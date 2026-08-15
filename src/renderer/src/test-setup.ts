@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, beforeAll } from 'vitest'
 import {
   handleRequest,
@@ -7,6 +7,7 @@ import {
   type AudioWorkerState,
 } from '@/engines/audio/audio-render'
 import { initI18n } from '@/i18n'
+import { forgetRememberedAssets, useAssets } from '@/stores/assets'
 
 /**
  * jsdom renders `<dialog>` but implements none of its modal API. Chromium does, and it is
@@ -37,6 +38,27 @@ function polyfillCanvas(): void {
   // `as`: the real method is overloaded per context id, and none of them accepts "always null".
   HTMLCanvasElement.prototype.getContext = (() =>
     null) as unknown as HTMLCanvasElement['getContext']
+}
+
+/**
+ * jsdom ships no `Path2D` either, and the strip paints one per clip — the mark saying whether it
+ * travels with its pair. Filled here rather than guarded in the painter: a `typeof` check in a
+ * draw loop is a production branch no real renderer takes, and it would leave the one thing the
+ * suite could not assert being that the mark is painted at all.
+ *
+ * A holder, not an implementation: nothing under test draws pixels — `getContext` above answers
+ * null — so what a case reads back is which path object reached `fill`.
+ */
+function polyfillPath2D(): void {
+  if ('Path2D' in globalThis) return
+
+  class Path2DHolder {
+    constructor(readonly d?: string) {}
+  }
+
+  // `as`: the real constructor also takes a `Path2D` and carries the drawing methods, none of
+  // which a jsdom case can reach.
+  globalThis.Path2D = Path2DHolder as unknown as typeof globalThis.Path2D
 }
 
 /**
@@ -97,14 +119,101 @@ function polyfillWorker(): void {
   globalThis.Worker = InProcessWorker as unknown as typeof Worker
 }
 
+/**
+ * How long an awaited query may wait. Testing Library's own default is one second.
+ *
+ * That second is a budget for the RUNNER, not for the studio, and the runner shares this machine
+ * with whatever else builds on it. Measured on `ModelNodeFields.test.tsx`, which waits on a
+ * catalogue asked only once the model's schema has named its family — two round trips: the case
+ * takes 136 to 181 ms alone on a quiet machine, and took 1035 ms then 1270 ms inside full runs
+ * under six concurrent sessions. Seven to nine times its own cost, against a ceiling of seven.
+ * Those readings are one machine's on one afternoon; a review re-measuring under its own load
+ * read 186 to 525 ms, which points the same way without reproducing them.
+ *
+ * Three seconds is twice the worst reading. It buys tolerance, not speed: a satisfied wait
+ * returns at once, so a green run should pay nothing — that mechanism is reasoned, not measured,
+ * and no run at one second was ever timed against a run at three. What it costs is +2,00 s per
+ * expiry, on 462 waiting sites across 63 files.
+ *
+ * Raised here rather than per call: two suites of THIS project had already bought their own
+ * patience by hand, which is how a default nobody set becomes a rule nobody can see. The `node`
+ * project keeps its own — `vi.waitFor` takes no global, and `main/project/folder.test.ts` still
+ * writes its number where its neighbours name theirs.
+ */
+export const AWAITED_QUERY_MS = 3000
+
+configure({ asyncUtilTimeout: AWAITED_QUERY_MS })
+
 // At module scope, not in `beforeAll`: a component rendered while a test file is imported
 // would already have asked for a context by then.
 polyfillCanvas()
+polyfillPath2D()
 polyfillPointerAndDrag()
 polyfillWorker()
 
 const VIEWPORT_WIDTH = 640
 const VIEWPORT_HEIGHT = 800
+
+/**
+ * A fake `IntersectionObserver`, and the handle to make it report.
+ *
+ * One definition rather than one per suite: the inert members below (`takeRecords`, `root`,
+ * `rootMargin`, `scrollMargin`, `thresholds`) are conformance to `lib.dom`, not test intent, and
+ * `scrollMargin` arriving in a TypeScript release is exactly how a second copy starts to rot.
+ *
+ * `eager` is the default because jsdom runs no layout: with nothing off screen, everything
+ * observed is on it. A suite about DEFERRING installs the other one and calls `reveal`.
+ */
+export function installIntersectionObserver({ eager = true }: { eager?: boolean } = {}): {
+  reveal: () => void
+} {
+  const watching: { observer: IntersectionObserver; watched: Element[] }[] = []
+
+  function reported(observer: IntersectionObserver, watched: readonly Element[]): void {
+    // `as`: an entry has eight fields, and a caller only ever reads `isIntersecting`.
+    const entries = watched.map(
+      target => ({ target, isIntersecting: true }) as IntersectionObserverEntry,
+    )
+    if (entries.length > 0) seen.get(observer)?.(entries, observer)
+  }
+
+  const seen = new Map<IntersectionObserver, IntersectionObserverCallback>()
+
+  class Fake implements IntersectionObserver {
+    private readonly watched: Element[] = []
+
+    constructor(callback: IntersectionObserverCallback) {
+      seen.set(this, callback)
+      watching.push({ observer: this, watched: this.watched })
+    }
+
+    observe(target: Element): void {
+      this.watched.push(target)
+      if (eager) reported(this, [target])
+    }
+
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return []
+    }
+
+    readonly root = null
+    readonly rootMargin = ''
+    readonly scrollMargin = ''
+    readonly thresholds: readonly number[] = []
+  }
+
+  globalThis.IntersectionObserver = Fake
+
+  return {
+    // Over a snapshot: a callback that mounts something registers another observer, and walking
+    // the live list would never end.
+    reveal: () => {
+      for (const { observer, watched } of [...watching]) reported(observer, watched)
+    },
+  }
+}
 
 /**
  * jsdom runs no layout: every element measures zero, and a virtualized collection asked to
@@ -129,6 +238,26 @@ function polyfillLayout(): void {
     }
   }
 
+  /**
+   * React Flow re-measures its nodes off the viewport's CSS transform, read through a
+   * `DOMMatrixReadOnly` jsdom does not carry — so a node arriving AFTER the mount threw where
+   * one present at mount never did. Identity is the honest answer where nothing is laid out,
+   * and `m22` — the zoom — is the only field it reads.
+   */
+  if (!('DOMMatrixReadOnly' in globalThis)) {
+    class IdentityMatrix {
+      readonly m22 = 1
+    }
+
+    Object.defineProperty(globalThis, 'DOMMatrixReadOnly', {
+      configurable: true,
+      value: IdentityMatrix,
+    })
+  }
+
+  // Same reading as the size stubs above: with no layout there is nothing off screen.
+  if (!('IntersectionObserver' in globalThis)) installIntersectionObserver()
+
   const sizes: [string, number][] = [
     ['clientWidth', VIEWPORT_WIDTH],
     ['offsetWidth', VIEWPORT_WIDTH],
@@ -141,23 +270,38 @@ function polyfillLayout(): void {
   }
 }
 
-/**
- * The language setting defaults to `system`, which reads `navigator.language` — jsdom answers
- * `en-US`, so every window would render in English while the assertions expect the French
- * bundle (CLAUDE.md: expected values come from `fr.json`). Pinned rather than worked around in
- * each test.
- */
-function pinLocale(): void {
-  Object.defineProperty(navigator, 'language', { configurable: true, value: 'fr-FR' })
-}
-
 // Components translate on first render: without init, `t()` would return raw keys and every
-// assertion on a label would test the key rather than the text.
+// assertion on a label would test the key rather than the text. French, because expected values
+// come from `fr.json` (CLAUDE.md).
 beforeAll(async () => {
-  pinLocale()
   polyfillDialog()
   polyfillLayout()
   await initI18n('fr')
 })
 
 afterEach(cleanup)
+
+/**
+ * A case must not leave a timer armed for the next one.
+ *
+ * `useAssets.invalidate` coalesces on a 200 ms timer held at MODULE scope, so it outlives the
+ * case that armed it — and anything that ingests, generates or pulls ends by calling it. When it
+ * fires inside a later case, `refresh()` re-reads the catalogue through whatever bridge THAT case
+ * installed, and the shelf changes under an element already held: a band flips from "open" to
+ * "fetch" between the query and the click. It cost half an hour of probing to find once
+ * (`b982fdd2`), and the failure moves with how busy the machine is, which is what makes it read
+ * as flakiness rather than as a bug.
+ *
+ * This narrows the window, it does not close it. The three callers — `stores/jobs`,
+ * `stores/media`, `stores/cloud` — invalidate from bridge callbacks, so a promise settling AFTER
+ * the hooks of a case can still arm one that nothing then cancels. A case that leaves work in
+ * flight has to await it; no teardown can await it for them.
+ */
+afterEach(() => useAssets.getState().cancelInvalidate())
+
+/**
+ * Nor may it leave an asset behind. `assetsById` remembers every asset it has been shown, so that
+ * a browsing facet cannot take the names off an open document — which also means an asset one
+ * case puts in the catalogue would answer a lookup in the next.
+ */
+afterEach(forgetRememberedAssets)

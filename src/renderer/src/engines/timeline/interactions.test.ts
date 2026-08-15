@@ -5,9 +5,10 @@ import {
   snapCandidates,
   viewportForGesture,
   type Gesture,
-  type MediaLengths,
+  type MediaExtents,
 } from './interactions'
-import { RULER_HEIGHT, type Point, type Viewport } from './timeline-geometry'
+import { RULER_HEIGHT, type Viewport } from './timeline-geometry'
+import type { Point } from '../core/geometry'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import { DEFAULT_TRACK_HEIGHT, trackOfClip, type Clip, type SequenceState } from './timeline-state'
 
@@ -30,7 +31,7 @@ const twoTracks = (clips: Clip[], secondLocked = false): SequenceState => {
 const GRAB: Point = { x: 50, y: RULER_HEIGHT + 10 }
 
 /** No media bound here — how a trim reads its own is covered in `commands.test.ts`. */
-const TIMELESS: MediaLengths = () => null
+const TIMELESS: MediaExtents = () => 'still'
 
 const commandFor = (gesture: Gesture, state: SequenceState, to: Point) =>
   commandForGesture(gesture, state, viewport, to, TIMELESS)

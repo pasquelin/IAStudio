@@ -1,6 +1,6 @@
-import { cn } from '@/helpers/cn'
-import { bound } from '@/helpers/numeric'
-import { FIELD_LABEL, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
+import { bound } from '@shared/numeric'
+import { Readout } from './Readout'
+import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
 export type SliderFieldProps = GestureProps & {
   label: string
@@ -27,7 +27,9 @@ export function SliderField({
 }: SliderFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      <span className={FIELD_LABEL}>{label}</span>
+      <span title={label} className={FIELD_LABEL}>
+        {label}
+      </span>
 
       <input
         type="range"
@@ -42,11 +44,10 @@ export function SliderField({
         onPointerUp={() => onGestureEnd?.()}
         onFocus={() => onGestureStart?.()}
         onBlur={() => onGestureEnd?.()}
-        className={cn('accent-accent h-(--sc-control) min-w-0 flex-1', FOCUS_RING)}
+        className="accent-accent h-(--sc-control) min-w-0 flex-1"
       />
 
-      {/* Tabular figures: without them the row twitches sideways as the digits change. */}
-      <output className="text-muted w-10 shrink-0 text-right tabular-nums">{value}</output>
+      <Readout values={[value]} />
     </label>
   )
 }

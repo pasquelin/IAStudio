@@ -1,19 +1,28 @@
 import { useEffect } from 'react'
-import { effectiveLanguage } from '@shared/i18n/languages'
 import { initI18n } from '@/i18n'
-import { useSettings } from '@/stores/settings'
+import { getBridge } from '@/services/bridge'
 import { useAppearance } from './useAppearance'
 
 /**
- * The language of everything the renderer draws. `initI18n` is idempotent — it changes the
- * language on an instance that already exists — so this is safe to run on every change.
+ * The language of everything the renderer draws. Followed rather than derived from the settings:
+ * the stored value can be `'system'`, and only the main process resolves that one.
+ *
+ * Read as well as followed, because `main.tsx` read it before React mounted: a change landing
+ * between the two would reach no listener and be lost for the session. `initI18n` is idempotent.
  */
 function useLanguage(): void {
-  const preference = useSettings(state => state.settings.general.language)
-
   useEffect(() => {
-    void initI18n(effectiveLanguage(preference, navigator.language))
-  }, [preference])
+    const bridge = getBridge()
+    if (!bridge) return
+
+    // Caught for the same reason as in `main.tsx`: a rejected read must not become an unhandled
+    // rejection. Nothing to fall back to here — the first frame already set a language.
+    void bridge.window
+      .language()
+      .then(language => initI18n(language))
+      .catch(() => {})
+    return bridge.window.onLanguage(language => void initI18n(language))
+  }, [])
 }
 
 /**

@@ -1,6 +1,6 @@
-import { clamp } from '@/helpers/numeric'
+import { clamp } from '@shared/numeric'
 import type { Rect } from './canvas-state'
-import type { Size } from './viewport'
+import type { Size } from '../core/geometry'
 
 /**
  * The grid pixel edits are recorded on. A full snapshot per history entry is what this exists to
@@ -89,5 +89,23 @@ export function brushRect(points: readonly { x: number; y: number }[], radius: n
     y: top - reach,
     width: right - left + reach * 2,
     height: bottom - top + reach * 2,
+  }
+}
+
+/**
+ * The same box, opened by a margin on all four sides.
+ *
+ * Beside `brushRect` because it is the second half of the same question: what a stroke covers is
+ * its discs, plus whatever a filter spreads past them — and the two are counted in different
+ * spaces, so they cannot be added before the first has been mapped.
+ */
+export function grownBy(rect: Rect, margin: number): Rect {
+  if (margin <= 0) return rect
+
+  return {
+    x: rect.x - margin,
+    y: rect.y - margin,
+    width: rect.width + margin * 2,
+    height: rect.height + margin * 2,
   }
 }

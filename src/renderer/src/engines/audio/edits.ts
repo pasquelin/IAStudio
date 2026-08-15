@@ -1,9 +1,11 @@
+import { isRecord, readNumber, readPositive, readString } from '@shared/guards'
 import type { Command } from '@/engines/core/history'
-import type { ClipEdge, Us } from '@/engines/timeline/timeline-state'
+import { CLIP_EDGES, type ClipEdge, type Us } from '@/engines/timeline/timeline-state'
 import {
   applyFades,
   applyGain,
   crop,
+  DEFAULT_TARGET_LUFS,
   durationOf,
   normalize,
   trimSilence,
@@ -73,6 +75,8 @@ export function audibleData(source: AudioData, state: AudioEditState): AudioData
 /** A region clamped to the take it belongs to, or nothing when it has collapsed. */
 export function clampRegion(region: Region, data: AudioData): Region | null {
   const total = durationOf(data)
+  // Not `clamp`: `durationOf` divides by a sample rate, so a negative total is not ruled out by
+  // the expression itself, and `clamp` would then answer that negative bound instead of zero.
   const from = Math.max(0, Math.min(total, region.from))
   const to = Math.max(from, Math.min(total, region.to))
   return to > from ? { from, to } : null
@@ -96,5 +100,71 @@ export function pushEdit(edit: AudioEdit): Command<AudioEditState> {
     },
     revert: state =>
       at < 0 ? state : { ...state, edits: state.edits.filter((_step, index) => index !== at) },
+  }
+}
+
+/**
+ * One step read back. `null` for anything this build cannot replay, and the caller drops it:
+ * a chain is replayed in order, so a step that does nothing would silently change what the
+ * take sounds like — dropping it says the same thing without pretending to have applied it.
+ */
+function readEdit(raw: unknown): AudioEdit | null {
+  if (!isRecord(raw)) return null
+
+  switch (raw.kind) {
+    case 'crop': {
+      const from = readPositive(raw, 'from', 0)
+      const to = readPositive(raw, 'to', 0)
+      return to > from ? { kind: 'crop', from, to } : null
+    }
+    case 'fade': {
+      const edge = CLIP_EDGES.find(candidate => candidate === raw.edge)
+      const length = readPositive(raw, 'length', 0)
+      return edge ? { kind: 'fade', edge, length } : null
+    }
+    case 'gain':
+      return { kind: 'gain', db: readNumber(raw, 'db', 0) }
+    case 'normalize':
+      return { kind: 'normalize', targetLufs: readNumber(raw, 'targetLufs', DEFAULT_TARGET_LUFS) }
+    case 'trimSilence':
+      return { kind: 'trimSilence' }
+    default:
+      return null
+  }
+}
+
+function readRegion(raw: unknown): Region | null {
+  if (!isRecord(raw)) return null
+
+  const from = readPositive(raw, 'from', 0)
+  const to = readPositive(raw, 'to', 0)
+  // A collapsed region loops over nothing and every tool reading it acts on nothing.
+  return to > from ? { from, to } : null
+}
+
+/**
+ * A chain read back from a file. Takes the parsed value rather than the text, like every other
+ * document reader: text that is not JSON at all is a file that failed to read, and that is the
+ * caller's to refuse — a shape that is merely wrong opens on an empty chain.
+ */
+export function parseAudioEdits(content: unknown): AudioEditState {
+  if (!isRecord(content)) return EMPTY_AUDIO_EDIT
+
+  const assetId = readString(content, 'assetId', '')
+  const edits: AudioEdit[] = []
+  if (Array.isArray(content.edits)) {
+    for (const entry of content.edits) {
+      const edit = readEdit(entry)
+      if (edit) edits.push(edit)
+    }
+  }
+
+  return {
+    assetId: assetId || null,
+    edits,
+    region: readRegion(content.region),
+    // Never restored as bypassed: A/B is which of two things one is listening to right now,
+    // and a document that reopens on the source would look like a chain that stopped working.
+    bypassed: false,
   }
 }

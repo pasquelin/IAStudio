@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isLicencesRoute, LICENCES_ROUTE, type Licence } from './licence'
+import { isCopyleft, isLicencesRoute, LICENCES_ROUTE, type Licence } from './licence'
 import licences from '../licences.json'
 import manifest from '../../../package.json'
 
@@ -17,14 +17,16 @@ const BUILD_ONLY = new Set([
   '@types/node',
   '@types/react',
   '@types/react-dom',
+  '@types/react-is',
   '@types/three',
   '@vitejs/plugin-react',
-  '@vitest/coverage-v8',
   'electron-builder',
   'electron-vite',
   'eslint',
   'eslint-plugin-react-hooks',
+  'jscpd',
   'jsdom',
+  'knip',
   'prettier',
   'prettier-plugin-tailwindcss',
   'typescript',
@@ -56,11 +58,22 @@ describe('the collected notice', () => {
     expect(entries.filter(entry => entry.spdx === 'UNKNOWN')).toEqual([])
   })
 
-  // The only component whose licence asks for more than attribution: whoever receives the
-  // binary must be able to reach the sources of the FFmpeg it was built from.
-  it('offers the sources of the copyleft component it ships', () => {
-    const ffmpeg = entries.find(entry => entry.name === 'FFmpeg')
-    expect(ffmpeg?.sources).toBeTruthy()
+  // By licence and through the collector's own predicate, so a new copyleft entry cannot slip by.
+  it('offers the sources of every copyleft component it ships', () => {
+    const copyleft = entries.filter(entry => isCopyleft(entry.spdx))
+    expect(copyleft.length).toBeGreaterThan(0)
+
+    for (const entry of copyleft) {
+      expect(entry.sources, `${entry.name} is ${entry.spdx} without a source offer`).toBeTruthy()
+    }
+  })
+
+  it('leaves the permissive licences out of the source-offer rule', () => {
+    expect(isCopyleft('MIT')).toBe(false)
+    expect(isCopyleft('BSD-3-Clause')).toBe(false)
+    expect(isCopyleft('Apache-2.0')).toBe(false)
+    expect(isCopyleft('MPL-2.0')).toBe(true)
+    expect(isCopyleft('GPL-3.0-or-later')).toBe(true)
   })
 
   /**
@@ -68,6 +81,9 @@ describe('the collected notice', () => {
    * leaves the machine that built it. A new one is neither until someone says which, and this
    * is what asks: reading `dependencies` alone would miss the twenty packages Vite bundles out
    * of `devDependencies`, which is most of what the notice owes.
+   *
+   * The reciprocal — nothing shipped that the manifest no longer declares — is `licences.test.ts`
+   * under `src/main`, which needs `node:fs` and so cannot live here.
    */
   it('accounts for every declared dependency, as shipped or as a build tool', () => {
     const declared = [

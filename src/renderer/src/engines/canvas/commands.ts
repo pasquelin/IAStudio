@@ -1,7 +1,9 @@
 import type { AdjustmentStack } from '@shared/domain/adjustments'
+import { clamp } from '@shared/numeric'
 import type { Command } from '../core/history'
 import {
   allLayers,
+  canRemoveLayer,
   clampOpacity,
   DEFAULT_CANVAS,
   groupLayer,
@@ -45,10 +47,10 @@ export function removeLayer(id: string): Command<CanvasState> {
     const target = layerById(state, id)
     if (!target) return state
 
-    // Counted across the tree, and only what can hold pixels: a root holding one group still
-    // holds every layer inside it, and a document with an empty stack cannot be painted on.
-    const paintable = allLayers(state.layers).filter(layer => !isGroup(layer))
-    if (!isGroup(target) && paintable.length <= 1) return state
+    // A document with an empty stack cannot be painted on — and a GROUP carries its subtree out
+    // with it, so what matters is what stays, not how many layers the document has. See
+    // `canRemoveLayer`, which the panel reads to grey the same gesture.
+    if (!canRemoveLayer(state.layers, target)) return state
 
     return withoutLayer(state, id)
   })
@@ -70,18 +72,42 @@ function withoutLayer(state: CanvasState, id: string): CanvasState {
   return { ...state, layers, activeLayerId: neighbour?.id ?? null }
 }
 
-/** Within its own level: reordering never moves a layer in or out of the group holding it. */
-export function reorderLayer(id: string, toIndex: number): Command<CanvasState> {
-  return restructure(`layer:reorder:${id}`, state =>
-    layerById(state, id)
-      ? {
-          ...state,
-          layers: updateSiblings(state.layers, id, (siblings, from) =>
-            moved(siblings, from, toIndex),
-          ),
-        }
-      : state,
-  )
+/**
+ * Anywhere in the tree: `parentId` names the group receiving the layer, `null` the root, and
+ * `index` its place among that level's layers once the moved one has left — bottom first, the
+ * order the stack is drawn in, which the panel reverses on its way to the eye.
+ *
+ * A group refuses to enter its own subtree. The drop would carry the receiving group along with
+ * it, and every layer under it would leave the document with no way back.
+ */
+export function moveLayer(
+  id: string,
+  parentId: string | null,
+  index: number,
+): Command<CanvasState> {
+  return restructure(`layer:move:${id}`, state => {
+    const layer = layerById(state, id)
+    if (!layer) return state
+
+    const parent = parentId === null ? null : layerById(state, parentId)
+    if (parentId !== null && (parent === null || !isGroup(parent))) return state
+    if (parentId === id) return state
+    if (isGroup(layer) && allLayers(layer.children).some(child => child.id === parentId)) {
+      return state
+    }
+
+    const without = mapLayers(state.layers, current => (current.id === id ? null : current))
+    if (parentId === null) return { ...state, layers: insertedAt(without, layer, index) }
+
+    return {
+      ...state,
+      layers: mapLayers(without, current =>
+        current.id === parentId && isGroup(current)
+          ? { ...current, children: insertedAt(current.children, layer, index) }
+          : current,
+      ),
+    }
+  })
 }
 
 export function setLayerBlend(id: string, blend: BlendMode): Command<CanvasState> {
@@ -100,11 +126,11 @@ export function setLayerClipped(id: string, clipped: boolean): Command<CanvasSta
   return patch(`layer:clip:${id}`, id, { clipped })
 }
 
-function moved(siblings: readonly Layer[], from: number, to: number): Layer[] {
+// Clamped rather than passed to `splice` as it comes: a negative index counts from the end there,
+// so a drop above the first row would land at the top of the stack instead of the bottom.
+function insertedAt(siblings: readonly Layer[], layer: Layer, index: number): Layer[] {
   const layers = [...siblings]
-  const [layer] = layers.splice(from, 1)
-  if (!layer) return [...siblings]
-  layers.splice(Math.min(Math.max(to, 0), layers.length), 0, layer)
+  layers.splice(clamp(index, 0, layers.length), 0, layer)
   return layers
 }
 
@@ -162,7 +188,7 @@ export function setLayerAdjustment(id: string, values: AdjustmentStack): Command
 /** The words of a caption, and how they are set. Its own command, like the grading values. */
 export function setLayerText(
   id: string,
-  changes: Partial<Pick<TextLayer, 'text' | 'size' | 'color'>>,
+  changes: Partial<Pick<TextLayer, 'text' | 'font' | 'size' | 'color'>>,
 ): Command<CanvasState> {
   let previous: TextLayer | null = null
 
@@ -615,7 +641,12 @@ export function rotateImage(clockwise: boolean): Command<CanvasState> {
   })
 }
 
-/** Cropping is resizing the frame onto a rectangle: same gesture, offset the other way. */
+/**
+ * Cropping is the frame closing onto a rectangle. The layers deliberately do NOT move with it:
+ * a surface is document-sized, and `CanvasEngine.resurface` recuts each one to the kept region,
+ * so the picture is already where the new frame expects it. Displacing the transforms as well
+ * would apply the same move twice and empty one side of the document.
+ */
 export function cropToRect(rect: Rect): Command<CanvasState> {
-  return resizeCanvas(rect.width, rect.height, { x: -rect.x, y: -rect.y })
+  return resizeCanvas(rect.width, rect.height, { x: 0, y: 0 })
 }

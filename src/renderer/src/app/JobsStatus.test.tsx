@@ -2,20 +2,19 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Job, JobStatus } from '@shared/domain/job'
+import { STATUS_BUTTON } from '@/design/styles'
+import { job as jobOf } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
 import { JobsStatus } from './JobsStatus'
 
-function job(id: string, status: JobStatus, progress: number): Job {
-  return {
-    id,
-    modelId: 'flux-dev',
-    label: `Take ${id}`,
-    status,
-    progress,
-    createdAt: '2026-08-07T10:00:00.000Z',
-    assetIds: [],
-  }
-}
+/**
+ * The shared fixture, told the numbered label this suite reads the bar by.
+ *
+ * `progress` is named on every call, which — per the factory's own rule — opts out of carrying a
+ * succeeded job to 1: say it here, as the bar would show it.
+ */
+const job = (id: string, status: JobStatus, progress: number): Job =>
+  jobOf({ id, status, progress, targetId: 'flux-dev', label: `Take ${id}` })
 
 beforeEach(() => {
   useJobs.setState({ jobs: [] })
@@ -33,11 +32,30 @@ describe('the jobs indicator', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  /**
+   * The face of the button is a count — "2 générations". What pressing it does is nowhere on
+   * screen, and the accessible name alone reaches no sighted pointer. Read the content, not the
+   * name: the name was already right.
+   */
+  it('says what opening it does, which its own face never shows', () => {
+    useJobs.setState({ jobs: [job('a', 'running', 0.4)] })
+    render(<JobsStatus />)
+
+    expect(screen.getByRole('button')).toHaveAttribute(
+      'data-tooltip-content',
+      'Ouvre la liste des générations, en cours comme terminées',
+    )
+    expect(screen.getByRole('button')).toHaveAttribute('data-tooltip-place', 'top')
+  })
+
   it('counts what is under way and averages its progress', () => {
     useJobs.setState({ jobs: [job('a', 'running', 0.4), job('b', 'running', 0.8)] })
     render(<JobsStatus />)
     expect(screen.getByRole('button')).toHaveTextContent('2 générations')
-    expect(screen.getByRole('button')).toHaveTextContent('60 %')
+    // Read off `textContent` rather than through `toHaveTextContent`, which collapses whitespace:
+    // the separator is U+00A0 because the suites run in French, and a matcher that normalises it
+    // accepts the hand-written space this batch removed.
+    expect(screen.getByRole('button').textContent).toContain('60\u00a0%')
   })
 
   it('counts a queued job as under way — it is waiting, not done', () => {
@@ -58,6 +76,30 @@ describe('the jobs indicator', () => {
     render(<JobsStatus />)
 
     await userEvent.click(screen.getByRole('button'))
-    expect(screen.getByRole('menu')).toHaveTextContent('Take a')
+    expect(screen.getByText(/Take a/)).toBeInTheDocument()
+  })
+
+  // Same defect as the journal beside it, seen less often only because the bar is not always up.
+  it('closes on a press beside it', async () => {
+    useJobs.setState({ jobs: [job('a', 'running', 0.4)] })
+    render(
+      <>
+        <JobsStatus />
+        <button type="button">Ailleurs</button>
+      </>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: /génération/i }))
+    expect(screen.getByText(/Take a/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ailleurs' }))
+
+    expect(screen.queryByText(/Take a/)).not.toBeInTheDocument()
+  })
+
+  it('offers the target the status line shares', () => {
+    useJobs.setState({ jobs: [job('a', 'running', 0.4)] })
+    render(<JobsStatus />)
+
+    expect(screen.getByRole('button')).toHaveClass(STATUS_BUTTON)
   })
 })

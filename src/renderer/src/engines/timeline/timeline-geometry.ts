@@ -1,6 +1,8 @@
+import { placeRows, rowAtOffset, rowsHeight } from './band'
 import {
   clipEnd,
   snapToFrame,
+  trackById,
   CLIP_EDGES,
   type Clip,
   type ClipEdge,
@@ -9,6 +11,7 @@ import {
   type Track,
   type Us,
 } from './timeline-state'
+import type { Point } from '../core/geometry'
 
 export type { ClipEdge }
 
@@ -24,8 +27,6 @@ export type Viewport = {
   scrollTop: number
 }
 
-export type Point = { x: number; y: number }
-
 export type HitTarget =
   | { kind: 'ruler' }
   | { kind: 'track'; trackId: string }
@@ -34,8 +35,23 @@ export type HitTarget =
   | { kind: 'fade'; clipId: string; trackId: string; edge: ClipEdge }
 
 export const RULER_HEIGHT = 24
+/**
+ * Both halves of the padding a header row sits in.
+ *
+ * Here rather than in the component that draws it, because the CANVAS has to agree with it: row
+ * heights are derived from what a header must hold, and the band is painted from those same
+ * heights. Two independent numbers would drift the DOM column and the painted rows apart by a
+ * line — cumulatively, with nothing red anywhere. `TimelineRow` reads it; so does `animation-rows`.
+ *
+ * A number and not a gauge, so it does NOT follow the density setting — deliberately, and for the
+ * same reason the row heights beside it do not: a canvas cannot read a CSS variable, and a header
+ * that breathed with the density would stop lining up with the rows it names.
+ */
+export const ROW_PADDING = 8
 /** Pixels around a clip edge that grab the edge rather than the body. */
-export const EDGE_GRAB = 6
+export const EDGE_GRAB = 8
+/** Share of a clip's width its body keeps, however narrow it gets: a clip must stay draggable. */
+const BODY_SHARE = 1 / 3
 /** Pixels around a fade handle that grab it. */
 export const FADE_GRAB = 7
 /** Depth of the strip along a clip's top where fade handles win over everything else. */
@@ -44,6 +60,18 @@ export const FADE_BAND = 12
 export const SNAP_THRESHOLD = 8
 /** Inset of a clip's rectangle inside its row, so neighbouring rows stay readable. */
 export const CLIP_INSET = 2
+/**
+ * Width of the bar drawn at each end of a clip. Narrower than the zone that grabs it — the
+ * target is meant to be forgiving, the mark is meant to say where the end is without eating
+ * the poster. Named for the edge, not for the fade handle this file already calls a handle.
+ */
+export const EDGE_BAR_WIDTH = 3
+/** How far the bar stops short of a clip's bottom, so it reads as a grip and not as a wall. */
+export const EDGE_BAR_INSET = 3
+/** Side of the mark a clip wears in its corner — the one saying whether it travels with a pair. */
+export const BADGE_SIZE = 10
+/** Narrower than this and the mark would BE the clip, which says nothing about a corner. */
+const BADGE_MIN_CLIP_WIDTH = BADGE_SIZE * 3
 
 export type SnapContext = {
   settings: SequenceSettings
@@ -68,20 +96,15 @@ export type TrackRow = {
 
 /**
  * Rows are stacked in track order with their own heights, so every reader — painter, hit test,
- * header column — derives a position the same way instead of each cumulating its own.
+ * header column — derives a position the same way instead of each cumulating its own. The stack
+ * itself is `band.ts`, which a scene's animation lays out the same way.
  */
 export function trackRows(state: SequenceState): TrackRow[] {
-  const rows: TrackRow[] = []
-  let offset = 0
-  for (const track of state.tracks) {
-    rows.push({ track, offset })
-    offset += track.height
-  }
-  return rows
+  return placeRows(state.tracks).map(({ item, offset }) => ({ track: item, offset }))
 }
 
 export function tracksHeight(state: SequenceState): number {
-  return state.tracks.reduce((total, track) => total + track.height, 0)
+  return rowsHeight(state.tracks)
 }
 
 export function trackTop(state: SequenceState, index: number, viewport: Viewport): number {
@@ -93,13 +116,8 @@ export function trackTop(state: SequenceState, index: number, viewport: Viewport
 
 /** The row under a vertical coordinate, or nothing below the last track. */
 export function rowAt(state: SequenceState, viewport: Viewport, y: number): TrackRow | null {
-  const from = y + viewport.scrollTop - RULER_HEIGHT
-  if (from < 0) return null
-
-  for (const row of trackRows(state)) {
-    if (from < row.offset + row.track.height) return row
-  }
-  return null
+  const found = rowAtOffset(state.tracks, y + viewport.scrollTop - RULER_HEIGHT)
+  return found ? { track: found.item, offset: found.offset } : null
 }
 
 export function visibleRange(viewport: Viewport, width: number): [Us, Us] {
@@ -109,6 +127,50 @@ export function visibleRange(viewport: Viewport, width: number): [Us, Us] {
 /** Where a fade handle sits: at the end of its ramp, which is the clip corner while it is zero. */
 export function fadeHandleTime(clip: Clip, edge: ClipEdge): Us {
   return edge === 'in' ? clip.start + clip.fadeIn : clipEnd(clip) - clip.fadeOut
+}
+
+/**
+ * How wide each edge's grab zone is on a clip of this width. Full width on any ordinary clip;
+ * on a narrow one the two zones would meet and swallow the body, and a clip that cannot be
+ * dragged is worse than one that is awkward to trim.
+ */
+export function edgeGrab(width: number): number {
+  return Math.min(EDGE_GRAB, (width * (1 - BODY_SHARE)) / 2)
+}
+
+/**
+ * Where a clip carries its corner mark, measured from the top of its ROW — the same origin
+ * `hitTest` reads, so the two cannot disagree about what `top` means. Nothing for a clip too
+ * narrow to hold one.
+ *
+ * Decided here rather than by the painter for the reason this whole file exists: it is the only
+ * place that knows which pixels belong to which gesture, and both of the marks a corner could
+ * take are already spoken for. **Below the fade band**, exactly as the edge bar is: a fade handle
+ * sits at `clip.start + fadeIn` and at `clipEnd - fadeOut`, so it MOVES INTO the clip as the fade
+ * grows — a mark placed against the clip's end clears it at zero and is drawn straight onto it at
+ * a tenth of a second. And one pixel past the edge grab, whose comparison is inclusive, so the
+ * mark never covers the trim either.
+ *
+ * The row always has the room: `MIN_TRACK_HEIGHT` is 28 against the 22 the band and the mark take.
+ */
+export function badgeAt(left: number, right: number, top: number): Point | null {
+  if (right - left < BADGE_MIN_CLIP_WIDTH) return null
+
+  return { x: right - edgeGrab(right - left) - BADGE_SIZE - 1, y: top + FADE_BAND }
+}
+
+/**
+ * The cursor over a point of the strip, as the CSS keyword — the same contract as the two other
+ * `cursorFor` in the studio. Both edges and fade handles are pulled sideways, and the cursor is
+ * the only sign either is live before a drag starts. Empty leaves the surface's own cursor.
+ *
+ * A locked track promises nothing: every edit on it is refused where it is applied, and an arrow
+ * offering a trim that will not happen is worse than no arrow at all.
+ */
+export function cursorAt(state: SequenceState, viewport: Viewport, point: Point): string {
+  const target = hitTest(state, viewport, point)
+  if (target?.kind !== 'edge' && target?.kind !== 'fade') return ''
+  return trackById(state, target.trackId)?.locked ? '' : 'ew-resize'
 }
 
 export function snap(time: Us, context: SnapContext): Us {
@@ -132,27 +194,34 @@ export function hitTest(state: SequenceState, viewport: Viewport, point: Point):
 
   const { track } = row
   const top = RULER_HEIGHT + row.offset - viewport.scrollTop
-  const inBand = point.y - top <= FADE_BAND
+  // Exclusive, so the band ends exactly where the edge bar starts: inclusive left one row of
+  // pixels both painted as a grip and read as a fade, and a press there handed back a ramp.
+  const inBand = point.y - top < FADE_BAND
 
   for (const clip of track.clips) {
     const left = timeToX(clip.start, viewport)
     const right = timeToX(clipEnd(clip), viewport)
     if (point.x < left || point.x > right) continue
 
+    const grab = edgeGrab(right - left)
+
     // Fades win in the top band only: below it the same corner has to stay grabbable for a trim.
+    // Never by a smaller margin than the edge, or a ring around the corner would trim inside the
+    // band and leave that promise half true.
     if (inBand) {
+      const reach = Math.max(FADE_GRAB, grab)
       for (const edge of CLIP_EDGES) {
         const handle = timeToX(fadeHandleTime(clip, edge), viewport)
-        if (Math.abs(point.x - handle) <= FADE_GRAB) {
+        if (Math.abs(point.x - handle) <= reach) {
           return { kind: 'fade', clipId: clip.id, trackId: track.id, edge }
         }
       }
     }
 
-    if (point.x <= left + EDGE_GRAB) {
+    if (point.x <= left + grab) {
       return { kind: 'edge', clipId: clip.id, trackId: track.id, edge: 'in' }
     }
-    if (point.x >= right - EDGE_GRAB) {
+    if (point.x >= right - grab) {
       return { kind: 'edge', clipId: clip.id, trackId: track.id, edge: 'out' }
     }
     return { kind: 'clip', clipId: clip.id, trackId: track.id }

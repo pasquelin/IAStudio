@@ -18,7 +18,7 @@ import {
   type FacetDescriptor,
   type FacetOption,
 } from '@/helpers/collection-state'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { HINT_TOP, TIP_BOTTOM } from '@/helpers/tooltip'
 import { CONTROL } from './styles'
 import { ToolButton } from './ToolButton'
 import { UiIcon } from './UiIcon'
@@ -160,7 +160,7 @@ export function CollectionBar({
   )
 
   const views = (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       <ToolButton
         icon={mdiViewGridOutline}
         label={t('collection.gridView')}
@@ -183,7 +183,7 @@ export function CollectionBar({
   )
 
   const zoom = (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       <ToolButton
         icon={mdiMinus}
         label={t('collection.smaller')}
@@ -211,14 +211,14 @@ export function CollectionBar({
     return (
       <div
         className={cn(
-          'flex items-center gap-1',
+          'flex items-center gap-2',
           layout === 'header' ? 'min-w-0 flex-1' : 'border-border border-b px-2 py-1.5',
           className,
         )}
       >
         {search}
         {menus}
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-2">
           {sortMenu}
           {views}
           {zoom}
@@ -245,11 +245,12 @@ export function CollectionBar({
         <button
           type="button"
           aria-expanded={expanded}
+          {...HINT_TOP(t(expanded ? 'collection.fewerHint' : 'collection.moreHint'))}
           onClick={() => setExpanded(current => !current)}
           className="group flex cursor-pointer items-center gap-2 py-0.5"
         >
           <span className="border-border flex-1 border-t" />
-          <span className="text-muted group-hover:text-text text-[10px] transition-colors">
+          <span className="text-muted group-hover:text-text text-mini transition-colors">
             {expanded ? t('collection.fewer') : t('collection.more')}
           </span>
           <span className="border-border flex-1 border-t" />
@@ -258,7 +259,7 @@ export function CollectionBar({
 
       <div className="flex items-center justify-between">
         {views}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           {sortMenu}
           {zoom}
         </div>

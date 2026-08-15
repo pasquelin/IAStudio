@@ -2,8 +2,138 @@
 
 [← First steps](02-first-steps.md) · [Contents](../user-guide.md) · [Next chapter: Projects →](04-projects.md)
 
-The studio's window looks like a development environment or an editing suite, not a web page. This
-chapter takes it apart, piece by piece.
+The studio's window looks like an editing suite, not a web page. This chapter takes it apart,
+piece by piece.
+
+---
+
+## The home screen, before anything else
+
+The studio opens on a full-width screen — the home — saying where you were, what you have made,
+and what you can do next. It closes as soon as you step into a workspace. It has no rail, no
+panel and no tab; the status line stays at the bottom.
+
+### The banner, at the top
+
+It shows one thing at a time:
+
+| What it shows | When |
+|---|---|
+| **Pick up where you left off** | a document was open last time |
+| **_n_ generations running** | something is still working |
+| **Connect an API key** | no key is stored |
+| **Ready when you are** | none of the cases above |
+
+While the studio reads your projects, it stays silent rather than announcing "Ready when you are"
+and then correcting itself.
+
+### The two bands
+
+The centre stacks two bands:
+
+| Band | What it shows | It needs |
+|---|---|---|
+| **Where you left off** | the banner: resume, connect, or create | nothing |
+| **Explore** | what everyone has published, by kind | an API key |
+
+**A band that lacks what it needs is not greyed out: it is not there.** With no API key,
+**Explore** does not exist on this screen.
+
+Everything else on the home is a panel, held in its two columns — except the **Tools** section,
+in the centre and across the width: it lists what the studio knows how to start, in the same
+order as the workspace bar, and lets you create a project from there.
+
+### Explore, the endless feed
+
+The feed of what **everyone** has published, one category at a time — the studio's six kinds, as
+tabs. There is no "all" tab.
+
+- **it loads as you go down**: the feed pages while you scroll;
+- **it stays at the foot of the page**, and does not move;
+- **the tiles do nothing.** They belong to someone else.
+
+It is the only band that can be hidden.
+
+### Clicking a tile opens it
+
+**That is the rule for the whole page.** A click on a picture opens it in its workspace. Anything
+that is not "open" is a secondary action, revealed on hover in the corner of the tile.
+
+**Making another image costs no network call.** "Make another one with…", in the corner of each
+creation, reopens the form already filled in — model, prompt and settings are kept beside the
+asset.
+
+**One exception: a library asset you have not fetched yet.** The click **fetches** it, and the
+button says so; once it is down, it opens like the others. Nothing is downloaded without your
+asking. With no project open, or while a transfer is running, the tile does not respond.
+
+That is where you fetch, and nowhere else; the shelf can send — see [Assets](07-assets.md).
+
+**A counter leads to its assets.** Clicking the images one opens the Image workspace with the
+filter set. A kind at zero does not respond. The panel stays on screen even with no project,
+showing its six kinds at zero.
+
+### Tidying the page
+
+**Hide this section**, when a band's heading is hovered. Hidden sections are counted at the foot
+of the page — "1 section hidden" — with a **Show them again** button.
+
+Only **Explore** carries that button; the banner is pinned.
+
+### The left column
+
+Cut in two: above, what one produces with; below, what one browses. **On the home screen, only
+the lower half exists.**
+
+| Panel | Half | What it shows | It needs |
+|---|---|---|---|
+| **Your projects** | 1st | the ones you opened recently, with their folder, reopened with a click — [its per-row menu](04-projects.md#the-home-screens-project-list) | nothing |
+| **Your recipes** | 2nd | the settings you have pinned | nothing |
+| **An idea to start from** | 2nd | prompt starting points written for your image model | an API key |
+| **In the same vein** | 2nd | public creations that look like your latest asset | an API key |
+
+**Your recipes** follows you from one project to the next: a recipe is kept outside every project.
+
+**An idea to start from** calls nothing until you click **Suggest an idea**. **It is free** — no
+creative unit is spent. Taking an idea opens the generator on the prompt **and** on the settings
+that go with it. With no image model chosen, the panel says what it is waiting for.
+
+**In the same vein** starts from your **latest asset**, named at the top of the panel, and looks
+for public creations that resemble it. If the library does not answer, the panel offers
+**Try again**.
+
+### The right column
+
+| Panel | Half | What it shows | It needs |
+|---|---|---|---|
+| **What you have made** | 1st | this project's generations, the most recent first | an open project |
+| **By kind** | 1st | one number per asset kind; a kind that is not at zero leads to its part of the shelf | nothing |
+| **What you have spent** | 1st | your units spent, in total and per model | an API key |
+| **Your library** | 1st | what your account holds online | an API key |
+| **Your documents** | 1st | the project's documents, open or not | an open project |
+| **Recent activity** | 2nd | the studio's journal, with filters | nothing |
+| **Running now** | 2nd | the studio's generations, under way and finished | nothing |
+
+**What you have spent** uses the same period as the usage window. It is a summary: the detail is
+in **Help ▸ Usage…**.
+
+**Running now** is the list the status bar's indicator already opens. It keeps finished
+generations for the session, so you can read what a run cost.
+
+**"It needs" does not mean here what it means for the bands.** A band missing what it needs
+disappears; **a panel stays and says what it lacks**. With no project, *Your documents* offers to
+open one; with no key, *Your library* says it got no answer and offers to try again — the same
+message as a refusal from the server. "The library is empty" only appears once the question has
+actually been asked.
+
+**Your documents is not the Explorer.** The Explorer walks the project folder as a tree; this
+panel lists the documents themselves. **It is what makes a closed document reachable again.**
+
+**Recent activity is the whole journal**, with its filters by level and by subject — not an
+extract of the last few lines.
+
+> **The home can be skipped.** **Settings ▸ General ▸ Show the home screen**: unticked, the studio
+> goes straight to the workspace you left. What you hide is set on the home itself.
 
 ---
 
@@ -11,16 +141,16 @@ chapter takes it apart, piece by piece.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  TITLE BAR — the six workspaces                              │
+│  TITLE BAR — home and the six workspaces                     │
 ├──┬────────────────────────────────────────────────────────┬──┤
-│  │                     top zone                           │  │
+│  │                    top zone                            │  │
 │ R├────────────────────────────────────────────────────────┤ R│
 │ A│         │                                    │         │ A│
 │ I│  left   │          DOCUMENT ZONE             │  right  │ I│
-│ L│  zone   │        (tabs live here)            │  zone   │ L│
+│ L│  zone   │        (the tabs live here)        │  zone   │ L│
 │  │         │                                    │         │  │
 │ l├────────────────────────────────────────────────────────┤ r│
-│  │                    bottom zone                         │  │
+│  │                   bottom zone                          │  │
 ├──┴────────────────────────────────────────────────────────┴──┤
 │  STATUS LINE — project — document                            │
 └──────────────────────────────────────────────────────────────┘
@@ -28,38 +158,52 @@ chapter takes it apart, piece by piece.
 
 Five elements, in the order you meet them:
 
-1. the **title bar**, at the very top, carrying the workspaces;
-2. the **rails**, stuck to the left and right edges: strips of icons;
-3. the **zones**, where panels live;
-4. the **document zone**, in the centre: this is where what you make sits;
+1. the **title bar**, carrying the workspaces;
+2. the **rails**, against the left and right edges: strips of icons;
+3. the **zones**, where the panels live;
+4. the **document zone**, in the centre;
 5. the **status line**, at the very bottom.
 
-**The colours mean something.** The general background — the *chassis* — is mid grey. The panels
-laid on it are **darker**, with rounded corners. This is the opposite of web habit, and it is
-deliberate: it gives the reading "panels laid on a table", as in an editing suite.
+**The colours mean something.** The general background — the *chassis* — is mid grey; the panels
+on it are **darker**, with rounded corners.
 
 ---
 
 ## The title bar
 
-It does not carry the file name. It carries the **six workspaces**:
+It does not carry the file name, but the **six workspaces**:
 
 **Image** · **Video** · **3D** · **Audio** · **Textures** · **Skyboxes**
 
-One click switches workspace. The active one is the button lighter than the others.
+A click switches workspace; the active one is lighter than the others. Switching does three
+things:
 
-Switching workspace does three things at once:
-
-- **the panels rearrange** — each workspace shows the tools it needs and hides the rest;
+- **the panels rearrange** — each workspace shows the tools it needs;
 - **the tabs change** — each workspace has its own open documents;
-- **the catalogue filters** — the Models panel now shows only the models capable of making that
-  kind of content.
+- **the catalogue filters** — Models shows only the models capable of that kind of content.
 
-On macOS, the three red / orange / green buttons stay in their usual place, on the left.
+On macOS, the three traffic lights stay where they always are, on the left.
+
+### Arranging the workspaces in the order that suits you
+
+| Gesture | How |
+|---|---|
+| **Drag** | pick up a workspace and drop it onto another |
+| **Keyboard** | `⌥←` / `⌥→` on the focused workspace — the bare arrows walk the bar |
+| **Right-click** | **Move left** / **Move right** |
+
+Both keys can be remapped under the *In the workspace bar* context of the
+[shortcuts screen](15-shortcuts.md).
+
+**Home does not move** and stays first. The order is the same in the home screen's **Tools**
+section, and it is remembered from one session to the next.
+
+> **A workspace added by an update does not land at the end of your bar.** It lands where the
+> studio files it by default, after the last of its earlier neighbours you kept.
 
 ### The account switcher
 
-On the right of the title bar: a small coloured dot, a name, and a chevron.
+On the right of the title bar: a coloured dot, a name, a chevron.
 
 | What you see | What it says |
 |---|---|
@@ -68,101 +212,76 @@ On the right of the title bar: a small coloured dot, a name, and a chevron.
 | **The name** | the account currently in use |
 | **"Not connected"** | no account is stored |
 
-**One click opens the list** of your accounts, the current one ticked, plus a **Manage accounts…**
-entry leading to settings.
-
-If **no account is stored**, the button opens no menu: it goes straight to settings. A one-line menu
-is not a menu.
+One click opens the list of your accounts, the current one ticked, plus **Manage accounts…**,
+which leads to the settings. With no account stored, the button goes straight to the settings.
 
 > **Switching accounts changes the library, not your work.** Each API key carries its own Scenario
-> project — its models, its assets, its credit. Your local project is on your disk and belongs to no
-> account: it does not move a pixel.
+> project — its models, its assets, its credit. Your local project is on your disk and belongs to
+> no account.
 
-It is a **switcher**, never a form: keys are typed in settings, and nowhere else.
+Keys are typed in the settings, and nowhere else.
 
 ---
 
 ## The rails
 
-The two vertical strips of icons, stuck to the left and right edges.
+The two vertical strips of icons, against the edges. **A rail never disappears**: even when you
+have closed everything, every panel stays one click away.
 
-**A rail never disappears.** That is the point of them: even when you have closed everything, every
-panel stays one click away.
-
-### How to read them
-
-One click on an icon **opens** the panel. A second click on the same icon **closes** it.
-
-A **separator line** across the rail marks a zone's split: the icons above the line open in the
-first half of the zone, those below in the second. The rail is therefore the legend of the column
-it commands.
+A click on an icon **opens** the panel; a second one **closes** it. A **separator** marks a
+zone's cut: the icons above it open in the first half, those below in the second.
 
 ### The left rail
-
-From top to bottom:
 
 | Element | What it does |
 |---|---|
 | **+** (blue button) | creates a **new document** in the active workspace |
 | *separator* | |
-| The **left column** icons | Layers, Meshes, Lights, Assets (depending on the workspace), then Explorer |
-| At the bottom: the **bottom strip** icons | Assets or Timeline, depending on the workspace |
+| **Upper half** icons | Models, then Generate; the home puts **Your projects** there |
+| *separator* | |
+| **Lower half** icons | the Explorer; the home puts its three shelves there |
+| At the bottom | Assets or Timeline, depending on the workspace |
 
-The **+** button is solid and blue, where all the others are grey glyphs. That is because it
-**acts** — it creates something — while the others only show or hide.
-
-> The **+** button is greyed out when no project is open: a document is a file in a project folder,
-> and without a project there is nowhere to write it.
+> The **+** button is greyed out when no project is open: a document is a file in a project
+> folder.
 
 ### The right rail
 
-The **right column** icons: Models, Generate, Skybox (in the Skyboxes workspace), then Inspector.
+The right column's icons — Skybox, View, Layers, Channels, Styles, Scene, Lights, Meshes, Assets,
+whichever the workspace declares, in that order — then, below the separator, Inspector.
 
 ### The rail only shows what the workspace can do
 
-An icon appears only if the workspace you are in actually has that panel. Layers mean nothing in the
-Audio workspace: their icon is not there.
+An icon appears only if the workspace really has that panel: Layers do not exist in the Audio
+workspace.
 
-**One special case: Generate.** Its icon disappears while no model is chosen. It is not a greyed-out
-button, it is an absence — generating without a model is impossible, and the rail would rather show
-what the workspace **can** do than what it cannot.
-
-As soon as you choose a model in the **Models** panel, the icon appears. It stays if you have set a
-default model for that family in settings.
+**Generate is a special case**: its icon is absent while no model is chosen. It appears as soon
+as you pick one in **Models**, and stays if you have set a default model for that family.
 
 ---
 
 ## Zones and panels
 
-There are four zones: **left**, **right**, **top**, **bottom**.
+Four zones — **left**, **right**, **top**, **bottom** — each cut into two halves, and each half
+shows **one panel at a time**:
 
-Each zone is **split into two halves**, and each half shows **one panel at a time**.
+- two panels in the **same half** take turns: opening the second closes the first;
+- two panels in **different** halves of the same zone show **together**.
 
-That means two things:
-
-- two panels of the **same half** take turns: opening the second closes the first;
-- two panels in **different halves** of the same zone are shown **together** — one above the other
-  in a column, side by side in a strip.
-
-> **The top zone hosts no panel for now.** It exists in the structure and stays reserved. Nothing
-> will appear there until a panel is declared for it.
+> **The top zone hosts no panel for now.** It exists in the structure and stays reserved.
 
 ### Resizing
 
-**Drag the space between two panels.** That space — the *gutter* — is itself the handle: there is
-no tiny grip to aim at pixel-perfect.
+**Drag the space between two panels** — the *gutter* is itself the handle.
 
-The studio always keeps **at least 240 pixels** for the document zone in the centre, and at least
-140 pixels for each side zone. So you cannot crush the centre by accident by dragging too far.
+The studio always keeps **at least 240 pixels** for the document zone and **at least 140** for
+each side zone: you cannot crush the centre by accident.
 
-Starting sizes: left column 260 px, right column 320 px, bottom strip 240 px.
+Starting sizes: left column 320 px, right column 260 px, bottom strip 240 px.
 
 ### Closing, reopening, putting everything back
 
-A panel **closes**; it does not collapse. A collapsed panel would be a third state resembling
-neither open nor closed — and the rail already reopens it in one click.
-
-Three ways to find what you closed:
+A panel closes; it does not collapse. Three ways to get back what you closed:
 
 | Means | Effect |
 |---|---|
@@ -174,118 +293,144 @@ Three ways to find what you closed:
 
 ### When a panel gets narrow
 
-Shrink a panel and its title line gives ground gradually: its own controls — a filter, a view
-button — go first. **The close button never goes.** A panel you could no longer get out of would be
-worse than a panel deprived of its filter.
-
-**One exception: the panel's name is not what goes first.** In a strip, the shelf puts its whole
-bar on the title row; were room to run short, it is the name that would be trimmed to nothing. A
-panel's name is not what a crowded row should spend first, so it keeps its size and the bar tightens
-instead.
+Its heading gives ground gradually: its own controls — a filter, a view button — go first. **The
+close button never goes**, and the panel's name keeps its size.
 
 ---
 
-## The complete list of panels
+## The complete list of the workspaces' panels
 
 | Panel | Zone | Half | Visible in | What it is |
 |---|---|---|---|---|
-| **Layers** | left | 1st | Image | the layer stack of the open image |
-| **Meshes** | left | 1st | 3D | the scene's objects, and the button that adds one |
-| **Lights** | left | 1st | 3D | the scene's light sources |
-| **Assets** | left | 1st | Video | the project's shelf |
-| **Explorer** | left | 2nd | everywhere | the 3D scene tree |
-| **Models** | right | 1st | everywhere | the Scenario catalogue, filtered on the active workspace |
-| **Generate** | right | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
+| **Models** | left | 1st | everywhere | the Scenario catalogue, filtered on the active workspace |
+| **Generate** | left | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
 | **Skybox** | right | 1st | Skyboxes | the open sky's settings |
+| **View** | right | 1st | Skyboxes | the projection, the field of view and the test objects |
+| **Layers** | right | 1st | Image | the layer stack of the open image |
+| **Channels** | right | 1st | Textures | the eight channels of the open material |
+| **Styles** | right | 1st | Textures | saved material settings, to replay on any material |
+| **Scene** | right | 1st | 3D | the tree of the open scene |
+| **Lights** | right | 1st | 3D | the scene's light sources |
+| **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
+| **Assets** | right | 1st | Video, Audio, 3D | the project's shelf, as a column |
+| **Explorer** | left | 2nd | everywhere | the project folder, folders and files |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
-| **Assets** | bottom | 1st | Image, 3D, Audio, Textures, Skyboxes | the same shelf, as a strip |
-| **Timeline** | bottom | 1st | Video | the sequence being edited |
+| **Assets** | bottom | 1st | Image, Textures, Skyboxes | the same shelf, as a strip |
+| **Timeline** | bottom | 1st | Video, Audio, 3D | the sequence being edited, or the animation |
 
-**The upper half of the right column is reserved.** Only three panels may sit there — **Models**,
-**Generate**, **Skybox** — and none of them appears anywhere else. It is the "making" half:
-choosing a model, filling in its form, steering the sky it produces. Those are three moments of the
-same work, so they take turns.
+> **"Everywhere" means the workspaces, not the home screen.** The home has panels of its own —
+> eleven, in its two columns — that this table does not list.
 
-**The Inspector holds the other half, and always the lower one.** You read what is selected **while**
-a model is being chosen and a prompt written: in an editor, the inspector is never the panel you
-have to switch away from to see something else.
+**The left column belongs to what produces.** Above, **Models** and **Generate**, which take
+turns. Below, the **Explorer**.
 
-**Why the asset shelf moves.** In most workspaces it sits at the bottom: it is a shelf, it reads
-across, and the side column is reserved for what acts on the document. But in the **Video**
-workspace the bottom strip belongs to the edit, which needs the full width. The shelf then moves to
-the **left column**, whose upper half is free there, so that the edit and the shelf hold the screen
-**together**: dragging a take onto a track is the gesture that workspace is built around.
+**The right column belongs to the open document**: what it holds, what lights it, what is
+selected. The panels take their turn in the upper half; the **Inspector** always holds the lower
+one.
+
+**The asset shelf moves depending on the workspace.** At the bottom in most; in **Video**,
+**Audio** and **3D**, the bottom strip belongs to the timeline, and the shelf moves to the right
+column — timeline and shelf then hold the screen together, so you can drag a take onto a track.
 
 ### A half shows what the workspace puts there
 
-You open the bottom strip in the Image workspace: it is the shelf. You switch to Video: the same
-strip becomes the edit, with nothing for you to reopen.
+Open the bottom strip in Image: it is the shelf. Switch to Video: the same strip becomes the
+edit, with nothing to reopen.
 
-**What you opened is a zone** — and it stays that zone. A half holding a panel this workspace puts
-elsewhere, or does not have at all, shows what the workspace does put there. Closing the half still
-empties it everywhere: that is the one thing the click actually said.
+**What you opened is a zone**, and it stays one. Closing the half empties it everywhere.
 
-Two practical consequences:
+- **nothing is overwritten**: go back to the original workspace and you find what you had;
+- **a Generate panel with no model gives way to Models.**
 
-- **nothing is overwritten**: go back to the original workspace and you find what you had there;
-- **a Generate panel with no model gives way to Models** — the panel that lets you choose one.
+### A half you have not chosen for opens on the workspace's first panel
 
-**Why the Explorer is visible everywhere when it only serves 3D.** It is meant to become the
-project tree. Until then, in other workspaces, it shows a message explaining what it is waiting for
-rather than disappearing.
+Until you have clicked an icon of a half, it shows the first panel the workspace declares there.
+That is what you see on first opening, and what **View ▸ Reset layout** restores.
+
+The lower left half opens on the **Explorer** in every workspace.
+
+| Workspace | The upper right half opens on | The bottom strip on |
+|---|---|---|
+| **Image** | Layers | Assets |
+| **Video** | Assets | Timeline |
+| **3D** | Scene | Timeline |
+| **Audio** | Assets | Timeline |
+| **Textures** | Channels | Assets |
+| **Skyboxes** | Skybox | Assets |
+
+As soon as you click an icon, that half remembers **your** choice and does not move again, until
+you click another one or reset the layout.
+
+**The Explorer is visible everywhere.** A double-click on a document opens it, switching
+workspace if it belongs to another; on a file under `assets/`, it opens in the workspace that
+edits its kind; on anything else, it hands it to the system.
 
 ---
 
 ## The document zone
 
-The centre. This is where what you make sits.
-
-**It only takes documents.** An open file and its toolbar, nothing else. No panel can enter it.
+The centre, where what you are making lives. **It only takes documents**: an open file and its
+toolbar. No panel can enter it.
 
 ### The tabs
 
-Each open document has its tab, at the top of the centre. One click moves between them.
-
-They can be **moved**, **reordered**, and **placed side by side**: drag a tab towards an edge of the
-centre, a drop zone appears, let go — and you get two documents visible at once.
+Every open document has its tab, at the top of the centre; one click moves between them. They can
+be **moved**, **reordered**
+and **placed side by side**: drag a tab towards an edge of the centre, a drop area appears, let
+go.
 
 ### The dot beside the name
 
-A tab whose work is not yet written to disk carries **a dot** (`•`) beside its name.
+A tab whose work is not on disk carries **a dot** (`•`). It goes at save time (`⌘S` / `Ctrl+S`)
+and comes back on the next change. Undo back to the exact point where you saved, and it goes too.
 
-The dot disappears on save (`⌘S` / `Ctrl+S`), and comes back on the next change. If you undo back
-to the exact point where you saved, it disappears too: what you see is then indeed what the file
-holds.
+> **All six document kinds save** — layered images, 3D scenes, materials, sequences, edited sounds
+> and skies. What does not survive one save to the next is the undo history. See
+> [What does not exist yet](18-limits.md).
 
-> **Not every document can save yet.** Today, only **3D scenes** and **materials** are written to
-> disk. See [What does not exist yet](18-limits.md).
+### Closing a tab
+
+The cross closes the document. **If it carries the dot**, the studio asks first:
+
+- **Save** writes and then closes — that is what `⏎` picks;
+- **Don’t save** closes and loses the work done since the last `⌘S`;
+- **Cancel** closes nothing — it is also what `⎋` answers.
+
+If writing fails, the tab stays open and the reason goes to the activity journal.
+
+### A tab's menu
+
+**Right-clicking** a tab opens three gestures:
+
+| Row | What it does |
+|---|---|
+| **Close tab** | like the cross, question included |
+| **Close other tabs** | closes them one by one; a *Cancel* stops the run |
+| **Delete document…** | **removes the file from the project folder** |
+
+**Deleting cannot be undone**, and it is the only gesture in the studio that erases a file you
+made. The studio asks for confirmation, and this time *Cancel* is the default button.
 
 ### Each workspace has its own tabs
 
-Going from "Image" to "3D" closes nothing: it puts away the Image tabs and brings out the 3D ones.
-Come back to Image and you find exactly what you left there.
+Going from "Image" to "3D" closes nothing: it files Image's tabs away and brings out 3D's.
 
 ---
 
 ## The status line
 
-The thin strip at the very bottom.
-
-On the left, it says **where you are**:
+The thin strip at the very bottom. On the left, it says **where you are**:
 
 | What appears | Situation |
 |---|---|
 | *No project open* | nothing is open |
 | `My project` | a project is open, no document in front |
-| `My project — Cliff` | a project is open, and the document "Cliff" is in front |
+| `My project — Cliff` | the document "Cliff" is in front |
 
 ### Generations, on the right of the status line
 
-This is where your pending requests live. **There is no Jobs panel**: a generation is minutes of
-waiting you spend elsewhere, so it has to be readable from any workspace — and a panel could only be
-in one.
-
-What you see while something is working:
+Your running requests. **There is no Jobs panel**: a generation must be readable from any
+workspace. What you see, when something is working:
 
 ```
 3 generations  ▓▓▓▓▓░░░░░  45 %  ⌃
@@ -298,14 +443,43 @@ What you see while something is working:
 | **The percentage** | the same figure, spelled out |
 | **The chevron** | one click opens the full list |
 
-**When nothing is working, the area disappears.** It costs no space at rest.
+**When nothing is working, the area disappears** — **unless something failed**: "2 failures"
+stays on screen after the jobs end.
 
-**Unless something failed**: "2 failures" stays on screen after the jobs end. A failure that vanished
-with the last running generation is a failure nobody would have read.
+**Clicking opens the list**, in a small window above the status line: one line per job, its
+model, its state, its bar, and the button that cancels it. Under the bar, what the generation
+cost — or, if it failed, why.
 
-**Clicking opens the list**, in a small window above the status line: one line per job, its model,
-its state, its bar, and the button that cancels it. It is the content of the former panel, one click
-away instead of a permanent piece of surface.
+### The journal, next to it
+
+A second icon, on the same line: the **activity journal**. It keeps what the studio did and what
+it failed at — a generation, an import, an upload to the library, a save. **It is always there**,
+unlike the generations, which vanish when nothing is running.
+
+| What you see | Situation |
+|---|---|
+| a small grey clock | all is well, the journal can be read |
+| an alert and "2 failures" in red | two things failed and have not been read |
+
+**One click opens the list and marks everything read.** Two filters wait there: the **level**
+(information, warning, failure) and the **subject** (generation, import, library, document,
+project, interface). **Each is a menu**: the button says what it keeps — "Level: Failure", or
+"Level: All" — and opening it gives the tick boxes. The **All** row, at the top of the menu,
+releases the whole filter.
+
+**Interface is the studio itself** rather than what it holds: a panel that could not be drawn, a
+stored layout gone unreadable — [see chapter 16](16-troubleshooting.md).
+
+**To close it**: a click outside, `Esc`, switching to another application, or clicking the icon
+again. That holds for everything floating above the window.
+
+### The toasts that do not fade
+
+A failure raises a **toast** in the bottom-right corner, above the status line.
+
+- **Only failures raise one.** An asset imported successfully gets its line in the journal.
+- **They do not go away on their own.** A toast goes when you close it, and closing it marks it
+  read.
 
 ---
 
@@ -317,36 +491,66 @@ The system menu — at the top of the screen on macOS, at the top of the window 
 |---|---|
 | **File** | New project…, Open project…, Save, Settings… |
 | **Edit** | Undo, Redo, and the system's text commands |
-| **View** | Tool windows (reopen a panel), Reset layout, Full screen, and image zoom |
+| **View** | Tool windows, Reset layout, Full screen, image zoom |
 | **Objects** | Add ▸ Mesh, Add ▸ Light — in the 3D workspace |
 | **Window** | the system's window commands |
-| **Help** | About Scenario Studio, Licences |
+| **Help** | About Scenario Studio, Usage…, Licences |
+
+The shortcuts shown in the menus are **the ones you have set**.
+
+**View ▸ Tool windows only lists what the workspace can open**, like the rail.
+
+### The usage window
+
+**Help ▸ Usage…** says **what your keys have spent**. Top right, the period: **7, 31 or 120
+days**, 31 by default.
+
+| Section | What it shows |
+|---|---|
+| **Overview** | the total spent over the period, discounts, how many generations, and the spend per day and per account |
+| **Models** | which models cost what, how many generations each served, and the share that went through an API key |
+| **Activities** | what was done, and the assets that came out of it |
+| **Journal** | every billed event, newest first, by pages |
+
+Activities and Journal name their rows in the window's language: you read "Image generation", not
+`images-generation`. An event kind the studio does not know yet shows the API's raw name.
+
+Three warnings are shown there:
+
+- **there is no balance.** The Scenario API only exposes what has been spent, never what is left.
+  No figure will tell you how much you can still generate;
+- **the euro amount is indicative.** Computed from the public prepaid pack grid: an order of
+  magnitude, not an invoice;
+- **the total mixes accounts billed separately.** With several keys, the sum shown matches no
+  real invoice — the Overview breaks it down per account.
+
+**A key that does not answer does not skew the figures silently**: the window names the keys that
+stayed quiet and states that the totals are the other keys'. With no key stored at all, it says
+so and points to the settings.
 
 ### The licences window
 
-**Help ▸ Licences** opens the list of software Scenario Studio ships with: their name, their
-version, and the short name of their licence (`MIT`, `Apache-2.0`…).
+**Help ▸ Licences** lists the software Scenario Studio ships with: name, version, and the short
+licence name (`MIT`, `Apache-2.0`…). Click a row: the **full text** unfolds, and the link to its
+sources appears when the licence requires it.
 
-Click a row: the **full text** of the licence unfolds, and the link to its sources appears where the
-licence requires it.
+Three texts, three scopes:
 
-> **The text is inside the application, not behind a link.** A notice you have to be online to read
-> is not a notice — and several of these licences require reproducing in full, not summarising.
+| What it covers | Under which terms | Where to read it |
+|---|---|---|
+| **The studio's source code** | PolyForm Noncommercial 1.0.0 — reusable for any **noncommercial** purpose | `LICENSE`, in the repository |
+| **The application** you installed | its own terms of use | `EULA.md`, in the repository |
+| **The third-party components** | each keeps its own | this window, and `THIRD-PARTY-NOTICES.md` |
 
-Nothing to do there, nothing to set. It is a legal obligation, honoured properly.
-
-The shortcuts shown in the menus are **the ones you have set**. Change a shortcut in settings and
-the menu follows.
-
-**View ▸ Tool windows only lists what the workspace can open.** Like the rail: no Layers in the Audio
-workspace, and no Generate while no model is chosen. A menu offering to open a panel that would not
-appear would be worse than a short menu.
+**ffmpeg is a case apart**: it is not linked into the application, it is launched **alongside**,
+as a separate program. Its licence differs by platform — GPL on macOS, LGPL elsewhere — and **its
+corresponding sources are attached to every published release**.
 
 ---
 
 ## What the studio remembers on its own
 
-You do not have to save any of this:
+You have nothing to save for this:
 
 - **your panel layout**, per workspace and per project;
 - **the size of each zone**;
@@ -354,6 +558,15 @@ You do not have to save any of this:
 - **the last project opened**, reopened on the next launch — adjustable, see
   [Every setting](14-settings.md);
 - **the chosen model**, per family.
+
+---
+
+## Closing the last window quits the studio
+
+On macOS, the convention is that an application outlives its windows. **That is not what the
+studio does**: closing the last window quits it, on all three systems.
+
+> Your documents do not go with it: anything unsaved is **asked about before** the window closes.
 
 ---
 

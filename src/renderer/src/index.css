@@ -12,6 +12,18 @@
  * what makes `bg-chassis` and friends exist at all; the light theme restates every one of them
  * further down, inside its own daisyUI theme block. Nothing else in the application may hold a
  * hex value — the engines read these tokens through `engines/core/palette.ts`.
+ *
+ * The line above is the rule, not a description of the code: some places DO restate a value from
+ * here, because they paint before any stylesheet can be read — the window chrome, the splash
+ * screen, the canvas overlay's last resort. Those three are pinned by a test against the token
+ * they restate, so repainting a token here fails a suite instead of leaving a stale twin behind.
+ * Others are not, and that is what the rule is for rather than a description of the code.
+ *
+ * No list, and no search either. This paragraph claimed "there is no third one" for twenty minutes
+ * before a review found three; the search offered in its place then missed two of them, because a
+ * copy needs neither this file's spelling nor even its type — `0x000000` restates a colour,
+ * `'9px'` restates a size. What holds is the rule: a value taken from here carries a test that
+ * says where it came from, written where the copy lives.
  */
 @theme {
   --color-chassis: #2b2d30;
@@ -21,18 +33,95 @@
   --color-surface: #202124;
   --color-elevated: #3c3f44;
   --color-border: #34363a;
-  --color-accent: #3574f0;
+  /*
+   * DARKENED from #3574f0 on 2026-08-12, and the amount is the whole point: white on it reads
+   * 4.508:1, over the 4.5 a menu row and a primary button need, for a blue no eye tells apart.
+   *
+   * It is pinned between TWO bars, and the window between them is 0.0052 of luminance wide.
+   * White needs the blue at or under 0.1833; the accent drawn as a LINE needs it at or over
+   * 0.1781, because WCAG 1.4.11 asks 3:1 of a control — the title bar's drop target rings a
+   * space in this very colour on the chassis. At 0.1829 it clears both, by 0.008 and by 0.063 —
+   * measured, not rounded. (The focus ring was the other side of that bar until 2026-08-15,
+   * when the studio stopped drawing one; the bar itself did not move.)
+   *
+   * **A first darkening to #336fe6 landed at 0.1779 and broke it at 2.997**, which reads as
+   * 3.00 at two decimals and was written down as if it passed. Two decimals are not enough
+   * for this token: `design/tokens.test.ts` now measures it rather than trusting a comment.
+   */
+  --color-accent: #346ef2;
+  /*
+   * The accent as INK, which the fill cannot be: #346ef2 carries 3.06:1 on the chassis, 3.86 on
+   * a panel and 3.57 on a surface — under the 4.5 WCAG 1.4.3 asks of normal text, on all three.
+   * Lightening `--color-accent` itself would fix the text and break the fill, taking white on it
+   * back under the bar: an accented button is a surface, not a word.
+   *
+   * Restated darker in the light theme, where a lighter blue would be the wrong direction.
+   */
+  --color-accent-ink: #6193f3;
+  /*
+   * What is written ON that fill, declared HERE and not only in the daisyUI blocks: three dock
+   * components read `text-accent-content`, and leaving the name to daisyUI's variable map would
+   * make them depend on a plugin `CLAUDE.md` reserves for the surfaces outside the docks.
+   * `useAppearance` overwrites it for a picked accent — see `contentFor`.
+   */
+  --color-accent-content: #ffffff;
+  /*
+   * The fill under the pointer, opaque — where `bg-accent/85` used to let the surface through and
+   * therefore LIGHTENED the button on the light theme, taking its white label to 3.52:1. Same
+   * value in both themes because the accent is, and `useAppearance` overwrites it for a picked
+   * one — see `hoverFor`, which draws this from the accent the way `create-hover` was drawn.
+   *
+   * The dark theme moves too, and knowingly: the alpha composed to #3061d2 over a panel, #3162d3
+   * over a surface and #3364d5 over the chassis — one hover wearing three colours — and this is
+   * one colour, a touch darker than any of them.
+   */
+  --color-accent-hover: #2a58c2;
   --color-accent-soft: #2e436e;
   --color-danger: #ff715b;
   /*
-   * The one button that CREATES rather than shows. Its own token, warm against the blue accent
-   * of everything that merely selects: the new-document button has to be findable in a rail of
-   * grey glyphs without borrowing the colour that means "focused".
+   * Something did not go as asked, but nothing was lost — a rename that reached the disk and
+   * not the library. Its own token rather than `danger`: a journal where a warning is painted
+   * like a failure is a journal in which nothing stands out.
+   *
+   * daisyUI declares `warning` too, and the two namespaces are one set of variables. Declared
+   * here all the same, with daisyUI's own value: the journal lives in a dock, so it reads a
+   * studio token — and the two are made to agree rather than one being left to win on layer
+   * order, which is the lesson `--color-accent` cost below.
    */
-  --color-create: #c65b4b;
-  --color-create-hover: #b04f40;
+  --color-warning: #e0a350;
+  /*
+   * The one button that CREATES rather than shows. Its own token, apart from the blue accent of
+   * everything that merely selects: the new-document button has to be findable in a rail of grey
+   * glyphs without borrowing the colour that means "focused". Opaque, both of them — half an
+   * alpha over the chassis reads as a disabled button rather than the one action always offered.
+   */
+  --color-create: #12b600;
+  --color-create-hover: #0e9200;
+  /*
+   * What is drawn ON that green, and the only ink in the studio that is DARKER than its fill. A
+   * white glyph on this vivid green carries 2.72:1 — under the 3:1 WCAG 1.4.11 asks of a glyph —
+   * where a near-black one carries 6.63. daisyUI reaches the same answer for `success-content`.
+   */
+  --color-create-content: #12180f;
   --color-text: #dfe1e5;
-  --color-muted: #868a91;
+  /*
+   * Raised from #868a91, which read 3.98:1 on the chassis — under 4.5, and the chassis is where
+   * the whole title bar rests. It stays under on `elevated`, a pairing nothing makes: a hovered
+   * control goes to `text`, never to this.
+   */
+  --color-muted: #91959b;
+
+  /*
+   * Marching ants — the outline of a selection, of a crop frame, of a shape being drawn. Two
+   * strokes, a light one under a dark dashed one, as Photoshop has drawn them for thirty years
+   * and as map3D draws them here. Deliberately white and black rather than palette greys: the
+   * outline crosses whatever the document happens to hold, and only a full-contrast alternation
+   * stays legible over a photograph, a flat white and a flat black alike.
+   *
+   * They do NOT swap with the theme, for that same reason: the picture underneath does not.
+   */
+  --color-marquee-light: #ffffff;
+  --color-marquee-dark: #000000;
 
   /*
    * The 3D viewport is neither a panel surface nor the chassis: it is a working space, and it
@@ -48,17 +137,124 @@
    */
   --color-monitor: #000000;
   /*
+   * A sound clip on the strip, where a picture clip stays `elevated`. Colour is what tells the
+   * two apart at a glance on a montage scrolled past its labels — the reading every editing
+   * suite gives its rows.
+   *
+   * Its LUMINANCE is `elevated`'s, near enough: the label is painted in `text` and the waveform
+   * in `muted`, and both are held on this fill by `design/tokens.test.ts`. A greener green would
+   * have taken the waveform under the 3:1 of WCAG 1.4.11.
+   */
+  --color-clip-audio: #264a31;
+  /*
    * Untextured geometry. Its own token and not `--color-muted`, which is a TEXT colour: raising
-   * the contrast of a dimmed label would otherwise repaint every mesh in the scene.
+   * the contrast of a dimmed label would otherwise repaint every mesh in the scene. That is not
+   * a hypothesis — `muted` was raised for exactly that reason and this value stayed where it was,
+   * which is what having two tokens bought.
    */
   --color-mesh: #868a91;
+  /*
+   * What dims the part of a document a crop is about to throw away. Translucent black rather
+   * than a flat grey: the picture underneath has to stay readable, or the frame cannot be
+   * placed against what it cuts.
+   */
+  --color-scrim: #00000099;
+  /*
+   * What the studio becomes while one is talking to it: a backdrop, not a workspace.
+   *
+   * Its own token rather than a heavier `--color-scrim`, because the two answer opposite needs.
+   * That one dims what a crop is about to throw away and the picture underneath HAS to stay
+   * readable; this one is behind a conversation, where a panel still legible enough to read
+   * competes with the words for the eye.
+   *
+   * The studio's own deep grey — `panel` — rather than black, which read as a hole cut in the
+   * window rather than as the application sunk behind a conversation. And four fifths rather than
+   * opaque: at 95% the studio disappeared entirely and this became a separate app. What is wanted
+   * is the studio still THERE, behind the words, which is also why the blur goes with it rather
+   * than more alpha.
+   */
+  --color-scrim-deep: #191a1ccc;
 
   --radius-sc-sm: 4px;
   --radius-sc-md: 6px;
   --radius-sc-lg: 10px;
 
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  /* No webfont ships with the studio: naming one it never loads only made the stack lie. */
+  --font-sans: system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /*
+   * The text ladder — every size the studio writes, and the only thing `--sc-font-scale` can
+   * reach. Pixels times the scale, NOT `rem`: `rem` answers to the root element, which this
+   * stylesheet never sizes, so Tailwind's steps shipped frozen at a 16px root while the
+   * preference moved nothing. Each value is what its sites already read, so scale 1 renders
+   * to the pixel as before.
+   *
+   * Tailwind's own four are re-valued rather than replaced, because they carry a paired
+   * `--text-*--line-height` their sites render today. That pair is a ratio, so it follows the
+   * font-size on its own. The four below are the steps Tailwind has no slot for, and they carry
+   * no pair — their sites inherit the 1.5 of preflight, which is what they did as `text-[11px]`.
+   */
+  --text-micro: calc(9px * var(--sc-font-scale));
+  --text-mini: calc(10px * var(--sc-font-scale));
+  --text-tiny: calc(11px * var(--sc-font-scale));
+  --text-body: calc(13px * var(--sc-font-scale));
+  --text-xs: calc(12px * var(--sc-font-scale));
+  --text-sm: calc(14px * var(--sc-font-scale));
+  --text-base: calc(16px * var(--sc-font-scale));
+  --text-lg: calc(18px * var(--sc-font-scale));
+}
+
+/*
+ * The ladder, declared as LENGTHS. Without this a painter reading `--text-tiny` off the root gets
+ * the token stream back — `calc(11px * 1)`, the literal text — because an unregistered custom
+ * property computes to its value with variables substituted and nothing else evaluated. Typed,
+ * it computes to `11px`, and to `15.4px` at scale 1.4; that is what the canvas rulers and the
+ * timeline read through `engines/core/palette.ts`.
+ *
+ * `initial-value` is the step at scale 1, so an unreadable `--sc-font-scale` falls to the size
+ * the studio shipped rather than to nothing at all. Laid-out text is unaffected: `font-size:
+ * var(--text-tiny)` resolved the same calc before.
+ */
+@property --text-micro {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 9px;
+}
+@property --text-mini {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 10px;
+}
+@property --text-tiny {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 11px;
+}
+@property --text-body {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 13px;
+}
+@property --text-xs {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 12px;
+}
+@property --text-sm {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 14px;
+}
+@property --text-base {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 16px;
+}
+@property --text-lg {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 18px;
 }
 
 /*
@@ -80,8 +276,8 @@
   --color-base-200: #191a1c;
   --color-base-300: #2b2d30;
   --color-base-content: #dfe1e5;
-  --color-primary: #3574f0;
-  --color-primary-content: #f4f6fa;
+  --color-primary: #346ef2;
+  --color-primary-content: #ffffff;
   --color-secondary: #3c3f44;
   --color-secondary-content: #dfe1e5;
   /*
@@ -91,12 +287,12 @@
    * accent. It is the studio's value that stands, because that is the one eight surfaces read;
    * no daisyUI component uses `accent` at all.
    */
-  --color-accent: #3574f0;
-  --color-accent-content: #f4f6fa;
+  --color-accent: #346ef2;
+  --color-accent-content: #ffffff;
   --color-neutral: #34363a;
   --color-neutral-content: #dfe1e5;
-  --color-info: #3574f0;
-  --color-info-content: #f4f6fa;
+  --color-info: #346ef2;
+  --color-info-content: #ffffff;
   --color-success: #57a773;
   --color-success-content: #12180f;
   --color-warning: #e0a350;
@@ -133,24 +329,29 @@
   --color-base-200: #ffffff;
   --color-base-300: #dcdde1;
   --color-base-content: #1f2124;
-  --color-primary: #3574f0;
+  --color-primary: #346ef2;
   --color-primary-content: #ffffff;
   --color-secondary: #e4e6ea;
   --color-secondary-content: #1f2124;
   /* One variable for daisyUI and the studio alike — see the dark theme above. */
-  --color-accent: #3574f0;
+  --color-accent: #346ef2;
   --color-accent-content: #ffffff;
   --color-neutral: #c9cbd1;
   --color-neutral-content: #1f2124;
-  --color-info: #3574f0;
+  --color-info: #346ef2;
   --color-info-content: #ffffff;
-  --color-success: #2f7d4f;
+  /*
+   * The status hues, DARKENED once more — the previous green cleared 4.5:1 on a panel and on a
+   * surface and failed it on the chassis, which is where a status word most often sits. Each is
+   * its own hue moved toward black by `inkFor`, the same ramp the accent a user picks takes.
+   */
+  --color-success: #296e46;
   --color-success-content: #ffffff;
   /* Darkened from the dark theme's amber: #e0a350 on white carries no text and reads as beige. */
-  --color-warning: #a86a08;
+  --color-warning: #885606;
   --color-warning-content: #ffffff;
   /* Same reason: the dark theme's coral is a highlight on black and a pastel on white. */
-  --color-error: #d0342c;
+  --color-error: #b72e27;
   --color-error-content: #ffffff;
 
   --radius-selector: 4px;
@@ -167,12 +368,27 @@
   --color-surface: #f5f6f8;
   --color-elevated: #e4e6ea;
   --color-border: #c9cbd1;
+  /* Darker than the dark theme's, not lighter: the ink has to leave the background it sits on. */
+  --color-accent-ink: #2a5dc0;
+  /* Restated rather than inherited: this theme reads its own block, and the accent could part. */
+  --color-accent-hover: #2a58c2;
   --color-accent-soft: #d3e1fb;
-  --color-danger: #d0342c;
-  --color-create: #c65b4b;
-  --color-create-hover: #b04f40;
+  /* The studio's own name for daisyUI's `error`, and the same value: two reds would be one too many. */
+  --color-danger: #b72e27;
+  /*
+   * The one token this theme darkens away from its dark twin rather than alongside it —
+   * `main/window/theme.test.ts` carries why. The green is drawn IN and drawn ON: `text-create`
+   * names a leading slide, `bg-create` fills the rail's create button under a white icon, and at
+   * #12b600 that icon carried 2.72:1, under even the 3:1 WCAG 1.4.11 asks of a glyph.
+   * The hover keeps its LUMINANCE ratio to the resting fill, so pointing still darkens the button.
+   */
+  --color-create: #0b7100;
+  --color-create-hover: #095a00;
+  /* White here, where the dark theme goes near-black: this green is dark enough to carry it, 6.22:1. */
+  --color-create-content: #ffffff;
   --color-text: #1f2124;
-  --color-muted: #6b7078;
+  /* Lowered from #6b7078, which read 3.67:1 on this theme's chassis. Same reason as the dark. */
+  --color-muted: #5d6168;
 
   /*
    * The viewport stays a working space rather than becoming part of the page: here that means
@@ -187,34 +403,122 @@
    * on, whatever the studio's own chrome is doing — the same trade the opaque window makes.
    */
   --color-monitor: #000000;
+  /* The same trade as the dark theme's green: `elevated`'s luminance here, so the label and the
+     waveform read on it exactly as they do on a picture clip. */
+  --color-clip-audio: #d5ecdb;
+  /*
+   * Restated identically, and for the same reason as the monitor: the marching ants are drawn
+   * over the document, not over the studio's chrome, and the document does not change with the
+   * theme. Swapping them would make the outline vanish over a light picture.
+   */
+  --color-marquee-light: #ffffff;
+  --color-marquee-dark: #000000;
+  /*
+   * Lighter than its dark counterpart: on a light document the same black would read as a hole
+   * rather than as a dimmed part of the picture.
+   */
+  --color-scrim: #0000004d;
+  /*
+   * The light theme's own panel, as the dark one takes the dark panel: this veil sinks the studio
+   * into the ground of whichever theme is on, rather than darkening it. It has to — the
+   * conversation over it is painted in `text`, which is DARK here, and a black veil would leave
+   * it unreadable.
+   */
+  --color-scrim-deep: #ffffffcc;
 }
 
 :root {
   /* Overwritten inline by `useAppearance`; the value here is what an unstyled root falls to. */
   --sc-font-scale: 1;
   --sc-control: 28px;
+  /* A control that sits INSIDE a list row rather than on a bar: the visibility eye, a layer's
+     padlock. `--sc-control` is the gauge of a BAR, and two of them at the end of a 28px line took
+     68px of it — more than a fifth of a side panel, on the very rows whose name is what one reads.
+
+     Deliberately under the 24px WCAG 2.2 SC 2.5.8 asks for, under the criterion's spacing
+     exception: these are the only targets on their line, and the row itself answers everywhere
+     they do not. Chosen on 2026-08-14, not derived. */
+  --sc-control-inline: 20px;
+  /* A list row that stacks a name over a subtitle. `--sc-control` cannot hold it: two steps of
+     `leading-tight` text are 27.5px, which fills a 28px row edge to edge and overflows a compact
+     one. Its own gauge rather than a padding on the row, because the virtualizer is given a
+     NUMBER and a padding would not reach it.
+
+     Flat, where `--sc-indent` next door is derived, and the difference is NOT an oversight:
+     nothing reads `--sc-indent` from JavaScript, whereas `useGauge` reads this one and tests
+     `endsWith('px')`. An unregistered property computes to its value with variables substituted
+     and nothing evaluated, so `calc(var(--sc-control) + 8px)` reads back as that very string,
+     fails the test, and falls to the shipped number at every density — silently. Deriving it
+     means registering it with `@property` first, and that has to be measured in Electron: jsdom
+     evaluates no calc, so no suite here would see the difference. */
+  --sc-row-stacked: 36px;
+  /* The same two steps of text under a fill that STANDS THERE — the open project on the home,
+     which `selectionTone: 'strong'` paints for as long as the project is open. At 36 that fill
+     leaves ~4px above and below the text, which reads as words pressed against their own
+     highlight rather than as a line standing in it; 44 leaves ~8.
+
+     Not "the rows that have a fill", which would be every picked row: `rowSkin` paints a selection
+     edge to edge in every list. What is answered here is a fill nobody has to select to see, and
+     only the home has one.
+
+     Its own gauge and not a taller `--sc-row-stacked`: raising the shared one for the home's sake
+     also loosened the documents panel, which stacks the same two steps. Flat, for the reason
+     above. */
+  --sc-row-filled: 44px;
   /* Rail width: the button (36) plus the margin keeping it off the window edge. */
   --sc-rail: 48px;
   --sc-rail-button: 36px;
+  /* What aligns on the rail's edge — today the footer. A chosen width, deliberately NOT the
+     rail's own `(rail - button) / 2`, which is 6px: the inset was widened on purpose. It does
+     not follow density either, so there is no second declaration below. */
+  --sc-rail-inset: 14px;
   --sc-gutter: 6px;
+  /* One step of indentation, wherever a tree draws depth — the layer stack included, which a
+     comment here claimed walked a narrower step of its own until 2026-08-14. It never did: it
+     goes through `Tree`, which knows one indent. Believing otherwise is what let a batch close
+     the fold column on leaves without noticing that the column and this step are the SAME 12px,
+     so a layer inside a group landed at its parent's x, and 4px to its left in compact.
+
+     Derived, so it follows density without a second declaration below — and named, because `Tree`
+     and the settings column had started to spell the same two gutters out on their own. */
+  --sc-indent: calc(var(--sc-gutter) * 2);
   --sc-header: 40px;
   /* The strip, not the tab: the tab sits inside it with 6px of air above and below, so this
      value is the pill's height plus that margin. */
   --sc-tab: 40px;
   /* Track header column: wide enough for a name plus mute, solo and lock on one line. */
   --sc-track-header: 140px;
+  /* The label column of a property line, whichever family draws it: `PropertyRow` for a value to
+     read, the fields for a control to change it. Two hardcoded widths — 80 and 64 — used to be
+     two declarations of the same thing, and five inspectors out of six show both families in one
+     group, so their labels started in two different places. 80 is the wider of the two, and the
+     one that was measured: `Aperçu de la répétition` does not fit in 64. */
+  --sc-label: 80px;
+  /* How wide a tooltip may grow before it wraps. Unbounded, it took the width of its longest
+     line — a layer named with a whole sentence drew a band across the canvas beside its panel,
+     which is the surface the studio exists to let one judge.
+     In `ch` and not pixels, the one measure in this block that has to be: the bubble wears
+     `--text-tiny`, which follows `appearance.fontScale` from 0.85 to 1.4, and a fixed width
+     would turn two lines into four for exactly the readers who enlarged the text. `Spotlight`
+     measures its prose the same way. Held out of the density block on purpose: a tooltip is
+     read, not operated. */
+  --sc-tooltip: 42ch;
   --sc-shadow-furniture: 0 1px 2px rgb(0 0 0 / 0.25);
   --sc-shadow-floating: 0 8px 24px rgb(0 0 0 / 0.55);
 }
 
 :root[data-density='compact'] {
   --sc-control: 24px;
+  --sc-control-inline: 18px;
+  --sc-row-stacked: 32px;
+  --sc-row-filled: 38px;
   --sc-rail: 42px;
   --sc-rail-button: 32px;
   --sc-gutter: 4px;
   --sc-header: 28px;
   --sc-tab: 32px;
   --sc-track-header: 120px;
+  --sc-label: 72px;
 }
 
 html,
@@ -223,14 +527,108 @@ body,
   height: 100%;
 }
 
+/*
+ * React Flow reads its own colours from these, so the canvas is dressed by the studio's tokens
+ * rather than by a stylesheet holding hex values of its own — the one rule no component escapes.
+ *
+ * The dashed, thick edge is the webapp's: `stroke-width: 3; stroke-dasharray: 8`, read off
+ * `app.scenario.com`. Keeping it means a graph looks the same in both editors, which is the
+ * point of adopting their format in the first place.
+ */
+.react-flow {
+  --xy-background-color: var(--color-panel);
+  --xy-background-pattern-color: var(--color-border);
+  --xy-node-color: var(--color-text);
+  --xy-edge-stroke: var(--color-border);
+  --xy-edge-stroke-selected: var(--color-accent);
+  --xy-edge-stroke-width: 3;
+  --xy-connectionline-stroke: var(--color-accent);
+  --xy-connectionline-stroke-width: 3;
+  --xy-handle-background-color: var(--color-surface);
+  --xy-selection-background-color: var(--color-accent-soft);
+  --xy-selection-border: 1px dotted var(--color-accent);
+  --xy-resize-background-color: var(--color-accent);
+}
+
+.react-flow__edge-path,
+.react-flow__connection-path {
+  stroke-dasharray: 8;
+}
+
+/*
+ * react-tooltip pads a wrapper INSIDE the bubble — `8px 16px`, on a node `TooltipHost` never
+ * names — and the classes it puts on the bubble itself cannot reach it. Left alone, the padding
+ * that host declares is added to this one rather than being it, and the bubble reads as a plaque:
+ * measured at 130×39 for one 11-pixel line. The bubble keeps its own padding; this one goes.
+ *
+ * Two class names deep because the library's own rule is one, and its stylesheet is injected
+ * after this file: at equal specificity the later rule wins, and a single class here was
+ * measured doing nothing at all.
+ */
+.react-tooltip .react-tooltip-content-wrapper {
+  padding: 0;
+}
+
+/*
+ * NO focus ring anywhere in the studio — the owner's call, taken on 2026-08-15 after the one on
+ * the title bar was seen clipped by the bar's own `overflow-hidden`.
+ *
+ * Here and not in `design/styles.ts` because "anywhere" includes what no constant of ours dresses:
+ * Chromium's native outline, daisyUI's on the preference surfaces, and every component written
+ * after this line. A `FOCUS_RING` each caller had to remember to carry could not hold that.
+ *
+ * `!important` for the same reason: daisyUI states its own with two class names, and this rule
+ * has one. What it costs is stated plainly — WCAG 2.4.7 asks for a visible focus indicator, and
+ * the studio no longer has one; keyboard focus moves without anything on screen following it.
+ * `design/no-focus-ring.test.ts` keeps a ring from creeping back in one component at a time.
+ */
+:focus,
+:focus-visible {
+  outline: none !important;
+}
+
+/*
+ * What a picture sits on once it fills the screen — the video return put on a second display and
+ * filled from the window menu, and anything else a viewer takes full screen later.
+ *
+ * The monitor keeps `chassis` inside the studio, where the panel around it is what says "this is
+ * a surface". Full screen there is no panel, and a dark grey field around a film is the one thing
+ * a room notices. Chromium paints the layer behind it too, hence the backdrop: without it the
+ * page shows through at the edges.
+ */
+:fullscreen,
+:fullscreen::backdrop {
+  background: var(--color-monitor);
+}
+
+/*
+ * A surface that scrolls without saying so.
+ *
+ * For the conversation, and it is the one place it belongs: a thread reads as a page of words, and
+ * a bar down its side turns it back into a scrolling box. Everywhere else in the studio the bar is
+ * information — a panel of layers, a list of assets, an inspector all use it to say how much more
+ * there is.
+ *
+ * A utility rather than a class written in the component, so the two spellings it takes — the
+ * WebKit pseudo-element and the standard property — stay together. They are one rule.
+ */
+@utility scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 body {
   margin: 0;
   background: var(--color-chassis);
   color: var(--color-text);
   font-family: var(--font-sans);
-  /* Every `rem` and every text size follows from this one; the gauges stay in pixels, because
-     a control has to keep hitting the same target size whatever the text does. */
-  font-size: calc(13px * var(--sc-font-scale));
+  /* What text without a size class falls to; the ladder above says why it is not `rem`. The
+     gauges stay in pixels, because a control has to keep hitting the same target size whatever
+     the text does. */
+  font-size: var(--text-body);
   /* A studio never scrolls as a whole: every panel handles its own overflow. */
   overflow: hidden;
   user-select: none;

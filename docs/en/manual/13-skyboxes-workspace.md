@@ -67,22 +67,44 @@ This is **not** a camera orbiting something — you are at the centre of the sph
 you. The drag follows your hand: pulling to the right turns the view to the left, as if you were
 grabbing the world.
 
-### The preview bar
+### The View panel
 
-Top left.
+In the right column, under the Skybox panel. Two sections.
+
+**Projection**
 
 | Control | What it does |
 |---|---|
 | **360°** | the immersive view — you are inside the sky |
-| **Equirect** | the image laid flat *(not wired up yet)* |
-| **Cross** | the six faces unfolded as a cross *(not wired up yet)* |
-| **6 faces** | the six faces side by side *(not wired up yet)* |
+| **Equirect** | the image laid flat, as it is stored — twice as wide as it is tall |
+| **Cross** | the six faces unfolded as a cross, on a 4 × 3 grid |
+| **6 faces** | the same six faces packed 3 × 2 — the cross spends half its cells on nothing, this one spends none, so a face is inspected at nearly twice the size |
+| **Field of view** | from 50° to 110°, 75° by default — **only affects the 360° view** |
+
+> **The three flat views are not pictures built on the side**: every pixel of the frame asks the
+> question backwards — which direction of the sky is this, and where does it land in the source.
+> So the sky they show is exactly the one of the immersive view, at the same rotation.
+>
+> They **letterbox their picture** rather than stretching it, and while one of them is in front the
+> backdrop and the test objects go dark: they would sit behind the picture, and the immersive sky
+> showing through the bars would read as part of what is being judged.
+
+**Helpers**
+
+| Control | What it does |
+|---|---|
 | **Test objects** | shows or hides witness spheres |
-| **Field of view** | from 50° to 110°, 75° by default |
+
+> **These settings live in a panel, not above the image.** The centre carries the toolbar and the
+> rulers, nothing else: a menu laid over the preview would cover the one thing this workspace
+> exists to show.
+
+**Two keys skip the panel**: `V` cycles through the four views, `P` shows or hides the test
+objects. `⌘Z` and `⇧⌘Z` undo and redo here as anywhere else — see [Every shortcut](15-shortcuts.md).
 
 **The test objects** are spheres set in the middle of the sky: one matte, one glossy, one metallic.
-They are not part of the sky — they are there to **see what the sky lights**. A sky is judged by
-what it does to objects, not only by its own image. That is why they are visible by default.
+They are not part of the sky — they are there to **see what the sky lights**, and are visible by
+default.
 
 **The field of view** is the equivalent of a camera lens: a small angle is a telephoto, you see
 little but closely; a wide angle shows a lot, but the edges distort.
@@ -162,12 +184,46 @@ place. Two ways to carry on:
 
 ---
 
+## Taking the sky out: the six faces
+
+**File › Export the sky**, then a size: 512, 1024 or 2048 pixels a side. The studio asks for a
+folder, creates one named after the document inside it, and writes six PNGs:
+
+| File | Face |
+|---|---|
+| `<title>_Rt.png` | right |
+| `<title>_Lf.png` | left |
+| `<title>_Up.png` | above |
+| `<title>_Dn.png` | below |
+| `<title>_Ft.png` | front |
+| `<title>_Bk.png` | back |
+
+Those two letters are the ones engines expect — Unity, Unreal and Roblox all read them, Roblox
+with a `Skybox` prefix. The faces follow the OpenGL cube map convention, so they come in the
+right way up without any of them needing to be flipped.
+
+Three things worth knowing:
+
+- **your settings leave with the pixels.** Exposure, contrast, saturation, temperature and
+  horizon rotation are baked into the six files. What you judged is what comes out;
+- **the export reads the source, not the preview.** The viewport works on a reduced copy to stay
+  responsive; the export starts again from the original picture at its own size, whatever face
+  size you asked for;
+- **the file may look more contrasted than the screen.** The viewport applies a render curve to
+  show a very bright picture on a screen that is not; the file carries the values, not that
+  curve. This is deliberate: your engine will apply its own, and baking one here would apply it
+  twice.
+
+A sky with no picture does not export: the studio says so in the journal rather than opening a
+folder chooser for six empty files.
+
+---
+
 ## What is still missing
 
-- **three views out of four** — Equirect, Cross and 6 faces are buttons that draw nothing yet;
-- **the Regenerate and Reset buttons** — announced in the translations, never placed in the panel;
-- **export** — you cannot yet write the six faces of a cube, nor an HDRI usable elsewhere;
-- **saving** — a sky is not yet written into a `.sky` file. Closing the tab loses the settings;
+- **the Regenerate and Reset buttons** — the panel does not place them;
+- **HDRI export** — the six faces come out as PNG, so eight bits a channel: anything above white
+  is clipped. For high dynamic range lighting there is no output yet;
 - **importing a `.hdr`** — the studio only imports ordinary images. An imported `.exr` is catalogued
   as an image, not as a sky. It still works as a source, but you have to go and find it among the
   images.

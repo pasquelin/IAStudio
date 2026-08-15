@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest'
+import { MAX_SCALE as TIMELINE_MAX_SCALE } from '@/engines/timeline/viewport'
 import {
   centerOn,
-  clampScale,
+  clampCanvasScale,
   containIn,
   fitTo,
-  MAX_SCALE,
-  MIN_SCALE,
+  CANVAS_MAX_SCALE,
+  CANVAS_MIN_SCALE,
   nextZoom,
   previousZoom,
   toDocument,
   toScreen,
   visibleRect,
-  zoomAt,
+  zoomCanvasAt,
   type Viewport,
 } from './viewport'
 
@@ -26,16 +27,16 @@ describe('viewport', () => {
   })
 
   it('clamps a scale to what the renderer can show', () => {
-    expect(clampScale(1000)).toBe(MAX_SCALE)
-    expect(clampScale(0)).toBe(MIN_SCALE)
-    expect(clampScale(Number.NaN)).toBe(1)
+    expect(clampCanvasScale(1000)).toBe(CANVAS_MAX_SCALE)
+    expect(clampCanvasScale(0)).toBe(CANVAS_MIN_SCALE)
+    expect(clampCanvasScale(Number.NaN)).toBe(1)
   })
 
   it('keeps the point under the anchor fixed while zooming', () => {
     const anchor = { x: 300, y: 180 }
     const before = toDocument(VIEWPORT, anchor)
 
-    const zoomed = zoomAt(VIEWPORT, 8, anchor)
+    const zoomed = zoomCanvasAt(VIEWPORT, 8, anchor)
 
     expect(zoomed.scale).toBe(8)
     expect(toDocument(zoomed, anchor).x).toBeCloseTo(before.x)
@@ -73,8 +74,8 @@ describe('viewport', () => {
   it('walks the zoom stops in both directions', () => {
     expect(nextZoom(1)).toBe(1.5)
     expect(previousZoom(1)).toBe(0.6667)
-    expect(nextZoom(MAX_SCALE)).toBe(MAX_SCALE)
-    expect(previousZoom(MIN_SCALE)).toBe(MIN_SCALE)
+    expect(nextZoom(CANVAS_MAX_SCALE)).toBe(CANVAS_MAX_SCALE)
+    expect(previousZoom(CANVAS_MIN_SCALE)).toBe(CANVAS_MIN_SCALE)
   })
 
   it('does not stall on a stop it already sits on', () => {
@@ -114,4 +115,44 @@ describe('viewport', () => {
       expect(laid).toEqual({ x: 0, y: 250, width: 1000, height: 500 })
     })
   })
+})
+
+/**
+ * The canvas and the timeline each bound a scale, in two files of the SAME name, and their bounds
+ * are four orders of magnitude apart: a canvas zooms between 0.02× and 64×, a timeline between a
+ * millionth and two thousandths of a second per pixel. Both were once exported as `MIN_SCALE` and
+ * `MAX_SCALE`, and both take and return a bare `number` — so an auto-import reaching the wrong
+ * file compiled, and clamped a zoom to a unit it had never heard of.
+ *
+ * The names now say which. This reads BOTH sides on purpose: a claim about two ranges that only
+ * ever measured one would be the costliest kind of comment — true-looking, and half-checked.
+ */
+describe("the canvas scale bounds, which are not the timeline's", () => {
+  it('lets a canvas zoom out to a fiftieth and in to sixty-four times', () => {
+    expect(CANVAS_MIN_SCALE).toBe(0.02)
+    expect(CANVAS_MAX_SCALE).toBe(64)
+  })
+
+  // The other side, read from its own module: the day the two ranges meet, one of them was
+  // imported by mistake or unified on purpose, and either way somebody must say so out loud.
+  it('bounds nothing the timeline bounds', () => {
+    expect(CANVAS_MIN_SCALE).toBeGreaterThan(TIMELINE_MAX_SCALE)
+  })
+
+  /*
+   * The ladder ⌘+ and ⌘− walk is written as literals beside these constants, so it can drift from
+   * them without a word. Asked through the walk rather than by exporting the array: what matters
+   * is that the ends of the ladder ARE the bounds, not how the ladder is stored.
+   */
+  it('walks a ladder that ends exactly on its own bounds', () => {
+    expect(previousZoom(0.03)).toBe(CANVAS_MIN_SCALE)
+    expect(nextZoom(48)).toBe(CANVAS_MAX_SCALE)
+  })
+
+  /*
+   * Retired rather than kept: `clampCanvasScale(1e-6) === CANVAS_MIN_SCALE` holds whatever that
+   * constant is, so it survived the very mutation it was written against — measured, the harness
+   * unified the bound to the timeline's and only the figures above went red. An assertion phrased
+   * against the symbol it is testing proves the symbol equals itself.
+   */
 })

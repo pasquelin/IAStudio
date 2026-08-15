@@ -1,6 +1,9 @@
-import { create } from 'zustand'
+import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import {
+  discardLast,
   emptyHistory,
+  forget,
+  markOf as historyMark,
   redo,
   run,
   runCoalescing,
@@ -20,6 +23,16 @@ export type DocumentStoreState<S> = {
   saved: Record<string, Command<S> | null>
   runCommand: (documentId: string, command: Command<S>) => void
   /**
+   * Writes a command that belongs to nobody's gesture — a job that lands whenever it lands, a
+   * picture dropped on a document.
+   *
+   * The store cannot tell where a command came from, and no rule on `command.id` can: provenance
+   * has to be said. Said, such a command neither merges into an open gesture nor takes it over —
+   * two generations landing while a cursor is held stay two entries, and the cursor goes on
+   * collapsing into its own.
+   */
+  runOutsideGesture: (documentId: string, command: Command<S>) => void
+  /**
    * Opens a gesture: from here until `endGesture`, successive commands of the same edit collapse
    * into one history entry. A slider dragged across a panel is one thing the user did, and ⌘Z
    * has to give all of it back at once.
@@ -28,18 +41,9 @@ export type DocumentStoreState<S> = {
   endGesture: (documentId: string) => void
   /** Writes without touching the history — selection is not a command. */
   replace: (documentId: string, state: S) => void
-  /**
-   * Reverts the last command and forgets it, rather than moving it to the redo stack. For a
-   * gesture that turned out to be a no-op — a guide pulled off a ruler and dropped back on it —
-   * where `undo` would leave ⌘Y able to resurrect what the user just threw away.
-   */
+  /** `discardLast` of `history.ts`, on this document. */
   discardLast: (documentId: string) => void
-  /**
-   * Drops an entry the engine can no longer replay, and everything the stack would have to step
-   * over to reach it. Undo is sequential, so an entry left behind a missing one is unreachable
-   * anyway — leaving it in place would show a ⌘Z that does nothing rather than one that has run
-   * out, which is the difference between a limit and a bug.
-   */
+  /** `forget` of `history.ts`, on this document — for a patch the engine can no longer replay. */
   forgetThrough: (documentId: string, commandId: string) => void
   /**
    * Installs a starting state on first open, built rather than shared: a scene needs its own
@@ -61,11 +65,26 @@ export type DocumentStoreState<S> = {
 type Readable<S> = Pick<DocumentStoreState<S>, 'states' | 'histories' | 'saved'>
 
 /**
+ * A space's store, as anything generic over spaces sees it. Spelled out rather than inferred so
+ * that `document-io` can take one as an argument: five kinds reach the disk the same way, and
+ * the alternative was that mechanism written out once per kind.
+ */
+export type DocumentStore<S> = {
+  use: UseBoundStore<StoreApi<DocumentStoreState<S>>>
+  stateOf: (state: Readable<S>, documentId: string) => S
+  hasState: (state: Readable<S>, documentId: string) => boolean
+  historyOf: (state: Readable<S>, documentId: string) => History<S>
+  markOf: (state: Readable<S>, documentId: string) => Command<S> | null
+  isDirty: (state: Readable<S>, documentId: string) => boolean
+  hasUnsavedWork: (state: Readable<S>, documentId: string) => boolean
+}
+
+/**
  * The per-document state, history and undo/redo shared by every editable space. Canvases and
  * scenes differ only in what they hold: the bookkeeping around it is the same, and writing it
  * twice meant a fix landing in one space and not the other.
  */
-export function createDocumentStore<S>(defaultState: S) {
+export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
   // Shared: `historyOf` runs on every selector pass, and a fresh pair per call is garbage.
   const NO_HISTORY: History<S> = emptyHistory<S>()
 
@@ -77,6 +96,12 @@ export function createDocumentStore<S>(defaultState: S) {
    */
   const gestures = new Map<string, string | null>()
 
+  /**
+   * Documents this store has been told to forget, held until one is opened again. Outside the
+   * store for the same reason as `gestures`, and read by `step`, which says what it protects.
+   */
+  const dropped = new Set<string>()
+
   const stateOf = (state: Readable<S>, documentId: string): S =>
     state.states[documentId] ?? defaultState
 
@@ -87,30 +112,60 @@ export function createDocumentStore<S>(defaultState: S) {
   const historyOf = (state: Readable<S>, documentId: string): History<S> =>
     state.histories[documentId] ?? NO_HISTORY
 
-  /**
-   * Where the document's history stands, as one value. The command it ended on, not a counter:
-   * undoing back to where the file was written makes the document clean again, which a counter
-   * would keep calling modified.
-   */
+  /** Where the document's history stands, as one value — see `markOf` in `history.ts`. */
   const markOf = (state: Readable<S>, documentId: string): Command<S> | null =>
-    historyOf(state, documentId).past.at(-1) ?? null
+    historyMark(historyOf(state, documentId))
 
   /**
    * Whether anything has been done since the document was last written. A document with no mark
    * at all reads `undefined`, which no history position ever equals — never saved is modified.
+   *
+   * This is what the tab's bullet reads, and "never written" is exactly what it must show.
    */
   const isDirty = (state: Readable<S>, documentId: string): boolean =>
     state.saved[documentId] !== markOf(state, documentId)
+
+  /**
+   * Whether closing this document would throw work away — a different question from `isDirty`,
+   * and the one a confirmation dialog must ask.
+   *
+   * A tab opened and never touched is modified in the bullet's sense (nothing of it is on disk)
+   * while holding nothing anyone would miss. Asking about it turns every stray ⌘W into a modal
+   * question about a document that does not exist yet.
+   */
+  const hasUnsavedWork = (state: Readable<S>, documentId: string): boolean => {
+    const never = state.saved[documentId] === undefined && markOf(state, documentId) === null
+    return !never && isDirty(state, documentId)
+  }
 
   const use = create<DocumentStoreState<S>>()((set, get) => {
     /**
      * `run`, `undo` and `redo` share one signature, so the three actions share one body: read
      * the document's pair, step it, write it back.
+     *
+     * A document that was CLOSED is left alone, and that guard is what keeps it from coming back:
+     * `forgetDocument` drops the state and only THEN closes the panel, so every effect that
+     * commits on its way out — the rename field is the one that does — runs after the document is
+     * gone. Writing there would read the default state through `stateOf` and put it back as
+     * `states[documentId]`, which reads as a document already open: the file would never be read
+     * again, and the montage would reopen empty.
+     *
+     * Closed AND still gone, never one or the other. A document with no state yet is a normal
+     * thing to write to — a generation claimed onto a canvas whose tab was never touched creates
+     * it on the way in, and 28 cases across the stores describe that. And a document whose state
+     * came back is open again whichever door it came through, including the `setState` a suite
+     * installs its fixtures with.
+     *
+     * `forgetThrough` and `markSaved` write outside this path and are NOT guarded: called after a
+     * drop they leave an entry behind in `histories` or `saved`. Nothing reads those for a
+     * document with no state, so the leak is bookkeeping rather than behaviour.
      */
     const step = (
       documentId: string,
       apply: (state: S, history: History<S>) => [S, History<S>],
     ): void => {
+      if (dropped.has(documentId) && !hasState(get(), documentId)) return
+
       const [next, history] = apply(stateOf(get(), documentId), historyOf(get(), documentId))
       set(state => ({
         states: { ...state.states, [documentId]: next },
@@ -132,53 +187,45 @@ export function createDocumentStore<S>(defaultState: S) {
         if (gestures.has(documentId)) gestures.set(documentId, command.id)
       },
 
+      runOutsideGesture: (documentId, command) =>
+        step(documentId, (state, history) => run(state, history, command)),
+
       beginGesture: documentId => gestures.set(documentId, null),
 
       endGesture: documentId => gestures.delete(documentId),
 
-      replace: (documentId, next) =>
-        set(state => ({ states: { ...state.states, [documentId]: next } })),
+      // Both are how a document ARRIVES — read from disk, or opened blank — so both take the id
+      // back out of `dropped`. This changes NO verdict, and no test holds it: the guard already
+      // lets a reopened document through on the second half of its condition. It bounds the set,
+      // which is otherwise the only structure here that never shrinks.
+      replace: (documentId, next) => {
+        dropped.delete(documentId)
+        set(state => ({ states: { ...state.states, [documentId]: next } }))
+      },
 
-      ensure: (documentId, create) =>
+      ensure: (documentId, create) => {
+        dropped.delete(documentId)
         set(state =>
           state.states[documentId]
             ? state
             : { states: { ...state.states, [documentId]: create() } },
-        ),
+        )
+      },
 
       markSaved: (documentId, at) =>
         set(state => ({ saved: { ...state.saved, [documentId]: at } })),
 
       // Deliberately leaves the open gesture alone: this is called from inside one, and closing
       // it would stop the rest of that gesture from coalescing — one history entry per frame.
-      discardLast: documentId =>
-        step(documentId, (state, history) => {
-          const command = history.past.at(-1)
-          if (!command) return [state, history]
-          return [
-            command.revert(state),
-            { past: history.past.slice(0, -1), future: history.future },
-          ]
-        }),
+      discardLast: documentId => step(documentId, discardLast),
 
       forgetThrough: (documentId, commandId) =>
-        set(state => {
-          const history = historyOf(state, documentId)
-          const behind = history.past.findIndex(command => command.id === commandId)
-          const ahead = history.future.findIndex(command => command.id === commandId)
-          if (behind < 0 && ahead < 0) return state
-
-          return {
-            histories: {
-              ...state.histories,
-              [documentId]: {
-                past: behind < 0 ? history.past : history.past.slice(behind + 1),
-                // Redo runs forwards, so a hole in the future cuts everything past it instead.
-                future: ahead < 0 ? history.future : history.future.slice(0, ahead),
-              },
-            },
-          }
-        }),
+        set(state => ({
+          histories: {
+            ...state.histories,
+            [documentId]: forget(historyOf(state, documentId), commandId),
+          },
+        })),
 
       // Both close whatever gesture was open: the entry the next command would have merged into
       // is no longer the one the gesture started from.
@@ -195,6 +242,7 @@ export function createDocumentStore<S>(defaultState: S) {
       drop: documentId =>
         set(state => {
           gestures.delete(documentId)
+          dropped.add(documentId)
 
           const states = { ...state.states }
           const histories = { ...state.histories }
@@ -207,5 +255,5 @@ export function createDocumentStore<S>(defaultState: S) {
     }
   })
 
-  return { use, stateOf, hasState, historyOf, markOf, isDirty }
+  return { use, stateOf, hasState, historyOf, markOf, isDirty, hasUnsavedWork }
 }

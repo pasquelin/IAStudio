@@ -1,8 +1,14 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { LicencesWindow } from './LicencesWindow'
+
+// Unfolding a licence puts its WHOLE text in the DOM — that is the point of the panel — and
+// `userEvent` re-checks pointability against all of it on every click. Under a loaded run the
+// two-click case went past the default budget, which reads as a broken panel rather than a slow
+// test. Raised rather than trimmed: what makes it slow is what it exists to prove.
+vi.setConfig({ testTimeout: 20_000 })
 
 describe('LicencesWindow', () => {
   beforeEach(() => {
@@ -14,6 +20,30 @@ describe('LicencesWindow', () => {
 
     expect(screen.getByRole('button', { name: /FFmpeg/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^three\b/ })).toBeInTheDocument()
+  })
+
+  /**
+   * The window renders its own React tree, so the shell's `TooltipHost` never reached it. A
+   * closed `<Tooltip>` renders nothing at all, so hovering is the only assertion that says the
+   * host is mounted — and the sentence follows the state, since one row does both gestures.
+   */
+  it('mounts the shared tooltip, and says which of the two gestures the row offers', async () => {
+    render(<LicencesWindow />)
+    const entry = screen.getByRole('button', { name: /^three\b/ })
+
+    expect(entry).toHaveAttribute(
+      'data-tooltip-content',
+      'Déplie le texte complet de cette licence, ici même',
+    )
+    await userEvent.hover(entry)
+    await waitFor(() => expect(entry).toHaveAttribute('aria-describedby'))
+
+    await userEvent.click(entry)
+
+    expect(entry).toHaveAttribute(
+      'data-tooltip-content',
+      'Replie ce texte — une seule licence reste ouverte à la fois',
+    )
   })
 
   // A notice that needs a working network to be read is not a notice: the whole text is here.
@@ -40,12 +70,35 @@ describe('LicencesWindow', () => {
     )
   })
 
-  // FFmpeg is the one whose licence asks for more than attribution: whoever receives the binary
-  // must be able to reach the sources it was built from.
+  // FFmpeg's licence asks for more than attribution: whoever receives the binary must be able to
+  // reach the source it was built from — the archive of that build, not the project's front page.
   it('offers the sources of the copyleft component', async () => {
     render(<LicencesWindow />)
     await userEvent.click(screen.getByRole('button', { name: /FFmpeg/ }))
 
-    expect(screen.getByText(/ffmpeg\.org\/download/)).toBeInTheDocument()
+    expect(screen.getByText(/ffmpeg-7\.1\.1\.tar\.xz/)).toBeInTheDocument()
+  })
+
+  /**
+   * A typeface carries no version number, and the script used to fill the gap with an English
+   * sentence that travelled through the generated JSON onto a French screen — past every guard,
+   * since none of them reads a `.json`.
+   */
+  it('says in the reader’s language that a typeface ships with the application', () => {
+    render(<LicencesWindow />)
+
+    expect(screen.getByRole('button', { name: /^Lato/ })).toHaveTextContent(
+      'livré avec l’application',
+    )
+  })
+
+  // The offer is not merely a link: it is the link to THAT version, untouched. Both halves are
+  // owed to the reader, and both are owed in their language.
+  it('says the offered source is the version shipped, untouched', async () => {
+    render(<LicencesWindow />)
+    await userEvent.click(screen.getByRole('button', { name: /^mediabunny/ }))
+
+    expect(screen.getByText(/Sources correspondantes, sans modification/)).toBeInTheDocument()
+    expect(screen.getByText(/github\.com\/Vanilagy\/mediabunny/)).toBeInTheDocument()
   })
 })

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { contentFor, hoverFor, inkFor } from '@shared/domain/color'
 import { THEME_ATTRIBUTE, type ResolvedTheme, type Theme } from '@shared/domain/settings'
-import { refreshPalette } from '@/engines/core/palette'
+import { refreshPalette, token } from '@/engines/core/palette'
 import { useSettings } from '@/stores/settings'
 
 const DARK_QUERY = '(prefers-color-scheme: dark)'
@@ -76,6 +77,30 @@ export function useAppearance(): void {
       if (accent) root.style.setProperty(name, accent)
       else root.style.removeProperty(name)
     }
+
+    // The ink follows the fill, or the words keep the blue the studio shipped with while every
+    // button turns the colour that was picked. Read against the chassis the theme just selected
+    // rather than a copy of it — the attribute is already set above. Uncached on purpose: the
+    // cache still holds the palette being left, which is the whole reason `refreshPalette` runs
+    // last. With nothing to read, `inkFor` hands the accent back rather than a broken value.
+    if (accent) {
+      root.style.setProperty('--color-accent-ink', inkFor(accent, token(root, '--color-chassis')))
+    } else root.style.removeProperty('--color-accent-ink')
+
+    // And the ink ON the fill, which is a different question and was nobody's until now: the
+    // sheet can only ship one answer, and a picked yellow takes the white it shipped with to
+    // 1.71:1 — a primary button whose label cannot be read at all. daisyUI's name follows for
+    // the reason its fill does, a paragraph above.
+    const content = accent ? contentFor(accent) : ''
+    for (const name of ['--color-accent-content', '--color-primary-content']) {
+      if (content) root.style.setProperty(name, content)
+      else root.style.removeProperty(name)
+    }
+
+    // And the fill under the pointer, which has to follow too: the sheet's hover is drawn from
+    // the sheet's accent, so a picked red would darken toward the blue it replaced.
+    if (accent) root.style.setProperty('--color-accent-hover', hoverFor(accent))
+    else root.style.removeProperty('--color-accent-hover')
 
     // After the attributes, never before: the engines read the tokens back the moment they are
     // told, and `getComputedStyle` would hand them the palette they are leaving.

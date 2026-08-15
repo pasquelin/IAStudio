@@ -9,13 +9,23 @@ export type MediaTileProps = {
   url?: string
   /** Overlaid on the picture, at the bottom. */
   caption: string
-  /** Overlaid at the top right — a standing or a state, never an action. */
+  /**
+   * Overlaid on the picture — a standing or a state, never an action. WHICH corner is the badge's
+   * own business: this slot renders it as handed over, `AssetBadge` places itself top right, and a
+   * channel tile puts its origin top left because the menu button owns the other corner.
+   */
   badge?: ReactNode
   /**
    * Drawn in place of the picture. Defaults to a broken image, which is only honest where one
    * was expected: a sound has no thumbnail to fail at, and saying otherwise reads as a bug.
    */
   fallbackIcon?: string
+  /**
+   * Fills the box it is given instead of squaring itself off. For a caller that has already
+   * reserved the exact place — the masonry does, from the asset's own dimensions, and a square
+   * forced on top of that would crop every picture that is not one.
+   */
+  fill?: boolean
 }
 
 /**
@@ -30,11 +40,12 @@ export function MediaTile({
   caption,
   badge,
   fallbackIcon = mdiImageOffOutline,
+  fill = false,
 }: MediaTileProps) {
   const { src, onError } = useLoadable(url)
 
   return (
-    <figure className={cn(MEDIA_FRAME, 'relative m-0 aspect-square w-full')}>
+    <figure className={cn(MEDIA_FRAME, 'relative m-0 w-full', fill ? 'h-full' : 'aspect-square')}>
       {src ? (
         <img
           src={src}
@@ -44,17 +55,20 @@ export function MediaTile({
           className="absolute inset-0 size-full object-cover"
         />
       ) : (
-        <UiIcon path={fallbackIcon} size={20} className="text-muted/30 absolute inset-0 m-auto" />
+        <UiIcon path={fallbackIcon} size={20} className="text-muted/80 absolute inset-0 m-auto" />
       )}
 
       {badge}
 
+      {/* The one white the studio writes outright, and the only place it can be: this word sits
+          on a PICTURE, which no token can describe. Its contrast comes from the gradient under it
+          and the shadow around it, not from a palette that knows nothing of what was generated. */}
       <figcaption
         title={caption}
         className={cn(
           'absolute inset-x-0 bottom-0 truncate px-1.5 pt-5 pb-1',
           'bg-gradient-to-t from-black/85 via-black/45 to-transparent',
-          'text-[11px] text-white drop-shadow-[0_1px_2px_black]',
+          'text-tiny text-white drop-shadow-[0_1px_2px_black]',
         )}
       >
         {caption}

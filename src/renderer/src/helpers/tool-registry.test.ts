@@ -1,21 +1,14 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import type { ModelFamily } from '@shared/domain/model'
+import { HOME_SURFACE, TOOL_PLACEMENTS, type ToolId, type ToolZone } from '@shared/domain/tool'
+import type { WorkspaceId } from '@shared/domain/workspace'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
-import { hasModelFor, shownTool, useAvailableTools } from './tool-registry'
+import { preferModels } from '@/stores/settings-fixtures'
+import { hasModelFor, shownTool, toolIcon, TOOLS, useAvailableTools } from './tool-registry'
 
-function preferModel(family: ModelFamily, modelId: string): void {
-  useSettings.setState({
-    settings: {
-      ...DEFAULT_SETTINGS,
-      generation: { ...DEFAULT_SETTINGS.generation, defaultModels: { [family]: modelId } },
-    },
-  })
-}
-
-function idsOf(zone: 'right', workspace: 'image' | 'textures'): string[] {
+function idsOf(zone: ToolZone, workspace: WorkspaceId): string[] {
   const { result } = renderHook(() => useAvailableTools(zone, workspace))
   return result.current.map(tool => tool.id)
 }
@@ -28,15 +21,15 @@ beforeEach(() => {
 describe('the generator', () => {
   it('is offered where a model was chosen', () => {
     useModels.setState({ selected: { image: 'flux-dev' } })
-    expect(idsOf('right', 'image')).toContain('generator')
+    expect(idsOf('left', 'image')).toContain('generator')
   })
 
   it('is absent where none was — generating is impossible without one', () => {
-    expect(idsOf('right', 'image')).not.toContain('generator')
+    expect(idsOf('left', 'image')).not.toContain('generator')
   })
 
   it('counts the preferred model, which is what that preference is for', () => {
-    preferModel('image', 'flux-dev')
+    preferModels({ image: 'flux-dev' })
     expect(hasModelFor('image')).toBe(true)
   })
 
@@ -47,7 +40,66 @@ describe('the generator', () => {
   })
 
   it('is the only panel its absence removes', () => {
-    expect(idsOf('right', 'image')).toEqual(['models', 'inspector'])
+    expect(idsOf('left', 'image')).toEqual(['models', 'explorer'])
+    useModels.setState({ selected: { image: 'flux-dev' } })
+    expect(idsOf('left', 'image')).toEqual(['models', 'generator', 'explorer'])
+  })
+
+  /** The home is the one surface with nothing to generate at all, and it stays that way. */
+  it('is never offered on the home, whatever has been chosen elsewhere', () => {
+    useModels.setState({ selected: { image: 'flux-dev' } })
+
+    expect(hasModelFor(HOME_SURFACE)).toBe(false)
+  })
+
+  /** A choice made in one space is not a choice made in another: the scopes are separate keys. */
+  it('keeps a space’s choice out of the spaces that have another family', () => {
+    useModels.setState({ selected: { texture: 'flux-dev' } })
+
+    expect(hasModelFor('image')).toBe(false)
+  })
+
+  // Named for what it checks: `canOffer` answers for the generator and for nothing else, so a
+  // section with no model still shows every panel of its right column.
+  it('leaves the right column alone — no model removes anything there', () => {
+    expect(idsOf('right', 'textures')).toEqual(['channels', 'styles', 'inspector'])
+  })
+})
+
+// A half nobody has chosen for holds `null`, and each section answers it on its own: what is
+// open is stored once for all six, while the panel that comes first differs in each.
+describe('a half open on no panel in particular', () => {
+  it('shows the one this section declares first', () => {
+    expect(shownTool(null, 'right', 'primary', 'image', true)).toBe('layers')
+    expect(shownTool(null, 'right', 'primary', '3d', true)).toBe('scene')
+    expect(shownTool(null, 'right', 'primary', 'video', true)).toBe('assets')
+    expect(shownTool(null, 'right', 'primary', 'skyboxes', true)).toBe('skybox')
+    expect(shownTool(null, 'right', 'primary', 'textures', true)).toBe('channels')
+  })
+
+  it('reads the band as the shelf or the montage, per section', () => {
+    expect(shownTool(null, 'bottom', 'primary', 'image', true)).toBe('assets')
+    expect(shownTool(null, 'bottom', 'primary', 'audio', true)).toBe('timeline')
+  })
+
+  it('never opens on a generator the section cannot offer', () => {
+    expect(shownTool(null, 'left', 'primary', 'image', false)).toBe('models')
+    expect(shownTool(null, 'left', 'primary', 'image', true)).toBe('models')
+  })
+
+  // The distinction the store draws: an absent key is a closed half, `null` an open one. Reading
+  // both as "nothing" would close every half nobody has clicked.
+  it('is not a closed half, which shows nothing at all', () => {
+    expect(shownTool(undefined, 'right', 'primary', 'image', true)).toBeNull()
+  })
+
+  it('shows nothing where the section fills no such half', () => {
+    expect(shownTool(null, 'bottom', 'secondary', 'image', true)).toBeNull()
+  })
+
+  // The lower half of the left column, which the Explorer took over.
+  it('opens the lower left on the first panel that half declares', () => {
+    expect(shownTool(null, 'left', 'secondary', 'image', true)).toBe('explorer')
   })
 })
 
@@ -64,42 +116,60 @@ describe('what a half of a zone shows', () => {
   })
 
   it('leaves a tool alone in the zone this section gives it', () => {
-    expect(shownTool('assets', 'left', 'primary', 'video', true)).toBe('assets')
+    expect(shownTool('assets', 'right', 'primary', 'video', true)).toBe('assets')
     expect(shownTool('assets', 'bottom', 'primary', 'image', true)).toBe('assets')
   })
 
   it('substitutes within the half, never across the separator', () => {
-    // Layers is an upper-left panel; Audio has nothing there, and the explorer below is not a
-    // candidate — it would jump the separator the rail draws.
-    expect(shownTool('layers', 'left', 'primary', 'audio', true)).toBeNull()
-    expect(shownTool('layers', 'left', 'primary', 'video', true)).toBe('assets')
+    expect(shownTool('inspector', 'right', 'primary', 'image', true)).toBe('layers')
+    expect(shownTool('layers', 'right', 'secondary', 'image', true)).toBe('inspector')
+  })
+
+  it('answers null for a half this section does not fill', () => {
+    // A band is read across its width, so it has no second half for anything to substitute into.
+    expect(shownTool('assets', 'bottom', 'secondary', 'image', true)).toBeNull()
   })
 
   it('never substitutes a generator a section cannot offer', () => {
-    expect(shownTool('skybox', 'right', 'primary', 'image', false)).toBe('models')
-  })
-
-  // The half is asked for by name, so a tool of the right zone but the other half is no more
-  // this one's business than a tool of another zone — a band holds only a first half, and
-  // that is the whole of what keeps one uncut.
-  it('answers for the half it is asked about, not merely the zone', () => {
-    expect(shownTool('inspector', 'right', 'primary', 'image', true)).toBe('models')
-    expect(shownTool('assets', 'bottom', 'secondary', 'image', true)).toBeNull()
+    expect(shownTool('inspector', 'left', 'primary', 'image', false)).toBe('models')
   })
 
   // Where several tools share a half, the substitute is the first the registry declares. The
   // order of `TOOL_PLACEMENTS` is the choice, so it is spelled out here rather than left to
   // whoever reorders that table next.
   it('substitutes the first tool the half declares when several share it', () => {
-    expect(shownTool('layers', 'left', 'primary', '3d', true)).toBe('meshes')
-    expect(shownTool('skybox', 'right', 'primary', 'image', true)).toBe('models')
+    expect(shownTool('layers', 'right', 'primary', '3d', true)).toBe('scene')
+    expect(shownTool('layers', 'right', 'primary', 'skyboxes', true)).toBe('skybox')
   })
 
   it('falls back to the models panel where the generator has no model', () => {
-    expect(shownTool('generator', 'right', 'primary', 'image', false)).toBe('models')
+    expect(shownTool('generator', 'left', 'primary', 'image', false)).toBe('models')
   })
 
   it('shows the generator again as soon as one is there', () => {
-    expect(shownTool('generator', 'right', 'primary', 'image', true)).toBe('generator')
+    expect(shownTool('generator', 'left', 'primary', 'image', true)).toBe('generator')
+  })
+})
+
+describe('the glyphs of the rail', () => {
+  /**
+   * One glyph, one meaning. The comment above `ICONS` promises it, and only a test keeps the
+   * promise: `counts` wore the mesh node's glyph for a day — harmless, since the two never share
+   * a rail, but a rail one reads twice starts exactly there.
+   */
+  it('gives every panel a glyph of its own', () => {
+    const ids = TOOL_PLACEMENTS.map(placement => placement.id)
+    const byIcon = new Map<string, ToolId>()
+
+    for (const id of ids) {
+      const icon = toolIcon(id)
+      const held = byIcon.get(icon)
+      expect(held ?? id).toBe(id)
+      byIcon.set(icon, id)
+    }
+  })
+
+  it('hands the panels the same glyph the rail draws', () => {
+    for (const tool of TOOLS) expect(tool.icon).toBe(toolIcon(tool.id))
   })
 })

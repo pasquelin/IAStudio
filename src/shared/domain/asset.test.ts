@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assetBadgeOf,
   assetIdFromUrl,
   assetUrl,
+  hostedParts,
+  hostedUrl,
   isAssetType,
+  isSyncStatus,
+  isTimeless,
   mediaDuration,
   posterUrl,
   withoutSourcePath,
+  POSTER_HOST,
   type Asset,
 } from './asset'
 
@@ -47,6 +53,23 @@ describe('which assets have a picture to show', () => {
     expect(posterUrl(asset({ type: 'image', path: 'assets/img/one.png' }))).not.toBeNull()
   })
 
+  /**
+   * A tile is what a ⌘S over the asset has to repaint, and the stamp is what tells it to: the id
+   * does not move, so an unstamped URL hands back the bitmap the browser already decoded.
+   */
+  it('stamps the poster with the moment the file last changed', () => {
+    const rewritten = asset({ type: 'image', localChangedAt: '2026-08-12T09:00:00.000Z' })
+
+    expect(posterUrl(rewritten)).not.toBe(assetUrl('asset-1'))
+  })
+
+  // The resolver reads the path, so the id has to survive whatever the stamp puts in the query.
+  it('still names the same asset once stamped', () => {
+    const rewritten = asset({ type: 'image', localChangedAt: '2026-08-12T09:00:00.000Z' })
+
+    expect(assetIdFromUrl(posterUrl(rewritten) ?? '')).toBe('asset-1')
+  })
+
   it('offers none for what does not decode as a picture', () => {
     expect(posterUrl(asset({ type: 'video' }))).toBeNull()
     expect(posterUrl(asset({ type: 'audio' }))).toBeNull()
@@ -54,6 +77,52 @@ describe('which assets have a picture to show', () => {
 
   it('offers none for an asset that only exists in the cloud', () => {
     expect(posterUrl(asset({ type: 'image', location: 'cloud' }))).toBeNull()
+  })
+
+  /**
+   * A mesh's own file is a `.glb`, which no browser decodes — and answering with it is what put
+   * an icon where the library had just shown a picture. The still recorded beside it answers on
+   * a host of its own, so one id can name two files.
+   */
+  it('offers the still recorded beside a mesh, on the poster host', () => {
+    const mesh = asset({ type: 'mesh', posterPath: '.index/posters/asset-1.jpg' })
+
+    expect(posterUrl(mesh)).toBe(hostedUrl(POSTER_HOST, 'asset-1'))
+  })
+
+  it('stamps that one too, so a still written again repaints', () => {
+    const mesh = asset({
+      type: 'mesh',
+      posterPath: '.index/posters/asset-1.jpg',
+      localChangedAt: '2026-08-12T09:00:00.000Z',
+    })
+
+    expect(posterUrl(mesh)).toContain('?v=')
+    expect(hostedParts(posterUrl(mesh) ?? '')).toMatchObject({ host: POSTER_HOST, id: 'asset-1' })
+  })
+
+  it('offers none for a mesh nothing wrote a still for', () => {
+    expect(posterUrl(asset({ type: 'mesh' }))).toBeNull()
+  })
+
+  // The still is a file inside the OPEN project. A row from anywhere else would send the window
+  // after a picture no resolver can answer for — a 404 where an icon belongs.
+  it('offers none for a row whose still is not in this project', () => {
+    const elsewhere = asset({
+      type: 'mesh',
+      location: 'cloud',
+      posterPath: '.index/posters/asset-1.jpg',
+    })
+
+    expect(posterUrl(elsewhere)).toBeNull()
+  })
+
+  // The asset host serves the file the asset owns. A poster URL answered from there would hand a
+  // `<img>` a `.glb`, which is the very defect this exists to fix.
+  it('never answers for a mesh on the asset host', () => {
+    const mesh = asset({ type: 'mesh', posterPath: '.index/posters/asset-1.jpg' })
+
+    expect(posterUrl(mesh)).not.toBe(assetUrl('asset-1'))
   })
 })
 
@@ -87,6 +156,20 @@ describe('how long the media runs', () => {
     expect(mediaDuration(asset())).toBeNull()
     expect(mediaDuration(null)).toBeNull()
   })
+
+  /**
+   * The distinction the answer above deliberately loses, and that a trim needs back: a picture
+   * has no source to run past, an unprobed rush has one whose length is merely not known yet.
+   */
+  it('tells a picture from an asset whose length is merely unknown', () => {
+    expect(isTimeless(asset({ type: 'image' }))).toBe(true)
+    expect(isTimeless(asset({ type: 'texture' }))).toBe(true)
+    expect(isTimeless(asset({ type: 'skybox' }))).toBe(true)
+
+    expect(isTimeless(asset({ type: 'video' }))).toBe(false)
+    expect(isTimeless(asset({ type: 'audio' }))).toBe(false)
+    expect(isTimeless(null)).toBe(false)
+  })
 })
 
 describe('asset types', () => {
@@ -95,5 +178,58 @@ describe('asset types', () => {
     expect(isAssetType('skybox')).toBe(true)
     expect(isAssetType('hologram')).toBe(false)
     expect(isAssetType(undefined)).toBe(false)
+  })
+})
+
+describe('sync statuses', () => {
+  it('accepts the states the catalogue may hold and refuses the rest', () => {
+    expect(isSyncStatus('synced')).toBe(true)
+    expect(isSyncStatus('local-ahead')).toBe(true)
+    expect(isSyncStatus('conflict')).toBe(true)
+    expect(isSyncStatus('pushing')).toBe(false)
+    expect(isSyncStatus(undefined)).toBe(false)
+  })
+})
+
+describe('the badge an asset wears', () => {
+  const OWNER = 'proj_current'
+
+  it('says local-only when there is no twin', () => {
+    expect(assetBadgeOf(asset(), OWNER)).toBe('local-only')
+  })
+
+  it('reads the sync status once a twin exists', () => {
+    const twin = { remoteAssetId: 'asset_x', remoteOwnerId: OWNER }
+    expect(assetBadgeOf(asset({ ...twin, syncStatus: 'synced' }), OWNER)).toBe('synced')
+    expect(assetBadgeOf(asset({ ...twin, syncStatus: 'local-ahead' }), OWNER)).toBe('to-push')
+    expect(assetBadgeOf(asset({ ...twin, syncStatus: 'remote-ahead' }), OWNER)).toBe('to-pull')
+    expect(assetBadgeOf(asset({ ...twin, syncStatus: 'conflict' }), OWNER)).toBe('conflict')
+    expect(assetBadgeOf(asset({ ...twin, syncStatus: 'error' }), OWNER)).toBe('error')
+  })
+
+  it('reads a twin the catalogue said nothing about as settled', () => {
+    // Rows written before the catalogue tracked sync — assets collected from a generation,
+    // which were downloaded from the very twin they point at.
+    expect(assetBadgeOf(asset({ remoteAssetId: 'asset_x' }), OWNER)).toBe('synced')
+  })
+
+  it('says so when the twin belongs to another project', () => {
+    // An API key carries its own project: the same identifier means nothing under another key,
+    // and calling it synchronised would promise a library that has never heard of it.
+    const foreign = asset({
+      remoteAssetId: 'asset_x',
+      remoteOwnerId: 'proj_other',
+      syncStatus: 'synced',
+    })
+    expect(assetBadgeOf(foreign, OWNER)).toBe('other-account')
+  })
+
+  it('judges nothing about ownership while no account is active', () => {
+    const twin = asset({
+      remoteAssetId: 'asset_x',
+      remoteOwnerId: 'proj_other',
+      syncStatus: 'synced',
+    })
+    expect(assetBadgeOf(twin, null)).toBe('synced')
   })
 })

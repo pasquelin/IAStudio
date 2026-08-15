@@ -1,9 +1,12 @@
 /**
- * Whether a keystroke belongs to a field rather than to the application. Asked by everything
- * that listens on `window`: the shortcut hook, the command registry deciding what ⌘Z means, and
- * the canvas engine deciding whether a held space pans or types a space.
+ * Whether a gesture belongs to a field rather than to the application. Asked by both listeners on
+ * `window` — the shortcut hook, and the canvas engine deciding whether a held space pans or types
+ * a space — and by the rows that open a menu on right-click: a field inside one of them owes its
+ * press to the native clipboard menu (`main/window/context-menu.ts`), which Chromium never asks
+ * for once the row has called `preventDefault`. The application menu asks nothing — it delegates
+ * with `registerAccelerator: false`.
  *
- * One definition, because the three had already drifted — only one of them knew about `<select>`.
+ * One definition, because the copies had already drifted — only one knew about `<select>`.
  */
 export function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
@@ -13,9 +16,4 @@ export function isTyping(target: EventTarget | null): boolean {
     target instanceof HTMLTextAreaElement ||
     target instanceof HTMLSelectElement
   )
-}
-
-/** The same question about wherever the caret is, for a listener with no event in hand. */
-export function isTypingNow(): boolean {
-  return isTyping(document.activeElement)
 }

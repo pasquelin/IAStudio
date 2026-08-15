@@ -1,27 +1,27 @@
-import { mdiFolderOpenOutline, mdiRefresh } from '@mdi/js'
-import { useState } from 'react'
+import { mdiFolderOpenOutline, mdiPin, mdiPinOutline, mdiRefresh } from '@mdi/js'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
+import { FAVORITES_MAX, sameRecipe } from '@shared/domain/favorite'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
 import { formatDuration } from '@/engines/timeline/timecode'
-import { formatBytes } from '@/helpers/format'
-import { generationOf } from '@/helpers/generation'
+import { formatBytes, formatMoment } from '@/helpers/format'
+import { generationOf, openGeneratorOn } from '@/helpers/generation'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
+import { useFavorites } from '@/stores/favorites'
 import { useJobs } from '@/stores/jobs'
 import { useLayouts } from '@/stores/layouts'
-import { useModels } from '@/stores/models'
-import { useTools } from '@/stores/tools'
 
 /**
  * One asset, read out — and the prompt behind it, which is what makes the shelf navigable
  * rather than a wall of thumbnails.
  */
 export function AssetInspector({ asset }: { asset: Asset }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const jobs = useJobs(state => state.jobs)
   const bodies = useJobs(state => state.bodies)
   const [missing, setMissing] = useState(false)
@@ -54,20 +54,24 @@ export function AssetInspector({ asset }: { asset: Asset }) {
           </PropertyRow>
         )}
         {asset.bytes !== undefined && (
-          <PropertyRow label={t('inspector.size')}>{formatBytes(asset.bytes)}</PropertyRow>
+          <PropertyRow label={t('inspector.size')}>
+            {formatBytes(asset.bytes, unit => t(`units.${unit}`), i18n.language)}
+          </PropertyRow>
         )}
         <PropertyRow label={t('inspector.created')}>
-          {new Date(asset.createdAt).toLocaleString()}
+          {/* The studio's language, not the machine's — the two differ. */}
+          {/* Local: this says when a person made the thing, not what an account was billed. */}
+          {formatMoment(asset.createdAt, i18n.language, 'local')}
         </PropertyRow>
       </PropertyGroup>
 
-      {generation && <GenerationGroup generation={generation} />}
+      {generation && <GenerationGroup assetId={asset.id} generation={generation} />}
 
       {asset.location === 'local' && (
         <PropertyGroup title={t('inspector.file')}>
           <PropertyRow label={t('inspector.onDisk')}>
             {missing ? (
-              <span className="text-muted text-[11px]">{t('inspector.fileMissing')}</span>
+              <span className="text-muted text-tiny">{t('inspector.fileMissing')}</span>
             ) : (
               <ToolButton
                 icon={mdiFolderOpenOutline}
@@ -87,15 +91,28 @@ export function AssetInspector({ asset }: { asset: Asset }) {
  * What produced the asset, and the offer to run it again. The prompt is shown whole and
  * selectable: it is the one field anyone wants to copy out and adjust.
  */
-function GenerationGroup({ generation }: { generation: AssetGeneration }) {
+function GenerationGroup({
+  assetId,
+  generation,
+}: {
+  assetId: string
+  generation: AssetGeneration
+}) {
   const { t } = useTranslation()
   const workspace = useLayouts(state => state.activeWorkspace)
+  const pinned = useFavorites(state =>
+    state.recipes.some(recipe => sameRecipe(recipe.generation, generation)),
+  )
+  const full = useFavorites(state => state.recipes.length >= FAVORITES_MAX)
+
+  // Read when the group appears: the shelf that shows these lives on the home, and this panel
+  // has to know whether the recipe in front of it is already there before offering to keep it.
+  // `load` answers from what it already holds after the first call, so clicking through a shelf
+  // of assets costs one read, not one per asset.
+  useEffect(() => void useFavorites.getState().load(), [])
 
   const regenerate = (): void => {
-    const { family } = workspaceById(workspace)
-    useModels.getState().prepare(family, generation.modelId, generation.params)
-    // The generator may well be closed — it is a tool window like any other.
-    useTools.getState().show('right', 'generator')
+    openGeneratorOn(workspaceById(workspace).family, generation.modelId, generation.params)
   }
 
   return (
@@ -106,12 +123,28 @@ function GenerationGroup({ generation }: { generation: AssetGeneration }) {
       )}
       {generation.prompt && (
         <PropertyRow label={t('inspector.prompt')} stacked>
-          <p className="text-text bg-surface rounded-(--radius-sc-sm) p-1.5 text-[11px] whitespace-pre-wrap select-text">
+          <p className="text-text bg-surface text-tiny rounded-(--radius-sc-sm) p-1.5 whitespace-pre-wrap select-text">
             {generation.prompt}
           </p>
         </PropertyRow>
       )}
-      <div className="flex justify-end px-2 pt-1">
+      <div className="flex justify-end gap-2 px-2 pt-1">
+        {/* Already pinned, the button says so rather than disappearing: a control that vanishes
+            once used leaves no way to tell "done" from "never offered". At the bound it is
+            disabled and says why — the store refuses silently, and a click that does nothing
+            reads as a broken button. */}
+        <ToolButton
+          icon={pinned ? mdiPin : mdiPinOutline}
+          label={t(pinned ? 'inspector.pinned' : 'inspector.pin')}
+          description={t(full && !pinned ? 'inspector.pinFull' : 'inspector.pinHint', {
+            max: FAVORITES_MAX,
+          })}
+          tooltip={TIP_LEFT}
+          variant="header"
+          active={pinned}
+          disabled={full && !pinned}
+          onClick={() => void useFavorites.getState().pin(assetId)}
+        />
         <ToolButton
           icon={mdiRefresh}
           label={t('inspector.regenerate')}

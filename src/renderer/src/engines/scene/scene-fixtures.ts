@@ -1,13 +1,17 @@
-import type { LightDescriptor } from '@shared/domain/scene'
+import { Texture, type ColorSpace } from 'three'
+import type { LightDescriptor, TextDescriptor } from '@shared/domain/scene'
+import type { TextureCache } from './texture-cache'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
+  DEFAULT_TEXT,
   shadowDefaults,
   IDENTITY_TRANSFORM,
   type LightNode,
   type MeshNode,
   type ModelNode,
   type SpriteNode,
+  type TextNode,
 } from './scene-state'
 
 /**
@@ -27,6 +31,16 @@ export function meshNode(id: string, parentId: string | null = null): MeshNode {
     geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
     material: DEFAULT_MATERIAL,
   }
+}
+
+/** The one light kind that builds a helper and a target beside itself. */
+export function directionalLight(id: string): LightNode {
+  return lightNodeFixture(id, {
+    kind: 'directional',
+    color: '#ffffff',
+    intensity: 1,
+    target: { x: 0, y: 0, z: 0 },
+  })
 }
 
 export function lightNodeFixture(
@@ -58,6 +72,20 @@ export function spriteNodeFixture(id: string, map: string | null = null): Sprite
   }
 }
 
+export function textNodeFixture(id: string, text: Partial<TextDescriptor> = {}): TextNode {
+  return {
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'text' }),
+    type: 'text',
+    text: { ...DEFAULT_TEXT, ...text },
+    material: DEFAULT_MATERIAL,
+  }
+}
+
 export function modelNodeFixture(id: string, assetId = 'asset-1'): ModelNode {
   return {
     id,
@@ -68,5 +96,44 @@ export function modelNodeFixture(id: string, assetId = 'asset-1'): ModelNode {
     ...shadowDefaults({ type: 'model' }),
     type: 'model',
     model: { assetId },
+  }
+}
+
+/**
+ * A texture cache whose loads the test settles by hand, so arrival order is what is under test —
+ * which is what every suite around a `TextureBinding` is really about.
+ */
+export function scriptedTextureCache() {
+  const pending = new Map<string, (texture: Texture | null) => void>()
+  const acquired: string[] = []
+  const released: string[] = []
+  const spaces = new Map<string, ColorSpace>()
+  /** What the catalogue would say each asset was last written at — set by the test that cares. */
+  const versions = new Map<string, string>()
+
+  const cache: TextureCache = {
+    acquire: (assetId, colorSpace) => {
+      acquired.push(assetId)
+      spaces.set(assetId, colorSpace)
+      return new Promise(resolve => pending.set(assetId, resolve))
+    },
+    release: assetId => {
+      released.push(assetId)
+    },
+    versionOf: assetId => versions.get(assetId),
+    dispose: () => {},
+  }
+
+  return {
+    cache,
+    acquired,
+    released,
+    spaces,
+    versions,
+    settle: async (assetId: string, texture: Texture | null = new Texture()) => {
+      pending.get(assetId)?.(texture)
+      await Promise.resolve()
+      return texture
+    },
   }
 }

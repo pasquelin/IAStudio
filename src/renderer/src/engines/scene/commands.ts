@@ -1,10 +1,13 @@
-import type { Command } from '../core/history'
+import { composed, type Command } from '../core/history'
 import type {
+  AnimationRef,
   EnvironmentRef,
   GeometryDescriptor,
   LightDescriptor,
   MaterialDescriptor,
+  ModelRef,
   SpriteDescriptor,
+  TextDescriptor,
   Transform,
 } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
@@ -17,7 +20,9 @@ import {
   canCastShadow,
   canReceiveShadow,
   canReparent,
+  hasChildren,
   nodeById,
+  rotationShows,
   subtreeOf,
   type SceneNodeBase,
   type SceneNodeType,
@@ -70,8 +75,16 @@ export function removeNode(id: string): Command<SceneState> {
  * One shape for every edit of a shared field: they all revert by putting the old values back.
  * The whole shared set is captured rather than the single field touched — the history is a
  * linear stack, so nothing can change the node between `apply` and `revert`.
+ *
+ * What to write may be a function of the node and the scene around it, which only `apply` holds:
+ * a command is built before it runs and replayed on redo, so a rule about the scene has to be
+ * read at each `apply` rather than frozen into the closure.
  */
-function editNode(label: string, id: string, changes: NodePatch): Command<SceneState> {
+function editNode(
+  label: string,
+  id: string,
+  changes: NodePatch | ((node: SceneNode, state: SceneState) => NodePatch),
+): Command<SceneState> {
   let previous: NodePatch | null = null
 
   return {
@@ -86,14 +99,26 @@ function editNode(label: string, id: string, changes: NodePatch): Command<SceneS
         castShadow: node.castShadow,
         receiveShadow: node.receiveShadow,
       }
-      return patch(state, id, changes)
+      return patch(state, id, typeof changes === 'function' ? changes(node, state) : changes)
     },
     revert: state => (previous ? patch(state, id, previous) : state),
   }
 }
 
+/**
+ * Where a node stands, how it is turned and how big it is.
+ *
+ * An angle `rotationShows` refuses is dropped, and the rest of the move written: the value would
+ * sit in the document and cost an undo without the screen ever moving. Dropped rather than the
+ * whole edit refused — a pivot drag over a mixed selection carries the sprite through space, and
+ * *that* shows.
+ */
 export function setTransform(id: string, next: Transform): Command<SceneState> {
-  return editNode('transform', id, { transform: next })
+  return editNode('transform', id, (node, state) => ({
+    transform: rotationShows(node, () => hasChildren(state.nodes, id))
+      ? next
+      : { ...next, rotation: node.transform.rotation },
+  }))
 }
 
 export function setNodeVisible(id: string, visible: boolean): Command<SceneState> {
@@ -152,7 +177,7 @@ export function setGeometry(id: string, geometry: GeometryDescriptor): Command<S
   return editMesh('geometry', id, { geometry })
 }
 
-export function setMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
+export function setMeshMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
   return editMesh('material', id, { material })
 }
 
@@ -207,14 +232,9 @@ function patchPart<T extends SceneNodeType>(
   }
 }
 
-/** One entry in the history for what the user did in one gesture. */
+/** One entry in the history for what the user did in one gesture — see `composed`. */
 export function multi(id: string, commands: Command<SceneState>[]): Command<SceneState> {
-  return {
-    id,
-    apply: state => commands.reduce((current, command) => command.apply(current), state),
-    revert: state =>
-      [...commands].reverse().reduce((current, command) => command.revert(current), state),
-  }
+  return composed(id, commands)
 }
 
 /**
@@ -295,14 +315,22 @@ function readField(descriptor: object, name: string): unknown {
 /**
  * Material fields onto every selected mesh. Only what the inspector moved is carried: the whole
  * descriptor would take the anchor's texture slots with it, onto meshes that never showed them.
+ *
+ * Keeps the bare shape beside `setMeshMaterial`, and that is a decision: only ONE engine
+ * publishes this name, so nothing can auto-import the wrong one. A domain is added the day a
+ * second claims the word — never for symmetry with a neighbour that needed it.
  */
 export function setMaterialOn(
   nodes: readonly SceneNode[],
   changes: Partial<MaterialDescriptor>,
 ): Command<SceneState> {
-  return batch('material', nodes, node =>
-    node.type === 'mesh' ? setMaterial(node.id, { ...node.material, ...changes }) : null,
-  )
+  return batch('material', nodes, node => {
+    // A text is lit exactly as a mesh is, and wears the same descriptor — so one section of the
+    // inspector serves both, and neither has to know the other exists.
+    if (node.type === 'mesh') return setMeshMaterial(node.id, { ...node.material, ...changes })
+    if (node.type === 'text') return setTextMaterial(node.id, { ...node.material, ...changes })
+    return null
+  })
 }
 
 /**
@@ -322,6 +350,106 @@ export function setSprite(id: string, sprite: SpriteDescriptor): Command<SceneSt
     },
     revert: state => (previous ? patchPart(state, id, 'sprite', { sprite: previous }) : state),
   }
+}
+
+/**
+ * Which clip of an imported model plays, and how. `null` puts it back to its rest pose.
+ *
+ * The whole reference is written rather than the field touched: the head position is part of it,
+ * and a play that kept the old time would start over from wherever the last pause happened to be.
+ */
+export function setModelAnimation(id: string, animation: AnimationRef | null): Command<SceneState> {
+  return editModel(id, 'animation', model => {
+    const rest = { ...model }
+    delete rest.animation
+    return animation ? { ...rest, animation } : rest
+  })
+}
+
+/**
+ * The project's own maps over the ones the model's file carries. An empty record puts every slot
+ * back to what the file brought.
+ *
+ * The whole set is written rather than one slot patched, for the reason `setMaterialOn` states
+ * about a descriptor: what the inspector holds IS the set, and a partial write would leave the
+ * revert unable to say which slots it was answering for.
+ */
+export function setModelTextures(id: string, textures: ModelRef['textures']): Command<SceneState> {
+  return editModel(id, 'textures', model => {
+    const rest = { ...model }
+    delete rest.textures
+    // An empty set is « the file's own maps », which is what a document says by holding no field.
+    return textures && Object.keys(textures).length > 0 ? { ...rest, textures } : rest
+  })
+}
+
+/**
+ * One field of a model's reference, with the rest of it carried over. Written once because the
+ * carrying is the whole point: an edit that rebuilt the reference from `assetId` alone dropped
+ * every other field a model holds — which is how a texture override vanished on the next play.
+ */
+function editModel(
+  id: string,
+  edited: string,
+  next: (model: ModelRef) => ModelRef,
+): Command<SceneState> {
+  let previous: ModelRef | null = null
+
+  return {
+    id: `${edited}:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'model') return state
+      previous = node.model
+      return patchPart(state, id, 'model', { model: next(node.model) })
+    },
+    revert: state => (previous ? patchPart(state, id, 'model', { model: previous }) : state),
+  }
+}
+
+/**
+ * The words, the face and the three numbers that shape them. A node of another type is left
+ * alone rather than patched, exactly as `editMesh` refuses to give a light a geometry.
+ */
+export function setText(id: string, text: TextDescriptor): Command<SceneState> {
+  let previous: TextDescriptor | null = null
+
+  return {
+    id: `text:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'text') return state
+      previous = node.text
+      return patchPart(state, id, 'text', { text })
+    },
+    revert: state => (previous ? patchPart(state, id, 'text', { text: previous }) : state),
+  }
+}
+
+/** The material a text wears — the same descriptor a mesh does, on the other node type. */
+export function setTextMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
+  let previous: MaterialDescriptor | null = null
+
+  return {
+    id: `material:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'text') return state
+      previous = node.material
+      return patchPart(state, id, 'text', { material })
+    },
+    revert: state => (previous ? patchPart(state, id, 'text', { material: previous }) : state),
+  }
+}
+
+/** The same, spread over a selection — the text counterpart of `setMaterialOn`. */
+export function setTextOn(
+  nodes: readonly SceneNode[],
+  changes: Partial<TextDescriptor>,
+): Command<SceneState> {
+  return batch('text', nodes, node =>
+    node.type === 'text' ? setText(node.id, { ...node.text, ...changes }) : null,
+  )
 }
 
 /** The same, spread over a selection — the sprite counterpart of `setMaterialOn`. */

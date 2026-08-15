@@ -1,5 +1,8 @@
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
+import type { ModelFamily } from '@shared/domain/model'
+import { revealTool } from '@/helpers/reveal-panel'
+import { useModels } from '@/stores/models'
 
 /** Keys a body may carry the prompt under, in the order a model is likely to name it. */
 const PROMPT_KEYS: readonly string[] = ['prompt', 'text', 'description']
@@ -22,6 +25,25 @@ function seedIn(body: Record<string, unknown>): number | undefined {
 }
 
 /**
+ * Opens the generator on a model and the values to run it with.
+ *
+ * Written once for the three surfaces that offer it — the inspector's "regenerate", the image
+ * space's edits, and the home's recipes — because the two statements have an order and a caller
+ * that reverses it arms the generator on the wrong model, silently.
+ *
+ * The seed is deliberately not part of it: replaying one asks for the picture one already has.
+ */
+export function openGeneratorOn(
+  family: ModelFamily,
+  modelId: string,
+  params: Record<string, unknown>,
+): void {
+  useModels.getState().prepare(family, modelId, params)
+  // The generator may well be closed — it is a tool window like any other.
+  revealTool('generator')
+}
+
+/**
  * Where an asset came from.
  *
  * Read from the catalogue when it records it, and otherwise reconstituted from the job that
@@ -41,7 +63,7 @@ export function generationOf(
   if (!job || !body) return null
 
   return {
-    modelId: job.modelId,
+    modelId: job.targetId,
     modelLabel: job.label,
     prompt: promptIn(body),
     params: body,

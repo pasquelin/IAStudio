@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
+import type { FontRef } from '@shared/domain/font'
+import type { FaceRegistrar } from './canvas-fonts'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { layerFixture } from './canvas-fixtures'
 import {
@@ -11,15 +13,20 @@ import {
   isGroup,
   pixelLayer,
   textLayer,
+  UNLOCKED,
   type CanvasState,
   type Layer,
+  type Rect,
   type Transform,
 } from './canvas-state'
-import type { CanvasTool } from './CanvasEngine'
+import { DEFAULT_BRUSH } from './brush'
+import { PixelPatches } from './PixelPatches'
+import stylesheet from '@/index.css?raw'
+import { FALLBACK_COLORS, OVERLAY_TOKENS, type CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
-import type { Point } from './shape-geometry'
+import type { Point } from '../core/geometry'
 import { RULER_SIZE } from './CanvasOverlay'
-import { DEFAULT_VIEW, type Viewport } from './viewport'
+import { DEFAULT_VIEW, toDocument, type Viewport } from './viewport'
 
 /**
  * jsdom has no WebGL context, so Pixi is doubled. What is tested here is what the engine
@@ -73,6 +80,12 @@ const gpu: {
   refuseLoad: boolean
   /** Every extraction, so what a snapshot framed and at what scale can be asserted. */
   extracted: { frame?: unknown; resolution?: number }[]
+  /** Every frame the eyedropper read, so what it sampled — and how much of it — can be asserted. */
+  sampled: { x: number; y: number; width: number; height: number }[]
+  /** What the renderer hands back, so a test can name the colour standing under the pointer. */
+  pixels: number[]
+  /** Every time the drawing buffer was asked to take its host's box — see `followHostSize`. */
+  resizes: number
 } = {
   renders: 0,
   texturesCreated: 0,
@@ -85,6 +98,9 @@ const gpu: {
   loaded: [],
   refuseLoad: false,
   extracted: [],
+  sampled: [],
+  pixels: [0, 0, 0, 0],
+  resizes: 0,
 }
 
 vi.mock('pixi.js/unsafe-eval', () => ({}))
@@ -231,7 +247,12 @@ vi.mock('pixi.js', () => {
           if (options?.target) gpu.painted.push(options.target.id)
         },
         extract: {
-          pixels: () => ({ pixels: [0, 0, 0, 0] }),
+          pixels: (options: {
+            frame?: { x: number; y: number; width: number; height: number }
+          }) => {
+            if (options.frame) gpu.sampled.push(options.frame)
+            return { pixels: gpu.pixels }
+          },
           base64: (options: { frame?: unknown; resolution?: number }) => {
             gpu.extracted.push(options)
             return Promise.resolve('data:image/png;base64,QUJD')
@@ -242,6 +263,9 @@ vi.mock('pixi.js', () => {
       async init(options: Record<string, unknown>): Promise<void> {
         gpu.init = options
       }
+      resize(): void {
+        gpu.resizes += 1
+      }
       destroy(): void {}
     },
     defaultFilterVert: '',
@@ -251,6 +275,12 @@ vi.mock('pixi.js', () => {
       from: () => ({ resources: { adjustUniforms: { uniforms: {} } } }),
     },
     AlphaFilter: class {
+      destroy(): void {}
+    },
+    /** What softens the edge of a dab: the engine writes a strength and a padding into it. */
+    BlurFilter: class {
+      strength = 0
+      padding = 0
       destroy(): void {}
     },
     Container,
@@ -272,7 +302,15 @@ vi.mock('pixi.js', () => {
       },
     },
     Text: class extends Container {},
-    Rectangle: class {},
+    // Carries its four numbers: the eyedropper's whole point is which frame it asks for.
+    Rectangle: class {
+      constructor(
+        readonly x: number,
+        readonly y: number,
+        readonly width: number,
+        readonly height: number,
+      ) {}
+    },
     Texture: class {},
     RenderTexture: {
       create: (options: { width: number; height: number }) => {
@@ -303,6 +341,8 @@ type Harness = {
   selections: CanvasSelection[]
   /** Where a caption was asked for, in document coordinates. */
   captions: Point[]
+  /** The frames the engine settled a crop drag on, each of which becomes one history entry. */
+  crops: Rect[]
   guides: { calls: string[] }
   /** The ids of the patches the engine reported as one finished gesture each. */
   patches: string[]
@@ -310,6 +350,10 @@ type Harness = {
   dropped: string[]
   /** `translate:<id>:<x>:<y>` and the two ends of the drag, in the order they arrived. */
   layers: string[]
+  /** The families the engine asked the page for, in the order it asked. */
+  faces: string[]
+  /** Every colour the eyedropper handed back, packed as the document stores one. */
+  picks: number[]
 }
 
 /**
@@ -320,6 +364,7 @@ type Harness = {
 function mounted(
   state: CanvasState = DEFAULT_CANVAS,
   tool: CanvasTool = 'brush',
+  addFace?: FaceRegistrar,
 ): Promise<Harness> {
   const host = document.createElement('div')
   document.body.appendChild(host)
@@ -327,18 +372,23 @@ function mounted(
   const viewports: Viewport[] = []
   const selections: CanvasSelection[] = []
   const captions: Point[] = []
+  const crops: Rect[] = []
   const calls: string[] = []
   const patches: string[] = []
   const dropped: string[] = []
   const layers: string[] = []
+  const faces: string[] = []
+  const picks: number[] = []
+  const defaultFace: FaceRegistrar = async family => void faces.push(family)
   const harness: Harness = {
     engine: new CanvasEngine({
-      onPick: () => undefined,
+      onPick: color => picks.push(color),
       onPixels: patchId => patches.push(patchId),
       onPixelsDropped: patchId => dropped.push(patchId),
       onViewport: viewport => viewports.push(viewport),
       onSelection: selection => selections.push(selection),
       onText: at => captions.push(at),
+      onCrop: rect => crops.push(rect),
       onHost: () => undefined,
       guides: {
         add: (axis, position) => {
@@ -359,17 +409,22 @@ function mounted(
         beginDrag: () => layers.push('begin'),
         endDrag: () => layers.push('end'),
       },
+      addFace: addFace ?? defaultFace,
     }),
     host,
     viewports,
     selections,
     captions,
+    crops,
     guides: { calls },
     patches,
     dropped,
     layers,
+    faces,
+    picks,
   }
 
+  mountedEngines.push(harness.engine)
   harness.engine.setView(DEFAULT_VIEW)
   harness.engine.setTool(tool)
   // The order React uses: the state is pushed while `mount` is still awaiting Pixi's `init`.
@@ -399,6 +454,54 @@ function press(host: HTMLElement, x: number, y: number, button = 0): void {
   host.dispatchEvent(new PointerEvent('pointerdown', { clientX: x, clientY: y, button }))
 }
 
+/**
+ * What the overlay put on screen, in order: the rectangles it filled — the grips — and the
+ * circles it traced — the brush ring. The overlay paints only when its canvas hands out a 2D
+ * context, and `test-setup` denies one to the whole renderer, so lending it a recorder for the
+ * length of one test is the only outlet this chrome has.
+ */
+function overlayRecorder(): { fills: number[][]; rings: number[][] } {
+  const fills: number[][] = []
+  const rings: number[][] = []
+  const ignore = (): void => {}
+  const context = {
+    save: ignore,
+    restore: ignore,
+    setTransform: ignore,
+    clearRect: ignore,
+    beginPath: ignore,
+    moveTo: ignore,
+    lineTo: ignore,
+    stroke: ignore,
+    strokeRect: ignore,
+    fillText: ignore,
+    setLineDash: ignore,
+    arc: (x: number, y: number, radius: number): void => {
+      rings.push([x, y, radius])
+    },
+    fillRect: (x: number, y: number, width: number, height: number): void => {
+      fills.push([x, y, width, height])
+    },
+    lineWidth: 1,
+    strokeStyle: '',
+    fillStyle: '',
+    font: '',
+    textAlign: 'left',
+    textBaseline: 'top',
+  }
+
+  const previous = HTMLCanvasElement.prototype.getContext
+  // Same cast as `test-setup` makes to deny it: the overloads of `getContext` cannot be
+  // satisfied by one function, and the overlay asks for its context in its constructor.
+  HTMLCanvasElement.prototype.getContext = (() =>
+    context) as unknown as HTMLCanvasElement['getContext']
+  onTestFinished(() => {
+    HTMLCanvasElement.prototype.getContext = previous
+  })
+
+  return { fills, rings }
+}
+
 /** How many tree mutations happen from here on, read when the assertion needs it. */
 function mutationsCounted(): () => number {
   const before = gpu.mutations
@@ -425,6 +528,23 @@ function groupContainer(id: string): Placed | undefined {
   return gpu.containers.find(container => container.label === id)
 }
 
+/**
+ * Every engine a test mounted. They listen on `window` for `pointerup` and `keydown`, so one left
+ * alive answers the next test's keys as well: a crop frame placed here and never applied was
+ * being cropped by the ⏎ of the test after it.
+ */
+/** A harness whose page refuses every face, which is what a missing or unreadable file is. */
+function mountedWithoutFace(): Promise<Harness> {
+  return mounted(DEFAULT_CANVAS, 'brush', () => Promise.reject(new Error('no such file')))
+}
+
+const mountedEngines: InstanceType<typeof CanvasEngine>[] = []
+
+afterEach(() => {
+  for (const engine of mountedEngines) engine.dispose()
+  mountedEngines.length = 0
+})
+
 beforeEach(() => {
   gpu.renders = 0
   gpu.texturesCreated = 0
@@ -436,6 +556,9 @@ beforeEach(() => {
   gpu.painted = []
   gpu.loaded = []
   gpu.extracted = []
+  gpu.sampled = []
+  gpu.pixels = [0, 0, 0, 0]
+  gpu.resizes = 0
 })
 
 describe('the blend table', () => {
@@ -469,6 +592,20 @@ describe('mounting', () => {
     await mounted()
 
     expect(gpu.texturesCreated).toBe(1)
+  })
+
+  /**
+   * Pixi honours `resizeTo` through a `window.resize` listener and nothing else. Every surface of
+   * the studio lives in a Dockview panel, and a dragged splitter resizes the panel without
+   * resizing the window — so the drawing buffer stayed at its mounted size while the overlay,
+   * which observes the host, followed it. The handles then sat beside the layer they belong to.
+   *
+   * Read through `measure`, which is the one path both the observer and the mount take.
+   */
+  it('hands the renderer the host box whenever it measures one', async () => {
+    await mounted()
+
+    expect(gpu.resizes).toBeGreaterThan(0)
   })
 
   /**
@@ -842,6 +979,130 @@ describe('painting a transformed layer', () => {
     press(host, x, y)
     release(x, y)
   }
+
+  /** The box a stroke reports to the undo, in surface pixels. */
+  const reachOf = (
+    host: HTMLElement,
+    at: { x: number; y: number } = { x: 200, y: 200 },
+  ): { x: number; y: number; width: number; height: number } | undefined => {
+    const touched = vi.spyOn(PixelPatches.prototype, 'touch')
+    onTestFinished(() => touched.mockRestore())
+    touched.mockClear()
+    dabAt(host, at.x, at.y)
+    return touched.mock.calls[0]?.[0]
+  }
+
+  /** The stamp is the one thing `paintSpace` carries into a surface. */
+  const stamp = (): Placed | undefined => paintSpace()?.children[0]
+
+  /**
+   * The reach, not the disc. A soft brush lays pixels beyond its own radius — that fringe IS the
+   * soft edge — and a stroke whose undo footprint was the radius alone would put back everything
+   * except what the softness had just drawn.
+   */
+  it('reaches past the disc when the edge is soft, and stops at it when it is hard', async () => {
+    const { host, engine } = await mounted(shifted({}))
+
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 1 })
+    const hard = reachOf(host)
+
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+    const soft = reachOf(host)
+
+    // 40 across, plus the pixel of slack `brushRect` already keeps for the antialiased rim.
+    expect(hard).toMatchObject({ width: 42, height: 42 })
+    // Ten pixels of spread, and the filter's padding is twice that on each side.
+    expect(soft).toMatchObject({ width: 82, height: 82 })
+    // The box grows on both sides, so its origin moves back by exactly what its width gained.
+    expect((hard?.x ?? 0) - (soft?.x ?? 0)).toBe(20)
+    expect((hard?.y ?? 0) - (soft?.y ?? 0)).toBe(20)
+  })
+
+  /**
+   * The fringe is counted in surface pixels and the disc in document ones. Added before the
+   * mapping, a layer scaled 2× recorded half the box its own stroke covered — and an undo left
+   * the fringe on screen. The one state the other cases never reach, being pure translations.
+   */
+  it('reports the fringe in the surface’s pixels, not the document’s', async () => {
+    const { host, engine } = await mounted(shifted({ scaleX: 2, scaleY: 2 }))
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+
+    const reach = reachOf(host)
+
+    // The disc maps to 20 surface px across; the filter's padding is 20 surface px each side.
+    expect(reach).toMatchObject({ width: 61, height: 61 })
+  })
+
+  /**
+   * The pencil reads the same settings and spreads none of them: that is the whole difference.
+   *
+   * The eraser goes with it, and for Pixi's reason rather than a promise of the tool — see
+   * `softness()`. Both rows are `BRUSH_SETTINGS_BY_TOOL`, which the bar reads to hide the
+   * slider: this is the measurement that keeps the table honest about the one column the engine
+   * asks it for.
+   */
+  it.each<CanvasTool>(['pencil', 'eraser'])(
+    'reaches no further under the %s, whatever the hardness slider says',
+    async tool => {
+      const { host, engine } = await mounted(shifted({}))
+      engine.setTool(tool)
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+
+      expect(reachOf(host)).toMatchObject({ width: 42 })
+    },
+  )
+
+  /**
+   * What the reach is computed from. Without this the filter could stop being hung at all and
+   * every assertion above would still pass: they read `softness()`, never the filter it sets.
+   */
+  describe('the filter that softens the edge', () => {
+    it('is hung, at the spread the brush asks for', async () => {
+      const { host, engine } = await mounted(shifted({}))
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+      dabAt(host, 200, 200)
+
+      expect(stamp()?.filters).toHaveLength(1)
+      expect(stamp()?.filters[0]).toMatchObject({ strength: 10, padding: 20 })
+    })
+
+    it('is taken off for an edge that is already hard', async () => {
+      const { host, engine } = await mounted(shifted({}))
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+      dabAt(host, 200, 200)
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 1 })
+
+      expect(stamp()?.filters).toEqual([])
+    })
+
+    /**
+     * Arming the pencil from the toolbar calls `setTool` alone — `setBrush` does not follow. The
+     * filter left hanging would paint a feathered pencil while the undo box believed it hard.
+     */
+    it('is taken off by arming the pencil, with no setting touched', async () => {
+      const { host, engine } = await mounted(shifted({}))
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+      dabAt(host, 200, 200)
+
+      engine.setTool('pencil')
+
+      expect(stamp()?.filters).toEqual([])
+    })
+
+    /**
+     * A filtered container is drawn into a texture of its own and composed back with the
+     * filter's blend mode, never the stamp's — so an `erase` stamp under a filter rubs out
+     * against nothing. The eraser stays hard until that can be checked on a GPU.
+     */
+    it('is never hung under the eraser, whose blend would not survive it', async () => {
+      const { host, engine } = await mounted(shifted({}))
+      engine.setTool('eraser')
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+      dabAt(host, 200, 200)
+
+      expect(stamp()?.filters).toEqual([])
+    })
+  })
 
   it('draws straight into the pixels of an untouched layer', async () => {
     const { host } = await mounted(shifted({}))
@@ -1246,6 +1507,77 @@ describe('loading a picture into a layer', () => {
     expect(gpu.loaded).toEqual([])
   })
 
+  // The race, and the loop behind it, are written out at `LayerSurface.fromDocument`.
+  it('leaves the asset alone for a layer whose pixels the document restored', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted()
+    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' })
+    gpu.loaded = []
+
+    engine.apply(stacked([pixelLayer('layer-1', 'Background'), laid]))
+    await flushMicrotasks()
+
+    expect(gpu.loaded).toEqual([{ src: 'data:image/png;base64,QUJD', parser: 'texture' }])
+  })
+
+  /**
+   * A part inside `<id>.img/` can be truncated or corrupt. Before the claim existed the layer was
+   * drawn from its asset regardless, so a bad part cost nothing visible; claimed and then failed,
+   * it would leave the layer empty and silent — and the next ⌘S would write that emptiness over
+   * the asset.
+   */
+  it('falls back to the asset when the document’s own pixels will not decode', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted()
+    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' })
+    gpu.loaded = []
+    gpu.refuseLoad = true
+    onTestFinished(() => {
+      gpu.refuseLoad = false
+    })
+
+    engine.apply(stacked([laid]))
+    await flushMicrotasks()
+
+    expect(gpu.loaded.map(asked => asked.src)).toContain('scenario://asset/asset-7')
+  })
+
+  // Same fallback on the other path: a surface that already exists takes its pixels directly,
+  // and the caller is told, because there it has somewhere to report to.
+  it('gives the claim back when pixels handed to a live surface will not decode', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted(stacked([laid]))
+    await flushMicrotasks()
+    gpu.loaded = []
+    gpu.refuseLoad = true
+    onTestFinished(() => {
+      gpu.refuseLoad = false
+    })
+
+    await expect(
+      engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' }),
+    ).rejects.toThrow()
+    await flushMicrotasks()
+
+    expect(gpu.loaded.map(asked => asked.src)).toContain('scenario://asset/asset-7')
+  })
+
+  // The pixels went with the surface, so the asset is the only picture left to draw.
+  it('goes back to the asset once the layer has left the stack and returned', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted()
+    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' })
+    engine.apply(stacked([laid]))
+    await flushMicrotasks()
+
+    engine.apply(stacked([pixelLayer('layer-1', 'Background')]))
+    gpu.loaded = []
+    engine.apply(stacked([laid]))
+    await flushMicrotasks()
+
+    expect(gpu.loaded).toEqual([{ src: 'scenario://asset/asset-7', parser: 'texture' }])
+  })
+
   it('does nothing at all for a layer it does not hold', async () => {
     const { engine } = await mounted()
     gpu.painted = []
@@ -1537,6 +1869,71 @@ describe('flattening the document', () => {
   })
 })
 
+/**
+ * What a saved image weighs. The stack goes in the manifest and the pixels in a file per surface,
+ * so this is the seam between a document on disk and the textures only the GPU holds.
+ */
+describe('saving and restoring the pixels', () => {
+  const masked = (): CanvasState => ({
+    ...DEFAULT_CANVAS,
+    layers: [
+      { ...pixelLayer('layer-1', 'Background'), mask: { enabled: true, linked: true } },
+      pixelLayer('layer-2', 'Paint'),
+    ],
+    activeLayerId: 'layer-1',
+  })
+
+  it('hands back one picture per surface, masks included', async () => {
+    const { engine } = await mounted(masked())
+
+    await expect(engine.pixelSnapshots()).resolves.toEqual([
+      { layerId: 'layer-1', mask: false, data: 'QUJD' },
+      { layerId: 'layer-1', mask: true, data: 'QUJD' },
+      { layerId: 'layer-2', mask: false, data: 'QUJD' },
+    ])
+  })
+
+  /**
+   * The texture, not the placed sprite: a surface is document-sized and the transform lives in
+   * the state, so extracting the sprite would bake in a move `place` applies again on the way in.
+   */
+  it('extracts the texture rather than the sprite, at the document’s own scale', async () => {
+    const { engine } = await mounted()
+    gpu.extracted.length = 0
+
+    await engine.pixelSnapshots()
+
+    expect(gpu.extracted[0]?.resolution).toBe(1)
+    expect(gpu.extracted[0]?.frame).toBeUndefined()
+  })
+
+  it('hands back nothing for a group, which owns no texture', async () => {
+    const { engine } = await mounted({
+      ...DEFAULT_CANVAS,
+      layers: [groupLayer('group-1', 'Set', [])],
+      activeLayerId: null,
+    })
+
+    await expect(engine.pixelSnapshots()).resolves.toEqual([])
+  })
+
+  it('hands back nothing before a document is applied', async () => {
+    const engine = new CanvasEngine(silentOptions())
+
+    await expect(engine.pixelSnapshots()).resolves.toEqual([])
+  })
+
+  it('draws a saved picture back into the surface it came from', async () => {
+    const { engine } = await mounted(masked())
+    gpu.loaded.length = 0
+
+    await engine.restoreSnapshot({ layerId: 'layer-1', mask: true, data: 'QUJD' })
+
+    expect(gpu.loaded[0]?.src).toBe('data:image/png;base64,QUJD')
+    expect(gpu.loaded[0]?.parser).toBe('texture')
+  })
+})
+
 describe('adjustment layers', () => {
   const graded = (values: Partial<AdjustmentStack> = {}): CanvasState =>
     stacked([
@@ -1666,6 +2063,128 @@ describe('captions', () => {
     press(host, 300, 250)
 
     expect(captions).toEqual([{ x: 300, y: 250 }])
+  })
+
+  /**
+   * The face a caption is set in has to be in the page before the browser can draw with it. The
+   * same reference a 3D text stores — see `domain/font` — and the studio's own three are files
+   * beside the bundle rather than anything the machine has installed.
+   */
+  it('asks the page for the face a caption is set in', async () => {
+    const { engine, faces } = await mounted()
+
+    engine.apply(caption('Hello'))
+    await flushMicrotasks()
+
+    expect(faces).toEqual(['Lato'])
+  })
+
+  // A document of twenty captions in one font must not fetch it twenty times.
+  it('asks for a face once, whatever is set in it', async () => {
+    const { engine, faces } = await mounted()
+
+    engine.apply(caption('Hello'))
+    await flushMicrotasks()
+    engine.apply(caption('Goodbye'))
+    await flushMicrotasks()
+
+    expect(faces).toEqual(['Lato'])
+  })
+
+  /**
+   * The one fetch is shared, so the redraw has to be too. Every caption but the one that happened
+   * to ask sat behind the early return, was drawn in the generic, and stayed there until someone
+   * edited it — two fonts on screen for a document set in one.
+   */
+  it('redraws every caption in a family when its face lands, not only the one that asked', async () => {
+    // Surfaces are built in document order, and `layer-1` takes texture 0.
+    const FIRST_CAPTION = 1
+    const SECOND_CAPTION = 2
+    let land = (): void => {}
+    const onItsWay = new Promise<void>(resolve => {
+      land = resolve
+    })
+    const { engine } = await mounted(DEFAULT_CANVAS, 'brush', () => onItsWay)
+
+    engine.apply(
+      stacked([
+        pixelLayer('layer-1', 'Background'),
+        textLayer('first', 'Hello', { x: 10, y: 20 }),
+        textLayer('second', 'Goodbye', { x: 10, y: 60 }),
+      ]),
+    )
+    await flushMicrotasks()
+    // Both are on screen in the generic by now; what follows is the file arriving.
+    gpu.painted = []
+
+    land()
+    await flushMicrotasks()
+
+    expect(gpu.painted).toEqual([FIRST_CAPTION, SECOND_CAPTION])
+  })
+
+  /**
+   * The redraw is decided by a key built from what the caption says. Left out of it, the face was
+   * an edit the screen never showed — the words stayed in the old font for good, and the page was
+   * never asked for the new one.
+   */
+  it('redraws and asks for the face when only the font changed', async () => {
+    const { engine, faces } = await mounted()
+    engine.apply(caption('Hello'))
+    await flushMicrotasks()
+    gpu.painted = []
+
+    const mono: FontRef = { source: 'embedded', family: 'IBM Plex Mono' }
+    const refaced = stacked([
+      pixelLayer('layer-1', 'Background'),
+      { ...textLayer('t', 'Hello', { x: 10, y: 20 }), font: mono },
+    ])
+    engine.apply(refaced)
+    await flushMicrotasks()
+
+    expect(gpu.painted).toContain(1)
+    expect(faces).toEqual(['Lato', 'IBM Plex Mono'])
+  })
+
+  /**
+   * A face the page refuses is said once and left alone: retrying on every reconciliation would
+   * fetch a file that is not there once per frame, and `familyStack` has already put a generic
+   * behind it, so the caption stays readable.
+   */
+  it('says a face it could not put in the page, once, and draws in the generic', async () => {
+    const logs = bridgeWatchingLogs()
+    const { engine } = await mountedWithoutFace()
+
+    engine.apply(caption('Hello'))
+    await flushMicrotasks()
+    engine.apply(caption('Goodbye'))
+    await flushMicrotasks()
+
+    expect(logs.entries().filter(entry => entry.scope === 'font.face')).toHaveLength(1)
+  })
+
+  // The caption may have been retyped in another face while the file was on its way: what the
+  // state holds now is what decides, never what asked.
+  it('leaves a caption alone when it was refaced while its file was on its way', async () => {
+    const { engine, faces } = await mounted()
+
+    engine.apply(caption('Hello'))
+    engine.apply(stacked([pixelLayer('layer-1', 'Background')]))
+    await flushMicrotasks()
+
+    expect(faces).toEqual(['Lato'])
+  })
+
+  // Nothing to fetch: the browser already resolves an installed family by name.
+  it('asks the page for nothing when the face is one the machine has', async () => {
+    const { engine, faces } = await mounted()
+    const font: FontRef = { source: 'system', family: 'Futura' }
+    const installed = stacked([{ ...textLayer('t', 'Hello', { x: 10, y: 20 }), font }])
+
+    engine.apply(installed)
+    await flushMicrotasks()
+
+    expect(faces).toEqual([])
   })
 
   it('rasterizes the words into the layer that holds them', async () => {
@@ -1869,6 +2388,24 @@ describe('the view', () => {
   })
 })
 
+/** An engine that reports to nobody, for the paths that answer before anything is mounted. */
+function silentOptions(): ConstructorParameters<typeof CanvasEngine>[0] {
+  const nothing = (): void => undefined
+  return {
+    addFace: () => Promise.resolve(),
+    onPick: nothing,
+    onPixels: nothing,
+    onPixelsDropped: nothing,
+    onViewport: nothing,
+    onSelection: nothing,
+    onHost: nothing,
+    onText: nothing,
+    onCrop: nothing,
+    guides: { add: () => '', move: nothing, remove: nothing, beginDrag: nothing, endDrag: nothing },
+    layers: { translate: nothing, transform: nothing, beginDrag: nothing, endDrag: nothing },
+  }
+}
+
 /** `pointermove` goes to the host, `pointerup` to the window — as the engine listens for them. */
 function drag(host: HTMLElement, x: number, y: number, shiftKey = false): void {
   host.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, shiftKey }))
@@ -1877,6 +2414,274 @@ function drag(host: HTMLElement, x: number, y: number, shiftKey = false): void {
 function release(x = 400, y = 400): void {
   window.dispatchEvent(new PointerEvent('pointerup', { clientX: x, clientY: y }))
 }
+
+describe('the crop tool', () => {
+  /** A frame is placed by the drag and applied by ⏎: the release is not what commits it. */
+  it('places a frame on release without cropping anything yet', async () => {
+    const { host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    expect(crops).toEqual([])
+  })
+
+  /**
+   * The frame draws its grips through the same geometry the move tool's box does, so it answers
+   * the same hover. Without this the crop kept the blind aiming the branch set out to remove.
+   */
+  it('says a grip of the placed frame pulls across its edge', async () => {
+    const { host } = await mounted(DEFAULT_CANVAS, 'crop')
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    drag(host, 400, 200)
+
+    expect(host.querySelector('canvas')?.style.cursor).toBe('ew-resize')
+  })
+
+  // A crop does not turn the document, so there is no ring outside its corners to find. Twelve
+  // pixels out is past the grip and well inside the reach a layer's corner would have answered.
+  it('offers no rotation outside a corner of the frame', async () => {
+    const { host } = await mounted(DEFAULT_CANVAS, 'crop')
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    drag(host, 412, 312)
+
+    expect(host.querySelector('canvas')?.style.cursor).toBe('')
+  })
+
+  it('crops to the placed frame on ⏎', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 100, y: 100, width: 300, height: 200 }])
+  })
+
+  it('takes the frame off screen on ⎋, and crops nothing', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+    engine.dropCrop()
+    engine.applyCrop()
+
+    expect(crops).toEqual([])
+  })
+
+  it('ignores ⏎ when no frame is placed', async () => {
+    const { engine, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    engine.applyCrop()
+
+    expect(crops).toEqual([])
+  })
+
+  /** The grips are real: this is the whole reason the frame outlives its drag. */
+  it('adjusts the placed frame when a grip is dragged', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    // The east grip sits at x = 400, halfway down the frame.
+    press(host, 400, 200)
+    drag(host, 500, 200)
+    release(500, 200)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 100, y: 100, width: 400, height: 200 }])
+  })
+
+  it('starts a fresh frame when the press lands away from every grip', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    press(host, 600, 600)
+    drag(host, 700, 660)
+    release(700, 660)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 600, y: 600, width: 100, height: 60 }])
+  })
+
+  it('places nothing for a press the hand never dragged', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 200, 200)
+    release(200, 200)
+    engine.applyCrop()
+
+    expect(crops).toEqual([])
+  })
+
+  it('clamps a drag that runs off the document, so a crop never grows the frame', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 900, 900)
+    drag(host, 2000, 2000)
+    release(2000, 2000)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 900, y: 900, width: 124, height: 124 }])
+  })
+
+  it('squares the frame while shift is held', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 200, true)
+    release(400, 200)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 100, y: 100, width: 300, height: 300 }])
+  })
+
+  /**
+   * The frame is not a gesture: panning to see what a crop would keep is the point, and a middle
+   * click used to be a way to commit one by accident.
+   */
+  it('keeps the frame through a middle-button pan', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    press(host, 400, 300, 1)
+    release(400, 300)
+    engine.applyCrop()
+
+    expect(crops).toEqual([{ x: 100, y: 100, width: 300, height: 200 }])
+  })
+
+  /**
+   * The engine hears the keyboard on `window`, so a second image left with a frame up would crop
+   * itself from behind. Arming another tool is what takes the frame down.
+   */
+  it('drops the frame when another tool is armed', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+    engine.setTool('brush')
+    engine.applyCrop()
+
+    expect(crops).toEqual([])
+  })
+
+  it('leaves a key typed into a prompt alone', async () => {
+    const { host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    const field = document.createElement('input')
+    document.body.appendChild(field)
+    field.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter', bubbles: true }))
+    field.remove()
+
+    expect(crops).toEqual([])
+  })
+
+  /**
+   * The one that decides whether a crop keeps the picture. A surface is document-sized, so the
+   * new one only fits the kept region — carrying the old texture in at the origin would copy the
+   * document's top-left corner instead, and the frame would come out blank wherever `rect.x`
+   * pushed past the new width.
+   */
+  it('carries the kept region into the new surface, not the document’s corner', async () => {
+    const { engine, host } = await mounted(DEFAULT_CANVAS, 'crop')
+    gpu.sprites.length = 0
+
+    press(host, 900, 900)
+    drag(host, 2000, 2000)
+    release(2000, 2000)
+    engine.applyCrop()
+
+    expect(gpu.sprites[0]?.position).toEqual({ x: -900, y: -900 })
+  })
+
+  /**
+   * A frame is placed against the document it was drawn on. A quarter turn or a resample under it
+   * would leave it pointing outside the picture, and applying it would recut every surface to
+   * nothing — with the undo tiles thrown away in the same move.
+   */
+  it('drops the frame when the document changes size under it', async () => {
+    const { engine, host, crops } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 800, 100)
+    drag(host, 1000, 400)
+    release(1000, 400)
+    engine.apply({ ...DEFAULT_CANVAS, width: 512, height: 2048 })
+    engine.applyCrop()
+
+    expect(crops).toEqual([])
+  })
+
+  /**
+   * A crop carries the pixels over translated by the frame's origin and re-cuts every surface —
+   * it does NOT reload the pictures. The rect each layer's grips are drawn on has to travel the
+   * same distance: left where it was, the grips of a picture layer would stand at coordinates
+   * only the document BEFORE the crop ever had.
+   */
+  it('moves the picture’s grips with the pixels when the document is cropped', async () => {
+    const { engine, host, layers } = await mounted(DEFAULT_CANVAS, 'crop')
+    // 200 × 100 centred in 1024²: the picture sits at 412,462.
+    await engine.loadInto('layer-1', 'scenario://asset/take-1')
+
+    press(host, 400, 450)
+    drag(host, 700, 600)
+    release(700, 600)
+    engine.applyCrop()
+    engine.setTool('move')
+
+    // The picture now sits at 12,12 in a 300 × 150 document, so its south-east grip is at 212,112.
+    press(host, 212, 112)
+    drag(host, 412, 212)
+
+    expect(layers.at(-1)).toBe('transform:layer-1:2.00:2.00:0.00')
+  })
+
+  it('gives the new surface the frame’s own size', async () => {
+    const { engine, host } = await mounted(DEFAULT_CANVAS, 'crop')
+    const before = gpu.texturesCreated
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+    engine.applyCrop()
+
+    expect(gpu.texturesCreated).toBeGreaterThan(before)
+    expect(gpu.painted.length).toBeGreaterThan(0)
+  })
+
+  // The tool draws a frame and nothing else: it must never reach the brush path below it.
+  it('leaves the pixels alone', async () => {
+    const { host, patches } = await mounted(DEFAULT_CANVAS, 'crop')
+
+    press(host, 100, 100)
+    drag(host, 400, 300)
+    release(400, 300)
+
+    expect(patches).toEqual([])
+  })
+})
 
 describe('the move tool', () => {
   // The layer position lives in the state, not on the sprite: anything else is lost to the next
@@ -1946,6 +2751,23 @@ describe('the move tool', () => {
   })
 })
 
+/**
+ * What the pointer says before the button goes down. The grips were reachable only by guessing:
+ * nothing changed under an idle hand, so the twelve pixels of a grip had to be found blind.
+ *
+ * Pixi owns this canvas and the cursor goes on it, which is what lets it win for as long as the
+ * gesture lasts and hand it back to the host on release.
+ */
+const cursorOn = (host: HTMLElement): string => {
+  // Found by what it is, not by where it sits: the overlay marks itself unclickable, so the
+  // other canvas is Pixi's. Taking the first would ride on the order `mount` happens to append
+  // them in, and every assertion of an *absent* cursor would pass on the wrong element.
+  const canvases = [...host.querySelectorAll('canvas')]
+  const pixi = canvases.filter(canvas => canvas.style.pointerEvents !== 'none')
+  const only = pixi.length === 1 ? pixi[0] : undefined
+  return only ? only.style.cursor : `expected one paintable canvas, found ${pixi.length}`
+}
+
 describe('the transform grips', () => {
   /** A layer occupying the whole 1024² document, so the grips sit on the document's corners. */
   const armed = async () => {
@@ -1963,6 +2785,24 @@ describe('the transform grips', () => {
     drag(host, 1224, 1224)
 
     expect(layers.at(-1)).toMatch(/^transform:layer-1:/)
+  })
+
+  /**
+   * A photo laid by `containIn` does not fill its surface: 200 × 100 centred in a 1024² document
+   * sits at 412,462 with transparent margin all round. The grips take the PHOTO, as every other
+   * editor does — a square touching the picture nowhere is a square one cannot resize it by.
+   *
+   * Pulling its south-east grip from 612,562 to 812,662 doubles both sides of the photo, which
+   * is the assertion: solved against the document, the same drag would report something else.
+   */
+  it('puts the grips on the picture the layer holds, not on the surface around it', async () => {
+    const { host, engine, layers } = await armed()
+    await engine.loadInto('layer-1', 'scenario://asset/take-1')
+
+    press(host, 612, 562)
+    drag(host, 812, 662)
+
+    expect(layers.at(-1)).toBe('transform:layer-1:2.00:2.00:0.00')
   })
 
   it('scales from the far corner, so the opposite one stays put', async () => {
@@ -1986,19 +2826,170 @@ describe('the transform grips', () => {
     expect(layers.at(-1)).toBe('transform:layer-1:1.50:1.50:0.00')
   })
 
-  // The layer is pushed down the document on purpose: the rotation grip floats above its top
-  // edge, and above a layer at the origin that lands under the ruler band.
-  it('turns the layer by the grip that floats above it', async () => {
-    const { engine, host, layers } = await mounted(
-      stacked([{ ...pixelLayer('layer-1', 'Background'), transform: { ...IDENTITY, y: 200 } }]),
+  /**
+   * There is no rotation grip: the zone just outside a corner turns the layer, as it does in
+   * Figma. The layer is pushed clear of the origin on purpose — outside its top-left corner has
+   * to be canvas, and at the origin that would be the ruler band.
+   */
+  const offset = (): Promise<Awaited<ReturnType<typeof mounted>>> =>
+    mounted(
+      stacked([
+        { ...pixelLayer('layer-1', 'Background'), transform: { ...IDENTITY, x: 200, y: 200 } },
+      ]),
+    )
+
+  it('turns the layer by the zone just outside a corner', async () => {
+    const { engine, host, layers } = await offset()
+    engine.setTool('move')
+
+    // Beyond the north-west corner (200, 200) — too far out for the grip, inside the rotation
+    // ring — then a quarter turn about the middle at (712, 712).
+    press(host, 190, 190)
+    drag(host, 1234, 190)
+
+    expect(layers.at(-1)).toMatch(/^transform:layer-1:1\.00:1\.00:1\.5/)
+  })
+
+  // Inside the corner is a drag of the layer, not a turn: only the outside of it rotates.
+  it('moves the layer for a drag that started just inside the same corner', async () => {
+    const { engine, host, layers } = await offset()
+    engine.setTool('move')
+
+    press(host, 210, 210)
+    drag(host, 240, 240)
+
+    expect(layers.at(-1)).toBe('translate:layer-1:230:230')
+  })
+
+  it('says a grip pulls across the edge when the pointer rests on one', async () => {
+    const { host } = await armed()
+
+    drag(host, 1024, 512)
+
+    expect(cursorOn(host)).toBe('ew-resize')
+  })
+
+  it('says a corner pulls along its diagonal', async () => {
+    const { host } = await armed()
+
+    drag(host, 1024, 1024)
+
+    expect(cursorOn(host)).toBe('nwse-resize')
+  })
+
+  // Drawn rather than named: no platform ships a rotation cursor.
+  it('draws a turning cursor over the zone outside a corner', async () => {
+    const { host } = await armed()
+
+    drag(host, 1034, 1034)
+
+    expect(cursorOn(host)).toContain('data:image/svg+xml')
+  })
+
+  /**
+   * Leaving a grip has to take its cursor with it. Established before it is denied — an assertion
+   * that the cursor is empty, on a canvas where nothing ever wrote one, cannot fail.
+   */
+  it('gives the cursor back when the pointer leaves a grip for the middle', async () => {
+    const { host } = await armed()
+    drag(host, 1024, 512)
+    expect(cursorOn(host)).toBe('ew-resize')
+
+    drag(host, 512, 512)
+
+    expect(cursorOn(host)).toBe('')
+  })
+
+  /**
+   * The layer's rotation is what turns the arrow, and the engine has to hand it over: a quarter
+   * turn puts the east grip due south, where it pulls up and down.
+   *
+   * Without this nothing would notice `hoverBox` passing a fixed zero — every other cursor test
+   * arms a layer that was never turned.
+   */
+  it('turns the arrow with the layer, not just with the grip', async () => {
+    const { engine, host } = await mounted(
+      stacked([
+        {
+          ...pixelLayer('layer-1', 'Background'),
+          transform: { ...IDENTITY, rotation: Math.PI / 2 },
+        },
+      ]),
     )
     engine.setTool('move')
 
-    // From due north of the box's middle to due east of it: a quarter turn.
-    press(host, 512, 176)
-    drag(host, 1048, 712)
+    drag(host, 512, 1024)
 
-    expect(layers.at(-1)).toMatch(/^transform:layer-1:1\.00:1\.00:1\.5/)
+    expect(cursorOn(host)).toBe('ns-resize')
+  })
+
+  /**
+   * Space is a pan in waiting and owns the cursor while it is held. What the pointer was over is
+   * dropped on release: the hover only recomputes when it *changes*, so a grip the hand never
+   * left would compare equal for ever and its arrow would never come back.
+   */
+  it('brings the grip’s arrow back after space was held and released', async () => {
+    const { host } = await armed()
+    drag(host, 1024, 512)
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }))
+    document.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }))
+
+    drag(host, 1024, 512)
+
+    expect(cursorOn(host)).toBe('ew-resize')
+  })
+
+  // Arming another layer keeps `layers` identical, so it is the one way a box moves under a
+  // still pointer without the tree changing — and the cursor used to keep the old promise.
+  it('drops the cursor when another layer is armed under a still pointer', async () => {
+    const state = stacked([pixelLayer('layer-1', 'Background'), pixelLayer('layer-2', 'Top')])
+    const { engine, host } = await mounted(state)
+    engine.setTool('move')
+    drag(host, 1024, 512)
+    expect(cursorOn(host)).toBe('ew-resize')
+
+    // The very shape `selectLayer` produces: a fresh state around the same `layers` array.
+    engine.apply({ ...state, activeLayerId: 'layer-2' })
+
+    expect(cursorOn(host)).toBe('')
+  })
+
+  // A turn is one gesture, so it is one history entry — the drag has to be closed like any other.
+  it('closes the history entry a turn opened', async () => {
+    const { engine, host, layers } = await offset()
+    engine.setTool('move')
+
+    press(host, 190, 190)
+    drag(host, 1234, 190)
+    release()
+
+    expect(layers.at(-1)).toBe('end')
+  })
+
+  /**
+   * The chrome belongs to the tool that draws it. Arming the brush used to leave the move tool's
+   * cursor and grips on screen until something else happened to repaint.
+   */
+  it('hands the cursor back when another tool is armed', async () => {
+    const { engine, host } = await armed()
+    drag(host, 1024, 512)
+
+    engine.setTool('brush')
+
+    expect(cursorOn(host)).toBe('')
+  })
+
+  // Presence established first, then denied: the same hover that answers under the move tool has
+  // to answer nothing under the brush, and an empty canvas would say that on its own.
+  it('offers no grip at all once another tool is armed', async () => {
+    const { engine, host } = await armed()
+    drag(host, 1024, 512)
+    expect(cursorOn(host)).toBe('ew-resize')
+
+    engine.setTool('brush')
+    drag(host, 1024, 513)
+
+    expect(cursorOn(host)).toBe('')
   })
 
   it('moves the layer for a drag that took no grip at all', async () => {
@@ -2025,6 +3016,116 @@ describe('the transform grips', () => {
     drag(host, 1224, 1224)
 
     expect(layers).toEqual([])
+  })
+})
+
+/**
+ * A tool that cannot act says so under the hand, before the click. The refusal was silent: the
+ * brush, the bucket, the shapes and the move tool all returned without a word on a group, on an
+ * adjustment layer, on a padlocked one — and a picture that takes no paint looks exactly like
+ * one whose stroke went somewhere unexpected.
+ *
+ * At the cursor rather than in a toast: a refusal has to be readable BEFORE the gesture, which
+ * no toast allows, and one toast per refused gesture would be worse than the silence it fixes.
+ */
+describe('a tool that can do nothing here', () => {
+  const BARE = { ...VIEW_1_1, rulers: false, guides: false, snap: false }
+
+  async function hoveringWith(tool: CanvasTool, state: CanvasState): Promise<string> {
+    const harness = await mounted(state, tool)
+    harness.engine.setView(BARE)
+    await nextFrame()
+
+    drag(harness.host, 120, 90)
+    await nextFrame()
+    return cursorOn(harness.host)
+  }
+
+  /** A group swallows every stroke: it holds layers, never pixels of its own. */
+  const armedGroup = (): CanvasState => {
+    const group = groupLayer('g', 'G', [pixelLayer('a', 'A')])
+    return { ...DEFAULT_CANVAS, layers: [group], activeLayerId: group.id }
+  }
+
+  const padlocked = (): CanvasState =>
+    stacked([layerFixture({ locked: { ...UNLOCKED, pixels: true } })])
+
+  const pinned = (): CanvasState =>
+    stacked([layerFixture({ locked: { ...UNLOCKED, position: true } })])
+
+  it('refuses the brush on a group, and says so under the hand', async () => {
+    expect(await hoveringWith('brush', armedGroup())).toBe('not-allowed')
+  })
+
+  it('refuses the brush on a layer padlocked against paint', async () => {
+    expect(await hoveringWith('brush', padlocked())).toBe('not-allowed')
+  })
+
+  it('refuses the eraser, the bucket and the shapes on the same layer', async () => {
+    expect(await hoveringWith('eraser', padlocked())).toBe('not-allowed')
+    expect(await hoveringWith('fill', padlocked())).toBe('not-allowed')
+    expect(await hoveringWith('shape', padlocked())).toBe('not-allowed')
+  })
+
+  // Its own padlock: a layer free to take paint can still be pinned where it stands.
+  it('refuses the move tool on a layer pinned in place', async () => {
+    expect(await hoveringWith('move', pinned())).toBe('not-allowed')
+  })
+
+  it('lets the brush through on a layer that can take it', async () => {
+    expect(await hoveringWith('brush', stacked([layerFixture()]))).toBe('')
+  })
+
+  /**
+   * The eyedropper reads the document, it does not write to it, and the selection tools carve
+   * out a region rather than a layer. Neither has anything to refuse on a padlocked layer.
+   */
+  it('says nothing for the tools a padlock does not stop', async () => {
+    expect(await hoveringWith('picker', padlocked())).toBe('')
+    expect(await hoveringWith('select', padlocked())).toBe('')
+    expect(await hoveringWith('crop', padlocked())).toBe('')
+  })
+
+  it('takes the refusal back when a tool that can act is armed', async () => {
+    const harness = await mounted(padlocked(), 'brush')
+    harness.engine.setView(BARE)
+    drag(harness.host, 120, 90)
+    await nextFrame()
+    expect(cursorOn(harness.host)).toBe('not-allowed')
+
+    harness.engine.setTool('picker')
+    drag(harness.host, 122, 92)
+    await nextFrame()
+
+    expect(cursorOn(harness.host)).toBe('')
+  })
+
+  // Space is a pan in waiting and owns the cursor while it is held — panning is the one gesture
+  // no tool may take over, and it works over a padlocked layer like any other.
+  it('yields to space, which can always pan', async () => {
+    const harness = await mounted(padlocked(), 'brush')
+    harness.engine.setView(BARE)
+    drag(harness.host, 120, 90)
+    await nextFrame()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }))
+    drag(harness.host, 122, 92)
+    await nextFrame()
+
+    expect(cursorOn(harness.host)).toBe('grab')
+  })
+
+  it('drops the ring too, since nothing would land under it', async () => {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(padlocked(), 'brush')
+    harness.engine.setView(BARE)
+    await nextFrame()
+
+    rings.length = 0
+    drag(harness.host, 120, 90)
+    await nextFrame()
+
+    expect(rings).toHaveLength(0)
   })
 })
 
@@ -2123,5 +3224,403 @@ describe('a layer whose picture never arrives', () => {
     )
     expect(engine).toBeDefined()
     gpu.refuseLoad = false
+  })
+})
+
+/** The cursor the engine set. It writes on Pixi's canvas, which `mount` puts inside the host. */
+function cursorOf(host: HTMLElement): string {
+  return host.querySelector('canvas')?.style.cursor ?? ''
+}
+
+function wheel(host: HTMLElement, init: WheelEventInit): void {
+  host.dispatchEvent(new WheelEvent('wheel', { cancelable: true, ...init }))
+}
+
+function key(type: 'keydown' | 'keyup', init: KeyboardEventInit): void {
+  window.dispatchEvent(new KeyboardEvent(type, init))
+}
+
+describe('the eyedropper', () => {
+  it('hands the colour standing under the pointer to the document', async () => {
+    gpu.pixels = [0x33, 0x66, 0x99, 255]
+    const { host, picks } = await mounted(DEFAULT_CANVAS, 'picker')
+
+    press(host, 40, 50)
+
+    expect(picks).toEqual([0x336699])
+  })
+
+  // A buffer shorter than three channels reads as black rather than as a colour made up from
+  // whatever the missing ones defaulted to — an opaque white, say, which `?? 255` would give.
+  it('reads a channel it was not given as none of it', async () => {
+    gpu.pixels = []
+    const { host, picks } = await mounted(DEFAULT_CANVAS, 'picker')
+
+    press(host, 40, 50)
+
+    expect(picks).toEqual([0])
+  })
+
+  // One pixel, not the layer: extracting a 1024² sprite to read a single colour is a 4 MB
+  // allocation and a synchronous read, on every click.
+  it('reads a single pixel, where it was pressed', async () => {
+    const { host } = await mounted(DEFAULT_CANVAS, 'picker')
+
+    press(host, 40, 50)
+
+    expect(gpu.sampled).toEqual([{ x: 40, y: 50, width: 1, height: 1 }])
+  })
+
+  /**
+   * At 1:1 unpanned a screen point and a document point are the same number, so every other test
+   * here would pass on an eyedropper that never converted at all. Zoomed, they part company: 41
+   * screen pixels are 20.5 document ones, and the pixel holding them is 20.
+   */
+  it('reads the pixel under the pointer, whatever the zoom', async () => {
+    const { engine, host } = await mounted(DEFAULT_CANVAS, 'picker')
+    engine.setView({ ...VIEW_1_1, snap: false, viewport: { x: 0, y: 0, scale: 2 } })
+
+    press(host, 41, 51)
+
+    expect(gpu.sampled).toEqual([{ x: 20, y: 25, width: 1, height: 1 }])
+  })
+
+  /**
+   * Rulers off: their bands cover the first 20 px of each axis and take a press before any tool
+   * sees it, so a point at or outside the origin is unreachable with them on.
+   */
+  it.each([
+    { where: 'left of', x: -5, y: 50 },
+    { where: 'above', x: 40, y: -5 },
+    { where: 'right of', x: 1024, y: 50 },
+    { where: 'below', x: 40, y: 1024 },
+  ])('says nothing about a point $where the document', async ({ x, y }) => {
+    const { engine, host, picks } = await mounted(DEFAULT_CANVAS, 'picker')
+    engine.setView({ ...VIEW_1_1, snap: false, rulers: false })
+
+    press(host, x, y)
+
+    expect(picks).toEqual([])
+    expect(gpu.sampled).toEqual([])
+  })
+
+  // The other side of the same guard: pressed from the outside alone, tightening it to `x < 1` or
+  // `x >= width - 1` would take the first and last row of the document away without a test noticing.
+  it.each([
+    { corner: 'first', x: 0, y: 0 },
+    { corner: 'last', x: 1023, y: 1023 },
+  ])('reads the $corner pixel of the document', async ({ x, y }) => {
+    const { engine, host } = await mounted(DEFAULT_CANVAS, 'picker')
+    engine.setView({ ...VIEW_1_1, snap: false, rulers: false })
+
+    press(host, x, y)
+
+    expect(gpu.sampled).toEqual([{ x, y, width: 1, height: 1 }])
+  })
+
+  it('says nothing when no layer is armed', async () => {
+    const { host, picks } = await mounted({ ...DEFAULT_CANVAS, activeLayerId: null }, 'picker')
+
+    press(host, 40, 50)
+
+    expect(picks).toEqual([])
+    expect(gpu.sampled).toEqual([])
+  })
+})
+
+describe('holding space to pan', () => {
+  it('arms the hand, and gives the cursor back on the way up', async () => {
+    const { host } = await mounted()
+
+    key('keydown', { code: 'Space' })
+    expect(cursorOf(host)).toBe('grab')
+
+    key('keyup', { code: 'Space' })
+    expect(cursorOf(host)).toBe('')
+  })
+
+  // A space typed into a prompt is a space, not a pan.
+  it('leaves a space typed into a field alone', async () => {
+    const { host } = await mounted()
+    const field = document.createElement('input')
+    document.body.appendChild(field)
+    // Booked rather than removed after the assertion: a failing expect would leave the field in
+    // the page for every test after it, which is the kind of residue shuffling makes unreadable.
+    onTestFinished(() => field.remove())
+
+    field.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))
+
+    expect(cursorOf(host)).toBe('')
+  })
+
+  it('ignores a key that is not the space bar', async () => {
+    const { host } = await mounted()
+
+    key('keydown', { code: 'KeyB' })
+
+    expect(cursorOf(host)).toBe('')
+  })
+
+  // Held down, the key repeats. Re-arming on each repeat would take the grabbing cursor off a
+  // pan that is still open and put the idle hand back over it.
+  it('ignores the repeats of a key already held', async () => {
+    const { host } = await mounted()
+    key('keydown', { code: 'Space' })
+    press(host, 40, 50)
+
+    key('keydown', { code: 'Space', repeat: true })
+
+    expect(cursorOf(host)).toBe('grabbing')
+  })
+
+  it('holds the hand through another key coming up', async () => {
+    const { host } = await mounted()
+    key('keydown', { code: 'Space' })
+
+    key('keyup', { code: 'KeyB' })
+
+    expect(cursorOf(host)).toBe('grab')
+  })
+
+  // ⌘Tab while space is held: the key up never arrives, and the hand would stay for good.
+  it('gives the cursor back when the window loses focus', async () => {
+    const { host } = await mounted()
+    key('keydown', { code: 'Space' })
+
+    window.dispatchEvent(new Event('blur'))
+
+    expect(cursorOf(host)).toBe('')
+  })
+
+  // The key going up mid-drag ends the hold, not the gesture: the pan runs to the pointer up.
+  it('leaves the grabbing cursor alone while a pan is still open', async () => {
+    const { host } = await mounted()
+    key('keydown', { code: 'Space' })
+    press(host, 40, 50)
+
+    key('keyup', { code: 'Space' })
+
+    expect(cursorOf(host)).toBe('grabbing')
+  })
+})
+
+describe('the wheel', () => {
+  // A trackpad sends a pinch as a wheel with `ctrlKey`, which is also how ⌘/Ctrl + wheel arrives.
+  it.each([
+    { how: 'ctrl', ctrlKey: true, metaKey: false },
+    { how: 'meta', ctrlKey: false, metaKey: true },
+  ])('zooms with $how held, around the pointer', async ({ ctrlKey, metaKey }) => {
+    const { host, viewports } = await mounted()
+
+    wheel(host, { clientX: 200, clientY: 100, deltaY: -100, ctrlKey, metaKey })
+    await nextFrame()
+
+    // Falling back to the identity rather than asserting non-null: a wheel that published nothing
+    // fails the scale below instead of throwing something unreadable.
+    const next = viewports.at(-1) ?? { x: 0, y: 0, scale: 1 }
+    expect(next.scale).toBeGreaterThan(1)
+    // Whatever sat under the pointer is still under it — scaling without an anchor drags the
+    // document away from the cursor, which is the regression this line exists for.
+    const under = toDocument(next, { x: 200, y: 100 })
+    expect(under.x).toBeCloseTo(200)
+    expect(under.y).toBeCloseTo(100)
+  })
+
+  // Bare, it scrolls as it does in Figma: the document moves under a still pointer rather than
+  // jumping a zoom step per notch.
+  it('scrolls the document on its own', async () => {
+    const { host, viewports } = await mounted()
+
+    wheel(host, { deltaX: 30, deltaY: 40 })
+    await nextFrame()
+
+    expect(viewports.at(-1)).toMatchObject({ x: -30, y: -40, scale: 1 })
+  })
+})
+
+/**
+ * What the engine hands the overlay for the move tool. Nothing else exposes it: the grips are
+ * chrome, they touch neither the document nor anything the engine publishes.
+ */
+describe('the grips offered on the armed layer', () => {
+  /** Rulers and guides off, or their own bands and lines would answer instead of the grips. */
+  const BARE = { ...VIEW_1_1, rulers: false, guides: false, snap: false }
+
+  async function chromeOf(tool: CanvasTool, layer: Layer): Promise<number[][]> {
+    const { fills } = overlayRecorder()
+    const harness = await mounted(stacked([layer]), tool)
+
+    // Twice: the first drains the frames mounting already booked, with the rulers still on.
+    harness.engine.setView(BARE)
+    await nextFrame()
+    fills.length = 0
+    harness.engine.setView(BARE)
+    await nextFrame()
+
+    return fills
+  }
+
+  // Eight, since the rotation moved out to a zone beyond each corner: a ninth square floating
+  // above the box was indistinguishable from the eight that resize it.
+  it('draws the eight of them while the move tool holds a free layer', async () => {
+    expect(await chromeOf('move', layerFixture())).toHaveLength(8)
+  })
+
+  it('draws none of them once another tool is armed', async () => {
+    expect(await chromeOf('brush', layerFixture())).toHaveLength(0)
+  })
+
+  it('draws none of them on a layer pinned in place', async () => {
+    const pinned = layerFixture({ locked: { ...UNLOCKED, position: true } })
+
+    expect(await chromeOf('move', pinned)).toHaveLength(0)
+  })
+})
+
+/**
+ * The ring under the hand, which says what the next dab will cover before it covers it. Same
+ * split as the grips: the engine decides its radius, the overlay puts it on screen.
+ */
+describe('the brush ring', () => {
+  /** Rulers off on purpose: they are the other reason the overlay repaints on a bare move. */
+  const BARE = { ...VIEW_1_1, rulers: false, guides: false, snap: false }
+
+  async function ringsAfterMoving(tool: CanvasTool, size?: number): Promise<number[][]> {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, tool)
+    harness.engine.setView(BARE)
+    if (size !== undefined) harness.engine.setBrush({ ...DEFAULT_BRUSH, size })
+    await nextFrame()
+
+    rings.length = 0
+    drag(harness.host, 120, 90)
+    await nextFrame()
+    return rings
+  }
+
+  it('rings the hand while the brush is armed', async () => {
+    const rings = await ringsAfterMoving('brush', 40)
+
+    expect(rings).toHaveLength(2)
+    // Half the brush: the setting is a diameter, and the ring is the footprint of one dab.
+    expect(rings[0]).toEqual([120, 90, 20])
+  })
+
+  it('rings the hand for the eraser too, which lays down the same disc', async () => {
+    expect(await ringsAfterMoving('eraser', 40)).toHaveLength(2)
+  })
+
+  it('leaves the hand bare under a tool that lays down no disc', async () => {
+    expect(await ringsAfterMoving('move')).toHaveLength(0)
+    expect(await ringsAfterMoving('select')).toHaveLength(0)
+    expect(await ringsAfterMoving('crop')).toHaveLength(0)
+  })
+
+  /**
+   * The overlay used to repaint on an idle move only to echo the pointer on the rulers. With
+   * them off, the ring would have been painted once and then stood still while the hand moved.
+   */
+  it('follows the hand with the rulers off', async () => {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, 'brush')
+    harness.engine.setView(BARE)
+    await nextFrame()
+
+    drag(harness.host, 100, 100)
+    await nextFrame()
+    rings.length = 0
+    drag(harness.host, 160, 140)
+    await nextFrame()
+
+    expect(rings[0]?.slice(0, 2)).toEqual([160, 140])
+  })
+
+  // Dragging the size slider must show the new footprint at once: waiting for the next twitch
+  // of the mouse is what makes a slider feel disconnected from what it sets.
+  it('resizes under a still hand when the setting changes', async () => {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, 'brush')
+    harness.engine.setView(BARE)
+    drag(harness.host, 100, 100)
+    await nextFrame()
+
+    rings.length = 0
+    harness.engine.setBrush({ ...DEFAULT_BRUSH, size: 64 })
+    await nextFrame()
+
+    expect(rings[0]).toEqual([100, 100, 32])
+  })
+
+  it('drops the ring once the hand leaves the canvas', async () => {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, 'brush')
+    harness.engine.setView(BARE)
+    drag(harness.host, 100, 100)
+    await nextFrame()
+
+    rings.length = 0
+    harness.host.dispatchEvent(new PointerEvent('pointerleave'))
+    await nextFrame()
+
+    expect(rings).toHaveLength(0)
+  })
+})
+
+/**
+ * The overlay reads its colours from the stylesheet and keeps a table of hexadecimals for the
+ * one case where it cannot: a canvas that is not in a document yet. That table restates nine
+ * tokens by hand, and nothing but this described what it was restating.
+ *
+ * The stakes are not that the fallback looks wrong. `token()` answers an empty string for a name
+ * `index.css` no longer declares, and `readColors` falls back on exactly that answer — so a
+ * renamed or removed token turns this table into the real source of the overlay's colours, on
+ * every canvas, with the whole suite green. Two of these nine tokens were repainted on 12 August
+ * alone.
+ *
+ * Pinned against the DARK declarations only, and that is a decision rather than an oversight: a
+ * canvas with no document has no theme to read either, and the table's own comment states the
+ * greys it was chosen for.
+ */
+describe('the overlay colours the canvas falls back on', () => {
+  /**
+   * The `@theme` BLOCK, not the rest of the file from `@theme` onwards — and the difference is
+   * the whole point, measured. Reading onwards, a token deleted from `@theme` is still found in
+   * the light theme's own block further down, so removing `--color-marquee-light` from the
+   * reference left this green while the dark theme no longer declared it. Three tokens are
+   * exposed that way: the ones the light theme restates at the same value.
+   */
+  const darkTokens = (): Map<string, string> => {
+    // Comments go from the WHOLE sheet before the block is cut out, and the order is the point:
+    // cutting first leaves any comment that opens above `@theme {` and closes inside it, so a
+    // commented-out declaration — or the commented-out block itself — reads as live and this
+    // guard stays green while the fallback quietly becomes the real source of every colour.
+    const live = stylesheet.replace(/\/\*[\s\S]*?\*\//g, '')
+    const start = live.indexOf('@theme {')
+    expect(start, '`@theme {` is gone from index.css').toBeGreaterThan(-1)
+    const block = live.slice(start, live.indexOf('\n}', start))
+
+    return new Map(
+      [...block.matchAll(/(--color-[a-z0-9-]+):\s*([^;]+);/g)].map(([, name = '', value = '']) => [
+        name,
+        value.trim(),
+      ]),
+    )
+  }
+
+  it('names only tokens the stylesheet still declares', () => {
+    const declared = darkTokens()
+    const gone = Object.values(OVERLAY_TOKENS).filter(name => !declared.has(name))
+
+    expect(gone).toEqual([])
+  })
+
+  it('restates each of those tokens exactly', () => {
+    const declared = darkTokens()
+
+    expect({ ...FALLBACK_COLORS }).toEqual(
+      Object.fromEntries(
+        Object.entries(OVERLAY_TOKENS).map(([part, name]) => [part, declared.get(name)]),
+      ),
+    )
   })
 })

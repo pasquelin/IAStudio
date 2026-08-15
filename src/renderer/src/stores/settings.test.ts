@@ -10,7 +10,7 @@ const COMPACT: Settings = {
 
 describe('settings store', () => {
   beforeEach(() => {
-    useSettings.setState({ settings: DEFAULT_SETTINGS, loaded: false })
+    useSettings.setState({ settings: DEFAULT_SETTINGS, loaded: false, authKnown: false })
   })
 
   it('loads what the main process holds', async () => {
@@ -122,6 +122,36 @@ describe('settings store', () => {
     await useSettings.getState().setValue('appearance.density', 'compact')
 
     expect(write).toHaveBeenCalledWith({ appearance: { density: 'compact' } })
+  })
+
+  /**
+   * The two waits are not the same wait: the settings come off a file, the key is tried against
+   * the API. Applied together, the whole window used to sit on the slower of the two — and every
+   * surface reading `auth` in the meantime was reading "no key" as though it were an answer.
+   */
+  it('applies the settings without waiting for the key to be tried', async () => {
+    let answerAuth = (): void => {}
+    installFakeBridge({
+      settings: {
+        read: () => Promise.resolve(COMPACT),
+        authState: () =>
+          new Promise(resolve => {
+            answerAuth = () => resolve({ authenticated: true })
+          }),
+      },
+    })
+
+    const connected = useSettings.getState().connect()
+    await vi.waitFor(() => expect(useSettings.getState().loaded).toBe(true))
+
+    expect(useSettings.getState().settings.appearance.density).toBe('compact')
+    expect(useSettings.getState().authKnown).toBe(false)
+
+    answerAuth()
+    await connected
+
+    expect(useSettings.getState().authKnown).toBe(true)
+    expect(useSettings.getState().auth.authenticated).toBe(true)
   })
 
   it('survives having no bridge at all, as a plain browser has none', async () => {

@@ -2,6 +2,8 @@ import { BrowserWindow } from 'electron'
 import { INITIAL_WINDOW_STATE, type WindowState } from '@shared/domain/window'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import { broadcast } from '@main/ipc/broadcast'
+import { followWindowLanguage, windowLanguage } from './language'
 
 function stateOf(target: BrowserWindow): WindowState {
   return {
@@ -41,6 +43,12 @@ export function registerWindowControls(): void {
   handle(CHANNELS.windowToggleFullScreen, event =>
     toggleFullScreen(BrowserWindow.fromWebContents(event.sender)),
   )
+
+  handle(CHANNELS.windowLanguage, () => Promise.resolve(windowLanguage()))
+
+  // Every window follows the one copy, the same call the native surfaces follow. Registered
+  // here rather than at each window: a window opened later reads the current value on load.
+  followWindowLanguage(language => broadcast(EVENTS.windowLanguage, language))
 
   // The window always exists here: the event comes from one of its own renderers. Falling
   // back to the initial state keeps the return type honest rather than leaking a null.

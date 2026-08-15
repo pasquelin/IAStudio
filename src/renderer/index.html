@@ -1,10 +1,12 @@
 <!doctype html>
+<!-- The default language, until `initI18n` sets it from the setting: the window is only
+     painted after that, and a document with no `lang` at all is worse than a wrong one. -->
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; img-src 'self' data: blob: scenario: https://cdn.cloud.scenario.com; media-src 'self' blob: scenario: https://cdn.cloud.scenario.com; connect-src 'self' scenario: https://cdn.cloud.scenario.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:"
+      content="default-src 'self'; img-src 'self' data: blob: scenario: https://cdn.cloud.scenario.com; media-src 'self' blob: scenario: https://cdn.cloud.scenario.com; connect-src 'self' blob: scenario: https://cdn.cloud.scenario.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:"
     />
     <title>Scenario Studio</title>
   </head>

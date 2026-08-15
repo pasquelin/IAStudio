@@ -40,8 +40,8 @@ This is the default mode. You turn **around** the scene, as if walking round it.
 | `Q` | down |
 | `⇧ Shift` | boost |
 
-This is video-game navigation: you move **through** the scene instead of around it. Release the
-right button and the camera returns to its normal mode.
+You move **through** the scene instead of around it, as in a video game. Release the right button
+and the camera returns to its normal mode.
 
 > **The keys are read at their physical position.** WASD on a QWERTY keyboard and ZQSD on an AZERTY
 > one are **the same four keys**. There is nothing to reconfigure.
@@ -64,11 +64,21 @@ Three settings govern flying: **Settings ▸ Workspaces ▸ 3D**
 | **Move** | `G` | drags the object along the coloured arrows |
 | **Rotate** | `R` | turns the object with the coloured circles |
 | **Scale** | `S` | grows or shrinks it with the handles |
-| **Snapping** | `M` | moves the handles **in steps** instead of leaving them free |
+| **Snap** | `M` | moves the handles **in steps** instead of leaving them free |
 | **Local frame** | `L` | lines the handles up with the **object's** orientation rather than the world's |
+| **Display mode** | `Z` | cycles the seven ways of drawing; hovering offers them one by one |
 | **Frame selection** | `F` | recentres the camera on the chosen object |
-| **Add** | — | places a mesh or a light in the scene |
-| **Delete** | `Del` | removes everything selected |
+
+The bar carries only what the hand asks for **without letting go of the mouse**. The rest is in
+the native menu:
+
+| What is not in the bar | Where to find it |
+|---|---|
+| Projection, four views, quad edges, skeletons, pose mode | **View**, as ticked rows |
+| The six sides, the seven display modes | **View ▸ Point of view** and **▸ Display mode** |
+| Adding a mesh, a light, an object | **Add** |
+| Duplicate, group, delete | **Edit** |
+| Copy, cut, paste | **the keys alone** — see below |
 
 **Snapping is for lining things up.** Without it an object lands 1.0374 m from the previous one;
 with it, at a round 1 m. How fine the steps are — one for moving, one for rotating, one for
@@ -77,10 +87,6 @@ scaling — is set in **Settings ▸ Workspaces ▸ 3D**.
 **The local frame shows on a turned object.** With world handles, the red arrow always points
 east. With local handles it points to the **object's** right: which is what you want to drive a
 car forwards along the way it faces.
-
-Unlike the Image workspace, the three manipulation tools stay **three visible buttons** instead of
-being grouped. That is deliberate: you switch between them several times a minute, and it is how
-Blender, Maya, Unity and the three.js editor all do it.
 
 ### The coloured handles
 
@@ -104,9 +110,9 @@ Drag an arrow to move along that axis only.
 
 Three paths lead to the same place:
 
-- the toolbar's **Add** button;
+- the **Add** menu, which files the three families — mesh, light, object;
 - the **+** buttons of the **Meshes** and **Lights** panels;
-- the menu **Objects ▸ Add**.
+- dragging and dropping, for a model coming off the shelf.
 
 The object lands at the **scene origin** — the centre of the world, where the axes cross.
 
@@ -149,8 +155,30 @@ A *mesh* is a geometric object.
 | **Dodecahedron** | 12 faces |
 | **Icosahedron** | 20 faces |
 
-> **Text** appears greyed out in the menu: a 3D text needs a font file, and the studio ships none.
-> See [What does not exist yet](18-limits.md).
+### Text — words in volume
+
+**Add ▸ Object ▸ Text** drops a text into the scene, already written and already readable. The
+inspector shows three things about it: the **content**, the **font**, and the numbers that give
+the letters their shape — the **size**, the **depth** (set it to zero for flat letters) and the
+**curve segments**, which decide how finely the curves are cut.
+
+A text is lit like a mesh and wears the same **material**: colour, roughness, metalness, and the
+five textures. It casts and receives shadows.
+
+#### The fonts on offer
+
+The list opens on the **three fonts the studio ships** — Lato, IBM Plex Serif, IBM Plex Mono —
+then on **whatever your machine has installed**. The first three travel inside the application: a
+scene that uses them opens identically on any machine.
+
+A system font does not. It stays written in the document, but if you open the scene elsewhere and
+the font is not there, two things happen: the list shows its name followed by **"(missing)"**, and
+the letters are drawn in the default embedded font so the text stays visible. The document itself
+is not rewritten — go back to the machine that has the font, and the scene is what it was.
+
+> Some older system fonts will not open: the font-reading library the studio uses does not read
+> every table format they use. The name stays in the list, the text falls back to the default
+> font, and the log says which one failed.
 
 ### The sprite — a picture facing the camera
 
@@ -167,13 +195,21 @@ under **Sprite**, from the project's own images — the same ones a material tak
 | **Opacity** | from transparent to opaque |
 | **Texture** | the picture shown, taken from the project's assets |
 
-Three things to know:
+Four things to know:
 
 - **Its size is its scale.** A sprite has no width of its own: you resize it with the scale handle,
   like any other object. It shrinks with distance, like everything else in the scene.
-- **It has nothing to do with shadows.** It throws none and catches none — three.js draws meshes
-  into a shadow map and nothing else. The Inspector therefore shows it no Shadows section at all,
-  rather than two switches with no effect.
+- **It does not turn.** Selected on its own it gets no **Rotate** handle and no **Rotation** row
+  in the Inspector. Two cases do turn it for real:
+  - **Objects hang under it.** It gets its handle and its row back: turning the whole thing swings
+    the children around it.
+  - **It is caught in a selection of several objects, and you drag the handle.** That turns the
+    group around a shared pivot, which carries the sprite through space. **The Inspector's
+    Rotation row does not do the same thing**: a typed angle is **absolute** and lands on each
+    object around its own origin, with no shared pivot, so the sprite does not move. The row stays
+    visible as long as one object of the selection turns, and the typed angle goes to those.
+- **It has nothing to do with shadows.** It throws none and catches none; the Inspector therefore
+  shows it no Shadows section at all.
 - **It is not lit.** Its colour is the one you give it, not the one the scene's lights make of it.
 
 ### The available lights
@@ -198,7 +234,7 @@ not completely black. That is the classic recipe.
 Three buttons, between the toggles and the framing. They change nothing of the scene: they change
 how it is looked at. None of it is saved with the document, and `⌘Z` never touches it.
 
-### Projection — `O`
+### Projection — `O`, or **View ▸ Projection**
 
 In **perspective**, receding lines converge: that is what an eye sees, and it is the default. In
 **orthographic**, parallels stay parallel and an object keeps its size whatever its distance.
@@ -206,39 +242,72 @@ In **perspective**, receding lines converge: that is what an eye sees, and it is
 That is what lets an alignment be judged. Two cubes set side by side look offset in perspective; in
 orthographic they either are or they are not.
 
-The swap does not move the view: the camera takes its exact place back, and the frustum is sized so
-that whatever sits at the centre keeps the size it had.
+The swap keeps whatever sits at the centre at the same size — the camera moves to do so, and how
+far away it stands therefore changes.
 
-### Stand at — the six sides
+### Stand at — **View ▸ Point of view**
 
 **Front**, **back**, **left**, **right**, **top**, **bottom**. The camera goes and stands on the
 matching axis, at the distance it already had, looking at the point it was turning around.
 
 Together with the orthographic projection, that is the classic plan view — the one you align on.
 
-### Display — `Z`
+### Display mode — `Z`, or **View ▸ Display mode**
 
 | Mode | What is drawn |
 |---|---|
-| **Shaded** | the surfaces, lit and textured |
-| **Wireframe** | the edges alone, through the object |
-| **Shaded and wireframe** | both: the surfaces, and their edges over them |
+| **Shaded** | surfaces painted by their material, edges left out |
+| **Wireframe** | the edges alone — which is what shows how dense the mesh is |
+| **Shaded and wireframe** | surfaces painted, with the edges drawn over them |
+| **Solid** | plain clay on every surface: the shape, without the materials |
+| **Material preview** | the materials under the studio light alone, with the scene’s own lights out |
+| **Matcap** | lighting captured on a sphere: it is the relief that reads, not the colour |
+| **Density** | green to red by triangles per unit of surface: what is red is what to optimise |
 
 The button wears the current mode and cycles it on each click; its menu picks one directly. `Z`
-does the same from the keyboard, as in Blender.
+does the same from the keyboard — **and in four views, on the quarter under the
+pointer**: each quarter keeps its own mode.
 
-The third mode is the costly one: the edges are one more object per mesh, built when it is turned
-on and thrown away when it is turned off. On an imported model of several thousand meshes, it
-shows.
+**Shaded and wireframe** is the costly one: the edges are one more object per mesh, built when it
+is turned on and thrown away when it is turned off. On an imported model of several thousand
+meshes, it shows.
+
+### Four views — `⇧Q`, or **View ▸ Four views**
+
+The viewport splits in four. **The top-left quarter keeps the framing you had**; it returns to
+perspective if you were in orthographic projection. The other three arrive orthographic: **top** at
+the top right, **front** at the bottom left, **left side** at the bottom right.
+
+**All four are work surfaces**, not previews: the transform handles follow the quarter your pointer
+is in. You can select and move in any of them.
+
+**A view's name, in the top right of its quarter, is also how you change it.** Seven choices: the
+free view and the six sides. Nothing ties you to the starting layout — two perspectives and two
+axes are just as askable.
+
+**Only the free view turns.** Dragging inside a side quarter does not spin it: a top view that tips
+over is no longer a top view, which is exactly what it is there for. **The view decides, never the
+projection** — putting the free view into orthographic with `O` does not stop it turning. Panning
+and zooming work everywhere.
+
+**Changing one quarter's view reframes every side quarter** onto the whole scene: they have no
+framing of their own to return to. Only the free view keeps its own.
+
+### Quad edges — `⇧W`
+
+In wireframe, the studio redraws the edges **without the diagonals triangulation added** — a cube
+loses the ones that crossed its faces, one per face.
+
+**It is a reconstruction, not a reading of the file**: a GLB stores triangles only. Two triangles
+whose shared edge separates near-coplanar faces are read back as one quad. **On a strongly curved
+surface the reconstruction is wrong** and erases an edge the modeller meant to keep.
 
 ---
 
 ## Selecting more than one object
 
-**A click replaces the selection. A click with `⇧`, `⌘` or `Ctrl` adds to it or removes from it.**
-
-It is every application's convention: the modifier toggles the clicked object without touching the
-rest. Clicking an already-chosen object again takes it out of the selection.
+**A click replaces the selection. A click with `⇧`, `⌘` or `Ctrl` adds to it or removes from it** —
+clicking an already-chosen object again takes it out of the selection.
 
 | Gesture | Effect |
 |---|---|
@@ -254,15 +323,15 @@ Inspector — acts on the **whole** selection, not only on the last object click
 
 ## Grouping
 
-**`⌘G`**, or the toolbar's **Group** button.
+**`⌘G`**, or **Edit ▸ Group**.
 
 A group files several objects under one parent. **Moving the group moves them all**, and it folds
-away with one click in the Explorer — a scene of thirty objects becomes readable again.
+away with one click in the Scene panel — a scene of thirty objects becomes readable again.
 
 Two ways to undo or redo a filing:
 
 - **`⌘Z`** takes the grouping back, like any other action;
-- **dragging one line onto another**, in the Explorer, files it underneath. To take an object
+- **dragging one line onto another**, in the Scene panel, files it underneath. To take an object
   **out** of its group, release it on the **first line**, the one carrying the scene's name: that
   is the root.
 
@@ -277,7 +346,8 @@ filed would vanish from the screen, and you would think it lost.
 
 ## Duplicate, copy, paste
 
-Four buttons at the end of the toolbar, and the four shortcuts you already know.
+The four shortcuts you already know. **Duplicate** has its row in **Edit**; the *Cut*, *Copy* and
+*Paste* rows you will see higher up there **are not the scene's**.
 
 | Gesture | Shortcut | What it does |
 |---|---|---|
@@ -285,6 +355,10 @@ Four buttons at the end of the toolbar, and the four shortcuts you already know.
 | **Copy** | `⌘C` | holds the selection without touching the scene |
 | **Cut** | `⌘X` | holds it and takes it out of the scene |
 | **Paste** | `⌘V` | puts what was held into the current scene |
+
+> **The Edit menu's rows act on TEXT**, not on the scene: they are what lets you copy the name of
+> a layer you are renaming. The keys know the difference — highlighted text keeps `⌘C`,
+> everything else belongs to the scene.
 
 Three things worth knowing:
 
@@ -299,9 +373,9 @@ Three things worth knowing:
 
 ---
 
-## The Explorer — the scene tree
+## The Scene panel — the scene tree
 
-The **Explorer** panel, in the left column, shows everything the scene contains, as a tree.
+The **Scene** panel, in the right column, shows everything the scene contains, as a tree.
 
 - **Click** a line to select the object — with `⇧`, `⌘` or `Ctrl` to pick several, exactly as in
   the view.
@@ -330,7 +404,7 @@ its radius, a torus shows its tube, a spot shows its angle.
 | Section | What it holds |
 |---|---|
 | **Identity** | the name, editable |
-| **Transform** | Position, Rotation, Scale — three numbers each (X, Y, Z) |
+| **Transform** | Position, Rotation, Scale — three numbers each (X, Y, Z). A childless sprite selected on its own has no Rotation row: it would show nowhere |
 | **Geometry** | what defines the shape: radius, width, segments… |
 | **Material** | Colour, Roughness, Metalness, and five texture slots |
 
@@ -369,7 +443,7 @@ result you cannot predict without trying.
 
 The five texture slots — **Texture**, **Normals**, **Roughness map**, **Metalness map**, **Ambient
 occlusion** — take images from the project. The **Choose a texture** button opens the list;
-**Remove texture** empties it.
+**Remove the texture** empties it.
 
 ### For a light
 
@@ -393,9 +467,9 @@ Two switches, on every object that can have them:
 | **Casts a shadow** | the object blocks light and lays its shadow on the rest |
 | **Catches shadows** | other objects' shadows are drawn on it |
 
-**Both are decided object by object**, and deliberately so: a shadow costs computation for every
-light casting it. A floor catches without casting; a small piece of set far from the camera can do
-neither without anyone noticing.
+**Both are decided object by object**, because a shadow costs computation for every light casting
+it. A floor catches without casting; a small piece of set far from the camera can do neither
+without anyone noticing.
 
 > **The section does not always appear.** A *sprite* plays no part in shadows at all, and an
 > ambient or hemisphere light casts none: rather than show a switch with no effect, the studio
@@ -435,7 +509,7 @@ at what height. It appears in no render.
 
 | Setting | What it does | Default |
 |---|---|---|
-| **Show grid** | shows or hides it | on |
+| **Show the grid** | shows or hides it | on |
 | **Grid size** | its extent in metres — one square is always 1 m | 20 |
 
 Hide it to judge an image with nothing around it.
@@ -458,12 +532,12 @@ follows the chosen format.
 
 **What does not come out.** The floor grid, the corner trihedron, the transform handles and the
 light markers are not part of the scene: they are display aids. The file holds only what the
-Explorer lists. The edges of the "shaded and wireframe" mode are not in it either.
+**Scene** panel lists. The edges of the "shaded and wireframe" mode are not in it either.
 
-**A sprite does not come out either.** Neither in glTF nor in USDZ: neither format has an object
-that always turns to face the camera, and three.js simply leaves it out — without a word. In glTF
-the file keeps its name and its place, but nothing is drawn there; in USDZ nothing of it remains at
-all. A flat image that has to survive the export is made with a plane and a texture.
+**A sprite does not come out either**, and without warning: neither format has an object that
+always turns to face the camera. In glTF the file keeps its name and its place, but nothing is
+drawn there; in USDZ nothing of it remains at all. A flat image that has to survive the export is
+made with a plane and a texture.
 
 **A nested selection keeps its place.** Exporting an object filed inside a group writes it where it
 stands in the scene, not where it stands inside its group.
@@ -474,7 +548,7 @@ stands in the scene, not where it stands inside its group.
 
 `⌘S` / `Ctrl+S` writes the scene into the project, under `documents/`.
 
-**3D scenes can save** — it is one of only two document types that can today.
+**3D scenes can save**, as do the six other document kinds.
 
 A tab whose work is not yet written carries **a dot** (`•`) beside its name. The dot disappears on
 save and comes back on the next change.
@@ -487,12 +561,146 @@ nothing had been written for it.
 
 ---
 
+## Animating the scene
+
+The bottom strip of the 3D workspace carries a **timeline**, as Video and Audio do — and the asset
+shelf moves up into the right column to leave it the full width.
+
+### What a model already brings
+
+A character generated by Scenario — by a *text to motion* model, or captured from a video — arrives
+with its **animation clips** inside the file. Select it, and the Inspector offers the **Animation**
+section:
+
+| Control | What it does |
+|---|---|
+| **Clip** | picks which one plays, among those the file carries |
+| **▶ / ⏸** | starts or stops playback |
+| **Speed** | a multiplier, from 0.1 to 4 |
+| **Loop** | starts over at the end, or holds the last pose |
+
+**The pose is saved with the document.** Reopening the scene finds it where you left it, not back
+at the start.
+
+**A model with no clip shows no section at all** — rather than an empty picker.
+
+**The chosen clip also shows on the band below**, laid as a block at its real length, on a line of
+its own bearing **the clip's name**. Blocks are grouped **under** the key lines, never mixed into
+them.
+
+### Seeing the skeleton
+
+A rigged model carries **bones**. The **B** key, or **View ▸ Show skeletons**, draws them over
+the scene. The row stays ticked for as long as they are visible.
+
+**To grab one, switch to pose mode** — the **P** key, or **View ▸ Pose mode**. Clicking then
+picks bones instead of objects.
+
+> **The studio takes the bone nearest the pointer on screen**, whether it sits in front of a
+> shoulder or behind it. Aim at **the joint itself** rather than at the limb it drives.
+
+### Laying down your own motion
+
+**Your objects are in the band already.** Every object of the scene has its line: there is nothing
+to create, and no button for it.
+
+Place the playhead, then **key the object's line**. Its three animated properties — Position,
+Rotation, Scale — are born at that moment, together, and in **one undo**. If the object is a
+rigged model, a **Bone** picker appears in the bar: it opens on **The whole model**, and picking a
+bone makes the keys drive that bone alone, which is how an arm is corrected without moving the
+whole character.
+
+**The band reads by object.** One line per object — or per bone — with its animated
+properties **folded underneath**. The folded line shows every key of the object, its three
+properties merged; unfolding separates them. **Folding never loses a key**, it only changes what
+is shown.
+
+| On the bar | What it does |
+|---|---|
+| **Back to the start** | brings the playhead to zero |
+| **Play** / **Pause** | runs the timeline |
+| **Auto-key** | moving an object **writes a key** instead of shifting its rest pose |
+| **Duration** and **FPS** | how long the timeline runs, and at what rate |
+| **Bone** | on a rigged model: the bone the next key will drive, or **The whole model**. A bone **clicked in the view** in pose mode wins over this choice |
+| **Key everything animated** | the same gesture, on everything **already** animated — greyed out until something is |
+| **Render to video** | see below — greyed out until a camera is in the scene |
+
+**Each line carries its own**, to the left of the band:
+
+| On a line's header | What it does |
+|---|---|
+| the chevron | **Show or hide the animated properties** |
+| **Key *(the name)*** | records the movement made since, on every property of that object. **The same button toggles**: where a key already stands, it lights up and reads **Remove *(the name)*’s key** |
+| **Mute** / **Solo** / **Lock** | the three switches a line carries, the same as in Video |
+| **Remove track *(the name)*** | on a property line, takes it away with its keys |
+
+**The playhead is grabbed and dragged** along the ruler, and **keys are dragged** along their
+line. **Past the duration the band is dimmed**: the head goes no further, and no key can be laid
+out there — a clip block still can.
+
+**A key comes off two ways.** The header's diamond, pressed where a key stands under the playhead,
+takes it off **every property carrying one at that instant** — in one go, the way it laid them, and
+`⌘Z` brings them all back together. On the band, **click a key to pick it, then `Delete` or
+`Backspace`**: it leaves the line it sits on, and **the line decides the reach**, never its
+folding — an object's line carries all of its properties away, an unfolded property's line only
+itself. **A locked line keeps its own** — the lock guards against removal as it guards against
+keying.
+
+**Playing with the head already at the end rewinds** instead of stopping on the frame it starts on.
+
+**Animation composes with the object's pose, it does not replace it** — and not the same way for
+every property: moves **add up**, scales **multiply**. That is the opposite of a video montage,
+where the clip on top hides the one below.
+
+> **To stack the same property twice on one object, lock its lines**: the next key opens fresh
+> ones over them. Two positions of 2 and 3 give 5; two scales that each double give **four times**
+> the size.
+
+> **An object that is ALREADY animated records on its own, whatever the switch says.** Once it
+> carries a key, moving it edits its animation. So the switch decides one thing only: whether an
+> object that is **not yet animated** starts being so — and the distinction is on the **keys**,
+> not on the lines: properties that are open and empty are not an animation yet, and the switch
+> still has its say there.
+>
+> **A bone with no key is a case apart**: having no rest pose to fall back to, the drag is simply
+> dropped and the bone returns where it was.
+
+### Keying by hand
+
+Auto-key is not compulsory. The gesture, in order:
+
+1. **set a key** at the start, on the object's line — it opens its three properties and keeps the
+   pose the object stands in at that moment, which every key of its own is measured against;
+2. **move the playhead** along the ruler;
+3. **move the object**, then **set a key** again.
+
+> **The Inspector's numbers go back to the reference pose, not the object on screen.** The key
+> holds the movement, and the stored position returns to its reference. In the view, **nothing
+> moves**: what you see is the reference plus the key, which is where you just put it.
+
+**A bone does not work that way**: its properties have no reference pose, so setting a key there
+**pins what they already hold** and nothing springs back. To animate a bone, go through auto-key
+and pose mode rather than through these three steps.
+
+### Writing a video
+
+Add a **camera** to the scene (Add menu → Object → Camera). It is an object like any other: it
+moves with the gizmo, it animates like any other object, and a glTF export carries it along.
+
+The timeline's **Render to video** button writes an `.mp4` of what that camera sees, over the whole
+length of the timeline. The studio asks **where to save before computing anything** — a render
+takes minutes.
+
+**With no camera in the scene the button is greyed out**: there is nothing to look through.
+
+---
+
 ## What is still missing
 
-The 3D workspace is functional but young. Do not look yet for:
-
-- the 3D **Text** — the greyed-out entry of the **Add** menu;
-- nothing else: the 3D workspace now has everything this manual describes.
+The 3D workspace now has everything this manual describes. What is left fits in two sentences:
+fonts are offered in one weight per family, and a text does not bend along a curve. On the
+animation side, keys run straight between one another — there are no easing curves yet — and a
+model's clip plays on its own, without blending into another.
 
 The detail is in [What does not exist yet](18-limits.md).
 

@@ -9,6 +9,7 @@ const MESSAGE_KEY: Record<JobFailure, string> = {
   missing: 'errors.missingCredentials',
   'invalid-credentials': 'errors.invalidCredentials',
   forbidden: 'errors.forbidden',
+  'plan-restricted': 'errors.planRestricted',
   'not-found': 'errors.notFound',
   'rate-limited': 'errors.rateLimited',
   server: 'errors.server',

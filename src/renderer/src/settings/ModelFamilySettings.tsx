@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelFamily, ModelSummary } from '@shared/domain/model'
+import { ModelOptions, type PickableModel } from '@/design/ModelOptions'
 import { getBridge } from '@/services/bridge'
+import { usePlanAccess, usePlanRefusal } from '@/helpers/plan-access'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
 
@@ -42,10 +44,22 @@ function useFamilyModels(family: ModelFamily): ModelSummary[] {
   return models
 }
 
+/**
+ * The stored default kept among the options whatever the page holds, so the screen never shows
+ * an empty picker over a setting that IS set — a `<select>` whose value matches no option has
+ * `selectedIndex === -1` and renders blank, and the next stray change overwrites it unseen.
+ */
+function withStored(models: readonly PickableModel[], stored: string): readonly PickableModel[] {
+  if (!stored || models.some(model => model.id === stored)) return models
+  return [{ id: stored, name: stored }, ...models]
+}
+
 /** Per-family generation settings. Today: which model the generator preselects. */
 export function ModelFamilySettings({ family }: { family: ModelFamily }) {
   const { t } = useTranslation()
-  const models = useFamilyModels(family)
+  const fetched = useFamilyModels(family)
+  const plan = usePlanAccess()
+  const refusalFor = usePlanRefusal(plan)
   const stored = useSettings(state => state.settings.generation.defaultModels)
   const stageBranch = useSettingsDraft(state => state.stageBranch)
   // Staged like every other setting: this screen writes a branch no path can name, which is
@@ -54,10 +68,20 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
 
   const defaultModels = staged ?? stored
   const selected = defaultModels[family] ?? ''
+  const models = withStored(fetched, selected)
+
+  /**
+   * The default that is ALREADY stored, which nobody is choosing right now. A downgrade or an
+   * account switch can put it out of plan, and a browser still shows a disabled `<option>` as
+   * the selected one — silently, since the suffix only lives in the option labels. The
+   * generator would then open armed on it and fail on every submission.
+   */
+  const selectedModel = models.find(model => model.id === selected)
+  const selectedRefusal = refusalFor(selectedModel?.requiredPlanLevel)
 
   return (
     <div className="flex max-w-md flex-col gap-3">
-      <label className="flex flex-col gap-1 text-xs">
+      <label className="flex flex-col gap-2 text-xs">
         {t('settings.defaultModel')}
         <select
           className="select select-sm"
@@ -72,13 +96,11 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
           }}
         >
           <option value="">{t('settings.noDefaultModel')}</option>
-          {models.map(model => (
-            <option key={model.id} value={model.id}>
-              {model.name}
-            </option>
-          ))}
+          <ModelOptions models={models} plan={plan} />
         </select>
       </label>
+
+      {selectedRefusal && <p className="text-warning text-xs">{selectedRefusal}</p>}
     </div>
   )
 }

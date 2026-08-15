@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { setLayerMask } from '@/engines/canvas/commands'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { useCanvases } from '@/stores/canvases'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
-import { useSettings } from '@/stores/settings'
-import { useTools } from '@/stores/tools'
+import { preferModels } from '@/stores/settings-fixtures'
+import { arrangedFor } from '@/stores/tool-fixtures'
+import { arrangementOf, useTools } from '@/stores/tools'
 import { prepareEdit } from './ai-actions'
 
 const DOCUMENT = 'doc-1'
@@ -31,22 +33,13 @@ const bridge = {
   describeModel: () => Promise.resolve({ fields: FIELDS }),
 }
 
-function defaultModel(family: string, modelId: string | undefined): void {
-  useSettings.setState(state => ({
-    settings: {
-      ...state.settings,
-      generation: { ...state.settings.generation, defaultModels: { [family]: modelId } },
-    },
-  }))
-}
-
 beforeEach(() => {
   uploaded = []
   installCanvas(DOCUMENT)
   useModels.setState({ selected: {}, preset: {} })
-  useTools.setState({ open: {}, focusedZone: null })
-  useLayouts.setState({ activeWorkspace: 'image' })
-  defaultModel('image', 'model_flux')
+  useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
+  useLayouts.setState({ activeWorkspace: 'image', home: false })
+  preferModels({ image: 'model_flux' })
 })
 
 describe('preparing an edit', () => {
@@ -58,7 +51,7 @@ describe('preparing an edit', () => {
   })
 
   // The session choice wins over the preference, the order the generator itself follows.
-  it('uses the model chosen in the panel over the one set in the preferences', async () => {
+  it('uses the model chosen in the panel over the one set in the settings', async () => {
     useModels.getState().select('image', 'model_chosen')
 
     await prepareEdit(DOCUMENT, 'regenerate', host, bridge)
@@ -113,7 +106,7 @@ describe('preparing an edit', () => {
 
   // Cutting out, enlarging and vectorizing take the picture whole: a mask would mean nothing.
   it('asks each edit of the family it belongs to', async () => {
-    defaultModel('upscale', 'model_big')
+    preferModels({ upscale: 'model_big' })
 
     await prepareEdit(DOCUMENT, 'enlarge', host, bridge)
 
@@ -126,12 +119,36 @@ describe('preparing an edit', () => {
    * the one place where choosing one belongs.
    */
   it('opens the models panel rather than picking one when none is set', async () => {
-    defaultModel('vectorization', undefined)
+    useModels.setState({ selected: {} })
+    preferModels()
+
+    await expect(prepareEdit(DOCUMENT, 'regenerate', host, bridge)).resolves.toBe(false)
+
+    expect(uploaded).toEqual([])
+    expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('models')
+  })
+
+  /**
+   * The Models panel lists the workspace's own family and no other, so it can never show a
+   * vectorizer: sending the user there was a dead end, and the reason three edits read as
+   * "the panel opens and nothing happens".
+   */
+  it('opens the settings screen of a family the workspace has no panel for', async () => {
+    const opened: string[] = []
+    installFakeBridge({
+      settings: {
+        open: section => {
+          opened.push(section)
+          return Promise.resolve()
+        },
+      },
+    })
+    preferModels()
 
     await expect(prepareEdit(DOCUMENT, 'vectorize', host, bridge)).resolves.toBe(false)
 
+    expect(opened).toEqual(['generation.vectorization'])
     expect(uploaded).toEqual([])
-    expect(useTools.getState().open.right?.primary).toBe('models')
   })
 
   // The action prepares; it never submits. Every parameter of the model stays visible, and the
@@ -139,6 +156,6 @@ describe('preparing an edit', () => {
   it('brings the form forward rather than submitting it', async () => {
     await prepareEdit(DOCUMENT, 'regenerate', host, bridge)
 
-    expect(useTools.getState().focusedZone).toBe('right')
+    expect(useTools.getState().focusedZone).toBe('left')
   })
 })

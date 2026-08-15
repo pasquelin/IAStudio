@@ -32,7 +32,7 @@ not applied yet".
 
 > **Closing the window with pending changes does not lose them silently.** The studio asks: "You
 > changed settings without applying them. What would you like to do?" — you choose **Apply** or
-> **Don't apply**.
+> **Don’t apply**.
 
 ### Going back to the original value
 
@@ -46,13 +46,13 @@ visible, but greyed out, with the reason written underneath — *"Has no effect 
 is off."*
 
 Nothing is ever hidden: a setting you cannot change right now stays where it is, with its
-explanation. Hunting for a vanished setting is more painful than reading why it is switched off.
+explanation.
 
 ---
 
 ## General
 
-*The application's language, and what it does when it opens.*
+*The application’s language, and what it does when it opens.*
 
 ### Language
 
@@ -62,15 +62,28 @@ The language of every text in the application: menus, buttons, messages.
 
 | Value | Effect |
 |---|---|
-| **System** | follows your computer's own language |
+| **System** | follows your computer's own language — **English** if that is neither French nor English |
 | **Français** | French |
 | **English** | English |
 
-Each language names itself in its own language — "Français" stays "Français" even on an English
-screen. That is deliberate: you recognise your own language before you can read the screen's.
+> **A machine set to German, Spanish or Japanese opens the studio in English**, not in French.
 
-The change is **immediate**, nothing needs relaunching. It touches neither your projects nor what
+Each language names itself in its own language — "Français" stays "Français" even on an English
+screen.
+
+Once applied, the change is **immediate**: nothing needs relaunching. It touches neither your projects nor what
 you write in them: a prompt written in English stays in English.
+
+> **The generation form follows too, but not always all the way.** The names of the settings a
+> model offers — and the explanatory sentences under them — are written by the model, and the
+> Scenario API only ever returns them in English. The studio translates them itself. A setting it
+> does not know yet therefore stays **in English** rather than disappearing, and a model published
+> tomorrow arrives in its original wording.
+>
+> **Seven words stay in English on purpose**: `sampler`, `scheduler`, `LoRA`, `checkpoint`,
+> `prompt`, `clip skip`, `denoising strength`. **A word is left in English only where the studio
+> never gives it a French name** — not in one of its own surfaces, and not in the
+> [glossary](17-glossary.md).
 
 ### On opening
 
@@ -84,6 +97,19 @@ What the application does when you launch it.
 | **Open nothing** | starts on an empty window |
 
 "Open nothing" is quicker to start, and calmer if you juggle a lot of projects.
+
+### Show the home screen
+
+**Switch. Default: on.**
+
+The full-width screen the studio opens on: your projects, what you were working on, what is
+running, and what the models can do. Unticked, the studio goes straight to the workspace you left.
+
+**This setting and the one above are independent.** "Open nothing" only concerns the project: the
+home still appears, offering to create one. To land directly in a workspace, untick this one.
+
+What is set **on the home itself**, and not here: which bands are shown — see
+[The window](03-the-window.md#the-home-screen-before-anything-else).
 
 ---
 
@@ -120,8 +146,7 @@ The form, below the list. Three fields:
 Take the key and the secret from [app.scenario.com](https://app.scenario.com), in your account
 settings. Then **Add an account** — the button reads "Adding…" while it writes.
 
-**The button stays off** until all three fields are valid. No need to guess why: it lights up when
-everything is there.
+**The button stays off** until all three fields are valid.
 
 The name obeys three rules, and the studio says which one was broken:
 
@@ -131,9 +156,7 @@ The name obeys three rules, and the studio says which one was broken:
 | 60 characters at most | "This name is too long." |
 | Two accounts cannot share a name | "Another account already uses this name." |
 
-Uniqueness is checked **ignoring case**: "Studio" and "studio" are the same name. That is deliberate
-— the switcher shows nothing but the name, and two entries that read the same would leave you
-choosing blind.
+Uniqueness is checked **ignoring case**: "Studio" and "studio" are the same name.
 
 **Two other messages can appear here**, more rarely, and they are not fixed the same way:
 
@@ -145,12 +168,9 @@ choosing blind.
 The first is never your fault and loses nothing. The second is the only message in this section
 that deserves a second attempt.
 
-> **The fields are cleared even on success.** That is not a bug. The screen you are looking at is
-> never allowed to know your key: it only knows whether it works. Once sent, it is encrypted by the
-> operating system's keychain — the same vault that holds your passwords — and filed out of the
-> display's reach.
->
-> That is why there is **no "show my key" button**: that button cannot exist.
+> **The fields are cleared even on success.** That is not a bug: once sent, the key is encrypted
+> by the operating system's keychain and filed out of the display's reach. That is why there is
+> **no "show my key" button**.
 
 ### The account list
 
@@ -180,10 +200,8 @@ as **an ordinary account** in the list, with a grey `secrets/.env` badge.
 It is used like the others — the **Use this account** button works — but it has **no Rename and no
 Remove**: those two buttons are absent, not greyed out.
 
-**That is more honest than a button that refuses.** This account is changed by editing the file, and
-a button that could only say no is worth less than no button at all. If you reach it by some other
-route, the studio says so: "This account comes from `secrets/.env`: edit that file to rename or
-remove it."
+This account is changed by editing the file. If you reach it by some other route, the studio says
+so: "This account comes from `secrets/.env`: edit that file to rename or remove it."
 
 ### When the list is empty
 
@@ -196,9 +214,8 @@ Nothing is stored, and nothing works: no catalogue, no generation.
 > "The keychain did not give your accounts back. Try again once it is unlocked — nothing was
 > changed."
 
-**The second half of that sentence is the important one.** The studio refused to write rather than
-write halfway: unable to read the existing list back, saving an account would have replaced it with
-that one alone. Unlock your keychain, try again, everything is still there.
+**Nothing has been changed**: the studio refused to write rather than overwrite a list it could
+not read back. Unlock your keychain, try again, everything is still there.
 
 ---
 
@@ -216,9 +233,8 @@ that one alone. Unlock your keychain, try again, everything is still there.
 | **Light** | light background — reads better in broad daylight |
 | **System** | follows your computer's setting, and switches on its own when evening comes |
 
-> **The background stays opaque, whatever the theme.** No transparency, no blur behind the window.
-> In a studio you judge colours, and a translucent background falsifies the perception of everything
-> shown on top of it. That is a professional decision, not an oversight.
+> **The background stays opaque, whatever the theme.** No transparency, no blur behind the window:
+> a translucent background would falsify the perception of the colours judged on top of it.
 
 ### Density
 
@@ -239,7 +255,7 @@ The colour that marks **what is selected or under way**: the outline of the acti
 timeline playhead, the frame around a selection.
 
 It changes nothing about what you make — only how the application shows you where you are. Leave it
-be to keep the theme's own.
+be to keep the theme’s own.
 
 ### Text size
 
@@ -280,8 +296,32 @@ service can turn away the ones arriving on top (see
 [Too many requests](16-troubleshooting.md)). **Three is a good balance.**
 
 > **This setting is the only valve.** Every generation goes through the same queue, whatever
-> workspace it starts from. There is no way around it, and that is intended: it is what stops a
-> burst of requests from being refused wholesale.
+> workspace it starts from, and nothing bypasses it.
+
+### Name fetched assets
+
+**Checkbox.**
+
+Automatically names a picture that arrives **without a useful name**, by asking the API what it
+sees in it.
+
+> **This is the only place where the studio spends without being asked**: clear it, and nothing
+> leaves on its own any more. The naming works in batches, under a bounded queue, and every result
+> takes its line in the activity journal.
+
+**What counts as "without a useful name"**, and nothing else:
+
+| What the studio renames | Examples |
+|---|---|
+| an empty name, or a device prefix followed by a number | `IMG_4821`, `DSC0001`, `PXL_20260809`, `photo 12` |
+| the names operating systems give, in both languages | `Untitled`, `Download`, `Sans titre`, `Téléchargement`, `Image collée`, `Nouvelle image` |
+| a screenshot **followed by its timestamp or copy number** | `Screenshot 2026-08-09 at 10.30.45`, `Screenshot (3)`, `Capture d'écran (2)` |
+
+**A name you chose is never replaced**, even when it starts with the same words: `Screenshot of
+the main menu` stays as it is.
+
+Accents make no difference to this recognition: `Capture d'écran` and `Capture d’écran` are
+treated alike, including in the particular form macOS writes inside its file names.
 
 ### Max retries
 
@@ -297,7 +337,12 @@ At **0**, it never tries twice.
 
 ### Default model, per family
 
-Five sub-sections: **Image**, **Video**, **3D**, **Audio**, **Upscaling**.
+Seven sub-sections: **Image**, **Video**, **3D**, **Audio**, **Upscaling**,
+**Background removal**, **Vectorisation**.
+
+The last three have no workspace of their own: they are the families the canvas edits — Enlarge,
+Cut out, Vectorise — reach for. The **Models** panel only shows the open workspace's family, so
+**this is where, and only where, their model is chosen**.
 
 > **The Texture family does not have one yet.** It has nevertheless been a model family in its own
 > right for a short while. The practical consequence: in the Textures workspace you have to pick a
@@ -313,11 +358,9 @@ workspace.
 
 Set it once you have found the model you work with most: it saves a click every session.
 
-> **The Upscaling sub-section is empty, and that is not a fault.** Its list offers nothing but
-> "Ask every time". No model is ever filed under the *upscale* family — an upscaler takes an image
-> and returns an image, so it is filed with the image models, where you can use it normally. The
-> setting is ahead of the workspace that will use it — see
-> [What does not exist yet](18-limits.md).
+> **For Upscaling, Background removal and Vectorisation, this setting is not a convenience.** It is what
+> decides whether the matching edit can leave at all: with no model set, **Enlarge** opens this
+> screen instead of sending the picture.
 
 ---
 
@@ -381,7 +424,7 @@ Snapping is switched on in the **scene's toolbar** (the `M` key); these three se
 | Setting | Range | Starts at | What it does |
 |---|---|---|---|
 | **Move step** | 0.1 to 10 m, in 0.1 | **0.5 m** | how far an object advances in one step |
-| **Rotate step** | 1° to 90°, in 1 | **15°** | the angle of one rotation step |
+| **Turn step** | 1° to 90°, in 1 | **15°** | the angle of one rotation step |
 | **Scale step** | 0.05 to 1, in 0.05 | **0.1** | how far the scale advances in one step |
 
 **15° is the classic value**: twenty-four positions in a full turn, including every round angle —
@@ -391,7 +434,7 @@ Snapping is switched on in the **scene's toolbar** (the `M` key); these three se
 
 **Choice. Starts at: Soft.**
 
-The grain of a shadow's edge.
+The grain of a shadow’s edge.
 
 | Value | Effect |
 |---|---|
@@ -418,6 +461,69 @@ starts to labour, raise to 4096 for a final image.
 *The keys that trigger each action. Click a key to replace it.*
 
 This section has its own chapter: [Every shortcut](15-shortcuts.md).
+
+---
+
+## Dictation
+
+*Speaking a text instead of typing it. Everything happens on this computer: nothing you say is
+sent anywhere.*
+
+The gesture is described in [Generating](06-generating.md#speaking-instead-of-typing); here is
+what can be adjusted.
+
+### Enable dictation
+
+Unticked, dictation disappears: no microphone button beside the fields, no shortcut, and the
+application loads nothing and never asks for microphone access.
+
+### How it is triggered
+
+**Hold the key** listens for as long as ⌥D is pressed and stops when you let go. It is the
+default, and the safest: the microphone is never left open by mistake.
+
+**Toggle on and off** starts on the first press and stops on the next. It rests the hand, which
+is better over a long dictation.
+
+### Silence that ends a sentence
+
+In milliseconds, 600 by default. It is how much quiet before what you have just said counts as
+finished, is transcribed, and is written into the field.
+
+**Raise it** if your sentences are cut in half because you pause to think. Lower it if the text
+feels slow to appear.
+
+### Preview while you speak
+
+In milliseconds, 700 by default. It is the interval between two previews of the sentence being
+spoken — the greyed text below the field.
+
+**It is not free**: every preview reads back everything said since the sentence began. On a
+machine that struggles, previews space themselves out — the settled text never suffers for it.
+
+**Set it to 0** to remove previews entirely: the text will then appear only at the end of each
+sentence, and the machine will work far less.
+
+### Compute threads
+
+From 1 to 8, two by default. How many cores recognition may occupy. Higher is faster up to a
+point, but every thread is a core taken away from the rest of the application — the 3D view, the
+timeline, the interface.
+
+### Free the memory after
+
+In minutes, ten by default. The loaded model takes around 700 MB; past that long without
+dictating, it is released and the memory returned. It loads itself again on the next dictation,
+in a few seconds.
+
+**Set it to 0** to keep it resident: dictation then starts instantly, at the cost of 700 MB held
+for as long as the studio is open.
+
+### Model folder
+
+Leave it empty in the normal case: the model is downloaded beside your settings. This field is
+for pointing at a model already somewhere else — an external disk, or one shared between several
+accounts on the machine.
 
 ---
 
@@ -500,9 +606,14 @@ How much the application says about what it is doing, in its log.
 "Everything" helps to understand a problem, and is chatty the rest of the time. This setting changes
 nothing about what the software does — only about what it says.
 
+**Do not confuse this log with the one on the status line.** This one is the studio's internal log,
+written to the terminal that launched it: **in the build you installed there is no terminal, so
+there is nothing to read**. The **Recent activity** panel does not depend on this setting — it gets
+its lines either way.
+
 ### Settings file
 
-**Button: Reveal.**
+**Button: Show in folder.**
 
 Opens your file manager where your settings are saved, in a file called `settings.json`.
 
@@ -519,6 +630,36 @@ a problem.
 > only **your** session's keychain can decrypt. Copying this file to another machine copies your
 > settings there, but **not** your connection: you will have to retype the key and the secret.
 
+### Drive the studio from outside
+
+**Checkbox. Starts at: unchecked.**
+
+Opens a way in **on this machine alone**, through which a program outside — an MCP client such as
+Claude Code — can run the same actions the assistant runs.
+
+**Unchecked, nothing is listening.** That is the state of a fresh install, and of every launch for
+as long as the box stays unticked.
+
+**Anything that spends or uploads asks for a yes on screen**, exactly as if you had asked for it
+yourself in the assistant. A program outside cannot give it on your behalf.
+
+> **[Chapter 20](20-driving-from-outside.md) is this setting's own**: what guards that way in, how
+> to connect Claude Code to it, the ten actions it reaches and what each one commits.
+
+### Connection command
+
+**Button: Copy.**
+
+Copies the line to paste in a terminal to connect a client:
+
+```
+claude mcp add --transport http <name> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+```
+
+**The port and the token change every time the studio starts**, which is why there is a button
+rather than a value on display: there is nothing to write down, only a line to copy again after
+each launch.
+
 ### Developer tools
 
 **Button: Open.**
@@ -526,8 +667,13 @@ a problem.
 Opens the technical console of the embedded browser: the log messages, the errors, the internal
 state of the display.
 
-For troubleshooting only. **Nothing in there is needed to use the software** — and nothing you type
-in it is meant to be.
+**In the build you installed, this button opens nothing** — the console is refused there, for
+security. It stays on screen, with no effect. You are missing nothing: **the activity journal
+already carries what a report needs**, technical detail included. See
+[When something goes wrong](16-troubleshooting.md#the-log).
+
+For troubleshooting only, in a development build. **Nothing in there is needed to use the
+software.**
 
 ### Reset everything
 
@@ -555,22 +701,36 @@ What you have on a fresh install, at a glance.
 |---|---|---|---|
 | General | Language | System | System, Français, English |
 | General | On opening | Reopen the last project | — |
+| General | Show the home screen | on | — |
 | Appearance | Theme | Dark | Dark, Light, System |
 | Appearance | Density | Comfortable | Comfortable, Compact |
 | Appearance | Accent colour | the theme's own | — |
 | Appearance | Text size | 1 | 0.85 to 1.40 |
 | Appearance | Limit animations | unchecked | — |
 | Generation | Concurrent generations | 3 | 1 to 16 |
+| Generation | Name fetched assets | ticked | — |
 | Generation | Max retries | 4 | 0 to 10 |
-| Generation | Default model ×5 | Ask every time | — |
+| Generation | Default model ×7 | Ask every time | — |
 | 3D | Show the grid | checked | — |
 | 3D | Grid size | 20 m | 2 to 500 |
 | 3D | Fly speed | 4 m/s | 0.5 to 20 |
 | 3D | Boost | 3× | 1 to 10 |
 | 3D | Field of view | 60° | 30 to 100 |
+| 3D | Move step | 0.5 m | 0.1 to 10 |
+| 3D | Rotate step | 15° | 1 to 90 |
+| 3D | Scale step | 0.1 | 0.05 to 1 |
+| 3D | Shadow softness | Soft | Hard or Soft |
+| 3D | Shadow detail | 2048 | 512, 1024, 2048, 4096 |
+| Dictation | Enable dictation | on | — |
+| Dictation | How it is triggered | Hold the key | Hold the key, Toggle on and off |
+| Dictation | Silence that ends a sentence | 600 ms | 200 to 2000 |
+| Dictation | Preview while you speak | 700 ms | 0 to 2000 |
+| Dictation | Compute threads | 2 | 1 to 8 |
+| Dictation | Free the memory after | 10 min | 0 to 120 |
 | Media | Path to ffmpeg | empty | — |
 | Storage | Projects folder | empty | — |
 | Advanced | Log detail | Everything | Nothing → Everything |
+| Advanced | Drive the studio from outside | unchecked | — |
 
 ---
 
@@ -580,9 +740,8 @@ Two values live in the settings file with no control editing them:
 
 - **the last project opened** — written on its own every time a project opens. That is session
   memory, not a preference: nothing to set;
-- **where assets are kept** — a choice between "on your disk" and "in the cloud". The second does
-  not exist yet, and offering a choice that leads nowhere would be a promise the software cannot
-  keep. See [What does not exist yet](18-limits.md).
+- **where assets are kept** — a choice between "on your disk" and "in the cloud", the second of
+  which does not exist yet. See [What does not exist yet](18-limits.md).
 
 ---
 

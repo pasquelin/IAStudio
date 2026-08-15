@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
+import { job as jobOf } from '@/stores/job-fixtures'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import { useAssets } from '@/stores/assets'
@@ -11,8 +12,10 @@ import { useJobs } from '@/stores/jobs'
 import { useModels } from '@/stores/models'
 import { installSequence } from '@/stores/sequence-fixtures'
 import { sequenceOf, useSequences } from '@/stores/sequences'
+import { useLayouts } from '@/stores/layouts'
 import { useSelection } from '@/stores/selection'
-import { useTools } from '@/stores/tools'
+import { arrangedFor } from '@/stores/tool-fixtures'
+import { arrangementOf, useTools } from '@/stores/tools'
 import { Inspector } from './Inspector'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
@@ -25,15 +28,13 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
-const job: Job = {
+const job: Job = jobOf({
   id: 'job-1',
-  modelId: 'eleven-music-v2',
+  targetId: 'eleven-music-v2',
   label: 'ElevenLabs Music v2',
   status: 'succeeded',
-  progress: 1,
-  createdAt: '2026-08-07T10:00:00.000Z',
   assetIds: ['asset-1'],
-}
+})
 
 function openSequence(): void {
   installSequence('doc-1', sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')]))
@@ -41,6 +42,7 @@ function openSequence(): void {
 
 describe('Inspector, on what a panel selected', () => {
   beforeEach(() => {
+    useLayouts.setState({ activeWorkspace: 'image', home: false })
     useSelection.setState({ selection: { kind: 'none' } })
     useAssets.setState({ items: [asset()] })
     useJobs.setState({ jobs: [], bodies: {} })
@@ -91,7 +93,7 @@ describe('Inspector, on what a panel selected', () => {
     useAssets.setState({ items: [asset({ jobId: 'job-1' })] })
     useJobs.setState({ jobs: [job], bodies: { 'job-1': { prompt: 'x', guidance: 7 } } })
     useSelection.getState().selectAssets(['asset-1'])
-    useTools.setState({ open: {} })
+    useTools.setState({ arrangements: arrangedFor('image', { open: {} }) })
     render(<Inspector />)
 
     await userEvent.click(screen.getByRole('button', { name: /Régénérer/ }))
@@ -99,7 +101,7 @@ describe('Inspector, on what a panel selected', () => {
     const models = useModels.getState()
     expect(models.selected.image).toBe('eleven-music-v2')
     expect(models.preset.image).toEqual({ prompt: 'x', guidance: 7 })
-    expect(useTools.getState().open.right?.primary).toBe('generator')
+    expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('generator')
   })
 
   it('reads out the clip the montage has selected', () => {

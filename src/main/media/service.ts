@@ -1,9 +1,17 @@
-import { PEAKS_PER_SECOND, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
+import { basename } from 'node:path'
+import {
+  PEAKS_PER_SECOND,
+  wantsPoster,
+  type Asset,
+  type AssetType,
+  type MediaProbe,
+} from '@shared/domain/asset'
 import type { IngestProgress, IngestStage } from '@shared/domain/media'
-import { PEAKS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
-import { peaksArgs, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
+import { PEAKS_FOLDER, POSTERS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
+import { peaksArgs, posterArgs, posterOffset, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
 import type { PeaksRun } from './peaks-client'
 import type { ProbeOutcome } from './probe'
+import type { ActivityReport } from '@main/project/activity-log'
 
 /**
  * What WebCodecs decodes without help. Anything else is montaged on a proxy. Both spellings of
@@ -26,17 +34,51 @@ export type MediaServiceDeps = {
   duplicateExists: (assetId: string, hash: string) => Promise<boolean>
   /** Drops the row this pick minted. What the catalogue must not keep, it must not show. */
   discard: (assetId: string) => Promise<void>
-  save: (assetId: string, fields: Partial<Asset>) => void
+  /** Awaited by `derive`, whose caller reads the row back — see its `finally`. */
+  save: (assetId: string, fields: Partial<Asset>) => void | Promise<void>
   writeFile: (path: string, data: Uint8Array) => Promise<void>
   onProgress: (progress: IngestProgress) => void
+  /** Where an import says what became of it, once the bar that showed it is gone. */
+  record: (report: ActivityReport) => void
   projectPath: () => string | null
   /** How many ingests may run at once — `hardwareConcurrency - 2`, per CLAUDE.md § 6. */
   concurrency: () => number
 }
 
+/**
+ * A file that is already inside the project and needs what `ingest` derives — a generation
+ * brought down from the API, which no picker ever handed over.
+ */
+export type DeriveRequest = {
+  assetId: string
+  /** Absolute path of the file. It sits inside the project, so nothing here records it. */
+  path: string
+  kind: AssetType
+  /** Read when the bytes were written — see `LocalBackendDeps.probeFile`. */
+  probe: MediaProbe
+  /** False when the library sent a still down beside the bytes: ours would overwrite a better one. */
+  poster: boolean
+  /**
+   * Whether this shows up in the import panel.
+   *
+   * True for a generation, whose take the user is waiting on. False for the maintenance a
+   * project does on opening: those rows read as "importing" files nobody picked, and a failed
+   * one leaves a notice to dismiss for a file the user never chose.
+   */
+  announce: boolean
+}
+
 export type MediaService = {
   /** `kind` decides what the pipeline runs: a still needs neither a proxy nor a waveform. */
   ingest: (assetId: string, sourcePath: string, kind: AssetType) => Promise<void>
+  /**
+   * The same derived files for an asset that arrived already probed and already in the project.
+   *
+   * Without the two halves that only a picked file needs: no `sourcePath` — there is no
+   * original anywhere else — and no duplicate check, since the row was minted by the collector
+   * for an output the account genuinely produced twice if it produced it twice.
+   */
+  derive: (request: DeriveRequest) => Promise<void>
   cancel: (assetId: string) => void
 }
 
@@ -80,6 +122,115 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
   const release = (): void => {
     active -= 1
     waiting.shift()?.()
+  }
+
+  /**
+   * What an import leaves behind once its progress row is gone.
+   *
+   * The file name only, never its path: what a source sits on the disk is this process's
+   * business, the same rule `withoutSourcePath` states for an asset crossing the boundary.
+   *
+   * Silent on a cancellation and on a duplicate: the user did the first, and the second is not
+   * a problem — the bytes are already in the project.
+   */
+  const journal = (sourcePath: string, outcome: IngestStage): void => {
+    const name = basename(sourcePath)
+
+    if (outcome === 'done') {
+      deps.record({
+        level: 'info',
+        topic: 'import',
+        messageKey: 'activity.imported',
+        params: { name },
+      })
+      return
+    }
+
+    if (outcome === 'unreadable' || outcome === 'failed') {
+      deps.record({
+        level: 'error',
+        topic: 'import',
+        messageKey:
+          outcome === 'unreadable' ? 'activity.importUnreadable' : 'activity.importFailed',
+        params: { name },
+      })
+    }
+  }
+
+  /**
+   * What a timed media gets beside it once its length is known: a still, a proxy when nothing
+   * can decode it as it is, and a waveform. Shared by both ways in — a file picked off a disk
+   * and a generation brought down from the API derive exactly the same things.
+   *
+   * `key` names the files that CAN be shared between rows holding the same bytes: the hash for
+   * both callers, so a rush imported twice writes one proxy.
+   */
+  const deriveFiles = async (
+    request: {
+      assetId: string
+      source: string
+      kind: AssetType
+      probe: MediaProbe
+      key: string
+      poster: boolean
+    },
+    fields: Partial<Asset>,
+    signal: AbortSignal,
+    advance: (stage: IngestStage) => void,
+  ): Promise<void> => {
+    const { assetId, source, kind, probe, key, poster } = request
+    const binary = deps.ffmpeg()
+    const project = deps.projectPath()
+    const timed = kind === 'video' || kind === 'audio'
+    if (!timed || !binary || !project) return
+
+    // Under the proxy's own stage rather than one of its own: a keyframe grab is a tenth of a
+    // second, and a stage of its own would cost an ingest state, its label in two bundles and
+    // the guards that hold them, for a bar nobody would see move.
+    //
+    // Swallowed on failure, like the still a download brings beside a mesh: a rush whose first
+    // keyframe ffmpeg refuses is still a perfectly good import.
+    if (poster && wantsPoster(kind)) {
+      const relative = `${POSTERS_FOLDER}/${assetId}.jpg`
+      const args = posterArgs(source, `${project}/${relative}`, posterOffset(probe.duration))
+      try {
+        await deps.run(binary, args, signal)
+        fields.posterPath = relative
+      } catch {
+        // A grid falls back to the kind's own glyph, which is what it showed before.
+      }
+      if (signal.aborted) return
+    }
+
+    if (needsProxy(probe)) {
+      advance('proxy')
+      const relative = `${PROXIES_FOLDER}/${key}.mp4`
+      await deps.run(binary, proxyArgs(source, `${project}/${relative}`), signal)
+      if (signal.aborted) return
+      fields.proxyPath = relative
+    }
+
+    // Without a duration there is no bucket count worth computing, and a waveform reduced to
+    // one pair is a flat line that looks exactly like silence.
+    if (probe.sampleRate && probe.duration > 0) {
+      advance('peaks')
+
+      const seconds = probe.duration / 1_000_000
+      // ffmpeg and the reduction both run off this process: an hour of audio is 57 MB of PCM,
+      // and folding it here froze every window for the length of the fold.
+      const peaks = await deps.computePeaks({
+        binary,
+        args: peaksArgs(source),
+        buckets: Math.max(1, Math.round(seconds * PEAKS_PER_SECOND)),
+        samplesPerBucket: PEAKS_SAMPLE_RATE / PEAKS_PER_SECOND,
+        signal,
+      })
+      if (signal.aborted) return
+
+      const relative = `${PEAKS_FOLDER}/${key}.bin`
+      await deps.writeFile(`${project}/${relative}`, new Uint8Array(peaks.buffer))
+      fields.peaksPath = relative
+    }
   }
 
   return {
@@ -149,41 +300,12 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         }
         if (cancelled()) return
 
-        const binary = deps.ffmpeg()
-        const project = deps.projectPath()
-        const timed = kind === 'video' || kind === 'audio'
-
-        if (timed && binary && project && probe) {
-          if (needsProxy(probe)) {
-            advance('proxy')
-            const relative = `${PROXIES_FOLDER}/${hash}.mp4`
-            const destination = `${project}/${relative}`
-            await deps.run(binary, proxyArgs(sourcePath, destination), controller.signal)
-            if (cancelled()) return
-            fields.proxyPath = relative
-          }
-
-          // Without a duration there is no bucket count worth computing, and a waveform
-          // reduced to one pair is a flat line that looks exactly like silence.
-          if (probe.sampleRate && probe.duration > 0) {
-            advance('peaks')
-
-            const seconds = probe.duration / 1_000_000
-            // ffmpeg and the reduction both run off this process: an hour of audio is 57 MB of
-            // PCM, and folding it here froze every window for the length of the fold.
-            const peaks = await deps.computePeaks({
-              binary,
-              args: peaksArgs(sourcePath),
-              buckets: Math.max(1, Math.round(seconds * PEAKS_PER_SECOND)),
-              samplesPerBucket: PEAKS_SAMPLE_RATE / PEAKS_PER_SECOND,
-              signal: controller.signal,
-            })
-            if (cancelled()) return
-
-            const relative = `${PEAKS_FOLDER}/${hash}.bin`
-            await deps.writeFile(`${project}/${relative}`, new Uint8Array(peaks.buffer))
-            fields.peaksPath = relative
-          }
+        if (probe) {
+          // A picked file has no still waiting for it anywhere: whatever ffmpeg grabs is the
+          // only picture there will ever be of it.
+          const work = { assetId, source: sourcePath, kind, probe, key: hash, poster: true }
+          await deriveFiles(work, fields, controller.signal, advance)
+          if (cancelled()) return
         }
 
         stage = 'done'
@@ -208,6 +330,64 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
           // new row.
           deps.save(assetId, fields)
         }
+
+        const outcome = cancelled() ? 'cancelled' : stage
+        advance(outcome)
+        journal(sourcePath, outcome)
+      }
+    },
+
+    derive: async ({ assetId, path, kind, probe, poster, announce }) => {
+      // Nothing to derive AND nothing to remember: a row stamped here would be read as one the
+      // pipeline has been through, and the catch-up that runs once the tool IS resolved would
+      // skip it for good. A studio whose ffmpeg is configured later must still catch up.
+      if (!deps.ffmpeg() || !deps.projectPath()) return
+
+      const controller = new AbortController()
+      running.set(assetId, controller)
+      const cancelled = (): boolean => controller.signal.aborted
+      const fields: Partial<Asset> = {}
+      let stage: IngestStage = 'queued'
+
+      const advance = (next: IngestStage): void => {
+        stage = next
+        if (announce) deps.onProgress({ assetId, stage, ratio: STAGE_RATIO[stage] })
+      }
+
+      advance('queued')
+      // The same bounded pool as a picked file, per CLAUDE.md § 6: four videos generated at once
+      // are four ffmpeg processes otherwise, on top of whatever is being imported beside them.
+      await acquire()
+
+      try {
+        if (cancelled()) return
+
+        // Hashed like a picked file, and for the same two reasons: it names the derived files —
+        // so the same bytes pulled twice write one proxy — and it is what a relink searches on.
+        advance('hash')
+        fields.hash = await deps.hash(path)
+        if (cancelled()) return
+
+        await deriveFiles(
+          { assetId, source: path, kind, probe, key: fields.hash, poster },
+          fields,
+          controller.signal,
+          advance,
+        )
+        stage = 'done'
+      } catch {
+        stage = 'failed'
+      } finally {
+        release()
+        running.delete(assetId)
+
+        // Never discarded, whatever happened: the row stands for an asset the account holds,
+        // and a proxy that failed is a take that plays without one — not a take that is gone.
+        //
+        // Awaited, unlike the same call in `ingest`: whoever asked for this reads the row back
+        // to announce it, and a broadcast that outran the write repainted the shelf with what
+        // was there before.
+        if (stage !== 'queued') await deps.save(assetId, fields)
 
         advance(cancelled() ? 'cancelled' : stage)
       }

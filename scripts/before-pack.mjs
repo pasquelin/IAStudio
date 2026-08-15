@@ -1,5 +1,6 @@
 /**
- * Fetches the ffmpeg of the target being packaged, right before electron-builder packs it.
+ * Fetches what the studio ships beside itself, right before electron-builder packs a target:
+ * the ffmpeg of that target, and the voice detector dictation listens through.
  *
  * A single `pnpm dist` builds several targets — macOS ships arm64 and x64 from one run — while
  * `resources/ffmpeg/` holds one platform's binaries at a time. Left to a manual
@@ -8,11 +9,13 @@
  * fetch would produce a release with no encoder at all, silently.
  *
  * Hooked here rather than in `dist.sh` because this is the only place that knows which target
- * is being packed, and it runs once per target. Targets are packed one after another
- * (`concurrency.jobs` defaults to 1 and is not raised), so they never race over the folder.
+ * is being packed, and it runs once per target. Targets are packed one after another —
+ * `concurrency.jobs: 1` is declared in `electron-builder.yml` for that reason — so they never
+ * race over the folder.
  */
 import { Arch } from 'electron-builder'
 import { fetchFfmpeg } from './fetch-ffmpeg.mjs'
+import { fetchStt } from './fetch-stt.mjs'
 
 export default async function beforePack(context) {
   const platform = context.electronPlatformName
@@ -26,4 +29,9 @@ export default async function beforePack(context) {
 
   console.log(`Fetching ffmpeg for ${platform}-${arch}`)
   await fetchFfmpeg(platform, arch)
+
+  // The same bytes on every target, so it is fetched per target only because this is the one
+  // hook that runs before each pack — and re-fetching 640 KB costs nothing worth optimising.
+  console.log('Fetching the voice detector')
+  await fetchStt()
 }

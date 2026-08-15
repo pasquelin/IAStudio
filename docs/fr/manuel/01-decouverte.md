@@ -9,8 +9,8 @@
 Vous décrivez ce que vous voulez, avec des mots. Un ordinateur distant le fabrique. Vous
 récupérez le résultat chez vous, et vous continuez à travailler dessus.
 
-Voilà l'idée entière. Ce que Scenario Studio ajoute par rapport à un site web où l'on tape une
-phrase et où l'on télécharge une image, c'est **tout ce qui vient après** :
+Voilà l’idée entière. Ce que Scenario Studio ajoute par rapport à un site web où l’on tape une
+phrase et où l’on télécharge une image, c’est **tout ce qui vient après** :
 
 - vos créations sont **rangées** dans un projet, sur votre disque, pas dans un dossier
   « Téléchargements » qui déborde ;
@@ -20,27 +20,27 @@ phrase et où l'on télécharge une image, c'est **tout ce qui vient après** :
   restent attachés à chaque fichier, et un bouton les rejoue ;
 - **rien ne repart** : vos fichiers restent chez vous.
 
-> **Une chose que le studio ne sait pas encore faire**, et qu'il vaut mieux savoir tout de suite :
-> **un travail en cours ne s'enregistre pas.** Une image que vous composez, un montage, un son
-> édité, un ciel réglé : fermer l'onglet les perd. Seules les scènes 3D et les matières
-> s'écrivent sur le disque. La liste complète et honnête de ces manques est le chapitre
-> [Ce qui n'existe pas encore](18-limites.md) — il est fait pour être lu, pas caché.
+> **Une chose à savoir tout de suite :** les six types de documents s’enregistrent dans le
+> dossier du projet et se rouvrent tels quels, et fermer un onglet qui a du travail non
+> enregistré pose la question avant de le perdre. Ce qui ne revient jamais, c’est l’historique
+> d’annulation. La liste complète et honnête de ce qui manque encore est le chapitre
+> [Ce qui n’existe pas encore](18-limites.md) — il est fait pour être lu, pas caché.
 
-## Six façons de travailler
+## Sept façons de travailler
 
-Le studio ne fait pas six logiciels différents. Il fait un seul logiciel qui **se réarrange**
-selon ce que vous fabriquez. Ces six arrangements s'appellent des **espaces de travail**.
+Le studio ne fait pas sept logiciels différents. Il fait un seul logiciel qui **se réarrange**
+selon ce que vous fabriquez. Ces sept arrangements s’appellent des **espaces de travail**.
 
-| Espace | Ce qu'on y fabrique | Un exemple |
+| Espace | Ce qu’on y fabrique | Un exemple |
 |---|---|---|
 | **Image** | des images fixes | une affiche, une illustration, une texture à plat |
 | **Vidéo** | des séquences animées | un plan de dix secondes, un montage de plusieurs prises |
 | **3D** | des scènes en volume | un décor, un objet posé sous une lumière |
 | **Audio** | des sons et des musiques | une ambiance, un bruitage, une nappe musicale |
 | **Textures** | des matières | du bois, du métal rouillé, du tissu — pour habiller un objet 3D |
-| **Skyboxes** | des ciels à 360° | ce qu'on voit autour de soi quand on lève les yeux dans une scène |
+| **Skyboxes** | des ciels à 360° | ce qu’on voit autour de soi quand on lève les yeux dans une scène |
 
-Vous changez d'espace en cliquant sur son nom, en haut de la fenêtre. Les panneaux se
+Vous changez d’espace en cliquant sur son nom, en haut de la fenêtre. Les panneaux se
 réorganisent tout seuls, et le catalogue de modèles se filtre sur ce qui sait fabriquer ce
 type-là.
 
@@ -54,10 +54,10 @@ Ce sont les seuls mots dont on ne peut pas se passer. Tous les autres sont dans 
 Un dossier sur votre disque, qui contient tout votre travail : les fichiers que vous avez
 fabriqués, ceux que vous avez importés, et la façon dont vous les avez arrangés.
 
-Un projet s'ouvre, se ferme, se copie sur une clé USB, s'envoie à quelqu'un. C'est un dossier
-ordinaire — vous pouvez l'ouvrir dans votre explorateur de fichiers et regarder dedans.
+Un projet s’ouvre, se ferme, se copie sur une clé USB, s’envoie à quelqu’un. C’est un dossier
+ordinaire — vous pouvez l’ouvrir dans votre explorateur de fichiers et regarder dedans.
 
-> **Sans projet ouvert, on ne peut pas générer.** C'est voulu : une image fabriquée doit
+> **Sans projet ouvert, on ne peut pas générer.** C’est voulu : une image fabriquée doit
 > atterrir quelque part.
 
 ### 2. Un **asset**
@@ -65,48 +65,48 @@ ordinaire — vous pouvez l'ouvrir dans votre explorateur de fichiers et regarde
 Un fichier de matière première dans votre projet : une image, une vidéo, un son, un objet 3D,
 une texture, un ciel.
 
-Le mot est anglais et n'a pas de bon équivalent français court. On dit parfois « ressource »
+Le mot est anglais et n’a pas de bon équivalent français court. On dit parfois « ressource »
 ou « média ». Retenez : **un asset est un fichier fini que vous pouvez réutiliser**.
 
-Les assets vivent dans le panneau **Assets**, qu'on appelle familièrement « l'étagère ».
+Les assets vivent dans le panneau **Assets**, qu’on appelle familièrement « l’étagère ».
 
 ### 3. Un **document**
 
 Un travail en cours, ouvert dans un onglet, au centre de la fenêtre.
 
-La différence avec un asset est celle qui sépare **la matière** de **l'ouvrage** : une image
-générée est un asset ; l'image que vous êtes en train de peindre, avec ses calques et son
+La différence avec un asset est celle qui sépare **la matière** de **l’ouvrage** : une image
+générée est un asset ; l’image que vous êtes en train de peindre, avec ses calques et son
 historique, est un document.
 
-Il y a six sortes de documents, une par espace :
+Il y a sept sortes de documents, une par espace :
 
 | Espace | Document | Extension du fichier |
 |---|---|---|
 | Image | une image en calques | `.img` |
 | 3D | une scène | `.scene` |
 | Vidéo | une séquence | `.seq` |
-| Audio | un son en cours d'édition | `.aud` |
+| Audio | un son en cours d’édition | `.aud` |
 | Skyboxes | un ciel | `.sky` |
 | Textures | une matière | `.tex` |
 
 ### 4. Un **modèle**
 
 Le programme distant qui fabrique. Il y en a plusieurs centaines dans le catalogue Scenario, et
-ils ne savent pas tous faire la même chose : l'un dessine des images à partir de texte, un autre
+ils ne savent pas tous faire la même chose : l’un dessine des images à partir de texte, un autre
 transforme une image en objet 3D, un troisième compose de la musique.
 
 **Choisir le bon modèle compte autant que bien écrire son prompt.** Le chapitre
-[Trouver un modèle](05-modeles.md) explique comment s'y retrouver.
+[Trouver un modèle](05-modeles.md) explique comment s’y retrouver.
 
 ### 5. Un **prompt**
 
 Votre phrase de commande. Le texte que vous écrivez pour décrire ce que vous voulez.
 
-C'est le champ le plus important du formulaire de génération. Quelques principes, développés au
+C’est le champ le plus important du formulaire de génération. Quelques principes, développés au
 chapitre [Générer](06-generer.md) :
 
 - **écrivez en anglais** si vous le pouvez : la plupart des modèles ont été entraînés dessus ;
-- **décrivez ce qui est là**, pas ce qui n'y est pas ;
+- **décrivez ce qui est là**, pas ce qui n’y est pas ;
 - **soyez concret** : « un phare rouge sur une falaise, lumière du matin » vaut mieux que
   « quelque chose de joli ».
 
@@ -116,28 +116,28 @@ Une demande de fabrication en cours.
 
 Vous appuyez sur **Générer**, et la demande part chez Scenario. Elle ne revient pas tout de
 suite : selon le modèle, cela prend de quelques secondes à plusieurs minutes. Pendant ce temps,
-la demande vit dans la **ligne d'état**, en bas de la fenêtre, avec une barre de progression, et
+la demande vit dans la **ligne d’état**, en bas de la fenêtre, avec une barre de progression, et
 vous pouvez
-continuer à travailler — ou l'annuler.
+continuer à travailler — ou l’annuler.
 
 Une tâche passe par cinq états : **En file** → **En cours** → **Terminée**. Ou bien
-**Échouée**, ou **Annulée** si vous l'arrêtez.
+**Échouée**, ou **Annulée** si vous l’arrêtez.
 
 ### 7. Un **panneau**
 
-Une petite fenêtre à l'intérieur de la grande. Chaque panneau fait une chose : montrer les
+Une petite fenêtre à l’intérieur de la grande. Chaque panneau fait une chose : montrer les
 calques, lister les modèles, montrer ce qui est sélectionné.
 
-On les ouvre et on les ferme d'un clic sur les **rails** — les bandes d'icônes collées aux bords
+On les ouvre et on les ferme d’un clic sur les **rails** — les bandes d’icônes collées aux bords
 gauche et droit de la fenêtre. Le chapitre [La fenêtre](03-la-fenetre.md) les décrit tous.
 
 ### 8. Un **calque**
 
-Une couche transparente empilée sur les autres, dans l'espace Image.
+Une couche transparente empilée sur les autres, dans l’espace Image.
 
 Imaginez des feuilles de calque posées les unes sur les autres : vous dessinez sur celle du
 dessus sans abîmer celles du dessous. Vous pouvez en masquer une, la remonter, la descendre, la
-supprimer. C'est ce qui rend une image **modifiable** au lieu d'être un aplat définitif.
+supprimer. C’est ce qui rend une image **modifiable** au lieu d’être un aplat définitif.
 
 ---
 
@@ -149,7 +149,7 @@ supprimer. C'est ce qui rend une image **modifiable** au lieu d'être un aplat d
 | **Une connexion internet** | pour générer. Pour travailler sur ce que vous avez déjà, non |
 | **Un compte Scenario** | avec une clé API et un secret API — voir [Premiers pas](02-premiers-pas.md) |
 
-**Ce dont vous n'avez pas besoin** : savoir dessiner, savoir programmer, savoir ce qu'est un
+**Ce dont vous n’avez pas besoin** : savoir dessiner, savoir programmer, savoir ce qu’est un
 réseau de neurones. Le studio est fait pour être conduit, pas compris.
 
 ---
@@ -161,12 +161,12 @@ Autant le dire tout de suite, cela évite de le chercher.
 - **Il ne travaille pas hors ligne pour générer.** La fabrication se passe sur les serveurs de
   Scenario. Sans connexion, vous pouvez ouvrir, monter, régler et enregistrer, mais pas créer
   de nouveau contenu.
-- **Il n'est pas gratuit à l'usage.** Chaque génération consomme le crédit de votre compte
+- **Il n’est pas gratuit à l’usage.** Chaque génération consomme le crédit de votre compte
   Scenario. Le studio ne vous le facture pas — il ne fait que transmettre — mais votre compte,
   lui, compte.
 - **Il ne remplace pas Photoshop, ni Blender, ni Premiere.** Il en fait une part utile, dans un
   seul endroit, autour de la génération. Le chapitre
-  [Ce qui n'existe pas encore](18-limites.md) dit précisément où sont les bords.
+  [Ce qui n’existe pas encore](18-limites.md) dit précisément où sont les bords.
 
 ---
 

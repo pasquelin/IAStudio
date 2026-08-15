@@ -66,13 +66,36 @@ describe('model filters', () => {
   })
 
   /**
-   * Tags are what the publishers wrote, matched by the API exactly as written — translating
-   * "Post Processing" would send a label that matches nothing.
+   * This read `expect({ value: 'I2V', label: 'I2V' })` and called it "verbatim rather than
+   * translated", on the grounds that translating a tag "would send a label that matches nothing".
+   * It would not: `value` is what the API matches and `label` is what a person reads, and the
+   * capability menu one push above had been splitting the two all along. What the tag menu
+   * actually did was show `Text to Image` inside an otherwise French interface.
    */
-  it('offers tags verbatim rather than translated', () => {
+  it('sends the tag the API matches, and shows the words a reader reads', () => {
+    const tag = facetsFor('video', identity).find(facet => facet.key === TAG_FACET)
+
+    expect(tag?.options).toContainEqual({ value: 'First Frame', label: 'modelTags.firstFrame' })
+  })
+
+  /**
+   * An acronym reads the same in both languages, and a raw key reads like a bug. The value
+   * standing in as its own label is what keeps a tag nobody named from ever showing one.
+   */
+  it('shows an unnamed tag as the publisher wrote it, never as a key', () => {
     const tag = facetsFor('video', identity).find(facet => facet.key === TAG_FACET)
 
     expect(tag?.options).toContainEqual({ value: 'I2V', label: 'I2V' })
+  })
+
+  /**
+   * `image-upscale` was offered here while it named a family of its own: the listing had already
+   * excluded every model the facet could match, so the menu's only possible answer was none.
+   */
+  it('offers no tag that names a family of its own', () => {
+    const tag = facetsFor('image', identity).find(facet => facet.key === TAG_FACET)
+
+    expect(tag?.options.map(option => option.value)).not.toContain('image-upscale')
   })
 
   it('sorts by the API score first, which is what popularity means here', () => {
@@ -82,6 +105,32 @@ describe('model filters', () => {
   describe('query', () => {
     it('always narrows to the workspace family', () => {
       expect(queryFrom(DEFAULT_COLLECTION_STATE, '3d', '')).toMatchObject({ family: '3d' })
+    })
+
+    /**
+     * Exact equality rather than an absence: a capability the bar kept from another space is
+     * dropped, while origin and search, which every model carries, stay.
+     */
+    it('drops what the family at hand cannot answer, and keeps the rest', () => {
+      const state = stateWith({
+        selections: { [ORIGIN_FACET]: ['official'], [CAPABILITY_FACET]: ['txt2video'] },
+      })
+
+      expect(queryFrom(state, 'image', 'flux')).toEqual({
+        family: 'image',
+        sort: 'relevance',
+        origin: 'official',
+        search: 'flux',
+      })
+    })
+
+    it('carries the chosen capability of the family at hand', () => {
+      const state = stateWith({ selections: { [CAPABILITY_FACET]: ['img2video'] } })
+
+      expect(queryFrom(state, 'video', '')).toMatchObject({
+        family: 'video',
+        capabilities: ['img2video'],
+      })
     })
 
     it('leaves out a search that is only whitespace', () => {

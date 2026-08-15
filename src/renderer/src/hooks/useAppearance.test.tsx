@@ -6,6 +6,7 @@ import {
   type Density,
   type Theme,
 } from '@shared/domain/settings'
+import { AA_NORMAL_TEXT, contrastRatio, HEX_COLOR, hoverFor } from '@shared/domain/color'
 import { onPaletteChange } from '@/engines/core/palette'
 import { useSettings } from '@/stores/settings'
 import { useAppearance } from './useAppearance'
@@ -40,14 +41,18 @@ function stubMatchMedia(matches: boolean) {
   }
 }
 
-function withAppearance(theme: Theme, density: Density = 'comfortable') {
+function withAppearance(theme: Theme, density: Density = 'comfortable', accent?: string) {
   useSettings.setState({
     settings: {
       ...DEFAULT_SETTINGS,
-      appearance: { ...DEFAULT_SETTINGS.appearance, theme, density },
+      appearance: { ...DEFAULT_SETTINGS.appearance, theme, density, accent },
     },
   })
   return renderHook(() => useAppearance())
+}
+
+function published(name: string): string {
+  return document.documentElement.style.getPropertyValue(name)
 }
 
 const publishedTheme = (): string | undefined => document.documentElement.dataset['theme']
@@ -129,5 +134,87 @@ describe('following the system', () => {
 
     expect(publishedTheme()).toBe(THEME_ATTRIBUTE.light)
     expect(media.watchers()).toBe(0)
+  })
+})
+
+/**
+ * The accent a user picks overrides the fill inline, so the ink has to follow it there or the
+ * words keep the blue the studio shipped with while every button turns the chosen colour.
+ */
+describe('the accent a user picks', () => {
+  it('publishes an ink beside the fill', () => {
+    stubMatchMedia(true)
+    // The sheet is not loaded under jsdom, and the hook reads the chassis back off the root.
+    document.documentElement.style.setProperty('--color-chassis', '#2b2d30')
+    withAppearance('dark', 'comfortable', '#c62828')
+
+    expect(published('--color-accent')).toBe('#c62828')
+    expect(published('--color-accent-ink')).toMatch(HEX_COLOR)
+    expect(contrastRatio(published('--color-accent-ink'), '#2b2d30')).toBeGreaterThanOrEqual(
+      AA_NORMAL_TEXT,
+    )
+    expect(contrastRatio('#c62828', '#2b2d30')).toBeLessThan(AA_NORMAL_TEXT)
+  })
+
+  /**
+   * The ink ON the fill, which is the other half and was nobody's until 2026-08-12. A light
+   * accent is where it earns its keep: the white the sheet ships reads 1.71:1 on a yellow, and a
+   * primary button's label cannot be read at all.
+   */
+  it('publishes an ink for what is written on the fill, and turns it dark on a light one', () => {
+    stubMatchMedia(true)
+    document.documentElement.style.setProperty('--color-chassis', '#2b2d30')
+    withAppearance('dark', 'comfortable', '#f0c035')
+
+    expect(published('--color-accent-content')).toBe('#000000')
+    // daisyUI's name follows for the reason its fill does: the two are one blue in this studio.
+    expect(published('--color-primary-content')).toBe('#000000')
+    expect(contrastRatio(published('--color-accent-content'), '#f0c035')).toBeGreaterThanOrEqual(
+      AA_NORMAL_TEXT,
+    )
+  })
+
+  it('keeps white on an accent white can be read on, rather than flipping every dark pick', () => {
+    stubMatchMedia(true)
+    document.documentElement.style.setProperty('--color-chassis', '#2b2d30')
+    withAppearance('dark', 'comfortable', '#5b21b6')
+
+    expect(published('--color-accent-content')).toBe('#ffffff')
+  })
+
+  /**
+   * The fill UNDER THE POINTER, third of the set and the one the sheet cannot answer alone: its
+   * hover is drawn from its own blue, so a picked red would darken toward a colour that is no
+   * longer on the button. The button used to hover at `bg-accent/85`, which followed the pick but
+   * let the surface through — and so lightened on the light theme, at 3.52:1 for the label.
+   */
+  it('publishes the fill the pointer takes, drawn from the accent that was picked', () => {
+    stubMatchMedia(true)
+    document.documentElement.style.setProperty('--color-chassis', '#2b2d30')
+    withAppearance('dark', 'comfortable', '#c62828')
+
+    expect(published('--color-accent-hover')).toBe(hoverFor('#c62828'))
+    expect(
+      contrastRatio(published('--color-accent-content'), published('--color-accent-hover')),
+    ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT)
+  })
+
+  // Removed rather than blanked, like the fill above it: an empty value parses as nothing, and
+  // the theme's own ink never comes back.
+  it('takes the ink away again when nothing is picked', () => {
+    stubMatchMedia(true)
+    document.documentElement.style.setProperty('--color-chassis', '#2b2d30')
+    withAppearance('dark', 'comfortable', '#c62828')
+    expect(published('--color-accent-ink')).not.toBe('')
+    expect(published('--color-accent-content')).not.toBe('')
+    expect(published('--color-accent-hover')).not.toBe('')
+
+    withAppearance('dark')
+
+    expect(published('--color-accent-ink')).toBe('')
+    expect(published('--color-accent-content')).toBe('')
+    expect(published('--color-primary-content')).toBe('')
+    expect(published('--color-accent-hover')).toBe('')
+    expect(published('--color-accent')).toBe('')
   })
 })

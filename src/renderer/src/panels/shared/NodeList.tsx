@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
-import { LIST_ROW_HEIGHT } from '@/design/styles'
 import { NODE_KINDS, type PanelNodeType } from '@/engines/scene/node-kinds'
 import { nodesOfType } from '@/engines/scene/scene-state'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
@@ -23,12 +22,13 @@ export function NodeList({ documentId, type }: { documentId: string; type: Panel
 
   return (
     <Collection
+      label={t(`panels.${namespace}`)}
+      multiple
       items={shown}
       selectedIds={selectedIds}
       // The panel lists half the scene, so a range here spans meshes or lights, never both —
       // which is what the list draws, and therefore what the gesture is allowed to mean.
       onSelect={(_node, ids, mode) => selectIn(documentId, ids, mode)}
-      rowHeight={LIST_ROW_HEIGHT}
       renderRow={node => (
         <SceneNodeRow documentId={documentId} node={node} visibleLabel={visibleLabel} />
       )}

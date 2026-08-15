@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_ACCOUNT_NAME, ENVIRONMENT_ACCOUNT_ID } from '@shared/domain/account'
 import {
+  accountFingerprint,
   activateAccount,
   activeCredentials,
   addAccount,
   bookFromCredentials,
+  credentialsByFingerprint,
   EMPTY_BOOK,
   removeAccount,
   renameAccount,
@@ -246,5 +248,37 @@ describe('the development account', () => {
     expect(() => addAccount(composed(EMPTY_BOOK), account('id-9', 'Development'))).toThrow(
       'duplicate',
     )
+  })
+})
+
+/**
+ * A job left running names the account that paid for it, and has to find its way back after the
+ * studio was closed. The book entry cannot answer that: it is renewed on a remove-and-re-add.
+ */
+describe('naming an account by its key', () => {
+  const key = { key: 'api_k', secret: 's3cr3t' }
+
+  it('names the same key the same way, whatever the book entry around it', () => {
+    expect(accountFingerprint(key)).toBe(accountFingerprint({ ...key, secret: 'rotated' }))
+  })
+
+  it('names two keys differently', () => {
+    expect(accountFingerprint(key)).not.toBe(accountFingerprint({ ...key, key: 'api_other' }))
+  })
+
+  // It goes to disk. The key itself never does.
+  it('never puts the key in the name', () => {
+    expect(accountFingerprint(key)).not.toContain(key.key)
+  })
+
+  it('finds the credentials behind a name it gave', () => {
+    const book = { accounts: [{ id: 'id-1', name: 'Studio', credentials: key }], activeId: 'id-1' }
+
+    expect(credentialsByFingerprint(book, accountFingerprint(key))).toEqual(key)
+  })
+
+  // What happens to a job whose account has been removed since: it fails rather than 404s.
+  it('answers nothing for a key the book no longer holds', () => {
+    expect(credentialsByFingerprint(EMPTY_BOOK, accountFingerprint(key))).toBeNull()
   })
 })

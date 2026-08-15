@@ -2,9 +2,11 @@ import { useEffect, useState, type SubmitEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { checkAccountName, type AccountSummary } from '@shared/domain/account'
 import { cn } from '@/helpers/cn'
+import { HINT_LEFT, HINT_TOP } from '@/helpers/tooltip'
 import { failureMessageKey } from '@/services/failure-message'
 import { useAccounts, type AccountSaveFailure } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
+import { WINDOW_CAPTION } from '@/design/window-styles'
 
 // A table rather than a template: a member added to the union stops the build here instead of
 // rendering a missing key on screen. Same reason `failureMessageKey` gives.
@@ -39,9 +41,9 @@ export function AccountSettings() {
   return (
     <div className="flex max-w-lg flex-col gap-4">
       {accounts.length === 0 ? (
-        <p className="text-base-content/60 text-xs">{t('accounts.none')}</p>
+        <p className={WINDOW_CAPTION}>{t('accounts.none')}</p>
       ) : (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-2">
           {accounts.map(account => (
             <AccountRow key={account.id} account={account} authenticated={auth.authenticated} />
           ))}
@@ -56,8 +58,8 @@ export function AccountSettings() {
 
       <AddAccountForm />
 
-      <p className="text-base-content/60 text-xs">{t('accounts.explanation')}</p>
-      <p className="text-base-content/60 text-xs">{t('auth.explanation')}</p>
+      <p className={WINDOW_CAPTION}>{t('accounts.explanation')}</p>
+      <p className={WINDOW_CAPTION}>{t('auth.explanation')}</p>
     </div>
   )
 }
@@ -107,11 +109,17 @@ function AccountRow({ account, authenticated }: AccountRowProps) {
           <button
             type="submit"
             className="btn btn-sm btn-primary"
+            {...HINT_TOP(t('accounts.saveHint'))}
             disabled={checkAccountName(draft, accounts, account.id) !== null}
           >
             {t('accounts.save')}
           </button>
-          <button type="button" className="btn btn-sm btn-ghost" onClick={stopEditing}>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            {...HINT_TOP(t('accounts.cancelHint'))}
+            onClick={stopEditing}
+          >
             {t('accounts.cancel')}
           </button>
         </form>
@@ -137,7 +145,12 @@ function AccountRow({ account, authenticated }: AccountRowProps) {
       </span>
 
       {!account.active && (
-        <button type="button" className="btn btn-sm" onClick={() => void activate(account.id)}>
+        <button
+          type="button"
+          className="btn btn-sm"
+          {...HINT_LEFT(t('accounts.useHint'))}
+          onClick={() => void activate(account.id)}
+        >
           {t('accounts.use')}
         </button>
       )}
@@ -148,6 +161,7 @@ function AccountRow({ account, authenticated }: AccountRowProps) {
           <button
             type="button"
             className="btn btn-sm btn-ghost"
+            {...HINT_LEFT(t('accounts.renameHint'))}
             onClick={() => setDraft(account.name)}
           >
             {t('accounts.rename')}
@@ -155,6 +169,7 @@ function AccountRow({ account, authenticated }: AccountRowProps) {
           <button
             type="button"
             className="btn btn-sm btn-ghost text-error"
+            {...HINT_LEFT(t('accounts.removeHint'))}
             onClick={() => void remove(account.id)}
           >
             {t('accounts.remove')}
@@ -197,7 +212,7 @@ function AddAccountForm() {
 
   return (
     <form className="flex flex-col gap-3 border-t border-current/10 pt-4" onSubmit={submit}>
-      <label className="flex flex-col gap-1 text-xs">
+      <label className="flex flex-col gap-2 text-xs">
         {t('accounts.name')}
         <input
           className="input input-sm w-full"
@@ -210,7 +225,7 @@ function AddAccountForm() {
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-xs">
+      <label className="flex flex-col gap-2 text-xs">
         {t('auth.key')}
         <input
           className="input input-sm w-full"
@@ -222,7 +237,7 @@ function AddAccountForm() {
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-xs">
+      <label className="flex flex-col gap-2 text-xs">
         {t('auth.secret')}
         <input
           className="input input-sm w-full"
@@ -239,7 +254,12 @@ function AddAccountForm() {
         </p>
       )}
 
-      <button type="submit" className="btn btn-primary btn-sm mt-1" disabled={busy || !complete}>
+      <button
+        type="submit"
+        className="btn btn-primary btn-sm mt-1"
+        {...HINT_TOP(t('accounts.addHint'))}
+        disabled={busy || !complete}
+      >
         {busy ? t('accounts.adding') : t('accounts.add')}
       </button>
     </form>

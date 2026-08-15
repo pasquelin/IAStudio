@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { layerById } from '@/engines/canvas/canvas-state'
-import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
+import { layerNow } from '@/stores/canvas-fixtures'
+import { canvasHistoryOf, useCanvases } from '@/stores/canvases'
 import { layerPort } from './layer-port'
 
 const DOCUMENT = 'doc-1'
 
-const transform = () => layerById(canvasOf(useCanvases.getState(), DOCUMENT), 'layer-1')?.transform
-const entries = () => historyOf(useCanvases.getState(), DOCUMENT).past.length
+const transform = (documentId = DOCUMENT) => layerNow(documentId, 'layer-1')?.transform
+const entries = () => canvasHistoryOf(useCanvases.getState(), DOCUMENT).past.length
 
 describe('layerPort', () => {
   beforeEach(() => {
@@ -20,7 +20,7 @@ describe('layerPort', () => {
     port.endDrag()
 
     expect(transform()).toMatchObject({ x: 40, y: -12 })
-    expect(layerById(canvasOf(useCanvases.getState(), 'doc-2'), 'layer-1')?.transform.x).toBe(0)
+    expect(transform('doc-2')?.x).toBe(0)
   })
 
   /**

@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
 import { DEFAULT_VIEW } from '@/engines/canvas/viewport'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { useCanvasViews, viewOf } from '@/stores/canvas-views'
+import { useCanvasViews, canvasViewOf } from '@/stores/canvas-views'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 
 const DOCUMENT = 'doc-1'
 const HOST = { width: 800, height: 600 }
 
-const viewport = () => viewOf(useCanvasViews.getState(), DOCUMENT).viewport
+const viewport = () => canvasViewOf(useCanvasViews.getState(), DOCUMENT).viewport
 
 function openImage(): void {
   useDocuments.setState({
@@ -87,7 +87,7 @@ describe('toggleView', () => {
   it('flips one toggle without touching the others', () => {
     toggleView(DOCUMENT, 'rulers')
 
-    const view = viewOf(useCanvasViews.getState(), DOCUMENT)
+    const view = canvasViewOf(useCanvasViews.getState(), DOCUMENT)
     expect(view.rulers).toBe(false)
     expect(view.guides).toBe(true)
     expect(view.snap).toBe(true)

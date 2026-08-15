@@ -42,10 +42,29 @@ describe('the light theme', () => {
   })
 
   it('actually changes them, rather than restating the dark value', () => {
-    // Deliberately shared: the accent reads on either background, the create button keeps its
-    // warm colour, and the monitor stays black because a picture is judged against the black it
-    // will be shown on — not against the studio's chrome.
-    const shared = ['--color-accent', '--color-create', '--color-create-hover', '--color-monitor']
+    // Deliberately shared: the accent reads on either background, and the monitor stays black
+    // because a picture is judged against the black it will be shown on — not against the
+    // studio's chrome.
+    // The marquee joins it for the monitor's reason: its two strokes are drawn over the
+    // document, which does not turn light with the studio around it.
+    //
+    // `create` and `create-hover` LEFT this list on 2026-08-12, and the decision they carried —
+    // one green in both themes, so the action that creates is one mark — was reversed knowingly.
+    // It was unreachable, not merely unmet: clearing 4.5:1 on both chassis at once asks for a
+    // luminance at or below 0.122 and at or above 0.292. The ratios are in `design/tokens.test.ts`,
+    // which now holds the light value; the mark stays green and only its lightness follows the
+    // theme, as `muted` and `accent-ink` already do.
+    const shared = [
+      '--color-accent',
+      // Shared because the fill it sits on is: one blue in both themes, one ink written on it.
+      '--color-accent-content',
+      // And the fill under the pointer, for the same reason and derived from the same blue —
+      // `hoverFor` draws it, so it parts from the dark value on the day the accent does.
+      '--color-accent-hover',
+      '--color-monitor',
+      '--color-marquee-light',
+      '--color-marquee-dark',
+    ]
     const unchanged = [...reference]
       .filter(([name, value]) => light.get(name) === value)
       .map(([name]) => name)

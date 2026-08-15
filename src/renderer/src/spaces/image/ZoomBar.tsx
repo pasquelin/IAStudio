@@ -1,8 +1,9 @@
 import { mdiFitToScreenOutline, mdiMagnifyMinusOutline, mdiMagnifyPlusOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
+import { formatPercent } from '@/helpers/format'
 import { TIP_TOP } from '@/helpers/tooltip'
-import { MAX_SCALE, MIN_SCALE } from '@/engines/canvas/viewport'
+import { CANVAS_MAX_SCALE, CANVAS_MIN_SCALE } from '@/engines/canvas/viewport'
 
 export type ZoomBarProps = {
   scale: number
@@ -15,9 +16,8 @@ export type ZoomBarProps = {
 }
 
 /** Whole percents up to 100%, one decimal below — 3% and 3.7% are different framings. */
-export function zoomLabel(scale: number): string {
-  const percent = scale * 100
-  return `${percent >= 100 ? Math.round(percent) : Math.round(percent * 10) / 10} %`
+export function zoomLabel(scale: number, language: string): string {
+  return formatPercent(scale, language, scale >= 1 ? 0 : 1)
 }
 
 /**
@@ -26,7 +26,11 @@ export function zoomLabel(scale: number): string {
  * already on the image.
  */
 export function ZoomBar({ scale, shortcuts, onZoomIn, onZoomOut, onFit, onActual }: ZoomBarProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+
+  // Read once: the readout SHOWS it and its accessible name OPENS with it, and the two drifting
+  // apart is the whole defect this button had (WCAG SC 2.5.3).
+  const reading = zoomLabel(scale, i18n.language)
 
   return (
     <div className="bg-surface border-border absolute right-2 bottom-2 flex items-center gap-0.5 rounded-(--radius-sc-md) border p-0.5">
@@ -36,13 +40,13 @@ export function ZoomBar({ scale, shortcuts, onZoomIn, onZoomOut, onFit, onActual
         shortcut={shortcuts.zoomOut}
         tooltip={TIP_TOP}
         variant="header"
-        disabled={scale <= MIN_SCALE}
+        disabled={scale <= CANVAS_MIN_SCALE}
         onClick={onZoomOut}
       />
       {/* The readout is the button: clicking a zoom level to go back to 100% is the gesture
           every editor has taught. `ToolButton` without an icon renders exactly this. */}
       <ToolButton
-        label={t('imageView.zoom')}
+        label={t('imageView.zoom', { value: reading })}
         description={t('imageView.actualHint')}
         shortcut={shortcuts.actual}
         tooltip={TIP_TOP}
@@ -50,7 +54,7 @@ export function ZoomBar({ scale, shortcuts, onZoomIn, onZoomOut, onFit, onActual
         className="text-muted w-auto px-1 tabular-nums"
         onClick={onActual}
       >
-        {zoomLabel(scale)}
+        {reading}
       </ToolButton>
       <ToolButton
         icon={mdiMagnifyPlusOutline}
@@ -58,7 +62,7 @@ export function ZoomBar({ scale, shortcuts, onZoomIn, onZoomOut, onFit, onActual
         shortcut={shortcuts.zoomIn}
         tooltip={TIP_TOP}
         variant="header"
-        disabled={scale >= MAX_SCALE}
+        disabled={scale >= CANVAS_MAX_SCALE}
         onClick={onZoomIn}
       />
       <ToolButton

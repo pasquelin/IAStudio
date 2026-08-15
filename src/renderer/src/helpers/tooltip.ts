@@ -22,18 +22,37 @@ export function withShortcut(label: string, shortcut?: string | false): string {
   return shortcut ? `${label} (${shortcut})` : label
 }
 
+function anchor(place: TooltipPlace, content: string): Record<string, string> {
+  return {
+    'data-tooltip-id': TOOLTIP_ID,
+    'data-tooltip-content': content,
+    'data-tooltip-place': place,
+  }
+}
+
 function makeTooltip(place: TooltipPlace): TooltipFactory {
   return (label, shortcut, description) => {
     const name = withShortcut(label, shortcut)
     return {
       'aria-label': name,
-      'data-tooltip-id': TOOLTIP_ID,
       // The shortcut rides along with the description too: it is the half of the tooltip nobody
       // can guess, and dropping it would make the explained controls the least documented ones.
-      'data-tooltip-content': description ? withShortcut(description, shortcut) : name,
-      'data-tooltip-place': place,
+      ...anchor(place, description ? withShortcut(description, shortcut) : name),
     }
   }
+}
+
+/**
+ * Explains a control whose name is ALREADY on screen — a button that reads "Refresh", a tab
+ * that reads "Models". The sentence only, and no `aria-label`: one set over a visible label
+ * replaces it for a screen reader (WCAG SC 2.5.3), so the button would answer to a name nobody
+ * can see. `TooltipFactory` is for the icon-only ones, which have no name until it gives them
+ * one.
+ */
+export type HintFactory = (sentence: string) => Record<string, string>
+
+function makeHint(place: TooltipPlace): HintFactory {
+  return sentence => anchor(place, sentence)
 }
 
 /**
@@ -45,15 +64,18 @@ export const TIP_RIGHT = makeTooltip('right')
 export const TIP_LEFT = makeTooltip('left')
 export const TIP_BOTTOM = makeTooltip('bottom')
 
+export const HINT_TOP = makeHint('top')
+export const HINT_RIGHT = makeHint('right')
+export const HINT_LEFT = makeHint('left')
+export const HINT_BOTTOM = makeHint('bottom')
+
 /**
- * Where a bar's tooltips go, so a floating bar never tips over its own canvas. `bar` is the
- * buttons' own; `flyout` is their menu rows', which must not land back on the bar that opened
- * them. One answer to one question — the flyout's placement was being re-derived inline.
+ * Where a bar's tooltips go, so a floating bar never tips over its own canvas.
+ *
+ * It answered for the flyout rows too until they all moved to `HINT_RIGHT`: a row shows its own
+ * label, and a `TooltipFactory` would set an `aria-label` over it (WCAG 2.5.3). One question,
+ * one answer — the second parameter had exactly one caller and now has none.
  */
-export function tipFor(
-  orientation: 'vertical' | 'horizontal',
-  of: 'bar' | 'flyout' = 'bar',
-): TooltipFactory {
-  if (orientation === 'vertical') return TIP_RIGHT
-  return of === 'bar' ? TIP_TOP : TIP_BOTTOM
+export function tipFor(orientation: 'vertical' | 'horizontal'): TooltipFactory {
+  return orientation === 'vertical' ? TIP_RIGHT : TIP_TOP
 }

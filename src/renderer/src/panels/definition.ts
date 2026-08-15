@@ -1,13 +1,16 @@
-import type { FC } from 'react'
+import type { ComponentType } from 'react'
 
 /**
  * What a panel publishes about itself. Here rather than beside the table that collects them:
  * that table imports every panel, so a panel reading the type off it closed a cycle.
+ *
+ * `ComponentType` rather than `FC` so a `lazy()` wrapper satisfies it: the table hands one down
+ * for every panel, and none of them is evaluated before its half is opened.
  */
 export type ToolDefinition = {
-  Content: FC
+  Content: ComponentType
   /** Actions rendered in the title bar, on the same line as the panel name. */
-  Actions?: FC
+  Actions?: ComponentType
   /** Whether those actions take the title row's free width once the panel lies in a band, for
    * a panel that moves a whole bar up there rather than a button or two. Such an `Actions` owns
    * its end of the row: nothing pushes it against the close button any more. */

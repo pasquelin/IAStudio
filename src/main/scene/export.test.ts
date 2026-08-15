@@ -64,6 +64,28 @@ describe('the scene export handler', () => {
     ).rejects.toThrow()
   })
 
+  /**
+   * The whole reason this handler answers a name rather than a path — and a rejected
+   * `ipcMain.handle` hands its message to the renderer, which files it in the journal. Node
+   * builds that message around the absolute path, so it was the one way one crossed.
+   */
+  it('says why the write failed without saying where the file sits', async () => {
+    const secret = join(folder, 'somewhere', 'private', 'set.glb')
+    registerSceneHandlers({ pickSavePath: () => Promise.resolve(secret) })
+
+    let refusal = ''
+    try {
+      await invoke(CHANNELS.sceneExport, { name: 'set', format: 'glb', data: bytes })
+    } catch (error) {
+      refusal = String(error)
+    }
+
+    expect(refusal).toMatch(/could not be written/)
+    expect(refusal).toContain('ENOENT')
+    expect(refusal).not.toContain(folder)
+    expect(refusal).not.toContain('private')
+  })
+
   it('refuses bytes that are not bytes', async () => {
     await expect(
       invoke(CHANNELS.sceneExport, { name: 'set', format: 'glb', data: 'not bytes' }),

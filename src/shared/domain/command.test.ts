@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '../guards'
+import { isSignature } from './shortcut'
 import { LANGUAGES, TRANSLATIONS } from '../i18n'
 import {
   bindingOf,
@@ -7,9 +8,12 @@ import {
   COMMAND_SCOPES,
   commandDescriptor,
   commandFor,
+  commandIn,
   commandsIn,
   conflicts,
+  scopeOfWorkspace,
 } from './command'
+import { WORKSPACE_IDS } from './workspace'
 
 function resolve(bundle: unknown, key: string): unknown {
   return key
@@ -111,5 +115,80 @@ describe('conflicts', () => {
 
   it('ignores commands bound to nothing, which cannot clash with anything', () => {
     expect(conflicts({ 'scene.frame': undefined })).not.toContain('layout.reset')
+  })
+})
+
+describe('every scope the registry declares', () => {
+  /**
+   * The shortcuts screen groups the commands by scope and names each group from the bundle.
+   * `canvas` had no label at all: its whole group was headed by the raw key. A scope added
+   * without one is a heading nobody can read.
+   */
+  it('is named in both bundles', () => {
+    for (const language of LANGUAGES) {
+      const labels = TRANSLATIONS[language.code].settings.scope
+      const unnamed = COMMAND_SCOPES.filter(scope => !labels[scope])
+
+      expect(unnamed).toEqual([])
+    }
+  })
+
+  it('holds at least one command, or it is a heading over nothing', () => {
+    const empty = COMMAND_SCOPES.filter(scope => commandsIn(scope).length === 0)
+
+    expect(empty).toEqual([])
+  })
+})
+
+describe('looking a command up by its suffix', () => {
+  it('finds the one that scope declares', () => {
+    expect(commandIn('scene', 'undo')).toBe('scene.undo')
+  })
+
+  /**
+   * The native menu asks every scope for `undo` and `redo` and greys the row out when the
+   * answer is `null` — so the answer for a scope that has no such command is what the menu is
+   * actually built on, and it was the one path never exercised.
+   */
+  it('answers null rather than guessing when that scope has none', () => {
+    expect(commandIn('scene', 'jamaisDeclare')).toBeNull()
+  })
+
+  /**
+   * Half of the trap `SCOPE_BY_WORKSPACE` describes — the half that lives here. A workspace
+   * pointed at a scope declaring only one of the two leaves the other row greyed for good, and
+   * nothing else says so. The other half, a store holding a history with no scope at all, is a
+   * fact of `renderer/` that this file cannot see.
+   */
+  it('gives every workspace that edits an undo AND a redo', () => {
+    const halved = WORKSPACE_IDS.map(workspace => scopeOfWorkspace(workspace))
+      .filter(scope => scope !== null)
+      .filter(scope => !commandIn(scope, 'undo') || !commandIn(scope, 'redo'))
+
+    expect(halved).toEqual([])
+  })
+})
+
+/**
+ * Sixteen commands once shipped bound to `'P'` where `'KeyP'` was meant. `Signature` is a string,
+ * so the typecheck was green, the lint was green, and every unit test was green — the binding
+ * simply never fired, because a code is a position and a letter is not one. Only a test driving
+ * a real keyboard caught it.
+ */
+describe('the keys the registry binds', () => {
+  it('spells every default binding as a signature the studio can produce', () => {
+    const malformed = COMMAND_REGISTRY.filter(
+      descriptor => descriptor.defaultBinding !== null && !isSignature(descriptor.defaultBinding),
+    )
+
+    expect(malformed.map(descriptor => `${descriptor.id}: ${descriptor.defaultBinding}`)).toEqual(
+      [],
+    )
+  })
+
+  /** A guard that passed everything would pass this list too, and say nothing about it. */
+  it('would refuse a letter written in place of a code', () => {
+    expect(isSignature('KeyP')).toBe(true)
+    expect(isSignature('P')).toBe(false)
   })
 })

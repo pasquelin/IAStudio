@@ -3,32 +3,41 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
+import { PANEL_SCROLL } from '@/design/styles'
 import { clipById, trackById } from '@/engines/timeline/timeline-state'
 import { formatBytes } from '@/helpers/format'
 import { assetsById, useAssets } from '@/stores/assets'
 import { layerById, type Layer } from '@/engines/canvas/canvas-state'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { activeImageId, activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
+import {
+  activeImageId,
+  activeSceneId,
+  activeSequenceId,
+  activeTextureId,
+  useDocuments,
+} from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
 import { AssetInspector } from './AssetInspector'
 import { ClipInspector } from './ClipInspector'
 import { LayerInspector } from './LayerInspector'
 import { SceneInspector } from './SceneInspector'
+import { TextureInspector } from './TextureInspector'
 import { TrackInspector } from './TrackInspector'
+import { inspectedTextureId } from './inspected'
 
 /**
  * What the selection is, read out.
  *
  * It owns no state: every face reads the store that holds the thing it describes, so two
  * panels showing the same clip cannot disagree about it. One panel for the whole studio — a
- * scene node, an asset, a clip, a track — because "what is selected" is one question, and an
- * inspector per space would be four panels to learn to find.
+ * scene node, an asset, a clip, a track, a layer — because "what is selected" is one question,
+ * and an inspector per space would be six panels to learn to find.
  */
 export function Inspector() {
   // The scroller belongs here rather than to each face: one of them used to forget it.
   return (
-    <div className="h-full overflow-y-auto">
+    <div className={PANEL_SCROLL}>
       <Face />
     </div>
   )
@@ -39,10 +48,11 @@ function Face() {
   const sceneId = useDocuments(activeSceneId)
   const sequenceId = useDocuments(activeSequenceId)
   const sequence = useSequences(state => (sequenceId ? sequenceOf(state, sequenceId) : null))
+  const textureId = useDocuments(activeTextureId)
   const imageId = useDocuments(activeImageId)
   const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
 
-  const layerOf = (documentId: string, picked: { ids: string[] }): Layer | null =>
+  const layerOf = (documentId: string, picked: { ids: readonly string[] }): Layer | null =>
     canvas && documentId === imageId ? layerById(canvas, picked.ids[0] ?? null) : null
 
   switch (selection.kind) {
@@ -84,12 +94,20 @@ function Face() {
         <Empty />
       )
     }
-
-    // Nothing was clicked in a panel, so the scene speaks for itself: which node is selected
-    // is held by the scene state rather than announced to the selection store.
-    default:
-      return sceneId ? <SceneInspector documentId={sceneId} /> : <Empty />
   }
+
+  // `none` and `node` both land here, and deliberately: neither names a thing the document in
+  // front might not hold. Nothing was clicked at all, or a scene node was — and a scene says
+  // which of its nodes from its OWN state, which `SceneInspector` reads there. That is why this
+  // one is not guarded on its owner as the three faces above are: guarding it emptied the panel
+  // on every switch between two scenes, and kept it empty over a texture afterwards. At most one
+  // id is set below, so the order is reading order.
+  if (sceneId) return <SceneInspector documentId={sceneId} />
+
+  // Through the same answer the title row reads, so the button it carries and the face below it
+  // can never describe two different things.
+  const material = inspectedTextureId(selection, sceneId, textureId)
+  return material ? <TextureInspector documentId={material} /> : <Empty />
 }
 
 function Empty() {
@@ -102,7 +120,7 @@ function Empty() {
  * for a selection of twelve is how someone regenerates the wrong thing.
  */
 function AssetSelection({ ids }: { ids: readonly string[] }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const byId = useAssets(assetsById)
 
   // Keyed rather than filtered: a selection of a handful against a catalogue of thousands was
@@ -117,7 +135,11 @@ function AssetSelection({ ids }: { ids: readonly string[] }) {
   return (
     <PropertyGroup title={t('inspector.selection')}>
       <PropertyRow label={t('inspector.count')}>{assets.length}</PropertyRow>
-      {total > 0 && <PropertyRow label={t('inspector.size')}>{formatBytes(total)}</PropertyRow>}
+      {total > 0 && (
+        <PropertyRow label={t('inspector.size')}>
+          {formatBytes(total, unit => t(`units.${unit}`), i18n.language)}
+        </PropertyRow>
+      )}
     </PropertyGroup>
   )
 }

@@ -1,5 +1,5 @@
 import { cn } from '@/helpers/cn'
-import { FIELD_LABEL, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
+import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
 export type ColorFieldProps = GestureProps & {
   label: string
@@ -18,7 +18,9 @@ export function ColorField({
 }: ColorFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      <span className={FIELD_LABEL}>{label}</span>
+      <span title={label} className={FIELD_LABEL}>
+        {label}
+      </span>
 
       <input
         type="color"
@@ -34,7 +36,6 @@ export function ColorField({
         className={cn(
           'border-border h-(--sc-control) w-8 shrink-0 cursor-pointer',
           'rounded-(--radius-sc-sm) border bg-transparent p-0.5',
-          FOCUS_RING,
         )}
       />
 
@@ -42,7 +43,7 @@ export function ColorField({
           and a second copy would end up inside the field's own name. */}
       <span
         aria-hidden
-        className="text-muted min-w-0 flex-1 truncate font-mono text-[10px] uppercase"
+        className="text-muted text-mini min-w-0 flex-1 truncate font-mono uppercase"
       >
         {value}
       </span>

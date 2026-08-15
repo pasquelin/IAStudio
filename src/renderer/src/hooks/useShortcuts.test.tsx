@@ -3,8 +3,9 @@ import type { MotionId } from '@shared/domain/shortcut'
 import { fireEvent, renderHook, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
-import { useShortcuts } from './useShortcuts'
+import { describe, expect, it, onTestFinished, vi } from 'vitest'
+import { publishCommand } from '@/services/command-bus'
+import { useHeldCommand, useShortcuts } from './useShortcuts'
 
 /** The hook listens on `window`; the field is here so a test can move focus into one. */
 function Fixture({ children }: { children: ReactNode }) {
@@ -52,6 +53,22 @@ describe('useShortcuts', () => {
     expect(onCommand).not.toHaveBeenCalled()
   })
 
+  // A dropdown types too, and the shared guard is the only thing that knows it — a copy local to
+  // this hook forgot it once already. Dispatched from the element rather than through focus, so
+  // what this pins is the guard and not what jsdom does with focus on a `<select>`.
+  it('ignores a key sent from a dropdown', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+    // Attached, because an orphan element's events never reach the `window` listener under test —
+    // and removed after, because Testing Library's cleanup only owns what `render` created.
+    const dropdown = document.body.appendChild(document.createElement('select'))
+    onTestFinished(() => dropdown.remove())
+
+    fireEvent.keyDown(dropdown, { code: 'KeyG' })
+
+    expect(onCommand).not.toHaveBeenCalled()
+  })
+
   // The platform copies a live selection from anywhere: taking ⌘C would leave the user no way
   // to copy the text they just highlighted.
   it('leaves ⌘C to the text the user has highlighted', () => {
@@ -67,6 +84,70 @@ describe('useShortcuts', () => {
     selection?.removeAllRanges()
     fireEvent.keyDown(window, { code: 'KeyC', metaKey: true })
     expect(onCommand).toHaveBeenCalledWith('scene.copy')
+  })
+
+  /**
+   * Why the rule is per command and not "⌘ wins from a field": ⌘E merges a layer down, and a
+   * layer is renamed in an `<input>` while its document stays the active tab. Firing it there
+   * would flatten the layer mid-rename, and the ⌘Z reflex undoes the typing, not the merge.
+   */
+  it.each(['KeyG', 'KeyD', 'KeyZ', 'KeyV', 'KeyC'])(
+    'leaves ⌘%s alone when the command has not declared it',
+    code => {
+      const onCommand = vi.fn()
+      mount(onCommand)
+
+      fireEvent.keyDown(screen.getByLabelText('prompt'), { code, metaKey: true })
+
+      expect(onCommand).not.toHaveBeenCalled()
+    },
+  )
+
+  // The motion branch now sits behind its own typing check rather than behind an early return:
+  // flying while writing in a field would be the regression that restructuring could cause.
+  it('registers no motion for a key typed into a field', () => {
+    const onMotionChange = vi.fn()
+    const { result } = mount(vi.fn(), true, onMotionChange)
+
+    fireEvent.keyDown(screen.getByLabelText('prompt'), { code: 'KeyW' })
+
+    expect([...result.current.heldMotion.current]).toEqual([])
+    expect(onMotionChange).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The native menu fires a command, never a key — and on macOS the menu is what hears an
+   * accelerator it declared, so the window never sees it. Both doors lead to the surface, or a
+   * menu row does nothing: eleven of them did.
+   */
+  it('runs a command the menu published for its own scope', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    publishCommand('scene.frame')
+
+    expect(onCommand).toHaveBeenCalledWith('scene.frame')
+  })
+
+  // Two surfaces are mounted at once — a scene tab and an image tab — and the same command must
+  // not run on both. The scope is what tells them apart.
+  it('leaves alone a command belonging to another surface', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    publishCommand('canvas.flatten')
+
+    expect(onCommand).not.toHaveBeenCalled()
+  })
+
+  // A hidden tab stays mounted: it must not run what the tab in front was handed.
+  it('ignores a published command while disabled', () => {
+    const onCommand = vi.fn()
+    mount(onCommand, false)
+
+    publishCommand('scene.frame')
+
+    expect(onCommand).not.toHaveBeenCalled()
   })
 
   it('stays silent when disabled', async () => {
@@ -136,5 +217,139 @@ describe('useShortcuts', () => {
     window.dispatchEvent(new Event('blur'))
     expect(onMotionChange).toHaveBeenCalledTimes(1)
     expect([...(onMotionChange.mock.lastCall?.[0] ?? [])]).toEqual([])
+  })
+
+  // A held command is heard by the window, so a surface must not also fire it as a tap — the
+  // press would run the command and the hold at once.
+  it('leaves a held command to the hook that holds it', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    fireEvent.keyDown(window, { code: 'KeyD', altKey: true })
+
+    expect(onCommand).not.toHaveBeenCalled()
+  })
+})
+
+describe('useHeldCommand', () => {
+  const hold = (onChange: (held: boolean) => void, enabled = true) =>
+    renderHook(() => useHeldCommand('app.dictate', enabled, onChange), { wrapper: Fixture })
+
+  const press = (init: KeyboardEventInit = {}) =>
+    fireEvent.keyDown(window, { code: 'KeyD', altKey: true, ...init })
+
+  const release = () => fireEvent.keyUp(window, { code: 'KeyD', altKey: true })
+
+  it('reports the press and the release', () => {
+    const onChange = vi.fn()
+    hold(onChange)
+
+    press()
+    release()
+
+    expect(onChange.mock.calls).toEqual([[true], [false]])
+  })
+
+  /**
+   * The order a hand actually uses: the little finger leaves ⌥ before the index leaves D. Read
+   * as a signature, that release is `KeyD` — matching nothing — and the one after it `AltLeft`,
+   * matching nothing either. The microphone stayed open, and because the hook still believed
+   * the key was down, every later press was ignored: dictation was dead until the window lost
+   * the focus.
+   */
+  it('releases when the modifier is let go before the key', () => {
+    const onChange = vi.fn()
+    hold(onChange)
+
+    press()
+    fireEvent.keyUp(window, { code: 'AltLeft', key: 'Alt', altKey: false })
+
+    expect(onChange.mock.calls).toEqual([[true], [false]])
+  })
+
+  it('takes the next press after a release in that order', () => {
+    const onChange = vi.fn()
+    hold(onChange)
+
+    press()
+    fireEvent.keyUp(window, { code: 'AltLeft', key: 'Alt', altKey: false })
+    fireEvent.keyUp(window, { code: 'KeyD', key: 'd', altKey: false })
+    press()
+
+    expect(onChange.mock.calls).toEqual([[true], [false], [true]])
+  })
+
+  it('reports the press once, not once per auto-repeat', () => {
+    const onChange = vi.fn()
+    hold(onChange)
+
+    press()
+    press({ repeat: true })
+    press({ repeat: true })
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+  })
+
+  // The whole point of dictation is to speak into the field one is already in, so the guard
+  // every other shortcut obeys is lifted for a command that declares `held`.
+  it('fires while the focus sits in a text field', async () => {
+    const onChange = vi.fn()
+    hold(onChange)
+
+    await userEvent.click(screen.getByLabelText('prompt'))
+    press()
+
+    expect(onChange).toHaveBeenCalledWith(true)
+  })
+
+  // Pressed outside a field and released inside one, the release still has to land — otherwise
+  // the microphone stays open with nothing holding it.
+  it('releases on a key up wherever the focus has moved', async () => {
+    const onChange = vi.fn()
+    hold(onChange)
+
+    press()
+    await userEvent.click(screen.getByLabelText('prompt'))
+    release()
+
+    expect(onChange).toHaveBeenLastCalledWith(false)
+  })
+
+  it('releases when the window loses focus, which never delivers a key up', () => {
+    const onChange = vi.fn()
+    hold(onChange)
+
+    press()
+    window.dispatchEvent(new Event('blur'))
+
+    expect(onChange).toHaveBeenLastCalledWith(false)
+  })
+
+  it('releases when it stops being enabled mid-press', () => {
+    const onChange = vi.fn()
+    const { unmount } = hold(onChange)
+
+    press()
+    unmount()
+
+    expect(onChange).toHaveBeenLastCalledWith(false)
+  })
+
+  it('stays silent while disabled', () => {
+    const onChange = vi.fn()
+    hold(onChange, false)
+
+    press()
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('ignores another key', () => {
+    const onChange = vi.fn()
+    hold(onChange)
+
+    fireEvent.keyDown(window, { code: 'KeyG', altKey: true })
+
+    expect(onChange).not.toHaveBeenCalled()
   })
 })

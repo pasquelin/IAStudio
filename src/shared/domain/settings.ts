@@ -1,6 +1,11 @@
 import type { LanguagePreference } from '../i18n/languages'
+import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistant'
 import type { BindingOverrides } from './command'
+import type { DictationMode } from './dictation'
 import type { ApiFailure } from './failure'
+import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
+import type { RecentProject } from './project'
+import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 import type { ModelFamily } from './model'
 import type { ShadowQuality } from './scene'
 
@@ -52,6 +57,22 @@ export type Settings = {
     language: LanguagePreference
     startup: StartupBehaviour
   }
+  /**
+   * The home screen. `sections` carries the user's own order and what they chose to hide;
+   * `domain/home.ts` owns what a section is, and which of them may never be hidden.
+   */
+  home: {
+    enabled: boolean
+    sections: HomeSectionSetting[]
+  }
+  /**
+   * The bar of spaces. `order` is the user's own, reconciled against what this build declares
+   * by `workspaceOrder` — a stored order is a photograph of the spaces that existed the day it
+   * was written, and the registry order is only what an untouched bar falls back to.
+   */
+  workspaces: {
+    order: WorkspaceId[]
+  }
   appearance: {
     theme: Theme
     density: Density
@@ -66,11 +87,33 @@ export type Settings = {
     maxRetries: number
     /** Model preselected by the generator, per family. Absent means "ask every time". */
     defaultModels: Partial<Record<ModelFamily, string>>
+    /**
+     * Whether an asset arriving without a useful name gets described on its own.
+     *
+     * The one place the studio spends creative units without being asked, which is why it is
+     * the one that can be turned off.
+     */
+    captionArrivals: boolean
   }
   storage: {
     backend: AssetBackend
     projectsFolder?: string
     lastProject?: string
+    /** Session state like `lastProject`, and replicated with it — see `domain/project.ts`. */
+    recentProjects: RecentProject[]
+    /**
+     * Which account each project works under, by folder — see `planProjectAccount`.
+     *
+     * Its own branch rather than a field on `recentProjects`: that list is session state, bounded
+     * to twelve and evicted by opening date, and `forget` empties an entry whenever an opening
+     * FAILS. A project on a drive that was not plugged in would have come back on someone else's
+     * key, in silence, which is the one thing this exists to prevent.
+     *
+     * Nothing prunes it, and `forget` deliberately leaves it alone for that same reason — pruning
+     * on the path an opening failed on is exactly the defect above. It grows by one short line per
+     * project ever opened, which is the cost of not losing a choice the user made.
+     */
+    projectAccounts: Record<string, string>
   }
   /**
    * The 3D workspace. A branch of its own rather than nested under a `spaces` one: every branch
@@ -120,6 +163,54 @@ export type Settings = {
      */
     ffmpegPath?: string
   }
+  /** Talking to the studio instead of driving it — see `domain/assistant.ts`. */
+  assistant: {
+    /**
+     * Which language model works out what a sentence meant.
+     *
+     * A preference rather than a constant because the four differ by a factor of nearly four in
+     * price — measured, see `AssistantModel` — and because a request the cheapest one fumbles is
+     * usually answered by the next one up. Changed from the assistant's own panel rather than
+     * from this screen: the moment one wants a better model is the moment one is mid-sentence,
+     * and opening the preferences to get there loses the sentence.
+     */
+    model: AssistantModel
+  }
+  /**
+   * The same actions the assistant runs, offered to a client outside the application — see
+   * `main/mcp/`.
+   *
+   * Off unless asked for, and that is the setting's whole reason to exist: it opens a port on
+   * the machine. Nothing about it survives a launch either — the port is whichever was free and
+   * the token is new — so turning it on is a decision taken again each time it matters.
+   */
+  mcp: {
+    enabled: boolean
+  }
+  /** Speaking a prompt instead of typing it. Everything runs on this machine — see `domain/dictation.ts`. */
+  dictation: {
+    enabled: boolean
+    mode: DictationMode
+    /** Silence that closes a segment, in milliseconds. Longer suits someone who pauses to think. */
+    silenceMs: number
+    /**
+     * How often the segment in flight is decoded again to show a preview. The model is not a
+     * streaming one, so a preview costs a full decode of what has been said so far; `0` turns
+     * previews off and leaves only the text of each closed segment.
+     */
+    previewMs: number
+    /** Inference threads. More is faster up to a point, and every one of them is a core taken. */
+    threads: number
+    /** Minutes of silence after which the engine is dropped, returning around 700 MB. `0` keeps it. */
+    idleUnloadMinutes: number
+    /** A model folder to read instead of the downloaded one. Absent is the normal case. */
+    modelFolder?: string
+    /**
+     * The microphone to record from. Absent means the system default, which is what most people
+     * want and what survives plugging a headset in and out.
+     */
+    inputDeviceId?: string
+  }
 }
 
 /**
@@ -129,8 +220,10 @@ export type Settings = {
  */
 export const DEFAULT_SETTINGS: Settings = {
   general: { language: 'system', startup: 'lastProject' },
+  home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] },
+  workspaces: { order: [...WORKSPACE_IDS] },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
-  generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {} },
+  generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {}, captionArrivals: true },
   three: {
     showGrid: true,
     gridSize: 20,
@@ -143,10 +236,20 @@ export const DEFAULT_SETTINGS: Settings = {
     shadowQuality: 'soft',
     shadowMapSize: 2048,
   },
-  storage: { backend: 'local' },
+  storage: { backend: 'local', recentProjects: [], projectAccounts: {} },
   shortcuts: { overrides: {} },
   advanced: { logLevel: 'info' },
   media: {},
+  assistant: { model: DEFAULT_ASSISTANT_MODEL },
+  mcp: { enabled: false },
+  dictation: {
+    enabled: true,
+    mode: 'pushToTalk',
+    silenceMs: 600,
+    previewMs: 700,
+    threads: 2,
+    idleUnloadMinutes: 10,
+  },
 }
 
 /** Derived, so a section added to `Settings` is writable without being restated here. */
@@ -177,7 +280,19 @@ export function mergePartial(base: PartialSettings, next: PartialSettings): Part
   return merged
 }
 
-export type AuthState = { authenticated: true } | { authenticated: false; reason: ApiFailure }
+export type AuthState =
+  | {
+      authenticated: true
+      /**
+       * The project this key opens onto, once the library has named it — there is no endpoint
+       * that would simply say, so it is learned from the first assets that come back.
+       *
+       * Absent means "not known yet", which every reader treats as "do not judge ownership"
+       * rather than as a mismatch.
+       */
+      ownerId?: string
+    }
+  | { authenticated: false; reason: ApiFailure }
 
 /**
  * Sections of the settings window, named so any surface can ask for one of them — a panel that
@@ -197,9 +312,12 @@ export type SettingsSectionId =
   | 'generation.3d'
   | 'generation.audio'
   | 'generation.upscale'
+  | 'generation.background-removal'
+  | 'generation.vectorization'
   | 'spaces'
   | 'spaces.three'
   | 'shortcuts'
+  | 'dictation'
   | 'media'
   | 'storage'
   | 'advanced'
@@ -214,9 +332,12 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'generation.3d',
   'generation.audio',
   'generation.upscale',
+  'generation.background-removal',
+  'generation.vectorization',
   'spaces',
   'spaces.three',
   'shortcuts',
+  'dictation',
   'media',
   'storage',
   'advanced',

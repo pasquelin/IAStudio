@@ -8,6 +8,24 @@ directories:
   output: release
   buildResources: build
 
+# `beforePack` fetches into `resources/ffmpeg/`, emptying it first — the binaries differ in name
+# per platform. Two targets packed at once would take each other's encoder. This is the default,
+# declared so a change of default cannot silently break it.
+concurrency:
+  jobs: 1
+
+# Name, version, platform and architecture, in that order: the two macOS installers differ only
+# by the last field, and a release page listing them has to make that legible.
+artifactName: ${name}-${version}-${platform}-${arch}.${ext}
+
+# The release is created as a draft by the `release` job, never by the build matrix — see
+# docs/ci/adr/ADR-06. Nothing reaches an installed client until the draft is published by hand.
+publish:
+  provider: github
+  owner: pasquelin
+  repo: scenario
+  releaseType: draft
+
 files:
   - out/**
   - package.json
@@ -34,6 +52,10 @@ electronFuses:
 # A native module cannot be loaded from inside the asar archive.
 asarUnpack:
   - '**/*.node'
+  # The recognition engine ships four dynamic libraries beside its `.node`, and the loader reads
+  # them from disk by name. The rule above unpacks the addon alone, which loads and then fails
+  # looking for a `libonnxruntime.dylib` still sealed in the archive.
+  - '**/sherpa-onnx-*/**'
 
 # The encoder the studio ships with. `beforePack` fetches the one matching the target about to
 # be packed, so a run building several of them gives each its own. Outside the asar on purpose:
@@ -44,14 +66,52 @@ extraResources:
   - from: resources/ffmpeg
     to: ffmpeg
     filter: ['**/*']
+  # The voice detector dictation listens through — 640 KB, fetched by `pnpm stt:fetch` and
+  # verified against a pinned digest. Shipped rather than downloaded because it is small, and
+  # because it lets the microphone be checked before the 640 MB recognition model is there.
+  - from: resources/stt
+    to: stt
+    filter: ['**/*']
+  # Beside the application rather than only inside its Help window: a notice reachable only from
+  # a running app is out of reach for whoever cannot start it, and the FFmpeg source offer has to
+  # survive that. Both are generated or hand-written at the repository root, never duplicated.
+  - from: EULA.md
+    to: EULA.md
+  - from: THIRD-PARTY-NOTICES.md
+    to: THIRD-PARTY-NOTICES.md
 
 mac:
+  # The permission sentence, once per language. macOS reads `InfoPlist.strings` from the `.lproj`
+  # matching the reader's language and falls back to `extendInfo` below for every other one, so a
+  # French user sees a French reason where they used to read English under a French dialog.
+  #
+  # Under `mac:` rather than at the root: an `.lproj` folder means nothing to Windows or Linux.
+  # electron-builder has no localisation feature of its own — it only places the files — which is
+  # why this was long called untranslatable. It is not; it is unassembled.
+  extraResources:
+    - from: build/lproj
+      to: .
+      filter: ['**/*']
   category: public.app-category.graphics-design
   icon: build/icon.svg
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+  # The value Electron 43 already carries in its Info.plist, written down so it stops being
+  # implicit: electron-updater reads it to decide whether a client may take an update.
+  minimumSystemVersion: '12.0'
+  extendInfo:
+    # macOS shows this sentence in the permission dialog, and kills the process outright if the
+    # key is missing when the microphone is first touched. Not localised: an Info.plist string
+    # needs an `InfoPlist.strings` per language, which electron-builder does not assemble.
+    NSMicrophoneUsageDescription:
+      Scenario Studio uses the microphone to turn what you say into text, on this computer.
+      Nothing you say is sent anywhere.
+  # `notarize` is deliberately left at its default rather than pinned to false: electron-builder
+  # only notarises what it managed to sign, so an unsigned build skips it on its own — and the
+  # day the secrets of ADR-07 exist, signing and notarising both start without touching this
+  # file. No Apple Developer Program is subscribed today; see docs/ci/adr/ADR-04.
   # Signed with the app, or the hardened runtime refuses to spawn it — an unsigned executable
   # inside a signed bundle is exactly what Gatekeeper is there to stop.
   binaries:
@@ -81,10 +141,35 @@ win:
       arch: [x64]
 
 nsis:
+  # The terms of use of the binary, not the source-available licence of the repository: two
+  # different texts, and only this one governs what an installer hands over. Per target — there is
+  # no root `license` key, and declaring one fails `validateConfiguration` before any platform is
+  # packaged. Not set under `dmg`: a licence there gates mounting the image every single time.
+  license: EULA.md
   oneClick: false
   allowToChangeInstallationDirectory: true
+  # Per user, so installing needs no administrator: the studio writes to the user's own folders
+  # and has nothing to register machine-wide.
+  perMachine: false
+  createDesktopShortcut: true
+  # Projects, settings and the encrypted API key live in appData. Uninstalling a version — to
+  # reinstall another — must not take the work with it.
+  deleteAppDataOnUninstall: false
 
 linux:
   icon: build/icon.svg
   category: Graphics
+  synopsis: Image, video, 3D, audio, texture and skybox creation on the Scenario API
+  maintainer: Alban Pasquelin <alban.pasquelin@gmail.com>
+  # The one surface of the studio that ships its wording instead of reading it: a `.desktop` file
+  # is written at build time and read by the desktop shell, long before any bundle is loaded. It
+  # localises the only way it can — one key per locale, `Comment` being the C fallback.
+  desktop:
+    entry:
+      StartupWMClass: Scenario Studio
+      Comment: Image, video, 3D, audio, texture and skybox creation on the Scenario API
+      Comment[fr]: Création d’images, vidéos, modèles 3D, audio, textures et skyboxes sur l’API Scenario
   target: [AppImage, deb]
+
+appImage:
+  license: EULA.md

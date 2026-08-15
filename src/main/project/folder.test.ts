@@ -1,0 +1,456 @@
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import type { FSWatcher } from 'node:fs'
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import {
+  createFolderEditor,
+  createFolderReader,
+  watchProjectFolder,
+  type WatchOpener,
+} from './folder'
+
+/**
+ * The language the listing is sorted for, named rather than inherited.
+ *
+ * It used to be `windowLanguage()`, a module global no test could set: every ordering case below
+ * rode on `DEFAULT_LANGUAGE` without saying so, and another suite's `beforeEach` could move it.
+ */
+const inFrench = (): string => 'fr'
+
+async function project(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), 'scenario-folder-'))
+  await mkdir(join(root, 'assets'))
+  await mkdir(join(root, 'documents'))
+  await mkdir(join(root, '.index'))
+  await writeFile(join(root, '.project.json'), '{}')
+  await writeFile(join(root, 'notes.txt'), 'hello')
+  return root
+}
+
+describe('reading the project folder', () => {
+  it('lists one level, folders first and then by name', async () => {
+    const root = await project()
+
+    const entries = await createFolderReader(() => root, inFrench).list('')
+
+    expect(entries.map(entry => `${entry.kind}:${entry.name}`)).toEqual([
+      'folder:assets',
+      'folder:documents',
+      'file:notes.txt',
+    ])
+  })
+
+  /**
+   * The case injecting the language exists to make writable, and it could not be written while the
+   * reader took it off a module global.
+   *
+   * `Ä` files with `A` for both of the studio's languages and after `Z` for a Swedish reader, so a
+   * listing sorted in whatever locale the machine was installed in is a listing in an order nobody
+   * asked for — which is what a bare `localeCompare` did here.
+   */
+  it('sorts for the language it is handed, not the one the machine runs', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'scenario-folder-'))
+    await writeFile(join(root, 'Ärger.txt'), '')
+    await writeFile(join(root, 'Zoo.txt'), '')
+
+    const namesIn = async (language: string): Promise<string[]> =>
+      (
+        await createFolderReader(
+          () => root,
+          () => language,
+        ).list('')
+      ).map(entry => entry.name)
+
+    expect(await namesIn('fr')).toEqual(['Ärger.txt', 'Zoo.txt'])
+    expect(await namesIn('sv')).toEqual(['Zoo.txt', 'Ärger.txt'])
+  })
+
+  /**
+   * The two the studio puts there and can rebuild. Hidden by the platforms' own rule — a
+   * leading dot — rather than by a list, so a third one does not have to be remembered.
+   */
+  it('leaves out what the studio keeps for itself', async () => {
+    const root = await project()
+
+    const entries = await createFolderReader(() => root, inFrench).list('')
+
+    expect(entries.map(entry => entry.name)).not.toContain('.index')
+    expect(entries.map(entry => entry.name)).not.toContain('.project.json')
+  })
+
+  // The path is the tree's id as well as the path, and it is what the next read is asked for.
+  it('names each entry relative to the project root', async () => {
+    const root = await project()
+    await writeFile(join(root, 'documents', 'a3f1.scene'), '{}')
+
+    const entries = await createFolderReader(() => root, inFrench).list('documents')
+
+    expect(entries[0]?.path).toBe('documents/a3f1.scene')
+  })
+
+  it('reads the folder of whatever project is open at call time', async () => {
+    const first = await project()
+    const second = await project()
+    await writeFile(join(second, 'only-here.txt'), '')
+    let open = first
+
+    const reader = createFolderReader(() => open, inFrench)
+    open = second
+
+    expect((await reader.list('')).map(entry => entry.name)).toContain('only-here.txt')
+  })
+})
+
+describe('following the project folder', () => {
+  // `as`: a watcher these tests never listen to, and only `close` is ever called on it. Naming
+  // the cast once keeps the two fake openers from each carrying their own.
+  const deaf = (): FSWatcher =>
+    ({ close: () => undefined, on: () => undefined }) as unknown as FSWatcher
+
+  const watches: { stop: () => void }[] = []
+  afterEach(() => {
+    for (const watch of watches) watch.stop()
+    watches.length = 0
+  })
+
+  /**
+   * What only a real watcher can prove: that the platform's events reach us, and that a real
+   * stream of them still collapses into one announcement. The driven test next door picks its
+   * own clock, so it can never see two events landing further apart than the debounce.
+   *
+   * Real timers on purpose — a fake clock advances past a debounce that was never armed, which
+   * is a test that passes on a watcher doing nothing.
+   *
+   * The wait is wall time on a machine that may be building something else: four seconds of it
+   * turned `pnpm validate` red about once in twelve. It stays BELOW `TEST_TIMEOUT`
+   * (`vitest.config.ts`), or vitest kills the test first and the failure loses the one line that
+   * names what went wrong — which is how this defect stayed anonymous for four rounds.
+   */
+  it('announces what lands in the folder', async () => {
+    const root = await project()
+    const announce = vi.fn()
+    watches.push(watchProjectFolder(root, announce))
+
+    /**
+     * The folder was made moments ago and its own creation is still in flight. Drained and
+     * forgotten here, because otherwise an announcement `project()` caused would answer for one
+     * this case never made: starved of its two writes, the case still passed 8 runs out of 10.
+     *
+     * 500 ms is measured, not the debounce plus a margin. What bounds it is the LAST leftover
+     * arriving, plus the debounce it arms: leftovers land at 3–52 ms, so the cliff sits near
+     * 352 ms. Starved, 200 ms still passed 4 times in 6; 350 ms, 500 ms and 1500 ms passed none.
+     */
+    await new Promise(done => setTimeout(done, 500))
+    announce.mockClear()
+
+    await writeFile(join(root, 'one.txt'), '')
+    await writeFile(join(root, 'two.txt'), '')
+    await vi.waitFor(() => expect(announce).toHaveBeenCalled(), { timeout: 10_000 })
+
+    expect(announce).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * The debounce itself, with no operating system in the loop. Two events inside the window make
+   * one announcement, and the second is what clears the first one's timer.
+   *
+   * Driven rather than provoked, because whether two writes arrive as two events or as one is
+   * the platform's decision: when it coalesced them, `clearTimeout` was never reached and two
+   * identical runs took different paths through this file.
+   */
+  it('collapses a burst into one announcement', () => {
+    vi.useFakeTimers()
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const announce = vi.fn()
+    let emit = (): void => undefined
+    const driven: WatchOpener = (_path, _options, listener) => {
+      emit = listener
+      return deaf()
+    }
+    watches.push(watchProjectFolder('/projects/demo', announce, driven))
+
+    emit()
+    emit()
+    // Well past the debounce, whatever it is set to: what is asserted is the collapse, not its
+    // duration — a test that pinned the delay would fail on every tuning of it.
+    vi.advanceTimersByTime(5000)
+
+    expect(announce).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * The path a platform without a recursive watch takes — Linux emits one event per watched
+   * folder, and older ones refuse `recursive` outright. It cannot be reached on the machine
+   * this is written on, which is exactly why the opener is injected: written and never run is
+   * the same as not written.
+   */
+  it('falls back to a flat watch when the platform refuses a recursive one', () => {
+    const opened: { recursive?: boolean }[] = []
+    const fake = (_path: string, options: { recursive?: boolean }) => {
+      opened.push(options)
+      if (options.recursive) throw new Error('not supported')
+      return deaf()
+    }
+
+    const watch = watchProjectFolder('/projects/demo', vi.fn(), fake)
+    watches.push(watch)
+
+    expect(opened).toEqual([{ recursive: true }, {}])
+  })
+
+  // A folder that cannot be watched is not a folder that cannot be read: the panel still lists
+  // it, and the read on refocus is what keeps it current.
+  it('gives up quietly when even a flat watch is refused', async () => {
+    const announce = vi.fn()
+    const refuse = (): FSWatcher => {
+      throw new Error('not supported')
+    }
+
+    const watch = watchProjectFolder('/projects/demo', announce, refuse)
+    watches.push(watch)
+
+    expect(() => watch.stop()).not.toThrow()
+    expect(announce).not.toHaveBeenCalled()
+  })
+
+  // A folder that cannot be watched is not a folder that cannot be read: the panel still lists
+  // it, it just will not follow it on its own.
+  it('says nothing and breaks nothing on a folder that is not there', () => {
+    const watch = watchProjectFolder(join(tmpdir(), 'scenario-missing-folder'), vi.fn())
+
+    expect(() => watch.stop()).not.toThrow()
+  })
+
+  // Stopped between the event and the announcement, which is the window a project being closed
+  // falls into: the folder of the project just left must not announce into the next one.
+  it('stops announcing once it is stopped, even with an event already in flight', async () => {
+    const root = await project()
+    const announce = vi.fn()
+    const watch = watchProjectFolder(root, announce)
+
+    await writeFile(join(root, 'one.txt'), '')
+    // Long enough for the event to have armed the debounce, short enough to be inside it: what
+    // this measures is a stop that lands BETWEEN the two, which is the window a closing project
+    // falls into.
+    await new Promise(done => setTimeout(done, 60))
+    watch.stop()
+    await new Promise(done => setTimeout(done, 800))
+
+    expect(announce).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * The three gestures that write to someone else's folder. All refuse the studio's own layout,
+ * and none erases anything: `trashItem` puts the file where it can be got back.
+ */
+describe('writing to the project folder', () => {
+  it('renames in place, inside the folder it already sits in', async () => {
+    const root = await project()
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.rename('notes.txt', 'brief.txt')).toBe(true)
+
+    const names = (await createFolderReader(() => root, inFrench).list('')).map(entry => entry.name)
+    expect(names).toContain('brief.txt')
+    expect(names).not.toContain('notes.txt')
+  })
+
+  it('renames what is inside a folder without moving it out of it', async () => {
+    const root = await project()
+    await writeFile(join(root, 'documents', 'a3f1.scene'), '{}')
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.rename('documents/a3f1.scene', 'level.scene')).toBe(true)
+
+    const entries = await createFolderReader(() => root, inFrench).list('documents')
+    expect(entries.map(entry => entry.path)).toEqual(['documents/level.scene'])
+  })
+
+  // `rename` overwrites without a word on POSIX, and the file it would overwrite is the user's.
+  it('refuses a name already taken rather than writing over it', async () => {
+    const root = await project()
+    await writeFile(join(root, 'brief.txt'), 'keep me')
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.rename('notes.txt', 'brief.txt')).toBe(false)
+
+    const names = (await createFolderReader(() => root, inFrench).list('')).map(entry => entry.name)
+    expect(names).toContain('notes.txt')
+  })
+
+  it('says yes and does nothing when the name has not changed', async () => {
+    const root = await project()
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.rename('notes.txt', 'notes.txt')).toBe(true)
+  })
+
+  it('refuses a file that is not there', async () => {
+    const root = await project()
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.rename('gone.txt', 'other.txt')).toBe(false)
+  })
+
+  // The catalogue stores every asset by a path under `assets/`: moving one orphans rows nobody
+  // can find again, and the refusal belongs here rather than in the window that asked.
+  it.each(['assets', 'documents', 'assets/img', ''])(
+    'refuses to move the studio folder %s',
+    async path => {
+      const root = await project()
+      const toTrash = vi.fn()
+      const editor = createFolderEditor(() => root, toTrash)
+
+      expect(await editor.rename(path, 'elsewhere')).toBe(false)
+      expect(await editor.trash(path)).toBe(false)
+      expect(toTrash).not.toHaveBeenCalled()
+    },
+  )
+
+  it('hands a file to the system trash rather than deleting it', async () => {
+    const root = await project()
+    const toTrash = vi.fn(async () => undefined)
+    const editor = createFolderEditor(() => root, toTrash)
+
+    expect(await editor.trash('notes.txt')).toBe(true)
+
+    expect(toTrash).toHaveBeenCalledWith(join(root, 'notes.txt'))
+  })
+
+  it('answers no when the system would not take it', async () => {
+    const root = await project()
+    const editor = createFolderEditor(
+      () => root,
+      vi.fn(async () => Promise.reject(new Error('no'))),
+    )
+
+    expect(await editor.trash('notes.txt')).toBe(false)
+  })
+})
+
+/**
+ * The drag in the tree. Kept apart from `rename` on purpose: a menu row reading "Rename" must
+ * not be able to displace a file, so the two gestures cannot be one call.
+ */
+describe('moving inside the project folder', () => {
+  async function withFolder(): Promise<string> {
+    const root = await project()
+    await mkdir(join(root, 'notes'))
+    return root
+  }
+
+  it('carries the file into the folder it was dropped on, under the same name', async () => {
+    const root = await withFolder()
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes.txt', 'notes')).toBe(true)
+
+    const reader = createFolderReader(() => root, inFrench)
+    expect((await reader.list('notes')).map(entry => entry.path)).toEqual(['notes/notes.txt'])
+    expect((await reader.list('')).map(entry => entry.name)).not.toContain('notes.txt')
+  })
+
+  it('carries it back out of a folder as readily as in', async () => {
+    const root = await withFolder()
+    await mkdir(join(root, 'refs'))
+    await writeFile(join(root, 'notes', 'brief.txt'), 'hello')
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes/brief.txt', 'refs')).toBe(true)
+
+    expect(
+      (await createFolderReader(() => root, inFrench).list('refs')).map(entry => entry.path),
+    ).toEqual(['refs/brief.txt'])
+  })
+
+  it('carries a folder and everything under it', async () => {
+    const root = await withFolder()
+    await mkdir(join(root, 'refs'))
+    await writeFile(join(root, 'notes', 'brief.txt'), 'hello')
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes', 'refs')).toBe(true)
+
+    const entries = await createFolderReader(() => root, inFrench).list('refs/notes')
+    expect(entries.map(entry => entry.path)).toEqual(['refs/notes/brief.txt'])
+  })
+
+  // Same reason as the rename: `rename` overwrites without a word on POSIX, and what it would
+  // overwrite is the user's own file.
+  it('refuses a name already taken in the folder it lands in', async () => {
+    const root = await withFolder()
+    await writeFile(join(root, 'notes', 'notes.txt'), 'keep me')
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes.txt', 'notes')).toBe(false)
+
+    const kept = await createFolderReader(() => root, inFrench).list('notes')
+    expect(kept.map(entry => entry.path)).toEqual(['notes/notes.txt'])
+  })
+
+  it('says yes and writes nothing when it is dropped on the folder it is already in', async () => {
+    const root = await withFolder()
+    await writeFile(join(root, 'notes', 'brief.txt'), 'hello')
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes/brief.txt', 'notes')).toBe(true)
+
+    expect(
+      (await createFolderReader(() => root, inFrench).list('notes')).map(one => one.path),
+    ).toEqual(['notes/brief.txt'])
+  })
+
+  it.each(['assets', 'documents', 'assets/img', ''])(
+    'refuses the studio folder %s as what moves',
+    async path => {
+      const root = await withFolder()
+
+      expect(await createFolderEditor(() => root, vi.fn()).move(path, 'notes')).toBe(false)
+    },
+  )
+
+  // The half a drag adds over the menu: the menu can only name what moves, a drag names both.
+  it.each(['assets', 'documents', 'assets/img', ''])(
+    'refuses the studio folder %s as what receives',
+    async folder => {
+      const root = await withFolder()
+
+      expect(await createFolderEditor(() => root, vi.fn()).move('notes.txt', folder)).toBe(false)
+    },
+  )
+
+  it('refuses a folder dropped inside itself, which would take its destination with it', async () => {
+    const root = await withFolder()
+    await mkdir(join(root, 'notes', 'drafts'))
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes', 'notes/drafts')).toBe(false)
+    expect(await editor.move('notes', 'notes')).toBe(false)
+  })
+
+  // No check of its own guards this: renaming into a file fails with ENOTDIR, and the catch is
+  // already the answer. Which is exactly why it is tested — the guard that is missing on
+  // purpose is the one a later reader adds back.
+  it('refuses a destination that is a file rather than a folder', async () => {
+    const root = await withFolder()
+    await writeFile(join(root, 'brief.txt'), 'hello')
+
+    expect(await createFolderEditor(() => root, vi.fn()).move('notes.txt', 'brief.txt')).toBe(false)
+  })
+
+  it('refuses a destination folder that is not there', async () => {
+    const root = await withFolder()
+
+    expect(await createFolderEditor(() => root, vi.fn()).move('notes.txt', 'gone')).toBe(false)
+  })
+
+  it('refuses a file that is not there', async () => {
+    const root = await withFolder()
+
+    expect(await createFolderEditor(() => root, vi.fn()).move('gone.txt', 'notes')).toBe(false)
+  })
+})

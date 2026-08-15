@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isRecord, readBoolean, readNumber, readString } from './guards'
+import { defined, isRecord, readBoolean, readNumber, readPositive, readString } from './guards'
 
 describe('isRecord', () => {
   it('rejects null, which typeof alone reports as an object', () => {
@@ -55,6 +55,31 @@ describe('readString', () => {
   })
 })
 
+describe('readPositive', () => {
+  it('reads a positive number that is there', () => {
+    expect(readPositive({ start: 4 }, 'start', 0)).toBe(4)
+    expect(readPositive({ start: 0 }, 'start', 9)).toBe(0)
+  })
+
+  // A negative length, a negative point in time: the file is user territory, and every caller
+  // of this reads a value that has no meaning below zero.
+  it('floors a negative value rather than passing it on', () => {
+    expect(readPositive({ start: -4 }, 'start', 0)).toBe(0)
+  })
+
+  // The fallback goes through the same floor: a caller that names a negative default is asking
+  // for something this function exists to refuse.
+  it('floors the fallback too', () => {
+    expect(readPositive({}, 'start', -4)).toBe(0)
+  })
+
+  it('falls back on a value of another type, or on none at all', () => {
+    expect(readPositive({ start: 'soon' }, 'start', 7)).toBe(7)
+    expect(readPositive({ start: Number.NaN }, 'start', 7)).toBe(7)
+    expect(readPositive({}, 'start', 7)).toBe(7)
+  })
+})
+
 describe('readBoolean', () => {
   it('reads a boolean that is there', () => {
     expect(readBoolean({ muted: true }, 'muted', false)).toBe(true)
@@ -68,5 +93,20 @@ describe('readBoolean', () => {
     expect(readBoolean({ muted: 'true' }, 'muted', false)).toBe(false)
     expect(readBoolean({ shown: null }, 'shown', true)).toBe(true)
     expect(readBoolean({}, 'shown', true)).toBe(true)
+  })
+})
+
+describe('defined', () => {
+  it('drops the keys whose value is undefined', () => {
+    expect(defined({ a: 1, b: undefined, c: 'x' })).toEqual({ a: 1, c: 'x' })
+  })
+
+  it('keeps a value that is falsy but present', () => {
+    // `0`, `''` and `false` are answers; only `undefined` is the absence of one.
+    expect(defined({ a: 0, b: '', c: false, d: null })).toEqual({ a: 0, b: '', c: false, d: null })
+  })
+
+  it('answers an empty object when nothing is defined', () => {
+    expect(defined({ a: undefined })).toEqual({})
   })
 })

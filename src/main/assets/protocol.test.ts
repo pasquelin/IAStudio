@@ -6,7 +6,9 @@ import type { Asset } from '@shared/domain/asset'
 // Electron in — and there is no Electron under Vitest.
 vi.mock('electron', () => ({ net: {}, protocol: {} }))
 
-const { assetFilePath, servedFileOf } = await import('./protocol')
+const { assetFilePath, posterFileOf, servedFileOf, servedPath } = await import('./protocol')
+const { ASSET_HOST, POSTER_HOST } = await import('@shared/domain/asset')
+const { FAVORITE_HOST } = await import('@shared/domain/favorite')
 
 const asset = (fields: Partial<Asset>): Asset => ({
   id: 'asset-1',
@@ -66,5 +68,84 @@ describe('what the scheme serves for an asset', () => {
 
   it('serves nothing for an asset that has no file yet', () => {
     expect(servedFileOf(PROJECT, asset({}))).toBeNull()
+  })
+})
+
+/**
+ * A mesh's own file is a `.glb`, and a `<img>` given one draws a broken tile. The still written
+ * beside it answers on its own host, which is why this resolution is separate rather than a
+ * fourth fallback inside `servedFileOf`.
+ */
+describe('what the scheme serves as a still', () => {
+  it('serves the still written beside an asset', () => {
+    const mesh = asset({
+      type: 'mesh',
+      path: 'assets/3d/a.glb',
+      posterPath: '.index/posters/a.jpg',
+    })
+
+    expect(posterFileOf(PROJECT, mesh)).toBe(join(PROJECT, '.index/posters/a.jpg'))
+  })
+
+  // Answering with the model itself is exactly the broken tile this replaces.
+  it('never falls back to the asset the still stands for', () => {
+    expect(posterFileOf(PROJECT, asset({ type: 'mesh', path: 'assets/3d/a.glb' }))).toBeNull()
+  })
+
+  // Same containment as everywhere else: a stored path is user-editable territory.
+  it('refuses a still path escaping the project', () => {
+    expect(posterFileOf(PROJECT, asset({ posterPath: '../../.ssh/id_rsa' }))).toBeNull()
+  })
+})
+
+/**
+ * One scheme, two hosts: a row of the open project's catalogue, and a still kept outside every
+ * project. Resolved by different means, so the routing has to tell them apart — the wrong
+ * resolver would answer 404 on a file that is plainly there.
+ */
+describe('routing a URL of the scheme', () => {
+  const resolveAsset = vi.fn(() => Promise.resolve('/projects/a/assets/img/asset_1.png'))
+  const resolveFavorite = vi.fn(() => Promise.resolve('/userData/favorites/favorite_1.png'))
+  const resolvePoster = vi.fn(() => Promise.resolve('/projects/a/.index/posters/asset_1.jpg'))
+  const resolvers = {
+    [ASSET_HOST]: resolveAsset,
+    [FAVORITE_HOST]: resolveFavorite,
+    [POSTER_HOST]: resolvePoster,
+  }
+
+  // One id, two files: the model and the picture of it. Only the host tells them apart.
+  it('sends the same identifier to a different file on the poster host', async () => {
+    await expect(servedPath('scenario://poster/asset_1', resolvers)).resolves.toBe(
+      '/projects/a/.index/posters/asset_1.jpg',
+    )
+    expect(resolvePoster).toHaveBeenCalledWith('asset_1')
+    expect(resolveAsset).not.toHaveBeenCalled()
+  })
+
+  it('sends an asset to the catalogue and a favourite to the folder beside the settings', async () => {
+    await expect(servedPath('scenario://asset/asset_1', resolvers)).resolves.toBe(
+      '/projects/a/assets/img/asset_1.png',
+    )
+    expect(resolveAsset).toHaveBeenCalledWith('asset_1')
+
+    await expect(servedPath('scenario://favorite/favorite_1', resolvers)).resolves.toBe(
+      '/userData/favorites/favorite_1.png',
+    )
+    expect(resolveFavorite).toHaveBeenCalledWith('favorite_1')
+  })
+
+  /**
+   * A plain object carries `Object.prototype`, so every one of its keys would be a live host —
+   * `scenario://toString/x` reached `net.fetch` with a path nobody registered.
+   */
+  it('serves nothing for a host that is only inherited', async () => {
+    await expect(servedPath('scenario://toString/x', resolvers)).resolves.toBeNull()
+    await expect(servedPath('scenario://constructor/x', resolvers)).resolves.toBeNull()
+    await expect(servedPath('scenario://__proto__/x', resolvers)).resolves.toBeNull()
+  })
+
+  it('serves nothing for a host neither resolver knows', async () => {
+    await expect(servedPath('scenario://something-else/1', resolvers)).resolves.toBeNull()
+    await expect(servedPath('https://example.com/1', resolvers)).resolves.toBeNull()
   })
 })

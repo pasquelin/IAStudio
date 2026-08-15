@@ -23,4 +23,13 @@ export const SPLASH_BACKGROUND_COLOR: Record<ResolvedTheme, string> = {
   light: '#eceef1',
 }
 
+/**
+ * Painted behind the video return before its first frame, and behind the picture afterwards.
+ *
+ * Not a theme pair: a monitor is black in both themes, as `--color-monitor` is — what surrounds
+ * a picture must add nothing to it, and a light grey field would tint every judgement made on
+ * the second screen. `theme.test.ts` pins it against that token.
+ */
+export const MIRROR_BACKGROUND = '#000000'
+
 export const APP_NAME = 'Scenario Studio'

@@ -1,10 +1,11 @@
 import type { FieldDescriptor, ModelFamily } from '@shared/domain/model'
 import { layerById } from '@/engines/canvas/canvas-state'
+import { modelForFamily } from '@/helpers/model-for-family'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useModels } from '@/stores/models'
-import { useSettings } from '@/stores/settings'
 import { fillEditFields } from './ai-fields'
-import { revealTool } from './reveal-panel'
+import { offerModelsOfFamily } from '@/helpers/offer-model'
+import { revealTool } from '@/helpers/reveal-panel'
 
 /** The engine, seen from an edit: it flattens, and it hands back the mask it was painted. */
 export type EditHost = {
@@ -48,13 +49,9 @@ export async function prepareEdit(
   bridge: EditBridge,
 ): Promise<boolean> {
   const { family, masked } = AI_EDITS[edit]
-  // The session choice first, then the preference — the order the generator itself follows.
-  const modelId =
-    useModels.getState().selected[family] ??
-    useSettings.getState().settings.generation.defaultModels[family]
+  const modelId = modelForFamily(family)
   if (!modelId) {
-    // Never a model chosen on the user's behalf: the panel opens on the family instead.
-    revealTool('models')
+    offerModelsOfFamily(family)
     return false
   }
 

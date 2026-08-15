@@ -11,11 +11,15 @@ import {
   type CommandId,
   type CommandScope,
 } from '@shared/domain/command'
-import { shortcutLabel, signatureOf, type Signature } from '@shared/domain/shortcut'
+import { signatureOf, type Signature } from '@shared/domain/shortcut'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
+import { HINT_BOTTOM, HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
+import { SettingLine } from './SettingLine'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
+import { WINDOW_CAPTION, WINDOW_HELP } from '@/design/window-styles'
 
 /** Modifiers on their own are not a shortcut; they are what is held while one is pressed. */
 const MODIFIER_CODES = new Set([
@@ -83,6 +87,7 @@ function CommandRow({
   onBind: (signature: Signature | null) => void
 }) {
   const { t } = useTranslation()
+  const label = useShortcutLabel()
 
   useCapture(signature => (signature === '' ? onCapture() : onBind(signature)), capturing)
 
@@ -92,49 +97,52 @@ function CommandRow({
   const describedBy = `${id}-help`
 
   return (
-    <div className="border-base-300 flex flex-col gap-1 border-b py-3 last:border-b-0">
-      <div className="flex items-center justify-between gap-4">
-        <span className="text-xs font-medium">{t(descriptor.titleKey)}</span>
+    <SettingLine
+      title={t(descriptor.titleKey)}
+      help={
+        <p id={describedBy} className={WINDOW_HELP}>
+          {t(descriptor.helpKey)}
+        </p>
+      }
+    >
+      <>
+        {clashing && (
+          <span className="text-error flex" title={t('settings.shortcutConflict')}>
+            <UiIcon path={mdiAlertCircleOutline} size={14} />
+          </span>
+        )}
 
-        <div className="flex shrink-0 items-center gap-1">
-          {clashing && (
-            <span className="text-error flex" title={t('settings.shortcutConflict')}>
-              <UiIcon path={mdiAlertCircleOutline} size={14} />
-            </span>
+        <button
+          id={id}
+          type="button"
+          aria-describedby={describedBy}
+          aria-label={t(descriptor.titleKey)}
+          {...HINT_LEFT(t('settings.captureHint'))}
+          onClick={onCapture}
+          className={cn(
+            'btn btn-sm w-40 font-mono',
+            capturing && 'btn-primary',
+            clashing && !capturing && 'btn-error btn-outline',
           )}
+        >
+          {capturing ? t('settings.pressAKey') : label(binding) || t('settings.unbound')}
+        </button>
 
-          <button
-            id={id}
-            type="button"
-            aria-describedby={describedBy}
-            aria-label={t(descriptor.titleKey)}
-            onClick={onCapture}
-            className={cn(
-              'btn btn-sm w-40 font-mono',
-              capturing && 'btn-primary',
-              clashing && !capturing && 'btn-error btn-outline',
-            )}
-          >
-            {capturing ? t('settings.pressAKey') : shortcutLabel(binding) || t('settings.unbound')}
-          </button>
-
-          <button
-            type="button"
-            title={t('settings.restoreDefault')}
-            aria-label={`${t('settings.restoreDefault')} — ${t(descriptor.titleKey)}`}
-            className="btn btn-ghost btn-xs btn-square"
-            disabled={!remapped}
-            onClick={() => onBind(null)}
-          >
-            <UiIcon path={mdiRestore} size={14} className={remapped ? '' : 'opacity-0'} />
-          </button>
-        </div>
-      </div>
-
-      <p id={describedBy} className="text-base-content/60 max-w-lg text-xs">
-        {t(descriptor.helpKey)}
-      </p>
-    </div>
+        <button
+          type="button"
+          {...TIP_LEFT(
+            `${t('settings.restoreDefault')} — ${t(descriptor.titleKey)}`,
+            false,
+            t('settings.restoreDefaultHint'),
+          )}
+          className="btn btn-ghost btn-xs btn-square"
+          disabled={!remapped}
+          onClick={() => onBind(null)}
+        >
+          <UiIcon path={mdiRestore} size={14} className={remapped ? '' : 'opacity-0'} />
+        </button>
+      </>
+    </SettingLine>
   )
 }
 
@@ -203,7 +211,7 @@ export function ShortcutsSettings() {
       ))}
 
       {query !== null && !COMMAND_SCOPES.some(scope => commandsIn(scope).some(matches)) && (
-        <p className="text-base-content/60 text-xs">{t('settings.chordFree')}</p>
+        <p className={WINDOW_CAPTION}>{t('settings.chordFree')}</p>
       )}
     </div>
   )
@@ -232,7 +240,7 @@ function Scope({
 
   return (
     <section>
-      <h3 className="text-base-content/60 mb-1 text-[11px] tracking-wide uppercase">
+      <h3 className="text-base-content/70 text-tiny mb-1 tracking-wide uppercase">
         {t(`settings.scope.${scope}`)}
       </h3>
 
@@ -264,6 +272,7 @@ function SearchByChord({
   onQuery: (signature: Signature | null) => void
 }) {
   const { t } = useTranslation()
+  const label = useShortcutLabel()
 
   useCapture(signature => onQuery(signature === '' ? null : signature), listening)
 
@@ -272,13 +281,19 @@ function SearchByChord({
       <button
         type="button"
         className={cn('btn btn-sm font-mono', listening && 'btn-primary')}
+        {...HINT_BOTTOM(t('settings.findByChordHint'))}
         onClick={onListen}
       >
-        {listening ? t('settings.pressAKey') : shortcutLabel(query) || t('settings.findByChord')}
+        {listening ? t('settings.pressAKey') : label(query) || t('settings.findByChord')}
       </button>
 
       {query !== null && (
-        <button type="button" className="btn btn-sm btn-ghost" onClick={() => onQuery(null)}>
+        <button
+          type="button"
+          className="btn btn-sm btn-ghost"
+          {...HINT_BOTTOM(t('settings.showAllHint'))}
+          onClick={() => onQuery(null)}
+        >
           {t('settings.showAll')}
         </button>
       )}

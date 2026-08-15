@@ -13,11 +13,11 @@ import {
   groupLayers,
   mergeDown,
   moveGuide,
+  moveLayer,
   removeGuide,
   removeLayer,
   rotateImage,
   renameLayer,
-  reorderLayer,
   resizeCanvas,
   resizeImage,
   selectLayer,
@@ -69,6 +69,28 @@ describe('removeLayer', () => {
     expect(removeLayer('layer-1').apply(DEFAULT_CANVAS)).toEqual(DEFAULT_CANVAS)
   })
 
+  /**
+   * A group carries its subtree out with it, so counting the document's paintable layers is not
+   * the question — what stays is. A folder holding every pixel layer answers "two paintable" and
+   * empties the stack, which `deserializeCanvas` reads back as a blank default: the size, the
+   * colour mode and the bit depth of the picture go with it.
+   */
+  it('refuses a group that would take everything paintable with it', () => {
+    const folded = groupLayers(['layer-1', 'layer-2'], 'g', 'Group').apply(withTwo)
+
+    expect(removeLayer('g').apply(folded)).toBe(folded)
+  })
+
+  it('removes a group the stack can do without', () => {
+    const three = addLayer(layerFixture({ id: 'layer-3' })).apply(withTwo)
+    const folded = groupLayers(['layer-1'], 'g', 'Group').apply(three)
+
+    expect(allLayers(removeLayer('g').apply(folded).layers).map(layer => layer.id)).toEqual([
+      'layer-2',
+      'layer-3',
+    ])
+  })
+
   it('moves the selection to a neighbour rather than leaving it dangling', () => {
     const state = removeLayer('layer-2').apply(withTwo)
     expect(state.activeLayerId).toBe('layer-1')
@@ -87,16 +109,32 @@ describe('removeLayer', () => {
   })
 })
 
-describe('reorderLayer', () => {
+describe('moveLayer', () => {
   it('moves a layer down the stack', () => {
-    const state = reorderLayer('layer-2', 0).apply(withTwo)
+    const state = moveLayer('layer-2', null, 0).apply(withTwo)
     expect(state.layers.map(layer => layer.id)).toEqual(['layer-2', 'layer-1'])
   })
 
   it('puts the order back on revert', () => {
-    const command = reorderLayer('layer-2', 0)
+    const command = moveLayer('layer-2', null, 0)
     const back = command.revert(command.apply(withTwo))
     expect(back.layers.map(layer => layer.id)).toEqual(['layer-1', 'layer-2'])
+  })
+
+  // A negative index is the case that bites: `splice` would count it from the end of the stack.
+  it('holds an index outside the stack at its edges', () => {
+    const withThree = addLayer(layerFixture({ id: 'layer-3' })).apply(withTwo)
+
+    expect(
+      moveLayer('layer-1', null, -1)
+        .apply(withThree)
+        .layers.map(layer => layer.id),
+    ).toEqual(['layer-1', 'layer-2', 'layer-3'])
+    expect(
+      moveLayer('layer-1', null, 99)
+        .apply(withThree)
+        .layers.map(layer => layer.id),
+    ).toEqual(['layer-2', 'layer-3', 'layer-1'])
   })
 })
 
@@ -145,6 +183,11 @@ const stack = (...names: string[]): CanvasState => ({
 })
 
 const namesOf = (state: CanvasState): string[] => state.layers.map(layer => layer.id)
+
+const childrenOf = (state: CanvasState, id: string): string[] => {
+  const group = layerById(state, id)
+  return group && isGroup(group) ? group.children.map(child => child.id) : []
+}
 
 /** Counted rather than random, so a duplicated subtree reads the same on every run. */
 function ids(): () => string {
@@ -307,11 +350,29 @@ describe('resizeCanvas against resizeImage', () => {
 })
 
 describe('cropToRect', () => {
-  it('brings the frame onto the rectangle and slides the layers under it', () => {
+  it('brings the frame onto the rectangle', () => {
     const [after] = roundTrip(stack('a'), cropToRect({ x: 30, y: 40, width: 100, height: 80 }))
 
     expect([after.width, after.height]).toEqual([100, 80])
-    expect(layerById(after, 'a')?.transform.x).toBe(-30)
+  })
+
+  /**
+   * The pixels move, the layers do not. A surface is document-sized and `CanvasEngine.resurface`
+   * recuts it to the kept region, so the picture already starts where the new frame expects it —
+   * sliding the transforms as well would displace it twice and empty one side of the document.
+   */
+  it('leaves the layer transforms where they were, since the surfaces carry the move', () => {
+    const before = stack('a')
+    const [after] = roundTrip(before, cropToRect({ x: 30, y: 40, width: 100, height: 80 }))
+
+    expect(layerById(after, 'a')?.transform).toEqual(layerById(before, 'a')?.transform)
+  })
+
+  it('gives the frame back on undo', () => {
+    const before = { ...stack('a'), width: 100, height: 100 }
+    const [, reverted] = roundTrip(before, cropToRect({ x: 30, y: 40, width: 50, height: 50 }))
+
+    expect([reverted.width, reverted.height]).toEqual([100, 100])
   })
 })
 
@@ -342,11 +403,41 @@ describe('operating inside a group', () => {
     expect(after.activeLayerId).toBe('a')
   })
 
-  it('reorders within the group, never out of it', () => {
-    const [after] = roundTrip(nested(), reorderLayer('a', 1))
-    const group = layerById(after, 'g')
+  it('reorders within the group', () => {
+    const [after] = roundTrip(nested(), moveLayer('a', 'g', 1))
 
-    expect(group && isGroup(group) ? group.children.map(child => child.id) : []).toEqual(['b', 'a'])
+    expect(childrenOf(after, 'g')).toEqual(['b', 'a'])
+  })
+
+  it('takes a layer into a group', () => {
+    const [after, back] = roundTrip(nested(), moveLayer('c', 'g', 0))
+
+    expect(namesOf(after)).toEqual(['g'])
+    expect(childrenOf(after, 'g')).toEqual(['c', 'a', 'b'])
+    expect(namesOf(back)).toEqual(['g', 'c'])
+  })
+
+  it('takes a layer out of a group, above it', () => {
+    const [after] = roundTrip(nested(), moveLayer('a', null, 1))
+
+    expect(namesOf(after)).toEqual(['g', 'a', 'c'])
+    expect(childrenOf(after, 'g')).toEqual(['b'])
+  })
+
+  /**
+   * The drop would carry the receiving group along with the moved one, and every layer under it
+   * would leave the document with no way back.
+   */
+  it('refuses a group dropped into its own subtree', () => {
+    const outer = groupLayers(['g', 'c'], 'outer', 'Outer').apply(nested())
+
+    expect(moveLayer('outer', 'g', 0).apply(outer)).toBe(outer)
+  })
+
+  it('refuses a layer dropped into something that is not a group', () => {
+    const before = nested()
+
+    expect(moveLayer('c', 'a', 0).apply(before)).toBe(before)
   })
 
   it('dissolves a group nested in another one', () => {
@@ -709,8 +800,8 @@ describe('commands aimed at a layer that is gone', () => {
     expect(removeLayer('gone').apply(withTwo)).toBe(withTwo)
   })
 
-  it('reorders nothing', () => {
-    expect(reorderLayer('gone', 0).apply(withTwo)).toBe(withTwo)
+  it('moves nothing', () => {
+    expect(moveLayer('gone', null, 0).apply(withTwo)).toBe(withTwo)
   })
 
   it('duplicates nothing', () => {

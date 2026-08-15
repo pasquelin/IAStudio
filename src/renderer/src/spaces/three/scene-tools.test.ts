@@ -1,18 +1,15 @@
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
-import { OBJECT_ENTRIES } from '@shared/domain/scene'
-import { LIGHT_TYPES } from '@/engines/scene/light-types'
-import { MESH_PRIMITIVES } from '@/engines/scene/mesh-primitives'
+import { DISPLAY_MODES } from '@shared/domain/scene'
 import { SCENE_TOOLS } from './scene-tools'
 
-const add = SCENE_TOOLS.find(tool => tool.id === 'add')
+const display = SCENE_TOOLS.find(tool => tool.id === 'display')
 
 describe('scene tools', () => {
   it('binds every command it declares to a known one', () => {
     for (const tool of SCENE_TOOLS) {
-      if (tool.command)
-        expect(COMMAND_REGISTRY.map(descriptor => descriptor.id)).toContain(tool.command)
+      expect(COMMAND_REGISTRY.map(descriptor => descriptor.id)).toContain(tool.command)
     }
   })
 
@@ -45,19 +42,31 @@ describe('scene tools', () => {
   })
 
   it('gives every flyout row an icon', () => {
-    for (const mode of add?.modes ?? []) expect(mode.icon).toBeTruthy()
+    for (const mode of display?.modes ?? []) expect(mode.icon).toBeTruthy()
   })
 })
 
 describe('SCENE_TOOLS', () => {
-  it('offers every primitive, every light and every object under one Add button', () => {
-    expect(add?.modes).toHaveLength(
-      MESH_PRIMITIVES.length + LIGHT_TYPES.length + OBJECT_ENTRIES.length,
-    )
+  /**
+   * Eight, down from twenty-three. The fifteen that left are all in the native menu now, and
+   * this is the number the whole batch is about: a bar of twenty-three icons made the eight
+   * that matter impossible to find.
+   */
+  it('holds what a hand reaches for while manipulating, and nothing else', () => {
+    expect(SCENE_TOOLS.map(tool => tool.id)).toEqual([
+      'select',
+      'translate',
+      'rotate',
+      'scale',
+      'snap',
+      'space',
+      'display',
+      'frame',
+    ])
   })
 
-  it('keeps the greyed kinds greyed', () => {
-    expect(add?.modes?.filter(mode => mode.disabled).map(mode => mode.id)).toEqual(['text'])
+  it('offers every way of drawing under the one flyout it kept', () => {
+    expect(display?.modes).toHaveLength(DISPLAY_MODES.length)
   })
 
   it('keeps the three transform modes as three reachable buttons', () => {
@@ -84,19 +93,23 @@ describe('SCENE_TOOLS', () => {
   it('reads as groups rather than a run of icons', () => {
     expect(SCENE_TOOLS.filter(tool => tool.separatorBefore).map(tool => tool.id)).toEqual([
       'snap',
-      'projection',
+      'display',
       'frame',
-      'add',
-      'duplicate',
     ])
   })
 
-  // Copy and Paste answer to the same keys as the native Edit menu, which acts on text: a
-  // button of the scene's own is the only thing that says the scene has them too.
-  it('offers the clipboard gestures as buttons, not to the keyboard alone', () => {
+  /**
+   * Copy, cut and paste stay on the bar while duplicate, group and delete left for the Edit
+   * menu, and the asymmetry is deliberate: those three rows keep their NATIVE roles so a text
+   * field goes on copying, and a command row in their place would act on the scene with the
+   * caret in a field — the menu path carries no `isTyping` guard.
+   */
+  it('keeps the clipboard gestures, which no menu row can answer for', () => {
     const ids = SCENE_TOOLS.map(tool => tool.id)
 
-    expect(ids).toEqual(expect.arrayContaining(['duplicate', 'copy', 'cut', 'paste']))
+    expect(ids).not.toContain('duplicate')
+    expect(ids).not.toContain('group')
+    expect(ids).not.toContain('delete')
   })
 
   // They qualify the armed tool rather than replacing it, so they follow it in their own group.
@@ -107,19 +120,12 @@ describe('SCENE_TOOLS', () => {
     expect(ids.indexOf('space')).toBe(ids.indexOf('snap') + 1)
   })
 
-  // A button with a flyout acts through its rows, never on its own click — and the reverse:
-  // a button with neither command nor rows would do nothing at all.
-  it('gives every button either a command or a flyout, and never neither', () => {
-    const idle = SCENE_TOOLS.filter(tool => tool.command === undefined && tool.modes === undefined)
-
-    expect(idle).toEqual([])
-  })
-
-  // Add and the six sides do nothing on their own; Display draws something, so its click
-  // cycles what it draws rather than sitting dead under an open flyout.
-  it('leaves a flyout commandless only where the button itself does nothing', () => {
-    const commandless = SCENE_TOOLS.filter(tool => tool.command === undefined)
-
-    expect(commandless.map(tool => tool.id)).toEqual(['view', 'add'])
+  /**
+   * Every button carries a command now — the two that acted through their rows alone, Add and
+   * the six sides, are menu rows. Display keeps its flyout AND its command: the click cycles
+   * what it draws rather than sitting dead under an open flyout.
+   */
+  it('gives every button a command of its own', () => {
+    expect(SCENE_TOOLS.filter(tool => tool.command === undefined)).toEqual([])
   })
 })

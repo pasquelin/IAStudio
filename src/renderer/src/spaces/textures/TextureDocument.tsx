@@ -1,51 +1,113 @@
-import { mdiRotate3dVariant, mdiTextureBox, mdiWeatherSunny } from '@mdi/js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { mdiTextureBox } from '@mdi/js'
+import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { TextureLoader, type Texture } from 'three'
-import { assetUrl, isLocalPicture } from '@shared/domain/asset'
-import { EmptyState } from '@/design/EmptyState'
-import { ToolButton } from '@/design/ToolButton'
-import { setChannel, setPreview } from '@/engines/texture/commands'
-import { TextureRenderer } from '@/engines/texture/TextureRenderer'
-import { PREVIEW_SHAPES, type PreviewShape } from '@/engines/texture/texture-state'
-import { restoreDocument } from '@/app/document-io'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { assetUrl, PICTURES, posterUrl, type Asset } from '@shared/domain/asset'
+import type { CommandId } from '@shared/domain/command'
+import { safeFileName, type TextureExportTarget } from '@shared/domain/texture-export'
+import { exportChannelsOf } from '@/engines/texture/export/channels'
+import { activation } from '@/helpers/activation'
+import { pixelEditorIntent } from '@/helpers/asset-intents'
 import { cn } from '@/helpers/cn'
-import { assetsById, useAssets } from '@/stores/assets'
+import { openAsset } from '@/helpers/open-asset'
+import { TIP_TOP } from '@/helpers/tooltip'
+import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
+import { useShortcuts } from '@/hooks/useShortcuts'
+import { useDocuments } from '@/stores/documents'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
+import { EmptyState } from '@/design/EmptyState'
+import { loadTexture } from '@/engines/scene/texture-cache'
+import { TextureRenderer } from '@/engines/texture/TextureRenderer'
+import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
+import { placeTextureChannel } from './place-channel'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
+import { useShelfRefresh } from '@/hooks/useShelfRefresh'
+import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 
-/** i18n key of a shape — never the label itself, as the scene registry does for its primitives. */
-const SHAPE_LABELS: Record<PreviewShape, string> = {
-  sphere: 'texture.shapeSphere',
-  box: 'texture.shapeBox',
-  cylinder: 'texture.shapeCylinder',
-  plane: 'texture.shapePlane',
-  torusKnot: 'texture.shapeKnot',
+/**
+ * A texture handed to an engine, from the row of the native menu that was picked.
+ *
+ * The port is reached through `import()` rather than at the top of this file. Not for the first
+ * screen — `eager-graph.test.ts` says this component is not in the opening chunk — but for the
+ * one after it: statically imported, `GLTFExporter` would be downloaded by anyone who opens a
+ * texture tab, and it is only ever read by somebody who exports one.
+ */
+async function exportTexture(documentId: string, target: TextureExportTarget): Promise<void> {
+  const bridge = getBridge()
+  if (!bridge) return
+
+  try {
+    const texture = textureOf(useTextures.getState(), documentId)
+    // Cleaned before it is either a folder or a file name: a document is titled by hand.
+    const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'texture')
+
+    const { createTextureExportPort } = await import('@/engines/texture/export/export-port')
+
+    const files = await createTextureExportPort({ loadTexture })({
+      target,
+      channels: exportChannelsOf(texture),
+      name,
+      material: texture.material,
+      shape: texture.preview.shape,
+    })
+
+    // A texture with no channels resolves to no file, and a dialog asking where to put nothing
+    // is a dialog that cannot be answered.
+    if (files.length === 0) throw new Error('this texture has no channel to export')
+
+    await bridge.texture.export({ folder: name, files })
+  } catch (error) {
+    reportFailure('texture.export', target, error)
+  }
 }
 
-/** jsdom decodes no image; the engine takes its loader as a port for exactly that reason. */
-const loadTexture = (url: string): Promise<Texture> => new TextureLoader().loadAsync(url)
-
+/**
+ * The subject, under light, and nothing else. Every setting it shows lives in the inspector — the
+ * shape it sits on and the sky that lights it included: a studio is where colours and finishes are
+ * judged, and a control floating over the material is a control in the way of it.
+ */
 export function TextureDocument({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const host = useRef<HTMLDivElement>(null)
   const engine = useRef<TextureRenderer | null>(null)
-  const [over, setOver] = useState(false)
 
   const texture = useTextures(state => textureOf(state, documentId))
-  const byId = useAssets(assetsById)
+  const inspected = useTextureViews(state => inspectedChannel(state, documentId))
+  const active = useDocuments(state => state.activeId === documentId)
 
-  // Fills the tab from the project when a file is there, from the default otherwise — and it is
-  // what saving reads back, so the two never disagree about what this document holds.
+  useRestoredDocument(documentId)
+
+  // Channels and styles both push onto `useTextures`, and until now nothing could pop it: no
+  // scope, no key, no menu row — while the manual already promised ⌘Z on an applied style.
+  const onCommand = useCallback(
+    (command: CommandId) => {
+      const store = useTextures.getState()
+      if (command === 'texture.undo') return store.undo(documentId)
+      if (command === 'texture.redo') return store.redo(documentId)
+    },
+    [documentId],
+  )
+
+  useShortcuts({ scope: 'texture', enabled: active, onCommand })
+
+  // Only while this tab is in front. The event goes to the window, not to a document, so two
+  // open textures would otherwise both answer one click of the same menu row — and both would
+  // open a folder dialog.
   useEffect(() => {
-    void restoreDocument(documentId)
-  }, [documentId])
+    const bridge = getBridge()
+    if (!bridge || !active) return
+
+    return bridge.menu.onTextureExport(({ target }) => {
+      void exportTexture(documentId, target)
+    })
+  }, [documentId, active])
 
   useEffect(() => {
     const element = host.current
     if (!element) return
 
-    const renderer = new TextureRenderer({ loadTexture })
+    const renderer = new TextureRenderer({ loadTexture, assetVersion: assetVersionOf })
     renderer.mount(element)
     engine.current = renderer
 
@@ -60,112 +122,70 @@ export function TextureDocument({ documentId }: { documentId: string }) {
     engine.current?.apply(texture)
   }, [texture])
 
-  const run = useTextures(state => state.runCommand)
-  const preview = texture.preview
+  useShelfRefresh(() => engine.current?.refreshMaps())
 
   /**
    * A picture dropped on the viewport becomes the base colour. It is the one channel a texture
    * cannot be judged without, and the strip of the other seven is what the next step brings.
    */
-  const onDrop = useMemo(
-    () => (event: React.DragEvent) => {
-      event.preventDefault()
-      setOver(false)
+  const onDrop = (asset: Asset): void => {
+    placeTextureChannel(documentId, asset)
+  }
 
-      const assetId = assetIdFromDrag(event)
-      const asset = assetId ? byId.get(assetId) : null
-      if (!asset || !isLocalPicture(asset)) return
-
-      run(
-        documentId,
-        setChannel('baseColor', {
-          assetId: asset.id,
-          origin: 'imported',
-          width: asset.width ?? 0,
-          height: asset.height ?? 0,
-        }),
-      )
-    },
-    [byId, documentId, run],
-  )
-
-  const base = texture.channels.baseColor
+  const flat = inspected ? texture.channels[inspected] : undefined
+  // One look-up for both the picture and the gesture over it — `usePosterUrl` did the very same
+  // one, and two subscriptions to a single catalogue row are two re-renders of a viewport.
+  const flatAsset = useAssets(state => (flat ? assetsById(state).get(flat.assetId) : undefined))
+  const flatPoster = flat && ((flatAsset && posterUrl(flatAsset)) ?? assetUrl(flat.assetId))
+  // Where its PIXELS are edited, which is not this space: a texture is assembled here and painted
+  // in Images. Absent leaves the picture there to be looked at and nothing more — a channel whose
+  // asset the shelf is not holding, or one that is not on this disk.
+  const intent = flatAsset ? pixelEditorIntent(flatAsset) : null
+  const editPixels = flatAsset && intent ? () => void openAsset(flatAsset, intent) : undefined
 
   return (
-    <div
-      className="relative size-full"
-      onDragOver={event => {
-        event.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
+    <AssetDropTarget
+      accepts={PICTURES}
       onDrop={onDrop}
+      // No frame: see `ImageDocument`. The CHANNEL slots keep theirs — there the frame IS the
+      // answer, because it says which of seven places the drop would land in.
+      outlined={false}
+      className="relative size-full"
     >
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
 
-      {!base && (
+      {/* Laid over the viewport rather than unmounting it: a WebGL context does not survive being
+          rebuilt for a glance at a normal map, and the engine would reload all eight channels. */}
+      {flat && (
+        // A button rather than a frame: the picture on show is one double-click from the space
+        // that repaints it, which is the last step of « take a model's texture out, edit it, and
+        // the model follows ». The same gesture the shelf offers, so it is the same two words.
+        <button
+          type="button"
+          disabled={!editPixels}
+          {...TIP_TOP(t('assets.editPixels'), false, t('assets.editPixelsHint'))}
+          {...(editPixels ? activation(editPixels) : {})}
+          className={cn(
+            'bg-viewport absolute inset-0 flex items-center justify-center border-none p-4',
+            'cursor-pointer disabled:cursor-default',
+          )}
+        >
+          <img
+            src={flatPoster}
+            alt=""
+            // `pixelated`: a normal or a height map is inspected to be read, and a browser's
+            // smoothing hides exactly the noise one is looking for.
+            className="max-h-full max-w-full object-contain [image-rendering:pixelated]"
+          />
+        </button>
+      )}
+
+      {!texture.channels.baseColor && !flat && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <EmptyState icon={mdiTextureBox} message={t('texture.dropSource')} />
         </div>
       )}
-
-      {over && <div className="border-accent pointer-events-none absolute inset-0 border-2" />}
-
-      <div className="bg-panel/80 absolute top-2 left-2 flex items-center gap-1 rounded-(--radius-sc-md) p-1">
-        {PREVIEW_SHAPES.map(shape => (
-          <button
-            key={shape}
-            type="button"
-            onClick={() => run(documentId, setPreview('shape', shape))}
-            aria-pressed={preview.shape === shape}
-            className={cn(
-              'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
-              preview.shape === shape ? 'bg-elevated text-text' : 'text-muted bg-transparent',
-            )}
-          >
-            {t(SHAPE_LABELS[shape])}
-          </button>
-        ))}
-
-        <ToolButton
-          icon={mdiWeatherSunny}
-          label={t('texture.showBackground')}
-          active={preview.showBackground}
-          onClick={() => run(documentId, setPreview('showBackground', !preview.showBackground))}
-        />
-        <ToolButton
-          icon={mdiRotate3dVariant}
-          label={t('texture.autoSpin')}
-          active={preview.autoSpin}
-          onClick={() => run(documentId, setPreview('autoSpin', !preview.autoSpin))}
-        />
-
-        <label className="text-muted flex items-center gap-1 pl-2 text-xs">
-          {t('texture.envIntensity')}
-          <input
-            type="range"
-            min={0}
-            max={3}
-            step={0.05}
-            value={preview.envIntensity}
-            onChange={event =>
-              run(documentId, setPreview('envIntensity', Number(event.target.value)))
-            }
-            className="accent-accent w-24"
-          />
-        </label>
-      </div>
-
-      {base && (
-        <div className="bg-panel/80 text-muted absolute right-2 bottom-2 rounded-(--radius-sc-md) px-2 py-1 text-xs">
-          <img
-            src={assetUrl(base.assetId)}
-            alt=""
-            className="size-16 rounded-(--radius-sc-sm) object-cover"
-          />
-        </div>
-      )}
-    </div>
+    </AssetDropTarget>
   )
 }

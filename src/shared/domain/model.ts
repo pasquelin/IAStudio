@@ -39,6 +39,12 @@ export type FieldDescriptor = {
    * field itself, which is what lets an edit action fill the pair without naming either.
    */
   maskFrom?: string
+  /**
+   * Whether this is the field prompt assistance rewrites. The API marks it itself — measured on
+   * `model_google-gemini-3-1-flash`, whose `prompt` input carries `promptSpark: true` — so no
+   * field name is ever guessed at here.
+   */
+  promptSpark?: boolean
 }
 
 export type ModelFamily =
@@ -94,6 +100,54 @@ export const FEATURED_TAG = 'sc:featured'
  */
 export const SKYBOX_TAG = 'sc:skybox'
 
+/**
+ * The namespace Scenario keeps for its own tags — and the one `GET /models?tags=` does not index.
+ *
+ * MEASURED 2026-08-14, one request per tag against the real catalogue: `sc:skybox`, `sc:scenario`,
+ * `sc:featured`, `sc:texture` and `sc:tool` each answer 0 models, while `image-upscale` answers
+ * 13, `remove-background` 9 and `vectorize` 4. The three skybox models carry `sc:skybox` in the
+ * records that same endpoint serves when asked for no tag at all, so the tag is real and only the
+ * filter is blind to it. Asking for one does not narrow the walk, it ends it — which is what left
+ * the skybox workspace with no model to choose from. `POST /search/models` is no way around it
+ * either: filtering its hits by the same tag answers nothing too.
+ */
+export const SYSTEM_TAG_PREFIX = 'sc:'
+
+/**
+ * The families no capability can name, and the tag that names each one. Skyboxes were the first;
+ * upscaling, cutout and vectorization are the same case — the capability enum holds no value for
+ * any of them, and all 29 of those models answer `img2img` like every other image model.
+ *
+ * Read in both directions, which is why it is a list of pairs: `familyOf` classifies a model by
+ * it, and the registry narrows a listing server-side by the ones the API indexes — every family
+ * but the skyboxes, whose tag lives in the namespace above. Twenty-six models out of 642 are not
+ * worth walking six pages of catalogue to find.
+ *
+ * A tag alone never decides — see `familyOf`: two of the nine models carrying `remove-background`
+ * remove it from video, and they belong to the montage, not to the canvas.
+ *
+ * A tag listed here belongs to its own family and to no other: offering it in `TAGS_BY_FAMILY`
+ * elsewhere would filter a listing down to models that listing has already excluded. Under its
+ * own family it is just as useless — every row already carries it.
+ *
+ * ORDER IS A PRIORITY. A model carrying two of these tags has no right answer — they name
+ * different outputs — and the first entry here wins. That is a choice for a stable answer over
+ * the order the API happens to serve its tags in.
+ */
+export type FamilyTag = { family: ModelFamily; tag: string }
+
+export const FAMILY_TAGS: readonly FamilyTag[] = [
+  { family: 'skybox', tag: SKYBOX_TAG },
+  { family: 'upscale', tag: 'image-upscale' },
+  { family: 'background-removal', tag: 'remove-background' },
+  { family: 'vectorization', tag: 'vectorize' },
+]
+
+/** The tag that stands for a family, when one does. */
+export function tagOfFamily(family: ModelFamily): string | undefined {
+  return FAMILY_TAGS.find(entry => entry.family === family)?.tag
+}
+
 export type ModelSummary = {
   id: string
   name: string
@@ -117,6 +171,15 @@ export type ModelSummary = {
    */
   previewAssetId?: string
   createdAt?: string
+  /**
+   * The plan grade the API refuses this model below — its `accessRestrictions`. Read against
+   * `PlanAccess` by `isBeyondPlan`; absent when the API grades the model with nothing.
+   *
+   * A plain number, NOT the SDK's `0 | 25 | 50 | 75 | 100` union: two public models answer `1`
+   * (Neo3D Realism, Scenario Flux Upscale), which that union does not admit. Measured — the
+   * generated type is wrong about its own values, and a closed union would drop the field.
+   */
+  requiredPlanLevel?: number
 }
 
 export type ModelDescriptor = ModelSummary & {
@@ -165,7 +228,6 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
     'Image to Image',
     'editing',
     'Post Processing',
-    'image-upscale',
     'characters',
     'fantasy',
     'cartoon',
@@ -193,6 +255,66 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   'background-removal': [],
   vectorization: [],
   other: [],
+}
+
+/**
+ * The i18n key naming each tag on screen, or `null` where the publisher's own word is what it
+ * shows — the acronyms, and one product name, which a translation would only obscure.
+ *
+ * What a tag is CALLED is not what it is MATCHED as: the value above travels to the API exactly
+ * as written, and this only names it. That is what lets a French studio read "Depuis un texte"
+ * while the request still carries `Text to Image`.
+ *
+ * One record with a nullable value rather than two lists that answer each other, the shape
+ * `NODE_LABEL_KEYS` settled on: two lists can disagree — name a tag and leave it alone at once —
+ * and a tag added upstairs then has three places to be entered instead of one.
+ *
+ * The keys are written here rather than built from the value: `Flux.1 LoRA` holds a dot, and a
+ * dot is how i18next spells a level of nesting.
+ */
+export const TAG_LABEL_KEYS: Record<string, string | null> = {
+  'Text to Image': 'modelTags.textToImage',
+  'Image to Image': 'modelTags.imageToImage',
+  editing: 'modelTags.editing',
+  'Post Processing': 'modelTags.postProcessing',
+  characters: 'modelTags.characters',
+  fantasy: 'modelTags.fantasy',
+  cartoon: 'modelTags.cartoon',
+  tool: 'modelTags.tool',
+  Video: 'modelTags.video',
+  'First Frame': 'modelTags.firstFrame',
+  'Last Frame': 'modelTags.lastFrame',
+  'Video Editing': 'modelTags.videoEditing',
+  'Image to 3D': 'modelTags.imageTo3d',
+  'Text to 3D': 'modelTags.textTo3d',
+  '3D to 3D': 'modelTags.threeDToThreeD',
+  Multiview: 'modelTags.multiview',
+  Motion: 'modelTags.motion',
+  Audio: 'modelTags.audio',
+  Music: 'modelTags.music',
+  'Text to Music': 'modelTags.textToMusic',
+  'Text to Speech': 'modelTags.textToSpeech',
+  'Flux.1 LoRA': null,
+  T2V: null,
+  I2V: null,
+  V2V: null,
+  PBR: null,
+  TTS: null,
+}
+
+/** Every key the record names, for the guard that checks the bundles carry them. */
+export const TAG_LABEL_KEY_LIST: readonly string[] = Object.values(TAG_LABEL_KEYS).flatMap(
+  key => key ?? [],
+)
+
+/**
+ * A tag's name on screen, given something that translates a key. The value stands in as its own
+ * label wherever nobody named it, which is the one wording that is always true — and never a raw
+ * key, which reads like a bug.
+ */
+export function tagLabel(value: string, translate: (key: string) => string): string {
+  const key = TAG_LABEL_KEYS[value]
+  return key === undefined || key === null ? value : translate(key)
 }
 
 /**

@@ -1,21 +1,21 @@
+import type { Us } from '@shared/domain/time'
 import { formatTimecode } from '@/engines/timeline/timecode'
-import type { SequenceSettings, Us } from '@/engines/timeline/timeline-state'
 import { cn } from '@/helpers/cn'
 
 export type TimecodeProps = {
   time: Us
-  settings: SequenceSettings
+  fps: number
   className?: string
 }
 
 /**
- * `HH:MM:SS:FF`, in one place. Both monitors and the status bar show one, and three copies of
- * the same tabular-figures rule is three chances for them to drift apart.
+ * `HH:MM:SS:FF`, in one place. Both monitors, the status bar and a scene's animation band show
+ * one, and copies of the same tabular-figures rule are chances for them to drift apart.
  */
-export function Timecode({ time, settings, className }: TimecodeProps) {
+export function Timecode({ time, fps, className }: TimecodeProps) {
   return (
-    <span className={cn('text-muted px-1 font-mono text-[11px] tabular-nums', className)}>
-      {formatTimecode(time, settings)}
+    <span className={cn('text-muted text-tiny px-1 font-mono tabular-nums', className)}>
+      {formatTimecode(time, fps)}
     </span>
   )
 }

@@ -1,22 +1,35 @@
 import {
   BoxGeometry,
+  Layers,
   LineBasicMaterial,
   LineSegments,
   Material,
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  Raycaster,
 } from 'three'
 import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import {
   applyDisplayMode,
   applyWireOverlay,
+  directionOf,
+  EDGE_LAYER,
+  hidesSceneLights,
+  showsEdges,
+  substituteFor,
+  substituteOf,
+  viewPosition,
+  framingDistance,
+  framingPlacement,
+} from './scene-view'
+import {
+  DISPLAY_MODES,
+  VIEW_DIRECTIONS,
   isDisplayMode,
   isViewDirection,
-  viewPosition,
-  VIEW_DIRECTIONS,
-} from './scene-view'
+} from '@shared/domain/scene'
 
 const ORIGIN = new Vector3(0, 0, 0)
 
@@ -51,6 +64,40 @@ describe('isViewDirection', () => {
   it('accepts a side and refuses anything else', () => {
     expect(isViewDirection('top')).toBe(true)
     expect(isViewDirection('sideways')).toBe(false)
+  })
+})
+
+/**
+ * What the trihedron's click is read through. It is the inverse of `viewPosition`, so the two are
+ * tested against each other: a sign flipped in either would make them disagree.
+ */
+describe('directionOf', () => {
+  it('names the side of every place a normalised view stands', () => {
+    for (const direction of VIEW_DIRECTIONS) {
+      const { x, y, z } = viewPosition(direction, ORIGIN, 10)
+
+      expect(directionOf(new Vector3(x, y, z))).toBe(direction)
+    }
+  })
+
+  it('names it from wherever the view was turning around', () => {
+    const target = new Vector3(1, 2, 3)
+    const { x, y, z } = viewPosition('left', target, 4)
+
+    expect(directionOf(new Vector3(x - target.x, y - target.y, z - target.z))).toBe('left')
+  })
+
+  it('names no side for a direction that points between two', () => {
+    expect(directionOf(new Vector3(1, 1, 0))).toBeNull()
+  })
+
+  // The camera sitting exactly on its target names no side rather than an arbitrary one.
+  it('names no side for a direction of no length', () => {
+    expect(directionOf(new Vector3(0, 0, 0))).toBeNull()
+  })
+
+  it('forgives the wobble a nudged pole leaves behind', () => {
+    expect(directionOf(new Vector3(0, 10, 0.001))).toBe('top')
   })
 })
 
@@ -124,6 +171,37 @@ describe('applyDisplayMode', () => {
   })
 })
 
+describe('what a mode paints with', () => {
+  it('names one substitute per mode, and none for the modes that keep the real materials', () => {
+    expect(DISPLAY_MODES.map(mode => substituteOf(mode))).toEqual([
+      'none',
+      'none',
+      'none',
+      'solid',
+      'none',
+      'matcap',
+      'density',
+    ])
+  })
+
+  it('hides the surfaces of a wireframe read as quads, and of that mode alone', () => {
+    expect(substituteFor('wireframe', true)).toBe('hidden')
+    expect(substituteFor('wireframe', false)).toBe('none')
+    expect(substituteFor('both', true)).toBe('none')
+  })
+
+  it('puts the lights out for the material preview only', () => {
+    expect(DISPLAY_MODES.filter(hidesSceneLights)).toEqual(['material'])
+  })
+
+  it('draws the edge overlay for the two modes that read edges', () => {
+    expect(showsEdges('both', false)).toBe(true)
+    expect(showsEdges('wireframe', true)).toBe(true)
+    expect(showsEdges('wireframe', false)).toBe(false)
+    expect(showsEdges('shaded', true)).toBe(false)
+  })
+})
+
 describe('applyWireOverlay', () => {
   const line = new LineBasicMaterial()
 
@@ -135,6 +213,36 @@ describe('applyWireOverlay', () => {
 
     applyWireOverlay(mesh, false, line)
     expect(mesh.children).toHaveLength(0)
+  })
+
+  /**
+   * A GLB never carries quads — the exporter triangulated long before the file existed — so what
+   * this draws is a reconstruction by angle, and it has to draw FEWER lines than the triangles.
+   */
+  it('drops the triangulation diagonals when the edges are read as quads', () => {
+    const { mesh } = meshTree()
+
+    applyWireOverlay(mesh, true, line, false)
+    const triangles = mesh.children.find(child => child instanceof LineSegments)
+    const trianglePoints = triangles?.geometry.attributes.position?.count ?? 0
+
+    applyWireOverlay(mesh, true, line, true)
+    const quads = mesh.children.find(child => child instanceof LineSegments)
+    const quadPoints = quads?.geometry.attributes.position?.count ?? 0
+
+    expect(quadPoints).toBeGreaterThan(0)
+    expect(quadPoints).toBeLessThan(trianglePoints)
+  })
+
+  /** Which views draw the edges is a per-camera answer, and a layer is what makes it one. */
+  it('hangs the edges on the layer a camera opts into', () => {
+    const { mesh } = meshTree()
+
+    applyWireOverlay(mesh, true, line)
+    const edges = mesh.children.find(child => child instanceof LineSegments)
+
+    expect(edges?.layers.test(new Layers())).toBe(false)
+    expect(edges?.layers.isEnabled(EDGE_LAYER)).toBe(true)
   })
 
   // Applied twice, it would otherwise stack a second set of edges on the first.
@@ -191,5 +299,120 @@ describe('applyWireOverlay', () => {
     applyWireOverlay(mesh, false, line)
 
     expect(mesh.children).toHaveLength(0)
+  })
+})
+
+/**
+ * A line is met within a whole world unit of itself — `Raycaster.params.Line.threshold`. The
+ * overlay is decoration hanging under every mesh, so left pickable it grows a halo of that size
+ * around every edge in the scene, and a click into the void beside a cube selects the cube.
+ */
+describe('the wireframe overlay under the pointer', () => {
+  it('is never what a ray meets', () => {
+    const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial())
+    mesh.updateMatrixWorld(true)
+    applyWireOverlay(mesh, true, new LineBasicMaterial())
+
+    // Beside the box, not through it: x sits outside the half-width, well inside the threshold.
+    const raycaster = new Raycaster(new Vector3(0.9, 0, 5), new Vector3(0, 0, -1))
+
+    expect(raycaster.intersectObject(mesh, true)).toEqual([])
+  })
+})
+
+/**
+ * The whole of what framing does, once the orthographic frustum stopped ignoring the move: a
+ * constant step framed a studio primitive and stood inside a fifty-unit model.
+ */
+describe('framingDistance', () => {
+  // tan(45°) = 1, so a 90° lens needs exactly the half-size, plus the margin.
+  it('stands as far back as the object is wide, for a square lens', () => {
+    expect(framingDistance(10, 90)).toBeCloseTo(12, 5)
+  })
+
+  // The defect it replaces: the same distance whatever the size.
+  it('stands further back for a bigger object', () => {
+    expect(framingDistance(50, 60)).toBeGreaterThan(framingDistance(5, 60))
+  })
+
+  // A narrower lens sees less at the same distance, so it has to back off further.
+  it('stands further back for a narrower lens', () => {
+    expect(framingDistance(10, 30)).toBeGreaterThan(framingDistance(10, 90))
+  })
+
+  /**
+   * A point light and an empty group have no size at all, and would ask for a distance of nil.
+   * The value, not just « more than zero » : a floor of a millimetre also clears that bar, and
+   * would frame a light from inside it.
+   */
+  it('keeps a usable distance from something with no size', () => {
+    // 0.5 / tan(45°) × 1.2 — the floor, the lens and the margin, pinned together.
+    expect(framingDistance(0, 90)).toBeCloseTo(0.6, 5)
+  })
+})
+
+/**
+ * The composition `frameSelection` performs, which no test could reach while it lived inside a
+ * method that returns early without mounted orbit controls.
+ */
+describe('framingPlacement', () => {
+  const boxAt = (x: number, size: number): Mesh =>
+    new Mesh(new BoxGeometry(size, size, size)).translateX(x)
+
+  it('looks at the middle of what is enclosed, not at the average of the placements', () => {
+    // Two boxes of very different sizes: their centroid and their bounds centre disagree.
+    const target = framingPlacement([boxAt(0, 2), boxAt(20, 10)], 60).target
+
+    expect(target.x).toBeCloseTo(12, 5)
+  })
+
+  it('stands back by what the size asks for, along the studio diagonal', () => {
+    const { target, position } = framingPlacement([boxAt(0, 50)], 60)
+    const away = position.clone().sub(target)
+
+    expect(away.length()).toBeCloseTo(framingDistance(25, 60), 5)
+    // Normalised, and the same on all three axes — an unnormalised step would be √3 times too far.
+    expect(away.x).toBeCloseTo(away.length() / Math.sqrt(3), 5)
+    expect(away.y).toBeCloseTo(away.x, 5)
+  })
+
+  // The defect it replaces: a constant step, so the same distance whatever the selection.
+  it('stands further back for a bigger selection', () => {
+    const near = framingPlacement([boxAt(0, 2)], 60)
+    const far = framingPlacement([boxAt(0, 50)], 60)
+
+    expect(far.position.length()).toBeGreaterThan(near.position.length() * 5)
+  })
+
+  // A light and an empty group enclose nothing; their placements still average to somewhere.
+  it('falls back on the average placement when nothing encloses a box', () => {
+    const lamp = new Object3D().translateX(10)
+    const other = new Object3D().translateX(20)
+
+    expect(framingPlacement([lamp, other], 60).target.x).toBeCloseTo(15, 5)
+  })
+})
+
+/**
+ * Every source of the renderer, as text — read through Vite rather than through `fs`, for the
+ * reason `no-hardcoded-text.test.ts` gives: a test living here has no filesystem.
+ */
+const SOURCES: Record<string, string> = import.meta.glob(
+  ['../../**/*.ts', '../../**/*.tsx', '!../../**/*.test.ts', '!../../**/*.test.tsx'],
+  { query: '?raw', import: 'default', eager: true },
+)
+
+/**
+ * The exporter strips these overlays by name, and used to spell that name itself. A rename here
+ * would then have left wireframes baked into every delivered GLB — silently, since neither side
+ * would have failed to compile. Counted rather than reviewed: the two spellings were identical.
+ */
+describe('the wireframe overlay marker', () => {
+  it('is spelled in exactly one place', () => {
+    const spelling = Object.entries(SOURCES)
+      .filter(([, source]) => source.includes("'wireframe-overlay'"))
+      .map(([path]) => path)
+
+    expect(spelling).toEqual(['./scene-view.ts'])
   })
 })

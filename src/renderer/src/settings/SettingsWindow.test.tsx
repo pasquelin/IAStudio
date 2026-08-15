@@ -48,6 +48,21 @@ describe('SettingsWindow', () => {
     await waitFor(() => expect(document.documentElement.dataset['density']).toBeDefined())
   })
 
+  /**
+   * The window renders its own React tree: `TooltipHost` living in the shell reached none of
+   * it, so every tooltip attribute written here pointed at an id nothing answered. Hovering is
+   * the only assertion that says the host is mounted — a closed `<Tooltip>` renders nothing.
+   */
+  it('mounts the shared tooltip, which its own tree would otherwise lack', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    const restore = screen.getAllByRole('button', { name: /Restaurer/ })[0]
+    await userEvent.hover(restore!)
+
+    await waitFor(() => expect(restore).toHaveAttribute('aria-describedby'))
+  })
+
   it('opens on the first section and shows it', () => {
     installFakeBridge()
     render(<SettingsWindow />)
@@ -99,13 +114,31 @@ describe('SettingsWindow', () => {
       '3D',
       'Audio',
       'Agrandissement',
+      'Détourage',
+      'Vectorisation',
       'Espaces de travail',
       '3D',
       'Raccourcis',
+      'Dictée',
       'Médias',
       'Stockage',
       'Avancé',
     ])
+  })
+
+  // Written in `rem` until the 11th of August, this column answered the root element that the
+  // sheet never sizes: it held 16 px a level in both densities, alone among the studio's trees.
+  it('indents a sub-section by the density gauge rather than a fixed step', () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    const entries = within(navigation()).getAllByRole('button')
+    const root = entries.find(entry => entry.textContent === 'Génération')
+    const child = entries.find(entry => entry.textContent === 'Vidéo')
+
+    expect(root?.style.paddingLeft).toContain('var(--sc-indent)')
+    expect(child?.style.paddingLeft).toContain('var(--sc-indent)')
+    expect(child?.style.paddingLeft).not.toEqual(root?.style.paddingLeft)
   })
 
   it('shows the section the user picks, and only that one', async () => {
@@ -131,6 +164,45 @@ describe('SettingsWindow', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }))
 
     expect(write).toHaveBeenCalledWith({ appearance: { density: 'compact' } })
+  })
+
+  /**
+   * "Annuler", "Appliquer", "OK" — three words for three different fates of the same buffer,
+   * and only one of them closes the window. The face of the bar cannot say which.
+   */
+  it('tells its three fates apart, which the words alone do not', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Apparence' }))
+    await userEvent.selectOptions(screen.getByLabelText(/Densité/), 'compact')
+
+    const contents = (name: string): string | null =>
+      screen.getByRole('button', { name }).getAttribute('data-tooltip-content')
+
+    expect(contents('Annuler')).toBe('Abandonne les changements en attente, sans fermer la fenêtre')
+    expect(contents('Appliquer')).toBe(
+      'Écrit les changements maintenant, et laisse la fenêtre ouverte',
+    )
+    expect(contents('OK')).toBe('Écrit les changements, puis ferme la fenêtre')
+  })
+
+  // The dot beside a section is the only sign that changes wait there; the sentence names it.
+  it('says why a section is marked, rather than only marking it', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+    const appearance = within(navigation()).getByRole('button', { name: 'Apparence' })
+    expect(appearance).toHaveAttribute(
+      'data-tooltip-content',
+      'Affiche les réglages de cette section',
+    )
+
+    await userEvent.click(appearance)
+    await userEvent.selectOptions(screen.getByLabelText(/Densité/), 'compact')
+
+    expect(within(navigation()).getByRole('button', { name: 'Apparence' })).toHaveAttribute(
+      'data-tooltip-content',
+      'Cette section a des changements non appliqués',
+    )
   })
 
   it('drops what was staged when the change is cancelled', async () => {
@@ -296,5 +368,118 @@ describe('SettingsWindow', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }))
     expect(written.at(-1)).toEqual({ generation: { defaultModels: {} } })
+  })
+
+  /**
+   * A default the plan cannot run is a generation that fails every time the generator opens,
+   * with nothing on this screen having said so. A native `<option>` carries no tooltip, so the
+   * reason is suffixed onto the label — greying a name out silently is the failure to avoid.
+   */
+  it('refuses a default model the plan does not cover, and says so in its label', async () => {
+    installFakeBridge({
+      // Without a key there is no plan to read, and nothing is greyed out — which is the whole
+      // point of the fallback, and would make this case pass on the wrong reason.
+      settings: { authState: () => Promise.resolve({ authenticated: true }) },
+      scenario: {
+        searchModels: () =>
+          Promise.resolve({
+            items: [
+              {
+                id: 'model_seedance',
+                name: 'Seedance 2.0',
+                family: 'image',
+                source: 'scenario',
+                origin: 'official',
+                featured: false,
+                capabilities: ['txt2img'],
+                tags: [],
+                requiredPlanLevel: 50,
+              },
+            ],
+            cursor: null,
+          }),
+        plan: () => Promise.resolve({ name: 'cu-basic', level: 25 }),
+      },
+    })
+
+    render(<SettingsWindow />)
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Image' }))
+
+    const option = await screen.findByRole('option', { name: /Seedance 2\.0/ })
+    expect(option).toBeDisabled()
+    expect(option).toHaveTextContent('Hors abonnement')
+  })
+
+  /**
+   * The default ALREADY stored, which nobody is choosing right now — a downgrade or an account
+   * switch puts it out of plan on its own. A browser still shows a disabled `<option>` as the
+   * selected one, and the suffix lives only in the option labels, so without this the screen
+   * says nothing and the generator opens armed on a model that fails on every submission.
+   */
+  it('warns when the default already stored has fallen out of the plan', async () => {
+    installFakeBridge({
+      settings: {
+        read: () =>
+          Promise.resolve({
+            ...DEFAULT_SETTINGS,
+            generation: { ...DEFAULT_SETTINGS.generation, defaultModels: { image: 'model_pro' } },
+          }),
+        authState: () => Promise.resolve({ authenticated: true }),
+      },
+      scenario: {
+        searchModels: () =>
+          Promise.resolve({
+            items: [
+              {
+                id: 'model_pro',
+                name: 'Seedance 2.0',
+                family: 'image',
+                source: 'scenario',
+                origin: 'official',
+                featured: false,
+                capabilities: ['txt2img'],
+                tags: [],
+                requiredPlanLevel: 50,
+              },
+            ],
+            cursor: null,
+          }),
+        plan: () => Promise.resolve({ name: 'cu-basic', level: 25 }),
+      },
+    })
+
+    render(<SettingsWindow />)
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Image' }))
+
+    expect(await screen.findByText(/cu-basic/)).toBeInTheDocument()
+  })
+
+  /**
+   * The search field sat inside the column that scrolls, at `w-full`. Two things followed from
+   * that: the scrollbar took its width out of the field, so it narrowed and widened as the list
+   * grew past the window; and it scrolled away with the sections it filters.
+   *
+   * jsdom lays nothing out, so what is checked is the structure that decides it: the field is
+   * outside whatever scrolls, and the list is inside it.
+   */
+  describe('the search field', () => {
+    const field = (): HTMLElement => screen.getByLabelText('Rechercher un réglage')
+
+    it('sits outside the part that scrolls, so a scrollbar never resizes it', () => {
+      installFakeBridge()
+      render(<SettingsWindow />)
+
+      const scrollers = field().closest('[class*="overflow-auto"]')
+      expect(scrollers).toBeNull()
+    })
+
+    it('leaves the sections themselves free to scroll under it', () => {
+      installFakeBridge()
+      render(<SettingsWindow />)
+
+      // The outermost one: the nested sections carry lists of their own.
+      const [list] = within(screen.getByRole('navigation')).getAllByRole('list')
+      expect(list?.closest('[class*="overflow-auto"]')).not.toBeNull()
+    })
   })
 })

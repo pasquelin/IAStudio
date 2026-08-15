@@ -36,6 +36,6 @@ describe('the adjustment fields', () => {
   })
 
   it('names an i18n key rather than a label', () => {
-    for (const field of ADJUSTMENT_FIELDS) expect(field.label).toMatch(/^skybox\./)
+    for (const field of ADJUSTMENT_FIELDS) expect(field.labelKey).toMatch(/^skybox\./)
   })
 })

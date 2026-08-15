@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { OFFICIAL_TAG, SKYBOX_TAG } from '@shared/domain/model'
+import { OFFICIAL_TAG, SKYBOX_TAG, SYSTEM_TAG_PREFIX } from '@shared/domain/model'
 import { createCredentialsWatch } from './credentials-watch'
 import {
   createModelRegistry,
@@ -40,6 +40,14 @@ const SKY: RemoteModel = {
   tags: [SKYBOX_TAG, 'panorama'],
 }
 
+/** Shaped after `model_ideogram-remove-background`: a cutout model answers `img2img` too. */
+const CUTOUT: RemoteModel = {
+  id: 'model_cutout',
+  name: 'Ideogram Remove Background',
+  capabilities: ['img2img'],
+  tags: [OFFICIAL_TAG, 'remove-background'],
+}
+
 type Catalogue = {
   private?: readonly RemoteModel[]
   public?: readonly RemoteModel[]
@@ -66,14 +74,17 @@ function spiedCatalog(catalogue: Catalogue): Spied {
   const catalog = (): ModelCatalog => ({
     list: request => {
       lists.push(request)
-      const held = (catalogue[request.privacy] ?? []).filter(
-        model =>
-          (!request.official || (model.tags ?? []).includes(OFFICIAL_TAG)) &&
-          // Narrowed server-side, as the real endpoint does: a page fetched under a tag holds
-          // fewer models than the same page without one, which is what makes it a page of its
-          // own rather than a slice of the catalogue.
-          (!request.tag || (model.tags ?? []).includes(request.tag)),
-      )
+      // Narrowed server-side, as the real endpoint does: a page fetched under a tag holds fewer
+      // models than the same page without one, which is what makes it a page of its own rather
+      // than a slice of the catalogue. And it answers NOTHING for Scenario's own namespace —
+      // measured, `tags=sc:skybox` returns no model while the unfiltered listing serves all
+      // three. A fake that honoured those would stay green on the defect that emptied the
+      // skybox workspace.
+      const held = request.tag?.startsWith(SYSTEM_TAG_PREFIX)
+        ? []
+        : (catalogue[request.privacy] ?? []).filter(
+            model => !request.tag || (model.tags ?? []).includes(request.tag),
+          )
       const start = request.token ? Number(request.token) : 0
       const models = held.slice(start, start + request.pageSize)
       const next = start + models.length
@@ -171,6 +182,77 @@ describe('model registry', () => {
         tags: [],
       },
     ])
+  })
+
+  /**
+   * The grade decides whether the picker offers the model at all, so it has to survive both
+   * projections. Grade 0 is the trap: it is the free tier, and a truthiness test drops it to
+   * "ungraded" — which reads as allowed, silently, for every model the free plan does cover.
+   */
+  it('carries the plan grade through, zero included', async () => {
+    const registry = registryOf({
+      catalog: publicCatalog([
+        { id: 'model_pro', accessRestrictions: 50 },
+        { id: 'model_free', accessRestrictions: 0 },
+        { id: 'model_ungraded' },
+      ]),
+    })
+
+    const { items } = await registry.search({})
+
+    expect(items.map(item => item.requiredPlanLevel)).toEqual([50, 0, undefined])
+  })
+
+  /**
+   * MEASURED, and the reason the grade is remembered at all: `GET /models` grades every model
+   * with a number, while `POST /search/models` answers `null` on every hit — the search index
+   * does not carry the field. Written straight through, that `null` landed in a `number` field
+   * and the same model went from greyed out in the listing to freely pickable the moment the
+   * user typed its name.
+   */
+  it('grades a search hit from what the listing already said', async () => {
+    // The two endpoints answer the SAME model differently — that is the whole bug.
+    const catalog = (): ModelCatalog => ({
+      list: () =>
+        Promise.resolve({
+          models: [{ id: 'model_seedance', accessRestrictions: 50 }],
+          token: null,
+        }),
+      search: () =>
+        Promise.resolve({
+          models: [{ id: 'model_seedance', name: 'Seedance', accessRestrictions: null }],
+          token: null,
+        }),
+      retrieve: () => Promise.reject(new Error('not asked')),
+      assetUrls: () => Promise.resolve([]),
+    })
+    const registry = registryOf({ catalog })
+
+    // Listed first, as the panel does before anyone types.
+    await registry.search({})
+    const { items } = await registry.search({ search: 'seedance' })
+
+    expect(items[0]?.requiredPlanLevel).toBe(50)
+  })
+
+  // Ungraded is the permissive answer; a grade invented at 0 would refuse nothing but would
+  // also claim to know, and the free tier IS 0.
+  it('leaves a search hit it has never listed ungraded', async () => {
+    const catalog = (): ModelCatalog => ({
+      list: () => Promise.resolve({ models: [], token: null }),
+      search: () =>
+        Promise.resolve({
+          models: [{ id: 'model_unseen', name: 'Unseen', accessRestrictions: null }],
+          token: null,
+        }),
+      retrieve: () => Promise.reject(new Error('not asked')),
+      assetUrls: () => Promise.resolve([]),
+    })
+    const registry = registryOf({ catalog })
+
+    const { items } = await registry.search({ search: 'unseen' })
+
+    expect(items[0]?.requiredPlanLevel).toBeUndefined()
   })
 
   it('reads authorship from the official tag, the only signal the API carries', async () => {
@@ -283,31 +365,51 @@ describe('model registry', () => {
   })
 
   /**
-   * Three models out of six hundred carry the tag, so the local filter alone would walk the
-   * whole public catalogue to keep three rows. The chosen tag still wins: it is what the user
-   * asked for, and the family narrows what comes back anyway.
+   * MEASURED 2026-08-14: `GET /models?tags=sc:skybox` answers zero models, while the three that
+   * carry the tag come out of the very same listing when it is asked for none. Narrowing by it
+   * left the skybox workspace with nothing to choose from, so the walk goes wide instead and
+   * `matches` keeps the family from the records. A chosen tag still wins over the family.
    */
-  it('asks the API for the skybox tag when the workspace wants that family', async () => {
-    const spied = spiedCatalog({ public: [SKY] })
-    const registry = registryOf({ catalog: spied.catalog })
-
-    await registry.search({ family: 'skybox' })
-    expect(spied.lists.at(-1)?.tag).toBe(SKYBOX_TAG)
-
-    await registry.search({ family: 'skybox', tags: ['panorama'] })
-    expect(spied.lists.at(-1)?.tag).toBe('panorama')
-
-    await registry.search({ family: 'image' })
-    expect(spied.lists.at(-1)?.tag).toBeUndefined()
-  })
-
-  // The pre-filter makes a page family-specific, so the pages cache has to be too. Without the
-  // family in its key, these three models answered the Image listing that came next.
-  it('does not serve a skybox page back to another family', async () => {
+  it('keeps the skybox family without asking for a tag the API does not index', async () => {
     const spied = spiedCatalog({ public: [SKY, FLUX] })
     const registry = registryOf({ catalog: spied.catalog })
 
-    await registry.search({ family: 'skybox' })
+    const skyboxes = await registry.search({ family: 'skybox' })
+    expect(skyboxes.items.map(item => item.id)).toEqual(['model_sky'])
+    expect(spied.lists.some(request => request.tag?.startsWith(SYSTEM_TAG_PREFIX))).toBe(false)
+
+    await registry.search({ family: 'skybox', tags: ['panorama'] })
+    expect(spied.lists.at(-1)?.tag).toBe('panorama')
+  })
+
+  /**
+   * The three edit families are as sparse as the skyboxes and are found the same way. Measured:
+   * nine models carry `remove-background`, thirteen `image-upscale`, four `vectorize`.
+   */
+  it('asks the API for the tag of every family the endpoint indexes', async () => {
+    const spied = spiedCatalog({ public: [CUTOUT] })
+    const registry = registryOf({ catalog: spied.catalog })
+
+    const cutouts = await registry.search({ family: 'background-removal' })
+    expect(spied.lists.at(-1)?.tag).toBe('remove-background')
+    expect(cutouts.items.map(item => item.id)).toEqual(['model_cutout'])
+
+    await registry.search({ family: 'upscale' })
+    expect(spied.lists.at(-1)?.tag).toBe('image-upscale')
+
+    await registry.search({ family: 'vectorization' })
+    expect(spied.lists.at(-1)?.tag).toBe('vectorize')
+  })
+
+  // A tagged listing holds fewer models than the plain one, so its page is a page of its own.
+  // Without the tag in the cache key, those nine cutouts answered the Image listing that came
+  // next. The families resolving to no tag share one page instead, which is the point of keying
+  // by the tag rather than by the family.
+  it('does not serve a tagged page back to another family', async () => {
+    const spied = spiedCatalog({ public: [CUTOUT, FLUX] })
+    const registry = registryOf({ catalog: spied.catalog })
+
+    await registry.search({ family: 'background-removal' })
     const images = await registry.search({ family: 'image' })
 
     expect(images.items.map(item => item.id)).toEqual(['model_flux'])
@@ -334,13 +436,21 @@ describe('model registry', () => {
     expect(spied.lists.at(-1)?.createdAfter).toBeUndefined()
   })
 
-  it('pushes the official filter to the API instead of discarding pages client-side', async () => {
+  /**
+   * `tags=sc:scenario` answers zero models too, so authorship is read off the records and the
+   * origin no longer changes what is asked for. The pages are therefore the same pages, and
+   * ticking "Official" used to redownload what the listing had in hand a second earlier.
+   */
+  it('reuses the pages already walked when only the origin changes', async () => {
     const spied = spiedCatalog({ public: [FLUX, VEO] })
     const registry = registryOf({ catalog: spied.catalog })
 
-    await registry.search({ origin: 'official' })
+    await registry.search({})
+    const walked = spied.lists.length
+    const officials = await registry.search({ origin: 'official' })
 
-    expect(spied.lists[0]?.official).toBe(true)
+    expect(officials.items.map(item => item.id)).toEqual(['model_flux'])
+    expect(spied.lists).toHaveLength(walked)
   })
 
   /**
@@ -512,7 +622,7 @@ describe('model registry', () => {
 
       expect(descriptor.name).toBe('Flux')
       expect(descriptor.fields).toEqual([
-        { key: 'prompt', kind: 'longText', label: 'Prompt', required: true },
+        { key: 'prompt', kind: 'longText', label: 'Prompt', required: true, promptSpark: true },
         {
           key: 'numInferenceSteps',
           kind: 'integer',

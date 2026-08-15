@@ -1,3 +1,5 @@
+import { usToSeconds, type Us } from '@shared/domain/time'
+
 export type FfmpegCandidates = {
   /** Shipped beside the app, when there is one. */
   bundled: string | undefined
@@ -78,6 +80,81 @@ export function proxyArgs(source: string, destination: string): string[] {
     'aac',
     '-movflags',
     '+faststart',
+    destination,
+  ]
+}
+
+/** How the frames of a render are named on disk. Zero-padded, since ffmpeg counts in order. */
+export const FRAME_PATTERN = 'frame_%06d.png'
+
+export function frameName(index: number): string {
+  return `frame_${String(index).padStart(6, '0')}.png`
+}
+
+/**
+ * A folder of numbered stills into one H.264 file.
+ *
+ * `-framerate` BEFORE `-i` and not after: placed after, it is read as an output rate and ffmpeg
+ * duplicates or drops frames to reach it rather than declaring what the stills already are.
+ *
+ * `yuv420p` because a render arrives in RGBA and libx264 would otherwise pick a format most
+ * players refuse — a file that plays everywhere is the point of encoding it at all.
+ */
+export function sequenceArgs(pattern: string, destination: string, fps: number): string[] {
+  return [
+    '-y',
+    '-v',
+    'error',
+    '-nostats',
+    '-framerate',
+    String(fps),
+    '-i',
+    pattern,
+    '-c:v',
+    'libx264',
+    '-preset',
+    'veryfast',
+    '-crf',
+    '18',
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    destination,
+  ]
+}
+
+/**
+ * Where the still of a rush is taken from, in seconds — a tenth of the way in.
+ *
+ * Not the first frame: a take opens on black often enough that a shelf of them would be a shelf
+ * of black tiles, which is the very thing the still exists to fix.
+ */
+export function posterOffset(duration: Us): number {
+  return usToSeconds(duration) / 10
+}
+
+/**
+ * One frame of a rush, as the picture that stands for it in a grid and on a clip.
+ *
+ * `-ss` BEFORE `-i`, which seeks by keyframe without decoding what precedes: after `-i` ffmpeg
+ * decodes from zero, and a still cost as much as the proxy on a long take. 360 lines because
+ * nothing paints it larger than a tile.
+ */
+export function posterArgs(source: string, destination: string, atSeconds: number): string[] {
+  return [
+    '-y',
+    '-v',
+    'error',
+    '-nostats',
+    '-ss',
+    atSeconds.toFixed(3),
+    '-i',
+    source,
+    '-frames:v',
+    '1',
+    '-vf',
+    'scale=-2:360',
     destination,
   ]
 }

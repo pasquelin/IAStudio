@@ -22,27 +22,42 @@ export function applyShadowQuality(renderer: ShadowMapHolder, quality: ShadowQua
 }
 
 /**
- * The flags a node carries, put on the object that stands for it — and, by default, on
- * everything under it: three.js reads them per mesh, and a model is one node over a whole
- * imported tree. A group is the opposite case, and asks for `deep: false`: its children are
- * nodes of their own, carrying flags of their own.
+ * The flags a node carries, put on the object that stands for it and on everything under it that
+ * is only scenery: three.js reads them per mesh, and a model is one node over a whole imported
+ * tree.
+ *
+ * It stops at a child that stands for a node of its own — `belongsElsewhere`, which has no default
+ * on purpose: a caller who forgot it would silently reopen the defect below. A traversal that
+ * went through wrote the parent's flags over a child's, and nothing ever put them back: `syncNode`
+ * only rewrites them when they changed, and the child's had not. A theme reload replayed the
+ * overwrite over the whole scene. A group is the extreme case, all of whose children are nodes.
  */
 export function applyShadowFlags(
   object: Object3D,
   cast: boolean,
   receive: boolean,
-  deep = true,
+  belongsElsewhere: (child: Object3D) => boolean,
 ): void {
-  if (!deep) {
-    object.castShadow = cast
-    object.receiveShadow = receive
-    return
-  }
+  object.castShadow = cast
+  object.receiveShadow = receive
 
-  object.traverse(child => {
-    child.castShadow = cast
-    child.receiveShadow = receive
-  })
+  for (const child of object.children) {
+    if (belongsElsewhere(child)) continue
+    applyShadowFlags(child, cast, receive, belongsElsewhere)
+  }
+}
+
+/**
+ * Reads the engine's map of nodes as the stop condition above: a child stands for a node of its
+ * own when the map, at that child's name, holds that very object.
+ *
+ * Identity rather than the name alone — an imported file names its own objects, and nothing stops
+ * one from carrying a string that reads like an id.
+ */
+export function ownedByAnotherNode(
+  objects: ReadonlyMap<string, Object3D>,
+): (child: Object3D) => boolean {
+  return child => objects.get(child.name) === child
 }
 
 /**

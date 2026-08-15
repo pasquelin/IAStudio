@@ -44,6 +44,30 @@ describe('translateSchema', () => {
     expect(fields.map(field => field.kind)).toEqual(['longText', 'color', 'text'])
   })
 
+  describe('the field prompt assistance rewrites', () => {
+    // Measured on `model_google-gemini-3-1-flash`: the API marks it itself.
+    it('takes the API at its word when it marks one', () => {
+      const [field] = translateSchema([
+        { name: 'prompt', type: 'string', prompt: true, promptSpark: true },
+      ])
+      expect(field?.promptSpark).toBe(true)
+    })
+
+    // A model sparing with metadata must not lose the feature altogether.
+    it('falls back to the prompt field on a model that marks only that', () => {
+      const [field] = translateSchema([{ name: 'prompt', type: 'string', prompt: true }])
+      expect(field?.promptSpark).toBe(true)
+    })
+
+    it('leaves every other field unmarked', () => {
+      const fields = translateSchema([
+        { name: 'title', type: 'string' },
+        { name: 'steps', type: 'number' },
+      ])
+      expect(fields.every(field => field.promptSpark === undefined)).toBe(true)
+    })
+  })
+
   it('recognizes the seed by its name', () => {
     const [field] = translateSchema([{ name: 'seed', type: 'number' }])
     expect(field?.kind).toBe('seed')
@@ -127,6 +151,18 @@ describe('familyOf', () => {
     expect(familyOf(['txt2txt'], [])).toBe('other')
   })
 
+  /**
+   * The real capabilities of `model_scenario-llm`, read from the account on 10 August 2026: it is
+   * the one public model that produces text, and it declares `img2txt` alongside. `img` matches
+   * the image pattern, so without a rule on the output the Image workspace listed a model that
+   * writes prose. Checked against a listing of the first 100 public models — no image model
+   * declares `img2txt`, so keying on the output cannot misfile one.
+   */
+  it('files a model that produces text under "other", whatever it reads', () => {
+    expect(familyOf(['txt2txt', 'img2txt'], [])).toBe('other')
+    expect(familyOf(['img2txt'], [])).toBe('other')
+  })
+
   // The three public skybox models answer `txt2img`/`img2img` like any image model, so the
   // capabilities alone put them in the wrong workspace. Only the tag tells them apart.
   it('classifies a tagged panorama model as skybox, not image', () => {
@@ -139,10 +175,51 @@ describe('familyOf', () => {
     expect(familyOf(['txt2img'], [])).toBe('image')
   })
 
-  // `skybox-upscale`, which carries no `sc:skybox`: an upscaler belongs with the pictures it
-  // enlarges, not in a workspace whose documents it cannot produce.
+  // `skybox-upscale` is not `image-upscale`: the four upscaling tags are disjoint, and this one
+  // enlarges panoramas. Classifying it is another errand — it stays where it was.
   it('does not claim a skybox upscaler', () => {
     expect(familyOf(['img2img'], ['sc:scenario', 'skybox-upscale'])).toBe('image')
+  })
+
+  // The capability enum holds no upscale, no cutout and no vectorize value — measured against
+  // `models.list`'s own — and all 26 of these models answer `img2img`. The tag is the only
+  // signal, exactly as for skyboxes.
+  it('tells the three edit families apart from plain image models', () => {
+    expect(familyOf(['img2img'], ['image-upscale'])).toBe('upscale')
+    expect(familyOf(['img2img'], ['remove-background'])).toBe('background-removal')
+    expect(familyOf(['img2img'], ['vectorize'])).toBe('vectorization')
+  })
+
+  // Two of the nine models carrying `remove-background` are video models. Refining from the
+  // capabilities rather than from the tag alone is what keeps them out of the canvas's cutout.
+  it('leaves a video background remover under video', () => {
+    expect(familyOf(['video2video'], ['remove-background'])).toBe('video')
+  })
+
+  // VecGlypher answers `txt2img` and produces an SVG: it is a vectorizer that takes no picture,
+  // and the family is what it makes, not what it is fed.
+  it('claims a text-to-image vectorizer', () => {
+    expect(familyOf(['txt2img'], ['vectorize'])).toBe('vectorization')
+  })
+
+  /**
+   * Two of these tags on one model have no right answer — they name different outputs. The
+   * table's order decides, so the answer is at least stable: the tag order the API happens to
+   * serve would not be.
+   */
+  it('settles a model carrying two family tags by the table, not by the API', () => {
+    expect(familyOf(['img2img'], ['vectorize', 'image-upscale'])).toBe('upscale')
+    expect(familyOf(['img2img'], ['image-upscale', 'vectorize'])).toBe('upscale')
+  })
+
+  /**
+   * An author's tag is trusted only once the capabilities have vouched for it, so a model that
+   * declares none stays unclassified. `sc:skybox` is the exception, and deliberately: it comes
+   * from Scenario's own namespace, where nobody else can post it.
+   */
+  it('does not classify by an author tag alone when a model declares no capability', () => {
+    expect(familyOf([], ['remove-background'])).toBe('other')
+    expect(familyOf(undefined, [SKYBOX_TAG])).toBe('skybox')
   })
 
   /**

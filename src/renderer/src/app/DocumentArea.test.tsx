@@ -1,8 +1,14 @@
-import { render } from '@testing-library/react'
-import { Orientation } from 'dockview-react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import type { Asset } from '@shared/domain/asset'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { forgetReportedFailures } from '@/services/diagnostics'
+import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
-import { useLayouts, type SerializedLayout } from '@/stores/layouts'
+import { layoutShowing } from '@/stores/layout-fixtures'
+import { useAssets } from '@/stores/assets'
+import { useLayouts } from '@/stores/layouts'
+import { startAssetDrag } from '@/helpers/asset-drag'
+import { dragTransfer } from '@/helpers/drag-fixtures'
 import { DocumentArea } from './DocumentArea'
 import { openDocument, setDocumentTitle } from './dockview-api'
 
@@ -33,74 +39,59 @@ vi.mock('dockview-react', () => ({
   },
 }))
 
-function layout(): SerializedLayout {
-  return {
-    grid: {
-      root: { type: 'branch', data: [] },
-      height: 100,
-      width: 100,
-      orientation: Orientation.HORIZONTAL,
-    },
-    panels: {},
-  }
-}
-
 describe('DocumentArea', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     panels = {}
-    useDocuments.setState({ documents: {}, activeId: null })
-    useLayouts.setState({ activeWorkspace: '3d', layouts: {} })
+    forgetReportedFailures()
+    useDocuments.setState({ documents: {}, activeId: null, recent: {} })
+    useLayouts.setState({ activeWorkspace: '3d', home: false, layout: null, projectPath: null })
   })
 
-  it('restores the layout stored for the active workspace', async () => {
-    const stored = layout()
-    useLayouts.setState({ layouts: { '3d': stored } })
+  it('restores the stored arrangement', async () => {
+    const stored = layoutShowing()
+    useLayouts.setState({ layout: stored })
 
     render(<DocumentArea />)
 
     expect(fromJSON).toHaveBeenCalledWith(stored)
   })
 
-  it('does not restore another workspace layout', async () => {
-    useLayouts.setState({ layouts: { image: layout() } })
-
-    render(<DocumentArea />)
-
-    expect(fromJSON).not.toHaveBeenCalled()
-  })
-
   describe('given a stored layout Dockview refuses', () => {
     beforeEach(() => {
-      useLayouts.setState({ layouts: { '3d': layout() } })
+      useLayouts.setState({ layout: layoutShowing(), projectPath: '/projects/first' })
       fromJSON.mockImplementation(() => {
         throw new Error('dockview: root must be of type branch')
       })
-      vi.spyOn(console, 'error').mockImplementation(() => {})
     })
 
     // `clearAllMocks` above resets calls, not implementations: without this the throwing
-    // `fromJSON` and the muted console would follow the tests declared after this block.
+    // `fromJSON` would follow the tests declared after this block.
     afterEach(() => {
       fromJSON.mockReset()
-      vi.restoreAllMocks()
     })
 
-    it('says so on the console rather than dropping the arrangement in silence', () => {
+    // Installed here rather than in the hook: `vi.stubGlobal` outlives the block, and the tests
+    // declared after it are meant to run with no bridge at all.
+    it('records it in the log rather than dropping the arrangement in silence', () => {
+      const log = bridgeWatchingLogs()
+
       render(<DocumentArea />)
 
-      expect(vi.mocked(console.error).mock.calls.flat().join(' ')).toContain(
-        'Discarding an unreadable layout',
-      )
+      expect(log.report).toHaveBeenCalledWith({
+        level: 'error',
+        scope: 'shell.layout',
+        message: '/projects/first: dockview: root must be of type branch',
+      })
     })
 
     it('forgets the layout, so the next launch is not the same launch', () => {
       render(<DocumentArea />)
 
-      expect(useLayouts.getState().layouts['3d']).toBeUndefined()
+      expect(useLayouts.getState().layout).toBeNull()
     })
 
-    it('still subscribes, so the workspace remembers what the user arranges next', () => {
+    it('still subscribes, so the centre remembers what the user arranges next', () => {
       render(<DocumentArea />)
 
       expect(onDidLayoutChange).toHaveBeenCalled()
@@ -117,6 +108,49 @@ describe('DocumentArea', () => {
 
     announceActivePanel?.({})
     expect(useDocuments.getState().activeId).toBeNull()
+  })
+
+  /**
+   * The half that makes one tab strip work for six sections: the centre holds them all, so the
+   * tab going to the front is what says which docks belong around it.
+   */
+  it('puts the section of the tab in front up', () => {
+    useDocuments.setState({
+      documents: { 'doc-7': { id: 'doc-7', kind: 'image', title: 'Affiche', workspace: 'image' } },
+    })
+    render(<DocumentArea />)
+
+    announceActivePanel?.({ panel: { id: 'doc-7' } })
+
+    expect(useLayouts.getState().activeWorkspace).toBe('image')
+  })
+
+  // There is no section a blank middle belongs to, and swapping the whole periphery for having
+  // closed the last tab is a screen nobody asked for.
+  it('leaves the section alone when no tab is left in front', () => {
+    render(<DocumentArea />)
+
+    announceActivePanel?.({})
+
+    expect(useLayouts.getState().activeWorkspace).toBe('3d')
+  })
+
+  /**
+   * Raising the home is what tears this centre down, and putting a section up LEAVES the home. A
+   * tab announced on the way out would therefore have reopened the studio over the home the user
+   * had just asked for — the button would have looked broken.
+   */
+  it('says nothing about the section once the home has taken the centre', () => {
+    useDocuments.setState({
+      documents: { 'doc-7': { id: 'doc-7', kind: 'image', title: 'Affiche', workspace: 'image' } },
+    })
+    render(<DocumentArea />)
+    useLayouts.setState({ home: true })
+
+    announceActivePanel?.({ panel: { id: 'doc-7' } })
+
+    expect(useLayouts.getState().home).toBe(true)
+    expect(useLayouts.getState().activeWorkspace).toBe('3d')
   })
 
   it('opens a panel for a document created after mount', async () => {
@@ -144,5 +178,65 @@ describe('DocumentArea', () => {
 
     setDocumentTitle('doc-3', 'Set dressing', false)
     expect(setTitle).toHaveBeenLastCalledWith('Set dressing')
+  })
+})
+
+describe('the last surface a dropped asset reaches', () => {
+  const picture: Asset = {
+    id: 'asset_1',
+    name: 'moss.png',
+    type: 'image',
+    location: 'local',
+    tags: [],
+    createdAt: '2026-08-07T10:00:00.000Z',
+  }
+
+  beforeEach(() => {
+    useAssets.setState({ items: [picture] })
+    useDocuments.setState({ documents: {}, activeId: null, recent: {} })
+  })
+
+  /**
+   * Everything else in the studio answers a different question with a drop — which channel,
+   * which track, where on the graph. This one answers the fallback: what no surface took gets
+   * opened, which is what an editor does with a file dropped on it.
+   */
+  it('opens what no other surface took', async () => {
+    const openAsset = vi.fn()
+    vi.doMock('@/helpers/open-asset', () => ({ openAsset }))
+
+    render(<DocumentArea />)
+    const dataTransfer = dragTransfer()
+    startAssetDrag({ dataTransfer }, { id: 'asset_1', type: 'image' })
+
+    fireEvent.drop(screen.getByTestId('dockview').parentElement as Element, { dataTransfer })
+
+    await vi.waitFor(() => expect(openAsset).toHaveBeenCalledWith(picture))
+    vi.doUnmock('@/helpers/open-asset')
+  })
+
+  // A frame here would outline the whole middle of the window, which says nothing the user
+  // cannot already see. The pointer's own "+" carries the answer instead.
+  it('draws no frame while an asset flies over it', () => {
+    render(<DocumentArea />)
+    const surface = screen.getByTestId('dockview').parentElement as Element
+    const dataTransfer = dragTransfer()
+    startAssetDrag({ dataTransfer }, { id: 'asset_1', type: 'image' })
+
+    fireEvent.dragOver(surface, { dataTransfer })
+
+    expect(surface.className).not.toContain('outline-')
+  })
+
+  // Dropping adds; it takes nothing away from the shelf. `move` would show the arrow that says
+  // otherwise, which is what the platform draws from this.
+  it('offers the pointer that means "add"', () => {
+    render(<DocumentArea />)
+    const dataTransfer = dragTransfer()
+    startAssetDrag({ dataTransfer }, { id: 'asset_1', type: 'image' })
+
+    fireEvent.dragOver(screen.getByTestId('dockview').parentElement as Element, { dataTransfer })
+
+    expect(dataTransfer.dropEffect).toBe('copy')
   })
 })

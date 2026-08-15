@@ -1,4 +1,7 @@
 import { z } from 'zod'
+import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
+import type { JobTarget } from '@shared/domain/job'
+import type { PersistedJob } from './job-store'
 import {
   MODEL_FAMILIES,
   MODEL_IDS_BATCH_LIMIT,
@@ -7,6 +10,26 @@ import {
   MODEL_SORTS,
   type ModelQuery,
 } from '@shared/domain/model'
+import {
+  PROMPT_IMAGES_MAX,
+  PROMPT_INPUT_MAX,
+  PROMPT_SUGGESTIONS_MAX,
+  type SuggestPromptsRequest,
+} from '@shared/domain/prompt-assist'
+import { USAGE_PERIODS, type UsageCursors, type UsagePeriod } from '@shared/domain/usage'
+
+const usagePeriod = z.literal(USAGE_PERIODS)
+
+export function parseUsagePeriod(value: unknown): UsagePeriod {
+  return usagePeriod.parse(value)
+}
+
+/** One cursor per account id. Bounded: a window asks for a handful of keys, never thousands. */
+const usageCursors = z.record(z.string().min(1), z.number().int().min(0))
+
+export function parseUsageCursors(value: unknown): UsageCursors {
+  return usageCursors.parse(value)
+}
 
 const modelId = z.string().trim().min(1)
 
@@ -20,7 +43,7 @@ export function parseJobId(value: unknown): string {
   return jobId.parse(value)
 }
 
-const assetName = z.string().trim().min(1).max(200)
+const assetName = z.string().trim().min(1).max(ASSET_NAME_MAX_LENGTH)
 
 export function parseAssetName(value: unknown): string {
   return assetName.parse(value)
@@ -30,7 +53,7 @@ export function parseAssetName(value: unknown): string {
  * Only the payload, never a data URL: an `data:image/png;base64,` prefix reaches the API as
  * part of the picture and comes back as an opaque decoding error.
  */
-const base64 = z
+export const base64Payload = z
   .string()
   .min(1)
   // Only the head: the payload is megabytes long, and a data URL prefix — the one mistake this
@@ -41,7 +64,7 @@ const base64 = z
   .refine(value => /^[A-Za-z0-9+/=]+$/.test(value.slice(0, 64)), 'expected raw base64')
 
 export function parseBase64(value: unknown): string {
-  return base64.parse(value)
+  return base64Payload.parse(value)
 }
 
 const facetValue = z.string().trim().min(1).max(80)
@@ -68,6 +91,13 @@ export function parseModelQuery(value: unknown): ModelQuery {
   return value === undefined ? {} : modelQuery.parse(value)
 }
 
+/** What a job runs, as the renderer names it — the same shape the manager submits. */
+const jobTarget = z.object({ id: z.string().trim().min(1) })
+
+export function parseJobTarget(value: unknown): JobTarget {
+  return jobTarget.parse(value)
+}
+
 const modelIds = z.array(modelId).max(MODEL_IDS_BATCH_LIMIT)
 
 export function parseModelIds(value: unknown): string[] {
@@ -84,4 +114,68 @@ const generationBody = z.record(z.string(), z.unknown())
 
 export function parseGenerationBody(value: unknown): Record<string, unknown> {
   return generationBody.parse(value)
+}
+
+/**
+ * The draft is bounded rather than trusted: the API's own field caps at 250 000 characters on
+ * the model measured, and a renderer must not be able to push a megabyte through a channel
+ * whose answer is a handful of sentences.
+ */
+const suggestPrompts = z.object({
+  modelId,
+  prompt: z.string().max(PROMPT_INPUT_MAX).optional(),
+  images: z.array(z.string().trim().min(1)).max(PROMPT_IMAGES_MAX).optional(),
+  numResults: z.number().int().min(1).max(PROMPT_SUGGESTIONS_MAX).optional(),
+})
+
+export function parseSuggestPrompts(value: unknown): SuggestPromptsRequest {
+  return suggestPrompts.parse(value)
+}
+
+/** Bounded like the draft above, and non-empty: there is nothing to translate in blank text. */
+const promptDraft = z.string().trim().min(1).max(PROMPT_INPUT_MAX)
+
+export function parsePromptDraft(value: unknown): string {
+  return promptDraft.parse(value)
+}
+
+/** At least one, or there is no style to read; capped where the API caps its references. */
+const referenceImages = z.array(z.string().trim().min(1)).min(1).max(PROMPT_IMAGES_MAX)
+
+export function parseReferenceImages(value: unknown): string[] {
+  return referenceImages.parse(value)
+}
+
+/**
+ * Jobs read back from disk. Non-empty strings throughout: a hand-rolled guard once let a blank
+ * pair through in the settings, and a blank `remoteId` here would poll a job id that is not one.
+ *
+ * An entry that does not parse is dropped rather than failing the read — a file the studio
+ * cannot make sense of must not be a studio that will not start.
+ */
+const storedJob = z
+  .object({
+    id: z.string().trim().min(1),
+    remoteId: z.string().trim().min(1),
+    targetId: z.string().trim().min(1).optional(),
+    /** What `targetId` was called in an earlier version. Read, never written. */
+    modelId: z.string().trim().min(1).optional(),
+    label: z.string(),
+    accountId: z.string().trim().min(1),
+    projectPath: z.string().trim().min(1),
+    createdAt: z.string().trim().min(1),
+  })
+  // A note written by an earlier version spells its target differently, and may carry fields this
+  // build no longer knows — zod strips those. Dropping the whole entry rather than reading what
+  // it does hold would abandon a generation that is running and already paid for.
+  .transform(({ targetId, modelId, ...job }) => {
+    const target = targetId ?? modelId
+    return target === undefined ? null : { ...job, targetId: target }
+  })
+
+const storedJobs = z.array(storedJob.nullable().catch(null))
+
+export function parseStoredJobs(content: string): PersistedJob[] {
+  const parsed: unknown = JSON.parse(content)
+  return storedJobs.parse(parsed).filter(job => job !== null)
 }

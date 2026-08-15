@@ -4,33 +4,34 @@
 
 ---
 
-## L'étagère du projet
+## L’étagère du projet
 
 Le panneau **Assets** montre tout ce que votre projet contient : ce que vous avez généré, et ce
 que vous avez importé.
 
-C'est l'équivalent d'un navigateur de contenu — la bibliothèque de matière première dans
+C’est l’équivalent d’un navigateur de contenu — la bibliothèque de matière première dans
 laquelle vous piochez.
 
-**Où il se trouve** dépend de l'espace où vous êtes :
+**Où il se trouve** dépend de l’espace où vous êtes :
 
-| Espace | Où se trouve l'étagère |
+| Espace | Où se trouve l’étagère |
 |---|---|
-| Image, 3D, Audio, Textures, Skyboxes | dans la **bande basse** |
-| Vidéo | dans la **colonne de gauche**, moitié haute |
+| Image, Textures, Skyboxes | dans la **bande basse** |
+| Vidéo, Audio, 3D | dans la **colonne de droite**, moitié haute |
 
-Ce n'est pas un caprice : dans l'espace Vidéo, la bande basse appartient au montage, qui a besoin
-de toute la largeur. Il faut pourtant que l'étagère et le montage tiennent l'écran **ensemble**
-pour qu'on puisse glisser une prise de l'une vers l'autre — l'étagère prend donc la moitié haute
-de la colonne de gauche, qui est libre dans cet espace.
+Ce n’est pas un caprice : dans les espaces Vidéo, Audio et 3D, la bande basse appartient à la
+timeline, qui a besoin de toute la largeur. Il faut pourtant que l’étagère et la timeline tiennent
+l’écran **ensemble** pour qu’on puisse glisser une prise ou un modèle de l’une vers l’autre —
+l’étagère prend donc la moitié haute de la colonne de droite, celle des panneaux qui servent le
+document ouvert.
 
 ---
 
-## Ce qu'on y trouve
+## Ce qu’on y trouve
 
-Six types d'assets :
+Six types d’assets :
 
-| Type | Ce que c'est | Où il est rangé |
+| Type | Ce que c’est | Où il est rangé |
 |---|---|---|
 | **Image** | une image fixe | `assets/img/` |
 | **Vidéo** | un plan animé | `assets/vid/` |
@@ -48,110 +49,274 @@ Six types d'assets :
 | Zone | Où ils sont |
 |---|---|
 | **Bande basse** | sur la **ligne de titre**, à côté du nom du panneau |
-| **Colonne de gauche** (espace Vidéo) | sur leur **propre ligne**, sous le titre |
+| **Colonne de droite** (espaces Vidéo, Audio et 3D) | sur leur **propre ligne**, sous le titre |
 
 Dans une bande, la ligne est large et presque vide : y loger la barre épargne une rangée
-entière, et l'étagère est là pour montrer des assets, pas des boutons. Dans une colonne de
-320 pixels, la même barre pousserait le bouton de fermeture hors du cadre — elle redescend donc
-sous le titre.
+entière, et l’étagère est là pour montrer des assets, pas des boutons. Dans une colonne étroite,
+la même barre pousserait le bouton de fermeture hors du cadre — elle redescend donc sous le
+titre.
 
-| Contrôle | Ce qu'il fait |
+| Contrôle | Ce qu’il fait |
 |---|---|
-| **Rechercher…** | filtre sur le **nom** de l'asset, à la frappe |
-| **Type** | ne garde qu'une ou plusieurs sortes d'assets |
+| **Rechercher…** | filtre sur le **nom** de l’asset, à la frappe |
+| **Type** | ne garde qu’**une seule** sorte d’assets — en choisir une remplace la précédente |
+| **Emplacement** | ne garde que les assets dans un certain état vis-à-vis de la bibliothèque |
 | **Icônes** / **Liste** | grille de vignettes, ou liste dense |
-| **Réduire** / **Agrandir** | la taille des vignettes |
+| **Réduire les vignettes** / **Agrandir les vignettes** | leur taille |
 
 Le filtrage est **instantané**, même sur un gros projet : tout le catalogue est déjà chargé en
 mémoire, contrairement au panneau Modèles qui interroge le catalogue Scenario à distance.
 
-Les deux vues sont **virtualisées** : seul ce qui est réellement à l'écran est dessiné. Un
-projet de plusieurs milliers d'assets défile donc sans à-coups.
+> **La recherche ne réclame pas vos accents.** Taper `foret` trouve « Forêt d’hiver », et `ete`
+> trouve « Été ». C’est vrai ici et dans la recherche des préférences : on cherche en tapant, pas
+> en épelant. Le panneau **Modèles** n’en dit rien, parce qu’il ne cherche pas lui-même — il passe
+> le mot à l’API et affiche ce qu’elle rend.
+>
+> Cela vaut aussi pour les fichiers venus du Finder. macOS écrit les noms sous une forme où
+> l’accent est un caractère à part, invisible à l’œil mais différent pour la machine — un asset
+> importé ne répondait donc pas toujours à son propre nom retapé ici. Les deux formes sont
+> désormais traitées comme une seule.
 
-### Quand l'étagère est vide
+Les deux vues sont **virtualisées** : seul ce qui est réellement à l’écran est dessiné. Un
+projet de plusieurs milliers d’assets défile donc sans à-coups.
 
-Le message dit lequel des trois cas vous êtes, parce qu'ils appellent des réponses différentes :
+### Quand l’étagère est vide
+
+Le message dit lequel des trois cas vous êtes, parce qu’ils appellent des réponses différentes :
 
 | Message | Situation |
 |---|---|
-| « Ouvrez un projet pour voir ses assets. » | aucun projet n'est ouvert |
+| « Ouvrez un projet pour voir ses assets. » | aucun projet n’est ouvert |
 | « Aucun asset. Générez quelque chose pour commencer. » | le projet est vide |
 | « Aucun résultat pour ce filtre. » | vos filtres sont trop restrictifs |
 
 ---
 
-## Se servir d'un asset
+## Se servir d’un asset
 
 | Geste | Effet |
 |---|---|
-| **Clic** | sélectionne — l'Inspecteur, à droite, montre ses informations |
-| **Double-clic** | envoie l'asset dans **l'onglet ouvert devant vous** |
-| **Glisser-déposer** | dépose l'asset là où vous le lâchez |
+| **Clic** | sélectionne — l’Inspecteur, à droite, montre ses informations |
+| **⌘-clic** *(Ctrl ailleurs)* | ajoute cet asset à la sélection, ou l’en retire |
+| **Maj-clic** | sélectionne toute la plage entre le dernier choisi et celui-ci |
+| **Double-clic** | **ouvre l’asset dans son propre onglet**, dans l’espace qui édite son type |
+| **Clic droit** | ouvre la liste de **toutes** ses destinations |
+| **Glisser-déposer** | dépose l’asset là où vous le lâchez |
 
-### Le double-clic ne fait pas ce qu'on croit
+### Choisir plusieurs assets
 
-**Il n'ouvre jamais de nouvel onglet.** C'est le point qui surprend tout le monde une fois, et une
-seule : le double-clic **envoie** l'asset dans le document déjà en avant.
+Deux actions de l’étagère travaillent sur **plusieurs** assets à la fois : **Envoyer** et
+**Nommer**. C’est pour elles que la sélection multiple existe.
 
-Ce que ça donne, selon l'onglet qui est devant :
+**Maj-clic étend, ⌘-clic pioche.** Le premier prend tout ce qui se trouve entre le dernier asset
+choisi et celui que vous cliquez ; le second n’ajoute — ou ne retire — que celui-là. Un clic nu
+recommence à zéro.
 
-| L'onglet en avant est… | Un double-clic sur un asset… |
+**Le point de départ suit vos choix.** Après un ⌘-clic, c’est ce dernier asset qui sert d’ancre au
+Maj-clic suivant : vous piochez trois vignettes ici, puis vous étendez à partir de la troisième,
+pas de la première.
+
+**L’étagère s’atteint aussi au clavier**, comme les autres listes du studio — voir
+[Parcourir une liste au clavier](15-raccourcis.md#parcourir-une-liste-au-clavier).
+
+### Le clic droit envoie l’asset ailleurs que le double-clic
+
+**Les deux gestes ne servent pas le même besoin, et c’est le partage à retenir** : le double-clic
+sert **l’asset** — il l’ouvre chez lui ; le clic droit sert **le document déjà ouvert** — il y
+envoie l’asset. Le premier crée un onglet, le second n’en crée aucun.
+
+Le clic droit liste toutes les destinations, toujours dans le même ordre :
+
+| Ligne | Où elle envoie l’asset | Pour quels types |
+|---|---|---|
+| **Utiliser comme ciel** | le ciel ouvert, espace Skyboxes | images |
+| **Ajouter à la scène** | la scène 3D ouverte | maillages |
+| **Ouvrir dans l’éditeur audio** | la prise ouverte, espace Audio | sons |
+| **Placer comme calque** | l’image ouverte, espace Image | images |
+| **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
+| **Utiliser comme couleur de base** | la matière ouverte, espace Textures | images |
+| **Afficher dans le gestionnaire de fichiers** | ouvre le dossier qui contient le fichier | tous |
+
+Chaque ligne porte l’icône de son espace, la même que dans la barre de titre. Le menu ne montre
+que les destinations capables de recevoir **ce type-là** : le clic droit sur un son n’offre pas
+de le poser comme ciel.
+
+**En revanche, une destination dont l’espace n’a pas de document ouvert reste affichée, mais
+grisée.** C’est délibéré : un menu qui change de longueur selon ce qui est ouvert est un menu
+qu’on ne peut pas apprendre. Une ligne grisée vous dit quoi faire — ouvrir un document dans cet
+espace — là où une ligne absente ne dit rien du tout.
+
+C’est aussi ce qu’il faut regarder quand un envoi ne mène nulle part : le clic droit montre en une
+fois ce que cet asset peut faire, et ce qui manque pour qu’il le fasse.
+
+### Le double-clic ouvre l’asset, il ne l’envoie nulle part
+
+**Un asset ouvert par double-clic a son onglet à lui**, dans l’espace qui édite son type : une
+image dans Image, un maillage dans 3D, un son dans Audio. Vous n’avez rien à ouvrir avant.
+
+**Il ne regarde jamais l’onglet que vous avez devant vous** : le double-clic ouvre l’asset dans
+l’espace de son type, quoi qu’il y ait à l’écran.
+
+**Rouvrir le même asset revient à son onglet**, il n’en naît pas un second : deux onglets sur un
+même document sont deux historiques, et la seconde sauvegarde écraserait la première.
+
+**Un refus se dit**, plutôt que de laisser un onglet vide à la place : un asset qu’aucun éditeur
+ne prend, ou qui n’est pas encore descendu sur votre disque, vous le fait savoir.
+
+Le type de l’asset désigne son éditeur, et rien d’autre n’entre en compte :
+
+| Ce que vous double-cliquez | Où il s’ouvre |
 |---|---|
-| un **ciel** (espace Skyboxes) | pose l'image comme ciel — seules les images du projet sont acceptées |
-| un **son** (espace Audio) | charge cette prise dans l'éditeur, si c'est bien un son |
-| une **séquence** (espace Vidéo) | pose un clip sur une piste, à la tête de lecture |
-| une **image** (espace Image) | pose l'image comme un calque de plus, déjà armé |
-| une **scène 3D** | fait entrer le maillage dans la scène, s'il s'agit bien d'un maillage |
-| une **texture** | **rien du tout** — une matière se remplit au glisser-déposer |
-| aucun onglet ouvert | **rien du tout** |
+| une **image** | l’espace Image |
+| une **texture** | l’espace Textures |
+| un **ciel** | l’espace Skyboxes |
+| un **maillage** | l’espace 3D |
+| un **son** | l’espace Audio |
+| une **vidéo** | l’espace Vidéo |
 
-**Rien ne prévient quand il ne se passe rien.** Pas de message, pas de refus visible : le
-double-clic est simplement sans effet. Si vous double-cliquez et que rien ne bouge, la question à
-se poser est **« quel onglet est devant ? »**, jamais « l'asset est-il abîmé ? ».
+**Un double-clic qui ne mène nulle part le dit** : « Cet asset n’a pas pu être ouvert ». C’est le
+cas d’un type qu’aucun éditeur ne prend, ou d’un asset qui n’est pas encore descendu sur votre
+disque — pas d’un asset abîmé.
 
-> **Pour ouvrir un document, c'est le bouton `+` du rail gauche**, dans l'espace voulu. Il crée un
-> document neuf. Le double-clic sert ensuite à y faire entrer de la matière — quand l'espace sait
-> en recevoir.
+> **Le bouton `+` du rail gauche crée un document VIDE**, dans l’espace voulu. Le double-clic, lui,
+> ouvre un document **sur un asset**. Ce sont les deux façons de commencer, et le clic droit sert
+> ensuite à faire entrer de la matière dans ce qui est ouvert.
 
-### Ce que le glisser-déposer sait faire aujourd'hui
+### Ce que le glisser-déposer sait faire aujourd’hui
 
 | Vous glissez… | Vers… | Résultat |
 |---|---|---|
-| une vidéo ou un son | la **timeline** | un clip sur une piste |
-| une image | la **toile** de l'espace Image | elle devient un calque de plus, armé |
-| une image | l'aperçu d'une **texture** | elle devient la couleur de base |
-| une image panoramique | l'aperçu d'un **ciel** | elle devient le ciel |
-| un maillage | la **vue 3D** | il entre dans la scène, à l'origine |
+| n’importe quel asset | la **timeline** | un clip sur la piste visée |
+| une image | la **toile** de l’espace Image | elle devient un calque de plus, armé |
+| une image | l’aperçu d’une **matière** | elle devient la couleur de base |
+| une image | la vignette d’un **canal** précis | elle devient ce canal-là |
+| une image panoramique | l’aperçu d’un **ciel** | elle devient le ciel |
+| un maillage | la **vue 3D** | il entre dans la scène, à l’origine |
+| un son | l’**éditeur audio** | il devient la prise ouverte |
+| un asset | un **champ d’asset** d’un formulaire de génération | il devient l’entrée du champ |
 
-**Ces cinq-là, et rien d'autre.** Dans la vue 3D, le dépôt est accepté **partout sur la vue**, la
-barre d'outils comprise : un lâcher qui tombe à côté serait un raté qu'on ne voit pas venir.
+**La timeline ne trie pas.** Elle prend ce qu’on lui donne : un asset sans durée propre reçoit une
+durée par défaut plutôt qu’un refus. Dans la vue 3D, le dépôt est accepté **partout sur la vue**,
+la barre d’outils comprise : un lâcher qui tombe à côté serait un raté qu’on ne voit pas venir.
 
 ---
 
-## L'inspecteur d'un asset
+## L’inspecteur d’un asset
 
-Sélectionnez un asset et regardez l'**Inspecteur**, dans la colonne de droite. Il montre, selon
-ce qu'il sait :
+Sélectionnez un asset et regardez l’**Inspecteur**, dans la colonne de droite. Il montre, selon
+ce qu’il sait :
 
-| Section | Ce qu'elle contient |
+| Section | Ce qu’elle contient |
 |---|---|
-| **Identité** | le nom, le type |
-| **Fichier** | la durée, les dimensions, la taille, la date de création, l'emplacement sur le disque |
-| **Génération** | le modèle, le prompt, la graine — et le bouton **Régénérer** |
+| **Identité** | le nom, le type, la durée, les dimensions, la taille, la date de création |
+| **Génération** | le modèle, la graine, le prompt — et deux boutons, **Épingler la recette** et **Régénérer** |
+| **Fichier** | l’**Emplacement** sur le disque, et rien d’autre — le groupe n’apparaît que pour un asset présent localement |
 
-Le bouton **Révéler dans le gestionnaire de fichiers** ouvre le dossier contenant le fichier,
-dans le Finder, l'Explorateur ou votre gestionnaire de fichiers.
+Le bouton **Afficher dans le gestionnaire de fichiers** ouvre le dossier contenant le fichier,
+dans le Finder, l’Explorateur ou votre gestionnaire de fichiers.
 
-> « **Fichier introuvable** » signifie qu'un média lié a été déplacé ou supprimé de son
-> emplacement d'origine. Voir la section suivante.
+> « **Fichier introuvable** » signifie qu’un média lié a été déplacé ou supprimé de son
+> emplacement d’origine. Voir la section suivante.
+
+---
+
+## La bibliothèque de votre compte
+
+Votre projet est un dossier sur votre disque. Votre compte Scenario, lui, a sa propre
+bibliothèque, en ligne. Les deux existent séparément, et **rien ne circule entre eux sans que
+vous le demandiez**.
+
+> **« Demander » ne veut pas dire « demander depuis cette étagère ».** Deux gestes faits
+> ailleurs envoient une image sans passer par les boutons ci-dessous : **lancer une génération**
+> qui porte une image de référence, et cliquer sur **Décrire le style des références** dans le
+> générateur (chapitre 6). Dans les deux cas l’API doit voir l’image pour répondre, donc le
+> studio l’envoie une fois, et son badge passe à **Synchronisé**. Rien n’est envoyé pendant que
+> vous tapez.
+
+### Ce que le badge d’une vignette raconte
+
+Une petite marque dit où en est un asset vis-à-vis de la bibliothèque :
+
+| Badge | Ce qu’il veut dire |
+|---|---|
+| **Local seulement** | le fichier est chez vous, la bibliothèque ne le connaît pas |
+| **Synchronisé avec la bibliothèque** | les deux côtés ont la même version |
+| **Modifié ici — à envoyer** | votre copie a bougé depuis le dernier envoi |
+| **Modifié dans la bibliothèque — à rapatrier** | c’est l’autre côté qui a bougé |
+| **Modifié des deux côtés** | les deux versions ont divergé |
+| **Le dernier envoi a échoué** | la tentative précédente n’est pas passée |
+| **Appartient à un autre projet** | le jumeau en ligne relève d’une autre clé API que celle qui est active |
+
+**Les deux premiers ne se dessinent qu’en vue liste.** Sur une vignette, « local seulement » et
+« synchronisé » restent muets : ce sont les deux états ordinaires, et les marquer couvrirait la
+grille de pastilles qui ne disent rien. Une vignette sans badge est donc une vignette qui va
+bien : ce qu’on cherche du regard, c’est ce qui s’affiche.
+
+Ce badge n’est pas stocké, il est **recalculé** : il dépend du compte actif, et une clé API
+ouvre sur un projet et un seul. Changez de compte dans la barre de titre, et les badges se
+relisent — c’est le même fichier, c’est la bibliothèque d’en face qui a changé.
+
+> **Deux de ces sept badges sont hors d’atteinte aujourd’hui**, et c’est cohérent : tant que les
+> transferts se déclenchent à la main, rien ne peut modifier la version en ligne dans votre dos.
+> « À rapatrier » et « modifié des deux côtés » n’apparaîtront qu’avec la synchronisation
+> automatique, quand elle existera.
+>
+> **« Appartient à un autre projet », lui, s’obtient sans rien attendre** : rapatriez un asset
+> avec une clé, basculez sur une autre dans la barre de titre, et il porte le badge. C’est le
+> paragraphe ci-dessus à l’œuvre, pas un cas de synchronisation.
+>
+> Le filtre **Emplacement** ne propose pourtant que quatre états — *local seulement*,
+> *synchronisé*, *à envoyer* et *échec*. « Autre projet » peut donc s’afficher sur une vignette
+> sans qu’on puisse s’en servir pour filtrer.
+
+### Envoyer une sélection
+
+Le bouton **Envoyer**, sur la ligne de titre de l’étagère, téléverse les assets **sélectionnés**
+dans la bibliothèque de votre compte — voir [Choisir plusieurs assets](#choisir-plusieurs-assets)
+pour en désigner plus d’un.
+
+Trois choses le décrivent mieux qu’une phrase de présentation :
+
+- **il ne part jamais tout seul** — il faut une sélection, et un clic ;
+- **il refuse de se lancer deux fois** : pendant un transfert, le bouton est inactif, pour
+  qu’un second clic ne pousse pas par-dessus le premier ;
+- **il rend compte asset par asset.** Ce qui est passé passe, ce qui a échoué prend le badge
+  *échec* et une ligne dans le journal — un envoi n’est pas un tout ou rien.
+
+Un asset non sélectionné, ou un projet fermé, laisse le bouton grisé.
+
+> **L’étagère n’a pas de bouton pour rapatrier ; l’accueil en a un.** La bande **Votre
+> bibliothèque**, sur la page d’accueil, liste ce que votre compte détient, et cliquer une
+> vignette la fait descendre dans le projet ouvert. Le transfert va donc dans les deux sens —
+> mais chaque sens a sa porte, et ce n’est pas la même : l’envoi part de l’étagère, le
+> rapatriement de l’accueil.
+>
+> **Le clic ne rapatrie qu’une fois.** Si l’asset est déjà sur votre disque, la même vignette
+> l’**ouvre** au lieu de le retélécharger. Et sans projet ouvert, ou pendant un transfert en
+> cours, elle ne réagit pas du tout.
+
+### Nommer par ce que l’API voit
+
+Le bouton **Nommer**, à côté, demande à l’API de regarder les images sélectionnées et de leur
+donner un nom tiré de leur contenu. Les noms obtenus atterrissent dans le catalogue du projet.
+
+**Il ne voit que les images que la bibliothèque connaît déjà.** L’API décrit ce qu’elle héberge :
+une image qui n’a jamais été envoyée est écartée de la demande, sans le dire. Envoyez-la d’abord,
+nommez ensuite.
+
+> **Ce bouton n’est pas la seule porte, et c’est la seule chose à retenir ici.** Le réglage
+> **Nommer les assets rapatriés**, dans **Génération**, est **coché par défaut** : une image qui
+> arrive sans nom utile est envoyée à l’API sans qu’on ait cliqué, et cela **consomme des unités
+> créatives**. Le chapitre [Tous les réglages](14-reglages.md) le détaille — c’est le seul endroit
+> où le studio dépense de lui-même, et le décocher suffit à l’arrêter.
 
 ---
 
 ## Importer vos propres médias
 
-Le bouton **Importer un média**, sur la ligne de titre de l'étagère.
+Le bouton **Importer un média**, sur la ligne de titre de l’étagère.
 
-### Ce qui s'importe
+### Ce qui s’importe
 
 | Type | Extensions acceptées |
 |---|---|
@@ -160,30 +325,43 @@ Le bouton **Importer un média**, sur la ligne de titre de l'étagère.
 | **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
 | **3D** | `glb` |
 
-> **Les modèles 3D s'importent au format `.glb`.** Le `.gltf` séparé (avec ses fichiers `.bin`
-> et ses textures à côté) ne s'importe pas : le studio sert chaque asset seul, sans son
+> **Les modèles 3D s’importent au format `.glb`.** Le `.gltf` séparé (avec ses fichiers `.bin`
+> et ses textures à côté) ne s’importe pas : le studio sert chaque asset seul, sans son
 > voisinage, et les fichiers liés resteraient introuvables. `.obj`, `.fbx` et les HDRI (`.hdr`)
-> ne s'importent pas encore.
+> ne s’importent pas encore.
 > Un `.exr` importé est catalogué comme une image, pas comme un ciel. Voir
-> [Ce qui n'existe pas encore](18-limites.md).
+> [Ce qui n’existe pas encore](18-limites.md).
 
-### Le fichier n'est pas copié
+### Le fichier n’est pas copié — à l’import
 
-**Important.** Le studio ne copie pas votre fichier dans le projet : il crée un **lien** vers
-l'endroit où il se trouve.
+**Important.** À l’import, le studio ne copie pas votre fichier dans le projet : il crée un
+**lien** vers l’endroit où il se trouve.
 
 Deux conséquences :
 
-- **Avantage** — un rush vidéo de 12 Go n'est pas dupliqué. Votre projet reste léger.
-- **Inconvénient** — si vous déplacez, renommez ou supprimez le fichier d'origine, le lien se
-  casse, et l'inspecteur affiche « Fichier introuvable ».
+- **Avantage** — un rush vidéo de 12 Go n’est pas dupliqué. Votre projet reste léger.
+- **Inconvénient** — si vous déplacez, renommez ou supprimez le fichier d’origine, le lien se
+  casse **en silence** : rien ne le signale tant que vous n’avez pas cliqué sur **Afficher dans le
+  gestionnaire de fichiers**, et c’est ce clic, ne trouvant rien, qui fait apparaître
+  « Fichier introuvable » dans l’inspecteur.
 
-Si vous devez emporter un projet ailleurs, emportez aussi les médias qu'il pointe — ou copiez-les
+Si vous devez emporter un projet ailleurs, emportez aussi les médias qu’il pointe — ou copiez-les
 vous-même dans le dossier du projet avant de les importer.
 
-### Ce qui se passe pendant l'import
+**Mais l’ÉDITER le fait entrer dans le projet.** Un média lié que vous retouchez puis enregistrez —
+`⌘S` sur une image, **Appliquer** sur une prise sonore — est écrit dans le dossier du projet, et
+c’est cette copie que le studio montre ensuite partout : l’étagère, la scène, l’inspecteur.
+Le lien est remplacé par un vrai fichier, et **Afficher dans le gestionnaire de fichiers** mène
+désormais là.
 
-Un bandeau apparaît au-dessus de l'étagère et suit chaque fichier, étape par étape :
+**Le fichier que vous aviez pointé n’est pas touché.** Il reste où il est, dans l’état où vous
+l’avez laissé : écrire dans un dossier que vous avez seulement montré au studio serait un autre
+geste que celui d’éditer un asset. Si vous vouliez modifier l’original, faites-le dans l’outil qui
+l’a produit.
+
+### Ce qui se passe pendant l’import
+
+Un bandeau apparaît au-dessus de l’étagère et suit chaque fichier, étape par étape :
 
 | Étape | Ce qui se passe | Pourquoi |
 |---|---|---|
@@ -191,43 +369,52 @@ Un bandeau apparaît au-dessus de l'étagère et suit chaque fichier, étape par
 | **Analyse…** | le studio lit ce que le fichier est réellement | durée, codec, dimensions, images par seconde |
 | **Empreinte…** | il calcule une signature du contenu | pour repérer les doublons |
 | **Proxy…** | il fabrique une copie allégée de la vidéo | pour naviguer dedans sans à-coups |
-| **Waveform…** | il dessine la forme d'onde du son | pour la voir sur la piste audio |
+| **Forme d’onde…** | il dessine la forme d’onde du son | pour la voir sur la piste audio |
 | **Prêt** | terminé | |
 
-**Chaque étape est interruptible.** Le bouton **Interrompre la préparation** l'arrête : vous
-n'avez pas à attendre le proxy d'un rush de vingt minutes pour commencer à travailler. Le
+**Chaque étape est interruptible.** Le bouton **Interrompre la préparation** l’arrête : vous
+n’avez pas à attendre le proxy d’un rush de vingt minutes pour commencer à travailler. Le
 fichier reste importé, simplement sans son proxy.
 
 Deux messages particuliers :
 
 | Message | Ce que ça veut dire |
 |---|---|
-| **Déjà dans le projet** | ce fichier exact y est déjà — c'est l'empreinte qui l'a vu |
+| **Déjà dans le projet** | ce fichier exact y est déjà — c’est l’empreinte qui l’a vu |
 | **Fichier illisible** | le fichier est corrompu, ou dans un format que le studio ne décode pas |
 
 ### Si la préparation vidéo est indisponible
 
-Le proxy et la forme d'onde sont fabriqués par **ffmpeg**, un utilitaire de traitement vidéo.
+Le proxy et la forme d’onde sont fabriqués par **ffmpeg**, un utilitaire de traitement vidéo.
 
-**Le studio porte le sien**, sur macOS, Windows et Linux. Vous n'avez rien à installer : c'est
-une décision assumée, parce qu'un import qui a besoin d'un proxy n'est pas le moment d'apprendre
-à quelqu'un ce qu'est un codec.
+**Le studio porte le sien**, sur macOS, Windows et Linux. Vous n’avez rien à installer : c’est
+une décision assumée, parce qu’un import qui a besoin d’un proxy n’est pas le moment d’apprendre
+à quelqu’un ce qu’est un codec.
 
 Le studio essaie trois candidats, dans cet ordre :
 
-1. le binaire **livré avec l'application** ;
+1. le binaire **livré avec l’application** ;
 2. le chemin que vous avez indiqué dans **Réglages ▸ Médias ▸ Chemin de ffmpeg** ;
 3. ce qui se trouve sur le `PATH` de votre système.
 
-Et il retient le premier qui **démarre**, pas le premier qui existe : il le lance pour vérifier.
-Un binaire présent mais cassé est traité comme absent — voir
+Il retient le **premier qui existe**, et s’arrête là : il ne redescend pas la liste. Le binaire
+retenu est bien lancé ensuite, mais pour dire si la préparation vidéo est disponible — pas pour
+choisir.
+
+**Deux conséquences, et la seconde surprend.** Le chemin des réglages ne sert que si le binaire
+livré est **absent** — c’est le cas quand on lance le studio depuis son code source sans avoir
+exécuté `pnpm ffmpeg:fetch`. Et si le binaire retenu est présent mais ne démarre pas, indiquer un
+autre chemin dans les réglages **ne le rattrape pas** : le studio annonce l’indisponibilité, il
+faut réparer ou remplacer ce binaire-là. Voir
 [Quand ça coince](16-depannage.md#le-cas-déroutant--ffmpeg-est-là-et-le-studio-dit-quil-ny-est-pas).
 
-Si aucun des trois ne répond, le bandeau le dit : « Préparation vidéo indisponible : ni copie
-allégée ni forme d'onde. »
+Quand le candidat retenu ne démarre pas — ou qu’il n’y en a aucun — un **triangle d’alerte ambre**
+apparaît dans la barre de titre de
+l’étagère à assets, à gauche du compteur. Survolez-le, ou atteignez-le au clavier, et il dit :
+« Préparation vidéo indisponible : ni copie allégée ni forme d’onde. » `Échap` referme l’infobulle.
 
-**L'import fonctionne quand même.** Vous perdez seulement le confort : la navigation dans les
-vidéos sera moins fluide, et les pistes audio n'afficheront pas leur dessin.
+**L’import fonctionne quand même.** Vous perdez seulement le confort : la navigation dans les
+vidéos sera moins fluide, et les pistes audio n’afficheront pas leur dessin.
 
 **Ce cas est devenu rare.** Il ne concerne guère que qui a lancé le studio depuis son code source
 sans avoir exécuté `pnpm ffmpeg:fetch`.
@@ -239,7 +426,7 @@ sans avoir exécuté `pnpm ffmpeg:fetch`.
 Tout est dans le dossier du projet, à un endroit précis et lisible :
 
 ```
-mon-projet.scenario/
+Mon projet/
 └── assets/
     ├── img/     les images
     ├── vid/     les vidéos
@@ -249,10 +436,10 @@ mon-projet.scenario/
     └── sky/     les ciels
 ```
 
-Ce sont de vrais fichiers, dans de vrais formats. Vous pouvez les ouvrir avec n'importe quel
+Ce sont de vrais fichiers, dans de vrais formats. Vous pouvez les ouvrir avec n’importe quel
 autre logiciel, les copier, les envoyer.
 
-**Sauf les médias importés**, qui restent là où ils étaient — c'est tout l'intérêt du lien.
+**Sauf les médias importés**, qui restent là où ils étaient — c’est tout l’intérêt du lien.
 
 ---
 

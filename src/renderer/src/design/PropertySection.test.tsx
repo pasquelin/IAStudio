@@ -18,6 +18,22 @@ describe('PropertySection', () => {
     )
   })
 
+  // One heading, two gestures: what a click does depends on where it already stands.
+  it('says which of its two gestures a click would do', async () => {
+    render(
+      <PropertySection title="Transform">
+        <p>fields</p>
+      </PropertySection>,
+    )
+    const heading = screen.getByRole('button', { name: /Transform/ })
+
+    expect(heading).toHaveAttribute('data-tooltip-content', 'Replie ce groupe de propriétés')
+
+    await userEvent.click(heading)
+
+    expect(heading).toHaveAttribute('data-tooltip-content', 'Déplie ce groupe de propriétés')
+  })
+
   it('folds and unfolds on its heading', async () => {
     render(
       <PropertySection title="Transform">

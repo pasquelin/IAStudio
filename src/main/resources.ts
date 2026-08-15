@@ -32,3 +32,11 @@ export function resourcesRoot(): string {
 export function bundledFfmpeg(root: string, platform: NodeJS.Platform): string {
   return join(root, 'ffmpeg', platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
 }
+
+/**
+ * The voice detector dictation listens through, fetched by `pnpm stt:fetch`. The same bytes on
+ * every platform — it is read by the engine, not executed, so nothing here varies.
+ */
+export function bundledVad(root: string): string {
+  return join(root, 'stt', 'silero_vad.onnx')
+}

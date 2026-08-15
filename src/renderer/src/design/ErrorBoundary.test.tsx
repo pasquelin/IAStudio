@@ -81,21 +81,8 @@ describe('ErrorBoundary', () => {
     expect(screen.queryByText('Ce panneau a rencontré une erreur.')).not.toBeInTheDocument()
   })
 
-  it('reports the error and the component stack, so a crash is not silent', () => {
-    render(
-      <ErrorBoundary>
-        <Boom />
-      </ErrorBoundary>,
-    )
-
-    const reported = vi.mocked(console.error).mock.calls.flat().join(' ')
-    // The prefix is ours: React reports caught errors on its own, so asserting only on the
-    // message and the stack would pass with `componentDidCatch` deleted.
-    expect(reported).toContain('Render failed:')
-    expect(reported).toContain('panel exploded')
-    expect(reported).toContain('Boom')
-  })
-
+  // What it catches reaches the log through the root, never from here: `app/root-errors.test.tsx`
+  // mounts this very boundary and asserts the entry that crosses.
   it('renders the children again after a retry, once they stop throwing', async () => {
     // Outside the component on purpose: the boundary unmounts what threw, so state held
     // inside it would not survive to answer differently on the second attempt.

@@ -2,12 +2,14 @@ import { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
 import type { Credentials } from '@main/settings/accounts'
 import {
+  clientFor,
   createClientProvider,
   describeFailure,
   failureOf,
   NotAuthenticatedError,
   testAuthentication,
   type AuthProbe,
+  type ClientProviderDeps,
 } from './client'
 import { createCredentialsWatch } from './credentials-watch'
 
@@ -28,6 +30,27 @@ describe('failure mapping', () => {
     expect(failureOf(apiError(429))).toBe('rate-limited')
     expect(failureOf(apiError(500))).toBe('server')
     expect(failureOf(apiError(503))).toBe('server')
+  })
+
+  /**
+   * The two 403s need opposite answers — a key to fix, or a subscription — and the body is the
+   * only thing that tells them apart. Measured: `POST /generate/custom/model_bytedance-seedance-2-0`
+   * on a `cu-basic` account answers this shape.
+   */
+  it('tells a 403 the plan caused from a 403 the key caused', () => {
+    const restricted = APIError.generate(
+      403,
+      {
+        reason: 'You are not allowed to use this model with your plan',
+        name: 'ModelAccessRestrictedError',
+        details: { currentPlan: 'cu-basic', requiredPlan: 'cu-pro-q3-25' },
+      },
+      undefined,
+      new Headers(),
+    )
+
+    expect(failureOf(restricted)).toBe('plan-restricted')
+    expect(failureOf(apiError(403))).toBe('forbidden')
   })
 
   it('maps an unreachable API to a network failure', () => {
@@ -99,9 +122,27 @@ describe('authentication probe', () => {
 
 describe('client provider', () => {
   const credentials: Credentials = { key: 'api_k', secret: 's3cr3t' }
+  const jsonHeaders = { 'content-type': 'application/json' }
+
+  /** Nothing is ever sent: the SDK is given a transport that answers without a network. */
+  function setup(resolve: () => Credentials | null, overrides: Partial<ClientProviderDeps> = {}) {
+    const sent: string[] = []
+
+    const provider = createClientProvider({
+      resolve,
+      watch: createCredentialsWatch().watch,
+      transport: () => input => {
+        sent.push(String(input))
+        return Promise.resolve(new Response('{"models":[]}', { headers: jsonHeaders }))
+      },
+      ...overrides,
+    })
+
+    return { provider, sent }
+  }
 
   it('has no client when no credentials can be resolved', async () => {
-    const provider = createClientProvider(() => null, createCredentialsWatch().watch)
+    const { provider } = setup(() => null)
 
     expect(provider.get()).toBeNull()
     expect(() => provider.require()).toThrow(NotAuthenticatedError)
@@ -113,7 +154,7 @@ describe('client provider', () => {
 
   it('builds the client once and keeps it', () => {
     const resolve = vi.fn(() => credentials)
-    const provider = createClientProvider(resolve, createCredentialsWatch().watch)
+    const { provider } = setup(resolve)
 
     expect(provider.get()).toBe(provider.get())
     expect(resolve).toHaveBeenCalledOnce()
@@ -127,12 +168,45 @@ describe('client provider', () => {
   it('rebuilds on an account switch, without being told', () => {
     const watch = createCredentialsWatch()
     const resolve = vi.fn(() => credentials)
-    const provider = createClientProvider(resolve, watch.watch)
+    const { provider } = setup(resolve, { watch: watch.watch })
 
     const first = provider.get()
     watch.changed()
 
     expect(provider.get()).not.toBe(first)
     expect(resolve).toHaveBeenCalledTimes(2)
+  })
+
+  it('builds the transport for the account it resolved, and sends through it', async () => {
+    const named: Credentials[] = []
+    const sent: string[] = []
+    const { provider } = setup(() => credentials, {
+      transport: account => {
+        named.push(account)
+        return input => {
+          sent.push(String(input))
+          return Promise.resolve(new Response('{"models":[]}', { headers: jsonHeaders }))
+        }
+      },
+    })
+
+    await provider.require().models.list({ pageSize: 1 })
+
+    expect(named).toEqual([credentials])
+    expect(sent).toHaveLength(1)
+  })
+
+  // Reading usage asks every stored key at once; borrowing the cache would swap the active one.
+  it('builds a client for another account without disturbing the cached one', () => {
+    const { provider } = setup(() => credentials)
+    const active = provider.get()
+
+    const other = clientFor(
+      { key: 'api_other', secret: 'other' },
+      () => () => Promise.resolve(new Response('{}')),
+    )
+
+    expect(other).not.toBe(active)
+    expect(provider.get()).toBe(active)
   })
 })

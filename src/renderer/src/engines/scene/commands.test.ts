@@ -17,8 +17,10 @@ import {
   setGeometryOn,
   setLight,
   setLightOn,
-  setMaterial,
+  setMeshMaterial,
   setMaterialOn,
+  setModelAnimation,
+  setModelTextures,
   setNodeVisible,
   setEnvironment,
   setSelection,
@@ -27,7 +29,12 @@ import {
   setSpriteOn,
   setTransform,
 } from './commands'
-import { lightNodeFixture as light, meshNode as mesh, spriteNodeFixture } from './scene-fixtures'
+import {
+  lightNodeFixture as light,
+  meshNode as mesh,
+  modelNodeFixture,
+  spriteNodeFixture,
+} from './scene-fixtures'
 
 const sprite = (id: string) => spriteNodeFixture(id, 'pic-1')
 import {
@@ -35,9 +42,10 @@ import {
   DEFAULT_SPRITE,
   EMPTY_SCENE,
   IDENTITY_TRANSFORM,
+  nodeById,
   type SceneState,
 } from './scene-state'
-import type { EnvironmentRef } from '@shared/domain/scene'
+import type { EnvironmentRef, Transform } from '@shared/domain/scene'
 
 describe('addNode', () => {
   it('appends the node and selects it', () => {
@@ -128,6 +136,48 @@ describe('setTransform', () => {
     expect(node?.type).toBe('mesh')
     expect(node?.type === 'mesh' && node.geometry.kind).toBe('box')
   })
+
+  /**
+   * The defect: the viewport already refused the handle, but a typed angle still reached the
+   * document — an undo entry for a screen that never moved.
+   */
+  describe('an angle that would show nowhere', () => {
+    const turned: Transform = {
+      ...IDENTITY_TRANSFORM,
+      position: { x: 5, y: 0, z: 0 },
+      rotation: { x: 0, y: Math.PI / 2, z: 0 },
+    }
+
+    it('is dropped off a lone sprite, and the rest of the move written', () => {
+      const start: SceneState = { ...EMPTY_SCENE, nodes: [sprite('s')], selectedIds: [] }
+      const after = setTransform('s', turned).apply(start)
+
+      expect(after.nodes[0]?.transform.rotation).toEqual({ x: 0, y: 0, z: 0 })
+      expect(after.nodes[0]?.transform.position).toEqual({ x: 5, y: 0, z: 0 })
+    })
+
+    it('is written on a sprite others hang from, which turning swings around it', () => {
+      const start: SceneState = {
+        ...EMPTY_SCENE,
+        nodes: [sprite('s'), mesh('m', 's')],
+        selectedIds: [],
+      }
+      const after = setTransform('s', turned).apply(start)
+
+      expect(after.nodes[0]?.transform.rotation.y).toBeCloseTo(Math.PI / 2)
+    })
+
+    // The rule is read at every `apply`, never frozen when the command was built: a child added
+    // between the two would otherwise keep answering for the scene the command was born in.
+    it('is written on redo once a child has arrived', () => {
+      const start: SceneState = { ...EMPTY_SCENE, nodes: [sprite('s')], selectedIds: [] }
+      const command = setTransform('s', turned)
+      command.apply(start)
+      const grown = addNode(mesh('m', 's')).apply(start)
+
+      expect(command.apply(grown).nodes[0]?.transform.rotation.y).toBeCloseTo(Math.PI / 2)
+    })
+  })
 })
 
 describe('setGeometry', () => {
@@ -163,10 +213,10 @@ describe('setGeometry', () => {
   })
 })
 
-describe('setMaterial', () => {
+describe('setMeshMaterial', () => {
   it('replaces the material and comes back', () => {
     const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
-    const command = setMaterial('a', {
+    const command = setMeshMaterial('a', {
       ...DEFAULT_MATERIAL,
       color: '#ff0000',
       roughness: 0.2,
@@ -183,7 +233,7 @@ describe('setMaterial', () => {
 
   it('leaves the geometry it did not touch alone', () => {
     const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
-    const command = setMaterial('a', { ...DEFAULT_MATERIAL, roughness: 0.5 })
+    const command = setMeshMaterial('a', { ...DEFAULT_MATERIAL, roughness: 0.5 })
 
     const node = command.apply(start).nodes[0]
     expect(node?.type === 'mesh' && node.geometry.kind).toBe('box')
@@ -341,13 +391,13 @@ describe('reparentNode', () => {
     const command = reparentNode('a', 'b')
     const moved = command.apply(start)
 
-    expect(moved.nodes.find(node => node.id === 'a')?.parentId).toBe('b')
-    expect(command.revert(moved).nodes.find(node => node.id === 'a')?.parentId).toBeNull()
+    expect(nodeById(moved, 'a')?.parentId).toBe('b')
+    expect(nodeById(command.revert(moved), 'a')?.parentId).toBeNull()
   })
 
   it('brings a node back out to the scene', () => {
     const command = reparentNode('c', null)
-    expect(command.apply(start).nodes.find(node => node.id === 'c')?.parentId).toBeNull()
+    expect(nodeById(command.apply(start), 'c')?.parentId).toBeNull()
   })
 
   // Applied, it would close the tree on itself and every walk of it would run forever.
@@ -366,7 +416,7 @@ describe('reparentNode', () => {
     const [out, history] = run(start, emptyHistory<SceneState>(), command)
     const [back] = undo(out, history)
 
-    expect(back.nodes.find(node => node.id === 'c')?.parentId).toBe('b')
+    expect(nodeById(back, 'c')?.parentId).toBe('b')
   })
 })
 
@@ -389,7 +439,7 @@ describe('groupNodes', () => {
     const chosen = [mesh('b'), mesh('c', 'b')]
     const grouped = groupNodes(chosen).apply(start)
 
-    expect(grouped.nodes.find(node => node.id === 'c')?.parentId).toBe('b')
+    expect(nodeById(grouped, 'c')?.parentId).toBe('b')
   })
 
   it('is one entry in the history, whatever it moved', () => {
@@ -673,5 +723,43 @@ describe('an edit spread over a selection', () => {
 
     expect(applied.nodes[0]?.type === 'mesh' && applied.nodes[0].material.color).toBe('#ff0000')
     expect(applied.nodes[1]).toBe(scene.nodes[1])
+  })
+})
+
+describe('setModelTextures', () => {
+  const withModel = (): SceneState => ({ ...EMPTY_SCENE, nodes: [modelNodeFixture('m')] })
+
+  const texturesOf = (state: SceneState) => {
+    const node = nodeById(state, 'm')
+    return node?.type === 'model' ? node.model.textures : undefined
+  }
+
+  it('writes the overrides and gives them back on undo', () => {
+    const before = withModel()
+    const applied = setModelTextures('m', { map: { assetId: 'tex-1' } })
+
+    const after = applied.apply(before)
+    expect(texturesOf(after)).toEqual({ map: { assetId: 'tex-1' } })
+    expect(texturesOf(applied.revert(after))).toBeUndefined()
+  })
+
+  // An empty set is « the file's own maps », which a document should not carry a field to say.
+  it('drops the field when the last override goes', () => {
+    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(withModel())
+
+    expect(texturesOf(setModelTextures('m', {}).apply(dressed))).toBeUndefined()
+  })
+
+  // Both edits write the same reference: rebuilding it from `assetId` alone dropped the other.
+  it('leaves the animation of the model alone, and is left alone by it', () => {
+    const clip = { clip: 'run', playing: true, time: 0, speed: 1, loop: true, start: 0 }
+    const playing = setModelAnimation('m', clip).apply(withModel())
+    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(playing)
+
+    const node = nodeById(dressed, 'm')
+    expect(node?.type === 'model' && node.model.animation).toEqual(clip)
+    expect(texturesOf(setModelAnimation('m', null).apply(dressed))).toEqual({
+      map: { assetId: 'tex-1' },
+    })
   })
 })

@@ -1,6 +1,6 @@
-import type { PbrChannel } from '@shared/domain/texture'
+import type { MaterialSettings, PbrChannel } from '@shared/domain/texture'
 import type { Command } from '../core/history'
-import type { ChannelMap, MaterialSettings, PreviewSettings, TextureState } from './texture-state'
+import type { ChannelMap, PreviewSettings, TextureState } from './texture-state'
 
 /**
  * Texture edits. Each captures what it needs to revert **as it is applied** rather than as it is
@@ -29,11 +29,24 @@ function replaceSection<K extends keyof TextureState>(
 }
 
 /** One entry per setting, so dragging one slider does not swallow the previous one's entry. */
-export function setMaterial<K extends keyof MaterialSettings>(
+export function setTextureMaterial<K extends keyof MaterialSettings>(
   key: K,
   value: MaterialSettings[K],
 ): Command<TextureState> {
   return replaceSection(`material:${key}`, 'material', material => ({ ...material, [key]: value }))
+}
+
+/**
+ * A whole material at once — what applying a saved style does.
+ *
+ * Keyed on the style rather than on the word "style": two styles applied in a row must leave two
+ * undo entries, and one shared id would coalesce them into one that gives back neither.
+ *
+ * The channels are not touched, which is the whole reason a style applies to any texture: it
+ * says how to read the maps in front of it, never which maps to read.
+ */
+export function applyStyle(styleId: string, values: MaterialSettings): Command<TextureState> {
+  return replaceSection(`material:style:${styleId}`, 'material', () => values)
 }
 
 export function setPreview<K extends keyof PreviewSettings>(

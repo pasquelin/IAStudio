@@ -16,15 +16,29 @@
  *
  * Licences differ per target and that is deliberate: LGPL builds exist for Windows and Linux,
  * none does for macOS. Both are fine here because ffmpeg is spawned as a separate program, but
- * the GPL ones oblige us to offer FFmpeg's sources — hence `SOURCES` in the written notice.
+ * both also oblige us to offer FFmpeg's corresponding sources — hence the `sources` of each
+ * target, pinned to the exact tarball or commit that build came from, written into the notice and
+ * attached to the release by `--sources`.
+ *
+ * Every URL is pinned to a version and every extracted binary is checked against a recorded
+ * digest: two builds of the same tag must ship the same encoder. Rotating a build means changing
+ * the URL *and* the digest, which `--digests` prints:
+ *
+ *     node scripts/fetch-ffmpeg.mjs --digests
+ *
+ * And the source archives the release must carry alongside the installers:
+ *
+ *     node scripts/fetch-ffmpeg.mjs --sources dist
  */
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
-  renameSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
@@ -35,71 +49,151 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DESTINATION = join(ROOT, 'resources', 'ffmpeg')
 
-const BTBN = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest'
+// A dated autobuild, not the rolling `latest` tag: `latest` moves under a pinned URL.
+const BTBN = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-07-13-13'
+const BTBN_VERSION = '7.1.5'
+const BTBN_BUILD = 'ffmpeg-n7.1.5-12-g1fdbca85aa'
+
+// `git describe` shape: ffmpeg-n<tag>-<commits ahead>-g<commit>. BtbN builds that commit, not the
+// tag, so the tag's tarball would not be the *corresponding* source. Derived rather than written
+// out, so rotating `BTBN_BUILD` cannot leave the source offer pointing at the previous build.
+const BTBN_COMMIT = BTBN_BUILD.split('-g').at(-1)
+
+const MACOS_VERSION = '7.1.1'
+
+/**
+ * Where the source of a build lives, and under which name it is attached to the release. Both
+ * copyleft families oblige the offer: GPL-3.0 for the macOS builds, LGPL-2.1 for the others. A
+ * link to ffmpeg.org's download page satisfies neither — the source has to correspond to the
+ * binary that was distributed, hence the exact release tarball and the exact commit.
+ *
+ * Declared per target rather than per version, because a version number does not identify a
+ * build: `darwin-arm64` and `darwin-x64` are both 7.1.1 today, yet come from two unrelated
+ * maintainers. Both are believed to be vanilla builds of the tarball below — if one ever carries
+ * a patch, its own entry is where that gets recorded, and `sourceArchives()` will then attach two
+ * archives instead of collapsing them into one.
+ *
+ * The build configuration is not reproduced here: every ffmpeg binary carries its own, and
+ * `ffmpeg -buildconf` prints it. Pointing at the binary beats a copy that can drift from it.
+ */
+const VANILLA_MACOS = {
+  url: `https://ffmpeg.org/releases/ffmpeg-${MACOS_VERSION}.tar.xz`,
+  file: `ffmpeg-${MACOS_VERSION}-source.tar.xz`,
+}
+
+const BTBN_SOURCE = {
+  url: `https://github.com/FFmpeg/FFmpeg/archive/${BTBN_COMMIT}.tar.gz`,
+  file: `${BTBN_BUILD}-source.tar.gz`,
+}
 
 /**
  * One entry per packaging target. `members` are paths inside the archive; a single archive
- * carrying both binaries is the common case, and macOS the exception with one each.
+ * carrying both binaries is the common case, and macOS the exception with one each. `digests`
+ * are sha256 of the *extracted* binaries, so recompression by a mirror does not invalidate them.
+ *
+ * All five targets sit on the 7.1 series on purpose: ffmpeg drops and renames CLI options
+ * between majors, and `src/main/media/runner.ts` builds one command line for every platform.
  */
-const TARGETS = {
+export const TARGETS = {
   'darwin-arm64': {
+    version: MACOS_VERSION,
     licence: 'GPL-3.0-or-later',
     source: 'https://www.osxexperts.net',
+    sources: VANILLA_MACOS,
     archives: [
       { url: 'https://www.osxexperts.net/ffmpeg711arm.zip', members: { ffmpeg: 'ffmpeg' } },
       { url: 'https://www.osxexperts.net/ffprobe711arm.zip', members: { ffprobe: 'ffprobe' } },
     ],
+    digests: {
+      ffmpeg: '011221d75eae36943b5a6a28f70e25928cfb5602fe616d06da0a3b9b55ff6b75',
+      ffprobe: 'ae77d6751f4db81098a11dcc966a8d098925411430169475c8f8a7bfad76188b',
+    },
   },
   'darwin-x64': {
+    version: MACOS_VERSION,
     licence: 'GPL-3.0-or-later',
     source: 'https://evermeet.cx/ffmpeg/',
+    sources: VANILLA_MACOS,
     archives: [
-      { url: 'https://evermeet.cx/ffmpeg/getrelease/zip', members: { ffmpeg: 'ffmpeg' } },
-      { url: 'https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip', members: { ffprobe: 'ffprobe' } },
+      { url: 'https://evermeet.cx/ffmpeg/ffmpeg-7.1.1.zip', members: { ffmpeg: 'ffmpeg' } },
+      { url: 'https://evermeet.cx/ffmpeg/ffprobe-7.1.1.zip', members: { ffprobe: 'ffprobe' } },
     ],
+    digests: {
+      ffmpeg: '23fb76dd559e155e49b9808b86ab5117f297b76294a798e4ef6cbb12fd15a689',
+      ffprobe: 'f7928a29c68c15cad6ef95b759d40477e3c97a3e74ff8ca69412d09f5889e9f6',
+    },
   },
   'win32-x64': {
+    version: BTBN_VERSION,
     licence: 'LGPL-2.1-or-later',
     source: 'https://github.com/BtbN/FFmpeg-Builds',
+    sources: BTBN_SOURCE,
     archives: [
       {
-        url: `${BTBN}/ffmpeg-master-latest-win64-lgpl.zip`,
+        url: `${BTBN}/${BTBN_BUILD}-win64-lgpl-7.1.zip`,
         members: {
-          'ffmpeg.exe': 'ffmpeg-master-latest-win64-lgpl/bin/ffmpeg.exe',
-          'ffprobe.exe': 'ffmpeg-master-latest-win64-lgpl/bin/ffprobe.exe',
+          'ffmpeg.exe': `${BTBN_BUILD}-win64-lgpl-7.1/bin/ffmpeg.exe`,
+          'ffprobe.exe': `${BTBN_BUILD}-win64-lgpl-7.1/bin/ffprobe.exe`,
         },
       },
     ],
+    digests: {
+      'ffmpeg.exe': '7f1699cebe0cf8ce516ca07e344aec1daeb6ee327406210bfeba93d73d79f881',
+      'ffprobe.exe': '4ef8134fd69e58f47760f7096abcd2400907cb273fa661ed48804599787aa20f',
+    },
   },
   'linux-x64': {
+    version: BTBN_VERSION,
     licence: 'LGPL-2.1-or-later',
     source: 'https://github.com/BtbN/FFmpeg-Builds',
+    sources: BTBN_SOURCE,
     archives: [
       {
-        url: `${BTBN}/ffmpeg-master-latest-linux64-lgpl.tar.xz`,
+        url: `${BTBN}/${BTBN_BUILD}-linux64-lgpl-7.1.tar.xz`,
         members: {
-          ffmpeg: 'ffmpeg-master-latest-linux64-lgpl/bin/ffmpeg',
-          ffprobe: 'ffmpeg-master-latest-linux64-lgpl/bin/ffprobe',
+          ffmpeg: `${BTBN_BUILD}-linux64-lgpl-7.1/bin/ffmpeg`,
+          ffprobe: `${BTBN_BUILD}-linux64-lgpl-7.1/bin/ffprobe`,
         },
       },
     ],
+    digests: {
+      ffmpeg: '2906d9c9562208328105521968b98688112c3e9c31b65b5f29bfda0593b3de4a',
+      ffprobe: '84412194eb4b87ca0dfe763843a2bb45b51e06042e7128b741c1b6c5a89d04f3',
+    },
   },
   'linux-arm64': {
+    version: BTBN_VERSION,
     licence: 'LGPL-2.1-or-later',
     source: 'https://github.com/BtbN/FFmpeg-Builds',
+    sources: BTBN_SOURCE,
     archives: [
       {
-        url: `${BTBN}/ffmpeg-master-latest-linuxarm64-lgpl.tar.xz`,
+        url: `${BTBN}/${BTBN_BUILD}-linuxarm64-lgpl-7.1.tar.xz`,
         members: {
-          ffmpeg: 'ffmpeg-master-latest-linuxarm64-lgpl/bin/ffmpeg',
-          ffprobe: 'ffmpeg-master-latest-linuxarm64-lgpl/bin/ffprobe',
+          ffmpeg: `${BTBN_BUILD}-linuxarm64-lgpl-7.1/bin/ffmpeg`,
+          ffprobe: `${BTBN_BUILD}-linuxarm64-lgpl-7.1/bin/ffprobe`,
         },
       },
     ],
+    digests: {
+      ffmpeg: '250065a03c052955963e3ff6724262e5fbffdc0d0325b08f62e2d04571ee4d1a',
+      ffprobe: 'b11d18c6d1a56a66ca75b1b14a3f831b70d6a4c3d1f7d95a9b7c3358e84343c0',
+    },
   },
 }
 
-const SOURCES = 'https://ffmpeg.org/download.html'
+/**
+ * The source archives the release has to carry, deduplicated by URL — not by version, since two
+ * targets on the same version may well be two different builds owing two different sources.
+ */
+export function sourceArchives() {
+  const byUrl = new Map()
+  for (const target of Object.values(TARGETS)) {
+    if (!target.sources) throw new Error(`No source archive declared for ffmpeg ${target.version}`)
+    byUrl.set(target.sources.url, { version: target.version, ...target.sources })
+  }
+  return [...byUrl.values()]
+}
 
 function flag(name, fallback) {
   const at = process.argv.indexOf(`--${name}`)
@@ -114,7 +208,8 @@ async function download(url, into) {
   writeFileSync(into, new Uint8Array(await response.arrayBuffer()))
 }
 
-function extract(archive, member, name, work) {
+/** Pulls one member out of the archive into `work`, and answers where it landed. */
+function extract(archive, member, work) {
   // `--strip-components` would need the depth of each member; pulling the exact path and
   // renaming afterwards works the same for a flat zip and for a nested tarball.
   const attempts = [
@@ -126,14 +221,18 @@ function extract(archive, member, name, work) {
   for (const [tool, args] of attempts) {
     try {
       execFileSync(tool, args, { stdio: 'pipe' })
-      renameSync(join(work, member), join(DESTINATION, name))
-      chmodSync(join(DESTINATION, name), 0o755)
-      return
+      // Left where it landed, still not executable. The caller checks its digest and only then
+      // moves it into place: nothing unverified is ever runnable at the path the app spawns.
+      return join(work, member)
     } catch (cause) {
       failures.push(`${tool}: ${cause.message}`)
     }
   }
   throw new Error(`Could not extract ${member} from ${archive}\n${failures.join('\n')}`)
+}
+
+function digestOf(file) {
+  return createHash('sha256').update(readFileSync(file)).digest('hex')
 }
 
 /**
@@ -143,7 +242,7 @@ function extract(archive, member, name, work) {
  * fetching for a second target would otherwise leave the first one's binaries behind, and
  * `extraResources` ships the whole folder.
  */
-export async function fetchFfmpeg(platform, arch) {
+export async function fetchFfmpeg(platform, arch, options = {}) {
   const key = `${platform}-${arch}`
   const target = TARGETS[key]
   if (!target) {
@@ -152,8 +251,12 @@ export async function fetchFfmpeg(platform, arch) {
     )
   }
 
-  rmSync(DESTINATION, { recursive: true, force: true })
-  mkdirSync(DESTINATION, { recursive: true })
+  const destination = options.destination ?? DESTINATION
+  const verify = options.verify ?? true
+  const seen = {}
+
+  rmSync(destination, { recursive: true, force: true })
+  mkdirSync(destination, { recursive: true })
   const work = mkdtempSync(join(tmpdir(), 'scenario-ffmpeg-'))
 
   try {
@@ -163,49 +266,125 @@ export async function fetchFfmpeg(platform, arch) {
       await download(archive.url, file)
 
       for (const [name, member] of Object.entries(archive.members)) {
-        extract(file, member, name, work)
-        console.log(`  \u2192 resources/ffmpeg/${name}`)
+        const extracted = extract(file, member, work)
+        seen[name] = digestOf(extracted)
+
+        if (verify) {
+          const expected = target.digests[name]
+          if (!expected) throw new Error(`No digest recorded for ${key}/${name}`)
+          if (expected !== seen[name]) {
+            throw new Error(
+              `${key}/${name} does not match its recorded digest.\n` +
+                `  expected ${expected}\n  got      ${seen[name]}\n` +
+                `Rotate deliberately: update the URL and rerun with --digests.`,
+            )
+          }
+        }
+
+        // Copied, not renamed: the scratch dir is under the OS temp root, which on a Windows
+        // runner is a different volume from the checkout — `rename` answers EXDEV across those.
+        copyFileSync(extracted, join(destination, name))
+        rmSync(extracted)
+        chmodSync(join(destination, name), 0o755)
+        console.log(`  \u2192 ${name} ${seen[name].slice(0, 12)}`)
       }
       rmSync(file)
     }
 
+    const sources = target.sources
     writeFileSync(
-      join(DESTINATION, 'NOTICE.txt'),
+      join(destination, 'NOTICE.txt'),
       [
-        `FFmpeg for ${key}`,
+        `FFmpeg ${target.version} for ${key}`,
         `Licence: ${target.licence}`,
         `Build: ${target.source}`,
-        `Corresponding sources: ${SOURCES}`,
         '',
         'FFmpeg is a separate program, spawned by Scenario Studio. It is not linked into it.',
+        '',
+        'Corresponding sources, as the licence requires:',
+        `  ${sources.url}`,
+        `  also attached to every release of Scenario Studio as ${sources.file}`,
+        '',
+        'The build configuration of this very binary is printed by:',
+        `  ${platform === 'win32' ? 'ffmpeg.exe' : './ffmpeg'} -buildconf`,
         '',
       ].join('\n'),
     )
   } catch (failure) {
     // Half a fetch looks like a whole one: an `ffmpeg` without its `ffprobe` resolves fine and
     // then fails per file. Leave nothing rather than something that reads as complete.
-    rmSync(DESTINATION, { recursive: true, force: true })
+    rmSync(destination, { recursive: true, force: true })
     throw failure
   } finally {
     rmSync(work, { recursive: true, force: true })
   }
 
-  const binary = join(DESTINATION, platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
+  const binary = join(destination, platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
   if (!existsSync(binary)) throw new Error(`Nothing landed at ${binary}`)
 
   // Only meaningful when fetching for this machine; a cross-fetched binary cannot be run here.
   if (platform === process.platform && arch === process.arch) {
     console.log(execFileSync(binary, ['-version'], { encoding: 'utf8' }).split('\n')[0])
   }
-  return binary
+  return seen
+}
+
+/** Fetches every target into a scratch folder and prints what to paste back into `TARGETS`. */
+async function printDigests() {
+  const scratch = mkdtempSync(join(tmpdir(), 'scenario-ffmpeg-digests-'))
+  try {
+    for (const key of Object.keys(TARGETS)) {
+      const [platform, arch] = key.split('-')
+      const digests = await fetchFfmpeg(platform, arch, {
+        destination: join(scratch, key),
+        verify: false,
+      })
+      // Keys stay quoted: `ffmpeg.exe` is not a valid identifier, and the output is pasted back.
+      const lines = Object.entries(digests).map(([name, hex]) => `      '${name}': '${hex}',`)
+      console.log(`\n${key}:\n    digests: {\n${lines.join('\n')}\n    },`)
+    }
+  } finally {
+    rmSync(scratch, { recursive: true, force: true })
+  }
+}
+
+/**
+ * Downloads the source archive of every shipped build into `into`, for the release job to attach.
+ *
+ * Distributing the binaries is what triggers the obligation, so the sources travel with the same
+ * release rather than living behind a link that can rot. No digest is checked here: unlike the
+ * binaries these are never executed, and pinning a hash to an upstream tarball would fail the
+ * release the day GitHub recompresses an archive.
+ */
+async function fetchSources(into) {
+  mkdirSync(into, { recursive: true })
+  for (const archive of sourceArchives()) {
+    const file = join(into, archive.file)
+    console.log(`Fetching ${archive.url}`)
+    await download(archive.url, file)
+    console.log(`  → ${archive.file}`)
+  }
 }
 
 // Run directly rather than imported by `before-pack.mjs`.
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
-  await fetchFfmpeg(flag('platform', process.platform), flag('arch', process.arch)).catch(
-    failure => {
-      console.error(failure.message)
-      process.exit(1)
-    },
-  )
+  const wantsSources = process.argv.includes('--sources')
+  const sourcesInto = flag('sources', null)
+
+  // Checked rather than trusted: a bare `--sources` would otherwise read as "no destination", fall
+  // through, and silently re-fetch this machine's binaries instead of the archives asked for.
+  if (wantsSources && (!sourcesInto || sourcesInto.startsWith('--'))) {
+    console.error('--sources needs a destination folder, as in: --sources dist')
+    process.exit(1)
+  }
+
+  let run
+  if (process.argv.includes('--digests')) run = printDigests()
+  else if (wantsSources) run = fetchSources(sourcesInto)
+  else run = fetchFfmpeg(flag('platform', process.platform), flag('arch', process.arch))
+
+  await run.catch(failure => {
+    console.error(failure.message)
+    process.exit(1)
+  })
 }

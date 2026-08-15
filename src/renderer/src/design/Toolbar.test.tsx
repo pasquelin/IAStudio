@@ -53,17 +53,12 @@ describe('Toolbar', () => {
     expect(onTool).toHaveBeenCalledWith('select')
   })
 
-  it('shows undo and redo only when the callbacks exist', () => {
-    const { rerender } = render(<Toolbar tools={TOOLS} onTool={vi.fn()} />)
+  // The Edit menu is the one place history lives; a bar that drew its own pair said the studio
+  // had two of them.
+  it('draws no history of its own', () => {
+    render(<Toolbar tools={TOOLS} onTool={vi.fn()} />)
     expect(screen.queryByRole('button', { name: /Annuler/ })).not.toBeInTheDocument()
-
-    rerender(<Toolbar tools={TOOLS} onTool={vi.fn()} onUndo={vi.fn()} canUndo />)
-    expect(screen.getByRole('button', { name: /Annuler/ })).toBeEnabled()
-  })
-
-  it('disables undo when the stack is empty', () => {
-    render(<Toolbar tools={TOOLS} onTool={vi.fn()} onUndo={vi.fn()} />)
-    expect(screen.getByRole('button', { name: /Annuler/ })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /Rétablir/ })).not.toBeInTheDocument()
   })
 
   it('declares its orientation', () => {
@@ -109,8 +104,18 @@ const WITH_MODES: ToolbarItem[] = [
     labelKey: 'actions.close',
     icon: mdiPencil,
     modes: [
-      { id: 'point', labelKey: 'actions.close', icon: mdiPencil },
-      { id: 'selection', labelKey: 'actions.generate', icon: mdiPencil },
+      {
+        id: 'point',
+        labelKey: 'actions.close',
+        descriptionKey: 'actions.generateHint',
+        icon: mdiPencil,
+      },
+      {
+        id: 'selection',
+        labelKey: 'actions.generate',
+        descriptionKey: 'actions.generateHint',
+        icon: mdiPencil,
+      },
     ],
   },
 ]
@@ -120,7 +125,14 @@ const SINGLE_MODE: ToolbarItem[] = [
     id: 'eraser',
     labelKey: 'actions.close',
     icon: mdiPencil,
-    modes: [{ id: 'point', labelKey: 'actions.close', icon: mdiPencil }],
+    modes: [
+      {
+        id: 'point',
+        labelKey: 'actions.close',
+        descriptionKey: 'actions.generateHint',
+        icon: mdiPencil,
+      },
+    ],
   },
 ]
 
@@ -138,6 +150,19 @@ describe('Toolbar modes', () => {
     await userEvent.hover(screen.getByRole('button', { name: 'Fermer' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Générer' }))
     expect(onMode).toHaveBeenCalledWith('eraser', 'selection')
+  })
+
+  // The bar's own buttons are icons and need a name; its rows show one, so they take the
+  // sentence alone — an `aria-label` there would replace the visible label (WCAG 2.5.3).
+  it('explains a mode row without giving it a name of its own', async () => {
+    render(<Toolbar tools={WITH_MODES} onTool={vi.fn()} onMode={vi.fn()} />)
+
+    await userEvent.hover(screen.getByRole('button', { name: 'Fermer' }))
+
+    const row = await screen.findByRole('menuitem', { name: 'Générer' })
+    expect(row).toHaveAttribute('data-tooltip-place', 'right')
+    expect(row.getAttribute('data-tooltip-content')).not.toBe('Générer')
+    expect(row).not.toHaveAttribute('aria-label')
   })
 
   it('opens no menu for a tool with a single mode', async () => {

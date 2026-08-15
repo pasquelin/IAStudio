@@ -1,10 +1,13 @@
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
-import { log } from '@main/log'
-import { describeFailure, failureOf } from './client'
+import { reducedBy } from './client'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
+import type { PlanReader } from './plan'
+import type { PromptAssist } from './prompt-assist'
 import type { AssetUploader } from './uploader'
+import type { CostEstimator } from './cost'
+import type { UsageReader } from './usage'
 import {
   parseAssetName,
   parseBase64,
@@ -13,34 +16,45 @@ import {
   parseModelId,
   parseModelIds,
   parseModelQuery,
+  parsePromptDraft,
+  parseReferenceImages,
+  parseSuggestPrompts,
+  parseUsageCursors,
+  parseJobTarget,
+  parseUsagePeriod,
 } from './validation'
 
 export type ScenarioHandlerDeps = {
   models: ModelRegistry
   jobs: JobManager
+  prompts: PromptAssist
   uploads: AssetUploader
+  usage: UsageReader
+  /** The account's plan, so the picker can refuse a model before the API does. */
+  plan: PlanReader
+  /** What a run would cost, asked before it is run. */
+  estimateCost: CostEstimator
 }
 
-/**
- * A rejection crossing the boundary carries its message to the renderer. An SDK message
- * embeds the request that produced it, so every failure leaves as a code — the same reduction
- * the job manager and the authentication probe already apply.
- *
- * The cause stays attached for the main process alone: Electron serializes `message`, `name`
- * and `stack` of a rejected handler, never `cause`.
- */
-async function reduced<T>(action: () => Promise<T>): Promise<T> {
-  try {
-    return await action()
-  } catch (error) {
-    // Logged where the credentials already live: reduced to a code, the renderer cannot say
-    // which call the API refused, and neither could anyone reading a bug report.
-    log.error('scenario', describeFailure(error))
-    throw new Error(failureOf(error), { cause: error })
-  }
-}
+const reduced = reducedBy('scenario')
 
-export function registerScenarioHandlers({ models, jobs, uploads }: ScenarioHandlerDeps): void {
+export function registerScenarioHandlers({
+  models,
+  jobs,
+  prompts,
+  uploads,
+  usage,
+  plan,
+  estimateCost,
+}: ScenarioHandlerDeps): void {
+  handle(CHANNELS.scenarioUsageReport, (_event, period) =>
+    reduced(() => usage.report(parseUsagePeriod(period))),
+  )
+
+  handle(CHANNELS.scenarioUsageEvents, (_event, period, cursors) =>
+    reduced(() => usage.events(parseUsagePeriod(period), parseUsageCursors(cursors))),
+  )
+
   handle(CHANNELS.scenarioSearchModels, (_event, query) =>
     reduced(() => models.search(parseModelQuery(query))),
   )
@@ -53,20 +67,42 @@ export function registerScenarioHandlers({ models, jobs, uploads }: ScenarioHand
     reduced(() => models.describe(parseModelId(modelId))),
   )
 
+  handle(CHANNELS.scenarioPlan, () => reduced(() => plan.access()))
+
+  handle(CHANNELS.scenarioSuggestPrompts, (_event, request) =>
+    reduced(() => prompts.suggest(parseSuggestPrompts(request))),
+  )
+
+  handle(CHANNELS.scenarioTranslatePrompt, (_event, draft) =>
+    reduced(() => prompts.translate(parsePromptDraft(draft))),
+  )
+
+  handle(CHANNELS.scenarioDescribeStyle, (_event, images) =>
+    reduced(() => prompts.describeStyle(parseReferenceImages(images))),
+  )
+
+  /**
+   * Queues the job under the name of the model it runs.
+   *
+   * `describe` rather than `list`: the panel just used it to render the form, so it is warm,
+   * whereas a cold listing paginates a whole catalogue before the job is even queued. A missing
+   * name is a cosmetic problem; refusing to run over one is not.
+   */
   handle(CHANNELS.scenarioGenerate, async (_event, modelId, body) => {
     const id = parseModelId(modelId)
-    const parsedBody = parseGenerationBody(body)
-
-    // `describe` rather than `list`: the generator just used it to render the form, so it is
-    // warm, whereas a cold `list` paginates the whole catalogue before the job is even queued.
-    // A missing label is a cosmetic problem; refusing to generate over one is not.
     const label = await models
       .describe(id)
       .then(descriptor => descriptor.name)
       .catch(() => id)
 
-    return jobs.submit(id, label, parsedBody)
+    return jobs.submit({ id }, label, parseGenerationBody(body))
   })
+
+  // What is priced is a target, exactly as what is submitted is. Where the figure sits in the
+  // answer is `cost.ts`'s business, not this one's.
+  handle(CHANNELS.scenarioEstimateCost, (_event, target, body) =>
+    reduced(() => estimateCost(parseJobTarget(target), parseGenerationBody(body))),
+  )
 
   handle(CHANNELS.scenarioUploadAsset, (_event, name, image) =>
     reduced(() => uploads.upload(parseAssetName(name), parseBase64(image))),

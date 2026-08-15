@@ -8,9 +8,10 @@ import { createDocumentStore } from './document-store'
  */
 const store = createDocumentStore<CanvasState>(DEFAULT_CANVAS)
 
+export const canvasStore = store
 export const useCanvases = store.use
 export const canvasOf = store.stateOf
-export const historyOf = store.historyOf
+export const canvasHistoryOf = store.historyOf
 
 /**
  * Selection stays out of the history, so it writes the whole canvas back — and the canvas has

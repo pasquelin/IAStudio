@@ -31,7 +31,42 @@ export const ASSET_FOLDERS: Record<AssetType, string> = {
   skybox: 'assets/sky',
 }
 
+/**
+ * What every asset id starts with, ours and Scenario's alike — the two vocabularies share the
+ * spelling and nothing else. Written down because the main process reads it to tell a value that
+ * may name an asset from one that cannot, before asking the catalogue about it.
+ */
+export const ASSET_ID_PREFIX = 'asset_'
+
 export type AssetLocation = 'local' | 'cloud'
+
+/**
+ * How a local asset stands against the twin it has in the library, when it has one.
+ *
+ * Separate from `location`, which answers a different question: `location` says whether the
+ * bytes are here, this says whether the two sides agree. An asset can be local and ahead, local
+ * and behind, or local with no twin at all, and one field could not tell those apart.
+ *
+ * The studio only ever writes `none`, `synced`, `local-ahead` and `error` today — pushing and
+ * pulling are explicit, so nothing drifts behind our back. `remote-ahead` and `conflict` are
+ * declared because the timestamps that decide them are already recorded: the day the plan is
+ * computed from a full diff rather than from a selection, that is a change of policy in
+ * `planSync`, not a migration.
+ */
+export type SyncStatus = 'none' | 'synced' | 'local-ahead' | 'remote-ahead' | 'conflict' | 'error'
+
+export const SYNC_STATUSES: readonly SyncStatus[] = [
+  'none',
+  'synced',
+  'local-ahead',
+  'remote-ahead',
+  'conflict',
+  'error',
+]
+
+export function isSyncStatus(value: unknown): value is SyncStatus {
+  return SYNC_STATUSES.some(candidate => candidate === value)
+}
 
 /**
  * Peak pairs per second in the waveform written at ingest. Shared because it is the contract
@@ -39,6 +74,16 @@ export type AssetLocation = 'local' | 'cloud'
  * fail, it would draw the right shape at the wrong speed.
  */
 export const PEAKS_PER_SECOND = 50
+
+/**
+ * How long an asset's name may be.
+ *
+ * Shared rather than repeated at each boundary: the rename channel has always refused more, and
+ * a name written straight into the catalogue — as automatic captioning does — must be held to
+ * the same rule. A caption is a sentence, and a row whose name is a paragraph is unreadable in
+ * every list that shows it.
+ */
+export const ASSET_NAME_MAX_LENGTH = 200
 
 /** What probing a media file tells us. Durations are microseconds, like the timeline. */
 export type MediaProbe = {
@@ -55,9 +100,10 @@ export type MediaProbe = {
  * How an asset was produced — what lets the inspector offer to run it again, and what ties a
  * texture back to the prompt that made it.
  *
- * Optional on `Asset` and not written by the catalogue yet: the ingest side stores `jobId`, and
- * the renderer reconstitutes the rest from the job it submitted. Declared here so that the day
- * the catalogue records it, nothing downstream has to change.
+ * The API is the source of truth here, not the job: a job carries neither `modelId` nor
+ * `prompt` at its top level — only an untyped `metadata.input` — while every asset it produces
+ * carries both. Reading it off the asset is what makes provenance survive the session that
+ * generated it.
  */
 export type AssetGeneration = {
   modelId: string
@@ -98,6 +144,23 @@ export type Asset = {
   path?: string
   /** Originating Scenario identifier, when the asset comes from a generation. */
   remoteAssetId?: string
+  /**
+   * The project that holds the twin — `asset.ownerId`, a `proj_…`.
+   *
+   * An API key carries its own project, so switching accounts changes what `remoteAssetId`
+   * even refers to. Without this, an asset pushed under one key would read as « synchronised »
+   * under another, against a library that has never heard of it.
+   */
+  remoteOwnerId?: string
+  /** The API's `updatedAt` for the twin. One of the three stamps a sync plan compares. */
+  remoteUpdatedAt?: string
+  /** When the two sides were last reconciled — the baseline both stamps are measured against. */
+  remoteSyncedAt?: string
+  /** When this row or its file last moved here. */
+  localChangedAt?: string
+  syncStatus?: SyncStatus
+  /** Why the last sync failed, so the badge can say more than « something went wrong ». */
+  syncError?: string
   jobId?: string
   width?: number
   height?: number
@@ -106,6 +169,15 @@ export type Asset = {
   createdAt: string
   /** Asset this one derives from — lets us trace a texture back to its source image. */
   derivedFrom?: string
+  /**
+   * What ties the outputs of one generation together — the seven channels of a PBR pack above
+   * all. The API has no notion of a group: it answers with siblings that share a `parentId`, a
+   * `parentJobId` and nothing else, and dropping a whole material onto the texture space means
+   * being able to name the set.
+   */
+  groupId?: string
+  /** Position within that group — `metadata.outputIndex`. Orders the siblings the same way twice. */
+  outputIndex?: number
   /**
    * Which PBR channel this asset holds, when it holds one. Named `map` rather than `channel`
    * because `probe.channels` already means audio channels, two fields apart.
@@ -128,12 +200,21 @@ export type Asset = {
   proxyPath?: string
   /** Precomputed waveform, relative to the project folder. */
   peaksPath?: string
+  /**
+   * A still standing for an asset that is not itself a picture — a mesh above all, whose file no
+   * browser can decode. Relative to the project folder, and rebuildable: it is the library's own
+   * thumbnail, brought down beside the bytes rather than kept only in a listing that expires.
+   *
+   * Without it a downloaded model is an icon in a grid it was a picture in one gesture earlier,
+   * which is exactly how "the thumbnail disappears when I download" was reported.
+   */
+  posterPath?: string
   /** Absent for an imported file, and for a generated one the catalogue predates. */
   generation?: AssetGeneration
 }
 
 /** The kinds that decode as an image — the only ones a thumbnail or a texture slot can use. */
-const PICTURES: readonly AssetType[] = ['image', 'texture', 'skybox']
+export const PICTURES: readonly AssetType[] = ['image', 'texture', 'skybox']
 
 /**
  * Whether this asset is a picture the studio can serve from disk. One answer to the question,
@@ -147,6 +228,119 @@ const PICTURES: readonly AssetType[] = ['image', 'texture', 'skybox']
  */
 export function isLocalPicture(asset: Asset): boolean {
   return PICTURES.includes(asset.type) && asset.location === 'local'
+}
+
+/**
+ * What the browser paints in the corner of a cell. One name per state the user can act on.
+ *
+ * Most of them describe a row the catalogue holds. Two stand for a line it does NOT — a library
+ * asset and a running generation — and that is deliberate: the browser lists both alongside what
+ * is on disk, so the vocabulary that says WHERE a thing is has to reach what is not here yet.
+ *
+ * The count is left out of this sentence on purpose: it went stale twice in one afternoon, and
+ * `exhaustive.test.ts` is what actually holds the list to the union.
+ */
+export type AssetBadge =
+  | 'local-only'
+  | 'synced'
+  | 'to-push'
+  | 'to-pull'
+  | 'conflict'
+  | 'error'
+  | 'other-account'
+  /** In the account's library, with no copy on this disk. Nothing local answers for it. */
+  | 'remote-only'
+  /** A job is still running. The row stands for an output that does not exist yet. */
+  | 'generating'
+  /** Its bytes are on their way down right now. Transient, and never read off a stored row. */
+  | 'fetching'
+  /** The catalogue records a file the disk no longer has — deleted or moved outside the studio. */
+  | 'missing'
+
+/**
+ * Whether this asset's twin lives in a project the active key does not open onto.
+ *
+ * Shared by the badge and by the sync planner, which is the point: the tile saying "in sync"
+ * while the plan says "skipped, other account" is a disagreement nothing would have caught.
+ *
+ * A `null` account means nothing has said which project is open yet — judged as "do not judge"
+ * rather than as a mismatch, since guessing would strand every asset behind a false warning.
+ */
+export function isForeignTwin(
+  twin: Pick<Asset, 'remoteOwnerId'>,
+  activeOwnerId: string | null,
+): boolean {
+  return (
+    activeOwnerId !== null &&
+    twin.remoteOwnerId !== undefined &&
+    twin.remoteOwnerId !== activeOwnerId
+  )
+}
+
+/**
+ * Whether a stamp is later than the baseline.
+ *
+ * Parsed rather than compared as text: both stamps are ISO today, but one comes from the API and
+ * one from us, and a string comparison would quietly give the wrong answer the day one of them
+ * carries an offset instead of a Z. An unreadable stamp counts as "not moved" — refusing to act
+ * on a date nobody can read beats pushing over a file on the strength of it.
+ *
+ * Beside `isForeignTwin` because the two answer the halves of one question — is the twin this
+ * asset records still the one the API would serve — and are read by the badge, by the sync
+ * planner and by what translates a body before a job runs.
+ */
+export function movedSince(stamp: string | undefined, baseline: string | undefined): boolean {
+  if (stamp === undefined) return false
+  if (baseline === undefined) return true
+
+  const at = Date.parse(stamp)
+  const since = Date.parse(baseline)
+  return Number.isNaN(at) || Number.isNaN(since) ? false : at > since
+}
+
+export const ASSET_BADGES: readonly AssetBadge[] = [
+  'local-only',
+  'synced',
+  'to-push',
+  'to-pull',
+  'conflict',
+  'error',
+  'other-account',
+  'remote-only',
+  'generating',
+  'fetching',
+  'missing',
+]
+
+/**
+ * The badge an asset wears, derived rather than stored: it depends on which account is active,
+ * and the catalogue outlives the choice of account. Storing it would mean rewriting every row
+ * on every key change — and showing a stale answer between the change and the rewrite.
+ *
+ * `activeOwnerId` is the project the current key opens onto. An asset whose twin lives in
+ * another project is shown for what it is instead of being hidden: the file is still here, it
+ * is only the library on the other end that has changed.
+ */
+export function assetBadgeOf(asset: Asset, activeOwnerId: string | null): AssetBadge {
+  if (asset.remoteAssetId === undefined) return 'local-only'
+  if (isForeignTwin(asset, activeOwnerId)) return 'other-account'
+
+  switch (asset.syncStatus) {
+    case 'synced':
+      return 'synced'
+    case 'local-ahead':
+      return 'to-push'
+    case 'remote-ahead':
+      return 'to-pull'
+    case 'conflict':
+      return 'conflict'
+    case 'error':
+      return 'error'
+    default:
+      // A twin with nothing said about it is one the catalogue recorded before it tracked
+      // sync — an asset collected from a generation. Both sides hold it, and neither has moved.
+      return 'synced'
+  }
 }
 
 /**
@@ -175,16 +369,141 @@ export function mediaDuration(asset: Asset | null): number | null {
   return duration !== undefined && duration > 0 ? duration : null
 }
 
+/**
+ * Whether the media has no length of its own — a picture, however it was generated. Not the same
+ * question as `mediaDuration` answering null, which also covers an asset nobody has probed yet:
+ * that one has a source whose length is merely unknown, and an edit treating the two alike would
+ * run a clip off the end of its own rush. A trim needs them apart; a drop does not.
+ */
+export function isTimeless(asset: Asset | null): boolean {
+  return asset !== null && PICTURES.includes(asset.type)
+}
+
+/**
+ * The kinds whose own file no surface can paint, and which therefore get a still of their own.
+ *
+ * A picture answers for itself. A sound must NOT be given one: a timeline clip reads `posterUrl`
+ * like every other surface, and the still would be painted under its waveform. What is left is
+ * a mesh — nothing decodes a `.glb` — and a rush, whose first frame is the only thing that tells
+ * one take from another in a shelf of grey rectangles.
+ *
+ * Here rather than beside either producer: a still comes down with a generated asset and is
+ * grabbed by ffmpeg for an imported one, and the two must not answer this differently.
+ */
+export const POSTER_KINDS: readonly AssetType[] = ['mesh', 'video']
+
+export function wantsPoster(type: AssetType): boolean {
+  return POSTER_KINDS.includes(type)
+}
+
+/**
+ * Whether the media carries a sound of its own. `channels` is only ever written when ffprobe
+ * found an audio stream, so its absence is the answer — for a silent rush AND for one nobody
+ * has probed, which a montage must treat alike: there is no sound it could lay down either way.
+ */
+export function hasSound(asset: Asset | null): boolean {
+  return (asset?.probe?.channels ?? 0) > 0
+}
+
 export type AssetQuery = {
   type?: AssetType
+  /**
+   * Several kinds at once — what a workspace asks for. The Image space wants pictures, textures
+   * and skyboxes and nothing else; `type` alone could only ever name one of the three.
+   */
+  types?: readonly AssetType[]
   tags?: string[]
   text?: string
+  /**
+   * The asset filed at exactly this path, relative to the project — how the explorer asks
+   * whether a file it is showing is one of ours.
+   *
+   * Exact, not a prefix: the question is « is this file an asset », and the folder walked by the
+   * explorer spells its paths the way `relativePathFor` writes them — `/` on every platform.
+   */
+  path?: string
+  /** Narrows to one side of the library, or to what still has to move between them. */
+  location?: AssetLocation
+  syncStatus?: SyncStatus
+  /** The siblings of one generation — the seven channels of a PBR pack. */
+  groupId?: string
+  /**
+   * What came OUT of one asset — the pictures taken out of a model's file above all.
+   *
+   * The column is already there and indexed; nothing asked it anything until a model's own
+   * textures had to be shown beside it in the inspector.
+   */
+  derivedFrom?: string
+  /**
+   * What a model produced, as opposed to what was imported. Only ever asked for affirmatively:
+   * "everything that was NOT generated" is a question no surface asks, and a branch nothing
+   * reaches is a branch nothing tests.
+   */
+  generated?: true
   limit?: number
   offset?: number
 }
 
+/**
+ * How many assets of each kind a project holds. Every kind is present, zero included: a counter
+ * that vanishes when it reaches nothing is a counter that reads as a bug rather than as a total.
+ */
+export type AssetCounts = Record<AssetType, number>
+
+/**
+ * A fresh tally at zero. A literal rather than built from `ASSET_TYPES`, so a seventh kind is a
+ * compile error here instead of a counter silently missing from five hand-written copies.
+ */
+export function emptyAssetCounts(): AssetCounts {
+  return { image: 0, video: 0, audio: 0, mesh: 0, texture: 0, skybox: 0 }
+}
+
+/**
+ * What may be changed about an asset from the interface. An absent field is left alone, which is
+ * what lets a rename and a retagging travel through the same channel without one erasing the
+ * other — tags are replaced wholesale, so `[]` genuinely means « no tags ».
+ */
+export type AssetChanges = {
+  name?: string
+  tags?: readonly string[]
+}
+
 export const ASSET_SCHEME = 'scenario'
-const ASSET_HOST = 'asset'
+export const ASSET_HOST = 'asset'
+
+/**
+ * The host that serves an asset's still rather than the asset itself. A host of its own, and not
+ * a parameter on `asset`: one id names one file per host, and a mesh's `.glb` and its `.jpg` are
+ * two files — the resolver would otherwise have to guess which of them a caller meant.
+ */
+export const POSTER_HOST = 'poster'
+
+/**
+ * `scenario://<host>/<id>`. One scheme, one host per kind of thing it serves — the favourites
+ * keep their stills outside any project, so they answer on a host of their own.
+ */
+export function hostedUrl(host: string, id: string): string {
+  return `${ASSET_SCHEME}://${host}/${encodeURIComponent(id)}`
+}
+
+/** What a URL of the scheme names, or null when it is not one of ours. */
+export function hostedParts(url: string): { host: string; id: string } | null {
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== `${ASSET_SCHEME}:`) return null
+
+    const id = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
+    return id.length > 0 ? { host: parsed.hostname, id } : null
+  } catch {
+    return null
+  }
+}
+
+/** The id back out, or null when the URL names another host — which is not ours to serve. */
+export function hostedIdFromUrl(url: string, host: string): string | null {
+  const parts = hostedParts(url)
+  return parts?.host === host ? parts.id : null
+}
 
 /**
  * Where the renderer loads a local asset from. Derived from the identifier rather than asked
@@ -195,27 +514,62 @@ const ASSET_HOST = 'asset'
  * catalogue when it serves the scheme.
  */
 export function assetUrl(assetId: string): string {
-  return `${ASSET_SCHEME}://${ASSET_HOST}/${encodeURIComponent(assetId)}`
+  return hostedUrl(ASSET_HOST, assetId)
 }
 
 /**
- * The still that stands for an asset — in a browser cell, on a timeline clip. Only pictures
- * have one today: a video's poster frame is produced at ingest, which is still to come, and
- * decoding one here would open a hardware decoder per visible clip.
+ * The still that stands for an asset — in a browser cell, on a timeline clip. A picture answers
+ * for itself; anything else answers with the still recorded beside it, which today means a mesh
+ * brought down from the library. A video has neither: its poster frame is produced at ingest,
+ * which is still to come, and decoding one here would open a hardware decoder per visible clip.
+ *
+ * Stamped with `localChangedAt`, and that is what makes a REWRITTEN asset repaint: an id alone
+ * is a stable URL, so a browser that already decoded it keeps the bitmap it holds and a ⌘S that
+ * overwrote the file would look like a gesture that did nothing. The stamp rides in the query,
+ * which the resolver never reads — it resolves the path.
+ *
+ * It lives HERE rather than on `assetUrl` because this is the one that knows the asset: a
+ * version parameter on `assetUrl` would widen a pure function for its fourteen callers to serve
+ * three, and `.map(assetUrl)` would then quietly pass the index as the version.
  */
 export function posterUrl(asset: Asset): string | null {
-  return isLocalPicture(asset) ? assetUrl(asset.id) : null
+  if (isLocalPicture(asset)) return versionedUrl(assetUrl(asset.id), asset.localChangedAt)
+  // `local` said out loud rather than left to the fact that nothing writes a poster path on a
+  // cloud row: the still is a file inside the open project, so a row from anywhere else would
+  // send the window after a picture no resolver can answer for — a 404 where an icon belongs.
+  if (asset.posterPath && asset.location === 'local') {
+    return versionedUrl(hostedUrl(POSTER_HOST, asset.id), asset.localChangedAt)
+  }
+  return null
+}
+
+/**
+ * The same URL, told apart from the one that named the file before it was overwritten.
+ *
+ * The version is `localChangedAt` at every call site: an id alone is a stable URL, so whoever
+ * decoded it once — a browser cell, a WebGL texture cache — keeps the bitmap it holds, and a ⌘S
+ * that rewrote the file looks like a gesture that did nothing.
+ *
+ * Apart from `posterUrl` because a texture slot has no `Asset` in hand, only an id and a stamp
+ * looked up beside it. The resolver never reads the query; it resolves the path.
+ */
+export function versionedUrl(url: string, version: string | undefined): string {
+  return version ? `${url}?v=${encodeURIComponent(version)}` : url
+}
+
+/**
+ * What a tile calls an asset: the model that made it, as scenario.com does — a grid of file
+ * names says what one already knows, and the name is still one hover away in the hint.
+ *
+ * Structural rather than `Asset`: the library and the explore band draw `CloudAsset`s, and the
+ * rule is the same on both sides of the wire. Four tiles had written it out; the fourth wrote
+ * `||` where the others did, which is the only reason nobody noticed.
+ */
+export function assetCaption(asset: { name: string; generation?: AssetGeneration }): string {
+  return asset.generation?.modelLabel || asset.name
 }
 
 /** `scenario://asset/<id>` → `<id>`. Anything else is not ours to serve. */
 export function assetIdFromUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url)
-    if (parsed.protocol !== `${ASSET_SCHEME}:` || parsed.hostname !== ASSET_HOST) return null
-
-    const id = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
-    return id.length > 0 ? id : null
-  } catch {
-    return null
-  }
+  return hostedIdFromUrl(url, ASSET_HOST)
 }

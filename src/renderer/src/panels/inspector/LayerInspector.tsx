@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { toDegrees, toRadians } from '@shared/domain/angles'
 import { NumberField } from '@/design/NumberField'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
@@ -27,12 +28,10 @@ import {
 import { cn } from '@/helpers/cn'
 import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
 import { useCanvases } from '@/stores/canvases'
+import { FontField } from './FontField'
 import { useDocumentEdit } from './useDocumentEdit'
 
 export type LayerInspectorProps = { documentId: string; layer: Layer }
-
-/** Radians are what the engine turns and what a document stores; nobody types in them. */
-const PER_RADIAN = 180 / Math.PI
 
 /** How far each dial swings. Its name is its key: `AdjustmentKind` is a subset of the stack. */
 const DIAL_RANGE: Readonly<Record<AdjustmentKind, { min: number; max: number }>> = {
@@ -142,6 +141,13 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             onChange={size => edit.run(setLayerText(layer.id, { size }))}
             {...edit.gesture}
           />
+          {/* The very field a 3D text uses, from the very list: the same caption reads the same
+              in both workspaces, or neither is worth having. */}
+          <FontField
+            label={t('inspector.font')}
+            value={layer.font}
+            onChange={font => edit.run(setLayerText(layer.id, { font }))}
+          />
         </PropertyGroup>
       )}
 
@@ -184,9 +190,9 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
         />
         <NumberField
           label={t('inspector.rotation')}
-          value={layer.transform.rotation * PER_RADIAN}
+          value={toDegrees(layer.transform.rotation)}
           step={1}
-          onChange={value => move({ rotation: value / PER_RADIAN })}
+          onChange={value => move({ rotation: toRadians(value) })}
           {...edit.gesture}
         />
         <NumberField

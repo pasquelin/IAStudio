@@ -1,4 +1,7 @@
+import type { DisplayMode } from './scene'
 import type { Signature } from './shortcut'
+import { HOME_SURFACE, type ToolSurface } from './tool'
+import type { WorkspaceId } from './workspace'
 
 /**
  * Which surface a command belongs to. Two spaces legitimately want the same key — `Delete`
@@ -9,15 +12,21 @@ import type { Signature } from './shortcut'
  * offers. Its bindings are the only ones that may clash with everything else, so they are the
  * only ones a conflict check treats as competing with every scope.
  */
-export type CommandScope = 'global' | 'scene' | 'sequence' | 'canvas'
+export type CommandScope =
+  'global' | 'spaces' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'audio' | 'texture'
 
 export type CommandId =
   | 'project.new'
   | 'project.open'
   | 'document.save'
+  | 'document.saveAs'
   | 'layout.reset'
   | 'app.settings'
+  | 'app.assistant'
+  | 'app.dictate'
   | 'window.fullScreen'
+  | 'spaces.moveLeft'
+  | 'spaces.moveRight'
   | 'scene.select'
   | 'scene.translate'
   | 'scene.rotate'
@@ -31,13 +40,19 @@ export type CommandId =
   | 'scene.snap'
   | 'scene.space'
   | 'scene.projection'
+  | 'scene.quad'
+  | 'scene.quadEdges'
   | 'scene.display'
+  | 'scene.skeletons'
+  | 'scene.poseMode'
   | 'scene.delete'
   | 'scene.undo'
   | 'scene.redo'
   | 'sequence.playPause'
+  | 'sequence.mirror'
   | 'sequence.split'
   | 'sequence.delete'
+  | 'sequence.unlink'
   | 'sequence.zoomIn'
   | 'sequence.zoomOut'
   | 'sequence.fit'
@@ -53,6 +68,8 @@ export type CommandId =
   | 'canvas.guides'
   | 'canvas.clearGuides'
   | 'canvas.deselect'
+  | 'canvas.cropApply'
+  | 'canvas.cropCancel'
   | 'canvas.maskFromSelection'
   | 'canvas.regenerate'
   | 'canvas.cutout'
@@ -67,8 +84,54 @@ export type CommandId =
   | 'canvas.rotateCw'
   | 'canvas.rotateCcw'
   | 'canvas.snap'
+  | 'canvas.toolMove'
+  | 'canvas.toolHand'
+  | 'canvas.toolScale'
+  | 'canvas.toolCrop'
+  | 'canvas.toolSelectRectangle'
+  | 'canvas.toolSelectEllipse'
+  | 'canvas.toolSelectLasso'
+  | 'canvas.toolShapeRectangle'
+  | 'canvas.toolShapeLine'
+  | 'canvas.toolShapeArrow'
+  | 'canvas.toolShapeEllipse'
+  | 'canvas.toolShapePolygon'
+  | 'canvas.toolShapeStar'
+  | 'canvas.toolBrush'
+  | 'canvas.toolPencil'
+  | 'canvas.toolText'
+  | 'canvas.toolEraser'
+  | 'canvas.toolEraserSelection'
+  | 'canvas.toolFill'
+  | 'canvas.toolPicker'
+  | 'canvas.brushSmaller'
+  | 'canvas.brushLarger'
   | 'canvas.undo'
   | 'canvas.redo'
+  | 'skybox.view'
+  | 'skybox.probes'
+  | 'skybox.undo'
+  | 'skybox.redo'
+  | 'audio.undo'
+  | 'audio.redo'
+  | 'texture.undo'
+  | 'texture.redo'
+
+/**
+ * A menu row that draws a state: a command that toggles, or one mode of a command that cycles.
+ *
+ * The renderer publishes the ones that are ON and the main process ticks exactly those. A string
+ * rather than a structure because it crosses the bridge and is only ever compared.
+ *
+ * BOTH halves are typed, and the second one is the point: `${CommandId}:${string}` would have
+ * accepted `scene.display:mattcap` without a word, and a radio row silently never ticked is the
+ * hardest kind of wrong to see. The union of modes widens the day a second command cycles
+ * through something — which is the moment to look at this line, not a cost to avoid.
+ *
+ * Kept out of the row itself: whether a scene is drawn in wireframe is not a fact of the command
+ * registry, it is a fact of the document in front, which only the renderer holds.
+ */
+export type MenuCheck = CommandId | `scene.display:${DisplayMode}`
 
 /**
  * What a command is: where it applies, what it is called, what it does in plain words, and the
@@ -89,6 +152,18 @@ export type CommandDescriptor = {
    * key someone chooses to give it.
    */
   defaultBinding: Signature | null
+  /**
+   * Held rather than tapped: it reports pressed and released instead of firing once.
+   *
+   * A held command is heard by the window even when its scope is `global`, which is the one
+   * exception to the rule below — a native accelerator has no release to report, so the menu
+   * cannot serve one, and no menu row is declared for it.
+   *
+   * It is also heard while the focus sits in a text field, where every other shortcut is
+   * silent: dictation exists to write into the field one is already in. A held command
+   * therefore has to carry a modifier, or it would swallow a letter.
+   */
+  held?: boolean
 }
 
 function command(descriptor: CommandDescriptor): CommandDescriptor {
@@ -118,6 +193,13 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: 'Meta+KeyS',
   }),
   command({
+    id: 'document.saveAs',
+    scope: 'global',
+    titleKey: 'commands.documentSaveAs.title',
+    helpKey: 'commands.documentSaveAs.help',
+    defaultBinding: 'Shift+Meta+KeyS',
+  }),
+  command({
     id: 'layout.reset',
     scope: 'global',
     titleKey: 'commands.layoutReset.title',
@@ -132,11 +214,46 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: 'Meta+Comma',
   }),
   command({
+    id: 'app.assistant',
+    scope: 'global',
+    titleKey: 'commands.appAssistant.title',
+    helpKey: 'commands.appAssistant.help',
+    // Free in the registry, and checked: ⌘K was taken by nothing, and the bare `K` the image
+    // space binds to its scale tool is a different signature entirely.
+    defaultBinding: 'Meta+KeyK',
+  }),
+  command({
+    id: 'app.dictate',
+    scope: 'global',
+    titleKey: 'commands.appDictate.title',
+    helpKey: 'commands.appDictate.help',
+    defaultBinding: 'Alt+KeyD',
+    held: true,
+  }),
+  command({
     id: 'window.fullScreen',
     scope: 'global',
     titleKey: 'commands.windowFullScreen.title',
     helpKey: 'commands.windowFullScreen.help',
     defaultBinding: 'Ctrl+Meta+KeyF',
+  }),
+
+  // Alt and not the bare arrows: those belong to whoever walks the bar, and taking them would
+  // trade one gesture for another. Its own scope because it is heard by the focused pill alone,
+  // where a `global` binding would fire from anywhere and move a space nobody was pointing at.
+  command({
+    id: 'spaces.moveLeft',
+    scope: 'spaces',
+    titleKey: 'commands.spacesMoveLeft.title',
+    helpKey: 'commands.spacesMoveLeft.help',
+    defaultBinding: 'Alt+ArrowLeft',
+  }),
+  command({
+    id: 'spaces.moveRight',
+    scope: 'spaces',
+    titleKey: 'commands.spacesMoveRight.title',
+    helpKey: 'commands.spacesMoveRight.help',
+    defaultBinding: 'Alt+ArrowRight',
   }),
 
   // `KeyV` as in every editor that has a pointer tool. Not `KeyQ` or `KeyW`, which fly the
@@ -199,6 +316,24 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.sceneProjection.help',
     defaultBinding: 'KeyO',
   }),
+  // `Q` as in Blender's own quad view, but shifted: bare `Q` is flight's "down", and the one
+  // overlap this scope tolerates is already spent on `KeyS` — see `shortcut.test.ts`.
+  command({
+    id: 'scene.quad',
+    scope: 'scene',
+    titleKey: 'commands.sceneQuad.title',
+    helpKey: 'commands.sceneQuad.help',
+    defaultBinding: 'Shift+KeyQ',
+  }),
+  // `Shift+W` for wires: bare `W` is flight's "forward", and this reads the same edges the
+  // wireframe draws, so it sits beside it rather than beside the layout.
+  command({
+    id: 'scene.quadEdges',
+    scope: 'scene',
+    titleKey: 'commands.sceneQuadEdges.title',
+    helpKey: 'commands.sceneQuadEdges.help',
+    defaultBinding: 'Shift+KeyW',
+  }),
   // `Z` as in Blender, where it is the key that changes what the viewport draws.
   command({
     id: 'scene.display',
@@ -206,6 +341,23 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneDisplay.title',
     helpKey: 'commands.sceneDisplay.help',
     defaultBinding: 'KeyZ',
+  }),
+  // `KeyB` as in bones. Nothing in the scene scope claims it, and the fly keys are all on the
+  // left hand — see the note above `scene.snap`.
+  command({
+    id: 'scene.skeletons',
+    scope: 'scene',
+    titleKey: 'commands.sceneSkeletons.title',
+    helpKey: 'commands.sceneSkeletons.help',
+    defaultBinding: 'KeyB',
+  }),
+  // `KeyP` as in pose, and next to `KeyB` for bones — the two go together at the hand.
+  command({
+    id: 'scene.poseMode',
+    scope: 'scene',
+    titleKey: 'commands.scenePoseMode.title',
+    helpKey: 'commands.scenePoseMode.help',
+    defaultBinding: 'KeyP',
   }),
   // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
   command({
@@ -277,6 +429,18 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.sequencePlayPause.help',
     defaultBinding: 'Space',
   }),
+  // The program monitor alone answers it: `Monitor` arms the sequence scope on the one that
+  // holds the playback token, so the key opens a return on the EDIT, never on the take.
+  command({
+    id: 'sequence.mirror',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceMirror.title',
+    helpKey: 'commands.sequenceMirror.help',
+    // Bare, as DaVinci has it: this is the one gesture taken while WATCHING rather than editing.
+    // `KeyF` is spoken for in the scene and the canvas, which are other scopes and never heard
+    // at the same time.
+    defaultBinding: 'KeyF',
+  }),
   command({
     id: 'sequence.split',
     scope: 'sequence',
@@ -290,6 +454,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sequenceDelete.title',
     helpKey: 'commands.sequenceDelete.help',
     defaultBinding: 'Delete',
+  }),
+  command({
+    id: 'sequence.unlink',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceUnlink.title',
+    helpKey: 'commands.sequenceUnlink.help',
+    // What Premiere and DaVinci both bind it to, and the gesture is the same one.
+    defaultBinding: 'Meta+KeyL',
   }),
   command({
     id: 'sequence.zoomIn',
@@ -441,6 +613,25 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.canvasDeselect.help',
     defaultBinding: 'Meta+KeyD',
   }),
+  /**
+   * Both mean nothing without a crop frame on screen, exactly as `deselect` means nothing without
+   * a selection: the handler answers that, not the table. Being commands is what gates them on the
+   * document in front — a frame left up on a background tab would otherwise eat the key.
+   */
+  command({
+    id: 'canvas.cropApply',
+    scope: 'canvas',
+    titleKey: 'commands.canvasCropApply.title',
+    helpKey: 'commands.canvasCropApply.help',
+    defaultBinding: 'Enter',
+  }),
+  command({
+    id: 'canvas.cropCancel',
+    scope: 'canvas',
+    titleKey: 'commands.canvasCropCancel.title',
+    helpKey: 'commands.canvasCropCancel.help',
+    defaultBinding: 'Escape',
+  }),
   command({
     id: 'canvas.maskFromSelection',
     scope: 'canvas',
@@ -497,6 +688,173 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.canvasSnap.help',
     defaultBinding: 'Shift+Meta+Semicolon',
   }),
+  /*
+   * Arming a tool. Declared here rather than as strings on the bar, so a key can be remapped
+   * in the settings and the button follows — and so the shortcuts screen lists them at all.
+   *
+   * `L` goes to the lasso, as it does in every editor that has one; the line takes `Shift+R`
+   * from the rectangle it belongs beside. They both claimed `L` while nothing listened, and
+   * a registry is where that stops being possible.
+   *
+   * A tool the engine drops every event of gets no command: an unbuilt gesture with a key is
+   * a key that does nothing.
+   */
+  command({
+    id: 'canvas.toolMove',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolMove.title',
+    helpKey: 'commands.canvasToolMove.help',
+    defaultBinding: 'KeyV',
+  }),
+  command({
+    id: 'canvas.toolHand',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolHand.title',
+    helpKey: 'commands.canvasToolHand.help',
+    defaultBinding: 'KeyH',
+  }),
+  command({
+    id: 'canvas.toolScale',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolScale.title',
+    helpKey: 'commands.canvasToolScale.help',
+    defaultBinding: 'KeyK',
+  }),
+  command({
+    id: 'canvas.toolCrop',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolCrop.title',
+    helpKey: 'commands.canvasToolCrop.help',
+    defaultBinding: 'KeyF',
+  }),
+  command({
+    id: 'canvas.toolSelectRectangle',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolSelectRectangle.title',
+    helpKey: 'commands.canvasToolSelectRectangle.help',
+    defaultBinding: 'KeyM',
+  }),
+  command({
+    id: 'canvas.toolSelectEllipse',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolSelectEllipse.title',
+    helpKey: 'commands.canvasToolSelectEllipse.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.toolSelectLasso',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolSelectLasso.title',
+    helpKey: 'commands.canvasToolSelectLasso.help',
+    defaultBinding: 'KeyL',
+  }),
+  command({
+    id: 'canvas.toolShapeRectangle',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapeRectangle.title',
+    helpKey: 'commands.canvasToolShapeRectangle.help',
+    defaultBinding: 'KeyR',
+  }),
+  command({
+    id: 'canvas.toolShapeLine',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapeLine.title',
+    helpKey: 'commands.canvasToolShapeLine.help',
+    defaultBinding: 'Shift+KeyR',
+  }),
+  command({
+    id: 'canvas.toolShapeArrow',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapeArrow.title',
+    helpKey: 'commands.canvasToolShapeArrow.help',
+    defaultBinding: 'KeyA',
+  }),
+  command({
+    id: 'canvas.toolShapeEllipse',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapeEllipse.title',
+    helpKey: 'commands.canvasToolShapeEllipse.help',
+    defaultBinding: 'KeyO',
+  }),
+  command({
+    id: 'canvas.toolShapePolygon',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapePolygon.title',
+    helpKey: 'commands.canvasToolShapePolygon.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.toolShapeStar',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolShapeStar.title',
+    helpKey: 'commands.canvasToolShapeStar.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.toolBrush',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolBrush.title',
+    helpKey: 'commands.canvasToolBrush.help',
+    defaultBinding: 'KeyP',
+  }),
+  command({
+    id: 'canvas.toolPencil',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolPencil.title',
+    helpKey: 'commands.canvasToolPencil.help',
+    defaultBinding: 'Shift+KeyP',
+  }),
+  command({
+    id: 'canvas.toolText',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolText.title',
+    helpKey: 'commands.canvasToolText.help',
+    defaultBinding: 'KeyT',
+  }),
+  command({
+    id: 'canvas.toolEraser',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolEraser.title',
+    helpKey: 'commands.canvasToolEraser.help',
+    defaultBinding: 'KeyE',
+  }),
+  command({
+    id: 'canvas.toolEraserSelection',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolEraserSelection.title',
+    helpKey: 'commands.canvasToolEraserSelection.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'canvas.toolFill',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolFill.title',
+    helpKey: 'commands.canvasToolFill.help',
+    defaultBinding: 'KeyG',
+  }),
+  command({
+    id: 'canvas.toolPicker',
+    scope: 'canvas',
+    titleKey: 'commands.canvasToolPicker.title',
+    helpKey: 'commands.canvasToolPicker.help',
+    defaultBinding: 'KeyI',
+  }),
+  // The two bracket keys, as every editor binds them. Physical codes: on AZERTY the same two
+  // positions carry ")" and "^", and a signature written from the letter would miss them.
+  command({
+    id: 'canvas.brushSmaller',
+    scope: 'canvas',
+    titleKey: 'commands.canvasBrushSmaller.title',
+    helpKey: 'commands.canvasBrushSmaller.help',
+    defaultBinding: 'BracketLeft',
+  }),
+  command({
+    id: 'canvas.brushLarger',
+    scope: 'canvas',
+    titleKey: 'commands.canvasBrushLarger.title',
+    helpKey: 'commands.canvasBrushLarger.help',
+    defaultBinding: 'BracketRight',
+  }),
   command({
     id: 'canvas.undo',
     scope: 'canvas',
@@ -511,11 +869,129 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
+  command({
+    id: 'skybox.view',
+    scope: 'skybox',
+    titleKey: 'commands.skyboxView.title',
+    helpKey: 'commands.skyboxView.help',
+    defaultBinding: 'KeyV',
+  }),
+  command({
+    id: 'skybox.probes',
+    scope: 'skybox',
+    titleKey: 'commands.skyboxProbes.title',
+    helpKey: 'commands.skyboxProbes.help',
+    defaultBinding: 'KeyP',
+  }),
+  command({
+    id: 'skybox.undo',
+    scope: 'skybox',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'skybox.redo',
+    scope: 'skybox',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
+  // The take editor was one of two surfaces whose history had no key and no menu row: its two
+  // buttons were the whole of it, so the bar could not be relieved of them without this pair.
+  command({
+    id: 'audio.undo',
+    scope: 'audio',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'audio.redo',
+    scope: 'audio',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
+
+  // The other one, and worse: the manual already promised ⌘Z on a style applied to a material
+  // (`docs/fr/manuel/12-espace-textures.md`) while nothing at all could reach that history.
+  command({
+    id: 'texture.undo',
+    scope: 'texture',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'texture.redo',
+    scope: 'texture',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
 ]
 
-export const COMMAND_SCOPES: readonly CommandScope[] = ['global', 'scene', 'sequence', 'canvas']
+export const COMMAND_SCOPES: readonly CommandScope[] = [
+  'global',
+  'spaces',
+  'scene',
+  'sequence',
+  'canvas',
+  'skybox',
+  'audio',
+  'texture',
+]
 
-export function commandDescriptor(id: CommandId): CommandDescriptor | null {
+/**
+ * What each workspace edits, or `null` where it edits nothing undoable.
+ *
+ * Declared rather than derived: the menu is built in the main process from a workspace id, and
+ * it has to name the exact command the surface in front is listening for.
+ *
+ * **Total, not partial, and that is the guard.** A workspace whose store holds a history and is
+ * missing here reaches nothing: the native role keeps the accelerator, ⌘Z never reaches the
+ * window, and the failure is silent. It cost Skyboxes once, Audio until its bar
+ * was asked to stop drawing the only undo it had, and Textures for as long as the manual
+ * promised a key nothing answered. Written as a full `Record`, the next workspace added does
+ * not COMPILE until someone answers the question for it — `Partial` let all four slip through.
+ *
+ * Which of them holds a history is a fact of `renderer/`, invisible from here, so the other half
+ * of the guard sits there: `renderer/src/stores/history-scopes.test.ts` walks the document
+ * stores and fails on the next one that grows a history while its workspace answers `null`.
+ */
+const SCOPE_BY_WORKSPACE: Record<WorkspaceId, CommandScope | null> = {
+  image: 'canvas',
+  '3d': 'scene',
+  video: 'sequence',
+  skyboxes: 'skybox',
+  audio: 'audio',
+  textures: 'texture',
+}
+
+/**
+ * The surface a workspace edits through, or `null` where nothing is undoable — which the home
+ * is: it covers the spaces rather than editing one, so it holds no history of its own.
+ */
+export function scopeOfWorkspace(surface: ToolSurface | null): CommandScope | null {
+  return surface && surface !== HOME_SURFACE ? SCOPE_BY_WORKSPACE[surface] : null
+}
+
+/** The command of that scope, when it declares one. Every editing scope declares undo and redo. */
+export function commandIn(scope: CommandScope, suffix: string): CommandId | null {
+  return commandsIn(scope).find(descriptor => descriptor.id.endsWith(`.${suffix}`))?.id ?? null
+}
+
+/**
+ * The descriptor of a command, or `null` for anything the registry does not declare.
+ *
+ * Takes a `string` rather than a `CommandId`, the way `assistantAction` does next door, and for
+ * the same reason: what asks is often something that has only a name — a language model's answer,
+ * an MCP client's call. Narrowing before the call meant two identical casts in two files, each
+ * with four lines explaining why it was safe. The check IS this function; there is no gap for a
+ * cast to close.
+ */
+export function commandDescriptor(id: string): CommandDescriptor | null {
   return COMMAND_REGISTRY.find(descriptor => descriptor.id === id) ?? null
 }
 
@@ -542,13 +1018,48 @@ export function bindingOf(id: CommandId, overrides: BindingOverrides): Signature
  * `global` is deliberately excluded: those are the native menu's accelerators, and Electron
  * fires them itself — matching them here too would run the command twice.
  */
+/**
+ * The one key that answers to two names.
+ *
+ * A Mac's main keyboard carries a single key marked « delete », and it reports `Backspace`. The
+ * key that reports `Delete` is a full keyboard's forward-delete, or `fn` held down with the
+ * other. A command bound to `Delete` was therefore out of reach on the keyboard most of this
+ * studio is used on: pressing the key labelled delete did nothing whatsoever, in every space
+ * that binds it — the montage, the scene, the canvas.
+ *
+ * One way round only: whatever genuinely binds `Backspace` keeps it to itself.
+ */
+const KEY_ALIASES: Partial<Record<Signature, Signature>> = { Backspace: 'Delete' }
+
 export function commandFor(
   signature: Signature,
   scope: CommandScope,
   overrides: BindingOverrides,
 ): CommandId | null {
+  const bound = (wanted: Signature): CommandId | null =>
+    COMMAND_REGISTRY.find(
+      descriptor =>
+        descriptor.scope === scope &&
+        !descriptor.held &&
+        bindingOf(descriptor.id, overrides) === wanted,
+    )?.id ?? null
+
+  // The alias is tried second, so a scope that binds the pressed key outright still wins.
+  const alias = KEY_ALIASES[signature]
+  return bound(signature) ?? (alias ? bound(alias) : null)
+}
+
+/**
+ * The held command a signature answers to, on any surface. Held commands are matched across
+ * scopes rather than within one: they are heard by the window itself, which is what a release
+ * requires, and the menu never claims their key.
+ */
+export function heldCommandFor(
+  signature: Signature,
+  overrides: BindingOverrides,
+): CommandId | null {
   const found = COMMAND_REGISTRY.find(
-    descriptor => descriptor.scope === scope && bindingOf(descriptor.id, overrides) === signature,
+    descriptor => descriptor.held && bindingOf(descriptor.id, overrides) === signature,
   )
   return found?.id ?? null
 }

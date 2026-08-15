@@ -7,14 +7,18 @@
  */
 import {
   STUDIO_ENVIRONMENT,
+  type CameraDescriptor,
   type EnvironmentRef,
   type GeometryDescriptor,
   type LightDescriptor,
   type MaterialDescriptor,
   type ModelRef,
   type SpriteDescriptor,
+  type TextDescriptor,
   type Transform,
 } from '@shared/domain/scene'
+import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
+import { DEFAULT_FONT } from '@shared/domain/font'
 
 export type SceneNodeBase = {
   id: string
@@ -35,8 +39,14 @@ export type SceneNode = SceneNodeBase &
     | { type: 'light'; light: LightDescriptor }
     | { type: 'model'; model: ModelRef }
     | { type: 'sprite'; sprite: SpriteDescriptor }
+    // A solid like a mesh, and lit like one — so it wears the same material, and the inspector's
+    // material section serves it without knowing it exists.
+    | { type: 'text'; text: TextDescriptor; material: MaterialDescriptor }
     // Nothing of its own: a group is a transform others hang from, and a name to find it by.
     | { type: 'group' }
+    // What a render looks through. Not the viewport's camera: that one is how the scene is being
+    // WATCHED, and this one is part of what the scene IS.
+    | { type: 'camera'; camera: CameraDescriptor }
   )
 
 /** Derived, never restated: a member added to the union above is a member here on the spot. */
@@ -56,10 +66,22 @@ export type SceneState = {
   selectedIds: readonly string[]
   /** What lights the scene, and what its materials reflect. Part of the document. */
   environment: EnvironmentRef
+  /** The tracks that move it through time. Where the head STANDS is session state, not this. */
+  animation: AnimationTimeline
 }
 
 /** Where a node ended up, reported by whatever moved it — a gizmo drag moves a whole selection. */
-export type NodeMove = { id: string; transform: Transform }
+export type NodeMove = {
+  id: string
+  transform: Transform
+  /** A bone of that node's model, when the pose mode moved one rather than the node itself. */
+  bone?: string
+  /**
+   * Where the bone rested when it arrived. Carried with the move because that pose lives in the
+   * FILE, not in the document — only the renderer ever knew it.
+   */
+  rest?: Transform
+}
 
 /**
  * What a node without shadow flags means — a document written before they existed, which is
@@ -91,12 +113,35 @@ export function shadowDefaults(node: ShadowSubject): {
  */
 export function canCastShadow(node: ShadowSubject): boolean {
   if (node.type === 'light') return SHADOW_CASTING_LIGHTS.includes(node.light.kind)
-  return node.type !== 'sprite'
+  // A camera draws nothing at all, so it can neither throw a shadow nor be drawn into a map.
+  return node.type !== 'sprite' && node.type !== 'camera'
 }
 
 /** Whether a node catches the shadows of others. A light catches none, and a sprite is unlit. */
 export function canReceiveShadow(node: ShadowSubject): boolean {
-  return node.type !== 'light' && node.type !== 'sprite'
+  return node.type !== 'light' && node.type !== 'sprite' && node.type !== 'camera'
+}
+
+/**
+ * Whether turning a node shows anything. A sprite always faces the camera: three.js reads its size
+ * off the *lengths* of the first two columns of the model matrix — which a rotation leaves
+ * untouched — and takes its angle from a material uniform. Nodes hanging under one are the
+ * exception: turning the sprite swings them around it, and that does show.
+ *
+ * The whole rule rather than the half the type answers, because three places have to agree: the
+ * handle offered in the viewport, the row offered in the inspector, and the command that writes
+ * the angle. Two of the three agreeing is how the angle stayed typeable after the handle was
+ * refused.
+ *
+ * The children are asked for, not handed over: every one of the three is on a drag path, and only
+ * a sprite makes the answer worth walking a scene for.
+ */
+export function rotationShows(node: { type: SceneNodeType }, children: () => boolean): boolean {
+  return node.type !== 'sprite' || children()
+}
+
+export function hasChildren(nodes: readonly SceneNode[], id: string): boolean {
+  return nodes.some(node => node.parentId === id)
 }
 
 const SHADOW_CASTING_LIGHTS: readonly LightDescriptor['kind'][] = ['directional', 'spot', 'point']
@@ -125,16 +170,30 @@ export const DEFAULT_SPRITE: SpriteDescriptor = {
   map: null,
 }
 
+/**
+ * A metre tall and slightly thick, in a face the studio ships: a text dropped into a scene reads
+ * against the grid straight away, and opens the same on whatever machine it travels to.
+ */
+export const DEFAULT_TEXT: TextDescriptor = {
+  value: 'Text',
+  font: DEFAULT_FONT,
+  size: 1,
+  depth: 0.2,
+  curveSegments: 6,
+}
+
 export const EMPTY_SCENE: SceneState = {
   nodes: [],
   selectedIds: [],
   environment: STUDIO_ENVIRONMENT,
+  animation: EMPTY_TIMELINE,
 }
 
 export type MeshNode = Extract<SceneNode, { type: 'mesh' }>
 export type LightNode = Extract<SceneNode, { type: 'light' }>
 export type ModelNode = Extract<SceneNode, { type: 'model' }>
 export type SpriteNode = Extract<SceneNode, { type: 'sprite' }>
+export type TextNode = Extract<SceneNode, { type: 'text' }>
 export type GroupNode = Extract<SceneNode, { type: 'group' }>
 
 export function nodeById(state: SceneState, id: string): SceneNode | null {

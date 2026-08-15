@@ -19,7 +19,8 @@ The simplest case. Double-click and follow what your system offers.
 |---|---|---|
 | **macOS** | a `.dmg` file | open it, drag the application into **Applications** |
 | **Windows** | an `.exe` installer | run it, follow the wizard |
-| **Linux** | an `.AppImage` | make it executable, then launch it |
+| **Linux — Debian, Ubuntu** | a `.deb` package | open it with your desktop's installer, or `sudo apt install ./<file>.deb` |
+| **Linux — everything else** | an `.AppImage` | make it executable, then launch it — nothing gets installed |
 
 > **macOS may refuse to open the application** if it has not been signed by Apple. The message
 > talks about an "unidentified developer". In that case: right-click the application → **Open** →
@@ -27,7 +28,8 @@ The simplest case. Double-click and follow what your system offers.
 
 ### You are starting from the source code
 
-You need **Node 22 or later** and **[pnpm](https://pnpm.io)**. Then, in a terminal, at the root of
+You need **Node 24** — the version `.nvmrc` carries, and the one CI uses — and
+**[pnpm](https://pnpm.io)**. Then, in a terminal, at the root of
 the folder:
 
 ```bash
@@ -64,8 +66,9 @@ programs.
 
 ## Step 3 — Connect your account
 
-1. Open settings: `⌘,` on macOS, `Ctrl+,` on Windows and Linux. Or through the menu
-   **File ▸ Settings…**
+1. Open settings: `⌘,` on macOS, `Ctrl+,` on Windows and Linux. Or through the menu —
+   **Scenario Studio ▸ Settings…** on macOS, **File ▸ Settings…** elsewhere, since only macOS
+   has an application menu.
 2. In the list on the left, click **Account**.
 3. Give it a **name** — whatever you like: "Studio", "Personal", your first name.
 4. Paste your key into **API key**, your secret into **API secret**.
@@ -80,8 +83,8 @@ The studio checks with Scenario immediately. Three possible answers:
 | What appears | What it means |
 |---|---|
 | A green **In use** badge on the account's row | all is well, you can close settings |
-| **Invalid API key or secret** | one of the two strings is wrong — often a stray space at the start or end |
-| **Cannot reach Scenario** | it is not your key, it is your internet connection |
+| **Invalid API key or secret.** | one of the two strings is wrong — often a stray space at the start or end |
+| **Cannot reach Scenario. Check your connection.** | it is not your key, it is your internet connection |
 
 **Where your credentials go.** They are encrypted by your system's keychain — Keychain on macOS,
 the credential manager on Windows, the desktop keyring on Linux — and filed with the studio's
@@ -101,9 +104,15 @@ connected?".
 
 Still in settings, section **General**, setting **Language**.
 
-Three choices: **System** (your computer's language), **Français**, **English**. The change is
-immediate, nothing needs restarting, and it touches neither your projects nor what you write in
-them.
+Three choices: **System** (your computer's language), **Français**, **English**.
+
+**A setting you have chosen is not yet a setting you have saved.** Click **Apply**, which leaves
+the window open, or **OK**, which closes it. That is the difference with the previous step, where
+**Add an account** wrote straight away: settings are held aside until you confirm. A dot marks the
+changed setting meanwhile, and **Cancel** drops those changes.
+
+Once applied, the language change shows straight away — nothing needs restarting — and it touches
+neither your projects nor what you write in them.
 
 ---
 
@@ -117,12 +126,11 @@ find again: your documents, your desktop, an external drive.
 What it builds:
 
 ```
-my-first-project/
-├── project.json      the project's identity card
+My first project/
 ├── assets/           everything you make and import
 ├── documents/        your works in progress
-├── layouts/          the way you have arranged your panels
-└── .index/           service files, regenerable
+├── .project.json     the project's identity card — hidden
+└── .index/           the catalogue and its caches — keep this, hidden
 ```
 
 The project's name appears at the top of the window. You always know what you are working in.
@@ -135,7 +143,7 @@ The chapter [Projects](04-projects.md) details each folder.
 
 At the top of the window, click **Image**.
 
-On the right, the **Models** panel fills up. These are the Scenario catalogue models capable of
+On the left, the **Models** panel fills up. These are the Scenario catalogue models capable of
 making images. There are many.
 
 For a first try, pick one at random among the featured ones: click a thumbnail. Its name appears
@@ -148,7 +156,9 @@ at the top of the panel — that is the one that will work.
 
 ## Step 7 — Write your first prompt
 
-Below the Models panel sits the **Generate** panel. It shows a form.
+Once a model is chosen, its **Generate** icon appears in the left rail. Click it: the **Generate**
+panel takes the place of Models — they share the same half of the column and take turns — and
+shows a form.
 
 **This form is not always the same.** It is built from what the chosen model can accept: two
 different models do not have the same settings, and the studio discovers them instead of guessing.
@@ -182,7 +192,7 @@ the project's shelf — and on your disk, in `assets/img/`.
 size, its weight, the model that made it, the prompt you wrote, and the *seed* that will let you
 come back to it.
 
-The **Reveal in file manager** button, in the inspector, opens the folder it sits in. That is
+The **Show in the file manager** button, in the inspector, opens the folder it sits in. That is
 where you take it from to send it to anyone.
 
 > **To retouch it**, move to the **Image** workspace: the `+` button on the left rail opens a
@@ -190,13 +200,14 @@ where you take it from to send it to anyone.
 > eraser and the shapes apply to it. The chapter [Image workspace](08-image-workspace.md) covers
 > the three ways of bringing it in.
 >
-> **What the studio cannot do yet:** save that document. Closing the tab loses the layers —
-> `⇧⌘E` gets a PNG out first. See [What does not exist yet](18-limits.md).
+> **To keep it:** `⌘S` writes the document into the project, layers and masks included, and it
+> reopens just as it was — the **Explorer** panel lists what the project holds. `⇧⌘E` gets a
+> flattened PNG out, which is an export and not a save.
 >
 > To transform the picture rather than paint it: go back to the **Generate** panel with an
 > *image to image* model, and give it your picture as the starting point.
 
-<!-- SCREENSHOT: the Generate panel with a model's form, and the status line below with a running
+<!-- SCREENSHOT: the Generation panel with a model's form, and the status line below with a running
      generation. Save to ../../images/generate.png -->
 
 ---

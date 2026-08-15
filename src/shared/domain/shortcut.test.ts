@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { bindingOf, COMMAND_REGISTRY } from './command'
+import { bindingOf, commandFor, COMMAND_REGISTRY } from './command'
 import {
   acceleratorOf,
   DEFAULT_MOTION,
+  isSignature,
   MOTION_IDS,
   shortcutLabel,
   signatureOf,
@@ -38,6 +39,35 @@ describe('signatureOf', () => {
       signatureOf(event('KeyZ', { metaKey: true, shiftKey: true })),
     )
   })
+
+  /**
+   * The keypad's Enter is its own position, and every binding is spelled `Enter`: the two
+   * commands below simply did not answer it. Folded rather than bound twice, so a remap of
+   * either one moves both.
+   */
+  it('reads the keypad Enter as the Enter it shares its meaning with', () => {
+    expect(signatureOf(event('NumpadEnter'))).toBe('Enter')
+    expect(signatureOf(event('NumpadEnter', { metaKey: true }))).toBe('Meta+Enter')
+  })
+
+  it('fires the commands bound to Enter from the keypad', () => {
+    expect(commandFor(signatureOf(event('NumpadEnter')), 'canvas', {})).toBe('canvas.cropApply')
+  })
+
+  it('follows a remap onto Enter, having no second spelling of its own', () => {
+    // A scope with nothing on Enter, so the remap is what puts a command there.
+    const moved = { 'scene.translate': 'Enter' }
+    expect(commandFor(signatureOf(event('NumpadEnter')), 'scene', moved)).toBe('scene.translate')
+    expect(commandFor(signatureOf(event('NumpadEnter')), 'scene', {})).toBeNull()
+  })
+
+  /**
+   * With Num Lock off this key is `End`, so a command on `Digit1` would fire on a keypress
+   * meant to move. Only keys whose meaning survives the lock are folded.
+   */
+  it('leaves the keypad digits on their own positions', () => {
+    expect(signatureOf(event('Numpad1'))).toBe('Numpad1')
+  })
 })
 
 describe('defaults', () => {
@@ -72,22 +102,27 @@ describe('defaults', () => {
   })
 })
 
+/** Marks what the caller was asked to name, so a key left unnamed stands out in the output. */
+const named = (code: string): string => `<${code}>`
+
 describe('shortcutLabel', () => {
   it('shows the printed letter of a physical key', () => {
-    expect(shortcutLabel('KeyG')).toBe('G')
+    expect(shortcutLabel('KeyG', named)).toBe('G')
   })
 
   it('keeps the modifiers in front', () => {
-    expect(shortcutLabel('Shift+KeyG')).toBe('⇧G')
+    expect(shortcutLabel('Shift+KeyG', named)).toBe('⇧G')
   })
 
-  it('leaves a non-letter code readable', () => {
-    expect(shortcutLabel('Delete')).toBe('Delete')
+  // The bug this replaced: `Delete` and `Space` are words, and read as English ones in French.
+  it('has the caller name the keys that are words', () => {
+    expect(shortcutLabel('Delete', named)).toBe('<Delete>')
+    expect(shortcutLabel('Meta+Space', named)).toBe('⌘<Space>')
   })
 
   it('renders every default binding without leaking a raw code', () => {
-    expect(shortcutLabel(shipped('scene.undo'))).toBe('⌘Z')
-    expect(shortcutLabel(shipped('scene.redo'))).toBe('⇧⌘Z')
+    expect(shortcutLabel(shipped('scene.undo'), named)).toBe('⌘Z')
+    expect(shortcutLabel(shipped('scene.redo'), named)).toBe('⇧⌘Z')
   })
 })
 
@@ -116,21 +151,148 @@ describe('acceleratorOf', () => {
 
 describe('shortcutLabel, on the keys that are neither letters nor named', () => {
   it('prints what the key cap prints', () => {
-    expect(shortcutLabel('Meta+Equal')).toBe('⌘=')
-    expect(shortcutLabel('Meta+Minus')).toBe('⌘−')
-    expect(shortcutLabel('Shift+Meta+Semicolon')).toBe('⇧⌘;')
-    expect(shortcutLabel('Meta+Comma')).toBe('⌘,')
+    expect(shortcutLabel('Meta+Equal', named)).toBe('⌘=')
+    expect(shortcutLabel('Meta+Minus', named)).toBe('⌘−')
+    expect(shortcutLabel('Shift+Meta+Semicolon', named)).toBe('⇧⌘;')
+    expect(shortcutLabel('Meta+Comma', named)).toBe('⌘,')
+  })
+
+  it('draws an arrow rather than spelling one', () => {
+    expect(shortcutLabel('ArrowUp', named)).toBe('↑')
   })
 
   it('drops the `Digit` prefix a number key carries', () => {
-    expect(shortcutLabel('Meta+Digit0')).toBe('⌘0')
+    expect(shortcutLabel('Meta+Digit0', named)).toBe('⌘0')
   })
 
-  // Every binding the registry ships has to be readable, or the shortcuts screen lists codes.
+  /**
+   * Every binding the registry ships is either a glyph or a name the caller supplied. The list
+   * used to stop at `Key|Digit|Equal|Minus|Semi`, which is how six word-keys shipped in English.
+   */
   it('never leaves a raw code in a shipped binding', () => {
     for (const descriptor of COMMAND_REGISTRY) {
       if (!descriptor.defaultBinding) continue
-      expect(shortcutLabel(descriptor.defaultBinding)).not.toMatch(/Key|Digit|Equal|Minus|Semi/)
+
+      // What is left once the caller's names are removed: a glyph or a single printed letter.
+      const raw = shortcutLabel(descriptor.defaultBinding, named).replace(/<[^>]+>/g, '')
+      expect(raw, descriptor.id).not.toMatch(/[A-Za-z]{2}/)
     }
+  })
+})
+
+/**
+ * The guard that was missing when sixteen commands shipped bound to `'P'` instead of `'KeyP'`.
+ * Typecheck green, lint green, every unit test green — `Signature` is a string, and nothing
+ * anywhere read its shape.
+ */
+describe('whether a string is a signature the studio could produce', () => {
+  it('accepts a bare code', () => {
+    expect(isSignature('KeyP')).toBe(true)
+    expect(isSignature('Digit1')).toBe(true)
+    expect(isSignature('Space')).toBe(true)
+    expect(isSignature('ArrowUp')).toBe(true)
+    expect(isSignature('F5')).toBe(true)
+    expect(isSignature('BracketLeft')).toBe(true)
+    expect(isSignature('NumpadDecimal')).toBe(true)
+  })
+
+  /**
+   * A guard written as a list of the codes that exist refuses the ones nobody thought of, and a
+   * refused code is a key nobody can bind. `IntlBackslash` is the `<>` key of every AZERTY
+   * keyboard — the layout this file's own opening paragraph says the codes are here to serve.
+   */
+  it('accepts the codes a real keyboard emits, listed or not', () => {
+    const emitted = [
+      'IntlBackslash',
+      'IntlRo',
+      'IntlYen',
+      'ContextMenu',
+      'CapsLock',
+      'Insert',
+      'PrintScreen',
+      'Pause',
+      'NumLock',
+      'AudioVolumeUp',
+      'ShiftLeft',
+      'MetaRight',
+    ]
+
+    for (const code of emitted) expect(isSignature(code), code).toBe(true)
+  })
+
+  it('accepts the modifiers in the order `signatureOf` writes them', () => {
+    expect(isSignature('Meta+KeyS')).toBe(true)
+    expect(isSignature('Ctrl+Alt+Shift+Meta+KeyS')).toBe(true)
+    expect(isSignature('Alt+Meta+Delete')).toBe(true)
+  })
+
+  /**
+   * The shortcuts screen recorded raw codes before the keypad Enter was folded, so an install
+   * upgrading into that change can hold `NumpadEnter` in its settings file. Kept, it would name
+   * a key on screen that fires nothing while that key ran another command; refused, the schema
+   * drops the line and the command returns to a default the keypad does reach.
+   */
+  it('refuses a code no keypress spells any more', () => {
+    expect(isSignature('NumpadEnter')).toBe(false)
+    expect(isSignature('Meta+NumpadEnter')).toBe(false)
+    expect(isSignature('Enter')).toBe(true)
+  })
+
+  /** The defect itself: a letter is what is printed on a key, never the key's position. */
+  it('refuses a letter written where a code was meant', () => {
+    expect(isSignature('P')).toBe(false)
+    expect(isSignature('Meta+P')).toBe(false)
+    expect(isSignature('1')).toBe(false)
+    expect(isSignature('[')).toBe(false)
+  })
+
+  /**
+   * Two spellings of one chord would be two different keys in every lookup, and the lookup that
+   * decides what a key does is an equality on this string.
+   */
+  it('refuses the modifiers out of order, or written twice', () => {
+    expect(isSignature('Meta+Ctrl+KeyS')).toBe(false)
+    expect(isSignature('Shift+Alt+KeyS')).toBe(false)
+    expect(isSignature('Meta+Meta+KeyS')).toBe(false)
+  })
+
+  it('refuses a modifier that is not one', () => {
+    expect(isSignature('Cmd+KeyS')).toBe(false)
+    expect(isSignature('Super+KeyS')).toBe(false)
+  })
+
+  /** What is not shaped like a code at all: one character, a glyph, a lowercase word. */
+  it('refuses what no `KeyboardEvent.code` looks like', () => {
+    expect(isSignature('')).toBe(false)
+    expect(isSignature('Meta+')).toBe(false)
+    expect(isSignature('keyP')).toBe(false)
+    expect(isSignature('KEY P')).toBe(false)
+    expect(isSignature(null)).toBe(false)
+    expect(isSignature(undefined)).toBe(false)
+    expect(isSignature(42)).toBe(false)
+  })
+
+  /** Whatever `signatureOf` builds must pass: the two describe the same grammar. */
+  it('accepts every signature the studio itself builds', () => {
+    const chords = [
+      { code: 'KeyS', ctrlKey: false, altKey: false, shiftKey: false, metaKey: true },
+      { code: 'Escape', ctrlKey: true, altKey: true, shiftKey: true, metaKey: true },
+      { code: 'ArrowLeft', ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
+      { code: 'Slash', ctrlKey: false, altKey: false, shiftKey: true, metaKey: false },
+      { code: 'IntlBackslash', ctrlKey: false, altKey: false, shiftKey: false, metaKey: true },
+    ]
+
+    for (const chord of chords) expect(isSignature(signatureOf(chord))).toBe(true)
+  })
+
+  /**
+   * The sister table of the registry, in this very file, with the same failure mode: `'W'` where
+   * `'KeyW'` was meant would hold no direction and say nothing. It is not remappable today,
+   * which is exactly why nothing else would ever read it back.
+   */
+  it('spells every motion the studio publishes as a signature', () => {
+    const malformed = Object.entries(DEFAULT_MOTION).filter(([, bound]) => !isSignature(bound))
+
+    expect(malformed).toEqual([])
   })
 })

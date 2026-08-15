@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AccountsResult, AccountSummary } from '@shared/domain/account'
+import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAccounts } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
@@ -17,8 +18,11 @@ const given = (accounts: AccountSummary[], authenticated = true): void => {
   })
 }
 
-const openMenu = async (): Promise<void> => {
-  await userEvent.click(screen.getByRole('button', { name: 'Compte Scenario' }))
+const buttonFor = (name: string): HTMLElement =>
+  screen.getByRole('button', { name: `Compte Scenario${NO_BREAK_SPACE}: ${name}` })
+
+const openMenu = async (name: string): Promise<void> => {
+  await userEvent.click(buttonFor(name))
 }
 
 describe('AccountSelect', () => {
@@ -31,25 +35,62 @@ describe('AccountSelect', () => {
     given([studio, client])
     render(<AccountSelect />)
 
-    expect(screen.getByRole('button', { name: 'Compte Scenario' })).toHaveTextContent('Studio')
+    expect(buttonFor('Studio')).toHaveTextContent('Studio')
   })
 
   it('says it is not connected while nothing is stored and nothing answers', () => {
     given([], false)
     render(<AccountSelect />)
 
-    expect(screen.getByRole('button', { name: 'Compte Scenario' })).toHaveTextContent(
-      'Non connecté',
-    )
+    expect(buttonFor('Non connecté')).toHaveTextContent('Non connecté')
   })
 
   it('lists every account, ticking the one in use', async () => {
     given([studio, client])
     render(<AccountSelect />)
-    await openMenu()
+    await openMenu('Studio')
 
-    const rows = screen.getAllByRole('menuitem')
-    expect(rows.map(row => row.textContent)).toEqual(['Studio', 'Client X', 'Gérer les comptes…'])
+    // The accounts are alternatives and the row that manages them is not, so they no longer
+    // share a role — which is the point: only one of the three can be ticked.
+    const accounts = screen.getAllByRole('menuitemradio')
+    expect(accounts.map(row => row.textContent)).toEqual(['Studio', 'Client X'])
+    expect(accounts[0]).toHaveAttribute('aria-checked', 'true')
+    expect(accounts[1]).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByRole('menuitem', { name: 'Gérer les comptes…' })).toBeInTheDocument()
+  })
+
+  it('explains each row instead of repeating the name it already shows', async () => {
+    given([studio])
+    render(<AccountSelect />)
+    await openMenu('Studio')
+
+    const account = screen.getByRole('menuitemradio', { name: 'Studio' })
+    expect(account).toHaveAttribute(
+      'data-tooltip-content',
+      'Toutes les générations partiront désormais de cette clé',
+    )
+    // A visible label answers for itself: an `aria-label` here would replace it (WCAG 2.5.3).
+    expect(account).not.toHaveAttribute('aria-label')
+    expect(screen.getByRole('menuitem', { name: 'Gérer les comptes…' })).toHaveAttribute(
+      'data-tooltip-content',
+      'Ouvre les réglages pour ajouter, renommer ou retirer un compte',
+    )
+  })
+
+  // The same mounting as the toolbar's menus, so the same manners: they come with the props
+  // `useHoverFlyout` hands the surface, not from three lines rewritten per caller.
+  it('walks its rows with the arrows, and closes on Escape', async () => {
+    given([studio, client])
+    render(<AccountSelect />)
+    await openMenu('Studio')
+
+    expect(screen.getByRole('menuitemradio', { name: /Studio/ })).toHaveFocus()
+
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('menuitemradio', { name: /Client X/ })).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
   it('switches to the account that was picked', async () => {
@@ -58,8 +99,8 @@ describe('AccountSelect', () => {
     given([studio, client])
 
     render(<AccountSelect />)
-    await openMenu()
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Client X' }))
+    await openMenu('Studio')
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'Client X' }))
 
     expect(activate).toHaveBeenCalledWith('b')
   })
@@ -72,8 +113,8 @@ describe('AccountSelect', () => {
     given([studio, client])
 
     render(<AccountSelect />)
-    await openMenu()
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Studio' }))
+    await openMenu('Studio')
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'Studio' }))
 
     expect(activate).not.toHaveBeenCalled()
   })
@@ -85,7 +126,7 @@ describe('AccountSelect', () => {
     given([studio])
 
     render(<AccountSelect />)
-    await openMenu()
+    await openMenu('Studio')
     await userEvent.click(screen.getByRole('menuitem', { name: 'Gérer les comptes…' }))
 
     expect(open).toHaveBeenCalledWith('account')
@@ -98,9 +139,16 @@ describe('AccountSelect', () => {
     installFakeBridge({ settings: { open } })
 
     render(<AccountSelect />)
-    await openMenu()
+    await openMenu('Non connecté')
 
     expect(open).toHaveBeenCalledWith('account')
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('lights up in the half-opaque shade this bar answers with', () => {
+    given([studio])
+    render(<AccountSelect />)
+
+    expect(buttonFor('Studio')).toHaveClass('hover:bg-elevated/60', 'hover:text-text')
   })
 })

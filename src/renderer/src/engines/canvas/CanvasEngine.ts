@@ -2,6 +2,7 @@ import {
   AlphaFilter,
   type Application,
   Assets,
+  BlurFilter,
   Container,
   Graphics,
   Matrix,
@@ -12,12 +13,14 @@ import {
   type BLEND_MODES,
 } from 'pixi.js'
 import { assetUrl } from '@shared/domain/asset'
+import { fontKey } from '@shared/domain/font'
 import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
 import { reportFailure } from '@/services/diagnostics'
 import { mountApplication } from '../core/mount'
-import { onPaletteChange, token } from '../core/palette'
+import { onPaletteChange, token, tokenAsFont } from '../core/palette'
 import { createAdjustFilter, type AdjustFilter } from './adjust-filter'
+import { captionsSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvas-fonts'
 import {
   allLayers,
   IDENTITY,
@@ -44,22 +47,21 @@ import {
 import { composite, maskKey, placement, type CompositeNode } from './compositor'
 import { compose, invert, layerMatrix, mapRect, type Affine } from './layer-space'
 import {
-  handleAt,
+  centerOf,
+  cornersOfRect,
+  hitTest,
   HANDLE_GRAB,
-  HANDLE_IDS,
-  layerBoxOf,
-  handlePoints,
+  layerCornersOf,
   resizeBy,
   rotateBy,
+  ROTATE_REACH,
+  wholeOf,
+  type Corners,
+  type HandleHit,
   type HandleId,
 } from './handles'
-import {
-  CanvasOverlay,
-  RULER_SIZE,
-  type OverlayColors,
-  type OverlayContext,
-  type OverlayScene,
-} from './CanvasOverlay'
+import { resizeCursor, rotateCursor, UPRIGHT, type Facing } from './cursors'
+import { CanvasOverlay, RULER_SIZE, type OverlayColors, type OverlayScene } from './CanvasOverlay'
 import {
   boxEdges,
   guideNear,
@@ -71,26 +73,25 @@ import {
   type Axis,
 } from './guides'
 import { PixelPatches, type PatchSide } from './PixelPatches'
+import { cropRect, resizeCrop } from './crop'
 import {
   paintShape,
   shapeBounds,
   shapeGeometry,
-  shapeOutline,
-  type Point,
   type ShapeGeometry,
   type ShapeKind,
 } from './shape-geometry'
-import { brushRect } from './tiles'
+import type { Point, Size } from '../core/geometry'
+import { blurRadius, DEFAULT_BRUSH, readsBrushSetting, type BrushSettings } from './brush'
+import { brushRect, grownBy } from './tiles'
 import {
   containIn,
   DEFAULT_VIEW,
   fitTo,
   sameViewport,
   toDocument,
-  toScreen,
-  zoomAt,
+  zoomCanvasAt,
   type CanvasView,
-  type Size,
   type Viewport,
 } from './viewport'
 
@@ -100,21 +101,17 @@ export type CanvasTool =
   | 'crop'
   | 'shape'
   | 'brush'
+  /**
+   * The same gesture as the brush, with the edge the bundle promises it: a pencil is hard, and
+   * nothing on screen sets that — which is why it is a tool rather than a mode of the brush.
+   */
+  | 'pencil'
   | 'text'
   | 'comment'
   | 'eraser'
   | 'fill'
   | 'picker'
   | 'hand'
-
-export type BrushSettings = {
-  size: number
-  /** 0 to 1. 1 is a hard edge, 0 a fully feathered one. */
-  hardness: number
-  opacity: number
-  /** Packed RGB, the form Pixi takes. */
-  color: number
-}
 
 /**
  * What the engine may do to the guides. It builds no id and runs no command: those belong to the
@@ -161,15 +158,15 @@ export type CanvasEngineOptions = {
   onHost: (size: Size) => void
   /** Where a caption was asked for. The layer it becomes is the stack's to make. */
   onText: (at: Point) => void
+  /**
+   * The frame a crop drag settled on, in document units. Same split as `onText`: the engine
+   * knows where the pointer went, the document's history knows what that means.
+   */
+  onCrop: (rect: Rect) => void
   guides: GuidePort
   layers: LayerPort
-}
-
-export const DEFAULT_BRUSH: BrushSettings = {
-  size: 24,
-  hardness: 0.8,
-  opacity: 1,
-  color: 0x000000,
+  /** Puts an embedded face in the page. Injected because jsdom has no `FontFace` to put it with. */
+  addFace: FaceRegistrar
 }
 
 /**
@@ -179,7 +176,7 @@ export const DEFAULT_BRUSH: BrushSettings = {
  * Exported so the bar's registry can be crossed against it: a tool listed here whose button is
  * not greyed arms a gesture `onPointerDown` drops on the floor.
  */
-export const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['crop', 'comment'])
+export const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['comment'])
 
 /**
  * Pixi's own name for each mode. Total on purpose: a mode added to `BlendMode` and forgotten here
@@ -213,10 +210,35 @@ export const BLEND_BY_MODE: Record<BlendMode, BLEND_MODES> = {
 type LayerSurface = {
   texture: RenderTexture
   sprite: Sprite
+  /**
+   * Whether the document filled this surface itself, which makes it the authority over the
+   * layer's `source`.
+   *
+   * `source` names where a pixel layer CAME FROM, and the engine reloads it when the surface is
+   * born. That is right until the document carries the layer's own pixels — and ⌘S is what makes
+   * the two diverge: it writes the flattened stack into that very asset, so a reload would fold
+   * the whole picture back into the layer it came from and draw the upper layers over it a
+   * second time, further at every open.
+   *
+   * Held on the surface rather than in a set beside it, so it dies with the texture: a layer
+   * that comes back on ⌘Z has no pixels left and its asset is the only picture to draw.
+   */
+  fromDocument: boolean
 }
 
 /** Which of a layer's two surfaces the brush writes on. */
 export type PaintSurface = 'pixels' | 'mask'
+
+/**
+ * One surface's pixels, on their way to a file or back. `data` is base64 PNG — what the document
+ * layer writes beside the manifest, and what the renderer has to offer since it owns no disk.
+ */
+export type LayerPixels = {
+  layerId: string
+  /** A layer keeps two surfaces: the picture, and the mask painted over it. */
+  mask: boolean
+  data: string
+}
 
 /** A surface a gesture may write to, with the key its undo patches are filed under. */
 /**
@@ -268,32 +290,103 @@ type Gesture =
   /** `origin` is where the layer stood when the drag began: every step is absolute from it. */
   | { kind: 'move'; id: string; from: Point; origin: Point }
   | { kind: 'select'; from: Point }
+  /** Drawing a fresh crop frame from `from`; the frame itself lives on past the drag. */
+  | { kind: 'crop'; from: Point }
+  /** Pulling one grip of the placed crop frame. `origin` is the frame the drag started on. */
+  | { kind: 'cropHandle'; handle: HandleId; origin: Rect }
   /** `from` is where the drag began; the shape is redrawn from it on every move. */
   | { kind: 'shape'; from: Point; target: BrushTarget }
   /** `origin` is the transform the layer had when the drag began: every step is absolute. */
-  | { kind: 'handle'; id: string; handle: HandleId; box: Rect; from: Point; origin: Transform }
+  | { kind: 'handle'; id: string; handle: HandleId; from: Point; origin: Transform }
+  /** Turning by the zone outside a corner. `center` is the middle the layer pivots about. */
+  | { kind: 'rotate'; id: string; center: Point; from: Point; origin: Transform }
 
 const NO_GESTURE: Gesture = { kind: 'none' }
 
-/** Which token each part of the overlay is painted with. The values live in `index.css`. */
-const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
-  frame: '--color-border',
-  guide: '--color-accent-soft',
-  rulerBackground: '--color-chassis',
-  rulerText: '--color-muted',
-  rulerTick: '--color-border',
-  accent: '--color-accent',
+/**
+ * The tools that lay a disc down where the hand is, and so the ones the ring stands for. The
+ * fill floods a region rather than stamping one, and the shapes are drawn corner to corner:
+ * neither says anything about the brush's footprint.
+ */
+const RINGED_TOOLS: ReadonlySet<CanvasTool> = new Set(['brush', 'pencil', 'eraser'])
+
+/**
+ * The tools that write on the armed layer's surface, and so the ones a layer can refuse. The
+ * text tool is not one: it places a caption of its own rather than writing on what is armed.
+ * The eyedropper reads, and the selection tools carve out a region rather than a layer.
+ */
+const WRITING_TOOLS: ReadonlySet<CanvasTool> = new Set([
+  'brush',
+  'pencil',
+  'eraser',
+  'fill',
+  'shape',
+])
+
+/** Which gestures hold a layer open in the history, so releasing one closes its entry. */
+const LAYER_DRAGS: ReadonlySet<Gesture['kind']> = new Set(['move', 'handle', 'rotate'])
+
+/** Both arms carry `id`, so two hovers compare without pairing their kinds again. */
+function sameHit(one: HandleHit | null, other: HandleHit | null): boolean {
+  if (!one || !other) return one === other
+  return one.kind === other.kind && one.id === other.id
 }
 
-/** Legible on the studio's greys, and only ever used before a canvas exists to read from. */
-const FALLBACK_COLORS: OverlayColors = {
+/** What a hover or a press may take hold of, and how the cursor over it should be turned. */
+type HoverBox = { corners: Corners; reach: number; facing: Facing }
+
+/**
+ * The layer's own rotation and mirroring turn the arrow, never the geometry of the box: a grip
+ * pulls along its nominal direction, and the box's proportions have nothing to say about it.
+ */
+function cursorFor(hit: HandleHit, facing: Facing): string {
+  return hit.kind === 'rotate' ? rotateCursor(hit.id, facing) : resizeCursor(hit.id, facing)
+}
+
+/** Where a surface's picture starts when nothing displaced it — see `resurface`. */
+const ORIGIN: Point = { x: 0, y: 0 }
+
+/** Which token each part of the overlay is painted with. The values live in `index.css`. */
+export const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
+  frame: '--color-border',
+  guide: '--color-accent-soft',
+  // A step above the chassis, not level with it: the bands sit on the darkest surface of the
+  // studio, and at chassis they read as a continuation of it rather than as a scale to measure
+  // against. The ticks come up with the background — `border` on `elevated` is barely a shade
+  // apart, and graduations nobody can see are the same as no rulers at all.
+  rulerBackground: '--color-elevated',
+  rulerText: '--color-muted',
+  rulerTick: '--color-muted',
+  accent: '--color-accent',
+  marqueeLight: '--color-marquee-light',
+  marqueeDark: '--color-marquee-dark',
+  scrim: '--color-scrim',
+}
+
+/**
+ * Legible on the studio's greys, and only ever used before a canvas exists to read from.
+ *
+ * Every value restates its token's DARK declaration, and a test pins the pair: `token()` answers
+ * empty for a name `index.css` no longer declares, so a renamed token would quietly make this
+ * table the real source of the overlay's colours instead of its last resort.
+ */
+export const FALLBACK_COLORS: OverlayColors = {
   frame: '#34363a',
   guide: '#2e436e',
-  rulerBackground: '#2b2d30',
-  rulerText: '#868a91',
-  rulerTick: '#34363a',
-  accent: '#3574f0',
+  rulerBackground: '#3c3f44',
+  rulerText: '#91959b',
+  rulerTick: '#91959b',
+  accent: '#346ef2',
+  marqueeLight: '#ffffff',
+  marqueeDark: '#000000',
+  scrim: '#00000099',
 }
+
+const RULER_FAMILY = 'system-ui, sans-serif'
+
+/** `--text-micro` at scale 1, for a canvas not yet in a document — as `FALLBACK_COLORS` is. */
+const RULER_FONT_SIZE = '9px'
+const FALLBACK_RULER_FONT = `${RULER_FONT_SIZE} ${RULER_FAMILY}`
 
 function readColors(element: HTMLElement): OverlayColors {
   const read = (part: keyof OverlayColors): string =>
@@ -306,6 +399,9 @@ function readColors(element: HTMLElement): OverlayColors {
     rulerText: read('rulerText'),
     rulerTick: read('rulerTick'),
     accent: read('accent'),
+    marqueeLight: read('marqueeLight'),
+    marqueeDark: read('marqueeDark'),
+    scrim: read('scrim'),
   }
 }
 
@@ -323,6 +419,17 @@ export class CanvasEngine {
   private host: HTMLElement | null = null
   private readonly world = new Container()
   private readonly surfaces = new Map<string, LayerSurface>()
+  /**
+   * Where the picture actually landed inside each layer's surface — what `containIn` worked out
+   * when it was drawn, kept so the handles can grip the photo rather than the document.
+   *
+   * Derived, never stored: `loadInto` fills it from `layer.source` on every mount, every undo and
+   * every detach, so a document rebuilt from its manifest arrives with the same answer. Invariant
+   * 3 holds — nothing here is a fact the state does not already carry.
+   */
+  private readonly contents = new Map<string, Rect>()
+  /** Families already asked of the page, whether they arrived or not — see `registerFace`. */
+  private readonly faces = new Set<string>()
   private readonly groups = new Map<string, Container>()
   /** One per clipped layer, keyed by it: a run of three on one base takes three proxies. */
   private readonly clips = new Map<string, ClipProxy>()
@@ -344,7 +451,23 @@ export class CanvasEngine {
   private readonly pendingMaskFills = new Map<string, readonly Point[]>()
   /** Pictures composed for layers that do not exist yet — see `flattenInto`. */
   private readonly pendingPictures = new Map<string, RenderTexture>()
+  /**
+   * Saved pixels waiting for the surface they belong to. The document layer writes the stack into
+   * the store, and the engine only hears about it a React commit later — so a picture read off the
+   * disk almost always arrives before the layer it fills.
+   */
+  private readonly pendingSnapshots = new Map<string, string>()
   private readonly stamp = new Graphics()
+  /**
+   * What softens the edge of a dab. One instance, tuned when the brush changes and never per
+   * dab: a filter rebuilt inside a `pointermove` would recompile a shader hundreds of times
+   * across one stroke.
+   */
+  private readonly softener = new BlurFilter({ strength: 0, quality: 2 })
+  /** The spread currently hung on the stamp, in document pixels. `dab` reads it rather than
+   * asking again: the number that sets the filter and the number that sizes the undo box are
+   * the same number, and two callers of one formula are two chances to disagree. */
+  private spread = 0
   /** Carries the map back into a surface's own pixels — see `inSurfaceSpace`. */
   private readonly paintSpace = new Container()
   private readonly paintMatrix = new Matrix()
@@ -362,6 +485,10 @@ export class CanvasEngine {
   private view: CanvasView = DEFAULT_VIEW
   private hostSize: Size = { width: 0, height: 0 }
   private colors: OverlayColors = FALLBACK_COLORS
+  private rulerFont = FALLBACK_RULER_FONT
+
+  /** What the graduations are written in. `undefined` is the host's locale; `''` would throw. */
+  private language: string | undefined
   /** Read on resize rather than per event: `getBoundingClientRect` forces a layout. */
   private bounds: DOMRect | null = null
 
@@ -369,6 +496,27 @@ export class CanvasEngine {
   private stacking = ''
 
   private gesture: Gesture = NO_GESTURE
+  private hover: HandleHit | null = null
+  /** Whether the armed tool is currently saying it can do nothing here — see `refuses`. */
+  private refused = false
+  /**
+   * The last refusal, and what it was computed from. Memoised for the same reason `corners` is:
+   * answering it walks the layer tree and inverts a matrix, and `hovering` runs per pointer move.
+   */
+  private refusal: {
+    of: CanvasState | null
+    tool: CanvasTool
+    painting: PaintSurface
+    value: boolean
+  } | null = null
+  /**
+   * The armed layer's corners, derived once per state. Reaching a layer flattens the whole tree,
+   * and both the hover test and the overlay frame want the same answer on the same pointer move.
+   *
+   * Keyed on the state's identity, as `apply` keys its own work: `apply` replaces it wholesale,
+   * so the document's size and the armed id ride along with the tree.
+   */
+  private corners: { of: CanvasState | null; box: Corners | null } = { of: null, box: null }
   private pointer: Point | null = null
   private selection: CanvasSelection = null
   /** Which of the three the region tool draws. Pushed in by the bar, like the tool itself. */
@@ -377,6 +525,12 @@ export class CanvasEngine {
   private shapeSides = 5
   /** The shape being dragged, drawn in the overlay until the hand comes up. */
   private pending: ShapeGeometry | null = null
+  /**
+   * The crop frame, once placed. Outlives its drag on purpose — that is what makes the grips
+   * real, and what ⏎ applies and ⎋ drops. Session state, like the selection: a frame nobody
+   * committed is not something ⌘Z should have to know about.
+   */
+  private cropping: Rect | null = null
   /** Wrapped, so a pending `null` is told apart from nothing pending — see `publishSelection`. */
   private publishingSelection: { selection: CanvasSelection } | null = null
   private selectionFrame = 0
@@ -463,9 +617,18 @@ export class CanvasEngine {
     this.state = state
     this.overlay.invalidate()
 
+    // Above the guard below on purpose: arming another layer keeps `layers` identical, so this
+    // is the one path a box can move under a still pointer without the tree changing at all.
+    if (previous !== state) this.forgetHover()
+
     // Dragging a guide rewrites the state sixty times a second and touches no pixel: walking the
     // tree and re-rendering the stage for it would be a full GPU frame per pointer move.
     if (previous && previous.layers === state.layers && !resized) return
+
+    // A frame is placed against a document that no longer exists: a quarter turn or a resample
+    // under it would leave ⏎ cropping to a rectangle outside the picture, which recuts every
+    // surface to nothing and throws the undo tiles away with them.
+    if (resized) this.dropCrop()
 
     // Before `reconcile`, which builds what is missing at the size the state now names: a
     // surface that survives has to reach the same size, or half the stack is one document old.
@@ -482,18 +645,27 @@ export class CanvasEngine {
    * when the layer was born, and never grew: a quarter turn left the layers outside the frame,
    * and merging or flattening had nowhere document-sized to compose into.
    *
-   * The copy lands at the origin, with no offset. `resizeCanvas` already moves every layer's
-   * transform by the frame's own displacement, and that transform is what places the sprite —
-   * shifting the pixels here as well would apply the same move twice.
+   * `from` is the corner the kept picture starts at. A crop moves it; a resample or a quarter
+   * turn leaves it at the origin. It has to be carried here rather than through the layer
+   * transforms: a surface is document-sized, so the new one only has room for the kept region,
+   * and a copy landing at the origin would keep the document's top-left corner instead — the
+   * frame would then come out empty wherever `from` pushed past the new width.
+   *
+   * A surface already at that size is left alone: the crop recuts the pixels before the command
+   * that reports the new frame, and the `apply` that follows must not undo its work.
    *
    * Shrinking loses what falls outside, and the undo tiles go with it: the frame comes back on
    * ⌘Z, the pixels it cut away do not.
    */
-  private resurface(size: Size): void {
+  private resurface(size: Size, from: Point = ORIGIN): void {
     const renderer = this.app?.renderer
     if (!renderer || this.surfaces.size === 0) return
 
+    let recut = false
     for (const surface of this.surfaces.values()) {
+      if (surface.texture.width === size.width && surface.texture.height === size.height) continue
+      recut = true
+
       const texture = RenderTexture.create({
         width: size.width,
         height: size.height,
@@ -501,6 +673,7 @@ export class CanvasEngine {
       })
 
       const carried = new Sprite(surface.texture)
+      carried.position.set(-from.x, -from.y)
       renderer.render({ container: carried, target: texture, clear: true })
       // The old texture is destroyed just below, so its source must not go with the sprite.
       carried.destroy({ texture: false, textureSource: false })
@@ -510,7 +683,15 @@ export class CanvasEngine {
       surface.texture = texture
     }
 
-    this.patches?.dropAll()
+    // The pixels were carried over translated by `-from`, and nothing re-runs `loadInto` here —
+    // so the remembered picture rects have to travel the same distance. Left where they were, a
+    // crop would leave every picture layer's grips at the coordinates the OLD document used.
+    if (recut) {
+      for (const [id, laid] of this.contents) {
+        this.contents.set(id, { ...laid, x: laid.x - from.x, y: laid.y - from.y })
+      }
+      this.patches?.dropAll()
+    }
   }
 
   /** The stack, made real on the GPU: one texture per paintable layer, in the stack's order. */
@@ -563,6 +744,7 @@ export class CanvasEngine {
       // The texture lives on the GPU: dropping the reference is not enough.
       surface.texture.destroy(true)
       this.surfaces.delete(id)
+      this.contents.delete(id)
     }
 
     for (const [id, container] of this.groups) {
@@ -753,7 +935,7 @@ export class CanvasEngine {
    * `url` is a `scenario://asset/<id>`: the renderer has no filesystem, and the main process
    * serves the scheme against the catalogue.
    */
-  async loadInto(layerId: string, url: string): Promise<void> {
+  async loadInto(layerId: string, url: string, clear = false): Promise<void> {
     const mounting = this.mounting
     const surface = this.surfaces.get(layerId)
     if (!surface || !this.app || !this.state) return
@@ -769,14 +951,48 @@ export class CanvasEngine {
     if (!renderer || !this.state) return
 
     const laid = containIn(texture, { width: this.state.width, height: this.state.height })
+    // Remembered here because here is where it is known: the handles need the rect the picture
+    // occupies, and nothing else in the engine ever works it out.
+    this.contents.set(layerId, laid)
     const sprite = new Sprite(texture)
     sprite.position.set(laid.x, laid.y)
     sprite.setSize(laid.width, laid.height)
 
-    renderer.render({ container: sprite, target: surface.texture, clear: false })
+    renderer.render({ container: sprite, target: surface.texture, clear })
     // Its texture belongs to the asset cache, and another layer may hold the same picture.
     sprite.destroy()
     this.render()
+  }
+
+  /**
+   * Drops a rewritten picture from the loader's cache, so the next layer placed from that asset
+   * draws what is on disk now.
+   *
+   * The cache is keyed on the URL and lives for the session, so ⌘S over an asset would otherwise
+   * be invisible to every OTHER document that places it — the loader answers from memory and
+   * never asks the scheme again.
+   *
+   * `unload` frees the GPU texture as well, so it must not run while something still draws from
+   * it. Nothing here does: `loadInto` renders it into the layer's own surface and destroys the
+   * sprite in the same breath. Skipped when the loader never held it — unloading a URL it does
+   * not know is not something to make a caller think about.
+   */
+  async forgetPicture(assetId: string): Promise<void> {
+    const url = assetUrl(assetId)
+    if (Assets.get(url) === undefined) return
+    await Assets.unload(url)
+  }
+
+  /**
+   * What the rulers are graduated in. Pushed like the view rather than read off
+   * `documentElement.lang`: that attribute is a projection written for screen readers, and it
+   * carries no notification — the rulers would keep the language they were mounted in while the
+   * inspector beside them changed.
+   */
+  setLanguage(language: string): void {
+    if (language === this.language) return
+    this.language = language
+    this.overlay.invalidate()
   }
 
   /** Pan, zoom, and what the overlay shows. Pushed in, never read out: React owns it. */
@@ -793,6 +1009,9 @@ export class CanvasEngine {
     const { x, y, scale } = this.view.viewport
     this.world.position.set(x, y)
     this.world.scale.set(scale)
+    // A zoom slides the grips out from under a still hand. Not while a gesture is open: that one
+    // owns the cursor — a pan holds `grabbing` across every frame it moves the view by.
+    if (this.gesture.kind === 'none') this.forgetHover()
     this.overlay.invalidate()
     this.render()
   }
@@ -821,11 +1040,100 @@ export class CanvasEngine {
   }
 
   setTool(tool: CanvasTool): void {
+    // A frame belongs to the tool that placed it: leaving it up under the brush would keep ⏎
+    // bound to a crop nothing on screen still explains.
+    if (tool !== 'crop') this.dropCrop()
     this.tool = tool
+    this.tuneSoftener()
+    // The pencil and the brush read the same settings and spread them differently: switching
+    // between them changes the edge with nothing else moving.
+    // The chrome belongs to the tool that draws it: without this the move tool's grips stayed on
+    // screen under the brush until something else happened to invalidate.
+    this.forgetHover()
+  }
+
+  /**
+   * Drops what the pointer was over, and repaints without it.
+   *
+   * Called wherever the box may have moved out from under a still hand — a tool change, the end
+   * of a drag, a zoom, a fresh state. The hover is recomputed on the next move rather than
+   * guessed at from before: a lit grip that no longer sits under the pointer is worse than none.
+   */
+  private forgetHover(): void {
+    // The refusal is dropped alongside the grip: a refusing tool holds no chrome, so a guard on
+    // the grip alone left `not-allowed` on screen after arming a tool that refuses nothing.
+    if (!this.hover && !this.refused) return
+    this.hover = null
+    this.refused = false
+    // Never over a cursor something else owns: a gesture holds its own for as long as it runs —
+    // a pan keeps `grabbing` across every frame it moves the view by — and space held is a pan
+    // in waiting that `releaseSpace` will give back.
+    if (this.gesture.kind === 'none' && !this.spacing) this.setCursor('')
+    this.overlay.invalidate()
   }
 
   setBrush(settings: BrushSettings): void {
     this.brush = settings
+    this.tuneSoftener()
+    // The ring is drawn from this size: without a repaint it would keep the old footprint until
+    // the hand next moved, and a size slider would look disconnected from what it sets.
+    if (this.ringed()) this.overlay.invalidate()
+  }
+
+  /**
+   * How far the edge of a dab is spread, in document pixels — zero for every tool that does not
+   * feather.
+   *
+   * **Which ones those are is `BRUSH_SETTINGS_BY_TOOL`, asked rather than restated.** The bar
+   * hides the hardness slider from the same table, so the two cannot drift into a control that
+   * moves nothing.
+   *
+   * The pencil is hard by definition, and that is the whole of what tells it from the brush. The
+   * eraser is hard for a reason of Pixi's: a filtered container is drawn into a texture of its
+   * own, cleared to nothing, and composed back with the FILTER's blend mode rather than the
+   * stamp's — so an `erase` stamp under a filter rubs out against an empty texture and takes
+   * nothing away. Softening it would mean moving the blend onto the filter, which no test here
+   * can check: there is no GPU under vitest, and this is the one path where being wrong means
+   * the eraser silently stops erasing.
+   */
+  private softness(): number {
+    return readsBrushSetting(this.tool, 'hardness') ? blurRadius(this.brush) : 0
+  }
+
+  /**
+   * How far the softened edge reaches past the disc, in SURFACE pixels — which is the space a
+   * filter works in. Zero when nothing is hung, so a hard brush records the box it always did.
+   */
+  private fringe(): number {
+    return this.spread === 0 ? 0 : this.softener.padding
+  }
+
+  /**
+   * The filter is hung on the stamp only while it has something to do. Left in place at zero
+   * strength it would still cost a render pass and a framebuffer bind on every dab of a hard
+   * brush, which is the common case.
+   */
+  private tuneSoftener(): void {
+    const spread = this.softness()
+    if (spread === this.spread) return
+
+    this.spread = spread
+    if (spread === 0) {
+      this.stamp.filters = []
+      return
+    }
+
+    this.softener.strength = spread
+    // Rounded up, and that is what this line is for: Pixi computes the same `strength * 2` and
+    // then applies it as `(padding | 0)`, so a fractional spread would lose its last pixel of
+    // fringe. Written after `strength`, whose setter recomputes padding from scratch.
+    this.softener.padding = Math.ceil(spread * 2)
+    this.stamp.filters = [this.softener]
+  }
+
+  /** Whether the armed tool stamps a disc, and so whether the ring stands for anything. */
+  private ringed(): boolean {
+    return RINGED_TOOLS.has(this.tool)
   }
 
   /**
@@ -1032,6 +1340,93 @@ export class CanvasEngine {
     return payloadOf(url)
   }
 
+  /**
+   * Every surface's pixels, for saving the document. The textures rather than the sprites: a
+   * surface is document-sized and the transform lives in the state, so extracting a placed
+   * sprite would bake in a move `place` applies again on the way back.
+   *
+   * Keyed by layer rather than by file name — what these are called on disk is the document
+   * layer's business, not the engine's.
+   */
+  async pixelSnapshots(): Promise<LayerPixels[]> {
+    const renderer = this.app?.renderer
+    if (!renderer || !this.state) return []
+
+    const taken: LayerPixels[] = []
+    for (const layer of allLayers(this.state.layers)) {
+      for (const mask of [false, true]) {
+        const surface = this.surfaces.get(mask ? maskKey(layer.id) : layer.id)
+        if (!surface) continue
+        const url = await renderer.extract.base64({ target: surface.texture, resolution: 1 })
+        taken.push({ layerId: layer.id, mask, data: payloadOf(url) })
+      }
+    }
+    return taken
+  }
+
+  /**
+   * Draws saved pixels back into a layer's surface. Through `loadInto`, which contains what it
+   * is given inside the document — a `.png` edited by hand to another size is put back framed
+   * rather than spilling over the layers under it.
+   */
+  async restoreSnapshot(pixels: LayerPixels): Promise<void> {
+    const key = pixels.mask ? maskKey(pixels.layerId) : pixels.layerId
+    const url = `data:image/png;base64,${pixels.data}`
+    const surface = this.surfaces.get(key)
+
+    // Held rather than dropped when the surface is not there yet: `loadInto` returns in silence
+    // on a missing one, and a document would reopen with its stack and none of its pixels. The
+    // claim below is then made by the drain, which runs before the surface can reload `source`.
+    if (!surface) {
+      this.pendingSnapshots.set(key, url)
+      return
+    }
+    // Marked before the await, so a reload of `source` in flight cannot slip in front of it.
+    surface.fromDocument = true
+    try {
+      // Cleared, unlike a placed picture: the surface was born filled — white, for the base
+      // layer — and compositing over that would bring a hole the user erased back as white
+      // rather than as the transparency the file holds.
+      await this.loadInto(key, url, true)
+    } catch (error) {
+      // Given back, and the asset drawn in its place — see `fallBackToSource`.
+      this.fallBackToSource(key, surface)
+      throw error
+    }
+  }
+
+  /** Pours the saved pixels held for a surface into it, once it exists. */
+  private drainPendingSnapshot(key: string, surface: LayerSurface): void {
+    const url = this.pendingSnapshots.get(key)
+    if (!url) return
+    this.pendingSnapshots.delete(key)
+    // Claimed BEFORE the load, because the guard in `syncLayer` reads it on the very next line:
+    // set on success it would always be too late, and the asset would be drawn over these pixels
+    // every time. Given back below if the load turns out not to arrive.
+    surface.fromDocument = true
+    // Nothing is rethrown: this runs inside `reconcile`, which has nowhere to report to.
+    void this.loadInto(key, url, true).catch(() => this.fallBackToSource(key, surface))
+  }
+
+  /**
+   * Draws the asset a layer names, after its own saved pixels failed to.
+   *
+   * A part inside `<id>.img/` can be truncated or corrupt, and before the claim existed the
+   * layer was drawn from `assetUrl(source)` regardless — so a bad part cost nothing visible.
+   * The claim would now leave that layer empty and silent, and the next ⌘S would write the empty
+   * layer over the asset. The claim is given back and the asset drawn, which is what it did.
+   */
+  private fallBackToSource(key: string, surface: LayerSurface): void {
+    surface.fromDocument = false
+
+    const layer = this.state && layerById(this.state, key)
+    if (!layer || layer.kind !== 'pixel' || layer.source === undefined) return
+
+    void this.loadInto(key, assetUrl(layer.source)).catch(error =>
+      reportFailure('canvas.layer', layer.source ?? key, error),
+    )
+  }
+
   /** Rectangle, ellipse or lasso: three gestures behind one tool, as the bar offers them. */
   setSelectionShape(shape: SelectionShape): void {
     this.selectionShape = shape
@@ -1094,9 +1489,13 @@ export class CanvasEngine {
 
     for (const surface of this.surfaces.values()) surface.texture.destroy(true)
     this.surfaces.clear()
+    this.contents.clear()
     // The tree is gone, so no placement holds: kept, it would make the replay in a remount find
     // the signature unchanged and skip the `attach` that is now the only way anything is hung.
     this.stacking = ''
+    // Same reason, and a sharper one: a frame kept across a remount would stand in the previous
+    // document's coordinates, armed for ⏎.
+    this.cropping = null
     for (const container of this.groups.values()) container.destroy()
     this.groups.clear()
     for (const pass of this.adjustments.values()) pass.destroy()
@@ -1104,6 +1503,7 @@ export class CanvasEngine {
     for (const clip of this.clips.values()) this.destroyClip(clip)
     this.clips.clear()
     this.pendingMaskFills.clear()
+    this.pendingSnapshots.clear()
     for (const picture of this.pendingPictures.values()) picture.destroy(true)
     this.pendingPictures.clear()
     this.wordings.clear()
@@ -1111,6 +1511,9 @@ export class CanvasEngine {
     this.isolation?.destroy()
     this.isolation = null
     this.stamp.destroy()
+    // The filter is not the stamp's to free: it is held here, and a destroyed Graphics takes
+    // only what it made itself.
+    this.softener.destroy()
 
     // `removeView`, because the canvas belongs to this engine now: leaving it behind would
     // stack a dead canvas per mount.
@@ -1121,12 +1524,20 @@ export class CanvasEngine {
 
   private readPalette(canvas: HTMLCanvasElement): void {
     this.colors = readColors(canvas)
+    this.rulerFont = tokenAsFont(canvas, '--text-micro', RULER_FONT_SIZE, RULER_FAMILY)
     this.overlay.invalidate()
   }
 
   private measure(): void {
     const host = this.host
     if (!host) return
+
+    // Before anything reads the box: Pixi honours `resizeTo` through a `window.resize` listener
+    // and nothing else — see `followHostSize` — so a Dockview splitter left the picture at its
+    // mounted size while the overlay, which observes the host, followed. The handles then sat
+    // beside the layer they belong to. Here rather than in a second observer so the order is
+    // stated: the renderer takes the new box, then the overlay is measured against it.
+    this.app?.resize()
 
     this.bounds = host.getBoundingClientRect()
     this.hostSize = { width: host.clientWidth, height: host.clientHeight }
@@ -1150,89 +1561,33 @@ export class CanvasEngine {
       activeGuideId: this.gesture.kind === 'guide' ? this.gesture.id : null,
       pointer: this.pointer,
       colors: this.colors,
-      paint: this.selection || this.pending || this.tool === 'move' ? this.paintOverlay : undefined,
+      rulerFont: this.rulerFont,
+      language: this.language,
+      marching: this.marching(),
+      // Handed over whole rather than gated here: every painter already returns on nothing to
+      // draw, and a gate repeating those guards is one a new decoration gets forgotten from —
+      // silently, since nothing would fail, it would simply never appear.
+      tools: {
+        crop: this.cropping,
+        handles: this.activeCorners(),
+        lit: this.hover?.kind === 'handle' ? this.hover.id : null,
+        pending: this.pending,
+        selection: this.selection,
+        // Not while the tool is refusing: a ring is a promise that a dab lands there.
+        brushRadius: this.ringed() && !this.refuses() ? this.brush.size / 2 : null,
+      },
     }
   }
 
   /**
-   * The marquee, in screen space: a selection is chrome, and chrome never scales. One polyline
-   * for the three shapes — the ellipse arrives already flattened, so the overlay's context needs
-   * to know nothing beyond `moveTo` and `lineTo`.
+   * Whether anything on screen is dashed, which is what keeps the overlay's frame loop alive.
+   * Kept beside what draws the ants: a fourth dashed surface that forgot to say so would simply
+   * stand still.
    */
-  /** The marquee and the shape being dragged, both chrome and both in screen space. */
-  private readonly paintOverlay = (context: OverlayContext): void => {
-    this.paintSelection(context)
-    this.paintPending(context)
-    this.paintHandles(context)
-  }
-
-  /**
-   * The nine grips of the armed layer, drawn only while the move tool holds them — Pixi ships no
-   * transformer, so these are ours. Fixed-size squares: a grip that shrank with the zoom would be
-   * unclickable on a document seen at 5%.
-   */
-  private readonly paintHandles = (context: OverlayContext): void => {
-    const layer = this.tool === 'move' ? this.activeLayer() : null
-    const box = layer && !layer.locked.position ? this.boxOf(layer) : null
-    if (!box) return
-
-    const points = handlePoints(box)
-    context.strokeStyle = this.colors.accent
-    context.fillStyle = this.colors.accent
-
-    for (const id of HANDLE_IDS) {
-      const grip = points[id]
-      const screen = toScreen(this.view.viewport, grip)
-      const side = HANDLE_GRAB * 2
-      context.fillRect(
-        Math.round(screen.x - HANDLE_GRAB) + 0.5,
-        Math.round(screen.y - HANDLE_GRAB) + 0.5,
-        side,
-        side,
-      )
-    }
-  }
-
-  /** The shape under the hand, outlined until it is committed to the layer. */
-  private readonly paintPending = (context: OverlayContext): void => {
-    const shape = this.pending
-    if (!shape) return
-
-    context.strokeStyle = this.colors.accent
-    this.strokePath(context, shapeOutline(shape))
-  }
-
-  private readonly paintSelection = (context: OverlayContext): void => {
-    const outline = selectionOutline(this.selection)
-    if (outline.length === 0) return
-
-    context.strokeStyle = this.colors.accent
-    context.setLineDash([4, 4])
-    this.strokePath(context, outline)
-    context.setLineDash([])
-  }
-
-  /** A closed polyline, in screen space: a selection is chrome, and chrome never scales. */
-  private strokePath(context: OverlayContext, outline: readonly Point[]): void {
-    const first = outline[0]
-    if (!first) return
-
-    const at = (point: Point): Point => {
-      const screen = toScreen(this.view.viewport, point)
-      return { x: Math.round(screen.x) + 0.5, y: Math.round(screen.y) + 0.5 }
-    }
-
-    context.beginPath()
-    const start = at(first)
-    context.moveTo(start.x, start.y)
-    for (const point of outline.slice(1)) {
-      const screen = at(point)
-      context.lineTo(screen.x, screen.y)
-    }
-    // Closed by hand rather than with `closePath`: a lasso is left open by the hand that drew it,
-    // and the region it stands for is the closed one.
-    context.lineTo(start.x, start.y)
-    context.stroke()
+  private marching(): boolean {
+    return (
+      selectionOutline(this.selection).length > 0 || this.pending !== null || this.cropping !== null
+    )
   }
 
   private render(): void {
@@ -1243,8 +1598,13 @@ export class CanvasEngine {
     // Read before the build: a picture is drawn once, when its surface comes into existence —
     // which is also the only moment the engine can know the layer at all.
     const born = !this.surfaces.has(layer.id)
-    // Words are redrawn whenever they change, unlike pixels, which are what the layer holds.
-    const wording = layer.kind === 'text' ? `${layer.text}|${layer.size}|${layer.color}` : null
+    // Words are redrawn whenever they change, unlike pixels, which are what the layer holds. The
+    // face counts as a change: without it, setting a caption in another font is an edit the
+    // screen never shows, and a face the page was never asked for.
+    const wording =
+      layer.kind === 'text'
+        ? `${layer.text}|${layer.size}|${layer.color}|${fontKey(layer.font)}`
+        : null
     const surface = this.buildSurface(layer.id, layer.kind === 'pixel' ? layer.fill : undefined)
     if (!surface) return
 
@@ -1255,8 +1615,11 @@ export class CanvasEngine {
 
     // A flatten composed its picture before the command ran; this is the surface it was for.
     if (born) this.drainPendingPicture(layer.id, surface)
+    // Before the reload below, which is the whole ordering: the drain is what claims the surface.
+    if (born) this.drainPendingSnapshot(layer.id, surface)
 
-    if (born && layer.kind === 'pixel' && layer.source !== undefined) {
+    // Never over pixels the document filled in — see `LayerSurface.fromDocument`.
+    if (born && layer.kind === 'pixel' && layer.source !== undefined && !surface.fromDocument) {
       // Unawaited: one unreadable asset must not take the rest of the document's reconciliation
       // down with it. The layer then lists in the panel and draws nothing, hence the report.
       void this.loadInto(layer.id, assetUrl(layer.source)).catch(error =>
@@ -1283,6 +1646,7 @@ export class CanvasEngine {
 
     this.place(mask.sprite, surfaceTransform(layer, true), mask.texture)
     if (bornMasked) this.drainPendingMask(layer.id, mask)
+    if (bornMasked) this.drainPendingSnapshot(maskKey(layer.id), mask)
   }
 
   /**
@@ -1295,11 +1659,50 @@ export class CanvasEngine {
 
     const text = new Text({
       text: layer.text,
-      style: { fontFamily: 'sans-serif', fontSize: layer.size, fill: layer.color },
+      style: { fontFamily: familyStack(layer.font), fontSize: layer.size, fill: layer.color },
     })
     renderer.render({ container: text, target: surface.texture, clear: true })
     text.destroy()
     this.render()
+
+    // The face the caption asks for may not be in the page yet. Registered once, and the caption
+    // drawn again when it lands — until then the browser has drawn it in the generic beside it.
+    // Caught here and not inside: the landing redraws every caption of the family, so one refusing
+    // to rasterize would strand the rest in the generic silently. Unhandled, it says nothing at all.
+    void this.registerFace(layer).catch(error =>
+      reportFailure('font.face', layer.font.family, error),
+    )
+  }
+
+  /**
+   * Puts an embedded face in the page, and redraws every caption set in it.
+   *
+   * Once per family, whatever asks: a document of twenty captions in one font must not fetch it
+   * twenty times, and a face already in the page is one `drawText` needs nothing more from. That
+   * one fetch is why the landing sweeps the document instead of the caption that happened to ask —
+   * the other nineteen were turned away at the early return, and no landing of their own is coming.
+   */
+  private async registerFace(layer: TextLayer): Promise<void> {
+    const url = faceUrlOf(layer.font)
+    const family = layer.font.family
+    if (!url || this.faces.has(family)) return
+
+    this.faces.add(family)
+    try {
+      await this.options.addFace(family, url)
+    } catch (error) {
+      // Kept in the set: retrying on every reconciliation would fetch a file that is not there
+      // once per frame. The caption stays in the generic, and the failure is said once.
+      reportFailure('font.face', family, error)
+      return
+    }
+
+    // Looked up rather than held: only the caption that asked came with a surface. `reconcile`
+    // syncs every caption in the tree, so the guard below is the map's type, not a case in the wild.
+    for (const caption of captionsSetIn(this.state, family)) {
+      const surface = this.surfaces.get(caption.id)
+      if (surface) this.drawText(surface, caption)
+    }
   }
 
   /** A document-sized texture and the sprite that shows it, built once and kept. */
@@ -1317,7 +1720,7 @@ export class CanvasEngine {
       resolution: 1,
     })
     // Attached by `attach`, which is the only place that knows which container holds it.
-    const surface: LayerSurface = { texture, sprite: new Sprite(texture) }
+    const surface: LayerSurface = { texture, sprite: new Sprite(texture), fromDocument: false }
     this.surfaces.set(key, surface)
 
     if (fill !== undefined) this.fill(surface, fill)
@@ -1422,7 +1825,8 @@ export class CanvasEngine {
 
     // Middle button pans whatever the tool: it is the one gesture no tool may take over. It can
     // land mid-drag, so whatever was open is closed rather than abandoned — a guide gesture left
-    // open would make the next drag of that guide re-create it instead of moving it.
+    // open would make the next drag of that guide re-create it instead of moving it. A crop frame
+    // is untouched by this: it is not a gesture, and panning to see it is the point.
     if (event.button === 1 || this.spacing || this.tool === 'hand') {
       this.endGesture()
       this.gesture = { kind: 'pan', from: host }
@@ -1470,19 +1874,23 @@ export class CanvasEngine {
       const layer = this.activeLayer()
       if (!layer || layer.locked.position) return
 
-      // The grips first: they sit on the layer, and a drag on one is not a drag of the layer.
-      const box = this.boxOf(layer)
-      const handle = box && handleAt(box, point, HANDLE_GRAB / this.view.viewport.scale)
-      if (box && handle) {
+      // The chrome first: a drag on a grip, or in the ring outside a corner, is not a drag of
+      // the layer. Answered by the same test the cursor asked, so the two cannot disagree.
+      const box = this.hoverBox()
+      const hit = box && this.chromeAt(box, point)
+      if (box && hit) {
+        const corners = box.corners
         this.options.layers.beginDrag()
-        this.gesture = {
-          kind: 'handle',
-          id: layer.id,
-          handle,
-          box,
-          from: point,
-          origin: layer.transform,
-        }
+        this.gesture =
+          hit.kind === 'handle'
+            ? { kind: 'handle', id: layer.id, handle: hit.id, from: point, origin: layer.transform }
+            : {
+                kind: 'rotate',
+                id: layer.id,
+                center: centerOf(corners),
+                from: point,
+                origin: layer.transform,
+              }
         return
       }
 
@@ -1509,6 +1917,22 @@ export class CanvasEngine {
 
       this.beginPixels(target)
       this.gesture = { kind: 'shape', from: point, target }
+      return
+    }
+
+    if (this.tool === 'crop') {
+      // The grips of a placed frame come first, exactly as the move tool's do: a press on one
+      // adjusts the frame, a press anywhere else starts a new one over it.
+      const frame = this.hoverBox()
+      const grip = frame && this.chromeAt(frame, point)
+      if (this.cropping && grip) {
+        this.gesture = { kind: 'cropHandle', handle: grip.id, origin: this.cropping }
+        return
+      }
+
+      this.cropping = null
+      this.overlay.invalidate()
+      this.gesture = { kind: 'crop', from: point }
       return
     }
 
@@ -1558,10 +1982,70 @@ export class CanvasEngine {
     return { width: this.state?.width ?? 0, height: this.state?.height ?? 0 }
   }
 
+  /**
+   * The rect a layer's grips describe: the picture it holds where it holds one, its whole
+   * surface otherwise.
+   *
+   * A layer painted by hand has no better answer — every pixel of its surface is fair game. One
+   * holding a photo does: `containIn` shrank it to fit and centred it, so the surface is mostly
+   * transparent margin, and gripping that is gripping nothing. This is what every other editor
+   * frames for a picture layer.
+   */
+  private frameOf(layerId: string): Rect {
+    return this.contents.get(layerId) ?? wholeOf(this.documentSize())
+  }
+
   /** `null` for a group, which has no texture of its own and so no box to grab. */
-  private boxOf(layer: Layer): Rect | null {
+  private cornersOf(layer: Layer): Corners | null {
     if (!this.state || isGroup(layer)) return null
-    return layerBoxOf(layer.transform, this.documentSize())
+    return layerCornersOf(layer.transform, this.documentSize(), this.frameOf(layer.id))
+  }
+
+  /**
+   * The corners of the armed layer, when there is one a grip may be taken on. Memoised on the
+   * tree's identity and the armed id: an idle hover would otherwise flatten the layer tree twice
+   * per pointer move, and pay for every layer in the document to answer about one.
+   */
+  private activeCorners(): Corners | null {
+    if (this.tool !== 'move') return null
+    if (this.corners.of === this.state) return this.corners.box
+
+    const layer = this.activeLayer()
+    const box = layer && !layer.locked.position ? this.cornersOf(layer) : null
+    this.corners = { of: this.state, box }
+    return box
+  }
+
+  /**
+   * Whether the armed tool can do nothing at all where the hand is — a group or an adjustment
+   * layer under the brush, a padlock on the pixels, a layer pinned under the move tool.
+   *
+   * Answered by the very test the gesture will run, never by a copy of it: a cursor that
+   * promises a stroke the press then refuses is worse than no cursor at all.
+   */
+  private refuses(): boolean {
+    const cached = this.refusal
+    if (
+      cached &&
+      cached.of === this.state &&
+      cached.tool === this.tool &&
+      cached.painting === this.painting
+    ) {
+      return cached.value
+    }
+
+    const value = this.wouldRefuse()
+    this.refusal = { of: this.state, tool: this.tool, painting: this.painting, value }
+    return value
+  }
+
+  private wouldRefuse(): boolean {
+    if (this.tool === 'move') {
+      const layer = this.activeLayer()
+      return !layer || layer.locked.position
+    }
+
+    return WRITING_TOOLS.has(this.tool) && this.paintTarget() === null
   }
 
   /** The surface a stroke may land on: armed, able to hold pixels, and not padlocked. */
@@ -1648,11 +2132,13 @@ export class CanvasEngine {
   private readonly onPointerMove = (event: PointerEvent): void => {
     const host = this.toHost(event)
     this.pointer = host
-    // The rulers echo the pointer, so an idle move still costs one overlay frame.
-    if (this.view.rulers) this.overlay.invalidate()
+    // Two things follow the pointer without a gesture: the rulers echo it, and the brush ring
+    // rides on it. Either one makes an idle move cost one overlay frame; neither armed, and it
+    // costs none.
+    if (this.view.rulers || this.ringed()) this.overlay.invalidate()
 
     const gesture = this.gesture
-    if (gesture.kind === 'none') return
+    if (gesture.kind === 'none') return this.hovering(host)
 
     if (gesture.kind === 'pan') {
       const viewport = this.view.viewport
@@ -1696,11 +2182,39 @@ export class CanvasEngine {
         return
       }
       case 'handle': {
-        const next =
-          gesture.handle === 'rotate'
-            ? rotateBy(gesture.origin, gesture.box, gesture.from, point)
-            : resizeBy(gesture.origin, gesture.handle, this.documentSize(), point, event.shiftKey)
+        // The same frame the grips were drawn on: solved against the document instead, a pull on
+        // a photo that does not fill its surface would scale from the wrong corner.
+        const next = resizeBy(
+          gesture.origin,
+          gesture.handle,
+          this.documentSize(),
+          point,
+          event.shiftKey,
+          this.frameOf(gesture.id),
+        )
         this.options.layers.transform(gesture.id, next)
+        return
+      }
+      case 'rotate': {
+        const next = rotateBy(gesture.origin, gesture.center, gesture.from, point, event.shiftKey)
+        this.options.layers.transform(gesture.id, next)
+        return
+      }
+      case 'crop': {
+        // Clamped here rather than at the commit, so the frame drawn is the frame applied.
+        this.cropping = cropRect(gesture.from, point, this.documentSize(), event.shiftKey)
+        this.overlay.invalidate()
+        return
+      }
+      case 'cropHandle': {
+        // Against the frame the drag started on, never the current one: every move is absolute,
+        // or a grip nudged twice would compound its own displacement.
+        const size = this.documentSize()
+        const next = resizeCrop(gesture.origin, gesture.handle, point, size, event.shiftKey)
+        // A collapsed adjustment keeps the last good frame rather than dropping it: the hand is
+        // still down, and a frame that vanished mid-drag could not be pulled back open.
+        if (next) this.cropping = next
+        this.overlay.invalidate()
         return
       }
       case 'shape': {
@@ -1719,7 +2233,7 @@ export class CanvasEngine {
   private readonly onPointerUp = (event: PointerEvent): void => {
     // The corner counts: a guide dropped anywhere on the chrome is a guide thrown away.
     const onChrome = this.inRuler(this.toHost(event)) !== null
-    this.setCursor('')
+    this.forgetHover()
     this.endGesture(onChrome)
   }
 
@@ -1736,7 +2250,7 @@ export class CanvasEngine {
     }
 
     // One history entry per gesture: a command per dab, or per pointer move, would make ⌘Z useless.
-    if (gesture.kind === 'move' || gesture.kind === 'handle') this.options.layers.endDrag()
+    if (LAYER_DRAGS.has(gesture.kind)) this.options.layers.endDrag()
     if (gesture.kind === 'paint') this.endPixels()
     if (gesture.kind === 'shape') this.commitShape(gesture.target)
     // A click that carved nothing out is how every editor deselects. Left standing, a zero-area
@@ -1744,9 +2258,62 @@ export class CanvasEngine {
     if (gesture.kind === 'select' && isEmptySelection(this.selection)) this.publishSelection(null)
   }
 
+  /**
+   * What an idle pointer is over, and what the cursor says about it. Repaints only when the
+   * answer changed: a hand resting on the canvas must not buy a frame of overlay per event.
+   *
+   * Space held wins over everything — it is a pan in waiting, and `releaseSpace` gives the
+   * cursor back.
+   */
+  private hovering(host: Point): void {
+    const box = this.spacing ? null : this.hoverBox()
+    const next = box && this.chromeAt(box, toDocument(this.view.viewport, host))
+    // Weighed alongside the grip, never behind it: a refusing tool holds no chrome, so both
+    // hits compare equal on every move and a test on the grip alone would return before the
+    // refusal was ever read.
+    const refused = !this.spacing && this.refuses()
+    if (sameHit(next, this.hover) && refused === this.refused) return
+
+    this.hover = next
+    this.refused = refused
+    // The refusal wins over a grip: a padlocked layer still draws its box, and an arrow over one
+    // would promise a pull the press declines.
+    if (!this.spacing) {
+      this.setCursor(refused ? 'not-allowed' : box && next ? cursorFor(next, box.facing) : '')
+    }
+    this.overlay.invalidate()
+  }
+
+  /**
+   * The chrome a press or a hover may take hold of — the armed layer's box, or the crop frame.
+   * Never both: the two tools that draw grips are mutually exclusive.
+   *
+   * A crop does not turn the document, so its rotation ring has no reach at all. Spelling that as
+   * a zero rather than as a second code path is what keeps the frame's grips and the layer's
+   * answering to one hit test.
+   */
+  private hoverBox(): HoverBox | null {
+    if (this.tool === 'crop') {
+      return this.cropping
+        ? { corners: cornersOfRect(this.cropping), reach: 0, facing: UPRIGHT }
+        : null
+    }
+
+    const corners = this.activeCorners()
+    const facing = this.activeLayer()?.transform
+    if (!corners || !facing) return null
+    return { corners, reach: ROTATE_REACH, facing }
+  }
+
+  /** Both tolerances are screen pixels, so a grip stays as easy to take at 5% as at 800%. */
+  private chromeAt(box: HoverBox, point: Point): HandleHit | null {
+    const scale = this.view.viewport.scale
+    return hitTest(box.corners, point, HANDLE_GRAB / scale, box.reach / scale)
+  }
+
   private readonly onPointerLeave = (): void => {
     this.pointer = null
-    this.overlay.invalidate()
+    this.forgetHover()
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
@@ -1765,7 +2332,16 @@ export class CanvasEngine {
 
   private releaseSpace(): void {
     this.spacing = false
-    if (this.gesture.kind !== 'pan') this.setCursor('')
+    if (this.gesture.kind === 'pan') return
+
+    this.setCursor('')
+    // What the pointer was over was left standing while space held the cursor. Dropped rather
+    // than kept: the hover is only recomputed when it *changes*, so a grip the hand never left
+    // would compare equal on the next move and its arrow would never come back. Same for the
+    // refusal, which is weighed the same way.
+    this.hover = null
+    this.refused = false
+    this.overlay.invalidate()
   }
 
   private setCursor(cursor: string): void {
@@ -1789,7 +2365,7 @@ export class CanvasEngine {
     if (event.ctrlKey || event.metaKey) {
       // Exponential, so a notch feels the same at 5% and at 800%.
       const scale = viewport.scale * Math.exp(-event.deltaY / 250)
-      this.moveTo(zoomAt(viewport, scale, this.toHost(event)))
+      this.moveTo(zoomCanvasAt(viewport, scale, this.toHost(event)))
       return
     }
 
@@ -1863,7 +2439,14 @@ export class CanvasEngine {
     // Before a single pixel is written: what the tiles hold now is what an undo will put back.
     // Mapped onto the surface, like the dabs themselves — tiles index the texture, and a stroke
     // on a turned layer covers a different set of them than its document-space box suggests.
-    this.patches?.touch(mapRect(target.toSurface, brushRect(points, this.brush.size / 2)))
+    //
+    // The fringe is added AFTER the mapping, and it has to be: a filter is applied once the
+    // container's transform has run, so its padding is a count of surface pixels while the
+    // brush's radius is a count of document ones. Added before, a layer scaled 2× recorded half
+    // the box its stroke actually covered, and an undo left the fringe behind.
+    this.patches?.touch(
+      grownBy(mapRect(target.toSurface, brushRect(points, this.brush.size / 2)), this.fringe()),
+    )
 
     const erasing = this.tool === 'eraser'
     this.stamp.clear()
@@ -1925,6 +2508,30 @@ export class CanvasEngine {
     clipping.holder.removeChildren()
     clipping.stencil.destroy()
     clipping.holder.destroy()
+  }
+
+  /** Crops the document to the frame on screen, in the one order the three steps work in. */
+  applyCrop(): void {
+    const rect = this.cropping
+    if (!rect) return
+
+    this.cropping = null
+    this.overlay.invalidate()
+    // A marquee is in document coordinates and the crop moves the picture under it: left
+    // standing it would stencil the wrong pixels, or none at all once the frame stops reaching
+    // it — and the brush would go silently dead.
+    this.publishSelection(null)
+    // The pixels before the state: `resurface` recuts every surface to the kept region, so the
+    // `apply` the command triggers finds them already the right size and leaves them alone.
+    this.resurface({ width: rect.width, height: rect.height }, rect)
+    this.options.onCrop(rect)
+  }
+
+  /** Takes the frame off screen without cropping anything. */
+  dropCrop(): void {
+    if (!this.cropping) return
+    this.cropping = null
+    this.overlay.invalidate()
   }
 
   /** Draws the previewed shape into the armed layer, once, when the hand comes up. */

@@ -67,6 +67,19 @@ describe('settings validation', () => {
     expect(() => parsePartialSettings({ generation: { concurrentJobs: 2.5 } })).toThrow()
   })
 
+  /*
+   * The shape is `HEX_COLOR`, shared with the document readers rather than restated here. The
+   * three-digit case is the one worth naming: CSS honours it, `tokenAsHex` reads `#fff` as
+   * `0xfff` — a dark blue — and this is the only side of that shared constant zod guards.
+   */
+  it('rejects an accent that is not six hexadecimal digits', () => {
+    expect(parsePartialSettings({ appearance: { accent: '#3574F0' } })).toEqual({
+      appearance: { accent: '#3574F0' },
+    })
+    expect(() => parsePartialSettings({ appearance: { accent: '#fff' } })).toThrow()
+    expect(() => parsePartialSettings({ appearance: { accent: 'red' } })).toThrow()
+  })
+
   it('accepts a path to ffmpeg, which it never checks for existence', () => {
     // The binary may be plugged in later; `resolveFfmpeg` falls through to the PATH meanwhile.
     expect(parsePartialSettings({ media: { ffmpegPath: '/nowhere/yet/ffmpeg' } })).toEqual({
@@ -94,5 +107,160 @@ describe('settings validation', () => {
     expect(salvagePartialSettings({ storage: { backend: 'cloud' } })).toEqual({
       storage: { backend: 'cloud' },
     })
+  })
+})
+
+/**
+ * The bar order is the one branch a stale or hand-edited file is likely to carry wrong, since
+ * it is written by a gesture rather than typed into a screen. Before it existed, an unknown key
+ * was simply stripped — it must not become the key that costs the file.
+ */
+describe('salvaging the bar order', () => {
+  const withTheme = (workspaces: unknown): unknown => ({
+    workspaces,
+    appearance: { theme: 'light' },
+  })
+
+  it('drops a space this build no longer knows, keeping the rest of the order', () => {
+    const salvaged = salvagePartialSettings(withTheme({ order: ['image', 'nether', 'audio'] }))
+
+    expect(salvaged.workspaces?.order).toEqual(['image', 'audio'])
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+
+  it('keeps the other settings when the order is not a list at all', () => {
+    expect(salvagePartialSettings(withTheme({ order: 'image' })).appearance?.theme).toBe('light')
+  })
+
+  it('keeps the other settings when the branch itself is not an object', () => {
+    expect(salvagePartialSettings(withTheme(['image', 'audio'])).appearance?.theme).toBe('light')
+  })
+
+  // A written order is always a reconciled one, so it can never legitimately outgrow the
+  // registry — a longer list is a file to distrust, not a list to keep in memory and rewrite.
+  it('refuses an order longer than the registry, and only the order', () => {
+    const long = Array.from({ length: 10_000 }, () => 'image')
+
+    const salvaged = salvagePartialSettings(withTheme({ order: long }))
+
+    expect(salvaged.workspaces?.order ?? []).toEqual([])
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+})
+
+/** The home's band order is written by the same kind of gesture, and costs the same if refused. */
+describe('salvaging the home section order', () => {
+  const withTheme = (home: unknown): unknown => ({ home, appearance: { theme: 'light' } })
+
+  it('drops a section this build no longer knows, keeping the rest of the order', () => {
+    const sections = [
+      { id: 'spotlight', visible: true },
+      { id: 'nether' },
+      // A band of an older build that IS one again: `tools` came back to the centre on 12 August,
+      // so its entry is salvaged where `projects` — still a panel — would be dropped.
+      { id: 'tools', visible: true },
+      { id: 'projects', visible: true },
+      { id: 'explore', visible: false },
+    ]
+
+    const salvaged = salvagePartialSettings(withTheme({ sections }))
+
+    expect(salvaged.home?.sections).toEqual([
+      { id: 'spotlight', visible: true },
+      { id: 'tools', visible: true },
+      { id: 'explore', visible: false },
+    ])
+  })
+
+  it('keeps the other settings when the sections are not a list at all', () => {
+    const salvaged = salvagePartialSettings(withTheme({ enabled: false, sections: 'spotlight' }))
+
+    expect(salvaged.home?.sections ?? []).toEqual([])
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+
+  it('keeps the other settings when the branch itself is not an object', () => {
+    expect(salvagePartialSettings(withTheme(['tools'])).appearance?.theme).toBe('light')
+  })
+})
+
+/**
+ * A remap crosses as a plain string, so the shape is all there is to check. The cost of getting
+ * it wrong is not symmetrical: a refused binding is a key nobody can bind, while an accepted one
+ * no keyboard emits is only a shortcut that never fires.
+ */
+describe('the keys a settings file remaps', () => {
+  it('keeps a binding on any key a real keyboard emits', () => {
+    const overrides = {
+      'canvas.toolBrush': 'IntlBackslash',
+      'canvas.toolPencil': 'Meta+ContextMenu',
+      'canvas.undo': 'Ctrl+Alt+Shift+Meta+KeyZ',
+    }
+
+    expect(salvagePartialSettings({ shortcuts: { overrides } }).shortcuts?.overrides).toEqual(
+      overrides,
+    )
+  })
+
+  /**
+   * The defect the guard exists for: a letter is what is printed on a key, never its position.
+   */
+  it('drops a binding written as a letter rather than a code', () => {
+    const file = { shortcuts: { overrides: { 'canvas.toolBrush': 'P' } } }
+
+    expect(salvagePartialSettings(file).shortcuts?.overrides).toEqual({})
+  })
+
+  /**
+   * One unreadable remap costs its own line and nothing else. Refusing the whole file would take
+   * the theme and the projects folder down with a key bound under an older version — which is
+   * what `home.sections` already learnt.
+   */
+  it('keeps every other setting, and every other binding, around the one it drops', () => {
+    const file = {
+      appearance: { theme: 'dark' },
+      shortcuts: { overrides: { 'canvas.toolBrush': 'P', 'canvas.toolPencil': 'Shift+KeyP' } },
+    }
+
+    const salvaged = salvagePartialSettings(file)
+
+    expect(salvaged.appearance?.theme).toBe('dark')
+    expect(salvaged.shortcuts?.overrides).toEqual({ 'canvas.toolPencil': 'Shift+KeyP' })
+  })
+
+  /**
+   * The write side drops it too rather than refusing the draft. `settings-draft` clears what is
+   * pending before the write settles, so a throw here would take the theme staged in the same
+   * Apply with it — and say nothing about either.
+   */
+  it('drops it on the way in as well, keeping the rest of the draft', () => {
+    const written = parsePartialSettings({
+      appearance: { theme: 'dark' },
+      shortcuts: { overrides: { 'canvas.toolBrush': 'P', 'canvas.undo': 'Meta+KeyZ' } },
+    })
+
+    expect(written.appearance?.theme).toBe('dark')
+    expect(written.shortcuts?.overrides).toEqual({ 'canvas.undo': 'Meta+KeyZ' })
+  })
+})
+
+/**
+ * A zod object STRIPS what it does not name, and this branch is reparsed on every settings write
+ * — which the project store does on every document saved. A field declared on the type but not on
+ * the schema therefore survives exactly until the next save, and nothing anywhere says why.
+ */
+describe('the account each project works under', () => {
+  it('keeps the links', () => {
+    const parsed = parsePartialSettings({
+      storage: { projectAccounts: { '/projects/a': 'account_two' } },
+    })
+
+    expect(parsed.storage?.projectAccounts).toEqual({ '/projects/a': 'account_two' })
+  })
+
+  it('refuses an empty account id rather than storing a link to nothing', () => {
+    expect(() =>
+      parsePartialSettings({ storage: { projectAccounts: { '/projects/a': '' } } }),
+    ).toThrow()
   })
 })

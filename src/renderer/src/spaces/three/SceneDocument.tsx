@@ -1,39 +1,49 @@
+import type { AssetType } from '@shared/domain/asset'
 import { bindingOf, type CommandId } from '@shared/domain/command'
-import { shortcutLabel } from '@shared/domain/shortcut'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { ExportFormat } from '@shared/domain/scene'
+import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
-import { canRedo, canUndo } from '@/engines/core/history'
-import {
-  addNodes,
-  copiesOf,
-  groupNodes,
-  moveNodes,
-  removeNodes,
-  rootedIn,
-} from '@/engines/scene/commands'
+import { nodeById } from '@/engines/scene/scene-state'
+import { movesToCommand } from '@/engines/scene/animation-commands'
+import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
+import { snapToFrame } from '@shared/domain/time'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
-import { restoreDocument } from '@/app/document-io'
 import { setDocumentTitle } from '@/app/dockview-api'
-import { useAddNode } from '@/hooks/useAddNode'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
-import { assetsById, useAssets } from '@/stores/assets'
-import { selectedNodes } from '@/engines/scene/scene-state'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
+import { assetVersionOf } from '@/stores/assets'
+import { useShelfRefresh } from '@/hooks/useShelfRefresh'
+import type { NodeMove } from '@/engines/scene/scene-state'
+import { useModelClips } from '@/stores/model-clips'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
-import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
-import { useSceneViews, viewOf } from '@/stores/scene-views'
-import { isDisplayMode, isViewDirection, nextDisplayMode } from '@/engines/scene/scene-view'
+import { addModelTo, isSceneDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
+import { displayOfPane, useSceneViews, sceneViewOf } from '@/stores/scene-views'
+import { nextDisplayMode } from '@/engines/scene/scene-view'
+import { isDisplayMode } from '@shared/domain/scene'
+import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
+import { SceneCounters } from './SceneCounters'
+import { openSceneNodeMenu } from './SceneNodeMenu'
+import { runSceneCommand, toggleNodeVisible } from './scene-commands'
+import { ScenePaneGrid } from './ScenePaneGrid'
 import { SCENE_TOOLS } from './scene-tools'
 
 /**
  * Encoded here, written by the main process: the renderer has no `fs`, and where the file lands
  * is decided by the save dialog it never sees the answer of — only the name it was given.
+ *
+ * The encoding is inside the guard, not only the write: nothing awaits this call, so an exporter
+ * that refuses a texture would otherwise reject into no one's hands and leave a menu click
+ * looking exactly like a dismissed dialog.
  */
 async function exportScene(
   documentId: string,
@@ -44,14 +54,63 @@ async function exportScene(
   const bridge = getBridge()
   if (!engine || !bridge) return
 
-  const data = await engine.exportTo(format, scope)
-  const name = useDocuments.getState().documents[documentId]?.title ?? 'scene'
-  // Reported rather than thrown on: nothing awaits this, and a disk that refused the write would
-  // otherwise leave a dismissed dialog and an unwritten file looking exactly alike.
-  await bridge.scene.export({ name, format, data }).catch(error => {
+  try {
+    const data = await engine.exportTo(format, scope)
+    const name = useDocuments.getState().documents[documentId]?.title ?? 'scene'
+    await bridge.scene.export({ name, format, data })
+  } catch (error) {
     reportFailure('scene.export', format, error)
+  }
+}
+
+/**
+ * The two store reads a gizmo drag needs; the rule itself is `movesToCommand`, which is pure and
+ * therefore testable — a viewport is not.
+ */
+function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
+  const store = useScenes.getState()
+  const state = sceneOf(store, documentId)
+  const at = snapToFrame(
+    sceneViewOf(useSceneViews.getState(), documentId).playhead,
+    state.animation.fps,
+  )
+  const recording = animationViewOf(useAnimationViews.getState(), documentId).autoKey
+
+  const command = movesToCommand(state, moves, at, recording)
+  if (command) store.runCommand(documentId, command)
+}
+
+/**
+ * A node right-clicked in the viewport, selected and then offered what can be done to it.
+ *
+ * Selecting first is this side's job rather than the menu's, as it is for the asset shelf: an
+ * outliner arms its row on pointer down, but the right button of a viewport flies the camera, so
+ * nothing has armed anything by the time the menu is asked for. Left as it was when the node is
+ * already in the selection — a right-click on one of six must not shrink it to one.
+ *
+ * No rename row: a viewport draws no name to type over. `i18next.t` rather than the hook's, for
+ * the reason `document-io` reads it that way — this runs from an engine callback, outside any
+ * render, and the singleton is always the language in force.
+ */
+function openNodeMenu(documentId: string, nodeId: string): void {
+  const scene = sceneOf(useScenes.getState(), documentId)
+  // Read before anything is selected: an id the engine still holds for a node the document has
+  // already dropped would otherwise move the selection and then open no menu at all.
+  const node = nodeById(scene, nodeId)
+  if (!node) return
+
+  if (!scene.selectedIds.includes(nodeId)) selectIn(documentId, [nodeId])
+
+  openSceneNodeMenu({
+    node,
+    canFrame: true,
+    t: i18next.t,
+    run: command => runSceneCommand(documentId, command),
+    onToggleVisible: () => toggleNodeVisible(documentId, node.id),
   })
 }
+
+const MESHES: readonly AssetType[] = ['mesh']
 
 export function SceneDocument({ documentId }: { documentId: string }) {
   const host = useRef<HTMLDivElement>(null)
@@ -61,25 +120,24 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   // whoever opens it next.
   const [snapping, setSnapping] = useState(false)
   const [localFrame, setLocalFrame] = useState(false)
+  /** What the scene costs, as the engine counts it — see `SceneRendererOptions.onStats`. */
+  const [stats, setStats] = useState<{ scene: SceneStats; selected: SceneStats }>({
+    scene: EMPTY_STATS,
+    selected: EMPTY_STATS,
+  })
 
   const scene = useScenes(state => sceneOf(state, documentId))
-  // Booleans rather than the history itself: a selector that builds an object on every call
-  // hands React a new snapshot each render, and the render loop never settles.
-  const undoable = useScenes(state => canUndo(historyOf(state, documentId)))
-  const redoable = useScenes(state => canRedo(historyOf(state, documentId)))
-  const modified = useScenes(state => isDirty(state, documentId))
+  const modified = useScenes(state => isSceneDirty(state, documentId))
   const title = useDocuments(state => state.documents[documentId]?.title)
   const bindings = useBindingOverrides()
-  const addNodeOf = useAddNode(documentId)
+  const label = useShortcutLabel()
   const active = useDocuments(state => state.activeId === documentId)
   const viewport = useSettings(state => state.settings.three)
-  const view = useSceneViews(state => viewOf(state, documentId))
+  const view = useSceneViews(state => sceneViewOf(state, documentId))
 
   // Before the renderer mounts: a saved document comes back from the project, a new one from
   // the default scene — an unlit viewport reads as broken rather than as empty.
-  useEffect(() => {
-    void restoreDocument(documentId)
-  }, [documentId])
+  useRestoredDocument(documentId)
 
   useEffect(() => {
     if (title) setDocumentTitle(documentId, title, modified)
@@ -93,14 +151,27 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // A click in the void with a modifier held keeps the selection: `toggle` of nothing is
       // nothing, which is what stops a near miss from undoing the picking that came before it.
       onSelect: (ids, mode) => selectIn(documentId, ids, mode),
-      onTransform: moves => useScenes.getState().runCommand(documentId, moveNodes(moves)),
+      onTransform: moves => recordTransform(documentId, moves),
+      onClips: (nodeId, clips, lengths) =>
+        useModelClips.getState().report(documentId, nodeId, clips, lengths),
+      onBones: (nodeId, bones) => useModelClips.getState().reportBones(documentId, nodeId, bones),
+      onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
+      onContextMenu: nodeId => openNodeMenu(documentId, nodeId),
+      onStats: (scene, selected) => setStats({ scene, selected }),
+      assetVersion: assetVersionOf,
     })
 
     renderer.mount(element)
     engine.current = renderer
+    // Registered so a panel that is not the viewport can ask it to draw a film — and forgotten
+    // below, or an engine whose canvas is gone would still be handed out.
+    registerSceneEngine(documentId, renderer)
     return () => {
       renderer.dispose()
       engine.current = null
+      forgetSceneEngine(documentId)
+      // The names came out of files this viewport parsed; nothing outside it can answer for them.
+      useModelClips.getState().forget(documentId)
     }
   }, [documentId])
 
@@ -108,6 +179,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.apply(scene)
   }, [scene])
+
+  useShelfRefresh(() => engine.current?.refreshTextures())
 
   // Same for the viewport settings, which were three constants inside the engine.
   useEffect(() => {
@@ -127,6 +200,20 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     engine.current?.setSpace(localFrame ? 'local' : 'world')
   }, [localFrame])
 
+  useEffect(() => {
+    engine.current?.setPoseMode(view.poseMode)
+    // A bone picked in pose mode has no meaning outside it: leaving the mode lets go of it, or
+    // the gizmo would keep holding a bone nothing can select any more.
+    if (!view.poseMode) {
+      engine.current?.setPickedBone(null)
+      useSceneViews.getState().setPickedBone(documentId, null)
+    }
+  }, [documentId, view.poseMode])
+
+  useEffect(() => {
+    engine.current?.setPickedBone(view.pickedBone)
+  }, [view.pickedBone])
+
   // Session state, pushed like the rest: the engine is rebuilt from it after a remount, which is
   // what keeps an orthographic view orthographic when a panel is detached.
   useEffect(() => {
@@ -134,8 +221,25 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   }, [view.projection])
 
   useEffect(() => {
-    engine.current?.setDisplayMode(view.display)
-  }, [view.display])
+    engine.current?.setDisplayModes(view.displays, view.quadEdges)
+  }, [view.displays, view.quadEdges])
+
+  useEffect(() => {
+    engine.current?.setSkeletons(view.skeletons)
+  }, [view.skeletons])
+
+  useEffect(() => {
+    engine.current?.setQuadView(view.quad)
+  }, [view.quad])
+
+  useEffect(() => {
+    engine.current?.setPaneViews(view.panes)
+  }, [view.panes])
+
+  // The head is session state React owns; the engine is told where it stands, never the reverse.
+  useEffect(() => {
+    engine.current?.setPlayhead(view.playhead)
+  }, [view.playhead])
 
   // Subscribed here rather than in `useNativeMenu`: an export reads the three.js objects, and
   // this component is the only thing that holds them. Only while this tab is in front, or two
@@ -149,13 +253,30 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     })
   }, [documentId, active])
 
+  /**
+   * Which view a display command lands on: the one the pointer is over, as every modelling
+   * package reads it. The engine is asked rather than React tracking it — the pointer is the
+   * viewport's own business, and a second tally here is a second answer free to disagree.
+   */
+  const paneInHand = useCallback(() => engine.current?.activePane() ?? 0, [])
+
+  const cycleDisplay = useCallback(() => {
+    const pane = paneInHand()
+    const displays = sceneViewOf(useSceneViews.getState(), documentId).displays
+    useSceneViews
+      .getState()
+      .setDisplay(documentId, pane, nextDisplayMode(displayOfPane(displays, pane)))
+  }, [documentId, paneInHand])
+
   // Single dispatch: the toolbar and the keyboard both resolve to a `CommandId` first, so a new
   // tool is declared once in `SCENE_TOOLS` and handled once here.
   const run = useCallback(
     (command: CommandId) => {
+      // What acts on the selection is shared with the node menu, which arrives by the same ids —
+      // see `runSceneCommand`. What is left below is what only this viewport can answer for.
+      if (runSceneCommand(documentId, command)) return
+
       const store = useScenes.getState()
-      const { nodes, selectedIds } = sceneOf(store, documentId)
-      const picked = selectedNodes(nodes, selectedIds)
 
       switch (command) {
         case 'scene.select':
@@ -166,14 +287,20 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return setMode('rotate')
         case 'scene.scale':
           return setMode('scale')
-        case 'scene.frame':
-          return engine.current?.frameSelection()
         case 'scene.snap':
           return setSnapping(current => !current)
         case 'scene.space':
           return setLocalFrame(current => !current)
         case 'scene.display':
-          return useSceneViews.getState().setDisplay(documentId, nextDisplayMode(view.display))
+          return cycleDisplay()
+        case 'scene.skeletons':
+          return useSceneViews.getState().setSkeletons(documentId, !view.skeletons)
+        case 'scene.poseMode':
+          return useSceneViews.getState().setPoseMode(documentId, !view.poseMode)
+        case 'scene.quad':
+          return useSceneViews.getState().setQuad(documentId, !view.quad)
+        case 'scene.quadEdges':
+          return useSceneViews.getState().setQuadEdges(documentId, !view.quadEdges)
         case 'scene.projection':
           return useSceneViews
             .getState()
@@ -181,49 +308,23 @@ export function SceneDocument({ documentId }: { documentId: string }) {
               documentId,
               view.projection === 'perspective' ? 'orthographic' : 'perspective',
             )
-        case 'scene.delete':
-          if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(nodes, selectedIds))
-          return
-        case 'scene.duplicate':
-          if (picked.length > 0) store.runCommand(documentId, addNodes(copiesOf(nodes, picked)))
-          return
-        case 'scene.copy':
-          if (picked.length > 0) useSceneClipboard.getState().copy(copiesOf(nodes, picked))
-          return
-        case 'scene.cut':
-          if (picked.length === 0) return
-          useSceneClipboard.getState().copy(copiesOf(nodes, picked))
-          store.runCommand(documentId, removeNodes(nodes, selectedIds))
-          return
-        case 'scene.paste': {
-          // Copied again on the way out: pasting twice must not put the same ids in twice.
-          const held = useSceneClipboard.getState().nodes
-          if (held.length === 0) return
-          store.runCommand(documentId, addNodes(rootedIn(copiesOf(held, held), nodes)))
-          return
-        }
-        case 'scene.group':
-          if (picked.length > 0) store.runCommand(documentId, groupNodes(picked))
-          return
         case 'scene.undo':
           return store.undo(documentId)
         case 'scene.redo':
           return store.redo(documentId)
       }
     },
-    [documentId, view],
+    [documentId, view, cycleDisplay],
   )
 
-  /** A flyout row: the Add rows name a node kind, the others a side to stand at or a way to draw. */
+  /** The one flyout left on this bar names a way to draw; Add and the six sides are menu rows. */
   const runMode = useCallback(
-    (toolId: string, modeId: string) => {
-      if (toolId === 'view' && isViewDirection(modeId)) return engine.current?.viewFrom(modeId)
-      if (toolId === 'display' && isDisplayMode(modeId)) {
-        return useSceneViews.getState().setDisplay(documentId, modeId)
+    (modeId: string) => {
+      if (isDisplayMode(modeId)) {
+        useSceneViews.getState().setDisplay(documentId, paneInHand(), modeId)
       }
-      addNodeOf(modeId)
     },
-    [documentId, addNodeOf],
+    [documentId, paneInHand],
   )
 
   useShortcuts({
@@ -249,6 +350,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.snap': snapping,
       'scene.space': localFrame,
       'scene.projection': view.projection === 'orthographic',
+      'scene.skeletons': view.skeletons,
+      'scene.poseMode': view.poseMode,
+      'scene.quad': view.quad,
+      'scene.quadEdges': view.quadEdges,
     }
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,
@@ -260,46 +365,43 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
     return SCENE_TOOLS.map(tool => ({
       ...tool,
-      shortcut: tool.command ? shortcutLabel(bindingOf(tool.command, bindings)) : undefined,
-      activeMode: tool.id === 'display' ? view.display : undefined,
-      disabled: tool.command ? unavailable[tool.command] : undefined,
-      pressed: tool.command ? pressed[tool.command] : undefined,
+      shortcut: label(bindingOf(tool.command, bindings)),
+      activeMode: tool.id === 'display' ? displayOfPane(view.displays, 0) : undefined,
+      disabled: unavailable[tool.command],
+      pressed: pressed[tool.command],
     }))
-  }, [bindings, nothingSelected, nothingHeld, snapping, localFrame, view])
+  }, [bindings, label, nothingSelected, nothingHeld, snapping, localFrame, view])
 
   return (
-    <div
+    // The whole surface, not the canvas: the renderer owns that one, and a drop landing on the
+    // toolbar instead of beside it would be a miss the user cannot see coming.
+    <AssetDropTarget
+      accepts={MESHES}
+      onDrop={asset => addModelTo(documentId, asset)}
+      // No frame: see `ImageDocument` — a surface that fills the centre outlines what the user is
+      // already looking at.
+      outlined={false}
       className="relative size-full"
-      // The whole surface, not the canvas: the renderer owns that one, and a drop landing on the
-      // toolbar instead of beside it would be a miss the user cannot see coming.
-      onDragOver={event => event.preventDefault()}
-      onDrop={event => {
-        event.preventDefault()
-        const assetId = assetIdFromDrag(event)
-        // Read at the drop rather than subscribed to: the catalogue refreshes on its own, and
-        // this document has no reason to re-render every time it does.
-        const asset = assetId ? assetsById(useAssets.getState()).get(assetId) : null
-        if (asset) addModelTo(documentId, asset)
-      }}
     >
       {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
       <div ref={host} className="absolute inset-0" />
+      <SceneCounters scene={stats.scene} selected={stats.selected} />
+      {view.quad && (
+        <ScenePaneGrid
+          views={view.panes}
+          onView={(pane, chosen) => useSceneViews.getState().setPaneView(documentId, pane, chosen)}
+        />
+      )}
       <Toolbar
-        className="absolute top-2 left-2"
+        className={PANE_TOOLBAR}
         tools={tools}
         activeTool={mode}
         onTool={id => {
           const command = SCENE_TOOLS.find(candidate => candidate.id === id)?.command
           if (command) run(command)
         }}
-        onMode={(toolId, modeId) => runMode(toolId, modeId)}
-        onUndo={() => run('scene.undo')}
-        onRedo={() => run('scene.redo')}
-        undoShortcut={shortcutLabel(bindingOf('scene.undo', bindings))}
-        redoShortcut={shortcutLabel(bindingOf('scene.redo', bindings))}
-        canUndo={undoable}
-        canRedo={redoable}
+        onMode={(_toolId, modeId) => runMode(modeId)}
       />
-    </div>
+    </AssetDropTarget>
   )
 }

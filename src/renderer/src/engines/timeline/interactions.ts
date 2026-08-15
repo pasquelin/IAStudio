@@ -1,6 +1,7 @@
 import type { Command } from '../core/history'
-import { moveClip, setClipFade, trimClip } from './commands'
-import { hitTest, rowAt, snap, xToTime, type Point, type Viewport } from './timeline-geometry'
+import { moveClip, setClipFade, trimClip, type MediaExtent } from './commands'
+import { hitTest, rowAt, snap, xToTime, type Viewport } from './timeline-geometry'
+import type { Point } from '../core/geometry'
 import { scrollBy } from './viewport'
 import {
   clipById,
@@ -75,10 +76,10 @@ function dropTrack(state: SequenceState, viewport: Viewport, point: Point, from:
 }
 
 /**
- * How long the media behind a clip runs, or null for a still. The catalogue is not part of the
- * sequence, so a trim has to be told — see `trimClip`.
+ * What is known of the media behind a clip. The catalogue is not part of the sequence, so a trim
+ * has to be told — see `trimClip` and `MediaExtent`.
  */
-export type MediaLengths = (assetId: string) => Us | null
+export type MediaExtents = (assetId: string) => MediaExtent
 
 /**
  * Where a gesture leaves the view. Null for everything that edits instead — the counterpart of
@@ -94,7 +95,7 @@ export function commandForGesture(
   state: SequenceState,
   viewport: Viewport,
   point: Point,
-  mediaLengths: MediaLengths,
+  mediaExtents: MediaExtents,
 ): Command<SequenceState> | null {
   if (gesture.kind === 'scrub' || gesture.kind === 'pan') return null
 
@@ -120,7 +121,7 @@ export function commandForGesture(
   if (gesture.kind === 'trim') {
     const clip = clipById(state, gesture.clipId)
     if (!clip) return null
-    return trimClip(gesture.clipId, gesture.edge, snap(raw, context), mediaLengths(clip.assetId))
+    return trimClip(gesture.clipId, gesture.edge, snap(raw, context), mediaExtents(clip.assetId))
   }
 
   const from = trackById(state, gesture.trackId)

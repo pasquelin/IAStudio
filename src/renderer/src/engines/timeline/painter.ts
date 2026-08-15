@@ -1,30 +1,71 @@
+import { mdiLinkVariant, mdiLinkVariantOff } from '@mdi/js'
 import {
+  badgeAt,
+  BADGE_SIZE,
   CLIP_INSET,
+  EDGE_BAR_INSET,
+  EDGE_BAR_WIDTH,
+  edgeGrab,
+  FADE_BAND,
   RULER_HEIGHT,
   timeToX,
   trackRows,
   visibleRange,
   type Viewport,
 } from './timeline-geometry'
-import { formatTimecode } from './timecode'
+import { MDI_VIEWBOX, mdiPath } from '@/helpers/mdi-canvas'
+import { paintBandEnd } from './band-end'
+import { paintRuler as paintBandRuler } from './ruler'
 import {
   clipEnd,
-  frameDuration,
+  sequenceDuration,
   type Clip,
   type SequenceState,
   type Track,
+  type TrackKind,
   type Us,
 } from './timeline-state'
-import { onPaletteChange, token } from '../core/palette'
+import { memoPalette, rootColour, rootFont } from '../core/palette'
+import type { Point, Size } from '../core/geometry'
 import { waveformColumns, type WaveColumn } from './waveform'
-
-export type Size = { width: number; height: number }
 
 /** Poster width, as a multiple of the row height. Sixteen by nine, near enough to read a shot. */
 const POSTER_RATIO = 16 / 9
 
-const CLIP_FONT = '11px ui-sans-serif, system-ui'
-const RULER_FONT = '10px ui-monospace, monospace'
+/**
+ * The mark a clip wears in its corner: whether it still travels with its other half — the
+ * picture of a rush and its sound, which `linkId` ties together.
+ *
+ * Both states are drawn, and that is the point: nothing on the strip said which pairs were still
+ * tied, and a mark shown only when linked cannot be told from a mark nobody drew.
+ */
+const LINK_GLYPHS: Record<'tied' | 'alone', string> = {
+  tied: mdiLinkVariant,
+  alone: mdiLinkVariantOff,
+}
+
+/** Which fill a row's clips take. Keyed by kind, so a third one cannot be added without one. */
+const CLIP_FILLS: Record<TrackKind, 'clip' | 'clipAudio'> = {
+  video: 'clip',
+  audio: 'clipAudio',
+}
+
+/** An `@mdi/js` glyph, drawn at `BADGE_SIZE` with its top left corner where the badge sits. */
+function paintGlyph(context: CanvasRenderingContext2D, glyph: string, at: Point): void {
+  const scale = BADGE_SIZE / MDI_VIEWBOX
+  context.save()
+  context.translate(at.x, at.y)
+  context.scale(scale, scale)
+  context.fill(mdiPath(glyph))
+  context.restore()
+}
+
+const CLIP_FAMILY = 'ui-sans-serif, system-ui'
+const RULER_FAMILY = 'ui-monospace, monospace'
+
+/** `--text-tiny` and `--text-mini` at scale 1, for a paint with no document to read from. */
+const CLIP_SIZE = '11px'
+const RULER_SIZE = '10px'
 
 export type PaintOptions = {
   /** What a clip is called. Absent falls back to its asset id, which is always available. */
@@ -41,70 +82,29 @@ type Palette = {
   trackAlt: string
   border: string
   clip: string
+  clipAudio: string
   selected: string
   playhead: string
   text: string
   muted: string
+  clipFont: string
+  rulerFont: string
 }
 
-let cached: Palette | null = null
-
-/**
- * Read once per theme, not once per paint and certainly not once per clip: `getComputedStyle`
- * forces a style resolution over the whole shell, and at sixty frames a second that alone is
- * the frame budget. The tokens only move when the theme does — see `forgetPalette`.
- */
-function readPalette(): Palette {
-  if (cached) return cached
-  cached = computePalette()
-  return cached
-}
-
-/** Called when the theme changes; the next paint reads the tokens again. */
-export function forgetPalette(): void {
-  cached = null
-}
-
-// Subscribed here rather than called from the hook that publishes the theme: the timeline is
-// the one that knows it caches, and a module nobody imported has no cache to drop.
-onPaletteChange(forgetPalette)
-
-function computePalette(): Palette {
-  // Absent under a test that never built a DOM; black is what an unreadable token falls back
-  // to everywhere, rather than each caller inventing its own.
-  const root = typeof document === 'undefined' ? null : document.documentElement
-  const read = (name: string): string => (root ? token(root, name) : '') || '#000'
-
-  return {
-    ruler: read('--color-chassis'),
-    track: read('--color-panel'),
-    trackAlt: read('--color-surface'),
-    border: read('--color-border'),
-    clip: read('--color-elevated'),
-    selected: read('--color-accent-soft'),
-    playhead: read('--color-accent'),
-    text: read('--color-text'),
-    muted: read('--color-muted'),
-  }
-}
-
-/**
- * Microseconds between two graduations, chosen so they never crowd below ~60 px apart. Below a
- * second the grid becomes the frame grid: zoomed in that far, seconds are what stops being
- * useful, and a graduation off the frame boundary cannot be trusted to cut against.
- */
-export function tickStep(viewport: Viewport, state: SequenceState): Us {
-  const frame = frameDuration(state.settings)
-  const fits = (step: Us): boolean => step * viewport.scale >= 60
-
-  for (const frames of [1, 2, 5, 10, 25]) {
-    const step = frame * frames
-    if (step < 1_000_000 && fits(step)) return step
-  }
-
-  const seconds = [1, 2, 5, 10, 30, 60, 120, 300, 600, 900]
-  return (seconds.find(step => fits(step * 1_000_000)) ?? 1_800) * 1_000_000
-}
+const readPalette = memoPalette((): Palette => ({
+  ruler: rootColour('--color-chassis'),
+  track: rootColour('--color-panel'),
+  trackAlt: rootColour('--color-surface'),
+  border: rootColour('--color-border'),
+  clip: rootColour('--color-elevated'),
+  clipAudio: rootColour('--color-clip-audio'),
+  selected: rootColour('--color-accent-soft'),
+  playhead: rootColour('--color-accent'),
+  text: rootColour('--color-text'),
+  muted: rootColour('--color-muted'),
+  clipFont: rootFont('--text-tiny', CLIP_SIZE, CLIP_FAMILY),
+  rulerFont: rootFont('--text-mini', RULER_SIZE, RULER_FAMILY),
+}))
 
 function paintRuler(
   context: CanvasRenderingContext2D,
@@ -113,25 +113,17 @@ function paintRuler(
   size: Size,
   palette: Palette,
 ): void {
-  context.fillStyle = palette.ruler
-  context.fillRect(0, 0, size.width, RULER_HEIGHT)
-
-  const step = tickStep(viewport, state)
-  const [from, to] = visibleRange(viewport, size.width)
-  context.font = RULER_FONT
-  context.textBaseline = 'middle'
-
-  for (let time = Math.floor(from / step) * step; time <= to; time += step) {
-    const x = Math.round(timeToX(time, viewport)) + 0.5
-    context.fillStyle = palette.border
-    context.fillRect(x, RULER_HEIGHT - 6, 1, 6)
-
-    context.fillStyle = palette.muted
-    context.fillText(formatTimecode(time, state.settings), x + 4, RULER_HEIGHT / 2)
-  }
-
-  context.fillStyle = palette.border
-  context.fillRect(0, RULER_HEIGHT - 1, size.width, 1)
+  paintBandRuler(context, {
+    viewport,
+    width: size.width,
+    fps: state.settings.fps,
+    style: {
+      background: palette.ruler,
+      tick: palette.border,
+      text: palette.muted,
+      font: palette.rulerFont,
+    },
+  })
 }
 
 function paintTrack(
@@ -228,6 +220,36 @@ function paintPoster(
   context.drawImage(poster, left, top, width, height)
 }
 
+/**
+ * The grips at both ends, which is what says a clip can be lengthened at all.
+ *
+ * They start BELOW the fade band, and that offset is the whole point: up there the same corner
+ * opens a fade rather than a trim (`hitTest`), so a bar drawn into the band would be pressed for
+ * a lengthening and hand back a ramp. Skipped altogether once the bar would be wider than the
+ * zone that grabs it — on a narrow clip `edgeGrab` gives the middle back to the drag, and a bar
+ * sticking out past its own target promises a trim that is refused.
+ */
+function paintEdgeBars(
+  context: CanvasRenderingContext2D,
+  left: number,
+  right: number,
+  top: number,
+  height: number,
+  selected: boolean,
+  palette: Palette,
+): void {
+  if (edgeGrab(right - left) < EDGE_BAR_WIDTH) return
+
+  // The band is measured from the row, `top` is the clip box: one inset apart.
+  const barTop = top + FADE_BAND - CLIP_INSET
+  // Never negative: MIN_TRACK_HEIGHT leaves a 23 px box against the 13 px the two insets take.
+  const barHeight = height - (FADE_BAND - CLIP_INSET) - EDGE_BAR_INSET
+
+  context.fillStyle = selected ? palette.text : palette.muted
+  context.fillRect(left, barTop, EDGE_BAR_WIDTH, barHeight)
+  context.fillRect(right - EDGE_BAR_WIDTH, barTop, EDGE_BAR_WIDTH, barHeight)
+}
+
 function paintClip(
   context: CanvasRenderingContext2D,
   clip: Clip,
@@ -240,11 +262,14 @@ function paintClip(
   selected: boolean,
   palette: Palette,
   options: PaintOptions,
+  kind: TrackKind,
 ): void {
   const boxTop = top + CLIP_INSET
   const boxHeight = height - CLIP_INSET * 2 - 1
 
-  context.fillStyle = selected ? palette.selected : palette.clip
+  // Selection wins over the kind: a picked clip has to read as picked, and two greens would say
+  // less than one blue does.
+  context.fillStyle = selected ? palette.selected : palette[CLIP_FILLS[kind]]
   context.fillRect(left, boxTop, right - left, boxHeight)
 
   context.save()
@@ -252,10 +277,15 @@ function paintClip(
   context.rect(left, boxTop, right - left, boxHeight)
   context.clip()
 
-  const poster = options.posterOf?.(clip) ?? null
+  // What a track SHOWS follows what it plays: pictures on a picture track, the waveform on a
+  // sound track. Both on both drew a waveform over the stills of every rush — and the sound
+  // half of a take, which points at the same file, wore that rush's frames under its own
+  // waveform. Asking for neither is also what keeps a video clip from fetching peaks nobody
+  // draws, and a sound clip from decoding a still.
+  const poster = kind === 'video' ? (options.posterOf?.(clip) ?? null) : null
   if (poster) paintPoster(context, poster, left, right, boxTop, boxHeight)
 
-  const peaks = options.peaksOf?.(clip) ?? null
+  const peaks = kind === 'audio' ? (options.peaksOf?.(clip) ?? null) : null
   if (peaks) {
     paintWaveform(
       context,
@@ -270,11 +300,27 @@ function paintClip(
 
   context.fillStyle = palette.text
   context.fillText(label, left + 6, boxTop + 4)
+
+  // From the row's top, not the box's: the placement is measured against the bands `hitTest`
+  // reads, and those are the row's.
+  const badge = badgeAt(left, right, top)
+  if (badge) {
+    // Full ink for a pair that holds, the quiet one for a clip standing alone: the state is read
+    // from the glyph, and the ink only says which of the two is the ordinary case. A picked clip
+    // lifts to the label's ink as the waveform and the grips do — `muted` on `accent-soft` is
+    // the one pairing this palette does not carry.
+    context.fillStyle = selected || clip.linkId ? palette.text : palette.muted
+    paintGlyph(context, LINK_GLYPHS[clip.linkId ? 'tied' : 'alone'], badge)
+  }
   context.restore()
 
   context.fillStyle = palette.border
   context.fillRect(left, boxTop, 1, boxHeight)
   context.fillRect(right - 1, boxTop, 1, boxHeight)
+
+  // After the border and outside the clipping path: a grip drawn under the poster is a grip
+  // nobody sees, and the border alone reads as a seam between two clips rather than an end.
+  paintEdgeBars(context, left, right, boxTop, boxHeight, selected, palette)
 }
 
 export function paintTimeline(
@@ -294,7 +340,7 @@ export function paintTimeline(
 
   // Hoisted out of the clip loop: assigning `font` reparses the CSS shorthand and drops the
   // context's metrics cache, and at five hundred clips a frame that is not free.
-  context.font = CLIP_FONT
+  context.font = palette.clipFont
   context.textBaseline = 'top'
 
   for (const { track, offset } of trackRows(state)) {
@@ -319,11 +365,22 @@ export function paintTimeline(
         state.selectedId === clip.id,
         palette,
         options,
+        track.kind,
       )
     }
   }
 
   paintRuler(context, state, viewport, size, palette)
+
+  // Where the montage stops, marked exactly as a scene's duration is: the two bands had said the
+  // same thing in two different languages — a wash of scrim there, nothing at all here.
+  paintBandEnd(context, {
+    end: sequenceDuration(state),
+    viewport,
+    width: size.width,
+    height: size.height,
+    colour: palette.muted,
+  })
 
   context.fillStyle = palette.playhead
   context.fillRect(Math.round(timeToX(state.playhead, viewport)), 0, 1, size.height)

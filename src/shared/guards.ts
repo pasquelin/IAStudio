@@ -20,6 +20,23 @@ export function messageOf(error: unknown): string {
 }
 
 /**
+ * The same object without the keys whose value is `undefined`.
+ *
+ * For building a record out of columns that may be null, where `{ width: undefined }` and `{}`
+ * must not be told apart: an asset read back from the catalogue is compared against the one
+ * that was written, and a key present with no value fails that comparison while meaning the
+ * same thing. Spreading this beats a run of `if (x !== undefined)` once a shape has twenty
+ * optional fields.
+ */
+export function defined<T extends object>(fields: T): Partial<T> {
+  const kept: Partial<T> = {}
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) Object.assign(kept, { [key]: value })
+  }
+  return kept
+}
+
+/**
  * Reading one field off something that came back from disk or from a store. Three readers
  * rather than a generic merge: a document written by an older build must open on the current
  * default, and the field is the only place that knows which default that is.
@@ -35,6 +52,18 @@ export function readNumber(source: Record<string, unknown>, key: string, fallbac
 export function readString(source: Record<string, unknown>, key: string, fallback: string): string {
   const value = source[key]
   return typeof value === 'string' ? value : fallback
+}
+
+/**
+ * A number that cannot be negative — a length, an intensity, a point in time. Twelve call sites
+ * across four engines wrote `Math.max(0, readNumber(…))` before this existed.
+ */
+export function readPositive(
+  source: Record<string, unknown>,
+  key: string,
+  fallback: number,
+): number {
+  return Math.max(0, readNumber(source, key, fallback))
 }
 
 export function readBoolean(

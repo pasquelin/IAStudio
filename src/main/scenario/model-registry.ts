@@ -2,7 +2,8 @@ import {
   FEATURED_TAG,
   OFFICIAL_TAG,
   PERIOD_DAYS,
-  SKYBOX_TAG,
+  SYSTEM_TAG_PREFIX,
+  tagOfFamily,
   type ModelDescriptor,
   type ModelPage,
   type ModelPeriod,
@@ -29,10 +30,19 @@ export type RemoteModel = {
   thumbnail?: { url?: string }
   /** Pictures the model's owner published. Measured: 629 of the 642 public models have some. */
   exampleAssetIds?: readonly string[]
+  /**
+   * The plan grade below which the API refuses this model. Widened from the SDK's union on
+   * purpose — see `ModelSummary.requiredPlanLevel`, which two models already contradict.
+   *
+   * `null` is a real answer, not a missing one: measured, `GET /models` always grades a model
+   * with a number, while `POST /search/models` answers `null` for every hit — the search index
+   * does not carry the field. That is why the search path is graded from `grades` below.
+   */
+  accessRestrictions?: number | null
   inputs?: readonly ScenarioInput[]
 }
 
-export type RemoteAsset = {
+type RemoteAsset = {
   id: string
   url?: string
   /** `video/mp4`, `model/gltf-binary`, `audio/mpeg`… — `url` is only showable when it is an image. */
@@ -52,13 +62,14 @@ export type ListRequest = {
   pageSize: number
   token?: string
   sort: ModelSort
-  /** Narrows the request to Scenario's own models, which the API can filter server-side. */
-  official: boolean
   /**
    * ONE tag, as a coarse pre-filter. Measured: the API unions the tags it is given — `Video`
    * alone answers 127 models, `Kling` alone 23, and `Video,Kling` answers 139. Passing every
    * chosen tag would therefore WIDEN the result with each filter added. The exact match is
    * made here instead, and this only narrows what has to be walked.
+   *
+   * Never one from `SYSTEM_TAG_PREFIX`, which the endpoint answers nothing for. `preFilter`
+   * is where that is decided.
    */
   tag?: string
   /** ISO date the models must be newer than, already resolved from the requested span. */
@@ -109,7 +120,21 @@ const MAX_PAGES_PER_REQUEST = 5
 /** One round trip per screenful of cards; the endpoint takes the ids in a single body. */
 const PREVIEW_BATCH = 50
 
-function summaryOf(model: RemoteModel): ModelSummary {
+/**
+ * Every plan grade the catalogue has answered so far, by model id.
+ *
+ * MEASURED: `GET /models` grades every model with a number, while `POST /search/models` answers
+ * `null` on every hit — the search index does not carry the field. Without this, a model found
+ * by name came back ungraded and was offered as runnable, while the very same model in the
+ * listing was greyed out. Grades do not change under a model, so remembering what the listings
+ * said is enough to grade most search hits too.
+ *
+ * NOT cleared by the credential purge, unlike every other cache here: a grade is a property of
+ * the model, not of who is asking.
+ */
+type Grades = Map<string, number>
+
+function summaryOf(model: RemoteModel, grades: Grades): ModelSummary {
   const tags = model.tags ?? []
   const summary: ModelSummary = {
     id: model.id,
@@ -130,6 +155,16 @@ function summaryOf(model: RemoteModel): ModelSummary {
   if (model.shortDescription) summary.description = model.shortDescription
   if (model.thumbnail?.url) summary.thumbnail = model.thumbnail.url
   if (model.createdAt) summary.createdAt = model.createdAt
+  // `typeof` and not `!== undefined`: the search index answers `null`, which would otherwise be
+  // written into a `number | undefined` field and read as a grade of nothing. Not `if (…)`
+  // either — grade 0 is the free tier, and truthiness would drop it to "ungraded".
+  const grade =
+    typeof model.accessRestrictions === 'number' ? model.accessRestrictions : grades.get(model.id)
+
+  if (grade !== undefined) {
+    summary.requiredPlanLevel = grade
+    grades.set(model.id, grade)
+  }
 
   return summary
 }
@@ -235,14 +270,20 @@ function matches(summary: ModelSummary, query: ModelQuery, since: string | null)
 /**
  * The one tag the listing is narrowed by server-side, ahead of `matches`.
  *
- * A chosen tag comes first — it is what the user asked for. Failing that, a skybox listing is
- * worth asking the API for by tag: three models carry `SKYBOX_TAG` out of six hundred, and
- * walking the public catalogue page by page to keep three of them costs eight round trips to
- * fill one screen. Every other family is dense enough that the local filter settles it.
+ * A chosen tag comes first — it is what the user asked for. Failing that, the three families
+ * whose tag the API indexes are worth asking for by it: four to thirteen models out of six
+ * hundred, and walking the public catalogue page by page to keep them costs eight round trips
+ * to fill one screen. Every other family is dense enough that the local filter settles it.
+ *
+ * Nothing from `SYSTEM_TAG_PREFIX` leaves, whichever of the two it came from: the endpoint
+ * answers zero models for those, so the pre-filter would not shorten the walk but empty it.
+ * That is the fourth family, the skyboxes: `matches` classifies them from the records instead.
+ * Measured 2026-08-14, that walk does reach them — the three sit at offsets 100 to 299 of the
+ * score-ordered public listing, so one request's five pages of a hundred bring them all back.
  */
 function preFilter(query: ModelQuery): string | undefined {
-  if (query.tags?.[0]) return query.tags[0]
-  return query.family === 'skybox' ? SKYBOX_TAG : undefined
+  const wanted = query.tags?.[0] ?? (query.family ? tagOfFamily(query.family) : undefined)
+  return wanted?.startsWith(SYSTEM_TAG_PREFIX) ? undefined : wanted
 }
 
 type Cached<T> = { at: number; value: T }
@@ -275,9 +316,26 @@ export function createModelRegistry({
    * is a request spent to learn what the previous one already said.
    */
   let ownsModels: { at: number; value: boolean } | null = null
+  /** Survives `invalidate` on purpose — see `Grades`: a grade belongs to the model, not the account. */
+  const grades: Grades = new Map()
 
   const fresh = <T>(entry: Cached<T> | null | undefined): T | null =>
     entry && now() - entry.at < ttlMs ? entry.value : null
+
+  /** The one place a model's schema is fetched, cached per model for the registry's own TTL. */
+  const described = async (modelId: string): Promise<ModelDescriptor> => {
+    const cached = fresh(descriptors.get(modelId))
+    if (cached) return cached
+
+    const { model } = await catalog().retrieve(modelId)
+    const value: ModelDescriptor = {
+      ...summaryOf(model, grades),
+      fields: translateSchema(model.inputs),
+    }
+
+    descriptors.set(modelId, { at: now(), value })
+    return value
+  }
 
   /** Distinguishes "resolved to nothing" from "never asked", which `fresh` both read as null. */
   const held = (assetId: string): boolean => {
@@ -295,15 +353,19 @@ export function createModelRegistry({
    */
   const fetchPage = async (cursor: Cursor, query: ModelQuery): Promise<CatalogPage> => {
     // Keyed by the tag that actually leaves, never by what it was derived from. The family is
-    // one of its sources — a skybox listing narrows server-side, so its page holds three models
-    // and must not be served back to Image — but the eight families that resolve to no tag ask
-    // the identical question and go on sharing one page. Keying the family itself would have
-    // made each of them repay a walk the previous one had already downloaded.
-    const key = `${preFilter(query) ?? ''}|${query.sort ?? ''}|${query.origin ?? ''}|${query.since ?? ''}|${query.search?.trim() ?? ''}|${serialize({ ...cursor, ...(cursor.mode === 'list' ? { skip: 0 } : {}) })}`
+    // one of its sources — a cutout listing narrows server-side, so its page holds nine models
+    // and must not be served back to Image — but every family resolving to no tag, skyboxes
+    // among them, asks the identical question and shares one page. Keying the family itself
+    // would make each of them repay a walk the previous one had already downloaded.
+    //
+    // The chosen origin is absent for the same reason: nothing of it leaves. It picks where the
+    // walk starts, which `serialize(cursor)` already says, and `matches` reads authorship off
+    // the records — so "Official" and "All" are the same pages under two names.
+    const tag = preFilter(query)
+    const key = `${tag ?? ''}|${query.sort ?? ''}|${query.since ?? ''}|${query.search?.trim() ?? ''}|${serialize({ ...cursor, ...(cursor.mode === 'list' ? { skip: 0 } : {}) })}`
     const cached = fresh(fetched.get(key))
     if (cached) return cached
 
-    const tag = preFilter(query)
     const page =
       cursor.mode === 'search'
         ? await catalog().search({
@@ -315,7 +377,6 @@ export function createModelRegistry({
             privacy: cursor.privacy,
             pageSize: PAGE_SIZE,
             sort: query.sort ?? 'relevance',
-            official: query.origin === 'official',
             ...(tag ? { tag } : {}),
             ...(query.since ? { createdAfter: cutoff(query.since, now()) } : {}),
             ...(cursor.token ? { token: cursor.token } : {}),
@@ -382,7 +443,7 @@ export function createModelRegistry({
           read += 1
           if (seen.has(model.id)) continue
 
-          const summary = summaryOf(model)
+          const summary = summaryOf(model, grades)
           if (matches(summary, query, since)) {
             seen.add(model.id)
             items.push(summary)
@@ -407,19 +468,7 @@ export function createModelRegistry({
       return value
     },
 
-    describe: async modelId => {
-      const cached = fresh(descriptors.get(modelId))
-      if (cached) return cached
-
-      const { model } = await catalog().retrieve(modelId)
-      const descriptor: ModelDescriptor = {
-        ...summaryOf(model),
-        fields: translateSchema(model.inputs),
-      }
-
-      descriptors.set(modelId, { at: now(), value: descriptor })
-      return descriptor
-    },
+    describe: modelId => described(modelId),
 
     previews: async assetIds => {
       const wanted = [...new Set(assetIds)]

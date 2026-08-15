@@ -3,30 +3,46 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
+import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timeline-state'
 import { TimelinePanel } from '@/panels/timeline/TimelinePanel'
 import { useDocuments } from '@/stores/documents'
-import { useSequences } from '@/stores/sequences'
+import { sequenceStore, useSequences } from '@/stores/sequences'
 import { SequenceDocument } from './SequenceDocument'
 
 const play = vi.fn()
 const pause = vi.fn()
+// Shared across instances, unlike the per-engine mocks: what the engine is handed is what will be
+// painted and heard, and both monitors hand it over here.
+const applied = vi.fn<(state: SequenceState) => void>()
 
 // jsdom has neither WebGL nor WebCodecs: the engine is exercised by hand, not here. What this
 // covers is that the tab shows two monitors and wires their transport.
 vi.mock('@/engines/timeline/TimelineEngine', () => ({
   TimelineEngine: class {
     mount = vi.fn(() => Promise.resolve())
-    apply = vi.fn()
+    apply = applied
     seek = vi.fn(() => Promise.resolve())
     play = play
     pause = pause
     playing = vi.fn(() => false)
-    openDecoders = vi.fn(() => 0)
-    dispose = vi.fn()
+    openSinks = vi.fn(() => 0)
+    // Faithful on this one point, because a case below turns on it: the real `dispose` pauses,
+    // and pausing reports the time one last time (`TimelineEngine.pause`).
+    dispose = vi.fn(() => this.deps.onTime?.(0))
+
+    constructor(private deps: { onTime?: (time: number) => void }) {}
   },
 }))
 
 const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
+const later = clipFixture('clip-2', 2_000_000, 1_000_000, { assetId: 'asset-2' })
+
+/** The source monitor's track, as the engine last received it — 'S1' is its only one. */
+const sourceTrack = () =>
+  applied.mock.calls
+    .map(([state]) => state.tracks.find(track => track.id === 'S1'))
+    .filter(Boolean)
+    .at(-1)
 
 describe('SequenceDocument', () => {
   beforeEach(() => {
@@ -40,6 +56,22 @@ describe('SequenceDocument', () => {
 
     expect(screen.getByText('Source')).toBeInTheDocument()
     expect(screen.getByText('Programme')).toBeInTheDocument()
+  })
+
+  // `forgetDocument` drops the document BEFORE React unmounts this tab, and disposing the engine
+  // reports the time one last time. Writing then would build the montage back out of the store's
+  // default — and the file would never be read again, since the document reads as open.
+  // On an id of its own, deliberately: the store's `dropped` mark outlives a case, and a `doc-1`
+  // dropped here would silence the commands of every case below — the fixtures reinstall state
+  // with `setState`, which is not a door the mark is lifted at.
+  it('does not build a closed montage back when the monitor reports one last time', () => {
+    useSequences.setState({ states: { closing: EMPTY_SEQUENCE }, histories: {} })
+    const view = render(<SequenceDocument documentId="closing" />)
+
+    useSequences.getState().drop('closing')
+    view.unmount()
+
+    expect(sequenceStore.hasState(useSequences.getState(), 'closing')).toBe(false)
   })
 
   it('gives each monitor its own transport', () => {
@@ -80,6 +112,42 @@ describe('SequenceDocument', () => {
     expect(screen.queryByText(/Sélectionnez un clip/)).not.toBeInTheDocument()
   })
 
+  /**
+   * The monitor used to mount whatever was selected on a picture track, whatever its kind. A take
+   * landed there is shown as a black frame and heard as nothing at all — `audioChunksIn` only
+   * schedules tracks of the sound kind.
+   */
+  it('mounts a clip taken from a sound track on a sound track, so it is heard', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('A1', clip)))
+
+    expect(sourceTrack()?.kind).toBe('audio')
+  })
+
+  /**
+   * The track the clip sits on, not the type of the file behind it: a rush dropped onto a sound
+   * track is played without a picture by the program monitor and shown as audio by the inspector,
+   * and the source monitor has no business disagreeing with both.
+   */
+  it('mounts a clip taken from a picture track on a picture track', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', clip)))
+
+    expect(sourceTrack()?.kind).toBe('video')
+  })
+
+  // A track holds many clips; the monitor shows the selected one, not the first one laid down.
+  it('mounts the selected clip rather than the first on its track', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('A1', clip)))
+    act(() => useSequences.getState().runCommand('doc-1', addClip('A1', later)))
+
+    expect(sourceTrack()?.clips[0]?.id).toBe('clip-2')
+  })
+
   it('starts the program monitor when its play button is pressed', () => {
     render(<SequenceDocument documentId="doc-1" />)
 
@@ -112,6 +180,38 @@ describe('SequenceDocument', () => {
       .getAllByRole('button', { name: /Lire/ })
       .map(button => button.getAttribute('aria-label'))
 
-    expect(names).toEqual(['Lire', 'Lire (Space)'])
+    // The key is named from the bundle: the French interface used to announce `Space`.
+    expect(names).toEqual(['Lire', 'Lire (Espace)'])
+  })
+
+  /**
+   * The two monitors used to share the row down the middle with a `Separator` between them, which
+   * draws a line and refuses to be moved. One of the two is always the one being judged — the
+   * program while cutting, the source while choosing a take — and it is the one that needs room.
+   */
+  describe('the divider between the two monitors', () => {
+    it('gives the source a width of its own once dragged, and the program the rest', () => {
+      render(<SequenceDocument documentId="doc-1" />)
+      const divider = screen.getByRole('separator', { hidden: true })
+
+      fireEvent.pointerDown(divider, { pointerId: 1, clientX: 500 })
+      fireEvent.pointerMove(divider, { pointerId: 1, clientX: 700 })
+
+      // The source is the first monitor's own box, which only exists once a width was set on it.
+      const source = screen.getByText('Source').closest('section')?.parentElement
+      expect(source?.style.width).not.toBe('')
+    })
+
+    it('refuses to swallow either monitor, whichever way it is dragged', () => {
+      render(<SequenceDocument documentId="doc-1" />)
+      const divider = screen.getByRole('separator', { hidden: true })
+
+      fireEvent.pointerDown(divider, { pointerId: 1, clientX: 500 })
+      fireEvent.pointerMove(divider, { pointerId: 1, clientX: -4000 })
+
+      const source = screen.getByText('Source').closest('section')?.parentElement
+      // `MIN_SPLIT`, through the same `fitSplit` the shell's own zones are clamped by.
+      expect(Number.parseInt(source?.style.width ?? '0', 10)).toBeGreaterThanOrEqual(100)
+    })
   })
 })

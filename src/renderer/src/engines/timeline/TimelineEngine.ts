@@ -3,6 +3,12 @@ import { createClock, type Clock } from './clock'
 import { createDecoderPool, type DecoderPool, type SinkLike } from './decoder-pool'
 import { playbackToken } from './playback'
 import {
+  createSoundScheduler,
+  SOUND_HORIZON,
+  type SoundPort,
+  type SoundScheduler,
+} from './sound-schedule'
+import {
   clipEnd,
   EMPTY_SEQUENCE,
   playsThrough,
@@ -13,13 +19,28 @@ import {
   type Track,
   type Us,
 } from './timeline-state'
-import { mountApplication } from '../core/mount'
+import { followHostSize, mountApplication } from '../core/mount'
 import { tokenAsHex } from '../core/palette'
-import type { Size } from './viewport'
+import type { Size } from '../core/geometry'
 
 /** The clip a track is playing at that instant, or nothing — a gap is a legitimate answer. */
 export function clipAt(track: Track, time: Us): Clip | null {
   return track.clips.find(clip => time >= clip.start && time < clipEnd(clip)) ?? null
+}
+
+/**
+ * The sprites whose track LEFT the frame, and which nothing else would ever take down.
+ *
+ * The paint loop reaches only the tracks still in the list, so a track deleted — or turned into a
+ * sound track by a change of selection — would keep the image it last painted on screen while
+ * something else plays.
+ */
+export function spritesOffFrame<T>(
+  sprites: ReadonlyMap<string, T>,
+  painting: readonly Track[],
+): T[] {
+  const inFrame = new Set(painting.map(track => track.id))
+  return [...sprites].filter(([trackId]) => !inFrame.has(trackId)).map(([, sprite]) => sprite)
 }
 
 /** Lowest index first: the sprite added last is the one the eye sees on top. */
@@ -99,7 +120,14 @@ export function createFrameSink({ upload }: { upload: (frame: VideoFrame) => voi
 
 export type TimelineEngineDeps = {
   openSink: (assetId: string) => Promise<SinkLike>
+  /**
+   * Where the sound goes. Required rather than optional: a player silent because a dependency
+   * was forgotten says nothing about it, and this repository has paid that once already.
+   */
+  sound: SoundPort
   maxDecoders: number
+  /** Still pictures hold no decoder; their ceiling bounds memory, not silicon. */
+  maxPictures: number
   /** Identifies this player to the single playback token — the document id does. */
   owner: string
   /** Called on every played frame, so the document can follow with its playhead. */
@@ -108,6 +136,18 @@ export type TimelineEngineDeps = {
   audioTime?: () => number | null
   /** Fires on both sides of a transport change, including a pause forced by the token. */
   onPlayingChange?: (playing: boolean) => void
+  /**
+   * Whether the frame just painted left a clip unshown because its media could not be read.
+   *
+   * `unreadable` rather than the pool's `undecodable`, and the difference is the point: the pool
+   * states a mechanical fact — this open failed, it will not be retried — where a failed fetch
+   * for a moved file counts as much as a format Chromium refuses. What reaches the screen can
+   * only claim the second.
+   *
+   * Reported on every seek rather than once per asset: the answer belongs to the playhead, and
+   * a message raised where a `.exr` sits has to fall again on the clip that follows it.
+   */
+  onUnreadable?: (unreadable: boolean) => void
 }
 
 /**
@@ -128,14 +168,31 @@ export class TimelineEngine {
   private disposed = false
   /** The canvas and screen sizes the frame was last laid out for — see `layout`. */
   private laidOut = ''
+  /** Stops watching the panel this monitor sits in — see `followHostSize`. */
+  private unfollow: (() => void) | null = null
 
   private readonly clock: Clock
+  private readonly sound: SoundScheduler
   private frameHandle: number | null = null
+  /**
+   * Whether the transport is running — which is NOT « a frame is pending ».
+   *
+   * The loop spends most of its time inside a decode with no frame requested, and reading the
+   * handle as the transport's state made `pause` a no-op exactly there.
+   */
+  private running = false
+  /** Which run of the transport a frame belongs to — see `step`. */
+  private transport = 0
 
   constructor(private readonly deps: TimelineEngineDeps) {
     // First child, so every layer added later composites over it.
     this.frame.addChild(this.backdrop)
-    this.pool = createDecoderPool({ open: deps.openSink, maxDecoders: deps.maxDecoders })
+    this.sound = createSoundScheduler({ port: deps.sound, horizon: SOUND_HORIZON })
+    this.pool = createDecoderPool({
+      open: deps.openSink,
+      maxDecoders: deps.maxDecoders,
+      maxPictures: deps.maxPictures,
+    })
     this.clock = createClock({
       audioTime: deps.audioTime ?? (() => null),
       monotonic: () => performance.now(),
@@ -143,41 +200,87 @@ export class TimelineEngine {
   }
 
   play(): void {
-    if (this.frameHandle !== null) return
+    if (this.running) return
 
     // Taking the token revokes whoever held it: two streams at once is the bug this prevents.
     playbackToken.acquire(this.deps.owner, () => this.pause())
-    this.clock.start(this.state.playhead)
 
-    const step = (): void => {
-      const time = this.clock.now()
-      if (time >= sequenceDuration(this.state)) {
-        this.pause()
-        return
-      }
+    // The playhead stops ON the end, where the loop's first test sends it straight back to
+    // pause: pressing play there did nothing at all, which reads as a broken transport rather
+    // than as a sequence that is over.
+    const from = this.state.playhead >= sequenceDuration(this.state) ? 0 : this.state.playhead
+    if (from !== this.state.playhead) this.deps.onTime?.(from)
 
-      this.deps.onTime?.(time)
-      void this.seek(time)
-      this.frameHandle = requestAnimationFrame(step)
-    }
+    // Sound first: it wakes the output, and the clock asks that same output whether to follow it
+    // — asked before, the answer is always no and the sequence runs on the wall clock instead.
+    this.sound.start(from)
+    this.clock.start(from)
 
-    this.frameHandle = requestAnimationFrame(step)
+    this.running = true
+    this.transport += 1
+    this.nextFrame(this.transport)
     this.deps.onPlayingChange?.(true)
   }
 
   pause(): void {
-    if (this.frameHandle === null) return
+    if (!this.running) return
 
-    cancelAnimationFrame(this.frameHandle)
+    this.running = false
+    if (this.frameHandle !== null) cancelAnimationFrame(this.frameHandle)
     this.frameHandle = null
     this.clock.stop()
+    this.sound.stop()
     playbackToken.release(this.deps.owner)
     this.deps.onTime?.(this.clock.now())
     this.deps.onPlayingChange?.(false)
   }
 
   playing(): boolean {
-    return this.frameHandle !== null
+    return this.running
+  }
+
+  /**
+   * One decode in flight at a time, and the next frame asked for only once it has been painted.
+   *
+   * Asked every animation frame instead, the loop outran its own decoder: `seek` bumps the
+   * generation on entry, so each ask invalidated the one still awaiting a frame, and a decode
+   * that took longer than sixteen milliseconds — which is every hardware decode — was closed
+   * unpainted on return. The picture froze at the first miss and only a pause revived it.
+   *
+   * The playhead comes from the clock rather than from a frame count, so a decoder slower than
+   * real time drops pictures instead of falling behind the sound.
+   */
+  private nextFrame(transport: number): void {
+    this.frameHandle = requestAnimationFrame(() => {
+      this.frameHandle = null
+      void this.step(transport)
+    })
+  }
+
+  /**
+   * `transport` says which run this frame belongs to, and `running` alone cannot.
+   *
+   * Most of a frame is spent inside a decode, with no animation frame left for `pause` to
+   * cancel: pausing there and pressing play again started a second chain while the first was
+   * still in flight, and the two then invalidated each other's decodes on every frame — the
+   * very freeze this loop was rewritten to fix.
+   */
+  private async step(transport: number): Promise<void> {
+    if (!this.running || transport !== this.transport) return
+
+    const time = this.clock.now()
+    if (time >= sequenceDuration(this.state)) {
+      this.pause()
+      return
+    }
+
+    this.deps.onTime?.(time)
+    // Planned from the frame loop rather than from `seek`: a seek also happens while paused,
+    // where scrubbing must stay silent, and it happens per video track rather than per frame.
+    this.sound.pump(time)
+    await this.seek(time)
+    // Re-read: a pause, a revoked token or a dispose may all have landed during that decode.
+    if (this.running && transport === this.transport) this.nextFrame(transport)
   }
 
   async mount(element: HTMLElement): Promise<void> {
@@ -199,14 +302,20 @@ export class TimelineEngine {
     // The panel resizes without the window doing so, and a frame laid out once would drift.
     // Pixi renders right after emitting this, so laying out is all this listener owes it.
     application.renderer.on('resize', this.layout)
+    // What actually makes that resize happen: `resizeTo` alone answers to the window only.
+    this.unfollow = followHostSize(application, element)
 
     this.application = application
     this.layout()
-    this.draw()
+    // Seeks rather than draws: the first `apply` lands while Pixi is still starting, `seek`
+    // returns on a missing application, and nothing else asks again — a monitor mounted on a
+    // sequence already positioned showed the backdrop and waited for the playhead to move.
+    void this.seek(this.state.playhead)
   }
 
   apply(state: SequenceState): void {
     this.state = state
+    this.sound.apply(state)
     this.layout()
     // While playing, the frame loop owns the playhead; seeking here too would fight it.
     if (!this.playing()) void this.seek(state.playhead)
@@ -218,39 +327,57 @@ export class TimelineEngine {
 
     this.generation += 1
     const generation = this.generation
+    let unreadable = false
+    let painted = false
 
-    for (const track of videoTracksByDepth(this.state)) {
-      const sprite = this.spriteFor(track.id)
+    const painting = videoTracksByDepth(this.state)
+    for (const sprite of spritesOffFrame(this.sprites, painting)) sprite.visible = false
+
+    // Every track asked BEFORE any is awaited: each holds a sink of its own, so their decodes
+    // are independent, and awaiting them one after another made a frame of a two-track montage
+    // cost the sum of two decodes rather than the longer of them.
+    const asked = painting.map(track => {
       // Asked here rather than by filtering the list: a track dropped from it would keep the
       // sprite it last painted on screen, which is the opposite of muting it.
       const clip = playsThrough(this.state, track) ? clipAt(track, time) : null
-      if (!clip) {
-        sprite.visible = false
-        continue
+      return {
+        sprite: this.spriteFor(track.id),
+        clip,
+        frame: clip ? this.pool.frameAt(clip.assetId, sourceTimeAt(clip, time)) : null,
       }
+    })
 
-      const frame = await this.pool.frameAt(clip.assetId, sourceTimeAt(clip, time))
-      if (generation !== this.generation) {
-        frame?.close()
-        return
-      }
+    const decoded = await Promise.all(asked.map(({ frame }) => frame))
+    if (generation !== this.generation) {
+      for (const frame of decoded) frame?.close()
+      return
+    }
+
+    asked.forEach(({ sprite, clip }, index) => {
+      const frame = decoded[index]
       if (!frame) {
         sprite.visible = false
-        continue
+        if (clip && this.pool.undecodable(clip.assetId)) unreadable = true
+        return
       }
 
       sprite.visible = true
+      painted = true
       createFrameSink({
         upload: uploaded =>
           swapTexture(sprite, uploadNow(Texture.from(uploaded), application.renderer.texture)),
       }).push(frame)
       this.fit(sprite)
-    }
+    })
 
+    // Only when the monitor is showing nothing at all: the message covers the whole picture, and
+    // laying it over a track that did decode would trade one silence for a worse lie. A layer
+    // lost under one that painted stays silent, and that half is still open.
+    this.deps.onUnreadable?.(unreadable && !painted)
     this.draw()
   }
 
-  openDecoders(): number {
+  openSinks(): number {
     return this.pool.openCount()
   }
 
@@ -259,6 +386,8 @@ export class TimelineEngine {
     this.pause()
     this.generation += 1
     this.pool.dispose()
+    this.unfollow?.()
+    this.unfollow = null
     this.application?.renderer.off('resize', this.layout)
     this.application?.destroy(true, { children: true, texture: true })
     this.application = null

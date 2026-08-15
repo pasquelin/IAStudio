@@ -1,0 +1,87 @@
+{
+  "actions": {
+    "generate": "Générer",
+    "close": "Fermer",
+    "removeTool": "Retirer le module",
+    "retry": "Réessayer",
+    "retryHint": "Retente le rendu de cette zone, sans redémarrer le studio",
+    "generateHint": "Lance la génération avec les réglages ci-dessus ; elle se suit dans la barre des générations"
+  },
+  "jobs": {
+    "none": "Aucune tâche en cours.",
+    "running_one": "{{count, number}} génération",
+    "running_many": "{{count, number}} générations",
+    "running_other": "{{count, number}} générations",
+    "failed_one": "{{count, number}} échec",
+    "failed_many": "{{count, number}} échecs",
+    "failed_other": "{{count, number}} échecs",
+    "open": "Afficher les générations",
+    "openHint": "Ouvre la liste des générations, en cours comme terminées",
+    "status": {
+      "queued": "En file",
+      "running": "En cours",
+      "succeeded": "Terminée",
+      "failed": "Échouée",
+      "cancelled": "Annulée"
+    },
+    "cancel": "Annuler la tâche"
+  },
+  "dialog": {
+    "allMedia": "Tous les médias",
+    "video": "Vidéo",
+    "audio": "Audio",
+    "image": "Image",
+    "mesh": "Modèle 3D"
+  },
+  "sorts": {
+    "relevance": "Qualité : les meilleurs",
+    "recent": "Création : les plus récents",
+    "oldest": "Création : les plus anciens"
+  },
+  "exportFormats": {
+    "glb": "glTF binaire (.glb)",
+    "gltf": "glTF (.gltf)",
+    "usdz": "USDZ (.usdz)"
+  },
+  "errors": {
+    "missingCredentials": "Aucun identifiant enregistré.",
+    "invalidCredentials": "Clé ou secret API invalide.",
+    "forbidden": "Cette clé API n’a pas les droits requis.",
+    "planRestricted": "Ce modèle n’est pas inclus dans votre abonnement.",
+    "notFound": "Ressource introuvable.",
+    "rateLimited": "Trop de requêtes. Nouvelle tentative en cours…",
+    "server": "Le service Scenario est momentanément indisponible.",
+    "network": "Impossible de joindre Scenario. Vérifiez votre connexion.",
+    "unexpected": "Une erreur inattendue est survenue.",
+    "invalidValue": "Valeur invalide.",
+    "rejected": "La génération a échoué.",
+    "storage": "Impossible d’enregistrer le résultat sur le disque.",
+    "panelCrashed": "Ce panneau a rencontré une erreur.",
+    "windowCrashed": "L’application a rencontré une erreur."
+  },
+  "licences": {
+    "title": "Licences",
+    "intro": "Scenario Studio est livré avec les logiciels ci-dessous. Chacun garde sa propre licence, reproduite ici en entier.",
+    "sources": "Sources correspondantes :",
+    "sourcesUnmodified": "Sources correspondantes, sans modification :",
+    "bundled": "livré avec l’application",
+    "unfold": "Déplie le texte complet de cette licence, ici même",
+    "fold": "Replie ce texte — une seule licence reste ouverte à la fois"
+  },
+  "manual": {
+    "title": "Manuel utilisateur",
+    "chapters": "Chapitres",
+    "search": "Chercher dans le manuel",
+    "results": "Résultats",
+    "noResult": "Aucun chapitre ne contient ces mots.",
+    "chapterHint": "Ouvre ce chapitre dans le panneau de droite",
+    "searchResultHint": "Ouvre le chapitre où ces mots apparaissent"
+  },
+  "units": {
+    "byte": "o",
+    "kibibyte": "Kio",
+    "mebibyte": "Mio",
+    "gibibyte": "Gio",
+    "creative": "{{units}} UC"
+  }
+}

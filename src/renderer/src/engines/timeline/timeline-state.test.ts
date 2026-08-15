@@ -2,23 +2,28 @@ import { describe, expect, it } from 'vitest'
 import { clipFixture } from './timeline-fixtures'
 import {
   clampFades,
+  clampGain,
+  clampSpeed,
   clipFrom,
   clampTrackHeight,
   clipEnd,
   clipById,
   DEFAULT_TRACK_HEIGHT,
-  deserializeSequence,
+  parseSequence,
   EMPTY_SEQUENCE,
   frameDuration,
   insertClip,
   makeClip,
   makeTrack,
+  MAX_GAIN_DB,
+  MAX_SPEED,
   MAX_TRACK_HEIGHT,
+  MIN_GAIN_DB,
+  MIN_SPEED,
   MIN_TRACK_HEIGHT,
   newClipId,
   playsThrough,
   sequenceDuration,
-  serializeSequence,
   snapToFrame,
   sourceTimeAt,
   trackOfClip,
@@ -56,6 +61,15 @@ describe('reading a clip against its source', () => {
   it('gives the part starting later the source offset that goes with it', () => {
     const tail = clipFrom(clip(0, 1_000_000, { inPoint: 2_000_000 }), 400_000)
     expect(tail).toMatchObject({ start: 400_000, duration: 600_000, inPoint: 2_400_000 })
+  })
+
+  /**
+   * A still trimmed leftwards is the way in: it has no source to run before, so the trim lets it
+   * go. `readPositive` drops a negative in point when the project is read back, and the clip
+   * would return other than the one that was saved.
+   */
+  it('never derives a source offset before the source itself', () => {
+    expect(clipFrom(clip(1_000_000, 1_000_000), 0).inPoint).toBe(0)
   })
 })
 
@@ -238,15 +252,31 @@ describe('track height', () => {
   })
 })
 
+// Both ranges are asymmetric, so a value left alone in the middle is what tells the two bounds
+// apart: swapped, either function would answer its floor for every input.
+describe('gain and speed', () => {
+  it('holds a gain inside the range the mixer offers', () => {
+    expect(clampGain(-100)).toBe(MIN_GAIN_DB)
+    expect(clampGain(50)).toBe(MAX_GAIN_DB)
+    expect(clampGain(0)).toBe(0)
+  })
+
+  it('holds a speed inside the range the decoder follows', () => {
+    expect(clampSpeed(0.1)).toBe(MIN_SPEED)
+    expect(clampSpeed(10)).toBe(MAX_SPEED)
+    expect(clampSpeed(1)).toBe(1)
+  })
+})
+
 describe('reading a sequence back', () => {
   it('survives a serialize/deserialize round trip unchanged', () => {
     const state: SequenceState = { ...EMPTY_SEQUENCE, tracks: [track([clip('a', 0, 1_000)])] }
-    expect(deserializeSequence(serializeSequence(state))).toEqual(state)
+    expect(parseSequence(JSON.parse(JSON.stringify(state)))).toEqual(state)
   })
 
-  it('falls back to an empty sequence rather than throwing on unreadable input', () => {
-    expect(deserializeSequence('{ not json')).toEqual(EMPTY_SEQUENCE)
-    expect(deserializeSequence('{"tracks":"nope"}')).toEqual(EMPTY_SEQUENCE)
+  it('falls back to an empty sequence rather than throwing on a shape it cannot read', () => {
+    expect(parseSequence('not a record')).toEqual(EMPTY_SEQUENCE)
+    expect(parseSequence({ tracks: 'nope' })).toEqual(EMPTY_SEQUENCE)
   })
 
   it('fills in what a version written before fades and heights left out', () => {
@@ -265,7 +295,7 @@ describe('reading a sequence back', () => {
       playhead: 0,
     })
 
-    const [restored] = deserializeSequence(older).tracks
+    const [restored] = parseSequence(JSON.parse(older)).tracks
     expect(restored).toMatchObject({ name: 'A1', height: DEFAULT_TRACK_HEIGHT, solo: false })
     expect(restored?.clips[0]).toMatchObject({ fadeIn: 0, fadeOut: 0, gain: 0 })
   })
@@ -285,9 +315,9 @@ describe('reading a sequence back', () => {
       ],
     })
 
-    expect(deserializeSequence(broken).tracks[0]?.clips.map(candidate => candidate.id)).toEqual([
-      'a',
-    ])
+    expect(
+      parseSequence(JSON.parse(broken)).tracks[0]?.clips.map(candidate => candidate.id),
+    ).toEqual(['a'])
   })
 
   it('rebuilds a track whose stored clips overlap, because every later edit assumes they do not', () => {
@@ -304,7 +334,7 @@ describe('reading a sequence back', () => {
       ],
     })
 
-    const [restored] = deserializeSequence(overlapping).tracks
+    const [restored] = parseSequence(JSON.parse(overlapping)).tracks
     expect(restored?.clips).toMatchObject([
       { id: 'a', start: 0, duration: 1_000 },
       { id: 'b', start: 1_000, duration: 2_000 },
@@ -316,7 +346,7 @@ describe('reading a sequence back', () => {
       settings: { width: 1920, height: 1080, fps: 0, sampleRate: 0 },
       tracks: [{ id: 'V1', kind: 'video', clips: [] }],
     })
-    expect(deserializeSequence(zero).settings).toMatchObject({ fps: 25, sampleRate: 48_000 })
+    expect(parseSequence(JSON.parse(zero)).settings).toMatchObject({ fps: 25, sampleRate: 48_000 })
   })
 
   it('forgets a selection pointing at a clip the read discarded', () => {
@@ -324,6 +354,6 @@ describe('reading a sequence back', () => {
       tracks: [{ id: 'V1', kind: 'video', clips: [] }],
       selectedId: 'gone',
     })
-    expect(deserializeSequence(stale).selectedId).toBeNull()
+    expect(parseSequence(JSON.parse(stale)).selectedId).toBeNull()
   })
 })

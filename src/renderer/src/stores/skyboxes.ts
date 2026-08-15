@@ -8,9 +8,10 @@ import { useJobs } from './jobs'
 /** One skybox per document, with its own history — spec § 8.3. */
 const store = createDocumentStore<SkyboxContent>(createSkyboxContent())
 
+export const skyboxStore = store
 export const useSkyboxes = store.use
 export const skyboxOf = store.stateOf
-export const historyOf = store.historyOf
+export const skyboxHistoryOf = store.historyOf
 
 /**
  * Hangs a picture of the project in a given sky. The target is passed rather than read off the
@@ -28,9 +29,11 @@ export const historyOf = store.historyOf
 export function setSkyboxSource(documentId: string, asset: Asset): void {
   if (!isLocalPicture(asset)) return
 
+  // Outside any gesture: this hangs off a job that lands whenever it lands, and off a drop —
+  // neither belongs to the cursor a panel may be holding at that moment.
   store.use
     .getState()
-    .runCommand(documentId, applyGeneration({ assetId: asset.id }, provenanceOf(asset)))
+    .runOutsideGesture(documentId, applyGeneration({ assetId: asset.id }, provenanceOf(asset)))
 }
 
 /**

@@ -1,11 +1,36 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'electron-vite'
+import type { Plugin } from 'vite'
 import { execSync } from 'node:child_process'
-import { resolve } from 'node:path'
+import { basename, resolve } from 'node:path'
+import { DECODER_MODULES, withoutDecoderUrls } from './src/main/decoder-urls'
 
 const partage = resolve('src/shared')
 const principal = resolve('src/main')
+
+/**
+ * Strips three.js's decoder URLs so the bundler stops emitting files nothing fetches. The why,
+ * and what it weighed, are in `decoder-urls.ts`.
+ *
+ * Refuses rather than passing the source through: the day three.js writes those URLs differently,
+ * a silent no-op puts two megabytes back into the artefact without a single test going red.
+ */
+function strippedDecoderUrls(): Plugin {
+  return {
+    name: 'scenario:stripped-decoder-urls',
+    transform(source, id) {
+      if (!DECODER_MODULES.includes(basename(id))) return null
+
+      const code = withoutDecoderUrls(source)
+      if (code === source) {
+        throw new Error(`${basename(id)} names no '../libs/' decoder URL — the rewrite is stale`)
+      }
+
+      return { code, map: null }
+    },
+  }
+}
 
 function commitHash(): string {
   // CI hands it over for free; elsewhere ask git, silencing stderr since the catch already
@@ -43,12 +68,14 @@ export default defineConfig(({ command }) => ({
     build: {
       externalizeDeps: true,
       rollupOptions: {
-        // The catalogue's thread and the waveform's process are entry points of their own:
-        // both are resolved beside the bundled main, so both must land there as their own file.
+        // The catalogue's thread, the waveform's process and the recogniser's are entry points
+        // of their own: each is resolved beside the bundled main, so each has to land there as
+        // a file of its own.
         input: {
           index: resolve('src/main/index.ts'),
           'catalog-worker': resolve('src/main/project/catalog-worker.ts'),
           'peaks-worker': resolve('src/main/media/peaks-worker.ts'),
+          'stt-worker': resolve('src/main/dictation/stt-worker.ts'),
         },
         output: { entryFileNames: '[name].js' },
       },
@@ -68,7 +95,7 @@ export default defineConfig(({ command }) => ({
   },
   renderer: {
     root: resolve('src/renderer'),
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), strippedDecoderUrls()],
     resolve: { alias: { '@': resolve('src/renderer/src'), '@shared': partage } },
     build: {
       rollupOptions: {

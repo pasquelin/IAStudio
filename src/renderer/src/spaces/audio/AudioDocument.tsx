@@ -1,26 +1,36 @@
 import { mdiMusicNoteOutline, mdiPause, mdiPlay } from '@mdi/js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { Asset, AssetType } from '@shared/domain/asset'
+import type { CommandId } from '@shared/domain/command'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { Toolbar } from '@/design/Toolbar'
 import { durationOf } from '@/engines/audio/audio-data'
 import type { RenderedAudio } from '@/engines/audio/audio-render'
 import { clampRegion, pushEdit, type AudioEdit, type Region } from '@/engines/audio/edits'
-import { canRedo, canUndo } from '@/engines/core/history'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { SECOND, type Us } from '@/engines/timeline/timeline-state'
+import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { assetsById, useAssets } from '@/stores/assets'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
+import { useSequences } from '@/stores/sequences'
+import { canRedo, canUndo } from '@/engines/core/history'
+import { useDocuments } from '@/stores/documents'
 import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
 import { decodeAsset } from './decode'
+import { loadTake } from './load-take'
 import { useAudioRenderer } from './useAudioRenderer'
 import { useWaveSurfer } from './useWaveSurfer'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 
 export type AudioDocumentProps = { documentId: string }
 
 /** What a fade tool lays down when no region says otherwise. */
 const DEFAULT_FADE: Us = SECOND
+
+const TAKES: readonly AssetType[] = ['audio']
 
 /**
  * One take, edited.
@@ -34,8 +44,8 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const waveform = useRef<HTMLDivElement>(null)
 
   const state = useAudioEdits(current => audioEditsOf(current, documentId))
-  const history = useAudioEdits(current => audioHistoryOf(current, documentId))
   const byId = useAssets(assetsById)
+  const active = useDocuments(current => current.activeId === documentId)
 
   const renderer = useAudioRenderer()
 
@@ -46,6 +56,8 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const [output, setOutput] = useState<{ assetId: string; audio: RenderedAudio } | null>(null)
 
   const asset = state.assetId ? (byId.get(state.assetId) ?? null) : null
+
+  useRestoredDocument(documentId)
 
   useEffect(() => {
     const assetId = state.assetId
@@ -162,13 +174,59 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
     }
   }
 
+  /**
+   * ⌘Z, for a document holding TWO stories: the chain over the take, and the sound montage under
+   * it. One key, one document, so it has to choose — and it chooses the chain whenever the chain
+   * has anything to give back, the montage otherwise.
+   *
+   * The montage cannot answer for itself: its own scope is `sequence`, and a second listener on
+   * that scope would undo BOTH halves on one press — the studio's "two diverging undo stacks",
+   * which is why `SoundPanel` mounts the strip with its shortcuts off.
+   */
+  const onCommand = useCallback(
+    (command: CommandId) => {
+      const takes = useAudioEdits.getState()
+      const montage = useSequences.getState()
+
+      if (command === 'audio.undo') {
+        return canUndo(audioHistoryOf(takes, documentId))
+          ? takes.undo(documentId)
+          : montage.undo(documentId)
+      }
+      if (command === 'audio.redo') {
+        return canRedo(audioHistoryOf(takes, documentId))
+          ? takes.redo(documentId)
+          : montage.redo(documentId)
+      }
+    },
+    [documentId],
+  )
+
+  // Both the keyboard and the Edit menu land here. `enabled` for the same reason the scene
+  // gives: Dockview keeps hidden tabs mounted, and a background take would eat ⌘Z.
+  useShortcuts({ scope: 'audio', enabled: active, onCommand })
+
+  // The whole space takes a drop, empty or not: dropping a take onto the editor is how one
+  // replaces what is loaded, and the empty state is where the first one lands.
+  const takeDrop = (dropped: Asset): void => loadTake(documentId, dropped)
+
   if (!state.assetId) {
-    return <EmptyState icon={mdiMusicNoteOutline} message={t('audio.noAsset')} />
+    return (
+      <AssetDropTarget accepts={TAKES} onDrop={takeDrop} outlined={false} className="h-full">
+        <EmptyState icon={mdiMusicNoteOutline} message={t('audio.noAsset')} />
+      </AssetDropTarget>
+    )
   }
   if (failed) return <EmptyState icon={mdiMusicNoteOutline} message={t('audio.unreadable')} />
 
   return (
-    <section className="flex h-full min-h-0 flex-col gap-2 p-2">
+    <AssetDropTarget
+      accepts={TAKES}
+      onDrop={takeDrop}
+      // No frame: see `ImageDocument`.
+      outlined={false}
+      className="flex h-full min-h-0 flex-col gap-2 p-2"
+    >
       <div className="bg-chassis relative min-h-0 w-full flex-1">
         <div ref={waveform} className="absolute inset-0" />
         {!rendered && <EmptyState icon={mdiMusicNoteOutline} message={t('collection.loading')} />}
@@ -181,23 +239,19 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
             id: 'transport',
             labelKey: player.playing ? 'transport.pause' : 'transport.play',
             icon: player.playing ? mdiPause : mdiPlay,
-            shortcut: 'Space',
+            shortcut: t('keys.Space'),
           },
           ...AUDIO_TOOLS,
         ]}
         activeTool={state.bypassed ? 'compare' : undefined}
         onTool={id => (id === 'transport' ? player.toggle() : isAudioTool(id) && act(id))}
-        onUndo={() => useAudioEdits.getState().undo(documentId)}
-        onRedo={() => useAudioEdits.getState().redo(documentId)}
-        canUndo={canUndo(history)}
-        canRedo={canRedo(history)}
         extras={
-          <span className="text-muted px-1 font-mono text-[11px]">
+          <span className="text-muted text-tiny px-1 font-mono">
             {formatDuration(player.currentTime)}
             {rendered && ` / ${formatDuration(durationOf(rendered.data))}`}
           </span>
         }
       />
-    </section>
+    </AssetDropTarget>
   )
 }

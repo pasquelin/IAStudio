@@ -1,10 +1,10 @@
 import { mdiImagePlusOutline } from '@mdi/js'
 import { useState } from 'react'
 import type { UseFormRegisterReturn } from 'react-hook-form'
-import { assetUrl } from '@shared/domain/asset'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { ASSET_TYPES, assetUrl, posterUrl, type Asset } from '@shared/domain/asset'
 import { cn } from '@/helpers/cn'
-import { FIELD } from './styles'
+import { AssetDropTarget } from './AssetDropTarget'
+import { FIELD, FIELD_THUMBNAIL } from './styles'
 import { Thumbnail } from './Thumbnail'
 import { UiIcon } from './UiIcon'
 
@@ -14,9 +14,6 @@ export type AssetDropFieldProps = {
   initial?: string
   placeholder: string
 }
-
-/** The thumbnail matches the control gauge, so the field is exactly one row tall. */
-const THUMBNAIL = 'size-(--sc-control)'
 
 /**
  * A picture, chosen by dropping one on it. The field a model asks for when it edits an image —
@@ -28,7 +25,14 @@ const THUMBNAIL = 'size-(--sc-control)'
  */
 export function AssetDropField({ registration, initial, placeholder }: AssetDropFieldProps) {
   const [assetId, setAssetId] = useState(initial ?? '')
-  const [over, setOver] = useState(false)
+  /**
+   * The dropped picture's stamped URL, kept beside the id so a ⌘S that overwrote it repaints.
+   *
+   * Only what was DROPPED, never what the form was reset to: stamping needs the asset, and
+   * nothing in `design/` reads a store — no component here does, and this field is not the one
+   * to open that door for a preset's thumbnail.
+   */
+  const [poster, setPoster] = useState<string | null>(null)
 
   // A model switch resets the form; without this the old thumbnail outlives the value it stood
   // for. Keyed on what the form was reset to, so typing in between is not undone.
@@ -36,35 +40,28 @@ export function AssetDropField({ registration, initial, placeholder }: AssetDrop
   if (seen !== initial) {
     setSeen(initial)
     setAssetId(initial ?? '')
+    setPoster(null)
   }
 
-  const take = (event: React.DragEvent): void => {
-    event.preventDefault()
-    // Ours alone: an editor behind this field must not also receive the drop.
-    event.stopPropagation()
-    setOver(false)
-
-    const dropped = assetIdFromDrag(event)
-    if (!dropped) return
-    setAssetId(dropped)
+  const take = (dropped: Asset): void => {
+    setAssetId(dropped.id)
+    setPoster(posterUrl(dropped))
     // Through the registration, or react-hook-form never hears about a value nobody typed.
-    void registration.onChange({ target: { name: registration.name, value: dropped } })
+    void registration.onChange({ target: { name: registration.name, value: dropped.id } })
   }
 
   return (
-    <div
-      className={cn('flex min-w-0 items-center gap-1', over && 'ring-accent rounded ring-1')}
-      onDragOver={event => {
-        event.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
+    <AssetDropTarget
+      accepts={ASSET_TYPES}
       onDrop={take}
+      // Ours alone: an editor behind this field must not also receive the drop.
+      exclusive
+      className="flex min-w-0 items-center gap-2 rounded"
     >
       {assetId ? (
-        <Thumbnail url={assetUrl(assetId)} className={THUMBNAIL} />
+        <Thumbnail url={poster ?? assetUrl(assetId)} className={FIELD_THUMBNAIL} />
       ) : (
-        <span className={cn(THUMBNAIL, 'text-muted grid shrink-0 place-items-center')}>
+        <span className={cn(FIELD_THUMBNAIL, 'text-muted grid shrink-0 place-items-center')}>
           <UiIcon path={mdiImagePlusOutline} size={14} />
         </span>
       )}
@@ -82,6 +79,6 @@ export function AssetDropField({ registration, initial, placeholder }: AssetDrop
           void registration.onChange(event)
         }}
       />
-    </div>
+    </AssetDropTarget>
   )
 }

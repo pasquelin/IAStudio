@@ -1,10 +1,40 @@
 import { describe, expect, it } from 'vitest'
 import {
   channelFromScenarioType,
+  seamVerdict,
   CHANNEL_BY_SCENARIO_TYPE,
+  DEFAULT_TEXTURE_MATERIAL,
   isPbrChannel,
   PBR_CHANNELS,
+  readMaterial,
 } from './texture'
+
+describe('reading a material back', () => {
+  /**
+   * A hand-edited `.tex` is user territory. `rgb(255,0,0)` renders and normalises — refused for
+   * one spelling, not for a bug — while `banana` is the half three.js refuses, where the material
+   * keeps whatever colour it already carried and nothing on screen reports it.
+   *
+   * `roughness` rides along on purpose: it proves the record was read field by field, rather than
+   * the whole material having fallen back to the defaults, which is how such a test passes for
+   * the wrong reason.
+   */
+  it('takes the default for a colour this studio would not have written, both slots', () => {
+    const read = readMaterial({ color: 'banana', emissive: 'rgb(255,0,0)', roughness: 0.25 })
+
+    expect(read.color).toBe(DEFAULT_TEXTURE_MATERIAL.color)
+    expect(read.emissive).toBe(DEFAULT_TEXTURE_MATERIAL.emissive)
+    expect(read.roughness).toBe(0.25)
+    expect(DEFAULT_TEXTURE_MATERIAL.roughness).not.toBe(0.25)
+  })
+
+  it('keeps a colour a picker could have written', () => {
+    const read = readMaterial({ color: '#ffcc88', emissive: '#102030' })
+
+    expect(read.color).toBe('#ffcc88')
+    expect(read.emissive).toBe('#102030')
+  })
+})
 
 describe('isPbrChannel', () => {
   it('accepts every declared channel', () => {
@@ -73,5 +103,26 @@ describe('channelFromScenarioType', () => {
     for (const source of Object.values(CHANNEL_BY_SCENARIO_TYPE)) {
       expect(isPbrChannel(source.channel)).toBe(true)
     }
+  })
+})
+
+/**
+ * The scale is of the picture's own grain, not of anything absolute: a wrap no worse than the
+ * detail already there cannot be seen, and one twice as strong is what the eye lands on first.
+ */
+describe('reading a seam ratio in words', () => {
+  it('calls a wrap no worse than the grain no seam at all', () => {
+    expect(seamVerdict(0)).toBe('none')
+    expect(seamVerdict(1.19)).toBe('none')
+  })
+
+  it('calls a wrap above the grain a faint one', () => {
+    expect(seamVerdict(1.2)).toBe('faint')
+    expect(seamVerdict(1.99)).toBe('faint')
+  })
+
+  it('calls a wrap twice the grain a visible one', () => {
+    expect(seamVerdict(2)).toBe('visible')
+    expect(seamVerdict(10)).toBe('visible')
   })
 })

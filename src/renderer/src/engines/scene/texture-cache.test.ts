@@ -194,4 +194,47 @@ describe('createTextureCache', () => {
 
     for (const dispose of disposals) expect(dispose).toHaveBeenCalledTimes(1)
   })
+
+  /**
+   * The id of an overwritten picture does not move, so a bare URL comes back from the browser's
+   * own cache: a ⌘S over a texture looked like a gesture that did nothing.
+   */
+  it('stamps the URL with what the catalogue says the file was written at', () => {
+    const source = deferredSource()
+    const cache = createTextureCache(source.load, silent, () => '2026-08-13T10:00:00.000Z')
+
+    void cache.acquire('tex-1', NoColorSpace, '2026-08-13T10:00:00.000Z')
+
+    expect(source.calls).toEqual(['scenario://asset/tex-1?v=2026-08-13T10%3A00%3A00.000Z'])
+  })
+
+  it('reads the same asset again when its version moved', () => {
+    const source = deferredSource()
+    const cache = createTextureCache(source.load, silent)
+
+    void cache.acquire('tex-1', NoColorSpace, 'before')
+    void cache.acquire('tex-1', NoColorSpace, 'after')
+
+    expect(source.calls).toHaveLength(2)
+  })
+})
+
+const SOURCES: Record<string, string> = import.meta.glob(
+  ['../../**/*.ts', '../../**/*.tsx', '!../../**/*.test.ts', '!../../**/*.test.tsx'],
+  { query: '?raw', import: 'default', eager: true },
+)
+
+/**
+ * `loadTexture` exists so the one implementation lives on one line — the JSDoc above it says
+ * three spaces had already grown their own copy. A fourth had grown back inside `SceneRenderer`,
+ * which built a `TextureLoader` of its own to fill the very port this module declares.
+ */
+describe('the one texture loader', () => {
+  it('is built in exactly one place', () => {
+    const building = Object.entries(SOURCES)
+      .filter(([, source]) => source.includes('new TextureLoader('))
+      .map(([path]) => path)
+
+    expect(building).toEqual(['./texture-cache.ts'])
+  })
 })

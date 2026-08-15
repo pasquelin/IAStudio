@@ -1,4 +1,5 @@
 import type { Object3D } from 'three'
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import { assetUrl } from '@shared/domain/asset'
 import { createRefCache, type RefCache } from '../core/ref-cache'
 
@@ -26,7 +27,10 @@ export function createModelCache(
  * hundred trees are one upload — and its own transform, so moving one moves nothing else.
  */
 export function instanceOf(source: Object3D): Object3D {
-  return source.clone(true)
+  // `SkeletonUtils.clone` rather than `clone`: `SkinnedMesh.copy` keeps the SOURCE's skeleton, so
+  // every instance of a rigged model would be driven by the bones of the cached original — pose
+  // one and they all move. It rebinds each copy onto its own copied bones.
+  return cloneSkinned(source)
 }
 
 /**

@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { MediaProbe } from '@shared/domain/asset'
 import type { ProbeOutcome } from './probe'
-import { createMediaService, needsProxy, type MediaServiceDeps } from './service'
+import {
+  createMediaService,
+  needsProxy,
+  type DeriveRequest,
+  type MediaServiceDeps,
+} from './service'
 
 const probe: MediaProbe = {
   duration: 20_000_000,
@@ -29,6 +34,7 @@ function deps(overrides: Partial<MediaServiceDeps> = {}): MediaServiceDeps {
     save: vi.fn(),
     writeFile: vi.fn(async () => undefined),
     onProgress: vi.fn(),
+    record: vi.fn(),
     projectPath: () => '/tmp/project',
     concurrency: () => 4,
     ...overrides,
@@ -84,9 +90,134 @@ describe('media service', () => {
       sourcePath: '/Volumes/Rushes/rush.mov',
       probe,
       hash: 'abc123',
+      posterPath: '.index/posters/asset-1.jpg',
       proxyPath: '.index/proxies/abc123.mp4',
       peaksPath: '.index/peaks/abc123.bin',
     })
+  })
+
+  /**
+   * A rush picked off the disk has no library still to bring down, and both the shelf and the
+   * clip on the strip read `posterUrl`: without this, every imported take is the same grey
+   * rectangle wearing a film glyph.
+   */
+  it('grabs a still of a rush, taken past the black a take often opens on', async () => {
+    const injected = deps()
+    await createMediaService(injected).ingest('asset-1', '/Volumes/Rushes/rush.mov', 'video')
+
+    const args = vi.mocked(injected.run).mock.calls.map(([, given]) => given)
+    // A tenth of the way into twenty seconds, and one frame out.
+    expect(args[0]).toContain('2.000')
+    expect(args[0]).toEqual(expect.arrayContaining(['/tmp/project/.index/posters/asset-1.jpg']))
+  })
+
+  // The still is a convenience; the rush is the asset. Same rule as the one a download brings
+  // beside a mesh — a refusal here must not cost the import.
+  it('imports the rush all the same when the still cannot be grabbed', async () => {
+    const injected = deps({
+      run: vi.fn(async (_binary: string, args: string[]) => {
+        if (args.includes('-frames:v')) throw new Error('no keyframe there')
+        return Buffer.alloc(0)
+      }),
+    })
+
+    await createMediaService(injected).ingest('asset-1', '/Volumes/Rushes/rush.mov', 'video')
+
+    expect(stages(injected.onProgress)).toContain('done')
+    expect(vi.mocked(injected.save).mock.calls[0]?.[1]).not.toHaveProperty('posterPath')
+  })
+
+  // A sound has a waveform, and a still recorded here would be painted under it.
+  it('grabs none for a sound', async () => {
+    const injected = deps()
+    await createMediaService(injected).ingest('asset-1', '/take.wav', 'audio')
+
+    expect(vi.mocked(injected.save).mock.calls[0]?.[1]).not.toHaveProperty('posterPath')
+  })
+})
+
+/**
+ * A generation never meets the picker, so nothing derived what a montage reads: its sound clip
+ * drew a flat rectangle where a waveform belongs — `stores/peaks` reads the file written here
+ * and never recomputes — and a codec the window cannot decode had no proxy to fall back on.
+ */
+describe('the files a generation gets beside it', () => {
+  const request: DeriveRequest = {
+    assetId: 'asset-1',
+    path: '/project/assets/vid/asset-1.mp4',
+    kind: 'video',
+    probe: { ...probe, codec: 'avc1', height: 1080 },
+    poster: false,
+    announce: true,
+  }
+
+  it('writes the waveform its sound clip is drawn from, and the hash a relink finds it by', async () => {
+    const injected = deps()
+    await createMediaService(injected).derive(request)
+
+    expect(injected.save).toHaveBeenCalledWith('asset-1', {
+      hash: 'abc123',
+      peaksPath: '.index/peaks/abc123.bin',
+    })
+  })
+
+  it('encodes a proxy when the window cannot decode what the API produced', async () => {
+    const injected = deps()
+    await createMediaService(injected).derive({ ...request, probe })
+
+    expect(vi.mocked(injected.save).mock.calls[0]?.[1]).toMatchObject({
+      proxyPath: '.index/proxies/abc123.mp4',
+    })
+  })
+
+  // The library sent one down with the bytes: a frame grabbed here would overwrite a picture
+  // chosen by whoever produced the model.
+  it('leaves the still alone when one came down with the bytes', async () => {
+    const injected = deps()
+    await createMediaService(injected).derive(request)
+
+    const args = vi.mocked(injected.run).mock.calls.map(([, given]) => given)
+    expect(args.some(given => given.includes('-frames:v'))).toBe(false)
+  })
+
+  // The row stands for an asset the account holds. A proxy that failed is a take that plays
+  // without one, never a take that is gone — where a picked file that turns out not to be
+  // media has its row dropped.
+  it('keeps the row when ffmpeg fails, unlike a file that was picked', async () => {
+    const injected = deps({ run: vi.fn(async () => Promise.reject(new Error('broken'))) })
+    await createMediaService(injected).derive({ ...request, probe })
+
+    expect(injected.discard).not.toHaveBeenCalled()
+    expect(injected.save).toHaveBeenCalledWith('asset-1', { hash: 'abc123' })
+  })
+
+  it('reports its stages, so a take being prepared is not a window doing nothing', async () => {
+    const injected = deps()
+    await createMediaService(injected).derive(request)
+
+    expect(stages(injected.onProgress)).toEqual(['queued', 'hash', 'peaks', 'done'])
+  })
+
+  // The maintenance a project does on opening is not an import: those rows read as files the
+  // user never picked, and a failed one leaves a notice to dismiss for a file they never chose.
+  it('says nothing at all when it was not asked to announce', async () => {
+    const injected = deps()
+    await createMediaService(injected).derive({ ...request, announce: false })
+
+    expect(stages(injected.onProgress)).toEqual([])
+    expect(injected.save).toHaveBeenCalled()
+  })
+
+  /**
+   * Nothing to derive AND nothing to remember. A row stamped with a hash reads as one the
+   * pipeline has been through, so the catch-up that runs once ffmpeg IS resolved would skip it
+   * for good — the take would show a grey tile and a flat waveform for the rest of its life.
+   */
+  it('writes nothing at all when there is no ffmpeg to derive with', async () => {
+    const injected = deps({ ffmpeg: () => null })
+    await createMediaService(injected).derive(request)
+
+    expect(injected.save).not.toHaveBeenCalled()
   })
 
   it('skips the proxy for a file the browser can already decode', async () => {
@@ -311,5 +442,67 @@ describe('media service', () => {
     await createMediaService(injected).ingest('asset-1', '/silent.mp4', 'video')
 
     expect(stages(injected.onProgress)).toEqual(['queued', 'probe', 'hash', 'done'])
+  })
+})
+
+/**
+ * A twenty-minute rush is prepared while the user works elsewhere: the progress row is gone by
+ * the time it ends, and a file that never arrived was a silence nobody could explain.
+ */
+describe('what an import leaves behind to read', () => {
+  it('records the file that landed, by name and never by path', async () => {
+    const record = vi.fn()
+    const service = createMediaService(deps({ record, probe: probing({ codec: 'avc1' }) }))
+
+    await service.ingest('asset_1', '/Users/someone/Movies/rush.mp4', 'video')
+
+    expect(record).toHaveBeenCalledWith({
+      level: 'info',
+      topic: 'import',
+      messageKey: 'activity.imported',
+      params: { name: 'rush.mp4' },
+    })
+  })
+
+  it('records a file the probe refused as a failure of its own', async () => {
+    const record = vi.fn()
+    const service = createMediaService(
+      deps({ record, probe: vi.fn(async (): Promise<ProbeOutcome> => ({ kind: 'unreadable' })) }),
+    )
+
+    await service.ingest('asset_1', '/tmp/notes.txt', 'video')
+
+    expect(record).toHaveBeenCalledWith({
+      level: 'error',
+      topic: 'import',
+      messageKey: 'activity.importUnreadable',
+      params: { name: 'notes.txt' },
+    })
+  })
+
+  // The user did it: telling them about it is telling them what they already know.
+  it('says nothing about an import that was cancelled', async () => {
+    const record = vi.fn()
+    const service = createMediaService(
+      deps({ record, hash: vi.fn(async () => 'abc123'), probe: probing({ codec: 'avc1' }) }),
+    )
+
+    const running = service.ingest('asset_1', '/tmp/rush.mp4', 'video')
+    service.cancel('asset_1')
+    await running
+
+    expect(record).not.toHaveBeenCalled()
+  })
+
+  // Not a problem: the bytes are already in the project, which is what the user wanted.
+  it('says nothing about bytes the project already holds', async () => {
+    const record = vi.fn()
+    const service = createMediaService(
+      deps({ record, duplicateExists: vi.fn(async () => true), probe: probing({ codec: 'avc1' }) }),
+    )
+
+    await service.ingest('asset_1', '/tmp/rush.mp4', 'video')
+
+    expect(record).not.toHaveBeenCalled()
   })
 })

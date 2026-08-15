@@ -10,6 +10,7 @@ const landing = createGenerationLanding({
   kind: 'skybox',
   // A generation can answer several pictures; the first that decodes is the sky.
   accepts: isLocalPicture,
+  takes: 'first',
   land: setSkyboxSource,
 })
 

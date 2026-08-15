@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { TooltipFactory } from '@/helpers/tooltip'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
 import { Flyout } from './Flyout'
@@ -6,7 +6,23 @@ import { ToolButton, type ToolButtonProps } from './ToolButton'
 
 export type MenuButtonProps = Pick<
   ToolButtonProps,
-  'icon' | 'label' | 'description' | 'shortcut' | 'active' | 'disabled' | 'variant'
+  | 'icon'
+  | 'label'
+  | 'description'
+  | 'shortcut'
+  | 'active'
+  | 'disabled'
+  | 'variant'
+  // Drawn beside the icon, for a menu whose CHOICE has to stay readable while it is closed — a
+  // filter says what it is filtering on, or collapsing its chips only hides them.
+  | 'children'
+  /*
+   * Needed BY `children` and not separately: `ToolButton` is square by gauge (`size-(--sc-control)`,
+   * and `styles.ts` states the rule), so a label handed to it without `w-auto` is clipped to a
+   * character or two. jsdom lays nothing out, so no test can see that — `ZoomBar` is the other
+   * label-bearing caller and undoes the square the same way.
+   */
+  | 'className'
 > & {
   tooltip: TooltipFactory
   /** How many rows the menu holds. One or none makes the button act directly. */
@@ -20,12 +36,20 @@ export type MenuButtonProps = Pick<
    * menu only offers to switch, and opening it on every click would fight the armed tool.
    */
   opensOnClick: boolean
+  /**
+   * Whether the rows really are menu items. False for the one caller whose flyout holds sliders:
+   * `role="menu"` over anything but menu items sends a screen reader looking for rows to step
+   * through, and finding none.
+   */
+  menu?: boolean
 }
 
 /**
- * A button whose menu opens on hover — and on click too, since hovering is not a keyboard
- * gesture. Written once for the toolbar's mode groups and the panel title bars: the anchoring,
- * the grace period and the close-on-select are the hard half, and they were drifting apart.
+ * A button whose menu opens on hover — on click when `opensOnClick`, and on `Alt+ArrowDown`
+ * always, since hovering is not a keyboard gesture and a group whose click arms a mode has no
+ * other way in. Written once for the toolbar's mode groups and the panel title bars: the
+ * anchoring, the grace period and the close-on-select are the hard half, and they were drifting
+ * apart.
  */
 export function MenuButton({
   tooltip,
@@ -33,16 +57,23 @@ export function MenuButton({
   rows,
   onClick,
   opensOnClick,
+  menu = true,
   ...button
 }: MenuButtonProps) {
-  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
   const flyout = useHoverFlyout(rowCount)
 
   return (
     <div {...flyout.wrapProps} className="contents">
       <ToolButton
         {...button}
-        ref={setAnchor}
+        // The anchor, the ARIA pair and the APG chord — `Alt+ArrowDown`, the only way into a mode
+        // group, where the click arms the tool rather than opening. All three from the hook, so
+        // the whole-line trigger of `TextureField` cannot get a different set of manners.
+        {...flyout.triggerProps}
+        // …except the promise itself, which is the one thing that is not the hook's to make: this
+        // button also serves a flyout of sliders, and `role="menu"` over anything but menu items
+        // sends a screen reader looking for rows to step through.
+        aria-haspopup={menu ? flyout.triggerProps['aria-haspopup'] : undefined}
         tooltip={tooltip}
         onClick={() => {
           onClick?.()
@@ -51,7 +82,7 @@ export function MenuButton({
       />
 
       {flyout.showing && (
-        <Flyout anchor={anchor} {...flyout.flyoutProps}>
+        <Flyout anchor={flyout.anchor} role={menu ? 'menu' : undefined} {...flyout.flyoutProps}>
           {rows(flyout.close)}
         </Flyout>
       )}

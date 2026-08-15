@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { assetsById, useAssets } from './assets'
+import { installFakeBridge } from '@/services/fake-bridge'
+import { assetsById, forgetRememberedAssets, useAssets } from './assets'
 
 function asset(id: string, name: string): Asset {
   return { id, name, type: 'image', location: 'local', tags: [], createdAt: '2026-08-07' }
@@ -8,6 +9,8 @@ function asset(id: string, name: string): Asset {
 
 describe('assetsById', () => {
   beforeEach(() => {
+    // This project runs without `test-setup`, which is where the renderer's cases get it.
+    forgetRememberedAssets()
     useAssets.setState({ items: [] })
   })
 
@@ -37,5 +40,181 @@ describe('assetsById', () => {
 
     expect(after).not.toBe(before)
     expect(after.get('a')?.name).toBe('Renamed')
+  })
+
+  /**
+   * The defect this closes: filtering the browser to meshes narrows the catalogue the store
+   * holds, and a montage of video clips lost its names, its stills and the lengths a trim clamps
+   * against — all three read through this index.
+   */
+  it('still answers for an asset the browsing scope has dropped', () => {
+    useAssets.setState({ items: [asset('a', 'One')] })
+    assetsById(useAssets.getState())
+
+    useAssets.setState({ items: [asset('mesh', 'A mesh')] })
+    const narrowed = assetsById(useAssets.getState())
+
+    expect(narrowed.get('a')?.name).toBe('One')
+    expect(narrowed.get('mesh')?.name).toBe('A mesh')
+  })
+
+  it('forgets what it remembered when the harness asks', () => {
+    useAssets.setState({ items: [asset('a', 'One')] })
+    assetsById(useAssets.getState())
+
+    forgetRememberedAssets()
+    useAssets.setState({ items: [] })
+
+    expect(assetsById(useAssets.getState()).get('a')).toBeUndefined()
+  })
+})
+
+/** The queries the catalogue was asked, in order — and its length is how many reads happened. */
+function watchSearch(): readonly unknown[] {
+  const asked: unknown[] = []
+  installFakeBridge({
+    assets: {
+      search: query => {
+        asked.push(query)
+        return Promise.resolve([])
+      },
+    },
+  })
+  return asked
+}
+
+describe('the kinds the catalogue is asked for', () => {
+  beforeEach(() => {
+    useAssets.setState({ items: [], scope: null })
+  })
+
+  it('asks for the kinds the space uses, and nothing else', async () => {
+    const asked = watchSearch()
+
+    await useAssets.getState().setScope(['image', 'texture'])
+
+    expect(asked).toEqual([{ types: ['image', 'texture'] }])
+  })
+
+  it('asks for everything once the scope is dropped', async () => {
+    const asked = watchSearch()
+    useAssets.setState({ scope: ['audio'] })
+
+    await useAssets.getState().setScope(null)
+
+    expect(asked).toEqual([{}])
+  })
+
+  // The panel calls this on every render; without the guard it would re-read the catalogue in
+  // a loop, and each read sets state that triggers the next render.
+  it('does not read the catalogue again for a scope it already holds', async () => {
+    const asked = watchSearch()
+
+    await useAssets.getState().setScope(['image'])
+    await useAssets.getState().setScope(['image'])
+
+    expect(asked).toHaveLength(1)
+  })
+
+  it('tells two scopes apart by what they hold, not by identity', async () => {
+    const asked = watchSearch()
+
+    await useAssets.getState().setScope(['image', 'texture'])
+    await useAssets.getState().setScope(['image', 'skybox'])
+
+    expect(asked).toHaveLength(2)
+  })
+})
+
+/**
+ * The write nothing else says out loud: a model sheds its pictures on the main process, seconds
+ * after the import that produced it was answered and its shelf refreshed. Without this the
+ * inspector said « no picture was taken out of this model » until the model was picked again.
+ */
+describe('what the main process writes on its own', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    useAssets.setState({ items: [], scope: null })
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('re-reads the catalogue when the main process says it wrote', async () => {
+    let announce = (): void => {}
+    const asked: unknown[] = []
+    installFakeBridge({
+      assets: {
+        search: query => {
+          asked.push(query)
+          return Promise.resolve([])
+        },
+        onChanged: callback => {
+          announce = callback
+          return () => {}
+        },
+      },
+    })
+
+    const stop = await useAssets.getState().connect()
+    announce()
+    vi.runAllTimers()
+
+    expect(asked).toHaveLength(1)
+    stop()
+  })
+
+  it('stops listening when the window lets go', async () => {
+    let listening = true
+    installFakeBridge({
+      assets: {
+        onChanged: () => () => {
+          listening = false
+        },
+      },
+    })
+
+    const stop = await useAssets.getState().connect()
+    stop()
+
+    expect(listening).toBe(false)
+  })
+})
+
+/**
+ * The timer `invalidate` arms lives at MODULE scope, so it outlives the case that armed it. Left
+ * alone it fires inside a LATER case and re-reads the catalogue through whatever bridge that one
+ * installed — which is how a shelf changes under an element a test is already holding.
+ */
+describe('the coalesced read, and cancelling it', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('reads the catalogue once for a burst of invalidations', () => {
+    const asked = watchSearch()
+
+    useAssets.getState().invalidate()
+    useAssets.getState().invalidate()
+    useAssets.getState().invalidate()
+    vi.runAllTimers()
+
+    expect(asked).toHaveLength(1)
+  })
+
+  it('reads nothing more once the pending one is cancelled', () => {
+    const asked = watchSearch()
+
+    useAssets.getState().invalidate()
+    useAssets.getState().cancelInvalidate()
+    vi.runAllTimers()
+
+    expect(asked).toHaveLength(0)
+  })
+
+  it('leaves no timer behind, which is what the harness relies on', () => {
+    watchSearch()
+
+    useAssets.getState().invalidate()
+    useAssets.getState().cancelInvalidate()
+
+    expect(vi.getTimerCount()).toBe(0)
   })
 })

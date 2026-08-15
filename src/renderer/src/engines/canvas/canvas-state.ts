@@ -1,6 +1,12 @@
-import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
+import {
+  NEUTRAL_ADJUSTMENTS,
+  readAdjustments,
+  type AdjustmentStack,
+} from '@shared/domain/adjustments'
+import { DEFAULT_FONT, readFontRef, type FontRef } from '@shared/domain/font'
 import { isRecord } from '@shared/guards'
-import type { Point } from './shape-geometry'
+import { clamp } from '@shared/numeric'
+import type { Point } from '../core/geometry'
 
 /**
  * An image document, as plain data. It holds no Pixi object on purpose: an engine is rebuilt
@@ -181,6 +187,12 @@ export function adjustmentLayer(
 export type TextLayer = LayerBase & {
   kind: 'text'
   text: string
+  /**
+   * What it is set in. The same reference a 3D text stores, from the same list — see
+   * `domain/font`: a studio where the two workspaces name their typefaces differently is a
+   * studio where the same caption cannot be moved from one to the other.
+   */
+  font: FontRef
   /** Points at 1:1, before the layer's own scale. */
   size: number
   /** Packed RGB, the form Pixi takes. */
@@ -194,6 +206,7 @@ export function textLayer(id: string, text: string, at: Point): TextLayer {
     ...layerBase(id, text),
     kind: 'text',
     text,
+    font: DEFAULT_FONT,
     size: DEFAULT_TEXT_SIZE,
     color: 0x000000,
     transform: { ...IDENTITY, x: at.x, y: at.y },
@@ -201,6 +214,11 @@ export function textLayer(id: string, text: string, at: Point): TextLayer {
 }
 
 export type Layer = PixelLayer | GroupLayer | AdjustmentLayer | TextLayer
+
+export type LayerKind = Layer['kind']
+
+/** All of them: the inspector names each one from a bundle, and a nameless one shows its key. */
+export const LAYER_KINDS: readonly LayerKind[] = ['pixel', 'group', 'adjustment', 'text']
 
 const GUIDE_AXES: readonly ('x' | 'y')[] = ['x', 'y']
 
@@ -319,6 +337,24 @@ export function updateSiblings(
 }
 
 /**
+ * Whether the stack would still hold something to paint on once `layer` leaves it — its whole
+ * subtree, for a group.
+ *
+ * Counting the paintable layers of the document is not enough, and that is the trap this exists
+ * for: a folder holding every pixel layer answers "two paintable" while deleting it empties the
+ * document. `deserializeCanvas` reads an empty stack back as `DEFAULT_CANVAS`, silently resetting
+ * the size, the colour mode and the bit depth of the picture.
+ *
+ * Read from both sides on purpose: `removeLayer` refuses the command, and the panel greys the
+ * button and the menu row rather than offering a gesture that would do nothing.
+ */
+export function canRemoveLayer(layers: readonly Layer[], layer: Layer): boolean {
+  const leaving = new Set(allLayers([layer]).map(one => one.id))
+
+  return allLayers(layers).some(one => !isGroup(one) && !leaving.has(one.id))
+}
+
+/**
  * The layer directly under `id` at its own level — what `mergeDown` merges into. Within the level,
  * never through the wall of the group it sits in, exactly as the command reads it.
  *
@@ -355,7 +391,7 @@ export function mapLayers(
 
 export function clampOpacity(value: number): number {
   if (Number.isNaN(value)) return 1
-  return Math.min(1, Math.max(0, value))
+  return clamp(value, 0, 1)
 }
 
 export function serializeCanvas(state: CanvasState): string {
@@ -405,6 +441,9 @@ function reviveLayer(raw: unknown, seen: Set<string>): Layer | null {
       ...base,
       kind: 'text',
       text: typeof source.text === 'string' ? source.text : '',
+      // Read rather than trusted, exactly as a scene reads a text node's face: a family the
+      // studio no longer ships falls back to one it does.
+      font: readFontRef(source.font),
       size: typeof source.size === 'number' ? source.size : DEFAULT_TEXT_SIZE,
       color: typeof source.color === 'number' ? source.color : 0x000000,
     }
@@ -415,7 +454,7 @@ function reviveLayer(raw: unknown, seen: Set<string>): Layer | null {
       ...base,
       kind: 'adjustment',
       adjustment: reviveAdjustment(source.adjustment),
-      values: reviveAdjustmentValues(source.values),
+      values: readAdjustments(source.values),
     }
   }
 
@@ -470,25 +509,6 @@ function reviveAdjustment(raw: unknown): AdjustmentKind {
     return RETIRED_ADJUSTMENTS[raw] ?? 'exposure'
   }
   return oneOf(ADJUSTMENT_KINDS, raw, 'exposure')
-}
-
-/** A stack read back from a file: every dial narrowed to a number, missing ones left neutral. */
-function reviveAdjustmentValues(raw: unknown): AdjustmentStack {
-  if (!isRecord(raw)) return NEUTRAL_ADJUSTMENTS
-  const source = raw
-
-  const number = (key: keyof AdjustmentStack): number =>
-    typeof source[key] === 'number' ? source[key] : NEUTRAL_ADJUSTMENTS[key]
-
-  return {
-    exposure: number('exposure'),
-    contrast: number('contrast'),
-    saturation: number('saturation'),
-    temperature: number('temperature'),
-    tint: number('tint'),
-    rotationY: number('rotationY'),
-    blur: number('blur'),
-  }
 }
 
 function reviveTransform(raw: unknown): Transform {

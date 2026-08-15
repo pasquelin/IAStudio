@@ -2,20 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Job } from '@shared/domain/job'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from './assets'
+import { job } from './job-fixtures'
 import { useJobs } from './jobs'
-
-function job(overrides: Partial<Job> = {}): Job {
-  return {
-    id: 'job_1',
-    modelId: 'model_flux',
-    label: 'Flux',
-    status: 'running',
-    progress: 0.2,
-    createdAt: '2026-08-06T10:00:00.000Z',
-    assetIds: [],
-    ...overrides,
-  }
-}
 
 describe('jobs store', () => {
   beforeEach(() => {
@@ -71,6 +59,36 @@ describe('jobs store', () => {
     vi.useRealTimers()
   })
 
+  /**
+   * `apply` can only merge into a job it already holds, so a job the main process picked up from
+   * a previous session would never appear and one that stepped aside would spin for ever. The
+   * whole list is the only thing that can say either.
+   */
+  it('takes the list the main process announces when its composition changes', async () => {
+    const listeners: ((jobs: Job[]) => void)[] = []
+    const stopProgress = vi.fn()
+    const stopChanges = vi.fn()
+    installFakeBridge({
+      scenario: {
+        onProgress: () => stopProgress,
+        onJobsChanged: callback => {
+          listeners.push(callback)
+          return stopChanges
+        },
+      },
+    })
+
+    const stop = await useJobs.getState().connect()
+    for (const announce of listeners) announce([job({ id: 'job_resumed', label: 'Veo' })])
+
+    expect(useJobs.getState().jobs).toEqual([expect.objectContaining({ id: 'job_resumed' })])
+
+    stop()
+    // Both go with the same call, or a closed window keeps receiving events into a dead store.
+    expect(stopProgress).toHaveBeenCalledOnce()
+    expect(stopChanges).toHaveBeenCalledOnce()
+  })
+
   it('puts a freshly submitted job at the top of the list', async () => {
     installFakeBridge({
       scenario: {
@@ -78,7 +96,7 @@ describe('jobs store', () => {
       },
     })
 
-    await useJobs.getState().submit('model_flux', { prompt: 'a rock' })
+    await useJobs.getState().submit({ id: 'model_flux' }, { prompt: 'a rock' })
     expect(useJobs.getState().jobs[0]?.id).toBe('job_new')
   })
 })

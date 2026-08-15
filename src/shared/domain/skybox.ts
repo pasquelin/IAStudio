@@ -52,6 +52,31 @@ export const CROSS_CELLS: Record<CubeFace, { column: number; row: number }> = {
 export const CROSS_COLUMNS = 4
 export const CROSS_ROWS = 3
 
+/** One axis, as x/y/z. A tuple rather than a `Vector3`: `shared/` carries no runtime dependency. */
+export type FaceAxis = readonly [number, number, number]
+
+/**
+ * The basis of one face: where its centre points, where a pixel travels as the picture goes
+ * right, and where it travels as the picture goes UP.
+ *
+ * These are the OpenGL cube map axes, which is what every engine named in `FACE_LABELS` samples.
+ * A face drawn on any other basis lands mirrored or a quarter turn out, and nothing in the
+ * picture says which — the four horizontal faces look plausible upside down.
+ *
+ * `forward` is `right × up` for all six; the test derives it rather than trusting six triplets
+ * typed by hand, which is the one thing the type system cannot check here.
+ */
+export type FaceBasis = { forward: FaceAxis; right: FaceAxis; up: FaceAxis }
+
+export const FACE_BASES: Record<CubeFace, FaceBasis> = {
+  px: { forward: [1, 0, 0], right: [0, 0, -1], up: [0, 1, 0] },
+  nx: { forward: [-1, 0, 0], right: [0, 0, 1], up: [0, 1, 0] },
+  py: { forward: [0, 1, 0], right: [1, 0, 0], up: [0, 0, -1] },
+  ny: { forward: [0, -1, 0], right: [1, 0, 0], up: [0, 0, 1] },
+  pz: { forward: [0, 0, 1], right: [1, 0, 0], up: [0, 1, 0] },
+  nz: { forward: [0, 0, -1], right: [-1, 0, 0], up: [0, 1, 0] },
+}
+
 /**
  * The sun, as two angles rather than a position. The angles are the truth and the light is
  * derived from them: the viewport drags one end and the panel types the other, and a position
@@ -81,6 +106,20 @@ export const DEFAULT_FIELD_OF_VIEW = 75
 
 /** Face sizes offered on export. Powers of two: engines sample cube maps by hardware. */
 export const FACE_SIZES: readonly number[] = [512, 1024, 2048]
+
+/** The middle one. Large enough to stand behind a scene, small enough not to be a decision. */
+export const DEFAULT_FACE_SIZE = 1024
+
+/**
+ * The six files an export writes, in the order faces are named.
+ *
+ * `<name>_Rt`, `<name>_Lf`… — the two letters of `FACE_LABELS` rather than the axis, because
+ * that is what an engine's importer matches on. The extension is not here: the writer owns it,
+ * as it does for a scene and for a texture.
+ */
+export function faceFileNames(name: string): { face: CubeFace; name: string }[] {
+  return CUBE_FACES.map(face => ({ face, name: `${name}_${FACE_LABELS[face]}` }))
+}
 
 export type SkyboxEnvironment = {
   /** Multiplies the image-based lighting the test objects and the ground receive. */

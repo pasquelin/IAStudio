@@ -1,6 +1,6 @@
 # 19. How do I…
 
-[← What does not exist yet](18-limits.md) · [Contents](../user-guide.md)
+[← What does not exist yet](18-limits.md) · [Contents](../user-guide.md) · [Next chapter: Driving the studio from outside →](20-driving-from-outside.md)
 
 The previous chapters explain **every piece** of the studio. This one does the opposite: it
 starts from what you want to end up with, and gives the whole path, from the first click to the
@@ -18,7 +18,7 @@ They recur everywhere, so they are said once here.
 |---|---|---|
 | **A connected account** | the dot is **green**, top right of the window | [First steps ▸ step 3](02-first-steps.md) |
 | **An open project** | its name is written bottom left, in the status line | `⌘N` to create one |
-| **The right workspace** | the six tabs, at the top of the window | click the one you need |
+| **The right workspace** | the seven tabs, at the top of the window | click the one you need |
 
 **The third is the one people forget.** Half the studio's "it does not work" moments are the
 right gesture made in the wrong workspace.
@@ -30,7 +30,8 @@ right gesture made in the wrong workspace.
 Before the recipes, one rule that runs through all of them.
 
 **Double-clicking an asset does not open a tab.** It sends the asset into the tab **already open
-in front of you**. With no tab, nothing happens, and nothing says so.
+in front of you** — failing that, into a document open **elsewhere**, switching workspace on the
+way. If there is nowhere at all, a message says so: "This asset could not be opened".
 
 So in every recipe below, the order is **always** the same:
 
@@ -51,13 +52,15 @@ Remember those three lines and nothing will block you.
 **This is the basic path**, detailed in [First steps](02-first-steps.md). In short:
 
 1. **Image** workspace;
-2. **Models** panel, on the right: click a thumbnail;
-3. **Generate** panel, just below: write your sentence in the **prompt**;
+2. **Models** panel, on the left: click a thumbnail;
+3. click the **Generate** icon in the left rail — choosing a model does not open the panel for
+   you — then write your sentence in the **prompt**;
 4. **Generate**. The status line, bottom right, follows the progress;
 5. the result arrives in the **Assets** panel, and in `assets/img/` on your disk.
 
-**The catch.** The Generate button is greyed out until a project is open. The message "Open a
-project to generate." appears above the form.
+**The catch.** With no project open there is **neither form nor button**: the panel shows "Open a
+project to generate." instead. It is not a greyed-out button, it is the whole panel waiting for a
+folder.
 
 ---
 
@@ -67,7 +70,8 @@ This is called **image to image**: you give a starting picture, the model return
 inspired by it.
 
 1. **Image** workspace;
-2. in the **Models** panel, open **More filters** → **Capability** → tick **Image to image**;
+2. in the **Models** panel, the **Capability** filter is visible without unfolding anything →
+   tick **Image to image**;
 3. choose a model from what remains;
 4. in the form, an **image** field appears: give it your starting picture;
 5. write what you want to end up with, and set **strength** if the model offers it:
@@ -82,22 +86,19 @@ text — the other path is an image document with the picture dragged onto it as
 
 ## Enlarge a picture
 
-The Image workspace's menu offers an **Enlarge** command. **Do not use it: it cannot complete
-today** — it looks for its model in a family no screen lets you choose, and merely opens the
-Models panel.
+**Image ▸ Enlarge** flattens the document, sends it, and opens the upscaler's form with your
+picture already in it. You are the one who presses **Generate**.
 
-The path that works goes through the ordinary form:
+Once, before the first time: **Settings ▸ Generation ▸ Upscaling**, pick a model. Without it the
+command sends nothing and opens that screen — the **Models** panel cannot serve here, it only
+shows the open workspace's family.
 
-1. **Image** workspace;
-2. in the **Models** panel, type `upscale` into the search — or open **More filters** → **Tag**
-   → `image-upscale`;
-3. pick one, give it your picture, **Generate**.
+**Cut out** and **Vectorise** work exactly the same way, with their own settings sub-sections:
+**Background removal** and **Vectorisation**.
 
-An upscaler is an image model like any other: it takes an image and returns one, larger. Which is
-precisely why it is filed under the Image family.
-
-**Cut out** and **Vectorize** are in the same position, with no fallback: no model of either
-family can be reached. See [What does not exist yet](18-limits.md).
+**Do not look for it in the Image workspace's Models panel**: that panel only ever lists its own
+workspace's family, and an upscaler is not part of it — you could look for a long time. The
+**Image ▸ Enlarge** menu is the way in.
 
 ---
 
@@ -116,8 +117,14 @@ as light.
 Then **click and drag** in the preview to turn your head, and use the **Skybox** panel, on the
 right, to set exposure and rotation.
 
-**The catch.** Three of the four view buttons — equirectangular, cross, faces — draw nothing yet.
-Only the 360 view works.
+**To check what you are shipping**, go through the other three views — equirectangular, cross,
+6 faces. They show the same sky, at the same rotation, but laid flat: a seam at the back or a
+crushed pole shows up at a glance, where the 360 view makes you turn your head to run into it.
+
+**To take it into an engine**: **File ▸ Export the sky**, and a size. Six PNGs come out into a
+folder, named `_Rt`, `_Lf`, `_Up`, `_Dn`, `_Ft`, `_Bk` — the two letters Unity, Unreal and Roblox
+expect. **Grade before you export**: the exposure, the horizon rotation and everything else are
+baked into the files. See [Skyboxes workspace](13-skyboxes-workspace.md#taking-the-sky-out-the-six-faces).
 
 ---
 
@@ -130,21 +137,27 @@ flat.
 2. the **+** button on the left rail;
 3. **drag a picture from the project onto the preview** — a blue frame confirms the drop will be
    taken. It becomes the **base colour**;
-4. choose the preview shape — **sphere**, box, cylinder, plane or torus knot — and look at it
-   under the studio lighting. The **sphere** shows the light best, the **plane** shows the
-   pattern's repetition best;
-5. `⌘S` **saves**. This is one of only two document kinds that can.
+4. **Inspector** → **Preview** section: choose the shape — **sphere**, box, cylinder, plane or
+   torus knot. The **sphere** shows the light best, the **plane** shows the pattern's repetition
+   best;
+5. **Inspector**: the **Material** section sets roughness and metalness; **Relief** and
+   **Emission** are two neighbouring sections, not its contents. If the
+   material looks uniformly average, it is the **ranges** — "Roughness range", "Metalness range" —
+   that need adjusting; they sit in the Material section, under the two settings;
+6. **Channels** panel: drop a picture onto the thumbnail of each channel you want to fill — and
+   for **height**, **normal**, **occlusion** and **roughness**, the thumbnail's menu computes them
+   from another channel, at no cost;
+7. `⌘S` **saves**.
 
-**The catch.** Only the base colour can be placed today. The other seven channels — normal,
-roughness, metalness… — are explained in [chapter 12](12-textures-workspace.md) but not wired up
-yet.
+**The catch.** A picture dropped on the **preview** always goes to the base colour — that is
+deliberate. To aim at normals or roughness, drop onto **their thumbnail** in the Channels panel.
 
 ---
 
 ## Make a still picture move
 
 1. **Video** workspace;
-2. **Models** panel → **More filters** → **Capability** → **Image to video**;
+2. **Models** panel → **Capability** filter, visible without unfolding anything → **Image to video**;
 3. pick a model, give it your picture, describe the motion you want;
 4. **Generate** — allow longer than for a picture: a few minutes is normal;
 5. the clip arrives in **Assets**.
@@ -189,15 +202,19 @@ goes up, `Q` goes down, left `⇧` speeds up.
 
 1. **Video** workspace;
 2. the **+** button on the left rail: a fresh sequence;
-3. **drag** your first clip from the shelf, on the left, onto a picture track;
-4. drag the second **right after it** — it sticks to the first one's edge on its own;
+3. **drag** your first clip from the shelf — in Video it sits in the **right column**, the bottom
+   strip being taken by the timeline — onto a picture track;
+4. drag the second **right after it**: it lands on the nearest frame, but **it does not stick to
+   the first one's edge**. Release too early and it covers its neighbour; edge snapping only comes
+   into play when you move a clip already laid down;
 5. `Space` to play, `Home` to go back to the start.
 
 **To cut:** place the playhead, press `S`. To delete a clip: select it, `Del`.
 
-**The catch, and it is a serious one.** A sequence **does not save yet**. Closing the tab loses
-the edit — the clips stay in the project, but their arrangement is gone. And there is no export:
-the studio cannot yet write a final video file.
+**To keep the edit:** `⌘S`. The sequence writes as `.seq` into the project and opens back as it
+was — tracks, clips, fades and gains. What does not come back is the undo history.
+
+**What is still missing:** the **export**. The studio cannot yet write a final video file.
 
 ---
 
@@ -206,7 +223,8 @@ the studio cannot yet write a final video file.
 1. **Audio** workspace, the **+** button, then **double-click** your sound;
 2. drag the region's edges to **trim**;
 3. set a **fade in** and a **fade out**;
-4. the listen button compares against the original, before your edits.
+4. the **A/B** tool compares against the original, before your edits — it is a tool of its own,
+   not the play button.
 
 **The catch.** Nothing is written until you ask for it, and **swapping takes wipes your
 settings**: cuts are measured against the take that received them.
@@ -215,7 +233,8 @@ settings**: cuts are measured against the take that received them.
 
 ## Put an asset where it belongs
 
-The table to remember. There are **only five** possible drops, and double-click obeys a
+The table of the commonest drops. **Nine** surfaces accept an asset; the [Assets](07-assets.md)
+chapter lists them all, and double-click obeys a
 different rule again.
 
 | You want… | The gesture | You need, in front of you |
@@ -226,7 +245,7 @@ different rule again.
 | a picture as sky | drag onto the **sky preview** | a sky tab |
 | a 3D object in a scene | drag onto the **3D view** | a scene tab |
 
-A texture, for its part, accepts **only** drag and drop: double-clicking one does nothing.
+A texture double-clicks like the rest: it then lands as the base colour of the open material.
 
 ---
 
@@ -238,11 +257,11 @@ A texture, for its part, accepts **only** drag and drop: double-clicking one doe
 2. choose your files. Accepted formats: video (`mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v`),
    audio (`wav` `mp3` `aac` `flac` `m4a` `ogg`), image (`png` `jpg` `jpeg` `webp` `tif` `tiff`
    `exr`), 3D (`glb`);
-3. a banner follows each file: Probing, Fingerprint, Proxy, Waveform, Ready.
+3. a banner follows each file: Probing, Fingerprinting, Proxy, Waveform, Ready.
 
-**What you need to know, and it has real consequences: the file is not copied.** The studio
-creates a **link** to where it sits. Moving, renaming or deleting the original **breaks the
-link**.
+**What you need to know, and it has real consequences: on import, the file is not copied.** The
+studio creates a **link** to where it sits. Moving, renaming or deleting the original **breaks the
+link**. Editing it, on the other hand, brings it into the project, without touching your file.
 
 **On the 3D side, only `.glb` comes in.** A separate `.gltf` — the kind that drags its `.bin`
 files and its textures along beside it — as well as `.obj`, `.fbx` and HDRIs (`.hdr`) are refused.
@@ -254,7 +273,7 @@ files and its textures along beside it — as well as `.obj`, `.fbx` and HDRIs (
 1. click the picture in the **Assets** panel;
 2. look at the **Inspector**, on the right: if it knows the generation, it shows the **model**,
    the **prompt** and the **seed**;
-3. the **Regenerate** button: the model and its parameters come back into the Generate panel,
+3. the **Regenerate** button: the model and its parameters come back into the Generation panel,
    ready to go again.
 
 **The principle to remember.** Same model + same prompt + **same seed** = same picture. Change
@@ -267,7 +286,7 @@ result.
 
 A project is **an ordinary folder**. Copy it, that is all.
 
-1. find where it sits — the **Reveal in file manager** button in an asset's inspector;
+1. find where it sits — the **Show in the file manager** button in an asset's inspector;
 2. copy the whole folder: USB stick, disk, sync service, it makes no difference;
 3. on the other machine, `⌘O` and open it.
 
@@ -314,11 +333,11 @@ on screen says so at the moment you try.
 
 | You try to… | What happens | Why |
 |---|---|---|
-| **reopen an image document** closed yesterday | it is gone | the layer stack does not save |
+| **find the history** of a reopened document | the undo stack is empty | only the state is saved, not the gestures that led to it |
 | **import an `.hdr`**, an `.obj` or an `.fbx` | it is refused | on the 3D side, only `.glb` comes in |
-| **cut out or vectorize** a picture | the Models panel opens, and no more | there is no way to choose the model |
+| **cut out or vectorise** a picture | **Settings ▸ Generation** opens on the right section | the model is chosen there, once and for all |
 | **export a video** | no button | video export is not written — a picture does go out with `⇧⌘E` |
-| **crop, flip or rotate** a picture | the tools are greyed out | the pixels would not follow the frame |
+| **undo a crop** | the size comes back, the cropped pixels do not | the history does not keep the whole picture from before |
 
 All of it is spelled out, with nothing hidden, in
 [What does not exist yet](18-limits.md).
@@ -331,7 +350,7 @@ All of it is spelled out, with nothing hidden, in
 |---|---|---|
 | a picture from a sentence | Image | Models → prompt → Generate |
 | a variant of a picture | Image | *Image to image* filter → give the picture |
-| a bigger picture | Image | search `upscale` in Models — **not** the Enlarge command |
+| a bigger picture | Image | the **Image ▸ Enlarge** menu, once its model is set |
 | a 360° sky | Skyboxes | `+` → Generate, it lands by itself |
 | a material | Textures | `+` → drag a picture onto the preview → `⌘S` |
 | an animated shot | Video | *Image to video* filter → Generate |
@@ -346,4 +365,4 @@ All of it is spelled out, with nothing hidden, in
 
 ---
 
-[← What does not exist yet](18-limits.md) · [Contents](../user-guide.md)
+[← What does not exist yet](18-limits.md) · [Contents](../user-guide.md) · [Next chapter: Driving the studio from outside →](20-driving-from-outside.md)

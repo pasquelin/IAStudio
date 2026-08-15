@@ -1,8 +1,12 @@
 import { BrowserWindow, dialog, screen, type WebPreferences } from 'electron'
 import { join } from 'node:path'
 import { chromeColor } from './theme'
+import { MIRROR_BACKGROUND } from '@shared/constants'
 import { LICENCES_ROUTE } from '@shared/domain/licence'
+import { MANUAL_ROUTE } from '@shared/domain/manual'
+import { MIRROR_ROUTE } from '@shared/domain/mirror'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
+import { USAGE_ROUTE } from '@shared/domain/usage'
 import { TRANSLATIONS } from '@shared/i18n'
 import { EVENTS } from '@shared/ipc'
 import { APP_ICON_PATH } from '@main/resources'
@@ -56,6 +60,63 @@ export function load(window: BrowserWindow, options: { entry?: string; hash?: st
 
   const file = join(import.meta.dirname, '../renderer', entry)
   void window.loadFile(file, hash ? { hash } : {})
+}
+
+/** What separates one auxiliary window from the next. Everything else about them is identical. */
+type AuxiliarySize = { width: number; height: number; minWidth: number; minHeight: number }
+
+/**
+ * The shape shared by every window that is not a document: a size typed here rather than taken
+ * from the screen, and no full screen — macOS would give it a space of its own, hiding the studio
+ * behind it.
+ *
+ * Written once because it was written three times: settings, licences and usage differed only by
+ * their four numbers, and a floor added to one of them silently left the other two behind.
+ */
+function auxiliaryWindow(size: AuxiliarySize): BrowserWindow {
+  const window = new BrowserWindow({
+    ...size,
+    show: false,
+    backgroundColor: chromeColor(),
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 12, y: 12 },
+    fullscreenable: false,
+    icon: WINDOW_ICON,
+    webPreferences: WEB_PREFERENCES,
+  })
+
+  trackWindowState(window)
+  window.once('ready-to-show', () => window.show())
+  return window
+}
+
+/**
+ * The windows there is only ever one of, held by the route that identifies them — a route is what
+ * the window IS here, and no two auxiliary windows share one.
+ */
+const auxiliaryWindows = new Map<string, BrowserWindow>()
+
+/**
+ * Reveals the window a route already has, or builds it. Settings does not come through here: it
+ * carries a section to announce and a close it may refuse, neither of which the other two have.
+ */
+function openAuxiliaryWindow(hash: string, size: AuxiliarySize): BrowserWindow {
+  const held = auxiliaryWindows.get(hash)
+  if (held && !held.isDestroyed()) {
+    revealWindow(held)
+    return held
+  }
+
+  const window = auxiliaryWindow(size)
+  // Identity-checked, as `createMainWindow` is: an older window closing must not clear a slot a
+  // newer one now holds.
+  window.on('closed', () => {
+    if (auxiliaryWindows.get(hash) === window) auxiliaryWindows.delete(hash)
+  })
+
+  load(window, { hash })
+  auxiliaryWindows.set(hash, window)
+  return window
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -116,6 +177,18 @@ export function showMainWindow(): void {
   else createMainWindow()
 }
 
+/**
+ * The window that shows the studio itself, and the only one that mounts the assistant.
+ *
+ * Named rather than "whichever is in front": the settings, licences, usage and mirror windows
+ * load the same bundle on another route, so they are focusable and they answer `frontWindow` —
+ * and none of them subscribes to anything the assistant sends. An action from outside must reach
+ * this one or be refused; anything else is a two-minute wait for a message nobody heard.
+ */
+export function studioWindow(): BrowserWindow | null {
+  return mainWindow && !mainWindow.isDestroyed() ? mainWindow : null
+}
+
 let settingsWindow: BrowserWindow | null = null
 
 /**
@@ -161,24 +234,7 @@ export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
     return settingsWindow
   }
 
-  const window = new BrowserWindow({
-    width: 760,
-    height: 540,
-    minWidth: 560,
-    minHeight: 420,
-    show: false,
-    backgroundColor: chromeColor(),
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 12 },
-    // Not a document window: nothing here is worth a full screen, and macOS would otherwise
-    // give it its own space, hiding the studio behind it.
-    fullscreenable: false,
-    icon: WINDOW_ICON,
-    webPreferences: WEB_PREFERENCES,
-  })
-
-  trackWindowState(window)
-  window.once('ready-to-show', () => window.show())
+  const window = auxiliaryWindow({ width: 760, height: 540, minWidth: 560, minHeight: 420 })
 
   /**
    * Nothing is written until Apply, so closing on a pending buffer throws the work away in
@@ -215,38 +271,91 @@ export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
   return window
 }
 
-let licencesWindow: BrowserWindow | null = null
-
 /**
  * The notice the licences of everything shipped ask for, as its own window rather than a
  * settings section: it is read once, printed or copied from, and belongs beside About in Help
  * — not among things one changes.
  */
 export function openLicencesWindow(): BrowserWindow {
-  if (licencesWindow && !licencesWindow.isDestroyed()) {
-    revealWindow(licencesWindow)
-    return licencesWindow
-  }
-
-  const window = new BrowserWindow({
+  return openAuxiliaryWindow(LICENCES_ROUTE, {
     width: 720,
     height: 600,
     minWidth: 480,
     minHeight: 360,
+  })
+}
+
+/**
+ * What every stored key has spent, as its own window rather than a panel: it is read on its
+ * own, not while working, and none of it belongs beside a document.
+ *
+ * Wider than the licences window — four sections, tables and charts side by side.
+ */
+export function openUsageWindow(): BrowserWindow {
+  return openAuxiliaryWindow(USAGE_ROUTE, {
+    width: 900,
+    height: 620,
+    minWidth: 680,
+    minHeight: 440,
+  })
+}
+
+/**
+ * The user manual, as its own window rather than a panel: it is read BESIDE the work, often
+ * while the studio is doing the thing being read about, and a dock would take the space the
+ * subject of the reading occupies.
+ *
+ * The widest of the three — a chapter list down one side and prose with tables beside it.
+ */
+export function openManualWindow(): BrowserWindow {
+  return openAuxiliaryWindow(MANUAL_ROUTE, {
+    width: 1000,
+    height: 700,
+    minWidth: 640,
+    minHeight: 420,
+  })
+}
+
+/** The one video return, held apart from the auxiliary ones — see `openMirrorWindow`. */
+let mirrorWindow: BrowserWindow | null = null
+
+/**
+ * The video return: the program monitor on a screen of its own.
+ *
+ * NOT an auxiliary window, and the difference is the whole point of a separate function. Those
+ * refuse full screen — macOS would give one a space of its own and hide the studio behind it,
+ * which is exactly right for a settings panel and exactly wrong for a monitor one puts on the
+ * second screen and fills. It also wears no title bar inset and no chrome colour: what is behind
+ * the picture is the monitor's own black, so that nothing beside the image tints the judgement.
+ *
+ * One window, revealed rather than stacked: a second return would decode the same sequence twice
+ * more for nothing, and there is only ever one screen to watch.
+ */
+export function openMirrorWindow(): BrowserWindow {
+  if (mirrorWindow && !mirrorWindow.isDestroyed()) {
+    revealWindow(mirrorWindow)
+    return mirrorWindow
+  }
+
+  const window = new BrowserWindow({
+    width: 960,
+    height: 560,
+    minWidth: 320,
+    minHeight: 200,
     show: false,
-    backgroundColor: chromeColor(),
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 12 },
-    fullscreenable: false,
+    backgroundColor: MIRROR_BACKGROUND,
+    title: TRANSLATIONS[windowLanguage()].mirror.title,
     icon: WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,
   })
 
   trackWindowState(window)
   window.once('ready-to-show', () => window.show())
-  window.on('closed', () => (licencesWindow = null))
+  window.on('closed', () => {
+    if (mirrorWindow === window) mirrorWindow = null
+  })
 
-  load(window, { hash: LICENCES_ROUTE })
-  licencesWindow = window
+  load(window, { hash: MIRROR_ROUTE })
+  mirrorWindow = window
   return window
 }

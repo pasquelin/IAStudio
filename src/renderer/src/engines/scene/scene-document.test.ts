@@ -1,3 +1,4 @@
+import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { describe, expect, it } from 'vitest'
 import { MESH_ENTRIES, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { MESH_PRIMITIVES } from './mesh-primitives'
@@ -7,10 +8,19 @@ import {
   meshNode as mesh,
   modelNodeFixture,
   spriteNodeFixture,
+  textNodeFixture,
 } from './scene-fixtures'
 import { groupNode } from './node-factory'
+import { SPRITE_SPECS } from './property-fields'
 import { scenePayload, sceneFromPayload } from './scene-document'
-import { DEFAULT_MATERIAL, EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './scene-state'
+import {
+  DEFAULT_MATERIAL,
+  DEFAULT_SPRITE,
+  DEFAULT_TEXT,
+  EMPTY_SCENE,
+  IDENTITY_TRANSFORM,
+  type SceneState,
+} from './scene-state'
 
 /** A payload as it comes back from disk: through JSON, so nothing keeps a live reference. */
 function reread(state: SceneState): SceneState {
@@ -20,9 +30,13 @@ function reread(state: SceneState): SceneState {
 const nodeWith = (fields: object): unknown => ({ ...mesh('a'), ...fields })
 
 describe('scenePayload', () => {
-  it('carries the nodes and what lights them, and leaves the selection behind', () => {
+  it('carries the nodes, what lights them and what moves them, and leaves the selection behind', () => {
     const state: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: ['a'] }
-    expect(scenePayload(state)).toEqual({ nodes: [mesh('a')], environment: { kind: 'studio' } })
+    expect(scenePayload(state)).toEqual({
+      nodes: [mesh('a')],
+      environment: { kind: 'studio' },
+      animation: EMPTY_TIMELINE,
+    })
   })
 })
 
@@ -94,6 +108,24 @@ describe('sceneFromPayload', () => {
     expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
   })
 
+  it('carries the maps put over a model own through a round trip', () => {
+    const model = modelNodeFixture('m')
+    model.model = { ...model.model, textures: { map: { assetId: 'tex-1' } } }
+
+    expect(reread({ ...EMPTY_SCENE, nodes: [model], selectedIds: [] }).nodes).toEqual([model])
+  })
+
+  // A slot spelled with something that is not a reference would come back as a model missing one
+  // map with nothing said — the node is refused instead, like a malformed animation.
+  it('drops a model whose override is not a reference', () => {
+    const nodes: unknown[] = [
+      mesh('a'),
+      { ...modelNodeFixture('m'), model: { assetId: 'x', textures: { map: 'tex-1' } } },
+    ]
+
+    expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
+  })
+
   it('keeps a model pointing at an asset nothing answers to, which is a project that moved', () => {
     const ghost = modelNodeFixture('m', 'gone')
     expect(reread({ ...EMPTY_SCENE, nodes: [ghost], selectedIds: [] }).nodes).toEqual([ghost])
@@ -138,10 +170,68 @@ describe('sceneFromPayload', () => {
     })
   })
 
-  it('drops a sprite whose opacity is not a number', () => {
+  /**
+   * The trap this scene has fallen into twice: `isSceneNode` did not know `group`, and a grouped
+   * scene reopened without its groups; the same was waiting for `sprite`. Every new kind of node
+   * is tested by a round trip through what a file holds, never by reading the guard.
+   */
+  it('carries a text, its face and its shape through a round trip', () => {
+    const written = textNodeFixture('t1', { value: 'Bonjour', size: 2, depth: 0.5 })
+
+    const back = reread({ ...EMPTY_SCENE, nodes: [written] }).nodes
+
+    expect(back).toHaveLength(1)
+    expect(back[0]).toMatchObject({
+      type: 'text',
+      text: { value: 'Bonjour', size: 2, depth: 0.5, font: { source: 'embedded', family: 'Lato' } },
+    })
+  })
+
+  // A family this machine has not got is kept as written: the document said what it meant, and
+  // rewriting it here would lose the author's choice on every open.
+  it('keeps a system face nobody here has, rather than rewriting the document', () => {
+    const written = textNodeFixture('t1', { font: { source: 'system', family: 'Futura' } })
+
+    const back = reread({ ...EMPTY_SCENE, nodes: [written] }).nodes
+
+    expect(back[0]?.type === 'text' && back[0].text.font).toEqual({
+      source: 'system',
+      family: 'Futura',
+    })
+  })
+
+  // A face the studio no longer ships is one nothing can produce: fallen back rather than kept,
+  // so the words still draw.
+  it('falls back to a shipped face when the document names one it no longer has', () => {
+    const written = textNodeFixture('t1', { font: { source: 'embedded', family: 'Helvetiker' } })
+
+    const back = reread({ ...EMPTY_SCENE, nodes: [written] }).nodes
+
+    expect(back[0]?.type === 'text' && back[0].text.font.family).toBe('Lato')
+  })
+
+  it.each([
+    ['a size that is not a number', { ...DEFAULT_TEXT, size: 'big' }],
+    ['no words at all', { ...DEFAULT_TEXT, value: 42 }],
+    ['a text that is not an object', 'Bonjour'],
+  ])('drops a text with %s', (_case, text) => {
+    const nodes: unknown[] = [{ ...textNodeFixture('t1'), text }]
+
+    expect(sceneFromPayload({ nodes }).nodes).toHaveLength(0)
+  })
+
+  /**
+   * Driven off the table rather than named one by one: `isSprite` was the last guard checking its
+   * fields by hand, so a field added to `SPRITE_SPECS` went unverified at load — and a document
+   * carrying a wrong value for it reopened with that value in place.
+   */
+  // The colour apart: `null` is legal for it and for nothing else, and a case below covers it.
+  const measured = Object.keys(SPRITE_SPECS).filter(name => name !== 'color')
+
+  it.each(measured)('drops a sprite whose %s is not a number', field => {
     const broken = {
       ...spriteNodeFixture('s1'),
-      sprite: { color: null, opacity: 'half', map: null },
+      sprite: { color: null, opacity: 1, map: null, [field]: 'half' },
     }
 
     expect(sceneFromPayload({ nodes: [broken] }).nodes).toEqual([])
@@ -203,7 +293,9 @@ describe('sceneFromPayload', () => {
     ['no name', nodeWith({ name: null })],
     ['a visibility that is not a flag', nodeWith({ visible: 'yes' })],
     ['a transform missing an axis', nodeWith({ transform: { ...IDENTITY_TRANSFORM, scale: {} } })],
-    ['a type nothing renders', nodeWith({ type: 'camera' })],
+    // 'camera' used to stand for an unknown type here; it is a node of its own since renders
+    // need one, so the example moved to something the studio still draws nothing for.
+    ['a type nothing renders', nodeWith({ type: 'projector' })],
     ['a geometry of an unknown kind', nodeWith({ geometry: { kind: 'blob', radius: 1 } })],
     ['a geometry missing a parameter', nodeWith({ geometry: { kind: 'box', width: 1 } })],
     ['a geometry whose parameter is text', nodeWith({ geometry: { kind: 'sphere', radius: '1' } })],
@@ -211,7 +303,6 @@ describe('sceneFromPayload', () => {
       'a material of an unknown kind',
       nodeWith({ material: { ...DEFAULT_MATERIAL, kind: 'toon' } }),
     ],
-    ['a material missing a slot', nodeWith({ material: { ...DEFAULT_MATERIAL, map: undefined } })],
     ['a texture without an asset', nodeWith({ material: { ...DEFAULT_MATERIAL, map: {} } })],
     ['an id that is not text', nodeWith({ id: 7 })],
     ['a transform that is not an object', nodeWith({ transform: 'origin' })],
@@ -246,11 +337,131 @@ describe('sceneFromPayload', () => {
     expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a', 'c'])
   })
 
+  /**
+   * The guarantee this used to get from a dropped node, now that an absent slot is legal: a slot
+   * added to `MaterialDescriptor` and forgotten in `TEXTURE_SLOTS` would go unchecked, and the
+   * texture it names would be neither validated nor drawn.
+   */
   it('names every texture slot a dressed material has to carry', () => {
-    for (const slot of TEXTURE_SLOTS) {
-      const stripped: Record<string, unknown> = { ...DEFAULT_MATERIAL }
-      delete stripped[slot]
-      expect(sceneFromPayload({ nodes: [nodeWith({ material: stripped })] }).nodes).toEqual([])
-    }
+    const declared = Object.keys(DEFAULT_MATERIAL).filter(name => name.endsWith('Map'))
+
+    expect([...TEXTURE_SLOTS].sort()).toEqual(['map', ...declared].sort())
+  })
+
+  /**
+   * The defect this guards: the tables are exhaustive by typecheck, so a field added to one is
+   * required of every document written before it existed — and a node that fails its guard is
+   * dropped in silence, indistinguishable from a node that never was.
+   */
+  it('revives a material missing a slot rather than dropping the node', () => {
+    const stripped: Record<string, unknown> = { ...DEFAULT_MATERIAL }
+    delete stripped.normalMap
+
+    const [node] = sceneFromPayload({ nodes: [nodeWith({ material: stripped })] }).nodes
+
+    expect(node?.type === 'mesh' && node.material.normalMap).toBe(null)
+  })
+
+  it('revives a sprite missing a measured field with the default for it', () => {
+    const stripped: Record<string, unknown> = { ...DEFAULT_SPRITE }
+    delete stripped.opacity
+    const nodes: unknown[] = [{ ...spriteNodeFixture('s1'), sprite: stripped }]
+
+    const [node] = sceneFromPayload({ nodes }).nodes
+
+    expect(node?.type === 'sprite' && node.sprite.opacity).toBe(DEFAULT_SPRITE.opacity)
+  })
+
+  it('revives a text missing a measured field with the default for it', () => {
+    const stripped: Record<string, unknown> = { ...DEFAULT_TEXT }
+    delete stripped.curveSegments
+    const nodes: unknown[] = [{ ...textNodeFixture('t1'), text: stripped }]
+
+    const [node] = sceneFromPayload({ nodes }).nodes
+
+    expect(node?.type === 'text' && node.text.curveSegments).toBe(DEFAULT_TEXT.curveSegments)
+  })
+
+  // Absent is a file that says nothing; `null` is a file that says something wrong.
+  it('still drops a node whose measured field is null rather than absent', () => {
+    const nodes: unknown[] = [
+      { ...spriteNodeFixture('s1'), sprite: { ...DEFAULT_SPRITE, opacity: null } },
+    ]
+
+    expect(sceneFromPayload({ nodes }).nodes).toEqual([])
+  })
+})
+
+describe('the timeline a file holds', () => {
+  const trackPayload = {
+    id: 'track-1',
+    name: 'Cube position',
+    index: 0,
+    muted: false,
+    solo: false,
+    locked: false,
+    target: { nodeId: 'cube', property: 'position' },
+    keys: [{ time: 1, value: { x: 1, y: 0, z: 0 } }],
+  }
+
+  const read = (animation: unknown) =>
+    sceneFromPayload({ nodes: [], environment: { kind: 'studio' }, animation }).animation
+
+  it('opens on an empty one where the file says nothing — every document written so far', () => {
+    expect(read(undefined)).toEqual(EMPTY_TIMELINE)
+  })
+
+  it('reads a track back whole, keys included', () => {
+    const timeline = read({ duration: 8, fps: 30, tracks: [trackPayload] })
+
+    expect(timeline).toMatchObject({ duration: 8, fps: 30 })
+    expect(timeline.tracks[0]?.keys).toEqual(trackPayload.keys)
+  })
+
+  it('drops one malformed track rather than the animation around it', () => {
+    const timeline = read({
+      tracks: [trackPayload, { id: 'broken', name: 'Broken' }, { ...trackPayload, id: 'track-2' }],
+    })
+
+    expect(timeline.tracks.map(track => track.id)).toEqual(['track-1', 'track-2'])
+  })
+
+  it('refuses a track whose property is not one this version drives', () => {
+    const timeline = read({
+      tracks: [{ ...trackPayload, target: { nodeId: 'cube', property: 'colour' } }],
+    })
+
+    expect(timeline.tracks).toEqual([])
+  })
+
+  it('refuses a key that is not a point in time and space', () => {
+    const timeline = read({ tracks: [{ ...trackPayload, keys: [{ time: 'soon' }] }] })
+    expect(timeline.tracks).toEqual([])
+  })
+
+  it('falls back on the defaults for a length or a rate that says nothing usable', () => {
+    const timeline = read({ duration: -3, fps: 0, tracks: [] })
+    expect(timeline).toMatchObject({
+      duration: EMPTY_TIMELINE.duration,
+      fps: EMPTY_TIMELINE.fps,
+    })
+  })
+
+  it('takes a bone track, which names a bone inside a file rather than a node', () => {
+    const timeline = read({
+      tracks: [
+        { ...trackPayload, target: { nodeId: 'perso', bone: 'spine', property: 'rotation' } },
+      ],
+    })
+
+    expect(timeline.tracks[0]?.target).toMatchObject({ bone: 'spine' })
+  })
+
+  it('refuses a bone that is not a name', () => {
+    const timeline = read({
+      tracks: [{ ...trackPayload, target: { nodeId: 'perso', bone: 7, property: 'rotation' } }],
+    })
+
+    expect(timeline.tracks).toEqual([])
   })
 })

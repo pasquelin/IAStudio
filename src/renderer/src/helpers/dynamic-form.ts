@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import type { FieldDescriptor, FieldKind } from '@shared/domain/model'
 
 export type FormValues = Record<string, unknown>
@@ -14,35 +13,10 @@ export function isNumeric(kind: FieldKind): boolean {
 }
 
 /** An emptied input is an absent value, not a zero and not an empty string. */
-function blankToUndefined(value: unknown): unknown {
+export function blankToUndefined(value: unknown): unknown {
   if (value === '' || value === null) return undefined
   if (typeof value === 'number' && Number.isNaN(value)) return undefined
   return value
-}
-
-function numericSchema(field: FieldDescriptor): z.ZodType {
-  let schema = field.kind === 'number' ? z.number() : z.number().int()
-  if (field.min !== undefined) schema = schema.min(field.min)
-  if (field.max !== undefined) schema = schema.max(field.max)
-  return schema
-}
-
-function fieldSchema(field: FieldDescriptor): z.ZodType {
-  if (field.kind === 'boolean') return z.boolean().optional()
-
-  const base = isNumeric(field.kind) ? numericSchema(field) : z.string().min(1)
-  return z.preprocess(blankToUndefined, field.required ? base : base.optional())
-}
-
-/**
- * Builds the validation schema from the descriptors the model published. Nothing here is
- * model-specific — that is the whole point: a provider Scenario adds tomorrow gets a
- * validated form without a line of code — see spec § 6.
- */
-export function buildSchema(fields: readonly FieldDescriptor[]) {
-  const shape: Record<string, z.ZodType> = {}
-  for (const field of fields) shape[field.key] = fieldSchema(field)
-  return z.object(shape)
 }
 
 /** A field whose dependency is unmet is not rendered, and does not take part in the body. */
@@ -109,4 +83,27 @@ export function groupFields(fields: readonly FieldDescriptor[]): [string, FieldD
   }
 
   return [...groups.entries()]
+}
+
+/**
+ * The reference pictures a filled form carries, in the order the model declared them.
+ *
+ * Values are handed over as they stand — a local asset id or a data URL — because the field
+ * cannot say which one the user gave it. A local id is not one the API has ever heard of: the
+ * main process rewrites it on the way out, through the same translator a generation goes
+ * through (`main/scenario/asset-inputs.ts`), sending the file if it has never gone up.
+ */
+export function referencePictures(
+  fields: readonly FieldDescriptor[],
+  values: FormValues,
+): string[] {
+  const pictures: string[] = []
+
+  for (const field of fields) {
+    if (field.kind !== 'image') continue
+    const value = values[field.key]
+    if (typeof value === 'string' && value.trim() !== '') pictures.push(value)
+  }
+
+  return pictures
 }

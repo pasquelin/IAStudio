@@ -5,12 +5,11 @@ import { useTranslation } from 'react-i18next'
 import { Separator } from '@/design/Separator'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { ToolButton } from '@/design/ToolButton'
-import { useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
+import { useLayouts, useToolSurface } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
-import { useTools } from '@/stores/tools'
-import { openDocument } from './dockview-api'
-import { TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
+import { arrangementOf, useTools } from '@/stores/tools'
+import { createDocumentIn } from './new-document'
+import { HOME_SURFACE, TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
 import {
   shownTool,
   toolTitleKey,
@@ -45,10 +44,10 @@ export function Rail({ side }: RailProps) {
       aria-orientation="vertical"
       className="flex w-(--sc-rail) shrink-0 flex-col items-center justify-between py-(--sc-gutter)"
     >
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-2">
         {side === 'left' && (
           <>
-            <NewDocumentButton />
+            <NewButton />
             <Separator orientation="horizontal" />
           </>
         )}
@@ -67,33 +66,35 @@ export function Rail({ side }: RailProps) {
  * Above the tool icons rather than in the Explorer header: it stays reachable when every panel
  * is closed. Disabled — not hidden — where no editor exists yet: a button that vanishes reads
  * as a display bug.
+ *
+ * It makes what the surface makes. A space makes documents; the home makes the project they
+ * need — and a document created from the home would land in the space behind it, out of sight
+ * of the screen that was asked.
  */
-function NewDocumentButton() {
+function NewButton() {
   const { t } = useTranslation()
+  const surface = useToolSurface()
   const workspace = useLayouts(state => state.activeWorkspace)
-  // A document is a file in a project folder: with no project open there is nowhere to write it,
-  // and the create would fail after the click rather than before it.
   const project = useProject(state => state.project)
+
+  const home = surface === HOME_SURFACE
 
   return (
     <ToolButton
       icon={mdiPlus}
       iconSize={22}
-      label={t('documents.new')}
+      label={home ? t('home.tools.newProject') : t('documents.new')}
       tooltip={TIP_RIGHT}
-      disabled={kindForWorkspace(workspace) === null || !project}
-      onClick={() => {
-        void useDocuments
-          .getState()
-          .create(workspace)
-          .then(created => created && openDocument(created))
-          // A folder gone read-only, or removed under us: no tab opens, which is the honest
-          // outcome, and the studio has nowhere to say more until it grows a notification.
-          .catch(() => {})
-      }}
+      // A document is a file in a project folder: with no project open there is nowhere to write
+      // it, and the create would fail after the click rather than before it. A project needs no
+      // project, so on the home the button is never dead.
+      disabled={!home && (kindForWorkspace(workspace) === null || !project)}
+      onClick={() =>
+        home ? void useProject.getState().createPicked() : createDocumentIn(workspace)
+      }
       // Filled, unlike every tool icon around it: this one acts, the others only switch what is
       // shown. A grey plus among grey glyphs is a plus nobody finds.
-      className="bg-create hover:bg-create-hover size-(--sc-rail-button) rounded-(--radius-sc-md) text-white hover:text-white disabled:bg-transparent disabled:text-current"
+      className="bg-create hover:bg-create-hover text-create-content hover:text-create-content size-(--sc-rail-button) rounded-(--radius-sc-md) disabled:bg-transparent disabled:text-current"
     />
   )
 }
@@ -108,8 +109,8 @@ function halvesOf(tools: Tool[]): [ToolSlot, Tool[]][] {
 
 /**
  * The zone's tools, cut the way the zone itself is cut: the icons above the separator open in
- * its first half, the ones below in its second. On the right that cut is the AI's — choosing a
- * model and filling its form above, everything else below. The rail is the legend of the column.
+ * its first half, the ones below in its second. On the right that cut separates what shows the
+ * document from what edits the selection. The rail is the legend of the column.
  *
  * One zone per group rather than a list: `useAvailableTools` is a hook, and the generator's
  * presence depends on state — a loop over zones could not ask it.
@@ -119,20 +120,25 @@ function RailGroup({ zone }: { zone: ToolZone }) {
   // Reading the store here rather than receiving props keeps a rail click from re-rendering
   // the Shell — and with it the Dockview host at the center.
   const focusedZone = useTools(state => state.focusedZone)
-  const workspace = useLayouts(state => state.activeWorkspace)
-  const open = useTools(state => state.open)
-  const hasModel = useHasModel(workspace)
-  const tools = useAvailableTools(zone, workspace)
+  const surface = useToolSurface()
+  const open = useTools(state => arrangementOf(state, surface).open)
+  const hasModel = useHasModel(surface)
+  const tools = useAvailableTools(zone, surface)
   // Actions are stable for the store's lifetime: subscribing to them would only add selectors
   // re-run on every write.
   const { show, close } = useTools.getState()
 
+  // The rule `halvesOf` makes for halves, applied to the group itself: an empty flex child still
+  // eats one of the rail's gaps, and the home's left rail has two such zones — a hole where its
+  // icons used to be. No surface declares a `top` placement at all.
+  if (tools.length === 0) return null
+
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-2">
       {halvesOf(tools).map(([slot, inSlot], index) => {
         // What the half draws, not what it stores: a panel standing in for one this section
         // puts elsewhere is up, and its icon has to read — and close — as up.
-        const up = shownTool(open[zone]?.[slot] ?? null, zone, slot, workspace, hasModel)
+        const up = shownTool(open[zone]?.[slot], zone, slot, surface, hasModel)
 
         return (
           <Fragment key={`${zone}:${slot}`}>
@@ -150,7 +156,9 @@ function RailGroup({ zone }: { zone: ToolZone }) {
                   tooltip={TIP_RIGHT}
                   active={isOpen}
                   accented={isOpen && focusedZone === zone}
-                  onClick={() => (isOpen ? close(zone, slot) : show(zone, tool.id))}
+                  onClick={() =>
+                    isOpen ? close(surface, zone, slot) : show(surface, zone, tool.id)
+                  }
                   className="size-(--sc-rail-button) rounded-(--radius-sc-md)"
                 />
               )

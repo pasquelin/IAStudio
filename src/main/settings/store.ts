@@ -6,6 +6,7 @@ import {
   activateAccount,
   activeCredentials,
   addAccount,
+  credentialsByFingerprint,
   bookFromCredentials,
   EMPTY_BOOK,
   removeAccount,
@@ -44,6 +45,13 @@ export type AccountChange = {
   credentialsChanged: boolean
 }
 
+/** An account as the main process may use it to call the API on that account's behalf. */
+export type KeyedAccount = {
+  id: string
+  name: string
+  credentials: Credentials
+}
+
 export type SettingsStore = {
   read: () => Settings
   write: (partial: PartialSettings) => Settings
@@ -55,6 +63,11 @@ export type SettingsStore = {
   reset: () => Settings
   /** Every held account, without its credentials — this is what may cross to a window. */
   accounts: () => AccountSummary[]
+  /**
+   * The same accounts, credentials included. Main process only: nothing here may cross to a
+   * window. Exists so usage can be read for every stored key at once, not just the active one.
+   */
+  keyedAccounts: () => KeyedAccount[]
   /** All four throw an `AccountError`: a refused name, an unknown id, or a locked keychain. */
   addAccount: (name: string, credentials: Credentials) => AccountChange
   renameAccount: (id: string, name: string) => AccountChange
@@ -68,6 +81,20 @@ export type SettingsStore = {
   settleAccounts: () => void
   /** Main process only. Never expose over IPC — see spec § 4, invariant 1. */
   readCredentials: () => Credentials | null
+  /**
+   * The credentials behind an `accountFingerprint`, or `null` if that key is no longer held.
+   * Main process only. What lets a job outliving a session be polled on the account that paid
+   * for it — by the key rather than by the book entry, which a remove-and-re-add renews.
+   */
+  credentialsOf: (fingerprint: string) => Credentials | null
+  /**
+   * Follows every change from here on. Returns the way to stop.
+   *
+   * Beside `onChange`, which is the ONE listener wired at construction and cannot be a second:
+   * the store is built before the services are, so anything built later — the MCP control is the
+   * first — had no way in but a module-level global. This is that way in.
+   */
+  subscribe: (listener: (settings: Settings) => void) => () => void
   /** Where the settings are written. */
   path: () => string
 }
@@ -98,6 +125,8 @@ function movedKey(before: AccountBook, after: AccountBook): boolean {
 function merge(base: Settings, partial: PartialSettings): Settings {
   return {
     general: { ...base.general, ...partial.general },
+    home: { ...base.home, ...partial.home },
+    workspaces: { ...base.workspaces, ...partial.workspaces },
     appearance: { ...base.appearance, ...partial.appearance },
     generation: { ...base.generation, ...partial.generation },
     storage: { ...base.storage, ...partial.storage },
@@ -105,6 +134,9 @@ function merge(base: Settings, partial: PartialSettings): Settings {
     shortcuts: { ...base.shortcuts, ...partial.shortcuts },
     media: { ...base.media, ...partial.media },
     advanced: { ...base.advanced, ...partial.advanced },
+    assistant: { ...base.assistant, ...partial.assistant },
+    mcp: { ...base.mcp, ...partial.mcp },
+    dictation: { ...base.dictation, ...partial.dictation },
   }
 }
 
@@ -238,23 +270,43 @@ export function createSettingsStore(
     return { accounts: summariesOf(after), credentialsChanged: movedKey(before, after) }
   }
 
+  const listeners = new Set<(settings: Settings) => void>()
+
+  /** The one wired at construction, then whoever subscribed later. */
+  const announce = (settings: Settings): void => {
+    onChange?.(settings)
+    for (const listener of listeners) listener(settings)
+  }
+
   return {
     read,
 
     write: partial => {
       const merged = merge(read(), partial)
       adapter.write(SETTINGS_KEY, merged)
-      onChange?.(merged)
+      announce(merged)
       return merged
     },
 
     reset: () => {
       adapter.write(SETTINGS_KEY, DEFAULT_SETTINGS)
-      onChange?.(DEFAULT_SETTINGS)
+      announce(DEFAULT_SETTINGS)
       return DEFAULT_SETTINGS
     },
 
+    subscribe: listener => {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+
     accounts: () => summariesOf(readBook()),
+
+    keyedAccounts: () =>
+      readBook().accounts.map(account => ({
+        id: account.id,
+        name: account.name,
+        credentials: account.credentials,
+      })),
 
     addAccount: (name, credentials) =>
       apply(book => addAccount(book, { id: newAccountId(), name, credentials })),
@@ -299,6 +351,8 @@ export function createSettingsStore(
     },
 
     readCredentials: () => activeCredentials(readBook()),
+
+    credentialsOf: fingerprint => credentialsByFingerprint(readBook(), fingerprint),
 
     path: adapter.path,
   }

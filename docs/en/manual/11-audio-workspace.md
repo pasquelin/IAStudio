@@ -2,7 +2,20 @@
 
 [← Video workspace](10-video-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Textures workspace →](12-textures-workspace.md)
 
-The workspace where you shape a sound: shorten it, bring it up gently, even out its volume.
+The workspace where you shape a sound — shorten it, bring it up gently, even out its volume — and
+then lay it beside the others.
+
+---
+
+## How this workspace is laid out
+
+As in Video, the **bottom strip belongs to the edit** and the asset shelf takes the upper half of
+the **right column**, so a take can be dragged from one to the other without switching panels. The
+left column holds Models and Generate, as it does everywhere else.
+
+> **An audio tab holds two halves, and they are saved together.** In the middle, the **one-take
+> editor**: the waveform and its tools. In the bottom strip, the **edit**, where takes are laid
+> side by side — described [further down](#the-edit). One tab, one `⌘S`, one file.
 
 ---
 
@@ -11,9 +24,11 @@ The workspace where you shape a sound: shorten it, bring it up gently, even out 
 **Two gestures, in this order, and the order matters:**
 
 1. **The `+` button on the left rail** — it opens an audio tab, empty for now.
-2. **Double-click an audio asset** in the shelf — the take goes into the tab.
+2. **Double-click an audio asset** in the shelf — the take goes into the tab. You can also **drag
+   it there** from the shelf, or use the right-click row **Open in the audio editor**.
 
-While no sound is loaded, the tab shows: "No sound open. Double-click an audio asset to edit it."
+While no sound is loaded, the tab shows: "No sound open. Drop a take here, or double-click an
+audio asset."
 
 > **Double-clicking without having opened a tab does nothing**, and nothing says so. Double-click
 > always sends the asset into the tab in front; with no tab, it has nowhere to send it. This is
@@ -54,7 +69,7 @@ example.
 
 | Tool | What it does |
 |---|---|
-| **Trim** | keeps only the selection, throws away the rest |
+| **Crop** | keeps only the selection, throws away the rest |
 | **Fade in** | brings the sound up from silence, over the selection |
 | **Fade out** | brings the sound down to silence, over the selection |
 | **Normalise** | brings the overall level to −14 LUFS |
@@ -88,7 +103,7 @@ and A/B tells the truth in three seconds.
 
 This is the important point of this workspace.
 
-Your tools **do not write into the file**. They stack a list of instructions — "trim here",
+Your tools **do not write into the file**. They stack a list of instructions — "crop here",
 "one-second fade", "normalise" — which is replayed over the original sound every time.
 
 Two very practical consequences:
@@ -100,7 +115,7 @@ Only when you explicitly ask is anything written:
 
 | Button | What it does |
 |---|---|
-| **Apply** | **rewrites the asset** with your changes. The original is replaced |
+| **Apply** | **rewrites the asset** with your changes. The original is replaced — unless it is a [linked medium](07-assets.md), which then enters the project without your file being touched |
 | **Save as new** | creates a **new asset** alongside, named "*(edited)*" |
 
 > **When in doubt, take "Save as new".** You keep the original, and you can always delete the copy
@@ -108,9 +123,42 @@ Only when you explicitly ask is anything written:
 
 ---
 
+## The edit
+
+The bottom strip holds the **same edit as the Video workspace**, with one difference: there is
+**no picture track**. A fresh audio tab opens on **four empty sound tracks**, `A1` to `A4`.
+
+This is what makes Audio a montage workspace rather than a plain take editor: music is built by
+laying sounds side by side.
+
+**The gestures are exactly those of the previous chapter** — dragging a take in from the shelf,
+trimming a clip by its edges, the blade, the fades, the gain, the inspector, the track headers
+with their mute, solo and lock. All of it is described in
+[Video workspace](10-video-workspace.md), and none of it changes here.
+
+The panel's bar carries one extra button, **Add an audio track** — one where Video has two: there
+is no picture track to add.
+
+Only two differences, and both come from the same cause: **this workspace has no monitor.**
+
+- **The transport sits on the panel's title bar**, not under a picture: play/pause and rewind to
+  the start. `Space` plays and pauses, as it does everywhere.
+- **There is nothing to watch** — a sound edit is listened to.
+
+> **Two players, never at once.** The waveform in the middle plays the **tool chain** applied to
+> the open take; the edit plays the **clips laid on the tracks**. Starting one stops the other:
+> the studio has a single player.
+
+---
+
 ## Undo and redo
 
 `⌘Z` / `Ctrl+Z` undoes the last step of the chain. `⇧⌘Z` redoes it.
+
+**One key for both halves, and it always takes the chain first.** As long as the tool chain has
+anything to give back, `⌘Z` undoes it; only once the chain is back to the bare take does the key
+address the edit. To undo an edit gesture you therefore have to have unwound the whole chain — or
+never to have applied any.
 
 As everywhere in the studio, the history belongs to the document: the tab you mean has to be in
 front.
@@ -133,9 +181,16 @@ clean by construction.
 What stays useful on a generated sound is to shorten it, bring it to the right level, and make it
 come in and go out cleanly. That is exactly what this workspace does.
 
-> **An edited sound is not saved as a document.** The Audio workspace writes assets directly, via
-> Apply or Save as new. There is no `.aud` file on disk for now — see
-> [What does not exist yet](18-limits.md).
+The detail is in [What does not exist yet](18-limits.md).
+
+> **Two different gestures, and they are worth telling apart.** `⌘S` saves the **document** —
+> your cuts, your fades, your settings, **and the edit in the bottom strip** — into an `.aud` file
+> in the project, which reopens just as it was. One key for both halves: an edit built over a take
+> you never touched is work, and it is saved as such. **Apply** and **Save as new** write an **audio asset**, a sound usable elsewhere, with
+> the settings baked in.
+>
+> In other words: `⌘S` keeps your work editable, Apply gets the result out. One thing does not
+> come back from a reopened document: the A/B listening, which always restarts on the chain.
 
 ---
 

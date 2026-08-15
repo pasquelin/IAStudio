@@ -38,14 +38,23 @@ The studio files each action under a **context** — the surface where it makes 
 surface listens at a time, the one you are looking at. A key shared between two contexts can
 therefore never be ambiguous.
 
-Four contexts:
+Eight contexts:
 
 | Context | Where it applies |
 |---|---|
 | **Anywhere in the application** | any window, any workspace |
+| **In the bar of spaces** | the top bar, while the focus is on one of its tabs |
 | **In the 3D view** | the viewport of the 3D workspace |
 | **In the edit** | the timeline of the Video and Audio workspaces |
 | **In the image** | the canvas of the Image workspace |
+| **In the sky** | the view of the Skyboxes workspace |
+| **In the take editor** | the waveform of the Audio workspace |
+| **In the material** | the preview and channels of the Textures workspace |
+
+**A surface can listen to a key without being a context, and the guarantee above does not cover it
+then.** The 3D workspace's animation band is that case: `Delete` and `Backspace` take off the
+chosen key there, the key being bound to the band rather than to the register of contexts. So it
+does not appear on the shortcuts screen, and cannot be changed.
 
 One context is special: **Anywhere in the application**. Its keys go through the operating system's
 menu, which catches them before anybody else. They are therefore the only ones that can never be
@@ -59,8 +68,11 @@ menu, which catches them before anybody else. They are therefore the only ones t
 |---|---|---|
 | **New project** | `⌘N` | creates an empty project and opens it |
 | **Open project** | `⌘O` | opens an existing project in place of the current one |
-| **Save document** | `⌘S` | writes the document in front into the project |
+| **Save document** | `⌘S` | writes the document in front into the project — **and rewrites the asset it came from**, in the Image workspace |
+| **Save as** | `⇧⌘S` | writes a copy of the asset beside the original and carries on with it, asking for no name |
 | **Settings** | `⌘,` | opens the settings window |
+| **Assistant** | `⌘K` | opens the window where you say what you want to do, by voice or by keyboard |
+| **Dictate** | `⌥D` | listens to the microphone and writes what you say at the caret |
 | **Full screen** | `⌃⌘F` | makes the window take the whole screen |
 | **Reset layout** | *none* | puts the panels back where they started |
 
@@ -68,9 +80,83 @@ menu, which catches them before anybody else. They are therefore the only ones t
 months, and giving it a shortcut would mean occupying a key for nothing. It is in the **View** menu,
 and you can assign one to it (see below).
 
+**Dictate is the only shortcut that works while you are typing into a field** — every other one
+stays quiet in that case. See [Generating](06-generating.md#speaking-instead-of-typing).
+
+It is **held** rather than tapped: press, speak, let go. It can be set to toggle instead, in the
+[settings](14-settings.md#how-it-is-triggered).
+
 > **The open project saves as it goes.** `⌘S` concerns only the **document** in front — a 3D scene,
 > for instance — not the project itself. The tab carries a dot (`•`) as long as what is on screen is
 > not what is on disk.
+
+### Walking a list with the keyboard
+
+Every list in the studio is crossed the same way: the shelf, the Explorer, the layers, the models,
+the scene tree.
+
+| Key | Effect |
+|---|---|
+| `Tab` | steps into the list, or out of it |
+| `←` `→` | the previous cell, the next one |
+| `↑` `↓` | the same column, one row up or down |
+| `Enter` | opens |
+| `Space` | picks |
+
+**A row that only opens leaves `Space` to scrolling.** That is the Explorer's case: opening a
+document may take you to another workspace, and `Space` promises that nowhere else in the studio.
+
+`Tab` brings you back where you were: a list keeps a single way in — your selection if there is
+one, the first visible cell otherwise.
+
+**In the shelf, the selection can also be plural** — `⌘` picks, `Shift` extends. See
+[Picking several assets](07-assets.md#picking-several-assets).
+
+### Walking a menu with the keyboard
+
+Menus are crossed like lists, with one difference: **they take the focus as they open**, on their
+first row. There is nothing to do to step in.
+
+| Key | Effect |
+|---|---|
+| `↑` `↓` | the previous row, the next one — wrapping at both ends |
+| `Home` `End` | the first row, the last |
+| `Enter` | chooses the row |
+| `Escape` | closes, and hands focus back where it was |
+| `Tab` | closes too — a menu is not somewhere you tab through |
+
+**To open a tool group's menu: `⌥↓`.** Most menus open on a click, and so on `Enter`. A group
+**with a tool armed** is the exception: there the click picks the tool, and the menu only opened
+under the pointer. `⌥↓` is the keyboard's way in; `Enter` goes on arming the tool, exactly as the
+click does.
+
+A group that arms nothing — 3D's **Add**, which is only a list of actions — opens on a click like
+any other menu: there is no tool to pick in its place.
+
+Like the walking keys above, `⌥↓` belongs to the button rather than the registry: it cannot be
+changed.
+
+**Greyed rows are stepped over.** A row the mouse cannot choose cannot be taken from the keyboard
+either, and stopping on one would make the walk look stuck.
+
+**A ticked row says what its tick means.** Some are alternatives — a tool's mode, the active
+account, the view of one quarter of the 3D space: ticking one unticks the rest. Others answer for themselves,
+like a layer's two padlocks. A screen reader announces the first kind as radio buttons and the
+second as checkboxes.
+
+### Arranging the workspace bar
+
+| Key | Effect |
+|---|---|
+| `⌥←` | moves the focused workspace one place left |
+| `⌥→` | moves the focused workspace one place right |
+
+**`⌥` and not the bare arrows**: those belong to whoever walks the bar, and taking them would
+trade one gesture for another. Dragging and right-clicking do the same thing — see
+[The title bar](03-the-window.md#arranging-the-workspaces-in-the-order-that-suits-you).
+
+Both keys can be changed like any other, under the **In the bar of spaces** context of the
+shortcuts screen.
 
 ---
 
@@ -84,12 +170,16 @@ and you can assign one to it (see below).
 | **Move** | `G` | drag the coloured arrows to slide it |
 | **Rotate** | `R` | drag the coloured circles to turn it |
 | **Scale** | `S` | drag the handles. `⇧` keeps its proportions |
-| **Magnet** | `M` | steps the handles by regular amounts, set in the preferences |
+| **Magnet** | `M` | steps the handles by regular amounts, set in the settings |
 | **Local frame** | `L` | aligns the handles with the object's orientation rather than the world's |
 | **Projection** | `O` | switches between perspective and orthographic projection |
-| **Display** | `Z` | cycles shaded, wireframe, shaded and wireframe |
+| **Display mode** | `Z` | cycles the seven ways of drawing |
+| **Four views** | `⇧Q` | splits the viewport in four: the current view, top, front, side |
+| **Quad edges** | `⇧W` | in wireframe, erases the diagonals triangulation added |
+| **Show skeletons** | `B` | draws the bones of every rigged model over the scene |
+| **Pose mode** | `P` | clicking then picks the **bones** of a rig instead of objects |
 | **Frame selection** | `F` | brings the camera in so the object fills the view |
-| **Delete** | `Del` | removes the chosen object. `⌘Z` brings it back |
+| **Delete** | `Delete` | removes the chosen object. `⌘Z` brings it back |
 
 ### Assemble and duplicate
 
@@ -128,6 +218,12 @@ These keys are **held** rather than pressed: while you hold, the camera moves.
 > **Why two columns.** The studio listens to the **position** of the key on the keyboard, not the
 > letter printed on it. The four direction keys are therefore always the same square, top left:
 > `WASD` if your keyboard is American, `ZQSD` if it is French. There is nothing to set.
+>
+> **One exception: the keypad's Enter.** It is a position of its own, distinct from the main
+> Enter, but the studio reads it as that one. Both keys therefore do the same thing, and
+> remapping either moves both — you cannot tell them apart. The rest of the keypad keeps its own
+> positions: with Num Lock on or off those keys mean different things, and the studio cannot
+> guess which one you meant.
 
 Speed and boost are set in [settings](14-settings.md#workspaces).
 
@@ -139,7 +235,7 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 
 | Gesture | Effect |
 |---|---|
-| **Left click** | chooses the object under the cursor |
+| **Left click** | chooses the object under the cursor — or the nearest **bone**, in pose mode (`P`) |
 | **Right click held + move** | turns your head, on the spot |
 | **Wheel** | moves forward or back |
 | **Click a handle + drag** | applies the current tool |
@@ -164,7 +260,12 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 | Action | Key | What it does |
 |---|---|---|
 | **Split clip** | `S` | cuts in two at the playhead |
-| **Delete clip** | `Del` | removes the clip from the edit. The original file stays in the assets |
+| **Return window** | `F` | opens the edit in a window of its own, to put on a second screen |
+| **Delete clip** | `Delete` | removes the clip from the edit. The original file stays in the assets |
+
+**`F` serves three times, and clashes with nothing.** It **frames the selection** in the 3D view and
+arms **Crop** in the image. All three belong to different contexts, which are never listening at the
+same time.
 
 ### Zoom
 
@@ -184,6 +285,51 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 ---
 
 ## In the image
+
+### Arming a tool
+
+Every tool in the bar is a command: its key arms it, and remaps like the rest.
+
+| Key | Tool | | Key | Tool |
+|---|---|---|---|---|
+| `V` | Move | | `R` | Rectangle |
+| `H` | Hand | | `⇧R` | Line |
+| `K` | Scale | | `A` | Arrow |
+| `F` | Crop | | `O` | Ellipse |
+| `M` | Rectangular selection | | `P` | Brush |
+| `L` | Lasso | | `⇧P` | Pencil |
+| `T` | Text | | `E` | Eraser |
+| `G` | Fill the layer | | `I` | Eyedropper |
+
+**Four tools have no default key** — elliptical selection, polygon, star, selection eraser — and you can
+give them one in the settings.
+
+> **Line changed key.** It answered to `L`, which the Lasso already used in the same context; it
+> moved to `⇧R`, next to Rectangle, and the Arrow to `A`.
+
+### The size of the stroke
+
+| Action | Key | What it does |
+|---|---|---|
+| **Smaller brush** | `[` | narrows the diameter by one notch |
+| **Larger brush** | `]` | widens it by one notch |
+
+One diameter for three tools: the brush, the eraser and the shape stroke. The notch is a ratio,
+about ×1.4, never a fixed count of pixels.
+
+> **These two keys are found by position, not by symbol.** On a French keyboard the same two
+> places carry `)` and `^` — you press where an American keyboard would, whatever letter is
+> printed on the key.
+
+### Cropping
+
+These two keys act **only** while a crop frame is placed on the picture, and only in the tab in
+front. Everywhere else they keep their usual meaning.
+
+| Action | Key | What it does |
+|---|---|---|
+| **Apply the crop** | `⏎` | trims the document to the frame. `⌘Z` gives the frame back, not the pixels |
+| **Abandon the crop** | `⎋` | takes the frame away without trimming anything |
 
 ### Zoom and framing
 
@@ -227,15 +373,16 @@ key pressed by mistake has no business spending any.
 | **Extend** | has the model paint beyond the edges of the image |
 | **Cut out** | removes the background of the flattened image |
 | **Enlarge** | raises the definition of the flattened image |
-| **Vectorize** | turns the flattened image into paths |
+| **Vectorise** | turns the flattened image into paths |
 
 **None of them leaves on its own.** Each flattens the document, sends it, then **fills in the
-Generate panel's form** and shows it to you. You are the one who presses Generate, having seen
+Generation panel's form** and shows it to you. You are the one who presses Generate, having seen
 what is going and with which settings.
 
-> **Three of them cannot complete today** — Cut out, Enlarge, Vectorize. They look for a model in
-> a family no screen lets you choose. The Models panel opens, and nothing happens. See
-> [What does not exist yet](18-limits.md).
+**They live in the Image menu**, and nowhere else: with no default shortcut, that is the only
+door. Cut out, Enlarge and Vectorise each ask for a model of a family that has no workspace of its
+own; it is set in **Settings ▸ Generation**. Until one is set, the edit does not leave and opens
+the screen where you choose it.
 
 ### Exporting
 
@@ -256,6 +403,58 @@ You can give them one in [settings](14-settings.md).
 
 ---
 
+## In the sky
+
+The Skyboxes workspace answers the keyboard like the others.
+
+| Action | Key | What it does |
+|---|---|---|
+| **Change the view** | `V` | cycles through the four ways of looking at the sky: immersive, panoramic, cross, faces |
+| **Light probes** | `P` | shows or hides the witness spheres |
+| **Undo** | `⌘Z` | |
+| **Redo** | `⇧⌘Z` | |
+
+> **The probes are not a gadget.** A sky is judged by what it lights, not by its own picture: the
+> witness spheres show what your panorama does to a matte surface and to a mirror one.
+
+> **`V` cycles through all four views, and all four draw.** The three flat ones — Equirect, Cross
+> and 6 faces — turn the backdrop and the test objects off while they are in front, and the field
+> of view only affects the immersive one. See [The Skyboxes workspace](13-skyboxes-workspace.md).
+
+---
+
+## In the take editor
+
+The seventh context: the audio editor listens for undo alone.
+
+| Action | Key | What it does |
+|---|---|---|
+| **Undo** | `⌘Z` | drops the last step off the chain — a fade, a normalise, a crop |
+| **Redo** | `⇧⌘Z` | |
+
+> **Nothing is written until you apply.** Every tool appends a step to a chain replayed over the
+> decoded take, which is what makes undo free and A/B instant. See
+> [The Audio workspace](11-audio-workspace.md).
+
+The tools themselves — the fades, the normalise, the silence trim — have no key yet: they are
+taken from the bar, under the waveform.
+
+---
+
+## In the material
+
+The eighth context, and the shortest: the Textures workspace listens for undo alone.
+
+| Action | Key | What it does |
+|---|---|---|
+| **Undo** | `⌘Z` | takes back the last channel edit, or the last style applied |
+| **Redo** | `⇧⌘Z` | |
+
+> **An applied style is one undo.** `⌘Z` puts back exactly what was set before, in one go — see
+> [The Textures workspace](12-textures-workspace.md).
+
+---
+
 ## One important thing about ⌘Z
 
 **Each document has its own undo stack.**
@@ -266,6 +465,16 @@ image has not moved.
 
 > **"⌘Z seems to do nothing."** It is almost always this: the action you have in mind belongs to
 > another tab. Activate the tab, then undo.
+
+**While you are typing, `⌘Z` undoes your text.** Rename a layer or a track, make a typo, press
+`⌘Z`: the word you have just typed steps back, not the last brush stroke. The studio stands aside
+as long as the caret is in a text field, and takes over again the moment you leave it.
+
+The same holds for `⌘X`, `⌘C` and `⌘V`: in a field they work on the text; anywhere else, on what
+the workspace has selected.
+
+**No shortcut crosses a text field**: a command has to declare it to be heard there, and none
+does today.
 
 ---
 
@@ -326,44 +535,71 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 **The flying keys** (`W A S D Q E` and boost) are not on this screen. They are fixed for now. See
 [What does not exist yet](18-limits.md).
 
+**`Delete` and `Backspace` on the animation band** are not either, for the reason given above: they
+are bound to the band, not to a context.
+
 ---
 
 ## Crib sheet, all on one page
 
-| Key | Anywhere | 3D view | Edit | Image |
-|---|---|---|---|---|
-| `⌘N` | New project | | | |
-| `⌘O` | Open project | | | |
-| `⌘S` | Save | | | |
-| `⌘,` | Settings | | | |
-| `⌃⌘F` | Full screen | | | |
-| `⌘Z` | | Undo | Undo | Undo |
-| `⇧⌘Z` | | Redo | Redo | Redo |
-| `⌘G` | | Group | | |
-| `⌘D` | | Duplicate | | Deselect |
-| `⌘C` / `⌘X` / `⌘V` | | Copy / Cut / Paste | | |
-| `O` | | Projection | | |
-| `Z` | | Display | | |
-| `V` | | Select | | |
-| `G` | | Move | | |
-| `R` | | Rotate | | |
-| `S` | | Scale *(and back up)* | Split clip | |
-| `F` | | Frame selection | | |
-| `Del` | | Delete object | Delete clip | |
-| `W A S D` | | Fly | | |
-| `Q` / `E` | | Down / Up | | |
-| left `⇧` | | Boost | | |
-| `Space` | | | Play / Pause | |
-| `Home` / `End` | | | Start / End of edit | |
-| `⌘=` | | | Zoom in | Zoom in |
-| `⌘−` | | | Zoom out | Zoom out |
-| `⇧Z` | | | Fit to view | |
-| `⌘0` | | | | Fit to window |
-| `⌘1` | | | | Actual size |
-| `⌘R` | | | | Rulers |
-| `⌘;` | | | | Guides |
-| `⇧⌘;` | | | | Snap |
-| `⇧⌘E` | | | | Export the image |
+| Key | Anywhere | Bar | 3D view | Edit | Image | Sky | Audio | Material |
+|---|---|---|---|---|---|---|---|---|
+| `⌘N` | New project |  |  |  |  |  |  |  |
+| `⌘O` | Open project |  |  |  |  |  |  |  |
+| `⌘S` | Save |  |  |  |  |  |  |  |
+| `⇧⌘S` | Save as |  |  |  |  |  |  |  |
+| `⌘,` | Settings |  |  |  |  |  |  |  |
+| `⌘K` | Assistant |  |  |  |  |  |  |  |
+| `⌥D` | Dictate |  |  |  |  |  |  |  |
+| `⌃⌘F` | Full screen |  |  |  |  |  |  |  |
+| `⌘Z` |  |  | Undo | Undo | Undo | Undo | Undo | Undo |
+| `⇧⌘Z` |  |  | Redo | Redo | Redo | Redo | Redo | Redo |
+| `⌘G` |  |  | Group |  |  |  |  |  |
+| `⌘D` |  |  | Duplicate |  | Deselect |  |  |  |
+| `⌘C` / `⌘X` / `⌘V` |  |  | Copy / Cut / Paste |  |  |  |  |  |
+| `O` |  |  | Projection |  | Ellipse shape |  |  |  |
+| `Z` |  |  | Display mode |  |  |  |  |  |
+| `B` |  |  | Show skeletons |  |  |  |  |  |
+| `V` |  |  | Select |  | Move tool | Change the view |  |  |
+| `P` |  |  | Pose mode |  | Brush tool | Light probes |  |  |
+| `G` |  |  | Move |  | Paint bucket tool |  |  |  |
+| `R` |  |  | Rotate |  | Rectangle shape |  |  |  |
+| `S` |  |  | Scale *(and back up)* | Split clip |  |  |  |  |
+| `M` |  |  | Snap |  | Rectangular selection |  |  |  |
+| `L` |  |  | Local frame |  | Lasso |  |  |  |
+| `F` |  |  | Frame selection | Return window | Crop |  |  |  |
+| `H` |  |  |  |  | Hand tool |  |  |  |
+| `K` |  |  |  |  | Scale tool |  |  |  |
+| `A` |  |  |  |  | Arrow shape |  |  |  |
+| `T` |  |  |  |  | Text tool |  |  |  |
+| `I` |  |  |  |  | Eyedropper tool |  |  |  |
+| `E` |  |  |  |  | Eraser tool |  |  |  |
+| `⇧Q` |  |  | Four views |  |  |  |  |  |
+| `⇧W` |  |  | Quad edges |  |  |  |  |  |
+| `⇧R` |  |  |  |  | Line shape |  |  |  |
+| `⇧P` |  |  |  |  | Pencil tool |  |  |  |
+| `[` / `]` |  |  |  |  | Smaller / Larger brush |  |  |  |
+| `Delete` |  |  | Delete object | Delete clip |  |  |  |  |
+| `W A S D` |  |  | Fly |  |  |  |  |  |
+| `Q` / `E` |  |  | Down / Up |  |  |  |  |  |
+| left `⇧` |  |  | Boost |  |  |  |  |  |
+| `Space` |  |  |  | Play / Pause |  |  |  |  |
+| `Home` / `End` |  |  |  | Start / End of edit |  |  |  |  |
+| `⌘=` |  |  |  | Zoom in | Zoom in |  |  |  |
+| `⌘−` |  |  |  | Zoom out | Zoom out |  |  |  |
+| `⇧Z` |  |  |  | Fit to view |  |  |  |  |
+| `⌘L` |  |  |  | Unlink picture and sound |  |  |  |  |
+| `⌘0` |  |  |  |  | Fit to window |  |  |  |
+| `⌘1` |  |  |  |  | Actual size |  |  |  |
+| `⌘E` |  |  |  |  | Merge down |  |  |  |
+| `⌘R` |  |  |  |  | Rulers |  |  |  |
+| `⌘;` |  |  |  |  | Guides |  |  |  |
+| `⇧⌘;` |  |  |  |  | Snap |  |  |  |
+| `⇧⌘E` |  |  |  |  | Export the image |  |  |  |
+| `Enter` |  |  |  |  | Apply the crop |  |  |  |
+| `Esc` |  |  |  |  | Abandon the crop |  |  |  |
+| `⌥←` |  | Move left |  |  |  |  |  |  |
+| `⌥→` |  | Move right |  |  |  |  |  |  |
 
 ---
 

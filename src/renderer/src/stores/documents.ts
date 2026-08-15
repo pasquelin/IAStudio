@@ -4,6 +4,7 @@ import {
   type DocumentKind,
 } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { resolveLanguage } from '@shared/i18n'
 import i18next from 'i18next'
 import { create as createStore } from 'zustand'
 import { getBridge } from '@/services/bridge'
@@ -17,11 +18,63 @@ type DocumentsState = {
    * to know which document they are inspecting — a layer stack has to follow the active tab.
    */
   activeId: string | null
-  /** Reads the open project's folder and keeps the documents a layout still shows. */
-  refresh: () => Promise<void>
-  /** `null` when the workspace has no editable document kind yet. */
-  create: (workspace: WorkspaceId) => Promise<DocumentDescriptor | null>
+  /**
+   * The last document each section had in front. The tab strip holds every section at once, so
+   * choosing a section in the rail has to say WHICH of its tabs comes forward — and the one
+   * being worked in is the only answer a hand can predict.
+   *
+   * Session state: it is a trail through the tabs, and a trail through tabs that are no longer
+   * open is worth nothing at the next launch.
+   */
+  recent: Partial<Record<WorkspaceId, string>>
+  /**
+   * Everything the project folder holds, open or not — what the Explorer lists.
+   *
+   * Beside `documents` rather than derived from it: `documents` is what the window is showing,
+   * and a document closed and gone from every layout would vanish from the folder listing too,
+   * which is exactly the document one needs the Explorer to find.
+   */
+  stored: DocumentDescriptor[]
+  /**
+   * Re-reads the folder into `stored`, and nothing else.
+   *
+   * Separate from `refresh` on purpose: a panel that wants a listing must not also settle which
+   * tabs are open. `create` posts a descriptor without writing a file — deliberately, so a tab
+   * opened and never typed in leaves nothing behind — and a reconciliation triggered by opening
+   * the Explorer would evict exactly that document while its tab is still on screen.
+   *
+   * `after: 'own-write'` for a caller that has just written or deleted a file: the listing this
+   * shares otherwise may have started BEFORE that write, and would answer without it.
+   */
+  relist: (after?: 'own-write') => Promise<void>
+  /**
+   * Reads the open project's folder and settles both halves: what exists, and which of those a
+   * layout still shows. For a change of project — where dropping the documents of the previous
+   * one is the whole point.
+   *
+   * Answers whether the folder was read at all. An empty centre is the honest answer to a
+   * folder that went away, but it is NOT an answer about which tabs deserve to survive: only a
+   * listing that came back says a document is nowhere.
+   */
+  refresh: () => Promise<boolean>
+  /**
+   * `null` when the workspace has no editable document kind yet.
+   *
+   * `of` is what opening an asset passes: the two fields travel together because a tab named
+   * after an asset it is not linked to would be a title that lies. Without it the document is
+   * numbered, which is what the rail's plus button and the home want.
+   */
+  create: (
+    workspace: WorkspaceId,
+    of?: { title: string; sourceAssetId: string },
+  ) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
+  /**
+   * Takes in a document the folder holds but no tab shows yet — what the Explorer hands over
+   * when one of its rows is opened. Idempotent, and it never overwrites: the open descriptor is
+   * the one the tab has been renaming, and the listing it came from is a snapshot.
+   */
+  adopt: (document: DocumentDescriptor) => void
   close: (id: string) => void
 }
 
@@ -34,6 +87,49 @@ export type DocumentsSlice = Pick<DocumentsState, 'documents' | 'activeId'>
 export function activeIdOfKind(state: DocumentsSlice, kind: DocumentKind): string | null {
   const id = state.activeId
   return id !== null && state.documents[id]?.kind === kind ? id : null
+}
+
+/**
+ * A document of a kind, preferring the one in front.
+ *
+ * What tells "a tab of this kind is open somewhere" from `activeIdOfKind`'s "the tab in front is
+ * of this kind" — the difference between a gesture that crosses workspaces and one that only
+ * works on the tab already on screen.
+ */
+export function documentOfKind(
+  state: DocumentsSlice,
+  kind: DocumentKind,
+): DocumentDescriptor | null {
+  const front = state.activeId !== null ? state.documents[state.activeId] : undefined
+  if (front?.kind === kind) return front
+
+  return Object.values(state.documents).find(document => document.kind === kind) ?? null
+}
+
+/**
+ * The document already editing an asset, open or merely on disk, or `null` when none is.
+ *
+ * What keeps a double-click idempotent: opening the same asset twice must come back to its tab
+ * rather than open a second one onto the same file — two tabs of one document are two histories
+ * of it, and the second save writes over the first.
+ *
+ * `stored` as well as `documents`, and that is the half that matters most: a document saved for
+ * an asset and then CLOSED lives only in the folder listing, and reading the open tabs alone
+ * would make the gesture build a second document beside the work it was meant to reopen.
+ */
+export function documentForAsset(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  assetId: string,
+  /**
+   * Narrows to documents of one kind. One asset can legitimately be edited by two of them — a
+   * texture is a channel in the Textures space and pixels in the Images one — and a gesture
+   * asking for the second must not be handed the first.
+   */
+  kind?: DocumentKind,
+): DocumentDescriptor | null {
+  const isIt = (document: DocumentDescriptor): boolean =>
+    document.sourceAssetId === assetId && (kind === undefined || document.kind === kind)
+  return Object.values(state.documents).find(isIt) ?? state.stored.find(isIt) ?? null
 }
 
 /**
@@ -51,9 +147,20 @@ export const activeImageId = (state: DocumentsSlice): string | null =>
 export const activeSequenceId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'sequence')
 
+/**
+ * The take in front, as a selector. Same reason again — and it names the SOUND MONTAGE the
+ * timeline shows for it, not the waveform in the centre: an audio document carries both.
+ */
+export const activeAudioId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'audio')
+
 /** The sky in front, as a selector. Same reason again, for the skybox panel. */
 export const activeSkyboxId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'skybox')
+
+/** The texture in front, as a selector. Same reason again, for the material inspector. */
+export const activeTextureId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'texture')
 
 export function documentsIn(
   state: Pick<DocumentsState, 'documents'>,
@@ -63,18 +170,31 @@ export function documentsIn(
 }
 
 /**
- * The documents some layout still shows, across every workspace.
+ * Which tab choosing a section brings forward, or `null` when that section has none open.
  *
- * A tab cannot say this for itself: switching workspace unmounts Dockview, which removes every
- * panel of the workspace being left — reading that would drop the documents the user is coming
- * back to. The persisted layouts are the reliable record of what is open.
+ * The remembered one when it is still open, and any of the section's tabs otherwise: `recent`
+ * is never cleaned when a tab closes, deliberately — a trail that has to be swept on every
+ * close is a second bookkeeping to get wrong, and a stale id is answered here in one read.
  */
-export function panelIds(layouts: Record<string, { panels?: object } | undefined>): Set<string> {
-  const shown = new Set<string>()
-  for (const layout of Object.values(layouts)) {
-    for (const id of Object.keys(layout?.panels ?? {})) shown.add(id)
-  }
-  return shown
+export function frontDocumentIn(
+  state: Pick<DocumentsState, 'documents' | 'recent'>,
+  workspace: WorkspaceId,
+): string | null {
+  const remembered = state.recent[workspace]
+  if (remembered !== undefined && state.documents[remembered]) return remembered
+
+  return documentsIn(state, workspace)[0]?.id ?? null
+}
+
+/**
+ * The documents the layout still shows.
+ *
+ * Read off the persisted arrangement rather than off Dockview: the centre is unmounted whenever
+ * the home covers it, and asking a torn-down api which panels it holds answers none — which
+ * would drop every document the user is about to come back to.
+ */
+export function panelIds(layout: { panels?: object } | null): Set<string> {
+  return new Set(Object.keys(layout?.panels ?? {}))
 }
 
 /**
@@ -85,59 +205,89 @@ export function panelIds(layouts: Record<string, { panels?: object } | undefined
  * pointing at files that are not there, or worse, at a file of the same id in another project.
  *
  * So the folder says which documents exist and what they are called; the persisted layout says
- * which of them are open. Loading is `load` plus `pruneDocuments`, in that order.
+ * which of them are open — `refresh` reads both and keeps the intersection.
  */
 export const useDocuments = createStore<DocumentsState>()((set, get) => ({
   documents: {},
+  stored: [],
   activeId: null,
+  recent: {},
 
-  // Guarded: Dockview announces the active panel again on each workspace switch — usually the
-  // same value, and every `set` wakes every subscriber.
+  // Guarded: Dockview announces the active panel again whenever the centre remounts — usually
+  // the same value, and every `set` wakes every subscriber.
   activate: id => {
-    if (get().activeId !== id) set({ activeId: id })
+    const state = get()
+    if (state.activeId === id) return
+
+    const workspace = id === null ? undefined : state.documents[id]?.workspace
+    set({
+      activeId: id,
+      ...(workspace && id ? { recent: { ...state.recent, [workspace]: id } } : {}),
+    })
+  },
+
+  relist: async after => {
+    // Callers that only want the folder share the listing already in flight rather than opening
+    // a second one: three surfaces ask on the same paint — the home's shelf, its tree, and the
+    // project that just opened — and each answer costs a round trip and a folder walk.
+    if (listing && after !== 'own-write') {
+      await listing
+      return
+    }
+
+    const mine = ++generations.relist
+    listing = listed()
+
+    try {
+      const found = await listing
+      // A second project opened while the first was still listing: the last answer to arrive is
+      // not necessarily the one that was asked for last.
+      if (mine === generations.relist) set({ stored: sorted(found ?? []) })
+    } finally {
+      listing = null
+    }
   },
 
   refresh: async () => {
-    const mine = ++generation
+    const mine = ++generations.refresh
     const found = await listed()
+    if (mine !== generations.refresh) return false
 
-    // A second project opened while the first was still listing: the last answer to arrive is
-    // not necessarily the one that was asked for last.
-    if (mine !== generation) return
-
-    const shown = panelIds(useLayouts.getState().layouts)
+    const inFolder = found ?? []
+    const shown = panelIds(useLayouts.getState().layout)
     // One `set` for both halves: the folder says which documents exist, the layout says which
     // are open, and between two writes every tab would paint and unpaint.
     const documents = Object.fromEntries(
-      found.filter(document => shown.has(document.id)).map(document => [document.id, document]),
+      inFolder.filter(document => shown.has(document.id)).map(document => [document.id, document]),
     )
 
     set(state => ({
       documents,
+      stored: sorted(inFolder),
       // Kept when the tab survived the load: Dockview announces the active panel on mount, and
       // that happens before this listing comes back — clearing it here would leave every tool
       // window looking at nothing while a document is plainly open.
       activeId: state.activeId && documents[state.activeId] ? state.activeId : null,
     }))
+
+    return found !== null
   },
 
-  create: async workspace => {
+  create: async (workspace, of) => {
     const kind = kindForWorkspace(workspace)
     if (!kind) return null
 
-    // Numbered against the folder as much as against the open tabs: a document saved and then
-    // closed still holds its name, and counting only what is open hands that name out twice.
-    const stored = await listed()
-    const taken = new Set([
-      ...stored.filter(document => document.workspace === workspace).map(document => document.id),
-      ...documentsIn(get(), workspace).map(document => document.id),
-    ])
+    // The listing FIRST, so that reading the store and writing to it happen in one synchronous
+    // run. An await between the two makes concurrent creations blind to each other: both read a
+    // store neither has written to yet, and two tabs open called « Sans titre 1 ».
+    const stored = of ? [] : ((await listed()) ?? [])
 
     const document: DocumentDescriptor = {
       id: newId(),
       kind,
       workspace,
-      title: i18next.t('documents.untitled', { n: taken.size + 1 }),
+      title: of ? of.title : untitled(stored, get(), workspace),
+      ...(of ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 
     // Nothing is written yet, and nothing should be: a document appears in the folder when it
@@ -147,6 +297,13 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     return document
   },
 
+  adopt: document =>
+    set(state =>
+      state.documents[document.id]
+        ? state
+        : { documents: { ...state.documents, [document.id]: document } },
+    ),
+
   close: id =>
     set(state => {
       const remaining = { ...state.documents }
@@ -155,18 +312,81 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     }),
 }))
 
-/** Bumped per refresh, so a listing that comes back late cannot install itself. */
-let generation = 0
+/**
+ * Bumped per listing, so one that comes back late cannot install itself — and one PER QUESTION.
+ *
+ * A shared counter looked harmless and was not: the Explorer relists from a mount effect while
+ * `followProject` is still awaiting its own read, and the relist would then make the refresh
+ * abandon — leaving every open tab without its descriptor, which is the very reconciliation
+ * `refresh` exists for.
+ */
+const generations = { relist: 0, refresh: 0 }
+
+/** The listing `relist` has in flight, shared by whoever asks while it is still travelling. */
+let listing: Promise<DocumentDescriptor[] | null> | null = null
 
 /**
- * What the project folder holds, or nothing at all: no project open, or a folder that went away
- * while one was. An empty centre is the honest answer to both, and neither is worth a throw
- * nobody is placed to catch.
+ * The next free name for a blank document — « Sans titre 3 ».
+ *
+ * Numbered against the folder as much as against the open tabs: a document saved and then closed
+ * still holds its name, and counting only what is open hands that name out twice.
+ *
+ * Only the BLANK ones count. A document opened for an asset carries the asset's name and skips
+ * this entirely — counting it would make the first untitled document of a space « Sans titre 4 »
+ * because three pictures had been opened before it.
+ *
+ * Synchronous, and the listing is handed in rather than read here: its caller has to write to the
+ * store in the same run it reads it, and an await inside would put a gap between the two.
  */
-async function listed(): Promise<DocumentDescriptor[]> {
+function untitled(
+  stored: readonly DocumentDescriptor[],
+  state: Pick<DocumentsState, 'documents'>,
+  workspace: WorkspaceId,
+): string {
+  const blank = (document: DocumentDescriptor): boolean =>
+    document.workspace === workspace && document.sourceAssetId === undefined
+
+  const taken = new Set([
+    ...stored.filter(blank).map(document => document.id),
+    ...documentsIn(state, workspace)
+      .filter(blank)
+      .map(document => document.id),
+  ])
+
+  return i18next.t('documents.untitled', { n: taken.size + 1 })
+}
+
+/**
+ * Sorted by title rather than by whatever order the folder was read in: a listing that
+ * reshuffles between two reads is a list nobody can point at.
+ *
+ * In the reader's language, and not in the machine's: left bare, `localeCompare` answers in the
+ * locale the OS was installed in, so the same project listed two orders on two desks — measured,
+ * a Swedish one files `Ärger` past `Zoo`.
+ *
+ * Through `resolveLanguage` rather than on `i18next.language` raw, and that is not belt and braces:
+ * the field is `undefined` until `initI18n` resolves, and it reads `pseudo` whenever the DEV
+ * pseudo-locale flag is set. Measured, `new Intl.Collator(undefined)` and `new Intl.Collator
+ * ('pseudo')` both resolve to `en-US` — handing the sort straight back to the machine, which is
+ * the whole defect this call was fixed for.
+ */
+function sorted(found: readonly DocumentDescriptor[]): DocumentDescriptor[] {
+  const language = resolveLanguage(i18next.language)
+  return [...found].sort((left, right) => left.title.localeCompare(right.title, language))
+}
+
+/**
+ * What the project folder holds, an empty list when no project is open, and `null` when the
+ * read itself failed — a folder that went away while it was open.
+ *
+ * The failure is told apart from the empty answer rather than levelled to it: both leave an
+ * empty centre, which is honest, but only the empty answer means a document is not there.
+ * Neither is worth a throw nobody is placed to catch.
+ */
+async function listed(): Promise<DocumentDescriptor[] | null> {
   try {
     return (await getBridge()?.documents.list()) ?? []
   } catch {
-    return []
+    return null
   }
 }

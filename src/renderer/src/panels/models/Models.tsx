@@ -1,14 +1,17 @@
 import { mdiCubeScan } from '@mdi/js'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MODEL_IDS_BATCH_LIMIT, type ModelPage, type ModelSummary } from '@shared/domain/model'
 import { failureKeyOf } from '@/services/failure-message'
+import { usePlanAccess, usePlanRefusal } from '@/helpers/plan-access'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { cn } from '@/helpers/cn'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { isFiltered } from '@/helpers/collection-state'
+import { useModelForFamily } from '@/helpers/model-for-family'
 import { MediaTile } from '@/design/MediaTile'
 import { Thumbnail } from '@/design/Thumbnail'
 import { Row } from '@/design/Row'
@@ -96,19 +99,29 @@ function useLazyPreviews() {
 export function Models() {
   const { t } = useTranslation()
   const workspace = useLayouts(state => state.activeWorkspace)
-  const family = workspaceById(workspace).family
+  const { family } = workspaceById(workspace)
 
   const collection = useModels(state => state.collection)
   const setCollection = useModels(state => state.setCollection)
-  const selectedId = useModels(state => state.selected[family] ?? null)
+  // Through the same answer the rail and the generator read. Reading the session choice alone
+  // left this panel saying "no model chosen" about the very model the generator was running.
+  const selectedId = useModelForFamily(family)
   const select = useModels(state => state.select)
   const authenticated = useSettings(state => state.auth.authenticated)
+  const plan = usePlanAccess()
+
+  const refusalFor = usePlanRefusal(plan)
 
   const search = useDebounced(collection.search, SEARCH_DELAY_MS)
-  // No memo: react-query hashes the key structurally, so a fresh object costs nothing.
+  // No memo, and only for this one: react-query hashes the key structurally, so a fresh object
+  // costs nothing, and `queryFrom` translates nothing.
   const query = queryFrom(collection, family, search)
-  const facets = facetsFor(family, t)
-  const sorts = sortOptions(t)
+
+  // Memoised, unlike the query above: building the facets translates up to twenty-five labels
+  // through i18next — measured at 376 µs, against 1 µs for the query — and this panel re-renders
+  // on every keystroke in its search field.
+  const facets = useMemo(() => facetsFor(family, t), [family, t])
+  const sorts = useMemo(() => sortOptions(t), [t])
 
   const catalogue = useInfiniteQuery<ModelPage>({
     queryKey: ['models', query],
@@ -201,15 +214,31 @@ export function Models() {
 
       <div className="min-h-0 flex-1">
         <Collection
+          label={t('panels.models')}
           items={items}
           state={collection}
           selectedIds={selectedId ? [selectedId] : []}
-          onSelect={model => select(family, model.id)}
+          onSelect={model => select(model.family, model.id)}
           onReachEnd={loadMore}
           onVisible={onVisible}
+          // The same answer greys the cell and explains it, so a row cannot end up dimmed with
+          // nothing to say why.
+          isDisabled={model => refusalFor(model.requiredPlanLevel) !== undefined}
           rowHeight={ROW_HEIGHT}
-          renderCard={model => <ModelCard model={model} picture={pictureOf(model)} />}
-          renderRow={model => <ModelRow model={model} picture={pictureOf(model)} />}
+          renderCard={model => (
+            <ModelCard
+              model={model}
+              picture={pictureOf(model)}
+              refusal={refusalFor(model.requiredPlanLevel)}
+            />
+          )}
+          renderRow={model => (
+            <ModelRow
+              model={model}
+              picture={pictureOf(model)}
+              refusal={refusalFor(model.requiredPlanLevel)}
+            />
+          )}
           empty={
             <EmptyState
               icon={mdiCubeScan}
@@ -218,7 +247,10 @@ export function Models() {
                   ? t('collection.loading')
                   : // The debounced search, not the typed one: for the 250 ms in between, the
                     // filter blamed for the empty panel has not been applied yet.
-                    isFiltered({ ...collection, search })
+                    isFiltered(
+                        { ...collection, search },
+                        facets.map(facet => facet.key),
+                      )
                     ? t('collection.noMatch')
                     : t('models.none')
               }
@@ -226,7 +258,7 @@ export function Models() {
           }
           footer={
             catalogue.isFetchingNextPage ? (
-              <p className="text-muted py-2 text-center text-[11px]">{t('collection.loading')}</p>
+              <p className="text-muted text-tiny py-2 text-center">{t('collection.loading')}</p>
             ) : null
           }
         />
@@ -271,43 +303,60 @@ function SelectedModel({ model, picture }: { model: ModelSummary | null; picture
   )
 }
 
+/** The tile's corner label: a standing, or the reason the model cannot be picked. */
+const BADGE = cn(
+  'bg-chassis/75 text-text absolute top-1 right-1 max-w-[calc(100%-0.5rem)]',
+  'truncate rounded-(--radius-sc-sm) px-1 py-px text-micro leading-tight',
+)
+
+/**
+ * The tile's corner label. The refusal outranks "featured": a highlighted model the plan will
+ * not run is first of all one that cannot be picked, and the tile has room for one label.
+ */
+function badgeFor(model: ModelSummary, refusal: string | undefined, t: TFunction): ReactNode {
+  // Left, not right: the badge already sits against the tile's right edge, and this panel is
+  // docked to a side — a tooltip opening outward would leave the window. HINT and not TIP:
+  // the badge's own words are on screen, so this explains them instead of repeating them.
+  if (refusal) {
+    return (
+      <span {...HINT_LEFT(refusal)} className={BADGE}>
+        {t('models.planLocked')}
+      </span>
+    )
+  }
+
+  if (!model.featured) return null
+
+  return (
+    <span title={t('models.featured')} className={BADGE}>
+      {t('models.featured')}
+    </span>
+  )
+}
+
 const ModelCard = memo(function ModelCard({
   model,
   picture,
+  refusal,
 }: {
   model: ModelSummary
   picture?: string
+  refusal?: string
 }) {
   const { t } = useTranslation()
 
-  return (
-    <MediaTile
-      url={picture}
-      caption={model.name}
-      badge={
-        model.featured && (
-          <span
-            title={t('models.featured')}
-            className={cn(
-              'bg-chassis/75 text-text absolute top-1 right-1 max-w-[calc(100%-0.5rem)]',
-              'truncate rounded-(--radius-sc-sm) px-1 py-px text-[9px] leading-tight',
-            )}
-          >
-            {t('models.featured')}
-          </span>
-        )
-      }
-    />
-  )
+  return <MediaTile url={picture} caption={model.name} badge={badgeFor(model, refusal, t)} />
 })
 
 /** Memoized like the card: a scroll re-renders every mounted row on each frame. */
 const ModelRow = memo(function ModelRow({
   model,
   picture,
+  refusal,
 }: {
   model: ModelSummary
   picture?: string
+  refusal?: string
 }) {
   const { t } = useTranslation()
 
@@ -315,7 +364,10 @@ const ModelRow = memo(function ModelRow({
     <Row
       media={<Thumbnail url={picture} className="size-8" />}
       title={model.name}
-      subtitle={subtitleOf(model, t)}
+      // The subtitle says what the model IS; the refusal says why it is out of reach, and it
+      // replaces the standing rather than crowding a 10px line with both.
+      subtitle={refusal ? t('models.planLocked') : subtitleOf(model, t)}
+      hint={refusal}
     />
   )
 })

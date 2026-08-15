@@ -1,0 +1,365 @@
+{
+  "commands": {
+    "projectNew": {
+      "title": "Nouveau projet",
+      "help": "Crée un projet vide et l’ouvre. Un projet est le dossier qui contient tout ce que vous fabriquez : les images, les vidéos, les sons et la façon dont ils sont rangés."
+    },
+    "projectOpen": {
+      "title": "Ouvrir un projet",
+      "help": "Choisit un projet déjà existant sur votre disque et l’ouvre à la place de celui en cours. Le projet ouvert est enregistré au fur et à mesure, il n’y a rien à enregistrer avant."
+    },
+    "documentSaveAs": {
+      "title": "Enregistrer sous",
+      "help": "Écrit une copie de l’asset à côté de l’original et continue sur elle. L’asset ouvert reste tel qu’il était au dernier enregistrement."
+    },
+    "documentSave": {
+      "title": "Enregistrer le document",
+      "help": "Écrit le document en avant dans le projet. Une scène 3D vit dans la fenêtre tant qu’elle n’est pas enregistrée : l’onglet porte un point tant que ce qui est à l’écran n’est pas ce qui est sur le disque."
+    },
+    "layoutReset": {
+      "title": "Réinitialiser la disposition",
+      "help": "Remet les panneaux là où ils étaient au départ. Utile quand on a déplacé les fenêtres dans tous les sens et qu’on ne s’y retrouve plus. Votre travail n’est pas touché."
+    },
+    "appSettings": {
+      "title": "Réglages",
+      "help": "Ouvre la fenêtre des réglages, celle-ci même : la langue, les couleurs, le compte, les raccourcis et tout ce qui se règle."
+    },
+    "appAssistant": {
+      "title": "Assistant",
+      "help": "Ouvre la fenêtre où l’on dit ce que l’on veut faire, à la voix ou au clavier. L’assistant exécute lui-même ce qu’il comprend, et demande votre accord avant tout ce qui coûte."
+    },
+    "appDictate": {
+      "title": "Dicter",
+      "help": "Écoute le micro et écrit ce que vous dites à l’endroit du curseur, dans le champ où vous êtes. Se maintient enfoncée par défaut : on parle, on relâche, le texte s’écrit."
+    },
+    "windowFullScreen": {
+      "title": "Plein écran",
+      "help": "Fait occuper tout l’écran à la fenêtre, sans barre ni bordure, pour travailler sans rien autour."
+    },
+    "spacesMoveLeft": {
+      "title": "Déplacer l’espace vers la gauche",
+      "help": "Décale d’un cran vers la gauche l’espace sur lequel se trouve le focus, dans la barre du haut. L’ordre choisi est retenu d’une session à l’autre."
+    },
+    "spacesMoveRight": {
+      "title": "Déplacer l’espace vers la droite",
+      "help": "Décale d’un cran vers la droite l’espace sur lequel se trouve le focus, dans la barre du haut. L’ordre choisi est retenu d’une session à l’autre."
+    },
+    "sceneSelect": {
+      "title": "Sélectionner",
+      "help": "L’outil de base : cliquer sur un objet de la scène pour le choisir, sans rien lui faire. C’est celui sur lequel on revient entre deux manipulations."
+    },
+    "sceneTranslate": {
+      "title": "Déplacer",
+      "help": "Fait glisser l’objet choisi d’un endroit à un autre, en tirant sur les flèches de couleur — une par direction."
+    },
+    "sceneRotate": {
+      "title": "Pivoter",
+      "help": "Fait tourner l’objet choisi sur lui-même, en tirant sur les cercles de couleur — un par axe."
+    },
+    "sceneScale": {
+      "title": "Redimensionner",
+      "help": "Agrandit ou rétrécit l’objet choisi, en tirant sur les poignées. Maintenir la touche Maj garde ses proportions."
+    },
+    "sceneFrame": {
+      "title": "Cadrer la sélection",
+      "help": "Rapproche la caméra de l’objet choisi pour qu’il remplisse la vue. Pratique quand on s’est perdu ou qu’un objet est minuscule."
+    },
+    "sceneSnap": {
+      "title": "Magnétisme",
+      "help": "Fait avancer les poignées par pas réguliers au lieu de les laisser libres. Pratique pour poser des objets bien alignés. La finesse des pas se règle dans les réglages de l’espace 3D."
+    },
+    "sceneSpace": {
+      "title": "Repère local",
+      "help": "Aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde. Sur un objet tourné, c’est ce qui permet de le déplacer « vers son avant » plutôt que vers le nord."
+    },
+    "sceneProjection": {
+      "title": "Projection",
+      "help": "Bascule entre la perspective, où les fuyantes convergent, et la projection orthographique, où les parallèles restent parallèles. C’est ce qui permet de juger un alignement à l’œil."
+    },
+    "sceneQuad": {
+      "title": "Quatre vues",
+      "help": "Partage le viewport en quatre — dessus, face et profil autour de la vue en cours. Chaque quart s’oriente à la souris ; la vue en cours garde les manipulateurs."
+    },
+    "sceneQuadEdges": {
+      "title": "Arêtes en quads",
+      "help": "Redessine le filaire sans les diagonales que la triangulation a ajoutées. Un fichier GLB ne contient jamais de quads : c’est une reconstruction par angle, fidèle sauf sur les surfaces très courbées."
+    },
+    "sceneDisplay": {
+      "title": "Mode de rendu",
+      "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."
+    },
+    "sceneGroup": {
+      "title": "Grouper",
+      "help": "Range les objets sélectionnés sous un même groupe. Déplacer le groupe les déplace tous, et ⌘Z défait le rangement."
+    },
+    "sceneDuplicate": {
+      "title": "Dupliquer",
+      "help": "Pose une copie de ce qui est sélectionné, sous le même parent et exactement au même endroit, puis la sélectionne. Un groupe se duplique entier, avec tout ce qui pend dessous."
+    },
+    "sceneCopy": {
+      "title": "Copier",
+      "help": "Retient ce qui est sélectionné pour le coller ensuite, ici ou dans une autre scène. Ce presse-papiers est celui du studio : il ne touche pas à celui du système."
+    },
+    "sceneCut": {
+      "title": "Couper",
+      "help": "Retient ce qui est sélectionné puis le retire de la scène. ⌘Z le fait revenir."
+    },
+    "scenePaste": {
+      "title": "Coller",
+      "help": "Pose ce qui a été copié dans la scène en cours, et le sélectionne. Coller deux fois pose deux copies distinctes."
+    },
+    "sceneDelete": {
+      "title": "Supprimer",
+      "help": "Retire de la scène tout ce qui est sélectionné. Rien n’est perdu pour de bon : ⌘Z le fait revenir."
+    },
+    "undo": {
+      "title": "Annuler",
+      "help": "Défait la dernière chose que vous avez faite dans ce document. Chaque document a sa propre pile : annuler agit sur l’onglet en cours, pas sur les autres."
+    },
+    "redo": {
+      "title": "Rétablir",
+      "help": "Refait ce que vous venez d’annuler. Utile quand on annule une fois de trop."
+    },
+    "sequencePlayPause": {
+      "title": "Lire / Pause",
+      "help": "Lance la lecture du montage, ou l’arrête là où elle en est. Relancer repart d’où l’on s’était arrêté."
+    },
+    "sequenceMirror": {
+      "title": "Fenêtre de retour",
+      "help": "Ouvre le montage dans une fenêtre à part, à poser sur un second écran. Elle suit le studio image par image, sans le son, et se ferme comme une fenêtre ordinaire."
+    },
+    "sequenceSplit": {
+      "title": "Couper le clip",
+      "help": "Coupe le clip en deux à l’endroit où se trouve la tête de lecture, pour pouvoir traiter les deux morceaux séparément."
+    },
+    "sequenceDelete": {
+      "title": "Supprimer le clip",
+      "help": "Retire du montage le clip choisi. Le fichier d’origine, lui, reste dans vos assets."
+    },
+    "sequenceUnlink": {
+      "title": "Délier l’image et le son",
+      "help": "Sépare les deux clips d’une même prise. Tant qu’ils sont liés, déplacer, couper ou supprimer l’un fait la même chose à l’autre."
+    },
+    "sequenceZoomIn": {
+      "title": "Zoomer",
+      "help": "Étale le montage pour voir le détail : les clips deviennent plus larges et on vise plus précisément."
+    },
+    "sequenceZoomOut": {
+      "title": "Dézoomer",
+      "help": "Resserre le montage pour en voir davantage d’un coup, quitte à perdre le détail."
+    },
+    "sequenceFit": {
+      "title": "Tout afficher",
+      "help": "Ajuste le zoom pour que le montage entier tienne à l’écran, d’un bout à l’autre."
+    },
+    "sequenceStart": {
+      "title": "Aller au début",
+      "help": "Ramène la tête de lecture tout au début du montage, sans rien déplacer d’autre."
+    },
+    "sequenceEnd": {
+      "title": "Aller à la fin",
+      "help": "Envoie la tête de lecture tout à la fin du montage, après le dernier clip."
+    },
+    "canvasZoomIn": {
+      "title": "Zoom avant",
+      "help": "Agrandit la vue d’un cran, autour du centre de ce qui est visible. L’image n’est pas touchée, seulement la façon de la regarder."
+    },
+    "canvasZoomOut": {
+      "title": "Zoom arrière",
+      "help": "Réduit la vue d’un cran pour reprendre du recul sur l’ensemble de l’image."
+    },
+    "canvasZoomFit": {
+      "title": "Ajuster à la fenêtre",
+      "help": "Cadre l’image entière dans le panneau, avec une marge, et sans jamais l’agrandir au-delà de sa taille réelle."
+    },
+    "canvasZoomActual": {
+      "title": "Taille réelle",
+      "help": "Un pixel de l’image pour un pixel d’écran : la seule échelle où l’on juge la netteté."
+    },
+    "canvasRulers": {
+      "title": "Règles",
+      "help": "Affiche ou masque les deux règles graduées, en haut et à gauche. C’est d’elles qu’on tire les repères."
+    },
+    "canvasGuides": {
+      "title": "Repères",
+      "help": "Affiche ou masque les repères posés sur l’image. Les masquer ne les efface pas."
+    },
+    "canvasClearGuides": {
+      "title": "Effacer les repères",
+      "help": "Retire tous les repères de l’image. Annulable, comme toute autre modification."
+    },
+    "canvasSnap": {
+      "title": "Magnétisme",
+      "help": "Fait coller ce qu’on déplace aux repères, aux bords de l’image et à son centre, à quelques pixels près."
+    },
+    "canvasDeselect": {
+      "title": "Désélectionner",
+      "help": "Abandonne la région sélectionnée : le pinceau retrouve tout le calque."
+    },
+    "canvasCropApply": {
+      "title": "Appliquer le recadrage",
+      "help": "Rogne le document au cadre posé. ⌘Z rend le cadre, pas les pixels retirés."
+    },
+    "canvasCropCancel": {
+      "title": "Abandonner le recadrage",
+      "help": "Retire le cadre de recadrage sans rien rogner du tout."
+    },
+    "canvasMaskFromSelection": {
+      "title": "Faire un masque de la sélection",
+      "help": "Masque le calque actif hors de la région sélectionnée."
+    },
+    "canvasRegenerate": {
+      "title": "Régénérer la zone",
+      "help": "Demande au modèle de repeindre la région masquée du calque actif."
+    },
+    "canvasCutout": {
+      "title": "Détourer",
+      "help": "Retire l’arrière-plan de l’image aplatie avec le modèle par défaut."
+    },
+    "canvasEnlarge": {
+      "title": "Agrandir",
+      "help": "Augmente la définition de l’image aplatie avec le modèle par défaut."
+    },
+    "canvasVectorize": {
+      "title": "Vectoriser",
+      "help": "Convertit l’image aplatie en tracés avec le modèle par défaut."
+    },
+    "canvasExtend": {
+      "title": "Étendre",
+      "help": "Demande au modèle de peindre au-delà des bords de l’image aplatie."
+    },
+    "canvasMergeDown": {
+      "title": "Fusionner vers le bas",
+      "help": "Réunit le calque actif et celui juste en dessous en un seul, qui garde le nom du dessous."
+    },
+    "canvasFlatten": {
+      "title": "Aplatir l’image",
+      "help": "Réduit toute la pile à un seul calque : les calques masqués sont perdus, pas fusionnés.",
+      "layerName": "Arrière-plan"
+    },
+    "canvasFlipHorizontal": {
+      "title": "Miroir horizontal",
+      "help": "Retourne tout le document de gauche à droite, calques compris."
+    },
+    "canvasFlipVertical": {
+      "title": "Miroir vertical",
+      "help": "Retourne tout le document de haut en bas, calques compris."
+    },
+    "canvasRotateCw": {
+      "title": "Rotation horaire",
+      "help": "Pivote le document d’un quart de tour vers la droite : le cadre pivote avec lui."
+    },
+    "canvasRotateCcw": {
+      "title": "Rotation antihoraire",
+      "help": "Pivote le document d’un quart de tour vers la gauche : le cadre pivote avec lui."
+    },
+    "canvasExport": {
+      "title": "Exporter l’image",
+      "help": "Écrit le document aplati sur le disque, au format PNG."
+    },
+    "skyboxView": {
+      "title": "Changer de vue",
+      "help": "Fait défiler les quatre façons de regarder le ciel : immersive, panoramique, croix, faces."
+    },
+    "skyboxProbes": {
+      "title": "Sondes de lumière",
+      "help": "Montre ou cache les sphères témoins. Un ciel se juge à ce qu’il éclaire, pas à sa propre image."
+    },
+    "canvasToolMove": {
+      "title": "Outil Déplacement",
+      "help": "Arme le pointeur : un glissement déplace le calque actif, et ses poignées le redimensionnent ou le font tourner."
+    },
+    "canvasToolHand": {
+      "title": "Outil Main",
+      "help": "Arme la main : un glissement fait défiler la vue sans rien toucher au document. La barre d’espace fait la même chose sans changer d’outil."
+    },
+    "canvasToolScale": {
+      "title": "Outil Échelle",
+      "help": "Arme la mise à l’échelle : les poignées du calque actif le redimensionnent, et MAJ conserve ses proportions."
+    },
+    "canvasToolCrop": {
+      "title": "Outil Recadrage",
+      "help": "Arme le cadre de recadrage. Poser un cadre, puis ⏎ pour rogner ou ⎋ pour abandonner."
+    },
+    "canvasToolSelectRectangle": {
+      "title": "Sélection rectangulaire",
+      "help": "Arme la sélection rectangulaire. Ce qui est sélectionné borne le pinceau, la gomme et le pot."
+    },
+    "canvasToolSelectEllipse": {
+      "title": "Sélection elliptique",
+      "help": "Arme la sélection elliptique : un glissement inscrit l’ellipse dans le rectangle parcouru, et MAJ en fait un cercle."
+    },
+    "canvasToolSelectLasso": {
+      "title": "Lasso",
+      "help": "Arme le lasso : la sélection suit la main, à main levée."
+    },
+    "canvasToolShapeRectangle": {
+      "title": "Forme Rectangle",
+      "help": "Arme le tracé d’un rectangle sur le calque actif ; MAJ en fait un carré."
+    },
+    "canvasToolShapeLine": {
+      "title": "Forme Ligne",
+      "help": "Arme le tracé d’une ligne. Dans le même groupe que le rectangle, d’où sa touche augmentée de MAJ."
+    },
+    "canvasToolShapeArrow": {
+      "title": "Forme Flèche",
+      "help": "Arme le tracé d’une flèche, de son point de départ vers l’endroit où la main relâche."
+    },
+    "canvasToolShapeEllipse": {
+      "title": "Forme Ellipse",
+      "help": "Arme le tracé d’une ellipse sur le calque actif ; MAJ en fait un cercle."
+    },
+    "canvasToolShapePolygon": {
+      "title": "Forme Polygone",
+      "help": "Arme le tracé d’un polygone régulier, dont le nombre de côtés se règle dans l’inspecteur avant de tracer."
+    },
+    "canvasToolShapeStar": {
+      "title": "Forme Étoile",
+      "help": "Arme le tracé d’une étoile, dont le nombre de branches se règle dans l’inspecteur avant de tracer."
+    },
+    "canvasToolBrush": {
+      "title": "Outil Pinceau",
+      "help": "Arme le pinceau, aux bords adoucis. Il peint sur le calque actif, borné par la sélection s’il y en a une."
+    },
+    "canvasToolPencil": {
+      "title": "Outil Crayon",
+      "help": "Arme le crayon, aux bords nets : le même geste que le pinceau, sans l’adoucissement des bords."
+    },
+    "canvasToolText": {
+      "title": "Outil Texte",
+      "help": "Arme le texte : un clic pose une légende, dont les mots se saisissent dans l’inspecteur."
+    },
+    "canvasToolEraser": {
+      "title": "Outil Gomme",
+      "help": "Arme la gomme ponctuelle : elle efface là où la main passe, bornée par la sélection s’il y en a une."
+    },
+    "canvasToolEraserSelection": {
+      "title": "Gomme sélective",
+      "help": "Arme la gomme sélective : un clic efface d’un coup tout ce que la sélection enferme, au lieu de le frotter."
+    },
+    "canvasToolFill": {
+      "title": "Outil Pot de peinture",
+      "help": "Arme le pot : un clic remplit le calque, ou la sélection s’il y en a une."
+    },
+    "canvasToolPicker": {
+      "title": "Outil Pipette",
+      "help": "Arme la pipette : un clic prend la couleur sous le pointeur et la donne au pinceau."
+    },
+    "canvasBrushSmaller": {
+      "title": "Réduire le pinceau",
+      "help": "Rétrécit d’un cran le diamètre du pinceau, de la gomme et du trait des formes."
+    },
+    "canvasBrushLarger": {
+      "title": "Agrandir le pinceau",
+      "help": "Élargit d’un cran le diamètre du pinceau, de la gomme et du trait des formes."
+    },
+    "sceneSkeletons": {
+      "title": "Afficher les squelettes",
+      "help": "Dessine les os de chaque modèle rigué par-dessus la scène."
+    },
+    "scenePoseMode": {
+      "title": "Mode pose",
+      "help": "Bascule entre la sélection des objets et celle des os d’un rig."
+    }
+  }
+}

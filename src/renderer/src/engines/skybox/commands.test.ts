@@ -33,6 +33,23 @@ describe('adjusting a skybox', () => {
     expect(before.adjustments.exposure).toBe(0)
   })
 
+  /**
+   * And it hands the untouched sections back as the same objects, which is not a detail of style:
+   * `SkyboxRenderer.apply` skips a section it recognises by identity, so a command that rebuilt
+   * all four would put a full grading pass back on every frame of every drag with nothing to say
+   * so. Asserted here rather than there, because here is where the identity is produced.
+   */
+  it('hands back the sections it did not touch, as the same objects', () => {
+    const before = createSkyboxContent()
+
+    const after = setAdjustment('exposure', 3).apply(before)
+
+    expect(after.adjustments).not.toBe(before.adjustments)
+    expect(after.sun).toBe(before.sun)
+    expect(after.environment).toBe(before.environment)
+    expect(after.source).toBe(before.source)
+  })
+
   it('carries one id per field, so two sliders are two undo entries', () => {
     expect(setAdjustment('exposure', 1).id).not.toBe(setAdjustment('contrast', 1).id)
   })

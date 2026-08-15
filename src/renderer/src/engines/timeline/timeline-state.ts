@@ -2,10 +2,19 @@
  * A sequence, as plain data. It holds no decoder and no Pixi object: an engine is rebuilt from
  * its serialized state, never from its DOM, and jsdom has neither WebCodecs nor WebGL.
  */
-import { isRecord, readBoolean, readNumber, readString } from '@shared/guards'
+import {
+  SECOND,
+  frameDuration as frameOf,
+  snapToFrame as snapOf,
+  type Us,
+} from '@shared/domain/time'
+import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
+import { clamp } from '@shared/numeric'
 
-/** Timeline time, in microseconds. Never float seconds: drift accumulates over a long edit. */
-export type Us = number
+// Re-exported where the montage has always read them from: a scene's animation is written in the
+// same unit, so the definition moved to `shared/` where both sides may reach it.
+export { SECOND }
+export type { Us }
 
 export type SequenceSettings = {
   width: number
@@ -15,6 +24,9 @@ export type SequenceSettings = {
 }
 
 export type TrackKind = 'video' | 'audio'
+
+/** Both of them, for the same reason as `LAYER_KINDS`: the inspector names a track by its kind. */
+export const TRACK_KINDS: readonly TrackKind[] = ['video', 'audio']
 
 /** Which end of a clip an edit works on — a trim, a fade, a snap candidate. */
 export type ClipEdge = 'in' | 'out'
@@ -35,6 +47,15 @@ export type Clip = {
   fadeOut: Us
   /** Decibels, audio only. Zero leaves the clip as it was recorded. */
   gain: number
+  /**
+   * What ties a take's picture to its sound: both clips carry the same value, and every edit
+   * that moves, trims, cuts or deletes one does the same to the other. A rush laid down as two
+   * clips that drift apart on the first drag is worse than one laid down as a mute picture.
+   *
+   * Absent for a clip that stands alone — a sound, a still, a rush with no audio stream, or a
+   * pair the user has unlinked to treat each half on its own.
+   */
+  linkId?: string
 }
 
 export type Track = {
@@ -60,9 +81,6 @@ export type SequenceState = {
   playhead: Us
 }
 
-/** One second, in the unit the whole studio counts time in. */
-export const SECOND: Us = 1_000_000
-
 export const DEFAULT_SETTINGS: SequenceSettings = {
   width: 1920,
   height: 1080,
@@ -76,7 +94,7 @@ export const MIN_TRACK_HEIGHT = 28
 export const MAX_TRACK_HEIGHT = 200
 
 export function clampTrackHeight(height: number): number {
-  return Math.min(MAX_TRACK_HEIGHT, Math.max(MIN_TRACK_HEIGHT, Math.round(height)))
+  return clamp(Math.round(height), MIN_TRACK_HEIGHT, MAX_TRACK_HEIGHT)
 }
 
 /** Below -60 dB nothing is audible, and above +12 dB generated audio only clips. */
@@ -84,7 +102,7 @@ export const MIN_GAIN_DB = -60
 export const MAX_GAIN_DB = 12
 
 export function clampGain(gain: number): number {
-  return Math.min(MAX_GAIN_DB, Math.max(MIN_GAIN_DB, gain))
+  return clamp(gain, MIN_GAIN_DB, MAX_GAIN_DB)
 }
 
 /** The range every media element agrees to resample without dropping to silence. */
@@ -92,7 +110,7 @@ export const MIN_SPEED = 0.25
 export const MAX_SPEED = 4
 
 export function clampSpeed(speed: number): number {
-  return Math.min(MAX_SPEED, Math.max(MIN_SPEED, speed))
+  return clamp(speed, MIN_SPEED, MAX_SPEED)
 }
 
 export type ClipInit = Pick<Clip, 'id' | 'assetId' | 'start' | 'duration'> & Partial<Clip>
@@ -130,13 +148,64 @@ export const EMPTY_SEQUENCE: SequenceState = {
   playhead: 0,
 }
 
+/**
+ * What the Audio workspace opens on: the same montage, with nothing but sound in it.
+ *
+ * Four tracks rather than the one a sequence opens with, and it is a decision about the work
+ * being done: music is layered — a rhythm, a bass, a harmony, a voice — and a person building it
+ * lays the second sound down within seconds of the first. One track means the very first gesture
+ * is "add a track", every time.
+ *
+ * No picture track at all, so a video dropped here lands nowhere rather than being montaged into
+ * a space that has no monitor to show it.
+ */
+export const EMPTY_SOUND_SEQUENCE: SequenceState = {
+  settings: DEFAULT_SETTINGS,
+  // `reindexTracks` rather than an index written by hand: it is the one place that decides what
+  // depth a row carries, and a second copy of that arithmetic is what makes the painter and the
+  // header column disagree about which track is on top.
+  tracks: reindexTracks(
+    [1, 2, 3, 4].map(number => makeTrack({ id: `A${number}`, kind: 'audio', index: 0 })),
+  ),
+  selectedId: null,
+  playhead: 0,
+}
+
+/** The letter a kind's tracks are named after, on the pattern `EMPTY_SEQUENCE` opens with. */
+const TRACK_PREFIX: Record<TrackKind, string> = { video: 'V', audio: 'A' }
+
+/**
+ * The next free name of a kind — V1, V2, A1… — rather than a uuid: `makeTrack` names a track by
+ * its id, and a header column reading `track_9f3c…` shows a name nobody typed. Renaming is a
+ * command of its own, so this only has to be free, not final.
+ */
+export function nextTrackId(state: SequenceState, kind: TrackKind): string {
+  const taken = new Set(state.tracks.map(track => track.id))
+  const prefix = TRACK_PREFIX[kind]
+
+  for (let n = 1; ; n += 1) {
+    const id = `${prefix}${n}`
+    if (!taken.has(id)) return id
+  }
+}
+
+/**
+ * Depth read back from position: the first row of the column is drawn last, so it is the one
+ * seen on top. `videoTracksByDepth` sorts on `index` while the header column reads the array —
+ * without this the two disagree the moment a track is added, removed or moved.
+ */
+export function reindexTracks(tracks: readonly Track[]): Track[] {
+  return tracks.map((track, position) => ({ ...track, index: tracks.length - 1 - position }))
+}
+
+// Adapters over the shared pair: a sequence carries four settings where the grid needs one. They
+// exist so the montage's call sites stay untouched while another branch is editing them.
 export function frameDuration(settings: SequenceSettings): Us {
-  return Math.round(SECOND / settings.fps)
+  return frameOf(settings.fps)
 }
 
 export function snapToFrame(time: Us, settings: SequenceSettings): Us {
-  const frame = frameDuration(settings)
-  return Math.max(0, Math.round(time / frame) * frame)
+  return snapOf(time, settings.fps)
 }
 
 /**
@@ -176,7 +245,10 @@ export function clipFrom(clip: Clip, time: Us): Clip {
     ...clip,
     start: time,
     duration: clipEnd(clip) - time,
-    inPoint: sourceTimeAt(clip, time),
+    // Never negative: a still pulled leftwards runs before its own in point, and there is no
+    // earlier frame to seek to. `readPositive` drops a negative one when the project is read
+    // back, so the clip would return other than the one that was saved.
+    inPoint: Math.max(0, sourceTimeAt(clip, time)),
   }
 }
 
@@ -220,6 +292,25 @@ export function editableTrack(state: SequenceState, id: string): Track | null {
 
 export function trackOfClip(state: SequenceState, clipId: string): Track | null {
   return state.tracks.find(track => track.clips.some(clip => clip.id === clipId)) ?? null
+}
+
+/**
+ * Every clip a link ties to this one, itself first and always present — an unlinked clip is a
+ * group of one, which is what lets every edit run through the same path whether it is tied to
+ * anything or not.
+ */
+export function linkedClipIds(state: SequenceState, clipId: string): string[] {
+  const clip = clipById(state, clipId)
+  if (!clip?.linkId) return clip ? [clipId] : []
+
+  const { linkId } = clip
+  const twins: string[] = []
+  for (const track of state.tracks) {
+    for (const candidate of track.clips) {
+      if (candidate.id !== clipId && candidate.linkId === linkId) twins.push(candidate.id)
+    }
+  }
+  return [clipId, ...twins]
 }
 
 export function clipById(state: SequenceState, id: string): Clip | null {
@@ -307,21 +398,22 @@ export function insertClip(track: Track, clip: Clip, tailId: string): Track {
 
     // Tail survives: it starts later in the source, so its in point moves with it.
     if (existingEnd > end) {
-      clips.push(
-        clampFades({
-          ...clipFrom(existing, end),
-          id: existing.start < clip.start ? tailId : existing.id,
-        }),
-      )
+      const cutInTwo = existing.start < clip.start
+      const tail = clampFades({
+        ...clipFrom(existing, end),
+        id: cutInTwo ? tailId : existing.id,
+      })
+      // A newcomer landing inside a linked take leaves two pieces of it. They must not both
+      // answer to the same link: dragging the head would then drag the far side of the cut,
+      // and deleting it would take that away too. The head keeps the sound it was laid with,
+      // and the tail stands alone — which is what an insertion into a take really produces.
+      if (cutInTwo) delete tail.linkId
+      clips.push(tail)
     }
   }
 
   clips.push(clampFades(clip))
   return { ...track, clips: clips.sort((left, right) => left.start - right.start) }
-}
-
-export function serializeSequence(state: SequenceState): string {
-  return JSON.stringify(state)
 }
 
 function readClip(raw: unknown): Clip | null {
@@ -333,16 +425,21 @@ function readClip(raw: unknown): Clip | null {
   // A clip with no identity, no source or no length cannot be drawn, selected or played.
   if (!id || !assetId || duration <= 0) return null
 
+  const linkId = readString(raw, 'linkId', '')
+
   return clampFades(
     makeClip({
       id,
       assetId,
       duration,
-      start: Math.max(0, readNumber(raw, 'start', 0)),
-      inPoint: Math.max(0, readNumber(raw, 'inPoint', 0)),
+      // Absent rather than empty: `linkedClipIds` reads its presence, and an empty string would
+      // tie together every clip a file was written without one.
+      ...(linkId ? { linkId } : {}),
+      start: readPositive(raw, 'start', 0),
+      inPoint: readPositive(raw, 'inPoint', 0),
       speed: readNumber(raw, 'speed', 1) || 1,
-      fadeIn: Math.max(0, readNumber(raw, 'fadeIn', 0)),
-      fadeOut: Math.max(0, readNumber(raw, 'fadeOut', 0)),
+      fadeIn: readPositive(raw, 'fadeIn', 0),
+      fadeOut: readPositive(raw, 'fadeOut', 0),
       gain: readNumber(raw, 'gain', 0),
     }),
   )
@@ -392,31 +489,31 @@ function readSettings(raw: unknown): SequenceSettings {
   }
 }
 
-/** Unreadable input yields a fresh sequence: a blank timeline beats an uncaught throw. */
-export function deserializeSequence(raw: string): SequenceState {
-  try {
-    const parsed: unknown = JSON.parse(raw)
-    if (!isRecord(parsed) || !Array.isArray(parsed.tracks)) return EMPTY_SEQUENCE
+/**
+ * A sequence read back from a file. Takes the parsed value rather than the text, like every
+ * other document reader: text that is not JSON at all is a file that failed to read, and the
+ * caller must be able to tell that from a file whose shape is merely wrong — the first refuses
+ * to be written over, the second opens on an empty timeline.
+ */
+export function parseSequence(content: unknown): SequenceState {
+  if (!isRecord(content) || !Array.isArray(content.tracks)) return EMPTY_SEQUENCE
 
-    const tracks: Track[] = []
-    parsed.tracks.forEach((entry, row) => {
-      const track = readTrack(entry, row)
-      if (track) tracks.push(track)
-    })
-    if (tracks.length === 0) return EMPTY_SEQUENCE
+  const tracks: Track[] = []
+  content.tracks.forEach((entry, row) => {
+    const track = readTrack(entry, row)
+    if (track) tracks.push(track)
+  })
+  if (tracks.length === 0) return EMPTY_SEQUENCE
 
-    const selectedId = parsed.selectedId
-    return {
-      settings: readSettings(parsed.settings),
-      tracks,
-      // Dropped when it points at a clip the read discarded: nothing may select nothing.
-      selectedId:
-        typeof selectedId === 'string' && tracks.some(t => t.clips.some(c => c.id === selectedId))
-          ? selectedId
-          : null,
-      playhead: Math.max(0, readNumber(parsed, 'playhead', 0)),
-    }
-  } catch {
-    return EMPTY_SEQUENCE
+  const selectedId = content.selectedId
+  return {
+    settings: readSettings(content.settings),
+    tracks,
+    // Dropped when it points at a clip the read discarded: nothing may select nothing.
+    selectedId:
+      typeof selectedId === 'string' && tracks.some(t => t.clips.some(c => c.id === selectedId))
+        ? selectedId
+        : null,
+    playhead: readPositive(content, 'playhead', 0),
   }
 }

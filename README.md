@@ -11,20 +11,16 @@ Generate and edit images, videos, 3D models, audio, textures and skyboxes — in
 [![three.js](https://img.shields.io/badge/three.js-0.185-2b2d30?logo=three.js&logoColor=ffffff)](https://threejs.org)
 [![PixiJS](https://img.shields.io/badge/PixiJS-8.19-2b2d30?logo=javascript&logoColor=e8639b)](https://pixijs.com)
 [![Vite](https://img.shields.io/badge/Vite-7-2b2d30?logo=vite&logoColor=ffd028)](https://vite.dev)
-[![Tests](https://img.shields.io/badge/tests-1398%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
-[![License](https://img.shields.io/badge/license-proprietary-2b2d30)](#license)
+[![Tests](https://img.shields.io/badge/tests-8096%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-2b2d30)](#license)
+
+**[→ Presentation site](https://pasquelin.github.io/scenario/)**
 
 </div>
-
-<!-- SCREENSHOT: the studio in the 3D workspace — rails on both edges, scene viewport in the
-     centre, outliner and meshes on the left, models on the right, asset shelf at the bottom.
-     Save to docs/images/studio-3d.png (2560×1600, dark theme), then uncomment the block below.
-     See docs/REPRISE.md § 6 for the full shot list.
 
 <div align="center">
-  <img src="docs/images/studio-3d.png" alt="Scenario Studio in the 3D workspace" width="900">
+  <img src="docs/assets/images/studio-3d.png" alt="Scenario Studio in the 3D workspace: the model catalogue and the project explorer on the left, the scene viewport in the centre, the asset shelf and the inspector on the right, the animation timeline across the bottom" width="900">
 </div>
--->
 
 ---
 
@@ -46,13 +42,15 @@ them, and assemble them into 3D scenes or video sequences — without leaving th
 without your API credentials ever reaching the browser context.
 
 The unit of work is a **project**: a folder on your disk. The unit of display is a **workspace**:
-six of them — Image, Video, 3D, Audio, Textures, Skyboxes — each rearranging the panels around
-what that kind of work needs.
+seven of them — Image, Video, 3D, Audio, Textures, Skyboxes and Graph — each rearranging the
+panels around what that kind of work needs. The Graph is the newest: it holds nodes, wires them,
+saves them and runs them, reusing whatever has not changed — its logic and loop nodes are still
+to come.
 
 | | |
 |---|---|
-| **Six workspaces** | Image, Video, 3D, Audio, Textures and Skyboxes, each with its own toolbar and its own panels |
-| **Three editors** | a Pixi-backed image canvas, a three.js 3D viewport, and a video timeline with real decoding |
+| **Seven workspaces** | Image, Video, 3D, Audio, Textures, Skyboxes and Graph, each with its own toolbar and its own panels |
+| **Real editors, not previews** | a Pixi-backed image canvas, a three.js 3D viewport, a video timeline that decodes for real, and a sound editor working on samples |
 | **No hand-written generation forms** | every model's inputs are discovered from the API and rendered from its schema |
 | **Your keys stay in the main process** | encrypted by the OS keychain, never handed to the renderer |
 | **Bounded concurrency** | one queue polls the API, with exponential backoff on 429 and 5xx |
@@ -62,7 +60,7 @@ what that kind of work needs.
 
 ## Getting started
 
-**Requirements** — Node 22 or later, [pnpm](https://pnpm.io), macOS / Windows / Linux, and a
+**Requirements** — Node **24** (the version in `.nvmrc`, which is also what CI runs), [pnpm](https://pnpm.io), macOS / Windows / Linux, and a
 Scenario API key and secret from [app.scenario.com](https://app.scenario.com).
 
 ```bash
@@ -79,7 +77,7 @@ In development you can drop them in `secrets/.env` instead (`SCENARIO_API_KEY`,
 Settings. See [`secrets/README.md`](secrets/README.md).
 
 Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained:
-[Settings](docs/en/user-guide.md#settings) · how configuration is layered:
+[Settings](docs/en/manual/14-settings.md) · how configuration is layered:
 [Architecture](docs/en/architecture.md#configuration).
 
 ---
@@ -94,10 +92,11 @@ Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained
 | `pnpm dist` | build, then package and sign with electron-builder |
 | `pnpm typecheck` | `tsc --noEmit` across the three targets |
 | `pnpm test` · `pnpm test:watch` | vitest, single run or watching |
-| `pnpm test:coverage` | vitest with coverage, enforcing the per-module budgets |
 | `pnpm lint` · `pnpm lint:fix` | eslint over `src` |
 | `pnpm format` · `pnpm format:check` | prettier, write or check |
-| `pnpm validate` | typecheck + lint + format check + tests with coverage budgets |
+| `pnpm validate` | typecheck + lint + format check + tests |
+| `pnpm unused:main` | knip — exports, files and dependencies nothing reaches. **`src/main` only**: the same unreachable export is reported there and ignored under `renderer` and `shared`, and no configuration found so far widens it |
+| `pnpm duplication` | jscpd — blocks written twice, from sixty tokens up, over the whole of `src` |
 | `pnpm rebuild:native` | electron-rebuild — required after touching better-sqlite3 |
 | `pnpm docs:scenario` | regenerate the local copy of the Scenario API docs |
 
@@ -119,30 +118,80 @@ src/
 ├── renderer/src/
 │   ├── app/         the shell: rails, zones, tool windows, document area
 │   ├── design/      the in-house design system — every docked component
-│   ├── engines/     canvas, scene, timeline and audio engines. No React in here
-│   ├── spaces/      one document editor per kind: image, three, video, audio
+│   ├── engines/     one engine per kind of surface. No React in here
+│   ├── spaces/      one document editor per kind
 │   ├── panels/      the dockable tools
 │   ├── stores/      zustand stores
 │   ├── hooks/       shared hooks
 │   └── helpers/     pure functions
 └── shared/        types and constants only — no runtime dependency
     ├── domain/      the vocabulary both processes speak
-    └── i18n/        one JSON per language, read by the menu and the UI
+    └── i18n/        one directory of sections per language, read by the menu and the UI
 ```
+
+A selection, not an inventory — enough to find your way, and no more.
+[Architecture](docs/en/architecture.md#the-main-process) goes through each side in turn.
 
 ---
 
 ## Quality bar
 
-`pnpm validate` must be green before any commit: typecheck, lint, format check, and the full
-test suite — **1398 tests across 148 files** at the time of writing. Unit tests are colocated
-with the code they cover and written in the same movement, never after.
+`pnpm validate` must be green before any commit: typecheck, lint, format check and the full
+test suite — **8,096 tests across 591 files**. Unit tests are colocated with the
+code they cover and written in the same movement, never after.
 
 Every change also goes through a reuse-and-simplification pass and an automated review before
 it is called done.
 
 ---
 
+## Releasing
+
+A `git tag vX.Y.Z` builds and packages the three platforms, and opens a draft GitHub Release.
+
+| | |
+|---|---|
+| [docs/ci/RELEASE.md](docs/ci/RELEASE.md) | The checklist to publish a version, and how to roll one back |
+| [docs/ci/SECRETS.md](docs/ci/SECRETS.md) | Code-signing secrets: what each one is, how to obtain it, when it expires |
+| [docs/ci/TROUBLESHOOTING.md](docs/ci/TROUBLESHOOTING.md) | Symptom, cause, fix — for when the pipeline breaks |
+
+The decisions behind the pipeline are recorded in [docs/ci/adr/](docs/ci/adr/). Builds are
+currently **unsigned**: macOS and Windows both warn on first launch until the certificates of
+`SECRETS.md` are provisioned.
+
+---
+
 ## License
 
-Proprietary. All rights reserved.
+Three texts, three scopes:
+
+- **The source code in this repository** is available under the
+  [PolyForm Noncommercial License 1.0.0](LICENSE). Read it, build it, study it, use it for any
+  noncommercial purpose. Commercial use is reserved.
+- **The application** distributed on the releases page has its own [terms of use](EULA.md).
+- **The third-party components** both of them carry keep their own licences — 36 of them, in
+  [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and shown in the app under Help ▸ Licences.
+
+FFmpeg is shipped beside the application as a separate program, under GPL-3.0 on macOS and
+LGPL-2.1 elsewhere. Its corresponding sources are attached to every release. The reasoning is in
+[ADR-16](docs/ci/adr/ADR-16-licence-du-projet.md).
+
+---
+
+## Trademarks and independence
+
+This is an **independent project**, developed personally by Alban Pasquelin. It is **not
+published, endorsed, supported by, or affiliated with Scenario Labs**.
+
+“Scenario”, the Scenario API and any associated signs are trademarks of their respective
+owners. They are named here **descriptively and nominatively only**, to identify the
+third-party service this application can connect to — no other wording would allow it. No
+logo, typeface, brand asset or visual identity belonging to Scenario Labs is reproduced
+anywhere in this repository: every screenshot shows this application's own interface, and
+every icon is its own.
+
+The application **provides no generation service and resells none**. It connects to the
+public API using **the key you supply, under your own account**: your use of it is governed
+by Scenario Labs' own terms, which you accept directly with them, and the cost is yours.
+
+© 2026 Alban Pasquelin.

@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, session } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import { EVENTS } from '@shared/ipc'
 import { registerAboutPanel } from '@main/about-panel'
@@ -10,8 +10,11 @@ import { isDevelopment } from '@main/environment'
 import { registerIpc } from '@main/ipc/register'
 import { log, mirrorLogsTo } from '@main/log'
 import { createServices, createSettings } from '@main/services'
+import { createShutdown } from '@main/shutdown'
 import type { SettingsStore } from '@main/settings/store'
+import { registerFieldMenu } from '@main/window/context-menu'
 import { lockNavigation } from '@main/window/navigation'
+import { lockPermissions, rendererOrigin } from '@main/window/permissions'
 import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splash-window'
 import { createMainWindow, showMainWindow } from '@main/window/windows'
@@ -45,6 +48,42 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   const services = createServices(settings)
   registerIpc(services)
 
+  // Fire and forget: whether a newer version exists has no bearing on the window opening, and
+  // a check that fails leaves the studio exactly as usable as it was.
+  void services.updates.check()
+
+  /**
+   * The way in from outside follows the setting from here on — and is applied straight away with
+   * the settings as they stand. Subscribing alone would only ever hear a CHANGE, so a user who
+   * left it on would find nothing listening until they toggled it twice.
+   */
+  services.mcp.apply(settings.read())
+  settings.subscribe(services.mcp.apply)
+
+  // The journal batches, so up to a flush's worth of it is still in memory at any moment — and
+  // the most ordinary way to lose it is the one that matters: an export fails, the user quits.
+  const settleBeforeQuit = (): Promise<unknown> => {
+    // Not awaited with the rest: the recognition process holds no state worth settling, and a
+    // model still loading would otherwise keep the studio on screen for seconds.
+    services.dictation.dispose()
+    // The note of what is still running goes out with the journal: a job whose submission
+    // landed in the last moments would otherwise be lost, and it has already been paid for.
+    // The manifest stamp joins them — quitting right after a save is the ordinary way to do it.
+    //
+    // The MCP server is AWAITED among them, not fired off beside them: the file it removes names
+    // a port, and a removal racing `app.quit()` leaves that file pointing the next client at
+    // whatever takes the port after this process is gone. `void` here undid the very thing it
+    // claimed to do.
+    return Promise.all([
+      services.journal.flush(),
+      services.flushJobs(),
+      services.project.settled(),
+      services.mcp.stop(),
+    ])
+  }
+
+  app.on('will-quit', createShutdown({ settle: settleBeforeQuit, quit: () => app.quit() }))
+
   // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
   // the other. Only a second launch overrides that — see `revealWindow`.
   const main = createMainWindow({ deferShow: true })
@@ -66,12 +105,12 @@ function startUp(splash: Splash, settings: SettingsStore): void {
 
   // After the window, so Chromium starts parsing the renderer bundle sooner. Neither the
   // application menu nor the About panel is reachable before a window exists.
-  const language = services.language()
-  registerAboutPanel(language)
-  buildMenu(language, services.settings.read().shortcuts.overrides)
+  registerAboutPanel()
+  buildMenu(services.settings.read().shortcuts.overrides)
 
   // Subscribed here, not beside the lock: reached any earlier, `showMainWindow` would find no
   // window yet and open one before `registerIpc` above — a renderer whose every `invoke` fails.
+  // Never fires in development, where no lock is held: this path is exercised by a packaged run.
   app.on('second-instance', showMainWindow)
 }
 
@@ -84,25 +123,51 @@ function bootstrap(): void {
   // created outside the lock and keep none of it.
   lockNavigation()
 
+  // Beside it, and for the same reason: a window created before this runs would hold no menu in
+  // its fields, and nothing would say so.
+  registerFieldMenu()
+
   void app.whenReady().then(() => {
+    // The session only exists once ready, and no window may exist before it is locked: with no
+    // handler installed Electron grants every permission a page asks for.
+    lockPermissions(session.defaultSession, rendererOrigin())
+
     // Before the splash: it is painted from the theme, and reading the settings is a JSON file —
     // the rest of the services open SQLite synchronously, far too late to decide what to paint.
     const settings = createSettings()
     const splash = openSplashWindow()
 
     setImmediate(() => startUp(splash, settings))
-
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
-    })
   })
 
-  app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit()
-  })
+  /**
+   * Closing the last window quits, on macOS as everywhere else. That is NOT the platform
+   * convention — a Mac app usually outlives its windows and reopens one from the Dock — but the
+   * studio is a document editor with nothing to offer once its windows are gone, and staying
+   * resident left an application running with no way to see it.
+   *
+   * Safe during start-up: the main window is created before the splash is ever dismissed, so
+   * there is no moment where zero windows exist and the launch quits itself.
+   */
+  app.on('window-all-closed', () => app.quit())
 }
 
 // One studio per machine: two would share one settings file and one WAL catalogue opened
 // without a busy timeout. Must stay below `setName` — the lock file lives under `userData`.
+//
+// Development starts anyway, and that is what keeps hot reload alive: a rebuild of anything the
+// main process bundles — `shared/` included, so a translation counts — makes electron-vite kill
+// this process and start the next in the same breath. Electron takes seconds to die, so the new
+// one finds the lock still held; exiting here would make electron-vite take the dev server down
+// with us, and the window left on screen would point at a server that no longer answers.
+//
+// Said out loud rather than waved through: the overlap is usually the second or two an old
+// process needs to die, but two `pnpm start` runs — one per worktree, which this repository
+// invites — overlap for as long as both are up, and they then reopen the same project catalogue.
+// SQLite takes one writer; the loser comes back with no project open, and `services` reduces
+// that to a warning. Without this line nothing anywhere would say why.
 if (app.requestSingleInstanceLock()) bootstrap()
-else app.quit()
+else if (isDevelopment) {
+  log.warn('startup', 'another studio holds the single-instance lock: starting anyway (dev)')
+  bootstrap()
+} else app.quit()

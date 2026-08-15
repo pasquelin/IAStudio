@@ -1,8 +1,6 @@
 node_modules/
 dist/
 out/
-coverage/
-coverage-audit/
 release/
 .DS_Store
 *.log
@@ -11,9 +9,10 @@ secrets/*
 !secrets/README.md
 .playwright-mcp/
 # Doc externe régénérable (pnpm docs:scenario) — pas de la doc de projet
-docs/scenario-api/
 docs/specs
 docs/superpowers
+# Le dépôt ne publie que la DOC DU PROJET. Ce qui suit est de l'état d'outillage : utile sur la
+# machine, hors sujet pour qui clone le dépôt.
 CLAUDE.md
 .idea/
 .vscode/
@@ -23,6 +22,16 @@ CLAUDE.md
 # Sorties d'exécution, jamais du code
 logs/
 
-# Shipped with the app, fetched by `pnpm ffmpeg:fetch` — binaries, never committed.
+# Shipped with the app, fetched by `pnpm ffmpeg:fetch` and `pnpm stt:fetch` — binaries and
+# model weights, never committed.
 resources/ffmpeg/
+resources/stt/
 src/renderer/public/decoders/
+
+# Signing material. A safety net, never a permission: certificates belong in the GitHub
+# secrets of the repository, and nowhere on disk — see docs/ci/SECRETS.md.
+*.p12
+*.pfx
+*.cer
+*.provisionprofile
+*.mobileprovision

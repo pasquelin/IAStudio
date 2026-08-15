@@ -1,35 +1,63 @@
-import { mdiCubeOutline, mdiWeatherSunny } from '@mdi/js'
-import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { mdiCubeOutline } from '@mdi/js'
+import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { TextureLoader, type Texture } from 'three'
 import type { SphericalAngles } from '@shared/domain/angles'
-import {
-  createSkyboxContent,
-  DEFAULT_FIELD_OF_VIEW,
-  MAX_FIELD_OF_VIEW,
-  MIN_FIELD_OF_VIEW,
-  SKYBOX_VIEWS,
-  type SkyboxView,
-} from '@shared/domain/skybox'
+import { PICTURES, type Asset } from '@shared/domain/asset'
+import { safeFileName } from '@shared/domain/texture-export'
 import { EmptyState } from '@/design/EmptyState'
-import { ToolButton } from '@/design/ToolButton'
+import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 import { setSunAngles } from '@/engines/skybox/commands'
+import { loadTexture } from '@/engines/scene/texture-cache'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
-import { cn } from '@/helpers/cn'
-import { assetsById, useAssets } from '@/stores/assets'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import { useDocuments } from '@/stores/documents'
+import { useSkyboxViews, skyboxViewOf } from '@/stores/skybox-views'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
+import { useShelfRefresh } from '@/hooks/useShelfRefresh'
+import { useShortcuts } from '@/hooks/useShortcuts'
+import { assetVersionOf } from '@/stores/assets'
+import type { CommandId } from '@shared/domain/command'
 
-/** i18n key of a view mode — never the label itself, as `SceneEntry` does for primitives. */
-const VIEW_LABELS: Record<SkyboxView, string> = {
-  immersive: 'skybox.viewImmersive',
-  equirect: 'skybox.viewEquirect',
-  cross: 'skybox.viewCross',
-  faces: 'skybox.viewFaces',
+/**
+ * A sky handed to an engine as six faces, from the row of the native menu that was picked.
+ *
+ * The port is reached through `import()` rather than at the top of this file, for the chunk that
+ * follows the first screen: statically imported, the export pass would be downloaded by anyone
+ * who opens a sky, and it is only ever read by somebody who exports one.
+ */
+async function exportSkybox(documentId: string, size: number): Promise<void> {
+  const bridge = getBridge()
+  if (!bridge) return
+
+  try {
+    // Read once, before any `await`. Read twice — the picture here and the grading after the
+    // `import()` — and a slider moved while the chunk downloads would export one sky's pixels
+    // under another sky's settings, with nothing in the six files to say so.
+    const sky = skyboxOf(useSkyboxes.getState(), documentId)
+
+    // Guarded before the dialog: a sky with no picture would open a folder chooser to write six
+    // files of nothing, and the message belongs where the gesture was made.
+    if (!sky.source) throw new Error('this sky has no source to export')
+
+    // Cleaned before it is either a folder or a file name: a document is titled by hand.
+    const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'skybox')
+
+    const { createSkyboxExportPort } = await import('@/engines/skybox/export-port')
+
+    const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })({
+      assetId: sky.source.assetId,
+      adjustments: sky.adjustments,
+      name,
+      size,
+    })
+
+    await bridge.skybox.export({ folder: name, files })
+  } catch (error) {
+    reportFailure('skybox.export', String(size), error)
+  }
 }
-
-/** jsdom decodes no image; the engine takes its loader as a port for exactly that reason. */
-const loadTexture = (url: string): Promise<Texture> => new TextureLoader().loadAsync(url)
 
 export function SkyboxDocument({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
@@ -37,17 +65,27 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   const engine = useRef<SkyboxRenderer | null>(null)
 
   const content = useSkyboxes(state => skyboxOf(state, documentId))
+  // A hidden tab stays mounted: without this, two skies would answer the same key.
+  const active = useDocuments(state => state.activeId === documentId)
 
-  // Session state, not document state: how a sky is being looked at right now is not what it
-  // is, and persisting it would make a reopened document argue with the window it opens in.
-  const [view, setView] = useState<SkyboxView>('immersive')
-  const [fieldOfView, setFieldOfView] = useState(DEFAULT_FIELD_OF_VIEW)
-  // A skybox is judged by what it lights, not by its own picture — so the probes start on.
-  const [probes, setProbes] = useState(true)
+  // Held in a store rather than here: the controls that set these live in the View panel, and
+  // the centre carries the toolbar and the rulers only. Session state all the same — none of it
+  // is saved with the document, and ⌘Z never touches it.
+  const { fieldOfView, probes, view } = useSkyboxViews(state => skyboxViewOf(state, documentId))
 
+  useRestoredDocument(documentId)
+
+  // Only while this tab is in front. The event goes to the window, not to a document, so two
+  // open skies would otherwise both answer one click of the same menu row — and both would open
+  // a folder dialog.
   useEffect(() => {
-    useSkyboxes.getState().ensure(documentId, createSkyboxContent)
-  }, [documentId])
+    const bridge = getBridge()
+    if (!bridge || !active) return
+
+    return bridge.menu.onSkyboxExport(({ size }) => {
+      void exportSkybox(documentId, size)
+    })
+  }, [documentId, active])
 
   useEffect(() => {
     const element = host.current
@@ -55,6 +93,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
 
     const renderer = new SkyboxRenderer({
       loadTexture,
+      assetVersion: assetVersionOf,
       onSunChange: (angles: SphericalAngles) =>
         useSkyboxes.getState().runCommand(documentId, setSunAngles(angles)),
     })
@@ -72,6 +111,8 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
     engine.current?.apply(content)
   }, [content])
 
+  useShelfRefresh(() => engine.current?.refreshSource())
+
   useEffect(() => {
     engine.current?.setFieldOfView(fieldOfView)
   }, [fieldOfView])
@@ -80,21 +121,45 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
     engine.current?.setProbesVisible(probes)
   }, [probes])
 
-  // Dropped from the shelf, which is shown in this workspace like every other. The asset is
-  // read from the catalogue rather than carried by the drag: only its id crosses.
-  const onDrop = (event: DragEvent<HTMLDivElement>): void => {
-    event.preventDefault()
+  useEffect(() => {
+    engine.current?.setView(view)
+  }, [view])
 
-    const assetId = assetIdFromDrag(event)
-    const asset = assetId ? assetsById(useAssets.getState()).get(assetId) : undefined
-    if (asset) setSkyboxSource(documentId, asset)
-  }
+  const onDrop = (asset: Asset): void => setSkyboxSource(documentId, asset)
+
+  /**
+   * The keyboard this space never had. Its history existed and worked — the sun is moved by a
+   * command — but nothing listened, so ⌘Z fell through to the platform and undid nothing at all.
+   */
+  const run = useCallback(
+    (command: CommandId): void => {
+      switch (command) {
+        case 'skybox.view':
+          // Cycles rather than one key per view: four modes, and a key each would spend four
+          // letters on a space that has two other things to offer.
+          return useSkyboxViews.getState().cycleView(documentId)
+        case 'skybox.probes': {
+          const views = useSkyboxViews.getState()
+          return views.set(documentId, { probes: !skyboxViewOf(views, documentId).probes })
+        }
+        case 'skybox.undo':
+          return useSkyboxes.getState().undo(documentId)
+        case 'skybox.redo':
+          return useSkyboxes.getState().redo(documentId)
+      }
+    },
+    [documentId],
+  )
+
+  useShortcuts({ scope: 'skybox', enabled: active, onCommand: run })
 
   return (
-    <div
-      className="relative size-full"
-      onDragOver={event => event.preventDefault()}
+    <AssetDropTarget
+      accepts={PICTURES}
       onDrop={onDrop}
+      // No frame: see `ImageDocument`.
+      outlined={false}
+      className="relative size-full"
     >
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
@@ -104,43 +169,6 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
           <EmptyState icon={mdiCubeOutline} message={t('skybox.noSource')} />
         </div>
       )}
-
-      <div className="bg-base/80 absolute top-2 left-2 flex items-center gap-1 rounded-(--radius-sc-md) p-1">
-        {SKYBOX_VIEWS.map(candidate => (
-          <button
-            key={candidate}
-            type="button"
-            onClick={() => setView(candidate)}
-            aria-pressed={view === candidate}
-            className={cn(
-              'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
-              view === candidate ? 'bg-elevated text-text' : 'text-muted bg-transparent',
-            )}
-          >
-            {t(VIEW_LABELS[candidate])}
-          </button>
-        ))}
-
-        <ToolButton
-          icon={mdiWeatherSunny}
-          label={t('skybox.testObjects')}
-          active={probes}
-          onClick={() => setProbes(current => !current)}
-        />
-
-        <label className="text-muted flex items-center gap-1 pl-2 text-xs">
-          {t('skybox.fieldOfView')}
-          <input
-            type="range"
-            min={MIN_FIELD_OF_VIEW}
-            max={MAX_FIELD_OF_VIEW}
-            step={1}
-            value={fieldOfView}
-            onChange={event => setFieldOfView(Number(event.target.value))}
-            className="accent-accent w-24"
-          />
-        </label>
-      </div>
-    </div>
+    </AssetDropTarget>
   )
 }

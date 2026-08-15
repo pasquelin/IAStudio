@@ -10,10 +10,14 @@ import {
   type SettingDescriptor,
 } from '@shared/domain/settings-registry'
 import { UiIcon } from '@/design/UiIcon'
-import { cn } from '@/helpers/cn'
+import { formatDecimal } from '@/helpers/format'
+import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { useToken } from '@/hooks/useToken'
+import { SettingLine } from './SettingLine'
 import { getBridge } from '@/services/bridge'
 import { useSettingsDraft, useSettingValue } from '@/stores/settings-draft'
+import { cn } from '@/helpers/cn'
+import { WINDOW_CAPTION, WINDOW_HELP } from '@/design/window-styles'
 
 /**
  * What a numeric field may hand over. An emptied field is mid-edit, and a value zod would
@@ -36,20 +40,26 @@ function decimalsOf(step: number | undefined): number {
   return step && step < 1 ? (String(step).split('.')[1]?.length ?? 0) : 0
 }
 
-/** Text settings commit on blur; a controlled input fed by a write hands back a stale word. */
-function TextControl({
-  descriptor,
-  id,
-  describedBy,
-  stored,
-  onCommit,
-}: {
+/**
+ * What ties any control below to the label above it and the help text under it. Every control
+ * takes these two and they are never optional: a field whose label points nowhere is a field a
+ * screen reader announces bare.
+ */
+type Labelled = { id: string; describedBy: string }
+
+/**
+ * A control that hands its word over when the field is LEFT rather than on every keystroke —
+ * hence `stored` and `onCommit` where the others take `value` and `onChange`. Written once
+ * because the text field and the path field had it spelt identically.
+ */
+type CommittedProps = Labelled & {
   descriptor: SettingDescriptor
-  id: string
-  describedBy: string
   stored: SettingValue | undefined
   onCommit: (value: string) => void
-}) {
+}
+
+/** Text settings commit on blur; a controlled input fed by a write hands back a stale word. */
+function TextControl({ descriptor, id, describedBy, stored, onCommit }: CommittedProps) {
   const { t } = useTranslation()
   // Null until touched, so a setting still on its way from the main process shows up when it
   // lands — seeding once would display an empty field over a stored value.
@@ -98,19 +108,7 @@ function TextControl({
  * A path, with the native picker beside it. The field stays writable: a path can be pasted, and
  * one typed before the binary is plugged in has to be storable — see `media.ffmpegPath`.
  */
-function PathControl({
-  descriptor,
-  id,
-  describedBy,
-  stored,
-  onCommit,
-}: {
-  descriptor: SettingDescriptor
-  id: string
-  describedBy: string
-  stored: SettingValue | undefined
-  onCommit: (value: string) => void
-}) {
+function PathControl({ descriptor, id, describedBy, stored, onCommit }: CommittedProps) {
   const { t } = useTranslation()
 
   const browse = async (): Promise<void> => {
@@ -120,7 +118,7 @@ function PathControl({
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       <TextControl
         descriptor={descriptor}
         id={id}
@@ -128,7 +126,12 @@ function PathControl({
         stored={stored}
         onCommit={onCommit}
       />
-      <button type="button" className="btn btn-sm shrink-0" onClick={() => void browse()}>
+      <button
+        type="button"
+        className="btn btn-sm shrink-0"
+        {...HINT_LEFT(t('settings.browseHint'))}
+        onClick={() => void browse()}
+      >
         {t('settings.browse')}
       </button>
     </div>
@@ -145,12 +148,7 @@ function ColorControl({
   describedBy,
   value,
   onChange,
-}: {
-  id: string
-  describedBy: string
-  value: SettingValue | undefined
-  onChange: (value: SettingValue) => void
-}) {
+}: Labelled & { value: SettingValue | undefined; onChange: (value: SettingValue) => void }) {
   const themeAccent = useToken('--color-accent')
 
   return (
@@ -171,14 +169,13 @@ function Control({
   describedBy,
   value,
   onChange,
-}: {
+}: Labelled & {
   descriptor: SettingDescriptor
-  id: string
-  describedBy: string
   value: SettingValue | undefined
   onChange: (value: SettingValue | undefined) => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const decimals = decimalsOf(descriptor.step)
 
   switch (descriptor.kind) {
     case 'choice':
@@ -240,8 +237,10 @@ function Control({
               if (writableNumber(descriptor, next)) onChange(next)
             }}
           />
-          <span className="text-base-content/60 w-10 text-right text-xs tabular-nums">
-            {typeof value === 'number' ? value.toFixed(decimalsOf(descriptor.step)) : ''}
+          <span className={cn(WINDOW_CAPTION, 'w-10 text-right tabular-nums')}>
+            {typeof value === 'number'
+              ? formatDecimal(value, i18n.language, { digits: decimals, least: decimals })
+              : ''}
           </span>
         </div>
       )
@@ -317,56 +316,48 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
   const describedBy = `${id}-help`
 
   return (
-    <div
-      className={cn(
-        'border-base-300 flex flex-col gap-1 border-b py-3 last:border-b-0',
-        !enabled && 'pointer-events-none opacity-50',
-      )}
+    <SettingLine
+      title={t(descriptor.titleKey)}
+      labelFor={id}
+      // Marks the row AND, through the section it belongs to, the entry in the tree.
+      staged={staged}
+      stagedLabel={t('settings.modified')}
+      disabled={!enabled}
+      help={
+        <p id={describedBy} className={WINDOW_HELP}>
+          {t(descriptor.helpKey)}
+          {/* A greyed control that does not say why is a dead end. */}
+          {!enabled && requirement && (
+            <span className="text-warning block">
+              {t('settings.requires', {
+                setting: t(descriptorAt(requirement.path)?.titleKey ?? ''),
+              })}
+            </span>
+          )}
+        </p>
+      }
     >
-      <div className="flex items-center justify-between gap-4">
-        <label htmlFor={id} className="flex items-center gap-1.5 text-xs font-medium">
-          {/* Marks the row AND, through the section it belongs to, the entry in the tree. */}
-          <span
-            aria-hidden={!staged}
-            title={staged ? t('settings.modified') : undefined}
-            className={cn('bg-primary size-1.5 shrink-0 rounded-full', !staged && 'invisible')}
-          />
-          {t(descriptor.titleKey)}
-        </label>
+      <Control
+        descriptor={descriptor}
+        id={id}
+        describedBy={describedBy}
+        value={value}
+        onChange={next => stage(descriptor.path, next)}
+      />
 
-        <div className="flex shrink-0 items-center gap-1">
-          <Control
-            descriptor={descriptor}
-            id={id}
-            describedBy={describedBy}
-            value={value}
-            onChange={next => stage(descriptor.path, next)}
-          />
-
-          <button
-            type="button"
-            title={t('settings.restoreDefault')}
-            aria-label={t('settings.restoreDefault')}
-            // Kept in place rather than unmounted: a button appearing between the control and
-            // the edge would shift the whole row the moment a value is touched.
-            className="btn btn-ghost btn-xs btn-square"
-            disabled={!restorable}
-            onClick={() => stage(descriptor.path, fallback)}
-          >
-            <UiIcon path={mdiRestore} size={14} className={restorable ? '' : 'opacity-0'} />
-          </button>
-        </div>
-      </div>
-
-      <p id={describedBy} className="text-base-content/60 max-w-lg text-xs">
-        {t(descriptor.helpKey)}
-        {/* A greyed control that does not say why is a dead end. */}
-        {!enabled && requirement && (
-          <span className="text-warning block">
-            {t('settings.requires', { setting: t(descriptorAt(requirement.path)?.titleKey ?? '') })}
-          </span>
-        )}
-      </p>
-    </div>
+      <button
+        type="button"
+        // The studio's tooltip rather than `title`: the native one comes with the OS delay and
+        // none of the theme, and this window now mounts the shared host like every other.
+        {...TIP_LEFT(t('settings.restoreDefault'), false, t('settings.restoreDefaultHint'))}
+        // Kept in place rather than unmounted: a button appearing between the control and the
+        // edge would shift the whole row the moment a value is touched.
+        className="btn btn-ghost btn-xs btn-square"
+        disabled={!restorable}
+        onClick={() => stage(descriptor.path, fallback)}
+      >
+        <UiIcon path={mdiRestore} size={14} className={restorable ? '' : 'opacity-0'} />
+      </button>
+    </SettingLine>
   )
 }

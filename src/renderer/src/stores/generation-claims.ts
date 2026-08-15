@@ -1,5 +1,5 @@
 import type { Job } from '@shared/domain/job'
-import { claimOnSubmit as claimImageOnSubmit } from './image-generation'
+import { claimImageOnSubmit } from './image-generation'
 import { claimModelOnSubmit } from './model-generation'
 import { claimSkyboxOnSubmit } from './skybox-generation'
 

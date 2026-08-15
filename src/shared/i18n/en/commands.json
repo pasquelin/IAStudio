@@ -1,0 +1,365 @@
+{
+  "commands": {
+    "projectNew": {
+      "title": "New project",
+      "help": "Creates an empty project and opens it. A project is the folder holding everything you make: the images, the videos, the sounds, and how they are arranged."
+    },
+    "projectOpen": {
+      "title": "Open project",
+      "help": "Picks a project already on your disk and opens it in place of the current one. The open project is saved as you go, so there is nothing to save first."
+    },
+    "documentSaveAs": {
+      "title": "Save as",
+      "help": "Writes a copy of the asset beside the original and carries on with it. The asset that was open stays as it was at the last save."
+    },
+    "documentSave": {
+      "title": "Save document",
+      "help": "Writes the document in front into the project. A 3D scene lives in the window until it is saved: the tab carries a dot for as long as what is on screen is not what is on disk."
+    },
+    "layoutReset": {
+      "title": "Reset layout",
+      "help": "Puts the panels back where they started. Useful once the windows have been dragged all over and nothing is where you expect. Your work is untouched."
+    },
+    "appSettings": {
+      "title": "Settings",
+      "help": "Opens the settings window — this one: the language, the colours, the account, the shortcuts, and everything else that is adjustable."
+    },
+    "appAssistant": {
+      "title": "Assistant",
+      "help": "Opens the window where you say what you want done, by voice or by keyboard. The assistant carries it out itself, and asks for a yes before anything that costs."
+    },
+    "appDictate": {
+      "title": "Dictate",
+      "help": "Listens to the microphone and writes what you say at the caret, in the field you are in. Held down by default: speak, let go, the text appears."
+    },
+    "windowFullScreen": {
+      "title": "Full screen",
+      "help": "Gives the window the whole screen, with no bar and no border, to work with nothing around it."
+    },
+    "spacesMoveLeft": {
+      "title": "Move the space left",
+      "help": "Shifts the focused space one place to the left in the top bar. The order you settle on is kept from one session to the next."
+    },
+    "spacesMoveRight": {
+      "title": "Move the space right",
+      "help": "Shifts the focused space one place to the right in the top bar. The order you settle on is kept from one session to the next."
+    },
+    "sceneSelect": {
+      "title": "Select",
+      "help": "The plain tool: click an object in the scene to choose it, without doing anything to it. It is the one you come back to between manipulations."
+    },
+    "sceneTranslate": {
+      "title": "Move",
+      "help": "Drags the chosen object from one place to another, by pulling the coloured arrows — one per direction."
+    },
+    "sceneRotate": {
+      "title": "Rotate",
+      "help": "Turns the chosen object on itself, by pulling the coloured rings — one per axis."
+    },
+    "sceneScale": {
+      "title": "Scale",
+      "help": "Makes the chosen object bigger or smaller, by pulling its handles. Holding Shift keeps its proportions."
+    },
+    "sceneFrame": {
+      "title": "Frame selection",
+      "help": "Brings the camera close enough that the chosen object fills the view. Handy when you are lost, or when an object is tiny."
+    },
+    "sceneSnap": {
+      "title": "Snap",
+      "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the 3D space settings."
+    },
+    "sceneSpace": {
+      "title": "Local frame",
+      "help": "Lines the handles up with the object’s own orientation rather than the world’s. On a turned object, that is what lets you move it “towards its front” rather than north."
+    },
+    "sceneProjection": {
+      "title": "Projection",
+      "help": "Switches between perspective, where receding lines converge, and orthographic projection, where parallels stay parallel. That is what lets an alignment be judged by eye."
+    },
+    "sceneQuad": {
+      "title": "Four views",
+      "help": "Splits the viewport in four — top, front and side around the view being flown. Each quarter orbits under the pointer; the flown one keeps the gizmos."
+    },
+    "sceneQuadEdges": {
+      "title": "Quad edges",
+      "help": "Redraws the wireframe without the diagonals triangulation added. A GLB never holds quads: this is a reconstruction by angle, faithful except on strongly curved surfaces."
+    },
+    "sceneDisplay": {
+      "title": "Display mode",
+      "help": "Cycles what the viewport draws: the surfaces, their edges alone, or both together. The button’s menu picks one directly."
+    },
+    "sceneGroup": {
+      "title": "Group",
+      "help": "Files the selected objects under one group. Moving the group moves them all, and ⌘Z takes the grouping back."
+    },
+    "sceneDuplicate": {
+      "title": "Duplicate",
+      "help": "Puts a copy of the selection under the same parent and at the very same place, then selects it. A group duplicates whole, with everything hanging from it."
+    },
+    "sceneCopy": {
+      "title": "Copy",
+      "help": "Holds on to the selection so it can be pasted, here or in another scene. This is the studio’s own clipboard: it leaves the system one alone."
+    },
+    "sceneCut": {
+      "title": "Cut",
+      "help": "Holds on to the selection and takes it out of the scene. ⌘Z brings it back."
+    },
+    "scenePaste": {
+      "title": "Paste",
+      "help": "Puts what was copied into the scene in front, and selects it. Pasting twice makes two separate copies."
+    },
+    "sceneDelete": {
+      "title": "Delete",
+      "help": "Removes everything selected from the scene. Nothing is lost for good: ⌘Z brings it back."
+    },
+    "undo": {
+      "title": "Undo",
+      "help": "Takes back the last thing you did in this document. Each document has its own stack: undo acts on the tab in front, not on the others."
+    },
+    "redo": {
+      "title": "Redo",
+      "help": "Does again what you have just undone. Handy after undoing once too often."
+    },
+    "sequencePlayPause": {
+      "title": "Play / Pause",
+      "help": "Starts playing the edit, or stops it where it is. Starting again picks up where you left off."
+    },
+    "sequenceMirror": {
+      "title": "Return window",
+      "help": "Opens the edit in a window of its own, to put on a second screen. It follows the studio frame by frame, without the sound, and closes like any window."
+    },
+    "sequenceSplit": {
+      "title": "Split clip",
+      "help": "Cuts the clip in two where the playhead sits, so each half can be handled on its own."
+    },
+    "sequenceDelete": {
+      "title": "Delete clip",
+      "help": "Removes the chosen clip from the edit. The original file stays in your assets."
+    },
+    "sequenceUnlink": {
+      "title": "Unlink picture and sound",
+      "help": "Separates the two clips of one take. While they are linked, moving, cutting or deleting one does the same to the other."
+    },
+    "sequenceZoomIn": {
+      "title": "Zoom in",
+      "help": "Spreads the edit out to see detail: clips get wider and are easier to aim at."
+    },
+    "sequenceZoomOut": {
+      "title": "Zoom out",
+      "help": "Draws the edit together to see more of it at once, at the cost of the detail."
+    },
+    "sequenceFit": {
+      "title": "Fit to view",
+      "help": "Sets the zoom so the whole edit fits on screen, end to end."
+    },
+    "sequenceStart": {
+      "title": "Go to start",
+      "help": "Brings the playhead right back to the beginning of the edit, moving nothing else."
+    },
+    "sequenceEnd": {
+      "title": "Go to end",
+      "help": "Sends the playhead right to the end of the edit, past the last clip."
+    },
+    "canvasZoomIn": {
+      "title": "Zoom in",
+      "help": "Magnifies the view one step, around the middle of what is visible. The image itself is untouched — only the way it is looked at."
+    },
+    "canvasZoomOut": {
+      "title": "Zoom out",
+      "help": "Shrinks the view one step, to take in the whole image again."
+    },
+    "canvasZoomFit": {
+      "title": "Fit to window",
+      "help": "Frames the whole image in the panel, with a margin, and never magnifies it past its actual size."
+    },
+    "canvasZoomActual": {
+      "title": "Actual size",
+      "help": "One image pixel per screen pixel: the only scale at which sharpness can be judged."
+    },
+    "canvasRulers": {
+      "title": "Rulers",
+      "help": "Shows or hides the two graduated rulers, at the top and on the left. Guides are pulled off them."
+    },
+    "canvasGuides": {
+      "title": "Guides",
+      "help": "Shows or hides the guides laid on the image. Hiding them does not remove them."
+    },
+    "canvasClearGuides": {
+      "title": "Clear guides",
+      "help": "Removes every guide from the image. Undoable, like any other edit."
+    },
+    "canvasSnap": {
+      "title": "Snap",
+      "help": "Makes what is dragged stick to guides, to the image edges and to its centre, within a few pixels."
+    },
+    "canvasDeselect": {
+      "title": "Deselect",
+      "help": "Drops the selected region, so the brush reaches the whole layer again."
+    },
+    "canvasCropApply": {
+      "title": "Apply the crop",
+      "help": "Trims the document to the placed frame. ⌘Z gives the frame back, not the pixels."
+    },
+    "canvasCropCancel": {
+      "title": "Abandon the crop",
+      "help": "Takes the crop frame away without trimming anything at all."
+    },
+    "canvasMaskFromSelection": {
+      "title": "Make a mask of the selection",
+      "help": "Hides the active layer outside the selected region."
+    },
+    "canvasRegenerate": {
+      "title": "Regenerate the region",
+      "help": "Asks the model to repaint the masked region of the active layer."
+    },
+    "canvasCutout": {
+      "title": "Cut out",
+      "help": "Removes the background of the flattened image with the default model."
+    },
+    "canvasEnlarge": {
+      "title": "Upscale",
+      "help": "Raises the resolution of the flattened image with the default model."
+    },
+    "canvasVectorize": {
+      "title": "Vectorise",
+      "help": "Turns the flattened image into paths with the default model."
+    },
+    "canvasExtend": {
+      "title": "Extend",
+      "help": "Asks the model to paint beyond the edges of the flattened image."
+    },
+    "canvasMergeDown": {
+      "title": "Merge down",
+      "help": "Joins the active layer and the one just below it into one, keeping the lower one’s name."
+    },
+    "canvasFlatten": {
+      "title": "Flatten image",
+      "help": "Reduces the whole stack to a single layer: hidden layers are dropped, not merged.",
+      "layerName": "Background"
+    },
+    "canvasFlipHorizontal": {
+      "title": "Flip horizontal",
+      "help": "Mirrors the whole document left to right, layers included."
+    },
+    "canvasFlipVertical": {
+      "title": "Flip vertical",
+      "help": "Mirrors the whole document top to bottom, layers included."
+    },
+    "canvasRotateCw": {
+      "title": "Rotate clockwise",
+      "help": "Turns the document a quarter turn to the right: the frame turns with it."
+    },
+    "canvasRotateCcw": {
+      "title": "Rotate counter-clockwise",
+      "help": "Turns the document a quarter turn to the left: the frame turns with it."
+    },
+    "canvasExport": {
+      "title": "Export the image",
+      "help": "Writes the flattened document to disk, as a PNG."
+    },
+    "skyboxView": {
+      "title": "Change the view",
+      "help": "Cycles through the four ways of looking at the sky: immersive, panoramic, cross, faces."
+    },
+    "skyboxProbes": {
+      "title": "Light probes",
+      "help": "Shows or hides the witness spheres. A sky is judged by what it lights, not by its own image."
+    },
+    "canvasToolMove": {
+      "title": "Move tool",
+      "help": "Arms the pointer: a drag moves the active layer, and its handles resize or turn it."
+    },
+    "canvasToolHand": {
+      "title": "Hand tool",
+      "help": "Arms the hand: a drag pans the view without touching the document. Holding space does the same without changing tool."
+    },
+    "canvasToolScale": {
+      "title": "Scale tool",
+      "help": "Arms scaling: the active layer’s handles resize it, and Shift keeps its proportions."
+    },
+    "canvasToolCrop": {
+      "title": "Crop tool",
+      "help": "Arms the crop frame. Draw a frame, then ⏎ to crop or ⎋ to drop it."
+    },
+    "canvasToolSelectRectangle": {
+      "title": "Rectangular selection",
+      "help": "Arms the rectangular selection. What is selected bounds the brush, the eraser and the bucket."
+    },
+    "canvasToolSelectEllipse": {
+      "title": "Elliptical selection",
+      "help": "Arms the elliptical selection: a drag inscribes the ellipse in the rectangle swept, and Shift makes it a circle."
+    },
+    "canvasToolSelectLasso": {
+      "title": "Lasso",
+      "help": "Arms the lasso: the selection follows the hand, freehand."
+    },
+    "canvasToolShapeRectangle": {
+      "title": "Rectangle shape",
+      "help": "Arms drawing a rectangle on the active layer; Shift makes it a square."
+    },
+    "canvasToolShapeLine": {
+      "title": "Line shape",
+      "help": "Arms drawing a line. Same group as the rectangle, hence its key with Shift added."
+    },
+    "canvasToolShapeArrow": {
+      "title": "Arrow shape",
+      "help": "Arms drawing an arrow, from where the drag began to where the hand lets go."
+    },
+    "canvasToolShapeEllipse": {
+      "title": "Ellipse shape",
+      "help": "Arms drawing an ellipse on the active layer; Shift makes it a circle."
+    },
+    "canvasToolShapePolygon": {
+      "title": "Polygon shape",
+      "help": "Arms drawing a regular polygon, whose number of sides is set in the inspector before drawing."
+    },
+    "canvasToolShapeStar": {
+      "title": "Star shape",
+      "help": "Arms drawing a star, whose number of points is set in the inspector before drawing."
+    },
+    "canvasToolBrush": {
+      "title": "Brush tool",
+      "help": "Arms the brush, with a softened edge. It paints on the active layer, bounded by the selection when there is one."
+    },
+    "canvasToolPencil": {
+      "title": "Pencil tool",
+      "help": "Arms the pencil, with a hard edge: the same gesture as the brush, without the softening."
+    },
+    "canvasToolText": {
+      "title": "Text tool",
+      "help": "Arms text: a click places a caption, whose words are typed in the inspector."
+    },
+    "canvasToolEraser": {
+      "title": "Eraser tool",
+      "help": "Arms the point eraser: it clears where the hand passes, bounded by the selection when there is one."
+    },
+    "canvasToolEraserSelection": {
+      "title": "Selective eraser",
+      "help": "Arms the selective eraser: one click clears everything the selection encloses at once, rather than rubbing it out."
+    },
+    "canvasToolFill": {
+      "title": "Paint bucket tool",
+      "help": "Arms the bucket: a click fills the layer, or the selection when there is one."
+    },
+    "canvasToolPicker": {
+      "title": "Eyedropper tool",
+      "help": "Arms the eyedropper: a click takes the colour under the pointer and hands it to the brush."
+    },
+    "canvasBrushSmaller": {
+      "title": "Smaller brush",
+      "help": "Narrows the brush, the eraser and the shape stroke by one step of the scale."
+    },
+    "canvasBrushLarger": {
+      "title": "Larger brush",
+      "help": "Widens the brush, the eraser and the shape stroke by one step of the scale."
+    },
+    "sceneSkeletons": {
+      "title": "Show skeletons",
+      "help": "Draws the bones of every rigged model over the scene."
+    },
+    "scenePoseMode": {
+      "title": "Pose mode",
+      "help": "Switches between picking objects and picking the bones of a rig."
+    }
+  }
+}

@@ -42,10 +42,29 @@
    foreign body. The horizontal margin is what separates them — touching tabs read as one
    segmented control rather than as several documents. */
 .dv-dockview .dv-tab {
+  display: flex;
+  align-items: center;
   border-radius: var(--radius-sc-md);
   margin: 6px 2px;
   padding: 0 4px;
   transition: background-color 120ms ease;
+}
+
+/* THIS is the row, not `.dv-tab` above it. dockview-react mounts a custom tab inside a
+   `dv-react-part` div it builds in JS, which its stylesheet never mentions — so it stays a
+   block, and the title (`width: 100%`) and our close button stack inside it. The strip's height
+   then cut the button in half: a cross under the title instead of beside it. Measured on the
+   running app, where the button started at the tab's own bottom edge. */
+.dv-dockview .dv-tab > .dv-react-part {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* The title yields, the cross never does: a long name shortens rather than pushing the button
+   out of the tab it belongs to. */
+.dv-dockview .dv-tab .dv-default-tab {
+  min-width: 0;
 }
 
 .dv-dockview .dv-tab:hover {

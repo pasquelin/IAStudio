@@ -1,16 +1,28 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { setGeometryOn, setLightOn, setMaterialOn, setSpriteOn } from '@/engines/scene/commands'
+import {
+  setEnvironment,
+  setGeometryOn,
+  setLightOn,
+  setMaterialOn,
+  setModelTextures,
+  setSpriteOn,
+  setTextOn,
+} from '@/engines/scene/commands'
 import { geometryFields, lightFields } from '@/engines/scene/property-fields'
 import { selectedNodes } from '@/engines/scene/scene-state'
 import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from './DescriptorSection'
+import { AnimationSection } from './AnimationSection'
 import { EnvironmentSection } from './EnvironmentSection'
 import { MaterialSection } from './MaterialSection'
+import { ModelOverridesSection } from './ModelOverridesSection'
+import { ModelTexturesSection } from './ModelTexturesSection'
 import { ShadowSection } from './ShadowSection'
 import { SpriteSection } from './SpriteSection'
+import { TextSection } from './TextSection'
 import { TransformSection } from './TransformSection'
 import { useSceneEdit } from './useSceneEdit'
 
@@ -44,6 +56,8 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const mesh = node?.type === 'mesh' ? node : null
   const light = node?.type === 'light' ? node : null
   const sprite = node?.type === 'sprite' ? node : null
+  const text = node?.type === 'text' ? node : null
+  const model = node?.type === 'model' ? node : null
   // The descriptors keep their identity across every edit that does not touch them, so the
   // fields of a material survive a whole drag of the position.
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
@@ -53,11 +67,14 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // it is what keeps the panel from being empty when nothing is selected, in place of a message.
   return (
     <>
-      <EnvironmentSection environment={environment} edit={edit} />
+      <EnvironmentSection
+        environment={environment}
+        onChange={next => edit.run(setEnvironment(next))}
+      />
 
       {node && (
         <>
-          <TransformSection node={node} selection={selection} edit={edit} />
+          <TransformSection node={node} nodes={nodes} selection={selection} edit={edit} />
           <ShadowSection node={node} selection={selection} edit={edit} />
         </>
       )}
@@ -79,6 +96,40 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
               edit.run(setMaterialOn(selection, changedFields(mesh.material, material)))
             }
             gesture={edit.gesture}
+          />
+        </>
+      )}
+
+      {text && (
+        <>
+          <TextSection
+            text={text.text}
+            onChange={next => edit.run(setTextOn(selection, changedFields(text.text, next)))}
+            gesture={edit.gesture}
+          />
+          {/* The very section a mesh gets: a text is lit the same way and wears the same
+              descriptor, so neither has to know the other exists. */}
+          <MaterialSection
+            material={text.material}
+            fallbackColor={meshColor}
+            onChange={material =>
+              edit.run(setMaterialOn(selection, changedFields(text.material, material)))
+            }
+            gesture={edit.gesture}
+          />
+        </>
+      )}
+
+      {model && (
+        <>
+          <AnimationSection documentId={documentId} node={model} edit={edit} />
+          {/* On the anchor alone, unlike a material: which maps a model wears depends on what its
+              own file carries, so spreading one over a selection would dress meshes that never
+              had that slot. */}
+          <ModelTexturesSection assetId={model.model.assetId} name={model.name} />
+          <ModelOverridesSection
+            textures={model.model.textures}
+            onChange={textures => edit.run(setModelTextures(model.id, textures))}
           />
         </>
       )}

@@ -1,28 +1,49 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { bindingOf, type CommandId } from '@shared/domain/command'
-import { shortcutLabel } from '@shared/domain/shortcut'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
+import { PICTURES, type Asset } from '@shared/domain/asset'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { reportFailure } from '@/services/diagnostics'
 import { cn } from '@/helpers/cn'
-import { CONTROL } from '@/design/styles'
+import { CONTROL, PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
 import { TIP_RIGHT } from '@/helpers/tooltip'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
-import { canRedo, canUndo } from '@/engines/core/history'
+import { registerFace } from '@/engines/canvas/canvas-fonts'
 import { layerBelow, textLayer } from '@/engines/canvas/canvas-state'
-import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
+import { mdiTune } from '@mdi/js'
+import { CanvasEngine, type CanvasTool } from '@/engines/canvas/CanvasEngine'
+import {
+  BRUSH_SETTINGS_BY_TOOL,
+  BRUSH_SIZE,
+  DEFAULT_BRUSH,
+  resizedBrush,
+  type BrushSettings,
+} from '@/engines/canvas/brush'
+import { MenuButton } from '@/design/MenuButton'
+import { SliderField } from '@/design/SliderField'
+import { RULER_SIZE } from '@/engines/canvas/CanvasOverlay'
 import { useBindingOverrides } from '@/stores/bindings'
-import { addLayer, flatten, flipImage, mergeDown, rotateImage } from '@/engines/canvas/commands'
+import {
+  addLayer,
+  cropToRect,
+  flatten,
+  flipImage,
+  mergeDown,
+  rotateImage,
+} from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
-import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
-import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
-import { assetsById, useAssets } from '@/stores/assets'
+import { canvasOf, useCanvases } from '@/stores/canvases'
+import { selectionOf, useCanvasViews, canvasViewOf } from '@/stores/canvas-views'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 import { guidePort } from './guide-port'
 import {
+  armedBy,
+  armingCommand,
   canvasToolFor,
   cursorFor,
   DEFAULT_MODES,
@@ -35,7 +56,8 @@ import { prepareEdit, type AiEdit } from './ai-actions'
 import { exportPicture } from './export-picture'
 import { maskFromSelection } from './mask-actions'
 import { placeAsset } from './place-asset'
-import { revealAssets } from './reveal-panel'
+import { revealAssets } from '@/helpers/reveal-panel'
+import { holdCanvas } from './canvas-hosts'
 import { pixelPort } from './pixel-port'
 import { ZoomBar } from './ZoomBar'
 
@@ -60,7 +82,7 @@ const CHECKER = cn(
 )
 
 export function ImageDocument({ documentId }: ImageDocumentProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<CanvasEngine | null>(null)
 
@@ -73,16 +95,13 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const [brush, setBrush] = useState<BrushSettings>(DEFAULT_BRUSH)
 
   const canvas = useCanvases(state => canvasOf(state, documentId))
-  const view = useCanvasViews(state => viewOf(state, documentId))
+  const view = useCanvasViews(state => canvasViewOf(state, documentId))
+  // What the rulers take from the top and the left when they are on, and nothing when they are off.
+  const rulerInset = view.rulers ? RULER_SIZE : 0
   const selection = useCanvasViews(state => selectionOf(state, documentId))
-  // Booleans rather than the history itself: a selector building an object on every call hands
-  // React a new snapshot each render, and the loop never settles.
-  const undoable = useCanvases(state => canUndo(historyOf(state, documentId)))
-  const redoable = useCanvases(state => canRedo(historyOf(state, documentId)))
   const bindings = useBindingOverrides()
+  const label = useShortcutLabel()
   const active = useDocuments(state => state.activeId === documentId)
-  const byId = useAssets(assetsById)
-  const [over, setOver] = useState(false)
 
   // What a fresh caption says. Held in a ref so the effect that builds the engine does not
   // depend on the language, which would remount it — and lose every layer's texture.
@@ -114,18 +133,30 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         useCanvases
           .getState()
           .runCommand(documentId, addLayer(textLayer(newId(), caption.current, at))),
+      onCrop: rect => useCanvases.getState().runCommand(documentId, cropToRect(rect)),
       guides: guidePort(documentId),
       layers: layerPort(documentId),
+      // Named here rather than defaulted inside the engine: jsdom has no `FontFace`, so
+      // every test hands its own, and a default would be a path nothing ever walks.
+      addFace: registerFace,
     })
 
     engine.current = created
+    // Read through the ref rather than captured, for the reason `pixelPort` gives: a save can
+    // land after this engine has been replaced, and the current one holds the textures.
+    const release = holdCanvas(documentId, () => engine.current)
     void created.mount(element)
 
     return () => {
+      release()
       created.dispose()
       engine.current = null
     }
   }, [documentId])
+
+  // After the engine is registered, never before: the pixels are handed to it, and it has to be
+  // reachable.
+  useRestoredDocument(documentId)
 
   // The engine holds the pixels, never the stack: every state change is pushed into it.
   useEffect(() => {
@@ -135,6 +166,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   useEffect(() => {
     engine.current?.setView(view)
   }, [view])
+
+  useEffect(() => {
+    engine.current?.setLanguage(i18n.language)
+  }, [i18n.language])
 
   useEffect(() => {
     engine.current?.setSelection(selection)
@@ -158,12 +193,29 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   }, [tool, mode])
 
   /**
+   * Choosing a row arms its group: picking `Ellipse` from the shapes menu while the brush is
+   * active has to hand over the ellipse, not merely remember it for later.
+   */
+  const pick = useCallback((toolId: string, modeId?: string) => {
+    // Placing a picture arms no gesture: it is a choice, and the shelf is where one is made.
+    if (modeId === 'image') return revealAssets()
+
+    if (modeId) setModes(current => ({ ...current, [toolId]: modeId }))
+    setTool(toolId)
+  }, [])
+
+  /**
    * What a key press means here. One `switch`, as every other space has one: the surface that is
    * listening is the one that answers, so `Meta+Equal` zooms an image here and stretches the
    * timeline there without either knowing about the other.
    */
   const run = useCallback(
     (command: CommandId) => {
+      // Twenty commands that all do the same thing, answered by the table rather than by twenty
+      // cases: a tool added to the bar is one row there, and never a branch forgotten here.
+      const arming = armedBy(command)
+      if (arming) return pick(arming.tool, arming.mode)
+
       switch (command) {
         case 'canvas.zoomIn':
           return zoomIn(documentId)
@@ -192,8 +244,18 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           }
           return
         }
+        case 'canvas.brushLarger':
+          return setBrush(current => resizedBrush(current, 'larger'))
+        case 'canvas.brushSmaller':
+          return setBrush(current => resizedBrush(current, 'smaller'))
         case 'canvas.deselect':
           return useCanvasViews.getState().setSelection(documentId, null)
+        // Both no-ops without a frame on screen, which is what makes ⏎ and ⎋ safe to bind here:
+        // the engine answers, and only the document in front is listening.
+        case 'canvas.cropApply':
+          return engine.current?.applyCrop()
+        case 'canvas.cropCancel':
+          return engine.current?.dropCrop()
         case 'canvas.maskFromSelection': {
           const host = engine.current
           return host ? maskFromSelection(documentId, host) : undefined
@@ -216,8 +278,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
         }
         case 'canvas.mergeDown': {
           const host = engine.current
-          const active = canvas.activeLayerId
-          const below = active ? layerBelow(canvas.layers, active) : null
+          // This handler is memoised: a captured stack goes stale the moment the selection moves.
+          const stack = canvasOf(useCanvases.getState(), documentId)
+          const active = stack.activeLayerId
+          const below = active ? layerBelow(stack.layers, active) : null
           // Nothing under it at its own level: no merge to offer, and nothing to say about it.
           if (!host || !active || !below) return
           // Composed before the command, which is the last moment the upper layer's pixels exist.
@@ -249,7 +313,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           return useCanvases.getState().redo(documentId)
       }
     },
-    [documentId],
+    [documentId, pick, t],
   )
 
   useShortcuts({
@@ -261,79 +325,86 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   })
 
   /** A picture dropped on the canvas becomes a layer of its own, on top and armed. */
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault()
-      setOver(false)
+  const onDrop = (asset: Asset): void => placeAsset(documentId, asset)
 
-      const assetId = assetIdFromDrag(event)
-      const asset = assetId ? byId.get(assetId) : null
-      if (asset) placeAsset(documentId, asset)
-    },
-    [byId, documentId],
-  )
+  /**
+   * The colour input fires continuously while the swatch is dragged; without this every frame of
+   * that drag rebuilds one object per group for a list that did not change.
+   *
+   * Every key shown is read off the registry, never written on the button: a key remapped in the
+   * settings has to move on the bar with it, exactly as `ZoomBar`'s already do.
+   */
+  const tools = useMemo(() => {
+    // Absent rather than empty when a gesture has no key: a button says nothing instead of
+    // wearing a blank where a shortcut is meant to be.
+    const keyOf = (toolId: string, modeId?: string): string | undefined => {
+      const command = armingCommand(toolId, modeId)
+      return command ? label(bindingOf(command, bindings)) || undefined : undefined
+    }
 
-  // Choosing a row arms its group: picking `Ellipse` from the shapes menu while the brush is
-  // active has to hand over the ellipse, not merely remember it for later.
-  const pick = useCallback((toolId: string, modeId: string) => {
-    // Placing a picture arms no gesture: it is a choice, and the shelf is where one is made.
-    if (modeId === 'image') return revealAssets()
-
-    setModes(current => ({ ...current, [toolId]: modeId }))
-    setTool(toolId)
-  }, [])
-
-  // The colour input fires continuously while the swatch is dragged; without this every frame
-  // of that drag rebuilds one object per group for a list that did not change.
-  const tools = useMemo(
-    () => IMAGE_TOOLS.map(entry => ({ ...entry, activeMode: modes[entry.id] })),
-    [modes],
-  )
+    return IMAGE_TOOLS.map(entry => ({
+      ...entry,
+      activeMode: modes[entry.id],
+      shortcut: keyOf(entry.id),
+      modes: entry.modes?.map(item => ({ ...item, shortcut: keyOf(entry.id, item.id) })),
+    }))
+  }, [modes, bindings, label])
 
   // Read off the registry rather than written on the buttons: a key remapped in the settings
   // has to move on the bar with it.
   const shortcuts = useMemo(
     () => ({
-      zoomIn: shortcutLabel(bindingOf('canvas.zoomIn', bindings)),
-      zoomOut: shortcutLabel(bindingOf('canvas.zoomOut', bindings)),
-      fit: shortcutLabel(bindingOf('canvas.zoomFit', bindings)),
-      actual: shortcutLabel(bindingOf('canvas.zoomActual', bindings)),
+      zoomIn: label(bindingOf('canvas.zoomIn', bindings)),
+      zoomOut: label(bindingOf('canvas.zoomOut', bindings)),
+      fit: label(bindingOf('canvas.zoomFit', bindings)),
+      actual: label(bindingOf('canvas.zoomActual', bindings)),
     }),
-    [bindings],
+    [bindings, label],
+  )
+
+  const brushKeys = useMemo(
+    () => ({
+      smaller: label(bindingOf('canvas.brushSmaller', bindings)),
+      larger: label(bindingOf('canvas.brushLarger', bindings)),
+    }),
+    [bindings, label],
   )
 
   return (
     <div className="flex h-full min-h-0">
-      <div
-        className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}
-        onDragOver={event => {
-          event.preventDefault()
-          setOver(true)
-        }}
-        onDragLeave={() => setOver(false)}
+      <AssetDropTarget
+        accepts={PICTURES}
         onDrop={onDrop}
+        // No frame: this surface fills the centre, so outlining it says nothing the user cannot
+        // already see — the same call `DocumentArea` makes for the middle behind it.
+        outlined={false}
+        className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}
       >
         {/* Pixi appends its own canvas here, and the overlay its own above it — see
             `CanvasEngine.mount`. The cursor goes on the host rather than the canvas, which Pixi
             owns and replaces on every mount. */}
         <div ref={hostRef} className="absolute inset-0" style={{ cursor: cursorFor(tool, mode) }} />
 
+        {/* Inside the rulers rather than over them: the toolbar covered the first twenty pixels
+            of both graduations — the corner one reads a position from. A margin, so the gap the
+            class already sets is kept, and the engine's own constant stays the only truth about
+            how thick a ruler is. */}
         <Toolbar
-          className="absolute top-2 left-2"
+          className={PANE_TOOLBAR}
+          style={{ marginTop: rulerInset, marginLeft: rulerInset }}
           tools={tools}
           activeTool={tool}
           onTool={setTool}
           onMode={pick}
-          extras={<BrushControls brush={brush} onBrush={setBrush} />}
-          onUndo={() => run('canvas.undo')}
-          onRedo={() => run('canvas.redo')}
-          canUndo={undoable}
-          canRedo={redoable}
+          extras={
+            <BrushControls
+              armed={canvasToolFor(tool, mode)}
+              brush={brush}
+              onBrush={setBrush}
+              shortcuts={brushKeys}
+            />
+          }
         />
-
-        {/* The same overlay every droppable surface uses, rather than a border of its own: a
-            difference in how two panels answer a drag reads as a bug. */}
-        {over && <div className="border-accent pointer-events-none absolute inset-0 border-2" />}
 
         <ZoomBar
           scale={view.viewport.scale}
@@ -343,36 +414,117 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           onFit={() => run('canvas.zoomFit')}
           onActual={() => run('canvas.zoomActual')}
         />
-      </div>
+      </AssetDropTarget>
     </div>
   )
 }
 
+/**
+ * The paint settings, showing only what the armed tool reads.
+ *
+ * A control the tool ignores is not greyed, it is gone — the rule the inspector already applies
+ * to a sprite, which gets no shadow section at all rather than a dead one. The hardness slider
+ * under the pencil was the case that named this: live, draggable, and moving nothing.
+ *
+ * The table is `BRUSH_SETTINGS_BY_TOOL`, and the engine reads the same one.
+ */
 function BrushControls({
+  armed,
   brush,
   onBrush,
+  shortcuts,
 }: {
+  /** What the engine is doing, not which button is lit: six groups map onto fewer tools. */
+  armed: CanvasTool | null
   brush: BrushSettings
   onBrush: (next: BrushSettings) => void
+  /** Read off the registry by the caller, so a remapped bracket key moves on the tooltip too. */
+  shortcuts: { smaller: string; larger: string }
 }) {
   const { t } = useTranslation()
+  const reads = armed ? BRUSH_SETTINGS_BY_TOOL[armed] : []
+
+  // Nothing to set is nothing to show: the pointer, the crop and the picker paint no pixel, and
+  // a bar of live controls above them promised settings the gesture never reads. `null` and not
+  // an empty wrapper — the bar is a flex row with a gap, which an empty child still spends.
+  if (reads.length === 0) return null
+
+  const fields = BRUSH_FIELDS.filter(field => reads.includes(field.of))
+  const showsColor = reads.includes('color')
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-2">
       {/*
         A native colour input, deliberately: macOS opens the system picker, which already has
         an eyedropper, swatches and HSL fields. Same reasoning as the native `<select>` in
         `CollectionBar`.
       */}
-      <input
-        type="color"
-        {...TIP_RIGHT(t('imageTools.color'), undefined, t('imageTools.colorHint'))}
-        value={`#${brush.color.toString(16).padStart(6, '0')}`}
-        onChange={event =>
-          onBrush({ ...brush, color: Number.parseInt(event.target.value.slice(1), 16) })
-        }
-        className={cn(CONTROL, 'w-(--sc-control) cursor-pointer border-none p-0.5')}
-      />
+      {showsColor && (
+        <input
+          type="color"
+          {...TIP_RIGHT(t('imageTools.color'), undefined, t('imageTools.colorHint'))}
+          value={`#${brush.color.toString(16).padStart(6, '0')}`}
+          onChange={event =>
+            onBrush({ ...brush, color: Number.parseInt(event.target.value.slice(1), 16) })
+          }
+          className={cn(CONTROL, 'w-(--sc-control) cursor-pointer border-none p-0.5')}
+        />
+      )}
+
+      {/*
+        Behind a flyout rather than in the bar: this bar is one control wide, and three labelled
+        sliders in a column that narrow are three sliders nobody can read. The brackets reach the
+        size without opening anything, which is what the hand uses mid-stroke.
+      */}
+      {fields.length > 0 && (
+        <MenuButton
+          icon={mdiTune}
+          label={t('imageTools.brushSettings')}
+          // The bracket keys are named on the tooltip rather than on the slider: they resize
+          // without opening anything, so the panel is the last place the hand learns about them.
+          description={`${t('imageTools.brushSettingsHint')} — ${shortcuts.smaller} / ${shortcuts.larger}`}
+          tooltip={TIP_RIGHT}
+          opensOnClick
+          menu={false}
+          // `useHoverFlyout` treats a single row as no menu at all — and what it counts has to
+          // be the rows actually drawn, not the table they were filtered from.
+          rowCount={fields.length}
+          rows={() => (
+            <div className="flex w-56 flex-col gap-2 p-1">
+              {fields.map(field => (
+                <SliderField
+                  key={field.of}
+                  label={t(field.labelKey)}
+                  value={brush[field.of]}
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
+                  onChange={value => onBrush({ ...brush, [field.of]: value })}
+                />
+              ))}
+            </div>
+          )}
+        />
+      )}
     </div>
   )
 }
+
+/**
+ * The three settings the flyout offers, as a table: a fourth is one row here rather than a
+ * fourth near-copy of the same slider. Colour is not one of them — it has its own input, and
+ * a swatch is not a value anyone drags along a track.
+ */
+const BRUSH_FIELDS: readonly {
+  of: 'size' | 'hardness' | 'opacity'
+  /** Spelled out rather than built from `of`: a composed key is one no search can find. */
+  labelKey: string
+  min: number
+  max: number
+  step: number
+}[] = [
+  { of: 'size', labelKey: 'imageTools.size', min: BRUSH_SIZE.min, max: BRUSH_SIZE.max, step: 1 },
+  // Twenty steps across the track: finer than that is a slider nobody can land on.
+  { of: 'hardness', labelKey: 'imageTools.hardness', min: 0, max: 1, step: 0.05 },
+  { of: 'opacity', labelKey: 'imageTools.opacity', min: 0, max: 1, step: 0.05 },
+]

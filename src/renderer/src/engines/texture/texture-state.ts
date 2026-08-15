@@ -5,10 +5,17 @@
  * The channels themselves are assets of the project, referenced by id. The renderer has no
  * `fs`, and a file path written into a document would stop the project folder from being moved.
  */
-import { isRecord, readBoolean, readNumber, readString } from '@shared/guards'
+import { isRecord, readBoolean, readNumber, readPositive } from '@shared/guards'
+import { normalizeAzimuth } from '@shared/domain/angles'
 import { readEnvironment, type EnvironmentRef } from '@shared/domain/scene'
-import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
-import { clamp } from '@/helpers/numeric'
+import {
+  DEFAULT_TEXTURE_MATERIAL,
+  PBR_CHANNELS,
+  readMaterial,
+  type MaterialSettings,
+  type PbrChannel,
+} from '@shared/domain/texture'
+import { clamp } from '@shared/numeric'
 
 /**
  * The `MeshStandardMaterial` property a channel feeds. Named here rather than borrowed from the
@@ -40,6 +47,32 @@ export function slotFor(channel: PbrChannel): MaterialSlot | null {
   return SLOT_BY_CHANNEL[channel]
 }
 
+/**
+ * What a channel's pixels ARE, which is what decides the colour space they must be decoded in.
+ * Named here rather than answered by the engine with `channel === 'baseColor'`: **two** channels
+ * carry colour, and the one that was forgotten came out dark and desaturated.
+ *
+ * A `data` channel decoded as colour would wash out the normals and lighten the roughness; a
+ * `color` channel decoded as data is the same mistake the other way round.
+ */
+export type ChannelContent = 'color' | 'data'
+
+const CONTENT_BY_CHANNEL: Record<PbrChannel, ChannelContent> = {
+  baseColor: 'color',
+  // Authored as a colour and read as one by three, exactly like the base map.
+  emissive: 'color',
+  normal: 'data',
+  roughness: 'data',
+  metalness: 'data',
+  ao: 'data',
+  height: 'data',
+  edge: 'data',
+}
+
+export function contentOf(channel: PbrChannel): ChannelContent {
+  return CONTENT_BY_CHANNEL[channel]
+}
+
 export type ChannelOrigin = 'generated' | 'derived' | 'imported'
 
 const CHANNEL_ORIGINS: readonly ChannelOrigin[] = ['generated', 'derived', 'imported']
@@ -50,7 +83,8 @@ function isChannelOrigin(value: unknown): value is ChannelOrigin {
 
 /**
  * One channel of a texture. `origin` is what the strip badges, and what tells a derived channel
- * — recomputed whenever its source changes — from a generated one, which is frozen.
+ * — computed by a shader from another channel of the same texture, and recomputed on demand —
+ * from a generated one, which is frozen at what the model answered.
  *
  * What a derived channel was computed *from* is not stored: `sourceFor` answers it from the
  * graph, and a second copy in the file would be free to contradict it.
@@ -85,65 +119,10 @@ export function sourceFor(channel: PbrChannel): PbrChannel | null {
   return SOURCE_BY_CHANNEL[channel]
 }
 
-export type ValueRange = { min: number; max: number }
-
-export type Vector2 = { x: number; y: number }
-
-/**
- * The settings of the preview material. None of them ever touch the pixels of a channel: they
- * are read at render time, which is what lets a value be changed back six months later.
- *
- * `roughnessRange` and `metalnessRange` remap what their map holds — the double handle of the
- * material panel — and are the identity by default.
- */
-export type MaterialSettings = {
-  /** Tint multiplied over the base colour map. */
-  color: string
-  roughness: number
-  metalness: number
-  roughnessRange: ValueRange
-  metalnessRange: ValueRange
-  normalScale: number
-  /** OpenGL and DirectX disagree on which way the green channel points. */
-  invertNormalGreen: boolean
-  /** Displacement, off by default: a subdivided sphere costs more than the scene it previews. */
-  heightScale: number
-  aoIntensity: number
-  /** How much the cavity mask darkens edges, read in `onBeforeCompile`. */
-  edgeIntensity: number
-  emissive: string
-  emissiveIntensity: number
-  /** Repeat, applied to every channel at once: applied to one alone, the maps drift apart. */
-  tiling: Vector2
-  offset: Vector2
-  /** Radians. */
-  rotation: number
+/** The same rule for the preview, whose two sliders were read unbounded just as those three were. */
+export const PREVIEW_BOUNDS = {
+  envIntensity: { min: 0, max: 3, step: 0.05 },
 }
-
-/**
- * Frozen down to its nested objects, and not only for its own sake: a panel that resets one row
- * writes `{ ...DEFAULT_TEXTURE_MATERIAL, roughness }`, and a spread copies the reference to
- * `tiling` — one drag on the copy would then move the default every other texture opens on.
- */
-export const DEFAULT_TEXTURE_MATERIAL: MaterialSettings = {
-  color: '#ffffff',
-  roughness: 1,
-  metalness: 0,
-  roughnessRange: Object.freeze({ min: 0, max: 1 }),
-  metalnessRange: Object.freeze({ min: 0, max: 1 }),
-  normalScale: 1,
-  invertNormalGreen: false,
-  heightScale: 0,
-  aoIntensity: 1,
-  edgeIntensity: 0,
-  emissive: '#000000',
-  emissiveIntensity: 1,
-  tiling: Object.freeze({ x: 1, y: 1 }),
-  offset: Object.freeze({ x: 0, y: 0 }),
-  rotation: 0,
-}
-
-Object.freeze(DEFAULT_TEXTURE_MATERIAL)
 
 /** The shapes a texture is judged on. A plane reads tiling, a sphere reads lighting. */
 export type PreviewShape = 'sphere' | 'box' | 'cylinder' | 'plane' | 'torusKnot'
@@ -160,10 +139,14 @@ function isPreviewShape(value: unknown): value is PreviewShape {
   return PREVIEW_SHAPES.some(candidate => candidate === value)
 }
 
-/** How many times the map repeats on the preview. Local to the view, never baked into tiling. */
+/**
+ * How many times the map repeats on the preview. A **multiplier over** `material.tiling`, never
+ * written into it: judging a repeat and choosing one are two different acts, and a texture whose
+ * tiling had been rewritten by a glance would go out into a scene tiled four times over.
+ */
 export type TilingPreview = 1 | 2 | 4
 
-const TILING_PREVIEWS: readonly TilingPreview[] = [1, 2, 4]
+export const TILING_PREVIEWS: readonly TilingPreview[] = [1, 2, 4]
 
 function isTilingPreview(value: unknown): value is TilingPreview {
   return TILING_PREVIEWS.some(candidate => candidate === value)
@@ -180,6 +163,12 @@ export type PreviewSettings = {
   showBackground: boolean
   autoSpin: boolean
   tilingPreview: TilingPreview
+  /**
+   * Brings the wrap edges of every map into the middle of the preview, by half a width and half
+   * a height. A seam is invisible where it falls — on the far side of a sphere, on the edge of a
+   * plane — and this is the whole of what makes it visible without touching a pixel.
+   */
+  showSeam: boolean
 }
 
 /** Frozen for the same reason as the material defaults, `environment` being its nested object. */
@@ -191,6 +180,7 @@ export const DEFAULT_PREVIEW: PreviewSettings = {
   showBackground: true,
   autoSpin: false,
   tilingPreview: 1,
+  showSeam: false,
 }
 
 Object.freeze(DEFAULT_PREVIEW)
@@ -221,43 +211,19 @@ export function resetMaterial(texture: TextureState): TextureState {
   return { ...texture, material: structuredClone(DEFAULT_TEXTURE_MATERIAL) }
 }
 
-/** Whether the pixels a channel would be computed from are there. */
-export function canDerive(texture: TextureState, channel: PbrChannel): boolean {
+/**
+ * Whether the pixels a channel would be computed from are there. Takes the channels rather than
+ * the whole texture: the panel that asks selects nothing else, and the material and the preview
+ * change on every frame of every drag.
+ */
+export function canDerive(channels: ChannelSet, channel: PbrChannel): boolean {
   const from = sourceFor(channel)
-  return from !== null && texture.channels[from] !== undefined
+  return from !== null && channels[from] !== undefined
 }
 
 /** The empty channels, in the order the strip shows them. */
 export function missingChannels(texture: TextureState): PbrChannel[] {
   return PBR_CHANNELS.filter(channel => texture.channels[channel] === undefined)
-}
-
-/**
- * Read like every other value, then held inside what the value means. A hand-edited `.tex` is
- * user territory, and a roughness of -1 reaches the GGX term as a negative alpha: black or white
- * pixels depending on the driver, with nothing on the way to say where it came from.
- */
-function readUnit(source: Record<string, unknown>, key: string, fallback: number): number {
-  return clamp(readNumber(source, key, fallback), 0, 1)
-}
-
-function readPositive(source: Record<string, unknown>, key: string, fallback: number): number {
-  return Math.max(0, readNumber(source, key, fallback))
-}
-
-/** Kept in order as well as in range: handles crossed over would remap everything to nothing. */
-function readRange(source: Record<string, unknown>, key: string, fallback: ValueRange): ValueRange {
-  const raw = source[key]
-  if (!isRecord(raw)) return { ...fallback }
-
-  const min = readUnit(raw, 'min', fallback.min)
-  return { min, max: clamp(readNumber(raw, 'max', fallback.max), min, 1) }
-}
-
-function readVector(source: Record<string, unknown>, key: string, fallback: Vector2): Vector2 {
-  const raw = source[key]
-  if (!isRecord(raw)) return { ...fallback }
-  return { x: readNumber(raw, 'x', fallback.x), y: readNumber(raw, 'y', fallback.y) }
 }
 
 function readChannels(value: unknown): ChannelSet {
@@ -295,31 +261,6 @@ function readChannels(value: unknown): ChannelSet {
   return channels
 }
 
-function readMaterial(value: unknown): MaterialSettings {
-  const fallback = DEFAULT_TEXTURE_MATERIAL
-  if (!isRecord(value)) return structuredClone(fallback)
-
-  return {
-    color: readString(value, 'color', fallback.color),
-    roughness: readUnit(value, 'roughness', fallback.roughness),
-    metalness: readUnit(value, 'metalness', fallback.metalness),
-    roughnessRange: readRange(value, 'roughnessRange', fallback.roughnessRange),
-    metalnessRange: readRange(value, 'metalnessRange', fallback.metalnessRange),
-    // Signed on purpose: a negative scale flips the relief, which is a legitimate answer to a
-    // normal map baked the other way round.
-    normalScale: readNumber(value, 'normalScale', fallback.normalScale),
-    invertNormalGreen: readBoolean(value, 'invertNormalGreen', fallback.invertNormalGreen),
-    heightScale: readNumber(value, 'heightScale', fallback.heightScale),
-    aoIntensity: readUnit(value, 'aoIntensity', fallback.aoIntensity),
-    edgeIntensity: readUnit(value, 'edgeIntensity', fallback.edgeIntensity),
-    emissive: readString(value, 'emissive', fallback.emissive),
-    emissiveIntensity: readPositive(value, 'emissiveIntensity', fallback.emissiveIntensity),
-    tiling: readVector(value, 'tiling', fallback.tiling),
-    offset: readVector(value, 'offset', fallback.offset),
-    rotation: readNumber(value, 'rotation', fallback.rotation),
-  }
-}
-
 function readPreview(value: unknown): PreviewSettings {
   const fallback = DEFAULT_PREVIEW
   if (!isRecord(value)) return structuredClone(fallback)
@@ -327,13 +268,18 @@ function readPreview(value: unknown): PreviewSettings {
   return {
     shape: isPreviewShape(value.shape) ? value.shape : fallback.shape,
     environment: readEnvironment(value.environment),
-    envIntensity: readPositive(value, 'envIntensity', fallback.envIntensity),
-    envRotation: readNumber(value, 'envRotation', fallback.envRotation),
+    envIntensity: clamp(
+      readPositive(value, 'envIntensity', fallback.envIntensity),
+      PREVIEW_BOUNDS.envIntensity.min,
+      PREVIEW_BOUNDS.envIntensity.max,
+    ),
+    envRotation: normalizeAzimuth(readNumber(value, 'envRotation', fallback.envRotation)),
     showBackground: readBoolean(value, 'showBackground', fallback.showBackground),
     autoSpin: readBoolean(value, 'autoSpin', fallback.autoSpin),
     tilingPreview: isTilingPreview(value.tilingPreview)
       ? value.tilingPreview
       : fallback.tilingPreview,
+    showSeam: readBoolean(value, 'showSeam', fallback.showSeam),
   }
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
+import { job as jobOf } from '@/stores/job-fixtures'
 import { generationOf } from './generation'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
@@ -13,16 +14,16 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
-const job = (overrides: Partial<Job> = {}): Job => ({
-  id: 'job-1',
-  modelId: 'eleven-music-v2',
-  label: 'ElevenLabs Music v2',
-  status: 'succeeded',
-  progress: 1,
-  createdAt: '2026-08-07T10:00:00.000Z',
-  assetIds: ['asset-1'],
-  ...overrides,
-})
+/** The shared fixture, told the ids this suite traces a generation back through. */
+const job = (overrides: Partial<Job> = {}): Job =>
+  jobOf({
+    id: 'job-1',
+    targetId: 'eleven-music-v2',
+    label: 'ElevenLabs Music v2',
+    status: 'succeeded',
+    assetIds: ['asset-1'],
+    ...overrides,
+  })
 
 describe('where an asset came from', () => {
   it('prefers what the catalogue recorded', () => {

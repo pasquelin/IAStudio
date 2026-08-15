@@ -106,3 +106,24 @@ describe('image tools', () => {
     }
   })
 })
+
+/**
+ * The modes of a group do not always mean one tool. Two of them do not, and both were a defect
+ * before they were a case: the pointer group holds dragging the content and dragging the view,
+ * and the paint group holds a brush and a pencil that lay the same disc with a different edge.
+ */
+describe('the mode a group is armed on', () => {
+  it('tells the pencil from the brush, which the engine reads as two tools', () => {
+    expect(canvasToolFor('paint', 'brush')).toBe('brush')
+    expect(canvasToolFor('paint', 'pencil')).toBe('pencil')
+  })
+
+  it('falls back to the brush for the group with no mode named', () => {
+    expect(canvasToolFor('paint')).toBe('brush')
+  })
+
+  it('tells dragging the view from dragging the content', () => {
+    expect(canvasToolFor('pointer', 'hand')).toBe('hand')
+    expect(canvasToolFor('pointer', 'move')).toBe('move')
+  })
+})

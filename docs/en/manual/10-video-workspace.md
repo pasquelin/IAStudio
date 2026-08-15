@@ -8,10 +8,9 @@ The workspace where you assemble shots one after another into a sequence.
 
 ## How this workspace is laid out
 
-This is the only workspace where the **bottom strip belongs to the edit**. A sequence reads across
-the full width of the screen: the **Timeline** therefore takes all of it, and the asset shelf moves
-into the upper half of the left column — free in this workspace — so it stays visible at the same
-time.
+Like the Audio workspace, this is one where the **bottom strip belongs to the edit**. A sequence
+reads across the full width of the screen: the **Timeline** therefore takes all of it, and the
+asset shelf moves into the upper half of the right column, so it stays visible at the same time.
 
 In the centre, two monitors side by side — the Premiere and DaVinci convention:
 
@@ -20,7 +19,9 @@ In the centre, two monitors side by side — the Premiere and DaVinci convention
 | **Source**, on the left | the selected clip, on its own |
 | **Program**, on the right | the edit as it will be |
 
-When no clip is selected, the Source monitor shows "Select a clip to see it here."
+When no clip is selected, the Source monitor shows "Select a clip to see it here." When the **picture**
+clip under the playhead cannot be decoded, [the other message](#when-a-clip-cannot-be-shown) takes
+its place; a sound clip whose media is missing stays black and silent, announcing nothing.
 
 ---
 
@@ -32,7 +33,8 @@ When no clip is selected, the Source monitor shows "Select a clip to see it here
 | **Track** | a horizontal line that holds clips. There are picture tracks and sound tracks |
 | **Clip** | a piece of media placed on a track |
 | **Playhead** | the vertical line showing where you are |
-| **Trim** | to shorten a clip from one of its ends |
+| **Trim** | to shorten **or lengthen** a clip from one of its ends |
+| **Handle** | the vertical bar at each end of a clip, the one you grab to trim it |
 | **In point** | the place in the original file where the clip starts |
 
 ---
@@ -57,7 +59,8 @@ would look like it did nothing.
 Either way, the studio settles two things:
 
 - **the duration** — that of the media. A still image, or a medium whose duration is unknown,
-  lasts **5 seconds** by default;
+  lasts **5 seconds** by default. That is only a starting point: how long an image stays on
+  screen is decided by pulling either of its ends, see below;
 - **the alignment** — on a whole frame, never between two. You can aim to the pixel; the clip
   files itself onto the nearest frame.
 
@@ -67,17 +70,31 @@ Either way, the studio settles two things:
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Select** | `V` | selects, moves and trims clips |
+| **Selection** | `V` | selects, moves, trims and lengthens clips |
 | **Blade** | `C` | cuts a clip where you click |
 | **Hand** | `H` | scrolls the timeline — wheel to zoom |
 
-### With the Select tool
+> **These three keys are not active yet**: they appear in the tooltips, but nothing listens for
+> them. A tool is picked with the mouse. The keys in service in the edit — `Space`, `S`,
+> `Delete`, the zooms — are in [Every shortcut](15-shortcuts.md).
+
+### With the Selection tool
 
 | Gesture | Effect |
 |---|---|
 | **Click** a clip | selects it — the inspector shows it |
 | **Drag** the clip's body | moves it, including from one track to another |
-| **Drag** a clip's edge | trims it on that side |
+| **Drag** a clip's edge | trims or lengthens it on that side |
+
+**Each end of a clip carries a handle**, a vertical bar, and the cursor there becomes a double
+arrow: that is the sign the edge can be grabbed. On a clip too narrow to hold them the handles
+disappear and the middle stays with the drag — otherwise a thin clip could not be moved at all.
+**Only the Selection tool shows that double arrow**: the **Hand** takes the whole surface to
+scroll and the **Blade** cuts where you click — neither trims, so neither promises it.
+
+**A lengthened clip grows over its neighbour** rather than stopping at it, the way DaVinci and
+Premiere do it: lengthening a shot means asking the next one to give way. `⌘Z` puts the whole
+track back as it was.
 
 **Snapping is automatic.** A moved clip sticks:
 
@@ -85,8 +102,12 @@ Either way, the studio settles two things:
 - to the **edges of neighbouring clips**, so there is no thousandth-of-a-second gap invisible to the
   eye.
 
-> A trimmed clip cannot exceed the length of the original media. The studio stops the trim itself
-> rather than showing black.
+> **A video or a sound** cannot exceed the length of the original media. The studio stops the trim
+> itself rather than showing black.
+>
+> **A still image has no media to exceed**: both of its ends lengthen it as far as you like, and
+> the only bound is the start of the sequence. That is how you decide how long a title card stays
+> on screen.
 
 ---
 
@@ -108,6 +129,7 @@ Below each monitor:
 | `⌘−` / `Ctrl+−` | zoom out |
 | `⇧Z` | fit — the whole edit fits on screen |
 | `S` | **cut the clip at the playhead** |
+| `F` | open the **return window**, for a second screen |
 | `Del` | delete the selected clip |
 | `⌘Z` / `⇧⌘Z` | undo / redo |
 
@@ -117,6 +139,55 @@ Below each monitor:
 **Only one player is active at a time.** If you open two sequences, only the one in front answers
 the space bar. That is what keeps playback smooth: two video decoders running at once fight over
 the machine.
+
+---
+
+## The return window — watching on a second screen
+
+**`F`**, or the **Return window** button under the **Program** monitor. A window opens holding
+nothing but the picture of the edit: no timeline, no tools, no bar. Put it on a second screen, and
+you watch your edit while you cut it.
+
+It is the gesture one makes while **watching** rather than editing, which is why the key is bare —
+no `⌘`, no `⇧`.
+
+### What it shows, and what it does not
+
+**The Program, always.** The whole edit, as it will be exported. Never the **Source**: the key
+belongs to the monitor that holds playback, and that is the edit's own.
+
+**It is MUTE, and that is not an oversight.** The studio is already playing the sound of this very
+edit. Two outputs on one machine drift a few milliseconds apart and **sound like an echo** — what
+you watch on the second screen is the picture; what you listen to stays where the work is.
+
+### It follows, playback included
+
+Everything you do to the edit shows there: a cut, a clip moved, a fade. When you move the playhead,
+it moves with you, **frame by frame**.
+
+**And when you play, it plays.** It is not handed the frames one by one — it runs its own playback,
+from the point you are at. That is what stops it trailing a step behind the picture it is meant to
+mirror.
+
+### One window, never two
+
+**A second press of `F` does not open a second window.** There is only one, and it shows **the edit
+in front of you**. Switch to another sequence tab and ask for the return again, and **the same
+window turns towards it** — not a third one stacking up on the desk.
+
+### On opening, and on closing
+
+**You have nothing to do to fill it.** It asks for the edit's state as soon as it opens, even when
+the edit was opened long before it.
+
+While no edit is in front, it shows:
+
+> *Waiting for the studio. Open an edit to see it here.*
+
+**And it goes back to that if you close the edit's tab**, rather than freezing on the last frame of
+work that is no longer open.
+
+It closes like any other window. Nothing under way stops when it goes.
 
 ---
 
@@ -148,8 +219,8 @@ Select a clip and look at the **Inspector**, in the right column.
 | **End** | where it finishes |
 | **Duration** | its length |
 | **In point** | where in the original file it starts |
-| **Fade in** | a rise from black or silence, at the start |
-| **Fade out** | a fall to black or silence, at the end |
+| **Fade in** | a rise from black, at the start — heard on a sound clip, only drawn on a picture one |
+| **Fade out** | a fall to black, at the end — the same split |
 | **Speed** | 1 = normal, 0.5 = half speed, 2 = double speed |
 | **Gain** | the volume, in decibels. 0 leaves the sound as recorded |
 
@@ -197,10 +268,50 @@ laptop: the fan goes quiet, the battery lasts.
 
 ---
 
+## The sound of the edit
+
+**The Program monitor plays the audio tracks during playback.** Press play: every clip laid on a
+sound track is heard in its place, at its gain, with its fades and at its speed, and a track muted
+or left out of a solo goes quiet at once — without waiting for the clip in progress to end.
+
+Four things worth knowing, because they show:
+
+- **Sound only comes out during playback.** Dragging the playhead by hand plays nothing: it is the
+  picture that follows the cursor, not the sound.
+- **The Source monitor plays the selected clip**, sound included when it is one — but it then
+  shows no picture, a sound having none. Its playhead does not move back on its own: coming from
+  a longer clip, it may land past the end of the new one, which then stays silent.
+- **A video's own sound is not played yet**: only sound tracks are. A video laid on a picture track
+  is seen without being heard.
+- **The first sound may take a moment to arrive**: the file is decoded whole before it plays. A
+  clip whose start went by in the meantime does not catch up, it is skipped — otherwise the sound
+  would stay behind the picture for the rest of the clip.
+
+---
+
+## When a clip cannot be shown
+
+The monitor then shows this in place of the picture:
+
+> This clip could not be shown: its media is missing, or its format cannot be read here.
+
+Three picture formats import without ever showing in a monitor — **`.exr`, `.tif` and `.tiff`**.
+They do enter the project and they do drop onto a track, but the studio's picture decoder does
+not open them. A truncated or damaged video file gives the same message.
+
+**The studio converts nothing.** The message says what is happening; it does not replace your
+file. To edit an `.exr` or a `.tif`, convert it to `.png` yourself before importing it.
+
+> **The message only shows when the monitor has nothing else to show.** An unreadable clip laid
+> **over** a track that does display leaves that one visible and simply goes missing: covering a
+> perfectly good picture to flag another one would cost more than it gives.
+
+---
+
 ## What is still missing
 
-> **A sequence does not save to disk yet.** Closing its tab loses the edit. The assets themselves
-> stay in the project.
+> **A sequence saves** as `.seq` with `⌘S`, and opens back as it was: tracks, clips, fades and
+> gains. What does not come back is the undo history.
 >
 > There is no **export** either: you cannot yet write a final video file. See
 > [What does not exist yet](18-limits.md).

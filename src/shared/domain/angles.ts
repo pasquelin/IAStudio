@@ -1,3 +1,4 @@
+import { clamp } from '../numeric'
 import type { Vector3 } from './scene'
 
 /**
@@ -37,7 +38,7 @@ export function normalizeAzimuth(azimuth: number): number {
 }
 
 export function clampElevation(elevation: number): number {
-  return Math.min(Math.max(elevation, -POLE_LIMIT), POLE_LIMIT)
+  return clamp(elevation, -POLE_LIMIT, POLE_LIMIT)
 }
 
 /** Unit vector pointing from the origin along the given angles. */
@@ -67,7 +68,7 @@ export function anglesFromDirection(
   if (length === 0) return fallback
 
   // Clamped before `asin`, not after: a ray off unit length by 1e-16 is outside its domain.
-  const vertical = Math.min(Math.max(y / length, -1), 1)
+  const vertical = clamp(y / length, -1, 1)
   return {
     elevation: Math.asin(vertical),
     azimuth: normalizeAzimuth(Math.atan2(x, z)),

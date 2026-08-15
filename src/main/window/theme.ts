@@ -16,7 +16,7 @@ export function applyTheme(theme: Theme): void {
 }
 
 /** What the theme resolves to right now, `system` included. */
-export function resolvedTheme(): ResolvedTheme {
+function resolvedTheme(): ResolvedTheme {
   return nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
 }
 

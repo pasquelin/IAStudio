@@ -1,12 +1,14 @@
 import { mdiCubeOutline } from '@mdi/js'
 import type { LightDescriptor, Vector3 } from '@shared/domain/scene'
+import { DEFAULT_CAMERA } from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
 import { lightByKind } from './light-types'
 import { primitiveByKind } from './mesh-primitives'
-import { GROUP_ICON, MODEL_ICON, SPRITE_ICON } from './node-kinds'
+import { CAMERA_ICON, GROUP_ICON, MODEL_ICON, SPRITE_ICON, TEXT_ICON } from './node-kinds'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
+  DEFAULT_TEXT,
   IDENTITY_TRANSFORM,
   shadowDefaults,
   type SceneNode,
@@ -57,6 +59,22 @@ export function modelNode(assetId: string, name: string): SceneNode {
  * from the project's assets, and a sprite that demanded one before it could exist would be a
  * node the Add menu could not add.
  */
+/** A camera of the scene: what a render looks through, placed like anything else. */
+export function cameraNode(): SceneNode {
+  return {
+    id: newId(),
+    parentId: null,
+    name: 'Camera',
+    visible: true,
+    // Back and up a little, looking at the origin is the job of whoever aims it — a camera born
+    // inside the object at the centre would show nothing at all.
+    transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 2, z: 6 } },
+    ...shadowDefaults({ type: 'camera' }),
+    type: 'camera',
+    camera: DEFAULT_CAMERA,
+  }
+}
+
 export function spriteNode(): SceneNode {
   return {
     id: newId(),
@@ -67,6 +85,24 @@ export function spriteNode(): SceneNode {
     ...shadowDefaults({ type: 'sprite' }),
     type: 'sprite',
     sprite: DEFAULT_SPRITE,
+  }
+}
+
+/**
+ * Words as a solid. Born with something written in it rather than empty: a text node that draws
+ * nothing until someone finds the field is a node the Add menu appears to have failed at.
+ */
+export function textNode(): SceneNode {
+  return {
+    id: newId(),
+    parentId: null,
+    name: 'Text',
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'text' }),
+    type: 'text',
+    text: DEFAULT_TEXT,
+    material: DEFAULT_MATERIAL,
   }
 }
 
@@ -90,6 +126,8 @@ export function iconOf(node: SceneNode): string {
   if (node.type === 'model') return MODEL_ICON
   if (node.type === 'group') return GROUP_ICON
   if (node.type === 'sprite') return SPRITE_ICON
+  if (node.type === 'text') return TEXT_ICON
+  if (node.type === 'camera') return CAMERA_ICON
 
   const kind = node.type === 'light' ? node.light.kind : node.geometry.kind
   return (primitiveByKind(kind) ?? lightByKind(kind))?.icon ?? mdiCubeOutline
@@ -119,7 +157,9 @@ export function createNodeOf(kind: string): SceneNode | null {
     }
   }
 
+  if (kind === 'camera') return cameraNode()
   if (kind === 'sprite') return spriteNode()
+  if (kind === 'text') return textNode()
 
   const light = lightByKind(kind)
   return light ? lightNode(light.create(), IDENTITY_TRANSFORM.position) : null

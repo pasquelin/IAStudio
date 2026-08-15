@@ -1,12 +1,13 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ModelPage, ModelQuery, ModelSummary } from '@shared/domain/model'
+import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
+import { preferModels } from '@/stores/settings-fixtures'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { Models } from './Models'
 
@@ -25,17 +26,15 @@ function model(id: string, overrides: Partial<ModelSummary> = {}): ModelSummary 
 }
 
 function renderPanel() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
-    <QueryClientProvider client={client}>
-      <Models />
-    </QueryClientProvider>,
-  )
+  return render(withQueries(<Models />))
 }
 
 describe('Models panel', () => {
   beforeEach(() => {
     useSettings.setState({ auth: { authenticated: true } })
+    // The panel reads the preference too, so a model preferred by one test would be shown as
+    // chosen in the next.
+    preferModels()
     useModels.setState({ selected: {}, collection: DEFAULT_COLLECTION_STATE })
     useLayouts.setState({ activeWorkspace: 'image' })
   })
@@ -224,6 +223,24 @@ describe('Models panel', () => {
     expect(useModels.getState().selected.image).toBe('flux')
   })
 
+  /**
+   * The rail draws the generator off the preference alone, and the generator runs on it. This
+   * panel said "no model chosen" about the very model the one beside it was running.
+   */
+  it('shows the preferred model as chosen where nothing was picked by hand', async () => {
+    preferModels({ image: 'flux' })
+    installFakeBridge({
+      scenario: { searchModels: () => Promise.resolve({ items: [model('flux')], cursor: null }) },
+    })
+
+    renderPanel()
+
+    // Twice: the header names it, and the grid lists it. Reading the session choice alone left
+    // the header on "no model chosen" while the row below it was the model being generated with.
+    expect(await screen.findAllByText('Model flux')).toHaveLength(2)
+    expect(screen.queryByText('Aucun modèle choisi')).not.toBeInTheDocument()
+  })
+
   it('tells an empty catalogue from a filter that matched nothing', async () => {
     installFakeBridge({
       scenario: { searchModels: () => Promise.resolve({ items: [], cursor: null }) },
@@ -233,12 +250,94 @@ describe('Models panel', () => {
     expect(await screen.findByText(/Aucun modèle dans cet espace/)).toBeInTheDocument()
 
     useModels.setState({ collection: { ...DEFAULT_COLLECTION_STATE, search: 'nothing' } })
-    rerender(
-      <QueryClientProvider client={new QueryClient()}>
-        <Models />
-      </QueryClientProvider>,
-    )
+    rerender(withQueries(<Models />))
 
     expect(await screen.findByText(/Aucun résultat pour ce filtre/)).toBeInTheDocument()
+  })
+
+  /**
+   * Measured on this account: 41 of the first 100 public models are graded above `cu-basic`,
+   * so picking one is the common case, not the edge one. The API answers 403
+   * `ModelAccessRestrictedError` — the studio says so first instead.
+   */
+  describe('a model the plan does not cover', () => {
+    /** Graded 50 against a plan worth 25, beside one graded 25 that the plan does cover. */
+    beforeEach(() => {
+      installFakeBridge({
+        scenario: {
+          searchModels: () =>
+            Promise.resolve({
+              items: [
+                model('pro', { requiredPlanLevel: 50 }),
+                model('mine', { requiredPlanLevel: 25 }),
+              ],
+              cursor: null,
+            }),
+          plan: () => Promise.resolve({ name: 'cu-basic', level: 25 }),
+        },
+      })
+    })
+
+    const cellOf = (name: string): HTMLElement | null =>
+      screen.getByText(name).closest('[role="option"]')
+
+    it('announces the row as disabled while leaving it listed', async () => {
+      renderPanel()
+
+      await screen.findByText('Model pro')
+      expect(cellOf('Model pro')).toHaveAttribute('aria-disabled', 'true')
+      expect(cellOf('Model mine')).not.toHaveAttribute('aria-disabled')
+    })
+
+    it('does not choose it when it is clicked', async () => {
+      renderPanel()
+
+      await userEvent.click(await screen.findByText('Model pro'))
+
+      expect(useModels.getState().selected).toEqual({})
+    })
+
+    it('still chooses a model the plan does cover', async () => {
+      renderPanel()
+
+      await userEvent.click(await screen.findByText('Model mine'))
+
+      expect(useModels.getState().selected).toMatchObject({ image: 'mine' })
+    })
+
+    /**
+     * Greying a row out without a word is a dead end, and the two views say it in two places:
+     * a card has a corner badge, a row explains through the tooltip on its name. Both are
+     * tested because a user meets whichever view the panel was left in.
+     */
+    it('says why on a card, naming the plan that refuses it', async () => {
+      renderPanel()
+
+      const badge = await screen.findByText('Hors abonnement')
+      expect(badge.getAttribute('data-tooltip-content')).toContain('cu-basic')
+    })
+
+    it('says why on a row too, where the badge has nowhere to sit', async () => {
+      useModels.setState({ collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' } })
+      renderPanel()
+
+      const title = await screen.findByText('Model pro')
+      expect(title.getAttribute('data-tooltip-content')).toContain('cu-basic')
+    })
+
+    // Being wrong here hides models the user is paying for, so an unread plan refuses nothing.
+    it('refuses nothing when the plan cannot be read', async () => {
+      installFakeBridge({
+        scenario: {
+          searchModels: () =>
+            Promise.resolve({ items: [model('pro', { requiredPlanLevel: 50 })], cursor: null }),
+          plan: () => Promise.resolve(null),
+        },
+      })
+      renderPanel()
+
+      await screen.findByText('Model pro')
+      expect(cellOf('Model pro')).not.toHaveAttribute('aria-disabled')
+    })
   })
 })

@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import { openAsset } from '@/helpers/open-asset'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from './documents'
+import { useProject } from './project'
 import { clearScenes } from './scene-fixtures'
 import { addModelTo, sceneOf, useScenes } from './scenes'
 
@@ -65,22 +67,37 @@ describe('addModelTo', () => {
   })
 })
 
-// The first of the three doors: a double-click in the asset browser.
+// The first of the three doors: a double-click in the asset browser. What it settles here is
+// which scene receives the model — `open-asset.test.ts` holds the gesture itself.
 describe('opening a model asset', () => {
-  it('drops it into the scene in front', () => {
-    openAsset(asset('mesh-1', 'mesh'))
-    expect(nodesOf('doc-1').filter(node => node.type === 'model')).toHaveLength(1)
+  beforeEach(() => {
+    installFakeBridge()
+    useProject.setState({
+      project: {
+        path: '/projects/demo',
+        manifest: { version: 1, name: 'Demo', createdAt: '', updatedAt: '' },
+      },
+      known: true,
+    })
   })
 
-  it('leaves a picture alone, which belongs to another workspace', () => {
-    openAsset(asset('img-1', 'image'))
+  /**
+   * A scene in front is not this mesh's scene. Dropping into it was the old rule, and it made
+   * one gesture mean two things — the tab under the eye decided, so the same double-click landed
+   * somewhere else the next time. Placing into the scene one is working in is what the context
+   * menu and the drag are for.
+   */
+  it('opens it in a scene of its own rather than the one in front', async () => {
+    await openAsset(asset('mesh-1', 'mesh'))
+
     expect(nodesOf('doc-1').filter(node => node.type === 'model')).toHaveLength(0)
+    const made = Object.values(useDocuments.getState().documents).at(-1)
+    expect(made?.sourceAssetId).toBe('mesh-1')
+    expect(nodesOf(made?.id ?? '').filter(node => node.type === 'model')).toHaveLength(1)
   })
 
-  it('does nothing with a model while no scene is in front', () => {
-    useDocuments.setState({ activeId: null })
-    openAsset(asset('mesh-1', 'mesh'))
-
+  it('leaves a picture alone, which belongs to another workspace', async () => {
+    await openAsset(asset('img-1', 'image'))
     expect(nodesOf('doc-1').filter(node => node.type === 'model')).toHaveLength(0)
   })
 })

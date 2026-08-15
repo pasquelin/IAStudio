@@ -1,3 +1,4 @@
+import { clamp } from '@shared/numeric'
 import type { Us } from '@/engines/timeline/timeline-state'
 
 /**
@@ -34,7 +35,7 @@ function mapChannels(data: AudioData, change: (channel: Float32Array) => Float32
 export function crop(data: AudioData, from: Us, to: Us): AudioData {
   const total = frameCount(data)
   const start = Math.min(total, framesFor(from, data.sampleRate))
-  const end = Math.max(start, Math.min(total, framesFor(to, data.sampleRate)))
+  const end = clamp(framesFor(to, data.sampleRate), start, total)
 
   return mapChannels(data, channel => channel.slice(start, end))
 }
@@ -62,16 +63,21 @@ export function applyFades(data: AudioData, fadeIn: Us, fadeOut: Us): AudioData 
   })
 }
 
+/** Decibels as a linear amplitude — what every gain, threshold and output actually multiplies by. */
+export function fromDb(db: number): number {
+  return 10 ** (db / 20)
+}
+
 export function applyGain(data: AudioData, db: number): AudioData {
   if (db === 0) return data
-  const factor = 10 ** (db / 20)
+  const factor = fromDb(db)
 
   return mapChannels(data, channel => {
     const scaled = channel.slice()
     for (let frame = 0; frame < scaled.length; frame++) {
       // Clamped: past ±1 the samples wrap on the way out, which is heard as a crackle rather
       // than as loudness.
-      scaled[frame] = Math.max(-1, Math.min(1, (scaled[frame] ?? 0) * factor))
+      scaled[frame] = clamp((scaled[frame] ?? 0) * factor, -1, 1)
     }
     return scaled
   })
@@ -129,7 +135,7 @@ export function edgeSilences(
   const total = frameCount(data)
   if (total === 0) return []
 
-  const floor = 10 ** (thresholdDb / 20)
+  const floor = fromDb(thresholdDb)
   const loud = (frame: number): boolean =>
     data.channels.some(channel => Math.abs(channel[frame] ?? 0) > floor)
 

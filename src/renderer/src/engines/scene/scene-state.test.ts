@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { lightNodeFixture as light, meshNode as mesh } from './scene-fixtures'
+import {
+  lightNodeFixture as light,
+  meshNode as mesh,
+  spriteNodeFixture as sprite,
+} from './scene-fixtures'
 import {
   canReparent,
   childrenOf,
   EMPTY_SCENE,
+  hasChildren,
   nodeById,
+  rotationShows,
   selectedNodes,
   subtreeOf,
   type SceneState,
@@ -126,5 +132,47 @@ describe('childrenOf', () => {
   it('answers with nothing for a childless parent', () => {
     const state: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
     expect(childrenOf(state, 'a')).toEqual([])
+  })
+})
+
+describe('hasChildren', () => {
+  it('answers on what hangs from the node, not on what the node hangs from', () => {
+    const nodes = [mesh('a'), mesh('b', 'a')]
+    expect(hasChildren(nodes, 'a')).toBe(true)
+    expect(hasChildren(nodes, 'b')).toBe(false)
+  })
+})
+
+/**
+ * The rule three places have to agree on: the handle in the viewport, the row in the inspector,
+ * and the command that writes the angle. It lives here so none of them can hold half of it.
+ */
+describe('rotationShows', () => {
+  const none = () => false
+  const some = () => true
+
+  it('shows for anything but a sprite', () => {
+    expect(rotationShows(mesh('a'), none)).toBe(true)
+    expect(rotationShows(light('a'), none)).toBe(true)
+  })
+
+  // three.js reads a sprite's size off the lengths of the first two columns of the model matrix,
+  // which a rotation leaves untouched, and takes its angle from a material uniform.
+  it('shows nothing for a sprite with nothing under it', () => {
+    expect(rotationShows(sprite('s'), none)).toBe(false)
+  })
+
+  it('shows for a sprite others hang from, which turning swings around it', () => {
+    expect(rotationShows(sprite('s'), some)).toBe(true)
+  })
+
+  // Every caller is on a drag path, and walking a scene to answer for a cube would be waste.
+  it('never asks for the children of a node its type already answers for', () => {
+    let asked = 0
+    rotationShows(mesh('a'), () => (asked += 1) > 0)
+    expect(asked).toBe(0)
+
+    rotationShows(sprite('s'), () => (asked += 1) > 0)
+    expect(asked).toBe(1)
   })
 })

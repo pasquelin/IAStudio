@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMedia } from '@/stores/media'
 import { useSettings } from '@/stores/settings'
+import { cn } from '@/helpers/cn'
+import { WINDOW_CAPTION } from '@/design/window-styles'
 
 /**
  * What no descriptor can express: whether a binary actually answers. The path itself is a
@@ -20,7 +22,7 @@ export function MediaSettings() {
   }, [refreshCapabilities, ffmpegPath])
 
   return (
-    <p className="text-base-content/60 mt-3 text-xs">
+    <p className={cn(WINDOW_CAPTION, 'mt-3')}>
       {resolved ? t('settings.ffmpegFound') : t('settings.ffmpegMissing')}
     </p>
   )

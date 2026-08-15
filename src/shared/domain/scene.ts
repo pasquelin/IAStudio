@@ -6,6 +6,9 @@
  * document, which is what `shared/domain` is for — and it is what lets `MeshKind` be *derived*
  * from them instead of restated, so a geometry added without a menu entry fails to compile.
  */
+import type { FontRef } from './font'
+import type { Us } from './time'
+
 export type Vector3 = { x: number; y: number; z: number }
 
 export type Transform = {
@@ -52,6 +55,20 @@ export type GeometryDescriptor =
 export type TextureRef = { assetId: string }
 
 /**
+ * A camera the scene holds, as opposed to the one the viewport looks through. It is a node like
+ * any other — pickable, movable, animatable by a track — and glTF carries one, so it survives an
+ * export where a viewport setting never could.
+ */
+export type CameraDescriptor = {
+  /** Vertical field of view, in degrees, as every other angle a person types. */
+  fov: number
+  near: number
+  far: number
+}
+
+export const DEFAULT_CAMERA: CameraDescriptor = Object.freeze({ fov: 50, near: 0.1, far: 1000 })
+
+/**
  * An imported model, for the same reason and in the same shape as a texture: what a document
  * stores is what a reload can resolve again.
  *
@@ -61,7 +78,62 @@ export type TextureRef = { assetId: string }
  * that is the right trade for a generation studio, and an explicit "explode" command is what
  * would lift it the day it matters.
  */
-export type ModelRef = { assetId: string }
+export type ModelRef = {
+  assetId: string
+  animation?: AnimationRef
+  /**
+   * Maps of the project put over the ones the file carries, slot by slot.
+   *
+   * A slot that is absent leaves what the GLB brought, which is why this is a partial and not the
+   * `MaterialDescriptor` a mesh wears: overriding a model means REPLACING one picture, never
+   * restating a colour and a roughness the file already got right.
+   *
+   * It applies to every material of the model at once. A file whose materials want different
+   * maps is not addressable here — the inside of a model is not a thing this document holds
+   * (see above), so there is no name to hang a per-material override on.
+   */
+  textures?: Partial<Record<TextureSlot, TextureRef>>
+}
+
+/**
+ * Which clip of a model plays, and how. Absent on a model carrying none, and on every document
+ * written before animation existed — the reader fills it in rather than refusing the node.
+ *
+ * The head position is part of it on purpose: an engine is rebuilt from its state, and a scene
+ * reopened on frame one would lose the pose its author saved it on.
+ */
+export type AnimationRef = {
+  /** The clip's name as the file spells it. A name the file no longer holds simply plays nothing. */
+  clip: string
+  playing: boolean
+  /**
+   * Where the head stands inside the clip, in SECONDS — three's mixer counts in them and this
+   * rides straight into it. The scene's own timeline counts in microseconds (`Keyframe.time`):
+   * the two meet only through `secondsToUs`, never by being handed to one another.
+   */
+  time: number
+  /** A multiplier, never a frame rate: the clip carries its own timing. */
+  speed: number
+  loop: boolean
+  /**
+   * Where the block sits on the scene's band, in MICROSECONDS — the unit that band counts in,
+   * unlike `time` just above, which is three's own clock inside the clip.
+   *
+   * It is what makes a clip a block one can move rather than something that simply runs: before
+   * the head reaches it the model stands at its rest pose, and the render walks it frame by
+   * frame instead of leaving it wherever real time happened to leave it.
+   */
+  start: Us
+}
+
+/** What a model animates like when nothing has been chosen: its first clip, stopped at the start. */
+export const DEFAULT_ANIMATION: Omit<AnimationRef, 'clip'> = Object.freeze({
+  playing: false,
+  time: 0,
+  speed: 1,
+  loop: true,
+  start: 0,
+})
 
 /**
  * What lights a viewport. `studio` is procedural — three builds a small lit room and prefilters
@@ -132,6 +204,26 @@ export type SpriteDescriptor = {
   opacity: number
   /** What it draws. None leaves the plain coloured quad three.js gives a mapless sprite. */
   map: TextureRef | null
+}
+
+/**
+ * Words, as a solid. The typeface is a reference like a texture or a model is, and for the same
+ * reason: what a document stores has to be something a reload can resolve again — see
+ * `domain/font`, which both workspaces that set text read.
+ *
+ * The face itself is never stored. A shipped one is a name the studio can always answer, and an
+ * installed one is a name only that machine can — which is the missing-font hole, said out loud
+ * rather than papered over by embedding half a megabyte of glyph tables in every scene file.
+ */
+export type TextDescriptor = {
+  value: string
+  font: FontRef
+  /** Height of the em square, in scene units. A capital stands about seven tenths of it. */
+  size: number
+  /** How far the letters stand out of their own plane. Zero leaves them flat. */
+  depth: number
+  /** How finely the curves are cut. The cost of a letter is mostly here. */
+  curveSegments: number
 }
 
 /**
@@ -207,17 +299,13 @@ export const EXPORT_EXTENSIONS: Record<ExportFormat, string> = {
   usdz: '.usdz',
 }
 
-/**
- * What is picked from the Add menu without being a mesh or a light.
- *
- * `text` is declared and greyed: three.js builds a 3D text from a font file, a project holds no
- * asset of that kind, and the studio ships none — see the plan of the 3D workspace.
- */
-export type ObjectKind = 'sprite' | 'text'
+/** What is picked from the Add menu without being a mesh or a light. */
+export type ObjectKind = 'sprite' | 'text' | 'camera'
 
 export const OBJECT_ENTRIES: readonly SceneEntry<ObjectKind>[] = [
   { kind: 'sprite' },
-  { kind: 'text', disabled: true },
+  { kind: 'text' },
+  { kind: 'camera' },
 ]
 
 export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [
@@ -227,3 +315,57 @@ export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [
   { kind: 'point' },
   { kind: 'spot' },
 ]
+
+/**
+ * How a scene is being looked at, and drawn.
+ *
+ * Session state, like an image document's zoom: never saved with the document, and ⌘Z never
+ * touches it — the scene did not change, the view did.
+ *
+ * Declared here rather than beside the renderer that applies them, and for the same reason
+ * `MESH_ENTRIES` is: the native menu offers a row per value and is built in the main process,
+ * which cannot import a renderer module.
+ */
+
+/** The six sides of the box a set is judged from. */
+export type ViewDirection = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'
+
+export const VIEW_DIRECTIONS: readonly ViewDirection[] = [
+  'front',
+  'back',
+  'left',
+  'right',
+  'top',
+  'bottom',
+]
+
+/** A toolbar row and a menu row both carry a plain string: this turns one back into a direction. */
+export function isViewDirection(value: string): value is ViewDirection {
+  return VIEW_DIRECTIONS.some(direction => direction === value)
+}
+
+/**
+ * What the viewport draws. Seven answers, and the order is the order the key cycles through:
+ * the three the studio opened with first, then the four a model is judged by.
+ *
+ * `solid`, `matcap` and `density` paint every surface with one stand-in material, so what shows
+ * is the SHAPE — a matcap reads curvature the way a clay render does, and density says which
+ * object of a set carries the triangles. `material` keeps the real materials but drops the
+ * scene's own lights, which is how a texture is judged without a light flattering it.
+ */
+export type DisplayMode =
+  'shaded' | 'wireframe' | 'both' | 'solid' | 'material' | 'matcap' | 'density'
+
+export const DISPLAY_MODES: readonly DisplayMode[] = [
+  'shaded',
+  'wireframe',
+  'both',
+  'solid',
+  'material',
+  'matcap',
+  'density',
+]
+
+export function isDisplayMode(value: string): value is DisplayMode {
+  return DISPLAY_MODES.some(mode => mode === value)
+}

@@ -12,11 +12,13 @@ vi.mock('@main/log', () => ({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(
 
 const entry = { level: 'error', scope: 'scene.model', message: 'mesh-1: unreadable' }
 
+const journal = { record: vi.fn(), read: vi.fn(), flush: vi.fn(), dispose: vi.fn() }
+
 describe('the diagnostics report handler', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetHandlers()
-    registerDiagnosticsHandlers()
+    registerDiagnosticsHandlers(() => journal)
   })
 
   it('writes the renderer failure at the level it was reported', async () => {
@@ -59,5 +61,57 @@ describe('the diagnostics report handler', () => {
 
   it('refuses an entry that is not one', () => {
     expect(() => invoke(CHANNELS.diagnosticsReport, { level: 'error' })).toThrow()
+  })
+})
+
+/**
+ * This channel is the funnel every renderer failure already went through — a 3D model that
+ * would not load, an export that broke. Feeding the journal here rather than from each caller
+ * is what covers all eight scopes at once.
+ */
+describe('what a renderer failure leaves in the journal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetHandlers()
+    registerDiagnosticsHandlers(() => journal)
+  })
+
+  it('records the failure under the part of the studio it came from', async () => {
+    await invoke(CHANNELS.diagnosticsReport, entry)
+
+    expect(journal.record).toHaveBeenCalledWith({
+      level: 'error',
+      topic: 'document',
+      messageKey: 'activity.scope.scene.model',
+      detail: 'mesh-1: unreadable',
+    })
+  })
+
+  it('files what the library refused under the library', async () => {
+    await invoke(CHANNELS.diagnosticsReport, { ...entry, scope: 'assets.reveal' })
+
+    expect(journal.record).toHaveBeenCalledWith(
+      expect.objectContaining({ topic: 'library', messageKey: 'activity.scope.assets.reveal' }),
+    )
+  })
+
+  it('keeps the level it was reported at, so a warning does not read as a failure', async () => {
+    await invoke(CHANNELS.diagnosticsReport, { ...entry, level: 'warn' })
+
+    expect(journal.record).toHaveBeenCalledWith(expect.objectContaining({ level: 'warn' }))
+  })
+
+  // A key and its parameters, never a sentence: the journal outlives the language it was
+  // written in, and the detail is the only free text a line carries.
+  it('names a key rather than storing the sentence the renderer sent', async () => {
+    await invoke(CHANNELS.diagnosticsReport, entry)
+
+    const recorded = journal.record.mock.calls[0]?.[0]
+    expect(recorded.messageKey).toMatch(/^activity\./)
+  })
+
+  it('records nothing when the entry was refused', () => {
+    expect(() => invoke(CHANNELS.diagnosticsReport, { level: 'error' })).toThrow()
+    expect(journal.record).not.toHaveBeenCalled()
   })
 })

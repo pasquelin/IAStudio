@@ -1,6 +1,7 @@
 import type Scenario from '@scenario-labs/sdk'
-import { OFFICIAL_TAG, type ModelSort } from '@shared/domain/model'
+import type { ModelSort } from '@shared/domain/model'
 import { log } from '@main/log'
+import { offsetAfter, tokenAfter } from './cursor'
 import type { CatalogPage, ListRequest, ModelCatalog, SearchRequest } from './model-registry'
 
 /**
@@ -24,16 +25,6 @@ function sortParams(sort: ModelSort): SortParams {
 }
 
 /**
- * The cursor is empty rather than absent once a listing is exhausted. A SHORT page is not the
- * same thing: with a server-side tag or date filter, the API returns fewer than `pageSize`
- * and still hands back a token, and treating that as the end truncated the catalogue silently.
- * An empty page is the end — that is the guard the SDK's own paginator applies.
- */
-function tokenAfter(token: string | undefined, received: number): string | null {
-  return token && received > 0 ? token : null
-}
-
-/**
  * Binds the registry's narrow catalogue to the real SDK. The only file where the two meet, so
  * a change in the SDK's shape lands here rather than throughout the registry.
  */
@@ -45,10 +36,9 @@ export function catalogOf(client: Scenario): ModelCatalog {
      * whole catalogue sat behind `privacy: 'public'` — measured: 0 private, 642 public. The
      * registry walks private first: a model the user trained outranks the six hundred others.
      */
-    list: async ({ privacy, pageSize, token, sort, official, tag, createdAfter }: ListRequest) => {
+    list: async ({ privacy, pageSize, token, sort, tag, createdAfter }: ListRequest) => {
       // `tags` and `score` ordering are public-only, and sorting private models by score would
       // additionally require a `status` filter the studio has no reason to impose.
-      const wanted = tag ?? (official ? OFFICIAL_TAG : undefined)
       const params = {
         pageSize,
         privacy,
@@ -58,7 +48,7 @@ export function catalogOf(client: Scenario): ModelCatalog {
               // A date bound is only honoured alongside the date order — the API says so, and
               // answers 400 otherwise. Asking for one silently overrides the chosen sort.
               ...(createdAfter ? { ...NEWEST_FIRST, createdAfter } : sortParams(sort)),
-              ...(wanted ? { tags: wanted } : {}),
+              ...(tag ? { tags: tag } : {}),
             }
           : {}),
       }
@@ -82,13 +72,9 @@ export function catalogOf(client: Scenario): ModelCatalog {
       const page = await client.search.modelSearch(params)
       log.info('scenario', `POST /search/models → ${page.hits.length}/${page.estimatedTotalHits}`)
 
-      const next = offset + page.hits.length
-
       return {
         models: page.hits,
-        // `estimatedTotalHits` is an estimate and can exceed what the index really holds; an
-        // empty page would otherwise hand back the very offset it was asked for, forever.
-        token: page.hits.length > 0 && next < page.estimatedTotalHits ? String(next) : null,
+        token: offsetAfter(offset, page.hits.length, page.estimatedTotalHits),
       }
     },
 

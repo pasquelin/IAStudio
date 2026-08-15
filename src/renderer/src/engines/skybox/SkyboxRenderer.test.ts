@@ -1,10 +1,12 @@
-import { Texture, WebGLRenderTarget } from 'three'
+import { DirectionalLight, Texture, WebGLRenderTarget } from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { SphericalAngles } from '@shared/domain/angles'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import type * as AdjustModule from '../gpu/passes/adjust'
 import type { AdjustPass } from '../gpu/passes/adjust'
 import type { GpuPipeline } from '../gpu/GpuPipeline'
+import type * as TestObjectsModule from '../viewport/test-objects'
+import type { TestObjects } from '../viewport/test-objects'
 import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import { SkyboxRenderer } from './SkyboxRenderer'
@@ -26,6 +28,23 @@ const pipeline = {
  * — so the material handed to the pipeline stays the real one.
  */
 let adjust: AdjustPass
+
+/**
+ * Kept real underneath — they are three meshes in a group, which jsdom builds fine — and held
+ * onto so a test can read what the viewport would actually draw.
+ */
+let probes: TestObjects
+
+vi.mock('../viewport/test-objects', async importOriginal => {
+  const actual = await importOriginal<typeof TestObjectsModule>()
+  return {
+    ...actual,
+    createTestObjects: (options: Parameters<typeof actual.createTestObjects>[0]) => {
+      probes = actual.createTestObjects(options)
+      return probes
+    },
+  }
+})
 
 vi.mock('../viewport/environment', () => ({ createEnvironment: () => environment }))
 vi.mock('../gpu/GpuPipeline', () => ({ createGpuPipeline: () => pipeline }))
@@ -62,6 +81,23 @@ const sunAt = (azimuth: number): SkyboxContent => {
   content.sun = { ...content.sun, elevation: 0, azimuth }
   return content
 }
+
+/**
+ * One edit, shaped as `skybox/commands.ts:31` makes it: the section it touches is replaced and
+ * the other three come back as the same objects. Building a whole content instead would hand the
+ * engine four new sections and prove nothing about what a real drag costs.
+ */
+const edited = <K extends keyof SkyboxContent>(
+  content: SkyboxContent,
+  key: K,
+  section: SkyboxContent[K],
+): SkyboxContent => ({ ...content, [key]: section })
+
+/** A gesture on the sun's colour, one frame per emitted value, as the slider sends them. */
+const draggedSun = (sky: SkyboxContent, frames: number): SkyboxContent[] =>
+  Array.from({ length: frames }, (_unused, frame) =>
+    edited(sky, 'sun', { ...sky.sun, color: `#ff00${frame.toString(16).padStart(2, '0')}` }),
+  )
 
 describe('the renderer of a skybox', () => {
   let onSunChange: Mock<(angles: SphericalAngles) => void>
@@ -149,6 +185,27 @@ describe('the renderer of a skybox', () => {
       expect(pipeline.createTarget).not.toHaveBeenCalled()
     })
 
+    /**
+     * A document can reach the engine before the viewport has a renderer, and everything `apply`
+     * does then falls on the floor. Mounting has to put it back — recognising the content and
+     * skipping it would open the sky on its defaults with nothing to say so.
+     */
+    it('applies the document again when it arrived before the renderer did', () => {
+      const renderer = new SkyboxRenderer({ onSunChange, loadTexture: source.load })
+      mountedRenderers.push(renderer)
+      const content = skyOf('sky-1')
+      content.environment = { intensity: 0.25, showBackground: false }
+      vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValueOnce(null)
+      renderer.mount(host)
+      renderer.apply(content)
+      vi.clearAllMocks()
+
+      renderer.mount(host)
+
+      expect(environment.setIntensity).toHaveBeenCalledWith(0.25)
+      expect(environment.setBackgroundVisible).toHaveBeenCalledWith(false)
+    })
+
     it('grades into a half-float target', () => {
       mounted()
 
@@ -167,6 +224,31 @@ describe('the renderer of a skybox', () => {
       await applied(mounted(), skyOf('sky-1'))
 
       expect(source.load).toHaveBeenCalledWith('scenario://asset/sky-1')
+    })
+
+    /**
+     * A panorama opened in Images, retouched and saved keeps its id, so the engine would never
+     * ask for it again — the sky judged an edit that had already happened.
+     */
+    it('reads the picture again once the catalogue says it was rewritten', async () => {
+      let version = 'before'
+      const renderer = new SkyboxRenderer({
+        onSunChange,
+        loadTexture: source.load,
+        assetVersion: () => version,
+      })
+      mountedRenderers.push(renderer)
+      renderer.mount(host)
+      await applied(renderer, skyOf('sky-1'))
+
+      renderer.refreshSource()
+      expect(source.load).toHaveBeenCalledTimes(1)
+
+      version = 'after'
+      renderer.refreshSource()
+
+      await vi.advanceTimersByTimeAsync(0)
+      expect(source.load).toHaveBeenLastCalledWith('scenario://asset/sky-1?v=after')
     })
 
     it('grades the picture it was given into the background', async () => {
@@ -264,15 +346,43 @@ describe('the renderer of a skybox', () => {
   })
 
   describe('the prefiltered map', () => {
+    /**
+     * The burst is one of adjustments, which is the only kind that still grades: a content built
+     * whole would pass whatever the engine skips, and three frames that change nothing would
+     * count the prefilter the first `apply` had already armed.
+     */
     it('prefilters once for a burst of changes, not once per change', async () => {
       const renderer = mounted()
-      await applied(renderer, skyOf('sky-1'))
-
-      renderer.apply(skyOf('sky-1'))
-      renderer.apply(skyOf('sky-1'))
-      renderer.apply(skyOf('sky-1'))
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
+      // Almost the whole delay, so a burst that failed to reschedule would fire before the wait
+      // below and be counted twice rather than once.
+      await vi.advanceTimersByTimeAsync(110)
       expect(environment.refresh).not.toHaveBeenCalled()
-      await vi.advanceTimersByTimeAsync(120)
+
+      for (const exposure of [1.1, 1.2, 1.3])
+        renderer.apply(edited(sky, 'adjustments', { ...sky.adjustments, exposure }))
+      await vi.advanceTimersByTimeAsync(110)
+      expect(environment.refresh).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(10)
+
+      expect(environment.refresh).toHaveBeenCalledTimes(1)
+    })
+
+    /**
+     * A sun drag does not postpone it, which is a change of behaviour and a decision: the sun is
+     * a light, not part of the graded picture, so the drag has no prefilter of its own to delay.
+     * Before the guard, every frame rescheduled the one an exposure edit already owed, and the
+     * probes stayed lit by a stale map for as long as the hand kept moving.
+     */
+    it('runs a prefilter that was already owed, even mid-drag on the sun', async () => {
+      const renderer = mounted()
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
+      await vi.advanceTimersByTimeAsync(110)
+
+      for (const frame of draggedSun(sky, 50)) renderer.apply(frame)
+      await vi.advanceTimersByTimeAsync(10)
 
       expect(environment.refresh).toHaveBeenCalledTimes(1)
     })
@@ -298,6 +408,82 @@ describe('the renderer of a skybox', () => {
 
       expect(environment.setIntensity).toHaveBeenCalledWith(0.25)
       expect(environment.setBackgroundVisible).toHaveBeenCalledWith(false)
+    })
+
+    it('recolours the sun in place, keeping the instance three was given', () => {
+      const renderer = mounted()
+      // The scene is only reachable through the group the test-objects mock captured.
+      const light = probes.group.parent?.children.find(child => child instanceof DirectionalLight)
+      if (!light) throw new Error('the renderer never put its sun in the scene')
+      const instance = light.color
+      const content = createSkyboxContent()
+      content.sun = { ...content.sun, color: '#ff8800' }
+
+      renderer.apply(content)
+
+      expect(light.color).toBe(instance)
+      expect(light.color.getHexString()).toBe('ff8800')
+    })
+
+    /**
+     * Measured before the guard: two hundred frames of the sun's colour cost two hundred grading
+     * passes into the 2048×1024 float target, and two hundred of everything else besides.
+     */
+    it('grades nothing more for a drag that only moves the sun', async () => {
+      const renderer = mounted()
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
+      const gradedOnce = pipeline.renderTo.mock.calls.length
+
+      for (const frame of draggedSun(sky, 200)) renderer.apply(frame)
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(pipeline.renderTo).toHaveBeenCalledTimes(gradedOnce)
+      expect(adjust.setAdjustments).toHaveBeenCalledTimes(1)
+      expect(environment.setIntensity).toHaveBeenCalledTimes(1)
+      expect(environment.setBackgroundVisible).toHaveBeenCalledTimes(1)
+    })
+
+    it('still recolours the sun on every frame of that drag', async () => {
+      const renderer = mounted()
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
+      const light = probes.group.parent?.children.find(child => child instanceof DirectionalLight)
+
+      for (const frame of draggedSun(sky, 3)) renderer.apply(frame)
+
+      expect(light?.color.getHexString()).toBe('ff0002')
+    })
+
+    it('grades again as soon as an adjustment moves', async () => {
+      const renderer = mounted()
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
+      const brighter = edited(sky, 'adjustments', { ...sky.adjustments, exposure: 1.7 })
+
+      await applied(renderer, brighter)
+
+      expect(adjust.setAdjustments).toHaveBeenLastCalledWith(brighter.adjustments)
+    })
+
+    it('takes the backdrop away when the document turns it off', async () => {
+      const renderer = mounted()
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
+
+      renderer.apply(edited(sky, 'environment', { ...sky.environment, showBackground: false }))
+
+      expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(false)
+    })
+
+    it('follows the environment intensity once the sky is already up', async () => {
+      const renderer = mounted()
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
+
+      renderer.apply(edited(sky, 'environment', { ...sky.environment, intensity: 0.25 }))
+
+      expect(environment.setIntensity).toHaveBeenLastCalledWith(0.25)
     })
   })
 
@@ -448,5 +634,173 @@ describe('the renderer of a skybox', () => {
       expect(() => renderer.dispose()).not.toThrow()
       expect(pipeline.dispose).not.toHaveBeenCalled()
     })
+  })
+})
+
+/**
+ * The empty state is the one sentence telling anyone what to do in this space, and it is drawn
+ * over the viewport. Seen on screen on 9 August: a `text-muted` over a lit ground and three
+ * spheres does not read — and there is nothing to judge without a sky anyway.
+ */
+describe('the test objects of a skybox', () => {
+  const mountedRenderers: SkyboxRenderer[] = []
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
+    vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue({} as never)
+    vi.spyOn(ViewportEngine.prototype, 'canvas', 'get').mockReturnValue(
+      document.createElement('canvas'),
+    )
+  })
+
+  afterEach(() => {
+    for (const renderer of mountedRenderers.splice(0)) renderer.dispose()
+    vi.useRealTimers()
+  })
+
+  const mounted = (): SkyboxRenderer => {
+    const renderer = new SkyboxRenderer({
+      onSunChange: vi.fn(),
+      loadTexture: fakeTextureSource().load,
+    })
+    renderer.mount(document.createElement('div'))
+    mountedRenderers.push(renderer)
+    return renderer
+  }
+
+  const withSky = (): SkyboxContent => {
+    const content = createSkyboxContent()
+    content.source = { assetId: 'sky-1' }
+    return content
+  }
+
+  it('shows nothing to judge until a sky is placed', () => {
+    mounted().apply(createSkyboxContent())
+
+    expect(probes.group.visible).toBe(false)
+  })
+
+  it('shows them once a sky is placed', () => {
+    mounted().apply(withSky())
+
+    expect(probes.group.visible).toBe(true)
+  })
+
+  /**
+   * And when it arrives on a later frame. Placing a sky is its own edit — `setSource`
+   * (`skybox/commands.ts:73`) replaces that section and leaves the other three where they were,
+   * so nothing but the sky itself tells the probes to look again.
+   */
+  it('shows them when the sky arrives after the document opened empty', () => {
+    const renderer = mounted()
+    const empty = createSkyboxContent()
+    renderer.apply(empty)
+
+    renderer.apply(edited(empty, 'source', { assetId: 'sky-1' }))
+
+    expect(probes.group.visible).toBe(true)
+  })
+
+  /** The setting still wins: asked to hide them, they stay hidden with a sky in place. */
+  it('keeps them hidden when the setting says so', () => {
+    const renderer = mounted()
+
+    renderer.setProbesVisible(false)
+    renderer.apply(withSky())
+
+    expect(probes.group.visible).toBe(false)
+  })
+
+  /** And they go again when the sky is taken away — the empty state comes back with them. */
+  it('hides them again when the sky is removed', () => {
+    const renderer = mounted()
+    const sky = withSky()
+    renderer.apply(sky)
+
+    renderer.apply(edited(sky, 'source', null))
+
+    expect(probes.group.visible).toBe(false)
+  })
+})
+
+/**
+ * A flat view is a quad over the frame, so what sits behind it is worth nothing — and worse
+ * than nothing for the backdrop: the projection letterboxes its picture, and the immersive sky
+ * showing through the bars would read as part of what is being judged.
+ */
+describe('the views of a skybox', () => {
+  const mountedRenderers: SkyboxRenderer[] = []
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
+    vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue({} as never)
+    vi.spyOn(ViewportEngine.prototype, 'canvas', 'get').mockReturnValue(
+      document.createElement('canvas'),
+    )
+  })
+
+  afterEach(() => {
+    for (const renderer of mountedRenderers.splice(0)) renderer.dispose()
+    vi.useRealTimers()
+  })
+
+  const withSky = (): SkyboxContent => {
+    const content = createSkyboxContent()
+    content.source = { assetId: 'sky-1' }
+    return content
+  }
+
+  const mounted = (): SkyboxRenderer => {
+    const renderer = new SkyboxRenderer({
+      onSunChange: vi.fn(),
+      loadTexture: fakeTextureSource().load,
+    })
+    renderer.mount(document.createElement('div'))
+    mountedRenderers.push(renderer)
+    renderer.apply(withSky())
+    return renderer
+  }
+
+  it('drops the backdrop and the probes for a flat view', () => {
+    const renderer = mounted()
+
+    renderer.setView('cross')
+
+    expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(false)
+    expect(probes.group.visible).toBe(false)
+  })
+
+  it('gives them back on the way home', () => {
+    const renderer = mounted()
+
+    renderer.setView('faces')
+    renderer.setView('immersive')
+
+    expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(true)
+    expect(probes.group.visible).toBe(true)
+  })
+
+  /** What the document asked of the backdrop is not forgotten while a flat view is on. */
+  it('does not turn a backdrop back on that the document had turned off', () => {
+    const renderer = mounted()
+    const content = withSky()
+    content.environment = { ...content.environment, showBackground: false }
+    renderer.apply(content)
+
+    renderer.setView('equirect')
+    renderer.setView('immersive')
+
+    expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(false)
+  })
+
+  /** Nothing is drawn over the immersive view — it IS the scene. */
+  it('draws no projection in the immersive view', () => {
+    mounted()
+
+    expect(pipeline.renderToScreen).not.toHaveBeenCalled()
   })
 })

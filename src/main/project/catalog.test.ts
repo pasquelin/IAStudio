@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { createCatalog, migrate, type Catalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
@@ -23,6 +23,7 @@ describe('catalog', () => {
   beforeEach(() => {
     driver = openMemoryDatabase()
     catalog = createCatalog(driver)
+    onTestFinished(driver.close)
   })
 
   it('keeps the ingest columns through a round trip', () => {
@@ -53,6 +54,22 @@ describe('catalog', () => {
     expect(found?.peaksPath).toBe('.index/peaks/abc123.bin')
   })
 
+  // The still of a mesh, which its own file cannot stand in for — see `posterUrl`.
+  it('keeps the still recorded beside an asset through a round trip', () => {
+    catalog.add(
+      asset({ id: 'asset_mesh', type: 'mesh', posterPath: '.index/posters/asset_mesh.jpg' }),
+    )
+
+    expect(catalog.find('asset_mesh')?.posterPath).toBe('.index/posters/asset_mesh.jpg')
+    expect(catalog.find('asset_mesh')?.type).toBe('mesh')
+  })
+
+  it('leaves it absent on an asset nothing wrote one for', () => {
+    catalog.add(asset())
+
+    expect(catalog.find('asset_1')?.posterPath).toBeUndefined()
+  })
+
   it('leaves the ingest columns absent on an asset that has never been probed', () => {
     catalog.add(asset())
     const found = catalog.find('asset_1')
@@ -69,6 +86,7 @@ describe('catalog', () => {
   it('opens a catalogue created before the ingest columns existed', () => {
     // Append-only migrations: a project made yesterday has to open today.
     const older = openMemoryDatabase()
+    onTestFinished(older.close)
     older.exec(`
       CREATE TABLE assets (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL, location TEXT NOT NULL,
@@ -87,10 +105,20 @@ describe('catalog', () => {
 
     migrate(older)
     const upgraded = createCatalog(older)
-    upgraded.add(asset({ id: 'asset_old', hash: 'def456', map: 'normal' }))
+    upgraded.add(
+      asset({
+        id: 'asset_old',
+        hash: 'def456',
+        map: 'normal',
+        posterPath: '.index/posters/asset_old.jpg',
+      }),
+    )
 
     expect(upgraded.find('asset_old')?.hash).toBe('def456')
     expect(upgraded.find('asset_old')?.map).toBe('normal')
+    // The newest column too: a project opened for the first time on this build is the ordinary
+    // case, not the exception, and a migration list read in the wrong order lands exactly here.
+    expect(upgraded.find('asset_old')?.posterPath).toBe('.index/posters/asset_old.jpg')
   })
 
   it('keeps a channel and its reading direction through a round trip', () => {
@@ -167,6 +195,19 @@ describe('catalog', () => {
     expect(catalog.find('asset_missing')).toBeNull()
   })
 
+  // The emoji is the case: `find` and the page path used to order tags by two rules that agree
+  // over the whole BMP and part ways above it, so any tag staying inside it — accents included —
+  // hid the split. See `catalog.ts`.
+  it('answers one order for the tags of an asset, read alone or through a page', () => {
+    catalog.add(asset({ id: 'asset_1', tags: ['Zoom', 'Éclairage', 'ﬀusion', '🌟etoile'] }))
+
+    const alone = catalog.find('asset_1')?.tags
+    const [inPage] = catalog.search({})
+
+    expect(alone).toEqual(inPage?.tags)
+    expect(alone).toEqual(['Zoom', 'Éclairage', '🌟etoile', 'ﬀusion'])
+  })
+
   it('finds an asset by name, whatever the case', () => {
     catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
     catalog.add(asset({ id: 'asset_2', name: 'Sky' }))
@@ -179,6 +220,65 @@ describe('catalog', () => {
     catalog.add(asset({ id: 'asset_2', name: '100%' }))
 
     expect(catalog.search({ text: '%' }).map(found => found.id)).toEqual(['asset_2'])
+  })
+
+  /**
+   * The search runs on every keystroke, so a word half typed has to find its row — that is what
+   * the trailing star of the fts5 expression is for.
+   */
+  it('finds a word still being typed', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.add(asset({ id: 'asset_2', name: 'Sky' }))
+
+    expect(catalog.search({ text: 'mos' }).map(found => found.id)).toEqual(['asset_1'])
+  })
+
+  /** Filters narrow: two words are two conditions, not two chances. */
+  it('asks for every word, not any of them', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.add(asset({ id: 'asset_2', name: 'Mossy sky' }))
+
+    expect(catalog.search({ text: 'mossy boulder' }).map(found => found.id)).toEqual(['asset_1'])
+  })
+
+  /** Typed in a hurry, without the accent the name carries. */
+  it('folds the accents away on both sides', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Pierre moussée' }))
+
+    expect(catalog.search({ text: 'moussee' }).map(found => found.id)).toEqual(['asset_1'])
+  })
+
+  /**
+   * The words are indexed in a table of their own, and nothing keeps it true but the triggers.
+   * Without them a deleted asset stays findable — a row the studio would then fail to open.
+   */
+  it('forgets the words of an asset that is gone', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.remove('asset_1')
+
+    expect(catalog.search({ text: 'mossy' })).toEqual([])
+  })
+
+  /**
+   * SQLite hands a freed rowid back out: delete the only asset and the next one takes its place
+   * in the table. The words of the first are keyed on that number — left behind, they answer for
+   * the second, and searching "mossy" returns an asset called "Dry sky".
+   */
+  it('does not let the words of a deleted asset answer for the one that takes its place', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.remove('asset_1')
+    catalog.add(asset({ id: 'asset_2', name: 'Dry sky' }))
+
+    expect(catalog.search({ text: 'mossy' })).toEqual([])
+    expect(catalog.search({ text: 'dry' }).map(found => found.id)).toEqual(['asset_2'])
+  })
+
+  it('forgets the name an asset used to carry', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.add(asset({ id: 'asset_1', name: 'Dry boulder' }))
+
+    expect(catalog.search({ text: 'mossy' })).toEqual([])
+    expect(catalog.search({ text: 'dry' }).map(found => found.id)).toEqual(['asset_1'])
   })
 
   it('narrows on every tag at once rather than any of them', () => {
@@ -196,6 +296,27 @@ describe('catalog', () => {
     catalog.add(asset({ id: 'asset_2', type: 'mesh' }))
 
     expect(catalog.search({ type: 'mesh' }).map(found => found.id)).toEqual(['asset_2'])
+  })
+
+  /**
+   * What the explorer asks before it hands a file to the system: the folder shows a file name,
+   * and only the catalogue can say whether that file is an asset this studio edits.
+   */
+  it('finds the asset filed at a path, and nothing else', () => {
+    catalog.add(asset({ id: 'asset_1', path: 'assets/img/asset_1.png' }))
+    catalog.add(asset({ id: 'asset_2', path: 'assets/img/asset_2.png' }))
+
+    const found = catalog.search({ path: 'assets/img/asset_2.png' })
+    expect(found.map(one => one.id)).toEqual(['asset_2'])
+  })
+
+  // Exact, never a prefix: the question is « is THIS file an asset », and a folder that shares
+  // the opening of a file name is not the file.
+  it('answers nothing for a path no asset was filed at', () => {
+    catalog.add(asset({ id: 'asset_1', path: 'assets/img/asset_1.png' }))
+
+    expect(catalog.search({ path: 'assets/img' })).toEqual([])
+    expect(catalog.search({ path: 'assets/img/stray.png' })).toEqual([])
   })
 
   it('returns the most recent first, and paginates', () => {
@@ -265,5 +386,243 @@ describe('catalog', () => {
 
     expect(version()).toEqual(before)
     expect(catalog.search({})).toHaveLength(1)
+  })
+})
+
+describe('catalogue provenance and sync', () => {
+  let driver: SqliteDriver
+  let catalog: Catalog
+
+  beforeEach(() => {
+    driver = openMemoryDatabase()
+    catalog = createCatalog(driver)
+    onTestFinished(driver.close)
+  })
+
+  it('keeps a generation through a round trip', () => {
+    const generation = {
+      modelId: 'model_flux',
+      modelLabel: 'Flux 1.1 Pro',
+      prompt: 'mossy boulder, overcast',
+      params: { guidance: 3.5, scheduler: 'euler' },
+      seed: 42,
+    }
+    catalog.add(asset({ generation }))
+
+    expect(catalog.find('asset_1')?.generation).toEqual(generation)
+  })
+
+  it('leaves an imported file without a generation rather than an empty one', () => {
+    catalog.add(asset())
+    expect(catalog.find('asset_1')?.generation).toBeUndefined()
+  })
+
+  it('keeps a generation whose seed the model never reported', () => {
+    catalog.add(asset({ generation: { modelId: 'm', modelLabel: 'M', prompt: 'p', params: {} } }))
+
+    const found = catalog.find('asset_1')?.generation
+    expect(found).toEqual({ modelId: 'm', modelLabel: 'M', prompt: 'p', params: {} })
+    expect(found && 'seed' in found).toBe(false)
+  })
+
+  it('keeps the twin and its three stamps through a round trip', () => {
+    const twin: Partial<Asset> = {
+      remoteAssetId: 'asset_remote',
+      remoteOwnerId: 'proj_a',
+      remoteUpdatedAt: '2026-08-06T09:00:00.000Z',
+      remoteSyncedAt: '2026-08-06T09:30:00.000Z',
+      localChangedAt: '2026-08-06T10:00:00.000Z',
+      syncStatus: 'local-ahead',
+      syncError: 'upload-too-large',
+    }
+    catalog.add(asset(twin))
+
+    expect(catalog.find('asset_1')).toMatchObject(twin)
+  })
+
+  it('drops a sync state this build no longer knows rather than carrying it out of the union', () => {
+    catalog.add(asset({ syncStatus: 'synced' }))
+    // Written straight to the column, as a build that knew a seventh state would have left it.
+    driver.prepare("UPDATE assets SET sync_state = 'quarantined' WHERE id = ?").run('asset_1')
+
+    expect(catalog.find('asset_1')?.syncStatus).toBeUndefined()
+  })
+
+  it('reads the members of one generation in the order the API produced them', () => {
+    for (const [index, name] of ['albedo', 'normal', 'height'].entries()) {
+      catalog.add(
+        asset({
+          id: `asset_${index}`,
+          name,
+          type: 'texture',
+          groupId: 'job_1',
+          outputIndex: 2 - index,
+          createdAt: `2026-08-06T10:0${index}:00.000Z`,
+        }),
+      )
+    }
+
+    expect(catalog.search({ groupId: 'job_1' }).map(found => found.name)).toEqual([
+      'height',
+      'normal',
+      'albedo',
+    ])
+  })
+
+  it('narrows to the kinds a workspace accepts', () => {
+    catalog.add(asset({ id: 'a', type: 'image' }))
+    catalog.add(asset({ id: 'b', type: 'audio' }))
+    catalog.add(asset({ id: 'c', type: 'texture' }))
+
+    const found = catalog.search({ types: ['image', 'texture'] })
+    expect(found.map(one => one.id).sort()).toEqual(['a', 'c'])
+  })
+
+  it('shows nothing for a workspace that accepts nothing', () => {
+    // An empty list is "nothing", not "no filter" — otherwise it would show everything.
+    catalog.add(asset())
+    expect(catalog.search({ types: [] })).toEqual([])
+  })
+
+  it('narrows by where the bytes are and by what is still to move', () => {
+    catalog.add(asset({ id: 'a', location: 'local', syncStatus: 'local-ahead' }))
+    catalog.add(asset({ id: 'b', location: 'cloud', syncStatus: 'synced' }))
+
+    expect(catalog.search({ location: 'cloud' }).map(one => one.id)).toEqual(['b'])
+    expect(catalog.search({ syncStatus: 'local-ahead' }).map(one => one.id)).toEqual(['a'])
+  })
+
+  it('counts every kind, zeroes included', () => {
+    catalog.add(asset({ id: 'a', type: 'image' }))
+    catalog.add(asset({ id: 'b', type: 'image' }))
+    catalog.add(asset({ id: 'c', type: 'skybox' }))
+
+    expect(catalog.countByType()).toEqual({
+      image: 2,
+      video: 0,
+      audio: 0,
+      mesh: 0,
+      texture: 0,
+      skybox: 1,
+    })
+  })
+
+  // The column is a free string in SQLite, as everywhere else here: a row written by a build
+  // that knew a seventh kind must not be counted under one of the six this one knows.
+  it('leaves a kind this build no longer knows out of the totals', () => {
+    catalog.add(asset({ id: 'a', type: 'image' }))
+    driver.exec(`
+      INSERT INTO assets (id, name, type, location, created_at)
+      VALUES ('b', 'hologram', 'hologram', 'local', '2026-08-08T10:00:00.000Z')
+    `)
+
+    expect(catalog.countByType()).toMatchObject({ image: 1 })
+  })
+
+  it('narrows to what a model produced, leaving imports out', () => {
+    catalog.add(
+      asset({
+        id: 'made',
+        generation: { modelId: 'flux', modelLabel: 'FLUX', prompt: 'a boulder', params: {} },
+      }),
+    )
+    catalog.add(asset({ id: 'imported' }))
+
+    expect(catalog.search({ generated: true }).map(one => one.id)).toEqual(['made'])
+  })
+
+  it('searches the prompt as well as the name', () => {
+    catalog.add(
+      asset({
+        id: 'a',
+        name: 'Flux 1',
+        generation: { modelId: 'm', modelLabel: 'M', prompt: 'mossy boulder', params: {} },
+      }),
+    )
+    catalog.add(asset({ id: 'b', name: 'mossy rock' }))
+
+    expect(
+      catalog
+        .search({ text: 'mossy' })
+        .map(one => one.id)
+        .sort(),
+    ).toEqual(['a', 'b'])
+  })
+})
+
+describe('migrating a catalogue that already holds assets', () => {
+  it('carries the existing rows across without losing a field', () => {
+    const older = openMemoryDatabase()
+    onTestFinished(older.close)
+    older.exec(`
+      CREATE TABLE assets (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL, location TEXT NOT NULL,
+        path TEXT, remote_asset_id TEXT, job_id TEXT, width INTEGER, height INTEGER,
+        bytes INTEGER, created_at TEXT NOT NULL, derived_from TEXT,
+        source_path TEXT, hash TEXT, probe TEXT, proxy_path TEXT, peaks_path TEXT,
+        map TEXT, map_inverted INTEGER
+      );
+      CREATE TABLE asset_tags (
+        asset_id TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+        tag TEXT NOT NULL, PRIMARY KEY (asset_id, tag)
+      );
+      INSERT INTO assets (id, name, type, location, path, remote_asset_id, created_at, hash)
+        VALUES ('asset_old', 'Boulder', 'image', 'local', 'assets/img/asset_old.png',
+                'asset_remote', '2026-08-01T10:00:00.000Z', 'abc123');
+      INSERT INTO asset_tags (asset_id, tag) VALUES ('asset_old', 'hero');
+      PRAGMA user_version = 3;
+    `)
+
+    migrate(older)
+    const upgraded = createCatalog(older)
+    const found = upgraded.find('asset_old')
+
+    expect(found).toMatchObject({
+      id: 'asset_old',
+      name: 'Boulder',
+      path: 'assets/img/asset_old.png',
+      remoteAssetId: 'asset_remote',
+      hash: 'abc123',
+      tags: ['hero'],
+    })
+    // Nothing invented for a row that predates the columns: an asset the catalogue never
+    // tracked has no provenance, and claiming one would put a prompt on an imported file.
+    expect(found?.generation).toBeUndefined()
+    expect(found?.syncStatus).toBeUndefined()
+    expect(found?.groupId).toBeUndefined()
+  })
+
+  /**
+   * The words of a project that predates the index. A migration that only started indexing from
+   * its next import would leave a library of two thousand assets unsearchable, and nothing on
+   * screen would say why.
+   */
+  it('makes what was already there searchable at once', () => {
+    const older = openMemoryDatabase()
+    onTestFinished(older.close)
+    older.exec(`
+      CREATE TABLE assets (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL, location TEXT NOT NULL,
+        path TEXT, remote_asset_id TEXT, job_id TEXT, width INTEGER, height INTEGER,
+        bytes INTEGER, created_at TEXT NOT NULL, derived_from TEXT,
+        source_path TEXT, hash TEXT, probe TEXT, proxy_path TEXT, peaks_path TEXT,
+        map TEXT, map_inverted INTEGER
+      );
+      CREATE TABLE asset_tags (
+        asset_id TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+        tag TEXT NOT NULL, PRIMARY KEY (asset_id, tag)
+      );
+      INSERT INTO assets (id, name, type, location, created_at)
+        VALUES ('asset_old', 'Mossy boulder', 'image', 'local', '2026-08-01T10:00:00.000Z');
+      PRAGMA user_version = 3;
+    `)
+
+    migrate(older)
+
+    expect(
+      createCatalog(older)
+        .search({ text: 'mossy' })
+        .map(found => found.id),
+    ).toEqual(['asset_old'])
   })
 })

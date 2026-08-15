@@ -4,6 +4,7 @@ import {
   MODEL_PERIODS,
   MODEL_SORTS,
   PUBLISHERS_BY_FAMILY,
+  tagLabel,
   TAGS_BY_FAMILY,
   type ModelFamily,
   type ModelPeriod,
@@ -31,16 +32,16 @@ type Translate = (key: string) => string
  * author name come back empty on every single one — a filter for them would filter nothing.
  */
 export function facetsFor(family: ModelFamily, t: Translate): FacetDescriptor[] {
-  const facets: FacetDescriptor[] = [
-    {
-      key: ORIGIN_FACET,
-      label: t('models.origin'),
-      options: [
-        { value: 'official', label: t('models.official') },
-        { value: 'community', label: t('models.community') },
-      ],
-    },
-  ]
+  const facets: FacetDescriptor[] = []
+
+  facets.push({
+    key: ORIGIN_FACET,
+    label: t('models.origin'),
+    options: [
+      { value: 'official', label: t('models.official') },
+      { value: 'community', label: t('models.community') },
+    ],
+  })
 
   const capabilities = CAPABILITIES_BY_FAMILY[family]
   if (capabilities.length) {
@@ -53,11 +54,10 @@ export function facetsFor(family: ModelFamily, t: Translate): FacetDescriptor[] 
 
   const tags = TAGS_BY_FAMILY[family]
   if (tags.length) {
-    // Tags are the publishers' own words — untranslated on purpose, and matched as written.
     facets.push({
       key: TAG_FACET,
       label: t('models.tag'),
-      options: tags.map(value => ({ value, label: value })),
+      options: tags.map(value => ({ value, label: tagLabel(value, t) })),
     })
   }
 

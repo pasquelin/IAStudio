@@ -3,16 +3,23 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { SceneExportCommand } from '@shared/ipc'
+import { PANE_TOOLBAR } from '@/design/styles'
 import { forgetReportedFailures } from '@/services/diagnostics'
-import { bridgeWatchingLogs } from '@/services/fake-bridge'
+import { fakeMenu } from '@/helpers/menu-fixtures'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/scene-state'
+import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
-import { useSceneViews, viewOf } from '@/stores/scene-views'
+import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
 import { clearScenes } from '@/stores/scene-fixtures'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
+import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
+import { bonesOfNode, clipsOfNode, useModelClips } from '@/stores/model-clips'
+import { IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
+import { DISPLAY_MODES } from '@shared/domain/scene'
 import { SceneDocument } from './SceneDocument'
 
 const setDocumentTitle = vi.fn()
@@ -29,13 +36,30 @@ const configure = vi.fn()
 const setSnapping = vi.fn()
 const setSpace = vi.fn()
 const setProjection = vi.fn()
-const setDisplayMode = vi.fn()
+const setDisplayModes = vi.fn()
+const activePane = vi.fn(() => 0)
+const setSkeletons = vi.fn()
+const setPoseMode = vi.fn()
+const setPickedBone = vi.fn()
+const setQuadView = vi.fn()
+const setPaneViews = vi.fn()
+const setPlayhead = vi.fn()
+const refreshTextures = vi.fn()
+/** Every engine built, so a test can fire the callbacks the real one would. */
+const built = vi.hoisted((): SceneRendererOptions[] => [])
 const viewFrom = vi.fn()
+// At module scope like the others, so a test can make the encoding itself refuse: the exporters
+// throw on a texture they cannot write, and that is the half no bridge failure stands in for.
+const exportTo = vi.fn(() => Promise.resolve(new Uint8Array([103, 108, 84, 70])))
 
 // jsdom has no WebGL context: the renderer is exercised by hand, not here. What this test
 // covers is that the document wires the toolbar and the keyboard to the right calls.
 vi.mock('@/engines/scene/SceneRenderer', () => ({
   SceneRenderer: class {
+    constructor(options: unknown) {
+      built.push(options as SceneRendererOptions)
+    }
+
     mount = vi.fn()
     unmount = vi.fn()
     apply = vi.fn()
@@ -46,18 +70,35 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setSnapping = setSnapping
     setSpace = setSpace
     setProjection = setProjection
-    setDisplayMode = setDisplayMode
+    setDisplayModes = setDisplayModes
+    activePane = activePane
+    setSkeletons = setSkeletons
+    setPoseMode = setPoseMode
+    setPickedBone = setPickedBone
+    setQuadView = setQuadView
+    setPaneViews = setPaneViews
+    setPlayhead = setPlayhead
+    refreshTextures = refreshTextures
     viewFrom = viewFrom
     frameSelection = frameSelection
-    exportTo = vi.fn(() => Promise.resolve(new Uint8Array([103, 108, 84, 70])))
+    exportTo = exportTo
   },
 }))
 
 const box = meshNode('box-1')
 
-/** A new document is born with three lights; only the meshes are what these tests count. */
+const moved = (x: number) => ({
+  ...IDENTITY_TRANSFORM,
+  position: { x, y: 0, z: 0 },
+})
+
+/** A new document is born with three lights; only the meshes are what most of these tests count. */
 function meshesOf(documentId: string): SceneNode[] {
-  return sceneOf(useScenes.getState(), documentId).nodes.filter(node => node.type === 'mesh')
+  return nodesOf(documentId).filter(node => node.type === 'mesh')
+}
+
+function nodesOf(documentId: string): SceneNode[] {
+  return [...sceneOf(useScenes.getState(), documentId).nodes]
 }
 
 // Every block, not one of them: a describe that leaned on its neighbour's setup only passed
@@ -65,6 +106,8 @@ function meshesOf(documentId: string): SceneNode[] {
 // things it leaked.
 beforeEach(() => {
   vi.clearAllMocks()
+  built.length = 0
+  useModelClips.setState({ clips: {}, bones: {} })
   // The export tests install a bridge; without this it would answer for the ones that follow.
   vi.unstubAllGlobals()
   // A report is said once per subject and the set lives at module scope: a second test on the
@@ -87,7 +130,16 @@ describe('SceneDocument', () => {
   it('renders the shared toolbar with the scene tools', () => {
     render(<SceneDocument documentId="doc-1" />)
     expect(screen.getByRole('button', { name: /Déplacer/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Tourner/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Pivoter/ })).toBeInTheDocument()
+  })
+
+  /**
+   * Read from the design system rather than written here: the image space and the graph put their
+   * bar in the same corner, and a copy of the inset is a copy that goes stale on its own.
+   */
+  it('places its bar where every space places it', () => {
+    render(<SceneDocument documentId="doc-1" />)
+    expect(screen.getByRole('toolbar')).toHaveClass(PANE_TOOLBAR)
   })
 
   /**
@@ -102,7 +154,7 @@ describe('SceneDocument', () => {
 
   it('switches the gizmo mode when a tool is clicked', async () => {
     render(<SceneDocument documentId="doc-1" />)
-    await userEvent.click(screen.getByRole('button', { name: /Tourner/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Pivoter/ }))
     expect(setMode).toHaveBeenCalledWith('rotate')
   })
 
@@ -128,11 +180,13 @@ describe('SceneDocument', () => {
     expect(setMode).not.toHaveBeenCalledWith('rotate')
   })
 
-  it('undoes through the toolbar', async () => {
+  // Through the key rather than a button: the bar drew its own pair until the Edit menu was
+  // made the one place a history lives.
+  it('undoes through the keyboard', async () => {
     useScenes.getState().runCommand('doc-1', addNode(box))
     render(<SceneDocument documentId="doc-1" />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Annuler/ }))
+    await userEvent.keyboard('{Meta>}{z}{/Meta}')
     expect(meshesOf('doc-1')).toHaveLength(0)
   })
 
@@ -155,9 +209,9 @@ describe('SceneDocument', () => {
     expect(meshesOf('doc-1')).toHaveLength(1)
   })
 
-  it('disables undo when there is nothing to undo', () => {
+  it('draws no history button of its own', () => {
     render(<SceneDocument documentId="doc-1" />)
-    expect(screen.getByRole('button', { name: /Annuler/ })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /Annuler/ })).not.toBeInTheDocument()
   })
 
   // Armed by default, and the one mode that leaves the gizmo off the selection.
@@ -166,37 +220,13 @@ describe('SceneDocument', () => {
     expect(setMode).toHaveBeenCalledWith('select')
   })
 
-  it('adds the primitive chosen in the Add flyout, and undo removes it', async () => {
+  /**
+   * Adding is the native Add menu's now, not the bar's — `useNativeMenu` covers the row, and
+   * `useAddNode` what it builds. What is left to say here is that the bar offers no second way.
+   */
+  it('offers no add button of its own', () => {
     render(<SceneDocument documentId="doc-1" />)
-
-    await userEvent.hover(screen.getByRole('button', { name: /Ajouter/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Cube/ }))
-
-    expect(meshesOf('doc-1')).toHaveLength(1)
-    expect(meshesOf('doc-1')[0]?.name).toBe('Box')
-
-    await userEvent.click(screen.getByRole('button', { name: /Annuler/ }))
-    expect(meshesOf('doc-1')).toHaveLength(0)
-  })
-
-  it('adds a light from the same flyout', async () => {
-    render(<SceneDocument documentId="doc-1" />)
-
-    await userEvent.hover(screen.getByRole('button', { name: /Ajouter/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Projecteur/ }))
-
-    const lights = sceneOf(useScenes.getState(), 'doc-1').nodes.filter(
-      node => node.type === 'light',
-    )
-    expect(lights).toHaveLength(4)
-  })
-
-  it('adds nothing for a primitive that is not buildable yet', async () => {
-    render(<SceneDocument documentId="doc-1" />)
-
-    await userEvent.hover(screen.getByRole('button', { name: /Ajouter/ }))
-    expect(await screen.findByRole('menuitem', { name: /Texte/ })).toBeDisabled()
-    expect(meshesOf('doc-1')).toHaveLength(0)
+    expect(screen.queryByRole('button', { name: /Ajouter/ })).not.toBeInTheDocument()
   })
 })
 
@@ -249,14 +279,14 @@ describe('snapping and the coordinate frame', () => {
   // Held down, not armed: turning snapping on must not disarm the transform mode.
   it('draws a toggle as pressed without unarming the tool', async () => {
     render(<SceneDocument documentId="doc-1" />)
-    await userEvent.click(screen.getByRole('button', { name: /Tourner/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Pivoter/ }))
     await userEvent.click(screen.getByRole('button', { name: /Magnétisme/ }))
 
     expect(screen.getByRole('button', { name: /Magnétisme/ })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
-    expect(screen.getByRole('button', { name: /Tourner/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Pivoter/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('carries the snap steps into the engine with the rest of the viewport settings', () => {
@@ -299,34 +329,22 @@ describe('the viewport settings', () => {
 })
 
 describe('how the scene is looked at', () => {
-  it('swaps the projection from the toolbar, and lights the button', async () => {
+  // On the key rather than a button: the row moved to the native View menu, which ticks it.
+  it('swaps the projection on the key', async () => {
     render(<SceneDocument documentId="doc-1" />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+    await userEvent.keyboard('{o}')
 
     expect(setProjection).toHaveBeenCalledWith('orthographic')
-    expect(screen.getByRole('button', { name: /Projection/ })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
   })
 
-  it('swaps it back on the second click', async () => {
+  it('swaps it back on the second press', async () => {
     render(<SceneDocument documentId="doc-1" />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+    await userEvent.keyboard('{o}')
+    await userEvent.keyboard('{o}')
 
     expect(setProjection).toHaveBeenLastCalledWith('perspective')
-  })
-
-  it('stands the camera at the side a flyout row names', async () => {
-    render(<SceneDocument documentId="doc-1" />)
-
-    await userEvent.hover(screen.getByRole('button', { name: /Se placer/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /De dessus/ }))
-
-    expect(viewFrom).toHaveBeenCalledWith('top')
   })
 
   // The button wears the mode it draws, so it is the mode's own name that names it.
@@ -334,30 +352,52 @@ describe('how the scene is looked at', () => {
     render(<SceneDocument documentId="doc-1" />)
 
     await userEvent.hover(screen.getByRole('button', { name: /Rendu/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /^Filaire/ }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /^Filaire/ }))
 
-    expect(setDisplayMode).toHaveBeenCalledWith('wireframe')
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['wireframe'], false)
   })
 
-  it('cycles through the three modes on the bound key', async () => {
+  it('cycles through every mode on the bound key, and comes back round', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    const seen: string[] = []
+    for (let press = 0; press < DISPLAY_MODES.length; press += 1) {
+      await userEvent.keyboard('{z}')
+      const [modes] = setDisplayModes.mock.lastCall ?? []
+      seen.push(String(modes))
+    }
+
+    // Starting from shaded, one press per mode lands on each of the others and returns.
+    expect(seen).toEqual([...DISPLAY_MODES.slice(1), DISPLAY_MODES[0]].map(String))
+  })
+
+  it('reads the edges as quads on the bound key, and back as triangles', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{Shift>}{W}{/Shift}')
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['shaded'], true)
+
+    await userEvent.keyboard('{Shift>}{W}{/Shift}')
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['shaded'], false)
+  })
+
+  /** Four views, four answers: the key lands on the one the pointer is over, and on no other. */
+  it('changes only the view the pointer is over', async () => {
+    activePane.mockReturnValue(2)
     render(<SceneDocument documentId="doc-1" />)
 
     await userEvent.keyboard('{z}')
-    expect(setDisplayMode).toHaveBeenLastCalledWith('wireframe')
 
-    await userEvent.keyboard('{z}')
-    expect(setDisplayMode).toHaveBeenLastCalledWith('both')
-
-    await userEvent.keyboard('{z}')
-    expect(setDisplayMode).toHaveBeenLastCalledWith('shaded')
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['shaded', 'shaded', 'wireframe'], false)
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').displays[0]).toBe('shaded')
   })
 
   // Session state, per document: two scenes side by side are two points of view.
   it('leaves the view of another document alone', async () => {
     render(<SceneDocument documentId="doc-1" />)
-    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+    await userEvent.keyboard('{o}')
 
-    expect(viewOf(useSceneViews.getState(), 'doc-2').projection).toBe('perspective')
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-2').projection).toBe('perspective')
   })
 })
 
@@ -403,5 +443,184 @@ describe('exporting the scene', () => {
         message: expect.stringContaining('read-only volume'),
       }),
     )
+  })
+
+  /**
+   * The other half, and the one no bridge failure covers: `GLTFExporter` and `USDZExporter` throw
+   * on a compressed texture, which the KTX2 loader makes an ordinary thing for an imported model
+   * to wear. Left outside the guard, that rejection reached nobody and the menu click did nothing.
+   */
+  it('records an encoding the exporter refused', async () => {
+    exportTo.mockRejectedValueOnce(new Error('setTextureUtils() must be called'))
+    const bridge = bridgeThatExports(() => Promise.resolve('set.glb'))
+    render(<SceneDocument documentId="doc-1" />)
+
+    await act(async () => bridge.ask())
+
+    expect(bridge.report).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'scene.export',
+        message: expect.stringContaining('setTextureUtils'),
+      }),
+    )
+  })
+  it('shows the bones of a rigged model on the bound key, and hides them again', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{b}')
+    expect(setSkeletons).toHaveBeenLastCalledWith(true)
+
+    await userEvent.keyboard('{b}')
+    expect(setSkeletons).toHaveBeenLastCalledWith(false)
+  })
+
+  it('splits the viewport in four on the bound key, and puts it back', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{Shift>}{Q}{/Shift}')
+    expect(setQuadView).toHaveBeenLastCalledWith(true)
+
+    await userEvent.keyboard('{Shift>}{Q}{/Shift}')
+    expect(setQuadView).toHaveBeenLastCalledWith(false)
+  })
+})
+
+/**
+ * The engine cannot see the catalogue, and the id a texture slot points at does not move when ⌘S
+ * rewrites the picture behind it. Without this the scene showed the image an edit replaced until
+ * something rebuilt the engine.
+ */
+describe('SceneDocument and a picture edited elsewhere', () => {
+  it('tells the engine to ask again for its maps when the shelf is re-read', () => {
+    render(<SceneDocument documentId="doc-1" />)
+    refreshTextures.mockClear()
+
+    act(() => useAssets.setState({ items: [] }))
+
+    expect(refreshTextures).toHaveBeenCalled()
+  })
+
+  it('hands the engine a way to read what the catalogue knows of a picture', () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    expect(built.at(-1)?.assetVersion?.('never-heard-of')).toBeUndefined()
+  })
+})
+
+describe('SceneDocument and the timeline over the scene', () => {
+  it('tells the engine where the head stands, and never the other way round', () => {
+    render(<SceneDocument documentId="doc-1" />)
+    // Inside `act`: the effect that pushes it runs on the render the store change causes.
+    act(() => useSceneViews.getState().setPlayhead('doc-1', 1.5))
+
+    expect(setPlayhead).toHaveBeenLastCalledWith(1.5)
+  })
+
+  it('reports the bones a model brought, so a track can name one', () => {
+    render(<SceneDocument documentId="doc-1" />)
+    const options = built.at(-1)
+    options?.onBones?.('perso', ['spine', 'arm.L'])
+
+    expect(bonesOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual(['spine', 'arm.L'])
+  })
+
+  it('reports the clips too, and forgets both when the viewport goes', () => {
+    const { unmount } = render(<SceneDocument documentId="doc-1" />)
+    const options = built.at(-1)
+    options?.onClips?.('perso', ['walk'], { walk: 2 })
+    expect(clipsOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual(['walk'])
+
+    // The names came out of files that viewport parsed; nothing outside it can answer for them.
+    unmount()
+    expect(clipsOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual([])
+  })
+
+  it('writes a plain move while auto-key is off', () => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    render(<SceneDocument documentId="doc-1" />)
+
+    built.at(-1)?.onTransform([{ id: 'box-1', transform: moved(3) }])
+
+    expect(nodesOf('doc-1').find(node => node.id === 'box-1')?.transform.position.x).toBe(3)
+  })
+})
+
+describe('SceneDocument and a node right-clicked in the viewport', () => {
+  /**
+   * What decides that a right-click WAS a click — brief, still, and no motion key held — lives in
+   * the engine, which needs a WebGL context and a ray to exercise: it is checked on screen rather
+   * than here. This covers the half a test can reach: the document raises the menu it reports.
+   */
+  it('raises the node menu the viewport reports, without a rename it could not open', async () => {
+    const menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    render(<SceneDocument documentId="doc-1" />)
+
+    built.at(-1)?.onContextMenu?.('box-1')
+
+    await vi.waitFor(() => expect(menu.labels()).toContain('Supprimer'))
+    expect(menu.labels()).not.toContain('Renommer l’objet')
+  })
+
+  /**
+   * The outliner arms its row on pointer down; the right button of a viewport flies the camera,
+   * so nothing has armed anything here. Without this the rows would act on whatever was selected
+   * before — the menu deletes a selection, never the node it was raised on.
+   */
+  it('selects the node it was raised on', () => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    render(<SceneDocument documentId="doc-1" />)
+
+    built.at(-1)?.onContextMenu?.('box-1')
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').selectedIds).toEqual(['box-1'])
+  })
+
+  // The other half of the same rule: a right-click on one of six must not shrink it to one.
+  it('leaves a selection the node already belongs to', () => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    useScenes.getState().runCommand('doc-1', addNode(meshNode('box-2')))
+    render(<SceneDocument documentId="doc-1" />)
+    selectIn('doc-1', ['box-1', 'box-2'])
+
+    built.at(-1)?.onContextMenu?.('box-1')
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').selectedIds).toEqual(['box-1', 'box-2'])
+  })
+})
+
+describe('SceneDocument and the pose mode', () => {
+  it('turns the pose mode on with the bound key, and back off', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{p}')
+    expect(setPoseMode).toHaveBeenLastCalledWith(true)
+
+    await userEvent.keyboard('{p}')
+    expect(setPoseMode).toHaveBeenLastCalledWith(false)
+  })
+
+  it('holds the bone the viewport picked, so the gizmo can aim at it', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    await userEvent.keyboard('{p}')
+
+    await act(async () => built.at(-1)?.onSelectBone?.({ nodeId: 'perso', bone: 'Arm.L' }))
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').pickedBone).toEqual({
+      nodeId: 'perso',
+      bone: 'Arm.L',
+    })
+  })
+
+  it('lets go of the bone when the mode is left, so nothing keeps holding it', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    await userEvent.keyboard('{p}')
+    await act(async () => built.at(-1)?.onSelectBone?.({ nodeId: 'perso', bone: 'Arm.L' }))
+
+    await userEvent.keyboard('{p}')
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').pickedBone).toBeNull()
+    expect(setPickedBone).toHaveBeenLastCalledWith(null)
   })
 })

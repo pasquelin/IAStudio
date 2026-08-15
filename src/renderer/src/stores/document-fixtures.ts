@@ -1,4 +1,4 @@
-import { kindForWorkspace } from '@shared/domain/document'
+import { kindForWorkspace, type DocumentDescriptor } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { useDocuments } from './documents'
 
@@ -12,11 +12,20 @@ import { useDocuments } from './documents'
  * application builds documents with, so a fixture cannot describe a pairing that cannot exist.
  */
 export function installDocument(documentId: string, workspace: WorkspaceId): void {
-  const kind = kindForWorkspace(workspace)
-  if (!kind) throw new Error(`workspace "${workspace}" has no document kind`)
+  installDocuments({ [documentId]: workspace }, documentId)
+}
 
-  useDocuments.setState({
-    documents: { [documentId]: { id: documentId, kind, workspace, title: documentId } },
-    activeId: documentId,
-  })
+/**
+ * Several tabs at once, one of them in front — what a gesture that crosses workspaces needs to
+ * be tested against, and what a single-document fixture cannot describe.
+ */
+export function installDocuments(tabs: Record<string, WorkspaceId>, activeId: string): void {
+  const documents: Record<string, DocumentDescriptor> = {}
+  for (const [documentId, workspace] of Object.entries(tabs)) {
+    const kind = kindForWorkspace(workspace)
+    if (!kind) throw new Error(`workspace "${workspace}" has no document kind`)
+    documents[documentId] = { id: documentId, kind, workspace, title: documentId }
+  }
+
+  useDocuments.setState({ documents, activeId })
 }

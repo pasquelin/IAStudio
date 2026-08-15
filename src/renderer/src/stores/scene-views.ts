@@ -1,13 +1,46 @@
 import { create } from 'zustand'
-import type { DisplayMode } from '@/engines/scene/scene-view'
+import type { Us } from '@shared/domain/time'
+import { DEFAULT_PANE_VIEWS, type PaneView } from '@/engines/scene/scene-view'
+import { type DisplayMode } from '@shared/domain/scene'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
 
 export type SceneView = {
   projection: ProjectionKind
-  display: DisplayMode
+  /**
+   * One mode per view, main one first. A list rather than a single value: in a quad layout each
+   * view answers for itself — wireframe on top while the flown one stays shaded is the whole
+   * point of four views.
+   */
+  displays: readonly DisplayMode[]
+  /** Whether the bones of every rigged model are drawn over it. Off, like every other overlay. */
+  skeletons: boolean
+  /** Whether a click picks a bone rather than a mesh. Exclusive on purpose — see the renderer. */
+  poseMode: boolean
+  /** The bone the pose mode picked, which the gizmo holds. Never a node — see `TrackTarget`. */
+  pickedBone: { nodeId: string; bone: string } | null
+  /** Four views instead of one — top, front, left, and the one being flown. */
+  quad: boolean
+  /** Whether the wireframe drops its triangulation diagonals. Never real quads — see the engine. */
+  quadEdges: boolean
+  /** What each of the four views shows. Only a free one turns — see `PaneView`. */
+  panes: readonly PaneView[]
+  /** Where the animation head stands, in microseconds. Never in the document — see `AnimationTimeline`. */
+  playhead: Us
+  playing: boolean
 }
 
-const DEFAULT_SCENE_VIEW: SceneView = { projection: 'perspective', display: 'shaded' }
+const DEFAULT_SCENE_VIEW: SceneView = {
+  projection: 'perspective',
+  displays: ['shaded'],
+  skeletons: false,
+  poseMode: false,
+  pickedBone: null,
+  quad: false,
+  quadEdges: false,
+  panes: DEFAULT_PANE_VIEWS,
+  playhead: 0,
+  playing: false,
+}
 
 /**
  * How each scene document is being looked at. Session state, exactly like `canvas-views` for an
@@ -20,7 +53,15 @@ const DEFAULT_SCENE_VIEW: SceneView = { projection: 'perspective', display: 'sha
 export type SceneViewsState = {
   views: Record<string, SceneView>
   setProjection: (documentId: string, projection: ProjectionKind) => void
-  setDisplay: (documentId: string, display: DisplayMode) => void
+  setDisplay: (documentId: string, pane: number, display: DisplayMode) => void
+  setSkeletons: (documentId: string, skeletons: boolean) => void
+  setPoseMode: (documentId: string, poseMode: boolean) => void
+  setPickedBone: (documentId: string, pickedBone: SceneView['pickedBone']) => void
+  setQuad: (documentId: string, quad: boolean) => void
+  setQuadEdges: (documentId: string, quadEdges: boolean) => void
+  setPaneView: (documentId: string, pane: number, view: PaneView) => void
+  setPlayhead: (documentId: string, playhead: Us) => void
+  setPlaying: (documentId: string, playing: boolean) => void
 }
 
 export const useSceneViews = create<SceneViewsState>()(set => ({
@@ -28,16 +69,70 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
 
   setProjection: (documentId, projection) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), projection } },
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), projection } },
     })),
 
-  setDisplay: (documentId, display) =>
+  setDisplay: (documentId, pane, display) =>
+    set(state => {
+      const view = sceneViewOf(state, documentId)
+      // Grown rather than indexed into: a view switched to four before anything set a mode has
+      // one entry, and writing at index 3 would leave two holes reading as undefined.
+      const displays = Array.from(
+        { length: Math.max(view.displays.length, pane + 1) },
+        (_, index) => (index === pane ? display : (view.displays[index] ?? 'shaded')),
+      )
+      return { views: { ...state.views, [documentId]: { ...view, displays } } }
+    }),
+
+  setSkeletons: (documentId, skeletons) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), display } },
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), skeletons } },
+    })),
+
+  setPoseMode: (documentId, poseMode) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), poseMode } },
+    })),
+
+  setPickedBone: (documentId, pickedBone) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), pickedBone } },
+    })),
+
+  setQuad: (documentId, quad) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), quad } },
+    })),
+
+  setQuadEdges: (documentId, quadEdges) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), quadEdges } },
+    })),
+
+  setPaneView: (documentId, pane, view) =>
+    set(state => {
+      const current = sceneViewOf(state, documentId)
+      const panes = current.panes.map((held, index) => (index === pane ? view : held))
+      return { views: { ...state.views, [documentId]: { ...current, panes } } }
+    }),
+
+  setPlayhead: (documentId, playhead) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), playhead } },
+    })),
+
+  setPlaying: (documentId, playing) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), playing } },
     })),
 }))
 
+/** How a given view draws. A pane nobody has set draws the way the studio opens: shaded. */
+export function displayOfPane(displays: readonly DisplayMode[], pane: number): DisplayMode {
+  return displays[pane] ?? 'shaded'
+}
+
 /** A document nobody has looked at yet is looked at the default way. */
-export function viewOf(state: SceneViewsState, documentId: string): SceneView {
+export function sceneViewOf(state: SceneViewsState, documentId: string): SceneView {
   return state.views[documentId] ?? DEFAULT_SCENE_VIEW
 }

@@ -1,0 +1,87 @@
+{
+  "actions": {
+    "generate": "Generate",
+    "close": "Close",
+    "removeTool": "Remove tool",
+    "retry": "Try again",
+    "retryHint": "Renders this area again, without restarting the studio",
+    "generateHint": "Starts the generation with the settings above; it is followed in the generations bar"
+  },
+  "jobs": {
+    "none": "No job running.",
+    "running_one": "{{count, number}} generation",
+    "running_many": "{{count, number}} generations",
+    "running_other": "{{count, number}} generations",
+    "failed_one": "{{count, number}} failure",
+    "failed_many": "{{count, number}} failures",
+    "failed_other": "{{count, number}} failures",
+    "open": "Show generations",
+    "openHint": "Opens the list of generations, running and finished alike",
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "succeeded": "Done",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "cancel": "Cancel job"
+  },
+  "dialog": {
+    "allMedia": "All media",
+    "video": "Video",
+    "audio": "Audio",
+    "image": "Image",
+    "mesh": "3D model"
+  },
+  "sorts": {
+    "relevance": "Quality: highest first",
+    "recent": "Created: newest first",
+    "oldest": "Created: oldest first"
+  },
+  "exportFormats": {
+    "glb": "Binary glTF (.glb)",
+    "gltf": "glTF (.gltf)",
+    "usdz": "USDZ (.usdz)"
+  },
+  "errors": {
+    "missingCredentials": "No credentials saved.",
+    "invalidCredentials": "Invalid API key or secret.",
+    "forbidden": "This API key lacks the required permissions.",
+    "planRestricted": "This model is not included in your plan.",
+    "notFound": "Resource not found.",
+    "rateLimited": "Too many requests. Retrying…",
+    "server": "The Scenario service is temporarily unavailable.",
+    "network": "Cannot reach Scenario. Check your connection.",
+    "unexpected": "An unexpected error occurred.",
+    "invalidValue": "Invalid value.",
+    "rejected": "The generation failed.",
+    "storage": "Could not save the result to disk.",
+    "panelCrashed": "This panel ran into an error.",
+    "windowCrashed": "The application ran into an error."
+  },
+  "licences": {
+    "title": "Licences",
+    "intro": "Scenario Studio ships with the software below. Each keeps its own licence, reproduced here in full.",
+    "sources": "Corresponding sources:",
+    "sourcesUnmodified": "Corresponding sources, unmodified:",
+    "bundled": "shipped with the application",
+    "unfold": "Unfolds the full text of this licence, right here",
+    "fold": "Folds this text back — only one licence stays open at a time"
+  },
+  "manual": {
+    "title": "User manual",
+    "chapters": "Chapters",
+    "search": "Search the manual",
+    "results": "Results",
+    "noResult": "No chapter contains those words.",
+    "chapterHint": "Opens this chapter in the pane on the right",
+    "searchResultHint": "Opens the chapter these words appear in"
+  },
+  "units": {
+    "byte": "B",
+    "kibibyte": "KiB",
+    "mebibyte": "MiB",
+    "gibibyte": "GiB",
+    "creative": "{{units}} CU"
+  }
+}

@@ -165,6 +165,20 @@ describe('AccountSettings', () => {
     expect(rename).toHaveBeenCalledWith('a', 'Client X')
   })
 
+  /**
+   * Three words, three consequences one cannot tell apart from them: what "Supprimer" leaves
+   * behind is the whole question, and the row says none of it.
+   */
+  it('says what removing a key does not touch', () => {
+    useAccounts.setState({ accounts: [studio] })
+    render(<AccountSettings />)
+
+    expect(screen.getByRole('button', { name: 'Supprimer' })).toHaveAttribute(
+      'data-tooltip-content',
+      'Oublie la clé sur cette machine ; le compte Scenario n’est pas touché',
+    )
+  })
+
   it('removes an account on demand', async () => {
     const remove = vi.fn((): Promise<AccountsResult> => Promise.resolve({ accounts: [] }))
     installFakeBridge({ accounts: { remove } })

@@ -3,7 +3,8 @@
  * the components so the panels that own this state — and drive a server query from it — can
  * be tested without rendering a virtualized grid.
  */
-import { clamp } from './numeric'
+import { foldForSearch } from '@shared/text'
+import { clamp } from '@shared/numeric'
 
 export type CollectionView = 'grid' | 'list'
 
@@ -52,6 +53,15 @@ export const DEFAULT_COLLECTION_STATE: CollectionState = {
 /** For panels with no grid and no filters: a fixed state, never persisted. */
 export const LIST_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, view: 'list' }
 
+/**
+ * Its twin the other way round: pictures in a narrow column, with neither search nor facets.
+ *
+ * A module constant rather than an object built in the panel, for the reason every fixed state
+ * here is one — nothing may hand out a shared mutable, and a preset belongs beside the defaults
+ * it is a variation of.
+ */
+export const TILES_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, thumbnailSize: 96 }
+
 export function resizeThumbnails(state: CollectionState, delta: number): CollectionState {
   const thumbnailSize = clamp(state.thumbnailSize + delta, MIN_THUMBNAIL, MAX_THUMBNAIL)
   return thumbnailSize === state.thumbnailSize ? state : { ...state, thumbnailSize }
@@ -77,9 +87,19 @@ export function setFacetValue(
   return { ...state, selections }
 }
 
-/** Whether anything is narrowing the collection — which is what tells the two empty states apart. */
-export function isFiltered(state: CollectionState): boolean {
-  return state.search.trim().length > 0 || Object.keys(state.selections).length > 0
+/**
+ * Whether anything is narrowing the collection — which is what tells the two empty states apart.
+ *
+ * `offered` bounds the question to the facets this surface actually shows, and a panel whose
+ * facets depend on where it is opened must pass them: a value the bar does not draw cannot be
+ * relaxed by the user, so blaming an empty panel on it asks for a filter nobody can find.
+ */
+export function isFiltered(state: CollectionState, offered?: readonly string[]): boolean {
+  if (state.search.trim().length > 0) return true
+
+  return Object.entries(state.selections).some(
+    ([key, values]) => values.length > 0 && (offered ? offered.includes(key) : true),
+  )
 }
 
 export type LocalFilter<T> = {
@@ -99,10 +119,10 @@ export function filterLocally<T>(
   state: CollectionState,
   filter: LocalFilter<T>,
 ): T[] {
-  const needle = state.search.trim().toLowerCase()
+  const needle = foldForSearch(state.search.trim())
 
   return items.filter(item => {
-    if (needle && !filter.text(item).toLowerCase().includes(needle)) return false
+    if (needle && !foldForSearch(filter.text(item)).includes(needle)) return false
 
     for (const [key, values] of Object.entries(state.selections)) {
       const read = filter.facets?.[key]

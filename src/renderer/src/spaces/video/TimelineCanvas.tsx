@@ -1,17 +1,31 @@
 import type { CommandId } from '@shared/domain/command'
+import { clamp } from '@shared/numeric'
+import { mdiContentCut, mdiDeleteOutline, mdiLinkVariantOff } from '@mdi/js'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
-import { mediaDuration, posterUrl } from '@shared/domain/asset'
-import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
+import { useTranslation } from 'react-i18next'
+import { isTimeless, mediaDuration, posterUrl } from '@shared/domain/asset'
+import type { Command } from '@/engines/core/history'
+import {
+  addClips,
+  removeClip,
+  splitClip,
+  unlinkClip,
+  type MediaExtent,
+} from '@/engines/timeline/commands'
 import {
   beginGesture,
   commandForGesture,
   viewportForGesture,
   type Gesture,
 } from '@/engines/timeline/interactions'
-import { clipForAsset } from '@/engines/timeline/insert'
+import { placementsForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
-import { hitTest, xToTime, type Point, type Viewport } from '@/engines/timeline/timeline-geometry'
+import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
+import type { Point, Size } from '@/engines/core/geometry'
+import { fitToDisplay } from '@/engines/core/canvas-2d'
 import {
+  clipById,
+  clipEnd,
   clipUnderPlayhead,
   sequenceDuration,
   snapToFrame,
@@ -22,15 +36,16 @@ import {
   clampViewport,
   fitToWidth,
   revealTime,
-  scrollBy,
   zoomAt,
   ZOOM_STEP,
-  type Size,
 } from '@/engines/timeline/viewport'
-import { assetIdFromDrag } from '@/helpers/asset-drag'
+import { assetIdFromDrag, carriesAsset, droppedAsset } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
+import { showContextMenu } from '@/helpers/context-menu'
 import { cachedImage } from '@/helpers/image-cache'
+import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import { assetsById, useAssets } from '@/stores/assets'
 import { usePeaks } from '@/stores/peaks'
 import { useSelection } from '@/stores/selection'
@@ -38,9 +53,23 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
 import type { VideoToolId } from './video-tools'
 
-export type TimelineCanvasProps = { documentId: string; tool: VideoToolId }
+export type TimelineCanvasProps = {
+  documentId: string
+  tool: VideoToolId
+  /**
+   * Whether ⌘Z and ⌘⇧Z belong to this strip.
+   *
+   * The host decides, and only for those two: a sound montage sits under a take that already
+   * answers ⌘Z on its own scope, and two listeners undoing at once is one press taking a step
+   * off BOTH halves of the document — the studio's oldest trap. Everything else the strip binds
+   * — the blade, Delete, the zoom, the ends — stays live, or the one timeline this lot exists to
+   * make consistent would be the only one with a dead keyboard.
+   */
+  history?: boolean
+}
 
-export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
+export function TimelineCanvas({ documentId, tool, history = true }: TimelineCanvasProps) {
+  const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The gesture and the state it started from: one history entry per gesture, not per pixel.
   const dragging = useRef<{ gesture: Gesture; base: SequenceState } | null>(null)
@@ -63,20 +92,8 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const context = canvas?.getContext('2d')
     if (!canvas || !context) return
 
-    const ratio = window.devicePixelRatio
-    const width = canvas.clientWidth
-    const height = canvas.clientHeight
+    const { width, height } = fitToDisplay(canvas, context)
     size.current = { width, height }
-
-    // Backing store in device pixels, drawing in CSS pixels: without this the ruler is soft on
-    // every retina display. Only when it actually changed — assigning `width` at all throws
-    // away the GPU texture and reallocates several megabytes, even for the same value.
-    const backing = { width: Math.round(width * ratio), height: Math.round(height * ratio) }
-    if (canvas.width !== backing.width || canvas.height !== backing.height) {
-      canvas.width = backing.width
-      canvas.height = backing.height
-    }
-    context.setTransform(ratio, 0, 0, ratio, 0, 0)
 
     const current = latest.current
     paintTimeline(context, current.sequence, current.viewport, { width, height }, current.options)
@@ -114,9 +131,15 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     return peaks.byAsset[clip.assetId] ?? null
   }, [])
 
-  // A trim stops where the media does, and only the catalogue knows how long that is.
-  const mediaLengths = useCallback(
-    (assetId: string) => mediaDuration(byId.get(assetId) ?? null),
+  // A trim stops where the media does, and only the catalogue knows how far that is.
+  const mediaExtents = useCallback(
+    (assetId: string): MediaExtent => {
+      const asset = byId.get(assetId) ?? null
+      const length = mediaDuration(asset)
+      if (length !== null) return length
+      // Null covers a picture and an asset nobody has probed; only the first has no source.
+      return isTimeless(asset) ? 'still' : 'unknown'
+    },
     [byId],
   )
 
@@ -137,14 +160,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     }
   }, [repaint])
 
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const observer = new ResizeObserver(paint)
-    observer.observe(canvas)
-    return () => observer.disconnect()
-  }, [paint])
+  useRepaintOnResize(canvasRef, paint)
 
   useEffect(() => {
     latest.current = { sequence, viewport, options: { labelOf: nameOf, peaksOf, posterOf } }
@@ -159,47 +175,37 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     [documentId],
   )
 
+  // The strip follows the playhead out of the frame — zoomed in, playing ran off the right edge
+  // within seconds and the montage stayed on a moment nobody was watching any more.
+  //
+  // On the PLAYHEAD alone, and the viewport read out of the ref rather than depended on: woken
+  // by the view as well, this pulled the strip back onto the playhead the instant the hand tool
+  // dragged it away, and chased its own clamped write when there was nowhere left to scroll.
+  useEffect(() => {
+    // A strip that has not been laid out yet says nothing about what is on screen, and every
+    // instant reads as off-frame against a width of zero.
+    if (size.current.width === 0) return
+
+    const current = latest.current.viewport
+    // Identity, which `revealTime` guarantees while the playhead is inside the frame: a montage
+    // that fits on screen must not scroll at all.
+    const revealed = revealTime(current, sequence.playhead, size.current.width)
+    if (revealed !== current) setViewport(revealed)
+  }, [sequence.playhead, setViewport])
+
   // Native and non-passive: React delivers `wheel` passively, where `preventDefault` is a no-op
   // and the whole window scrolls behind the timeline instead.
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const onWheel = (event: WheelEvent): void => {
-      event.preventDefault()
-      const current = latest.current.viewport
-
-      if (event.ctrlKey || event.metaKey) {
-        const bounds = canvas.getBoundingClientRect()
-        setViewport(
-          zoomAt(
-            current,
-            event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP,
-            event.clientX - bounds.left,
-          ),
-        )
-        return
-      }
-
-      // Shift turns a vertical wheel horizontal, as every editor does for a single-axis mouse.
-      const horizontal = event.shiftKey ? event.deltaY : event.deltaX
-      const vertical = event.shiftKey ? 0 : event.deltaY
-      setViewport(scrollBy(current, horizontal, vertical))
-    }
-
-    canvas.addEventListener('wheel', onWheel, { passive: false })
-    return () => canvas.removeEventListener('wheel', onWheel)
-  }, [setViewport])
+  useTimelineWheel(canvasRef, () => latest.current.viewport, setViewport)
 
   const seek = useCallback(
     (time: number): void => {
       const store = useSequences.getState()
       const state = sequenceOf(store, documentId)
-      const playhead = Math.max(0, Math.min(sequenceDuration(state), time))
+      const playhead = clamp(time, 0, sequenceDuration(state))
+      // The strip follows on its own, from wherever the playhead lands — see the effect above.
       store.replace(documentId, { ...state, playhead })
-      setViewport(revealTime(latest.current.viewport, playhead, size.current.width))
     },
-    [documentId, setViewport],
+    [documentId],
   )
 
   const run = useCallback(
@@ -220,6 +226,14 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
         case 'sequence.delete':
           if (state.selectedId) store.runCommand(documentId, removeClip(state.selectedId))
           return
+        case 'sequence.unlink': {
+          // Asked here rather than left to the command: every command run lands on the undo
+          // stack, so a ⌘L on a clip that is tied to nothing would mark the document modified
+          // and leave a ⌘Z that visibly does nothing.
+          const linked = state.selectedId ? clipById(state, state.selectedId) : null
+          if (linked?.linkId) store.runCommand(documentId, unlinkClip(linked.id))
+          return
+        }
         case 'sequence.zoomIn':
           return setViewport(zoomAt(current, ZOOM_STEP, middle))
         case 'sequence.zoomOut':
@@ -230,15 +244,17 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
           return seek(0)
         case 'sequence.end':
           return seek(sequenceDuration(state))
+        // Left alone where the host owns the history — see `history`. Not the same as being
+        // absent: the key is still swallowed by this scope, and it is the host that answers it.
         case 'sequence.undo':
-          return store.undo(documentId)
+          return history ? store.undo(documentId) : undefined
         case 'sequence.redo':
-          return store.redo(documentId)
+          return history ? store.redo(documentId) : undefined
         default:
           return
       }
     },
-    [documentId, seek, setViewport],
+    [documentId, history, seek, setViewport],
   )
 
   // The strip is only mounted for the document in front, so it always listens while it is there.
@@ -258,6 +274,15 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   }
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>): void => {
+    // A right press raises the menu and must not start anything else. It arrives here first —
+    // `pointerdown` precedes `contextmenu` — so the clip was picked up: it followed the pointer
+    // while the menu was open, and the drag's own pointer-up then rewound the montage to where
+    // the press began, over whatever the menu had just done. Delete looked like it moved the
+    // clip and deleted nothing.
+    //
+    // `ctrlKey` with it: on macOS a control-click IS the context menu, and it reports button 0.
+    if (event.button !== 0 || event.ctrlKey) return
+
     const point = pointAt(event)
 
     if (tool === 'blade') {
@@ -295,7 +320,17 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>): void => {
     const current = dragging.current
-    if (!current) return
+    if (!current) {
+      // Written straight to the node, the way `CanvasEngine` does it: this component keeps
+      // everything that moves with the pointer out of React, and a hover is no exception.
+      // Always written, empty included — skipping the write would leave a stale `ew-resize`
+      // on the node after a tool change, where it would beat the hand's own class.
+      // Only Selection trims: the hand moves the view and the blade cuts where it is pressed,
+      // so promising either a trim would be a cursor the press then refuses.
+      event.currentTarget.style.cursor =
+        tool === 'select' ? cursorAt(sequence, viewport, pointAt(event)) : ''
+      return
+    }
 
     const point = pointAt(event)
 
@@ -307,7 +342,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       return
     }
 
-    const command = commandForGesture(current.gesture, current.base, viewport, point, mediaLengths)
+    const command = commandForGesture(current.gesture, current.base, viewport, point, mediaExtents)
     if (command) useSequences.getState().replace(documentId, command.apply(current.base))
   }
 
@@ -323,7 +358,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       current.base,
       viewport,
       pointAt(event),
-      mediaLengths,
+      mediaExtents,
     )
     if (!command) return
 
@@ -334,21 +369,94 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     store.runCommand(documentId, command)
   }
 
+  /**
+   * What can be done to the clip under the pointer, as the system's own menu.
+   *
+   * Everything here is also a shortcut, and that is the point: the keys were the ONLY way to
+   * reach them, so a montage offered nothing to a right-click and nothing at all to whoever had
+   * not learnt them. The labels are the commands' own, so a row and its key never drift apart.
+   */
+  const onContextMenu = (event: PointerEvent<HTMLCanvasElement>): void => {
+    event.preventDefault()
+
+    const store = useSequences.getState()
+    const state = sequenceOf(store, documentId)
+    const target = hitTest(state, viewport, pointAt(event))
+    if (!target || !('clipId' in target)) return
+
+    const clip = clipById(state, target.clipId)
+    if (!clip) return
+
+    // Selected first: the menu acts on this clip, and a menu whose rows edit something other
+    // than what is highlighted is a menu nobody trusts.
+    store.replace(documentId, { ...state, selectedId: clip.id })
+
+    const run = (command: Command<SequenceState>) => (): void =>
+      useSequences.getState().runCommand(documentId, command)
+
+    void showContextMenu([
+      {
+        label: t('commands.sequenceSplit.title'),
+        icon: mdiContentCut,
+        tooltip: t('commands.sequenceSplit.help'),
+        // At the playhead, exactly as the key does — the blade tool is what cuts at the pointer.
+        disabled: state.playhead <= clip.start || state.playhead >= clipEnd(clip),
+        onSelect: run(splitClip(clip.id, state.playhead)),
+      },
+      {
+        label: t('commands.sequenceUnlink.title'),
+        icon: mdiLinkVariantOff,
+        tooltip: t('commands.sequenceUnlink.help'),
+        // Greyed rather than dropped: a menu whose length follows the clip cannot be learnt.
+        disabled: !clip.linkId,
+        onSelect: run(unlinkClip(clip.id)),
+      },
+      {
+        label: t('commands.sequenceDelete.title'),
+        icon: mdiDeleteOutline,
+        tooltip: t('commands.sequenceDelete.help'),
+        onSelect: run(removeClip(clip.id)),
+      },
+    ])
+  }
+
   const onDrop = (event: DragEvent<HTMLCanvasElement>): void => {
     event.preventDefault()
 
     const assetId = assetIdFromDrag(event)
     if (!assetId) return
 
+    // Where it landed is read HERE and carried into the promise: both the pointer position and
+    // `dataTransfer` are gone once this handler returns, so a library asset fetched first would
+    // otherwise land wherever the cursor happened to be a download later.
     const point = pointAt(event)
     const target = hitTest(sequence, viewport, point)
+    // Left to bubble on purpose when it landed on nothing: the ruler takes no clip, and a drop
+    // this surface does not use is one the shell should still answer by opening the asset.
     if (!target || target.kind === 'ruler') return
 
-    const asset = byId.get(assetId) ?? null
-    const start = xToTime(point.x, viewport)
-    const clip = clipForAsset(assetId, asset, start, sequence.settings)
+    // Taken from here on — see `AssetDropTarget`, which consumes for the same reason.
+    event.stopPropagation()
 
-    useSequences.getState().runCommand(documentId, addClip(target.trackId, clip))
+    const start = xToTime(point.x, viewport)
+    const { trackId } = target
+
+    void droppedAsset(event).then(asset => {
+      // Nothing to lay down: a library asset whose fetch was refused has no row, and a clip
+      // pointing at one that was never written reads as missing media for good.
+      if (!asset) return
+
+      // `asset.id`, never the id the drag carried: a library drag carries the CLOUD id, and what
+      // the import wrote is a catalogue row under an id of its own. A clip built on the first
+      // names a row the project does not hold.
+      //
+      // Read out of the store rather than from the render's own `sequence`: a library asset is
+      // fetched first, and the montage may have been edited while it came down.
+      const store = useSequences.getState()
+      const current = sequenceOf(store, documentId)
+      const placements = placementsForAsset(current, asset, asset.id, start, trackId)
+      if (placements.length > 0) store.runCommand(documentId, addClips(placements))
+    })
   }
 
   return (
@@ -359,10 +467,20 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
         'block h-full w-full outline-none',
         tool === 'hand' && 'cursor-grab active:cursor-grabbing',
       )}
+      onContextMenu={onContextMenu}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onDragOver={event => event.preventDefault()}
+      // A pointer that leaves mid-hover would otherwise leave the resize cursor written on the
+      // node, and the surface would wear it until another move cleared it.
+      onPointerLeave={event => (event.currentTarget.style.cursor = '')}
+      // Not `AssetDropTarget`: what this surface accepts is decided per track, and one outline
+      // over the whole timeline would promise the ruler takes what it refuses. Only the half
+      // that has nothing to do with tracks is shared — preventing a drag we do not carry is
+      // what makes a surface swallow files dragged in from the desktop.
+      onDragOver={event => {
+        if (carriesAsset(event)) event.preventDefault()
+      }}
       onDrop={onDrop}
     />
   )

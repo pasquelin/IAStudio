@@ -1,13 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { mdiDiceMultipleOutline } from '@mdi/js'
-import { useEffect, useMemo } from 'react'
+import { Fragment, useEffect, useMemo, type ReactNode } from 'react'
 import { useForm, type UseFormRegisterReturn } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { cn } from '@/helpers/cn'
 import {
   buildBody,
-  buildSchema,
   defaultValues,
   dependencyKeys,
   groupFields,
@@ -16,15 +15,32 @@ import {
   visibleFields,
   type FormValues,
 } from '@/helpers/dynamic-form'
+import { buildSchema } from '@/helpers/dynamic-form-schema'
+import { useModelText } from '@/hooks/useModelText'
 import { Button } from './Button'
 import { AssetDropField } from './AssetDropField'
 import { FIELD } from './styles'
 import { ToolButton } from './ToolButton'
+import { HINT_TOP, TIP_LEFT } from '@/helpers/tooltip'
 
 export type DynamicFormProps = {
   fields: readonly FieldDescriptor[]
-  onSubmit: (body: FormValues) => void
-  submitLabel: string
+  /**
+   * Absent where the form is not run but read into something — parameters kept for a caller that
+   * submits later. The button then has nothing to say and is not drawn.
+   */
+  onSubmit?: (body: FormValues) => void
+  submitLabel?: string
+  /** What the submit label does not say. Required with it: a form's one action is the one
+   * nobody should have to press to find out about. */
+  submitHint?: string
+  /** Beside the label on the button, for what the form costs. Absent draws nothing. */
+  submitNote?: string
+  /**
+   * The body as it stands, on every edit. A subscription rather than a watched value: rendering
+   * on each keystroke is what the dependency watch below goes out of its way to avoid.
+   */
+  onValuesChange?: (body: FormValues) => void
   busy?: boolean
   /**
    * Values to open on, over each field's own default. What "regenerate with these parameters"
@@ -32,18 +48,32 @@ export type DynamicFormProps = {
    * would reach fields that do not exist.
    */
   preset?: FormValues
+  /**
+   * Rendered under each field, for whatever the caller wants to hang there — dictation hangs on
+   * anything a sentence can be spoken into. Called for every field so that nothing about any
+   * particular feature is decided here; answering `null` leaves the field alone.
+   *
+   * The field alone, with no handle onto its value. It carried one — `read`, `write`, `readAll`
+   * — for prompt assistance, which rewrote the field it hung under. That moved to the assistant,
+   * which reaches the form through `GeneratorBridge` instead, and nothing was left reading it.
+   */
+  accessory?: (field: FieldDescriptor) => ReactNode
 }
 
 function Control({
   field,
   registration,
+  initial,
   onRoll,
 }: {
   field: FieldDescriptor
   registration: UseFormRegisterReturn
+  /** What the form opens on for this field — the preset when there is one, the default if not. */
+  initial: unknown
   onRoll: () => void
 }) {
   const { t } = useTranslation()
+  const say = useModelText()
 
   switch (field.kind) {
     case 'longText':
@@ -58,7 +88,7 @@ function Control({
           {!field.required && <option value="" />}
           {field.options?.map(option => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {say(option.label)}
             </option>
           ))}
         </select>
@@ -69,11 +99,12 @@ function Control({
 
     case 'seed':
       return (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <input type="number" className={cn(FIELD, 'min-w-0 flex-1')} {...registration} />
           <ToolButton
             icon={mdiDiceMultipleOutline}
             label={t('generation.randomSeed')}
+            tooltip={TIP_LEFT}
             onClick={onRoll}
           />
         </div>
@@ -96,7 +127,7 @@ function Control({
       return (
         <AssetDropField
           registration={registration}
-          initial={typeof field.default === 'string' ? field.default : undefined}
+          initial={typeof initial === 'string' && initial ? initial : undefined}
           placeholder={t('generation.dropPicture')}
         />
       )
@@ -116,23 +147,40 @@ export function DynamicForm({
   fields,
   onSubmit,
   submitLabel,
+  submitHint,
+  submitNote,
+  onValuesChange,
   busy = false,
   preset,
+  accessory,
 }: DynamicFormProps) {
   const { t } = useTranslation()
+  const say = useModelText()
   const schema = useMemo(() => buildSchema(fields), [fields])
   const initial = useMemo(() => defaultValues(fields, preset), [fields, preset])
   const groups = useMemo(() => groupFields(fields), [fields])
   const dependencies = useMemo(() => dependencyKeys(fields), [fields])
 
-  const { register, handleSubmit, watch, setValue, reset, formState } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: initial,
-  })
+  const { register, handleSubmit, watch, setValue, getValues, reset, formState } =
+    useForm<FormValues>({
+      resolver: zodResolver(schema),
+      defaultValues: initial,
+    })
 
   // Switching model swaps the whole descriptor set: keeping the previous values would carry a
   // `guidance` from one model into another that never declared it.
   useEffect(() => reset(initial), [initial, reset])
+
+  // Subscribed, not rendered: `watch(callback)` reports every edit without making this component
+  // a listener of its own form. The body is built the same way submitting builds it, so what is
+  // priced is what would be sent.
+  useEffect(() => {
+    if (!onValuesChange) return
+
+    onValuesChange(buildBody(fields, getValues()))
+    const subscription = watch(current => onValuesChange(buildBody(fields, current)))
+    return () => subscription.unsubscribe()
+  }, [fields, getValues, onValuesChange, watch])
 
   // Watching the whole form would re-render every control on every keystroke. Only the keys
   // another field declares a dependency on can change what is on screen.
@@ -149,42 +197,62 @@ export function DynamicForm({
     <form
       className="flex flex-col gap-3 p-2"
       onSubmit={event =>
-        void handleSubmit(submitted => onSubmit(buildBody(fields, submitted)))(event)
+        void handleSubmit(submitted => onSubmit?.(buildBody(fields, submitted)))(event)
       }
     >
       {groups.map(([group, groupedFields]) => (
         <fieldset key={group} className="m-0 flex flex-col gap-2 border-0 p-0">
           {group && (
-            <legend className="text-muted p-0 text-[11px] tracking-wide uppercase">{group}</legend>
+            <legend className="text-muted text-tiny p-0 tracking-wide uppercase">
+              {say(group)}
+            </legend>
           )}
 
           {visibleFields(groupedFields, values).map(field => (
-            <label key={field.key} className="flex flex-col gap-1 text-xs">
-              <span className="text-muted">
-                {field.label}
-                {field.required && <span aria-hidden> *</span>}
-              </span>
-
-              <Control
-                field={field}
-                registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
-                onRoll={() => setValue(field.key, randomSeed())}
-              />
-
-              {field.help && <span className="text-muted text-[11px]">{field.help}</span>}
-              {formState.errors[field.key] && (
-                <span role="alert" className="text-danger text-[11px]">
-                  {t('errors.invalidValue')}
+            // The accessory sits outside the label rather than in it: it holds buttons, and a
+            // control nested in a label steals the click meant for the field.
+            <Fragment key={field.key}>
+              <label className="flex flex-col gap-2 text-xs">
+                <span className="text-muted">
+                  {say(field.label)}
+                  {field.required && <span aria-hidden> *</span>}
                 </span>
-              )}
-            </label>
+
+                <Control
+                  field={field}
+                  registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
+                  initial={initial[field.key]}
+                  onRoll={() => setValue(field.key, randomSeed())}
+                />
+
+                {field.help && <span className="text-muted text-tiny">{say(field.help)}</span>}
+                {formState.errors[field.key] && (
+                  <span role="alert" className="text-danger text-tiny">
+                    {t('errors.invalidValue')}
+                  </span>
+                )}
+              </label>
+
+              {accessory?.(field)}
+            </Fragment>
           ))}
         </fieldset>
       ))}
 
-      <Button type="submit" variant="primary" disabled={busy}>
-        {submitLabel}
-      </Button>
+      {submitLabel !== undefined && (
+        <Button
+          type="submit"
+          variant="primary"
+          {...(submitHint ? HINT_TOP(submitHint) : {})}
+          disabled={busy}
+        >
+          {submitLabel}
+          {/* Spaced here rather than by a gap on the button: every tool button in the studio is
+              built on the same base, and most of them are an icon beside a word. Set apart by its
+              SIZE alone — an `opacity-70` read 3.03:1 on the accent, and this is a price. */}
+          {submitNote && <span className="text-tiny ml-1.5">{submitNote}</span>}
+        </Button>
+      )}
     </form>
   )
 }

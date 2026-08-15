@@ -1,6 +1,6 @@
-import { clamp } from '@/helpers/numeric'
+import { clamp } from '@shared/numeric'
 import type { Rect } from './canvas-state'
-import type { Point } from './shape-geometry'
+import type { Point, Size } from '../core/geometry'
 
 /**
  * Where the document sits on screen. `x` and `y` are the screen position of the document's
@@ -11,11 +11,9 @@ import type { Point } from './shape-geometry'
  */
 export type Viewport = { x: number; y: number; scale: number }
 
-export type Size = { width: number; height: number }
-
 /** Below 2% a 4096² document is a smear; above 64 a pixel fills a quarter of the screen. */
-export const MIN_SCALE = 0.02
-export const MAX_SCALE = 64
+export const CANVAS_MIN_SCALE = 0.02
+export const CANVAS_MAX_SCALE = 64
 
 /** Breathing room around a fitted document, so its edge never touches the panel's. */
 const FIT_PADDING = 24
@@ -45,9 +43,18 @@ export function sameViewport(a: Viewport, b: Viewport): boolean {
   return a.x === b.x && a.y === b.y && a.scale === b.scale
 }
 
-export function clampScale(scale: number): number {
+export function clampCanvasScale(scale: number): number {
   if (!Number.isFinite(scale)) return 1
-  return clamp(scale, MIN_SCALE, MAX_SCALE)
+  return clamp(scale, CANVAS_MIN_SCALE, CANVAS_MAX_SCALE)
+}
+
+/**
+ * Half-pixel offset, or a one-pixel line spreads over two and comes out grey. Here rather than
+ * with the painters: the overlay, the crop chrome and the grips all snap to the same grid, and
+ * the convention belongs beside the screen-space maths it applies to.
+ */
+export function crisp(value: number): number {
+  return Math.round(value) + 0.5
 }
 
 export function toScreen(viewport: Viewport, point: Point): Point {
@@ -62,8 +69,8 @@ export function toDocument(viewport: Viewport, point: Point): Point {
  * Zooms while keeping whatever sits under `anchor` exactly where it is. Anything else makes the
  * wheel feel like it is dragging the image away from the pointer.
  */
-export function zoomAt(viewport: Viewport, scale: number, anchor: Point): Viewport {
-  const next = clampScale(scale)
+export function zoomCanvasAt(viewport: Viewport, scale: number, anchor: Point): Viewport {
+  const next = clampCanvasScale(scale)
   const point = toDocument(viewport, anchor)
   return { scale: next, x: anchor.x - point.x * next, y: anchor.y - point.y * next }
 }
@@ -78,7 +85,7 @@ export function zoomAt(viewport: Viewport, scale: number, anchor: Point): Viewpo
 export function fitTo(document: Size, host: Size, inset: number = 0): Viewport {
   const width = Math.max(1, host.width - inset - FIT_PADDING * 2)
   const height = Math.max(1, host.height - inset - FIT_PADDING * 2)
-  const scale = clampScale(
+  const scale = clampCanvasScale(
     Math.min(
       1,
       Math.min(width / Math.max(1, document.width), height / Math.max(1, document.height)),
@@ -111,7 +118,7 @@ export function containIn(source: Size, box: Size): Rect {
 
 /** Same framing as `fitTo`, at a scale the caller chose — ⌘1 lands here. */
 export function centerOn(document: Size, host: Size, scale: number, inset: number = 0): Viewport {
-  const next = clampScale(scale)
+  const next = clampCanvasScale(scale)
   return {
     scale: next,
     x: inset + Math.round((host.width - inset - document.width * next) / 2),
@@ -132,11 +139,11 @@ const ZOOM_STOPS: readonly number[] = [
 const EPSILON = 1e-6
 
 export function nextZoom(scale: number): number {
-  return ZOOM_STOPS.find(stop => stop > scale + EPSILON) ?? MAX_SCALE
+  return ZOOM_STOPS.find(stop => stop > scale + EPSILON) ?? CANVAS_MAX_SCALE
 }
 
 export function previousZoom(scale: number): number {
-  return ZOOM_STOPS.findLast(stop => stop < scale - EPSILON) ?? MIN_SCALE
+  return ZOOM_STOPS.findLast(stop => stop < scale - EPSILON) ?? CANVAS_MIN_SCALE
 }
 
 /**

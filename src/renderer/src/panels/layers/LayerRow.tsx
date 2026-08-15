@@ -1,113 +1,114 @@
-import { mdiChevronDown, mdiChevronRight, mdiLockOpenVariantOutline, mdiLockOutline } from '@mdi/js'
-import { memo, useState } from 'react'
+import { mdiLockOpenVariantOutline, mdiLockOutline, mdiTrashCanOutline } from '@mdi/js'
+import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
 import { Row } from '@/design/Row'
 import { ToolButton } from '@/design/ToolButton'
-import { isGroup, type CanvasState, type Layer } from '@/engines/canvas/canvas-state'
-import { renameLayer, setLayerLocks, setLayerVisible } from '@/engines/canvas/commands'
+import type { CanvasState, Layer } from '@/engines/canvas/canvas-state'
+import { removeLayer, renameLayer, setLayerLocks } from '@/engines/canvas/commands'
 import type { Command } from '@/engines/core/history'
-import { TIP_RIGHT } from '@/helpers/tooltip'
+import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { InlineRename } from '@/panels/shared/InlineRename'
-import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { LAYER_LOCKS } from './layer-locks'
-import { collapseLayerIn, useCanvases } from '@/stores/canvases'
+import { useCanvases } from '@/stores/canvases'
 
-/** Resolved by the list rather than per row — see `LayerList`. */
+/**
+ * Resolved by the list rather than per row — see `LayerList`. The eye's three are not here: it
+ * lives in the tree's pinned column now, and the list hands them straight to it.
+ */
 export type LayerRowLabels = {
-  visible: string
-  show: string
-  hide: string
   locks: string
   locksHint: string
   rename: string
-  collapse: string
-  expand: string
+  remove: string
+  removeHint: string
 }
 
 export type LayerRowProps = {
   documentId: string
   layer: Layer
-  /** 0 at the root: each step indents the row, so the stack reads as the tree it is. */
-  depth: number
   labels: LayerRowLabels
+  /**
+   * False when the stack would keep nothing to paint on once this row leaves — its whole subtree,
+   * for a group. Handed down rather than read here: it is a fact about the stack, and a row that
+   * subscribed to it would re-render on every command, which is what the memo below avoids.
+   */
+  canRemove: boolean
+  /** The name is being typed over. Held by the list: the menu that opens a rename sits there. */
+  renaming: boolean
+  onRename: () => void
+  onRenamed: () => void
 }
-
-/** One step of indentation. A gauge rather than a pixel count — see `index.css`. */
-const INDENT = 'var(--sc-gutter)'
 
 /**
  * Memoized, as `SceneNodeRow` is: layer identity survives every command that does not touch it,
  * so hiding one re-renders one row instead of the whole stack.
+ *
+ * The chevron and the indent belong to `Tree`, which owns the geometry of every stack in the
+ * studio — this draws what is inside the row and nothing around it.
  */
 export const LayerRow = memo(function LayerRow({
   documentId,
   layer,
-  depth,
   labels,
+  canRemove,
+  renaming,
+  onRename,
+  onRenamed,
 }: LayerRowProps) {
   const { t } = useTranslation()
-  const [renaming, setRenaming] = useState(false)
   const run = (command: Command<CanvasState>): void =>
     useCanvases.getState().runCommand(documentId, command)
 
   const locked = layer.locked.pixels || layer.locked.position || layer.locked.alpha
 
   return (
-    <div
-      className="flex h-full min-w-0 items-center"
-      style={{ paddingLeft: `calc(${INDENT} * ${depth})` }}
-    >
-      {isGroup(layer) ? (
-        <ToolButton
-          icon={layer.collapsed ? mdiChevronRight : mdiChevronDown}
-          label={layer.collapsed ? labels.expand : labels.collapse}
-          tooltip={TIP_RIGHT}
-          variant="header"
-          // Both, as `VisibilityToggle` does: `Collection` selects on click and `Tree` on
-          // pointer down, so a chevron that swallowed one would steal the selection in the other.
-          onPointerDown={event => event.stopPropagation()}
-          onClick={event => {
-            event.stopPropagation()
-            collapseLayerIn(documentId, layer.id, !layer.collapsed)
+    // On the name and its buttons, never on the chevron or the eye — both of those sit outside
+    // this element, and a double click meant for either is not a rename. One div, as
+    // `SceneNodeRow` has: the wrapper around it lost its second child when the eye left the line.
+    <div className="h-full min-w-0 flex-1" onDoubleClick={onRename}>
+      {renaming ? (
+        <InlineRename
+          value={layer.name}
+          label={labels.rename}
+          onCommit={name => {
+            onRenamed()
+            if (name !== layer.name) run(renameLayer(layer.id, name))
           }}
         />
       ) : (
-        // A group's chevron and a layer's absence of one must not shift the name sideways.
-        <span aria-hidden className="w-(--sc-control) shrink-0" />
-      )}
-
-      {/* On the name alone: a double click meant for the chevron or the eye is not a rename. */}
-      <div className="min-w-0 flex-1" onDoubleClick={() => setRenaming(true)}>
-        {renaming ? (
-          <InlineRename
-            value={layer.name}
-            label={labels.rename}
-            onCommit={name => {
-              setRenaming(false)
-              if (name !== layer.name) run(renameLayer(layer.id, name))
-            }}
-          />
-        ) : (
-          <Row
-            title={layer.name}
-            muted={!layer.visible}
-            leading={
-              <VisibilityToggle
-                visible={layer.visible}
-                label={labels.visible}
-                description={layer.visible ? labels.hide : labels.show}
-                onToggle={() => run(setLayerVisible(layer.id, !layer.visible))}
+        <Row
+          title={layer.name}
+          muted={!layer.visible}
+          actions={
+            <>
+              <ToolButton
+                icon={mdiTrashCanOutline}
+                label={labels.remove}
+                description={labels.removeHint}
+                tooltip={TIP_RIGHT}
+                variant="row"
+                // The command does not refuse the last paintable layer — `deserializeCanvas`
+                // rejects the empty stack that would follow — so the refusal is here, as it is
+                // on the panel's own delete button.
+                disabled={!canRemove}
+                // Both, as `VisibilityToggle` does: `Tree` arms a row on POINTER DOWN, which
+                // fires before the click — stopping the click alone would have let the delete
+                // arm the row it is about to remove, moving the brush off whatever the user
+                // was painting on.
+                onPointerDown={event => event.stopPropagation()}
+                onClick={event => {
+                  event.stopPropagation()
+                  run(removeLayer(layer.id))
+                }}
               />
-            }
-            actions={
               <MenuButton
                 icon={locked ? mdiLockOutline : mdiLockOpenVariantOutline}
                 label={labels.locks}
                 description={labels.locksHint}
                 tooltip={TIP_RIGHT}
-                variant="header"
+                variant="row"
                 active={locked}
                 // One button rather than three on the line: the row is 24 px tall in compact.
                 rowCount={LAYER_LOCKS.length}
@@ -119,6 +120,8 @@ export const LayerRow = memo(function LayerRow({
                       label={t(padlock.labelKey)}
                       icon={padlock.iconFor(layer.locked[padlock.key])}
                       checked={layer.locked[padlock.key]}
+                      tick="on-off"
+                      tip={HINT_RIGHT(t(`${padlock.labelKey}Hint`))}
                       onSelect={() =>
                         run(
                           setLayerLocks(layer.id, {
@@ -131,10 +134,10 @@ export const LayerRow = memo(function LayerRow({
                   ))
                 }
               />
-            }
-          />
-        )}
-      </div>
+            </>
+          }
+        />
+      )}
     </div>
   )
 })

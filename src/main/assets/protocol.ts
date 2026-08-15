@@ -1,7 +1,7 @@
 import { net, protocol } from 'electron'
 import { isAbsolute, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { ASSET_SCHEME, assetIdFromUrl, type Asset } from '@shared/domain/asset'
+import { ASSET_SCHEME, hostedParts, type Asset } from '@shared/domain/asset'
 
 /**
  * Resolves an asset's stored path inside its project, or refuses.
@@ -28,6 +28,15 @@ export function servedFileOf(projectPath: string, asset: Asset): string | null {
   if (asset.path) return assetFilePath(projectPath, asset.path)
   if (asset.proxyPath) return assetFilePath(projectPath, asset.proxyPath)
   return linkedFileOf(asset)
+}
+
+/**
+ * The still that stands for an asset, when one was written beside it — what the `poster` host
+ * serves. Never falls back to the asset's own file: a `.glb` handed to an `<img>` is the broken
+ * tile this exists to replace, and answering nothing lets the browser draw its icon instead.
+ */
+export function posterFileOf(projectPath: string, asset: Asset): string | null {
+  return asset.posterPath ? assetFilePath(projectPath, asset.posterPath) : null
 }
 
 /**
@@ -69,14 +78,36 @@ export function registerAssetScheme(): void {
 }
 
 /** Asynchronous since the catalogue moved to its own thread — see `catalog-thread.ts`. */
-export type AssetResolver = (assetId: string) => Promise<string | null>
+type AssetResolver = (assetId: string) => Promise<string | null>
 
-export function serveAssets(resolveAsset: AssetResolver): void {
+/**
+ * One resolver per host of the scheme. `asset` is a row of the open project's catalogue;
+ * `favorite` is a still kept outside every project, which is why it cannot be resolved the same
+ * way — there is no catalogue to look it up in. A third kind is a third entry, nothing else.
+ */
+export type AssetResolvers = Readonly<Record<string, AssetResolver>>
+
+export function serveAssets(resolvers: AssetResolvers): void {
   protocol.handle(ASSET_SCHEME, async request => {
-    const assetId = assetIdFromUrl(request.url)
-    const file = assetId ? await resolveAsset(assetId) : null
+    const file = await servedPath(request.url, resolvers)
 
     if (!file) return new Response(null, { status: 404 })
     return net.fetch(pathToFileURL(file).toString())
   })
+}
+
+/**
+ * Which file a URL of the scheme names — the routing itself, apart from the handler so it can be
+ * tested without an Electron `protocol`. A host nobody registered is answered with nothing.
+ */
+export async function servedPath(url: string, resolvers: AssetResolvers): Promise<string | null> {
+  const parsed = hostedParts(url)
+  if (!parsed) return null
+
+  // `hasOwn`, not a plain lookup: every key of `Object.prototype` would otherwise be a live host,
+  // and `scenario://toString/x` would reach `net.fetch` with a path nobody registered.
+  if (!Object.hasOwn(resolvers, parsed.host)) return null
+
+  const resolveHost = resolvers[parsed.host]
+  return resolveHost ? resolveHost(parsed.id) : null
 }

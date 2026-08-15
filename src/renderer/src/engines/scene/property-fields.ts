@@ -3,11 +3,12 @@ import type {
   LightDescriptor,
   MaterialDescriptor,
   SpriteDescriptor,
+  TextDescriptor,
   TextureSlot,
   Vector3,
 } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
-import type { NumericBounds } from '@/helpers/numeric'
+import type { NumericBounds } from '@shared/numeric'
 
 /*
  * What each field of a descriptor is, so the inspector can be derived from a descriptor rather
@@ -137,6 +138,34 @@ export const SPRITE_SPECS: SpriteSpecs = {
   color: COLOR,
   opacity: UNIT,
 }
+
+/**
+ * Exhaustive like the others, minus the two no control describes: the words, which are a caption
+ * and not a number, and the face, which is picked from a list rather than typed.
+ */
+type TextSpecs = { [F in Exclude<keyof TextDescriptor, 'value' | 'font'>]: PropertySpec }
+
+export const TEXT_SPECS: TextSpecs = {
+  size: SIZE,
+  /** Zero is legal, and is what makes a flat letter out of a solid one. */
+  depth: { control: 'number', min: 0, step: 0.05 },
+  // Above a dozen the difference stops showing and the vertex count keeps climbing.
+  curveSegments: { control: 'number', min: 1, max: 32, step: 1 },
+}
+
+/** The caption and the face are left out: each has a control of its own in the inspector. */
+export function textFields(descriptor: TextDescriptor): PropertyField[] {
+  const measured: TextSpecsSubject = {
+    size: descriptor.size,
+    depth: descriptor.depth,
+    curveSegments: descriptor.curveSegments,
+  }
+
+  return listFields(measured, TEXT_SPECS)
+}
+
+/** Derived from the specs, so a parameter gained without a control fails to compile here. */
+type TextSpecsSubject = { [F in keyof TextSpecs]: TextDescriptor[F] }
 
 export function geometryFields(descriptor: GeometryDescriptor): PropertyField[] {
   return listFields(descriptor, GEOMETRY_SPECS[descriptor.kind])

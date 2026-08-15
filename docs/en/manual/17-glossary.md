@@ -14,6 +14,20 @@ When one word calls for another, it is written *in italics*: you will find it un
 A button that plays — or shows — the original version while you hold it, to compare it with the
 modified one. It undoes nothing: it shows.
 
+**Accent colour**
+The colour that marks what is selected or under way in the interface: the outline of the active
+panel, the *playhead*, the frame around a selection. Adjustable in Settings → **Appearance**.
+
+**Account**
+A stored API key, under a name you choose. The studio holds **several**, and the switcher in the
+title bar moves between them.
+
+Each key carries **its own Scenario project** — its models, its assets, its credit. Switching
+accounts therefore changes the remote library you browse, **never** the files in your local project,
+which are on your disk and belong to no account.
+
+A *job* already under way finishes on the account that launched it: switching interrupts nothing.
+
 **Adjustment layer**
 A *layer* holding no pixels of its own: it **changes what sits below it**. Brightness, contrast,
 saturation, hue. Moving it in the stack changes what it touches; switching it off puts everything
@@ -26,26 +40,29 @@ times, or delete it, having spoilt nothing.
 A greyscale image marking the places ambient light struggles to reach: hollows, corners, joints. It
 adds depth to a material that looked flat.
 
-**Account**
-A stored API key, under a name you choose. The studio holds **several**, and the switcher in the
-title bar moves between them.
-
-Each key carries **its own Scenario project** — its models, its assets, its credit. Switching
-accounts therefore changes the remote library you browse, **never** the files in your local project,
-which are on your disk and belong to no account.
-
-A *job* already under way finishes on the account that launched it: switching interrupts nothing.
-
 **API key**
 Your identifier with Scenario, the equivalent of a username. It always goes with an *API secret*.
 Both are taken from [app.scenario.com](https://app.scenario.com) and pasted into Settings →
 **Account**.
+
+**API secret**
+The second half of your Scenario credentials, the equivalent of a password. It always goes with an
+*API key*, and is never displayed in the clear once stored.
 
 **Asset**
 A raw-material file in your *project*: an image, a video, a sound, a 3D object, a *texture*, a sky.
 Keep this in mind: **an asset is a finished, reusable file**.
 
 Assets live in the **Assets** panel, familiarly called *the shelf*.
+
+**Automatic retry**
+What the studio does when a *job* fails for a reason another attempt can mend: a dropped
+connection, a busy service, too many requests. See *Exponential backoff*.
+
+**Assistant**
+The window where you say what you want to do, in an ordinary sentence, rather than clicking it.
+`⌘K`. It picks the actions itself and runs them, and asks for your yes before anything that spends
+or uploads. See [Driving the studio from outside](20-driving-from-outside.md).
 
 **Azimuth**
 The direction of something all around you, measured by turning on the spot. For a *skybox*'s sun:
@@ -55,26 +72,31 @@ east, south, west, north. It pairs with *elevation*, which gives its height.
 
 ## B
 
+**Background removal** *(cut out)*
+Taking the background out of a picture to keep only the subject, on transparency. The **Cut out**
+command lives in the Image menu; its model is set in **Settings ▸ Generation ▸ Background removal**.
+
 **Backoff** → see *Exponential backoff*.
 
-**Background removal** *(cut out)*
-Taking the background out of a picture to keep only the subject, on transparency. The studio has
-the command, in the Image workspace, but it cannot complete yet — see
-[What does not exist yet](18-limits.md).
+**Badge** *(of an asset)*
+The small mark on a thumbnail in the *shelf*, saying where that file stands with respect to the
+*library*: local only, in sync, to send, to fetch, changed on both sides, failed, or belonging to
+another project. It is not stored but **recomputed** — it depends on the active account. See
+[Assets](07-assets.md).
 
 **Base colour** *(texture channel)*
 A material's colour, as it would be under perfectly neutral light: no shadow, no reflection, no
 relief. The "paint" aspect of the surface.
-
----
-
-## C
 
 **Blend mode**
 How a layer mixes with what is below it. **Normal** simply lays it on top; **Multiply** darkens;
 **Screen** lightens; there are sixteen in all.
 
 It is the setting that turns a stack of pictures into a composition.
+
+---
+
+## C
 
 **Canvas**
 The drawing surface, in the centre of the Image workspace. This is where you paint, erase and crop.
@@ -108,6 +130,10 @@ eight — see [Textures workspace](12-textures-workspace.md).
 A piece of video or sound placed on a *track* of the edit. The same *asset* can give several clips;
 cutting a clip never touches the original file.
 
+**Colour grading**
+Setting a picture's colours and lights as a whole, after the fact: *exposure*, *contrast*,
+*saturation*, *temperature*, *tint*. The term comes from cinema.
+
 **Context** *(of a shortcut)*
 The surface where a key has a meaning. The studio knows four: anywhere in the application, in the 3D
 view, in the edit, in the image. That is what lets `S` split a clip **and** scale an object, without
@@ -117,21 +143,37 @@ ambiguity: only one surface listens at a time.
 The gap between dark and light areas. Below 1, the image flattens and goes grey; above, it hardens
 and loses detail at the extremes.
 
-**Accent colour**
-The colour that marks what is selected or under way in the interface: the outline of the active
-panel, the *playhead*, the frame around a selection. Adjustable in Settings → **Appearance**.
+**Creative unit** *(CU)*
+What a generation spends on your Scenario account. The service sets the rate, never the studio: a
+video does not cost what an image costs, and two image models do not cost the same either.
+
+You meet it in three places: the **Generate** button carries an estimate — `~12 CU` — before you
+press it; the generation's own line shows the real figure once it has gone; **Help ▸ Usage…**
+totals a period. Asking for the estimate spends nothing and generates nothing.
 
 ---
 
 ## D
+
+**Default model**
+The one the **Generate** panel preselects when a *workspace* opens. Adjustable per *family*, in
+Settings → **Generation**.
 
 **Density**
 The size of the interface's controls. **Comfortable** leaves air (28 px tall); **Compact** tightens
 (24 px) to fit more on screen.
 
 **Derived** *(channel)*
-A texture *channel* the studio computed from another, rather than received from a *model*. It
-recomputes on its own if its source changes.
+A texture *channel* the studio computed from another, rather than received from a *model*. The
+computation is relaunched from its thumbnail's menu, as many times as you like.
+
+**Dictation**
+Writing a text by saying it rather than typing it. Recognition runs **on this computer**, with no
+key and no connection: nothing said goes anywhere else.
+
+It needs a recognition *model*, downloaded once (640 MB), and works in every text field of the
+studio — the text lands at the caret. See
+[Generating](06-generating.md#speaking-instead-of-typing).
 
 **Dock**
 An area of the window where *panels* can settle: the left and right columns, the bottom strip. See
@@ -190,25 +232,22 @@ starts or stops dead.
 
 **Family** *(of models)*
 The broad type of what a *model* makes: image, video, 3D, audio, texture, sky, upscaling, background
-removal, vectorisation. Most families can have their *default model* in settings — the Texture
-family cannot yet.
+removal, vectorisation. Seven of them have their *default model* in settings; Texture and Sky do
+not yet. The last three — upscaling, background removal, vectorisation — have no workspace at all:
+it is the Image menu's edits that use them.
 
 **ffmpeg**
 A small program outside the studio, which can read and convert just about every existing video and
 audio format. The studio uses it on import to make *proxies* and *waveforms*. Optional: without it,
 importing still works, just less comfortably.
 
-**Fingerprint** *(of a file)*
-A signature computed from a file's content. Two identical files have the same fingerprint, even under
-different names. That is how the studio recognises a duplicate on import.
-
 **Field of view** *(FOV)*
 What a camera takes in, measured in degrees. A narrow angle: you see little, but closely, and
 distances flatten. A wide angle: you see a lot, but the edges distort. A human eye sits around 60°.
 
----
-
-## G
+**Fingerprint** *(of a file)*
+A signature computed from a file's content. Two identical files have the same fingerprint, even under
+different names. That is how the studio recognises a duplicate on import.
 
 **Flatten**
 Melting every visible *layer* into a single picture, as if photographing it. That is what export
@@ -216,6 +255,10 @@ does, and what leaves when you ask the model to cut out or enlarge: the service 
 picture, not a stack.
 
 The document keeps its layers. Flattening is not destructive here.
+
+---
+
+## G
 
 **Generate**
 To ask a *model* to make something. The request leaves for Scenario, comes back as a *job*, and the
@@ -254,6 +297,10 @@ meant to light. Extensions `.hdr` and `.exr`.
 A greyscale image giving a surface's real relief: white is high, black is low. Stronger than
 *normals*, because it actually displaces the geometry rather than simulating it.
 
+**Horizon rotation**
+Turning a whole *skybox* around you. A sky's most useful setting: it puts the sun on whichever
+side suits you, instantly, without regenerating anything.
+
 ---
 
 ## I
@@ -283,6 +330,21 @@ bar, and goes through five states: **Queued** → **Running** → **Done**, or e
 
 You can keep working while a job runs.
 
+**Journal** *(activity)*
+The list of what the studio has done and failed to do, opened from the *status line*. Six
+topics — generation, import, library, document, project, interface — and three levels:
+information, warning, failure. A failure also raises a **toast** in the corner of the window,
+which only leaves if you dismiss it. See [When something goes wrong](16-troubleshooting.md).
+
+---
+
+## K
+
+**Keychain**
+Your operating system's vault, the one that holds your passwords. It is what encrypts your *API key*
+and your *API secret*. They never come out in the clear, and the screen you are looking at has no
+access: it only knows whether the connection works.
+
 ---
 
 ## L
@@ -293,6 +355,11 @@ on another: you draw on the top one without spoiling the ones below. You can hid
 move it down, delete it.
 
 That is what makes an image **editable** instead of a final flat.
+
+**Library** *(of the account)*
+The stock of assets living online, on your Scenario account's side — as opposed to the *project*,
+which is a folder on your disk. The two are separate and nothing travels between them without an
+action of yours. Today only the **project → library** direction has a button (**Send**).
 
 **Local frame / world frame**
 The orientation of the manipulation handles, in the 3D workspace. In the **world** frame the red
@@ -315,6 +382,12 @@ picture never moved.
 
 A mask can also be made from a *selection*, in one command.
 
+**MCP** *(Model Context Protocol)*
+The common tongue coding assistants speak to the tools they drive. The studio can present itself as
+one of those tools: a client such as Claude Code then runs the same actions the *assistant* runs.
+Shut to start with, opened in Settings → **Advanced**. See
+[Driving the studio from outside](20-driving-from-outside.md).
+
 **Mesh**
 A 3D object, described by its points and the triangles joining them. It is the shape, without the
 material or the light.
@@ -328,13 +401,17 @@ they serve to soften the boundary between two areas.
 The distant program that makes things. There are several hundred, and they cannot all do the same
 thing. **Choosing the right model matters as much as writing a good prompt.**
 
-**Default model**
-The one the **Generate** panel preselects when a *workspace* opens. Adjustable per *family*, in
-Settings → **Generation**.
-
 ---
 
 ## N
+
+**Negative prompt**
+What you want to avoid. Short, in keywords: `blurry, text, watermark`. It is not the place to
+describe a scene in reverse.
+
+**Node**
+An element of a 3D *scene*'s tree: a mesh, a light, a sprite, a group. It is what the *outliner*
+lists and what the *inspector* describes.
 
 **Normalise** *(audio)*
 Bringing a sound's perceived loudness to a reference level, here −14 *LUFS*. It stops two sounds
@@ -379,10 +456,6 @@ Your instruction sentence: the text describing what you want. The most important
 Three principles: **write in English** if you can, **describe what is there** rather than what is
 not, and **be concrete**.
 
-**Negative prompt**
-What you want to avoid. Short, in keywords: `blurry, text, watermark`. It is not the place to
-describe a scene in reverse.
-
 **Proxy**
 A lightweight copy of a video, made at import, which lets you scrub through the edit smoothly. You
 work on the proxy and export from the original. Making it requires *ffmpeg*.
@@ -391,14 +464,14 @@ work on the proxy and export from the original. Making it requires *ffmpeg*.
 
 ## Q
 
+**Queue**
+The line of pending *jobs*. How many work at once is adjustable (3 by default). Everything goes
+through this queue — that is what stops a burst of requests from being refused wholesale.
+
 **QWERTY / AZERTY**
 The two common keyboard layouts. The studio listens to the **position** of the keys, not the letter
 printed on them: the flying keys always form the same square at the top left — `WASD` on an American
 keyboard, `ZQSD` on a French one. Nothing to set.
-
-**Queue**
-The line of pending *jobs*. How many work at once is adjustable (3 by default). Everything goes
-through this queue — that is what stops a burst of requests from being refused wholesale.
 
 ---
 
@@ -427,10 +500,6 @@ are dragged.
 
 **Saturation**
 The intensity of colours. At 0 the image is black and white; above 1 the colours shout.
-
-**API secret**
-The second half of your Scenario credentials, the equivalent of a password. It always goes with an
-*API key*, and is never displayed in the clear once stored.
 
 **Seed**
 The starting point of a generation's randomness. It is a number.
@@ -470,14 +539,18 @@ matters more.
 Making what you drag stick to *guides*, edges and centre, within a few pixels. It avoids alignments
 that miss by a hair.
 
----
-
-## T
-
 **Sprite**
 A picture placed in a 3D scene that **always faces the camera**, whichever direction you look from.
 Useful for foliage, a spark, a flat character. It is neither lit nor part of shadows: its colour is
 the one you give it.
+
+---
+
+## T
+
+**Tab**
+An open *document*, in the centre of the window. A tab whose work is not yet written to disk
+carries a dot (`•`) beside its name.
 
 **Temperature**
 An image's shift towards cold (blue) or warm (orange). It is the setting that stops a photograph
@@ -503,16 +576,17 @@ A line of the edit, on which *clips* are laid end to end. A picture track, a sou
 each if needed.
 
 **Trim**
-To shorten a *clip* from one of its ends, or to keep only the selected portion of a sound.
-
-**Keychain**
-Your operating system's vault, the one that holds your passwords. It is what encrypts your *API key*
-and your *API secret*. They never come out in the clear, and the screen you are looking at has no
-access: it only knows whether the connection works.
+To shorten or lengthen a *clip* from one of its ends, or to keep only the selected portion of a
+sound. A video stops where its source does; a still has no source to run past, so both of its
+ends stretch it.
 
 ---
 
 ## U
+
+**Undo** *(⌘Z)*
+To take back the last action. Each *document* has its own *undo stack*: `⌘Z` steps back in the
+active tab, not in the last gesture made anywhere in the studio.
 
 **Undo stack**
 A *document*'s history of actions, in which `⌘Z` steps back and `⇧⌘Z` steps forward. **Each document
@@ -524,12 +598,16 @@ plausible matter where there was only a smeared pixel.
 
 ---
 
-## W
+## V
 
 **Vectorisation**
 Turning a picture into paths — lines and curves, which scale up without ever going blurry. The
-studio has the command, in the Image workspace, but it cannot complete yet — see
-[What does not exist yet](18-limits.md).
+**Vectorise** command lives in the Image menu; its model is set in
+**Settings ▸ Generation ▸ Vectorisation**.
+
+---
+
+## W
 
 **Waveform**
 The drawing of a sound: those waves showing where it is loud and where it is silent. It is what lets

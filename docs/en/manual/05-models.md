@@ -19,7 +19,8 @@ require a starting image. Some return in ten seconds, others in three minutes.
 
 ## The Models panel
 
-It sits in the right column. It lists the catalogue **for the workspace you are in**: in the Image
+It sits in the left column, in the same place in every workspace. It lists the catalogue
+**for the workspace you are in**: in the Image
 workspace, image models; in the 3D workspace, 3D models.
 
 There are no type tabs to choose: the title bar already says which workspace you are in.
@@ -49,9 +50,9 @@ It searches the model's **name**.
 
 | Sort | What it puts first |
 |---|---|
-| **Quality: the best** | the most used and best rated models — the default sort |
-| **Created: newest** | the most recently published |
-| **Created: oldest** | the oldest, often the most proven |
+| **Quality: highest first** | the most used and best rated models — the default sort |
+| **Created: newest first** | the most recently published |
+| **Created: oldest first** | the oldest, often the most proven |
 
 ---
 
@@ -77,9 +78,9 @@ This is the most useful filter. The vocabulary is technical but short:
 |---|---|
 | **Text to image** | you write a sentence, it draws |
 | **Image to image** | you give a starting image, it transforms it |
-| **Inpaint** | you erase an area, it redraws it |
-| **Outpaint** | it extends the image beyond its edges |
-| **ControlNet** | it follows a structure you impose — a pose, an outline |
+| **Inpainting** | you erase an area, it redraws it |
+| **Outpainting** | it extends the image beyond its edges |
+| **Guidance** | it follows a structure you impose — a pose, an outline |
 | **Reference** | it takes style cues from an image you supply |
 
 **In the Video workspace**
@@ -117,11 +118,15 @@ This is the most useful filter. The vocabulary is technical but short:
 
 ### Tag — the publishers' keywords
 
-Labels put there by whoever publishes the models. They are not translated, because they are written
-as-is in the catalogue.
+Labels put there by whoever publishes the models. The menu shows them **translated**; it is the
+original label, untranslated, that reaches the catalogue — you read "First frame", the filter asks
+for `First Frame`.
 
-A few examples, by workspace: `Flux.1 LoRA`, `characters`, `fantasy`, `cartoon` for image; `T2V`,
-`I2V`, `First Frame` for video; `PBR`, `Multiview` for 3D; `TTS`, `Music` for audio.
+A few examples, by workspace: "Characters", "Fantasy", "Cartoon" for image; "First frame", "Video
+editing" for video; "Multiview", "Motion" for 3D; "Music", "Text to speech" for audio.
+
+Acronyms stay as they are, having no translation that would make anything clearer: `T2V`, `I2V`,
+`V2V`, `PBR`, `TTS`, and the product name `Flux.1 LoRA`.
 
 ### Publisher — who made the model
 
@@ -136,15 +141,12 @@ The big names in the field, different per workspace:
 
 ### Date — how long the model has existed
 
-**Last 24 h** · **Last 7 days** · **Last 30 days** · **Last 3 months**.
+**Last 24 hours** · **Last 7 days** · **Last 30 days** · **Last 3 months**.
 
 Useful for seeing what has just come out.
 
 > **The Skyboxes workspace has no capabilities, tags or publishers to filter on, and the Textures
-> workspace has no tags or publishers.** That is not an oversight: those families hold only a handful
-> of models, and a menu that narrows three lines is useless. The Texture family was split out of the
-> Image family on its capabilities alone — lending it the image tags would offer labels no texture
-> model carries.
+> workspace has no tags or publishers**: those families hold only a handful of models.
 
 ---
 
@@ -157,8 +159,8 @@ the **Generate** panel, just below, will put to work.
 image model is still there.
 
 You can also fix a **default model** for each family, once and for all:
-**Settings ▸ Generation ▸ Image** (or Video, 3D, Audio, Upscale). Leave the setting on "Ask every
-time" to choose at each generation.
+**Settings ▸ Generation ▸ Image** (or Video, 3D, Audio, Upscaling, Background removal, Vectorisation). Leave
+the setting on "Ask every time" to choose at each generation.
 
 ---
 
@@ -169,9 +171,21 @@ from what it takes in and gives back: a model that returns a video is in the Vid
 model that returns a sound is in the Audio workspace. If you are hunting for a model and cannot
 find it, the first question to ask is **"am I in the right workspace?"**.
 
-One case surprises people regularly: **upscalers are in the Image workspace**, because they take
-an image and return an image. Search for `upscale`, or filter on the `image-upscale` tag. There is
-no "Upscaling" workspace — see [What does not exist yet](18-limits.md).
+Three families have no workspace at all: **upscale**, **background removal** and
+**vectorisation**. Their models take an image and return one, like image models, but they do a job
+of their own and the studio files them apart. The **Models** panel therefore shows them nowhere:
+their model is chosen in **Settings ▸ Generation**, and it is the **Image** menu's edits — Enlarge,
+Cut out, Vectorise — that use them.
+
+| Edit | Family asked for | Where its model is set |
+|---|---|---|
+| Regenerate the region, Extend | image | the Image workspace's **Models** panel |
+| Enlarge | upscale | **Settings ▸ Generation ▸ Upscaling** |
+| Cut out | background removal | **Settings ▸ Generation ▸ Background removal** |
+| Vectorise | vectorisation | **Settings ▸ Generation ▸ Vectorisation** |
+
+With no model set, the edit does not leave and opens the screen where you choose one. Nothing is
+sent, nothing is billed.
 
 **The thumbnails are not all the same kind.** Most public models have no presentation image. The
 studio then shows one of their generation samples instead. It is representative of what the model

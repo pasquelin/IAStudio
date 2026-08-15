@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_VERSION } from '@shared/domain/document'
+import { MANIFEST_VERSION } from '@shared/domain/project'
 import {
+  parseAssetQuery,
   parseDocumentDraft,
   parseDocumentEnvelope,
   parseDocumentId,
   parseDocumentKind,
+  parseFolderPath,
+  parseManifest,
 } from './validation'
 
 const valid = {
@@ -31,6 +35,16 @@ describe('parseDocumentId', () => {
   it('refuses an empty id', () => {
     expect(() => parseDocumentId('')).toThrow()
     expect(() => parseDocumentId('   ')).toThrow()
+  })
+
+  /**
+   * No escape, but `writeFile` throws on a NUL — after the folder was made and the files before
+   * it were written, which leaves something nobody can tell from a finished piece of work.
+   */
+  it('refuses a control character, which no filesystem call survives', () => {
+    expect(() => parseDocumentId('a\u0000b')).toThrow()
+    expect(() => parseDocumentId('a\nb')).toThrow()
+    expect(() => parseDocumentId('a\u001fb')).toThrow()
   })
 })
 
@@ -75,6 +89,31 @@ describe('parseDocumentEnvelope', () => {
   })
 })
 
+describe('parseManifest', () => {
+  const manifest = {
+    version: MANIFEST_VERSION,
+    name: 'Reel',
+    createdAt: '2026-08-06T10:00:00.000Z',
+    updatedAt: '2026-08-06T10:00:00.000Z',
+  }
+
+  it('reads a manifest this build wrote', () => {
+    expect(parseManifest(manifest)).toEqual(manifest)
+  })
+
+  // The same cap `documentEnvelope` has always carried, and for a heavier reason: a document
+  // flattened by a later save is one file, a project is the whole folder.
+  it('refuses a version outside the range this build understands', () => {
+    expect(() => parseManifest({ ...manifest, version: 0 })).toThrow()
+    expect(() => parseManifest({ ...manifest, version: 1.5 })).toThrow()
+    expect(() => parseManifest({ ...manifest, version: MANIFEST_VERSION + 1 })).toThrow()
+  })
+
+  it('refuses a manifest a field short', () => {
+    expect(() => parseManifest({ version: MANIFEST_VERSION, name: 'Reel' })).toThrow()
+  })
+})
+
 describe('parseDocumentDraft', () => {
   it('keeps what the editor owns, serialized as it arrived', () => {
     expect(parseDocumentDraft({ title: 'Stone', content: '{"tiling":2}' })).toEqual({
@@ -106,5 +145,107 @@ describe('parseDocumentDraft', () => {
   it('refuses a draft with no title', () => {
     expect(() => parseDocumentDraft({ content: null })).toThrow()
     expect(() => parseDocumentDraft(null)).toThrow()
+  })
+
+  /**
+   * The field this schema does not name is the field the disk never sees, and zod strips in
+   * silence. An image document holds one PNG per layer: without `parts` here, `storeFolder`
+   * replaced the folder with a manifest alone — a save that threw away the pixels it was called
+   * to keep, and nothing in the reply said so.
+   */
+  it('keeps the files that go beside the content', () => {
+    const drafted = parseDocumentDraft({
+      title: 'Poster',
+      content: '{"layers":[{"id":"l1"}]}',
+      parts: [{ name: 'l1.png', data: 'AA==' }],
+    })
+
+    expect(drafted.parts).toEqual([{ name: 'l1.png', data: 'AA==' }])
+  })
+
+  // Same silence, same cost: the link is what brings a double-click back to the tab that edits
+  // an asset, and it is read off the file after a restart.
+  it('keeps the asset a document was opened to edit', () => {
+    const drafted = parseDocumentDraft({ title: 'Poster', content: '{}', sourceAssetId: 'asset_1' })
+
+    expect(drafted.sourceAssetId).toBe('asset_1')
+  })
+
+  it('leaves both out when the editor sends neither', () => {
+    const drafted = parseDocumentDraft({ title: 'Stone', content: '{}' })
+
+    expect(drafted.parts).toBeUndefined()
+    expect(drafted.sourceAssetId).toBeUndefined()
+  })
+})
+
+describe('parseAssetQuery', () => {
+  it('lets a workspace ask for the kinds it uses', () => {
+    expect(parseAssetQuery({ types: ['image', 'texture', 'skybox'] })).toEqual({
+      types: ['image', 'texture', 'skybox'],
+    })
+  })
+
+  it('refuses a kind the studio does not have', () => {
+    expect(() => parseAssetQuery({ types: ['hologram'] })).toThrow()
+    expect(() => parseAssetQuery({ type: 'hologram' })).toThrow()
+  })
+
+  it('refuses a list longer than there are kinds', () => {
+    // A caller asking for eight of six kinds has lost track of what it wants.
+    const tooMany = Array.from({ length: 8 }, () => 'image')
+    expect(() => parseAssetQuery({ types: tooMany })).toThrow()
+  })
+
+  it('narrows by where the bytes are, and by nothing else that looks like it', () => {
+    expect(parseAssetQuery({ location: 'cloud' })).toEqual({ location: 'cloud' })
+    expect(() => parseAssetQuery({ location: 'remote' })).toThrow()
+  })
+
+  it('accepts a sync state the catalogue can hold, and refuses the rest', () => {
+    expect(parseAssetQuery({ syncStatus: 'local-ahead' })).toEqual({ syncStatus: 'local-ahead' })
+    expect(() => parseAssetQuery({ syncStatus: 'pushing' })).toThrow()
+  })
+
+  it('refuses a group that names nothing', () => {
+    expect(parseAssetQuery({ groupId: 'job_1' })).toEqual({ groupId: 'job_1' })
+    expect(() => parseAssetQuery({ groupId: '   ' })).toThrow()
+  })
+
+  it('asks for everything when asked for nothing', () => {
+    expect(parseAssetQuery({})).toEqual({})
+  })
+})
+
+/**
+ * The one channel where a window names a path of its own. Everything here is about the refusal:
+ * `join(root, '../../..')` walks out of the project on every platform, and the renderer has no
+ * business reaching a folder nobody opened.
+ */
+describe('parseFolderPath', () => {
+  it('takes the project root, which is the empty path', () => {
+    expect(parseFolderPath('')).toBe('')
+  })
+
+  it('takes a folder inside the project', () => {
+    expect(parseFolderPath('assets/img')).toBe('assets/img')
+  })
+
+  it.each(['..', '../secrets', 'assets/../..', 'assets/./img'])('refuses %s', path => {
+    expect(() => parseFolderPath(path)).toThrow()
+  })
+
+  // Windows takes a backslash as a separator, so a check that only looked at `/` would let
+  // `..\..` walk straight out.
+  it.each(['..\\secrets', 'assets\\img'])('refuses the backslash in %s', path => {
+    expect(() => parseFolderPath(path)).toThrow()
+  })
+
+  it.each(['/etc', 'C:\\Windows'])('refuses the absolute path %s', path => {
+    expect(() => parseFolderPath(path)).toThrow()
+  })
+
+  it('refuses what is not a string at all', () => {
+    expect(() => parseFolderPath(null)).toThrow()
   })
 })

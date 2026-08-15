@@ -27,7 +27,7 @@ export function AdjustmentSliders({
       {ADJUSTMENT_FIELDS.map(field => (
         <SliderField
           key={field.key}
-          label={t(field.label)}
+          label={t(field.labelKey)}
           value={adjustments[field.key]}
           min={field.min}
           max={field.max}

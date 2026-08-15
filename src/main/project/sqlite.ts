@@ -18,11 +18,11 @@ export type SqlValue = string | number | null
  * What SQLite gives back. Wider than `SqlValue`: an integer column can come back as a
  * `bigint`, and a blob as bytes. Callers narrow, they never assume.
  */
-export type SqlOutput = string | number | bigint | Uint8Array | null
+type SqlOutput = string | number | bigint | Uint8Array | null
 
 export type SqlRow = Record<string, SqlOutput | undefined>
 
-export type SqliteStatement = {
+type SqliteStatement = {
   all: (...params: SqlValue[]) => SqlRow[]
   get: (...params: SqlValue[]) => SqlRow | undefined
   run: (...params: SqlValue[]) => void

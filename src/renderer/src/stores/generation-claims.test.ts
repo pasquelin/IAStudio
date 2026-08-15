@@ -6,7 +6,9 @@ import { canvasOf, useCanvases } from './canvases'
 import { installDocument } from './document-fixtures'
 import { useDocuments } from './documents'
 import { claimOnSubmit } from './generation-claims'
+import { flush } from './generation-fixtures'
 import { connectImageGeneration } from './image-generation'
+import { job } from './job-fixtures'
 import { useJobs } from './jobs'
 import { connectSkyboxGeneration } from './skybox-generation'
 import { skyboxOf, useSkyboxes } from './skyboxes'
@@ -21,17 +23,7 @@ const picture: Asset = {
   createdAt: '2026-08-08T10:00:00.000Z',
 }
 
-const done: Job = {
-  id: 'job-1',
-  modelId: 'model_flux',
-  label: 'Scenario Flux.1',
-  status: 'succeeded',
-  progress: 1,
-  createdAt: '2026-08-08T10:00:00.000Z',
-  assetIds: [],
-}
-
-const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
+const done: Job = job({ id: 'job-1', label: 'Scenario Flux.1', status: 'succeeded' })
 
 beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })

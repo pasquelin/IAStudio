@@ -39,6 +39,17 @@ describe('the window policy', () => {
     expect(directive('worker-src')).toContain('blob:')
   })
 
+  /**
+   * A `.glb` carries its textures inside itself, and three turns each one into a blob before
+   * decoding it. Which loader reads that blob depends on the user agent, and Electron's lands on
+   * `ImageBitmapLoader` — which uses `fetch`, not an `<img>`. So `img-src blob:` is not enough:
+   * without this, EVERY textured model showed up white, and `GLTFLoader` swallowed the refusal
+   * (`.catch(() => null)` on a texture), so nothing anywhere said why. Measured, not deduced.
+   */
+  it('lets an embedded texture be read back from its blob', () => {
+    expect(directive('connect-src')).toContain('blob:')
+  })
+
   // The asset scheme is fetched, not just linked: the monitor reads a rush through it.
   it('lets the asset scheme be fetched and shown', () => {
     expect(directive('connect-src')).toContain('scenario:')

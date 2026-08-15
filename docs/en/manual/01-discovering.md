@@ -20,16 +20,16 @@ and download an image, is **everything that comes after**:
   each file, and one button replays them;
 - **nothing leaves**: your files stay with you.
 
-> **One thing the studio cannot do yet**, and it is better known straight away: **work in
-> progress does not save.** A picture you are composing, an edit, a sound, an adjusted sky:
-> closing the tab loses them. Only 3D scenes and materials write to disk. The complete and honest
-> list of these gaps is the chapter [What does not exist yet](18-limits.md) — it exists to be
+> **One thing worth knowing straight away:** all six document kinds save into the project
+> folder and open back exactly as they were, and closing a tab that holds unsaved work asks
+> before losing it. What never comes back is the undo history. The complete and honest list of
+> what is still missing is the chapter [What does not exist yet](18-limits.md) — it exists to be
 > read, not hidden.
 
-## Six ways of working
+## Seven ways of working
 
-The studio is not six different applications. It is one application that **rearranges itself**
-according to what you are making. Those six arrangements are called **workspaces**.
+The studio is not seven different applications. It is one application that **rearranges itself**
+according to what you are making. Those seven arrangements are called **workspaces**.
 
 | Workspace | What you make there | An example |
 |---|---|---|
@@ -74,7 +74,7 @@ A work in progress, open in a tab, in the centre of the window.
 The difference from an asset is the one between **material** and **work**: a generated image is an
 asset; the image you are painting on, with its layers and its history, is a document.
 
-There are six kinds of document, one per workspace:
+There are seven kinds of document, one per workspace:
 
 | Workspace | Document | File extension |
 |---|---|---|

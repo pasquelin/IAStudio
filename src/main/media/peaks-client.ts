@@ -18,11 +18,15 @@ export type PeaksClient = {
   compute: (run: PeaksRun) => Promise<Float32Array>
 }
 
+type Pending = {
+  resolve: (peaks: Float32Array) => void
+  reject: (error: Error) => void
+  /** Drops the abort listener: a signal outlives the run it was handed to. */
+  release: () => void
+}
+
 export function createPeaksClient(port: PeaksPort): PeaksClient {
-  const pending = new Map<
-    number,
-    { resolve: (peaks: Float32Array) => void; reject: (error: Error) => void }
-  >()
+  const pending = new Map<number, Pending>()
   let nextId = 1
   // A dead process swallows `postMessage` without a word, so a run posted into one would hold
   // its slot in the ingest pool for good. Same guard `catalog-client` carries, same reason.
@@ -32,6 +36,7 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
     const slot = pending.get(response.id)
     if (!slot) return
     pending.delete(response.id)
+    slot.release()
 
     if (response.ok) slot.resolve(response.peaks)
     else slot.reject(new Error(response.error))
@@ -41,7 +46,10 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
     closed = true
     const waiting = [...pending.values()]
     pending.clear()
-    for (const slot of waiting) slot.reject(error)
+    for (const slot of waiting) {
+      slot.release()
+      slot.reject(error)
+    }
   })
 
   return {
@@ -57,19 +65,21 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
         }
 
         const id = nextId++
-        pending.set(id, { resolve, reject })
 
-        try {
-          // Cancelling tells the worker to kill ffmpeg; the promise settles on its answer, so a
-          // cancelled run frees its slot in the ingest pool like any other.
-          signal?.addEventListener('abort', () => port.postMessage({ id, cancel: true }), {
-            once: true,
-          })
-          port.postMessage({ id, ...job })
-        } catch (error) {
-          pending.delete(id)
-          reject(error instanceof Error ? error : new Error(String(error)))
-        }
+        // Sent first, the order `catalog-client` settled on: a throw here leaves nothing behind
+        // and rejects this promise on its own. Safe because an answer is always a turn later.
+        port.postMessage({ id, ...job })
+
+        // Cancelling tells the worker to kill ffmpeg; the promise settles on its answer, so a
+        // cancelled run frees its slot in the ingest pool like any other.
+        const cancel = (): void => port.postMessage({ id, cancel: true })
+        signal?.addEventListener('abort', cancel, { once: true })
+
+        pending.set(id, {
+          resolve,
+          reject,
+          release: () => signal?.removeEventListener('abort', cancel),
+        })
       }),
   }
 }

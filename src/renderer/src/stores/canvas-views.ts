@@ -4,9 +4,9 @@ import {
   DEFAULT_VIEW,
   sameViewport,
   type CanvasView,
-  type Size,
   type Viewport,
 } from '@/engines/canvas/viewport'
+import type { Size } from '@/engines/core/geometry'
 
 /** The toggles a menu item flips. Spelled as a union so a typo cannot invent a fourth one. */
 export type ViewToggle = 'rulers' | 'guides' | 'snap'
@@ -45,7 +45,7 @@ export const useCanvasViews = create<CanvasViewsState>()(set => ({
   // resize observer firing for an unchanged layout would otherwise wake every subscriber.
   setViewport: (documentId, viewport) =>
     set(state => {
-      const view = viewOf(state, documentId)
+      const view = canvasViewOf(state, documentId)
       return sameViewport(view.viewport, viewport)
         ? state
         : { views: { ...state.views, [documentId]: { ...view, viewport } } }
@@ -64,7 +64,7 @@ export const useCanvasViews = create<CanvasViewsState>()(set => ({
 
   toggle: (documentId, key) =>
     set(state => {
-      const view = viewOf(state, documentId)
+      const view = canvasViewOf(state, documentId)
       return { views: { ...state.views, [documentId]: { ...view, [key]: !view[key] } } }
     }),
 }))
@@ -72,7 +72,7 @@ export const useCanvasViews = create<CanvasViewsState>()(set => ({
 type Readable = Pick<CanvasViewsState, 'views' | 'hosts' | 'selections'>
 
 /** Shared defaults, never a fresh object: a selector building one hands React a new snapshot. */
-export function viewOf(state: Readable, documentId: string): CanvasView {
+export function canvasViewOf(state: Readable, documentId: string): CanvasView {
   return state.views[documentId] ?? DEFAULT_VIEW
 }
 

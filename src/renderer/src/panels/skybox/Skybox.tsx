@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import { POLE_LIMIT } from '@shared/domain/angles'
 import type { SkyboxEnvironment, SunSettings } from '@shared/domain/skybox'
+import { PANEL_SCROLL } from '@/design/styles'
 import { ColorField } from '@/design/ColorField'
 import { EmptyState } from '@/design/EmptyState'
 import { PropertySection } from '@/design/PropertySection'
@@ -28,6 +29,8 @@ export function Skybox() {
   const documentId = useDocuments(activeSkyboxId)
   const content = useSkyboxes(state => (documentId ? skyboxOf(state, documentId) : null))
 
+  // `!content` cannot happen — `skyboxOf` falls back to the default — but the selector answers
+  // `null` for the no-tab case rather than invent an id for it, and this narrows it back.
   if (!documentId || !content) {
     return <EmptyState icon={mdiWeatherPartlyCloudy} message={t('skybox.empty')} />
   }
@@ -47,7 +50,7 @@ export function Skybox() {
     useSkyboxes.getState().runCommand(documentId, setAdjustment(key, value))
 
   return (
-    <div className="flex flex-col overflow-y-auto">
+    <div className={PANEL_SCROLL}>
       <PropertySection title={t('skybox.sun')}>
         <SliderField
           label={t('skybox.elevation')}

@@ -1,4 +1,5 @@
 import { LANGUAGES } from '../i18n/languages'
+import { DICTATION_MODES } from './dictation'
 import {
   DENSITIES,
   LOG_VERBOSITIES,
@@ -6,6 +7,7 @@ import {
   THEMES,
   type SettingsSectionId,
 } from './settings'
+import type { ModelFamily } from './model'
 import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from './scene'
 import type { SettingPath, SettingValue, ValueAt } from './settings-path'
 
@@ -40,20 +42,50 @@ export type SettingSectionEntry = {
   descriptionKey?: string
   /** Set on a sub-section. The navigation builds its tree from this, and nothing else. */
   parent?: SettingsSectionId
+  /**
+   * The model family this screen sets a default for. Declared rather than read back out of the
+   * id: an action that cannot find a model of a family has to open the screen that sets one,
+   * and slicing `'background-removal'` off the id would hand it a string nothing checks.
+   */
+  family?: ModelFamily
+}
+
+/** Where a family's model is chosen, when a screen offers one. */
+export function sectionOfFamily(family: ModelFamily): SettingsSectionId | undefined {
+  return SETTING_SECTIONS.find(section => section.family === family)?.id
 }
 
 /**
  * One screen per model family, each holding the default model of that family. Their labels are
  * the workspaces' own: a family and the space that works with it are the same idea to the user.
  *
- * `upscale` has no workspace, so it carries a label of its own.
+ * The last three have no workspace of their own — they are the families the canvas edits reach
+ * for — so they are named after the family. Without these screens, Cutout and Vectorize have
+ * nowhere at all to be given a model, and both stop on "no model set".
  */
 const MODEL_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
-  { id: 'generation.image', labelKey: 'workspaces.image', parent: 'generation' },
-  { id: 'generation.video', labelKey: 'workspaces.video', parent: 'generation' },
-  { id: 'generation.3d', labelKey: 'workspaces.3d', parent: 'generation' },
-  { id: 'generation.audio', labelKey: 'workspaces.audio', parent: 'generation' },
-  { id: 'generation.upscale', labelKey: 'settings.familyUpscale', parent: 'generation' },
+  { id: 'generation.image', labelKey: 'workspaces.image', parent: 'generation', family: 'image' },
+  { id: 'generation.video', labelKey: 'workspaces.video', parent: 'generation', family: 'video' },
+  { id: 'generation.3d', labelKey: 'workspaces.3d', parent: 'generation', family: '3d' },
+  { id: 'generation.audio', labelKey: 'workspaces.audio', parent: 'generation', family: 'audio' },
+  {
+    id: 'generation.upscale',
+    labelKey: 'families.upscale',
+    parent: 'generation',
+    family: 'upscale',
+  },
+  {
+    id: 'generation.background-removal',
+    labelKey: 'families.background-removal',
+    parent: 'generation',
+    family: 'background-removal',
+  },
+  {
+    id: 'generation.vectorization',
+    labelKey: 'families.vectorization',
+    parent: 'generation',
+    family: 'vectorization',
+  },
 ]
 
 export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
@@ -92,6 +124,11 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     id: 'shortcuts',
     labelKey: 'settings.shortcuts',
     descriptionKey: 'settings.shortcutsDescription',
+  },
+  {
+    id: 'dictation',
+    labelKey: 'settings.dictation',
+    descriptionKey: 'settings.dictationDescription',
   },
   {
     id: 'media',
@@ -219,6 +256,16 @@ export const SETTING_REGISTRY = [
       labelKey: `settings.startup.${behaviour}`,
     })),
   }),
+  // Beside `startup` rather than in a screen of its own: what shows when the studio opens is
+  // one subject. Which sections the home draws, and in which order, is set on the home itself
+  // — see `home.sections` in `settings-path.ts`.
+  setting({
+    path: 'home.enabled',
+    kind: 'boolean',
+    section: 'general',
+    titleKey: 'settings.home.title',
+    helpKey: 'settings.home.help',
+  }),
   setting({
     path: 'appearance.theme',
     kind: 'choice',
@@ -281,6 +328,13 @@ export const SETTING_REGISTRY = [
     helpKey: 'settings.maxRetries.help',
     min: 0,
     max: 10,
+  }),
+  setting({
+    path: 'generation.captionArrivals',
+    kind: 'boolean',
+    section: 'generation',
+    titleKey: 'settings.captionArrivals.title',
+    helpKey: 'settings.captionArrivals.help',
   }),
   setting({
     path: 'three.showGrid',
@@ -402,6 +456,84 @@ export const SETTING_REGISTRY = [
     })),
   }),
   setting({
+    path: 'dictation.enabled',
+    kind: 'boolean',
+    section: 'dictation',
+    titleKey: 'settings.dictationEnabled.title',
+    helpKey: 'settings.dictationEnabled.help',
+  }),
+  setting({
+    path: 'dictation.mode',
+    kind: 'choice',
+    section: 'dictation',
+    titleKey: 'settings.dictationMode.title',
+    helpKey: 'settings.dictationMode.help',
+    options: DICTATION_MODES.map(mode => ({
+      value: mode,
+      labelKey: `settings.dictationMode.${mode}`,
+    })),
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
+    path: 'dictation.silenceMs',
+    kind: 'number',
+    section: 'dictation',
+    titleKey: 'settings.dictationSilence.title',
+    helpKey: 'settings.dictationSilence.help',
+    min: 200,
+    max: 2000,
+    step: 50,
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
+    path: 'dictation.previewMs',
+    kind: 'number',
+    section: 'dictation',
+    titleKey: 'settings.dictationPreview.title',
+    helpKey: 'settings.dictationPreview.help',
+    min: 0,
+    max: 2000,
+    step: 100,
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
+    path: 'dictation.threads',
+    kind: 'number',
+    section: 'dictation',
+    titleKey: 'settings.dictationThreads.title',
+    helpKey: 'settings.dictationThreads.help',
+    min: 1,
+    max: 8,
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
+    path: 'dictation.idleUnloadMinutes',
+    kind: 'number',
+    section: 'dictation',
+    titleKey: 'settings.dictationIdleUnload.title',
+    helpKey: 'settings.dictationIdleUnload.help',
+    min: 0,
+    max: 120,
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
+    path: 'dictation.modelFolder',
+    kind: 'path',
+    pathKind: 'folder',
+    section: 'dictation',
+    titleKey: 'settings.dictationModelFolder.title',
+    helpKey: 'settings.dictationModelFolder.help',
+    placeholderKey: 'settings.dictationModelFolder.placeholder',
+    dependsOn: { path: 'dictation.enabled', equals: true },
+  }),
+  setting({
+    path: 'mcp.enabled',
+    kind: 'boolean',
+    section: 'advanced',
+    titleKey: 'settings.mcpEnabled.title',
+    helpKey: 'settings.mcpEnabled.help',
+  }),
+  setting({
     path: 'media.ffmpegPath',
     kind: 'path',
     pathKind: 'file',
@@ -418,7 +550,10 @@ export const SETTING_REGISTRY = [
  * of the same shape: an id, a section, and the two texts that name and explain it.
  */
 export type SettingActionId =
-  'advanced.openSettingsFile' | 'advanced.openDevtools' | 'advanced.reset'
+  | 'advanced.openSettingsFile'
+  | 'advanced.openDevtools'
+  | 'advanced.copyMcpCommand'
+  | 'advanced.reset'
 
 export type SettingAction = {
   id: SettingActionId
@@ -447,6 +582,15 @@ export const ACTION_REGISTRY: readonly SettingAction[] = [
     titleKey: 'settings.openDevtools.title',
     helpKey: 'settings.openDevtools.help',
     buttonKey: 'settings.open',
+  },
+  {
+    // The port and the token are minted per launch, so there is nothing to write down and
+    // nothing to show on this screen — only a line to paste, which is what this hands over.
+    id: 'advanced.copyMcpCommand',
+    section: 'advanced',
+    titleKey: 'settings.copyMcpCommand.title',
+    helpKey: 'settings.copyMcpCommand.help',
+    buttonKey: 'settings.copyMcpCommand.button',
   },
   {
     id: 'advanced.reset',
@@ -478,9 +622,15 @@ function paths<P extends SettingPath[]>(...list: P): P {
 export const UNLISTED_PATHS = paths(
   // Written by the main process every time a project opens: session state, not a preference.
   'storage.lastProject',
+  // Picked from the microphones actually plugged in, which no table can list ahead of time —
+  // `DictationDevices` renders it and `devicechange` keeps it honest.
+  'dictation.inputDeviceId',
   // Waits on the cloud backend actually existing: offering a choice nothing implements would
   // be a promise the application cannot keep.
   'storage.backend',
+  // Chosen from the assistant's own panel, where the wish to change it arises: one wants a
+  // better model mid-sentence, and going through this screen to get there loses the sentence.
+  'assistant.model',
 )
 
 /**

@@ -21,11 +21,28 @@ type ModelsState = {
    * preference.
    */
   preset: Partial<Record<ModelFamily, FormValues>>
+  /**
+   * The family an action asked the generator to open on, when it is not the workspace's own —
+   * Enlarge reaches for an upscaler. Without it the panel went on showing the image model it
+   * already held: the picture the edit had just uploaded never appeared, and Generate would
+   * have run the wrong model on it.
+   *
+   * A parenthesis, not a preference: it lasts until a model is picked by hand or the user
+   * leaves the space — see `connectPreparation`.
+   */
+  prepared: ModelFamily | null
 
+  /**
+   * Files the choice under the model's own family, which makes a choice GLOBAL to that family:
+   * picking an image model anywhere replaces the one the Image space was on. Assumed rather than
+   * worked around: the alternative is a second table filed per surface, persisted and migrated,
+   * to record a distinction — "chosen here" against "chosen there" — that nothing asks about.
+   */
   select: (family: ModelFamily, modelId: string) => void
   /** Picks the model AND the values to open its form on, in one write. */
   prepare: (family: ModelFamily, modelId: string, params: FormValues) => void
   setCollection: (collection: CollectionState) => void
+  dropPreparation: () => void
 }
 
 /**
@@ -38,17 +55,24 @@ export const useModels = create<ModelsState>()(
       selected: {},
       collection: DEFAULT_COLLECTION_STATE,
       preset: {},
+      prepared: null,
 
       select: (family, modelId) =>
-        set(state => ({ selected: { ...state.selected, [family]: modelId } })),
+        set(state => ({
+          selected: { ...state.selected, [family]: modelId },
+          prepared: null,
+        })),
 
       prepare: (family, modelId, params) =>
         set(state => ({
           selected: { ...state.selected, [family]: modelId },
           preset: { ...state.preset, [family]: params },
+          prepared: family,
         })),
 
       setCollection: collection => set({ collection }),
+
+      dropPreparation: () => set(state => (state.prepared ? { prepared: null } : state)),
     }),
     {
       name: 'scenario-studio:models',

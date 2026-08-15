@@ -39,8 +39,18 @@ describe('createNodeOf', () => {
     expect(createNodeOf('box')?.id).not.toBe(createNodeOf('box')?.id)
   })
 
-  it('refuses a kind that is announced but not buildable yet', () => {
-    expect(createNodeOf('text')).toBeNull()
+  it('refuses a kind no registry claims', () => {
+    expect(createNodeOf('hologram')).toBeNull()
+  })
+
+  // Born with something written in it: a text node that draws nothing until someone finds the
+  // field is a node the Add menu appears to have failed at.
+  it('builds a text with words in it, in a face the studio ships', () => {
+    const node = createNodeOf('text')
+
+    expect(node?.type).toBe('text')
+    expect(node?.type === 'text' && node.text.value).toBeTruthy()
+    expect(node?.type === 'text' && node.text.font.source).toBe('embedded')
   })
 
   it('builds a sprite, mapless, since the picture is picked afterwards', () => {

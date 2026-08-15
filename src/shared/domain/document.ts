@@ -25,6 +25,14 @@ export type DocumentDescriptor = {
   kind: DocumentKind
   title: string
   workspace: WorkspaceId
+  /**
+   * The asset this document was opened to edit, when it was opened for one.
+   *
+   * What tells "the image document that is open" from "the document OF this image": a
+   * double-click on an asset must come back to its own tab rather than pile a second copy into
+   * whichever tab happens to be of the right kind.
+   */
+  sourceAssetId?: string
 }
 
 const KIND_BY_WORKSPACE: Record<WorkspaceId, DocumentKind | null> = {
@@ -111,6 +119,52 @@ export function kindForExtension(extension: string): DocumentKind | null {
 export type DocumentDraft = {
   title: string
   content: string
+  /**
+   * Carried into the file so the link survives the tab: a document reopened next session still
+   * knows which asset it edits, which is what a save back onto that asset will read.
+   */
+  sourceAssetId?: string
+  /**
+   * The files that go beside the content, for a document one string cannot hold. An image keeps
+   * one PNG per layer: the pixels live on the GPU, never in the state, so `content` can only
+   * name them.
+   *
+   * Absent for every kind that fits in a string, which is all of them but the image.
+   */
+  parts?: readonly DocumentPart[]
+}
+
+/**
+ * One file beside a document's content. `data` is base64 — the renderer has no filesystem, and
+ * bytes are what it has.
+ *
+ * `name` is turned into a path by the main process, so it is checked there rather than trusted:
+ * see `isPartName`. It is the one field of this contract that crosses a security boundary.
+ */
+export type DocumentPart = {
+  name: string
+  data: string
+}
+
+/**
+ * Which kinds are written as a folder rather than a single file. `parts` is what makes it
+ * necessary: a document with files beside it needs somewhere to put them, and `<id>.img/` keeps
+ * them together — inspectable, and removable in one gesture.
+ */
+export const FOLDER_KINDS: ReadonlySet<DocumentKind> = new Set<DocumentKind>(['image'])
+
+/** The manifest inside a folder document, holding exactly what a file document's body holds. */
+export const DOCUMENT_MANIFEST = 'document.json'
+
+/**
+ * Whether a part may become a file name. Deliberately narrow: the renderer picks these, and a
+ * `../` or an absolute path would write wherever it pleased. Letters, digits, dot, dash and
+ * underscore only — no separator can be spelled with those, so no traversal can either.
+ *
+ * `document.json` is refused: a part must never stand where the manifest goes.
+ */
+export function isPartName(name: string): boolean {
+  return /^[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/.test(name) && name !== DOCUMENT_MANIFEST
 }
 
 /**
@@ -139,6 +193,12 @@ export type DocumentFile = DocumentDraft & {
 
 /** The envelope alone, which is all a listing needs. */
 export type DocumentEnvelope = Omit<DocumentFile, 'content'>
+
+/**
+ * The three answers to closing a document that has unsaved work. `cancel` is the safe one, so
+ * it is what a dismissed dialog gives back — a tab must never close because a key was struck.
+ */
+export type CloseChoice = 'save' | 'discard' | 'cancel'
 
 /**
  * How much of a file the envelope may take. It holds a capped title and three short fields; a

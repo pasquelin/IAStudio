@@ -5,6 +5,7 @@ import {
   mdiImageOutline,
   mdiLightbulbOutline,
   mdiShapeOutline,
+  mdiVideoOutline,
 } from '@mdi/js'
 import { OBJECT_ENTRIES, type ObjectKind } from '@shared/domain/scene'
 import { LIGHT_TYPES } from './light-types'
@@ -30,10 +31,10 @@ export type NodeKind = {
  * and neither is a group, which is made by grouping a selection rather than picked from a menu.
  * Everything here is read by a panel, its title bar and its flyout: what those two have none of.
  *
- * A sprite is picked from a menu like a mesh, but one sprite is not a family: a panel listing
- * the sprites of a scene would be a panel of one row and one Add button.
+ * A sprite and a text are picked from a menu like a mesh, but neither is a family: a panel
+ * listing the sprites of a scene would be a panel of one row and one Add button.
  */
-export type PanelNodeType = Exclude<SceneNodeType, 'model' | 'sprite' | 'group'>
+export type PanelNodeType = Exclude<SceneNodeType, 'model' | 'sprite' | 'text' | 'group' | 'camera'>
 
 /**
  * What tells a mesh from a light, everywhere: the rail icon, the panels, the toolbar's Add
@@ -47,12 +48,15 @@ export const NODE_KINDS: Record<PanelNodeType, NodeKind> = {
 const OBJECT_ICONS: Record<ObjectKind, string> = {
   sprite: mdiImageOutline,
   text: mdiFormatText,
+  camera: mdiVideoOutline,
 }
 
 /** The glyphs of the kinds no registry describes, since neither is picked from a menu. */
 export const MODEL_ICON = mdiCubeScan
+export const CAMERA_ICON = OBJECT_ICONS.camera
 export const GROUP_ICON = mdiFolderOutline
 export const SPRITE_ICON = OBJECT_ICONS.sprite
+export const TEXT_ICON = OBJECT_ICONS.text
 
 /** i18n key of what a kind is called. */
 export function labelKeyOf(namespace: string, entry: AddEntry): string {

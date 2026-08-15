@@ -1,5 +1,8 @@
 import { vi } from 'vitest'
+import type { CloseChoice } from '@shared/domain/document'
+import { emptyAssetCounts } from '@shared/domain/asset'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
 import type { LogEntry, StudioBridge } from '@shared/ipc'
 
 const noSubscription = (): (() => void) => () => {}
@@ -37,11 +40,21 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       searchModels: () => Promise.resolve({ items: [], cursor: null }),
       modelPreviews: () => Promise.resolve({}),
       describeModel: () => Promise.reject(new Error('no model')),
+      // No plan by default, which is the "grey nothing out" case: a test that wants a row
+      // refused says so itself, rather than every other test inheriting a restriction.
+      plan: () => Promise.resolve(null),
+      suggestPrompts: () => Promise.resolve([]),
+      translatePrompt: draft => Promise.resolve({ text: draft, detectedLanguage: 'english' }),
+      describeStyle: () => Promise.resolve({ description: '', synthesis: '' }),
       generate: () => Promise.reject(new Error('no generation')),
+      estimateCost: () => Promise.resolve(null),
       uploadAsset: () => Promise.reject(new Error('no upload')),
       cancelJob: () => Promise.resolve(),
       listJobs: () => Promise.resolve([]),
       onProgress: noSubscription,
+      onJobsChanged: noSubscription,
+      usageReport: () => Promise.reject(new Error('no usage')),
+      usageEvents: () => Promise.reject(new Error('no usage')),
       ...overrides.scenario,
     },
     project: {
@@ -49,6 +62,15 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       open: () => Promise.reject(new Error('no project')),
       current: () => Promise.resolve(null),
       onChange: noSubscription,
+      listFolder: () => Promise.resolve([]),
+      openFile: () => Promise.resolve(true),
+      onFolderChanged: noSubscription,
+      revealFile: () => Promise.resolve(),
+      revealFolder: () => Promise.resolve(true),
+      rename: () => Promise.reject(new Error('no project')),
+      renameFile: () => Promise.resolve(true),
+      moveFile: () => Promise.resolve(true),
+      trashFile: () => Promise.resolve(true),
       ...overrides.project,
     },
     dialog: {
@@ -61,18 +83,82 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       read: () => Promise.resolve(null),
       write: () => Promise.resolve(),
       remove: () => Promise.resolve(),
+      // Cancel and refuse: a test that does not stub these cannot lose a document by omission.
+      confirmClose: () => Promise.resolve<CloseChoice>('cancel'),
+      confirmDelete: () => Promise.resolve(false),
       ...overrides.documents,
     },
     assets: {
       search: () => Promise.resolve([]),
+      onChanged: noSubscription,
+      counts: () => Promise.resolve(emptyAssetCounts()),
       peaks: () => Promise.resolve(null),
       reveal: () => Promise.resolve(false),
+      // Nothing is absent by default: a suite that has said nothing about the disk is not one
+      // where every file has gone, and answering otherwise would mark every fixture as lost.
+      absent: () => Promise.resolve([]),
       saveAudio: () => Promise.reject(new Error('no project')),
+      savePicture: () => Promise.reject(new Error('no project')),
+      saveTexture: () => Promise.reject(new Error('no project')),
+      extractTextures: () => Promise.reject(new Error('no project')),
+      update: () => Promise.reject(new Error('no project')),
+      remove: () => Promise.resolve(),
+      describe: () => Promise.resolve(0),
       ...overrides.assets,
+    },
+    cloud: {
+      browse: () => Promise.resolve({ assets: [], cursor: null }),
+      explore: () => Promise.resolve({ assets: [], cursor: null }),
+      similar: () => Promise.resolve([]),
+      pull: () => Promise.resolve([]),
+      push: () => Promise.resolve([]),
+      plan: () =>
+        Promise.resolve({ actions: [], summary: { push: 0, pull: 0, conflict: 0, skip: 0 } }),
+      ...overrides.cloud,
+    },
+    favorites: {
+      list: () => Promise.resolve([]),
+      pin: () => Promise.resolve([]),
+      unpin: () => Promise.resolve([]),
+      ...overrides.favorites,
+    },
+    styles: {
+      list: () => Promise.resolve([]),
+      save: () => Promise.resolve([]),
+      rename: () => Promise.resolve([]),
+      remove: () => Promise.resolve([]),
+      ...overrides.styles,
+    },
+    activity: {
+      read: () => Promise.resolve([]),
+      onEntries: () => () => {},
+      ...overrides.activity,
     },
     scene: {
       export: () => Promise.resolve(null),
       ...overrides.scene,
+    },
+    render: {
+      start: () => Promise.resolve(null),
+      frame: () => Promise.resolve(),
+      finish: () => Promise.resolve(null),
+      cancel: () => Promise.resolve(),
+      ...overrides.render,
+    },
+    texture: {
+      export: () => Promise.resolve(null),
+      ...overrides.texture,
+    },
+    skybox: {
+      export: () => Promise.resolve(null),
+      ...overrides.skybox,
+    },
+    // A test machine's installed faces are not the studio's business: the list is empty unless
+    // a case says otherwise, so nothing under test depends on what happens to be on the disk.
+    fonts: {
+      list: () => Promise.resolve([]),
+      read: () => Promise.resolve(null),
+      ...overrides.fonts,
     },
     media: {
       ingest: () => Promise.resolve([]),
@@ -81,10 +167,34 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onProgress: noSubscription,
       ...overrides.media,
     },
+    assistant: {
+      think: () => Promise.resolve({ say: '', calls: [], cost: 0 }),
+      onAction: noSubscription,
+      actionResult: () => Promise.resolve(),
+      ...overrides.assistant,
+    },
+    dictation: {
+      state: () => Promise.resolve({ state: 'idle', download: null, failure: null }),
+      start: () => Promise.resolve(),
+      stop: () => Promise.resolve(),
+      cancel: () => Promise.resolve(),
+      push: () => Promise.resolve(),
+      downloadModel: () => Promise.resolve(),
+      cancelDownload: () => Promise.resolve(),
+      openPrivacySettings: () => Promise.resolve(),
+      onEvent: noSubscription,
+      ...overrides.dictation,
+    },
+    mirror: {
+      open: () => Promise.resolve(),
+      ...overrides.mirror,
+    },
     window: {
       toggleFullScreen: () => Promise.resolve(),
       state: () => Promise.resolve({ active: true, fullScreen: false, maximized: false }),
       onState: noSubscription,
+      language: () => Promise.resolve(DEFAULT_LANGUAGE),
+      onLanguage: noSubscription,
       setWorkspace: () => Promise.resolve(),
       ...overrides.window,
     },
@@ -94,11 +204,24 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       ...overrides.diagnostics,
     },
     menu: {
+      // Dismissed, which is what a test that never doubles this one wants: no row runs by
+      // accident because a menu it did not think about was raised.
+      popup: () => Promise.resolve(null),
       onOpenTool: noSubscription,
       onCommand: noSubscription,
       onSceneAdd: noSubscription,
+      onSceneView: noSubscription,
+      onSceneDisplay: noSubscription,
       onSceneExport: noSubscription,
+      onTextureExport: noSubscription,
+      onSkyboxExport: noSubscription,
       ...overrides.menu,
+    },
+    updates: {
+      state: () => Promise.resolve({ phase: 'idle' }),
+      install: () => Promise.resolve(),
+      onState: noSubscription,
+      ...overrides.updates,
     },
   }
 

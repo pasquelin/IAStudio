@@ -48,10 +48,19 @@ function renderField(props: Partial<Parameters<typeof NumberField>[0]> = {}) {
 }
 
 describe('NumberField', () => {
-  it('shows the value it was given', () => {
+  // In the reader's own separator, like the readout beside it: the two sit in the same panel.
+  it('shows the value it was given, written the way this reader writes one', () => {
     renderField({ value: 2.5 })
 
-    expect(screen.getByLabelText('Radius')).toHaveValue('2.5')
+    expect(screen.getByLabelText('Radius')).toHaveValue('2,5')
+  })
+
+  // `String(-0)` was `'0'`; `Intl` writes the sign out. A step landing on zero from below is the
+  // ordinary way to get one.
+  it('never shows a negative zero', () => {
+    renderField({ value: -0 })
+
+    expect(screen.getByLabelText('Radius')).toHaveValue('0')
   })
 
   describe('arrow keys', () => {
@@ -84,6 +93,50 @@ describe('NumberField', () => {
     await userEvent.type(screen.getByLabelText('Radius'), '7')
 
     expect(onChange).toHaveBeenLastCalledWith(7)
+  })
+
+  /**
+   * The decimal key of a French numeric pad produces a comma, so `0,5` is what a hand types by
+   * default rather than by preference. `Number` read it as `NaN`, the field refuses non-finite
+   * values, and the gesture failed in silence: the old value came back on blur.
+   */
+  it('takes the separator the keyboard puts under the thumb', async () => {
+    const { onChange } = renderField({ value: 1, min: 0, step: 0.1 })
+
+    await userEvent.clear(screen.getByLabelText('Radius'))
+    await userEvent.type(screen.getByLabelText('Radius'), '0,5')
+
+    expect(onChange).toHaveBeenLastCalledWith(0.5)
+  })
+
+  /**
+   * Not a proof of the fix — it passed before it too, since `Number` reads a dot. It is here so
+   * that taking the comma never costs the point.
+   */
+  it('takes the other one just as well', async () => {
+    const { onChange } = renderField({ value: 1, min: 0, step: 0.1 })
+
+    await userEvent.clear(screen.getByLabelText('Radius'))
+    await userEvent.type(screen.getByLabelText('Radius'), '0.5')
+
+    expect(onChange).toHaveBeenLastCalledWith(0.5)
+  })
+
+  /**
+   * The visible half of the change, and the one a hand notices: a value typed with a dot comes
+   * back written with a comma once the field is left. The number never moved — only its spelling.
+   */
+  it("rewrites what was typed in the reader's own separator once the field is left", async () => {
+    render(<Controlled value={1} min={0} step={0.05} onChange={vi.fn()} />)
+    const field = screen.getByLabelText('Radius')
+
+    await userEvent.clear(field)
+    await userEvent.type(field, '2.25')
+    expect(field).toHaveDisplayValue('2.25')
+
+    await userEvent.tab()
+
+    expect(field).toHaveDisplayValue('2,25')
   })
 
   // `Number('')` is 0: emitting it would crush the mesh to its minimum in the moment between

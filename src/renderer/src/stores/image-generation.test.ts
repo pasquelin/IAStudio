@@ -4,8 +4,10 @@ import type { Job, JobStatus } from '@shared/domain/job'
 import { useAssets } from './assets'
 import { canvasOf, useCanvases } from './canvases'
 import { installDocument } from './document-fixtures'
+import { catalogueHolds, flush } from './generation-fixtures'
 import { useDocuments } from './documents'
-import { claimOnSubmit, connectImageGeneration } from './image-generation'
+import { job as jobOf } from './job-fixtures'
+import { claimImageOnSubmit, connectImageGeneration } from './image-generation'
 import { useJobs } from './jobs'
 
 const picture = (id: string, overrides: Partial<Asset> = {}): Asset => ({
@@ -19,32 +21,9 @@ const picture = (id: string, overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
-const job = (overrides: Partial<Job> = {}): Job => ({
-  id: 'job-1',
-  modelId: 'model_flux',
-  label: 'Scenario Flux.1',
-  status: 'running',
-  progress: 0.5,
-  createdAt: '2026-08-08T10:00:00.000Z',
-  assetIds: [],
-  ...overrides,
-})
-
-/**
- * The catalogue as the main process would answer it once the ingest is done. `refresh` is what
- * the seam calls rather than waiting on the coalesced invalidation, so this is where the assets
- * appear — never before the job reports.
- */
-function catalogueHolds(assets: readonly Asset[]): void {
-  useAssets.setState({ refresh: async () => void useAssets.setState({ items: assets }) })
-}
-
-/**
- * Lets every pending microtask run. The seam reads the catalogue back before it writes, so
- * without draining them the assertion runs before anything is laid down — and a test passing
- * for that reason would pass just as well against a seam that does nothing.
- */
-const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
+/** The shared fixture, told the id this suite's assets name. */
+const job = (overrides: Partial<Job> = {}): Job =>
+  jobOf({ id: 'job-1', label: 'Scenario Flux.1', ...overrides })
 
 async function finish(status: JobStatus, overrides: Partial<Job> = {}): Promise<void> {
   useJobs.setState({ jobs: [job({ status, ...overrides })] })
@@ -53,7 +32,7 @@ async function finish(status: JobStatus, overrides: Partial<Job> = {}): Promise<
 
 /** Submits from whatever tab is in front, the way the generator does — capture, then settle. */
 function submitFrom(jobId: string): void {
-  claimOnSubmit()(job({ id: jobId }))
+  claimImageOnSubmit()(job({ id: jobId }))
 }
 
 const stack = (documentId: string) => canvasOf(useCanvases.getState(), documentId)

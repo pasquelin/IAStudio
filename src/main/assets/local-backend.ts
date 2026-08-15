@@ -1,6 +1,14 @@
 import { rm, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
-import { ASSET_FOLDERS, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
+import {
+  ASSET_FOLDERS,
+  wantsPoster,
+  type Asset,
+  type AssetGeneration,
+  type AssetType,
+  type MediaProbe,
+} from '@shared/domain/asset'
+import { POSTERS_FOLDER } from '@shared/domain/project'
 import type { PbrChannel } from '@shared/domain/texture'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 
@@ -20,6 +28,26 @@ export type LocalBackendDeps = {
   projectPath: () => string
   catalog: () => AsyncCatalog
   now: () => string
+  /**
+   * Reads a written file back for its length and its tracks — `null` when the tool is missing
+   * or the file says nothing.
+   *
+   * A generation carries no length with its bytes: the API states none, and a clip laid down
+   * without one is given an arbitrary five seconds and no way to know whether it even has a
+   * sound. Read here rather than at the drop, which has no ffprobe and no file path either.
+   */
+  probeFile?: (path: string) => Promise<MediaProbe | null>
+  /**
+   * What has just landed in the project, once the catalogue holds it.
+   *
+   * The one hook here, and it exists because this is the single door every asset comes through:
+   * a download, a generation collected, a picture saved — whoever wants to act on an arrival
+   * would otherwise have to catch it at each of them, and would miss the next one added.
+   *
+   * NOT awaited: an import must not wait on what somebody does afterwards, and a listener that
+   * throws must not cost the asset. Whatever it starts is its own to see through.
+   */
+  onImported?: (asset: Asset) => void
 }
 
 export type ImportRequest = {
@@ -29,9 +57,22 @@ export type ImportRequest = {
   type: AssetType
   jobId?: string
   remoteAssetId?: string
+  /** The project the twin belongs to — an API key opens onto one, and keys can be swapped. */
+  remoteOwnerId?: string
+  remoteUpdatedAt?: string
   derivedFrom?: string
+  /** What ties the outputs of one generation together — the seven channels of a PBR pack. */
+  groupId?: string
+  outputIndex?: number
+  /** The model, prompt and parameters behind it, read off the API asset rather than the job. */
+  generation?: AssetGeneration
   map?: PbrChannel
   mapInverted?: boolean
+  /**
+   * The library's own still for this asset. Brought down for the kinds no browser can decode —
+   * a mesh — so a tile that was a picture in the library stays one once the file is here.
+   */
+  thumbnailUrl?: string
 }
 
 /** An import whose bytes the caller already holds — an edited take, rather than a download. */
@@ -85,6 +126,28 @@ export function relativePathFor(id: string, extension: string, type: AssetType):
 }
 
 /**
+ * What an asset that came down from the library records about its twin.
+ *
+ * It is `synced` the moment it lands, and that is not an assumption: the bytes on disk were
+ * just downloaded from the very asset being pointed at, so the two sides cannot differ yet.
+ * `remoteSyncedAt` is the baseline both later stamps are measured against.
+ */
+export function twinOf(
+  request: Pick<ImportRequest, 'remoteAssetId' | 'remoteOwnerId' | 'remoteUpdatedAt'>,
+  at: string,
+): Partial<Asset> {
+  if (!request.remoteAssetId) return {}
+
+  return {
+    remoteAssetId: request.remoteAssetId,
+    syncStatus: 'synced',
+    remoteSyncedAt: at,
+    ...(request.remoteOwnerId ? { remoteOwnerId: request.remoteOwnerId } : {}),
+    ...(request.remoteUpdatedAt ? { remoteUpdatedAt: request.remoteUpdatedAt } : {}),
+  }
+}
+
+/**
  * Brings a generated asset down to disk and indexes it. The disk is the truth: scrubbing a
  * video and loading a mesh must never depend on the network — see spec § 5.
  */
@@ -93,34 +156,118 @@ export function createLocalBackend({
   projectPath,
   catalog,
   now,
+  probeFile,
+  onImported,
 }: LocalBackendDeps): LocalBackend {
+  /**
+   * What the bytes say about themselves, read off the file that was just written.
+   *
+   * Only for the two kinds that run in time, and only when the caller could not say: an editor
+   * applying an edit already knows, and a picture has nothing to time. Best effort, like the
+   * poster beside it — a missing ffprobe leaves the asset exactly as it was before.
+   */
+  const probeWritten = async (
+    request: WriteRequest,
+    relativePath: string,
+  ): Promise<MediaProbe | undefined> => {
+    if (request.probe) return request.probe
+    if (!probeFile || (request.type !== 'video' && request.type !== 'audio')) return undefined
+
+    try {
+      return (await probeFile(join(projectPath(), relativePath))) ?? undefined
+    } catch {
+      return undefined
+    }
+  }
+
+  /**
+   * The library's still, brought down beside the bytes — for the kinds `wantsPoster` names.
+   *
+   * Best effort, and that is the whole design: the thumbnail is a convenience, the model is the
+   * asset. A CDN that answers 404 must leave the import that carries it untouched.
+   */
+  const savePoster = async (request: WriteRequest): Promise<string | undefined> => {
+    if (!request.thumbnailUrl || !wantsPoster(request.type)) return undefined
+
+    try {
+      const poster = await download(request.thumbnailUrl)
+      const relative = `${POSTERS_FOLDER}/${request.id}${extensionOf(request.thumbnailUrl, 'image')}`
+      await writeFile(join(projectPath(), relative), poster)
+      return relative
+    } catch {
+      return undefined
+    }
+  }
+
   const write = async (request: WriteRequest, bytes: Uint8Array): Promise<Asset> => {
     const relativePath = relativePathFor(request.id, request.extension, request.type)
-    await writeFile(join(projectPath(), relativePath), bytes)
+
+    // All at once. Three of these are the only thing the fourth waits on: the still is a second
+    // download over the network, the probe spawns ffprobe, and the row is a catalogue read —
+    // run in a file, each one's latency lands on every import that carries the others.
+    //
+    // What the row already held survives being written again. Pulling a twin a second time
+    // lands on the same id on purpose, and rebuilding the asset from the request alone dropped
+    // the tags the user had put on it and moved its creation date to now — which also sent it
+    // back to the top of a shelf sorted newest first, for a file that had not changed.
+    const written = writeFile(join(projectPath(), relativePath), bytes)
+    const [, posterPath, probe, existing] = await Promise.all([
+      written,
+      savePoster(request),
+      // After the write, and only after it: this one reads the file that was just laid down.
+      written.then(() => probeWritten(request, relativePath)),
+      catalog().find(request.id),
+    ])
+
+    const at = now()
+
+    // The still's name follows the extension the CDN's URL carried, and a second pull of the
+    // same twin can carry another one. The file the row stops pointing at is ours and nothing
+    // would ever come back for it — the same reason `replaceBytes` drops the file it replaces.
+    if (posterPath && existing?.posterPath && existing.posterPath !== posterPath) {
+      await rm(join(projectPath(), existing.posterPath), { force: true })
+    }
 
     const asset: Asset = {
+      ...existing,
       id: request.id,
       name: request.name,
       type: request.type,
       location: 'local',
       path: relativePath,
       bytes: bytes.byteLength,
-      tags: [],
-      createdAt: now(),
+      tags: existing?.tags ?? [],
+      createdAt: existing?.createdAt ?? at,
+      localChangedAt: at,
+      ...(probe ? { probe } : {}),
+      // Absent rather than cleared: a still that failed to come down this time leaves the one
+      // an earlier pull already put on disk, which is still a true picture of the same asset.
+      ...(posterPath ? { posterPath } : {}),
+      ...(request.jobId ? { jobId: request.jobId } : {}),
+      ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
+      ...(request.groupId ? { groupId: request.groupId } : {}),
+      ...(request.outputIndex !== undefined ? { outputIndex: request.outputIndex } : {}),
+      ...(request.generation ? { generation: request.generation } : {}),
+      // Nested: the flag says how to read a channel, so it means nothing without one — and the
+      // catalogue only reads it back inside a valid channel anyway.
+      ...(request.map
+        ? { map: request.map, ...(request.mapInverted ? { mapInverted: true } : {}) }
+        : {}),
+      ...twinOf(request, at),
     }
 
-    if (request.probe) asset.probe = request.probe
-    if (request.jobId) asset.jobId = request.jobId
-    if (request.remoteAssetId) asset.remoteAssetId = request.remoteAssetId
-    if (request.derivedFrom) asset.derivedFrom = request.derivedFrom
-    // Nested: the flag says how to read a channel, so it means nothing without one — and the
-    // catalogue only reads it back inside a valid channel anyway.
-    if (request.map) {
-      asset.map = request.map
-      if (request.mapInverted) asset.mapInverted = true
+    const added = await catalog().add(asset)
+    // After the catalogue, never before: a listener that goes looking for what just arrived —
+    // extracting a model's pictures does exactly that — would find nothing at all. Caught, as
+    // the deps promise: the row is committed by now, so a listener throwing here would fail an
+    // import that has already happened.
+    try {
+      onImported?.(added)
+    } catch {
+      // Nothing to say from here: what a listener does is its own errand, and the one this
+      // exists for reports its own failures to the journal.
     }
-
-    return await catalog().add(asset)
+    return added
   }
 
   return {
@@ -134,14 +281,24 @@ export function createLocalBackend({
 
     replaceBytes: async (assetId, bytes, extension, probe) => {
       const existing = await catalog().find(assetId)
-      if (!existing?.path) throw new Error(`asset ${assetId} has no file to replace`)
+      if (!existing) throw new Error(`asset ${assetId} is not in the catalogue`)
 
+      // Written INSIDE the project, always — including for a row that had no file there.
+      //
+      // A linked asset keeps its bytes where the user left them and `path` empty on purpose
+      // (`linkedAsset` says so). Editing one used to be refused outright; it now lands in the
+      // project and the row gains its `path`, so the shelf, the scene and every other reader
+      // show the edit. The file that was linked is NOT touched: the studio writing into a
+      // folder the user only pointed at is a different act from editing an asset, and the one
+      // guard that keeps every other write inside the project — `assetFilePath` — exists
+      // precisely because a catalogue row is user-editable territory.
       const relativePath = relativePathFor(assetId, extension, existing.type)
       await writeFile(join(projectPath(), relativePath), bytes)
 
       // The extension follows the bytes: an edited take goes back as a `.wav`, and leaving it
-      // under the `.mp3` it was imported as would hand every reader a file that lies.
-      if (relativePath !== existing.path) {
+      // under the `.mp3` it was imported as would hand every reader a file that lies. Only a
+      // file the PROJECT held is removed — a linked one is not ours to delete.
+      if (existing.path && relativePath !== existing.path) {
         await rm(join(projectPath(), existing.path), { force: true })
       }
 
@@ -155,6 +312,10 @@ export function createLocalBackend({
         ...existing,
         path: relativePath,
         bytes: bytes.byteLength,
+        localChangedAt: now(),
+        // The file just changed under a twin that has not: saying so is what later lets a push
+        // be offered, and what stops an edited take from passing for identical to the library.
+        ...(existing.remoteAssetId ? { syncStatus: 'local-ahead' } : {}),
         ...(probe ? { probe } : {}),
       }
       delete rewritten.peaksPath

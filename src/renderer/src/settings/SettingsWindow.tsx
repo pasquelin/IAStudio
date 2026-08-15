@@ -5,17 +5,19 @@ import type { SettingPath } from '@shared/domain/settings-path'
 import { descriptorsIn, sectionEntry, SETTING_REGISTRY } from '@shared/domain/settings-registry'
 import { hitId, matchSettings, sectionsOf, type SearchHit } from '@shared/domain/settings-search'
 import { bindingOf } from '@shared/domain/command'
-import { shortcutLabel } from '@shared/domain/shortcut'
-import { DRAGGABLE } from '@/helpers/app-region'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { cn } from '@/helpers/cn'
+import { WindowShell } from '@/design/WindowShell'
+import { HINT_RIGHT, HINT_TOP } from '@/helpers/tooltip'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
 import { useAccounts } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
-import { isDirty, useSettingsDraft } from '@/stores/settings-draft'
+import { isSettingsDraftDirty, useSettingsDraft } from '@/stores/settings-draft'
 import { SettingActions } from './SettingActions'
 import { SettingList } from './SettingList'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
+import { windowControl, WINDOW_CAPTION, WINDOW_HELP } from '@/design/window-styles'
 
 /** Whether anything under a section is staged — its own settings, or a sub-section's. */
 function sectionIsStaged(touched: ReadonlySet<SettingPath>, section: SettingsSection): boolean {
@@ -47,12 +49,10 @@ function NavigationEntry({
       <button
         type="button"
         aria-current={active ? 'page' : undefined}
+        {...HINT_RIGHT(t(staged ? 'settings.sectionStagedHint' : 'settings.sectionHint'))}
         onClick={() => onSelect(section.id)}
-        style={{ paddingLeft: `${0.75 + depth * 1}rem` }}
-        className={cn(
-          'flex h-(--sc-control) w-full items-center gap-1.5 rounded-(--radius-sc-sm) pr-3 text-left text-xs',
-          active ? 'bg-primary text-primary-content' : 'hover:bg-base-300',
-        )}
+        style={{ paddingLeft: `calc(var(--sc-indent) * ${depth + 1})` }}
+        className={cn(windowControl(active), 'w-full gap-1.5 pr-3 text-left')}
       >
         {t(section.labelKey)}
         {staged && (
@@ -100,7 +100,7 @@ function SearchResults({
   const { t } = useTranslation()
 
   if (found.length === 0) {
-    return <p className="text-base-content/60 text-xs">{t('settings.noResult')}</p>
+    return <p className={WINDOW_CAPTION}>{t('settings.noResult')}</p>
   }
 
   return (
@@ -109,8 +109,9 @@ function SearchResults({
         <section key={section}>
           <button
             type="button"
+            {...HINT_RIGHT(t('settings.searchSectionHint'))}
             onClick={() => onGo(section)}
-            className="text-base-content/60 hover:text-base-content mb-1 text-[11px] tracking-wide uppercase"
+            className="text-base-content/70 hover:text-base-content text-tiny mb-1 tracking-wide uppercase"
           >
             {t(sectionEntry(section)?.labelKey ?? '')}
           </button>
@@ -135,24 +136,26 @@ function SearchResults({
 /** A hit that is not a setting: a button, or a command with the key it answers to. */
 function ResultRow({ hit, onGo }: { hit: SearchHit; onGo: () => void }) {
   const { t } = useTranslation()
+  const label = useShortcutLabel()
   const overrides = useSettings(state => state.settings.shortcuts.overrides)
 
   if (hit.kind === 'setting') return null
 
   const entry = hit.kind === 'action' ? hit.action : hit.command
-  const key = hit.kind === 'command' ? shortcutLabel(bindingOf(hit.command.id, overrides)) : ''
+  const key = hit.kind === 'command' ? label(bindingOf(hit.command.id, overrides)) : ''
 
   return (
     <button
       type="button"
+      {...HINT_RIGHT(t('settings.searchResultHint'))}
       onClick={onGo}
-      className="border-base-300 hover:bg-base-300 flex w-full flex-col gap-1 border-b py-3 text-left last:border-b-0"
+      className="border-base-300 hover:bg-base-300 flex w-full flex-col gap-2 border-b py-3 text-left last:border-b-0"
     >
       <span className="flex items-center justify-between gap-4">
         <span className="text-xs font-medium">{t(entry.titleKey)}</span>
         {key && <span className="shrink-0 font-mono text-xs">{key}</span>}
       </span>
-      <span className="text-base-content/60 max-w-lg text-xs">{t(entry.helpKey)}</span>
+      <span className={WINDOW_HELP}>{t(entry.helpKey)}</span>
     </button>
   )
 }
@@ -162,10 +165,9 @@ function ResultRow({ hit, onGo }: { hit: SearchHit; onGo: () => void }) {
  * rather than a panel — settings are not a document, they outlive the workspace being edited,
  * and ⌘, is expected to open one.
  *
- * Changes are written as they are made rather than behind an Apply button — a text field when
- * it is left, everything else on the spot. Every setting here is reversible and immediately
- * visible, and a buffered form would add a dirty state to reconcile against the other windows
- * already replicating these settings.
+ * Nothing is written until Apply or OK: an editing buffer holds the changes, and Cancel drops
+ * them. Writing on the spot left no way back from a settings session — the per-row ↺ restores
+ * the FACTORY value, not the one held before the window opened.
  */
 export function SettingsWindow() {
   const { t } = useTranslation()
@@ -203,7 +205,7 @@ export function SettingsWindow() {
 
   // Published so the main process can ask before closing on work nobody applied: closing a
   // window is its decision, and it has no other way to know.
-  const pending = useSettingsDraft(isDirty)
+  const pending = useSettingsDraft(isSettingsDraftDirty)
   useEffect(() => {
     void getBridge()?.settings.setPending(pending)
   }, [pending])
@@ -216,29 +218,27 @@ export function SettingsWindow() {
   const searching = query.trim() !== ''
 
   return (
-    <div className="bg-base-200 text-base-content flex h-full flex-col">
-      <header
-        style={DRAGGABLE}
-        className="flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 text-[13px] font-medium"
-      >
-        {t('settings.title')}
-      </header>
-
-      <div className="flex min-h-0 flex-1">
-        <nav
-          aria-label={t('settings.sections')}
-          className="border-base-300 flex w-56 shrink-0 flex-col gap-2 overflow-auto border-r p-2"
-        >
+    <WindowShell
+      title={t('settings.title')}
+      navLabel={t('settings.sections')}
+      footer={<DraftBar />}
+      nav={
+        <>
+          {/*
+            Outside the scrolling part, deliberately. Inside it the field was `w-full` of a box
+            the scrollbar had already taken its width from, so it narrowed and widened as the
+            list grew past the window — and it scrolled away with the sections it filters.
+          */}
           <input
             type="search"
-            className="input input-xs w-full"
+            className="input input-xs w-full shrink-0"
             aria-label={t('settings.search')}
             placeholder={t('settings.search')}
             value={query}
             onChange={event => setQuery(event.target.value)}
           />
 
-          <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+          <ul className="m-0 flex min-h-0 flex-1 list-none flex-col gap-0.5 overflow-auto p-0">
             {SETTINGS_SECTIONS.map(entry => (
               <NavigationEntry
                 key={entry.id}
@@ -252,38 +252,34 @@ export function SettingsWindow() {
               />
             ))}
           </ul>
-        </nav>
-
-        <main className="min-w-0 flex-1 overflow-auto px-6 py-4">
-          {searching ? (
-            <>
-              <h2 className="mb-4 text-base font-semibold">{t('settings.results')}</h2>
-              <SearchResults
-                found={found}
-                onGo={id => {
-                  setQuery('')
-                  setSelected(id)
-                }}
-              />
-            </>
-          ) : (
-            section && (
-              <>
-                <h2 className="mb-1 text-base font-semibold">{t(section.labelKey)}</h2>
-                {section.descriptionKey && (
-                  <p className="text-base-content/60 mb-4 text-xs">{t(section.descriptionKey)}</p>
-                )}
-                <SettingList descriptors={descriptorsIn(section.id)} />
-                <SettingActions section={section.id} />
-                {section.Content && <section.Content />}
-              </>
-            )
-          )}
-        </main>
-      </div>
-
-      <DraftBar />
-    </div>
+        </>
+      }
+    >
+      {searching ? (
+        <>
+          <h2 className="mb-4 text-base font-semibold">{t('settings.results')}</h2>
+          <SearchResults
+            found={found}
+            onGo={id => {
+              setQuery('')
+              setSelected(id)
+            }}
+          />
+        </>
+      ) : (
+        section && (
+          <>
+            <h2 className="mb-1 text-base font-semibold">{t(section.labelKey)}</h2>
+            {section.descriptionKey && (
+              <p className={cn(WINDOW_CAPTION, 'mb-4')}>{t(section.descriptionKey)}</p>
+            )}
+            <SettingList descriptors={descriptorsIn(section.id)} />
+            <SettingActions section={section.id} />
+            {section.Content && <section.Content />}
+          </>
+        )
+      )}
+    </WindowShell>
   )
 }
 
@@ -297,7 +293,7 @@ export function SettingsWindow() {
  */
 function DraftBar() {
   const { t } = useTranslation()
-  const dirty = useSettingsDraft(isDirty)
+  const dirty = useSettingsDraft(isSettingsDraftDirty)
   const apply = useSettingsDraft(state => state.apply)
   const cancel = useSettingsDraft(state => state.cancel)
 
@@ -305,15 +301,26 @@ function DraftBar() {
 
   return (
     <footer className="border-base-300 flex shrink-0 items-center justify-end gap-2 border-t px-4 py-2">
-      <button type="button" className="btn btn-sm btn-ghost" onClick={cancel}>
+      <button
+        type="button"
+        className="btn btn-sm btn-ghost"
+        {...HINT_TOP(t('settings.cancelHint'))}
+        onClick={cancel}
+      >
         {t('settings.cancel')}
       </button>
-      <button type="button" className="btn btn-sm" onClick={() => void apply()}>
+      <button
+        type="button"
+        className="btn btn-sm"
+        {...HINT_TOP(t('settings.applyHint'))}
+        onClick={() => void apply()}
+      >
         {t('settings.apply')}
       </button>
       <button
         type="button"
         className="btn btn-sm btn-primary"
+        {...HINT_TOP(t('settings.confirmHint'))}
         onClick={() => void apply().then(() => window.close())}
       >
         {t('settings.confirm')}

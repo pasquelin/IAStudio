@@ -1,4 +1,4 @@
-import { SKYBOX_TAG } from '@shared/domain/model'
+import { FAMILY_TAGS, SKYBOX_TAG } from '@shared/domain/model'
 import type { FieldDescriptor, FieldKind, ModelFamily } from '@shared/domain/model'
 
 /**
@@ -19,6 +19,8 @@ export type ScenarioInput = {
   maskFrom?: string
   color?: boolean
   prompt?: boolean
+  /** Whether the input is the one prompt assistance rewrites. */
+  promptSpark?: boolean
   default?: unknown
   min?: number
   max?: number
@@ -56,19 +58,34 @@ function kindOf(input: ScenarioInput): FieldKind {
   }
 }
 
-function labelOf(input: ScenarioInput): string {
-  if (input.label) return input.label
-  // `numInferenceSteps` → `Num inference steps`: an API name stays readable instead of raw.
-  const spaced = input.name
+/** `numInferenceSteps` → `Num inference steps`: an API name stays readable instead of raw. */
+function humanize(text: string): string {
+  const spaced = text
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replace(/[_-]+/g, ' ')
     .toLowerCase()
   return spaced.charAt(0).toUpperCase() + spaced.slice(1)
 }
 
+function labelOf(input: ScenarioInput): string {
+  return input.label ?? humanize(input.name)
+}
+
+/**
+ * A choice reads as a phrase where it was written as one, and stays untouched everywhere else:
+ * `original_image` was shown with its underscore, in both languages, while the field ABOVE it had
+ * been humanised all along.
+ *
+ * Only letters and separators qualify. A digit means a code rather than a word — `mp3_44100_128`,
+ * `480p`, `1:1` — and humanising those would trade an odd label for a wrong one.
+ */
 function optionsOf(input: ScenarioInput): FieldDescriptor['options'] {
   if (!input.allowedValues?.length) return undefined
-  return input.allowedValues.map(value => ({ value: String(value), label: String(value) }))
+
+  return input.allowedValues.map(value => {
+    const text = String(value)
+    return { value: text, label: /^[a-zA-Z]+([_-][a-zA-Z]+)+$/.test(text) ? humanize(text) : text }
+  })
 }
 
 /**
@@ -99,6 +116,10 @@ export function translateSchema(inputs: readonly ScenarioInput[] | undefined): F
     // an edit action can fill both without knowing either model's field names.
     if (input.maskFrom !== undefined) descriptor.maskFrom = input.maskFrom
 
+    // The API says which field prompt assistance rewrites, so the studio never has to guess.
+    // `prompt` is the fallback: it marks the same field on models that declare only that one.
+    if (input.promptSpark === true || input.prompt === true) descriptor.promptSpark = true
+
     const options = optionsOf(input)
     if (options) descriptor.options = options
 
@@ -111,6 +132,9 @@ const FAMILY_BY_CAPABILITY: readonly { pattern: RegExp; family: ModelFamily }[] 
   { pattern: /3d$/, family: '3d' },
   { pattern: /audio$/, family: 'audio' },
   { pattern: /texture/, family: 'texture' },
+  // Ahead of the image pattern, which `img2txt` would otherwise match: what a model produces
+  // decides its family, and only `model_scenario-llm` produces text among the public models.
+  { pattern: /txt$/, family: 'other' },
   { pattern: /img|inpaint|outpaint|reference/, family: 'image' },
 ]
 
@@ -118,9 +142,14 @@ const FAMILY_BY_CAPABILITY: readonly { pattern: RegExp; family: ModelFamily }[] 
  * Infers a model's family from its capabilities. Order matters: `img2video` is a video model,
  * not an image one, and suffixes must win over broader patterns.
  *
- * The tag is consulted first, and only skyboxes need it: a panorama model answers `txt2img`
- * like every other image model, so the capabilities alone would file the whole workspace under
- * Image. See `SKYBOX_TAG` — it is the only signal the API offers.
+ * `SKYBOX_TAG` is trusted on its own, ahead of everything: it belongs to Scenario's own `sc:`
+ * namespace, so only the platform posts it, and it is the only signal there is — a panorama
+ * model answers `txt2img` like every other image model.
+ *
+ * The three other tagged families are settled AFTER the capabilities, and only when those
+ * answered `image`. Their tags are authors' words, which land where they please: two of the
+ * nine models carrying `remove-background` remove it from video, and the canvas cannot use
+ * them. Trusting that tag first would file them under cutout.
  */
 export function familyOf(
   capabilities: readonly string[] | undefined,
@@ -128,8 +157,14 @@ export function familyOf(
 ): ModelFamily {
   if (tags.includes(SKYBOX_TAG)) return 'skybox'
   if (!capabilities?.length) return 'other'
-  for (const { pattern, family } of FAMILY_BY_CAPABILITY) {
-    if (capabilities.some(capability => pattern.test(capability))) return family
-  }
-  return 'other'
+
+  const matched = FAMILY_BY_CAPABILITY.find(({ pattern }) =>
+    capabilities.some(capability => pattern.test(capability)),
+  )
+  if (!matched) return 'other'
+  if (matched.family !== 'image') return matched.family
+
+  // The skybox entry is unreachable here — the tag above already answered — but it is what the
+  // registry narrows a listing by, so the table carries it.
+  return FAMILY_TAGS.find(entry => tags.includes(entry.tag))?.family ?? matched.family
 }

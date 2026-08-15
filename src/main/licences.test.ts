@@ -1,0 +1,98 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
+import licences from '@shared/licences.json'
+import { isCopyleft, type Licence, NO_VERSION } from '@shared/domain/licence'
+import manifest from '../../package.json'
+import { SHIPPED } from './shipped-packages'
+
+// Under `src/main` because `src/shared` compiles for the renderer, where `node:fs` has no types.
+const ROOT = join(import.meta.dirname, '..', '..')
+const entries: Licence[] = licences
+
+const notices = readFileSync(join(ROOT, 'THIRD-PARTY-NOTICES.md'), 'utf8')
+const licence = readFileSync(join(ROOT, 'LICENSE'), 'utf8')
+const eula = readFileSync(join(ROOT, 'EULA.md'), 'utf8')
+
+describe('the notice the repository carries', () => {
+  // A stale copy would credit the wrong versions to whoever reads the repository, not the app.
+  it('mirrors every entry of the window, version and licence included', () => {
+    for (const entry of entries) {
+      expect(notices, `${entry.name} is missing from THIRD-PARTY-NOTICES.md`).toContain(
+        `## ${entry.name}\n`,
+      )
+      // A typeface carries no version of its own; the file says so in words rather than leaving
+      // the column empty — and never `undefined`, which is what a missing field used to print.
+      expect(notices).toContain(
+        `| ${entry.name} | ${entry.version ?? NO_VERSION} | ${entry.spdx} |`,
+      )
+    }
+  })
+
+  // The offer is the whole point of the file for these two: attribution alone would not do.
+  it('carries the source offer of every copyleft component', () => {
+    const copyleft = entries.filter(entry => isCopyleft(entry.spdx))
+    expect(copyleft.length).toBeGreaterThan(0)
+
+    for (const entry of copyleft) {
+      expect(notices, `${entry.name} lost its source offer`).toContain(entry.sources ?? '')
+    }
+  })
+})
+
+/**
+ * `SHIPPED` is spelled out by hand, and nothing confronts it with the manifest: a package dropped
+ * from `package.json` stays listed, and the notice goes on naming a component the binary no longer
+ * carries. `licence.test.ts` holds the other half of the same accounting — declared, hence shipped
+ * or a build tool — and neither half sees a name that left the manifest.
+ *
+ * What is still uncovered: a name removed from `SHIPPED` without regenerating leaves its entry in
+ * the notice, and every case here passes on a superset.
+ */
+describe('the list the collector ships from', () => {
+  it('names only packages the manifest still declares', () => {
+    const declared = new Set([
+      ...Object.keys(manifest.dependencies),
+      ...Object.keys(manifest.devDependencies),
+    ])
+    expect(SHIPPED.filter(name => !declared.has(name))).toEqual([])
+  })
+
+  // Adding a name without regenerating leaves the window announcing less than the binary ships.
+  it('has an entry in the notice for each of its names', () => {
+    const named = new Set(entries.map(entry => entry.name))
+    expect(SHIPPED.filter(name => !named.has(name))).toEqual([])
+  })
+})
+
+// Three texts, three scopes; confusing them is the mistake worth guarding against.
+describe('the terms the project ships under', () => {
+  it('declares in the manifest the licence the repository actually carries', () => {
+    expect(manifest.license).toBe('PolyForm-Noncommercial-1.0.0')
+    expect(licence).toContain('# PolyForm Noncommercial License 1.0.0')
+    expect(licence).toContain('Required Notice: Copyright 2026 Alban Pasquelin')
+  })
+
+  it('keeps the repository licence clear of what it does not cover', () => {
+    expect(licence).toContain('THIRD-PARTY-NOTICES.md')
+    expect(licence).toContain('EULA.md')
+  })
+
+  it('governs the binary by its own terms, which name the FFmpeg offer', () => {
+    expect(eula).toContain('THIRD-PARTY-NOTICES.md')
+    // The one obligation the terms of use must not read as narrowing.
+    expect(eula).toContain('FFmpeg')
+  })
+
+  /**
+   * electron-builder has no root `license` key: declaring one fails `validateConfiguration`
+   * before any platform is packaged, so the mistake costs a whole release rather than one target.
+   * Matched on the text — the schema lives in a dev dependency this project must not import.
+   */
+  it('offers the terms of use from where electron-builder accepts them', () => {
+    const packaging = readFileSync(join(ROOT, 'electron-builder.yml'), 'utf8')
+
+    expect(packaging).not.toMatch(/^license:/m)
+    expect(packaging).toMatch(/^ {2}license: EULA\.md$/m)
+  })
+})

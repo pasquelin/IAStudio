@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
 import { ImportProgressRow } from './ImportProgressRow'
@@ -6,23 +5,24 @@ import { ImportProgressRow } from './ImportProgressRow'
 /**
  * What the ingest of the files just imported is doing. It sits above the browser rather than
  * in the jobs bar: these are not generations, and the row they describe is right below.
+ * Only the ingests: the notice for a missing ffmpeg outlives them, so it rides on the title row
+ * rather than hold a row's height here for a whole session.
  */
 export function ImportProgress() {
-  const { t } = useTranslation()
   const progress = useMedia(state => state.progress)
-  const ffmpeg = useMedia(state => state.capabilities.ffmpeg)
   const byId = useAssets(assetsById)
 
   const entries = Object.values(progress)
 
-  // The notice outlives the ingests: without ffmpeg one lasts a few hundred milliseconds, and
-  // the explanation would vanish just as the user wonders where the waveform went.
-  if (ffmpeg && entries.length === 0) return null
+  if (entries.length === 0) return null
 
   return (
-    <div className="border-border border-b">
-      {!ffmpeg && <p className="text-muted px-2 py-1 text-[11px]">{t('ingest.noFfmpeg')}</p>}
-      <ul>
+    <div className="border-border shrink-0 border-b">
+      {/* A row opens before the pool gate (`main/media/service.ts:138`), so a folder dropped
+          whole opens all of them at once and pushes the browser out of the panel. */}
+      {/* `pr-2` for the same reason `PANEL_SCROLL` carries it: on macOS the scrollbar is drawn
+          OVER the content, and here it would land on the button that dismisses a failed row. */}
+      <ul className="max-h-40 overflow-y-auto pr-2">
         {entries.map(entry => (
           <ImportProgressRow
             key={entry.assetId}

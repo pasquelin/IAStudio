@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { Flyout } from './Flyout'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import { Flyout, type FlyoutProps } from './Flyout'
 
 describe('Flyout', () => {
   it('renders its rows outside the anchor, at the document root', () => {
@@ -27,7 +28,57 @@ describe('Flyout', () => {
     expect(screen.queryByRole('button', { name: 'Pinceau' })).not.toBeInTheDocument()
   })
 
-  it('exposes itself as a menu', () => {
+  /**
+   * The anchor's box, which jsdom reports as zeros. `offsetWidth` comes from the layout polyfill
+   * in `test-setup`, which answers 640 for every element — so the menu is 640 wide here.
+   */
+  function anchorAt(left: number, right: number): HTMLElement {
+    const anchor = document.createElement('div')
+    document.body.appendChild(anchor)
+    anchor.getBoundingClientRect = () =>
+      ({ top: 10, bottom: 30, left, right, width: right - left, height: 20 }) as DOMRect
+    return anchor
+  }
+
+  function menuLeft(): string {
+    return screen.getByRole('menu').style.left
+  }
+
+  it('hangs beside its anchor when there is room', () => {
+    render(
+      <Flyout anchor={anchorAt(80, 100)} role="menu">
+        <button type="button">Pinceau</button>
+      </Flyout>,
+    )
+    expect(menuLeft()).toBe('102px')
+  })
+
+  it('flips to the other side rather than drawing itself off the window', () => {
+    // A section heading reaches the very right edge: hung to the right, its rows sit outside the
+    // window and cannot be reached at all.
+    render(
+      <Flyout anchor={anchorAt(1000, 1020)} role="menu">
+        <button type="button">Pinceau</button>
+      </Flyout>,
+    )
+    expect(menuLeft()).toBe(`${1000 - 640 - 2}px`)
+  })
+
+  it('keeps the flipped side inside the window too', () => {
+    // Flipping is not enough on its own: a menu wider than the room to the left of its anchor
+    // lands at a negative x, and runs off the side it just flipped to. Every other placement
+    // went through `clamped`; this branch was the one that did not.
+    render(
+      <Flyout anchor={anchorAt(300, 1020)} role="menu">
+        <button type="button">Pinceau</button>
+      </Flyout>,
+    )
+    expect(menuLeft()).toBe('0px')
+  })
+
+  // `role="menu"` promises rows a reader can step through. The surface also holds panels and
+  // sliders, and announcing a menu over those sends a reader looking for rows that do not exist.
+  it('carries no role of its own', () => {
     const anchor = document.createElement('div')
     document.body.appendChild(anchor)
 
@@ -36,6 +87,70 @@ describe('Flyout', () => {
         <button type="button">Pinceau</button>
       </Flyout>,
     )
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('announces a menu when its caller says the rows are menu items', () => {
+    const anchor = document.createElement('div')
+    document.body.appendChild(anchor)
+
+    render(
+      <Flyout anchor={anchor} role="menu">
+        <button type="button">Pinceau</button>
+      </Flyout>,
+    )
     expect(screen.getByRole('menu')).toBeInTheDocument()
+  })
+
+  /**
+   * The menu keyboard, opted into rather than assumed — the same shape as `onDismiss`, and for
+   * the same reason: two callers open on hover, and a surface that grabs the focus as the
+   * pointer passes over it takes the caret out of whatever was being typed.
+   */
+  describe('the keyboard', () => {
+    const menu = (props: Partial<FlyoutProps> = {}) => {
+      const anchor = document.createElement('div')
+      document.body.appendChild(anchor)
+
+      render(
+        <Flyout anchor={anchor} role="menu" {...props}>
+          <button type="button" role="menuitem">
+            Pinceau
+          </button>
+          <button type="button" role="menuitem">
+            Gomme
+          </button>
+        </Flyout>,
+      )
+      return anchor
+    }
+
+    it('walks the rows once a caller asks for it', async () => {
+      menu({ onKeyClose: vi.fn() })
+      expect(screen.getByRole('menuitem', { name: 'Pinceau' })).toHaveFocus()
+
+      await userEvent.keyboard('{ArrowDown}')
+
+      expect(screen.getByRole('menuitem', { name: 'Gomme' })).toHaveFocus()
+    })
+
+    it('closes on Tab through the callback it was handed', async () => {
+      const onKeyClose = vi.fn()
+      menu({ onKeyClose })
+
+      await userEvent.keyboard('{Tab}')
+
+      expect(onKeyClose).toHaveBeenCalled()
+    })
+
+    it('takes no focus at all from a caller that did not ask', () => {
+      const outside = document.createElement('button')
+      document.body.appendChild(outside)
+      outside.focus()
+
+      menu()
+
+      expect(outside).toHaveFocus()
+    })
   })
 })

@@ -1,26 +1,57 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SceneAddRequest, Unsubscribe } from '@shared/ipc'
+import type { MenuCheck } from '@shared/domain/command'
+import type {
+  SceneAddRequest,
+  SceneDisplayRequest,
+  SceneViewRequest,
+  Unsubscribe,
+} from '@shared/ipc'
 import { installScene } from '@/stores/scene-fixtures'
 import type { CommandId } from '@shared/domain/command'
-import type { ToolId } from '@shared/domain/tool'
+import type { ToolId, ToolSurface } from '@shared/domain/tool'
+import type * as ToolRegistryModule from '@/helpers/tool-registry'
+
+type ToolRegistry = typeof ToolRegistryModule
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/scene-views'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
+import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 
 const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
+const saveDocumentAs = vi.fn((_documentId: string) => Promise.resolve(true))
 
 // What saving does is `document-io`'s own suite; what this one is about is the menu reaching it.
 vi.mock('@/app/document-io', () => ({
   saveDocument: (documentId: string) => saveDocument(documentId),
+  saveDocumentAs: (documentId: string) => saveDocumentAs(documentId),
 }))
+
+/**
+ * Counted, not replaced: what the guard below saves is this walk over the whole tool registry,
+ * and the suite has to be able to see it NOT happening.
+ */
+const listedTools = vi.fn()
+
+vi.mock('@/helpers/tool-registry', async importOriginal => {
+  const actual = await importOriginal<ToolRegistry>()
+  return {
+    ...actual,
+    availableToolIds: (surface: ToolSurface) => {
+      listedTools()
+      return actual.availableToolIds(surface)
+    },
+  }
+})
 
 const { useNativeMenu } = await import('./useNativeMenu')
 
 /** Holds the listener the hook registers on a menu channel, so the test can play the menu. */
-function captureMenu<T>(channel: 'onSceneAdd' | 'onCommand') {
+function captureMenu<T>(channel: 'onSceneAdd' | 'onCommand' | 'onSceneView' | 'onSceneDisplay') {
   let listener: ((payload: T) => void) | null = null
   const watched = bridgeWatchingLogs({
     menu: {
@@ -37,6 +68,8 @@ function captureMenu<T>(channel: 'onSceneAdd' | 'onCommand') {
 
 const captureSceneAdd = () => captureMenu<SceneAddRequest>('onSceneAdd')
 const captureCommand = () => captureMenu<CommandId>('onCommand')
+const captureSceneView = () => captureMenu<SceneViewRequest>('onSceneView')
+const captureSceneDisplay = () => captureMenu<SceneDisplayRequest>('onSceneDisplay')
 
 function meshes() {
   return sceneOf(useScenes.getState(), 'doc-1').nodes.filter(node => node.type === 'mesh')
@@ -45,6 +78,9 @@ function meshes() {
 beforeEach(() => {
   vi.clearAllMocks()
   installScene('doc-1')
+  // Cleared with the rest: how a scene is drawn is what half of this suite now asserts on, and
+  // a view left behind by another test reads as one this one set.
+  useSceneViews.setState({ views: {} })
 })
 
 describe('useNativeMenu', () => {
@@ -117,6 +153,41 @@ describe('useNativeMenu', () => {
     expect(saveDocument).not.toHaveBeenCalled()
   })
 
+  it('copies the document in front when the menu asks for Save as', () => {
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    menu.emit('document.saveAs')
+
+    expect(saveDocumentAs).toHaveBeenCalledWith('doc-1')
+  })
+
+  // Same reason as saving: with no tab in front there is no document to copy.
+  it('copies nothing when no document is in front', () => {
+    useDocuments.setState({ activeId: null })
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    menu.emit('document.saveAs')
+
+    expect(saveDocumentAs).not.toHaveBeenCalled()
+  })
+
+  /**
+   * `saveDocumentAs` journals its own failures under `assets.copy` — the shelf the copy would
+   * have landed in — and answers false rather than rejecting. A second scope reported here would
+   * say the same failure twice, under a name that does not fit it.
+   */
+  it('leaves a refused copy to say so itself, without a second report', async () => {
+    saveDocumentAs.mockReturnValueOnce(Promise.resolve(false))
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    expect(() => menu.emit('document.saveAs')).not.toThrow()
+
+    expect(menu.report).not.toHaveBeenCalled()
+  })
+
   /**
    * A menu command runs outside React, so a failed one has nowhere to surface: the tab simply
    * keeps its modified marker. The log is what says why it kept it.
@@ -138,18 +209,25 @@ describe('useNativeMenu', () => {
 describe('what the native menu is told', () => {
   const setWorkspace = vi.fn(() => Promise.resolve())
 
-  function lastPublished(): { workspace: string; tools: readonly ToolId[] } {
+  function lastPublished(): {
+    surface: string
+    tools: readonly ToolId[]
+    checked: readonly MenuCheck[]
+  } {
     // Typed by the stub rather than by the bridge; the call is what the hook actually sent.
-    const [workspace, tools] = (setWorkspace.mock.lastCall ?? []) as unknown as [
+    const [surface, tools, checked] = (setWorkspace.mock.lastCall ?? []) as unknown as [
       string,
       readonly ToolId[],
+      readonly MenuCheck[],
     ]
-    return { workspace, tools }
+    return { surface, tools, checked }
   }
 
   beforeEach(() => {
     installFakeBridge({ window: { setWorkspace } })
-    useLayouts.setState({ activeWorkspace: 'image' })
+    // `home: false` explicitly: the flag starts true on every launch, and what these cases are
+    // about is the space in front — the home has its own case below.
+    useLayouts.setState({ activeWorkspace: 'image', home: false })
     useModels.setState({ selected: {} })
   })
 
@@ -157,13 +235,31 @@ describe('what the native menu is told', () => {
   // persisted state without ever going through `setActiveWorkspace`.
   it('announces the restored section without waiting for a switch', () => {
     renderHook(() => useNativeMenu())
-    expect(lastPublished().workspace).toBe('image')
+    expect(lastPublished().surface).toBe('image')
+  })
+
+  /**
+   * The surface, not the space behind it. The home covers a workspace rather than replacing it,
+   * so `activeWorkspace` still names one there — and the menu built on that name offered the
+   * whole image toolbox, plus the Image menu, over a screen that edits no image.
+   */
+  it('names the home rather than the space it covers', () => {
+    useLayouts.setState({ home: true })
+    renderHook(() => useNativeMenu())
+    expect(lastPublished().surface).toBe('home')
+  })
+
+  it('names the space again once the home is dismissed', () => {
+    useLayouts.setState({ home: true })
+    renderHook(() => useNativeMenu())
+    useLayouts.getState().setHome(false)
+    expect(lastPublished().surface).toBe('image')
   })
 
   it('follows a change of section', () => {
     renderHook(() => useNativeMenu())
     useLayouts.getState().setActiveWorkspace('3d')
-    expect(lastPublished().workspace).toBe('3d')
+    expect(lastPublished().surface).toBe('3d')
   })
 
   it('leaves the generator out while the section has no model', () => {
@@ -178,5 +274,144 @@ describe('what the native menu is told', () => {
     renderHook(() => useNativeMenu())
     useModels.getState().select('image', 'flux-dev')
     expect(lastPublished().tools).toContain('generator')
+  })
+
+  /**
+   * The ticks. Without them a "Skeletons" row would read the same whether they are drawn or
+   * not — which is why the six toggles could not simply move off the bar.
+   */
+  describe('the rows it reports as ticked', () => {
+    it('names the way the main view draws, and nothing else, on a scene nobody has touched', () => {
+      renderHook(() => useNativeMenu())
+      expect(lastPublished().checked).toEqual(['scene.display:shaded'])
+    })
+
+    it('names a toggle as soon as it is on', () => {
+      renderHook(() => useNativeMenu())
+      useSceneViews.getState().setSkeletons('doc-1', true)
+      expect(lastPublished().checked).toContain('scene.skeletons')
+    })
+
+    /** All five at once: each is a branch of its own, and one left untested is one left unsaid. */
+    it('names every toggle that is on', () => {
+      renderHook(() => useNativeMenu())
+      const views = useSceneViews.getState()
+
+      views.setProjection('doc-1', 'orthographic')
+      views.setQuad('doc-1', true)
+      views.setQuadEdges('doc-1', true)
+      views.setSkeletons('doc-1', true)
+      views.setPoseMode('doc-1', true)
+
+      expect(lastPublished().checked).toEqual([
+        'scene.display:shaded',
+        'scene.projection',
+        'scene.quad',
+        'scene.quadEdges',
+        'scene.skeletons',
+        'scene.poseMode',
+      ])
+    })
+
+    it('drops it again when it goes off', () => {
+      renderHook(() => useNativeMenu())
+      useSceneViews.getState().setQuad('doc-1', true)
+      useSceneViews.getState().setQuad('doc-1', false)
+      expect(lastPublished().checked).not.toContain('scene.quad')
+    })
+
+    it('follows the way the main view draws', () => {
+      renderHook(() => useNativeMenu())
+      useSceneViews.getState().setDisplay('doc-1', 0, 'matcap')
+      expect(lastPublished().checked).toContain('scene.display:matcap')
+    })
+
+    /**
+     * `useSceneViews` carries the animation playhead, written on every frame of a running
+     * animation. Published without a comparison, a played scene would send sixty messages a
+     * second for a menu that never changes.
+     */
+    it('sends nothing at all when a write changes nothing the menu draws', () => {
+      renderHook(() => useNativeMenu())
+      const sent = setWorkspace.mock.calls.length
+
+      useSceneViews.getState().setPlayhead('doc-1', 1_000_000)
+      useSceneViews.getState().setPlayhead('doc-1', 2_000_000)
+
+      expect(setWorkspace.mock.calls.length).toBe(sent)
+    })
+
+    /**
+     * And does not even PRICE one. Dropping the message is half the answer: the context costs a
+     * walk over the whole tool registry and a `JSON.stringify` of its result, and paying that
+     * sixty times a second to throw it away is the very thing the playhead would cause.
+     */
+    it('does not even build the context a frame of animation would throw away', () => {
+      renderHook(() => useNativeMenu())
+      listedTools.mockClear()
+
+      useSceneViews.getState().setPlayhead('doc-1', 1_000_000)
+      useSceneViews.getState().setPlayhead('doc-1', 2_000_000)
+
+      expect(listedTools).not.toHaveBeenCalled()
+    })
+
+    /** The guard prices one the moment a tick really moves, or it would freeze the menu. */
+    it('builds it again as soon as a tick actually moves', () => {
+      renderHook(() => useNativeMenu())
+      listedTools.mockClear()
+
+      useSceneViews.getState().setQuad('doc-1', true)
+
+      expect(listedTools).toHaveBeenCalled()
+    })
+  })
+})
+
+describe('what the native View menu asks of the scene', () => {
+  it('switches the main view to the way of drawing the row named', () => {
+    const menu = captureSceneDisplay()
+    renderHook(() => useNativeMenu())
+
+    menu.emit({ mode: 'wireframe' })
+
+    expect(displayOfPane(sceneViewOf(useSceneViews.getState(), 'doc-1').displays, 0)).toBe(
+      'wireframe',
+    )
+  })
+
+  it('draws nothing when the document in front is not a scene', () => {
+    useDocuments.setState({ activeId: null })
+    const menu = captureSceneDisplay()
+    renderHook(() => useNativeMenu())
+
+    menu.emit({ mode: 'wireframe' })
+
+    expect(displayOfPane(sceneViewOf(useSceneViews.getState(), 'doc-1').displays, 0)).toBe('shaded')
+  })
+
+  /**
+   * A side to look from is the camera's, and the camera belongs to the engine rather than to a
+   * store: an axis view is where one stands, not a state the document carries — see `PaneView`.
+   */
+  it('stands the camera at the side the row names', () => {
+    const viewFrom = vi.fn()
+    // Only the one method the row reaches for: the rest of `SceneRenderer` is another suite's.
+    registerSceneEngine('doc-1', { viewFrom } as unknown as SceneRenderer)
+    const menu = captureSceneView()
+    renderHook(() => useNativeMenu())
+
+    menu.emit({ direction: 'top' })
+
+    expect(viewFrom).toHaveBeenCalledWith('top')
+    forgetSceneEngine('doc-1')
+  })
+
+  /** A tab whose viewport is not mounted has no engine, and the row must not throw on it. */
+  it('says nothing to a scene whose viewport is not mounted', () => {
+    const menu = captureSceneView()
+    renderHook(() => useNativeMenu())
+
+    expect(() => menu.emit({ direction: 'top' })).not.toThrow()
   })
 })

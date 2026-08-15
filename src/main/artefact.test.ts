@@ -1,0 +1,94 @@
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
+import { filesUnder, shippedTwice, wastedBytes } from './artefact'
+import manifest from '../../package.json'
+
+// Under `src/main` rather than `src/shared`: it judges what sits at the repository root, and
+// `src/shared` compiles for the renderer, which has no filesystem.
+function folderHolding(files: Record<string, string>): string {
+  const root = mkdtempSync(join(tmpdir(), 'artefact-'))
+
+  for (const [path, content] of Object.entries(files)) {
+    const file = join(root, path)
+    mkdirSync(join(file, '..'), { recursive: true })
+    writeFileSync(file, content)
+  }
+
+  return root
+}
+
+describe('what a build ships twice', () => {
+  it('names every path holding the same bytes, once', () => {
+    const root = folderHolding({
+      'assets/transcoder-a1b2.wasm': 'the same bytes',
+      'decoders/basis/transcoder.wasm': 'the same bytes',
+      'assets/index.js': 'something else',
+    })
+
+    const copies = shippedTwice(filesUnder(root))
+
+    expect(copies).toHaveLength(1)
+    expect(copies[0]?.paths.map(path => path.slice(root.length + 1)).sort()).toEqual([
+      'assets/transcoder-a1b2.wasm',
+      'decoders/basis/transcoder.wasm',
+    ])
+  })
+
+  it('leaves an artefact where every file is its own alone', () => {
+    const root = folderHolding({ 'a.js': 'one', 'nested/b.js': 'two', 'nested/deep/c.js': 'three' })
+
+    expect(filesUnder(root)).toHaveLength(3)
+    expect(shippedTwice(filesUnder(root))).toEqual([])
+  })
+
+  /**
+   * Two of them are the same bytes by definition, and a copy that weighs nothing is not one worth
+   * failing a build over. This is the whole tolerance the check has — see `artefact.ts`.
+   */
+  it('does not call two empty files a copy', () => {
+    const root = folderHolding({ 'one.txt': '', 'two.txt': '' })
+
+    expect(shippedTwice(filesUnder(root))).toEqual([])
+  })
+
+  it('counts every path beyond the first, at its own weight', () => {
+    const root = folderHolding({ 'a.bin': 'sixteen bytes!!', 'b.bin': 'sixteen bytes!!' })
+    const copies = shippedTwice(filesUnder(root))
+
+    expect(wastedBytes(copies)).toBe(15)
+  })
+})
+
+/**
+ * The check has to run where the artefact is, and a build is the only moment it exists.
+ *
+ * `pnpm build` is not enough on its own: the integration job runs `electron-vite build` directly,
+ * to spare the second typecheck, so the check has to be named there too. Both sites are asserted
+ * because nothing else would notice either one going missing — a build without it is a green
+ * build, and that is exactly what this lot found in the artefact.
+ */
+describe('the artefact check', () => {
+  it('runs at the end of every local build, hence of every package', () => {
+    expect(manifest.scripts.build).toContain('check-artefact.mjs')
+    expect(manifest.scripts.dist).toContain('pnpm build')
+  })
+
+  /**
+   * Read as steps rather than as text: a commented-out `# - run: …` still contains the words, and
+   * a guard that a `#` disarms is one the next rebase disarms by accident.
+   */
+  it('runs in the job that builds before a merge, which does not call `pnpm build`', () => {
+    const ci = readFileSync(
+      join(import.meta.dirname, '..', '..', '.github/workflows/ci.yml'),
+      'utf8',
+    )
+    const steps = ci.split('\n').filter(line => !/^\s*#/.test(line))
+
+    expect(steps.join('\n')).toContain('electron-vite build')
+    expect(steps).toContainEqual(
+      expect.stringMatching(/^\s*- run: node scripts\/check-artefact\.mjs\s*$/),
+    )
+  })
+})

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SceneRenderer } from './SceneRenderer'
-import { lightNodeFixture, meshNode } from './scene-fixtures'
+import { directionalLight, meshNode } from './scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from './scene-state'
 
 /**
@@ -15,14 +15,6 @@ function rendererOf(state: Partial<SceneState>): SceneRenderer {
   return renderer
 }
 
-const directional = (id: string) =>
-  lightNodeFixture(id, {
-    kind: 'directional',
-    color: '#ffffff',
-    intensity: 1,
-    target: { x: 0, y: 0, z: 0 },
-  })
-
 async function namesIn(renderer: SceneRenderer, scope: 'scene' | 'selection'): Promise<string[]> {
   const bytes = await renderer.exportTo('gltf', scope)
   // `as`: what a `.gltf` file holds is glTF, and `nodes` is the field a reader looks at first.
@@ -32,7 +24,7 @@ async function namesIn(renderer: SceneRenderer, scope: 'scene' | 'selection'): P
 
 describe('SceneRenderer export', () => {
   it('writes the nodes of the document, meshes and lights alike', async () => {
-    const renderer = rendererOf({ nodes: [meshNode('box-1'), directional('light-1')] })
+    const renderer = rendererOf({ nodes: [meshNode('box-1'), directionalLight('light-1')] })
 
     expect(await namesIn(renderer, 'scene')).toEqual(['box-1', 'light-1'])
   })
@@ -44,7 +36,7 @@ describe('SceneRenderer export', () => {
    * exactly two nodes come out for the two the document holds.
    */
   it('leaves the grid, the helpers and the light targets behind', async () => {
-    const renderer = rendererOf({ nodes: [meshNode('box-1'), directional('light-1')] })
+    const renderer = rendererOf({ nodes: [meshNode('box-1'), directionalLight('light-1')] })
 
     expect(await namesIn(renderer, 'scene')).toHaveLength(2)
   })

@@ -1,6 +1,9 @@
-import { useCallback, type ReactNode } from 'react'
+import { useCallback, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
+import { useDismiss } from '@/hooks/useDismiss'
+import { useMenuKeys } from '@/hooks/useMenuKeys'
+import { MENU_SURFACE } from './styles'
 
 /** Which side of its anchor the menu hangs on. */
 export type FlyoutPlacement = 'right' | 'above' | 'below'
@@ -9,6 +12,31 @@ export type FlyoutProps = {
   anchor: HTMLElement | null
   children: ReactNode
   placement?: FlyoutPlacement
+  /**
+   * Declared rather than assumed. `role="menu"` promises rows a screen reader can step through,
+   * and the surface also serves panels and sliders — announcing a menu that has no menu items
+   * sends a reader looking for something that is not there.
+   */
+  role?: 'menu'
+  /**
+   * Closes on a press outside, on `Escape`, and when the window loses focus. Optional for a
+   * surface whose caller closes it another way — `useHoverFlyout` now passes it always, since a
+   * menu it kept open for the keyboard has no pointer-out left to close it. Must be stable: it
+   * is what the listeners hang off.
+   */
+  onDismiss?: () => void
+  /**
+   * Gives the surface a menu's keyboard: focus on the first row, arrows, `Home`/`End`, a roving
+   * `tabindex`, and the focus handed back to the opener on the way out. The callback is what
+   * `Tab` calls.
+   *
+   * Optional, the same shape as `onDismiss` and for the same reason — a flyout that opens under
+   * the pointer would take the focus from whatever the caret was in. Rows are found by THEIR OWN
+   * role inside the panel, not by the panel's: a surface holding sliders installs the walk and
+   * finds nothing to walk, which costs a listener and hands the focus back to the opener as it
+   * closes. Both are wanted, so there is no guard against it.
+   */
+  onKeyClose?: () => void
   onPointerEnter?: () => void
   onPointerLeave?: () => void
 }
@@ -18,6 +46,11 @@ export type FlyoutProps = {
  * pointer crosses over nothing, and `useHoverFlyout`'s grace period has to cover it.
  */
 const OFFSET = 2
+
+/** Kept inside the window: rows drawn past its edge cannot be reached, by pointer or by key. */
+function clamped(wanted: number, size: number, within: number): number {
+  return Math.max(0, Math.min(wanted, within - size))
+}
 
 /**
  * The rows of a tool's modes, laid beside the bar.
@@ -30,19 +63,35 @@ export function Flyout({
   anchor,
   children,
   placement = 'right',
+  role,
+  onDismiss,
+  onKeyClose,
   onPointerEnter,
   onPointerLeave,
 }: FlyoutProps) {
+  const panel = useRef<HTMLDivElement | null>(null)
+
+  useDismiss(onDismiss, panel, anchor)
+  useMenuKeys(panel, onKeyClose)
+
   // Placed through a callback ref rather than state: measuring in an effect and storing the
   // result would render the menu once at the wrong place, then move it.
   const place = useCallback(
     (node: HTMLDivElement | null) => {
+      panel.current = node
       if (!node || !anchor) return
       const box = anchor.getBoundingClientRect()
 
       if (placement === 'right') {
-        node.style.top = `${box.top}px`
-        node.style.left = `${box.right + OFFSET}px`
+        node.style.top = `${clamped(box.top, node.offsetHeight, window.innerHeight)}px`
+        // Flipped to the other side when the anchor sits too near the right edge. A section
+        // heading reaches the very edge of the window, and its menu was drawn outside it.
+        const beside = box.right + OFFSET
+        const fits = beside + node.offsetWidth <= window.innerWidth
+        // Clamped like every other placement, the flip included: a menu wider than the room to
+        // the left of its anchor lands at a negative x, and runs off the side it flipped to.
+        const wanted = fits ? beside : box.left - node.offsetWidth - OFFSET
+        node.style.left = `${clamped(wanted, node.offsetWidth, window.innerWidth)}px`
         return
       }
 
@@ -50,7 +99,7 @@ export function Flyout({
       // against the window edge, and a menu hung from their left would run off it.
       const above = placement === 'above'
       node.style.top = `${above ? box.top - node.offsetHeight - OFFSET : box.bottom + OFFSET}px`
-      node.style.left = `${box.right - node.offsetWidth}px`
+      node.style.left = `${clamped(box.right - node.offsetWidth, node.offsetWidth, window.innerWidth)}px`
     },
     [anchor, placement],
   )
@@ -60,12 +109,12 @@ export function Flyout({
   return createPortal(
     <div
       ref={place}
-      role="menu"
+      role={role}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       className={cn(
-        'border-border bg-surface fixed z-50 flex min-w-40 flex-col gap-0.5',
-        'rounded-(--radius-sc-lg) border p-1 shadow-(--sc-shadow-floating)',
+        MENU_SURFACE,
+        'min-w-40',
         // The scene's Add menu is 22 rows: unbounded it runs off the bottom of the window,
         // and the rows past the edge are unreachable.
         'max-h-[min(60vh,32rem)] overflow-y-auto',

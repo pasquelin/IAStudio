@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  badgeAt,
+  BADGE_SIZE,
+  cursorAt,
+  edgeGrab,
+  EDGE_GRAB,
+  FADE_BAND,
   fadeHandleTime,
   hitTest,
   rowAt,
@@ -15,6 +21,7 @@ import {
 } from './timeline-geometry'
 import { sequenceWith, trackFixture } from './timeline-fixtures'
 import {
+  clipEnd,
   DEFAULT_TRACK_HEIGHT,
   EMPTY_SEQUENCE,
   makeClip,
@@ -141,10 +148,96 @@ describe('hit testing', () => {
     expect(target).toEqual({ kind: 'fade', clipId: 'a', trackId: 'V1', edge: 'in' })
   })
 
+  /**
+   * `EDGE_GRAB` is the wider of the two, so without this the ring between the two margins would
+   * trim inside the band — and the comment beside `hitTest` promises the fade wins there.
+   */
+  it('leaves the whole corner to the fade inside the band, even past its own margin', () => {
+    const faded = { ...clip('a', 0, 1_000_000), fadeIn: 0, fadeOut: 0 }
+    const target = hitTest(stateWith([faded]), viewport, { x: 7.5, y: RULER_HEIGHT + 4 })
+    expect(target).toMatchObject({ kind: 'fade', edge: 'in' })
+  })
+
   it('leaves the same corner to the trim below the fade band', () => {
     const faded = { ...clip('a', 0, 1_000_000), fadeIn: 0, fadeOut: 0 }
     const target = hitTest(stateWith([faded]), viewport, { x: 2, y: RULER_HEIGHT + 30 })
     expect(target).toEqual({ kind: 'edge', clipId: 'a', trackId: 'V1', edge: 'in' })
+  })
+
+  it('gives an ordinary clip the full grab margin at each end', () => {
+    expect(edgeGrab(100)).toBe(EDGE_GRAB)
+  })
+
+  it('shrinks the grab margin on a narrow clip, so its body keeps a third of the width', () => {
+    // 12 px wide: 4 px per edge leaves the middle 4 px to the drag.
+    expect(edgeGrab(12)).toBe(4)
+  })
+
+  it('leaves the middle of a narrow clip draggable rather than trimmable', () => {
+    // 12 px wide. At the full margin this point would be an edge, and the clip could not be moved.
+    const target = hitTest(stateWith([clip('a', 0, 120_000)]), viewport, {
+      x: 5,
+      y: RULER_HEIGHT + 30,
+    })
+    expect(target).toEqual({ kind: 'clip', clipId: 'a', trackId: 'V1' })
+  })
+
+  it('still grabs both edges of a narrow clip', () => {
+    const narrow = stateWith([clip('a', 0, 120_000)])
+    const at = (x: number) => hitTest(narrow, viewport, { x, y: RULER_HEIGHT + 30 })
+
+    expect(at(1)).toMatchObject({ kind: 'edge', edge: 'in' })
+    expect(at(11)).toMatchObject({ kind: 'edge', edge: 'out' })
+  })
+
+  it('asks for a resize cursor on anything that trims, and for none on anything else', () => {
+    const state = stateWith([clip('a', 0, 1_000_000)])
+    const on = (x: number) => cursorAt(state, viewport, { x, y: RULER_HEIGHT + 30 })
+
+    expect(on(2)).toBe('ew-resize')
+    expect(on(98)).toBe('ew-resize')
+    expect(on(50)).toBe('')
+  })
+
+  it('asks for a resize cursor on a fade handle, which is dragged the same way', () => {
+    const faded = { ...clip('a', 0, 1_000_000), fadeIn: 200_000, fadeOut: 0 }
+    expect(cursorAt(stateWith([faded]), viewport, { x: 20, y: RULER_HEIGHT + 4 })).toBe('ew-resize')
+  })
+
+  // Every edit on a locked track is refused where it is applied, so an arrow offering a trim
+  // that will not happen is worse than no arrow at all.
+  it('promises nothing on a locked track, whose edits are all refused anyway', () => {
+    const locked = sequenceWith([
+      trackFixture('V1', 'video', [clip('a', 0, 1_000_000)], {
+        locked: true,
+      }),
+    ])
+
+    expect(cursorAt(locked, viewport, { x: 2, y: RULER_HEIGHT + 30 })).toBe('')
+    expect(cursorAt(locked, viewport, { x: 98, y: RULER_HEIGHT + 30 })).toBe('')
+  })
+
+  it('leaves the surface its own cursor where there is nothing to trim', () => {
+    const state = stateWith([clip('a', 0, 1_000_000)])
+
+    expect(cursorAt(state, viewport, { x: 50, y: 4 })).toBe('')
+    expect(cursorAt(state, viewport, { x: 50, y: 5_000 })).toBe('')
+  })
+
+  /**
+   * The band is exclusive at its foot and the bar starts there, so no row of pixels is both
+   * painted as a grip and read as a fade — a press on one used to hand back a ramp.
+   */
+  it('hands the first row of the bar to the trim, where the bar is painted', () => {
+    const faded = { ...clip('a', 0, 1_000_000), fadeIn: 0, fadeOut: 0 }
+    const state = stateWith([faded])
+
+    expect(hitTest(state, viewport, { x: 1, y: RULER_HEIGHT + FADE_BAND })).toMatchObject({
+      kind: 'edge',
+    })
+    expect(hitTest(state, viewport, { x: 1, y: RULER_HEIGHT + FADE_BAND - 1 })).toMatchObject({
+      kind: 'fade',
+    })
   })
 
   it('reads the track a point lands on, whatever the clip beneath it', () => {
@@ -163,5 +256,47 @@ describe('hit testing', () => {
     const state = sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
 
     expect(rowAt(state, scrolled, RULER_HEIGHT + 10)?.track.id).toBe('A1')
+  })
+})
+
+describe('the corner a clip wears its mark in', () => {
+  /**
+   * The rule the placement exists for: every pixel of the mark answers as the clip itself, so
+   * pressing it neither trims nor opens a fade.
+   *
+   * The fade is what makes this worth a test rather than a comment. A first version measured the
+   * mark against the clip's END and passed — with a clip that had no fade. A handle sits at
+   * `clipEnd - fadeOut`, so it walks INTO the clip as the ramp grows, and at a tenth of a second
+   * it was under the mark: nine of its ten pixels started a fade drag.
+   */
+  const marked = (one: Clip): (string | undefined)[] => {
+    const state = stateWith([one])
+    const badge = badgeAt(
+      timeToX(one.start, viewport),
+      timeToX(clipEnd(one), viewport),
+      RULER_HEIGHT,
+    )
+    expect(badge).not.toBeNull()
+
+    const { x = 0, y = 0 } = badge ?? {}
+    return [x, x + BADGE_SIZE / 2, x + BADGE_SIZE].map(
+      at => hitTest(state, viewport, { x: at, y })?.kind,
+    )
+  }
+
+  it('answers as the clip across its whole width', () => {
+    expect(marked(clip('a', 0, 1_000_000))).toEqual(['clip', 'clip', 'clip'])
+  })
+
+  it('stays clear of a fade handle that has walked into the clip', () => {
+    expect(
+      marked(
+        makeClip({ id: 'a', assetId: 'asset-a', start: 0, duration: 1_000_000, fadeOut: 150_000 }),
+      ),
+    ).toEqual(['clip', 'clip', 'clip'])
+  })
+
+  it('is left off a clip it would take whole', () => {
+    expect(badgeAt(0, 20, RULER_HEIGHT)).toBeNull()
   })
 })

@@ -1,13 +1,16 @@
-import { RULER_HEIGHT, tracksHeight, visibleRange, type Viewport } from './timeline-geometry'
-import { sequenceDuration, type SequenceState, type Us } from './timeline-state'
-
 /**
  * What the user can see of a sequence, and how the wheel and the zoom keys move it. Pure, and
  * kept out of `SequenceState` on purpose: where one is looking is not an edit, and pushing it
  * through the history would make undo step back through scroll positions.
  */
-export type Size = { width: number; height: number }
+import { clamp } from '@shared/numeric'
+import { maxOffsetFor, maxScrollTopFor } from './band'
+import { RULER_HEIGHT, tracksHeight, visibleRange, type Viewport } from './timeline-geometry'
+import { sequenceDuration, type SequenceState, type Us } from './timeline-state'
+import type { Size } from '../core/geometry'
 
+// Bare because the CANVAS took the prefix: the two ranges are four orders apart and an
+// auto-import once crossed them. `canvas/viewport.test.ts` reads both sides and holds the gap.
 /** One pixel a second: a twenty-minute rush still fits across a wide strip. */
 export const MIN_SCALE = 1 / 1_000_000
 /** Two thousand pixels a second: a couple of frames fill the strip, which is as far as trimming needs. */
@@ -20,7 +23,7 @@ export const DEFAULT_VIEWPORT: Viewport = { scale: DEFAULT_SCALE, offset: 0, scr
 export const ZOOM_STEP = 1.25
 
 export function clampScale(scale: number): number {
-  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale))
+  return clamp(scale, MIN_SCALE, MAX_SCALE)
 }
 
 /**
@@ -29,24 +32,17 @@ export function clampScale(scale: number): number {
  * into unbounded emptiness loses the montage off the left edge.
  */
 export function maxOffset(state: SequenceState, scale: number, width: number): Us {
-  const span = Math.round(width / scale)
-  return Math.max(0, sequenceDuration(state) - Math.round(span / 2))
+  return maxOffsetFor(sequenceDuration(state), scale, width)
 }
 
 export function maxScrollTop(state: SequenceState, height: number): number {
-  return Math.max(0, tracksHeight(state) - (height - RULER_HEIGHT))
+  return maxScrollTopFor(tracksHeight(state), height, RULER_HEIGHT)
 }
 
 export function clampViewport(viewport: Viewport, state: SequenceState, size: Size): Viewport {
   const scale = clampScale(viewport.scale)
-  const offset = Math.max(
-    0,
-    Math.min(maxOffset(state, scale, size.width), Math.round(viewport.offset)),
-  )
-  const scrollTop = Math.max(
-    0,
-    Math.min(maxScrollTop(state, size.height), Math.round(viewport.scrollTop)),
-  )
+  const offset = clamp(Math.round(viewport.offset), 0, maxOffset(state, scale, size.width))
+  const scrollTop = clamp(Math.round(viewport.scrollTop), 0, maxScrollTop(state, size.height))
 
   // The same viewport back when nothing moved, as `zoomAt` and `revealTime` already do: panning
   // against an edge would otherwise write to the store and repaint the strip on every pixel.
