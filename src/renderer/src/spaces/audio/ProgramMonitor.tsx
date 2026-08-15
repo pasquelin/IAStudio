@@ -5,7 +5,7 @@ import { clamp } from '@shared/numeric'
 import { MonitorFrame } from '@/design/MonitorFrame'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar } from '@/design/Toolbar'
-import { fitToDisplay } from '@/engines/core/canvas-2d'
+import { paintOn } from '@/engines/core/canvas-2d'
 import { rootColour } from '@/engines/core/palette'
 import { paintProgram, programViewport } from '@/engines/timeline/program-wave'
 import { xToTime } from '@/engines/timeline/timeline-geometry'
@@ -47,17 +47,15 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
   }, [])
 
   const paint = useCallback((): void => {
-    const canvas = canvasRef.current
-    const context = canvas?.getContext('2d')
-    if (!canvas || !context) return
-
-    paintProgram(context, latest.current, peaksOf, fitToDisplay(canvas, context), {
-      background: rootColour('--color-chassis'),
-      // The ink a clip draws its own waveform in, not the green it is filled with: green on the
-      // chassis is the one pairing this token was never balanced against, and a wave is a glyph
-      // that informs — 3:1, by 1.4.11. Read this way, both halves of the pair draw alike.
-      wave: rootColour('--color-muted'),
-      playhead: rootColour('--color-accent'),
+    paintOn(canvasRef.current, (context, box) => {
+      paintProgram(context, latest.current, peaksOf, box, {
+        background: rootColour('--color-chassis'),
+        // The ink a clip draws its own waveform in, not the green it is filled with: green on the
+        // chassis is the one pairing this token was never balanced against, and a wave is a glyph
+        // that informs — 3:1, by 1.4.11. Read this way, both halves of the pair draw alike.
+        wave: rootColour('--color-muted'),
+        playhead: rootColour('--color-accent'),
+      })
     })
   }, [peaksOf])
 

@@ -117,6 +117,7 @@ const DOM_BOUND = [
   'src/renderer/src/engines/audio/audio-render.test.ts',
   'src/renderer/src/engines/canvas/CanvasEngine.test.ts',
   'src/renderer/src/engines/canvas/CanvasOverlay.test.ts',
+  'src/renderer/src/engines/core/canvas-2d.test.ts',
   'src/renderer/src/engines/core/palette.test.ts',
   'src/renderer/src/engines/scene/animation-painter.test.ts',
   'src/renderer/src/engines/scene/bvh-builder.test.ts',
