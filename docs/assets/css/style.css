@@ -640,14 +640,13 @@ main, .footer { position: relative; z-index: 1; }
 }
 .footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
 .footer a:hover { color: var(--bone); }
-/* Le filet suit la BOÎTE, le texte suit le padding. La boîte reste donc pleine largeur — le
-   trait s'aligne sur les colonnes du dessus, ce qu'un `max-width` empêchait en le coupant avec
-   le texte — pendant que la marge droite ramène la ligne à une mesure lisible. Surtout pas de
-   `columns` : sur un paragraphe de trois lignes, la coupure tombe en plein milieu d'une phrase
-   et laisse la seconde colonne à moitié vide. */
+/* Centré, et borné comme tout texte de cette feuille — 44ch pour le chapô du héros, 52ch pour
+   un chapô, 62ch pour un intertitre, 78ch pour la note des téléchargements. Élargir n'était donc
+   pas la réponse : ce qui déséquilibrait, c'est un bloc borné mais collé à gauche, dont le filet
+   laissait le reste de la largeur vide à sa droite. Surtout pas de `columns` : sur un paragraphe
+   de trois lignes la coupure tombe en plein milieu d'une phrase. */
 .legal {
-  margin-top: 52px; padding-top: 26px; border-top: 1px solid var(--edge);
-  font-size: .8rem; color: var(--dim);
-  padding-right: max(0px, 100% - 92ch);
+  margin: 52px auto 0; padding-top: 26px; border-top: 1px solid var(--edge);
+  font-size: .8rem; color: var(--dim); max-width: 78ch;
 }
 .legal strong { color: var(--mist); font-weight: 500; }
