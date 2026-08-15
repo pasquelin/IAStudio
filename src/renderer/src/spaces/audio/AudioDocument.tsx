@@ -40,24 +40,24 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
    */
   const transport = useSoundTransport(documentId, sequence)
 
-  const rowRef = useRef<HTMLDivElement>(null)
-  /** Null until the divider is dragged: the two monitors share the row equally before that. */
-  const [sourceWidth, setSourceWidth] = useState<number | null>(null)
-  /** The row's own width, so the handle starts a drag from where the divider actually is. */
+  const columnRef = useRef<HTMLDivElement>(null)
+  /** Null until the divider is dragged: the two monitors share the column equally before that. */
+  const [sourceHeight, setSourceHeight] = useState<number | null>(null)
+  /** The column's own height, so the handle starts a drag from where the divider actually is. */
   const [available, setAvailable] = useState(0)
 
-  // The row changes width without any drag — the window, a panel, the timeline being opened. A
-  // width kept in pixels through that either overflows the row or leaves the program nothing, so
-  // it is re-clamped the way the shell re-clamps its zones after a window resize.
+  // The column changes height without any drag — the window, a panel, the timeline being opened.
+  // A height kept in pixels through that either overflows the column or leaves the program
+  // nothing, so it is re-clamped the way the shell re-clamps its zones after a window resize.
   useEffect(() => {
-    const row = rowRef.current
-    if (!row) return
+    const column = columnRef.current
+    if (!column) return
 
     const observer = new ResizeObserver(() => {
-      setAvailable(row.clientWidth)
-      setSourceWidth(current => (current === null ? null : fitSplit(current, row.clientWidth)))
+      setAvailable(column.clientHeight)
+      setSourceHeight(current => (current === null ? null : fitSplit(current, column.clientHeight)))
     })
-    observer.observe(row)
+    observer.observe(column)
     return () => observer.disconnect()
   }, [])
 
@@ -117,24 +117,31 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   useShortcuts({ scope: 'sequence', enabled: active, onCommand: onTransport })
 
   return (
-    // The inset belongs to the ROW, not to each monitor: carried by both, it doubled around the
-    // handle and the pair read as two panes pushed apart rather than two panels side by side.
-    <div ref={rowRef} className="flex h-full min-h-0 p-(--sc-gutter)">
+    /*
+     * Stacked, where the picture pair sits side by side — and the difference is the thing being
+     * looked at. A frame is judged at the largest size the tab can give it, so two of them share
+     * the width; a waveform is READ along time, and half a width is half the montage's detail for
+     * height nothing does anything with. Both keep the full width here, one above the other.
+     *
+     * The inset belongs to the COLUMN, not to each monitor: carried by both, it doubled around
+     * the handle and the pair read as two panes pushed apart rather than two panels stacked.
+     */
+    <div ref={columnRef} className="flex h-full min-h-0 flex-col p-(--sc-gutter)">
       <div
-        className="flex min-w-0"
-        style={sourceWidth === null ? { flex: 1 } : { width: sourceWidth, flexShrink: 0 }}
+        className="flex min-h-0"
+        style={sourceHeight === null ? { flex: 1 } : { height: sourceHeight, flexShrink: 0 }}
       >
         <TakeEditor documentId={documentId} />
       </div>
 
       {/* The same handle the shell splits its zones with, so the gesture is the one gesture. */}
       <ResizeHandle
-        axis="horizontal"
-        size={sourceWidth ?? available / 2}
-        onSize={(size, room) => setSourceWidth(fitSplit(size, room))}
+        axis="vertical"
+        size={sourceHeight ?? available / 2}
+        onSize={(size, room) => setSourceHeight(fitSplit(size, room))}
       />
 
-      <div className="flex min-w-0 flex-1">
+      <div className="flex min-h-0 flex-1">
         <ProgramMonitor sequence={sequence} transport={transport} onSeek={seek} />
       </div>
     </div>
