@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { isComposing } from '@/helpers/composition'
 import { isGoneForGood } from '@/helpers/teardown'
 
 export type InlineRenameProps = {
@@ -113,6 +114,8 @@ export function InlineRename({ value, label, onCommit, gauge = 'control' }: Inli
     // Stopped here: the surfaces around these lists bind bare letters, and typing a name must
     // not arm a tool or split a clip.
     event.stopPropagation()
+    // Both keys belong to the input method while it composes — see `isComposing`.
+    if (isComposing(event)) return
     if (event.key === 'Enter') done()
     if (event.key === 'Escape') {
       // Restored first, so neither the blur nor the unmount writes what was abandoned.

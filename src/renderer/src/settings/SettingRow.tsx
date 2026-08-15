@@ -10,6 +10,7 @@ import {
   type SettingDescriptor,
 } from '@shared/domain/settings-registry'
 import { UiIcon } from '@/design/UiIcon'
+import { isComposing } from '@/helpers/composition'
 import { formatDecimal } from '@/helpers/format'
 import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { useToken } from '@/hooks/useToken'
@@ -98,7 +99,8 @@ function TextControl({ descriptor, id, describedBy, stored, onCommit }: Committe
       onChange={event => setTyped(event.target.value)}
       onBlur={commit}
       onKeyDown={event => {
-        if (event.key === 'Enter') commit()
+        // Enter belongs to the input method while it composes — see `isComposing`.
+        if (event.key === 'Enter' && !isComposing(event)) commit()
       }}
     />
   )
