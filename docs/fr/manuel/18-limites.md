@@ -246,9 +246,9 @@ faire entrer et sortir proprement. C’est exactement ce que fait cet espace, et
 ### Le document audio ne garde pas l’écoute A/B
 
 Le fichier `.aud` existe et se rouvre — c’est le tableau du haut de ce chapitre qui fait foi. Ce
-qu’il tient est **le montage**, pas le son : les coupes, les fondus, le gain, rejoués sur l’asset
-d’origine. Ce qu’il ne garde pas, c’est l’**écoute A/B** — un document rouvert écoute la chaîne,
-jamais la source.
+qu’il tient est **la chaîne d’édition**, pas le son : les coupes, les fondus, le gain, rejoués sur
+l’asset d’origine — **et le montage multipiste de la bande basse**. Ce qu’il ne garde pas, c’est
+l’**écoute A/B** : un document rouvert écoute la chaîne, jamais la source.
 
 L’espace sait aussi écrire un *asset* directement, par **Appliquer** ou **Enregistrer comme
 nouveau** : c’est ce qu’on fait quand le résultat doit servir ailleurs, pas continuer d’être édité.
