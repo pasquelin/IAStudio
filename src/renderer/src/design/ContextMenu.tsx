@@ -103,9 +103,12 @@ export function ContextMenu({ at, onClose, children }: ContextMenuProps) {
  * let that menu through — a right-click inside a text field asks the system for spelling and
  * clipboard — decides BEFORE calling, not after.
  *
- * Both are stable, which `StyleRow` had already learnt the hard way: an open menu re-subscribes
- * its three global listeners whenever `onClose` changes identity, and every write in that panel
- * answers with the whole list re-read from disk.
+ * Both are stable, which two of the three hosts had already learnt the hard way, for reasons that
+ * are NOT the same one: an open menu re-subscribes its three global listeners whenever `onClose`
+ * changes identity (`useDismiss.ts:51`), and every write in the styles panel answers with the
+ * whole list re-read from disk — while the projects shelf re-renders on any SETTINGS write at
+ * all, density or theme included, because `Projects.tsx` reads `useSettings` to build its rows.
+ * The wider of the two triggers is the one nothing else records.
  */
 export function useContextMenu(): {
   at: { x: number; y: number } | null

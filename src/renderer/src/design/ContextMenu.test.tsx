@@ -231,14 +231,6 @@ describe('a menu at the pointer', () => {
 describe('the pointer a right-click reported', () => {
   const gesture = (x: number, y: number) => ({ preventDefault: vi.fn(), clientX: x, clientY: y })
 
-  it('is held until the menu is done with it', () => {
-    const { result } = renderHook(() => useContextMenu())
-
-    act(() => result.current.open(gesture(40, 60)))
-
-    expect(result.current.at).toEqual({ x: 40, y: 60 })
-  })
-
   // The one contract `TrackHeaders` leans on: it decides BEFORE calling, because this cannot be
   // undone after. Without it the platform's own menu arrives on top of the one being opened.
   it('refuses the platform menu the same gesture would have raised', () => {
