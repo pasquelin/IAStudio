@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { chromeColor } from './theme'
 import { MIRROR_BACKGROUND } from '@shared/constants'
 import { LICENCES_ROUTE } from '@shared/domain/licence'
+import { MANUAL_ROUTE } from '@shared/domain/manual'
 import { MIRROR_ROUTE } from '@shared/domain/mirror'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
 import { USAGE_ROUTE } from '@shared/domain/usage'
@@ -284,6 +285,22 @@ export function openUsageWindow(): BrowserWindow {
     height: 620,
     minWidth: 680,
     minHeight: 440,
+  })
+}
+
+/**
+ * The user manual, as its own window rather than a panel: it is read BESIDE the work, often
+ * while the studio is doing the thing being read about, and a dock would take the space the
+ * subject of the reading occupies.
+ *
+ * The widest of the three — a chapter list down one side and prose with tables beside it.
+ */
+export function openManualWindow(): BrowserWindow {
+  return openAuxiliaryWindow(MANUAL_ROUTE, {
+    width: 1000,
+    height: 700,
+    minWidth: 640,
+    minHeight: 420,
   })
 }
 

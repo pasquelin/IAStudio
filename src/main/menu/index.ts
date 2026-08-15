@@ -7,7 +7,12 @@ import { handle } from '@main/ipc/handle'
 import { isDevelopment } from '@main/environment'
 import { followWindowLanguage, windowLanguage } from '@main/window/language'
 import { toggleFullScreen } from '@main/window/controls'
-import { openLicencesWindow, openSettingsWindow, openUsageWindow } from '@main/window/windows'
+import {
+  openLicencesWindow,
+  openManualWindow,
+  openSettingsWindow,
+  openUsageWindow,
+} from '@main/window/windows'
 import { menuTemplate } from './template'
 
 /**
@@ -92,6 +97,7 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
     actions: {
       openSettings: () => void openSettingsWindow(),
       openLicences: () => void openLicencesWindow(),
+      openManual: () => void openManualWindow(),
       openUsage: () => void openUsageWindow(),
       toggleFullScreen: () => toggleFullScreen(BrowserWindow.getFocusedWindow()),
       openTool: request => sendToFocused(EVENTS.openTool, request),

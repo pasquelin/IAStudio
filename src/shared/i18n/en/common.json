@@ -68,6 +68,11 @@
     "unfold": "Unfolds the full text of this licence, right here",
     "fold": "Folds this text back — only one licence stays open at a time"
   },
+  "manual": {
+    "title": "User manual",
+    "search": "Search the manual",
+    "noResult": "No chapter contains those words."
+  },
   "units": {
     "byte": "B",
     "kibibyte": "KiB",

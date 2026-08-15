@@ -68,6 +68,11 @@
     "unfold": "Déplie le texte complet de cette licence, ici même",
     "fold": "Replie ce texte — une seule licence reste ouverte à la fois"
   },
+  "manual": {
+    "title": "Manuel utilisateur",
+    "search": "Chercher dans le manuel",
+    "noResult": "Aucun chapitre ne contient ces mots."
+  },
   "units": {
     "byte": "o",
     "kibibyte": "Kio",

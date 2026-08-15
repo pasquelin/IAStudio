@@ -1,6 +1,7 @@
 import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { isLicencesRoute } from '@shared/domain/licence'
+import { isManualRoute } from '@shared/domain/manual'
 import { isMirrorRoute } from '@shared/domain/mirror'
 import { isSettingsRoute } from '@shared/domain/settings'
 import { isUsageRoute } from '@shared/domain/usage'
@@ -49,6 +50,14 @@ const UsageWindow = lazy(async () => ({
 }))
 
 /**
+ * Lazy for the plainest reason of the four: `manual.json` is nineteen chapters in two languages,
+ * and the markdown renderer comes with it. None of it belongs in the chunk the splash waits for.
+ */
+const ManualWindow = lazy(async () => ({
+  default: (await import('@/manual/ManualWindow')).ManualWindow,
+}))
+
+/**
  * Every application window loads the same bundle and reads the route from the fragment: the
  * i18n bootstrap, the tokens and the bridge are shared, and navigation is locked, so the
  * fragment is only ever what the main process loaded. The splash is the one exception — it
@@ -80,6 +89,13 @@ function Route({ hash }: { hash: string }) {
     return (
       <Suspense fallback={null}>
         <MirrorWindow />
+      </Suspense>
+    )
+  }
+  if (isManualRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <ManualWindow />
       </Suspense>
     )
   }

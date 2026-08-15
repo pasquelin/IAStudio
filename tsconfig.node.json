@@ -4,6 +4,7 @@
     "tsBuildInfoFile": "node_modules/.cache/tsc/node.tsbuildinfo",
     "lib": ["ES2023"],
     "types": ["node"],
+    "allowImportingTsExtensions": true,
     "paths": {
       "@shared/*": ["./src/shared/*"],
       "@main/*": ["./src/main/*"]

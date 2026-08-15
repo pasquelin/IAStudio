@@ -47,6 +47,7 @@ import type {
 export type MenuActions = {
   openSettings: () => void
   openLicences: () => void
+  openManual: () => void
   openUsage: () => void
   toggleFullScreen: () => void
   openTool: (request: ToolRequest) => void
@@ -190,6 +191,11 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     ? []
     : [settingsItem, { type: 'separator' }]
 
+  const manualItem: MenuItemConstructorOptions = {
+    label: t.menu.manual,
+    click: () => actions.openManual(),
+  }
+
   const licencesItem: MenuItemConstructorOptions = {
     label: t.menu.licences,
     click: () => actions.openLicences(),
@@ -200,14 +206,21 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     click: () => actions.openUsage(),
   }
 
-  // On macOS About lives in the application menu; Help exists here for the licences alone,
-  // which is where every macOS application keeps its notice.
+  // On macOS About lives in the application menu; Help holds the manual, what has been spent,
+  // and the notice — which is where every macOS application keeps the last of the three.
   const helpMenu: MenuItemConstructorOptions[] = [
     {
       label: t.menu.help,
       submenu: isMac
-        ? [usageItem, { type: 'separator' }, licencesItem]
-        : [{ role: 'about', label: aboutLabel }, usageItem, { type: 'separator' }, licencesItem],
+        ? [manualItem, { type: 'separator' }, usageItem, { type: 'separator' }, licencesItem]
+        : [
+            { role: 'about', label: aboutLabel },
+            manualItem,
+            { type: 'separator' },
+            usageItem,
+            { type: 'separator' },
+            licencesItem,
+          ],
     },
   ]
 
