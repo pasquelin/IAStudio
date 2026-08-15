@@ -70,7 +70,8 @@ import { catchUpMedia } from './media/catch-up'
 import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { createTextureExtraction, type TextureExtraction } from './assets/texture-extraction'
-import { broadcast, sendToFront } from './ipc/broadcast'
+import { broadcast, sendTo } from './ipc/broadcast'
+import { studioWindow } from './window/windows'
 import { setLogVerbosity } from './log'
 import type Scenario from '@scenario-labs/sdk'
 import {
@@ -1055,10 +1056,10 @@ export function createServices(settings: SettingsStore): Services {
     model: () => settings.read().assistant.model,
   })
 
-  // To the window in front alone, and it says when there is none — which is the difference
-  // between an MCP client hearing "no window was there" and hearing nothing at all.
+  // To the studio window alone, and it says when there is none — which is the difference between
+  // an MCP client hearing "no window was there" and waiting out two minutes for nothing.
   const remoteActions = createRemoteActions({
-    send: request => sendToFront(EVENTS.assistantAction, request),
+    send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
   })
 
   /**

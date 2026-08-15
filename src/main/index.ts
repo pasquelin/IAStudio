@@ -66,13 +66,20 @@ function startUp(splash: Splash, settings: SettingsStore): void {
     // Not awaited with the rest: the recognition process holds no state worth settling, and a
     // model still loading would otherwise keep the studio on screen for seconds.
     services.dictation.dispose()
-    // Stopped with the rest: the file beside the settings names a port, and one left behind
-    // points the next client at whatever takes that port after this process is gone.
-    void services.mcp.stop()
     // The note of what is still running goes out with the journal: a job whose submission
     // landed in the last moments would otherwise be lost, and it has already been paid for.
     // The manifest stamp joins them — quitting right after a save is the ordinary way to do it.
-    return Promise.all([services.journal.flush(), services.flushJobs(), services.project.settled()])
+    //
+    // The MCP server is AWAITED among them, not fired off beside them: the file it removes names
+    // a port, and a removal racing `app.quit()` leaves that file pointing the next client at
+    // whatever takes the port after this process is gone. `void` here undid the very thing it
+    // claimed to do.
+    return Promise.all([
+      services.journal.flush(),
+      services.flushJobs(),
+      services.project.settled(),
+      services.mcp.stop(),
+    ])
   }
 
   app.on('will-quit', createShutdown({ settle: settleBeforeQuit, quit: () => app.quit() }))

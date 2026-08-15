@@ -102,7 +102,7 @@ describe("a staging name of the caller's own", () => {
   it('writes through the name it was given', async () => {
     const file = join(folder, 'doc.json')
 
-    await writeAtomic(file, '{"a":1}', join(folder, 'doc.json.abc.tmp'))
+    await writeAtomic(file, '{"a":1}', { staging: join(folder, 'doc.json.abc.tmp') })
 
     expect(await readFile(file, 'utf8')).toBe('{"a":1}')
   })
@@ -116,8 +116,8 @@ describe("a staging name of the caller's own", () => {
     const second = join(folder, 'two.json')
 
     await Promise.all([
-      writeAtomic(first, 'first', join(folder, 'one.json.aaa.tmp')),
-      writeAtomic(second, 'second', join(folder, 'two.json.bbb.tmp')),
+      writeAtomic(first, 'first', { staging: join(folder, 'one.json.aaa.tmp') }),
+      writeAtomic(second, 'second', { staging: join(folder, 'two.json.bbb.tmp') }),
     ])
 
     expect(await readFile(first, 'utf8')).toBe('first')
@@ -138,7 +138,7 @@ describe("a staging name of the caller's own", () => {
     await mkdir(staging)
     await writeFile(join(staging, 'inside'), 'x')
 
-    const write = writeAtomic(join(folder, 'doc.json'), 'x', staging)
+    const write = writeAtomic(join(folder, 'doc.json'), 'x', { staging })
 
     await expect(write).rejects.toThrow(/illegal operation on a directory/)
     await expect(write).rejects.not.toThrow(/rm returned/)

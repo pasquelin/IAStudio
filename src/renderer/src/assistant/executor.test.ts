@@ -337,6 +337,38 @@ describe('asking before acting', () => {
     stop()
   })
 
+  /**
+   * What was priced is what goes out, or nothing does.
+   *
+   * The question may stand for two minutes — that is what a client from outside is given — and
+   * the generator panel stays live behind it. Raising the count while "~4 CU" is on screen used
+   * to send the new form: the figure was read before the question and the body re-read after the
+   * yes, with nothing tying the two together.
+   */
+  it('sends nothing when the form moved between the figure and the yes', async () => {
+    const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
+    let count = 1
+    installFakeBridge({
+      scenario: { estimateCost: () => Promise.resolve({ creativeUnits: 4 }) },
+    })
+    const stopGenerator = registerGenerator(
+      aGenerator({ body: () => ({ modelId: 'model_x', values: { count } }), submit }),
+    )
+    // The hand that changes the form while the question is on screen.
+    const stopConfirmer = registerConfirmer(() => {
+      count = 10
+      return Promise.resolve(true)
+    })
+
+    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+      ok: false,
+      refusal: 'formChanged',
+    })
+    expect(submit).not.toHaveBeenCalled()
+    stopGenerator()
+    stopConfirmer()
+  })
+
   // An upload is a permanent asset and earns the question, but there is no figure to quote for
   // it — and one invented to fill the sentence would be worse than none.
   it('asks about an upload without quoting a price', async () => {

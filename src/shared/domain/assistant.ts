@@ -336,6 +336,8 @@ export type ActionRefusal =
   | 'timedOut'
   /** Nothing to read a style from: the form carries no reference picture. */
   | 'noReference'
+  /** The form moved between the figure being quoted and the yes. What was priced is what goes. */
+  | 'formChanged'
 
 export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'unknownCommand',
@@ -351,6 +353,7 @@ export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'noWindow',
   'timedOut',
   'noReference',
+  'formChanged',
 ]
 
 /**

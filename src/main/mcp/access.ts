@@ -14,12 +14,18 @@ export type AccessVerdict = 'granted' | 'badOrigin' | 'badToken'
 /** Just enough of a request to decide. Lower-cased keys, as Node hands them over. */
 export type RequestHeaders = Record<string, string | string[] | undefined>
 
+/**
+ * One header value, or nothing.
+ *
+ * The array arm is not for repeated `Authorization` or `Origin` — measured: Node DROPS repeats of
+ * `authorization` and keeps the first, and JOINS repeats of `origin` with `', '`, so both reach
+ * here as a string either way. It is there because the type says so, and because a joined origin
+ * (`"https://evil.example, http://localhost"`) then fails `LOOPBACK` on its own, which is the
+ * answer we want.
+ */
 function headerOf(headers: RequestHeaders, name: string): string | null {
   const value = headers[name]
-  if (typeof value === 'string') return value
-  // Node folds repeats into an array. Two `Authorization` headers is not something a client
-  // does by accident, and picking one of them would be guessing.
-  return null
+  return typeof value === 'string' ? value : null
 }
 
 /**

@@ -70,7 +70,19 @@ export function AssistantOverlay() {
    */
   useEffect(() => {
     if (!open) return
-    return registerDictationTarget(text => void useAssistant.getState().say(text))
+
+    return registerDictationTarget(text => {
+      // While a plan is running the assistant takes no new sentence — but the words were spoken,
+      // and dropping them left no trace at all: not sent, not inserted at the caret (the claim
+      // above short-circuits that), nothing on screen. They land in the field instead, where
+      // they wait exactly as typed ones do.
+      if (useAssistant.getState().busy) {
+        setDraft(current => (current === '' ? text : `${current} ${text}`))
+        return
+      }
+
+      void useAssistant.getState().say(text)
+    })
   }, [open])
 
   useEffect(() => {
@@ -116,9 +128,11 @@ export function AssistantOverlay() {
             onChange={event => useAssistant.getState().setModel(asModel(event.target.value))}
             className={cn(CONTROL, 'max-w-44 px-1')}
           >
+            {/* Named from the bundle, never from the union: a raw `gemini-3.5-flash` in an
+                otherwise French list is the defect this repository pays for most. */}
             {ASSISTANT_MODELS.map(name => (
               <option key={name} value={name}>
-                {name}
+                {t(`assistant.models.${name}`)}
               </option>
             ))}
           </select>

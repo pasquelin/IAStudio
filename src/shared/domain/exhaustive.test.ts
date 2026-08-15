@@ -244,6 +244,7 @@ describe('the lists that stand for a union', () => {
       noWindow: true,
       timedOut: true,
       noReference: true,
+      formChanged: true,
     }
 
     expect(sorted(ACTION_REFUSALS)).toEqual(sorted(Object.keys(all)))

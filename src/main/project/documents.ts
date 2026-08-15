@@ -174,7 +174,7 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
       // Shared with the three stores of `persistence`, which is also where the tidy-up learned not
       // to become the failure: this copy's `rm` used to throw over the error the caller needed.
       // Durability across a power cut would want `fsync`; it has none.
-      await writeAtomic(file, bodyOf(document), copy)
+      await writeAtomic(file, bodyOf(document), { staging: copy })
     } finally {
       staging.delete(basename(copy))
     }

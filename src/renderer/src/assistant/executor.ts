@@ -253,13 +253,40 @@ export async function runConfirmedAction(
   // nobody was shown.
   if (!ask) return refused('noConfirmer')
 
+  // Read BEFORE the question and compared after it — see `unchangedSince`.
+  const quoted = commitment === 'credits' ? mountedGenerator()?.body() : null
+
   const granted = await ask({
     action: name,
     commitment,
     ...(commitment === 'credits' ? { estimate: await estimateOfSubmission() } : {}),
   })
 
-  return granted ? runAction(name, input) : refused('declined')
+  if (!granted) return refused('declined')
+
+  /**
+   * What was priced is what goes out, or nothing does.
+   *
+   * The question may stand for two minutes — that is what an MCP client is given — and the
+   * generator panel stays live behind it. Raising `numImages` from one to ten while "~4 CU" is on
+   * screen used to send the ten: the figure was read before the question and the form re-read
+   * after the yes, with nothing tying the two together. The yes belongs to a body, not to a
+   * moment.
+   */
+  if (quoted && !unchangedSince(quoted)) return refused('formChanged')
+
+  return runAction(name, input)
+}
+
+/** Whether the form still holds exactly what was priced. */
+function unchangedSince(quoted: { modelId: string; values: Record<string, unknown> }): boolean {
+  const now = mountedGenerator()?.body()
+  return (
+    now !== undefined &&
+    now !== null &&
+    now.modelId === quoted.modelId &&
+    JSON.stringify(now.values) === JSON.stringify(quoted.values)
+  )
 }
 
 /**

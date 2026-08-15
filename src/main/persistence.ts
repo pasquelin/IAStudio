@@ -20,14 +20,19 @@ import { rename, rm, writeFile } from 'node:fs/promises'
  * copy can exist at a time, and a crash leaves one the next write overwrites instead of an orphan
  * per crash that nothing ever collects. A caller whose writes are *not* serialized — several
  * windows saving into the same project folder — passes a name unique to the call instead.
+ *
+ * `mode` is set on the STAGING copy, before the rename, which is the only order that never
+ * exposes the content: a file created at the default mode and narrowed afterwards is readable
+ * for the width of that gap. It exists for the one file here that is a secret — the MCP token —
+ * and defaults to what every other caller was already getting.
  */
 export async function writeAtomic(
   file: string,
   content: string,
-  staging = `${file}.staging`,
+  { staging = `${file}.staging`, mode }: { staging?: string; mode?: number } = {},
 ): Promise<void> {
   try {
-    await writeFile(staging, content, 'utf8')
+    await writeFile(staging, content, { encoding: 'utf8', ...(mode === undefined ? {} : { mode }) })
     await rename(staging, file)
   } catch (error) {
     // The tidy-up must not become the failure: what the caller has to hear is why the content

@@ -92,6 +92,22 @@ describe('the assistant modal', () => {
     expect(mountedDictationTarget()).toBeNull()
   })
 
+  /**
+   * A sentence spoken while a plan is running used to vanish whole: not sent (`say` returns on
+   * `busy`), not inserted at the caret (the claim above short-circuits that), and shown nowhere.
+   * Typed text is protected by the disabled field; the voice had no equivalent, on the very path
+   * this batch opened.
+   */
+  it('keeps a sentence spoken while it is busy, in the field', async () => {
+    useAssistant.setState({ busy: true })
+    render(<AssistantOverlay />)
+
+    mountedDictationTarget()?.('et maintenant génère')
+
+    expect(say).not.toHaveBeenCalled()
+    expect(await screen.findByDisplayValue('et maintenant génère')).toBeInTheDocument()
+  })
+
   /** The decision this modal exists to hold: what a conversation has cost, as it costs it. */
   it('shows the running total', () => {
     useAssistant.setState({ spent: 2.5 })

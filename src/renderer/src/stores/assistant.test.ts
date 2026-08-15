@@ -136,6 +136,22 @@ describe('saying something to the assistant', () => {
     expect(useAssistant.getState().spent).toBe(1.5)
   })
 
+  /**
+   * Every branch of the executor reaches an IPC channel that genuinely rejects — the API client
+   * turns a 429, a missing key or a dropped network into a thrown error. Unguarded, one such
+   * throw left `busy` true for the rest of the session: field disabled, spinner turning, nothing
+   * on screen saying why.
+   */
+  it('does not seize up when an action throws', async () => {
+    runConfirmedAction.mockRejectedValue(new Error('the network is gone'))
+    brain(answer({ calls: [{ action: 'models.search', input: { query: 'casque' } }] }))
+
+    await useAssistant.getState().say('cherche un casque')
+
+    expect(useAssistant.getState().busy).toBe(false)
+    expect(useAssistant.getState().turns[0]?.lost).toBe(true)
+  })
+
   it('says so rather than hanging when the studio does not answer at all', async () => {
     installFakeBridge({ assistant: { think: () => Promise.reject(new Error('closed')) } })
     await useAssistant.getState().say('ouvre un fichier 3D')
@@ -153,6 +169,26 @@ describe('the question asked before anything is engaged', () => {
     expect(useAssistant.getState().open).toBe(true)
     useAssistant.getState().answer(false)
     await expect(asked).resolves.toBe(false)
+  })
+
+  /**
+   * The two callers of the gate are independent — the modal's own plan, and an MCP client on the
+   * other side of the machine — so two questions can genuinely be in flight. Overwriting the
+   * first cost twice: its promise never settled, holding `busy` for the session, and the buttons
+   * on screen then answered the SECOND request while the person was reading the first. A yes
+   * meant for "this uploads an image, it is free" would have started a paid generation.
+   */
+  it('refuses a second question rather than replacing the one on screen', async () => {
+    const first = useAssistant.getState().ask({ action: 'command.run', commitment: 'asset' })
+    const second = useAssistant
+      .getState()
+      .ask({ action: 'generator.submit', commitment: 'credits' })
+
+    await expect(second).resolves.toBe(false)
+    expect(useAssistant.getState().asked?.request.action).toBe('command.run')
+
+    useAssistant.getState().answer(true)
+    await expect(first).resolves.toBe(true)
   })
 
   /** Left unanswered it would hold `busy` for the rest of the session, and spend nothing ever. */

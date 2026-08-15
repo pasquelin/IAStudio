@@ -27,16 +27,27 @@ export function frontWindow(): BrowserWindow | null {
   return target && !target.isDestroyed() ? target : null
 }
 
+/** Sends to the window in front, for the native menu, whose rows belong to whatever is focused. */
+export function sendToFront(channel: string, payload?: unknown): void {
+  frontWindow()?.webContents.send(channel, payload)
+}
+
 /**
- * Sends to that window alone, and says whether there was one.
+ * Sends to one named window, and says whether there was one.
  *
  * The answer matters to exactly one caller: an action arriving from OUTSIDE the application —
- * over MCP — has somebody waiting on it, so "no window was in front" has to travel back rather
- * than be dropped in silence. The menu ignores it, as it should: a row clicked in a menu that
- * only exists because a window does cannot miss.
+ * over MCP — has somebody waiting on it, so "there was no window" has to travel back rather than
+ * be dropped in silence.
+ *
+ * A NAMED window rather than whichever is in front, and that is the correction: `frontWindow`
+ * answers the settings window, the licences window and the mirror just as readily, and none of
+ * them mounts the assistant. Sent there, the event reached a renderer that never subscribed —
+ * `true` came back, so nothing was refused, and the client waited out the full two minutes for a
+ * `timedOut` where an immediate `noWindow` was the truth.
  */
-export function sendToFront(channel: string, payload?: unknown): boolean {
-  const target = frontWindow()
-  target?.webContents.send(channel, payload)
-  return target !== null
+export function sendTo(target: BrowserWindow | null, channel: string, payload?: unknown): boolean {
+  if (!target || target.isDestroyed()) return false
+
+  target.webContents.send(channel, payload)
+  return true
 }

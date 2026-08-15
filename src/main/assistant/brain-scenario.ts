@@ -109,9 +109,20 @@ export function createScenarioBrain({ run, readText, model }: BrainDeps): Assist
        * One retry, and only one. A model that cannot answer the shape twice will not answer it
        * the third time either, and every attempt is a creative unit off the person's balance —
        * measured at 0.75 for the cheapest of them.
+       *
+       * Caught, and the reason is the figure rather than the failure: the first pass SUCCEEDED
+       * and was billed. A rejection escaping here — the job refused, a rate limit, the CDN the
+       * answer is read from being unreachable — took `think` down with it, the window marked the
+       * turn lost, and the running total never learnt about the units already spent. What the
+       * modal exists to show is exactly the cost nobody would otherwise see.
        */
       log.warn('assistant', 'unreadable answer, asking once more')
-      const second = await ask(request, chosen, complaintAbout(first.answer))
+      const second = await ask(request, chosen, complaintAbout(first.answer)).catch(
+        (error: unknown) => {
+          log.warn('assistant', `the second attempt failed: ${String(error)}`)
+          return { answer: '', cost: 0 }
+        },
+      )
       const retried = parseReply(second.answer)
       const cost = first.cost + second.cost
 

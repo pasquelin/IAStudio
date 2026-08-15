@@ -5,6 +5,7 @@ import { HOME_SECTION_IDS } from '../domain/home'
 import { DISPLAY_MODES, VIEW_DIRECTIONS } from '../domain/scene'
 import { TOOL_PLACEMENTS } from '../domain/tool'
 import { ASSET_BADGES, ASSET_TYPES } from '../domain/asset'
+import { ASSISTANT_MODELS } from '../domain/assistant'
 import { STT_ERROR_CODES } from '../domain/dictation'
 import { breakableSpots } from './typography'
 import { isRecord } from '../guards'
@@ -599,6 +600,15 @@ const DYNAMIC_KEYS: readonly string[] = [
   // turns the progress row into a raw code at the exact moment something is happening.
   ...JOB_STATUSES.map(status => `jobs.status.${status}`),
   ...INGEST_STAGES.map(stage => `ingest.${stage}`),
+  /**
+   * The models the assistant may think with, named in the picker of its own modal.
+   *
+   * Here rather than trusted to `exhaustive.test.ts`, which proves the LIST covers the union and
+   * says nothing about the bundles: a fifth model added there and forgotten here would read as
+   * `gemini-4-flash` in an otherwise French list — the family of defect the usage report already
+   * shipped once, with `images-generation` sitting in a French table.
+   */
+  ...ASSISTANT_MODELS.map(model => `assistant.models.${model}`),
   // Composed from the shared PBR union to caption a tile of the Channels panel. `panels.channels`
   // needs no line here because `t.panels[id]` is typed; this family has no such guard, so a ninth
   // channel — and the domain warns the API adds types without notice — would caption a tile with

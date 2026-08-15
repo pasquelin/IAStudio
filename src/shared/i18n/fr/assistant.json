@@ -55,7 +55,14 @@
       "declined": "Vous avez refusé cette action.",
       "noWindow": "Aucune fenêtre du studio n’était au premier plan pour exécuter cette action.",
       "timedOut": "La demande est restée à l’écran sans réponse, et a été abandonnée.",
-      "noReference": "Le formulaire ne porte aucune image de référence dont lire le style."
+      "noReference": "Le formulaire ne porte aucune image de référence dont lire le style.",
+      "formChanged": "Le formulaire a changé depuis l’annonce du coût. Rien n’a été envoyé — redemandez pour obtenir un nouveau chiffre."
+    },
+    "models": {
+      "claude-haiku-4-5": "Haiku 4.5 — le plus rapide et le moins cher",
+      "claude-sonnet-4-6": "Sonnet 4.6 — l’équilibre",
+      "claude-opus-4-8": "Opus 4.8 — le plus fiable en plusieurs étapes",
+      "gemini-3.5-flash": "Gemini 3.5 Flash — l’alternative rapide"
     },
     "fields": {
       "command": "Identifiant de la commande",

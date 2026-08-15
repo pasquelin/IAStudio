@@ -27,10 +27,13 @@ describe('who the MCP server serves', () => {
   })
 
   /**
-   * Node folds repeated headers into an array, and picking one of two `Authorization` values
-   * would be guessing at which the caller meant.
+   * A repeated `Origin`, which is what Node really produces: it JOINS them with `', '` rather
+   * than handing over an array — measured, after a case here spent a while describing an array
+   * arm no request can reach. The joined value fails the loopback pattern on its own.
    */
-  it('refuses a caller that sent the header twice', () => {
-    expect(admits({ authorization: [`Bearer ${TOKEN}`, 'Bearer nope'] }, TOKEN)).toBe('badToken')
+  it('refuses a page that sent two origins at once', () => {
+    const doubled = 'https://elsewhere.example, http://localhost:5173'
+
+    expect(admits({ ...authorised, origin: doubled }, TOKEN)).toBe('badOrigin')
   })
 })

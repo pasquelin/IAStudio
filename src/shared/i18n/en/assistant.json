@@ -55,7 +55,14 @@
       "declined": "You turned that action down.",
       "noWindow": "No studio window was in front to run that action.",
       "timedOut": "The request stood on screen unanswered, and was given up on.",
-      "noReference": "The form carries no reference image to read a style from."
+      "noReference": "The form carries no reference image to read a style from.",
+      "formChanged": "The form changed after the cost was quoted. Nothing was sent — ask again for a fresh figure."
+    },
+    "models": {
+      "claude-haiku-4-5": "Haiku 4.5 — the fastest and the cheapest",
+      "claude-sonnet-4-6": "Sonnet 4.6 — the balance",
+      "claude-opus-4-8": "Opus 4.8 — the steadiest over several steps",
+      "gemini-3.5-flash": "Gemini 3.5 Flash — the quick alternative"
     },
     "fields": {
       "command": "Command identifier",

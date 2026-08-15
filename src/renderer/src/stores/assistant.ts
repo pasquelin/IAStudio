@@ -72,9 +72,24 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
 
   ask: request =>
     new Promise<boolean>(resolve => {
-      // Opened, not queued: a question nobody can see is not a question. It is what makes an
-      // action arriving from outside this window — the MCP server — surface here rather than
-      // wait behind a closed modal.
+      /**
+       * One question at a time, and a second one is REFUSED rather than shown.
+       *
+       * The two callers are independent — the modal's own plan, and an MCP client on the other
+       * side of the machine — so two questions can genuinely be in flight. Overwriting the first
+       * cost twice: its promise never settled, which held `busy` for the rest of the session,
+       * and the buttons on screen then answered the SECOND request while the person was reading
+       * the first. Approving "this uploads an image, it is free" would have started a forty-unit
+       * generation.
+       *
+       * Refusing the newcomer is the safe end of that: nothing is spent, and the caller hears
+       * why. Opened, not queued, for the first one — a question nobody can see is not a question.
+       */
+      if (get().asked) {
+        resolve(false)
+        return
+      }
+
       set({ open: true, asked: { request, answer: resolve } })
     }),
 
@@ -124,16 +139,30 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
       lost: answer.say === '' && answer.calls.length === 0,
     })
 
-    // One after another, never at once: `generator.prepare` fills the form that
-    // `generator.submit` then sends, and a plan run in parallel would send an empty one.
+    /**
+     * One after another, never at once: `generator.prepare` fills the form that
+     * `generator.submit` then sends, and a plan run in parallel would send an empty one.
+     *
+     * Inside a `try/finally`, and the `finally` is the point: every branch of `runAction`
+     * reaches an IPC channel that genuinely rejects — the API client turns a 429, a missing key
+     * or a dropped network into a thrown error. Unguarded, one such throw left the loop, left
+     * `say`, and `busy` stayed true for the rest of the session: the field disabled, the spinner
+     * turning, nothing on screen saying why. The assistant was dead until the window reloaded.
+     */
     const steps: AssistantStep[] = []
-    for (const call of answer.calls) {
-      const outcome = await runConfirmedAction(call.action, call.input)
-      steps.push({ action: call.action, refusal: outcome.ok ? null : outcome.refusal })
-      patch(set, id, { steps: [...steps] })
+    try {
+      for (const call of answer.calls) {
+        const outcome = await runConfirmedAction(call.action, call.input)
+        steps.push({ action: call.action, refusal: outcome.ok ? null : outcome.refusal })
+        patch(set, id, { steps: [...steps] })
+      }
+    } catch {
+      // Said rather than swallowed: an action that threw did not run, and a turn showing only
+      // the steps that worked would read as a plan that finished.
+      patch(set, id, { lost: true })
+    } finally {
+      set({ busy: false })
     }
-
-    set({ busy: false })
   },
 
   setModel: model => {

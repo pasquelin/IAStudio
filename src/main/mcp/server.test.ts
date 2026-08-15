@@ -100,6 +100,38 @@ describe('the door', () => {
 
     expect(response.status).toBe(404)
   })
+
+  /**
+   * Everything but a well-formed POST, which is what the suite used to be made of entirely.
+   *
+   * None of these may run an action, and none may take the server down — a client that reconnects
+   * badly, or a browser that stumbles onto the port, must cost nothing. What each STATUS is is
+   * the transport's business and deliberately not asserted; that nothing was executed, and that
+   * the next real call still works, is ours.
+   */
+  it('runs nothing on a request that is not a call, and stays up', async () => {
+    const run = vi.fn<(call: AssistantCall) => Promise<ActionOutcome>>(() =>
+      Promise.resolve({ ok: true }),
+    )
+    const server = await serverRunning(run)
+
+    const url = mcpUrl(server)
+    const headers = { authorization: `Bearer ${TOKEN}`, accept: 'application/json' }
+    await fetch(url, { method: 'DELETE', headers })
+    await fetch(url, {
+      method: 'POST',
+      headers: { ...headers, 'content-type': 'application/json' },
+    })
+    await fetch(url, {
+      method: 'POST',
+      headers: { ...headers, 'content-type': 'application/json' },
+      body: 'pas du json',
+    })
+
+    expect(run).not.toHaveBeenCalled()
+    // Still serving: a malformed request must not be able to end the session for the good ones.
+    expect(await ask(server, 'tools/list')).toHaveProperty('tools')
+  })
 })
 
 describe('what a client can ask for', () => {
