@@ -117,7 +117,7 @@ It is the universal representation of sound. At a glance you can see:
 **Drag across the waveform** to draw a selection. That is the portion the tools work on.
 
 **The editor's bar always says where you stand**: both bounds of the selection when there is one,
-and "Drag across the wave to select" when there is not. An area nobody knows how to draw is not
+and "Drag across the waveform to select" when there is not. An area nobody knows how to draw is not
 explained by a sentence that only appears once a pointer rests on a tool.
 
 **Playback itself ignores the selection**: it plays the whole take from where the cursor stands,
