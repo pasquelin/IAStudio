@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/design/Button'
+import { Chip } from '@/design/Chip'
 import { ColorField } from '@/design/ColorField'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { RangeField } from '@/design/RangeField'
 import { SliderField } from '@/design/SliderField'
-import { chipSkin } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { VectorField } from '@/design/VectorField'
 import { setTextureMaterial, setPreview } from '@/engines/texture/commands'
@@ -213,16 +213,13 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
         <PropertyRow label={t('texture.tilingPreview')}>
           <div className="flex justify-end gap-2">
             {TILING_PREVIEWS.map(times => (
-              <button
+              <Chip
                 key={times}
-                type="button"
-                {...HINT_LEFT(t('texture.tilingPreviewHint'))}
+                label={t('texture.tilingPreviewTimes', { count: times })}
+                hint={t('texture.tilingPreviewHint')}
+                selected={preview.tilingPreview === times}
                 onClick={() => onPreview('tilingPreview', times)}
-                aria-pressed={preview.tilingPreview === times}
-                className={chipSkin(preview.tilingPreview === times)}
-              >
-                {t('texture.tilingPreviewTimes', { count: times })}
-              </button>
+              />
             ))}
           </div>
         </PropertyRow>
@@ -237,16 +234,13 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
       <PropertySection title={t('texture.preview')}>
         <div className="flex flex-wrap gap-2">
           {PREVIEW_SHAPES.map(shape => (
-            <button
+            <Chip
               key={shape}
-              type="button"
-              {...HINT_LEFT(t('texture.previewShapeHint'))}
+              label={t(SHAPE_LABELS[shape])}
+              hint={t('texture.previewShapeHint')}
+              selected={preview.shape === shape}
               onClick={() => onPreview('shape', shape)}
-              aria-pressed={preview.shape === shape}
-              className={chipSkin(preview.shape === shape)}
-            >
-              {t(SHAPE_LABELS[shape])}
-            </button>
+            />
           ))}
         </div>
 
