@@ -1,6 +1,6 @@
 # 19. Comment faire pour…
 
-[← Ce qui n’existe pas encore](18-limites.md) · [Sommaire](../guide-utilisateur.md)
+[← Ce qui n’existe pas encore](18-limites.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Piloter le studio depuis l’extérieur →](20-piloter-de-l-exterieur.md)
 
 Les chapitres précédents expliquent **chaque morceau** du studio. Celui-ci fait l’inverse : il
 part de ce que vous voulez obtenir, et donne le chemin complet, du premier clic au résultat.
@@ -376,4 +376,4 @@ Tout est détaillé, sans rien cacher, dans
 
 ---
 
-[← Ce qui n’existe pas encore](18-limites.md) · [Sommaire](../guide-utilisateur.md)
+[← Ce qui n’existe pas encore](18-limites.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Piloter le studio depuis l’extérieur →](20-piloter-de-l-exterieur.md)

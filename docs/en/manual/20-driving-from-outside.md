@@ -1,0 +1,287 @@
+# 20. Driving the studio from outside
+
+[← How do I…](19-recipes.md) · [Contents](../user-guide.md)
+
+---
+
+So far you have driven the studio by hand: a click, a shortcut, a menu row. This chapter covers
+the other way — **saying what you want, and letting the studio do it**.
+
+It has two doors, and **they open onto the same room**:
+
+| The door | Where it is | Who speaks |
+|---|---|---|
+| **The assistant** | in the window, on `⌘K` | you, in English or in French |
+| **The way in** | shut to start with, opened in the settings | a program outside, such as Claude Code |
+
+Both run **exactly the same catalogue of ten actions**, listed further down. Nothing is possible
+on one side that is not possible on the other, and **nothing that commits anything goes out
+without your seeing it on screen** — wherever the request came from.
+
+---
+
+## The assistant
+
+**`⌘K`**, or **View ▸ Assistant** in the menu bar. A window opens over the studio, with a field,
+and that is all.
+
+You write what you want to do, in an ordinary sentence:
+
+> *Open a new 3D file*
+> *Search for a texture model for stone*
+> *Prepare an image generation at 1024 by 1024*
+
+The assistant reads the sentence, picks one or more actions from the catalogue, and runs them.
+Each step shows in the thread, with what it returned.
+
+### What the assistant can read
+
+**Nothing you have not written.** It receives your sentence and **the last ten exchanges** of the
+conversation under way, rendered as text. It sees neither your images, nor your projects, nor the
+contents of your documents — it knows the *catalogue* of actions and their parameters, not what
+they are about to apply to.
+
+One exception, and it is explicit: **Describe the style of the references** reads the reference
+images already sitting on the Generator's form. It is the only place the assistant looks at an
+image, and you have to have asked for it.
+
+### Choosing the model that reads you
+
+The picker is **in the assistant's own window**, not in the settings — the moment one wants a
+steadier model is the middle of a sentence that was not understood.
+
+| Model | What it is worth |
+|---|---|
+| **Haiku 4.5** *(start)* | the fastest and the cheapest |
+| **Sonnet 4.6** | the balance |
+| **Opus 4.8** | the steadiest over a request in several steps |
+| **Gemini 3.5 Flash** | the quick alternative |
+
+The cheapest is enough to open a workspace or search for a model. The others hold up better on a
+request that chains three or four actions.
+
+> **There is no second account and no second key to enter.** The assistant thinks on a model of
+> the Scenario catalogue, over the connection you already have. That is also why **thinking is
+> paid for** — see just below.
+
+### What it costs
+
+**Thinking spends creative units.** Not many, but it is not free, and it is separate from what the
+generation the assistant prepares will cost.
+
+**The window shows the running total for the conversation under way**, at the bottom.
+
+**Closing the window does not reset it**, and does not clear the thread: reopening the assistant
+finds both where you left them. The counter runs **until you quit the studio**.
+
+> **That total counts thinking alone.** What a generation costs is the jobs bar's to report, and
+> the [Generating](06-generating.md) chapter covers it. The two do not blend, and the assistant
+> starts no generation without asking you.
+
+### Dictation works there
+
+The microphone beside the field is the same one as everywhere else, with the same settings
+([chapter 14](14-settings.md#dictation)). Speaking to the assistant rather than typing changes
+nothing about what it does with the sentence.
+
+---
+
+## The way in for a program outside
+
+This is the second door: **another program installed on your machine can run the same ten
+actions**. A coding assistant such as Claude Code, for instance, or any client speaking the **MCP**
+protocol.
+
+**This door is shut to start with, and stays shut until you open it.**
+
+### What guards it
+
+Four things, and a request needs all four to get through:
+
+| The lock | What it stops |
+|---|---|
+| **Off by default** | nothing is listening on a fresh install |
+| **This machine alone** | the way in listens on `127.0.0.1` only: nothing on the network reaches it, neither the home Wi-Fi nor the office one |
+| **A fresh token every launch** | a request without the token of the launch under way is refused |
+| **No web page** | a request coming from a site open in your browser is refused on that ground alone |
+
+> **And above the four, the fifth, which is you.** Anything that spends or uploads shows on screen
+> and waits for your yes, exactly as if you had asked for it yourself. A program outside cannot
+> give it on your behalf.
+
+### Opening it
+
+**Settings ▸ Advanced ▸ Drive the studio from outside.** Tick the box; the way in starts at once.
+Untick it, it stops and **nothing is listening any more**.
+
+---
+
+## Connecting Claude Code
+
+This is the common case, and it takes three gestures.
+
+### 1. Open the door
+
+**Settings ▸ Advanced**, tick **Drive the studio from outside**.
+
+### 2. Copy the connection line
+
+Just below, **Connection command ▸ Copy**. The studio puts a line of this shape on your clipboard:
+
+```
+claude mcp add --transport http <name> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+```
+
+The number after `127.0.0.1:` and the token after `Bearer` **are yours, and this launch's**. They
+are not in this manual because they cannot be: they change.
+
+### 3. Paste it in a terminal
+
+Open a terminal **in the project folder where you work with Claude Code**, and paste the line.
+That is all: Claude Code now knows the studio, and sees its ten tools.
+
+To check, ask it for its MCP servers — the studio should be there, connected.
+
+### What to redo at every launch
+
+**The port and the token change every time the studio starts.** Yesterday's line is worth nothing
+today: the client addresses a port where nothing is listening any more, or presents a stale token.
+
+**So the gesture is to be redone after each launch**: copy the command again, and paste it again. A
+client already registered under the same name is replaced; there is nothing to remove first.
+
+> **That is the price of the two middle locks**, and it is deliberate. A fixed port and a permanent
+> token would hold on their own from one session to the next — and would hold just as well for any
+> program that had read that file once.
+
+### What you can ask it for
+
+Once connected, Claude Code speaks to the studio the way you would speak to the assistant, but
+from your code project:
+
+> *Open the 3D workspace in the studio and create a document*
+> *Find me a night skybox model*
+> *List the generations under way*
+> *Prepare an image generation with this prompt, but do not send it*
+
+**That last sentence is worth reading twice.** Preparing and sending are **two distinct actions**,
+and only the second spends. A program outside can fill the form as much as it likes: until **Start
+the prepared generation** has had your yes on screen, nothing has gone out.
+
+---
+
+## The ten actions
+
+The same catalogue on both sides. The right-hand column says what the action **commits** — that is
+what decides whether the studio will ask you anything.
+
+| Action | What it does | What it commits |
+|---|---|---|
+| **Run a command** | fires a studio command by its identifier, as a shortcut would | **nothing**, bar the five exceptions below |
+| **Open a workspace** | switches to a workspace, and creates a document there when asked | nothing |
+| **Search for a model** | searches generation models by keywords | nothing |
+| **Pick a model** | arms a model for a family; the form is rebuilt on it | nothing |
+| **Prepare a generation** | fills the Generator's form and shows it | nothing — **and above all, sends nothing** |
+| **Start the prepared generation** | sends the form as it stands on screen | **creative units** |
+| **List the jobs** | returns the generations under way and how far along they are | nothing |
+| **Suggest prompt variants** | rewrites a sentence into variants cut for the armed model | nothing |
+| **Translate a prompt into English** | carries a text into the language the models are trained on | nothing |
+| **Describe the style of the references** | reads the form's reference images and returns a description | nothing |
+
+### The five commands that are the exception
+
+**Run a command** commits nothing — except when the command aimed at is one of these five:
+
+| Command | What it does with your picture |
+|---|---|
+| **Regenerate the region** | flattens it and uploads it |
+| **Cut out** | same |
+| **Upscale** | same |
+| **Vectorise** | same |
+| **Extend** | same |
+
+All five **upload the canvas picture**, which then becomes a permanent asset of your library. They
+cost no creative units — they only prepare the form — but they leave something behind them, and
+that is what earns them a question.
+
+---
+
+## What the studio asks you, and when
+
+Two questions only, both on screen, in the window in front.
+
+**When an action is about to spend:**
+
+> *This action will spend 12 creative units.*
+
+The figure is **estimated before** anything is committed. When the studio cannot estimate it, it
+says so rather than inventing one:
+
+> *This action will spend creative units. The studio could not estimate how many, and does not
+> invent a figure.*
+
+**When an action is about to upload:**
+
+> *This action will upload an image, which then stays in your library. It costs no creative units.*
+
+In both cases, two buttons: **Allow** and **Refuse**. Refusing runs nothing, and the assistant
+takes it into account for what follows.
+
+> **The question cannot be walked around.** Neither `Esc` nor a click outside closes it: an action
+> is waiting for the answer, and making it vanish would leave that action waiting for good. It has
+> to be answered.
+
+**You have two minutes.** Past that the request is given up on, and the program that made it gets a
+refusal rather than waiting. That is the time it takes to read "this will spend 12 units" and
+decide — not a network timeout.
+
+---
+
+## When it refuses
+
+A refused action always says why. The grounds, and what they mean:
+
+| The message | What happened |
+|---|---|
+| *No such command exists in the studio.* | the identifier asked for matches nothing |
+| *That command belongs to the application menu, which fires it itself.* | some commands are not to be taken by this route |
+| *That command speaks to a document that is not in front.* | bring the right tab forward, and ask again |
+| *The Generator was not open. It is now.* | nothing failed: ask for the same thing again |
+| *The Generator has no model armed at the moment.* | pick a model before preparing |
+| *The generation did not go out.* | sending failed downstream — nothing was spent |
+| *The parameters given do not suit this action.* | what was passed does not match the expected fields |
+| *The studio is not answering.* | the window could not be reached |
+| *That action needs a yes, and no window was there to give one.* | never a silent yes: with no screen, it is no |
+| *You turned that action down.* | that one is you |
+| *No studio window was in front to run that action.* | the studio is running with no window in front: open one |
+| *The request stood on screen unanswered, and was given up on.* | the two minutes went by |
+| *The form carries no reference image to read a style from.* | put an image on the form first |
+| *The form changed after the cost was quoted. Nothing was sent — ask again for a fresh figure.* | what was quoted is what goes, never anything else |
+
+The window grounds — *no window in front*, *no window to give a yes* — **are only ever met from a
+program outside**. The assistant is in the window: there is always someone there to be asked.
+
+---
+
+## What this route does not do
+
+- **It does not open your files to anyone.** The ten actions drive the studio; none reads a folder,
+  sends a document, or returns the contents of a project.
+- **It does not replace your API key.** What goes to Scenario goes as usual, with your credentials,
+  from your machine.
+- **It never spends on its own.** One of the ten spends, and it asks.
+- **It does not outlive the studio.** With the studio closed the way in no longer exists, and the
+  launch's token with it.
+
+---
+
+## Alongside this chapter
+
+- **[Generating](06-generating.md)** — what the assistant prepares, and what sending it costs.
+- **[Every setting](14-settings.md)** — the box and the button, in their section.
+- **[Every shortcut](15-shortcuts.md)** — `⌘K` among the others.
+- **[When something goes wrong](16-troubleshooting.md)** — when the door will not open.
+
+---
+
+[← How do I…](19-recipes.md) · [Contents](../user-guide.md)

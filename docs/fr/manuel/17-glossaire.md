@@ -46,6 +46,11 @@ ou « média » s’en approchent. Retenez : **un asset est un fichier fini, ré
 
 Les assets vivent dans le panneau **Assets**, qu’on appelle familièrement *l’étagère*.
 
+**Assistant**
+La fenêtre où l’on dit ce que l’on veut faire, en une phrase ordinaire, plutôt que de le cliquer.
+`⌘K`. Elle choisit elle-même les actions et les exécute, et demande votre accord avant tout ce qui
+dépense ou téléverse. Voir [Piloter le studio depuis l’extérieur](20-piloter-de-l-exterieur.md).
+
 **Azimut**
 La direction d’une chose tout autour de vous, mesurée en tournant sur place. Pour le soleil d’une
 *skybox* : est, sud, ouest, nord. Se combine avec l’*élévation*, qui dit sa hauteur.
@@ -372,6 +377,12 @@ l’effacer : les pixels sont toujours là, ils ne s’affichent pas. On le pein
 retire — l’image d’origine n’a jamais bougé.
 
 Un masque se fabrique aussi à partir d’une *sélection*, en une commande.
+
+**MCP** *(Model Context Protocol)*
+La langue commune que parlent les assistants de programmation et les outils qu’ils pilotent. Le
+studio peut se présenter comme l’un de ces outils : un client comme Claude Code lance alors les
+mêmes actions que l’*assistant*. Fermé au départ, à ouvrir dans Réglages → **Avancé**. Voir
+[Piloter le studio depuis l’extérieur](20-piloter-de-l-exterieur.md).
 
 **Métallicité** *(canal de texture)*
 Zone par zone : cette partie est-elle du métal, ou non ? Ce n’est pas un curseur d’aspect mais un

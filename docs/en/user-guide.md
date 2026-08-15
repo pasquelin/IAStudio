@@ -61,6 +61,7 @@ machine, without sending them anywhere.
 | 17 | [Glossary](manual/17-glossary.md) | Every word in the software, explained plainly |
 | 18 | [What does not exist yet](manual/18-limits.md) | The greyed-out buttons, the work in progress, what not to expect |
 | 19 | [How do I…](manual/19-recipes.md) | Sixteen step-by-step recipes, from the first click to the result |
+| 20 | [Driving the studio from outside](manual/20-driving-from-outside.md) | The assistant, and the way in for a client such as Claude Code |
 
 ---
 

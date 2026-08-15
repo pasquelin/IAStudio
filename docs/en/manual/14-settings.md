@@ -630,6 +630,36 @@ a problem.
 > only **your** session's keychain can decrypt. Copying this file to another machine copies your
 > settings there, but **not** your connection: you will have to retype the key and the secret.
 
+### Drive the studio from outside
+
+**Checkbox. Starts at: unchecked.**
+
+Opens a way in **on this machine alone**, through which a program outside — an MCP client such as
+Claude Code — can run the same actions the assistant runs.
+
+**Unchecked, nothing is listening.** That is the state of a fresh install, and of every launch for
+as long as the box stays unticked.
+
+**Anything that spends or uploads asks for a yes on screen**, exactly as if you had asked for it
+yourself in the assistant. A program outside cannot give it on your behalf.
+
+> **[Chapter 20](20-driving-from-outside.md) is this setting's own**: what guards that way in, how
+> to connect Claude Code to it, the ten actions it reaches and what each one commits.
+
+### Connection command
+
+**Button: Copy.**
+
+Copies the line to paste in a terminal to connect a client:
+
+```
+claude mcp add --transport http <name> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+```
+
+**The port and the token change every time the studio starts**, which is why there is a button
+rather than a value on display: there is nothing to write down, only a line to copy again after
+each launch.
+
 ### Developer tools
 
 **Button: Open.**
@@ -700,6 +730,7 @@ What you have on a fresh install, at a glance.
 | Media | Path to ffmpeg | empty | — |
 | Storage | Projects folder | empty | — |
 | Advanced | Log detail | Everything | Nothing → Everything |
+| Advanced | Drive the studio from outside | unchecked | — |
 
 ---
 

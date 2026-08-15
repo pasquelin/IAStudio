@@ -650,6 +650,37 @@ aide à comprendre un problème.
 > sur une autre machine y recopie vos réglages, mais **pas** votre connexion : il faudra retaper
 > la clé et le secret.
 
+### Piloter le studio depuis l’extérieur
+
+**Case à cocher. Départ : décochée.**
+
+Ouvre un point d’entrée **sur cette machine seule**, par lequel un programme extérieur — un client
+MCP comme Claude Code — peut lancer les mêmes actions que l’assistant.
+
+**Décochée, rien n’écoute.** C’est l’état d’une installation neuve, et celui de tout lancement tant
+que la case n’est pas cochée.
+
+**Tout ce qui coûte ou téléverse demande votre accord à l’écran**, exactement comme si vous l’aviez
+demandé vous-même dans l’assistant. Un programme extérieur ne peut pas se le donner à votre place.
+
+> **Le [chapitre 20](20-piloter-de-l-exterieur.md) est celui de ce réglage** : ce qui garde ce
+> point d’entrée, comment y brancher Claude Code, les dix actions accessibles et ce que chacune
+> engage.
+
+### Commande de connexion
+
+**Bouton : Copier.**
+
+Copie la ligne à coller dans un terminal pour brancher un client :
+
+```
+claude mcp add --transport http <nom> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+```
+
+**Le port et le jeton changent à chaque démarrage du studio**, et c’est pour cette raison qu’il y a
+un bouton plutôt qu’une valeur affichée : il n’y a rien à noter, seulement une ligne à recopier
+après chaque lancement.
+
 ### Outils de développement
 
 **Bouton : Ouvrir.**
@@ -721,6 +752,7 @@ Ce que vous avez sur une installation neuve, d’un coup d’œil.
 | Médias | Chemin de ffmpeg | vide | — |
 | Stockage | Dossier des projets | vide | — |
 | Avancé | Détail du journal | Tout | Rien → Tout |
+| Avancé | Piloter le studio depuis l’extérieur | décochée | — |
 
 ---
 

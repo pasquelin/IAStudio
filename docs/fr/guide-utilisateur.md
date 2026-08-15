@@ -63,6 +63,7 @@ part.
 | 17 | [Glossaire](manuel/17-glossaire.md) | Tous les mots du logiciel, expliqués simplement |
 | 18 | [Ce qui n’existe pas encore](manuel/18-limites.md) | Les boutons gris, les promesses en cours, ce qu’il ne faut pas attendre |
 | 19 | [Comment faire pour…](manuel/19-recettes.md) | Seize recettes pas à pas, du premier clic au résultat |
+| 20 | [Piloter le studio depuis l’extérieur](manuel/20-piloter-de-l-exterieur.md) | L’assistant, et le point d’entrée pour un client comme Claude Code |
 
 ---
 
