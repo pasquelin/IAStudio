@@ -63,7 +63,16 @@ export function AnimationHeaders({ documentId, rows }: AnimationHeadersProps) {
   const shown = useMemo(() => shownSubjects(rows), [rows])
 
   return (
-    <TimelineHeaderColumn scrollTop={scrollTop}>
+    <TimelineHeaderColumn
+      scrollTop={scrollTop}
+      // Read from the store rather than subscribed to: the whole viewport as a dependency would
+      // redraw every line on a zoom, and this only ever writes one of its three fields.
+      onScrollTop={top => {
+        const views = useAnimationViews.getState()
+        const view = animationViewOf(views, documentId)
+        views.setViewport(documentId, { ...view.viewport, scrollTop: top })
+      }}
+    >
       {rows.map(row => (
         <HeaderRow key={row.id} documentId={documentId} row={row} shown={shown} />
       ))}

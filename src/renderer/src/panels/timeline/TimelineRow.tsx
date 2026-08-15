@@ -1,5 +1,7 @@
 import { mdiDragVertical } from '@mdi/js'
 import {
+  createContext,
+  use,
   useEffect,
   useRef,
   useState,
@@ -7,8 +9,11 @@ import {
   type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
+  type WheelEvent,
 } from 'react'
+import { clamp } from '@shared/numeric'
 import { UiIcon } from '@/design/UiIcon'
+import { edgeScroll } from '@/engines/timeline/edge-scroll'
 import { ROW_PADDING, RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import { cn } from '@/helpers/cn'
 import { isGoneForGood } from '@/helpers/teardown'
@@ -26,6 +31,32 @@ function reorderSteps(travelled: number, height: number): number {
 }
 
 /**
+ * What a band offers the rows inside it, so a drag can reach past what is on screen.
+ *
+ * Published by the column because the column is the only one that knows its own box AND the
+ * height of the whole stack: a row knows neither, and the store keeps no viewport size.
+ */
+type BandScroll = {
+  /** Opens and closes the band's own gesture — it only travels while a row is held. */
+  onDrag: (dragging: boolean) => void
+  /** Read at every step of a drag: an auto-scroll moves the stack under a pointer that is still. */
+  scrollTop: () => number
+}
+
+const BandScrollContext = createContext<BandScroll | null>(null)
+
+/**
+ * How far the band could still travel — the stack it renders, less what it shows.
+ *
+ * Measured off the DOM and not off the store, which holds no viewport size: the column is the
+ * only place in the studio that knows both numbers.
+ */
+function roomBelow(clip: HTMLElement | null, stack: HTMLElement | null): number {
+  if (!clip) return 0
+  return (stack?.offsetHeight ?? 0) - clip.clientHeight
+}
+
+/**
  * The column of headers standing beside a band: one row per line, scrolled with the band.
  *
  * Shared by the three for the same reason `TimelineRow` is — the montage and the dope sheet had
@@ -34,19 +65,114 @@ function reorderSteps(travelled: number, height: number): number {
  */
 export function TimelineHeaderColumn({
   scrollTop,
+  onScrollTop,
   children,
 }: {
   scrollTop: number
+  /**
+   * Where the band writes the offset it reaches on its own, ALREADY within its bounds — the
+   * column measures the stack it renders, and nothing else in the studio can. Absent leaves the
+   * band still: a stack no one can reorder never needs to come to the pointer.
+   */
+  onScrollTop?: (top: number) => void
   children: ReactNode
 }) {
+  const clip = useRef<HTMLDivElement>(null)
+  const stack = useRef<HTMLDivElement>(null)
+  const [dragging, setDragging] = useState(false)
+
+  // Read by the frame loop below, bound once for the whole gesture.
+  const latest = useRef({ scrollTop, onScrollTop })
+  useEffect(() => {
+    latest.current = { scrollTop, onScrollTop }
+  })
+
+  // Stable for the column's whole life: a fresh object every draw would re-run the effect that
+  // every grip inside binds to it, mid-gesture. State rather than a ref, which no component may
+  // read while it renders.
+  const [band] = useState<BandScroll>(() => ({
+    onDrag: setDragging,
+    scrollTop: () => latest.current.scrollTop,
+  }))
+
+  useEffect(() => {
+    if (!dragging) return
+
+    let y: number | null = null
+    // `null` and not zero: a clock that starts at zero would read every frame as the first.
+    let previous: number | null = null
+    let frame = 0
+    // Kept across frames: a sixtieth of a second of travel is a fraction of a pixel at the foot
+    // of the ramp, and rounding each frame on its own would round every one of them to nothing.
+    let carry = 0
+
+    const onMove = (event: globalThis.PointerEvent): void => {
+      y = event.clientY
+    }
+
+    const step = (now: number): void => {
+      frame = requestAnimationFrame(step)
+
+      const seconds = previous === null ? 0 : (now - previous) / 1000
+      previous = now
+
+      const write = latest.current.onScrollTop
+      const box = clip.current
+      if (y === null || !write || !box) return
+
+      const room = roomBelow(clip.current, stack.current)
+      if (room <= 0) return
+
+      const edges = box.getBoundingClientRect()
+      carry += edgeScroll(y, { top: edges.top, bottom: edges.bottom }, seconds)
+
+      const whole = Math.trunc(carry)
+      if (whole === 0) return
+      carry -= whole
+
+      const next = clamp(latest.current.scrollTop + whole, 0, room)
+      if (next !== latest.current.scrollTop) write(next)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    frame = requestAnimationFrame(step)
+
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      cancelAnimationFrame(frame)
+    }
+  }, [dragging])
+
+  /**
+   * The wheel over the NAMES, not only over the band beside them.
+   *
+   * The strip has always answered it; the column never did, so reading a stack meant carrying the
+   * pointer off the very rows one was reading. Same offset, same bounds — the two halves of a
+   * band cannot be scrolled apart.
+   */
+  const onWheel = (event: WheelEvent<HTMLDivElement>): void => {
+    const room = roomBelow(clip.current, stack.current)
+    if (!onScrollTop || room <= 0) return
+
+    const next = clamp(Math.round(scrollTop + event.deltaY), 0, room)
+    if (next !== scrollTop) onScrollTop(next)
+  }
+
   return (
-    <div className="border-border flex w-(--sc-track-header) shrink-0 flex-col overflow-hidden border-r">
-      {/* Empty band facing the ruler, so line one lines up with row one. */}
-      <div style={{ height: RULER_HEIGHT }} />
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <div style={{ transform: `translateY(${-scrollTop}px)` }}>{children}</div>
+    <BandScrollContext value={band}>
+      <div
+        onWheel={onWheel}
+        className="border-border flex w-(--sc-track-header) shrink-0 flex-col overflow-hidden border-r"
+      >
+        {/* Empty band facing the ruler, so line one lines up with row one. */}
+        <div style={{ height: RULER_HEIGHT }} />
+        <div ref={clip} className="min-h-0 flex-1 overflow-hidden">
+          <div ref={stack} style={{ transform: `translateY(${-scrollTop}px)` }}>
+            {children}
+          </div>
+        </div>
       </div>
-    </div>
+    </BandScrollContext>
   )
 }
 
@@ -137,6 +263,10 @@ export function TimelineRow({
 type Grab = {
   pointerId: number
   y: number
+  /** Where the pointer stands now — the band can travel while it does not, and the rank follows. */
+  at: number
+  /** Where the band stood at the press: what it has travelled since counts as pointer travel. */
+  scrollTop: number
   applied: number
   /** Held from the press, because `isGoneForGood` cannot be asked a ref React has already cleared. */
   node: HTMLButtonElement
@@ -159,11 +289,15 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
   const grabbed = useRef<Grab | null>(null)
   const [dragging, setDragging] = useState(false)
 
+  // Absent for a row rendered on its own, outside any band — which is how this component is unit
+  // tested, and the only case where nothing can scroll.
+  const band = use(BandScrollContext)
+
   // Read by the window listeners below, which are bound once for the whole gesture: `reorder` is
   // a fresh object on every draw of its row, and rebinding on each would drop events mid-drag.
-  const latest = useRef({ height, reorder, onHeld })
+  const latest = useRef({ height, reorder, onHeld, band })
   useEffect(() => {
-    latest.current = { height, reorder, onHeld }
+    latest.current = { height, reorder, onHeld, band }
   })
 
   /**
@@ -182,6 +316,7 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
     const release = (): void => {
       grabbed.current = null
       latest.current.onHeld(false)
+      latest.current.band?.onDrag(false)
       latest.current.reorder.end?.()
     }
 
@@ -189,6 +324,26 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
       if (!grabbed.current) return
       release()
       setDragging(false)
+    }
+
+    /**
+     * Where the row belongs now, given where the pointer stands and how far the band has come to
+     * meet it. Run on every move AND on every frame: held at an edge the pointer emits nothing,
+     * and it is the band that travels — without the frame the auto-scroll would slide the stack
+     * past a row that never changed rank.
+     */
+    const settle = (): void => {
+      const grab = grabbed.current
+      if (!grab) return
+
+      const held = latest.current
+      const scrolled = (held.band?.scrollTop() ?? 0) - grab.scrollTop
+      const steps = reorderSteps(grab.at - grab.y + scrolled, held.height)
+      if (steps === grab.applied) return
+
+      // What the stack GAVE, not what the pointer asked for — see `move`.
+      const moved = held.reorder.move(steps - grab.applied)
+      grabbed.current = { ...grab, applied: grab.applied + moved }
     }
 
     const onMove = (event: globalThis.PointerEvent): void => {
@@ -204,18 +359,22 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
       // stays dimmed and armed for the rest of the session.
       if (event.buttons === 0) return finish()
 
-      const held = latest.current
-      const steps = reorderSteps(event.clientY - grab.y, held.height)
-      if (steps === grab.applied) return
-
-      // What the stack GAVE, not what the pointer asked for — see `move`.
-      const moved = held.reorder.move(steps - grab.applied)
-      grabbed.current = { ...grab, applied: grab.applied + moved }
+      grabbed.current = { ...grab, at: event.clientY }
+      settle()
     }
 
     const onUp = (event: globalThis.PointerEvent): void => {
       if (grabbed.current?.pointerId === event.pointerId) finish()
     }
+
+    // Only where a band can travel: outside one, nothing moves the stack but the pointer, and a
+    // frame could never answer differently from the move that came before it.
+    let frame = 0
+    const tick = (): void => {
+      frame = requestAnimationFrame(tick)
+      settle()
+    }
+    if (latest.current.band) frame = requestAnimationFrame(tick)
 
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
@@ -225,6 +384,7 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
     window.addEventListener('blur', finish)
 
     return () => {
+      cancelAnimationFrame(frame)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
@@ -243,11 +403,14 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
     grabbed.current = {
       pointerId: event.pointerId,
       y: event.clientY,
+      at: event.clientY,
+      scrollTop: band?.scrollTop() ?? 0,
       applied: 0,
       node: event.currentTarget,
     }
     setDragging(true)
     onHeld(true)
+    band?.onDrag(true)
     reorder.begin?.()
   }
 

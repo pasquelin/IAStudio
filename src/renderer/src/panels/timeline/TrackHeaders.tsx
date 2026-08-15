@@ -56,7 +56,15 @@ export function TrackHeaders({ documentId }: TrackHeadersProps) {
   const scrollTop = useTimelineView(state => viewportOf(state, documentId).scrollTop)
 
   return (
-    <TimelineHeaderColumn scrollTop={scrollTop}>
+    <TimelineHeaderColumn
+      scrollTop={scrollTop}
+      // Read from the store rather than subscribed to: the whole viewport as a dependency would
+      // redraw every header on a zoom, and this only ever writes one of its three fields.
+      onScrollTop={top => {
+        const store = useTimelineView.getState()
+        store.set(documentId, { ...viewportOf(store, documentId), scrollTop: top })
+      }}
+    >
       {sequence.tracks.map((track, row) => (
         <TrackHeader
           key={track.id}

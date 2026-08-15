@@ -1,0 +1,169 @@
+import { act, fireEvent, render, screen, type RenderResult } from '@testing-library/react'
+import { StrictMode } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
+import { DEFAULT_TRACK_HEIGHT } from '@/engines/timeline/timeline-state'
+import { sequenceOf, useSequences } from '@/stores/sequences'
+import { useTimelineView, viewportOf } from '@/stores/timeline-view'
+import { TrackHeaders } from './TrackHeaders'
+
+/** Six rows in a column three high: the last three cannot be reached without the band moving. */
+const ROWS = 6
+const VISIBLE = 3 * DEFAULT_TRACK_HEIGHT
+const CONTENT = ROWS * DEFAULT_TRACK_HEIGHT
+const TOP = 1_000
+const BOTTOM = TOP + VISIBLE
+
+const frames = new Map<number, FrameRequestCallback>()
+let queued = 0
+let clock = 0
+
+/**
+ * Runs the frames queued so far, `ms` later.
+ *
+ * Hand-pumped rather than left to jsdom's own timer: the band's speed is written in pixels a
+ * SECOND, so a test that cannot say how much time passed cannot say how far it should have gone.
+ * Cancellation is honoured — a stub that ignores it would run the loop of a gesture that ended,
+ * which is exactly what one of the cases below is about.
+ */
+const advance = (ms: number): void => {
+  const due = [...frames.values()]
+  frames.clear()
+  clock += ms
+  act(() => {
+    for (const frame of due) frame(clock)
+  })
+}
+
+/**
+ * The box the column clips with, and the stack inside it — neither of which jsdom measures.
+ *
+ * Found by the transform, which is the column's own mechanism: it scrolls by moving the stack
+ * rather than by a native scroller, which is what keeps the headers in step with the strip
+ * painted beside them.
+ */
+const layout = (view: RenderResult, content: number): void => {
+  const stack = view.container.querySelector<HTMLElement>('[style*="translateY"]')
+  const clip = stack?.parentElement
+  if (!stack || !clip) throw new Error('the column no longer scrolls by transform')
+
+  Object.defineProperty(stack, 'offsetHeight', { configurable: true, value: content })
+  Object.defineProperty(clip, 'clientHeight', { configurable: true, value: VISIBLE })
+  clip.getBoundingClientRect = (): DOMRect => ({ top: TOP, bottom: BOTTOM }) as DOMRect
+}
+
+const scrollTop = (): number => viewportOf(useTimelineView.getState(), 'doc-1').scrollTop
+const ids = (): string[] => sequenceOf(useSequences.getState(), 'doc-1').tracks.map(t => t.id)
+
+const grab = (name: string, y: number): void => {
+  fireEvent.pointerDown(screen.getByRole('button', { name: `Déplacer la piste ${name}` }), {
+    clientY: y,
+  })
+}
+
+describe('a band that comes to the pointer', () => {
+  beforeEach(() => {
+    frames.clear()
+    queued = 0
+    clock = 0
+    vi.stubGlobal('requestAnimationFrame', (frame: FrameRequestCallback) => {
+      frames.set(++queued, frame)
+      return queued
+    })
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id))
+
+    useTimelineView.setState({ viewports: {} })
+    useSequences.setState({
+      states: {
+        'doc-1': sequenceWith(
+          [...Array(ROWS).keys()].map(row => trackFixture(`A${row + 1}`, 'audio')),
+        ),
+      },
+      histories: {},
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  /** A row taken by its grip and brought against the bottom edge, one frame in — see `advance`. */
+  const held = (content = CONTENT): void => {
+    const view = render(<TrackHeaders documentId="doc-1" />, { wrapper: StrictMode })
+    layout(view, content)
+    grab('A1', TOP + 10)
+    fireEvent.pointerMove(window, { clientY: BOTTOM - 4, buttons: 1 })
+    // The first frame of a gesture only sets the clock: nothing has passed yet, so nothing moves.
+    advance(0)
+  }
+
+  /**
+   * The whole reason this exists, measured on 15 August 2026: a panel docked at the foot of the
+   * screen puts the fourth and fifth tracks of a montage past the bottom of the WINDOW. No
+   * arithmetic in the gesture reaches them — the band has to come to the pointer.
+   */
+  it('travels while a row is held against its bottom edge', () => {
+    held()
+
+    advance(100)
+
+    expect(scrollTop()).toBeGreaterThan(0)
+  })
+
+  it('stops where the stack ends, however long the row is held there', () => {
+    held()
+
+    for (let tick = 0; tick < 60; tick++) advance(100)
+
+    expect(scrollTop()).toBe(CONTENT - VISIBLE)
+  })
+
+  // The pointer emits nothing while it is held still. Without the band's travel counting as
+  // travel of its own, the stack would slide past a row that never changed rank.
+  it('goes on placing the row while the band moves under a pointer that is still', () => {
+    held()
+
+    for (let tick = 0; tick < 60; tick++) advance(100)
+    fireEvent.pointerUp(window)
+
+    expect(ids().at(-1)).toBe('A1')
+  })
+
+  it('stands still once the row is dropped', () => {
+    held()
+    advance(100)
+    const reached = scrollTop()
+
+    fireEvent.pointerUp(window)
+    advance(1_000)
+
+    expect(scrollTop()).toBe(reached)
+  })
+
+  // Nothing to come to: a band whose whole stack is on screen must not creep when a row is
+  // dragged over its edge, which would move the strip beside it for no reason at all.
+  it('leaves a band alone when its whole stack is already on screen', () => {
+    held(VISIBLE)
+
+    advance(1_000)
+
+    expect(scrollTop()).toBe(0)
+  })
+
+  /**
+   * Reading a stack meant carrying the pointer off the very rows one was reading: the strip has
+   * always answered the wheel, the column of names never did.
+   */
+  it('answers the wheel over the names, and stops where the stack ends', () => {
+    const view = render(<TrackHeaders documentId="doc-1" />, { wrapper: StrictMode })
+    layout(view, CONTENT)
+    const column = view.container.firstElementChild
+    if (!column) throw new Error('the column no longer renders a box')
+
+    fireEvent.wheel(column, { deltaY: DEFAULT_TRACK_HEIGHT })
+    expect(scrollTop()).toBe(DEFAULT_TRACK_HEIGHT)
+
+    fireEvent.wheel(column, { deltaY: 10_000 })
+    expect(scrollTop()).toBe(CONTENT - VISIBLE)
+  })
+})
