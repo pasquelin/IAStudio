@@ -230,8 +230,8 @@ says so rather than inventing one:
 
 > *This action will upload an image, which then stays in your library. It costs no creative units.*
 
-In both cases, two buttons: **Allow** and **Refuse**. Refusing runs nothing, and the assistant
-takes it into account for what follows.
+In both cases, two buttons: **Allow** and **Don’t allow**. Declining runs nothing, and the
+assistant takes it into account for what follows.
 
 > **The question cannot be walked around.** Neither `Esc` nor a click outside closes it: an action
 > is waiting for the answer, and making it vanish would leave that action waiting for good. It has

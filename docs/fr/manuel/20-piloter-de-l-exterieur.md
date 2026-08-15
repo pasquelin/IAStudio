@@ -269,7 +269,7 @@ Une action refusée dit toujours pourquoi. Les motifs, et ce qu’ils veulent di
 | *Le formulaire ne porte aucune image de référence dont lire le style.* | posez une image sur le formulaire d’abord |
 | *Le formulaire a changé depuis l’annonce du coût. Rien n’a été envoyé — redemandez pour obtenir un nouveau chiffre.* | ce qui a été chiffré est ce qui part, jamais autre chose |
 
-Les quatre derniers motifs de fenêtre — *aucune fenêtre au premier plan*, *aucune fenêtre pour
+Les deux motifs de fenêtre — *aucune fenêtre au premier plan*, *aucune fenêtre pour
 donner l’accord* — **ne se rencontrent que depuis un programme extérieur**. L’assistant, lui, est
 dans la fenêtre : il y a toujours quelqu’un pour être demandé.
 
