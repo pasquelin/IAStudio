@@ -1,9 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { canUndo } from '@/engines/core/history'
 import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
-import type { Track } from '@/engines/timeline/timeline-state'
+import { DEFAULT_TRACK_HEIGHT, type Track } from '@/engines/timeline/timeline-state'
 import { sequenceHistoryOf, sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView } from '@/stores/timeline-view'
 import { TrackHeaders } from './TrackHeaders'
@@ -11,15 +12,14 @@ import { TrackHeaders } from './TrackHeaders'
 const trackOf = (id: string): Track | undefined =>
   sequenceOf(useSequences.getState(), 'doc-1').tracks.find(track => track.id === id)
 
+const install = (tracks: readonly Track[]): void => {
+  useSequences.setState({ states: { 'doc-1': sequenceWith([...tracks]) }, histories: {} })
+}
+
 describe('TrackHeaders', () => {
   beforeEach(() => {
     useTimelineView.setState({ viewports: {} })
-    useSequences.setState({
-      states: {
-        'doc-1': sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')]),
-      },
-      histories: {},
-    })
+    install([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
   })
 
   it('names one row per track', () => {
@@ -30,9 +30,7 @@ describe('TrackHeaders', () => {
   })
 
   it('gives each row the height its track carries', () => {
-    useSequences.setState({
-      states: { 'doc-1': sequenceWith([trackFixture('V1', 'video', [], { height: 90 })]) },
-    })
+    install([trackFixture('V1', 'video', [], { height: 90 })])
     render(<TrackHeaders documentId="doc-1" />)
 
     expect(screen.getByTestId('track-header-V1')).toHaveStyle({ height: '90px' })
@@ -171,6 +169,38 @@ describe('TrackHeaders', () => {
       drop()
 
       expect(sequenceHistoryOf(useSequences.getState(), 'doc-1').past).toHaveLength(before + 1)
+    })
+
+    /**
+     * The defect this was written against: climbing crossed as many rows as the pointer did,
+     * descending stopped after swapping with its immediate neighbour.
+     *
+     * `StrictMode` is what reproduces it, and it is not decoration: React only ever RELOCATES the
+     * child that is out of order — climbing that is the neighbour, descending it is the row being
+     * held — and StrictMode runs the effects of a relocated node again. That second run is what
+     * used to take the grab away. The studio mounts under `StrictMode` (`main.tsx`); dropped from
+     * here, this test goes green on the very defect it exists for.
+     */
+    it('carries the top track all the way to the bottom of the stack', () => {
+      install([
+        trackFixture('V1', 'video'),
+        trackFixture('V2', 'video'),
+        trackFixture('A1', 'audio'),
+        trackFixture('A2', 'audio'),
+      ])
+      render(
+        <StrictMode>
+          <TrackHeaders documentId="doc-1" />
+        </StrictMode>,
+      )
+
+      fireEvent.pointerDown(grip('V1'), { clientY: 0 })
+      dragTo(DEFAULT_TRACK_HEIGHT)
+      dragTo(2 * DEFAULT_TRACK_HEIGHT)
+      dragTo(3 * DEFAULT_TRACK_HEIGHT)
+      drop()
+
+      expect(ids()).toEqual(['V2', 'A1', 'A2', 'V1'])
     })
 
     // Held against the end of the stack, the drag banks nothing — otherwise bringing the pointer
