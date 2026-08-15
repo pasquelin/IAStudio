@@ -34,6 +34,35 @@ const entries = (store: ReturnType<typeof storeOf>): number =>
 const valueOf = (store: ReturnType<typeof storeOf>): string =>
   store.stateOf(store.use.getState(), 'doc').value
 
+describe('a document the store was told to forget', () => {
+  it('is not put back by a command that arrives after it closed', () => {
+    const store = storeOf()
+    store.use.getState().drop('doc')
+
+    store.use.getState().runCommand('doc', set('name', 'late'))
+
+    expect(store.hasState(store.use.getState(), 'doc')).toBe(false)
+  })
+
+  it('takes commands again once it is reopened', () => {
+    const store = storeOf()
+    store.use.getState().drop('doc')
+
+    store.use.getState().ensure('doc', () => ({ value: '' }))
+    store.use.getState().runCommand('doc', set('name', 'after'))
+
+    expect(valueOf(store)).toBe('after')
+  })
+
+  it('leaves a document that was never opened alone — it is created on the way in', () => {
+    const store = createDocumentStore<Text>({ value: '' })
+
+    store.use.getState().runCommand('fresh', set('name', 'first'))
+
+    expect(store.stateOf(store.use.getState(), 'fresh').value).toBe('first')
+  })
+})
+
 describe('a gesture held over a document', () => {
   it('collapses its own commands into one entry', () => {
     const store = storeOf()

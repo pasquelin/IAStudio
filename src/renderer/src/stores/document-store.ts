@@ -96,6 +96,12 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
    */
   const gestures = new Map<string, string | null>()
 
+  /**
+   * Documents this store has been told to forget, held until one is opened again. Outside the
+   * store for the same reason as `gestures`, and read by `step`, which says what it protects.
+   */
+  const dropped = new Set<string>()
+
   const stateOf = (state: Readable<S>, documentId: string): S =>
     state.states[documentId] ?? defaultState
 
@@ -136,11 +142,30 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
     /**
      * `run`, `undo` and `redo` share one signature, so the three actions share one body: read
      * the document's pair, step it, write it back.
+     *
+     * A document that was CLOSED is left alone, and that guard is what keeps it from coming back:
+     * `forgetDocument` drops the state and only THEN closes the panel, so every effect that
+     * commits on its way out — the rename field is the one that does — runs after the document is
+     * gone. Writing there would read the default state through `stateOf` and put it back as
+     * `states[documentId]`, which reads as a document already open: the file would never be read
+     * again, and the montage would reopen empty.
+     *
+     * Closed AND still gone, never one or the other. A document with no state yet is a normal
+     * thing to write to — a generation claimed onto a canvas whose tab was never touched creates
+     * it on the way in, and 28 cases across the stores describe that. And a document whose state
+     * came back is open again whichever door it came through, including the `setState` a suite
+     * installs its fixtures with.
+     *
+     * `forgetThrough` and `markSaved` write outside this path and are NOT guarded: called after a
+     * drop they leave an entry behind in `histories` or `saved`. Nothing reads those for a
+     * document with no state, so the leak is bookkeeping rather than behaviour.
      */
     const step = (
       documentId: string,
       apply: (state: S, history: History<S>) => [S, History<S>],
     ): void => {
+      if (dropped.has(documentId) && !hasState(get(), documentId)) return
+
       const [next, history] = apply(stateOf(get(), documentId), historyOf(get(), documentId))
       set(state => ({
         states: { ...state.states, [documentId]: next },
@@ -169,15 +194,21 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
 
       endGesture: documentId => gestures.delete(documentId),
 
-      replace: (documentId, next) =>
-        set(state => ({ states: { ...state.states, [documentId]: next } })),
+      // Both are how a document ARRIVES — read from disk, or opened blank — so both take the id
+      // back out of `dropped`: the same id is handed out again when a file is reopened.
+      replace: (documentId, next) => {
+        dropped.delete(documentId)
+        set(state => ({ states: { ...state.states, [documentId]: next } }))
+      },
 
-      ensure: (documentId, create) =>
+      ensure: (documentId, create) => {
+        dropped.delete(documentId)
         set(state =>
           state.states[documentId]
             ? state
             : { states: { ...state.states, [documentId]: create() } },
-        ),
+        )
+      },
 
       markSaved: (documentId, at) =>
         set(state => ({ saved: { ...state.saved, [documentId]: at } })),
@@ -209,6 +240,7 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
       drop: documentId =>
         set(state => {
           gestures.delete(documentId)
+          dropped.add(documentId)
 
           const states = { ...state.states }
           const histories = { ...state.histories }
