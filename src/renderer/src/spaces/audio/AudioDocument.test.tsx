@@ -199,6 +199,18 @@ describe('AudioDocument', () => {
     })
   })
 
+  /**
+   * The pair is what the space was missing: an editor alone showed ONE take while the strip
+   * below showed several, and nothing on screen said how the two were related. Each half says
+   * which one it is, under its own bar — that line is the whole explanation.
+   */
+  it('shows both halves of the pair, each saying which one it is', async () => {
+    await openTake()
+
+    expect(screen.getByText(/La prise que vous éditez/)).toBeInTheDocument()
+    expect(screen.getByText(/Le montage entier/)).toBeInTheDocument()
+  })
+
   it('asks for a take when none is open', () => {
     render(<AudioDocument documentId="doc-1" />)
     expect(screen.getByText(/Aucun son ouvert/)).toBeInTheDocument()

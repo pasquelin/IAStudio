@@ -1,33 +1,34 @@
-import { useCallback } from 'react'
-import type { CommandId } from '@shared/domain/command'
-import { useShortcuts } from '@/hooks/useShortcuts'
-import { useSoundTransport } from '@/spaces/audio/useSoundTransport'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { transports } from '@/engines/timeline/playback'
+import { playbackOf, usePlayback } from '@/stores/playback'
+import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { SequenceActions } from './SequenceActions'
 import { TimelineTransport } from './TimelineTransport'
 
 export type SoundActionsProps = { documentId: string }
 
 /**
- * What a sound montage puts on the panel's title bar: its own transport, then the montage tools.
+ * What a sound montage puts on the panel's title bar: its transport, then the montage tools.
  *
- * The transport lives HERE rather than in the panel below, and that is not an arbitrary split:
- * the Audio workspace has no monitor to hold one — its centre is the take being edited — so the
- * player has to hang off the one surface the montage always brings with it.
+ * The player itself lives in the programme monitor, as the picture pair's does — this row only
+ * asks it, through the registry both surfaces share. It used to be owned here, and the reason
+ * given was that the Audio workspace had no monitor to hold one; it has two now.
+ *
+ * The space bar is answered by the monitor, not from here: a strip and a tab both listening on
+ * the `sequence` scope would toggle playback twice on one press.
  */
 export function SoundActions({ documentId }: SoundActionsProps) {
   const sequence = useSequences(state => sequenceOf(state, documentId))
-  const transport = useSoundTransport(documentId, sequence)
+  const playing = usePlayback(state => playbackOf(state, documentId))
 
-  // The space bar, which nothing else in this workspace would answer: the strip leaves
-  // `sequence.playPause` to the programme monitor, and Audio has no monitor to leave it to.
-  const onCommand = useCallback(
-    (command: CommandId) => {
-      if (command === 'sequence.playPause') transport.toggle()
-    },
-    [transport],
-  )
-  useShortcuts({ scope: 'sequence', enabled: true, onCommand })
+  const rewind = (): void => {
+    const store = useSequences.getState()
+    transports.get(documentId)?.pause()
+    // The same guard the monitor writes its head behind: a document dropped while this row is
+    // still mounted would be rebuilt out of the store's default, a picture track and all.
+    if (sequenceStore.hasState(store, documentId)) {
+      store.replace(documentId, { ...sequenceOf(store, documentId), playhead: 0 })
+    }
+  }
 
   return (
     <SequenceActions
@@ -36,11 +37,11 @@ export function SoundActions({ documentId }: SoundActionsProps) {
       kinds={['audio']}
       lead={
         <TimelineTransport
-          playing={transport.playing}
+          playing={playing}
           time={sequence.playhead}
           fps={sequence.settings.fps}
-          onToggle={transport.toggle}
-          onRewind={transport.rewind}
+          onToggle={() => transports.toggle(documentId)}
+          onRewind={rewind}
         />
       }
     />

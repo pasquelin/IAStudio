@@ -182,7 +182,7 @@ function paintFades(
  * The waveform, filling the row under the label. Drawn as one path rather than a rectangle per
  * column: five hundred `fillRect` calls per clip is what a long montage cannot afford.
  */
-function paintWaveform(
+export function paintWaveform(
   context: CanvasRenderingContext2D,
   columns: readonly WaveColumn[],
   top: number,

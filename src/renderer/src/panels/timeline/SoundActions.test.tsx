@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SECOND } from '@shared/domain/time'
+import { transports } from '@/engines/timeline/playback'
 import { EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timeline-state'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
@@ -39,5 +40,21 @@ describe('the bar of a sound montage', () => {
     await userEvent.click(screen.getByRole('button', { name: /Retour au début/ }))
 
     expect(montage().playhead).toBe(0)
+  })
+
+  /**
+   * The player lives in the programme monitor now, as the picture pair's does — this row asks it
+   * through the registry both surfaces share. Owned here, it was a second player for a montage
+   * that already had one, and the workspace's single playback token would have arbitrated
+   * between two halves of the same document.
+   */
+  it('asks the monitor to play rather than holding a player of its own', async () => {
+    const play = vi.fn()
+    const stop = transports.register(DOCUMENT, { play, pause: vi.fn(), playing: () => false })
+
+    await userEvent.click(screen.getByRole('button', { name: /^Lire/ }))
+
+    expect(play).toHaveBeenCalledOnce()
+    stop()
   })
 })
