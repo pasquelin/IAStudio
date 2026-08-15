@@ -38,13 +38,15 @@
    * 4.508:1, over the 4.5 a menu row and a primary button need, for a blue no eye tells apart.
    *
    * It is pinned between TWO bars, and the window between them is 0.0052 of luminance wide.
-   * White needs the blue at or under 0.1833; the focus ring needs it at or over 0.1781, because
-   * `FOCUS_RING` draws in this very colour on the chassis and WCAG 1.4.11 asks a control for
-   * 3:1. At 0.1829 it clears both, by 0.008 and by 0.063 — measured, not rounded.
+   * White needs the blue at or under 0.1833; the accent drawn as a LINE needs it at or over
+   * 0.1781, because WCAG 1.4.11 asks 3:1 of a control — the title bar's drop target rings a
+   * space in this very colour on the chassis. At 0.1829 it clears both, by 0.008 and by 0.063 —
+   * measured, not rounded. (The focus ring was the other side of that bar until 2026-08-15,
+   * when the studio stopped drawing one; the bar itself did not move.)
    *
-   * **A first darkening to #336fe6 landed at 0.1779 and broke the ring at 2.997**, which reads
-   * as 3.00 at two decimals and was written down as if it passed. Two decimals are not enough
-   * for this token: `design/tokens.test.ts` now measures the ring rather than trusting a comment.
+   * **A first darkening to #336fe6 landed at 0.1779 and broke it at 2.997**, which reads as
+   * 3.00 at two decimals and was written down as if it passed. Two decimals are not enough
+   * for this token: `design/tokens.test.ts` now measures it rather than trusting a comment.
    */
   --color-accent: #346ef2;
   /*
@@ -543,6 +545,24 @@ body,
  */
 .react-tooltip .react-tooltip-content-wrapper {
   padding: 0;
+}
+
+/*
+ * NO focus ring anywhere in the studio — the owner's call, taken on 2026-08-15 after the one on
+ * the title bar was seen clipped by the bar's own `overflow-hidden`.
+ *
+ * Here and not in `design/styles.ts` because "anywhere" includes what no constant of ours dresses:
+ * Chromium's native outline, daisyUI's on the preference surfaces, and every component written
+ * after this line. A `FOCUS_RING` each caller had to remember to carry could not hold that.
+ *
+ * `!important` for the same reason: daisyUI states its own with two class names, and this rule
+ * has one. What it costs is stated plainly — WCAG 2.4.7 asks for a visible focus indicator, and
+ * the studio no longer has one; keyboard focus moves without anything on screen following it.
+ * `design/no-focus-ring.test.ts` keeps a ring from creeping back in one component at a time.
+ */
+:focus,
+:focus-visible {
+  outline: none !important;
 }
 
 body {

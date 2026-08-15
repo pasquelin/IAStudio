@@ -1,5 +1,5 @@
 import { cn } from '@/helpers/cn'
-import { FIELD_LABEL, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
+import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
 export type ColorFieldProps = GestureProps & {
   label: string
@@ -36,7 +36,6 @@ export function ColorField({
         className={cn(
           'border-border h-(--sc-control) w-8 shrink-0 cursor-pointer',
           'rounded-(--radius-sc-sm) border bg-transparent p-0.5',
-          FOCUS_RING,
         )}
       />
 

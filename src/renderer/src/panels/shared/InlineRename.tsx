@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { FIELD, FOCUS_RING } from '@/design/styles'
+import { FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 
 export type InlineRenameProps = {
@@ -117,7 +117,7 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
       autoFocus
       aria-label={label}
       value={draft}
-      className={cn(FIELD, FOCUS_RING, 'w-full')}
+      className={cn(FIELD, 'w-full')}
       onPointerDown={event => event.stopPropagation()}
       onChange={event => setDraft(event.target.value)}
       onBlur={done}

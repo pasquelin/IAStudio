@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   BUTTON_NEUTRAL,
-  FOCUS_RING,
   OVERLAY_BUTTON,
   ROW_INK,
   ROW_QUIET,
@@ -199,7 +198,7 @@ describe('the row skin and the state it publishes', () => {
  * The loud fill, for the one list whose selection says WHERE ONE IS rather than what a gesture
  * gathered. Every assertion here is a measurement, not a taste: `--color-accent` is pinned at
  * 4.508:1 against pure white, so on that fill nothing but `accent-content` clears WCAG 1.4.3 —
- * `text` reads 3.44 — and `FOCUS_RING` draws in `accent`, which on an accent fill is 1:1.
+ * `text` reads 3.44.
  *
  * `design/tokens.test.ts` owns the ratios themselves; what this file owns is that the skin and the
  * two inks actually ASK for them.
@@ -216,17 +215,7 @@ describe('the loud fill of a row that says where one is', () => {
     expect(rowSkin(true)).toBe(rowSkin(true, { tone: 'soft' }))
   })
 
-  /**
-   * The ring would otherwise be `accent` on `accent` — 1:1, and therefore no focus indicator at
-   * all on the single row where a keyboard most needs one. Overridden last so `cn` keeps it.
-   */
-  it('takes the ring off the accent it would otherwise be invisible against', () => {
-    expect(rowSkin(true, { tone: 'strong' })).toContain('focus-visible:ring-accent-content')
-    expect(rowSkin(true, { tone: 'strong' })).not.toContain('focus-visible:ring-accent ')
-    expect(rowSkin(true, { tone: 'soft' })).toContain('focus-visible:ring-accent')
-  })
-
-  // Only a SELECTED row is filled, so an unselected one must keep the ordinary ring and hover.
+  // Only a SELECTED row is filled, so an unselected one must keep the ordinary hover.
   it('changes nothing about a row that is not the one open', () => {
     expect(rowSkin(false, { tone: 'strong' })).toBe(rowSkin(false, { tone: 'soft' }))
   })
@@ -260,16 +249,6 @@ describe('the loud fill of a row that says where one is', () => {
     expect(ROW_QUIET).toContain(
       'group-data-accented/row:group-data-selected/row:text-accent-content',
     )
-  })
-
-  /**
-   * A control INSIDE such a row — the rename field, its menu button — draws the studio's one focus
-   * ring, and that ring is the accent: on an accent fill it is 1:1, so a keyboard sees nothing at
-   * all (WCAG 2.4.7). Fixed on the indicator rather than at each caller, since "must not draw in
-   * accent over an accent fill" is a property of the ring.
-   */
-  it('takes the ring of a control standing inside such a row off the accent too', () => {
-    expect(FOCUS_RING).toContain('group-data-accented/row:focus-visible:ring-accent-content')
   })
 
   /**

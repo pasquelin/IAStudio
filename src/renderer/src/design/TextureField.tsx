@@ -10,7 +10,7 @@ import { Flyout } from './Flyout'
 import { Thumbnail } from './Thumbnail'
 import { MenuRow } from './MenuRow'
 import { Row } from './Row'
-import { FIELD_THUMBNAIL, FOCUS_RING, OVERLAY_BUTTON } from './styles'
+import { FIELD_THUMBNAIL, OVERLAY_BUTTON } from './styles'
 import { ToolButton } from './ToolButton'
 
 export type TextureOption = {
@@ -242,10 +242,8 @@ export function TextureField({
 const MENU_TRIGGER = cn(OVERLAY_BUTTON, 'rounded-(--radius-sc-md)')
 
 /** The picture's own press, which is a second surface rather than a second meaning of one gesture. */
-const OPEN_PICTURE = cn(
-  'relative shrink-0 cursor-pointer rounded-(--radius-sc-md) border-none bg-transparent p-0',
-  FOCUS_RING,
-)
+const OPEN_PICTURE =
+  'relative shrink-0 cursor-pointer rounded-(--radius-sc-md) border-none bg-transparent p-0'
 
 /**
  * The row itself, made a drop target only where a drop means something.

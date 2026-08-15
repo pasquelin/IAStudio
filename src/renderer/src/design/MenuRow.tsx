@@ -88,8 +88,9 @@ export function MenuRow({
         'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
         'disabled:hover:text-text',
         // The keyboard walks these rows without the pointer being anywhere near them, so the
-        // focused row has to light up on its own — `hover:` alone left the walk invisible.
-        'focus-visible:bg-accent focus-visible:text-accent-content focus-visible:outline-none',
+        // focused row has to light up on its own — `hover:` alone left the walk invisible. A FILL
+        // and not a ring: the studio draws none any more, and `index.css` says why.
+        'focus-visible:bg-accent focus-visible:text-accent-content',
       )}
       onClick={onSelect}
     >

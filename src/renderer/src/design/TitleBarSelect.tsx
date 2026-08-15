@@ -4,7 +4,7 @@ import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
 import { Flyout } from './Flyout'
-import { FOCUS_RING, TITLE_BAR_GHOST } from './styles'
+import { TITLE_BAR_GHOST } from './styles'
 import { UiIcon } from './UiIcon'
 
 export type TitleBarSelectProps = {
@@ -61,14 +61,7 @@ export function TitleBarSelect({
         // selectors, the gesture that opens every other menu of the studio did nothing.
         {...flyout.triggerProps}
         onClick={flyout.hasFlyout ? flyout.open : onAct}
-        // The ring is the caller's job on `TITLE_BAR_GHOST`, and its own doc says so: without it
-        // the platform draws an outline in a blue that belongs to no theme.
-        className={cn(
-          TITLE_BAR_GHOST,
-          FOCUS_RING,
-          'text-tiny h-(--sc-control) gap-1.5 px-2',
-          width,
-        )}
+        className={cn(TITLE_BAR_GHOST, 'text-tiny h-(--sc-control) gap-1.5 px-2', width)}
       >
         {leading}
         <span className="truncate">{label}</span>

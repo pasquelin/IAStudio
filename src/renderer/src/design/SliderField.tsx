@@ -1,7 +1,6 @@
-import { cn } from '@/helpers/cn'
 import { bound } from '@shared/numeric'
 import { Readout } from './Readout'
-import { FIELD_LABEL, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
+import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
 export type SliderFieldProps = GestureProps & {
   label: string
@@ -45,7 +44,7 @@ export function SliderField({
         onPointerUp={() => onGestureEnd?.()}
         onFocus={() => onGestureStart?.()}
         onBlur={() => onGestureEnd?.()}
-        className={cn('accent-accent h-(--sc-control) min-w-0 flex-1', FOCUS_RING)}
+        className="accent-accent h-(--sc-control) min-w-0 flex-1"
       />
 
       <Readout values={[value]} />

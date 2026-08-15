@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { CLICKABLE, DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { showContextMenu } from '@/helpers/context-menu'
-import { TITLE_BAR_GHOST, FOCUS_RING } from '@/design/styles'
+import { TITLE_BAR_GHOST } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { bindingOf, commandFor } from '@shared/domain/command'
 import { signatureOf } from '@shared/domain/shortcut'
@@ -264,8 +264,6 @@ function BarButton({ icon, label, current, onClick, reorder }: BarButtonProps) {
         // A ring rather than a fill: `accent-soft` sits at 1.03:1 on the light chassis, and it
         // would also take the active pill's own background away from it.
         reorder?.over && 'ring-accent text-text ring-2',
-        // Without it the platform draws its own outline, in a blue that belongs to no theme.
-        FOCUS_RING,
       )}
     >
       <UiIcon path={icon} size={16} />

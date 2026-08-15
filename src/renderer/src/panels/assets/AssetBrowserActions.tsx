@@ -8,10 +8,8 @@ import { useTranslation } from 'react-i18next'
 import { useToolLying } from '@/app/tool-zone'
 import { getBridge } from '@/services/bridge'
 import { CollectionBar } from '@/design/CollectionBar'
-import { FOCUS_RING } from '@/design/styles'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
-import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
@@ -68,10 +66,7 @@ export function AssetBrowserActions() {
         <span
           role="img"
           tabIndex={0}
-          className={cn(
-            'text-warning inline-flex shrink-0 items-center rounded-(--radius-sc-sm)',
-            FOCUS_RING,
-          )}
+          className="text-warning inline-flex shrink-0 items-center rounded-(--radius-sc-sm)"
           {...TIP_BOTTOM(t('ingest.noFfmpeg'))}
         >
           <UiIcon path={mdiAlertOutline} size={14} />

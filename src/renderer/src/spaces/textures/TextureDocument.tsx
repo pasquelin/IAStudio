@@ -24,7 +24,6 @@ import { placeTextureChannel } from './place-channel'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
-import { FOCUS_RING } from '@/design/styles'
 
 /**
  * A texture handed to an engine, from the row of the native menu that was picked.
@@ -170,7 +169,6 @@ export function TextureDocument({ documentId }: { documentId: string }) {
           className={cn(
             'bg-viewport absolute inset-0 flex items-center justify-center border-none p-4',
             'cursor-pointer disabled:cursor-default',
-            FOCUS_RING,
           )}
         >
           <img

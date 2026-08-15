@@ -1,7 +1,7 @@
 import { cn } from '@/helpers/cn'
 import { bound } from '@shared/numeric'
 import { Readout } from './Readout'
-import { FIELD_LABEL, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
+import { FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
 /** Both ends of one value, kept in order. Declared here rather than imported from an engine:
  * `design/` describes controls, and a field that reached into a workspace would tie the two. */
@@ -17,7 +17,6 @@ const HANDLE = cn(
   'absolute inset-0 m-0 h-full w-full appearance-none bg-transparent pointer-events-none',
   '[&::-webkit-slider-thumb]:pointer-events-auto [&::-moz-range-thumb]:pointer-events-auto',
   'accent-accent',
-  FOCUS_RING,
 )
 
 export type RangeFieldProps = GestureProps & {

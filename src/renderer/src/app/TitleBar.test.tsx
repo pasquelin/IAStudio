@@ -9,7 +9,6 @@ import { TitleBar } from './TitleBar'
 
 let menu = fakeMenu()
 
-/** `classList`, never `className`: `FOCUS_RING` already carries a `focus-visible:ring-accent`. */
 function pill(name: string): HTMLElement {
   return screen.getByRole('button', { name })
 }

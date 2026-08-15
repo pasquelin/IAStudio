@@ -7,22 +7,6 @@ import { cn } from '@/helpers/cn'
  */
 
 /**
- * The focus ring on its own, for controls that carry their own shape.
- *
- * The second line is for a control sitting INSIDE a row filled with the accent — the rename field
- * of the open project, its menu button. The ring draws in `accent`, so on that fill it is 1:1 and
- * therefore no indicator at all (WCAG 2.4.7). Read off `rowSkin`'s group, as the two row inks are,
- * so no list passes state down; outside such a row the attribute never appears.
- *
- * It does NOT cover the row cell itself, and cannot: `group/row` and `data-accented` sit on the
- * same element there, and a `group-*` variant only looks at ancestors. `rowSkin` overrides its own.
- */
-export const FOCUS_RING = cn(
-  'outline-none focus-visible:ring-accent focus-visible:ring-1',
-  'group-data-accented/row:focus-visible:ring-accent-content',
-)
-
-/**
  * The chrome every button of the docks shares, whether it carries a glyph or a label. Its own
  * gauge is left to the caller: `ToolButton` is square, `Button` is as wide as its word.
  */
@@ -30,15 +14,14 @@ export const BUTTON_BASE = cn(
   'inline-flex cursor-pointer items-center justify-center rounded-(--radius-sc-md)',
   'border-none transition-colors',
   'disabled:cursor-not-allowed disabled:opacity-40',
-  FOCUS_RING,
 )
 
 /**
  * What a button of the docks is FILLED with when it is not the one action a surface exists for —
  * the fill, the ink written on it, and what the pointer does to that fill.
  *
- * Apart from `BUTTON_BASE` because the two answer different questions: that one is the shape and
- * the focus ring, this one is the colour. **A site can want the chrome and not the fill, and
+ * Apart from `BUTTON_BASE` because the two answer different questions: that one is the shape,
+ * this one is the colour. **A site can want the chrome and not the fill, and
  * `ToolButton` is the witness**: it takes `BUTTON_BASE` over `bg-transparent`, because a tool sits
  * on the bar it belongs to rather than on a surface of its own.
  *
@@ -67,20 +50,13 @@ export const BUTTON_NEUTRAL = 'bg-surface text-text hover:bg-elevated'
  * rest and lights up under the pointer is a decision for the host to take (`rowSkin`), not one
  * this shape should smuggle in.
  */
-export const OVERLAY_BUTTON = cn(
-  'absolute inset-0 cursor-pointer border-none bg-transparent',
-  FOCUS_RING,
-)
+export const OVERLAY_BUTTON = 'absolute inset-0 cursor-pointer border-none bg-transparent'
 
 /**
  * The control language shared by the bars: same height token, so the density setting reaches
- * every one of them at once, and the same focus ring, so no bar ends up being the one control
- * a keyboard user cannot see.
+ * every one of them at once.
  */
-export const CONTROL = cn(
-  'bg-surface text-text h-(--sc-control) rounded-(--radius-sc-md) text-tiny',
-  FOCUS_RING,
-)
+export const CONTROL = 'bg-surface text-text h-(--sc-control) rounded-(--radius-sc-md) text-tiny'
 
 /**
  * A button of the status line, of which there are three. Icon-only, each measured 12 x 12 —
@@ -137,16 +113,14 @@ export type RowTone = 'soft' | 'strong'
 export const ROW_LINE = 'flex h-full items-center px-1'
 
 /**
- * Hover, selection and keyboard focus of one line in a list. The same line must not light up
- * differently depending on whether a `Tree` or a `Collection` is holding it.
+ * Hover and selection of one line in a list. The same line must not light up differently
+ * depending on whether a `Tree` or a `Collection` is holding it.
  *
- * `strong` costs two things beyond the fill, and both are measured rather than chosen: the ink and
- * the focus ring. Nothing but pure white clears WCAG 1.4.3 on `accent` — the token is pinned at
- * 4.508:1 against white, so `text` at 3.44 does not — hence `data-accented`, which `ROW_INK` and
- * `ROW_QUIET` read to swap BOTH the name and its subtitle to `accent-content`. The size is what
- * keeps the two apart on that fill, since the colour no longer can. And `FOCUS_RING` draws in
- * `accent`, which on an accent fill is 1:1 and therefore no ring at all: it is overridden here,
- * last-wins through `cn`, so a keyboard can still see where it is on the one row it matters on.
+ * `strong` costs one thing beyond the fill, and it is measured rather than chosen: the ink.
+ * Nothing but pure white clears WCAG 1.4.3 on `accent` — the token is pinned at 4.508:1 against
+ * white, so `text` at 3.44 does not — hence `data-accented`, which `ROW_INK` and `ROW_QUIET` read
+ * to swap BOTH the name and its subtitle to `accent-content`. The size is what keeps the two
+ * apart on that fill, since the colour no longer can.
  *
  * Everything past `selected` is named rather than positional, and `surface` is why: it arrived as
  * a fourth boolean, and the one call that needed it had to spell out the two defaults in front of
@@ -199,8 +173,6 @@ export function rowSkin(
     // that does nothing. `MenuRow` reached the same pair on its own — this is where a list row
     // gets it, so `Tree` inherits it too.
     disabled && 'cursor-not-allowed opacity-40',
-    FOCUS_RING,
-    accented && 'focus-visible:ring-accent-content',
   )
 }
 
@@ -277,7 +249,6 @@ export function chipSkin(active: boolean): string {
   return cn(
     'h-(--sc-control) cursor-pointer rounded-(--radius-sc-sm) border-none px-2 text-xs',
     active ? 'bg-elevated text-text' : 'text-muted hover:text-text bg-transparent',
-    FOCUS_RING,
   )
 }
 
@@ -385,10 +356,8 @@ export type GestureProps = {
  * A value the user types into: the generation form's fields and the inspector's. Its own shape
  * — bordered, tighter corners — because a field is something to fill in, not a bar control.
  */
-export const FIELD = cn(
-  'bg-surface border-border text-text h-(--sc-control) rounded-(--radius-sc-sm) border px-2',
-  FOCUS_RING,
-)
+export const FIELD =
+  'bg-surface border-border text-text h-(--sc-control) rounded-(--radius-sc-sm) border px-2'
 
 /**
  * The surface a menu wears, whether it hangs from a control or opens at the pointer. Its width

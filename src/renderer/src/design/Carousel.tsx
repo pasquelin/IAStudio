@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
-import { FOCUS_RING, SHELF_OVERLAY } from './styles'
+import { SHELF_OVERLAY } from './styles'
 import { TIP_BOTTOM, TIP_TOP } from '@/helpers/tooltip'
 import { UiIcon } from './UiIcon'
 import { GAP } from './virtual'
@@ -174,10 +174,7 @@ export function Carousel<T extends { id: string }>({
         onScroll={measure}
         onKeyDown={onKeyDown}
         style={{ height: itemHeight }}
-        className={cn(
-          'snap-x snap-proximity overflow-x-auto overflow-y-hidden scroll-smooth',
-          FOCUS_RING,
-        )}
+        className="snap-x snap-proximity overflow-x-auto overflow-y-hidden scroll-smooth"
       >
         <div style={{ width: virtualizer.getTotalSize() }} className="relative h-full">
           {virtualItems.map(virtual => {
@@ -222,7 +219,6 @@ export function Carousel<T extends { id: string }>({
                 'h-1.5 cursor-pointer rounded-full border-none p-0',
                 'transition-[background-color,width]',
                 page === position.page ? 'bg-text w-4' : 'bg-muted hover:bg-text w-1.5',
-                FOCUS_RING,
               )}
             />
           ))}

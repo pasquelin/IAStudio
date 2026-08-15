@@ -538,10 +538,14 @@ describe('the contrast of the inks', () => {
   })
 
   /**
-   * The accent as a CONTROL against the surfaces it is drawn over — the focus ring, first of
-   * all, which `FOCUS_RING` paints in this very colour and which is the only thing saying where
-   * the keyboard is. WCAG 1.4.11 asks 3:1 of it, and that is the second bar the accent is pinned
-   * between: white on it needs the blue dark, the ring needs it light.
+   * The accent as a CONTROL against the surfaces it is drawn over — the title bar's drop target,
+   * which rings the space a dragged pill would land in, and which is the only thing saying that
+   * the drop will be taken. WCAG 1.4.11 asks 3:1 of it, and that is the second bar the accent is
+   * pinned between: white on it needs the blue dark, a line drawn in it needs the blue light.
+   *
+   * The focus ring was this bar's first holder and is gone since 2026-08-15
+   * (`design/no-focus-ring.test.ts`). The measurement stayed: the accent is still drawn as a
+   * line, and a bar that outlives the reason it was written is a bar that has to name a new one.
    *
    * **Written because the pair went unmeasured and broke.** On 2026-08-12 the accent was darkened
    * to #336fe6 for the ink alone, taking the ring to 2.997 — under the bar, and recorded in a

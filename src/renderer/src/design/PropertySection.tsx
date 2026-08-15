@@ -1,7 +1,7 @@
 import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { FOCUS_RING, PROPERTY_BODY } from './styles'
+import { PROPERTY_BODY } from './styles'
 import { UiIcon } from './UiIcon'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useTranslation } from 'react-i18next'
@@ -28,7 +28,6 @@ export function PropertySection({ title, children, defaultOpen = true }: Propert
         className={cn(
           'text-text flex h-(--sc-control) w-full cursor-pointer items-center gap-2',
           'text-tiny border-none bg-transparent px-2 text-left font-medium tracking-wide uppercase',
-          FOCUS_RING,
         )}
       >
         <UiIcon path={open ? mdiChevronDown : mdiChevronRight} size={14} />

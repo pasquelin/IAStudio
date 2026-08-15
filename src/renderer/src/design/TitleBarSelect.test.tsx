@@ -50,14 +50,6 @@ describe('TitleBarSelect', () => {
     expect(button().querySelector('.truncate')).toHaveTextContent('Été')
   })
 
-  // `TITLE_BAR_GHOST` leaves the ring to its caller, and two of the three that wear it had
-  // forgotten: without it the platform draws an outline in a blue that belongs to no theme.
-  it('carries the focus ring the ghost skin leaves to its caller', () => {
-    mount()
-
-    expect(button()).toHaveClass('focus-visible:ring-accent')
-  })
-
   it('opens its rows on a click, and a row closes what it was chosen from', async () => {
     mount()
 
