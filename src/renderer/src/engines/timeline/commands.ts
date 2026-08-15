@@ -1,5 +1,6 @@
+import type { Asset } from '@shared/domain/asset'
 import { composed, type Command } from '../core/history'
-import type { ClipPlacement } from './insert'
+import { clipForAsset, newTracksForAsset, pairedPlacements, type ClipPlacement } from './insert'
 import {
   clampFades,
   clampGain,
@@ -147,6 +148,56 @@ export function addClips(placements: readonly ClipPlacement[]): Command<Sequence
   )
 
   return { ...all, apply: state => ({ ...all.apply(state), selectedId: aimed }) }
+}
+
+/**
+ * Lays an asset down on rows opened for it — what a drop into the empty space below the last
+ * track comes to, and what makes that space usable instead of inert.
+ *
+ * ONE history entry, rows included: ⌘Z after a drop that opened two tracks has to take back both
+ * the clips and the rows, or the montage grows a pair of empty tracks every time one is undone.
+ *
+ * Composed on the first apply and KEPT, exactly as `acrossLink` is, and for a sharper reason:
+ * `addTrack` decides its own name as it runs, and the clips are laid on the names it chose.
+ * Rebuilding the parts on redo would name rows that undo had already taken away.
+ */
+export function addClipsOnNewTracks(
+  asset: Asset | null,
+  assetId: string,
+  start: Us,
+): Command<SequenceState> {
+  let parts: Command<SequenceState>[] | null = null
+
+  return {
+    id: `add:tracks:${assetId}`,
+    apply: state => {
+      if (parts) return parts.reduce((current, part) => part.apply(current), state)
+
+      const kinds = newTracksForAsset(state, asset)
+      // Nothing this montage would open a row for — a rush over a sound montage. Handed back
+      // untouched, which is how every command here refuses.
+      if (kinds.length === 0) return state
+
+      const adds = kinds.map(addTrack)
+      const opened = adds.reduce((current, add) => add.apply(current), state)
+      // The rows just opened, in the order they were asked for: `addTrack` appends at the bottom
+      // and names itself as it runs, so reading them off the tail is the only way to their ids.
+      const [target, sound] = opened.tracks.slice(-kinds.length)
+      if (!target) return state
+
+      const laid = addClips(
+        pairedPlacements(
+          clipForAsset(assetId, asset, start, state.settings),
+          target.id,
+          sound?.id ?? null,
+        ),
+      )
+      parts = [...adds, laid]
+      return laid.apply(opened)
+    },
+    revert: state =>
+      parts ? parts.reduceRight((current, part) => part.revert(current), state) : state,
+  }
 }
 
 export function addClip(trackId: string, clip: Clip): Command<SequenceState> {

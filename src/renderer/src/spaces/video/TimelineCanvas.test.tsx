@@ -2,10 +2,20 @@ import { act, fireEvent, render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { addClip } from '@/engines/timeline/commands'
-import { RULER_HEIGHT, timeToX, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
+import {
+  RULER_HEIGHT,
+  timeToX,
+  tracksHeight,
+  xToTime,
+  type Viewport,
+} from '@/engines/timeline/timeline-geometry'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
 import type { Clip } from '@/engines/timeline/timeline-state'
-import { EMPTY_SEQUENCE, snapToFrame } from '@/engines/timeline/timeline-state'
+import {
+  EMPTY_SEQUENCE,
+  EMPTY_SOUND_SEQUENCE,
+  snapToFrame,
+} from '@/engines/timeline/timeline-state'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { fakeMenu } from '@/helpers/menu-fixtures'
@@ -136,6 +146,51 @@ describe('TimelineCanvas', () => {
   it('refuses a drop on the ruler, which holds no track', () => {
     fireEvent.drop(paint(), { clientX: 200, clientY: 4, dataTransfer: dataTransfer('asset-1') })
     expect(clipsOf()).toHaveLength(0)
+  })
+
+  /** Well below the last row of a montage that opens on two, whatever their height. */
+  const BELOW_THE_TRACKS = RULER_HEIGHT + tracksHeight(EMPTY_SEQUENCE) + 20
+
+  it('opens the rows a drop below the last track needs, rather than refusing it', async () => {
+    useAssets.setState({
+      items: [asset({ probe: { duration: 5_000_000, codec: 'avc1', channels: 2 } })],
+    })
+
+    fireEvent.drop(paint(), {
+      clientX: 200,
+      clientY: BELOW_THE_TRACKS,
+      dataTransfer: dataTransfer('asset-1'),
+    })
+
+    // Settled first: a drop resolves through `droppedAsset`, which fetches a library asset
+    // before handing it over — so the clip is added a microtask after the gesture.
+    await Promise.resolve()
+
+    const { tracks } = sequenceOf(useSequences.getState(), 'doc-1')
+    expect(tracks.map(track => track.id)).toEqual(['V1', 'A1', 'V2', 'A2'])
+    expect(tracks[2]?.clips[0]).toMatchObject({ assetId: 'asset-1', start: 2_000_000 })
+    expect(tracks[3]?.clips).toHaveLength(1)
+  })
+
+  // Left to bubble rather than swallowed, so the shell still answers it by opening the asset:
+  // the Audio workspace has no monitor to paint a rush on, and opens no picture row for one.
+  it('leaves a rush dropped below a sound montage to the shell', () => {
+    act(() => {
+      useSequences.getState().replace('doc-1', EMPTY_SOUND_SEQUENCE)
+    })
+
+    const shell = vi.fn()
+    document.body.addEventListener('drop', shell)
+    fireEvent.drop(paint(), {
+      clientX: 200,
+      // Its own rows, which outnumber a sequence's: the empty space starts lower here.
+      clientY: RULER_HEIGHT + tracksHeight(EMPTY_SOUND_SEQUENCE) + 20,
+      dataTransfer: dataTransfer('asset-1'),
+    })
+    document.body.removeEventListener('drop', shell)
+
+    expect(shell).toHaveBeenCalled()
+    expect(sequenceOf(useSequences.getState(), 'doc-1').tracks).toHaveLength(4)
   })
 
   // The one half `AssetDropTarget` shares with it: a surface that prevents every dragover

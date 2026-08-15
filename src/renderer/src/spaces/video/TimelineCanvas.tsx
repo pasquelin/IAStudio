@@ -7,6 +7,7 @@ import { isTimeless, mediaDuration, posterUrl } from '@shared/domain/asset'
 import type { Command } from '@/engines/core/history'
 import {
   addClips,
+  addClipsOnNewTracks,
   removeClip,
   splitClip,
   unlinkClip,
@@ -18,7 +19,7 @@ import {
   viewportForGesture,
   type Gesture,
 } from '@/engines/timeline/interactions'
-import { placementsForAsset } from '@/engines/timeline/insert'
+import { newTracksForAsset, opensTrackFor, placementsForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
 import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import type { Point, Size } from '@/engines/core/geometry'
@@ -39,7 +40,7 @@ import {
   zoomAt,
   ZOOM_STEP,
 } from '@/engines/timeline/viewport'
-import { assetIdFromDrag, carriesAsset, droppedAsset } from '@/helpers/asset-drag'
+import { assetIdFromDrag, carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
 import { showContextMenu } from '@/helpers/context-menu'
 import { cachedImage } from '@/helpers/image-cache'
@@ -431,15 +432,17 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     // otherwise land wherever the cursor happened to be a download later.
     const point = pointAt(event)
     const target = hitTest(sequence, viewport, point)
-    // Left to bubble on purpose when it landed on nothing: the ruler takes no clip, and a drop
-    // this surface does not use is one the shell should still answer by opening the asset.
-    if (!target || target.kind === 'ruler') return
+    // Left to bubble on purpose: the ruler takes no clip, and a drop this surface does not use
+    // is one the shell should still answer by opening the asset. Below the last row the same
+    // holds for a kind no track would be opened for — a rush over a sound montage.
+    if (target?.kind === 'ruler') return
+    if (!target && !opensTrackFor(sequence, draggedAssetType(event))) return
 
     // Taken from here on — see `AssetDropTarget`, which consumes for the same reason.
     event.stopPropagation()
 
     const start = xToTime(point.x, viewport)
-    const { trackId } = target
+    const trackId = target?.trackId
 
     void droppedAsset(event).then(asset => {
       // Nothing to lay down: a library asset whose fetch was refused has no row, and a clip
@@ -454,6 +457,16 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
       // fetched first, and the montage may have been edited while it came down.
       const store = useSequences.getState()
       const current = sequenceOf(store, documentId)
+
+      // Landed below the last row: the drop opens the rows it needs rather than refusing — a
+      // picture row, and the sound row beside it for a take that carries one.
+      if (!trackId) {
+        if (newTracksForAsset(current, asset).length > 0) {
+          store.runCommand(documentId, addClipsOnNewTracks(asset, asset.id, start))
+        }
+        return
+      }
+
       const placements = placementsForAsset(current, asset, asset.id, start, trackId)
       if (placements.length > 0) store.runCommand(documentId, addClips(placements))
     })
