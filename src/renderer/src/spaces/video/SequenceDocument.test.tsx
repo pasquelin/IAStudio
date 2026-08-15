@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
-import type { SequenceState } from '@/engines/timeline/timeline-state'
+import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timeline-state'
 import { TimelinePanel } from '@/panels/timeline/TimelinePanel'
 import { useDocuments } from '@/stores/documents'
-import { useSequences } from '@/stores/sequences'
+import { sequenceStore, useSequences } from '@/stores/sequences'
 import { SequenceDocument } from './SequenceDocument'
 
 const play = vi.fn()
@@ -26,7 +26,11 @@ vi.mock('@/engines/timeline/TimelineEngine', () => ({
     pause = pause
     playing = vi.fn(() => false)
     openSinks = vi.fn(() => 0)
-    dispose = vi.fn()
+    // Faithful on this one point, because a case below turns on it: the real `dispose` pauses,
+    // and pausing reports the time one last time (`TimelineEngine.pause`).
+    dispose = vi.fn(() => this.deps.onTime?.(0))
+
+    constructor(private deps: { onTime?: (time: number) => void }) {}
   },
 }))
 
@@ -52,6 +56,22 @@ describe('SequenceDocument', () => {
 
     expect(screen.getByText('Source')).toBeInTheDocument()
     expect(screen.getByText('Programme')).toBeInTheDocument()
+  })
+
+  // `forgetDocument` drops the document BEFORE React unmounts this tab, and disposing the engine
+  // reports the time one last time. Writing then would build the montage back out of the store's
+  // default — and the file would never be read again, since the document reads as open.
+  // On an id of its own, deliberately: the store's `dropped` mark outlives a case, and a `doc-1`
+  // dropped here would silence the commands of every case below — the fixtures reinstall state
+  // with `setState`, which is not a door the mark is lifted at.
+  it('does not build a closed montage back when the monitor reports one last time', () => {
+    useSequences.setState({ states: { closing: EMPTY_SEQUENCE }, histories: {} })
+    const view = render(<SequenceDocument documentId="closing" />)
+
+    useSequences.getState().drop('closing')
+    view.unmount()
+
+    expect(sequenceStore.hasState(useSequences.getState(), 'closing')).toBe(false)
   })
 
   it('gives each monitor its own transport', () => {

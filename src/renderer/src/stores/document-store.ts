@@ -195,7 +195,9 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
       endGesture: documentId => gestures.delete(documentId),
 
       // Both are how a document ARRIVES — read from disk, or opened blank — so both take the id
-      // back out of `dropped`: the same id is handed out again when a file is reopened.
+      // back out of `dropped`. This changes NO verdict, and no test holds it: the guard already
+      // lets a reopened document through on the second half of its condition. It bounds the set,
+      // which is otherwise the only structure here that never shrinks.
       replace: (documentId, next) => {
         dropped.delete(documentId)
         set(state => ({ states: { ...state.states, [documentId]: next } }))
