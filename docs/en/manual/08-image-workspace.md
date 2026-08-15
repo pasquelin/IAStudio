@@ -173,9 +173,12 @@ The frame never leaves the picture — a crop trims, it does not grow.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Rectangular selection** | `M` | draws a rectangular area |
-| **Elliptical selection** | — | draws an oval area |
+| **Rectangular selection** | `M` | draws a rectangular area — **Shift for a square** |
+| **Elliptical selection** | — | draws an oval area — **Shift for a circle** |
 | **Lasso** | `L` | draws a freehand area |
+
+**`Shift` constrains the area while you drag**, as it constrains the shapes of the next group. The
+**Lasso** ignores it: an area traced point by point has no sides to even out.
 
 > As long as an area is drawn, **the brush, the eraser and the bucket only act inside it**.
 > A click without a drag drops the area, just like `⌘D`.

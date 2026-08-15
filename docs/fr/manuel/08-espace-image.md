@@ -182,9 +182,12 @@ Le cadre ne sort jamais de l’image — un recadrage rogne, il n’agrandit pas
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Sélection rectangulaire** | `M` | trace une zone rectangulaire |
-| **Sélection elliptique** | — | trace une zone ovale |
+| **Sélection rectangulaire** | `M` | trace une zone rectangulaire — **Maj pour un carré** |
+| **Sélection elliptique** | — | trace une zone ovale — **Maj pour un cercle** |
 | **Lasso** | `L` | trace une zone à main levée |
+
+**`Maj` contraint la zone pendant le glissement**, comme il contraint les formes du groupe
+suivant. Le **Lasso** l’ignore : une zone tracée point par point n’a pas de côtés à égaliser.
 
 > Tant qu’une zone est tracée, **le pinceau, la gomme et le pot n’agissent qu’à l’intérieur**.
 > Un clic sans glisser abandonne la zone, comme `⌘D`.
