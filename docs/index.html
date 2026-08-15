@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scenario Studio — six ateliers de génération, une seule fenêtre</title>
+<meta name="description" content="Application de bureau multimodale : image, vidéo, 3D, audio, textures et skyboxes dans une interface à panneaux ancrables. Client indépendant de l'API Scenario, avec dictée hors ligne et pilotage par serveur MCP.">
+<meta name="theme-color" content="#0C0D0F">
+<link rel="canonical" href="https://pasquelin.github.io/scenario/">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://pasquelin.github.io/scenario/">
+<meta property="og:title" content="Scenario Studio — six ateliers de génération, une seule fenêtre">
+<meta property="og:description" content="Six ateliers de génération dans une seule fenêtre. Electron, React 19, TypeScript. macOS, Windows, Linux.">
+<!-- Absolue, et non relative : les robots d'aperçu ne résolvent pas les chemins relatifs. -->
+<meta property="og:image" content="https://pasquelin.github.io/scenario/assets/images/accueil.webp">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Chargée sans bloquer la première peinture : une feuille de style tierce retarde
+     l'affichage du temps d'un aller-retour réseau. `media="print"` la sort du chemin
+     critique, le `onload` la rend à tout le monde. Le <noscript> couvre le cas sans JS. -->
+<link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap">
+<noscript>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap">
+</noscript>
+<link rel="stylesheet" href="assets/css/style.css">
+<script>
+  /* on masque avant la première peinture, mais on redonne la main
+     si le moteur ne démarre pas : le contenu ne doit jamais rester caché. */
+  document.documentElement.className += ' js';
+  setTimeout(function () {
+    var r = document.documentElement;
+    if (!r.classList.contains('fx-ready')) r.classList.remove('js');
+  }, 2500);
+</script>
+</head>
+
+<body>
+<a class="skip" href="#accueil">Aller au contenu</a>
+
+<!-- ===================================================================
+     Jeu d'icônes — reprend la barre de modes de l'application.
+     =================================================================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="m15.5 11 6-3.2v8.4l-6-3.2z"/></symbol>
+  <symbol id="i-3d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8 21 8v8l-9 5.2L3 16V8z"/><path d="M3 8l9 5.2L21 8"/><path d="M12 13.2v8"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="m4 17 4.8-4.4 4 3.4 3.2-2.6L20 17"/></symbol>
+  <symbol id="i-audio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><path d="M15.6 9.4a4 4 0 0 1 0 5.2"/><path d="M18.4 6.9a7.6 7.6 0 0 1 0 10.2"/></symbol>
+  <symbol id="i-tex" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M3.5 14 14 3.5M9 20.5 20.5 9"/></symbol>
+  <symbol id="i-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8" cy="10" r="1.7"/><path d="M2.5 16.5 8.5 12l4.5 3.4L17 12.6l4.5 3.4"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 6.5 18 12l-9 5.5z" stroke-linejoin="round"/></symbol>
+</svg>
+
+<!-- ===================================================================
+     BARRE DE TITRE — c'est le menu. Chaque onglet vise une section.
+     =================================================================== -->
+<header class="app-bar">
+  <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <nav class="tabs" aria-label="Ateliers">
+    <a class="tab" href="#accueil"   data-tab="Accueil"  aria-current="true"><svg><use href="#i-home"/></svg>Accueil</a>
+    <a class="tab" href="#video"     data-tab="Vidéo"><svg><use href="#i-video"/></svg>Vidéo</a>
+    <a class="tab" href="#trois-d"   data-tab="3D"><svg><use href="#i-3d"/></svg>3D</a>
+    <a class="tab" href="#image"     data-tab="Image"><svg><use href="#i-image"/></svg>Image</a>
+    <a class="tab" href="#audio"     data-tab="Audio"><svg><use href="#i-audio"/></svg>Audio</a>
+    <a class="tab" href="#textures"  data-tab="Textures"><svg><use href="#i-tex"/></svg>Textures</a>
+    <a class="tab" href="#skyboxes"  data-tab="Skyboxes"><svg><use href="#i-sky"/></svg>Skyboxes</a>
+  </nav>
+
+  <div class="bar-right">
+    <a class="chip chip--nav" href="#architecture">Architecture</a>
+    <a class="chip chip--nav" href="#docs">Docs</a>
+    <!-- Le texte est réécrit par main.js depuis assets/release.json, que la CI produit au tag.
+         Ce qui est écrit ici est le repli quand aucune version n'a encore été publiée. -->
+    <span class="chip chip--build" data-release-tag><span class="dot"></span>Version de développement</span>
+    <a class="chip chip--cta" href="#telecharger">Télécharger</a>
+  </div>
+</header>
+
+<canvas id="scene" aria-hidden="true"></canvas>
+<div id="veil" aria-hidden="true"></div>
+
+<main id="contenu">
+
+  <!-- ================================================================
+       HÉROS — le décor est le viewport 3D de l'application.
+       ================================================================ -->
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow" data-fx data-rise="16" data-delay="60">Application de bureau · projet indépendant, non affilié à Scenario Labs</p>
+      <h1>
+        <span class="l1" data-fx data-split data-delay="140">Scenario</span>
+        <span class="l2" data-fx data-split data-delay="240">Studio</span>
+      </h1>
+      <p class="lede" data-fx data-rise="22" data-delay="520">Six ateliers de génération dans une seule fenêtre. Panneaux ancrables, timeline au timecode, inspecteur, bibliothèque sur disque : les outils d'un logiciel de production, appliqués aux modèles génératifs.</p>
+      <div class="hero-actions" data-fx data-rise="20" data-delay="620">
+        <a class="btn btn--fill" href="#video">Parcourir les ateliers</a>
+        <a class="btn" href="https://github.com/pasquelin/scenario" target="_blank" rel="noopener">Voir le code source</a>
+      </div>
+      <p class="hero-meta" data-fx data-rise="16" data-delay="720">
+        <span>Electron · React 19 · TypeScript</span>
+        <span>macOS, Windows, Linux</span>
+        <span>Français et anglais</span>
+      </p>
+    </div>
+    <div class="scroll-cue" aria-hidden="true">Défiler</div>
+  </section>
+
+  <!-- ================================================================
+       ACCUEIL — la capture s'ouvre en plein cadre pendant le scroll.
+       Le bloc .stage est épinglé : sa hauteur (210vh) détermine la
+       durée de l'ouverture.
+       ================================================================ -->
+  <section class="panel" id="accueil">
+    <div class="wrap">
+      <div class="panel__head">
+        <p class="eyebrow" data-fx data-rise="16">Accueil · le point de départ</p>
+        <h2 data-fx data-split data-delay="80">Un projet est un dossier. Rien de plus.</h2>
+        <p class="lede" data-fx data-rise="22" data-delay="320">Ouvrez un dossier, il devient un projet : documents, assets importés, générations. Tout reste sur le disque, lisible sans l'application, versionnable comme n'importe quel répertoire de travail.</p>
+      </div>
+    </div>
+
+    <div class="stage" data-stage>
+      <div class="stage__pin">
+        <div class="stage__frame frame frame--glow">
+          <img src="assets/images/accueil.webp" width="1800" height="1129"
+               alt="Écran d'accueil : liste des projets, raccourcis vers les six ateliers, galerie de générations récentes et panneau bibliothèque." loading="eager">
+        </div>
+        <p class="stage__hint">Continuer à défiler</p>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <!-- AXE : vertical -->
+      <dl class="specs" data-fx data-rise="32" data-speed="-0.018">
+        <div class="spec">
+          <dt>Ateliers</dt>
+          <dd><b>Six espaces, une fenêtre</b>Image, Vidéo, 3D, Audio, Textures et Skyboxes. Chacun a ses outils propres et s'ouvre en onglet, à côté des autres.</dd>
+        </div>
+        <div class="spec">
+          <dt>Panneaux</dt>
+          <dd><b>Ancrables et détachables</b>Modèles, Explorateur, Assets, Inspecteur, Timeline. On range la fenêtre comme on veut, la disposition est retenue par atelier.</dd>
+        </div>
+        <div class="spec">
+          <dt>Bibliothèque</dt>
+          <dd><b>Le disque d'abord</b>Les générations tombent dans le dossier du projet. La bibliothèque du compte distant se branche ensuite, avec une clé API.</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — VIDÉO
+       AXE : vertical. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="video">
+    <div class="wrap mode">
+      <div class="mode__text" data-fx data-still data-speed="-0.035">
+        <p class="eyebrow" data-fx data-rise="16">Atelier · sortie .mp4</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">Vidéo</h2>
+        <p class="lede" data-fx data-rise="20" data-delay="220">Deux moniteurs, une timeline multipiste, et des modèles qui produisent les plans.</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="20">
+          <li><b>Moniteurs</b>Source et Programme, comme sur une station de montage : le clip choisi d'un côté, le montage tel qu'il sera exporté de l'autre.</li>
+          <li><b>Timeline</b>Pistes vidéo et audio, outils sélection, lame et main, lecture au timecode.</li>
+          <li><b>Modèles</b>Sequence-to-Video, Video Cut, Scenario Video Concat, Scenario Video Studio.</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speed="0.07">
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="assets/images/video.webp" width="1800" height="1129" data-depth
+               alt="Atelier Vidéo : moniteurs Source et Programme, panneau Assets, timeline avec pistes V1 et A1." loading="lazy">
+        </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="14">
+          <span>Source 00:00:00:00</span><span>V1 · A1</span><span>25 img/s</span><span>Assets du projet</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — 3D
+       AXE : horizontal. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="trois-d">
+    <div class="wrap mode mode--flip">
+      <div class="mode__text" data-fx data-still data-speedx="0.026">
+        <p class="eyebrow" data-fx data-rise="0" data-shift="-20">Atelier · sortie .glb</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">3D</h2>
+        <p class="lede" data-fx data-rise="0" data-shift="-24" data-delay="220">Un maillage généré, posé dans une scène qu'on éclaire, qu'on anime et qu'on exporte.</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="0" data-stagger-shift="-26">
+          <li><b>Viewport</b>Grille, gizmo d'orientation et compteur en surimpression : triangles, sommets, appels de dessin, mémoire de textures.</li>
+          <li><b>Éclairage</b>Ambient, Directional et Hemisphere exposés en pistes, avec images clés sur la timeline.</li>
+          <li><b>Export</b>Le maillage part en .glb dans le dossier assets du projet, prêt pour un moteur.</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speedx="-0.036">
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="assets/images/3d.webp" width="1800" height="1129" data-depth
+               alt="Atelier 3D : viewport avec grille et gizmo, panneau Assets de maillages, timeline des lumières." loading="lazy">
+        </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="0" data-stagger-shift="-18">
+          <span>Triangles · Sommets · Appels</span><span>Durée 5 s</span><span>25 img/s</span><span>Environnement Studio</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — IMAGE
+       AXE : diagonal. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="image">
+    <div class="wrap mode">
+      <div class="mode__text" data-fx data-still data-speed="-0.024" data-speedx="-0.016">
+        <p class="eyebrow" data-fx data-rise="12" data-shift="-12">Atelier · sortie .png</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">Image</h2>
+        <p class="lede" data-fx data-rise="14" data-shift="-14" data-delay="220">Un canevas à calques, où la génération est un outil parmi les autres.</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="14" data-stagger-shift="-14">
+          <li><b>Calques</b>Empilement, visibilité, verrouillage. Chaque génération arrive en calque, au-dessus de ce qui existe déjà.</li>
+          <li><b>Outils</b>Déplacement, sélection, cadre, pinceau, texte, gomme, pot de peinture, pipette.</li>
+          <li><b>Traçabilité</b>L'inspecteur garde le modèle qui a produit le calque, son poids et sa date de création.</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speed="0.05" data-speedx="0.024">
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="assets/images/image.webp" width="1800" height="1129" data-depth
+               alt="Atelier Image : canevas avec un personnage détouré, panneau Calques, inspecteur détaillant le modèle générateur." loading="lazy">
+        </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="10" data-stagger-shift="-10">
+          <span>Calques</span><span>Zoom 78,9 %</span><span>Modèle conservé</span><span>Bandeau d'assets</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — AUDIO
+       AXE : vertical. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="audio">
+    <div class="wrap mode mode--flip">
+      <div class="mode__text" data-fx data-still data-speed="-0.035">
+        <p class="eyebrow" data-fx data-rise="16">Atelier · sortie .wav</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">Audio</h2>
+        <p class="lede" data-fx data-rise="20" data-delay="220">Composer et monter du son sur plusieurs pistes, dans la même fenêtre que le reste.</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="20">
+          <li><b>Pistes</b>Montage multipiste, mêmes outils que la timeline vidéo, lecture calée sur le même timecode.</li>
+          <li><b>Formes d'onde</b>Calculées dans un processus séparé : une heure de son ne fige pas l'interface pendant l'analyse.</li>
+          <li><b>Modèles</b>Musique, ambiances et effets, générés par l'API puis déposés directement sur une piste.</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speed="0.07">
+        <div class="empty" data-fx data-rise="0" data-zoom="0.04">
+          <p>Capture à venir.</p>
+          <p>Déposez <code>assets/images/audio.webp</code>, puis remplacez ce bloc par le même
+             <code>&lt;div class="frame"&gt;</code> que les autres ateliers.</p>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — TEXTURES
+       AXE : horizontal. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="textures">
+    <div class="wrap mode">
+      <div class="mode__text" data-fx data-still data-speedx="-0.026">
+        <p class="eyebrow" data-fx data-rise="0" data-shift="-20">Atelier · sortie .png ×4</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">Textures</h2>
+        <p class="lede" data-fx data-rise="0" data-shift="-24" data-delay="220">Un matériau, pas une image : chaque canal est produit puis vérifié séparément.</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="0" data-stagger-shift="-26">
+          <li><b>Canaux</b>Couleur de base, Normale, Rugosité, Métal. Générés ensemble, exportés fichier par fichier.</li>
+          <li><b>Aperçu</b>Le matériau est appliqué sur une sphère et éclairé en temps réel, avant l'export.</li>
+          <li><b>Raccords</b>Canaux tuilables en 4096 × 4096, utilisables tels quels dans un moteur.</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speedx="0.036">
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="assets/images/textures.webp" width="1800" height="1129" data-depth
+               alt="Atelier Textures : sphère de prévisualisation du matériau, panneau Canaux avec couleur de base, normale, rugosité et métal." loading="lazy">
+        </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="0" data-stagger-shift="-18">
+          <span>4096 × 4096</span><span>4 canaux</span><span>Aperçu sur sphère</span><span>Export séparé</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — SKYBOXES
+       AXE : diagonal. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="skyboxes">
+    <div class="wrap mode mode--flip">
+      <div class="mode__text" data-fx data-still data-speed="-0.024" data-speedx="0.016">
+        <p class="eyebrow" data-fx data-rise="12" data-shift="-12">Atelier · sortie .hdr</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">Skyboxes</h2>
+        <p class="lede" data-fx data-rise="14" data-shift="-14" data-delay="220">Un ciel qui sert de décor et, en même temps, de source de lumière.</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="14" data-stagger-shift="-14">
+          <li><b>Projections</b>360°, équirectangulaire, croix, six faces. On bascule d'une vue à l'autre sans réexporter.</li>
+          <li><b>Contrôle</b>Champ de vision réglable et objets de test, pour juger la lumière sur une sphère mate et une sphère brillante.</li>
+          <li><b>Usage</b>Le ciel produit ici éclaire directement la scène de l'atelier 3D.</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speed="0.05" data-speedx="-0.024">
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="assets/images/skyboxes.webp" width="1800" height="1129" data-depth
+               alt="Atelier Skyboxes : ciel orange en projection 360 degrés avec deux sphères de test posées au sol." loading="lazy">
+        </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="10" data-stagger-shift="-10">
+          <span>360°</span><span>Équirect</span><span>Croix</span><span>6 faces</span><span>Objets de test</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       BANDEAU — ce que les ateliers savent produire. Le contenu est
+       dupliqué à l'identique : c'est ce qui rend la boucle invisible.
+       Pour modifier la liste, éditer les DEUX blocs .ticker__set.
+       ================================================================ -->
+  <div class="ticker" aria-hidden="true" data-ticker>
+    <div class="ticker__row">
+      <div class="ticker__set"><span>Texte → Image</span><span>Image → Image</span><span>Détourage</span><span>Reframe</span><span>Découpe</span><span>Texte → Vidéo</span><span>Séquence → Vidéo</span><span>Montage</span><span>Concaténation</span><span>Image → 3D</span><span>Voxel</span><span>Texte → Audio</span><span>Matériau PBR</span><span>Couleur · Normale · Rugosité · Métal</span><span>Skybox 360°</span><span>Équirectangulaire</span></div>
+      <div class="ticker__set"><span>Texte → Image</span><span>Image → Image</span><span>Détourage</span><span>Reframe</span><span>Découpe</span><span>Texte → Vidéo</span><span>Séquence → Vidéo</span><span>Montage</span><span>Concaténation</span><span>Image → 3D</span><span>Voxel</span><span>Texte → Audio</span><span>Matériau PBR</span><span>Couleur · Normale · Rugosité · Métal</span><span>Skybox 360°</span><span>Équirectangulaire</span></div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       ARCHITECTURE
+       ================================================================ -->
+  <section class="panel" id="architecture">
+    <div class="wrap">
+      <div class="panel__head">
+        <p class="eyebrow" data-fx data-rise="16">Sous le capot</p>
+        <h2 data-fx data-split data-delay="80">Aucun formulaire de génération n'est écrit à la main.</h2>
+        <p class="lede" data-fx data-rise="22" data-delay="360">Les paramètres d'un modèle lui sont propres et changent sans prévenir. Ils sont donc lus à l'exécution et transformés en champs : un modèle nouveau apparaît avec ses réglages, sans une ligne de code de plus.</p>
+      </div>
+
+      <!-- AXE : horizontal -->
+      <div class="rack" data-fx data-rise="0" data-shift="-28" data-speedx="0.018">
+        <div class="rack__row">
+          <div class="rack__label">Interface</div>
+          <div class="rack__cells">
+            <div class="cell">
+              <span class="tag">Ateliers</span>
+              <h3>Six modes, une disposition</h3>
+              <p>Panneaux ancrables et détachables, onglets, disposition retenue par atelier entre deux sessions.</p>
+            </div>
+            <div class="cell">
+              <span class="tag">Moteurs</span>
+              <h3>Recréés depuis leur état</h3>
+              <p>Détacher un panneau détruit son contexte graphique. Le moteur se rebâtit à l'identique — ce qui donne l'annulation et la sauvegarde par la même occasion.</p>
+            </div>
+            <div class="cell">
+              <span class="tag">Bibliothèque</span>
+              <h3>Dossier de projet</h3>
+              <p>Un projet est un dossier lisible sans l'application. Import, export et catalogue partagent le même index.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rack__row">
+          <div class="rack__label">Le pont vers l'API</div>
+          <div class="rack__cells">
+            <div class="cell">
+              <span class="tag">ModelRegistry</span>
+              <h3>Les champs viennent du modèle</h3>
+              <p>Le schéma déclaré par le modèle devient une liste de champs, rendue telle quelle. Un type inconnu retombe en saisie brute plutôt que de faire disparaître le formulaire.</p>
+            </div>
+            <div class="cell">
+              <span class="tag">JobManager</span>
+              <h3>Un seul endroit interroge</h3>
+              <p>Toute génération est asynchrone. Un seul composant suit l'avancement, borne le nombre de tâches simultanées et temporise en cas de refus du service.</p>
+            </div>
+            <div class="cell">
+              <span class="tag">Secrets</span>
+              <h3>L'interface ne voit jamais la clé</h3>
+              <p>Clé et secret sont chiffrés par le magasin du système. La fenêtre demande « suis-je connecté ? », jamais « quelle est ma clé ? ».</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rack__row">
+          <div class="rack__label">Sur votre machine</div>
+          <div class="rack__cells">
+            <div class="cell">
+              <span class="tag">Dictée</span>
+              <h3>Hors ligne, entièrement</h3>
+              <p>Un moteur de reconnaissance vocale tourne dans un processus séparé, sur votre ordinateur. Une fois le modèle rapatrié, rien de ce qui est dit ne part sur le réseau.</p>
+            </div>
+            <div class="cell">
+              <span class="tag">Serveur MCP</span>
+              <h3>Le studio se pilote de l'extérieur</h3>
+              <p>Un agent peut ouvrir un projet, lancer une génération et lire le catalogue, par les mêmes actions que l'interface.</p>
+            </div>
+            <div class="cell">
+              <span class="tag">Charge</span>
+              <h3>Le fil d'affichage reste libre</h3>
+              <p>Vignettes, formes d'onde, gros maillages et encodage vidéo partent sur le processeur graphique, dans des fils de calcul ou dans un processus à part.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       DOCUMENTATION + DÉMO
+
+       LA VIDÉO DE PRÉSENTATION SE POSE ICI. Déposer le fichier dans
+       `assets/video/demo.mp4`, puis remplacer le CONTENU de `.player`
+       — en gardant la div elle-même, qui porte le ratio 16/9 — par :
+
+         <video src="assets/video/demo.mp4"
+                poster="assets/images/accueil.webp"
+                controls playsinline preload="none"></video>
+
+       `preload="none"` : sans lui, le navigateur télécharge la vidéo
+       avant même qu'on ait défilé jusqu'ici. Le poster suffit à montrer
+       de quoi il s'agit. Un <iframe> 16/9 convient aussi.
+       ================================================================ -->
+  <section class="panel" id="docs">
+    <div class="wrap">
+      <div class="panel__head">
+        <p class="eyebrow" data-fx data-rise="16">Documentation &amp; démonstration</p>
+        <h2 data-fx data-split data-delay="80">Tout est écrit à côté du code.</h2>
+      </div>
+
+      <div class="split">
+        <div class="player" data-fx data-rise="0" data-zoom="0.04" data-speedx="0.026">
+          <span class="play"><svg width="22" height="22"><use href="#i-play"/></svg></span>
+          <p>La vidéo de présentation arrive ici.</p>
+        </div>
+
+        <!-- `blob/HEAD` suit la branche par défaut du dépôt : un renommage de branche
+             ne transforme pas ces six liens en 404. -->
+        <ul class="doclist" data-stagger="70" data-stagger-rise="0" data-stagger-shift="-30">
+          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/docs/fr/guide-utilisateur.md" target="_blank" rel="noopener"><span>Le manuel, vingt chapitres — aussi lisibles dans l'application</span><em>guide-utilisateur.md</em></a></li>
+          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/docs/fr/architecture.md" target="_blank" rel="noopener"><span>Les invariants, les moteurs et ce qui traverse la frontière</span><em>architecture.md</em></a></li>
+          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/docs/fr/manuel/20-piloter-de-l-exterieur.md" target="_blank" rel="noopener"><span>Piloter le studio depuis un agent, par le serveur MCP</span><em>20-piloter-de-l-exterieur.md</em></a></li>
+          <li><a href="https://github.com/pasquelin/scenario/tree/HEAD/docs/ci/adr" target="_blank" rel="noopener"><span>Dix-sept décisions, avec ce qui a été écarté et pourquoi</span><em>docs/ci/adr/</em></a></li>
+          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/docs/ci/RELEASE.md" target="_blank" rel="noopener"><span>Publier une version : signature, artefacts, retour arrière</span><em>RELEASE.md</em></a></li>
+          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/LICENSE" target="_blank" rel="noopener"><span>Licence du code source — PolyForm Noncommercial 1.0.0</span><em>LICENSE</em></a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       TÉLÉCHARGEMENT
+       ================================================================ -->
+  <section class="panel" id="telecharger">
+    <div class="wrap">
+      <div class="panel__head">
+        <p class="eyebrow" data-fx data-rise="16">Installation</p>
+        <h2 data-fx data-split data-delay="80">Trois plateformes, un seul dépôt.</h2>
+        <p class="lede" data-fx data-rise="22" data-delay="300">Cinq installeurs, produits par la même chaîne d'intégration à chaque version. En attendant la première version publique, le dépôt se clone et se lance en trois commandes.</p>
+      </div>
+
+      <!-- AXE : vertical
+           Les liens et les états sont remplis par main.js depuis assets/release.json,
+           que la chaîne de publication écrit au moment du tag. Ce qui est écrit ici
+           est l'état affiché tant qu'aucune version n'a été publiée. -->
+      <div class="dl" data-fx data-rise="28">
+        <a class="dl__item" data-dl="darwin-arm64" href="https://github.com/pasquelin/scenario/releases" target="_blank" rel="noopener">
+          <h3>macOS</h3>
+          <p>Apple Silicon · .dmg</p>
+          <span class="state">Version à venir</span>
+        </a>
+        <a class="dl__item" data-dl="darwin-x64" href="https://github.com/pasquelin/scenario/releases" target="_blank" rel="noopener">
+          <h3>macOS</h3>
+          <p>Intel · .dmg</p>
+          <span class="state">Version à venir</span>
+        </a>
+        <a class="dl__item" data-dl="win32-x64" href="https://github.com/pasquelin/scenario/releases" target="_blank" rel="noopener">
+          <h3>Windows</h3>
+          <p>x64 · .exe</p>
+          <span class="state">Version à venir</span>
+        </a>
+        <a class="dl__item" data-dl="linux-AppImage" href="https://github.com/pasquelin/scenario/releases" target="_blank" rel="noopener">
+          <h3>Linux</h3>
+          <p>x86_64 · .AppImage</p>
+          <span class="state">Version à venir</span>
+        </a>
+        <a class="dl__item" data-dl="linux-deb" href="https://github.com/pasquelin/scenario/releases" target="_blank" rel="noopener">
+          <h3>Debian, Ubuntu</h3>
+          <p>x86_64 · .deb</p>
+          <span class="state">Version à venir</span>
+        </a>
+      </div>
+
+      <p class="dl-note" data-fx data-rise="18" data-delay="120">
+        L'installeur est régi par les <a href="https://github.com/pasquelin/scenario/blob/HEAD/EULA.md" target="_blank" rel="noopener">conditions d'utilisation</a> ; le code source, par la licence <a href="https://github.com/pasquelin/scenario/blob/HEAD/LICENSE" target="_blank" rel="noopener">PolyForm Noncommercial&nbsp;1.0.0</a>. L'application ne donne accès à aucun service de génération : elle utilise la clé d'API que vous fournissez, sous votre compte et à vos frais.
+      </p>
+
+      <pre class="term" data-fx data-rise="22" data-delay="140"><code><b>git</b> clone https://github.com/pasquelin/scenario.git
+<b>pnpm</b> install
+<b>pnpm</b> start</code></pre>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================================================================
+     PIED DE PAGE — la mention d'indépendance reste visible.
+     =================================================================== -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__grid" data-fx data-rise="22">
+      <div>
+        <h4>Scenario Studio</h4>
+        <p style="margin:0;max-width:34ch">Application de bureau multimodale, développée en solo. Electron, React, TypeScript.</p>
+      </div>
+      <div>
+        <h4>Ateliers</h4>
+        <ul>
+          <li><a href="#image">Image</a></li>
+          <li><a href="#video">Vidéo</a></li>
+          <li><a href="#trois-d">3D</a></li>
+          <li><a href="#audio">Audio</a></li>
+          <li><a href="#textures">Textures</a></li>
+          <li><a href="#skyboxes">Skyboxes</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Ressources</h4>
+        <ul>
+          <li><a href="#docs">Documentation</a></li>
+          <li><a href="#architecture">Architecture</a></li>
+          <li><a href="#telecharger">Téléchargement</a></li>
+          <li><a href="https://github.com/pasquelin/scenario" target="_blank" rel="noopener">Dépôt</a></li>
+          <li><a href="https://github.com/pasquelin/scenario/blob/HEAD/LICENSE" target="_blank" rel="noopener">Licence</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="https://www.linkedin.com/in/alban-pasquelin/" target="_blank" rel="noopener">LinkedIn</a></li>
+          <li><a href="mailto:alban.pasquelin@gmail.com">alban.pasquelin@gmail.com</a></li>
+          <li><a href="https://github.com/pasquelin" target="_blank" rel="noopener">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="legal" data-fx data-rise="18" data-delay="120">
+      <strong>Projet indépendant, sans lien avec Scenario Labs.</strong> Cette application est développée à titre personnel par Alban Pasquelin. Elle n'est <strong>ni éditée, ni approuvée, ni soutenue, ni affiliée</strong> à Scenario Labs, et ce site n'est en aucun cas une communication officielle de cette société.
+    </p>
+    <p class="legal" data-fx data-rise="18" data-delay="160">
+      « Scenario », l'API Scenario et les signes associés sont des marques appartenant à leurs titulaires respectifs. Ils ne sont mentionnés ici qu'à titre <strong>descriptif et nominatif</strong>, pour indiquer le service tiers auquel l'application peut se connecter — usage qu'aucune autre formulation ne permettrait. Aucun logo, aucune police, aucune charte ni aucun élément graphique appartenant à Scenario Labs n'est repris : toutes les captures montrent l'interface de cette application, et toutes les icônes en sont propres.
+    </p>
+    <p class="legal" data-fx data-rise="18" data-delay="200">
+      L'application <strong>ne donne accès à aucun service de génération et n'en revend aucun</strong>. Elle se connecte à l'API publique au moyen de la clé que vous fournissez, sous votre propre compte : l'usage que vous en faites relève des conditions de Scenario Labs, que vous acceptez directement auprès d'eux, et les coûts sont à votre charge. Une interruption ou une modification du service tiers ne relève pas de l'éditeur de cette application.
+    </p>
+    <p class="legal" data-fx data-rise="18" data-delay="240">
+      Code source sous licence <a href="https://github.com/pasquelin/scenario/blob/HEAD/LICENSE" target="_blank" rel="noopener">PolyForm Noncommercial 1.0.0</a> · application distribuée sous ses <a href="https://github.com/pasquelin/scenario/blob/HEAD/EULA.md" target="_blank" rel="noopener">conditions d'utilisation</a> · composants tiers listés dans les <a href="https://github.com/pasquelin/scenario/blob/HEAD/THIRD-PARTY-NOTICES.md" target="_blank" rel="noopener">mentions</a>. © 2026 Alban Pasquelin.
+    </p>
+  </div>
+</footer>
+
+<!-- ===================================================================
+     BARRE DE STATUT — position de lecture, comme dans l'application.
+     =================================================================== -->
+<div class="status-bar" role="status" aria-live="off">
+  <span class="hide-s"><b>projet</b> scenario-studio</span>
+  <span class="hide-s"><b>atelier</b> <span class="cur" data-current>Accueil</span></span>
+  <span class="sp"></span>
+  <span><b>position</b> <span class="tc" data-timecode>00:00:00:00</span></span>
+</div>
+<div class="progress" aria-hidden="true"></div>
+
+<!-- three 0.185.1, la version que l'application embarque. Depuis 0.16x la bibliothèque ne
+     publie plus de build global : seul le module existe, d'où la carte d'import. Le module
+     tire `./three.core.min.js` en relatif, résolu contre cette même URL — rien à déclarer
+     de plus. `integrity` ne s'applique pas à un module résolu par carte d'import : la seule
+     protection réelle contre un CDN altéré serait d'héberger le fichier ici. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.185.1/three.module.min.js"
+  }
+}
+</script>
+<script type="module" src="assets/js/scene.js"></script>
+<script src="assets/js/main.js" defer></script>
+</body>
+</html>
