@@ -84,6 +84,8 @@ const gpu: {
   sampled: { x: number; y: number; width: number; height: number }[]
   /** What the renderer hands back, so a test can name the colour standing under the pointer. */
   pixels: number[]
+  /** Every time the drawing buffer was asked to take its host's box — see `followHostSize`. */
+  resizes: number
 } = {
   renders: 0,
   texturesCreated: 0,
@@ -98,6 +100,7 @@ const gpu: {
   extracted: [],
   sampled: [],
   pixels: [0, 0, 0, 0],
+  resizes: 0,
 }
 
 vi.mock('pixi.js/unsafe-eval', () => ({}))
@@ -259,6 +262,9 @@ vi.mock('pixi.js', () => {
 
       async init(options: Record<string, unknown>): Promise<void> {
         gpu.init = options
+      }
+      resize(): void {
+        gpu.resizes += 1
       }
       destroy(): void {}
     },
@@ -552,6 +558,7 @@ beforeEach(() => {
   gpu.extracted = []
   gpu.sampled = []
   gpu.pixels = [0, 0, 0, 0]
+  gpu.resizes = 0
 })
 
 describe('the blend table', () => {
@@ -585,6 +592,20 @@ describe('mounting', () => {
     await mounted()
 
     expect(gpu.texturesCreated).toBe(1)
+  })
+
+  /**
+   * Pixi honours `resizeTo` through a `window.resize` listener and nothing else. Every surface of
+   * the studio lives in a Dockview panel, and a dragged splitter resizes the panel without
+   * resizing the window — so the drawing buffer stayed at its mounted size while the overlay,
+   * which observes the host, followed it. The handles then sat beside the layer they belong to.
+   *
+   * Read through `measure`, which is the one path both the observer and the mount take.
+   */
+  it('hands the renderer the host box whenever it measures one', async () => {
+    await mounted()
+
+    expect(gpu.resizes).toBeGreaterThan(0)
   })
 
   /**
