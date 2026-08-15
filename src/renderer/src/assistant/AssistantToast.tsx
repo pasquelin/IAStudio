@@ -61,7 +61,7 @@ export function AssistantToast() {
     <ToastStack>
       <Toast
         icon={lost ? mdiAlertOutline : mdiCheckCircleOutline}
-        tone={lost ? 'text-warning' : 'text-success'}
+        tone={lost ? 'warning' : 'success'}
         // The activity toasts' own word for the same gesture: one label, so a reader meets the
         // same button twice rather than two that differ by a synonym.
         dismissLabel={t('activity.dismiss')}

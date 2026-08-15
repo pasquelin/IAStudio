@@ -2,7 +2,7 @@ import { mdiClose } from '@mdi/js'
 import type { ReactNode } from 'react'
 import { ToolButton } from './ToolButton'
 import { UiIcon } from './UiIcon'
-import { MENU_SURFACE } from './styles'
+import { MENU_SURFACE, TONE_TEXT, type StatusTone } from './styles'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
 
@@ -29,8 +29,8 @@ export function ToastStack({ children }: ToastStackProps) {
 
 export type ToastProps = {
   icon: string
-  /** The ink of the glyph, which is the whole of what says which kind of notice this is. */
-  tone?: string
+  /** What KIND of notice this is; the ink that says so stays here, as every tone of the studio. */
+  tone: StatusTone
   children: ReactNode
   /** Already translated, as every design factory takes it. */
   dismissLabel: string
@@ -49,7 +49,7 @@ export type ToastProps = {
 export function Toast({ icon, tone, children, dismissLabel, dismissHint, onDismiss }: ToastProps) {
   return (
     <div className={cn(MENU_SURFACE, 'pointer-events-auto static flex-row items-start gap-2 p-2')}>
-      <UiIcon path={icon} size={14} className={cn('mt-px shrink-0', tone)} />
+      <UiIcon path={icon} size={14} className={cn('mt-px shrink-0', TONE_TEXT[tone])} />
 
       {children}
 

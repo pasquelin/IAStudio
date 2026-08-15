@@ -7,7 +7,13 @@ import { Toast, ToastStack } from './Toast'
 const renderToast = (onDismiss = vi.fn()) =>
   render(
     <ToastStack>
-      <Toast icon={mdiAlertOutline} dismissLabel="Ignorer" onDismiss={onDismiss}>
+      <Toast
+        icon={mdiAlertOutline}
+        tone="warning"
+        dismissLabel="Ignorer"
+        dismissHint="Marque l'avertissement comme lu"
+        onDismiss={onDismiss}
+      >
         <span>Le compte a changé</span>
       </Toast>
     </ToastStack>,
@@ -27,11 +33,16 @@ describe('Toast', () => {
     expect(stack?.firstElementChild).toHaveClass('pointer-events-auto')
   })
 
-  it('dismisses on the button that says so', async () => {
+  // The hint explains rather than repeating the visible name — and it is the one field of the
+  // contract that only one of the two hosts passes, so nothing else would notice it going missing.
+  it('dismisses on the button that says so, and hands its hint to the tooltip', async () => {
     const onDismiss = vi.fn()
     renderToast(onDismiss)
+    const button = screen.getByRole('button', { name: 'Ignorer' })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ignorer' }))
+    expect(button).toHaveAttribute('data-tooltip-content', "Marque l'avertissement comme lu")
+
+    await userEvent.click(button)
 
     expect(onDismiss).toHaveBeenCalledOnce()
   })

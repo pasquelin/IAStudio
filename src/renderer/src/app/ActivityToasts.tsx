@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Toast, ToastStack } from '@/design/Toast'
 import { useActivity } from '@/stores/activity'
-import { ActivityMessage, GLYPHS, TINTS } from './ActivityList'
+import { ActivityMessage, GLYPHS, TONES } from './ActivityList'
 
 /**
  * Failures and warnings, said out loud once.
@@ -33,7 +33,7 @@ export function ActivityToasts() {
           // apart, and React needs the pair to stop reusing one row's node for the other.
           key={`${entry.at}-${entry.id}`}
           icon={GLYPHS[entry.level]}
-          tone={TINTS[entry.level]}
+          tone={TONES[entry.level]}
           dismissLabel={t('activity.dismiss')}
           onDismiss={() => useActivity.getState().dismiss(entry.id)}
         >
