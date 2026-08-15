@@ -222,33 +222,12 @@ jobs:
       - name: Attach FFmpeg's corresponding sources
         run: node scripts/fetch-ffmpeg.mjs --sources dist
 
+      # This loop used to live here in shell, and it demanded a `<url>.blockmap` for every file the
+      # manifests list. That refused the v0.1.0 release outright: the AppImage carries its block
+      # map INSIDE the installer and declares `blockMapSize`, and a Debian package has none at all
+      # because electron-updater never installs one. The rule now lives where a test can hold it.
       - name: Check the update manifests are complete
-        run: |
-          missing=()
-          for manifest in latest.yml latest-mac.yml latest-linux.yml; do
-            [ -f "dist/$manifest" ] || missing+=("$manifest")
-          done
-
-          if [ ${#missing[@]} -ne 0 ]; then
-            echo "::error::Missing update manifests: ${missing[*]}"
-            echo "A release without them breaks auto-update for every installed client, and does" \
-                 "so silently — the server answers 404 and the app says nothing. Publishing is" \
-                 "refused. See docs/ci/adr/ADR-06-publication-des-artefacts.md."
-            exit 1
-          fi
-
-          # A manifest never names its blockmaps: electron-updater derives each one by appending
-          # .blockmap to the file URL. A missing one hangs the client on "Download block maps"
-          # instead of degrading to a full download, so check every file the manifests list.
-          for file in $(grep -ho 'url: .*' dist/latest*.yml | cut -d' ' -f2 | sort -u); do
-            [ -f "dist/$file.blockmap" ] || {
-              echo "::error::No blockmap for $file, which the manifests list."
-              exit 1
-            }
-          done
-
-          echo "Manifests present. Versions found:"
-          grep -h '^version:' dist/latest*.yml | sort -u
+        run: node scripts/check-manifests.mjs dist
 
       - name: Create the draft release
         env:
