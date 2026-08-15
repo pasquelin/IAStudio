@@ -235,7 +235,9 @@ se construit en posant des sons les uns à côté des autres.
 **Les gestes sont exactement ceux du chapitre précédent** — glisser une prise depuis l’étagère,
 tailler un clip par ses bords, la lame, les fondus, le gain, l’inspecteur, les en-têtes de piste
 avec leur muet, leur solo et leur verrou. Tout est décrit dans
-[Espace Vidéo](10-espace-video.md), et rien n’en change ici.
+[Espace Vidéo](10-espace-video.md), et rien n’en change ici — à une chose près, qui se voit :
+**le petit maillon de lien n’apparaît sur aucun clip.** Il n’y a pas de piste image, donc aucune
+paire à former, donc rien à signaler.
 
 La barre du panneau porte en plus un bouton **Ajouter une piste audio** — un seul, là où la Vidéo
 en a deux : il n’y a pas de piste image à ajouter.

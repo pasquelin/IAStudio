@@ -228,7 +228,9 @@ laying sounds side by side.
 **The gestures are exactly those of the previous chapter** — dragging a take in from the shelf,
 trimming a clip by its edges, the blade, the fades, the gain, the inspector, the track headers
 with their mute, solo and lock. All of it is described in
-[Video workspace](10-video-workspace.md), and none of it changes here.
+[Video workspace](10-video-workspace.md), and none of it changes here — bar one thing, and it
+shows: **the little link never appears on any clip.** There is no picture track, so no pair to
+form, so nothing to report.
 
 The panel's bar carries one extra button, **Add an audio track** — one where Video has two: there
 is no picture track to add.

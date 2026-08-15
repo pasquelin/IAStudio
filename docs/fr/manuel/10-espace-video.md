@@ -128,6 +128,32 @@ entière comme elle était.
 > et la seule borne est le début de la séquence. C’est ainsi qu’on décide du temps qu’un carton
 > de titre reste à l’écran.
 
+### Les clips liés, et le petit maillon qui le dit
+
+**Une vidéo qui porte du son arrive en DEUX clips** : l’image sur une piste image, le son sur une
+piste son, en face. Ils sont **liés**.
+
+**Un petit maillon, au bout droit de chaque clip, dit lequel des deux cas vous avez :**
+
+| Ce que vous voyez | Ce que ça veut dire |
+|---|---|
+| une **chaîne** | ce clip est lié à un autre |
+| une **chaîne brisée** | ce clip est seul |
+
+Le maillon **s’efface sur un clip trop étroit** pour le porter — c’est la place qui manque, pas le
+lien qui a changé. Et **ce n’est pas un bouton** : cliquer dessus ne délie rien, il ne fait que
+vous renseigner.
+
+**Tant que deux clips sont liés, ce que vous faites à l’un arrive à l’autre** — le déplacer, le
+couper à la lame, le supprimer.
+
+> **Et c’est tout ou rien.** Si l’un des deux ne peut pas suivre — sa piste est verrouillée, la
+> coupe tombe en dehors de lui — **l’autre ne bouge pas non plus**. Verrouillez `A1`, tirez
+> l’image sur `V1` : rien ne se passe. C’est voulu — une paire à moitié déplacée est exactement
+> ce qu’un lien existe pour empêcher.
+
+**`⌘L` les sépare.** Chacun redevient un clip ordinaire, et son maillon passe à la chaîne brisée.
+
 ---
 
 ## Le transport — lire, mettre en pause
