@@ -1,5 +1,6 @@
 import activity from './activity.json'
 import assets from './assets.json'
+import assistant from './assistant.json'
 import commands from './commands.json'
 import common from './common.json'
 import image from './image.json'
@@ -23,6 +24,7 @@ import usage from './usage.json'
 export const fr = {
   ...activity,
   ...assets,
+  ...assistant,
   ...commands,
   ...common,
   ...image,

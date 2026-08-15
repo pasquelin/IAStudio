@@ -140,19 +140,6 @@
     "videoClipHint": "Opens the edit and adds the asset to it as a clip",
     "textureChannelHint": "Opens the texture document and fills its base colour channel"
   },
-  "prompt": {
-    "suggest": "Suggest variants",
-    "suggesting": "Writing variants…",
-    "noSuggestion": "No variant proposed.",
-    "useText": "Use the text",
-    "useTextAndSettings": "Text + settings",
-    "translate": "Translate to English",
-    "alreadyEnglish": "This text is already in English.",
-    "describeStyle": "Describe the style of the references",
-    "noReference": "Drop a reference image to describe its style.",
-    "useTextHint": "Takes the sentence only, and leaves your settings as they are",
-    "useTextAndSettingsHint": "Takes the sentence AND the settings listed above"
-  },
   "keys": {
     "Space": "Space",
     "Enter": "Enter",

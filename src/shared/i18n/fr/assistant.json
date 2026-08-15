@@ -1,0 +1,93 @@
+{
+  "assistant": {
+    "actions": {
+      "commandRun": {
+        "title": "Lancer une commande",
+        "description": "Déclenche une commande du studio par son identifiant, comme le ferait un raccourci clavier ou une entrée de menu. Le document concerné doit être au premier plan."
+      },
+      "workspaceOpen": {
+        "title": "Ouvrir un espace",
+        "description": "Bascule vers un espace de travail, et y crée un document si on le demande. C’est ce qui répond à « ouvre un nouveau fichier 3D »."
+      },
+      "modelsSearch": {
+        "title": "Chercher un modèle",
+        "description": "Cherche un modèle de génération par mots-clés, en se limitant à une famille si elle est précisée. Ne change rien à l’écran."
+      },
+      "modelsSelect": {
+        "title": "Choisir un modèle",
+        "description": "Arme un modèle pour une famille de génération. Le formulaire du Générateur se reconstruit alors sur les champs de ce modèle."
+      },
+      "generatorPrepare": {
+        "title": "Préparer une génération",
+        "description": "Remplit le formulaire du Générateur avec un modèle et ses paramètres, puis l’affiche. Rien n’est envoyé, et la génération reste à lancer."
+      },
+      "generatorSubmit": {
+        "title": "Lancer la génération préparée",
+        "description": "Envoie le formulaire tel qu’il est affiché. Consomme des unités créatives, dont le montant estimé est annoncé avant d’être engagé."
+      },
+      "jobsList": {
+        "title": "Lister les tâches",
+        "description": "Rend les générations en cours et leur avancement, tels que le studio les suit. Ne change rien à l’écran."
+      },
+      "promptSuggest": {
+        "title": "Proposer des variantes de prompt",
+        "description": "Réécrit une phrase en plusieurs variantes taillées pour le modèle armé dans le Générateur, avec les réglages qui vont avec. Ne consomme rien et ne change rien à l’écran."
+      },
+      "promptTranslate": {
+        "title": "Traduire un prompt en anglais",
+        "description": "Porte un texte dans la langue sur laquelle les modèles sont entraînés, et dit quelle langue il a reconnue. Ne consomme rien et ne change rien à l’écran."
+      },
+      "promptDescribeStyle": {
+        "title": "Décrire le style des références",
+        "description": "Lit les images de référence posées sur le formulaire du Générateur et en rend une description utilisable comme prompt. Ne consomme rien."
+      }
+    },
+    "refusals": {
+      "unknownCommand": "Cette commande n’existe pas dans le studio.",
+      "globalCommand": "Cette commande appartient au menu de l’application, qui la déclenche lui-même.",
+      "wrongSurface": "Cette commande s’adresse à un document qui n’est pas au premier plan.",
+      "generatorClosed": "Le Générateur n’était pas ouvert. Il vient de l’être.",
+      "nothingPrepared": "Le Générateur n’a aucun modèle armé pour l’instant.",
+      "notSubmitted": "La génération n’est pas partie.",
+      "badInput": "Les paramètres fournis ne conviennent pas à cette action.",
+      "noBridge": "Le studio ne répond pas.",
+      "noConfirmer": "Cette action demande un accord, et aucune fenêtre n’était là pour le donner.",
+      "declined": "Vous avez refusé cette action.",
+      "noWindow": "Aucune fenêtre du studio n’était au premier plan pour exécuter cette action.",
+      "timedOut": "La demande est restée à l’écran sans réponse, et a été abandonnée.",
+      "noReference": "Le formulaire ne porte aucune image de référence dont lire le style."
+    },
+    "fields": {
+      "command": "Identifiant de la commande",
+      "workspace": "Espace de travail",
+      "createDocument": "Créer un document",
+      "query": "Mots-clés",
+      "family": "Famille de génération",
+      "modelId": "Identifiant du modèle",
+      "parameters": "Paramètres du modèle",
+      "draft": "Phrase à retravailler",
+      "text": "Texte à traduire"
+    },
+    "title": "Assistant",
+    "empty": "Dites ce que vous voulez faire, et l’assistant s’en charge.",
+    "placeholder": "Ouvre un fichier 3D, cherche un modèle, prépare une génération…",
+    "send": "Envoyer",
+    "sendHint": "Envoie la phrase à l’assistant, qui choisit les actions et les exécute",
+    "close": "Fermer",
+    "closeHint": "Referme la fenêtre sans rien annuler de ce qui tourne déjà",
+    "model": "Modèle de l’assistant",
+    "modelHint": "Choisit le modèle qui lit vos phrases. Le moins cher suffit pour ouvrir un espace, les autres tiennent mieux les demandes en plusieurs étapes.",
+    "thinking": "L’assistant réfléchit…",
+    "lost": "L’assistant n’a pas su répondre à cette demande.",
+    "refused": "{{action}} — {{reason}}",
+    "confirm": {
+      "credits": "Cette action va dépenser {{cost}}.",
+      "unknownCost": "Cette action va dépenser des unités créatives. Le studio n’a pas pu en estimer le montant, et n’en invente pas.",
+      "asset": "Cette action va téléverser une image, qui restera dans votre bibliothèque. Elle ne coûte aucune unité créative.",
+      "yes": "Autoriser",
+      "yesHint": "Lance l’action décrite au-dessus, et engage ce qu’elle engage",
+      "no": "Refuser",
+      "noHint": "N’exécute rien, et l’assistant en tient compte pour la suite"
+    }
+  }
+}

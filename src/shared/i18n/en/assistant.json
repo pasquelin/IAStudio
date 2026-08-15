@@ -1,0 +1,93 @@
+{
+  "assistant": {
+    "actions": {
+      "commandRun": {
+        "title": "Run a command",
+        "description": "Fires a studio command by its identifier, exactly as a keyboard shortcut or a menu row would. The document it applies to has to be in front."
+      },
+      "workspaceOpen": {
+        "title": "Open a workspace",
+        "description": "Switches to a workspace, and creates a document there when asked to. This is what answers “open a new 3D file”."
+      },
+      "modelsSearch": {
+        "title": "Search for a model",
+        "description": "Searches generation models by keywords, narrowed to one family when a family is given. Changes nothing on screen."
+      },
+      "modelsSelect": {
+        "title": "Pick a model",
+        "description": "Arms a model for a generation family. The Generator’s form is then rebuilt on that model’s own fields."
+      },
+      "generatorPrepare": {
+        "title": "Prepare a generation",
+        "description": "Fills the Generator’s form with a model and its parameters, then shows it. Nothing is sent, and the generation is still to be started."
+      },
+      "generatorSubmit": {
+        "title": "Start the prepared generation",
+        "description": "Sends the form as it stands on screen. Spends creative units, whose estimate is stated before anything is committed."
+      },
+      "jobsList": {
+        "title": "List the jobs",
+        "description": "Returns the generations under way and how far along they are, as the studio tracks them. Changes nothing on screen."
+      },
+      "promptSuggest": {
+        "title": "Suggest prompt variants",
+        "description": "Rewrites a sentence into several variants cut for the model armed in the Generator, with the settings that go with them. Spends nothing and changes nothing on screen."
+      },
+      "promptTranslate": {
+        "title": "Translate a prompt into English",
+        "description": "Carries a text into the language the models are trained on, and says which language it recognised. Spends nothing and changes nothing on screen."
+      },
+      "promptDescribeStyle": {
+        "title": "Describe the style of the references",
+        "description": "Reads the reference images sitting on the Generator’s form and returns a description usable as a prompt. Spends nothing."
+      }
+    },
+    "refusals": {
+      "unknownCommand": "No such command exists in the studio.",
+      "globalCommand": "That command belongs to the application menu, which fires it itself.",
+      "wrongSurface": "That command speaks to a document that is not in front.",
+      "generatorClosed": "The Generator was not open. It is now.",
+      "nothingPrepared": "The Generator has no model armed at the moment.",
+      "notSubmitted": "The generation did not go out.",
+      "badInput": "The parameters given do not suit this action.",
+      "noBridge": "The studio is not answering.",
+      "noConfirmer": "That action needs a yes, and no window was there to give one.",
+      "declined": "You turned that action down.",
+      "noWindow": "No studio window was in front to run that action.",
+      "timedOut": "The request stood on screen unanswered, and was given up on.",
+      "noReference": "The form carries no reference image to read a style from."
+    },
+    "fields": {
+      "command": "Command identifier",
+      "workspace": "Workspace",
+      "createDocument": "Create a document",
+      "query": "Keywords",
+      "family": "Generation family",
+      "modelId": "Model identifier",
+      "parameters": "Model parameters",
+      "draft": "Sentence to rework",
+      "text": "Text to translate"
+    },
+    "title": "Assistant",
+    "empty": "Say what you want done, and the assistant does it.",
+    "placeholder": "Open a 3D file, find a model, prepare a generation…",
+    "send": "Send",
+    "sendHint": "Sends the sentence to the assistant, which picks the actions and runs them",
+    "close": "Close",
+    "closeHint": "Closes the window without cancelling anything already under way",
+    "model": "Assistant model",
+    "modelHint": "Picks the model that reads your sentences. The cheapest is enough to open a workspace, the others hold up better on requests that take several steps.",
+    "thinking": "The assistant is thinking…",
+    "lost": "The assistant could not make sense of that one.",
+    "refused": "{{action}} — {{reason}}",
+    "confirm": {
+      "credits": "This action will spend {{cost}}.",
+      "unknownCost": "This action will spend creative units. The studio could not estimate how many, and does not invent a figure.",
+      "asset": "This action will upload an image, which then stays in your library. It costs no creative units.",
+      "yes": "Allow",
+      "yesHint": "Runs the action above, and commits what it commits",
+      "no": "Refuse",
+      "noHint": "Runs nothing, and the assistant takes it into account for what follows"
+    }
+  }
+}

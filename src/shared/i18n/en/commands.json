@@ -24,6 +24,10 @@
       "title": "Settings",
       "help": "Opens the settings window — this one: the language, the colours, the account, the shortcuts, and everything else that is adjustable."
     },
+    "appAssistant": {
+      "title": "Assistant",
+      "help": "Opens the window where you say what you want done, by voice or by keyboard. The assistant carries it out itself, and asks for a yes before anything that costs."
+    },
     "appDictate": {
       "title": "Dictate",
       "help": "Listens to the microphone and writes what you say at the caret, in the field you are in. Held down by default: speak, let go, the text appears."
