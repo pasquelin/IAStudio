@@ -112,6 +112,7 @@ const { reindexTracks } = await import('./timeline-state')
 /** No output in jsdom: the suite plays nothing, and every load is refused. */
 const silence = () => ({
   now: () => null,
+  tap: () => null,
   resume: vi.fn(),
   load: () => Promise.reject(new Error('no output')),
 })

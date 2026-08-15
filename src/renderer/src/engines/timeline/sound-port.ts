@@ -1,5 +1,5 @@
 import { fetchAsset } from '@/helpers/asset-fetch'
-import type { LoadedSound, SoundCue, SoundPort } from './sound-schedule'
+import type { AudioTap, LoadedSound, SoundCue, SoundPort } from './sound-schedule'
 
 /** What the port needs of an output, which is far less than an `AudioContext` offers. */
 export type SoundOutput = Pick<
@@ -7,17 +7,69 @@ export type SoundOutput = Pick<
   | 'currentTime'
   | 'state'
   | 'resume'
+  | 'sampleRate'
   | 'decodeAudioData'
+  | 'createAnalyser'
   | 'createBufferSource'
   | 'createGain'
   | 'destination'
 >
 
 /**
- * One source per slice, through a gain of its own.
+ * How many samples the analyser reads at once. 2048 gives 1024 bins, which is a spectrum fine
+ * enough to tell a bass note from the one above it and still one frame's work to walk.
+ */
+const FFT_SIZE = 2048
+
+/**
+ * Everything the window plays passes through here on its way out, so a meter has one place to
+ * listen — where each clip used to reach `destination` on its own and nothing stood in between.
+ *
+ * Kept beside the output that built it rather than per port: two Audio tabs share one context,
+ * and a bus per tab would leave one summing node behind per tab ever opened. Sharing it is also
+ * what the meter means — the OUTPUT's level, and the playback token already grants one player.
+ */
+type SoundBus = { output: SoundOutput; input: AudioNode; tap: AudioTap }
+
+let bus: SoundBus | null = null
+
+function busFor(output: SoundOutput): SoundBus {
+  if (bus?.output === output) return bus
+
+  const analyser = output.createAnalyser()
+  analyser.fftSize = FFT_SIZE
+  const input = output.createGain()
+  input.connect(analyser).connect(output.destination)
+
+  // Filled in place on every read: at sixty frames a second, two arrays per frame is two
+  // thousand allocations a minute for a bar and a row of bins.
+  const samples = new Float32Array(analyser.fftSize)
+  const bins = new Uint8Array(analyser.frequencyBinCount)
+
+  bus = {
+    output,
+    input,
+    tap: {
+      sampleRate: output.sampleRate,
+      levels: () => {
+        analyser.getFloatTimeDomainData(samples)
+        return samples
+      },
+      frequencies: () => {
+        analyser.getByteFrequencyData(bins)
+        return bins
+      },
+    },
+  }
+  return bus
+}
+
+/**
+ * One source per slice, through a gain of its own, onto the window's one bus.
  *
  * The node graph is torn down when the sound ends: a gain left connected is a node the output
- * keeps summing, one per clip played, for as long as the window lives.
+ * keeps summing, one per clip played, for as long as the window lives. The bus itself is not
+ * part of that teardown — it outlives every clip, which is the point of it.
  */
 export function playFrom(output: SoundOutput, buffer: AudioBuffer): LoadedSound {
   return (cue: SoundCue) => {
@@ -31,7 +83,7 @@ export function playFrom(output: SoundOutput, buffer: AudioBuffer): LoadedSound 
     gain.gain.setValueAtTime(cue.gain, cue.when)
     for (const ramp of cue.ramps) gain.gain.linearRampToValueAtTime(ramp.level, ramp.when)
 
-    source.connect(gain).connect(output.destination)
+    source.connect(gain).connect(busFor(output).input)
     source.onended = () => gain.disconnect()
 
     source.start(cue.when, cue.offset, cue.duration)
@@ -76,6 +128,9 @@ export function createSoundPort(output: () => SoundOutput = sharedOutput): Sound
 
   return {
     now: clock,
+    // Null until something has been played: a tab mounts its monitor long before anyone presses
+    // play, and asking for a tap is not a reason to open an output device.
+    tap: () => (opened ? busFor(output()).tap : null),
     resume: () => {
       opened = true
       void output().resume()

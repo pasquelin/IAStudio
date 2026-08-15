@@ -15,25 +15,42 @@ const outputWith = () => {
     stop: vi.fn(),
     onended: null as (() => void) | null,
   }
-  const gain = {
+  // One object per call, so the clip's gain and the bus's can be told apart — they are the same
+  // kind of node standing at two ends of the graph.
+  const gains: ReturnType<typeof makeGain>[] = []
+  const makeGain = () => ({
     gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() },
-    connect: vi.fn(),
+    connect: vi.fn(<T>(node: T): T => node),
     disconnect: vi.fn(),
+  })
+  const analyser = {
+    fftSize: 0,
+    frequencyBinCount: 4,
+    connect: vi.fn(<T>(node: T): T => node),
+    getFloatTimeDomainData: vi.fn(),
+    getByteFrequencyData: vi.fn(),
   }
   const decoded = { length: 1 } as AudioBuffer
 
   const output = {
     currentTime: 12,
     state: 'running',
+    sampleRate: 48_000,
     resume: vi.fn(async () => {}),
     decodeAudioData: vi.fn(async () => decoded),
+    createAnalyser: vi.fn(() => analyser),
     createBufferSource: vi.fn(() => source),
-    createGain: vi.fn(() => gain),
+    createGain: vi.fn(() => {
+      const made = makeGain()
+      gains.push(made)
+      return made
+    }),
     destination: { id: 'speakers' },
-    // The suite drives the three calls the port makes; a real `AudioContext` offers forty more.
+    // The suite drives the calls the port makes; a real `AudioContext` offers forty more.
   } as unknown as SoundOutput
 
-  return { output, source, gain, decoded }
+  // The clip's own gain is made first: `playFrom` builds it before reaching for the bus.
+  return { output, source, gains, analyser, decoded, gain: () => gains[0] }
 }
 
 const cue = (over: Partial<SoundCue> = {}): SoundCue => ({
@@ -119,7 +136,7 @@ describe('the browser sound port', () => {
     const { output, gain } = outputWith()
     playFrom(output, {} as AudioBuffer)(cue({ when: 20, gain: 0.25 }))
 
-    expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0.25, 20)
+    expect(gain()?.gain.setValueAtTime).toHaveBeenCalledWith(0.25, 20)
   })
 
   it('lays the envelope out as ramps, each landing at its own instant', () => {
@@ -130,7 +147,7 @@ describe('the browser sound port', () => {
     ]
     playFrom(output, {} as AudioBuffer)(cue({ ramps: envelope }))
 
-    expect(gain.gain.linearRampToValueAtTime.mock.calls).toEqual([
+    expect(gain()?.gain.linearRampToValueAtTime.mock.calls).toEqual([
       [1, 21],
       [0, 23],
     ])
@@ -140,27 +157,47 @@ describe('the browser sound port', () => {
     const { output, gain } = outputWith()
     playFrom(output, {} as AudioBuffer)(cue())
 
-    expect(gain.gain.linearRampToValueAtTime).not.toHaveBeenCalled()
+    expect(gain()?.gain.linearRampToValueAtTime).not.toHaveBeenCalled()
   })
 
-  it('sends the sound through its gain to the speakers', () => {
-    const { output, source, gain } = outputWith()
+  /**
+   * Every clip meets on one bus on its way out, which is what gives a meter somewhere to listen:
+   * each of them used to reach `destination` on its own, with nothing in between to read.
+   */
+  it('sends the sound through its gain onto the bus, and the bus to the speakers', () => {
+    const { output, source, gains, analyser } = outputWith()
     playFrom(output, {} as AudioBuffer)(cue())
 
-    expect(source.connect).toHaveBeenCalledWith(gain)
-    expect(gain.connect).toHaveBeenCalledWith(output.destination)
+    const [clip, busInput] = gains
+    expect(source.connect).toHaveBeenCalledWith(clip)
+    expect(clip?.connect).toHaveBeenCalledWith(busInput)
+    expect(busInput?.connect).toHaveBeenCalledWith(analyser)
+    expect(analyser.connect).toHaveBeenCalledWith(output.destination)
+  })
+
+  it('builds that bus once, however many sounds pass through it', () => {
+    const { output, analyser } = outputWith()
+    const play = playFrom(output, {} as AudioBuffer)
+    play(cue())
+    play(cue({ when: 30 }))
+
+    expect(output.createAnalyser).toHaveBeenCalledTimes(1)
+    expect(analyser.fftSize).toBe(2048)
   })
 
   /**
    * A gain left connected is a node the output keeps summing — one per clip played, for as long
-   * as the window lives.
+   * as the window lives. The bus is the exception it must not take with it: torn down with the
+   * first clip that ends, every sound after it would be inaudible.
    */
-  it('takes the graph down once the sound has ended', () => {
-    const { output, source, gain } = outputWith()
+  it('takes the clip down once the sound has ended, and leaves the bus standing', () => {
+    const { output, source, gains } = outputWith()
     playFrom(output, {} as AudioBuffer)(cue())
 
     source.onended?.()
-    expect(gain.disconnect).toHaveBeenCalled()
+    const [clip, busInput] = gains
+    expect(clip?.disconnect).toHaveBeenCalled()
+    expect(busInput?.disconnect).not.toHaveBeenCalled()
   })
 
   it('stops the source it started, and nothing else', () => {
@@ -168,5 +205,42 @@ describe('the browser sound port', () => {
     playFrom(output, {} as AudioBuffer)(cue()).stop()
 
     expect(source.stop).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('listening to what goes out', () => {
+  /** Same reason as the clock: a monitor is mounted long before anyone presses play. */
+  it('offers nothing to listen to before an output was opened', () => {
+    const { output } = outputWith()
+    const open = vi.fn(() => output)
+
+    expect(createSoundPort(open).tap()).toBeNull()
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  it('listens on the same bus the sounds are summed onto, at the output rate', () => {
+    const { output } = outputWith()
+    const port = createSoundPort(() => output)
+    port.resume()
+
+    expect(port.tap()?.sampleRate).toBe(48_000)
+    expect(output.createAnalyser).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * Both readers hand back a buffer of their own, refilled in place: at sixty frames a second, a
+   * pair of fresh arrays per frame is two thousand allocations a minute for one bar and a row of
+   * bins.
+   */
+  it('refills the buffers it owns rather than handing out new ones', () => {
+    const { output, analyser } = outputWith()
+    const port = createSoundPort(() => output)
+    port.resume()
+    const tap = port.tap()
+
+    expect(tap?.levels()).toBe(tap?.levels())
+    expect(tap?.frequencies()).toBe(tap?.frequencies())
+    expect(analyser.getFloatTimeDomainData).toHaveBeenCalledTimes(2)
+    expect(tap?.frequencies()).toHaveLength(analyser.frequencyBinCount)
   })
 })

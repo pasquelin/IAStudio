@@ -88,7 +88,8 @@
     "programRole": "Le montage entier, tel qu’il sera exporté",
     "mirror": "Fenêtre de retour",
     "mirrorHint": "Ouvre le montage dans une fenêtre à part, à poser sur un autre écran",
-    "decibels": "dB"
+    "decibels": "dB",
+    "outputLevel": "Niveau de sortie"
   },
   "timeline": {
     "noDocument": "Aucune séquence ouverte. Créez-en une pour monter.",

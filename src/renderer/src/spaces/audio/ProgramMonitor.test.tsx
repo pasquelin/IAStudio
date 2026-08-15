@@ -12,6 +12,7 @@ const transport = (playing = false): SoundTransport => ({
   playing,
   toggle: vi.fn(),
   rewind: vi.fn(),
+  tap: () => null,
 })
 
 function show(overrides: { playing?: boolean; onSeek?: (time: number) => void } = {}) {
@@ -24,6 +25,8 @@ function show(overrides: { playing?: boolean; onSeek?: (time: number) => void } 
 /**
  * jsdom lays nothing out, so the canvas measures zero and `programViewport` would scale by zero.
  * The width is declared where the component reads it — off the bounding box, not off the element.
+ *
+ * The FIRST canvas: the meter stands beside the wave, and only the wave is scrubbed on.
  */
 function wave(width = 400): HTMLElement {
   const canvas = document.querySelector('canvas')

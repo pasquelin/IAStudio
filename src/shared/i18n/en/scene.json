@@ -88,7 +88,8 @@
     "programRole": "The whole edit, as it will be exported",
     "mirror": "Return window",
     "mirrorHint": "Opens the edit in a window of its own, to put on a second screen",
-    "decibels": "dB"
+    "decibels": "dB",
+    "outputLevel": "Output level"
   },
   "timeline": {
     "noDocument": "No sequence open. Create one to start editing.",

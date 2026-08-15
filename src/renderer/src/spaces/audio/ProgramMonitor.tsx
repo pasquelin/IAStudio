@@ -19,6 +19,7 @@ import {
 } from '@/engines/timeline/timeline-state'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { usePeaks } from '@/stores/peaks'
+import { OutputMeter } from './OutputMeter'
 import type { SoundTransport } from './useSoundTransport'
 
 /** The scale's own face, as the ruler above it takes one: monospace, so digits keep their column. */
@@ -123,7 +124,12 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
         />
       }
     >
-      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" onPointerDown={seek} />
+      {/* The meter beside the wave rather than over it: the wave is clicked to seek, and a
+          surface one drags on has no room for a strip that is only ever read. */}
+      <div className="absolute inset-0 flex gap-(--sc-gutter)">
+        <canvas ref={canvasRef} className="h-full min-w-0 flex-1" onPointerDown={seek} />
+        <OutputMeter tap={transport.tap} playing={transport.playing} />
+      </div>
     </MonitorFrame>
   )
 }
