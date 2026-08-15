@@ -1234,19 +1234,28 @@ describe('a job nobody asked to see', () => {
     expect(recorded).toEqual([])
   })
 
-  // Picked up tomorrow, a reasoning step would answer a question nobody is still asking — and
-  // charge an account for it.
+  /**
+   * Picked up tomorrow, a reasoning step would answer a question nobody is still asking — and
+   * charge an account for it. So it goes through the loop that persists, and is not written.
+   *
+   * The runner SETTLES on the second look rather than answering `in-progress` for ever. A poll
+   * loop with no way out spins past the end of the test on the microtask queue, and the
+   * harness's runaway guard then throws into whatever file happens to be running — which is
+   * exactly what it did, as an unhandled error nobody could place.
+   */
   it('is never written down to be resumed', async () => {
+    let looks = 0
     const { manager, remembered } = harness({
       runner: {
         submit: () => Promise.resolve(remote('in-progress')),
-        poll: () => Promise.resolve(remote('in-progress')),
+        poll: () => Promise.resolve(remote((looks += 1) > 1 ? 'success' : 'in-progress')),
       },
     })
 
-    void manager.run({ id: 'model_scenario-llm' }, 'Assistant', {})
-    await settled()
+    await manager.run({ id: 'model_scenario-llm' }, 'Assistant', {})
 
+    // In flight AND settled: a generation is written down at both, and this is written at neither.
+    expect(looks).toBeGreaterThan(1)
     expect(remembered()).toEqual([])
   })
 
