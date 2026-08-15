@@ -17,7 +17,10 @@ import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
-import { installDocuments } from '@/stores/document-fixtures'
+import { clipFixture } from '@/engines/timeline/timeline-fixtures'
+import { EMPTY_SOUND_SEQUENCE, SECOND } from '@/engines/timeline/timeline-state'
+import { useSequences } from '@/stores/sequences'
+import { installDocument, installDocuments } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useSelection } from '@/stores/selection'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
@@ -639,6 +642,29 @@ describe('inspector panel', () => {
     render(<Content />)
 
     expect(screen.getByText('Composition')).toBeInTheDocument()
+  })
+
+  /**
+   * The Audio workspace shows a montage too, and it lives in the same store. Reading only the
+   * SEQUENCE in front left every clip and track picked there with an empty inspector: gain,
+   * speed and fades of a sound clip were editable from nowhere at all.
+   */
+  it('describes a clip picked in a sound montage', () => {
+    installDocument('doc-1', 'audio')
+    useSequences.getState().replace('doc-1', {
+      ...EMPTY_SOUND_SEQUENCE,
+      tracks: [
+        { ...EMPTY_SOUND_SEQUENCE.tracks[0]!, clips: [clipFixture('clip-1', 0, SECOND)] },
+        ...EMPTY_SOUND_SEQUENCE.tracks.slice(1),
+      ],
+      selectedId: 'clip-1',
+    })
+    useSelection.getState().selectClip('doc-1', 'clip-1')
+    render(<Content />)
+
+    expect(screen.getByRole('heading', { name: 'Clip' })).toBeInTheDocument()
+    // The three a sound clip is shaped by, and the reason this matters: they had no other surface.
+    expect(screen.getByRole('spinbutton', { name: /Gain/ })).toBeInTheDocument()
   })
 
   // The image in front is not necessarily the one the layer was picked in.

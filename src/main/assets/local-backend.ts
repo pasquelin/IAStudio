@@ -256,18 +256,25 @@ export function createLocalBackend({
       ...twinOf(request, at),
     }
 
-    const added = await catalog().add(asset)
-    // After the catalogue, never before: a listener that goes looking for what just arrived —
-    // extracting a model's pictures does exactly that — would find nothing at all. Caught, as
-    // the deps promise: the row is committed by now, so a listener throwing here would fail an
-    // import that has already happened.
+    return announce(await catalog().add(asset))
+  }
+
+  /**
+   * Tells whoever derives files from an asset that its bytes are on disk.
+   *
+   * After the catalogue, never before: a listener that goes looking for what just arrived —
+   * extracting a model's pictures does exactly that — would find nothing at all. Caught, as the
+   * deps promise: the row is committed by now, so a listener throwing here would fail a write
+   * that has already happened.
+   */
+  const announce = (asset: Asset): Asset => {
     try {
-      onImported?.(added)
+      onImported?.(asset)
     } catch {
       // Nothing to say from here: what a listener does is its own errand, and the one this
       // exists for reports its own failures to the journal.
     }
-    return added
+    return asset
   }
 
   return {
@@ -307,7 +314,9 @@ export function createLocalBackend({
       //
       // `peaksPath` goes, always: the waveform on disk describes the take before the edit, and
       // a stale one is worse than none — the strip would draw a shape the ear no longer hears.
-      // A fresh one comes back when the take is ingested again.
+      // A fresh one is derived from the new bytes below, on the same path every other write
+      // takes. Nothing used to do that, and applying an edit left every clip of the take
+      // waveform-less for good.
       const rewritten: Asset = {
         ...existing,
         path: relativePath,
@@ -320,7 +329,7 @@ export function createLocalBackend({
       }
       delete rewritten.peaksPath
 
-      return await catalog().add(rewritten)
+      return announce(await catalog().add(rewritten))
     },
   }
 }

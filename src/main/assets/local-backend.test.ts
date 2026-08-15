@@ -459,6 +459,31 @@ describe('local backend', () => {
     expect((await catalog.find('asset_4'))?.peaksPath).toBeUndefined()
   })
 
+  // Dropping the waveform is only half the job. Nothing used to derive the new one — `ingest`
+  // hangs off the file picker alone — so applying an edit left every clip of that take
+  // waveform-less, in every montage, for good.
+  it('says the take changed, so a fresh waveform can be derived from the new bytes', async () => {
+    const landed: string[] = []
+    const watched = createLocalBackend({
+      download: () => Promise.resolve(BYTES),
+      projectPath: () => root,
+      catalog: () => catalog,
+      now: () => '2026-08-06T10:00:00.000Z',
+      onImported: asset => {
+        landed.push(asset.id)
+      },
+    })
+    await watched.importFromBytes(
+      { id: 'asset_7', name: 'Take', type: 'audio', extension: '.wav' },
+      new Uint8Array([1]),
+    )
+    landed.length = 0
+
+    await watched.replaceBytes('asset_7', new Uint8Array([4, 5]), '.wav')
+
+    expect(landed).toEqual(['asset_7'])
+  })
+
   it('carries the probe of bytes written beside the source', async () => {
     const asset = await backend.importFromBytes(
       {
