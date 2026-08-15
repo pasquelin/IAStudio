@@ -124,7 +124,7 @@ src/
 │   └── helpers/     pure functions
 └── shared/        types and constants only — no runtime dependency
     ├── domain/      the vocabulary both processes speak
-    └── i18n/        one JSON per language, read by the menu and the UI
+    └── i18n/        one directory of sections per language, read by the menu and the UI
 ```
 
 A selection, not an inventory — enough to find your way, and no more.

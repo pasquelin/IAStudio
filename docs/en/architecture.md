@@ -773,10 +773,33 @@ The split is a **storage** choice, not a contract one: the namespace stays singl
 `main/i18n-sections.test.ts` refuses a flat file reappearing at the root of the directory — it
 would hijack the import and take the whole language down with it.
 
+### A branch older than the split conflicts: what to do
+
+A branch started before 15/08 edits `fr.json` and `en.json`, which the split deleted. Git offers
+a **modify/delete** conflict on both, plus a content conflict on `shared/i18n/index.ts` if the
+branch touched it too.
+
+**Both reflex resolutions are wrong, and neither goes red.** Keeping the flat file — what git
+leaves in the tree by default — hijacks the import and leaves `TRANSLATIONS.fr` undefined; that
+is the only one of the two `main/i18n-sections.test.ts` catches. Removing it with `git rm`
+**silently loses every key the branch had added**: parity stays clean, the typecheck passes, the
+bundle guards pass.
+
+The right move, in this order:
+
+1. list the keys the branch was adding, before resolving anything —
+   `git diff <base>...<branch> -- src/shared/i18n/fr.json`;
+2. write them into the section of their surface, on both sides (`fr/<section>.json` and
+   `en/<section>.json`); a new root belonging to none of the twelve calls for a decision between
+   an existing section and a thirteenth file, which has to be declared in **both** `index.ts`;
+3. `git rm` the two flat files only then;
+4. replay `main/i18n-sections.test.ts` and the typecheck, then check the key count grew by the
+   number listed in step 1.
+
 - **All identifiers, comments, JSDoc, file names, i18n keys, IPC channels and test descriptions
   are in English**, everywhere in `src/`.
-- The only exceptions are the sections of `fr/` themselves, and the expected values in tests when they come from
-  the French bundle.
+- The only exceptions are the sections of `fr/` themselves, and the expected values in tests
+  when they come from the French bundle.
 - No hard-coded user-facing string in a component. Dynamic keys (`assetTypes.${type}`,
   `capabilities.${capability}`) resolve against the same bundles, with the raw API name as a
   fallback so an unknown value shows something readable rather than a missing key.
