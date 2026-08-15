@@ -182,12 +182,15 @@ Le cadre ne sort jamais de l’image — un recadrage rogne, il n’agrandit pas
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Sélection rectangulaire** | `M` | trace une zone rectangulaire |
-| **Sélection elliptique** | — | trace une zone ovale |
+| **Sélection rectangulaire** | `M` | trace une zone rectangulaire — **Maj pour un carré** |
+| **Sélection elliptique** | — | trace une zone ovale — **Maj pour un cercle** |
 | **Lasso** | `L` | trace une zone à main levée |
 
-> Tant qu’une zone est tracée, **le pinceau, la gomme et le pot n’agissent qu’à l’intérieur**.
-> Un clic sans glisser abandonne la zone, comme `⌘D`.
+**`Maj` contraint la zone pendant le glissement**, comme il contraint les formes du groupe
+suivant. Le **Lasso** l’ignore : une zone tracée point par point n’a pas de côtés à égaliser.
+
+> Tant qu’une zone est tracée, **le pinceau, la gomme, le remplissage et les formes n’agissent
+> qu’à l’intérieur**. Un clic sans glisser abandonne la zone, comme `⌘D`.
 
 ### Groupe Formes
 
@@ -237,7 +240,7 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Commentaire** | `C` | *pas encore disponible* |
-| **Remplir le calque** | `G` | remplit **tout** le calque actif de la couleur courante |
+| **Remplir le calque** | `G` | remplit le calque actif — ou la **zone sélectionnée**, s’il y en a une |
 | **Pipette** | `I` | prélève la couleur sous le pointeur |
 | **Couleur** | — | la couleur du pinceau, du crayon, des formes et du remplissage |
 | **Réglages du pinceau** | `[` et `]` | la taille, la dureté et l’opacité |
@@ -250,9 +253,11 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 > l’inspecteur applique déjà à un sprite, qui n’a aucune section d’ombre plutôt qu’une section
 > morte.
 
-> **Remplir n’est pas un pot de peinture.** Il remplit le calque entier, d’un bord à l’autre.
-> C’est ce qui donne un fond uni en un geste, mais ce n’est pas le remplissage par zone que vous
-> connaissez peut-être ailleurs.
+> **Remplir n’est pas un pot de peinture.** Il ne cherche pas la plage de couleur sous le
+> pointeur : il remplit **tout le calque**, d’un bord à l’autre — ou, **si une zone est
+> sélectionnée, cette zone seulement**. C’est ce qui donne un fond uni en un geste, et une zone sa
+> couleur plate ; ce n’est pas le remplissage par proximité de couleur que vous connaissez
+> peut-être ailleurs.
 
 ### Les réglages du pinceau
 

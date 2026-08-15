@@ -173,12 +173,15 @@ The frame never leaves the picture — a crop trims, it does not grow.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Rectangular selection** | `M` | draws a rectangular area |
-| **Elliptical selection** | — | draws an oval area |
+| **Rectangular selection** | `M` | draws a rectangular area — **Shift for a square** |
+| **Elliptical selection** | — | draws an oval area — **Shift for a circle** |
 | **Lasso** | `L` | draws a freehand area |
 
-> As long as an area is drawn, **the brush, the eraser and the bucket only act inside it**.
-> A click without a drag drops the area, just like `⌘D`.
+**`Shift` constrains the area while you drag**, as it constrains the shapes of the next group. The
+**Lasso** ignores it: an area traced point by point has no sides to even out.
+
+> As long as an area is drawn, **the brush, the eraser, the fill and the shapes only act inside
+> it**. A click without a drag drops the area, just like `⌘D`.
 
 ### Shapes group
 
@@ -228,7 +231,7 @@ The eraser erases **to transparency**; it does not paint white.
 | Tool | Shortcut | What it does |
 |---|---|---|
 | **Comment** | `C` | *not available yet* |
-| **Fill layer** | `G` | fills the **whole** active layer with the current colour |
+| **Fill layer** | `G` | fills the active layer — or the **selected area**, if there is one |
 | **Eyedropper** | `I` | picks up the colour under the pointer |
 | **Colour** | — | the colour of the brush, the pencil, the shapes and the fill |
 | **Brush settings** | `[` and `]` | the size, the hardness and the opacity |
@@ -240,8 +243,10 @@ The eraser erases **to transparency**; it does not paint white.
 > **not greyed, it is gone**: the rule the inspector already applies to a sprite, which gets no
 > shadow section rather than a dead one.
 
-> **Fill is not a paint bucket.** It fills the entire layer, edge to edge. That is what gives a
-> plain background in one gesture, but it is not the region fill you may know from elsewhere.
+> **Fill is not a paint bucket.** It does not hunt for the patch of colour under the pointer: it
+> fills **the whole layer**, edge to edge — or, **if an area is selected, that area alone**. That
+> is what gives a plain background in one gesture, and a region its flat colour; it is not the
+> colour-proximity fill you may know from elsewhere.
 
 ### The brush settings
 
