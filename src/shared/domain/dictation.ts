@@ -57,7 +57,7 @@ export type SttEvent =
    *
    * No language travels with it. Parakeet recognises twenty-five of them and reports none: the
    * `lang` field of a NeMo transducer result comes back empty, measured rather than assumed.
-   * There is therefore nothing to lock and nothing to warn about — see docs/stt/00-architecture.md.
+   * There is therefore nothing to lock and nothing to warn about.
    */
   | { type: 'final'; text: string; latencyMs: number }
   | { type: 'download'; progress: DownloadProgress }

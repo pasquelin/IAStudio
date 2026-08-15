@@ -67,7 +67,7 @@ mort. Ni le processus principal ni le renderer n'exécutent d'inférence.
   - le détecteur rend ses échantillons dans un **tampon externe**, qu'Electron refuse (« External
     buffers are not allowed ») là où Node l'accepte. `front(false)` demande une copie.
 
-  Les deux sont documentées dans `docs/stt/00-architecture.md` et tenues par le type partagé.
+  Les deux sont tenues par le type partagé.
 
 - **Un décodage à la fois.** L'audio arrive toutes les 100 ms et un décodage en prend plusieurs
   centaines ; `decodeAsync` rendant la main, les messages doivent être enchaînés (`serial.ts`)

@@ -141,8 +141,7 @@ hundred million parameters, 640 MB of weights — in a `utilityProcess` of its o
 not have done: it shares its process's heap and lifetime, so the 700 MB would stay in the main
 process's footprint and a crash in the native addon would take the studio with it. Everything
 that decides anything — the buffer, the queue, the state machine — sits beside it and is tested
-without it. See [`docs/stt/`](../stt/00-architecture.md) and
-[`ADR-17`](../ci/adr/ADR-17-moteur-de-dictee-hors-processus.md).
+without it. See [`ADR-17`](../ci/adr/ADR-17-moteur-de-dictee-hors-processus.md).
 
 ---
 

@@ -8,8 +8,8 @@ import type { Language } from '../i18n/languages'
  * reach a machine with no network. Nothing here is written by hand — `manual.i18n.test.ts`
  * recomputes the whole file and fails on any drift.
  *
- * Only the manual travels. `docs/ci`, `docs/stt`, `docs/perf` and `architecture.md` address a
- * developer, and shipping them would put the repository's own notes in front of a user.
+ * Only the manual travels. `docs/ci` and `architecture.md` address a developer, and shipping
+ * them would put the repository's own notes in front of a user.
  */
 
 /**

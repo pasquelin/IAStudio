@@ -76,4 +76,3 @@ refus. Les deux se posent ensemble ou pas du tout.
 `disable-library-validation` reste refusé, y compris pour le moteur de reconnaissance : ses
 quatre bibliothèques sortent de l’asar et sont signées avec l’application, comme
 `better-sqlite3` — c’est ce que `asarUnpack` et la signature du bundle servent à garantir.
-Voir [`docs/stt/02-packaging.md`](../../stt/02-packaging.md).
