@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback } from 'react'
 import type { CommandId } from '@shared/domain/command'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { canRedo, canUndo } from '@/engines/core/history'
 import type { Us } from '@/engines/timeline/timeline-state'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { useSplitPair } from '@/hooks/useSplitPair'
 import { audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
 import { useDocuments } from '@/stores/documents'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { fitSplit } from '@/stores/tools'
 import { ProgramMonitor } from './ProgramMonitor'
 import { TakeEditor } from './TakeEditor'
 import { useSoundTransport } from './useSoundTransport'
@@ -39,28 +39,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
    */
   const transport = useSoundTransport(documentId, sequence)
 
-  const columnRef = useRef<HTMLDivElement>(null)
-  /** Null until the divider is dragged: the two monitors share the column equally before that. */
-  const [programHeight, setProgramHeight] = useState<number | null>(null)
-  /** The column's own height, so the handle starts a drag from where the divider actually is. */
-  const [available, setAvailable] = useState(0)
-
-  // The column changes height without any drag — the window, a panel, the timeline being opened.
-  // A height kept in pixels through that either overflows the column or leaves the program
-  // nothing, so it is re-clamped the way the shell re-clamps its zones after a window resize.
-  useEffect(() => {
-    const column = columnRef.current
-    if (!column) return
-
-    const observer = new ResizeObserver(() => {
-      setAvailable(column.clientHeight)
-      setProgramHeight(current =>
-        current === null ? null : fitSplit(current, column.clientHeight),
-      )
-    })
-    observer.observe(column)
-    return () => observer.disconnect()
-  }, [])
+  const { pairRef, leadStyle, dividerSize, onDividerSize } = useSplitPair('vertical')
 
   const seek = useCallback(
     (playhead: Us) => {
@@ -127,23 +106,16 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
      * The inset belongs to the COLUMN, not to each monitor: carried by both, it doubled around
      * the handle and the pair read as two panes pushed apart rather than two panels stacked.
      */
-    <div ref={columnRef} className="flex h-full min-h-0 flex-col p-(--sc-gutter)">
+    <div ref={pairRef} className="flex h-full min-h-0 flex-col p-(--sc-gutter)">
       {/* The whole above the part, and the part above the strip it sits on: what one is making
           reads top to bottom, and the take being worked on stays next to the montage it lands
           in rather than a monitor's width away from it. */}
-      <div
-        className="flex min-h-0"
-        style={programHeight === null ? { flex: 1 } : { height: programHeight, flexShrink: 0 }}
-      >
+      <div className="flex min-h-0" style={leadStyle}>
         <ProgramMonitor sequence={sequence} transport={transport} onSeek={seek} />
       </div>
 
       {/* The same handle the shell splits its zones with, so the gesture is the one gesture. */}
-      <ResizeHandle
-        axis="vertical"
-        size={programHeight ?? available / 2}
-        onSize={(size, room) => setProgramHeight(fitSplit(size, room))}
-      />
+      <ResizeHandle axis="vertical" size={dividerSize} onSize={onDividerSize} />
 
       <div className="flex min-h-0 flex-1">
         <TakeEditor documentId={documentId} />
