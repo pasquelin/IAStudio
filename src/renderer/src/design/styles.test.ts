@@ -331,40 +331,50 @@ describe('the neutral fill of a button', () => {
 })
 
 /**
- * The three together, in the order the tailwind plugin sorts them into — which is what makes an
- * order-blind rule unnecessary here, where its neighbour above needed one.
+ * Read off the constant and compared word for word, which settles two things a regex over the
+ * raw source got wrong. Order first: `prettier-plugin-tailwindcss` sorts stably and leaves
+ * `text-tiny text-muted px-1` exactly as written, so an ordered pattern is a rule anyone can
+ * walk past by typing the three in another order. Exactness second: `px-1` as a SUBSTRING is
+ * also in `px-10` and `px-1.5`.
  *
  * All three are required, and `text-tiny` is what does the work: `text-muted … px-1` alone is
  * worn by the zoom readout of the image space, which is a BUTTON one clicks to return to 100 %
  * and not a word the bar sets down. A rule without it would call that a violation and be wrong.
  *
- * **What it cannot see**: the trio reached across two strings of one `cn()`, or assembled from a
+ * **What it cannot see**: the trio split across two strings of one `cn()`, or assembled from a
  * variable. A site determined to write the shade again can still do it; this catches the copy
- * that happens by habit, which is the one that happened four times.
+ * that happens by habit, which is the one that happened five times.
  */
-const REWRITTEN_LABEL = /text-muted[^'"`]*\btext-tiny\b[^'"`]*\bpx-1\b/
+const rewritesLabel = (source: string): boolean =>
+  [...source.matchAll(/['"`]([^'"`\n]*)['"`]/g)].some(match => {
+    const words = (match[1] ?? '').split(/\s+/)
+    return TOOLBAR_LABEL.split(' ').every(part => words.includes(part))
+  })
 
 describe('the word a bar sets beside its buttons', () => {
-  it('carries the ink, the size and the room around it', () => {
-    expect(TOOLBAR_LABEL).toContain('text-muted')
-    expect(TOOLBAR_LABEL).toContain('text-tiny')
-    expect(TOOLBAR_LABEL).toContain('px-1')
+  it('carries the ink, the size and the room around it, and nothing else', () => {
+    expect(TOOLBAR_LABEL.split(' ')).toEqual(['text-muted', 'text-tiny', 'px-1'])
   })
 
   it('is worn rather than written out again', () => {
     const offenders = WRITTEN_SOURCES.filter(
-      ([path, source]) => path !== GUARDED && REWRITTEN_LABEL.test(source),
+      ([path, source]) => path !== GUARDED && rewritesLabel(source),
     ).map(([path]) => path)
 
     expect(offenders).toEqual([])
   })
 
-  it('leaves alone what only shares two of the three', () => {
-    // The four sites as they stood before this batch, then the zoom readout and the manual's
-    // inline code — both of which a looser rule would have called violations.
-    expect(REWRITTEN_LABEL.test('"text-muted text-tiny px-1"')).toBe(true)
-    expect(REWRITTEN_LABEL.test('"text-muted w-auto px-1 tabular-nums"')).toBe(false)
-    expect(REWRITTEN_LABEL.test('"bg-base-300 text-tiny rounded px-1 py-0.5"')).toBe(false)
+  it('reads the three in any order, since the formatter leaves the order alone', () => {
+    expect(rewritesLabel('"text-muted text-tiny px-1"')).toBe(true)
+    expect(rewritesLabel('"text-tiny text-muted px-1"')).toBe(true)
+  })
+
+  it('leaves alone what only shares two of the three, or a longer word that starts the same', () => {
+    // The zoom readout of the image space, the manual's inline code, and the gauge a looser
+    // substring rule would have read as `px-1`.
+    expect(rewritesLabel('"text-muted w-auto px-1 tabular-nums"')).toBe(false)
+    expect(rewritesLabel('"bg-base-300 text-tiny rounded px-1 py-0.5"')).toBe(false)
+    expect(rewritesLabel('"text-muted text-tiny px-10"')).toBe(false)
   })
 
   // The partner of the rule above, and the same reason: a constant nobody wears is a dead export.
