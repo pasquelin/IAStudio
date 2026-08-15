@@ -35,6 +35,14 @@ export type AudioEditState = {
   region: Region | null
   /** A/B: hear the source rather than the chain, without undoing anything. */
   bypassed: boolean
+  /**
+   * The montage clip this take was laid down as, in the sound sequence of the same document.
+   *
+   * Held here rather than found by asset id, because the two are not the same question: a
+   * montage may well hold the same take twice, and only one of them is what the editor above is
+   * working on. Null when no track would take it — a montage whose sound tracks are all locked.
+   */
+  takeClipId: string | null
 }
 
 export const EMPTY_AUDIO_EDIT: AudioEditState = {
@@ -42,6 +50,7 @@ export const EMPTY_AUDIO_EDIT: AudioEditState = {
   edits: [],
   region: null,
   bypassed: false,
+  takeClipId: null,
 }
 
 /**
@@ -151,6 +160,7 @@ export function parseAudioEdits(content: unknown): AudioEditState {
   if (!isRecord(content)) return EMPTY_AUDIO_EDIT
 
   const assetId = readString(content, 'assetId', '')
+  const takeClipId = readString(content, 'takeClipId', '')
   const edits: AudioEdit[] = []
   if (Array.isArray(content.edits)) {
     for (const entry of content.edits) {
@@ -162,6 +172,9 @@ export function parseAudioEdits(content: unknown): AudioEditState {
   return {
     assetId: assetId || null,
     edits,
+    // Absent from every take written before the montage had a clip of its own: those reopen
+    // with the two halves untied, which is what they were saved as.
+    takeClipId: takeClipId || null,
     region: readRegion(content.region),
     // Never restored as bypassed: A/B is which of two things one is listening to right now,
     // and a document that reopens on the source would look like a chain that stopped working.

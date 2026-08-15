@@ -1207,6 +1207,7 @@ describe('the kinds a string holds', () => {
       edits: [],
       region: null,
       bypassed: false,
+      takeClipId: null,
     })
     useAudioEdits.getState().runCommand(documentId, pushEdit({ kind: 'gain', db: -6 }))
     const before = useAudioEdits.getState().states[documentId]

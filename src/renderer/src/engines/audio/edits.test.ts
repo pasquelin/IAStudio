@@ -167,6 +167,7 @@ describe('reading an edit chain back', () => {
     ],
     region: { from: 0, to: 200 },
     bypassed: false,
+    takeClipId: 'clip-a',
   }
 
   it('survives a serialize/parse round trip unchanged', () => {

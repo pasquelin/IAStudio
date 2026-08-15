@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { EMPTY_AUDIO_EDIT, pushEdit } from '@/engines/audio/edits'
+import {
+  EMPTY_SOUND_SEQUENCE,
+  updateTrack,
+  type Clip,
+  type SequenceState,
+} from '@/engines/timeline/timeline-state'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
+import { sequenceOf, useSequences } from '@/stores/sequences'
 import { loadTake } from './load-take'
 
 const take = (overrides: Partial<Asset> = {}): Asset => ({
@@ -15,6 +22,8 @@ const take = (overrides: Partial<Asset> = {}): Asset => ({
 })
 
 const editsOf = () => audioEditsOf(useAudioEdits.getState(), 'doc-1')
+const montageOf = (): SequenceState => sequenceOf(useSequences.getState(), 'doc-1')
+const clipsOf = (): Clip[] => montageOf().tracks.flatMap(track => track.clips)
 
 /** A document already holding a take, with one edit on it. */
 function loaded(assetId: string): void {
@@ -26,6 +35,8 @@ function loaded(assetId: string): void {
 describe('putting a take into the audio editor', () => {
   beforeEach(() => {
     useAudioEdits.setState({ states: {}, histories: {} })
+    useSequences.setState({ states: {}, histories: {} })
+    useSequences.getState().replace('doc-1', EMPTY_SOUND_SEQUENCE)
   })
 
   it('loads the take onto an empty editor', () => {
@@ -61,5 +72,69 @@ describe('putting a take into the audio editor', () => {
     loadTake('doc-1', take())
 
     expect(editsOf().edits).toBe(before)
+  })
+})
+
+// A take loaded over four empty tracks reads exactly like a load that did nothing, and the only
+// way sound reached the strip used to be a drag from the shelf that nothing announced.
+describe('the clip a take becomes on the montage under it', () => {
+  beforeEach(() => {
+    useAudioEdits.setState({ states: {}, histories: {} })
+    useSequences.setState({ states: {}, histories: {} })
+    useSequences.getState().replace('doc-1', EMPTY_SOUND_SEQUENCE)
+  })
+
+  it('lands on the first sound track, and the chain knows which clip it is', () => {
+    loadTake('doc-1', take())
+
+    const [first] = montageOf().tracks
+    expect(first?.clips.map(clip => clip.assetId)).toEqual(['take-1'])
+    expect(editsOf().takeClipId).toBe(first?.clips[0]?.id)
+  })
+
+  it('replaces the previous take rather than stacking beside it', () => {
+    loadTake('doc-1', take({ id: 'take-0' }))
+    loadTake('doc-1', take())
+
+    expect(clipsOf().map(clip => clip.assetId)).toEqual(['take-1'])
+  })
+
+  it('goes down a track when the first one is locked', () => {
+    useSequences.getState().replace(
+      'doc-1',
+      updateTrack(montageOf(), 'A1', track => ({ ...track, locked: true })),
+    )
+
+    loadTake('doc-1', take())
+
+    expect(montageOf().tracks[0]?.clips).toEqual([])
+    expect(montageOf().tracks[1]?.clips.map(clip => clip.assetId)).toEqual(['take-1'])
+  })
+
+  // The window between a tab appearing and its file being read: the montage store answers with
+  // the SEQUENCE default there, which carries a picture track this workspace cannot play.
+  it('builds no montage at all for a document whose file is still on its way', () => {
+    useSequences.setState({ states: {}, histories: {} })
+
+    loadTake('doc-1', take())
+
+    expect(useSequences.getState().states['doc-1']).toBeUndefined()
+    expect(editsOf().takeClipId).toBeNull()
+    expect(editsOf().assetId).toBe('take-1')
+  })
+
+  // Nowhere to lay it is not a reason to refuse the take itself: the editor still holds it, and
+  // unlocking a track is a gesture away.
+  it('still loads the take when every sound track refuses it', () => {
+    const locked = montageOf().tracks.reduce(
+      (state, track) => updateTrack(state, track.id, one => ({ ...one, locked: true })),
+      montageOf(),
+    )
+    useSequences.getState().replace('doc-1', locked)
+
+    loadTake('doc-1', take())
+
+    expect(editsOf().assetId).toBe('take-1')
+    expect(editsOf().takeClipId).toBeNull()
   })
 })
