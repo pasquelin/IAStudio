@@ -7,6 +7,7 @@ import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloud-asset'
 import type { CommandId, MenuCheck } from './domain/command'
 import type { ContextMenuItem } from './domain/context-menu'
+import type { AssistantAnswer, AssistantThought } from './domain/assistant'
 import type { SttEvent, SttSnapshot } from './domain/dictation'
 import type {
   CloseChoice,
@@ -137,6 +138,8 @@ export type Channels = {
   mediaCancel: 'media:cancel'
   mediaAvailable: 'media:available'
 
+  assistantThink: 'assistant:think'
+
   dictationState: 'dictation:state'
   dictationStart: 'dictation:start'
   dictationStop: 'dictation:stop'
@@ -262,6 +265,8 @@ export const CHANNELS: Channels = {
   mediaIngest: 'media:ingest',
   mediaCancel: 'media:cancel',
   mediaAvailable: 'media:available',
+
+  assistantThink: 'assistant:think',
 
   dictationState: 'dictation:state',
   dictationStart: 'dictation:start',
@@ -990,6 +995,17 @@ export type StudioBridge = {
     cancel: (assetId: string) => Promise<void>
     capabilities: () => Promise<MediaCapabilities>
     onProgress: (callback: (progress: IngestProgress) => void) => Unsubscribe
+  }
+  assistant: {
+    /**
+     * Works out what a sentence meant, and answers what to do about it.
+     *
+     * Thinking is the main process's business because the key, the rate limiter and the job loop
+     * are there; deciding and acting is the window's, because that is where the actions are and
+     * where the person is looking. So this asks a question and answers a plan — it never runs
+     * anything itself.
+     */
+    think: (request: AssistantThought) => Promise<AssistantAnswer>
   }
   dictation: {
     /** The state as it stands, for a window that arrives after the events it missed. */

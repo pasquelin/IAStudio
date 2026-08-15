@@ -1,6 +1,13 @@
-import { assistantAction, type ActionName } from '@shared/domain/assistant'
+import {
+  type ActionName,
+  assistantAction,
+  type AssistantCall,
+  type AssistantAnswer,
+} from '@shared/domain/assistant'
 import { isRecord } from '@shared/guards'
-import type { BrainCall, BrainReply } from './brain-port'
+
+/** What `parseReply` answers: the reply without the cost, which only the caller knows. */
+type Reply = Omit<AssistantAnswer, 'cost'>
 
 /**
  * Reads what the model answered, and refuses everything it cannot vouch for.
@@ -37,7 +44,7 @@ export function jsonIn(text: string): unknown {
   }
 }
 
-function callIn(value: unknown): BrainCall | null {
+function callIn(value: unknown): AssistantCall | null {
   if (!isRecord(value)) return null
 
   const action = assistantAction(typeof value.action === 'string' ? value.action : '')
@@ -60,7 +67,7 @@ function callIn(value: unknown): BrainCall | null {
  * down to the ones it does. Dropping the unknown call silently would run the remainder of a plan
  * whose author meant it to run entire — the studio would do half of something nobody asked for.
  */
-export function parseReply(text: string): BrainReply | null {
+export function parseReply(text: string): Reply | null {
   const parsed = jsonIn(text)
   if (!isRecord(parsed)) return null
 
@@ -70,7 +77,7 @@ export function parseReply(text: string): BrainReply | null {
   // Absent is allowed and means none; present and not a list is a shape nobody meant.
   if (rawCalls !== undefined && !Array.isArray(rawCalls)) return null
 
-  const calls: BrainCall[] = []
+  const calls: AssistantCall[] = []
   for (const raw of Array.isArray(rawCalls) ? rawCalls : []) {
     const call = callIn(raw)
     if (!call) return null

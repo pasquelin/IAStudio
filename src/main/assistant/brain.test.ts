@@ -172,7 +172,8 @@ describe('thinking', () => {
     })
 
     expect(await brain.think({ utterance: 'open a 3D file', history: [] })).toEqual({
-      reply: { say: 'Opening.', calls: [] },
+      say: 'Opening.',
+      calls: [],
       cost: 0.75,
     })
   })
@@ -210,8 +211,7 @@ describe('thinking', () => {
 
     const outcome = await brain.think({ utterance: 'open a 3D file', history: [] })
 
-    expect(outcome.reply).toEqual({ say: 'Opening.', calls: [] })
-    expect(outcome.cost).toBe(1.5)
+    expect(outcome).toEqual({ say: 'Opening.', calls: [], cost: 1.5 })
     const retry = run.mock.calls[1]?.[0]
     expect((retry?.textInputs as string[]).at(-1)).toContain('I think you want a 3D file!')
   })
@@ -225,8 +225,7 @@ describe('thinking', () => {
 
     const outcome = await brain.think({ utterance: 'open a 3D file', history: [] })
 
-    expect(outcome.reply).toEqual({ say: '', calls: [] })
-    expect(outcome.cost).toBe(1.5)
+    expect(outcome).toEqual({ say: '', calls: [], cost: 1.5 })
   })
 
   // A job that failed was still paid for, and the total the modal shows has to say so.

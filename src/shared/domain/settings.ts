@@ -1,4 +1,5 @@
 import type { LanguagePreference } from '../i18n/languages'
+import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistant'
 import type { BindingOverrides } from './command'
 import type { DictationMode } from './dictation'
 import type { ApiFailure } from './failure'
@@ -162,6 +163,19 @@ export type Settings = {
      */
     ffmpegPath?: string
   }
+  /** Talking to the studio instead of driving it — see `domain/assistant.ts`. */
+  assistant: {
+    /**
+     * Which language model works out what a sentence meant.
+     *
+     * A preference rather than a constant because the four differ by a factor of nearly four in
+     * price — measured, see `AssistantModel` — and because a request the cheapest one fumbles is
+     * usually answered by the next one up. Changed from the assistant's own panel rather than
+     * from this screen: the moment one wants a better model is the moment one is mid-sentence,
+     * and opening the preferences to get there loses the sentence.
+     */
+    model: AssistantModel
+  }
   /** Speaking a prompt instead of typing it. Everything runs on this machine — see `domain/dictation.ts`. */
   dictation: {
     enabled: boolean
@@ -215,6 +229,7 @@ export const DEFAULT_SETTINGS: Settings = {
   shortcuts: { overrides: {} },
   advanced: { logLevel: 'info' },
   media: {},
+  assistant: { model: DEFAULT_ASSISTANT_MODEL },
   dictation: {
     enabled: true,
     mode: 'pushToTalk',

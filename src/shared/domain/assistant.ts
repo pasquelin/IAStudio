@@ -248,6 +248,33 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
 
 export const ACTION_COMMITMENTS: readonly ActionCommitment[] = ['none', 'asset', 'credits']
 
+/** One thing the assistant decided to do. Checked against the registry before it is run. */
+export type AssistantCall = { action: ActionName; input: Record<string, unknown> }
+
+/** What is asked of whatever does the thinking. */
+export type AssistantThought = {
+  utterance: string
+  /**
+   * The turns before this one, oldest first, already rendered as lines. Rendered rather than
+   * structured because that is what a model reads, and because the implementation the studio
+   * ships can only carry ten blocks of text.
+   */
+  history: readonly string[]
+}
+
+export type AssistantAnswer = {
+  /** What to say to the person. Empty when the actions speak for themselves. */
+  say: string
+  calls: readonly AssistantCall[]
+  /**
+   * What the turn cost, in creative units.
+   *
+   * On the answer rather than reported separately: the modal shows a running total, and a figure
+   * that arrived by another route would drift from it the first time a call failed halfway.
+   */
+  cost: number
+}
+
 /**
  * Why an action did not run.
  *

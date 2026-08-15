@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ASSISTANT_MODELS } from '@shared/domain/assistant'
 import { LANGUAGE_PREFERENCES } from '@shared/i18n/languages'
 import {
   DENSITIES,
@@ -176,6 +177,11 @@ const shortcuts = z.object({
 
 const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })
 
+// Enumerated rather than left a string: a model the API does not serve is answered with a 400,
+// and the panel that writes this offers a fixed list — so anything else came from a hand-edited
+// file, and the defaults are a better answer than a failing assistant.
+const assistant = z.object({ model: z.enum(ASSISTANT_MODELS).optional() })
+
 const silence = boundsOf('dictation.silenceMs')
 const preview = boundsOf('dictation.previewMs')
 const threads = boundsOf('dictation.threads')
@@ -205,6 +211,7 @@ const partialSettings = z.object({
   shortcuts: shortcuts.optional(),
   media: media.optional(),
   advanced: advanced.optional(),
+  assistant: assistant.optional(),
   dictation: dictation.optional(),
 })
 

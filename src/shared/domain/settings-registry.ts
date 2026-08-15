@@ -609,6 +609,9 @@ export const UNLISTED_PATHS = paths(
   // Waits on the cloud backend actually existing: offering a choice nothing implements would
   // be a promise the application cannot keep.
   'storage.backend',
+  // Chosen from the assistant's own panel, where the wish to change it arises: one wants a
+  // better model mid-sentence, and going through this screen to get there loses the sentence.
+  'assistant.model',
 )
 
 /**

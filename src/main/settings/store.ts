@@ -126,6 +126,7 @@ function merge(base: Settings, partial: PartialSettings): Settings {
     shortcuts: { ...base.shortcuts, ...partial.shortcuts },
     media: { ...base.media, ...partial.media },
     advanced: { ...base.advanced, ...partial.advanced },
+    assistant: { ...base.assistant, ...partial.assistant },
     dictation: { ...base.dictation, ...partial.dictation },
   }
 }

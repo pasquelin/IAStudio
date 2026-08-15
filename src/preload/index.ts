@@ -163,6 +163,9 @@ const bridge: StudioBridge = {
     capabilities: () => ipcRenderer.invoke(CHANNELS.mediaAvailable),
     onProgress: callback => subscribe<IngestProgress>(EVENTS.mediaProgress, callback),
   },
+  assistant: {
+    think: request => ipcRenderer.invoke(CHANNELS.assistantThink, request),
+  },
   dictation: {
     state: () => ipcRenderer.invoke(CHANNELS.dictationState),
     start: () => ipcRenderer.invoke(CHANNELS.dictationStart),

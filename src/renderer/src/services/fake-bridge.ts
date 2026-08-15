@@ -167,6 +167,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onProgress: noSubscription,
       ...overrides.media,
     },
+    assistant: {
+      think: () => Promise.resolve({ say: '', calls: [], cost: 0 }),
+      ...overrides.assistant,
+    },
     dictation: {
       state: () => Promise.resolve({ state: 'idle', download: null, failure: null }),
       start: () => Promise.resolve(),

@@ -1,7 +1,8 @@
 import type { AssistantModel } from '@shared/domain/assistant'
 import type { Job } from '@shared/domain/job'
 import { log } from '@main/log'
-import type { AssistantBrain, BrainRequest } from './brain-port'
+import type { AssistantThought } from '@shared/domain/assistant'
+import type { AssistantBrain } from './brain-port'
 import { instructionFor, recentHistory } from './instruction'
 import { parseReply } from './reply'
 
@@ -32,7 +33,7 @@ export type BrainDeps = {
   model: () => AssistantModel
 }
 
-function bodyFor(request: BrainRequest, model: AssistantModel, complaint?: string): {
+function bodyFor(request: AssistantThought, model: AssistantModel, complaint?: string): {
   instruction: string
   model: AssistantModel
   numOutputs: number
@@ -74,7 +75,7 @@ async function answerFrom(job: Job, readText: (assetId: string) => Promise<strin
 export function createScenarioBrain({ run, readText, model }: BrainDeps): AssistantBrain {
   /** One round trip: run the model, read the asset it wrote, hand back text and what it cost. */
   const ask = async (
-    request: BrainRequest,
+    request: AssistantThought,
     chosen: AssistantModel,
     complaint?: string,
   ): Promise<{ answer: string; cost: number }> => {
@@ -94,7 +95,7 @@ export function createScenarioBrain({ run, readText, model }: BrainDeps): Assist
       const chosen = model()
       const first = await ask(request, chosen)
       const reply = parseReply(first.answer)
-      if (reply) return { reply, cost: first.cost }
+      if (reply) return { ...reply, cost: first.cost }
 
       /**
        * One retry, and only one. A model that cannot answer the shape twice will not answer it
@@ -108,7 +109,7 @@ export function createScenarioBrain({ run, readText, model }: BrainDeps): Assist
 
       // Said plainly rather than thrown: the caller has a person waiting, and "I did not
       // understand" is a better answer than a stack trace — and the cost was still incurred.
-      return retried ? { reply: retried, cost } : { reply: { say: '', calls: [] }, cost }
+      return retried ? { ...retried, cost } : { say: '', calls: [], cost }
     },
   }
 }
