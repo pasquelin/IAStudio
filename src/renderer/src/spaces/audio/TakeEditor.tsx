@@ -102,10 +102,20 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
   // them would mean writing state from inside an effect, and would show the previous take for
   // one frame.
   const [loaded, setLoaded] = useState<{ assetId: string; ok: boolean } | null>(null)
-  // Tagged with the SIDE of A/B it was asked for as well as with its asset: a bypassed render is
-  // asked for an empty chain, so its shape is the whole untouched take. Read without that tag,
-  // the press that comes back OFF bypass writes the answer of the press that went on.
+  /**
+   * Tagged with everything the answer DEPENDS on, and each tag paid for by a defect.
+   *
+   * The BLOCK, because a shape is now the shape of one block's slice: two blocks on the same take
+   * — a split, the same sound laid down twice — read as one another when only the asset is
+   * compared, and selecting the second wrote the first one's bounds onto it. Not transiently
+   * either, the write moving the bounds the next render is asked for.
+   *
+   * The SIDE of A/B, because a bypassed render is asked for an empty chain, so its shape is the
+   * whole untouched take. Read without that tag, the press that comes back OFF bypass writes the
+   * answer of the press that went on.
+   */
   const [output, setOutput] = useState<{
+    clipId: string
     assetId: string
     bypassed: boolean
     audio: RenderedAudio | null
@@ -151,7 +161,7 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
       // `live` is what tells the two nulls apart. A render overtaken by a newer one was
       // overtaken because these deps changed, which ran the cleanup below first; a null that
       // still arrives on a live effect is the worker having died, and it has to be said.
-      if (live) setOutput({ assetId, bypassed, audio })
+      if (live) setOutput({ clipId, assetId, bypassed, audio })
     })
 
     return () => {
@@ -159,7 +169,7 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
     }
   }, [renderer, settled, assetId, clipId, inPoint, sourceDuration, chain.edits, chain.bypassed])
 
-  const answered = output?.assetId === assetId ? output : null
+  const answered = output?.clipId === clipId && output.assetId === assetId ? output : null
   const rendered = answered?.audio ?? null
 
   /**

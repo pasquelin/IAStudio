@@ -177,10 +177,13 @@ deliberate, and it is the price of the button: the new file now **holds** your s
 replaying them over it would lay them down a second time — a fade twice as long, a gain twice as
 strong. The waveform that comes back is the one of that new file.
 
-> **The whole tab's history goes, not just that clip's.** The other clips keep their chains —
+> **The whole editor's history goes, not just that clip's.** The other clips keep their chains —
 > their fades and levels are untouched — but no step undoes with `⌘Z` any more, on any of them. The
-> history is the document's, and it cannot rewind for one block alone. This is the editor's one
-> irreversible button.
+> history is the document's, and it cannot rewind for one block alone.
+>
+> **What `⌘Z` still undoes is the edit itself**: the clip repointed at the new asset, a crop made
+> earlier. The sound written to disk stays, and the chain that produced it does not come back. In
+> other words, stepping back after "Apply" gives you the clip you had, not the settings you had.
 
 > **One sound can serve several clips**, here and in other tabs. That is why "Apply" writes
 > alongside rather than over: rewriting the original would move every one of those clips at

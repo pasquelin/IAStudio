@@ -182,10 +182,15 @@ c’est la contrepartie du bouton : le nouveau fichier **porte** vos réglages, 
 par-dessus les poserait une seconde fois — un fondu deux fois plus long, un gain deux fois plus
 fort. La forme d’onde qui revient est celle de ce nouveau fichier.
 
-> **C’est tout l’historique de l’onglet qui part, pas seulement celui du clip.** Les autres clips
+> **C’est tout l’historique de l’éditeur qui part, pas seulement celui du clip.** Les autres clips
 > gardent leurs chaînes — leurs fondus et leurs niveaux sont intacts —, mais plus aucune étape ne
 > se défait par `⌘Z`, sur aucun d’eux. L’historique est celui du document, et il ne peut pas se
-> rembobiner pour un seul bloc. C’est le seul bouton irréversible de l’éditeur.
+> rembobiner pour un seul bloc.
+>
+> **Ce que `⌘Z` défait encore, c’est le montage** : le clip repointé sur le nouvel asset, un
+> rognage antérieur. Le son écrit sur le disque, lui, reste — et la chaîne qui l’a produit ne
+> revient pas. Autrement dit, revenir en arrière après « Appliquer » vous rend le clip d’avant,
+> pas les réglages d’avant.
 
 > **Un même son peut servir à plusieurs clips**, ici comme dans d’autres onglets. C’est pourquoi
 > « Appliquer » écrit à côté plutôt que par-dessus : réécrire l’original changerait tous ces

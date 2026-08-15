@@ -3,14 +3,20 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { canUndo } from '@/engines/core/history'
-import { chainOf, EMPTY_AUDIO_EDIT, withChain, type TakeChain } from '@/engines/audio/edits'
+import {
+  chainOf,
+  EMPTY_AUDIO_EDIT,
+  pushEdit,
+  withChain,
+  type TakeChain,
+} from '@/engines/audio/edits'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { SECOND } from '@shared/domain/time'
 import { addClip } from '@/engines/timeline/commands'
 import { makeClip, updateClip, EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timeline-state'
 import { useAssets } from '@/stores/assets'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
 import { useDocuments } from '@/stores/documents'
 import { installDocuments } from '@/stores/document-fixtures'
@@ -48,7 +54,8 @@ const asset: Asset = {
 /** The block every test here edits — the editor below the montage shows the selected one. */
 const CLIP = 'clip-1'
 
-const editsOf = (): TakeChain => chainOf(audioEditsOf(useAudioEdits.getState(), 'doc-1'), CLIP)
+const editsOf = (clipId: string = CLIP): TakeChain =>
+  chainOf(audioEditsOf(useAudioEdits.getState(), 'doc-1'), clipId)
 
 /** That block's chain written back, out of the history, as the editor writes a region. */
 function writeChain(fields: Partial<TakeChain>): void {
@@ -278,6 +285,41 @@ describe('AudioDocument', () => {
     })
 
     /**
+     * Two blocks of the SAME take — a split, or the same sound laid down twice — and the render
+     * in hand belongs to whichever was selected a moment ago. Tagged by asset alone, the answer
+     * for one was written onto the other the instant the selection moved: same asset, so it read
+     * as current. It settles there, too, because the write moves the bounds the next render is
+     * asked for.
+     */
+    it('never writes one block’s shape onto its neighbour on the same take', async () => {
+      await openLaidTake()
+      const second = makeClip({
+        id: 'clip-2',
+        assetId: 'asset-1',
+        start: 3 * SECOND,
+        duration: SECOND,
+      })
+      useSequences.getState().runCommand('doc-1', addClip('A1', second))
+      // Both tooled, so neither is held back by `touched`.
+      useAudioEdits.getState().runCommand('doc-1', pushEdit(CLIP, { kind: 'gain', db: -3 }))
+      useAudioEdits.getState().runCommand('doc-1', pushEdit('clip-2', { kind: 'gain', db: -3 }))
+
+      useSequences.setState(state => ({
+        states: {
+          ...state.states,
+          'doc-1': { ...sequenceOf(state, 'doc-1'), selectedId: 'clip-2' },
+        },
+      }))
+
+      await waitFor(() => expect(editsOf('clip-2').edits).toHaveLength(1))
+      const moved = sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips.find(
+        one => one.id === 'clip-2',
+      )
+      expect(moved?.start).toBe(3 * SECOND)
+      expect(moved?.duration).toBe(SECOND)
+    })
+
+    /**
      * A bypassed render is asked for an EMPTY chain, so the shape that comes back is the whole
      * untouched take. Written down, one press of A/B would stretch the clip back to the source —
      * turning a listening aid into an edit of the montage.
@@ -452,6 +494,23 @@ describe('AudioDocument', () => {
     await userEvent.click(screen.getByRole('button', { name: /Appliquer/ }))
 
     await waitFor(() => expect(laidAssetIds()).toEqual(['asset-2']))
+  })
+
+  /**
+   * Which take a block plays is held by the MONTAGE and by nothing else — the chain that asked
+   * for it is dropped by the same button. Left unmarked, ⌘W closes the tab without asking and the
+   * block reopens on the original take, brut: the whole edit gone, and the derived file orphaned.
+   */
+  it('leaves work to save once apply has repointed the block', async () => {
+    await openTake()
+    const clean = useSequences.getState()
+    clean.markSaved('doc-1', sequenceStore.markOf(clean, 'doc-1'))
+    saveAudio.mockResolvedValueOnce({ ...asset, id: 'asset-2' })
+
+    await userEvent.click(screen.getByRole('button', { name: /Appliquer/ }))
+
+    await waitFor(() => expect(laidAssetIds()).toEqual(['asset-2']))
+    expect(sequenceStore.hasUnsavedWork(useSequences.getState(), 'doc-1')).toBe(true)
   })
 
   // The difference between the two buttons, and the whole of it: one moves the montage on, the

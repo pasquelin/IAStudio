@@ -165,9 +165,12 @@ export function writeTakeClip(documentId: string, clipId: string, shape: TakeSha
  * no ramps, no level. Everything the block described is now IN the bytes, and a block still
  * describing it would have the montage play it twice.
  *
- * Outside the history, like `writeTakeClip` and for a reason the editor's own comment gives:
- * "apply" drops the chain and the undo stack that named it, so a press giving the block its old
- * take back would leave it playing raw samples with the settings gone.
+ * ON the history, where `writeTakeClip` above deliberately is not, and for a reason that is not
+ * about ⌘Z: which take a block plays is held by the MONTAGE and by nothing else — the chain that
+ * asked for it is dropped by the same button. Written outside, the document read as having
+ * nothing to save: ⌘W closed the tab without asking, and the block reopened on the original take
+ * with the whole edit gone and the file just written orphaned. An entry on the history is what
+ * marks a document dirty.
  */
 const FLAT_TAKE = { inPoint: 0, fadeIn: 0, fadeOut: 0, gain: 0 }
 
@@ -177,18 +180,11 @@ export function flattenTakeClip(
   assetId: string,
   duration: Us,
 ): void {
-  const current = store.use.getState()
-  if (!store.hasState(current, documentId)) return
-
-  const sequence = store.stateOf(current, documentId)
-  const clip = clipById(sequence, clipId)
-  if (!clip) return
-
-  const flat = shapedClip(sequence, { ...clip, assetId }, { ...FLAT_TAKE, duration })
-
-  current.replace(
+  store.use.getState().runCommand(
     documentId,
-    updateClip(sequence, clipId, () => flat),
+    editClip(`takeFlat:${clipId}`, clipId, (clip, state) =>
+      shapedClip(state, { ...clip, assetId }, { ...FLAT_TAKE, duration }),
+    ),
   )
 }
 
