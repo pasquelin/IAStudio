@@ -5,7 +5,7 @@ import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
 import { MENU_SURFACE } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_TOP, TIP_LEFT } from '@/helpers/tooltip'
 import { useAssistant } from '@/stores/assistant'
 
 /**
@@ -39,9 +39,15 @@ export function AssistantToast() {
   const open = useAssistant(state => state.open)
   const busy = useAssistant(state => state.busy)
   const seen = useAssistant(state => state.seen)
-  const turn = useAssistant(state => state.turns.at(-1))
+  // Three primitives rather than the turn itself: `patch` rebuilds that object by spread on every
+  // step of a plan, so a selector returning it fails zustand's equality each time and re-renders
+  // this whole file several times per sentence — for a component that shows nothing until the
+  // plan is over.
+  const id = useAssistant(state => state.turns.at(-1)?.id ?? 0)
+  const said = useAssistant(state => state.turns.at(-1)?.said ?? '')
+  const lost = useAssistant(state => state.turns.at(-1)?.lost ?? false)
 
-  const showing = !open && !busy && turn !== undefined && turn.id > seen
+  const showing = !open && !busy && id > seen
 
   useEffect(() => {
     if (!showing) return
@@ -50,7 +56,7 @@ export function AssistantToast() {
     return () => clearTimeout(timer)
     // Restarted per turn: two sentences in a row must not have the second inherit the first's
     // remaining time, which would flash it and take it away.
-  }, [showing, turn?.id])
+  }, [showing, id])
 
   if (!showing) return null
 
@@ -64,23 +70,24 @@ export function AssistantToast() {
     >
       <div className={cn(MENU_SURFACE, 'static flex-row items-start gap-2 p-2')}>
         <UiIcon
-          path={turn.lost ? mdiAlertOutline : mdiCheckCircleOutline}
+          path={lost ? mdiAlertOutline : mdiCheckCircleOutline}
           size={14}
-          className={cn('mt-px shrink-0', turn.lost ? 'text-warning' : 'text-success')}
+          className={cn('mt-px shrink-0', lost ? 'text-warning' : 'text-success')}
         />
 
         <button
           type="button"
+          {...HINT_TOP(t('assistant.reviewHint'))}
           onClick={() => useAssistant.getState().show()}
           className="min-w-0 flex-1 cursor-pointer border-none bg-transparent text-left"
         >
           <span className="text-text block text-xs">
-            {turn.lost ? t('assistant.lost') : t('assistant.done')}
+            {lost ? t('assistant.lost') : t('assistant.done')}
           </span>
           {/* The sentence as it left. Truncated, because a spoken request has no length limit —
               and what one is checking is the first few words, which are the ones a microphone
               gets wrong. */}
-          <span className="text-muted text-mini block truncate italic">{turn.said}</span>
+          <span className="text-muted text-mini block truncate italic">{said}</span>
         </button>
 
         <ToolButton

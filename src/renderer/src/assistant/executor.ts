@@ -172,6 +172,15 @@ export async function runAction(
           progress: job.progress,
         })),
       }
+    /**
+     * Recognised here, carried out by the conversation itself — see `say` in `stores/assistant`.
+     *
+     * Not `useAssistant.getState().hide()` on this line, tempting as it is: that store imports
+     * this file to run a plan, and reaching back into it would close the loop between the two.
+     * The window belongs to the conversation, not to the executor of studio actions.
+     */
+    case 'chat.close':
+      return { ok: true }
     case 'prompt.suggest':
       return suggestPrompts(input)
     case 'prompt.translate':

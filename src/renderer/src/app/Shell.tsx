@@ -8,7 +8,7 @@ import { HomeView } from '@/home/HomeView'
 import { DocumentArea } from './DocumentArea'
 import { showWorkspace } from './dockview-api'
 import { guardUnsavedWork } from './unsaved-guard'
-import { AssistantEntries } from '@/assistant/AssistantEntries'
+import { AssistantEntry } from '@/assistant/AssistantEntry'
 import { AssistantOverlay } from '@/assistant/AssistantOverlay'
 import { AssistantStatus } from '@/assistant/AssistantStatus'
 import { AssistantToast } from '@/assistant/AssistantToast'
@@ -73,7 +73,7 @@ export function Shell() {
         // hairline because they are not the same kind of thing: one acts, the other points.
         actions={
           <>
-            <AssistantEntries />
+            <AssistantEntry />
             <Separator orientation="vertical" />
             <ProjectSelect />
             <AccountSelect />

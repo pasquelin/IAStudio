@@ -159,6 +159,21 @@
    * placed against what it cuts.
    */
   --color-scrim: #00000099;
+  /*
+   * What the studio becomes while one is talking to it: a backdrop, not a workspace.
+   *
+   * Its own token rather than a heavier `--color-scrim`, because the two answer opposite needs.
+   * That one dims what a crop is about to throw away and the picture underneath HAS to stay
+   * readable; this one is behind a conversation, where a panel still legible enough to read
+   * competes with the words for the eye.
+   *
+   * The studio's own deep grey — `panel` — rather than black, which read as a hole cut in the
+   * window rather than as the application sunk behind a conversation. And four fifths rather than
+   * opaque: at 95% the studio disappeared entirely and this became a separate app. What is wanted
+   * is the studio still THERE, behind the words, which is also why the blur goes with it rather
+   * than more alpha.
+   */
+  --color-scrim-deep: #191a1ccc;
 
   --radius-sc-sm: 4px;
   --radius-sc-md: 6px;
@@ -403,6 +418,13 @@
    * rather than as a dimmed part of the picture.
    */
   --color-scrim: #0000004d;
+  /*
+   * The light theme's own panel, as the dark one takes the dark panel: this veil sinks the studio
+   * into the ground of whichever theme is on, rather than darkening it. It has to — the
+   * conversation over it is painted in `text`, which is DARK here, and a black veil would leave
+   * it unreadable.
+   */
+  --color-scrim-deep: #ffffffcc;
 }
 
 :root {
@@ -577,6 +599,25 @@ body,
 :fullscreen,
 :fullscreen::backdrop {
   background: var(--color-monitor);
+}
+
+/*
+ * A surface that scrolls without saying so.
+ *
+ * For the conversation, and it is the one place it belongs: a thread reads as a page of words, and
+ * a bar down its side turns it back into a scrolling box. Everywhere else in the studio the bar is
+ * information — a panel of layers, a list of assets, an inspector all use it to say how much more
+ * there is.
+ *
+ * A utility rather than a class written in the component, so the two spellings it takes — the
+ * WebKit pseudo-element and the standard property — stay together. They are one rule.
+ */
+@utility scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 body {

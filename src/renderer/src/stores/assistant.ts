@@ -206,6 +206,21 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
     } finally {
       set({ busy: false })
     }
+
+    /**
+     * The model asking to be got out of the way, once its plan has run.
+     *
+     * The window is the surface that answered, and it is also the one covering the answer: a
+     * space opened or a form filled is behind it. `chat.close` is how the model says "what I did
+     * is now the thing to look at" — carried out here rather than in the executor, because the
+     * window belongs to the conversation.
+     *
+     * Never while a question is on screen: closing IS declining, so a plan that asked for
+     * something and then asked to be dismissed would refuse its own request.
+     */
+    if (answer.calls.some(call => call.action === 'chat.close') && !get().asked) {
+      set({ open: false, listening: false })
+    }
   },
 
   setModel: model => {
