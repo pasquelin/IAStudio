@@ -85,6 +85,19 @@ export const CANVAS_TRIGGER = cn(
 )
 
 /**
+ * An action worded INSIDE a sentence — the home's "restore them" is the one so far.
+ *
+ * A `button` rather than an `a`: nothing is navigated to, and a link that goes nowhere is a
+ * promise the browser cannot keep. Underlined all the same, because inside running text the
+ * colour alone is what a reader is asked not to rely on (WCAG SC 1.4.1). It takes the size of
+ * the sentence around it, so no text token is set here.
+ */
+export const INLINE_LINK = cn(
+  'text-accent-ink cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',
+  'p-0 underline',
+)
+
+/**
  * A control of the title bar: the space pills on one end, the account trigger on the other.
  * Nothing until hovered, so the bar reads as a row of destinations rather than as a strip of
  * buttons. Gauge, padding and the active state stay with the caller — a pill is as wide as its

@@ -74,7 +74,7 @@
     "textDefault": "Your text"
   },
   "imageView": {
-    "zoom": "Zoom",
+    "zoom": "{{value}} — actual size",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "fit": "Fit",

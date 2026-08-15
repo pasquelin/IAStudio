@@ -4,6 +4,7 @@ import { hiddenHomeSections, homeSections, shownHomeSection } from '@shared/doma
 import { Button } from '@/design/Button'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { ScrollHostProvider } from '@/design/ScrollHost'
+import { INLINE_LINK } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
@@ -102,10 +103,7 @@ function Hidden() {
         type="button"
         {...HINT_TOP(t('home.restoreHint'))}
         onClick={restore}
-        className={cn(
-          'text-accent-ink cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',
-          'text-tiny p-0 underline',
-        )}
+        className={cn(INLINE_LINK, 'text-tiny')}
       >
         {t('home.restore')}
       </button>
