@@ -136,7 +136,7 @@ Le clic droit liste toutes les destinations, toujours dans le même ordre :
 |---|---|---|
 | **Utiliser comme ciel** | le ciel ouvert, espace Skyboxes | images |
 | **Ajouter à la scène** | la scène 3D ouverte | maillages |
-| **Ouvrir dans l’éditeur audio** | la prise ouverte, espace Audio | sons |
+| **Ouvrir dans l’éditeur audio** | le montage ouvert, espace Audio | sons |
 | **Placer comme calque** | l’image ouverte, espace Image | images |
 | **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
 | **Utiliser comme couleur de base** | la matière ouverte, espace Textures | images |
@@ -197,7 +197,7 @@ disque — pas d’un asset abîmé.
 | une image | la vignette d’un **canal** précis | elle devient ce canal-là |
 | une image panoramique | l’aperçu d’un **ciel** | elle devient le ciel |
 | un maillage | la **vue 3D** | il entre dans la scène, à l’origine |
-| un son | l’**éditeur audio** | il devient la prise ouverte |
+| un son | l’**éditeur audio** | il s’ajoute au montage comme un clip, et c’est lui qu’on édite |
 | un asset | un **champ d’asset** d’un formulaire de génération | il devient l’entrée du champ |
 
 **La timeline ne trie pas.** Elle prend ce qu’on lui donne : un asset sans durée propre reçoit une

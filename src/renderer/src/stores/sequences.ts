@@ -1,6 +1,6 @@
 import type { Asset } from '@shared/domain/asset'
-import type { TakeShape } from '@/engines/audio/edits'
-import { addClips } from '@/engines/timeline/commands'
+import type { TakeBounds, TakeShape } from '@/engines/audio/edits'
+import { addClips, editClip } from '@/engines/timeline/commands'
 import { placementsForAsset, trackForAsset } from '@/engines/timeline/insert'
 import {
   clampFades,
@@ -101,15 +101,45 @@ function fits(state: SequenceState, clip: Clip, duration: Us): Us {
 }
 
 /**
+ * A shape laid onto the clip that carries it — the one place that knows how the editor's
+ * arithmetic becomes a clip, read by the two writers below.
+ *
+ * `start` and `speed` are left alone: where a take sits on the strip and how fast it runs are
+ * decisions about the montage, and the editor above knows nothing of either.
+ */
+function shapedClip(sequence: SequenceState, clip: Clip, shape: TakeShape): Clip {
+  // Clamped HERE rather than left to `updateClip`, which clamps on the way in: comparing against
+  // the unclamped shape would answer "changed" forever as soon as the two ramps outlast the
+  // clip, and every render would repaint the strip. On the frame grid too, exactly as
+  // `clipForAsset` lays a clip down: a duration that is not a whole number of frames leaves a
+  // tail nothing can snap to.
+  return clampFades({
+    ...clip,
+    inPoint: shape.inPoint,
+    // Source time divided by the speed, because a clip's duration is TIMELINE time — the two are
+    // the same only at speed 1. `takeSliceOf` multiplies by it going the other way, which is what
+    // makes the round trip land on the clip it started from.
+    duration: fits(sequence, clip, wholeFrames(shape.duration / clip.speed, sequence.settings)),
+    fadeIn: shape.fadeIn,
+    fadeOut: shape.fadeOut,
+    // Bounded like every other writer of this field. A quiet take normalised to −14 LUFS asks
+    // for +26 dB, which `applyGain` absorbs on the samples it clamps and the strip does not:
+    // `sound-schedule` would hand the output a twentyfold gain on the raw source.
+    gain: clampGain(shape.gain),
+  })
+}
+
+/**
  * Rewrites the clip a take was laid down as, so that what the strip plays is what the editor
- * plays: bounds, ramps and level all come from the chain above it.
+ * plays: the ramps and the level the chain came to.
  *
  * Outside the history, like `writeTrack` below and for a stricter reason than convenience: the
  * chain already owns ⌘Z here, and a second entry per edit would make one press give back half a
  * change — the studio's "two diverging undo stacks", from the other end.
  *
- * `start` and `speed` are left alone: where a take sits on the strip and how fast it runs are
- * decisions about the montage, and the editor above knows nothing of either.
+ * The bounds ride along and never move: the chain is replayed FROM them — see `takeSliceOf` —
+ * so what this writes back is what it was handed. That is what makes it safe to run on every
+ * render, and it is why the chain holds no step that cuts.
  */
 export function writeTakeClip(documentId: string, clipId: string, shape: TakeShape): void {
   const current = store.use.getState()
@@ -119,24 +149,7 @@ export function writeTakeClip(documentId: string, clipId: string, shape: TakeSha
   const clip = clipById(sequence, clipId)
   if (!clip) return
 
-  // Clamped HERE rather than left to `updateClip`, which clamps on the way in: comparing against
-  // the unclamped shape would answer "changed" forever as soon as the two ramps outlast the
-  // clip — the very case `replayEdits` documents as approximate — and every render would repaint
-  // the strip. On the frame grid too, exactly as `clipForAsset` lays a clip down: a duration
-  // that is not a whole number of frames leaves a tail nothing can snap to.
-  const shaped = clampFades({
-    ...clip,
-    inPoint: shape.inPoint,
-    // Source time divided by the speed, because a clip's duration is TIMELINE time — the two are
-    // the same only at speed 1. `sourceTimeAt` multiplies by it going the other way.
-    duration: fits(sequence, clip, wholeFrames(shape.duration / clip.speed, sequence.settings)),
-    fadeIn: shape.fadeIn,
-    fadeOut: shape.fadeOut,
-    // Bounded like every other writer of this field. A quiet take normalised to −14 LUFS asks
-    // for +26 dB, which `applyGain` absorbs on the samples it clamps and the strip does not:
-    // `sound-schedule` would hand the output a twentyfold gain on the raw source.
-    gain: clampGain(shape.gain),
-  })
+  const shaped = shapedClip(sequence, clip, shape)
   // A render answers on every open of a document, not only on an edit, and writing an unchanged
   // clip would wake every reader of the montage for nothing.
   if (sameValues(clip, shaped)) return
@@ -144,6 +157,65 @@ export function writeTakeClip(documentId: string, clipId: string, shape: TakeSha
   current.replace(
     documentId,
     updateClip(sequence, clipId, () => shaped),
+  )
+}
+
+/**
+ * Points a block at the file "apply" has just written, and lays it flat: the whole of that file,
+ * no ramps, no level. Everything the block described is now IN the bytes, and a block still
+ * describing it would have the montage play it twice.
+ *
+ * ON the history, where `writeTakeClip` above deliberately is not, and for a reason that is not
+ * about ⌘Z: which take a block plays is held by the MONTAGE and by nothing else — the chain that
+ * asked for it is dropped by the same button. Written outside, the document read as having
+ * nothing to save: ⌘W closed the tab without asking, and the block reopened on the original take
+ * with the whole edit gone and the file just written orphaned. An entry on the history is what
+ * marks a document dirty.
+ */
+const FLAT_TAKE = { inPoint: 0, fadeIn: 0, fadeOut: 0, gain: 0 }
+
+export function flattenTakeClip(
+  documentId: string,
+  clipId: string,
+  assetId: string,
+  duration: Us,
+): void {
+  store.use.getState().runCommand(
+    documentId,
+    editClip(`takeFlat:${clipId}`, clipId, (clip, state) =>
+      shapedClip(state, { ...clip, assetId }, { ...FLAT_TAKE, duration }),
+    ),
+  )
+}
+
+/**
+ * The slice a block shows, set outright from the editor — cropping to a selection, dropping the
+ * silence at the two ends.
+ *
+ * On the history, where its neighbour above deliberately is not, and that is the whole difference
+ * between them: this is a montage gesture that happens to be made from the editor, so ⌘Z has to
+ * give the block its bounds back. It goes on the SEQUENCE's stack for the same reason — the
+ * bounds are the montage's, and `AudioDocument` already arbitrates between the two stacks.
+ *
+ * The RAMPS AND THE LEVEL are the clip's own and ride through untouched: what a cut leaves of a
+ * ramp is `clampFades`' answer, and a hand's gain has nothing to do with where one cut. Written
+ * from a slice — where they are zero by construction — a crop wiped both.
+ *
+ * `trimClip` is the other way to move these bounds and stays what a hand does on the strip: it
+ * drags one edge and lets the block grow over its neighbour. This lands both edges at once and
+ * never lengthens, a selection being a stretch of what is already there.
+ */
+export function trimTakeClip(documentId: string, clipId: string, slice: TakeBounds): void {
+  store.use.getState().runCommand(
+    documentId,
+    editClip(`takeSlice:${clipId}`, clipId, (clip, state) =>
+      shapedClip(state, clip, {
+        ...slice,
+        fadeIn: clip.fadeIn,
+        fadeOut: clip.fadeOut,
+        gain: clip.gain,
+      }),
+    ),
   )
 }
 

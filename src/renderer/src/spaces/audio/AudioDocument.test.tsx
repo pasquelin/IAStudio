@@ -3,14 +3,20 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { canUndo } from '@/engines/core/history'
-import { chainOf, EMPTY_AUDIO_EDIT, withChain, type TakeChain } from '@/engines/audio/edits'
+import {
+  chainOf,
+  EMPTY_AUDIO_EDIT,
+  pushEdit,
+  withChain,
+  type TakeChain,
+} from '@/engines/audio/edits'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { SECOND } from '@shared/domain/time'
 import { addClip } from '@/engines/timeline/commands'
-import { makeClip, EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timeline-state'
+import { makeClip, updateClip, EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timeline-state'
 import { useAssets } from '@/stores/assets'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
 import { useDocuments } from '@/stores/documents'
 import { installDocuments } from '@/stores/document-fixtures'
@@ -48,7 +54,8 @@ const asset: Asset = {
 /** The block every test here edits — the editor below the montage shows the selected one. */
 const CLIP = 'clip-1'
 
-const editsOf = (): TakeChain => chainOf(audioEditsOf(useAudioEdits.getState(), 'doc-1'), CLIP)
+const editsOf = (clipId: string = CLIP): TakeChain =>
+  chainOf(audioEditsOf(useAudioEdits.getState(), 'doc-1'), clipId)
 
 /** That block's chain written back, out of the history, as the editor writes a region. */
 function writeChain(fields: Partial<TakeChain>): void {
@@ -56,6 +63,9 @@ function writeChain(fields: Partial<TakeChain>): void {
   const current = audioEditsOf(store, 'doc-1')
   store.replace('doc-1', withChain(current, CLIP, { ...chainOf(current, CLIP), ...fields }))
 }
+
+/** The block the editor is on — the montage of these suites holds it first on its only track. */
+const takeClip = () => sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips[0]
 
 const laidAssetIds = (): string[] =>
   sequenceOf(useSequences.getState(), 'doc-1')
@@ -141,11 +151,11 @@ describe('AudioDocument', () => {
 
     it('stays deaf while another tab is in front', async () => {
       await openTake({ inFront: false })
-      await userEvent.click(screen.getByRole('button', { name: /Couper les silences/ }))
+      await userEvent.click(screen.getByRole('button', { name: /Normaliser/ }))
 
       await userEvent.keyboard('{Meta>}{z}{/Meta}')
 
-      expect(editsOf().edits).toEqual([{ kind: 'trimSilence' }])
+      expect(editsOf().edits).toEqual([{ kind: 'normalize', targetLufs: -14 }])
     })
 
     // One key, one document, two stores: the montage under the take answers ⌘Z only when the
@@ -187,8 +197,6 @@ describe('AudioDocument', () => {
 
   // The take under the editor and the clip on the strip are two views of one thing.
   describe('the clip it keeps in step', () => {
-    const takeClip = () => sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips[0]
-
     /** A document whose take is laid on the strip and selected, as `loadTake` leaves it. */
     async function openLaidTake(): Promise<void> {
       montageWithTake()
@@ -213,10 +221,10 @@ describe('AudioDocument', () => {
     })
 
     /**
-     * The other half of that, and the half a count of steps could not tell: an emptied chain is
-     * a chain that emptied ON PURPOSE. Left to itself, the editor plays the whole take again
-     * while the strip below keeps the block the crop shortened — the two halves saying different
-     * things about one take, which is the very thing this pair exists to stop.
+     * The crop went on the MONTAGE's stack, being a montage gesture, and `AudioDocument` sends
+     * ⌘Z there once the chain has nothing left to give back. Anywhere else and the block would
+     * keep a length the editor no longer plays — the two halves saying different things about
+     * one take, which is the very thing this pair exists to stop.
      */
     it('gives the block its length back when the crop is undone', async () => {
       await openLaidTake()
@@ -230,21 +238,85 @@ describe('AudioDocument', () => {
     })
 
     /**
-     * "Apply" writes the chain INTO the file, so the block has to be laid flat with it: it
-     * carries the crop and the gain too, and a block left describing them plays them a second
-     * time over bytes that already hold them — six decibels above what the editor sounds like,
-     * or a block pointing two seconds into a file that no longer has them.
+     * "Apply" writes the slice INTO a file of its own, so the block has to be laid flat over it:
+     * it carries the ramps and the level too, and a block left describing them plays them a
+     * second time over bytes that already hold them — six decibels above what the editor sounds
+     * like, or a block pointing into a file that starts where the block does.
      */
-    it('lays the block flat once the take has been written over', async () => {
+    it('lays the block flat over the file apply wrote', async () => {
       await openLaidTake()
       writeChain({ region: { from: 0, to: 500_000 } })
       await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
       await waitFor(() => expect(takeClip()?.duration).toBe(CROPPED))
+      saveAudio.mockResolvedValueOnce({ ...asset, id: 'asset-2' })
 
       await userEvent.click(screen.getByRole('button', { name: /Appliquer/ }))
 
-      await waitFor(() => expect(takeClip()?.duration).toBe(2_000_000))
+      await waitFor(() => expect(takeClip()?.assetId).toBe('asset-2'))
+      // The new file IS the slice, so the block spans the whole of it from its first sample.
       expect(takeClip()?.inPoint).toBe(0)
+      expect(takeClip()?.duration).toBe(CROPPED)
+    })
+
+    /**
+     * Dragging a region writes an entry into `chains` — a region is where one is LOOKING, and it
+     * has to be remembered. Read as "the tools own this block", that entry let an empty chain
+     * project no ramp and no level onto a clip that carried both from the strip: one drag on the
+     * wave, and a fade laid by hand was gone. `touched` is what answers that question now.
+     */
+    it('leaves a hand-laid fade alone when the wave is merely dragged over', async () => {
+      await openLaidTake()
+      useSequences.setState(state => ({
+        states: {
+          ...state.states,
+          'doc-1': updateClip(sequenceOf(state, 'doc-1'), CLIP, clip => ({
+            ...clip,
+            fadeIn: 300_000,
+            gain: -4,
+          })),
+        },
+      }))
+
+      writeChain({ region: { from: 0, to: 500_000 } })
+
+      await waitFor(() => expect(editsOf().region).not.toBeNull())
+      expect(takeClip()?.fadeIn).toBe(300_000)
+      expect(takeClip()?.gain).toBe(-4)
+    })
+
+    /**
+     * Two blocks of the SAME take — a split, or the same sound laid down twice — and the render
+     * in hand belongs to whichever was selected a moment ago. Tagged by asset alone, the answer
+     * for one was written onto the other the instant the selection moved: same asset, so it read
+     * as current. It settles there, too, because the write moves the bounds the next render is
+     * asked for.
+     */
+    it('never writes one block’s shape onto its neighbour on the same take', async () => {
+      await openLaidTake()
+      const second = makeClip({
+        id: 'clip-2',
+        assetId: 'asset-1',
+        start: 3 * SECOND,
+        duration: SECOND,
+      })
+      useSequences.getState().runCommand('doc-1', addClip('A1', second))
+      // Both tooled, so neither is held back by `touched`.
+      useAudioEdits.getState().runCommand('doc-1', pushEdit(CLIP, { kind: 'gain', db: -3 }))
+      useAudioEdits.getState().runCommand('doc-1', pushEdit('clip-2', { kind: 'gain', db: -3 }))
+
+      useSequences.setState(state => ({
+        states: {
+          ...state.states,
+          'doc-1': { ...sequenceOf(state, 'doc-1'), selectedId: 'clip-2' },
+        },
+      }))
+
+      await waitFor(() => expect(editsOf('clip-2').edits).toHaveLength(1))
+      const moved = sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips.find(
+        one => one.id === 'clip-2',
+      )
+      expect(moved?.start).toBe(3 * SECOND)
+      expect(moved?.duration).toBe(SECOND)
     })
 
     /**
@@ -325,27 +397,67 @@ describe('AudioDocument', () => {
     expect(canUndo(audioHistoryOf(useAudioEdits.getState(), 'doc-1'))).toBe(true)
   })
 
-  it('trims the silence at both ends as one step', async () => {
+  /**
+   * The two tools that CUT land on the block's bounds and leave the chain empty, cutting being
+   * a montage gesture wherever it is made from. As a STEP, each was replayed over the slice it
+   * had just produced and ate into it again on every render.
+   */
+  it('trims the block to what is not silence at its two ends', async () => {
+    const quiet = new Float32Array(200)
+    quiet.fill(0.5, 50, 150)
+    decodeAsset.mockResolvedValueOnce({ sampleRate: 100, channels: [quiet] })
     await openTake()
+
     await userEvent.click(screen.getByRole('button', { name: /Couper les silences/ }))
 
-    expect(editsOf().edits).toEqual([{ kind: 'trimSilence' }])
+    await waitFor(() => expect(takeClip()?.inPoint).toBe(500_000))
+    expect(takeClip()?.duration).toBe(1_000_000)
+    expect(editsOf().edits).toEqual([])
   })
 
   it('refuses to crop with nothing selected, rather than emptying the take', async () => {
     await openTake()
     await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
 
-    expect(editsOf().edits).toEqual([])
+    expect(takeClip()?.duration).toBe(2 * SECOND)
   })
 
-  it('crops to the selected region', async () => {
+  it('crops the block to the selected region', async () => {
     await openTake()
     writeChain({ region: { from: 0, to: 500_000 } })
 
     await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
 
-    expect(editsOf().edits).toEqual([{ kind: 'crop', from: 0, to: 500_000 }])
+    // 13 frames at 25 fps rather than the 12.5 asked for: a block lands on the frame grid,
+    // exactly as one laid down by hand does.
+    await waitFor(() => expect(takeClip()?.duration).toBe(520_000))
+    expect(editsOf().edits).toEqual([])
+  })
+
+  /**
+   * Cutting says nothing about a level, and only `clampFades` may say what is left of a ramp.
+   * Written from the SLICE — where both are zero by construction — a crop wiped what a hand had
+   * laid on the strip, which is the very defect the slice was introduced to stop.
+   */
+  it('leaves the block its ramps and its level when it crops', async () => {
+    await openTake()
+    useSequences.setState(state => ({
+      states: {
+        ...state.states,
+        'doc-1': updateClip(sequenceOf(state, 'doc-1'), CLIP, clip => ({
+          ...clip,
+          fadeIn: 200_000,
+          gain: -4,
+        })),
+      },
+    }))
+    writeChain({ region: { from: 0, to: 500_000 } })
+
+    await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
+
+    await waitFor(() => expect(takeClip()?.duration).toBe(520_000))
+    expect(takeClip()?.fadeIn).toBe(200_000)
+    expect(takeClip()?.gain).toBe(-4)
   })
 
   it('keeps A/B off the undo stack: it changes what is heard, not what was done', async () => {
@@ -356,16 +468,57 @@ describe('AudioDocument', () => {
     expect(canUndo(audioHistoryOf(useAudioEdits.getState(), 'doc-1'))).toBe(false)
   })
 
-  it('writes over the source on apply', async () => {
+  /**
+   * A take is one asset behind however many blocks — in this montage and in every other document
+   * open on the project. "Apply" used to replace it under its own id, which moved all of them at
+   * once, silently, to bytes only this block had asked for.
+   */
+  it('writes beside the source on apply, never over it', async () => {
     await openTake()
     await userEvent.click(screen.getByRole('button', { name: /Appliquer/ }))
 
     await waitFor(() => expect(saveAudio).toHaveBeenCalled())
-    expect(saveAudio.mock.calls[0]?.[0]).toMatchObject({ replaces: 'asset-1', name: 'pad.wav' })
+    expect(saveAudio.mock.calls[0]?.[0]).toEqual(
+      expect.not.objectContaining({ replaces: expect.anything() }),
+    )
+    expect(saveAudio.mock.calls[0]?.[0]).toMatchObject({
+      derivedFrom: 'asset-1',
+      name: 'pad.wav (édité)',
+    })
   })
 
-  it('writes beside the source on save as, and keeps them traceable', async () => {
+  it('points the block at what apply wrote', async () => {
     await openTake()
+    saveAudio.mockResolvedValueOnce({ ...asset, id: 'asset-2' })
+
+    await userEvent.click(screen.getByRole('button', { name: /Appliquer/ }))
+
+    await waitFor(() => expect(laidAssetIds()).toEqual(['asset-2']))
+  })
+
+  /**
+   * Which take a block plays is held by the MONTAGE and by nothing else — the chain that asked
+   * for it is dropped by the same button. Left unmarked, ⌘W closes the tab without asking and the
+   * block reopens on the original take, brut: the whole edit gone, and the derived file orphaned.
+   */
+  it('leaves work to save once apply has repointed the block', async () => {
+    await openTake()
+    const clean = useSequences.getState()
+    clean.markSaved('doc-1', sequenceStore.markOf(clean, 'doc-1'))
+    saveAudio.mockResolvedValueOnce({ ...asset, id: 'asset-2' })
+
+    await userEvent.click(screen.getByRole('button', { name: /Appliquer/ }))
+
+    await waitFor(() => expect(laidAssetIds()).toEqual(['asset-2']))
+    expect(sequenceStore.hasUnsavedWork(useSequences.getState(), 'doc-1')).toBe(true)
+  })
+
+  // The difference between the two buttons, and the whole of it: one moves the montage on, the
+  // other only adds to the shelf.
+  it('writes beside the source on save as, and leaves the montage where it was', async () => {
+    await openTake()
+    saveAudio.mockResolvedValueOnce({ ...asset, id: 'asset-2' })
+
     await userEvent.click(screen.getByRole('button', { name: /Enregistrer comme nouveau/ }))
 
     await waitFor(() => expect(saveAudio).toHaveBeenCalled())
@@ -373,6 +526,7 @@ describe('AudioDocument', () => {
       derivedFrom: 'asset-1',
       name: 'pad.wav (édité)',
     })
+    expect(laidAssetIds()).toEqual(['asset-1'])
   })
 
   it('hands the disk a real wav, not an empty buffer', async () => {

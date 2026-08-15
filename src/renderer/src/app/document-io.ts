@@ -7,7 +7,7 @@ import {
   type DocumentKind,
   type DocumentPart,
 } from '@shared/domain/document'
-import { parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
+import { chainsOnMontage, parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
 import { parseSkybox } from '@/engines/skybox/skybox-state'
@@ -226,12 +226,15 @@ const AUDIO_IO: DocumentIo = {
     const montage = sequenceStore.use.getState()
     const editMark = audioEditStore.markOf(edits, documentId)
     const montageMark = sequenceStore.markOf(montage, documentId)
+    const written = sequenceStore.stateOf(montage, documentId)
 
     return Promise.resolve({
       draft: {
         content: JSON.stringify({
-          edits: audioEditStore.stateOf(edits, documentId),
-          montage: sequenceStore.stateOf(montage, documentId),
+          // Pruned on the way to the file and nowhere else — see `chainsOnMontage`: the store
+          // keeps every chain so that ⌘Z of a deleted block gives its settings back.
+          edits: chainsOnMontage(audioEditStore.stateOf(edits, documentId), written),
+          montage: written,
         }),
       },
       commit: () => {

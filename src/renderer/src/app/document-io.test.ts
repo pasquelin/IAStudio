@@ -572,9 +572,9 @@ describe('saveDocument', () => {
 
     /**
      * The take is a REPLAYABLE chain over a decoded source: baking it into that source would
-     * leave the chain in the document and apply it a second time on the next open — normalized
-     * twice, trimmed twice, with the pre-edit audio nowhere. The editor's own toolbar offers
-     * both writes, where a hand asks for them.
+     * leave the chain in the document and apply it a second time on the next open — normalised
+     * twice, faded twice, with the pre-edit audio nowhere. The editor's own toolbar offers both
+     * writes, where a hand asks for them.
      */
     it('leaves a take alone too, chain and all', async () => {
       const saveAudio = vi.fn(() => Promise.resolve(picture()))
@@ -584,7 +584,9 @@ describe('saveDocument', () => {
         .getState()
         .create('audio', { title: 'pad.wav', sourceAssetId: 'asset-take' })
       if (!created) throw new Error('expected a document')
-      useAudioEdits.getState().runCommand(created.id, pushEdit('clip-a', { kind: 'trimSilence' }))
+      useAudioEdits
+        .getState()
+        .runCommand(created.id, pushEdit('clip-a', { kind: 'normalize', targetLufs: -14 }))
 
       await expect(saveDocument(created.id)).resolves.toBe(true)
 
@@ -1202,6 +1204,8 @@ describe('the kinds a string holds', () => {
     diskBackedBridge('audio')
     const documentId = await open('audio')
 
+    const clip = makeClip({ id: 'clip-a', assetId: 'asset-a', start: 0, duration: 2_000_000 })
+    useSequences.getState().runCommand(documentId, addClip('A1', clip))
     useAudioEdits.getState().runCommand(documentId, pushEdit('clip-a', { kind: 'gain', db: -6 }))
     const before = useAudioEdits.getState().states[documentId]
     await saveDocument(documentId)
@@ -1209,6 +1213,25 @@ describe('the kinds a string holds', () => {
     useAudioEdits.getState().drop(documentId)
     await restoreDocument(documentId)
     expect(useAudioEdits.getState().states[documentId]).toEqual(before)
+  })
+
+  /**
+   * A block deleted from the montage leaves its chain in the STORE, and has to: ⌘Z of the
+   * deletion gives the block back, and its settings with it. But the file is where a block is
+   * gone for good — left in, a long session grows a document without bound behind chains
+   * nothing on screen can reach.
+   */
+  it('leaves behind the chains of blocks the montage no longer holds', async () => {
+    diskBackedBridge('audio')
+    const documentId = await open('audio')
+
+    useAudioEdits.getState().runCommand(documentId, pushEdit('clip-gone', { kind: 'gain', db: -6 }))
+    await saveDocument(documentId)
+
+    useAudioEdits.getState().drop(documentId)
+    await restoreDocument(documentId)
+
+    expect(useAudioEdits.getState().states[documentId]).toEqual(EMPTY_AUDIO_EDIT)
   })
 
   // Both halves of a take are one document: the chain over the sample, and the montage under it.

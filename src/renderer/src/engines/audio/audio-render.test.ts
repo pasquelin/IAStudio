@@ -8,11 +8,17 @@ import {
   type AudioWorkerState,
   type WorkerPort,
 } from './audio-render'
-import type { TakeShape } from './edits'
+import type { TakeBounds, TakeShape } from './edits'
 import { encodeWav } from './wav'
 
 /** What an untouched take comes to. These suites are about the wiring, not about the shape. */
 const UNTOUCHED: TakeShape = { inPoint: 0, duration: 0, fadeIn: 0, fadeOut: 0, gain: 0 }
+
+/** A block covering everything it is handed — `crop` clamps to what the take actually holds. */
+const WHOLE: TakeBounds = { inPoint: 0, duration: 1_000_000 }
+
+/** What a take with no silence at either end comes back as. */
+const NO_SILENCE = { head: 0, tail: 0 }
 
 function fakePort(): {
   port: WorkerPort
@@ -72,7 +78,7 @@ describe('createAudioRenderer', () => {
     const { port, reply } = fakePort()
     const renderer = createAudioRenderer(() => port)
 
-    const pending = renderer.render([{ kind: 'gain', db: 3 }])
+    const pending = renderer.render([{ kind: 'gain', db: 3 }], WHOLE.inPoint, WHOLE.duration)
     const channels = [new Float32Array([0.25])]
     reply({
       kind: 'rendered',
@@ -81,12 +87,14 @@ describe('createAudioRenderer', () => {
       channels,
       wav: new Uint8Array([1, 2]),
       shape: UNTOUCHED,
+      silence: NO_SILENCE,
     })
 
     await expect(pending).resolves.toEqual({
       data: { sampleRate: 48_000, channels },
       wav: new Uint8Array([1, 2]),
       shape: UNTOUCHED,
+      silence: NO_SILENCE,
     })
   })
 
@@ -94,8 +102,8 @@ describe('createAudioRenderer', () => {
     const { port, reply } = fakePort()
     const renderer = createAudioRenderer(() => port)
 
-    const first = renderer.render([{ kind: 'gain', db: 3 }])
-    const second = renderer.render([{ kind: 'gain', db: 6 }])
+    const first = renderer.render([{ kind: 'gain', db: 3 }], WHOLE.inPoint, WHOLE.duration)
+    const second = renderer.render([{ kind: 'gain', db: 6 }], WHOLE.inPoint, WHOLE.duration)
     reply({
       kind: 'rendered',
       id: 1,
@@ -103,6 +111,7 @@ describe('createAudioRenderer', () => {
       channels: [new Float32Array([0.5])],
       wav: new Uint8Array([9]),
       shape: UNTOUCHED,
+      silence: NO_SILENCE,
     })
 
     await expect(first).resolves.toBeNull()
@@ -111,7 +120,7 @@ describe('createAudioRenderer', () => {
 
   it('resolves rather than hanging when the worker reports a failure', async () => {
     const { port, reply } = fakePort()
-    const pending = createAudioRenderer(() => port).render([])
+    const pending = createAudioRenderer(() => port).render([], WHOLE.inPoint, WHOLE.duration)
 
     reply({ kind: 'failed', id: 0, message: 'no take loaded' })
 
@@ -122,7 +131,7 @@ describe('createAudioRenderer', () => {
     const { port, terminated } = fakePort()
     const renderer = createAudioRenderer(() => port)
 
-    const pending = renderer.render([])
+    const pending = renderer.render([], WHOLE.inPoint, WHOLE.duration)
     renderer.dispose()
 
     await expect(pending).resolves.toBeNull()
@@ -139,6 +148,7 @@ describe('handleRequest', () => {
       kind: 'render',
       id: 4,
       edits: [{ kind: 'gain', db: -6 }],
+      start: WHOLE,
     })
 
     expect(answer?.response.kind).toBe('rendered')
@@ -158,7 +168,12 @@ describe('handleRequest', () => {
       channels: [new Float32Array([1, 0]), new Float32Array([0, 1])],
     })
 
-    const answer = handleRequest(state, { kind: 'render', id: 0, edits: [{ kind: 'gain', db: 2 }] })
+    const answer = handleRequest(state, {
+      kind: 'render',
+      id: 0,
+      edits: [{ kind: 'gain', db: 2 }],
+      start: WHOLE,
+    })
 
     expect(answer?.transfer).toHaveLength(3)
     expect(new Set(answer?.transfer).size).toBe(3)
@@ -169,10 +184,11 @@ describe('handleRequest', () => {
     const channel = new Float32Array([0.5, 0.25])
     handleRequest(state, { kind: 'load', sampleRate: 48_000, channels: [channel] })
 
-    const answer = handleRequest(state, { kind: 'render', id: 0, edits: [] })
+    const answer = handleRequest(state, { kind: 'render', id: 0, edits: [], start: WHOLE })
 
     if (answer?.response.kind !== 'rendered') throw new Error('expected a rendered response')
-    // An empty chain returns the source array itself; sending that one would detach the take.
+    // Whatever the chain does, the array the worker was loaded with must not go out: transferred
+    // once, it is detached, and every render after this one has no take to replay.
     expect(answer.response.channels[0]).not.toBe(channel)
     expect(answer.transfer).not.toContain(channel.buffer)
     expect([...(answer.response.channels[0] ?? [])]).toEqual([0.5, 0.25])
@@ -182,11 +198,12 @@ describe('handleRequest', () => {
     const state: AudioWorkerState = { source: null }
     handleRequest(state, { kind: 'load', sampleRate: 48_000, channels: [new Float32Array([1, 1])] })
 
-    handleRequest(state, { kind: 'render', id: 0, edits: [] })
+    handleRequest(state, { kind: 'render', id: 0, edits: [], start: WHOLE })
     const second = handleRequest(state, {
       kind: 'render',
       id: 1,
       edits: [{ kind: 'gain', db: -6 }],
+      start: WHOLE,
     })
 
     if (second?.response.kind !== 'rendered') throw new Error('expected a rendered response')
@@ -194,7 +211,10 @@ describe('handleRequest', () => {
   })
 
   it('reports rather than throws when a render arrives before any take', () => {
-    const answer = handleRequest({ source: null }, { kind: 'render', id: 2, edits: [] })
+    const answer = handleRequest(
+      { source: null },
+      { kind: 'render', id: 2, edits: [], start: WHOLE },
+    )
     expect(answer?.response).toEqual({ kind: 'failed', id: 2, message: 'no take loaded' })
   })
 
@@ -226,7 +246,7 @@ describe('the worker entry', () => {
     deliver({ kind: 'load', sampleRate: 8_000, channels: [new Float32Array([1])] })
     expect(posted).not.toHaveBeenCalled()
 
-    deliver({ kind: 'render', id: 7, edits: [] })
+    deliver({ kind: 'render', id: 7, edits: [], start: WHOLE })
     expect(posted).toHaveBeenCalledWith(expect.objectContaining({ kind: 'rendered', id: 7 }), {
       transfer: expect.any(Array),
     })
@@ -251,7 +271,7 @@ describe('the worker it opens', () => {
     const renderer = createAudioRenderer(open)
 
     renderer.load(take([0, 1]))
-    const pending = renderer.render([])
+    const pending = renderer.render([], WHOLE.inPoint, WHOLE.duration)
     reply({
       kind: 'rendered',
       id: 0,
@@ -259,6 +279,7 @@ describe('the worker it opens', () => {
       channels: [],
       wav: new Uint8Array(),
       shape: UNTOUCHED,
+      silence: NO_SILENCE,
     })
     await pending
 
@@ -278,7 +299,11 @@ describe('a worker that dies', () => {
     const { port, fail } = fakePort()
     const renderer = createAudioRenderer(() => port)
 
-    const pending = renderer.render([{ kind: 'normalize', targetLufs: -14 }])
+    const pending = renderer.render(
+      [{ kind: 'normalize', targetLufs: -14 }],
+      WHOLE.inPoint,
+      WHOLE.duration,
+    )
     fail()
 
     await expect(pending).resolves.toBeNull()
@@ -320,7 +345,9 @@ describe('a worker that refuses the take', () => {
   it('answers the render rather than leaving the editor waiting on it', async () => {
     const renderer = createAudioRenderer(refusingPort)
 
-    await expect(renderer.render([{ kind: 'normalize', targetLufs: -14 }])).resolves.toBeNull()
+    await expect(
+      renderer.render([{ kind: 'normalize', targetLufs: -14 }], WHOLE.inPoint, WHOLE.duration),
+    ).resolves.toBeNull()
   })
 
   // Null and not a rejection: that is what a worker dying mid-take already answers, and no
@@ -330,11 +357,19 @@ describe('a worker that refuses the take', () => {
     const alive = createAudioRenderer(() => dying.port)
     const refusing = createAudioRenderer(refusingPort)
 
-    const afterDeath = alive.render([{ kind: 'normalize', targetLufs: -14 }])
+    const afterDeath = alive.render(
+      [{ kind: 'normalize', targetLufs: -14 }],
+      WHOLE.inPoint,
+      WHOLE.duration,
+    )
     dying.fail()
 
     await expect(afterDeath).resolves.toBe(
-      await refusing.render([{ kind: 'normalize', targetLufs: -14 }]),
+      await refusing.render(
+        [{ kind: 'normalize', targetLufs: -14 }],
+        WHOLE.inPoint,
+        WHOLE.duration,
+      ),
     )
   })
 
@@ -343,8 +378,8 @@ describe('a worker that refuses the take', () => {
     const ports = [refusingPort(), working.port]
     const renderer = createAudioRenderer(() => ports.shift() ?? working.port)
 
-    await renderer.render([{ kind: 'normalize', targetLufs: -14 }])
-    void renderer.render([{ kind: 'normalize', targetLufs: -14 }])
+    await renderer.render([{ kind: 'normalize', targetLufs: -14 }], WHOLE.inPoint, WHOLE.duration)
+    void renderer.render([{ kind: 'normalize', targetLufs: -14 }], WHOLE.inPoint, WHOLE.duration)
 
     expect(working.sent).toHaveLength(1)
   })
@@ -358,8 +393,12 @@ describe('a worker that refuses the take', () => {
     const ports = [refusingPort(), working.port]
     const renderer = createAudioRenderer(() => ports.shift() ?? working.port)
 
-    await renderer.render([{ kind: 'normalize', targetLufs: -14 }])
-    const second = renderer.render([{ kind: 'normalize', targetLufs: -14 }])
+    await renderer.render([{ kind: 'normalize', targetLufs: -14 }], WHOLE.inPoint, WHOLE.duration)
+    const second = renderer.render(
+      [{ kind: 'normalize', targetLufs: -14 }],
+      WHOLE.inPoint,
+      WHOLE.duration,
+    )
     const request = working.sent[0]?.message
     if (request?.kind !== 'render') throw new Error('the second take was never sent')
     working.reply({
@@ -369,6 +408,7 @@ describe('a worker that refuses the take', () => {
       channels: [new Float32Array([0.5])],
       wav: new Uint8Array([9]),
       shape: UNTOUCHED,
+      silence: NO_SILENCE,
     })
 
     await expect(second).resolves.not.toBeNull()

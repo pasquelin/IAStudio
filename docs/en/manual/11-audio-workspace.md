@@ -70,6 +70,9 @@ lower monitor, and it follows what you do to it — a crop shortens it, a fade s
 normalising changes its gain. Two things stay its own, because they belong to the edit rather than
 to the take: **where it starts** and **how fast it runs**.
 
+**And the editor only ever works on the clip's own slice.** If you shortened a clip by dragging its
+edge on the strip, the tools act on what is left, never on the whole file.
+
 > **Reopening the take already under the editor does nothing**, and that is deliberate: a second
 > clip on the same sound would leave the first one's chain with nothing to call it back.
 
@@ -108,11 +111,11 @@ example.
 
 | Tool | What it does |
 |---|---|
-| **Crop** | keeps only the selection, throws away the rest |
+| **Crop** | brings the clip down to the selection, on the edit |
 | **Fade in** | brings the sound up from silence, over the selection |
 | **Fade out** | brings the sound down to silence, over the selection |
 | **Normalise** | brings the overall level to −14 LUFS |
-| **Trim silence** | removes silence at the start and the end |
+| **Trim silence** | pulls the clip in to what is not silence, at both ends |
 | **A/B** | plays the original source, without undoing anything |
 
 ### What "normalise" means
@@ -148,33 +151,43 @@ and A/B tells the truth in three seconds.
 
 This is the important point of this workspace.
 
-Your tools **do not write into the file**. They stack a list of instructions — "crop here",
-"one-second fade", "normalise" — which is replayed over the original sound every time.
+Your tools **do not write into the file**. They stack a list of instructions — "one-second fade",
+"normalise" — which is replayed over the original sound every time.
 
 Two very practical consequences:
 
 - **undoing costs nothing**, however many steps there are;
 - **A/B is instant**, because the source is always there, intact.
 
-Only when you explicitly ask is anything written:
+**Crop** and **Trim silence** are the exception, and for a good reason: they do not change the
+sound, they change **the clip's bounds** on the edit — exactly as if you had dragged its edge
+with the mouse. Nothing is written into the file there either, and `⌘Z` undoes them.
+
+Only when you explicitly ask is a file written:
 
 | Button | What it does |
 |---|---|
-| **Apply** | **rewrites the asset** with your changes. The original is replaced — unless it is a [linked medium](07-assets.md), which then enters the project without your file being touched |
-| **Save as new** | creates a **new asset** alongside, named "*(edited)*" |
+| **Apply** | creates a **new asset** holding the slice as you hear it, and **the clip on the edit now points at it**. The original is never touched |
+| **Save as new** | creates the same asset, but **leaves the edit where it is**. Take this when you want the edited version on the shelf without changing what the edit plays |
+
+Both name the new asset "*(edited)*".
 
 **After "Apply", this clip's chain is empty and `⌘Z` no longer walks back up it.** That is
-deliberate, and it is the price of the button: the file now **holds** your settings, and replaying
-them over it would lay them down a second time — a fade twice as long, a gain twice as strong. The
-waveform that comes back is the one of the rewritten file.
+deliberate, and it is the price of the button: the new file now **holds** your settings, and
+replaying them over it would lay them down a second time — a fade twice as long, a gain twice as
+strong. The waveform that comes back is the one of that new file.
 
-> **The whole tab's history goes, not just that clip's.** The other clips keep their chains —
-> their crops and fades are untouched — but no step undoes with `⌘Z` any more, on any of them. The
-> history is the document's, and it cannot rewind for one block alone. This is the editor's one
-> destructive button.
+> **The whole editor's history goes, not just that clip's.** The other clips keep their chains —
+> their fades and levels are untouched — but no step undoes with `⌘Z` any more, on any of them. The
+> history is the document's, and it cannot rewind for one block alone.
+>
+> **What `⌘Z` still undoes is the edit itself**: the clip repointed at the new asset, a crop made
+> earlier. The sound written to disk stays, and the chain that produced it does not come back. In
+> other words, stepping back after "Apply" gives you the clip you had, not the settings you had.
 
-> **When in doubt, take "Save as new".** You keep the original, and you can always delete the copy
-> if it does not work out.
+> **One sound can serve several clips**, here and in other tabs. That is why "Apply" writes
+> alongside rather than over: rewriting the original would move every one of those clips at
+> once, without saying so.
 
 ---
 
