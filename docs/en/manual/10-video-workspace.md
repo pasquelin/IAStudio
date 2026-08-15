@@ -126,6 +126,31 @@ track back as it was.
 > the only bound is the start of the sequence. That is how you decide how long a title card stays
 > on screen.
 
+### Linked clips, and the little link that says so
+
+**A video carrying sound arrives as TWO clips**: the picture on a picture track, the sound on a
+sound track facing it. They are **linked**.
+
+**A small link, at the right end of each clip, tells you which case you are in:**
+
+| What you see | What it means |
+|---|---|
+| a **chain** | this clip is linked to another |
+| a **broken chain** | this clip stands alone |
+
+The link **disappears on a clip too narrow** to hold it — that is room running out, not the link
+changing. And **it is not a button**: clicking it unlinks nothing, it only informs you.
+
+**While two clips are linked, what you do to one happens to the other** — moving it, cutting it
+with the blade, deleting it.
+
+> **And it is all or nothing.** If either half cannot follow — its track is locked, the cut falls
+> outside it — **the other does not move either**. Lock `A1`, drag the picture on `V1`: nothing
+> happens. That is deliberate — a half-moved pair is exactly what a link exists to prevent.
+
+**`⌘L` separates them.** Each becomes an ordinary clip again, and its link turns to the broken
+chain.
+
 ---
 
 ## Transport — playing and pausing

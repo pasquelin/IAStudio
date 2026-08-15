@@ -117,7 +117,7 @@ It is the universal representation of sound. At a glance you can see:
 **Drag across the waveform** to draw a selection. That is the portion the tools work on.
 
 **The editor's bar always says where you stand**: both bounds of the selection when there is one,
-and "Drag across the wave to select" when there is not. An area nobody knows how to draw is not
+and "Drag across the waveform to select" when there is not. An area nobody knows how to draw is not
 explained by a sentence that only appears once a pointer rests on a tool.
 
 **Playback itself ignores the selection**: it plays the whole take from where the cursor stands,
@@ -228,7 +228,9 @@ laying sounds side by side.
 **The gestures are exactly those of the previous chapter** — dragging a take in from the shelf,
 trimming a clip by its edges, the blade, the fades, the gain, the inspector, the track headers
 with their mute, solo and lock. All of it is described in
-[Video workspace](10-video-workspace.md), and none of it changes here.
+[Video workspace](10-video-workspace.md), and none of it changes here — bar one thing, and it
+shows: **the little link never appears on any clip.** There is no picture track, so no pair to
+form, so nothing to report.
 
 The panel's bar carries one extra button, **Add an audio track** — one where Video has two: there
 is no picture track to add.
