@@ -1,8 +1,9 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { StrictMode, useMemo } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { SECOND } from '@shared/domain/time'
-import { animationRows } from '@/engines/scene/animation-rows'
+import { animationRows, SUBJECT_HEIGHT } from '@/engines/scene/animation-rows'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 import { addAnimationTrack } from '@/engines/scene/animation-commands'
@@ -218,5 +219,72 @@ describe('arranging the lines', () => {
       'cube-2',
     ])
     expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(0)
+  })
+})
+
+/**
+ * The sheet's own drag, which the block above never exercised: it reorders from the KEYBOARD, one
+ * press at a time, and a press moves nothing in the DOM that a pointer gesture has to survive.
+ *
+ * The rows are recomputed from the arrangement here, as `AnimationPanel` does — handed a frozen
+ * array, a drag would read the same order at every step and prove nothing.
+ */
+describe('a line of the sheet dragged by its grip', () => {
+  const THREE = [
+    { id: 'cube-1', name: 'Cube' },
+    { id: 'cube-2', name: 'Sphere' },
+    { id: 'cube-3', name: 'Cone' },
+  ]
+
+  function Sheet() {
+    const order = useAnimationViews(state => animationViewOf(state, DOCUMENT).order)
+    const rows = useMemo(
+      () => animationRows(timelineOf(), { nodes: THREE, expanded: new Set(), order }),
+      [order],
+    )
+    return <AnimationHeaders documentId={DOCUMENT} rows={rows} />
+  }
+
+  const shown = (): (string | undefined)[] =>
+    screen
+      .getAllByTestId(/^anim-subject-/)
+      .map(node => node.getAttribute('data-testid')?.replace('anim-subject-', ''))
+
+  beforeEach(() => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [meshNode('cube-1'), meshNode('cube-2'), meshNode('cube-3')],
+    })
+    useAnimationViews.setState({ views: {} })
+    render(<Sheet />, { wrapper: StrictMode })
+  })
+
+  // Climbing crossed as many lines as the pointer did; descending stopped at the first.
+  it('carries the top line all the way to the bottom of the sheet', () => {
+    const height = SUBJECT_HEIGHT
+    fireEvent.pointerDown(screen.getByRole('button', { name: /Déplacer la ligne Cube$/ }), {
+      clientY: 0,
+    })
+    fireEvent.pointerMove(window, { clientY: height, buttons: 1 })
+    fireEvent.pointerMove(window, { clientY: 2 * height, buttons: 1 })
+    fireEvent.pointerUp(window)
+
+    expect(shown()).toEqual(['cube-2', 'cube-3', 'cube-1'])
+  })
+
+  // Two moves reaching the handle before React has published the render between them: the sheet
+  // used to answer from the order it was drawn with, bank a place the line never took, and
+  // swallow the rest of the gesture in silence.
+  it('answers from the arrangement it holds, not from the one it was drawn with', () => {
+    fireEvent.pointerDown(screen.getByRole('button', { name: /Déplacer la ligne Cube$/ }), {
+      clientY: 0,
+    })
+    act(() => {
+      fireEvent.pointerMove(window, { clientY: SUBJECT_HEIGHT, buttons: 1 })
+      fireEvent.pointerMove(window, { clientY: 2 * SUBJECT_HEIGHT, buttons: 1 })
+    })
+    fireEvent.pointerUp(window)
+
+    expect(shown()).toEqual(['cube-2', 'cube-3', 'cube-1'])
   })
 })

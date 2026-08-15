@@ -44,13 +44,16 @@ export type AnimationViewState = {
   setSelected: (documentId: string, selected: readonly string[]) => void
   setAutoKey: (documentId: string, autoKey: boolean) => void
   /**
-   * Moves one line in the sheet's own arrangement.
+   * Moves one line in the sheet's own arrangement, and answers how many places it ACTUALLY
+   * travelled — nothing at the ends of the stack, which is what `RowReorder.move` owes its caller.
    *
-   * `shown` is the order the sheet is displaying right now — the whole of it, not the moved id
-   * alone: the first drag is what turns "the scene's order" into an arrangement, and an order
-   * holding one entry would send every other line behind it.
+   * `shown` only SEEDS the arrangement, on the first drag: it is the order the sheet displays,
+   * the whole of it and not the moved id alone, because an order holding one entry would send
+   * every other line behind it. Once there IS an arrangement, this reads it rather than what the
+   * caller carries — a `shown` captured at render goes stale between two steps of one gesture,
+   * and the sheet then banks a place the line never took.
    */
-  moveRow: (documentId: string, shown: readonly string[], rowId: string, by: number) => void
+  moveRow: (documentId: string, shown: readonly string[], rowId: string, by: number) => number
   forget: (documentId: string) => void
 }
 
@@ -76,15 +79,25 @@ export const useAnimationViews = create<AnimationViewState>()(set => ({
   setAutoKey: (documentId, autoKey) =>
     set(state => write(state, documentId, view => ({ ...view, autoKey }))),
 
-  moveRow: (documentId, shown, rowId, by) =>
+  moveRow: (documentId, shown, rowId, by) => {
+    let travelled = 0
+
     set(state =>
       write(state, documentId, view => {
-        const order = movedWithin(shown, rowId, by)
+        const current = view.order.length > 0 ? view.order : shown
+        const from = current.indexOf(rowId)
+        if (from === -1) return view
+
+        const order = movedWithin(current, rowId, by)
+        travelled = order.indexOf(rowId) - from
         // Identity is the answer to "nothing moved": rewriting the view would rebuild every row
         // of the sheet, on every step of a drag against the end of the stack.
-        return order === shown ? view : { ...view, order }
+        return order === current ? view : { ...view, order }
       }),
-    ),
+    )
+
+    return travelled
+  },
 
   forget: documentId =>
     set(state => {

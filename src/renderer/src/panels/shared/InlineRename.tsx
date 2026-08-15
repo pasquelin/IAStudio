@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { isGoneForGood } from '@/helpers/teardown'
 
 export type InlineRenameProps = {
   value: string
@@ -68,10 +69,10 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
        * owner closed the field a frame after opening it. Every rename in the studio opened and
        * shut in the same frame, looking from the outside like a gesture that did nothing.
        *
-       * Measured over CDP in Electron on 13 August: the replayed cleanup sees `isConnected` true,
-       * a real unmount sees it false. That is the only signal that tells the two apart here.
+       * `isGoneForGood` is the signal that tells the two apart, and where the measurement behind
+       * it is written down — the drag handle of the timeline reads the same one.
        */
-      if (node?.isConnected) return
+      if (!isGoneForGood(node)) return
 
       // An input torn out of the tree leaves the focus on `document.body`, so the next Tab
       // restarts from the top of the window — whoever renamed at the keyboard is thrown out of

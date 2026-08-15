@@ -1,10 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { StrictMode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { TimelineRow, type RowReorder } from './TimelineRow'
 
 const ROW_HEIGHT = 40
 const GRIP = /Move the row/
+
+/**
+ * Every render of this suite, as the window itself runs (`main.tsx`).
+ *
+ * A gesture whose effect cannot survive being replayed is exactly what this file guards — see
+ * `helpers/teardown`. Rendered plainly, the whole suite is blind to that class of defect, and a
+ * band above it (`TrackHeaders.test.tsx`) was left carrying the only proof.
+ */
+const strictly = { wrapper: StrictMode }
 
 describe('TimelineRow', () => {
   /** A stack that always takes the move, unless the test hands one that does not. */
@@ -37,7 +47,7 @@ describe('TimelineRow', () => {
 
   it('moves the row by what the drag has travelled, and only by the difference', () => {
     const move = vi.fn((by: number) => by)
-    render(rowWith({ move }))
+    render(rowWith({ move }), strictly)
 
     grab()
     dragTo(45)
@@ -52,7 +62,7 @@ describe('TimelineRow', () => {
   // and the drag went dead, because moving it is what released the capture the grip relied on.
   it('keeps following the pointer after the row has moved, in both directions', () => {
     const move = vi.fn((by: number) => by)
-    render(rowWith({ move }))
+    render(rowWith({ move }), strictly)
 
     grab()
     dragTo(-45)
@@ -64,7 +74,7 @@ describe('TimelineRow', () => {
 
   it('leaves the row where it is while the pointer stays inside its own height', () => {
     const move = vi.fn((by: number) => by)
-    render(rowWith({ move }))
+    render(rowWith({ move }), strictly)
 
     grab()
     dragTo(15)
@@ -76,7 +86,7 @@ describe('TimelineRow', () => {
   // place it was never dragged over, the moment the pointer came back to where it started.
   it('counts what the stack gave, not what the pointer asked for', () => {
     const move = vi.fn(() => 0)
-    render(rowWith({ move }))
+    render(rowWith({ move }), strictly)
 
     grab()
     dragTo(45)
@@ -87,7 +97,7 @@ describe('TimelineRow', () => {
 
   it('moves the row from the keyboard, so reordering is not a mouse-only gesture', async () => {
     const move = vi.fn((by: number) => by)
-    render(rowWith({ move }))
+    render(rowWith({ move }), strictly)
 
     screen.getByRole('button', { name: GRIP }).focus()
     await userEvent.keyboard('{ArrowUp}{ArrowDown}')
@@ -100,7 +110,7 @@ describe('TimelineRow', () => {
   it('opens one gesture for a whole drag, and closes it on release', () => {
     const begin = vi.fn()
     const end = vi.fn()
-    render(rowWith({ move: (by: number) => by, begin, end }))
+    render(rowWith({ move: (by: number) => by, begin, end }), strictly)
 
     grab()
     dragTo(45)
@@ -117,7 +127,7 @@ describe('TimelineRow', () => {
   it('closes the gesture when the pointer is cancelled', () => {
     const move = vi.fn((by: number) => by)
     const end = vi.fn()
-    render(rowWith({ move, begin: () => undefined, end }))
+    render(rowWith({ move, begin: () => undefined, end }), strictly)
 
     grab()
     fireEvent.pointerCancel(window, { pointerId: 1 })
@@ -136,7 +146,7 @@ describe('TimelineRow', () => {
   it('ends the gesture on the first move that carries no button', () => {
     const move = vi.fn((by: number) => by)
     const end = vi.fn()
-    render(rowWith({ move, end }))
+    render(rowWith({ move, end }), strictly)
     const row = screen.getByText('A1').closest('div[style]')
 
     grab()
@@ -151,7 +161,7 @@ describe('TimelineRow', () => {
   // was down. The store would keep the gesture open, and every later edit would coalesce into it.
   it('closes the gesture when it is torn down mid-drag', () => {
     const end = vi.fn()
-    const view = render(rowWith({ move: (by: number) => by, end }))
+    const view = render(rowWith({ move: (by: number) => by, end }), strictly)
 
     grab()
     view.unmount()
@@ -162,7 +172,7 @@ describe('TimelineRow', () => {
   // A window that loses focus mid-drag never delivers the release at all.
   it('ends the gesture when the window loses focus', () => {
     const end = vi.fn()
-    render(rowWith({ move: (by: number) => by, end }))
+    render(rowWith({ move: (by: number) => by, end }), strictly)
     const row = screen.getByText('A1').closest('div[style]')
 
     grab()
@@ -174,7 +184,7 @@ describe('TimelineRow', () => {
 
   // Between two ranks the stack does not move, and nothing else would say a drag is under way.
   it('reads as held for the length of the gesture, and only for that', () => {
-    render(rowWith({ move: (by: number) => by }))
+    render(rowWith({ move: (by: number) => by }), strictly)
     const row = screen.getByText('A1').closest('div[style]')
 
     grab()
@@ -189,6 +199,7 @@ describe('TimelineRow', () => {
       <TimelineRow height={ROW_HEIGHT} nested>
         <span>position</span>
       </TimelineRow>,
+      strictly,
     )
 
     expect(screen.queryByRole('button')).not.toBeInTheDocument()

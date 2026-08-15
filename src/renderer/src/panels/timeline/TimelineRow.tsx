@@ -11,6 +11,7 @@ import {
 import { UiIcon } from '@/design/UiIcon'
 import { ROW_PADDING, RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import { cn } from '@/helpers/cn'
+import { isGoneForGood } from '@/helpers/teardown'
 
 /**
  * How many places a row has travelled, dragged by this much over rows of this height.
@@ -137,8 +138,8 @@ type Grab = {
   pointerId: number
   y: number
   applied: number
-  /** The grip itself, kept so a teardown can say whether the row really left — see the effect. */
-  node: HTMLElement
+  /** Held from the press, because `isGoneForGood` cannot be asked a ref React has already cleared. */
+  node: HTMLButtonElement
 }
 
 /**
@@ -228,16 +229,11 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       window.removeEventListener('blur', finish)
-      // Torn down with the pointer still down — a panel closed, a workspace left, a module
-      // swapped under a running gesture. BOTH halves have to be given back: the gesture the store
-      // is holding open, and the row's own "I am held", which nothing else would ever clear.
-      //
-      // But a teardown is not always the end. StrictMode runs this effect again whenever React
-      // RE-INSERTS the row's node, and React only ever relocates the child that is out of order:
-      // climbing that is the neighbour, descending it is the row one is holding. Releasing here
-      // is what ended every downward drag on the first rank it crossed, while climbing crossed
-      // as many as it liked. A grip still standing in the document is only being moved.
-      if (grabbed.current && !grabbed.current.node.isConnected) release()
+      // Torn down with the pointer still down — a panel closed, a workspace left. BOTH halves go
+      // back: the gesture the store holds open, and the row's own "I am held". But only for a
+      // teardown that is real: React relocates the child that is out of order, which descending
+      // IS the row one is holding, and releasing on that replay ended every downward drag.
+      if (grabbed.current && isGoneForGood(grabbed.current.node)) release()
     }
   }, [dragging])
 
