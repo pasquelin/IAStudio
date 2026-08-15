@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import WaveSurfer, { type WaveSurferOptions } from 'wavesurfer.js'
+import WaveSurfer from 'wavesurfer.js'
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js'
 import { playbackToken } from '@/engines/timeline/playback'
-import { rootColour } from '@/engines/core/palette'
+import { useToken } from '@/hooks/useToken'
 import { durationOf } from '@/engines/audio/audio-data'
 import type { RenderedAudio } from '@/engines/audio/audio-render'
 import type { Region } from '@/engines/audio/edits'
@@ -37,31 +37,6 @@ const BAR_RADIUS = 2
 const CURSOR_WIDTH = 2
 
 /**
- * The studio's palette, where wavesurfer would otherwise draw in its own greys — read here rather
- * than written, for the reason `engines/core/palette.ts` carries.
- *
- * The two marks of this surface are the SELECTION and the head, they overlap, and telling them
- * apart is the whole point of reading these tokens: the selection is the accent as a veil, an
- * area; the head is the accent at full, a line — the same opposition the strip below already
- * draws between a selected clip and the playhead. Which is also why the played part is NOT
- * tinted: a third fill sliding under the veil is what made the two unreadable in the first place.
- */
-function studioColours(): Pick<
-  WaveSurferOptions,
-  'waveColor' | 'progressColor' | 'cursorColor' | 'cursorWidth'
-> {
-  const wave = rootColour('--color-muted')
-
-  return {
-    // The ink the programme monitor draws its own wave in: one pair, one reading.
-    waveColor: wave,
-    progressColor: wave,
-    cursorColor: rootColour('--color-accent'),
-    cursorWidth: CURSOR_WIDTH,
-  }
-}
-
-/**
  * Wavesurfer, driven from the edit chain rather than from the file on disk.
  *
  * The peaks are handed over ready-made, so drawing costs no decode; the audible side comes
@@ -78,8 +53,22 @@ export function useWaveSurfer({
   onRegionChange,
 }: UseWaveSurferOptions): WaveSurferHandle {
   const surfer = useRef<WaveSurfer | null>(null)
+  const regions = useRef<ReturnType<typeof RegionsPlugin.create> | null>(null)
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState<Us>(0)
+
+  /**
+   * The two marks of this surface, and they sit on top of one another: the SELECTION a drag lays
+   * down, and the head a click moves. Telling them apart is what these tokens are for — the
+   * selection is the accent as a veil, an area; the head is the accent at full, a line. The same
+   * opposition the strip below already draws between a selected clip and the playhead.
+   *
+   * Through `useToken` and not read once on mount: a theme switched with the editor open would
+   * otherwise leave this the one surface still wearing the palette it was built under.
+   */
+  const wave = useToken('--color-muted')
+  const head = useToken('--color-accent')
+  const veil = useToken('--color-accent-veil')
 
   // Kept in a ref so the listeners below never have to be re-subscribed when the callback
   // identity changes — a re-subscription mid-drag drops the region being drawn.
@@ -100,14 +89,11 @@ export function useWaveSurfer({
       barGap: BAR_GAP,
       barRadius: BAR_RADIUS,
       height: 'auto',
-      ...studioColours(),
       plugins: [plugin],
     })
 
     surfer.current = instance
-    // The colour goes in HERE and not on the region once it lands: the drag draws the area as it
-    // is being traced, and a region left to its own default traces it in wavesurfer's black.
-    plugin.enableDragSelection({ color: rootColour('--color-accent-veil') })
+    regions.current = plugin
 
     instance.on('play', () => setPlaying(true))
     instance.on('pause', () => setPlaying(false))
@@ -129,9 +115,43 @@ export function useWaveSurfer({
       playbackToken.release(owner)
       instance.destroy()
       surfer.current = null
+      regions.current = null
       setPlaying(false)
     }
   }, [container, owner])
+
+  /**
+   * The palette, laid on the instance rather than handed to its constructor — which is what lets
+   * a theme switched with the editor open reach a wave already drawn.
+   *
+   * The veil is given to the DRAG and not to the region once it lands: what is being traced is
+   * drawn as the pointer moves, and a region left to its own default traces it in wavesurfer's
+   * black. `enableDragSelection` hands back its own unsubscribe, so re-arming it with the new
+   * colour is the effect's cleanup and nothing has to be counted.
+   *
+   * `container` sits in the deps for the reason the take below carries: it stands for the
+   * INSTANCE, and a surface replaced is a fresh one holding none of this.
+   */
+  useEffect(() => {
+    const instance = surfer.current
+    const plugin = regions.current
+    if (!instance || !plugin) return
+    // A token that answers nothing is a stylesheet not parsed yet, and an empty string is not the
+    // library's `??` default: it would paint the wave and the selection in nothing at all.
+    if (!wave || !head || !veil) return
+
+    // The played part is NOT tinted: a third fill sliding under the veil is what made the
+    // selection and the head unreadable against one another in the first place.
+    instance.setOptions({
+      waveColor: wave,
+      progressColor: wave,
+      cursorColor: head,
+      cursorWidth: CURSOR_WIDTH,
+    })
+    for (const region of plugin.getRegions()) region.setOptions({ color: veil })
+
+    return plugin.enableDragSelection({ color: veil })
+  }, [container, wave, head, veil])
 
   /**
    * The take itself, pushed in as a blob AND as peaks.

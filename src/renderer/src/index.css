@@ -83,17 +83,15 @@
    * opaque fill there would hide the very waveform one selects by.
    *
    * Composed from the accent rather than written out, so it follows a picked one: `useAppearance`
-   * overwrites `--color-accent` on the root, and every derived token it does NOT recompute by
-   * hand would otherwise stay the sheet's blue. Declared once for the same reason — the
-   * substitution happens where it is read, so the light theme's accent reaches it unaided.
+   * overwrites `--color-accent` on the root, and a derived token nobody recomputes by hand would
+   * otherwise stay the sheet's blue. Declared once for the same reason — the substitution happens
+   * on the element that reads it, so each theme's accent reaches it unaided, and
+   * `main/window/theme.test.ts` exempts a derived token from restating itself.
    *
    * Read as a STRING by `engines/core/palette.ts`, unlike the text ladder below: an unregistered
    * property answers `color-mix(in srgb, #346ef2 35%, transparent)`, which every CSS colour
    * consumer takes as it stands. Registering it would buy a resolved `rgba()` and cost an
    * `initial-value` — a hex written a second time, which is what this token exists to avoid.
-   *
-   * A third of the way over: on the dark chassis it composes to #2e4474, six values of blue off
-   * `accent-soft` above — the studio's selection colour, arrived at from the other side.
    */
   --color-accent-veil: color-mix(in srgb, var(--color-accent) 35%, transparent);
   --color-danger: #ff715b;
@@ -392,9 +390,6 @@
   /* Restated rather than inherited: this theme reads its own block, and the accent could part. */
   --color-accent-hover: #2a58c2;
   --color-accent-soft: #d3e1fb;
-  /* Restated for the reason above and NOT re-valued: it is a composition, not a colour, and the
-     accent it composes is this block's own — see the veil's own paragraph in `@theme`. */
-  --color-accent-veil: color-mix(in srgb, var(--color-accent) 35%, transparent);
   /* The studio's own name for daisyUI's `error`, and the same value: two reds would be one too many. */
   --color-danger: #b72e27;
   /*
@@ -589,6 +584,25 @@ body,
  */
 .react-tooltip .react-tooltip-content-wrapper {
   padding: 0;
+}
+
+/*
+ * The two edges of a selection in the take editor, which the regions plugin writes inline as
+ * `rgba(0, 0, 0, 0.5)` — a black that reads 1.15:1 on the dark chassis, so the marks that
+ * actually bound the selection are the ones nobody can see.
+ *
+ * They are what CARRIES the state, and the veil inside them is emphasis on top: the accent at
+ * full clears the 3:1 WCAG 1.4.11 asks of a control, where the veil composed on the chassis
+ * reads 1.44 and could not reach that bar at any alpha still letting the wave through. Both
+ * ratios are measured in `design/tokens.test.ts`, which also holds this rule to its class.
+ *
+ * `::part` because wavesurfer builds its own shadow host inside our surface — hence the
+ * descendant step, the host being its div and not ours — and `!important` because the plugin
+ * writes the border inline, where no author rule reaches it.
+ */
+.sc-wave div::part(region-handle-left),
+.sc-wave div::part(region-handle-right) {
+  border-color: var(--color-accent) !important;
 }
 
 /*

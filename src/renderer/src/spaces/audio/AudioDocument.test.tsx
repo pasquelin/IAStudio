@@ -78,23 +78,29 @@ describe('AudioDocument', () => {
     useSequences.setState({ states: { 'doc-1': EMPTY_SOUND_SEQUENCE }, histories: {} })
   })
 
-  /**
-   * The wave carries two marks at once — the area a drag laid down and the head a click moved —
-   * and the tools act on the first. The bar is where that is said in words: the tooltips only
-   * answer a pointer already resting on a tool, which is not where somebody looking for the
-   * gesture is.
-   */
-  describe('what its tools act on', () => {
-    it('invites a selection while there is none, and reads it back once there is', async () => {
-      await openTake()
-      expect(screen.getByText(/Glissez sur l’onde/)).toBeInTheDocument()
+  it('says what its tools act on: the gesture while there is nothing, the range once there is', async () => {
+    await openTake()
+    expect(screen.getByText(/Glissez sur l’onde/)).toBeInTheDocument()
 
-      useAudioEdits
-        .getState()
-        .replace('doc-1', { ...editsOf(), region: { from: 2 * SECOND, to: 5 * SECOND } })
+    useAudioEdits
+      .getState()
+      .replace('doc-1', { ...editsOf(), region: { from: SECOND / 2, to: SECOND } })
 
-      expect(await screen.findByText('Sélection 00:02.00 – 00:05.00')).toBeInTheDocument()
-    })
+    expect(await screen.findByText('Sélection 00:00.50 – 00:01.00')).toBeInTheDocument()
+    // And the invitation goes: the bar says one thing at a time, or it says both at once.
+    expect(screen.queryByText(/Glissez sur l’onde/)).not.toBeInTheDocument()
+  })
+
+  // Clamped like the tools clamp it: the take is two seconds long, so a range past its end is a
+  // range no tool would touch, and announcing it would be the bar promising what nothing does.
+  it('takes a selection the take no longer holds for no selection at all', async () => {
+    await openTake()
+
+    useAudioEdits
+      .getState()
+      .replace('doc-1', { ...editsOf(), region: { from: 9 * SECOND, to: 12 * SECOND } })
+
+    expect(await screen.findByText(/Glissez sur l’onde/)).toBeInTheDocument()
   })
 
   // The bar carried the only undo this space had until `audio.undo` was registered — which is

@@ -1,17 +1,19 @@
-import { render } from '@testing-library/react'
+import { act, render } from '@testing-library/react'
 import { useState } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RenderedAudio } from '@/engines/audio/audio-render'
 import { refreshPalette } from '@/engines/core/palette'
 import { useWaveSurfer } from './useWaveSurfer'
 
 const loadBlob = vi.fn(() => Promise.resolve())
 const destroy = vi.fn()
+const setOptions = vi.fn((_options: unknown) => {})
 const dragSelection = vi.fn((_options: unknown) => {})
 const create = vi.fn((_options: unknown) => ({
   on: vi.fn(),
   loadBlob,
   destroy,
+  setOptions,
   isPlaying: () => false,
   play: vi.fn(),
   pause: vi.fn(),
@@ -66,31 +68,60 @@ describe('useWaveSurfer', () => {
     expect(loadBlob).toHaveBeenCalledOnce()
   })
 
-  it('draws the selected area and the head apart, in the studio palette', () => {
-    // The two marks of this surface sit on top of one another — an area a drag laid down, a line
-    // a click moved — and wavesurfer's own greys give them neither the studio's colours nor a
-    // difference to read: the area is the accent VEILED, the head the accent at full.
-    const root = document.documentElement
-    root.style.setProperty('--color-muted', 'rgb(4, 5, 6)')
-    root.style.setProperty('--color-accent', 'rgb(1, 2, 3)')
-    root.style.setProperty('--color-accent-veil', 'rgba(1, 2, 3, 0.35)')
-    refreshPalette()
+  // The two marks of this surface sit on top of one another — an area a drag laid down, a line a
+  // click moved — and wavesurfer's own greys give them neither the studio's colours nor a
+  // difference to read: the area is the accent VEILED, the head the accent at full.
+  describe('its palette', () => {
+    const NAMES = ['--color-muted', '--color-accent', '--color-accent-veil']
 
-    // Restored even on a failed assertion: the palette is a module cache.
-    try {
+    function theme(wave: string, head: string, veil: string): void {
+      const { style } = document.documentElement
+      style.setProperty('--color-muted', wave)
+      style.setProperty('--color-accent', head)
+      style.setProperty('--color-accent-veil', veil)
+      act(() => refreshPalette())
+    }
+
+    afterEach(() => {
+      for (const name of NAMES) document.documentElement.style.removeProperty(name)
+      refreshPalette()
+    })
+
+    it('draws the selected area and the head apart, in the studio palette', () => {
+      theme('rgb(4, 5, 6)', 'rgb(1, 2, 3)', 'rgba(1, 2, 3, 0.35)')
+
       render(<Editor surface />)
 
-      expect(create.mock.calls.at(-1)?.[0]).toMatchObject({
+      // Whole rather than matched: `cursorWidth: 0` draws no head at all, and the played part
+      // tinted is the third fill this palette exists to keep out — two changes a partial
+      // assertion lets through while claiming to hold the pair.
+      expect(setOptions.mock.calls.at(-1)?.[0]).toEqual({
         waveColor: 'rgb(4, 5, 6)',
+        progressColor: 'rgb(4, 5, 6)',
         cursorColor: 'rgb(1, 2, 3)',
+        cursorWidth: 2,
       })
       // On the drag rather than on the region once it lands: what is being traced is drawn too.
-      expect(dragSelection).toHaveBeenCalledWith({ color: 'rgba(1, 2, 3, 0.35)' })
-    } finally {
-      for (const name of ['--color-muted', '--color-accent', '--color-accent-veil']) {
-        root.style.removeProperty(name)
-      }
-      refreshPalette()
-    }
+      expect(dragSelection).toHaveBeenLastCalledWith({ color: 'rgba(1, 2, 3, 0.35)' })
+    })
+
+    it('follows a theme switched under a wave already drawn', () => {
+      // The instance holds its colours in JavaScript, so nothing repaints it on its own: read
+      // once at build time, this editor is the one surface that keeps the palette it was born
+      // under — which is the mistake `useToken` exists to prevent.
+      theme('rgb(4, 5, 6)', 'rgb(1, 2, 3)', 'rgba(1, 2, 3, 0.35)')
+      render(<Editor surface />)
+      create.mockClear()
+
+      theme('rgb(9, 9, 9)', 'rgb(7, 7, 7)', 'rgba(7, 7, 7, 0.35)')
+
+      expect(setOptions.mock.calls.at(-1)?.[0]).toMatchObject({
+        waveColor: 'rgb(9, 9, 9)',
+        cursorColor: 'rgb(7, 7, 7)',
+      })
+      expect(dragSelection).toHaveBeenLastCalledWith({ color: 'rgba(7, 7, 7, 0.35)' })
+      // Repainted, not rebuilt: a new instance would come up empty and the take would vanish.
+      expect(create).not.toHaveBeenCalled()
+    })
   })
 })

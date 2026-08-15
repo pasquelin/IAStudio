@@ -32,13 +32,30 @@ const reference = colorsIn(blockFrom('@theme {'))
 const dark = colorsIn(blockFrom(`name: '${THEME_ATTRIBUTE.dark}'`))
 const light = colorsIn(blockFrom(`name: '${THEME_ATTRIBUTE.light}'`))
 
+/**
+ * A token whose value is drawn from another token rather than written — `--color-accent-veil`
+ * composes the accent. It is not a colour and cannot stay on a dark value: the substitution
+ * happens on the element that reads it, so whichever accent this theme declares is the one it
+ * composes. Restating it would put the same text in two blocks and mean nothing.
+ *
+ * Read off the value rather than listed by name, so the next one costs nothing — and so nobody
+ * has to notice that the rule below would otherwise ask for a duplicate.
+ */
+function isDerived(value: string): boolean {
+  return value.includes('var(--color-')
+}
+
 describe('the light theme', () => {
   it('restates every studio colour, so none of them stays on its dark value', () => {
     // `@theme` declares the dark values in `:root`, and a theme block only wins where it
     // declares something. A token missed here is a surface that never turns light.
-    const missing = [...reference.keys()].filter(name => !light.has(name))
+    const missing = [...reference]
+      .filter(([name, value]) => !light.has(name) && !isDerived(value))
+      .map(([name]) => name)
 
     expect(missing).toEqual([])
+    // The exemption is narrow, and shown to be: a colour written out is still owed a light one.
+    expect(isDerived('#346ef2')).toBe(false)
   })
 
   it('actually changes them, rather than restating the dark value', () => {
@@ -61,9 +78,6 @@ describe('the light theme', () => {
       // And the fill under the pointer, for the same reason and derived from the same blue —
       // `hoverFor` draws it, so it parts from the dark value on the day the accent does.
       '--color-accent-hover',
-      // And the veil, which is not a value at all: it composes whatever `--color-accent` holds
-      // where it is read, so both themes — and a picked accent — reach it through that one token.
-      '--color-accent-veil',
       '--color-monitor',
       '--color-marquee-light',
       '--color-marquee-dark',

@@ -193,9 +193,12 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
     if (replaces) applied()
   }
 
-  const act = (id: AudioToolId): void => {
-    const region = rendered && state.region ? clampRegion(state.region, rendered.data) : null
+  // What the tools will act on, and what the bar says they will: read through one clamp rather
+  // than two, so a range the take no longer holds — a crop having shortened it under a selection
+  // laid before — cannot be announced as one and ignored as another.
+  const region = rendered && state.region ? clampRegion(state.region, rendered.data) : null
 
+  const act = (id: AudioToolId): void => {
     switch (id) {
       case 'crop':
         // Only with a region: cropping to nothing would silently empty the take.
@@ -276,18 +279,13 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
             onTool={id => (id === 'transport' ? player.toggle() : isAudioTool(id) && act(id))}
             extras={
               <>
-                {/*
-                 * What the tools act on, said in words. The wave carries two marks at once — the
-                 * area a drag laid down and the head a click moved — and every editor of this
-                 * kind leaves a reader to work out which one "the selection" means. Written here
-                 * rather than in the tooltips alone: an area nobody knows how to draw is not
-                 * explained by a sentence that only appears once the pointer rests on a tool.
-                 */}
+                {/* On the bar rather than in the tooltips alone: an area nobody knows how to draw
+                    is not explained by a sentence that appears once a pointer rests on a tool. */}
                 <span className="text-muted text-tiny px-1">
-                  {state.region
+                  {region
                     ? t('audio.selection', {
-                        from: formatDuration(state.region.from),
-                        to: formatDuration(state.region.to),
+                        from: formatDuration(region.from),
+                        to: formatDuration(region.to),
                       })
                     : t('audio.noSelection')}
                 </span>
@@ -300,7 +298,9 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
           />
         }
       >
-        <div ref={setSurface} className="absolute inset-0" />
+        {/* `sc-wave` is what paints the selection's edges in the accent, from `index.css`: they
+            live in wavesurfer's shadow tree, where only `::part` reaches them. */}
+        <div ref={setSurface} className="sc-wave absolute inset-0" />
         {!rendered && <EmptyState icon={mdiMusicNoteOutline} message={t('collection.loading')} />}
       </MonitorFrame>
     </AssetDropTarget>
