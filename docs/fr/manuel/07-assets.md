@@ -80,6 +80,11 @@ mémoire, contrairement au panneau Modèles qui interroge le catalogue Scenario 
 Les deux vues sont **virtualisées** : seul ce qui est réellement à l’écran est dessiné. Un
 projet de plusieurs milliers d’assets défile donc sans à-coups.
 
+**Un son se montre par son onde**, en vignette, et non par un pictogramme de haut-parleur : deux
+prises de même durée se ressemblaient trait pour trait tant qu’on ne les avait pas écoutées.
+L’onde est celle que le montage dessine, calculée à l’import — elle apparaît donc une fraction de
+seconde après la vignette, le temps qu’elle arrive.
+
 ### Quand l’étagère est vide
 
 Le message dit lequel des trois cas vous êtes, parce qu’ils appellent des réponses différentes :
