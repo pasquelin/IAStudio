@@ -127,9 +127,15 @@ Rendre le son **ni trop faible, ni trop fort**, à un niveau standard.
 et les autres. Un son normalisé à cette valeur sonnera à peu près au même volume que ce qui
 l’entoure, au lieu de faire sursauter ou d’obliger à monter le son.
 
-Le « LUFS » mesure le volume **perçu**, pas le volume mesuré : il tient compte de la façon dont
-l’oreille humaine entend. C’est pourquoi il vaut mieux que la simple recherche du pic le plus
-fort.
+Le « LUFS » est l’unité du volume **perçu**, celle qui tient compte de la façon dont l’oreille
+humaine entend — bien plus utile que la simple recherche du pic le plus fort.
+
+> **Le studio en calcule une approximation, et il vaut mieux le savoir.** La mesure normalisée
+> (ITU-R BS.1770) applique un filtre de pondération et écarte les passages silencieux ; le studio
+> se contente d’une **moyenne quadratique** sur toute la prise. Sur un son **généré** — une seule
+> texture, pas de dialogue, pas de silences à écarter — les deux valeurs tombent très près l’une
+> de l’autre. Sur une prise de voix avec des blancs, elles s’écartent : **ne comparez pas ce
+> chiffre à celui d’un mesureur LUFS professionnel.**
 
 ### À quoi sert le bouton A/B
 

@@ -123,8 +123,14 @@ Making the sound **neither too quiet nor too loud**, at a standard level.
 sound normalised to that value will play at roughly the same volume as whatever surrounds it,
 instead of making people jump or reach for the volume knob.
 
-"LUFS" measures **perceived** loudness, not measured level: it accounts for how the human ear
-hears. That is why it beats simply hunting for the loudest peak.
+"LUFS" is the unit of **perceived** loudness, the one that accounts for how the human ear hears —
+far more useful than simply hunting for the loudest peak.
+
+> **The studio computes an approximation of it, and it is worth knowing.** The standard measure
+> (ITU-R BS.1770) applies a weighting filter and gates silent passages out; the studio settles for
+> a **root mean square** across the whole take. On a **generated** sound — one texture, no
+> dialogue, no silence to gate out — the two land very close together. On a voice recording with
+> gaps they drift apart: **do not compare this figure with a professional LUFS meter's.**
 
 ### What the A/B button is for
 
