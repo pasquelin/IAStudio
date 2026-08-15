@@ -11,13 +11,15 @@ Generate and edit images, videos, 3D models, audio, textures and skyboxes — in
 [![three.js](https://img.shields.io/badge/three.js-0.185-2b2d30?logo=three.js&logoColor=ffffff)](https://threejs.org)
 [![PixiJS](https://img.shields.io/badge/PixiJS-8.19-2b2d30?logo=javascript&logoColor=e8639b)](https://pixijs.com)
 [![Vite](https://img.shields.io/badge/Vite-7-2b2d30?logo=vite&logoColor=ffd028)](https://vite.dev)
-[![Tests](https://img.shields.io/badge/tests-5600%2B%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
+[![Tests](https://img.shields.io/badge/tests-8096%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-2b2d30)](#license)
+
+**[→ Presentation site](https://pasquelin.github.io/scenario/)**
 
 </div>
 
 <div align="center">
-  <img src="docs/images/studio-3d.png" alt="Scenario Studio in the 3D workspace: the model catalogue and the project explorer on the left, the scene viewport in the centre, the asset shelf and the inspector on the right, the animation timeline across the bottom" width="900">
+  <img src="docs/assets/images/studio-3d.png" alt="Scenario Studio in the 3D workspace: the model catalogue and the project explorer on the left, the scene viewport in the centre, the asset shelf and the inspector on the right, the animation timeline across the bottom" width="900">
 </div>
 
 ---
@@ -135,7 +137,7 @@ A selection, not an inventory — enough to find your way, and no more.
 ## Quality bar
 
 `pnpm validate` must be green before any commit: typecheck, lint, format check and the full
-test suite — **over 8,100 tests across more than 570 files**. Unit tests are colocated with the
+test suite — **8,096 tests across 591 files**. Unit tests are colocated with the
 code they cover and written in the same movement, never after.
 
 Every change also goes through a reuse-and-simplification pass and an automated review before
@@ -174,4 +176,22 @@ FFmpeg is shipped beside the application as a separate program, under GPL-3.0 on
 LGPL-2.1 elsewhere. Its corresponding sources are attached to every release. The reasoning is in
 [ADR-16](docs/ci/adr/ADR-16-licence-du-projet.md).
 
-© 2026 Alban Pasquelin. Not affiliated with Scenario Labs.
+---
+
+## Trademarks and independence
+
+This is an **independent project**, developed personally by Alban Pasquelin. It is **not
+published, endorsed, supported by, or affiliated with Scenario Labs**.
+
+“Scenario”, the Scenario API and any associated signs are trademarks of their respective
+owners. They are named here **descriptively and nominatively only**, to identify the
+third-party service this application can connect to — no other wording would allow it. No
+logo, typeface, brand asset or visual identity belonging to Scenario Labs is reproduced
+anywhere in this repository: every screenshot shows this application's own interface, and
+every icon is its own.
+
+The application **provides no generation service and resells none**. It connects to the
+public API using **the key you supply, under your own account**: your use of it is governed
+by Scenario Labs' own terms, which you accept directly with them, and the cost is yours.
+
+© 2026 Alban Pasquelin.
