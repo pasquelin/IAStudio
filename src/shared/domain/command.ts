@@ -22,6 +22,7 @@ export type CommandId =
   | 'document.saveAs'
   | 'layout.reset'
   | 'app.settings'
+  | 'app.assistant'
   | 'app.dictate'
   | 'window.fullScreen'
   | 'spaces.moveLeft'
@@ -211,6 +212,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.appSettings.title',
     helpKey: 'commands.appSettings.help',
     defaultBinding: 'Meta+Comma',
+  }),
+  command({
+    id: 'app.assistant',
+    scope: 'global',
+    titleKey: 'commands.appAssistant.title',
+    helpKey: 'commands.appAssistant.help',
+    // Free in the registry, and checked: ⌘K was taken by nothing, and the bare `K` the image
+    // space binds to its scale tool is a different signature entirely.
+    defaultBinding: 'Meta+KeyK',
   }),
   command({
     id: 'app.dictate',

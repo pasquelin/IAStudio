@@ -33,10 +33,7 @@ export const ASSISTANT_MODEL_ID = 'model_scenario-llm'
  * default: routing a sentence to an action is not the work that needs the best model.
  */
 export type AssistantModel =
-  | 'claude-haiku-4-5'
-  | 'claude-sonnet-4-6'
-  | 'claude-opus-4-8'
-  | 'gemini-3.5-flash'
+  'claude-haiku-4-5' | 'claude-sonnet-4-6' | 'claude-opus-4-8' | 'gemini-3.5-flash'
 
 export const ASSISTANT_MODELS: readonly AssistantModel[] = [
   'claude-haiku-4-5',
@@ -330,7 +327,10 @@ export function needsConfirmation(commitment: ActionCommitment): boolean {
  * it tells a window to. A second copy of this arithmetic is the one that would drift, and it
  * would drift towards spending something without asking.
  */
-export function commitmentOfCall(name: ActionName, input: Record<string, unknown>): ActionCommitment {
+export function commitmentOfCall(
+  name: ActionName,
+  input: Record<string, unknown>,
+): ActionCommitment {
   if (name === 'generator.submit') return 'credits'
   if (name !== 'command.run') return assistantAction(name)?.commitment ?? 'none'
 

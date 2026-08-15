@@ -571,6 +571,16 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     {
       label: t.menu.view,
       submenu: [
+        /**
+         * The way in, and the only one: `app.assistant` is a `global` command, and a global
+         * command is fired by this menu rather than by the window — nothing in the renderer
+         * listens on that scope. Without this row, ⌘K would reach nothing at all.
+         *
+         * Under View for the reason the whole shell is laid out the way it is: this studio is
+         * modelled on VSCode, where the command palette is exactly where a hand goes looking.
+         */
+        commandItem('app.assistant', t.commands.appAssistant.title),
+        { type: 'separator' },
         {
           label: t.menu.tools,
           // The zone sent here is only a starting point — the window resolves it against the

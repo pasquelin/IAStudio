@@ -5,6 +5,7 @@ import { installFakeBridge } from '@/services/fake-bridge'
 import { subscribeToCommands } from '@/services/command-bus'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
+import { job as jobOf } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
 import { registerGenerator } from './generator-bridge'
 import { commitmentOfCall } from '@shared/domain/assistant'
@@ -34,15 +35,8 @@ const aModel = (id: string, name: string): ModelSummary => ({
   tags: [],
 })
 
-const aJob = (id: string): Job => ({
-  id,
-  targetId: 'model_x',
-  label: 'Knight',
-  status: 'running',
-  progress: 0.5,
-  createdAt: '2026-08-15T10:00:00.000Z',
-  assetIds: [],
-})
+/** The shared factory, told the label and the progress this suite reads a job by. */
+const aJob = (id: string): Job => jobOf({ id, label: 'Knight', progress: 0.5 })
 
 beforeEach(() => {
   vi.clearAllMocks()

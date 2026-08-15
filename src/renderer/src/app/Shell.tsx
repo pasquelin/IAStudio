@@ -8,6 +8,7 @@ import { HomeView } from '@/home/HomeView'
 import { DocumentArea } from './DocumentArea'
 import { showWorkspace } from './dockview-api'
 import { guardUnsavedWork } from './unsaved-guard'
+import { AssistantOverlay } from '@/assistant/AssistantOverlay'
 import { DictationStatus } from '@/dictation/DictationStatus'
 import { Breadcrumb } from './Breadcrumb'
 import { Footer } from './Footer'
@@ -109,6 +110,9 @@ export function Shell() {
         }
       />
       <ActivityToasts />
+      {/* Over everything, and mounted whether or not it shows: it is the window's confirmer, and
+          an action that needs a yes must be able to raise one from a closed modal. */}
+      <AssistantOverlay />
       <TooltipHost />
     </div>
   )

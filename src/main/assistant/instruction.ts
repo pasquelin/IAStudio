@@ -5,36 +5,26 @@ import {
   HISTORY_MAX,
   INSTRUCTION_MAX,
 } from '@shared/domain/assistant'
-import { isRecord } from '@shared/guards'
-import { TRANSLATIONS } from '@shared/i18n'
+import { englishText } from '@shared/i18n'
 
 /**
  * What the model is told before it answers.
  *
  * Written from the English bundle rather than from sentences in this file, for the reason every
- * word bound for a screen is: there are no sentences in `src/`. English specifically — the model
- * reasons in it, and the same catalogue read in French would change what it decides from one
- * user to the next.
+ * word bound for a screen is: there are no sentences in `src/`. English specifically — see
+ * `englishText`, which the window uses for the other half of the same conversation.
  */
-
-function english(key: string): string {
-  const text = key
-    .split('.')
-    .reduce<unknown>((current, part) => (isRecord(current) ? current[part] : undefined),
-      TRANSLATIONS.en)
-  return typeof text === 'string' ? text : ''
-}
 
 /** One field, as a line the model can read: name, type, whether it must be there, what it takes. */
 function fieldLine(field: ActionField): string {
   const parts = [`${field.key} (${field.kind}${field.required ? ', required' : ''})`]
   if (field.options) parts.push(`one of: ${field.options.join(', ')}`)
-  parts.push(english(field.labelKey))
+  parts.push(englishText(field.labelKey))
   return `    - ${parts.join(' — ')}`
 }
 
 function actionBlock(action: AssistantAction): string {
-  const lines = [`  ${action.name} — ${english(action.descriptionKey)}`]
+  const lines = [`  ${action.name} — ${englishText(action.descriptionKey)}`]
   for (const field of action.fields) lines.push(fieldLine(field))
   return lines.join('\n')
 }
@@ -103,8 +93,17 @@ export function instructionFor(
   utterance: string,
   actions: readonly AssistantAction[] = ACTION_REGISTRY,
 ): string {
-  const preamble = [ROLE, '', 'Catalogue:', actionCatalogue(actions), '', FORMAT, '', 'The person says:', '']
-    .join('\n')
+  const preamble = [
+    ROLE,
+    '',
+    'Catalogue:',
+    actionCatalogue(actions),
+    '',
+    FORMAT,
+    '',
+    'The person says:',
+    '',
+  ].join('\n')
 
   return preamble + utterance.slice(0, Math.max(0, INSTRUCTION_MAX - preamble.length))
 }

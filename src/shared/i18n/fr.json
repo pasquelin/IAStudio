@@ -1340,6 +1340,10 @@
       "title": "Réglages",
       "help": "Ouvre la fenêtre des réglages, celle-ci même : la langue, les couleurs, le compte, les raccourcis et tout ce qui se règle."
     },
+    "appAssistant": {
+      "title": "Assistant",
+      "help": "Ouvre la fenêtre où l’on dit ce que l’on veut faire, à la voix ou au clavier. L’assistant exécute lui-même ce qu’il comprend, et demande votre accord avant tout ce qui coûte."
+    },
     "appDictate": {
       "title": "Dicter",
       "help": "Écoute le micro et écrit ce que vous dites à l’endroit du curseur, dans le champ où vous êtes. Se maintient enfoncée par défaut : on parle, on relâche, le texte s’écrit."
@@ -2033,6 +2037,27 @@
       "family": "Famille de génération",
       "modelId": "Identifiant du modèle",
       "parameters": "Paramètres du modèle"
+    },
+    "title": "Assistant",
+    "empty": "Dites ce que vous voulez faire, et l’assistant s’en charge.",
+    "placeholder": "Ouvre un fichier 3D, cherche un modèle, prépare une génération…",
+    "send": "Envoyer",
+    "sendHint": "Envoie la phrase à l’assistant, qui choisit les actions et les exécute",
+    "close": "Fermer",
+    "closeHint": "Referme la fenêtre sans rien annuler de ce qui tourne déjà",
+    "model": "Modèle de l’assistant",
+    "modelHint": "Choisit le modèle qui lit vos phrases. Le moins cher suffit pour ouvrir un espace, les autres tiennent mieux les demandes en plusieurs étapes.",
+    "thinking": "L’assistant réfléchit…",
+    "lost": "L’assistant n’a pas su répondre à cette demande.",
+    "refused": "{{action}} — {{reason}}",
+    "confirm": {
+      "credits": "Cette action va dépenser {{cost}}.",
+      "unknownCost": "Cette action va dépenser des unités créatives. Le studio n’a pas pu en estimer le montant, et n’en invente pas.",
+      "asset": "Cette action va téléverser une image, qui restera dans votre bibliothèque. Elle ne coûte aucune unité créative.",
+      "yes": "Autoriser",
+      "yesHint": "Lance l’action décrite au-dessus, et engage ce qu’elle engage",
+      "no": "Refuser",
+      "noHint": "N’exécute rien, et l’assistant en tient compte pour la suite"
     }
   },
   "prompt": {

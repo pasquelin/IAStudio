@@ -33,7 +33,11 @@ export type BrainDeps = {
   model: () => AssistantModel
 }
 
-function bodyFor(request: AssistantThought, model: AssistantModel, complaint?: string): {
+function bodyFor(
+  request: AssistantThought,
+  model: AssistantModel,
+  complaint?: string,
+): {
   instruction: string
   model: AssistantModel
   numOutputs: number
@@ -67,7 +71,10 @@ function complaintAbout(answer: string): string {
   ].join('\n')
 }
 
-async function answerFrom(job: Job, readText: (assetId: string) => Promise<string>): Promise<string> {
+async function answerFrom(
+  job: Job,
+  readText: (assetId: string) => Promise<string>,
+): Promise<string> {
   const assetId = job.assetIds[0]
   return assetId === undefined ? '' : await readText(assetId)
 }
