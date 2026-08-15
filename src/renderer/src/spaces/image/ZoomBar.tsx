@@ -28,6 +28,10 @@ export function zoomLabel(scale: number, language: string): string {
 export function ZoomBar({ scale, shortcuts, onZoomIn, onZoomOut, onFit, onActual }: ZoomBarProps) {
   const { t, i18n } = useTranslation()
 
+  // Read once: the readout SHOWS it and its accessible name OPENS with it, and the two drifting
+  // apart is the whole defect this button had (WCAG SC 2.5.3).
+  const reading = zoomLabel(scale, i18n.language)
+
   return (
     <div className="bg-surface border-border absolute right-2 bottom-2 flex items-center gap-0.5 rounded-(--radius-sc-md) border p-0.5">
       <ToolButton
@@ -42,7 +46,7 @@ export function ZoomBar({ scale, shortcuts, onZoomIn, onZoomOut, onFit, onActual
       {/* The readout is the button: clicking a zoom level to go back to 100% is the gesture
           every editor has taught. `ToolButton` without an icon renders exactly this. */}
       <ToolButton
-        label={t('imageView.zoom')}
+        label={t('imageView.zoom', { value: reading })}
         description={t('imageView.actualHint')}
         shortcut={shortcuts.actual}
         tooltip={TIP_TOP}
@@ -50,7 +54,7 @@ export function ZoomBar({ scale, shortcuts, onZoomIn, onZoomOut, onFit, onActual
         className="text-muted w-auto px-1 tabular-nums"
         onClick={onActual}
       >
-        {zoomLabel(scale, i18n.language)}
+        {reading}
       </ToolButton>
       <ToolButton
         icon={mdiMagnifyPlusOutline}

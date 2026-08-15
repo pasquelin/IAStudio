@@ -28,17 +28,29 @@ describe('zoomLabel', () => {
   })
 
   // The separator is the language's, not the bar's: French writes U+00A0 before the sign, and a
-  // comma between the digits — the hand-written version printed `3.7 %` to a French reader.
+  // comma between the digits. Spelled by code point, because a non-breaking space typed by hand
+  // is indistinguishable from an ordinary one in a source file.
   it('punctuates the way the language does', () => {
-    expect(zoomLabel(0.5, 'fr')).toBe('50\u00a0%')
-    expect(zoomLabel(0.037, 'fr')).toBe('3,7\u00a0%')
+    expect(zoomLabel(0.5, 'fr')).toBe('50 %')
+    expect(zoomLabel(0.037, 'fr')).toBe('3,7 %')
   })
 })
 
 describe('ZoomBar', () => {
-  it('shows where the zoom is', () => {
-    mount(0.5)
-    expect(screen.getByText('50 %')).toBeInTheDocument()
+  /**
+   * The readout is the one button of the bar whose word is on screen, so its accessible name has
+   * to OPEN with that word: a name of "Zoom" over a button reading "78,9 %" is one nobody can ask
+   * for out loud (WCAG SC 2.5.3).
+   *
+   * Read off `textContent` rather than through a matcher: every query of the library normalizes
+   * whitespace, which folds the very space the label above is about.
+   */
+  it('shows the zoom, and is named by what it shows', () => {
+    mount(0.789)
+
+    const readout = screen.getByRole('button', { name: /taille réelle/ })
+    expect(readout.textContent).toBe(zoomLabel(0.789, 'fr'))
+    expect(readout.getAttribute('aria-label')?.startsWith(zoomLabel(0.789, 'fr'))).toBe(true)
   })
 
   it('calls each of the four ways out', async () => {
@@ -47,8 +59,7 @@ describe('ZoomBar', () => {
     await userEvent.click(screen.getByRole('button', { name: /Zoom avant/ }))
     await userEvent.click(screen.getByRole('button', { name: /Zoom arrière/ }))
     await userEvent.click(screen.getByRole('button', { name: /Ajuster/ }))
-    // The readout's accessible name carries its key, like every other button of the bars.
-    await userEvent.click(screen.getByRole('button', { name: 'Zoom (⌘1)' }))
+    await userEvent.click(screen.getByRole('button', { name: /taille réelle/ }))
 
     expect(handlers.onZoomIn).toHaveBeenCalledOnce()
     expect(handlers.onZoomOut).toHaveBeenCalledOnce()
