@@ -26,7 +26,32 @@ Rappel du modèle de branches ([ADR-15](adr/ADR-15-modele-de-branches.md)) : **`
 
    Tant que ce n’est pas fait, les workflows ne peuvent pas s’exécuter.
 
-2. **Vérifier le pipeline à blanc**, avant tout tag :
+2. **Vérifier que le dépôt est public.**
+
+   ```bash
+   gh api repos/:owner/:repo --cache 0 --jq .visibility    # attendu : public
+   ```
+
+   `gh repo view` répond depuis un cache et a déjà annoncé `PRIVATE` sur un dépôt public :
+   demander l’API sans cache est la seule réponse qui vaille. Un dépôt privé n’empêche ni le
+   packaging ni la création de la draft — il rend seulement les assets inaccessibles sans jeton,
+   donc l’auto-update répond 404 **sans que rien ne s’affiche**
+   ([ADR-05](adr/ADR-05-canal-de-distribution.md)).
+
+3. **Basculer GitHub Pages sur le workflow.**
+
+   ```bash
+   gh api -X PUT repos/:owner/:repo/pages -f build_type=workflow
+   gh api repos/:owner/:repo/pages --jq .build_type        # attendu : workflow
+   ```
+
+   Un dépôt configuré depuis l’interface arrive en `build_type: legacy`, où Pages sert la branche
+   choisie **directement** et ignore `pages.yml` : `actions/deploy-pages` échoue, le site reste
+   sur ce que `main` porte, et `assets/release.json` n’est jamais écrit — donc aucune carte de
+   téléchargement ne se remplit. Le symptôme est un 404 sur la page d’accueil, sans le moindre
+   run en échec.
+
+4. **Vérifier le pipeline à blanc**, avant tout tag :
 
    ```bash
    gh workflow run release.yml -f dry_run=true
@@ -72,11 +97,24 @@ la recevoir.
    Un désalignement produit des manifestes d’auto-update dont la version ne correspond pas au nom
    du tag — l’auto-update part alors en boucle ou ne voit rien.
 
-3. **Mettre à jour le changelog**, puis committer :
+3. **Écrire la section de la version dans [`CHANGELOG.md`](../../CHANGELOG.md)**, puis committer :
 
    ```bash
    git add package.json CHANGELOG.md
    git commit -m "chore(release): 0.2.0"
+   ```
+
+   **Ce n’est pas une formalité : c’est le corps de la release.** Le job `release` extrait la
+   section `## [0.2.0]` et la passe à `gh release create --notes-file`. Un tag dont la section
+   manque **fait échouer la publication** — délibérément, plutôt que de créer une draft vide.
+   Le titre reste le nom du tag.
+
+   **Rejouer la garde ici, et pas seulement à l’étape 1** : elle lit la version que porte
+   `package.json`, qui vient de changer deux étapes plus haut. Le `pnpm validate` de l’étape 1
+   l’a vue avec l’ancien numéro.
+
+   ```bash
+   pnpm test src/main/release-notes.test.ts
    ```
 
 4. **Fusionner dans `main`.** C’est le seul type de merge que `main` accepte :
@@ -113,11 +151,17 @@ la recevoir.
 
    | Fichier | Plateforme |
    |---|---|
-   | `scenario-studio-0.2.0-mac-arm64.dmg` / `.zip` | macOS Apple Silicon |
-   | `scenario-studio-0.2.0-mac-x64.dmg` / `.zip` | macOS Intel |
-   | `scenario-studio-0.2.0-win-x64.exe` | Windows |
+   | `scenario-studio-0.2.0-darwin-arm64.dmg` / `.zip` | macOS Apple Silicon |
+   | `scenario-studio-0.2.0-darwin-x64.dmg` / `.zip` | macOS Intel |
+   | `scenario-studio-0.2.0-win32-x64.exe` | Windows |
    | `scenario-studio-0.2.0-linux-x64.AppImage` / `.deb` | Linux |
    | `latest.yml`, `latest-mac.yml`, `latest-linux.yml` | manifestes d’auto-update |
+
+   > **`darwin` et `win32`, pas `mac` et `win`.** `artifactName` d’`electron-builder.yml` interpole
+   > `${platform}`, qui vaut `process.platform` — la plateforme de la machine **qui construit**.
+   > En CI chaque runner construit sa propre cible, donc les trois noms tombent juste ; un
+   > `pnpm dist --win` lancé depuis le Mac écrirait `darwin-x64.exe`, et les cartes du site ne le
+   > reconnaîtraient pas.
 
    Contrôler que les tailles sont cohérentes (170–240 Mo par installeur) et que les manifestes
    portent bien `version: 0.2.0`.
