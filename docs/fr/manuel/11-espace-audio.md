@@ -166,7 +166,12 @@ Deux conséquences très pratiques :
 
 **Rogner** et **Couper les silences** font exception, et pour une bonne raison : ils ne changent
 pas le son, ils changent **les bornes du clip** sur le montage — exactement comme si vous aviez
-tiré son bord à la souris. Là aussi rien n’est écrit dans le fichier, et `⌘Z` les défait.
+tiré son bord à la souris. Là aussi rien n’est écrit dans le fichier.
+
+> **`⌘Z` les défait, mais pas forcément en premier.** Ce sont des gestes de **montage**, et la
+> touche remonte toujours les **outils** d’abord : après un fondu puis un rognage, la première
+> pression défait le fondu, pas le rognage. Rien n’est perdu, l’ordre surprend — la règle
+> complète est [plus bas](#annuler-et-rétablir).
 
 Ce n’est qu’au moment où vous le demandez explicitement qu’un fichier est écrit :
 

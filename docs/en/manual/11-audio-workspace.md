@@ -161,7 +161,12 @@ Two very practical consequences:
 
 **Crop** and **Trim silence** are the exception, and for a good reason: they do not change the
 sound, they change **the clip's bounds** on the edit — exactly as if you had dragged its edge
-with the mouse. Nothing is written into the file there either, and `⌘Z` undoes them.
+with the mouse. Nothing is written into the file there either.
+
+> **`⌘Z` undoes them, but not necessarily first.** These are **edit** gestures, and the key always
+> walks back up the **tools** first: after a fade and then a crop, the first press undoes the
+> fade, not the crop. Nothing is lost, the order surprises — the full rule is
+> [further down](#undo-and-redo).
 
 Only when you explicitly ask is a file written:
 
