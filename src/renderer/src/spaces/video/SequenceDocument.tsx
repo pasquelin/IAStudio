@@ -15,7 +15,7 @@ import { useDocuments } from '@/stores/documents'
 import { playbackOf, usePlayback } from '@/stores/playback'
 import { fitSplit } from '@/stores/tools'
 import { mirrorMessageOf, openMirrorChannel } from './mirror-channel'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 
@@ -153,6 +153,12 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const setProgramTime = useCallback(
     (playhead: Us) => {
       const store = useSequences.getState()
+      // Closing a tab drops the document BEFORE React unmounts this tab, and `dispose` pauses —
+      // which reports one last time. Writing then would build the montage back out of the store's
+      // default, and `replace` is the one write the store's own guard cannot catch: it is how a
+      // document ARRIVES. The sound workspace carries the same line, for the same reason.
+      if (!sequenceStore.hasState(store, documentId)) return
+
       // Playback is not an edit: the playhead goes through `replace`, which skips the history.
       store.replace(documentId, { ...sequenceOf(store, documentId), playhead })
     },
