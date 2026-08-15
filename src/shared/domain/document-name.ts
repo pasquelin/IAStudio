@@ -13,7 +13,19 @@ import { foldForFileName, isSafeFileName, safeFileName } from './file-name'
 /** Long enough for a sentence of a title, short enough for every file system to hold it. */
 export const DOCUMENT_NAME_MAX_LENGTH = 80
 
+/**
+ * Listed as well as typed: the failure crosses the IPC boundary as an error message, so one
+ * side has to be able to walk them. `duplicate` last — it is the only one the disk can raise
+ * that the field could not, so it is also the only one worth recognising in a message alone.
+ */
 export type DocumentNameFailure = 'empty' | 'too-long' | 'invalid' | 'duplicate'
+
+export const DOCUMENT_NAME_FAILURES: readonly DocumentNameFailure[] = [
+  'empty',
+  'too-long',
+  'invalid',
+  'duplicate',
+]
 
 /** What a folder already holds, as the check needs to see it. */
 export type NamedDocument = {

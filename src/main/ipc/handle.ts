@@ -53,6 +53,7 @@ type ChannelMethod = {
   [CHANNELS.documentList]: StudioBridge['documents']['list']
   [CHANNELS.documentRead]: StudioBridge['documents']['read']
   [CHANNELS.documentWrite]: StudioBridge['documents']['write']
+  [CHANNELS.documentRename]: StudioBridge['documents']['rename']
   [CHANNELS.documentRemove]: StudioBridge['documents']['remove']
   [CHANNELS.documentConfirmClose]: StudioBridge['documents']['confirmClose']
   [CHANNELS.documentConfirmDelete]: StudioBridge['documents']['confirmDelete']

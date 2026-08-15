@@ -104,6 +104,7 @@ export type Channels = {
   documentList: 'document:list'
   documentRead: 'document:read'
   documentWrite: 'document:write'
+  documentRename: 'document:rename'
   documentRemove: 'document:remove'
   documentConfirmClose: 'document:confirm-close'
   documentConfirmDelete: 'document:confirm-delete'
@@ -233,6 +234,7 @@ export const CHANNELS: Channels = {
   documentList: 'document:list',
   documentRead: 'document:read',
   documentWrite: 'document:write',
+  documentRename: 'document:rename',
   documentRemove: 'document:remove',
   documentConfirmClose: 'document:confirm-close',
   documentConfirmDelete: 'document:confirm-delete',
@@ -787,6 +789,17 @@ export type StudioBridge = {
     read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
     /** The envelope — version, kind, timestamp — is stamped by the main process, not here. */
     write: (id: string, kind: DocumentKind, draft: DocumentDraft) => Promise<void>
+    /**
+     * Gives a document another name — which, the file being named after the document, moves it.
+     *
+     * The id does not change, and that is the point: the layout, the recent list and the open
+     * tab all hold it, so a document may be renamed while it is open.
+     *
+     * Answers with the descriptor as it now stands, `fileName` included, so no window has to
+     * work out where the document went. Rejects when the folder already holds that name —
+     * `checkDocumentName` says the same thing before the gesture, this is what makes it true.
+     */
+    rename: (id: string, kind: DocumentKind, title: string) => Promise<DocumentDescriptor>
     remove: (id: string, kind: DocumentKind) => Promise<void>
     /**
      * What to do with a modified document being closed. Native rather than drawn in the window:

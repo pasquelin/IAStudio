@@ -282,6 +282,120 @@ describe('createDocumentFiles', () => {
     expect(await readdir(join(root, 'documents'))).toEqual(['Brique 1 2.scene'])
   })
 
+  /**
+   * The gesture the whole change exists for. A document is renamed by being called something
+   * else, and its file follows — the id does not move, so the tab holding it does not either.
+   */
+  describe('rename', () => {
+    it('moves the file and rewrites the title, keeping the id', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{"nodes":[]}' })
+
+      const renamed = await documents.rename('doc-1', 'scene', 'Décor')
+
+      expect(renamed).toEqual({
+        id: 'doc-1',
+        kind: 'scene',
+        title: 'Décor',
+        workspace: '3d',
+        fileName: 'Décor.scene',
+      })
+      expect(await readdir(join(root, 'documents'))).toEqual(['Décor.scene'])
+      expect(await documents.read('doc-1', 'scene')).toMatchObject({
+        title: 'Décor',
+        content: '{"nodes":[]}',
+      })
+    })
+
+    // The one case the old code forbade outright, `openInTab` being the only guard it had.
+    it('renames a document written before the file carried a name', async () => {
+      await mkdir(join(root, 'documents'), { recursive: true })
+      const v2 = { version: 2, kind: 'scene', title: 'Niveau', updatedAt: NOW }
+      await writeFile(
+        join(root, 'documents', '6d517ff3.scene'),
+        `${JSON.stringify(v2)}\n{}`,
+        'utf8',
+      )
+
+      await documents.rename('6d517ff3', 'scene', 'Décor')
+
+      expect(await readdir(join(root, 'documents'))).toEqual(['Décor.scene'])
+      expect((await documents.read('6d517ff3', 'scene'))?.id).toBe('6d517ff3')
+    })
+
+    /**
+     * Refused rather than suffixed: this is a name the user typed, and handing them a document
+     * called something they did not write is worse than saying no.
+     */
+    it('refuses a name the folder already holds, and touches nothing', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Niveau', content: 'first' })
+      await documents.write('doc-2', 'scene', { title: 'Décor', content: 'second' })
+
+      await expect(documents.rename('doc-2', 'scene', 'Niveau')).rejects.toThrow(/duplicate/)
+      expect([...(await readdir(join(root, 'documents')))].sort()).toEqual([
+        'Décor.scene',
+        'Niveau.scene',
+      ])
+    })
+
+    it('says which refusal it is, rather than calling every one a duplicate', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{}' })
+
+      await expect(documents.rename('doc-1', 'scene', '   ')).rejects.toThrow(/empty/)
+      await expect(documents.rename('doc-1', 'scene', 'Brique 1/2')).rejects.toThrow(/invalid/)
+    })
+
+    it('lets a document keep the name it already has', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{}' })
+
+      await expect(documents.rename('doc-1', 'scene', 'Niveau')).resolves.toMatchObject({
+        fileName: 'Niveau.scene',
+      })
+    })
+
+    // An image is a directory holding its manifest and its parts; renaming it moves the lot.
+    it('renames a document written as a folder, parts and all', async () => {
+      const pixels = Buffer.from([137, 80, 78, 71]).toString('base64')
+      await documents.write('doc-1', 'image', {
+        title: 'Poster',
+        content: '{}',
+        parts: [{ name: 'layer-1.png', data: pixels }],
+      })
+
+      await documents.rename('doc-1', 'image', 'Affiche')
+
+      expect(await readdir(join(root, 'documents'))).toEqual(['Affiche.img'])
+      expect((await documents.read('doc-1', 'image'))?.parts).toEqual([
+        { name: 'layer-1.png', data: pixels },
+      ])
+    })
+
+    /**
+     * `fs.rename` overwrites without a word on POSIX, and replaces an empty directory without
+     * one either — which is what an untouched `.img` is. Asked of the disk and not of the index:
+     * the index only knows what it has read, and anything at all may be sitting there.
+     */
+    it('refuses when something already stands where it would land, and changes nothing', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{}' })
+      await mkdir(join(root, 'documents', 'Décor.scene', 'in the way'), { recursive: true })
+
+      await expect(documents.rename('doc-1', 'scene', 'Décor')).rejects.toThrow()
+      expect((await documents.read('doc-1', 'scene'))?.title).toBe('Niveau')
+      expect(await readdir(join(root, 'documents', 'Décor.scene'))).toEqual(['in the way'])
+    })
+
+    // A rename and a save in flight aim at two different paths, so nothing queues them but the id.
+    it('does not let a write in flight land under the name just left behind', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Niveau', content: 'first' })
+
+      await Promise.all([
+        documents.write('doc-1', 'scene', { title: 'Niveau', content: 'x'.repeat(100_000) }),
+        documents.rename('doc-1', 'scene', 'Décor'),
+      ])
+
+      expect(await readdir(join(root, 'documents'))).toEqual(['Décor.scene'])
+    })
+  })
+
   it('keeps a failed operation from blocking the file afterwards', async () => {
     await expect(documents.read('doc-1', 'scene')).resolves.toBeNull()
     await documents.write('doc-1', 'scene', { title: 'After', content: '1' })

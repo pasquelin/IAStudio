@@ -438,6 +438,75 @@ describe('adopt', () => {
   })
 })
 
+describe('rename', () => {
+  const renamed: DocumentDescriptor = { ...POSTER, title: 'Affiche', fileName: 'Affiche.img' }
+
+  beforeEach(() => {
+    useDocuments.setState({ documents: {}, stored: [], activeId: null })
+  })
+
+  /**
+   * Both halves at once. `documents` is what a tab reads and `stored` is what the Explorer and
+   * the document list read: writing one leaves the other showing the name the document has just
+   * stopped having — the two names this whole change exists to collapse into one.
+   */
+  it('writes the new name where the tab reads it and where the folder is listed', async () => {
+    useDocuments.setState({ documents: { [POSTER.id]: POSTER }, stored: [POSTER] })
+    installFakeBridge({ documents: { rename: () => Promise.resolve(renamed) } })
+
+    expect(await useDocuments.getState().rename(POSTER.id, 'Affiche')).toBeNull()
+
+    expect(useDocuments.getState().documents[POSTER.id]).toEqual(renamed)
+    expect(useDocuments.getState().stored[0]).toEqual(renamed)
+  })
+
+  // The id is what the layout, the recent list and the open tab all hold.
+  it('leaves the id where it was, so the open tab does not notice', async () => {
+    useDocuments.setState({ documents: { [POSTER.id]: POSTER }, stored: [POSTER] })
+    installFakeBridge({ documents: { rename: () => Promise.resolve(renamed) } })
+
+    await useDocuments.getState().rename(POSTER.id, 'Affiche')
+
+    expect(Object.keys(useDocuments.getState().documents)).toEqual([POSTER.id])
+  })
+
+  // Asked here as well as in the main process: this is what puts a sentence under the field.
+  it('refuses a name the folder already holds without asking the disk', async () => {
+    const other: DocumentDescriptor = { ...POSTER, id: 'other', fileName: 'Affiche.img' }
+    useDocuments.setState({ documents: { [POSTER.id]: POSTER }, stored: [POSTER, other] })
+    const rename = vi.fn()
+    installFakeBridge({ documents: { rename } })
+
+    expect(await useDocuments.getState().rename(POSTER.id, 'Affiche')).toBe('duplicate')
+    expect(rename).not.toHaveBeenCalled()
+  })
+
+  it('refuses a title the disk would have to rewrite', async () => {
+    useDocuments.setState({ documents: { [POSTER.id]: POSTER }, stored: [POSTER] })
+    const rename = vi.fn()
+    installFakeBridge({ documents: { rename } })
+
+    expect(await useDocuments.getState().rename(POSTER.id, 'Brique 1/2')).toBe('invalid')
+    expect(rename).not.toHaveBeenCalled()
+  })
+
+  // The window believed the name was free; the folder is what decides, and it may have changed.
+  it('reports the refusal the main process came back with', async () => {
+    useDocuments.setState({ documents: { [POSTER.id]: POSTER }, stored: [POSTER] })
+    installFakeBridge({
+      documents: { rename: () => Promise.reject(new Error('duplicate-name')) },
+    })
+
+    expect(await useDocuments.getState().rename(POSTER.id, 'Affiche')).toBe('duplicate')
+    expect(useDocuments.getState().documents[POSTER.id]).toEqual(POSTER)
+  })
+
+  // Closed while the field was open, or never open at all: there is nothing to rename.
+  it('says so when no document of that id is anywhere', async () => {
+    expect(await useDocuments.getState().rename('gone', 'Affiche')).toBe('invalid')
+  })
+})
+
 /**
  * `relist` shares a listing already in flight, which is right for three surfaces asking on the
  * same paint — and wrong for a caller that has just written a file: the shared answer may have

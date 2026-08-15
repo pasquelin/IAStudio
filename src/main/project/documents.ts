@@ -18,7 +18,11 @@ import {
   type DocumentKind,
   type DocumentPart,
 } from '@shared/domain/document'
-import { documentFileName, nextFreeDocumentName } from '@shared/domain/document-name'
+import {
+  checkDocumentName,
+  documentFileName,
+  nextFreeDocumentName,
+} from '@shared/domain/document-name'
 import { isRecord } from '@shared/guards'
 import { isMissing, writeAtomic } from '@main/persistence'
 import { parseDocumentEnvelope } from './validation'
@@ -34,7 +38,18 @@ export type DocumentFiles = {
   read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
   write: (id: string, kind: DocumentKind, draft: DocumentDraft) => Promise<void>
   remove: (id: string, kind: DocumentKind) => Promise<void>
+  /**
+   * Gives a document another name, which is also giving its file another name.
+   *
+   * Rejects rather than suffixing when the folder already holds that name: this is a name the
+   * user typed, and handing them a document called something they did not write is worse than
+   * saying no. `checkDocumentName` is what says the same thing before the gesture.
+   */
+  rename: (id: string, kind: DocumentKind, title: string) => Promise<DocumentDescriptor>
 }
+
+/** What `rename` throws when the folder already holds the name — the renderer says it in words. */
+export const DUPLICATE_NAME = 'duplicate-name'
 
 const STAGING_SUFFIX = '.tmp'
 
@@ -454,6 +469,49 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
 
         await (FOLDER_KINDS.has(kind) ? storeFolder(file, document) : store(file, document))
         index.set(keyOf(id, kind), basename(file))
+      }),
+
+    rename: (id, kind, title) =>
+      queued(id, async () => {
+        const folder = folderPath()
+        const from = await locate(id, kind)
+
+        const taken = [...index]
+          .filter(([key]) => key !== keyOf(id, kind))
+          .map(([key, fileName]) => ({ id: key, fileName }))
+
+        // The failure travels as the message, so the window says which of the four it was rather
+        // than reporting every refusal as a name already taken.
+        const refused = checkDocumentName(title, kind, taken)
+        if (refused) throw new Error(refused)
+
+        const entry = documentFileName(title, kind)
+        const to = join(folder, entry)
+
+        const descriptor = await descriptorOf(folder, basename(from))
+        if (!descriptor) throw new Error(`Document ${id} is not there to rename`)
+        if (to === from) return { ...descriptor, title, fileName: entry }
+
+        // Asked before renaming, because `fs.rename` overwrites without a word on POSIX — and
+        // replaces an empty directory without one either, which is what an untouched `.img` is.
+        // The index only knows what it has read; the disk is what decides.
+        if (await exists(to)) throw new Error(DUPLICATE_NAME)
+
+        // The envelope FIRST, the move second. A crash between the two leaves the right title in
+        // a file under the old name, and the name is derived from the title — so the next open
+        // reads the document correctly and only its file lags, which renaming again repairs. The
+        // other order leaves a file whose name says one thing and whose envelope says another:
+        // the two names this whole change exists to collapse into one.
+        const held = await readOne(id, kind)
+        if (!held) throw new Error(`Document ${id} is not there to rename`)
+        await (FOLDER_KINDS.has(kind)
+          ? writeFile(join(from, DOCUMENT_MANIFEST), bodyOf({ ...held, title, id }), 'utf8')
+          : store(from, { ...held, title, id }))
+
+        await rename(from, to)
+        index.set(keyOf(id, kind), entry)
+
+        return { ...descriptor, title, fileName: entry }
       }),
 
     // `force`: closing a document that was never saved must not fail on a file that is absent.

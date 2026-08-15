@@ -261,13 +261,33 @@ describe('writing to the project folder', () => {
 
   it('renames what is inside a folder without moving it out of it', async () => {
     const root = await project()
-    await writeFile(join(root, 'documents', 'a3f1.scene'), '{}')
+    await mkdir(join(root, 'repérages'), { recursive: true })
+    await writeFile(join(root, 'repérages', 'brief.txt'), 'x')
     const editor = createFolderEditor(() => root, vi.fn())
 
-    expect(await editor.rename('documents/a3f1.scene', 'level.scene')).toBe(true)
+    expect(await editor.rename('repérages/brief.txt', 'note.txt')).toBe(true)
 
-    const entries = await createFolderReader(() => root, inFrench).list('documents')
-    expect(entries.map(entry => entry.path)).toEqual(['documents/level.scene'])
+    const entries = await createFolderReader(() => root, inFrench).list('repérages')
+    expect(entries.map(entry => entry.path)).toEqual(['repérages/note.txt'])
+  })
+
+  /**
+   * The catalogue stores every asset by its path, and a document is renamed through its own
+   * channel — which moves the file AND rewrites the envelope. Renaming either as a plain file
+   * leaves the studio pointing at a path that is no longer there: a row nobody can find, or a
+   * document that drops out of every listing while sitting in the folder.
+   *
+   * Refused here and not only in the panel, because a window is not what decides what is written.
+   */
+  it('refuses to rename what the studio owns, contents included', async () => {
+    const root = await project()
+    await writeFile(join(root, 'documents', 'a3f1.scene'), '{}')
+    await mkdir(join(root, 'assets', 'img'), { recursive: true })
+    await writeFile(join(root, 'assets', 'img', 'asset_2604.png'), 'x')
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.rename('documents/a3f1.scene', 'level.scene')).toBe(false)
+    expect(await editor.rename('assets/img/asset_2604.png', 'dusk.png')).toBe(false)
   })
 
   // `rename` overwrites without a word on POSIX, and the file it would overwrite is the user's.
