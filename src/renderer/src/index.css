@@ -531,6 +531,20 @@ body,
   stroke-dasharray: 8;
 }
 
+/*
+ * react-tooltip pads a wrapper INSIDE the bubble — `8px 16px`, on a node `TooltipHost` never
+ * names — and the classes it puts on the bubble itself cannot reach it. Left alone, the padding
+ * that host declares is added to this one rather than being it, and the bubble reads as a plaque:
+ * measured at 130×39 for one 11-pixel line. The bubble keeps its own padding; this one goes.
+ *
+ * Two class names deep because the library's own rule is one, and its stylesheet is injected
+ * after this file: at equal specificity the later rule wins, and a single class here was
+ * measured doing nothing at all.
+ */
+.react-tooltip .react-tooltip-content-wrapper {
+  padding: 0;
+}
+
 body {
   margin: 0;
   background: var(--color-chassis);

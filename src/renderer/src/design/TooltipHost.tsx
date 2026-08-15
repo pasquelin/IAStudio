@@ -36,7 +36,10 @@ export function TooltipHost() {
          Wrapped at `--sc-tooltip` rather than running as wide as its longest line — see
          `index.css`. `break-words` with it: a path or an id has no space to wrap at, and would
          push the bubble back past the measure this sets. */
-      className="bg-surface! border-border! text-text! text-tiny! z-50! max-w-(--sc-tooltip)! rounded-(--radius-sc-md)! border! px-2! py-0.5! break-words! shadow-(--sc-shadow-floating)!"
+      /* `opacity-100` because the library ships 0.9: at that value the border it is drawn with
+         washes into whatever it floats over, and the bubble reads as a smudge rather than a
+         plate. Measured through CDP, not deduced — the class list was already right. */
+      className="bg-surface! border-border! text-text! text-tiny! z-50! max-w-(--sc-tooltip)! rounded-(--radius-sc-md)! border! px-2! py-1! break-words! opacity-100! shadow-(--sc-shadow-floating)!"
     />
   )
 }
