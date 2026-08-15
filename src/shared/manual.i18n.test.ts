@@ -65,8 +65,8 @@ describe('the manual the application carries', () => {
    * Prose only, and `proseOf` says what that costs: the `Authorization` header of two chapters
    * would fail this guard on its first run.
    *
-   * What it does not read: the French chapters, which have no British side to keep, and the four
-   * words `AMERICAN_FORMS` leaves out — `dialogue` above all, which the manual spells both ways.
+   * What it does not read: the French chapters, which have no British side to keep, and the two
+   * pairs `AMERICAN_FORMS` leaves out, where British English spells both words.
    */
   it('spells its English prose the British way', () => {
     const american = chaptersOf('en').flatMap(chapter => {

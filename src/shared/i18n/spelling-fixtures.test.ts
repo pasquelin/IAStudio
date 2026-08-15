@@ -25,6 +25,9 @@ describe('the British spelling of the repository', () => {
     expect(americanWords('Concentrate on the discoloured grayscale')).toEqual(['grayscale'])
     // British English licenses a verb and licences nothing: the noun cannot be told from it.
     expect(americanWords('The software is licensed under a licence')).toEqual([])
+    // Settled the British way, though Electron names the API `dialog`.
+    expect(americanWords('A save dialog opens')).toEqual(['dialog'])
+    expect(americanWords('A save dialogue opens')).toEqual([])
   })
 
   /**

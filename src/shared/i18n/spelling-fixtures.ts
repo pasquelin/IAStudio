@@ -36,8 +36,10 @@ export const americanVerbs = (text: string): string[] =>
  * American noun cannot be told from a correct one: `license`, which is the British verb beside the
  * noun `licence`, and `meter`, the instrument beside the unit `metre`.
  *
- * `dialogue` is the one the manual has not settled: four chapters say it and four say `dialog`,
- * which is also what Electron names the API. That is a terminology decision, not a spelling one.
+ * `dialogue` was the one the manual had not settled — four chapters each way, `04-projects`
+ * spelling both. Settled on the British form: what Electron names `dialog` is an API, and the
+ * chapters speak to a reader. The key `common.dialog.*` keeps the API's spelling, being an
+ * identifier this guard never reads.
  *
  * Asked of prose only, never of a bundle: measured over the English bundle, the only three hits
  * are `blend.color`, `blend.color-burn` and `blend.color-dodge`, spelled the way `mix-blend-mode`
@@ -52,6 +54,7 @@ const AMERICAN_FORMS: readonly string[] = [
   'behavior(?:s|al)?',
   'neighbor(?:s|ing|hood)?',
   'favorites?',
+  'dialogs?',
 ]
 
 const AMERICAN_WORDS = new RegExp(`\\b(?:${AMERICAN_FORMS.join('|')})\\b`, 'gi')

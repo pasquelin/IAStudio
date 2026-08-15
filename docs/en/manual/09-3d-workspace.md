@@ -527,7 +527,7 @@ writes only the chosen objects — a group takes along whatever hangs from it.
 | **glTF (`.gltf`)** | the same thing as readable JSON | to inspect or diff what is in it |
 | **USDZ (`.usdz`)** | the format Apple's viewers open | to look at the scene on an iPhone or a Mac |
 
-A save dialog opens to choose where the file goes. Its name is the document's; the extension
+A save dialogue opens to choose where the file goes. Its name is the document's; the extension
 follows the chosen format.
 
 **What does not come out.** The floor grid, the corner trihedron, the transform handles and the

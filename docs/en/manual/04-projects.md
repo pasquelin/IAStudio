@@ -239,7 +239,7 @@ network volume sometimes emits no event at all, and that second net catches it.
 > is written to your disk, the contents of documents are not — the `documents/` folder stands for
 > them, and what was never written there has nothing to reopen.
 
-There is no "Open file" dialog, and none is planned: the studio only opens what is in the
+There is no "Open file" dialogue, and none is planned: the studio only opens what is in the
 project.
 
 ### How a document is written
