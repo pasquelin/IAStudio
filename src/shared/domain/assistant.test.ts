@@ -3,10 +3,12 @@ import { isRecord } from '../guards'
 import { LANGUAGES, TRANSLATIONS } from '../i18n'
 import {
   ACTION_COMMITMENTS,
+  ACTION_REFUSALS,
   ACTION_REGISTRY,
   assistantAction,
   commitmentOfCommand,
   needsConfirmation,
+  refusalKey,
 } from './assistant'
 import { COMMAND_REGISTRY, type CommandId } from './command'
 
@@ -102,6 +104,13 @@ describe('what an action engages', () => {
     ]
 
     expect(commitmentOfCommand(id)).toBe(uploads.includes(id) ? 'asset' : 'none')
+  })
+
+  it.each(LANGUAGES.map(language => language.code))('says why it refused, in %s', code => {
+    for (const refusal of ACTION_REFUSALS) {
+      const text = resolve(TRANSLATIONS[code], refusalKey(refusal))
+      expect(typeof text === 'string' && text.trim() !== '', refusal).toBe(true)
+    }
   })
 
   it('never spends credits through a command', () => {

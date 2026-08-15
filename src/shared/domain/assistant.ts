@@ -208,6 +208,39 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
 
 export const ACTION_COMMITMENTS: readonly ActionCommitment[] = ['none', 'asset', 'credits']
 
+/**
+ * Why an action did not run.
+ *
+ * Shared rather than private to the executor, because the sentence is read twice and in two
+ * languages: the person watching the modal reads their own, and the model deciding what to try
+ * next reads English. Both renderings come from the bundles, so the list has to be visible from
+ * the main process, which does the second one.
+ */
+export type ActionRefusal =
+  | 'unknownCommand'
+  | 'globalCommand'
+  | 'wrongSurface'
+  | 'generatorClosed'
+  | 'nothingPrepared'
+  | 'notSubmitted'
+  | 'badInput'
+  | 'noBridge'
+
+export const ACTION_REFUSALS: readonly ActionRefusal[] = [
+  'unknownCommand',
+  'globalCommand',
+  'wrongSurface',
+  'generatorClosed',
+  'nothingPrepared',
+  'notSubmitted',
+  'badInput',
+  'noBridge',
+]
+
+export function refusalKey(refusal: ActionRefusal): string {
+  return `assistant.refusals.${refusal}`
+}
+
 export function assistantAction(name: string): AssistantAction | null {
   return ACTION_REGISTRY.find(descriptor => descriptor.name === name) ?? null
 }

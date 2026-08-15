@@ -2013,6 +2013,16 @@
         "description": "Rend les générations en cours et leur avancement, tels que le studio les suit. Ne change rien à l’écran."
       }
     },
+    "refusals": {
+      "unknownCommand": "Cette commande n’existe pas dans le studio.",
+      "globalCommand": "Cette commande appartient au menu de l’application, qui la déclenche lui-même.",
+      "wrongSurface": "Cette commande s’adresse à un document qui n’est pas au premier plan.",
+      "generatorClosed": "Le Générateur n’était pas ouvert. Il vient de l’être.",
+      "nothingPrepared": "Le Générateur n’a aucun modèle armé pour l’instant.",
+      "notSubmitted": "La génération n’est pas partie.",
+      "badInput": "Les paramètres fournis ne conviennent pas à cette action.",
+      "noBridge": "Le studio ne répond pas."
+    },
     "fields": {
       "command": "Identifiant de la commande",
       "workspace": "Espace de travail",

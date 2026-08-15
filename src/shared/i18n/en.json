@@ -2013,6 +2013,16 @@
         "description": "Returns the generations under way and how far along they are, as the studio tracks them. Changes nothing on screen."
       }
     },
+    "refusals": {
+      "unknownCommand": "No such command exists in the studio.",
+      "globalCommand": "That command belongs to the application menu, which fires it itself.",
+      "wrongSurface": "That command speaks to a document that is not in front.",
+      "generatorClosed": "The Generator was not open. It is now.",
+      "nothingPrepared": "The Generator has no model armed at the moment.",
+      "notSubmitted": "The generation did not go out.",
+      "badInput": "The parameters given do not suit this action.",
+      "noBridge": "The studio is not answering."
+    },
     "fields": {
       "command": "Command identifier",
       "workspace": "Workspace",
