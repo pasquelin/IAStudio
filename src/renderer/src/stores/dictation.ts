@@ -9,6 +9,7 @@ import {
   type Capture,
 } from '@/dictation/capture'
 import { insertAtCaret } from '@/dictation/insert-at-caret'
+import { useAssistant } from './assistant'
 import { useSettings } from './settings'
 
 type DictationState = {
@@ -103,9 +104,7 @@ export const useDictation = create<DictationState>()((set, get) => ({
       if (event.type === 'partial') set({ partial: event.text })
       else if (event.type === 'final') {
         set({ partial: '' })
-        // Into the field the caret is in — which is what makes dictation work in every input of
-        // the studio without any of them being rewritten.
-        insertAtCaret(event.text)
+        settle(event.text)
       } else if (event.type === 'download') set({ download: event.progress })
       else set({ failure: event.failure })
     })
@@ -197,6 +196,29 @@ export const useDictation = create<DictationState>()((set, get) => ({
     set({ devices: await listInputDevices() })
   },
 }))
+
+/**
+ * Where a settled sentence goes.
+ *
+ * The assistant while its modal is up, the caret otherwise — and that is the whole of what
+ * talking to the studio changed about dictation. The microphone, the engine, the worker and the
+ * IPC contract have no idea the destination moved: one sentence arrives, one of two things reads
+ * it.
+ *
+ * The modal being OPEN is the test, not the caret being inside it: one dictates with the hands
+ * off the keyboard, so requiring a focused field would make the voice path unreachable by voice.
+ */
+function settle(text: string): void {
+  const assistant = useAssistant.getState()
+  if (assistant.open) {
+    void assistant.say(text)
+    return
+  }
+
+  // Into the field the caret is in — which is what makes dictation work in every input of the
+  // studio without any of them being rewritten.
+  insertAtCaret(text)
+}
 
 async function closeCapture(): Promise<void> {
   // Bumped before the first await, so a start still opening a device sees it and closes what it

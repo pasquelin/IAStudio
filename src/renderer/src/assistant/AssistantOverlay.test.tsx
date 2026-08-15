@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssistant } from '@/stores/assistant'
+import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { AssistantOverlay } from './AssistantOverlay'
 import { mountedConfirmer } from './confirm'
@@ -22,6 +23,7 @@ beforeEach(() => {
     say,
   })
   useSettings.setState({ settings: DEFAULT_SETTINGS })
+  useDictation.setState({ partial: '' })
   installFakeBridge()
 })
 
@@ -63,6 +65,14 @@ describe('the assistant modal', () => {
 
     expect(screen.getByText('génère un casque')).toBeInTheDocument()
     expect(screen.getByText(/Vous avez refusé cette action/)).toBeInTheDocument()
+  })
+
+  // Shown as the fields show it — a hypothesis, never something to mistake for what was sent.
+  it('shows the sentence still being spoken', () => {
+    useDictation.setState({ partial: 'ouvre un fichier' })
+    render(<AssistantOverlay />)
+
+    expect(screen.getByText('ouvre un fichier')).toBeInTheDocument()
   })
 
   /** The decision this modal exists to hold: what a conversation has cost, as it costs it. */

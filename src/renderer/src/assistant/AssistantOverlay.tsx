@@ -16,6 +16,7 @@ import { cn } from '@/helpers/cn'
 import { HINT_TOP, TIP_BOTTOM, TIP_LEFT } from '@/helpers/tooltip'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useAssistant } from '@/stores/assistant'
+import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { formatUnits } from '@/usage/format'
 import type { ConfirmRequest } from './confirm'
@@ -44,6 +45,9 @@ export function AssistantOverlay() {
   const spent = useAssistant(state => state.spent)
   const hide = useAssistant(state => state.hide)
   const model = useSettings(state => state.settings.assistant.model)
+  // The sentence in flight. Read straight off the dictation store rather than pushed here: the
+  // hypothesis is replaced several times a second, and nothing else in the modal re-renders on it.
+  const heard = useDictation(state => state.partial)
 
   const surface = useRef<HTMLDivElement>(null)
   const thread = useRef<HTMLOListElement>(null)
@@ -137,6 +141,10 @@ export function AssistantOverlay() {
         )}
 
         {asked && <Question request={asked.request} />}
+
+        {/* The sentence still being spoken, shown as the fields show it: a hypothesis, replaced
+            by the next one, and never something one could mistake for what was sent. */}
+        {heard !== '' && <p className="text-muted m-0 shrink-0 px-2 text-xs italic">{heard}</p>}
 
         <form
           className="flex shrink-0 items-center gap-2"
