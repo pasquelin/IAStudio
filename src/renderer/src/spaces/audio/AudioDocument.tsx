@@ -1,5 +1,5 @@
 import { mdiMusicNoteOutline, mdiPause, mdiPlay } from '@mdi/js'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
@@ -41,7 +41,10 @@ const TAKES: readonly AssetType[] = ['audio']
  */
 export function AudioDocument({ documentId }: AudioDocumentProps) {
   const { t } = useTranslation()
-  const waveform = useRef<HTMLDivElement>(null)
+  // State rather than a ref, because the surface below is mounted only once a take is loaded:
+  // a ref read on the first render is null and never announces its own arrival, which left the
+  // waveform blank on every path that loads a take AFTER the editor is on screen.
+  const [surface, setSurface] = useState<HTMLDivElement | null>(null)
 
   const state = useAudioEdits(current => audioEditsOf(current, documentId))
   const byId = useAssets(assetsById)
@@ -53,7 +56,12 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   // them would mean writing state from inside an effect, and would show the previous take for
   // one frame.
   const [loaded, setLoaded] = useState<{ assetId: string; ok: boolean } | null>(null)
-  const [output, setOutput] = useState<{ assetId: string; audio: RenderedAudio } | null>(null)
+  // The audio is nullable and that is the point: a render that answers nothing is how a dead
+  // worker shows up here, and holding no entry at all for it would leave "loading" on screen
+  // for as long as the tab lives.
+  const [output, setOutput] = useState<{ assetId: string; audio: RenderedAudio | null } | null>(
+    null,
+  )
 
   const asset = state.assetId ? (byId.get(state.assetId) ?? null) : null
 
@@ -92,8 +100,10 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
     let live = true
     void renderer.render(state.bypassed ? [] : state.edits).then(audio => {
-      // Null means a newer render overtook this one, and its answer is the one worth showing.
-      if (live && audio) setOutput({ assetId, audio })
+      // `live` is what tells the two nulls apart. A render overtaken by a newer one was
+      // overtaken because these deps changed, which ran the cleanup below first; a null that
+      // still arrives on a live effect is the worker having died, and it has to be said.
+      if (live) setOutput({ assetId, audio })
     })
 
     return () => {
@@ -101,7 +111,11 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
     }
   }, [renderer, settled, state.assetId, state.edits, state.bypassed])
 
-  const rendered = output?.assetId === state.assetId ? output.audio : null
+  const answered = output?.assetId === state.assetId ? output : null
+  const rendered = answered?.audio ?? null
+  // Either half of the pipeline giving up leaves the same take unplayable, and says so the same
+  // way — the decode, and the chain replayed over it.
+  const unreadable = failed || answered?.audio === null
 
   const onRegionChange = useCallback(
     (region: Region | null) => {
@@ -114,7 +128,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   )
 
   const player = useWaveSurfer({
-    container: waveform,
+    container: surface,
     rendered,
     owner: `audio:${documentId}`,
     onRegionChange,
@@ -210,14 +224,19 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   // replaces what is loaded, and the empty state is where the first one lands.
   const takeDrop = (dropped: Asset): void => loadTake(documentId, dropped)
 
-  if (!state.assetId) {
+  // A take that cannot be read lands here too, and it is why the drop target wraps both: an
+  // editor that only says "undecodable" is a tab with no way out — the gesture that would
+  // replace the take is the very one it stopped accepting.
+  if (!state.assetId || unreadable) {
     return (
       <AssetDropTarget accepts={TAKES} onDrop={takeDrop} outlined={false} className="h-full">
-        <EmptyState icon={mdiMusicNoteOutline} message={t('audio.noAsset')} />
+        <EmptyState
+          icon={mdiMusicNoteOutline}
+          message={t(unreadable ? 'audio.unreadable' : 'audio.noAsset')}
+        />
       </AssetDropTarget>
     )
   }
-  if (failed) return <EmptyState icon={mdiMusicNoteOutline} message={t('audio.unreadable')} />
 
   return (
     <AssetDropTarget
@@ -228,7 +247,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
       className="flex h-full min-h-0 flex-col gap-2 p-2"
     >
       <div className="bg-chassis relative min-h-0 w-full flex-1">
-        <div ref={waveform} className="absolute inset-0" />
+        <div ref={setSurface} className="absolute inset-0" />
         {!rendered && <EmptyState icon={mdiMusicNoteOutline} message={t('collection.loading')} />}
       </div>
 

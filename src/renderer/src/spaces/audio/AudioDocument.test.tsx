@@ -22,10 +22,11 @@ const saveAudio = vi.fn((_request: SaveAudioRequest) => Promise.resolve(asset))
 
 // jsdom has no AudioContext and wavesurfer needs a real canvas: both are exercised by hand.
 // What this covers is the chain — which tool appends which step, and what reaches the disk.
-vi.mock('./decode', () => ({
-  decodeAsset: () =>
-    Promise.resolve({ sampleRate: 100, channels: [new Float32Array(200).fill(0.5)] }),
-}))
+const decodeAsset = vi.hoisted(() =>
+  vi.fn(() => Promise.resolve({ sampleRate: 100, channels: [new Float32Array(200).fill(0.5)] })),
+)
+
+vi.mock('./decode', () => ({ decodeAsset }))
 
 vi.mock('./useWaveSurfer', () => ({
   useWaveSurfer: () => ({ playing: false, currentTime: 0, toggle: vi.fn(), seek: vi.fn() }),
@@ -227,6 +228,27 @@ describe('dropping a take on the editor', () => {
     await Promise.resolve()
 
     expect(editsOf().assetId).toBe('asset-1')
+  })
+
+  // A tab that only says "undecodable" is a dead end: the gesture that would replace the take
+  // is the very one it stopped accepting.
+  it('still takes a drop once the take it holds turned out to be undecodable', async () => {
+    decodeAsset.mockRejectedValueOnce(new Error('not audio'))
+    useAssets.setState({ items: [asset, { ...asset, id: 'asset-2', name: 'other.wav' }] })
+    useAudioEdits.setState({
+      states: { 'doc-1': { ...EMPTY_AUDIO_EDIT, assetId: 'asset-1' } },
+      histories: {},
+    })
+
+    render(<AudioDocument documentId="doc-1" />)
+    const dead = await screen.findByText(/n’a pas pu être décodé/)
+
+    const dataTransfer = dragTransfer()
+    startAssetDrag({ dataTransfer }, { id: 'asset-2', type: 'audio' })
+    fireEvent.drop(dead.closest('div[class]') ?? document.body, { dataTransfer })
+    await Promise.resolve()
+
+    expect(editsOf().assetId).toBe('asset-2')
   })
 
   it('refuses a picture, which the editor has nothing to do with', () => {
