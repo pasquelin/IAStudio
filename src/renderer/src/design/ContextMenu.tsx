@@ -1,9 +1,19 @@
-import { useCallback, useRef, type ReactNode } from 'react'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useMenuKeys } from '@/hooks/useMenuKeys'
 import { MENU_SURFACE } from './styles'
+
+/**
+ * What `useContextMenu` needs of a right-click, and no more: a React synthetic event satisfies it,
+ * and so does a plain object, which is what lets the hook be exercised without a DOM.
+ */
+export type ContextMenuGesture = {
+  preventDefault: () => void
+  clientX: number
+  clientY: number
+}
 
 export type ContextMenuProps = {
   /** Where the pointer was. Viewport coordinates, as a right-click reports them. */
@@ -75,4 +85,41 @@ export function ContextMenu({ at, onClose, children }: ContextMenuProps) {
     </div>,
     document.body,
   )
+}
+
+/**
+ * The pointer a right-click reported, held until the menu it opened is done with it.
+ *
+ * Three hosts draw a `ContextMenu` — the project row, the style row and a track header — and each
+ * one had written the same `useState`, the same `preventDefault` and the same pair of client
+ * coordinates. They are the three the studio deliberately did NOT hand to the system, because a
+ * `⋯` button renders their rows too; the rest go through `showContextMenu` in
+ * `helpers/context-menu.ts`, which holds no state at all. **This hook belongs to the DRAWN menu**,
+ * and lives beside it rather than beside that helper so the two paths cannot be reached for by
+ * mistake.
+ *
+ * `open` is the handler itself, not a setter: preventing the default is not a caller's choice, it
+ * is what stops the platform menu from arriving on top of this one. A host with its own reason to
+ * let that menu through — a right-click inside a text field asks the system for spelling and
+ * clipboard — decides BEFORE calling, not after.
+ *
+ * Both are stable, which `StyleRow` had already learnt the hard way: an open menu re-subscribes
+ * its three global listeners whenever `onClose` changes identity, and every write in that panel
+ * answers with the whole list re-read from disk.
+ */
+export function useContextMenu(): {
+  at: { x: number; y: number } | null
+  open: (event: ContextMenuGesture) => void
+  close: () => void
+} {
+  const [at, setAt] = useState<{ x: number; y: number } | null>(null)
+
+  const open = useCallback((event: ContextMenuGesture) => {
+    event.preventDefault()
+    setAt({ x: event.clientX, y: event.clientY })
+  }, [])
+
+  const close = useCallback(() => setAt(null), [])
+
+  return { at, open, close }
 }
