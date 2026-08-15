@@ -46,7 +46,13 @@ function openBoth(): void {
   useDocuments.setState(state => ({
     documents: {
       ...state.documents,
-      'doc-2': { id: 'doc-2', kind: 'skybox', title: 'Other', workspace: 'skyboxes' },
+      'doc-2': {
+        id: 'doc-2',
+        kind: 'skybox',
+        title: 'Other',
+        workspace: 'skyboxes',
+        fileName: 'Other.sky',
+      },
     },
   }))
 }

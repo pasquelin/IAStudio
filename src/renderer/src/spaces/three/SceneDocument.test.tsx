@@ -120,7 +120,13 @@ beforeEach(() => {
   // `WithDocument` is what guarantees one exists before this component ever renders.
   useDocuments.setState({
     documents: {
-      'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Set dressing' },
+      'doc-1': {
+        id: 'doc-1',
+        kind: 'scene',
+        workspace: '3d',
+        title: 'Set dressing',
+        fileName: 'Set dressing.scene',
+      },
     },
     activeId: 'doc-1',
   })
@@ -193,7 +199,13 @@ describe('SceneDocument', () => {
   it('opens a new document on a lit scene rather than a black viewport', () => {
     useDocuments.setState({
       documents: {
-        'doc-fresh': { id: 'doc-fresh', kind: 'scene', workspace: '3d', title: 'Fresh' },
+        'doc-fresh': {
+          id: 'doc-fresh',
+          kind: 'scene',
+          workspace: '3d',
+          title: 'Fresh',
+          fileName: 'Fresh.scene',
+        },
       },
     })
     render(<SceneDocument documentId="doc-fresh" />)
@@ -320,7 +332,15 @@ describe('the viewport settings', () => {
 
     await act(async () => {
       useDocuments.setState({
-        documents: { 'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Renamed' } },
+        documents: {
+          'doc-1': {
+            id: 'doc-1',
+            kind: 'scene',
+            workspace: '3d',
+            title: 'Renamed',
+            fileName: 'Renamed.scene',
+          },
+        },
       })
     })
 

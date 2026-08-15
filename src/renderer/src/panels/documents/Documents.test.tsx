@@ -9,7 +9,13 @@ import { Documents } from './Documents'
 
 vi.mock('@/app/dockview-api', () => ({ openDocument: vi.fn() }))
 
-const POSTER: DocumentDescriptor = { id: 'a', kind: 'image', title: 'Poster', workspace: 'image' }
+const POSTER: DocumentDescriptor = {
+  id: 'a',
+  kind: 'image',
+  title: 'Poster',
+  workspace: 'image',
+  fileName: 'Poster.img',
+}
 
 beforeEach(() => {
   vi.clearAllMocks()

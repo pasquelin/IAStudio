@@ -31,6 +31,7 @@ function titled(title: string): void {
         kind: 'image',
         workspace: 'image',
         title,
+        fileName: `${title}.img`,
       },
     },
   }))

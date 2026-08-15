@@ -10,6 +10,7 @@ const POSTER: DocumentDescriptor = {
   kind: 'image',
   title: 'Poster',
   workspace: 'image',
+  fileName: 'Poster.img',
 }
 
 const showing = (...ids: readonly string[]): void => showPanels(...ids)
@@ -55,7 +56,13 @@ describe('documents store', () => {
       documents: {
         list: () =>
           Promise.resolve([
-            { id: 'saved-then-closed', kind: 'scene', title: 'Untitled 1', workspace: '3d' },
+            {
+              id: 'saved-then-closed',
+              kind: 'scene',
+              title: 'Untitled 1',
+              workspace: '3d',
+              fileName: 'Untitled 1.scene',
+            },
           ]),
       },
     })
@@ -273,6 +280,7 @@ describe('documentForAsset', () => {
       kind: 'image',
       title: 'Poster',
       workspace: 'image',
+      fileName: 'Poster.img',
       sourceAssetId: 'asset_42',
     }
     useDocuments.setState({ documents: {}, stored: [saved] })
@@ -287,7 +295,14 @@ describe('documentForAsset', () => {
       .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_42' })
     useDocuments.setState({
       stored: [
-        { id: 'stale', kind: 'image', title: 'Old', workspace: 'image', sourceAssetId: 'asset_42' },
+        {
+          id: 'stale',
+          kind: 'image',
+          title: 'Old',
+          workspace: 'image',
+          fileName: 'Old.img',
+          sourceAssetId: 'asset_42',
+        },
       ],
     })
 
@@ -332,6 +347,7 @@ describe('relist', () => {
       kind: 'scene',
       title: 'Untitled 1',
       workspace: '3d',
+      fileName: 'Untitled 1.scene',
     }
     useDocuments.setState({ documents: { unwritten } })
     installFakeBridge({ documents: { list: () => Promise.resolve([POSTER]) } })
@@ -342,8 +358,20 @@ describe('relist', () => {
 
   // A list that reshuffles between two reads is a list nobody can point at.
   it('sorts by title', async () => {
-    const zulu: DocumentDescriptor = { id: 'z', kind: 'scene', title: 'Zulu', workspace: '3d' }
-    const alpha: DocumentDescriptor = { id: 'a', kind: 'scene', title: 'Alpha', workspace: '3d' }
+    const zulu: DocumentDescriptor = {
+      id: 'z',
+      kind: 'scene',
+      title: 'Zulu',
+      workspace: '3d',
+      fileName: 'Zulu.scene',
+    }
+    const alpha: DocumentDescriptor = {
+      id: 'a',
+      kind: 'scene',
+      title: 'Alpha',
+      workspace: '3d',
+      fileName: 'Alpha.scene',
+    }
     installFakeBridge({ documents: { list: () => Promise.resolve([zulu, alpha]) } })
 
     await useDocuments.getState().relist()

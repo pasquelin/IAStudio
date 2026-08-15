@@ -21,7 +21,13 @@ vi.mock('@/app/dockview-api', () => ({
 const openAsset = vi.hoisted(() => vi.fn<(asset: Asset) => Promise<void>>(() => Promise.resolve()))
 vi.mock('@/helpers/open-asset', () => ({ openAsset }))
 
-const scene: DocumentDescriptor = { id: 'a3f1', kind: 'scene', title: 'Niveau', workspace: '3d' }
+const scene: DocumentDescriptor = {
+  id: 'a3f1',
+  kind: 'scene',
+  title: 'Niveau',
+  workspace: '3d',
+  fileName: 'a3f1.scene',
+}
 
 /** Written as a folder — `FOLDER_KINDS` — which is what the folder reader sees of it. */
 const picture: DocumentDescriptor = {
@@ -29,6 +35,7 @@ const picture: DocumentDescriptor = {
   kind: 'image',
   title: 'Planche',
   workspace: 'image',
+  fileName: 'a3f1.img',
 }
 
 const folder = (name: string, at = ''): FolderEntry => ({

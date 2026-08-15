@@ -75,7 +75,7 @@ const savedFile = (): DocumentFile => ({
 })
 
 function scene(id: string): DocumentDescriptor {
-  return { id, kind: 'scene', title: 'Set dressing', workspace: '3d' }
+  return { id, kind: 'scene', title: 'Set dressing', workspace: '3d', fileName: `${id}.scene` }
 }
 
 beforeEach(() => {
@@ -480,7 +480,15 @@ describe('saveDocument', () => {
       const read = vi.fn(() => Promise.resolve(null))
       installFakeBridge({ documents: { write: () => Promise.resolve(), read } })
       useDocuments.setState({
-        documents: { 'doc-1': { id: 'doc-1', kind: 'image', title: 'x', workspace: 'image' } },
+        documents: {
+          'doc-1': {
+            id: 'doc-1',
+            kind: 'image',
+            title: 'x',
+            workspace: 'image',
+            fileName: 'x.img',
+          },
+        },
       })
 
       await rehydrateDocument('doc-1')
@@ -898,7 +906,9 @@ describe('restoreDocument', () => {
       const workspace = workspaceForKind(kind)
       if (!workspace) throw new Error(`no workspace opens ${kind}`)
       const id = `doc-${kind}`
-      useDocuments.setState({ documents: { [id]: { id, kind, title: kind, workspace } } })
+      useDocuments.setState({
+        documents: { [id]: { id, kind, title: kind, workspace, fileName: `${kind}${id}` } },
+      })
       await restoreDocument(id)
     }
 
@@ -1090,7 +1100,13 @@ describe('an image document', () => {
     const documentId = 'doc-img'
     useDocuments.setState({
       documents: {
-        [documentId]: { id: documentId, kind: 'image', workspace: 'image', title: 'Poster' },
+        [documentId]: {
+          id: documentId,
+          kind: 'image',
+          workspace: 'image',
+          title: 'Poster',
+          fileName: 'Poster.img',
+        },
       },
       activeId: documentId,
     })
@@ -1129,7 +1145,13 @@ describe('an image document', () => {
     const documentId = 'doc-img-2'
     useDocuments.setState({
       documents: {
-        [documentId]: { id: documentId, kind: 'image', workspace: 'image', title: 'Poster' },
+        [documentId]: {
+          id: documentId,
+          kind: 'image',
+          workspace: 'image',
+          title: 'Poster',
+          fileName: 'Poster.img',
+        },
       },
       activeId: documentId,
     })

@@ -110,7 +110,13 @@ describe('useNativeMenu', () => {
   it('adds nothing when the document in front is not a scene', () => {
     useDocuments.setState({
       documents: {
-        'doc-1': { id: 'doc-1', kind: 'image', workspace: 'image', title: 'Sans titre' },
+        'doc-1': {
+          id: 'doc-1',
+          kind: 'image',
+          workspace: 'image',
+          title: 'Sans titre',
+          fileName: 'Sans titre.img',
+        },
       },
       activeId: 'doc-1',
     })
