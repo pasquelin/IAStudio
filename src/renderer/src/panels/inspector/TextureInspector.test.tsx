@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import fr from '@shared/i18n/fr.json'
+import { TRANSLATIONS } from '@shared/i18n'
 import { installTexture } from '@/stores/texture-fixtures'
 import { textureHistoryOf, textureOf, useTextures } from '@/stores/textures'
 import { TextureInspector } from './TextureInspector'
@@ -29,7 +29,7 @@ describe('TextureInspector', () => {
     show()
 
     expect(screen.getByLabelText('Rugosité')).toBeInTheDocument()
-    expect(JSON.stringify(fr)).not.toMatch(/brillance/i)
+    expect(JSON.stringify(TRANSLATIONS.fr)).not.toMatch(/brillance/i)
   })
 
   /** Two remaps under one label is two rows a reader cannot tell apart. */
