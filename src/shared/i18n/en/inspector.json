@@ -107,7 +107,7 @@
     "locked": "Locked",
     "height": "Height",
     "onDisk": "Location",
-    "reveal": "Show in the file manager",
+    "reveal": "Show in folder",
     "fileMissing": "File not found",
     "layer": "Layer",
     "layerKind_pixel": "Pixels",

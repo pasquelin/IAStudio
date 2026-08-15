@@ -140,7 +140,7 @@ Le clic droit liste toutes les destinations, toujours dans le même ordre :
 | **Placer comme calque** | l’image ouverte, espace Image | images |
 | **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
 | **Utiliser comme couleur de base** | la matière ouverte, espace Textures | images |
-| **Afficher dans le gestionnaire de fichiers** | ouvre le dossier qui contient le fichier | tous |
+| **Afficher dans le dossier** | ouvre le gestionnaire de fichiers sur le fichier | tous |
 
 Chaque ligne porte l’icône de son espace, la même que dans la barre de titre. Le menu ne montre
 que les destinations capables de recevoir **ce type-là** : le clic droit sur un son n’offre pas
@@ -217,8 +217,8 @@ ce qu’il sait :
 | **Génération** | le modèle, la graine, le prompt — et deux boutons, **Épingler la recette** et **Régénérer** |
 | **Fichier** | l’**Emplacement** sur le disque, et rien d’autre — le groupe n’apparaît que pour un asset présent localement |
 
-Le bouton **Afficher dans le gestionnaire de fichiers** ouvre le dossier contenant le fichier,
-dans le Finder, l’Explorateur ou votre gestionnaire de fichiers.
+Le bouton **Afficher dans le dossier** sort du studio : il ouvre le Finder, l’Explorateur ou
+votre gestionnaire de fichiers, le fichier déjà sélectionné.
 
 > « **Fichier introuvable** » signifie qu’un média lié a été déplacé ou supprimé de son
 > emplacement d’origine. Voir la section suivante.
@@ -347,7 +347,7 @@ Deux conséquences :
 - **Avantage** — un rush vidéo de 12 Go n’est pas dupliqué. Votre projet reste léger.
 - **Inconvénient** — si vous déplacez, renommez ou supprimez le fichier d’origine, le lien se
   casse **en silence** : rien ne le signale tant que vous n’avez pas cliqué sur **Afficher dans le
-  gestionnaire de fichiers**, et c’est ce clic, ne trouvant rien, qui fait apparaître
+  dossier**, et c’est ce clic, ne trouvant rien, qui fait apparaître
   « Fichier introuvable » dans l’inspecteur.
 
 Si vous devez emporter un projet ailleurs, emportez aussi les médias qu’il pointe — ou copiez-les
@@ -356,7 +356,7 @@ vous-même dans le dossier du projet avant de les importer.
 **Mais l’ÉDITER le fait entrer dans le projet.** Un média lié que vous retouchez puis enregistrez —
 `⌘S` sur une image, **Appliquer** sur une prise sonore — est écrit dans le dossier du projet, et
 c’est cette copie que le studio montre ensuite partout : l’étagère, la scène, l’inspecteur.
-Le lien est remplacé par un vrai fichier, et **Afficher dans le gestionnaire de fichiers** mène
+Le lien est remplacé par un vrai fichier, et **Afficher dans le dossier** mène
 désormais là.
 
 **Le fichier que vous aviez pointé n’est pas touché.** Il reste où il est, dans l’état où vous

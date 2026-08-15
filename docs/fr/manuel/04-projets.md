@@ -285,7 +285,7 @@ qu’ils décrivent une position à l’intérieur du dossier, pas un emplacemen
 > fichiers-là, les liens se cassent.
 >
 > **Rien ne vous le dira tant que vous n’aurez pas cliqué.** L’inspecteur ne montre pas « Fichier
-> introuvable » de lui-même : il propose le bouton **Afficher dans le gestionnaire de fichiers**, et
+> introuvable » de lui-même : il propose le bouton **Afficher dans le dossier**, et
 > c’est le clic qui, ne trouvant rien, fait apparaître le message. Voir
 > [Les assets](07-assets.md).
 

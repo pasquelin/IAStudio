@@ -64,10 +64,10 @@ describe('what the shelf offers to do with an asset', () => {
     expect(offered(/ciel/)).toBe(false)
   })
 
-  it('cannot show a cloud asset in the file manager, since there is no file yet', () => {
+  it('cannot show a cloud asset in a folder, since there is no file yet', () => {
     raise(asset({ location: 'cloud' }))
 
-    expect(offered(/gestionnaire de fichiers/)).toBe(false)
+    expect(offered(/dans le dossier/)).toBe(false)
   })
 
   // The row used to be offered live whatever was open, because `ready` counted tabs and never

@@ -294,7 +294,7 @@ résultat.
 
 Un projet est **un dossier ordinaire**. Copiez-le, c’est tout.
 
-1. repérez son emplacement — bouton **Afficher dans le gestionnaire de fichiers** de l’inspecteur
+1. repérez son emplacement — bouton **Afficher dans le dossier** de l’inspecteur
    d’un asset ;
 2. copiez le dossier entier : clé USB, disque, service de synchronisation, peu importe ;
 3. sur l’autre machine, `⌘O` et ouvrez-le.
