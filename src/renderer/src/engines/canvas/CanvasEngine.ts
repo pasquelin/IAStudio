@@ -1532,6 +1532,13 @@ export class CanvasEngine {
     const host = this.host
     if (!host) return
 
+    // Before anything reads the box: Pixi honours `resizeTo` through a `window.resize` listener
+    // and nothing else — see `followHostSize` — so a Dockview splitter left the picture at its
+    // mounted size while the overlay, which observes the host, followed. The handles then sat
+    // beside the layer they belong to. Here rather than in a second observer so the order is
+    // stated: the renderer takes the new box, then the overlay is measured against it.
+    this.app?.resize()
+
     this.bounds = host.getBoundingClientRect()
     this.hostSize = { width: host.clientWidth, height: host.clientHeight }
     this.overlay.resize(this.hostSize)
