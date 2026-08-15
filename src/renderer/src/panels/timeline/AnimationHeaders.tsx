@@ -6,7 +6,6 @@ import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
 import { keyNode, removeAnimationTrack, unkeySubject } from '@/engines/scene/animation-commands'
 import { snapToFrame } from '@shared/domain/time'
-import { clamp } from '@shared/numeric'
 import { newId } from '@/helpers/ids'
 import {
   trackIdsOf,
@@ -46,16 +45,6 @@ export type AnimationHeadersProps = {
 
 function shownSubjects(rows: readonly AnimationRow[]): string[] {
   return rows.filter(row => row.kind === 'subject').map(row => row.id)
-}
-
-/**
- * How many places a line would actually travel, asked to move by that much — nothing at the ends
- * of the stack. What `RowReorder.move` has to answer, and for the reason spelled out there: a
- * drag counting the pointer rather than the stack spends steps it never took.
- */
-function travelled(shown: readonly string[], rowId: string, by: number): number {
-  const from = shown.indexOf(rowId)
-  return from === -1 ? 0 : clamp(from + by, 0, shown.length - 1) - from
 }
 
 /**
@@ -132,10 +121,7 @@ function SubjectHeader({ documentId, row, shown }: SubjectRowProps) {
         label: t('animation.reorderRow', { name: row.name }),
         // The sheet's own arrangement, never the scene: the outliner keeps the hierarchy it has.
         // No gesture around it either — an arrangement is a way of looking, and no history holds it.
-        move: by => {
-          useAnimationViews.getState().moveRow(documentId, shown, row.id, by)
-          return travelled(shown, row.id, by)
-        },
+        move: by => useAnimationViews.getState().moveRow(documentId, shown, row.id, by),
       }}
       data-testid={`anim-subject-${row.id}`}
     >
