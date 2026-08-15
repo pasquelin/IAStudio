@@ -21,10 +21,23 @@ export function isDocumentKind(value: unknown): value is DocumentKind {
 }
 
 export type DocumentDescriptor = {
+  /**
+   * Never shown. It used to BE the file name, so a folder of documents read as a folder of
+   * uuids — and renaming one gave the document a new identity, which is why renaming an open
+   * one had to be forbidden. It now lives in the envelope and survives being renamed.
+   */
   id: string
   kind: DocumentKind
   title: string
   workspace: WorkspaceId
+  /**
+   * The directory entry this document was read from, extension included — `Niveau.scene`.
+   *
+   * Carried because the id no longer spells it: whoever joins a folder listing to a document
+   * has only the entry to go on, and rebuilding it from the title would be a second answer free
+   * to disagree with the disk.
+   */
+  fileName: string
   /**
    * The asset this document was opened to edit, when it was opened for one.
    *
@@ -62,10 +75,12 @@ export function workspaceForKind(kind: DocumentKind): WorkspaceId | null {
 }
 
 /**
- * 2 since the envelope moved onto a line of its own — see `DocumentFile`. A file written by
- * version 1 is still read: its whole body is one JSON object, content included.
+ * 3 since the envelope carries the document's `id` — which is what let the file be named after
+ * the document instead of after a uuid. A file written by version 2 is still read: its id is its
+ * file name, exactly as it was. Version 1 is still read too, its whole body being one JSON
+ * object, content included.
  */
-export const DOCUMENT_VERSION = 2
+export const DOCUMENT_VERSION = 3
 
 export const DOCUMENTS_FOLDER = 'documents'
 
@@ -189,6 +204,15 @@ export type DocumentFile = DocumentDraft & {
   version: number
   kind: DocumentKind
   updatedAt: string
+  /**
+   * Who this document is, told by the document rather than by where it sits.
+   *
+   * Optional because a file written before version 3 has none: there, the file name WAS the id,
+   * and `descriptorOf` still reads it that way. Stamped by the main process on the next write,
+   * which is what lets a document be renamed without becoming a different document — the layout,
+   * the recent list and every open tab are keyed by this.
+   */
+  id?: string
 }
 
 /** The envelope alone, which is all a listing needs. */

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -24,15 +24,19 @@ describe('createDocumentFiles', () => {
       kind: 'scene',
       title: 'Untitled',
       updatedAt: NOW,
+      id: 'doc-1',
       content: '{"nodes":[]}',
     })
   })
 
   // One exact-equality assertion: it proves the folder was created, the extension comes from
   // the kind, and no staging file was left behind.
-  it('creates the documents folder, names the file after the kind, and leaves no staging file', async () => {
+  //
+  // The name is the document's own. It was the id — a uuid — which is what the explorer showed
+  // the user beside a tab bearing the title, two names for one document.
+  it('creates the documents folder, names the file after the document, and leaves no staging file', async () => {
     await documents.write('doc-1', 'scene', { title: 'Untitled', content: '{}' })
-    expect(await readdir(join(root, 'documents'))).toEqual(['doc-1.scene'])
+    expect(await readdir(join(root, 'documents'))).toEqual(['Untitled.scene'])
   })
 
   // The envelope on the first line, the content under it: listing a project then reads a short
@@ -40,7 +44,7 @@ describe('createDocumentFiles', () => {
   it('writes the envelope on a line of its own', async () => {
     await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":[]}' })
 
-    const [head, body] = (await readFile(join(root, 'documents', 'doc-1.scene'), 'utf8')).split(
+    const [head, body] = (await readFile(join(root, 'documents', 'Level.scene'), 'utf8')).split(
       '\n',
     )
     expect(JSON.parse(head ?? '')).toEqual({
@@ -48,6 +52,7 @@ describe('createDocumentFiles', () => {
       kind: 'scene',
       title: 'Level',
       updatedAt: NOW,
+      id: 'doc-1',
     })
     expect(body).toBe('{"nodes":[]}')
   })
@@ -58,7 +63,7 @@ describe('createDocumentFiles', () => {
     await documents.write('doc-1', 'scene', { title: 'Level', content: 'not json at all' })
 
     expect(await documents.list()).toEqual([
-      { id: 'doc-1', kind: 'scene', title: 'Level', workspace: '3d' },
+      { id: 'doc-1', kind: 'scene', title: 'Level', workspace: '3d', fileName: 'Level.scene' },
     ])
   })
 
@@ -111,28 +116,39 @@ describe('createDocumentFiles', () => {
     expect(file?.content).toBe('')
   })
 
+  // Under the name a document written before version 3 wears, for the reason spelt out below on
+  // the kind disagreement: a broken envelope cannot say which document it belongs to.
   it('reports a file it cannot parse rather than answering null', async () => {
-    await documents.write('doc-1', 'scene', { title: 'Untitled', content: '{}' })
+    await mkdir(join(root, 'documents'), { recursive: true })
     await writeFile(join(root, 'documents', 'doc-1.scene'), '{ truncated', 'utf8')
 
     await expect(documents.read('doc-1', 'scene')).rejects.toThrow()
   })
 
-  // A document copied to another extension by hand would otherwise open in the wrong editor.
+  /**
+   * A document copied to another extension by hand would otherwise open in the wrong editor.
+   *
+   * Left under the name a document written before version 3 wears — its id — because that is
+   * the one an unreadable file can still be reached by: an envelope that does not parse cannot
+   * say which document it is, so a title-named file whose head is broken is nameless to the id
+   * that used to address it, and reads as never saved rather than as broken.
+   */
   it('refuses a file whose kind disagrees with its extension', async () => {
     await documents.write('doc-1', 'texture', { title: 'Untitled', content: '{}' })
-    const source = await readFile(join(root, 'documents', 'doc-1.tex'), 'utf8')
+    const source = await readFile(join(root, 'documents', 'Untitled.tex'), 'utf8')
     await writeFile(join(root, 'documents', 'doc-1.scene'), source, 'utf8')
 
     await expect(documents.read('doc-1', 'scene')).rejects.toThrow(/texture/)
   })
 
   it('refuses a file written by a later build instead of flattening it', async () => {
-    const file = join(root, 'documents', 'doc-1.scene')
-    await documents.write('doc-1', 'scene', { title: 'Untitled', content: '{}' })
-
-    const stored = await readFile(file, 'utf8')
-    await writeFile(file, stored.replace(`"version":${DOCUMENT_VERSION}`, '"version":99'), 'utf8')
+    await mkdir(join(root, 'documents'), { recursive: true })
+    const later = { version: 99, kind: 'scene', title: 'Ahead', updatedAt: NOW }
+    await writeFile(
+      join(root, 'documents', 'doc-1.scene'),
+      `${JSON.stringify(later)}\n{}`,
+      'utf8',
+    )
 
     await expect(documents.read('doc-1', 'scene')).rejects.toThrow()
   })
@@ -163,7 +179,9 @@ describe('createDocumentFiles', () => {
 
     const file = await documents.read('doc-1', 'scene')
     expect(file?.content).toMatch(/^(a+|b+)$/)
-    expect(await readdir(join(root, 'documents'))).toEqual(['doc-1.scene'])
+    // One file, and it is the one the first write named: a document already on disk keeps the
+    // file it is in, so a second write cannot leave a copy under another name beside it.
+    expect(await readdir(join(root, 'documents'))).toEqual(['A.scene'])
   })
 
   // An autosave still staging its copy would otherwise rename it back over a document the
@@ -178,6 +196,90 @@ describe('createDocumentFiles', () => {
 
     expect(await documents.read('doc-1', 'scene')).toBeNull()
     expect(await readdir(join(root, 'documents'))).toEqual([])
+  })
+
+  /**
+   * What the whole of this change is for. A document written before version 3 is named after
+   * its id — a uuid — and nothing about it may move: the layout, the recent list and every open
+   * tab are keyed by that id, and the studio must not rewrite a project to open it.
+   */
+  describe('a document written before the file carried a name', () => {
+    const legacyFile = (id: string, envelope: object, content = '{}'): Promise<void> =>
+      mkdir(join(root, 'documents'), { recursive: true }).then(() =>
+        writeFile(
+          join(root, 'documents', `${id}.scene`),
+          `${JSON.stringify(envelope)}\n${content}`,
+          'utf8',
+        ),
+      )
+
+    const V2 = { version: 2, kind: 'scene', title: 'Niveau', updatedAt: NOW }
+
+    it('is called what its file name says, having nothing else to say so', async () => {
+      await legacyFile('6d517ff3', V2)
+
+      expect(await documents.list()).toEqual([
+        {
+          id: '6d517ff3',
+          kind: 'scene',
+          title: 'Niveau',
+          workspace: '3d',
+          fileName: '6d517ff3.scene',
+        },
+      ])
+    })
+
+    it('is left where it is, and read by the id it has always had', async () => {
+      await legacyFile('6d517ff3', V2, '{"nodes":[]}')
+
+      expect((await documents.read('6d517ff3', 'scene'))?.content).toBe('{"nodes":[]}')
+      expect(await readdir(join(root, 'documents'))).toEqual(['6d517ff3.scene'])
+    })
+
+    // Opening a project must not rewrite it; saving one is where the stamp goes in.
+    it('is given its id in the envelope by the next save, and keeps its file', async () => {
+      await legacyFile('6d517ff3', V2)
+      await documents.write('6d517ff3', 'scene', { title: 'Niveau', content: '{}' })
+
+      expect((await documents.read('6d517ff3', 'scene'))?.id).toBe('6d517ff3')
+      expect(await readdir(join(root, 'documents'))).toEqual(['6d517ff3.scene'])
+    })
+  })
+
+  /**
+   * The identity is the envelope's, so a file renamed in the Finder is the same document under
+   * another name — which is what lets the studio rename one without it becoming a different
+   * document, and what the tabs, the layout and the recent list all depend on.
+   */
+  it('follows a document whose file was renamed by hand', async () => {
+    await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{"nodes":[]}' })
+    await rename(join(root, 'documents', 'Niveau.scene'), join(root, 'documents', 'Décor.scene'))
+
+    expect((await documents.read('doc-1', 'scene'))?.content).toBe('{"nodes":[]}')
+    expect((await documents.list())[0]).toMatchObject({ id: 'doc-1', fileName: 'Décor.scene' })
+  })
+
+  // The studio names what it engenders, and there is nobody to ask about a collision.
+  it('suffixes a fresh document rather than writing over the name it wanted', async () => {
+    await documents.write('doc-1', 'scene', { title: 'Niveau', content: 'first' })
+    await documents.write('doc-2', 'scene', { title: 'Niveau', content: 'second' })
+
+    expect((await documents.read('doc-1', 'scene'))?.content).toBe('first')
+    expect((await documents.read('doc-2', 'scene'))?.content).toBe('second')
+    expect([...(await readdir(join(root, 'documents')))].sort()).toEqual([
+      'Niveau 2.scene',
+      'Niveau.scene',
+    ])
+  })
+
+  /**
+   * A title is a file name now, and a file name cannot hold a separator: `Brique 1/2` would
+   * land on `Brique 1 2` and the document would answer to two names again.
+   */
+  it('writes a title the disk cannot hold under a name it can', async () => {
+    await documents.write('doc-1', 'scene', { title: 'Brique 1/2', content: '{}' })
+
+    expect(await readdir(join(root, 'documents'))).toEqual(['Brique 1 2.scene'])
   })
 
   it('keeps a failed operation from blocking the file afterwards', async () => {
@@ -196,8 +298,14 @@ describe('createDocumentFiles', () => {
 
       expect(await documents.list()).toEqual(
         expect.arrayContaining([
-          { id: 'doc-1', kind: 'scene', title: 'Level', workspace: '3d' },
-          { id: 'doc-2', kind: 'image', title: 'Poster', workspace: 'image' },
+          { id: 'doc-1', kind: 'scene', title: 'Level', workspace: '3d', fileName: 'Level.scene' },
+          {
+            id: 'doc-2',
+            kind: 'image',
+            title: 'Poster',
+            workspace: 'image',
+            fileName: 'Poster.img',
+          },
         ]),
       )
     })
@@ -225,7 +333,7 @@ describe('createDocumentFiles', () => {
     // The folder's word beats the file's, exactly as `read` has it.
     it('skips a document whose extension disagrees with what it holds', async () => {
       await documents.write('doc-1', 'scene', { title: 'Level', content: '{}' })
-      const written = await readFile(join(root, 'documents', 'doc-1.scene'), 'utf8')
+      const written = await readFile(join(root, 'documents', 'Level.scene'), 'utf8')
       await writeFile(join(root, 'documents', 'doc-2.img'), written, 'utf8')
 
       expect((await documents.list()).map(entry => entry.id)).toEqual(['doc-1'])
@@ -242,7 +350,7 @@ describe('createDocumentFiles', () => {
       )
 
       await documents.list()
-      expect(await readdir(join(root, 'documents'))).toEqual(['doc-1.scene'])
+      expect(await readdir(join(root, 'documents'))).toEqual(['Level.scene'])
     })
   })
 
@@ -275,7 +383,7 @@ describe('createDocumentFiles', () => {
         parts: [{ name: 'layer-1.png', data: PIXELS }],
       })
 
-      const entries = await readdir(join(root, 'documents', 'doc-1.img'))
+      const entries = await readdir(join(root, 'documents', 'Poster.img'))
       expect([...entries].sort()).toEqual(['document.json', 'layer-1.png'])
     })
 
@@ -300,7 +408,7 @@ describe('createDocumentFiles', () => {
       await documents.write('doc-1', 'image', { title: 'Poster', content: '{}' })
 
       expect(await documents.list()).toEqual([
-        { id: 'doc-1', kind: 'image', title: 'Poster', workspace: 'image' },
+        { id: 'doc-1', kind: 'image', title: 'Poster', workspace: 'image', fileName: 'Poster.img' },
       ])
     })
 
@@ -320,7 +428,7 @@ describe('createDocumentFiles', () => {
         parts: [{ name: 'layer-1.png', data: PIXELS }],
       })
 
-      const entries = await readdir(join(root, 'documents', 'doc-1.img'))
+      const entries = await readdir(join(root, 'documents', 'Poster.img'))
       expect([...entries].sort()).toEqual(['document.json', 'layer-1.png'])
     })
 
@@ -333,7 +441,7 @@ describe('createDocumentFiles', () => {
       await documents.write('doc-1', 'image', { title: 'Poster', content: '{}' })
 
       const entries = await readdir(join(root, 'documents'))
-      expect(entries).toEqual(['doc-1.img'])
+      expect(entries).toEqual(['Poster.img'])
     })
 
     it('takes the whole folder away on remove', async () => {

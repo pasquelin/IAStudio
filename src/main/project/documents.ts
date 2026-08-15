@@ -18,6 +18,7 @@ import {
   type DocumentKind,
   type DocumentPart,
 } from '@shared/domain/document'
+import { documentFileName, nextFreeDocumentName } from '@shared/domain/document-name'
 import { isRecord } from '@shared/guards'
 import { isMissing, writeAtomic } from '@main/persistence'
 import { parseDocumentEnvelope } from './validation'
@@ -127,22 +128,42 @@ async function headOf(file: string): Promise<DocumentEnvelope> {
  * survive a catalogue rebuilt from that folder.
  */
 export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): DocumentFiles {
-  /** In-flight work per file, so writing and removing one document cannot interleave. */
+  /**
+   * In-flight work per DOCUMENT, so writing, renaming and removing one cannot interleave.
+   *
+   * Keyed by id rather than by path, which it was until a document could be renamed: a rename
+   * and a save aim at two different paths, so keyed by path they no longer queued behind one
+   * another — the autosave would rename its staging copy back over the name the document just
+   * left, and the rename would undo itself.
+   */
   const pending = new Map<string, Promise<unknown>>()
 
+  /**
+   * Where a document sits. A document is no longer named after its id, so this is what says
+   * which entry of the folder is which document.
+   *
+   * Keyed by kind AND id, never by id alone: an id is unique per kind and not across them, and
+   * `keeps two kinds of the same id apart` is the case that says so. Keyed by id, writing the
+   * image twin displaced the scene twin and the pair came back as one document.
+   *
+   * A cache and not a registry: `walk` rebuilds it from the folder, which stays the only thing
+   * that says what exists. Missing or stale, the answer is one listing away.
+   */
+  const index = new Map<string, string>()
+
+  const keyOf = (id: string, kind: DocumentKind): string => `${kind}:${id}`
+
+  const folderPath = (): string => join(projectPath(), DOCUMENTS_FOLDER)
+
+  /** Where a document of this id WOULD sit had it never been named — and where a first write goes. */
   const fileOf = (id: string, kind: DocumentKind): string =>
     join(projectPath(), documentPath(id, kind))
 
-  /**
-   * Queues an operation behind whatever else touches this file. Without it an autosave still
-   * writing its staging copy renames it back over a document deleted meanwhile, and the
-   * deletion undoes itself.
-   */
-  const queued = <T>(file: string, run: () => Promise<T>): Promise<T> => {
-    const next = (pending.get(file) ?? Promise.resolve()).then(run, run)
-    // Settled either way: a failed operation must not block the file for the rest of the session.
+  const queued = <T>(id: string, run: () => Promise<T>): Promise<T> => {
+    const next = (pending.get(id) ?? Promise.resolve()).then(run, run)
+    // Settled either way: a failed operation must not block the document for the rest of the session.
     pending.set(
-      file,
+      id,
       next.catch(() => {}),
     )
     return next
@@ -276,11 +297,19 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
       // hand must not send a document to an editor that cannot open it.
       if (envelope.kind !== kind) return null
 
+      const stem = basename(entry, extname(entry))
+
       return {
-        id: basename(entry, extname(entry)),
+        // Before version 3 the file name WAS the id, so that is what such a document is still
+        // called — its tabs, its place in the layout and its recent entry all say so.
+        id: envelope.id ?? stem,
         kind,
-        title: envelope.title,
+        // The file name is the title, and has been since documents came to be named by hand.
+        // Falling back on it rather than refusing an envelope that lost its own: a document
+        // with no title would drop out of every listing while sitting in the folder.
+        title: envelope.title || stem,
         workspace,
+        fileName: entry,
         ...(envelope.sourceAssetId ? { sourceAssetId: envelope.sourceAssetId } : {}),
       }
     } catch {
@@ -290,12 +319,103 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
   }
 
   /**
+   * The folder, read once: the documents it holds, and where each one sits.
+   *
+   * Two files can claim the same id — a document duplicated in the Finder carries the id of the
+   * one it was copied from. The first in `readdir` order keeps it and the second is called after
+   * its own file, which is unique by construction: dropping it instead would leave a file
+   * plainly sitting in the folder and absent from every list in the studio.
+   */
+  const walk = async (): Promise<DocumentDescriptor[]> => {
+    const folder = folderPath()
+
+    let entries: string[]
+    try {
+      entries = await readdir(folder)
+    } catch (error) {
+      // A project that has never saved anything has no folder yet, and holds no document.
+      if (isMissing(error)) return []
+      throw error
+    }
+
+    await sweep(folder, entries)
+
+    index.clear()
+
+    // One at a time rather than all at once: a folder of a few thousand documents opened in
+    // parallel runs the process out of file descriptors, and every failed read would come
+    // back as a document silently missing from the list.
+    const found: DocumentDescriptor[] = []
+    for (const entry of entries.sort()) {
+      const descriptor = await descriptorOf(folder, entry)
+      if (!descriptor) continue
+
+      const claimed = index.has(keyOf(descriptor.id, descriptor.kind))
+      const id = claimed ? entry : descriptor.id
+      index.set(keyOf(id, descriptor.kind), entry)
+      found.push(claimed ? { ...descriptor, id } : descriptor)
+    }
+    return found
+  }
+
+  /**
+   * The entry a document is written to, or the address it would have had.
+   *
+   * The cached answer is checked rather than trusted: the folder is the user's, and a document
+   * renamed in the Finder would otherwise be written to a path that is no longer there — which
+   * `writeFile` answers by creating it, leaving two files where the user made one.
+   */
+  const locate = async (id: string, kind: DocumentKind): Promise<string> => {
+    const folder = folderPath()
+
+    const holds = async (entry: string): Promise<boolean> => {
+      const descriptor = await descriptorOf(folder, entry)
+      return descriptor?.id === id && descriptor.kind === kind
+    }
+
+    const cached = index.get(keyOf(id, kind))
+    if (cached && (await holds(cached))) return join(folder, cached)
+
+    // A folder that cannot be read answers "not found" rather than throwing: whatever is wrong
+    // with it, the caller is about to touch it and will fail with its OWN error, which is the
+    // one worth reporting — a `documents` that is a file must say `mkdir`, not `scandir`.
+    try {
+      await walk()
+    } catch {
+      return fileOf(id, kind)
+    }
+
+    const found = index.get(keyOf(id, kind))
+    if (found && (await holds(found))) return join(folder, found)
+
+    // Never listed, so never written: a document saved for the first time is named after itself
+    // by `write`, and this is only what `read` and `remove` ask about before that happens.
+    return fileOf(id, kind)
+  }
+
+  /**
+   * Where a document written for the first time goes: under its own name.
+   *
+   * Suffixed rather than refused when the folder already holds that name — this is the studio
+   * naming a document nobody has named yet ("Sans titre 2", the title of an asset opened twice),
+   * and there is no one to ask. A name the USER typed is refused instead, by `rename`.
+   *
+   * Reads the index as `locate` has just left it, rather than walking the folder a second time.
+   */
+  const freshFile = (kind: DocumentKind, title: string): string => {
+    // Only the file names matter here — a free name is one no entry of the folder wears — so the
+    // key is handed over as the id it stands for and nothing reads it.
+    const taken = [...index].map(([key, fileName]) => ({ id: key, fileName }))
+    return join(folderPath(), documentFileName(nextFreeDocumentName(title, kind, taken), kind))
+  }
+
+  /**
    * Read behind whatever is writing the same path. A folder document is swapped in three moves,
    * and a read landing between two of them would see nothing there — the tab would take the
    * default, and the next ⌘S would write that over the document being saved.
    */
   async function readOne(id: string, kind: DocumentKind): Promise<DocumentFile | null> {
-    const file = fileOf(id, kind)
+    const file = await locate(id, kind)
 
     let document: DocumentFile
     try {
@@ -316,45 +436,33 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
   }
 
   return {
-    list: async () => {
-      const folder = join(projectPath(), DOCUMENTS_FOLDER)
+    list: walk,
 
-      let entries: string[]
-      try {
-        entries = await readdir(folder)
-      } catch (error) {
-        // A project that has never saved anything has no folder yet, and holds no document.
-        if (isMissing(error)) return []
-        throw error
-      }
+    read: (id, kind) => queued(id, () => readOne(id, kind)),
 
-      await sweep(folder, entries)
+    write: (id, kind, draft) =>
+      queued(id, async () => {
+        // A document already on disk keeps the file it is in — including one written before
+        // version 3, still under the uuid it was named after. Renaming those is the user's
+        // gesture, not something a save does behind them.
+        const located = await locate(id, kind)
+        const file = (await exists(located)) ? located : freshFile(kind, draft.title)
 
-      // One at a time rather than all at once: a folder of a few thousand documents opened in
-      // parallel runs the process out of file descriptors, and every failed read would come
-      // back as a document silently missing from the list.
-      const found: DocumentDescriptor[] = []
-      for (const entry of entries) {
-        const descriptor = await descriptorOf(folder, entry)
-        if (descriptor) found.push(descriptor)
-      }
-      return found
-    },
+        // Stamped here rather than taken from the draft: the renderer owns none of these, and
+        // an id from its side would be its word against the folder's.
+        const document = { ...draft, version: DOCUMENT_VERSION, kind, updatedAt: now(), id }
 
-    read: (id, kind) => queued(fileOf(id, kind), () => readOne(id, kind)),
-
-    write: (id, kind, draft) => {
-      const file = fileOf(id, kind)
-      const document = { ...draft, version: DOCUMENT_VERSION, kind, updatedAt: now() }
-      return queued(file, () =>
-        FOLDER_KINDS.has(kind) ? storeFolder(file, document) : store(file, document),
-      )
-    },
+        await (FOLDER_KINDS.has(kind) ? storeFolder(file, document) : store(file, document))
+        index.set(keyOf(id, kind), basename(file))
+      }),
 
     // `force`: closing a document that was never saved must not fail on a file that is absent.
     remove: async (id, kind) => {
-      const file = fileOf(id, kind)
-      await queued(file, () => rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) }))
+      await queued(id, async () => {
+        const file = await locate(id, kind)
+        await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
+        index.delete(keyOf(id, kind))
+      })
     },
   }
 }

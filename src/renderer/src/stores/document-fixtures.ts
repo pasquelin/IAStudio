@@ -1,4 +1,5 @@
 import { kindForWorkspace, type DocumentDescriptor } from '@shared/domain/document'
+import { documentFileName } from '@shared/domain/document-name'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { useDocuments } from './documents'
 
@@ -24,7 +25,13 @@ export function installDocuments(tabs: Record<string, WorkspaceId>, activeId: st
   for (const [documentId, workspace] of Object.entries(tabs)) {
     const kind = kindForWorkspace(workspace)
     if (!kind) throw new Error(`workspace "${workspace}" has no document kind`)
-    documents[documentId] = { id: documentId, kind, workspace, title: documentId }
+    documents[documentId] = {
+      id: documentId,
+      kind,
+      workspace,
+      title: documentId,
+      fileName: documentFileName(documentId, kind),
+    }
   }
 
   useDocuments.setState({ documents, activeId })

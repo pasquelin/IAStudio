@@ -3,6 +3,7 @@ import {
   type DocumentDescriptor,
   type DocumentKind,
 } from '@shared/domain/document'
+import { documentFileName } from '@shared/domain/document-name'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
 import i18next from 'i18next'
@@ -291,11 +292,18 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     // store neither has written to yet, and two tabs open called « Sans titre 1 ».
     const stored = of ? [] : ((await listed()) ?? [])
 
+    const title = of ? of.title : untitled(stored, get(), workspace)
+
     const document: DocumentDescriptor = {
       id: newId(),
       kind,
       workspace,
-      title: of ? of.title : untitled(stored, get(), workspace),
+      title,
+      // Where it WOULD go, nothing having been written yet. Not a second answer disagreeing with
+      // the disk — there is no file to disagree with — and the first save answers for good: it
+      // may land on a suffixed name if the folder meanwhile took this one, and `relist` reads
+      // back what the folder actually holds.
+      fileName: documentFileName(title, kind),
       ...(of ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 
