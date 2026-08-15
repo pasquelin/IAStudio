@@ -1,5 +1,5 @@
 import { mdiDotsHorizontal } from '@mdi/js'
-import { useCallback, useState, type KeyboardEvent } from 'react'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MenuButton } from '@/design/MenuButton'
 import { ResizeHandle } from '@/design/ResizeHandle'
@@ -16,6 +16,7 @@ import { clamp } from '@shared/numeric'
 import { cn } from '@/helpers/cn'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { isTyping } from '@/helpers/typing'
+import { InlineRename } from '@/panels/shared/InlineRename'
 import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
@@ -172,31 +173,23 @@ function TrackName({
   dimmed: boolean
 }) {
   const { t } = useTranslation()
-  const [editing, setEditing] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState(false)
 
-  const commit = (): void => {
-    if (editing !== null)
-      useSequences.getState().runCommand(documentId, renameTrack(track.id, editing))
-    setEditing(null)
-  }
-
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
-    // Stopped here: the strip binds bare letters, and typing a name must not split a clip.
-    event.stopPropagation()
-    if (event.key === 'Enter') commit()
-    if (event.key === 'Escape') setEditing(null)
-  }
-
-  if (editing !== null) {
+  if (renaming) {
     return (
-      <input
-        autoFocus
-        aria-label={t('timeline.rename')}
-        className="bg-surface text-text text-tiny w-full rounded-(--radius-sc-sm) px-1 outline-none"
-        value={editing}
-        onChange={event => setEditing(event.target.value)}
-        onKeyDown={onKeyDown}
-        onBlur={commit}
+      <InlineRename
+        value={track.name}
+        label={t('timeline.rename')}
+        // The name shares its row with the three toggles under it: measured on screen, the row
+        // holds 48px of content and the toggles alone take 28.
+        gauge="inline"
+        // Guarded, because the field commits the ORIGINAL name on Escape: without it an
+        // abandoned edit lands on the undo stack, and the next ⌘Z visibly does nothing.
+        onCommit={name => {
+          setRenaming(false)
+          if (name !== track.name)
+            useSequences.getState().runCommand(documentId, renameTrack(track.id, name))
+        }}
       />
     )
   }
@@ -205,7 +198,7 @@ function TrackName({
     <span
       {...TIP_RIGHT(t('timeline.renameHint'))}
       className={cn('text-tiny cursor-text truncate', dimmed ? 'text-muted' : 'text-text')}
-      onDoubleClick={() => setEditing(track.name)}
+      onDoubleClick={() => setRenaming(true)}
     >
       {track.name}
     </span>

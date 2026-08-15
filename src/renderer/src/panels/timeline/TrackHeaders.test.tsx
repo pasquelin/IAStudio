@@ -80,13 +80,16 @@ describe('TrackHeaders', () => {
     expect(canUndo(sequenceHistoryOf(useSequences.getState(), 'doc-1'))).toBe(true)
   })
 
-  it('keeps the old name when the edit is abandoned', async () => {
+  // The field commits the original name on Escape rather than nothing at all, so an abandoned
+  // edit that reached the command would cost a ⌘Z that undoes a rename nobody made.
+  it('keeps the old name when the edit is abandoned, and costs nothing to undo', async () => {
     headers()
 
     await userEvent.dblClick(screen.getByText('V1'))
     await userEvent.type(screen.getByLabelText('Nom de la piste'), 'discarded{Escape}')
 
     expect(trackOf('V1')?.name).toBe('V1')
+    expect(canUndo(sequenceHistoryOf(useSequences.getState(), 'doc-1'))).toBe(false)
   })
 
   it('follows the vertical scroll, so a row never drifts from the clips it names', () => {
