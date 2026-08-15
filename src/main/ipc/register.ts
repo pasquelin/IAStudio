@@ -20,12 +20,14 @@ import { registerSceneHandlers } from '@main/scene/export'
 import { registerExportHandlers } from '@main/export/folder'
 import { registerRenderHandlers } from '@main/render/handlers'
 import { registerUpdateHandlers } from '@main/update/handlers'
+import { registerMirrorWindow } from '@main/window/mirror'
 import { markSettingsPending, openSettingsWindow } from '@main/window/windows'
 import type { Services } from '@main/services'
 
 /** Single place where the IPC surface is wired. Registered once, before any window loads. */
 export function registerIpc(services: Services): void {
   registerWindowControls()
+  registerMirrorWindow()
   registerContextMenu()
   registerMenuHandlers()
   registerDiagnosticsHandlers(() => services.journal)

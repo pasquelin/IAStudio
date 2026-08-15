@@ -182,7 +182,7 @@
       "shell.render": "Une partie de l’interface n’a pas pu s’afficher",
       "shell.layout": "L’agencement enregistré d’un espace était illisible",
       "shell.menu": "Un menu contextuel n’a pas pu être ouvert",
-      "sequence.fullScreen": "Le moniteur n’a pas pu passer en plein écran",
+      "sequence.mirror": "La fenêtre de retour n’a pas pu s’ouvrir",
       "scene": {
         "render": "Le rendu vidéo a échoué"
       }
@@ -797,10 +797,12 @@
     "rewind": "Retour au début",
     "sourceRole": "Le clip choisi, tel qu’il est avant montage",
     "programRole": "Le montage entier, tel qu’il sera exporté",
-    "large": "Plein écran",
-    "largeHint": "Montre l’image seule sur tout l’écran, sans rien du studio autour",
-    "exitLarge": "Quitter le plein écran",
-    "exitLargeHint": "Revient au studio. La touche Échap le fait aussi"
+    "mirror": "Fenêtre de retour",
+    "mirrorHint": "Ouvre le montage dans une fenêtre à part, à poser sur un autre écran"
+  },
+  "mirror": {
+    "title": "Retour vidéo",
+    "waiting": "En attente du studio. Ouvrez un montage pour le voir ici."
   },
   "audio": {
     "noAsset": "Aucun son ouvert. Déposez une prise ici, ou double-cliquez sur un asset audio.",
@@ -1436,9 +1438,9 @@
       "title": "Lire / Pause",
       "help": "Lance la lecture du montage, ou l’arrête là où elle en est. Relancer repart d’où l’on s’était arrêté."
     },
-    "sequenceFullScreen": {
-      "title": "Plein écran",
-      "help": "Montre le moniteur Programme seul sur tout l’écran, pour juger le montage ou le présenter. Échap revient au studio."
+    "sequenceMirror": {
+      "title": "Fenêtre de retour",
+      "help": "Ouvre le montage dans une fenêtre à part, à poser sur un second écran. Elle suit le studio image par image, sans le son, et se ferme comme une fenêtre ordinaire."
     },
     "sequenceSplit": {
       "title": "Couper le clip",

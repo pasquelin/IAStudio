@@ -179,6 +179,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onEvent: noSubscription,
       ...overrides.dictation,
     },
+    mirror: {
+      open: () => Promise.resolve(),
+      ...overrides.mirror,
+    },
     window: {
       toggleFullScreen: () => Promise.resolve(),
       state: () => Promise.resolve({ active: true, fullScreen: false, maximized: false }),

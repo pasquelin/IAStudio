@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TimelineEngineDeps } from '@/engines/timeline/TimelineEngine'
 import { sequenceWith } from '@/engines/timeline/timeline-fixtures'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { Monitor } from './Monitor'
 
 /**
@@ -48,6 +49,7 @@ describe('Monitor', () => {
         sequence={sequenceWith([])}
         onTime={onTime}
         placeholder={placeholder ? <p>{placeholder}</p> : undefined}
+        program
       />,
     )
 
@@ -95,37 +97,38 @@ describe('Monitor', () => {
     expect(screen.getByText(/Le montage entier/)).toBeInTheDocument()
   })
 
-  describe('full screen', () => {
-    it('asks the platform for the picture alone, not for the transport around it', async () => {
-      const request = vi.fn(() => Promise.resolve())
-      Element.prototype.requestFullscreen = request
+  /**
+   * A window and not this element blown up, and the measurement is why: asked on the picture,
+   * `requestFullscreen()` neither resolved nor rejected in this Electron window — nothing came
+   * back from the platform, so there was not even a refusal to report.
+   */
+  describe('the video return', () => {
+    it('asks the main process for the window, which is the one thing it cannot open itself', async () => {
+      const open = vi.fn(() => Promise.resolve())
+      installFakeBridge({ mirror: { open } })
       mounted()
 
-      await userEvent.click(screen.getByRole('button', { name: /Plein écran/ }))
+      await userEvent.click(screen.getByRole('button', { name: /Fenêtre de retour/ }))
 
-      expect(request).toHaveBeenCalledTimes(1)
-      // The element that asked is the one holding the canvas, so the studio's furniture stays out.
-      const asked = request.mock.instances[0]
-      expect(asked).toBeInstanceOf(HTMLElement)
-      expect((asked as HTMLElement).querySelector('canvas, div')).not.toBeNull()
+      expect(open).toHaveBeenCalledTimes(1)
     })
 
     /**
-     * Escape leaves full screen without passing through this component, and so does the platform's
-     * own chrome. A boolean of our own would then offer to leave a full screen nobody is in.
+     * The source shows the take being trimmed; a return on it would be the first monitor's
+     * picture on the second screen. `keyboard` marks the program, and marks it once per tab.
      */
-    it('reads the state off the document rather than remembering its own', async () => {
-      Element.prototype.requestFullscreen = vi.fn(() => Promise.resolve())
-      mounted()
-      const picture = screen.getByRole('button', { name: /Plein écran/ })
-      await userEvent.click(picture)
+    it('is offered by the program monitor alone', () => {
+      render(
+        <Monitor
+          owner="doc-1:source"
+          title="Source"
+          role="Le clip choisi"
+          sequence={sequenceWith([])}
+          onTime={onTime}
+        />,
+      )
 
-      act(() => {
-        document.dispatchEvent(new Event('fullscreenchange'))
-      })
-
-      // Nothing entered full screen in jsdom, so the button still offers to.
-      expect(screen.getByRole('button', { name: /Plein écran/ })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Fenêtre de retour/ })).not.toBeInTheDocument()
     })
   })
 })

@@ -164,6 +164,8 @@ export type Channels = {
   windowState: 'window:state'
   windowLanguage: 'window:language'
   windowWorkspace: 'window:workspace'
+  /** Opens the video return, or reveals the one already open. See `MIRROR_ROUTE`. */
+  mirrorOpen: 'mirror:open'
 
   menuPopup: 'menu:popup'
 
@@ -288,6 +290,7 @@ export const CHANNELS: Channels = {
   windowState: 'window:state',
   windowLanguage: 'window:language',
   windowWorkspace: 'window:workspace',
+  mirrorOpen: 'mirror:open',
 
   menuPopup: 'menu:popup',
 
@@ -449,9 +452,9 @@ export type LogScope =
   // A menu the system refused to draw. It leaves nothing on screen to look at — no surface, no
   // half-open flyout — so a right-click that does nothing at all is the only symptom there is.
   | 'shell.menu'
-  // The Fullscreen API refuses without a user gesture, and answers with a rejected promise rather
-  // than an exception: dropped, a monitor that stays exactly where it is is the whole symptom.
-  | 'sequence.fullScreen'
+  // The video return is a WINDOW, and a window the main process refuses to open leaves nothing
+  // on screen to look at — the button simply appears not to work.
+  | 'sequence.mirror'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -485,7 +488,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'shell.render',
   'shell.layout',
   'shell.menu',
-  'sequence.fullScreen',
+  'sequence.mirror',
 ]
 
 /**
@@ -1044,6 +1047,16 @@ export type StudioBridge = {
       tools: readonly ToolId[],
       checked: readonly MenuCheck[],
     ) => Promise<void>
+  }
+  /**
+   * The video return — one window, revealed if it already exists.
+   *
+   * Nothing of the edit travels here: what the return SHOWS is published straight from one
+   * renderer to the other, since every window of the studio runs the same bundle. This side only
+   * owns what only the main process can do, which is to open a window.
+   */
+  mirror: {
+    open: () => Promise<void>
   }
   menu: {
     /**

@@ -566,10 +566,13 @@ body,
 }
 
 /*
- * What the picture sits on once it fills the screen. The monitor keeps `chassis` inside the
- * studio, where the panel it floats in is what says "this is a surface" — full screen there is
- * no panel, and a dark grey field around a film is the one thing a room notices. Chromium paints
- * the layer behind it too, hence the backdrop: without it the page shows through at the edges.
+ * What a picture sits on once it fills the screen — the video return put on a second display and
+ * filled from the window menu, and anything else a viewer takes full screen later.
+ *
+ * The monitor keeps `chassis` inside the studio, where the panel around it is what says "this is
+ * a surface". Full screen there is no panel, and a dark grey field around a film is the one thing
+ * a room notices. Chromium paints the layer behind it too, hence the backdrop: without it the
+ * page shows through at the edges.
  */
 :fullscreen,
 :fullscreen::backdrop {

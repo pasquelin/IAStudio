@@ -120,6 +120,8 @@ type ChannelMethod = {
   [CHANNELS.windowLanguage]: StudioBridge['window']['language']
   [CHANNELS.windowWorkspace]: StudioBridge['window']['setWorkspace']
 
+  [CHANNELS.mirrorOpen]: StudioBridge['mirror']['open']
+
   [CHANNELS.menuPopup]: StudioBridge['menu']['popup']
 
   [CHANNELS.updateState]: StudioBridge['updates']['state']
