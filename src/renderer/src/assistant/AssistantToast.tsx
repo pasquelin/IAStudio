@@ -1,11 +1,8 @@
-import { mdiCheckCircleOutline, mdiClose, mdiAlertOutline } from '@mdi/js'
+import { mdiCheckCircleOutline, mdiAlertOutline } from '@mdi/js'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
-import { UiIcon } from '@/design/UiIcon'
-import { MENU_SURFACE } from '@/design/styles'
-import { cn } from '@/helpers/cn'
-import { HINT_TOP, TIP_LEFT } from '@/helpers/tooltip'
+import { Toast, ToastStack } from '@/design/Toast'
+import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant } from '@/stores/assistant'
 
 /**
@@ -61,20 +58,16 @@ export function AssistantToast() {
   if (!showing) return null
 
   return (
-    <div
-      // Where `ActivityToasts` sits, and above it: a failure is the one thing that must not be
-      // pushed off screen by an answer, so this takes the row nearer the status line.
-      className="fixed right-3 bottom-9 z-50 flex w-80 flex-col gap-1.5"
-      role="status"
-      aria-live="polite"
-    >
-      <div className={cn(MENU_SURFACE, 'static flex-row items-start gap-2 p-2')}>
-        <UiIcon
-          path={lost ? mdiAlertOutline : mdiCheckCircleOutline}
-          size={14}
-          className={cn('mt-px shrink-0', lost ? 'text-warning' : 'text-success')}
-        />
-
+    <ToastStack>
+      <Toast
+        icon={lost ? mdiAlertOutline : mdiCheckCircleOutline}
+        tone={lost ? 'text-warning' : 'text-success'}
+        // The activity toasts' own word for the same gesture: one label, so a reader meets the
+        // same button twice rather than two that differ by a synonym.
+        dismissLabel={t('activity.dismiss')}
+        dismissHint={t('assistant.dismissHint')}
+        onDismiss={() => useAssistant.getState().markSeen()}
+      >
         <button
           type="button"
           {...HINT_TOP(t('assistant.reviewHint'))}
@@ -89,18 +82,7 @@ export function AssistantToast() {
               gets wrong. */}
           <span className="text-muted text-mini block truncate italic">{said}</span>
         </button>
-
-        <ToolButton
-          icon={mdiClose}
-          // The activity toasts' own word for the same gesture: one label, so a reader meets the
-          // same button twice rather than two that differ by a synonym.
-          label={t('activity.dismiss')}
-          description={t('assistant.dismissHint')}
-          tooltip={TIP_LEFT}
-          variant="header"
-          onClick={() => useAssistant.getState().markSeen()}
-        />
-      </div>
-    </div>
+      </Toast>
+    </ToastStack>
   )
 }
