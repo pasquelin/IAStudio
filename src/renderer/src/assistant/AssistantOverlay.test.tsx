@@ -197,6 +197,33 @@ describe('the assistant modal', () => {
   })
 
   /**
+   * The same, for a session this window opened ITSELF — its own microphone, where `listening` is
+   * never set. Measured on screen rather than deduced: the case above was green while this one
+   * left the microphone running, and the status line quietly said "dictating to the field".
+   */
+  it('closes a microphone it opened itself, too', async () => {
+    const stop = vi.fn(() => Promise.resolve())
+    useDictation.setState({ stop, state: 'listening' })
+    render(<AssistantOverlay />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fermer' }))
+
+    expect(stop).toHaveBeenCalled()
+  })
+
+  // Nothing to close, so nothing crosses to the main process: every dismissal would otherwise
+  // spend a round trip ending a session that was never running.
+  it('says nothing to the microphone when none was open', async () => {
+    const stop = vi.fn(() => Promise.resolve())
+    useDictation.setState({ stop, state: 'idle' })
+    render(<AssistantOverlay />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fermer' }))
+
+    expect(stop).not.toHaveBeenCalled()
+  })
+
+  /**
    * A microphone that never opened — the model still to fetch, a refused device — must not leave
    * the claim standing: every later sentence dictated into a field would come here instead, and
    * nothing on screen would explain why.

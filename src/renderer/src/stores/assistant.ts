@@ -45,6 +45,16 @@ type AssistantState = {
    */
   listen: () => void
   stopListening: () => void
+  /**
+   * The last turn the person has actually SEEN, by id.
+   *
+   * Because one now talks to the studio without its window up: the sentence goes, something
+   * happens on screen, and nothing said it had been taken, was being worked on, or came back
+   * empty. The status line reads this to know whether it still has something to report — and
+   * showing the window is what marks it read, as dismissing a toast is.
+   */
+  seen: number
+  markSeen: () => void
   /** Sends one sentence, then runs what came back, in order. */
   say: (utterance: string) => Promise<void>
   /** Asks the person, on screen. Registered as the studio's confirmer by the modal. */
@@ -76,8 +86,16 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   busy: false,
   asked: null,
   spent: 0,
+  seen: 0,
 
-  show: () => set({ open: true }),
+  // Showing IS reading: the thread is right there, and leaving an indicator reporting a turn the
+  // person is looking at would be one that never goes out.
+  show: () => set(state => ({ open: true, seen: lastSeen(state) })),
+
+  // Read off the turns rather than off `lastTurnId`, which counts what this module has ALLOCATED
+  // rather than what the window holds: a state restored from anywhere else leaves the counter at
+  // zero, so every turn stayed unread for ever and the reminder never went away.
+  markSeen: () => set(state => ({ seen: lastSeen(state) })),
 
   hide: () => {
     // Closing IS declining. A question left unanswered would hold `busy` for the rest of the
@@ -115,7 +133,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
         return
       }
 
-      set({ open: true, asked: { request, answer: resolve } })
+      set(state => ({ open: true, seen: lastSeen(state), asked: { request, answer: resolve } }))
     }),
 
   answer: granted => {
@@ -207,6 +225,11 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
  */
 export function assistantHearsSpeech(state: Pick<AssistantState, 'open' | 'listening'>): boolean {
   return state.open || state.listening
+}
+
+/** The turn a reader would have taken in by looking — the last one there is. */
+function lastSeen(state: Pick<AssistantState, 'turns'>): number {
+  return state.turns.at(-1)?.id ?? 0
 }
 
 /** Rewrites one turn in place, leaving the others as they were. */

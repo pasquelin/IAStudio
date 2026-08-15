@@ -1,20 +1,9 @@
-import { useTranslation } from 'react-i18next'
 import type { ReactNode } from 'react'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { DictationButton } from './DictationButton'
+import { Heard } from './Heard'
 import { useDictation } from './useDictation'
-
-export type DictationFieldProps = {
-  /**
-   * What is said while nothing has been heard yet, in place of "Listening…".
-   *
-   * For the one host whose words do not go to the caret: the assistant claims them while it is
-   * up, and a microphone that only says it is open leaves "to whom" unanswered. Every other site
-   * dictates into the field beside it, where the question does not arise.
-   */
-  listeningLabel?: string
-}
 
 /**
  * The microphone, and the words as they are still being weighed.
@@ -25,12 +14,10 @@ export type DictationFieldProps = {
  * Only the settled text is inserted, at the caret.
  *
  * Meant to sit under any field. It holds nothing about the field it sits under: what a settled
- * sentence does is decided by `useDictation`, which puts it where the caret is — or hands it to
- * whoever claimed it.
+ * sentence does is decided by `useDictation`, which puts it where the caret is.
  */
-export function DictationField({ listeningLabel }: DictationFieldProps = {}) {
-  const { t } = useTranslation()
-  const { partial, isListening, enabled } = useDictation()
+export function DictationField() {
+  const { isListening, enabled } = useDictation()
 
   if (!enabled) return null
 
@@ -40,17 +27,7 @@ export function DictationField({ listeningLabel }: DictationFieldProps = {}) {
         <DictationButton variant="header" tooltip={TIP_BOTTOM} />
       </div>
 
-      {/*
-        Not a live region. The hypothesis is replaced about every 700 ms and each one is the
-        whole sentence so far, never a delta: announced politely, they queue up and the reader
-        falls further behind the voice with every pass. What settles goes into the field, which
-        a screen reader follows on its own.
-      */}
-      {isListening && (
-        <p aria-live="off" className="text-muted text-tiny italic">
-          {partial || listeningLabel || t('dictation.listening')}
-        </p>
-      )}
+      {isListening && <Heard className="text-tiny" />}
     </div>
   )
 }

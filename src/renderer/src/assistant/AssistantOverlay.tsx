@@ -13,13 +13,14 @@ import { Spinner } from '@/design/Spinner'
 import { ToolButton } from '@/design/ToolButton'
 import { CONTROL, FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { HINT_TOP, TIP_BOTTOM, TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_TOP, TIP_BOTTOM, TIP_LEFT, TIP_TOP } from '@/helpers/tooltip'
 import { useDismiss } from '@/hooks/useDismiss'
 import { assistantHearsSpeech, useAssistant } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { formatUnits } from '@/usage/format'
-import { DictationField } from '@/dictation/DictationField'
+import { DictationButton } from '@/dictation/DictationButton'
+import { Heard } from '@/dictation/Heard'
 import { registerDictationTarget } from '@/dictation/destination'
 import type { ConfirmRequest } from './confirm'
 import { registerConfirmer } from './confirm'
@@ -48,11 +49,12 @@ export function AssistantOverlay() {
   const hide = useAssistant(state => state.hide)
   const listening = useAssistant(state => state.listening)
   const hears = useAssistant(assistantHearsSpeech)
+  const micOpen = useDictation(store => store.state === 'listening')
   const model = useSettings(state => state.settings.assistant.model)
 
   const surface = useRef<HTMLDivElement>(null)
   const thread = useRef<HTMLOListElement>(null)
-  const field = useRef<HTMLInputElement>(null)
+  const field = useRef<HTMLTextAreaElement>(null)
   const [draft, setDraft] = useState('')
 
   // For as long as the shell is up, and only from here: a confirmation shown where nobody is
@@ -93,6 +95,26 @@ export function AssistantOverlay() {
   }, [hears])
 
   /**
+   * And the session ends with the claim, whichever button opened it.
+   *
+   * Its own effect rather than a line inside the cleanup above, because the two answer different
+   * questions and one of them is conditional: giving the words back is unconditional, closing a
+   * microphone is not — a window dismissed while nothing was being said has none to close, and
+   * `stop()` would still cross to the main process on every dismissal.
+   *
+   * Measured on screen, not deduced: dictating from the window's own microphone leaves `listening`
+   * false, so the effect below released nothing and the next sentence went to the caret with the
+   * status line quietly changing to "dictating to the field".
+   */
+  useEffect(() => {
+    if (!hears) return
+
+    return () => {
+      if (useDictation.getState().state === 'listening') void useDictation.getState().stop()
+    }
+  }, [hears])
+
+  /**
    * The microphone, for the entry that talks to the studio without showing this window.
    *
    * Opened here rather than by the button, so it can only open once the effect above has claimed
@@ -117,7 +139,11 @@ export function AssistantOverlay() {
         }
       })
 
-    return () => void useDictation.getState().stop()
+    // Guarded like the one above, and for the second case it does not cover: giving the words
+    // back while the window STAYS open leaves `hears` true, so nothing else would end the session.
+    return () => {
+      if (useDictation.getState().state === 'listening') void useDictation.getState().stop()
+    }
   }, [listening])
 
   useEffect(() => {
@@ -202,29 +228,44 @@ export function AssistantOverlay() {
 
         {asked && <Question request={asked.request} />}
 
-        {/* The microphone the studio hangs under every long field, and the running hypothesis
-            under it. The label is what makes it this window's: it says where the words are going,
-            which "Listening…" does not — the same microphone dictates into a prompt. */}
-        <DictationField listeningLabel={t('assistant.listening')} />
+        {/* The running hypothesis, above the field it will land in. The label is what makes it
+            this window's: it says where the words are going, which "Listening…" does not — the
+            same microphone dictates into a prompt. */}
+        {micOpen && <Heard label={t('assistant.listening')} className="shrink-0 px-2 text-xs" />}
 
         <form
-          className="flex shrink-0 items-center gap-2"
+          className="flex shrink-0 items-end gap-2"
           onSubmit={event => {
             event.preventDefault()
             send()
           }}
         >
-          <input
+          {/* A textarea rather than a line: one SPEAKS to this window, and a spoken request runs
+              long — dictated into a single line it scrolled sideways under the caret, with the
+              beginning of one's own sentence out of sight. */}
+          <textarea
             ref={field}
-            type="text"
+            rows={2}
             value={draft}
             placeholder={t('assistant.placeholder')}
             // While a plan is running: a second sentence would interleave two plans over one
             // generator form, and the question on screen belongs to the first of them.
             disabled={busy}
             onChange={event => setDraft(event.target.value)}
-            className={cn(FIELD, 'min-w-0 flex-1 text-xs')}
+            // Enter still sends, as it did when this was one line: a textarea's own default would
+            // have made the keyboard path to sending disappear. Shift+Enter is the new line.
+            onKeyDown={event => {
+              if (event.key !== 'Enter' || event.shiftKey) return
+              event.preventDefault()
+              send()
+            }}
+            className={cn(FIELD, 'h-auto min-w-0 flex-1 resize-none py-1 text-xs')}
           />
+
+          {/* Beside the button it shares a job with: this pair is "how the sentence gets in",
+              and the microphone hovering above the field read as belonging to the thread. */}
+          <DictationButton variant="header" tooltip={TIP_TOP} />
+
           <Button
             type="submit"
             variant="primary"

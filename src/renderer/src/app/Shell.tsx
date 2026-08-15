@@ -10,6 +10,8 @@ import { showWorkspace } from './dockview-api'
 import { guardUnsavedWork } from './unsaved-guard'
 import { AssistantEntries } from '@/assistant/AssistantEntries'
 import { AssistantOverlay } from '@/assistant/AssistantOverlay'
+import { AssistantStatus } from '@/assistant/AssistantStatus'
+import { AssistantToast } from '@/assistant/AssistantToast'
 import { DictationStatus } from '@/dictation/DictationStatus'
 import { Breadcrumb } from './Breadcrumb'
 import { Footer } from './Footer'
@@ -107,8 +109,11 @@ export function Shell() {
         left={<Breadcrumb />}
         right={
           <>
-            {/* First of the indicators: a live microphone outranks a download. */}
+            {/* First of the indicators: a live microphone outranks a download. The assistant
+                follows it, because the two are read as one sentence — what is being heard, then
+                what became of it. */}
             <DictationStatus />
+            <AssistantStatus />
             <UpdateStatus />
             <JobsStatus />
             <ActivityStatus />
@@ -116,6 +121,7 @@ export function Shell() {
         }
       />
       <ActivityToasts />
+      <AssistantToast />
       {/* Over everything, and mounted whether or not it shows: it is the window's confirmer, and
           an action that needs a yes must be able to raise one from a closed modal. */}
       <AssistantOverlay />

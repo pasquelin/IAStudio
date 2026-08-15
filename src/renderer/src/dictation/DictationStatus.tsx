@@ -6,7 +6,7 @@ import { STATUS_BUTTON } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { formatBytes } from '@/helpers/format'
 import { assistantHearsSpeech, useAssistant } from '@/stores/assistant'
-import { useDictation as useStore } from '@/stores/dictation'
+import { Heard } from './Heard'
 import { LevelMeter } from './LevelMeter'
 import { useDictation } from './useDictation'
 import { HINT_TOP } from '@/helpers/tooltip'
@@ -121,30 +121,9 @@ function Listening() {
         {toAssistant ? t('assistant.listening') : t('dictation.active')}
       </span>
       <LevelMeter />
-      <Heard />
-    </span>
-  )
-}
-
-/**
- * The sentence as it is still being weighed — the proof that it is hearing, which no indicator
- * can give.
- *
- * A component of its own for the reason `LevelMeter` is one: the hypothesis is replaced several
- * times a second, and subscribing to it one level up would re-render the whole status line at the
- * speed of speech. Capped and truncated because the line has no width to give — four other
- * indicators share its end.
- *
- * Not a live region: each hypothesis is the whole sentence so far rather than a delta, so a
- * reader announcing them politely falls further behind the voice with every pass.
- */
-function Heard() {
-  const heard = useStore(store => store.partial)
-  if (heard === '') return null
-
-  return (
-    <span aria-live="off" className="text-muted max-w-64 truncate italic">
-      {heard}
+      {/* Capped and truncated: the line has no width to give — four other indicators share its
+          end, and a spoken sentence has no length limit. */}
+      <Heard className="max-w-64 truncate" />
     </span>
   )
 }
