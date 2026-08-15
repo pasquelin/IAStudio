@@ -338,7 +338,7 @@ de se charger.
 ### Un registre d’actions, deux lecteurs
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) déclare ce que le studio sait faire sur demande —
-dix actions, leurs champs, et **ce que chacune engage** (`none`, `asset`, `credits`). Il a deux
+onze actions, leurs champs, et **ce que chacune engage** (`none`, `asset`, `credits`). Il a deux
 lecteurs, et **aucun des deux ne décide** :
 
 - **l’assistant**, dans la fenêtre, qui le liste à son modèle comme un vocabulaire ;
