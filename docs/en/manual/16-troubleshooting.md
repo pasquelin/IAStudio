@@ -638,7 +638,7 @@ Three checks, in this order:
 application** — and it is what to attach when you ask for help. Every failure leaves a line there,
 with its time. **When the studio has a technical detail to give**, it writes it in small type under
 the message: that is the case for drawing failures, for refusals from the API and for failed
-uploads to the library. Project failures carry none — the path you picked in a dialog would teach
+uploads to the library. Project failures carry none — the path you picked in a dialogue would teach
 nothing more. An open project keeps the line: it is written into the project and can be read back
 later.
 
