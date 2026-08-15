@@ -18,6 +18,7 @@ import { paintBandEnd } from './band-end'
 import { paintRuler as paintBandRuler, readRulerStyle } from './ruler'
 import {
   clipEnd,
+  hasTrackOfKind,
   sequenceDuration,
   type Clip,
   type SequenceState,
@@ -45,16 +46,20 @@ const LINK_GLYPHS: Record<'tied' | 'alone', string> = {
 }
 
 /**
- * Whether a pair can exist on this montage at all — which is what decides that the mark above is
+ * Whether a pair can still HOLD on this montage — which is what decides that the mark above is
  * worth drawing.
  *
  * A `linkId` is only ever laid by `insert.ts`, on the two halves of a rush that has both a picture
- * and a sound. A montage with no picture track can therefore never hold one, and the Audio
- * workspace has none by construction: every clip there wore the broken link, forever, saying the
- * same thing about all of them. A mark that cannot vary is not a state, it is decoration.
+ * and a sound. With no picture row there is no half to travel with, and the Audio workspace has
+ * none by construction: every clip there wore the broken link, forever, saying the same thing
+ * about all of them. A mark that cannot vary is not a state, it is decoration.
+ *
+ * A sound clip CAN outlive its picture — `removeTrack` takes a row without clearing the ids of
+ * the clips left behind — and its `linkId` then names a half that is gone. Drawing nothing is the
+ * honest answer there too: the full link would promise a pair that no longer exists.
  */
 function pairsPossible(state: SequenceState): boolean {
-  return state.tracks.some(track => track.kind === 'video')
+  return hasTrackOfKind(state, 'video')
 }
 
 /** Which fill a row's clips take. Keyed by kind, so a third one cannot be added without one. */
@@ -253,6 +258,13 @@ function paintEdgeBars(
   context.fillRect(right - EDGE_BAR_WIDTH, barTop, EDGE_BAR_WIDTH, barHeight)
 }
 
+/**
+ * What every clip of one paint shares — read once for the strip, where the nine arguments above
+ * vary per clip. `linkable` is derived from the montage rather than taken from `PaintOptions`:
+ * that one is the caller's, and a caller has no business claiming a montage holds pairs.
+ */
+type ClipPaint = { palette: Palette; options: PaintOptions; linkable: boolean }
+
 function paintClip(
   context: CanvasRenderingContext2D,
   clip: Clip,
@@ -263,10 +275,8 @@ function paintClip(
   top: number,
   height: number,
   selected: boolean,
-  palette: Palette,
-  options: PaintOptions,
   kind: TrackKind,
-  linkable: boolean,
+  { palette, options, linkable }: ClipPaint,
 ): void {
   const boxTop = top + CLIP_INSET
   const boxHeight = height - CLIP_INSET * 2 - 1
@@ -347,9 +357,9 @@ export function paintTimeline(
   context.font = palette.clipFont
   context.textBaseline = 'top'
 
-  // Read once for the whole strip rather than per clip: it answers about the MONTAGE, and asking
-  // it five hundred times a frame would walk the tracks five hundred times.
-  const linkable = pairsPossible(state)
+  // Read once for the whole strip rather than per clip: `linkable` answers about the MONTAGE, and
+  // asking it five hundred times a frame would walk the tracks five hundred times.
+  const shared: ClipPaint = { palette, options, linkable: pairsPossible(state) }
 
   for (const { track, offset } of trackRows(state)) {
     const top = RULER_HEIGHT + offset - viewport.scrollTop
@@ -371,10 +381,8 @@ export function paintTimeline(
         top,
         track.height,
         state.selectedId === clip.id,
-        palette,
-        options,
         track.kind,
-        linkable,
+        shared,
       )
     }
   }

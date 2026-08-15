@@ -1,6 +1,7 @@
 import { hasSound, mediaDuration, type Asset, type AssetType } from '@shared/domain/asset'
 import { newId } from '@/helpers/ids'
 import {
+  hasTrackOfKind,
   makeClip,
   playsThrough,
   snapToFrame,
@@ -83,7 +84,7 @@ export function trackForAsset(state: SequenceState, asset: Asset | null): Track 
  * behind that decision. A sound is welcome in either — every montage plays one.
  */
 function opensKind(state: SequenceState, kind: TrackKind): boolean {
-  return kind === 'audio' || state.tracks.some(track => track.kind === 'video')
+  return kind === 'audio' || hasTrackOfKind(state, 'video')
 }
 
 /**

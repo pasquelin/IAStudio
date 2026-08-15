@@ -1,8 +1,10 @@
 /**
- * The graduated strip above a band, painted the same way for a montage and for a scene.
+ * The graduated strip above a band, painted the same way for a montage, for a scene, and for the
+ * programme monitor of the Audio workspace.
  *
- * It takes a style rather than reading tokens itself: each band caches its own palette, and a
- * second `getComputedStyle` per paint is the frame budget — see `painter.ts`.
+ * `paintRuler` takes its style as an argument, so a surface with a palette of its own could hand
+ * it another; `readRulerStyle` is the one every surface actually uses, memoised so that reading
+ * the tokens costs one `getComputedStyle` per theme rather than one per paint.
  */
 import { frameDuration, SECOND, type Us } from '@shared/domain/time'
 import { memoPalette, rootColour, rootFont } from '@/engines/core/palette'
@@ -22,12 +24,11 @@ const RULER_FAMILY = 'ui-monospace, monospace'
 const RULER_SIZE = '10px'
 
 /**
- * The ruler's own inks, read once per theme rather than per paint — `memoPalette` is what keeps
- * `getComputedStyle` out of the frame budget, and it is why `paintRuler` takes a style instead of
- * reading tokens itself.
+ * The ruler's own inks, read once per theme rather than per paint.
  *
- * Shared by every surface that graduates time: the strip, and the programme monitor above it.
- * Two copies of these four values is two grids for one eye to reconcile.
+ * Shared by every surface that graduates time — the montage strip, the scene's dope sheet, the
+ * programme monitor. These four values stood in three copies, and three copies is three grids
+ * for one eye to reconcile.
  */
 export const readRulerStyle = memoPalette((): RulerStyle => ({
   background: rootColour('--color-chassis'),
