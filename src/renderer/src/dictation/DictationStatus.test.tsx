@@ -24,7 +24,7 @@ function show(
 beforeEach(() => {
   installFakeBridge()
   useSettings.setState({ settings: DEFAULT_SETTINGS })
-  useAssistant.setState({ open: false, listening: false })
+  useAssistant.setState({ open: false })
   useDictation.setState({ state: 'idle', partial: '', failure: null, download: null })
 })
 
@@ -44,7 +44,7 @@ describe('what dictation says to the whole application', () => {
   })
 
   it('says the words are going to the assistant when the assistant has claimed them', () => {
-    useAssistant.setState({ listening: true })
+    useAssistant.setState({ open: true })
     show('listening')
 
     expect(screen.getByRole('status')).toHaveTextContent('L’assistant vous écoute')

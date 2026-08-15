@@ -15,7 +15,7 @@ import { CONTROL } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP, TIP_LEFT, TIP_TOP } from '@/helpers/tooltip'
 import { useDismiss } from '@/hooks/useDismiss'
-import { assistantHearsSpeech, useAssistant } from '@/stores/assistant'
+import { useAssistant } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { formatUnits } from '@/usage/format'
@@ -47,8 +47,6 @@ export function AssistantOverlay() {
   const asked = useAssistant(state => state.asked)
   const spent = useAssistant(state => state.spent)
   const hide = useAssistant(state => state.hide)
-  const listening = useAssistant(state => state.listening)
-  const hears = useAssistant(assistantHearsSpeech)
   const micOpen = useDictation(store => store.state === 'listening')
   const model = useSettings(state => state.settings.assistant.model)
 
@@ -85,7 +83,7 @@ export function AssistantOverlay() {
    * two entries exist to remove.
    */
   useEffect(() => {
-    if (!hears) return
+    if (!open) return
 
     return registerDictationTarget(text => {
       // While a plan is running the assistant takes no new sentence — but the words were spoken,
@@ -99,63 +97,24 @@ export function AssistantOverlay() {
 
       void useAssistant.getState().say(text)
     })
-  }, [hears])
+  }, [open])
 
   /**
-   * And the session ends with the claim, whichever button opened it.
+   * And the session ends with the claim.
    *
    * Its own effect rather than a line inside the cleanup above, because the two answer different
    * questions and one of them is conditional: giving the words back is unconditional, closing a
    * microphone is not — a window dismissed while nothing was being said has none to close, and
    * `stop()` would still cross to the main process on every dismissal.
    *
-   * Measured on screen, not deduced: dictating from the window's own microphone leaves `listening`
-   * false, so the effect below released nothing and the next sentence went to the caret with the
-   * status line quietly changing to "dictating to the field".
+   * Measured on screen, not deduced: closing the window over a live microphone used to leave it
+   * running, and the next sentence went to the caret with the status line quietly changing to
+   * "dictating to the field".
    */
   useEffect(() => {
-    if (!hears) return
+    if (!open) return
     return endSession
-  }, [hears])
-
-  /**
-   * The microphone, for the entry that talks to the studio without showing this window.
-   *
-   * Opened here rather than by the button, so it can only open once the effect above has claimed
-   * the words. The cleanup is the other half of that: it is what closes the microphone when the
-   * window is dismissed mid-sentence, since `hide` clears `listening` along with `open`.
-   *
-   * Nothing here when the words are dictated INTO the open window — `DictationField` below owns
-   * that session, and its button is what ends it.
-   */
-  useEffect(() => {
-    if (!listening) return
-
-    void useDictation
-      .getState()
-      .start()
-      // A microphone that never opened — the model still to fetch, a refused device — must not
-      // leave the claim standing: every later sentence dictated into a field would come here
-      // instead, and nothing on screen would explain why.
-      .then(() => {
-        if (useDictation.getState().state !== 'listening') {
-          useAssistant.getState().stopListening()
-        }
-      })
-
-    /**
-     * The second case the effect above does not cover: giving the words back while the window
-     * STAYS open leaves `hears` true, so nothing else would end the session.
-     *
-     * Unguarded here, where `endSession` checks first, and the difference is a race: `start` above
-     * is still crossing to the main process, so the store's `state` is not `listening` YET. Guarded
-     * on it, a listen cancelled inside that window closed nothing, the flight finished, and it left
-     * a live microphone no effect referenced any more — recording light on, every later `start`
-     * returning early. `stop` bumps the session counter synchronously, which is what calls that
-     * flight back.
-     */
-    return () => void useDictation.getState().stop()
-  }, [listening])
+  }, [open])
 
   useEffect(() => {
     if (open) field.current?.focus()

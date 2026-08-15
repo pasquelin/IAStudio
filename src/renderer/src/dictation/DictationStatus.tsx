@@ -5,7 +5,7 @@ import { ProgressBar } from '@/design/ProgressBar'
 import { STATUS_BUTTON } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { formatBytes } from '@/helpers/format'
-import { assistantHearsSpeech, useAssistant } from '@/stores/assistant'
+import { useAssistant } from '@/stores/assistant'
 import { Heard } from './Heard'
 import { LevelMeter } from './LevelMeter'
 import { useDictation } from './useDictation'
@@ -113,7 +113,9 @@ export function DictationStatus() {
  */
 function Listening() {
   const { t } = useTranslation()
-  const toAssistant = useAssistant(assistantHearsSpeech)
+  // Open IS the claim: the window takes the spoken word for as long as it is up, and nothing
+  // else in the studio does.
+  const toAssistant = useAssistant(state => state.open)
 
   return (
     <span className="text-accent-ink flex items-center gap-1.5">

@@ -17,7 +17,6 @@ beforeEach(() => {
   say.mockResolvedValue(undefined)
   useAssistant.setState({
     open: true,
-    listening: false,
     turns: [],
     busy: false,
     asked: null,
@@ -30,7 +29,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  useAssistant.setState({ open: false, listening: false, asked: null })
+  useAssistant.setState({ open: false, asked: null })
 })
 
 describe('the assistant modal', () => {
@@ -162,46 +161,14 @@ describe('the assistant modal', () => {
   })
 
   /**
-   * The ordering the whole arrangement rests on, and it is held by the mount rather than by a
-   * race: `start` crosses to the main process before any stream opens, so a sentence settling in
-   * that window with no target claimed would go to the caret — into whatever field it sits in.
+   * Closing the door stops the talking: the next sentence would otherwise pour into whatever
+   * field the caret sits in, with nothing on screen saying the address had changed.
+   *
+   * Measured on screen rather than deduced — a first version of this guarded on a flag the
+   * window's own microphone never sets, so it was green while the microphone stayed running and
+   * the status line quietly changed to "dictating to the field".
    */
-  it('claims the spoken word before it opens the microphone', () => {
-    const claimed: boolean[] = []
-    const start = vi.fn(() => {
-      claimed.push(mountedDictationTarget() !== null)
-      return Promise.resolve()
-    })
-    useAssistant.setState({ open: false })
-    useDictation.setState({ start })
-    const { rerender } = render(<AssistantOverlay />)
-
-    useAssistant.setState({ listening: true })
-    rerender(<AssistantOverlay />)
-
-    expect(claimed).toEqual([true])
-  })
-
-  // Closing the door stops the talking: the next sentence would otherwise pour into whatever
-  // field the caret sits in, with nothing on screen saying the address had changed.
   it('closes the microphone when it is dismissed mid-sentence', async () => {
-    const stop = vi.fn(() => Promise.resolve())
-    useAssistant.setState({ listening: true })
-    useDictation.setState({ stop, state: 'listening' })
-    render(<AssistantOverlay />)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Fermer' }))
-
-    expect(stop).toHaveBeenCalled()
-    expect(useAssistant.getState().listening).toBe(false)
-  })
-
-  /**
-   * The same, for a session this window opened ITSELF — its own microphone, where `listening` is
-   * never set. Measured on screen rather than deduced: the case above was green while this one
-   * left the microphone running, and the status line quietly said "dictating to the field".
-   */
-  it('closes a microphone it opened itself, too', async () => {
     const stop = vi.fn(() => Promise.resolve())
     useDictation.setState({ stop, state: 'listening' })
     render(<AssistantOverlay />)
@@ -221,23 +188,6 @@ describe('the assistant modal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Fermer' }))
 
     expect(stop).not.toHaveBeenCalled()
-  })
-
-  /**
-   * A microphone that never opened — the model still to fetch, a refused device — must not leave
-   * the claim standing: every later sentence dictated into a field would come here instead, and
-   * nothing on screen would explain why.
-   */
-  it('gives the words back when the microphone would not open', async () => {
-    useAssistant.setState({ open: false })
-    useDictation.setState({ start: () => Promise.resolve(), state: 'modelMissing' })
-    const { rerender } = render(<AssistantOverlay />)
-
-    useAssistant.setState({ listening: true })
-    rerender(<AssistantOverlay />)
-    await vi.waitFor(() => expect(useAssistant.getState().listening).toBe(false))
-
-    expect(mountedDictationTarget()).toBeNull()
   })
 
   // Nothing else in the studio may answer for the person, and only a mounted modal may at all.
