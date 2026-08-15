@@ -25,6 +25,7 @@ import { PBR_CHANNELS } from '../domain/texture'
 import { WORKSPACE_IDS } from '../domain/workspace'
 import { USAGE_ACTIONS, USAGE_ASSET_KINDS, USAGE_EVENT_ACTIONS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
+import { americanVerbs } from './spelling-fixtures'
 
 function flatten(
   bundle: unknown,
@@ -109,30 +110,11 @@ const BUNDLES: Record<Language, Map<string, string>> = {
 const REFERENCE = BUNDLES.fr
 
 /**
- * `ize` is the root here, not the suffix, so no British twin exists — a guard that flagged
- * `resize` would cry wolf on the word the image workspace uses most. Keyed by the `-ize` form so
- * that `resizing` and `sizes` fold onto their entry rather than needing one each.
- */
-const IZE_IS_THE_ROOT: ReadonlySet<string> = new Set(['size', 'resize'])
-
-/**
  * Named one key at a time rather than by its subtree: `usage.actionNames` also holds labels the
  * studio words itself, and exempting the branch would let the next one drift. What this split
  * costs the reader is written at `TWO_THINGS.vectorisation`.
  */
 const NAMED_AS_THE_API_BILLS_IT: ReadonlySet<string> = new Set(['usage.actionNames.vectorization'])
-
-/**
- * Anchored, so that it strips the SAME `iz` the match found: a word carrying two of them would
- * otherwise fold onto the wrong root and slip through exempt.
- */
-const izeRootOf = (word: string): string =>
-  word.toLowerCase().replace(/iz(?:es?|ed|ing|ations?|ers?)$/, 'ize')
-
-const americanVerbs = (text: string): string[] =>
-  [...text.matchAll(/\b\w*?iz(?:es?|ed|ing|ations?|ers?)\b/gi)]
-    .map(([word]) => word)
-    .filter(word => !IZE_IS_THE_ROOT.has(izeRootOf(word)))
 
 describe('the translation bundles', () => {
   // The typecheck only catches a bundle that MISSES a key: an extra one is still assignable.
@@ -528,10 +510,11 @@ describe('the translation bundles', () => {
    * to it. The manual was already spelling `vectorisation` in prose while the bundle it quotes
    * said `Vectorization`.
    *
-   * Its blind spot, and it is a wide one: only `BUNDLES.en`. The nineteen chapters of
-   * `docs/en/manual/`, rendered verbatim from `manual.json` by the Help window, pass through no
-   * bundle at all — `manual.i18n.test.ts` is where that reading would go, and nothing does it
-   * today. Measured clean the day this guard was written; a chapter is one edit from drifting.
+   * It reads only `BUNDLES.en`, which used to be its blind spot: the twenty chapters the Help
+   * window renders from `manual.json` pass through no bundle at all. `manual.i18n.test.ts` reads
+   * them now, with the same `americanVerbs` — shared through `spelling-fixtures`, so a root
+   * exempted for one side is exempt for both. The key-by-key exemption below stays here: it names
+   * bundle paths, which the manual has none of.
    */
   it('spells its English verbs the British way', () => {
     const american = [...BUNDLES.en]
@@ -603,13 +586,6 @@ describe('what the guards would catch', () => {
 
   it('walks into the nested keys rather than stopping at the first level', () => {
     expect([...flatten({ panel: { title: 'Assets' } }).keys()]).toEqual(['panel.title'])
-  })
-
-  it('tells an American verb from a word that merely ends that way', () => {
-    expect(americanVerbs('Vectorize the image')).toEqual(['Vectorize'])
-    expect(americanVerbs('Vectorise, then resize the layer')).toEqual([])
-    // Folded onto the LAST `iz`, so an exempt root at the front cannot smuggle a verb in.
-    expect(americanVerbs('sizeorganize')).toEqual(['sizeorganize'])
   })
 })
 
