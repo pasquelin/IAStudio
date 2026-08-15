@@ -56,6 +56,7 @@ function shownSubjects(rows: readonly AnimationRow[]): string[] {
  * wide — no track ever showed what it drove.
  */
 export function AnimationHeaders({ documentId, rows }: AnimationHeadersProps) {
+  const { t } = useTranslation()
   const scrollTop = useAnimationViews(
     state => animationViewOf(state, documentId).viewport.scrollTop,
   )
@@ -75,7 +76,12 @@ export function AnimationHeaders({ documentId, rows }: AnimationHeadersProps) {
   )
 
   return (
-    <TimelineHeaderColumn scrollTop={scrollTop} viewportNow={viewportNow} setViewport={setViewport}>
+    <TimelineHeaderColumn
+      scrollTop={scrollTop}
+      label={t('animation.rowList')}
+      viewportNow={viewportNow}
+      setViewport={setViewport}
+    >
       {rows.map(row => (
         <HeaderRow key={row.id} documentId={documentId} row={row} shown={shown} />
       ))}

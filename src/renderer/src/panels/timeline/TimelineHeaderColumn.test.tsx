@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, type RenderResult } from '@testing-library/react'
+import { act, fireEvent, render, screen, within, type RenderResult } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
@@ -225,6 +225,20 @@ describe('a band that comes to the pointer', () => {
    * Reading a stack meant carrying the pointer off the very rows one was reading: the strip has
    * always answered the wheel, the column of names never did.
    */
+  /**
+   * Nothing said these lines belonged together: the column is a stack of bare divs, so a reader
+   * met as many unnamed boxes as there are tracks, with no count to place any of them.
+   *
+   * Asked with the name, because a list that has none is announced by the bare word — the reason
+   * `Collection` and `Tree` both require theirs.
+   */
+  it('reads as a named list holding one item per track', () => {
+    render(<TrackHeaders documentId="doc-1" />, { wrapper: StrictMode })
+
+    const list = screen.getByRole('list', { name: 'Pistes du montage' })
+    expect(within(list).getAllByRole('listitem')).toHaveLength(ROWS)
+  })
+
   it('answers the wheel over the names, and stops where the stack ends', () => {
     const view = render(<TrackHeaders documentId="doc-1" />, { wrapper: StrictMode })
     layout(view, CONTENT)

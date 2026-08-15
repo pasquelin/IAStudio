@@ -112,7 +112,8 @@
     "moveTrackUpHint": "Swaps this track with the one above it",
     "moveTrackDownHint": "Swaps this track with the one below it",
     "removeTrackHint": "Removes the track and every clip it carries",
-    "reorderTrack": "Move the {{name}} track"
+    "reorderTrack": "Move the {{name}} track",
+    "trackList": "Montage tracks"
   },
   "videoTools": {
     "select": "Selection",
@@ -208,6 +209,7 @@
     "keyAllHint": "Keys every animated object at the playhead",
     "unkeySubject": "Remove {{name}}’s key",
     "unkeySubjectHint": "Removes the key standing here, on every property of this object",
-    "reorderRow": "Move the {{name}} line"
+    "reorderRow": "Move the {{name}} line",
+    "rowList": "Animation rows"
   }
 }
