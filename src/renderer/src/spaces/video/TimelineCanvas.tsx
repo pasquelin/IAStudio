@@ -23,7 +23,7 @@ import { newTracksForAsset, opensTrackFor, placementsForAsset } from '@/engines/
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
 import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import type { Point, Size } from '@/engines/core/geometry'
-import { fitToDisplay } from '@/engines/core/canvas-2d'
+import { paintOn } from '@/engines/core/canvas-2d'
 import {
   clipById,
   clipEnd,
@@ -89,15 +89,12 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
   const size = useRef<Size>({ width: 0, height: 0 })
 
   const paint = useCallback((): void => {
-    const canvas = canvasRef.current
-    const context = canvas?.getContext('2d')
-    if (!canvas || !context) return
+    paintOn(canvasRef.current, (context, box) => {
+      size.current = box
 
-    const { width, height } = fitToDisplay(canvas, context)
-    size.current = { width, height }
-
-    const current = latest.current
-    paintTimeline(context, current.sequence, current.viewport, { width, height }, current.options)
+      const current = latest.current
+      paintTimeline(context, current.sequence, current.viewport, box, current.options)
+    })
   }, [])
 
   /**

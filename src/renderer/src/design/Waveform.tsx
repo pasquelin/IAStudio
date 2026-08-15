@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { fitToDisplay } from '@/engines/core/canvas-2d'
+import { paintOn } from '@/engines/core/canvas-2d'
 import { rootColour } from '@/engines/core/palette'
 import { paintWaveform } from '@/engines/timeline/painter'
 import { tileColumns } from '@/engines/timeline/waveform'
@@ -28,16 +28,13 @@ export function Waveform({ peaks, className }: WaveformProps) {
   const latest = useRef(peaks)
 
   const paint = useCallback((): void => {
-    const canvas = canvasRef.current
-    const context = canvas?.getContext('2d')
-    if (!canvas || !context) return
+    paintOn(canvasRef.current, (context, { width, height }) => {
+      context.clearRect(0, 0, width, height)
 
-    const { width, height } = fitToDisplay(canvas, context)
-    context.clearRect(0, 0, width, height)
-
-    const held = latest.current
-    if (!held) return
-    paintWaveform(context, tileColumns(held, width), 0, height, rootColour('--color-muted'))
+      const held = latest.current
+      if (!held) return
+      paintWaveform(context, tileColumns(held, width), 0, height, rootColour('--color-muted'))
+    })
   }, [])
 
   useEffect(() => {
