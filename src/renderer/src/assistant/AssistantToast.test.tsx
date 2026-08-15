@@ -77,4 +77,20 @@ describe('what became of the sentence, once', () => {
 
     expect(container).toBeEmptyDOMElement()
   })
+
+  /**
+   * A turn joins the thread when it is SENT, not when it is answered. Opening the window while a
+   * plan runs used to mark that answer read before it existed — close again before it landed and
+   * nothing ever reported it: the status line only speaks while the plan runs, and this thought
+   * it had been read.
+   */
+  it('still reports an answer that landed after the window was opened and closed again', () => {
+    useAssistant.setState({ busy: true, turns: [turn(1)] })
+    useAssistant.getState().show()
+    useAssistant.getState().hide()
+    useAssistant.setState({ busy: false })
+    render(<AssistantToast />)
+
+    expect(screen.getByText('L’assistant a répondu')).toBeInTheDocument()
+  })
 })

@@ -80,12 +80,7 @@
       "text": "Texte à traduire"
     },
     "title": "Assistant",
-    "write": "Écrire à l’assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",
-    "speak": "Parler à l’assistant",
-    "speakHint": "Ouvre le micro et donne vos phrases à l’assistant, sans rien masquer du studio",
-    "stopSpeaking": "Cesser de parler à l’assistant",
-    "stopSpeakingHint": "Ferme le micro. La phrase en cours est abandonnée",
     "listening": "L’assistant vous écoute",
     "done": "L’assistant a répondu",
     "reviewHint": "Ouvre l’assistant sur ce qu’il a compris et sur ce qu’il a fait",

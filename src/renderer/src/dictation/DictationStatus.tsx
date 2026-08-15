@@ -107,8 +107,9 @@ export function DictationStatus() {
  * to the assistant, and the two are told apart nowhere else on screen — the assistant claims the
  * spoken word without necessarily showing its window.
  *
- * This is also the only thing left visible once that window IS up: the modal's scrim is 60% black,
- * so the title bar and its entries sit behind it at 40%. The status line never does.
+ * It is also the only thing left visible once that window IS up: the conversation lays the studio's
+ * own panel colour over everything at 80%, plus a blur, so the title bar and its entry are sunk
+ * behind it. The status line never is.
  */
 function Listening() {
   const { t } = useTranslation()

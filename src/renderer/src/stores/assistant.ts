@@ -88,9 +88,16 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   spent: 0,
   seen: 0,
 
-  // Showing IS reading: the thread is right there, and leaving an indicator reporting a turn the
-  // person is looking at would be one that never goes out.
-  show: () => set(state => ({ open: true, seen: lastSeen(state) })),
+  /**
+   * Showing IS reading — but only of what there is to read.
+   *
+   * The `busy` guard is the whole subtlety: a turn joins `turns` when it is SENT, not when it is
+   * answered, so opening the window while a plan runs would mark an answer seen before it exists.
+   * Close again before it lands and nothing would ever report it — the status line only speaks
+   * while `busy`, and the toast would think it had been read. What marks a running turn seen is
+   * the end of `say`, and only if the window is still up to show it.
+   */
+  show: () => set(state => ({ open: true, seen: state.busy ? state.seen : lastSeen(state) })),
 
   // Read off the turns rather than off `lastTurnId`, which counts what this module has ALLOCATED
   // rather than what the window holds: a state restored from anywhere else leaves the counter at
@@ -221,6 +228,10 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
     if (answer.calls.some(call => call.action === 'chat.close') && !get().asked) {
       set({ open: false, listening: false })
     }
+
+    // Read, if the window was there to be read: this is the other half of the `busy` guard in
+    // `show`. A turn answered under an open window needs no toast afterwards.
+    if (get().open) set({ seen: id })
   },
 
   setModel: model => {

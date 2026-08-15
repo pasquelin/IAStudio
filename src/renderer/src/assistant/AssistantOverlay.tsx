@@ -143,9 +143,18 @@ export function AssistantOverlay() {
         }
       })
 
-    // The second case the effect above does not cover: giving the words back while the window
-    // STAYS open leaves `hears` true, so nothing else would end the session.
-    return endSession
+    /**
+     * The second case the effect above does not cover: giving the words back while the window
+     * STAYS open leaves `hears` true, so nothing else would end the session.
+     *
+     * Unguarded here, where `endSession` checks first, and the difference is a race: `start` above
+     * is still crossing to the main process, so the store's `state` is not `listening` YET. Guarded
+     * on it, a listen cancelled inside that window closed nothing, the flight finished, and it left
+     * a live microphone no effect referenced any more — recording light on, every later `start`
+     * returning early. `stop` bumps the session counter synchronously, which is what calls that
+     * flight back.
+     */
+    return () => void useDictation.getState().stop()
   }, [listening])
 
   useEffect(() => {
@@ -174,6 +183,10 @@ export function AssistantOverlay() {
   if (!open) return null
 
   const send = (): void => {
+    // Sending is asking to see the answer. Without this, one trip up the thread to reread an
+    // earlier exchange turned the following off for the rest of the session — every later reply
+    // then landed out of sight, with nothing on screen saying why.
+    following.current = true
     void useAssistant.getState().say(draft)
     setDraft('')
   }

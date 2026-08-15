@@ -80,12 +80,7 @@
       "text": "Text to translate"
     },
     "title": "Assistant",
-    "write": "Write to the assistant",
     "writeHint": "Opens the assistant so you can write what you want done",
-    "speak": "Speak to the assistant",
-    "speakHint": "Opens the microphone and gives your sentences to the assistant, hiding none of the studio",
-    "stopSpeaking": "Stop speaking to the assistant",
-    "stopSpeakingHint": "Closes the microphone. The sentence under way is dropped",
     "listening": "The assistant is listening",
     "done": "The assistant has answered",
     "reviewHint": "Opens the assistant on what it understood and what it did",
