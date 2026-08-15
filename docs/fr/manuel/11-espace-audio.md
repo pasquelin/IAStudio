@@ -25,6 +25,17 @@ toute la largeur, l’un sous l’autre :
 Une **poignée** les sépare : tirez-la pour donner plus de place à l’un ou à l’autre. Sous chacun,
 une ligne rappelle lequel des deux on regarde.
 
+**Les trois surfaces portent des graduations, à la même hauteur** — le moniteur du montage, celui
+de la prise, et la bande basse. Elles ne comptent pas la même chose, et c’est voulu :
+
+| Surface | Ce que la règle gradue |
+|---|---|
+| Le montage, en haut | le **temps du montage**, en images — la même règle que la bande basse |
+| La prise, en bas | la **durée de la prise**, en minutes et secondes |
+
+Une prise n’a pas de grille d’images à elle : elle est un son, pas une suite de photogrammes.
+C’est pourquoi sa règle compte en durée, quand les deux autres comptent en images.
+
 > **L’onglet audio porte deux moitiés, et elles s’enregistrent ensemble.** En bas,
 > l’**éditeur d’une prise** : la forme d’onde et ses outils. En haut et dans la bande basse, le
 > **montage**, où l’on pose des prises les unes à côté des autres — décrit
