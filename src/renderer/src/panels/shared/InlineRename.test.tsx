@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { StrictMode, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -60,6 +60,24 @@ describe('a name edited where it is read', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Rename' }), 'Winter{Enter}')
 
     expect(onCommit).toHaveBeenCalledExactlyOnceWith('Winter')
+  })
+
+  /**
+   * Typed through an input method, Enter picks the candidate character rather than ending the
+   * name — a Japanese layer name committed on the first Enter would keep whatever syllable was
+   * on screen at the time. `fireEvent` rather than `userEvent` because the composition flag lives
+   * on the native event, which only a raw event carries.
+   */
+  it('leaves Enter to the input method while it is composing a character', () => {
+    const onCommit = vi.fn()
+    render(<Owner onCommit={onCommit} />, { wrapper: StrictMode })
+
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Rename' }), {
+      key: 'Enter',
+      isComposing: true,
+    })
+
+    expect(onCommit).not.toHaveBeenCalled()
   })
 
   /**

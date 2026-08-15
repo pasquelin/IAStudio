@@ -13,6 +13,7 @@ import { Spinner } from '@/design/Spinner'
 import { ToolButton } from '@/design/ToolButton'
 import { CONTROL } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { isComposing } from '@/helpers/composition'
 import { HINT_TOP, TIP_LEFT, TIP_TOP } from '@/helpers/tooltip'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useAssistant } from '@/stores/assistant'
@@ -253,7 +254,9 @@ export function AssistantOverlay() {
               // Enter still sends, as it did when this was one line: a textarea's own default would
               // have made the keyboard path to sending disappear. Shift+Enter is the new line.
               onKeyDown={event => {
-                if (event.key !== 'Enter' || event.shiftKey) return
+                // While an input method composes, Enter picks the candidate character — see
+                // `isComposing`. Sending here would cut the word being written.
+                if (event.key !== 'Enter' || event.shiftKey || isComposing(event)) return
                 event.preventDefault()
                 send()
               }}

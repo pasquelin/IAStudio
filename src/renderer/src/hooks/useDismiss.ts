@@ -1,4 +1,5 @@
 import { useEffect, type RefObject } from 'react'
+import { isComposing } from '@/helpers/composition'
 
 /**
  * The three ways a floating surface goes away without anything being chosen: a press outside it,
@@ -36,7 +37,9 @@ export function useDismiss(
       onDismiss()
     }
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onDismiss()
+      // Escape cancels the candidate an input method is composing, and a surface holding a text
+      // field would close under it — the assistant does. See `isComposing`.
+      if (event.key === 'Escape' && !isComposing(event)) onDismiss()
     }
 
     document.addEventListener('pointerdown', onPointerDown, true)

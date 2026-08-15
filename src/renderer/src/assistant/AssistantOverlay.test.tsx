@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
@@ -48,6 +48,20 @@ describe('the assistant modal', () => {
 
     expect(say).toHaveBeenCalledWith('ouvre un fichier 3D')
     expect(screen.getByRole('textbox')).toHaveValue('')
+  })
+
+  /**
+   * The field sends on Enter, so a message typed through an input method would leave halfway
+   * through its last character — Enter picks the candidate, it does not end the sentence.
+   */
+  it('leaves Enter to the input method while it is composing a character', async () => {
+    render(<AssistantOverlay />)
+
+    await userEvent.type(screen.getByRole('textbox'), 'ouvre un')
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter', isComposing: true })
+
+    expect(say).not.toHaveBeenCalled()
+    expect(screen.getByRole('textbox')).toHaveValue('ouvre un')
   })
 
   it('draws the thread, refusal and all', () => {

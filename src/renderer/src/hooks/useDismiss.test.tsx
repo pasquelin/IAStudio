@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useCallback, useRef, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -44,6 +44,20 @@ describe('useDismiss', () => {
     await userEvent.keyboard('{Escape}')
 
     expect(onDismiss).toHaveBeenCalled()
+  })
+
+  /**
+   * The assistant holds a text field inside its surface, and Escape is how an input method
+   * cancels the character being composed. Dismissing on it would close the window under someone
+   * writing Japanese — the keystroke never meant to leave.
+   */
+  it('leaves Escape to the input method while it is composing a character', () => {
+    const onDismiss = vi.fn()
+    render(<Panel onDismiss={onDismiss} />)
+
+    fireEvent.keyDown(document, { key: 'Escape', isComposing: true })
+
+    expect(onDismiss).not.toHaveBeenCalled()
   })
 
   // In a studio one leaves for a reference image constantly, and a panel still hanging over the

@@ -107,6 +107,20 @@ describe('SettingRow', () => {
     expect(written).toEqual([['media.ffmpegPath', '/usr/bin/ffmpeg']])
   })
 
+  // Enter stores the field, so it must not store one an input method has not finished writing.
+  it('leaves Enter to the input method while it is composing a character', async () => {
+    const written = captureWrites()
+    render(rowFor('media.ffmpegPath'))
+
+    await userEvent.type(screen.getByLabelText(/Chemin de ffmpeg/), '/usr/bin/ff')
+    fireEvent.keyDown(screen.getByLabelText(/Chemin de ffmpeg/), {
+      key: 'Enter',
+      isComposing: true,
+    })
+
+    expect(written).toEqual([])
+  })
+
   it('drops the setting when the field is emptied, rather than storing a blank', async () => {
     useSettings.setState({
       settings: { ...DEFAULT_SETTINGS, media: { ffmpegPath: '/usr/bin/ffmpeg' } },
