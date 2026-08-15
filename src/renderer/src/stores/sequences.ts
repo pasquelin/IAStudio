@@ -1,9 +1,14 @@
 import type { Asset } from '@shared/domain/asset'
+import type { TakeShape } from '@/engines/audio/edits'
 import { addClips, removeClip } from '@/engines/timeline/commands'
 import { placementsForAsset, trackForAsset } from '@/engines/timeline/insert'
 import {
+  clipById,
   EMPTY_SEQUENCE,
+  updateClip,
   updateTrack,
+  wholeFrames,
+  type Clip,
   type SequenceState,
   type Track,
 } from '@/engines/timeline/timeline-state'
@@ -73,6 +78,54 @@ export function addTakeToSequence(documentId: string, asset: Asset): string | nu
 /** Takes a clip back off a montage, outside any gesture and for the same reason. */
 export function removeClipFromSequence(documentId: string, clipId: string): void {
   store.use.getState().runOutsideGesture(documentId, removeClip(clipId))
+}
+
+/**
+ * Rewrites the clip a take was laid down as, so that what the strip plays is what the editor
+ * plays: bounds, ramps and level all come from the chain above it.
+ *
+ * Outside the history, like `writeTrack` below and for a stricter reason than convenience: the
+ * chain already owns ⌘Z here, and a second entry per edit would make one press give back half a
+ * change — the studio's "two diverging undo stacks", from the other end.
+ *
+ * `start` and `speed` are left alone: where a take sits on the strip and how fast it runs are
+ * decisions about the montage, and the editor above knows nothing of either.
+ */
+export function writeTakeClip(documentId: string, clipId: string, shape: TakeShape): void {
+  const current = store.use.getState()
+  if (!store.hasState(current, documentId)) return
+
+  const sequence = store.stateOf(current, documentId)
+  const clip = clipById(sequence, clipId)
+  if (!clip) return
+
+  // On the frame grid, exactly as `clipForAsset` lays it down: a duration that is not a whole
+  // number of frames leaves a tail nothing can snap to.
+  const duration = wholeFrames(shape.duration, sequence.settings)
+  const shaped: Clip = {
+    ...clip,
+    inPoint: shape.inPoint,
+    duration,
+    fadeIn: shape.fadeIn,
+    fadeOut: shape.fadeOut,
+    gain: shape.gain,
+  }
+  // A render answers on every open of a document, not only on an edit: writing an unchanged clip
+  // would repaint the strip and wake every reader of the montage for nothing.
+  if (
+    clip.inPoint === shaped.inPoint &&
+    clip.duration === shaped.duration &&
+    clip.fadeIn === shaped.fadeIn &&
+    clip.fadeOut === shaped.fadeOut &&
+    clip.gain === shaped.gain
+  ) {
+    return
+  }
+
+  current.replace(
+    documentId,
+    updateClip(sequence, clipId, () => shaped),
+  )
 }
 
 /**

@@ -22,6 +22,7 @@ import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
 import { decodeAsset } from './decode'
 import { loadTake } from './load-take'
 import { useAudioRenderer } from './useAudioRenderer'
+import { useTakeClip } from './useTakeClip'
 import { useWaveSurfer } from './useWaveSurfer'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 
@@ -113,6 +114,11 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
   const answered = output?.assetId === state.assetId ? output : null
   const rendered = answered?.audio ?? null
+
+  // What ties the two halves of this document: the clip on the strip below is this very take,
+  // and every edit above has to reach it.
+  useTakeClip(documentId, state.takeClipId, rendered?.shape ?? null)
+
   // Either half of the pipeline giving up leaves the same take unplayable, and says so the same
   // way — the decode, and the chain replayed over it.
   const unreadable = failed || answered?.audio === null

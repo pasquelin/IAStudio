@@ -28,6 +28,7 @@ vi.mock('wavesurfer.js/dist/plugins/regions.js', () => ({
 const rendered: RenderedAudio = {
   data: { sampleRate: 100, channels: [new Float32Array(200).fill(0.5)] },
   wav: new Uint8Array(8),
+  shape: { inPoint: 0, duration: 2_000_000, fadeIn: 0, fadeOut: 0, gain: 0 },
 }
 
 function Editor({ surface, nodeKey = 'one' }: { surface: boolean; nodeKey?: string }) {
