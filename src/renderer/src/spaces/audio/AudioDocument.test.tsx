@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { canUndo } from '@/engines/core/history'
-import { EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
+import { chainOf, EMPTY_AUDIO_EDIT, withChain, type TakeChain } from '@/engines/audio/edits'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { SECOND } from '@shared/domain/time'
@@ -45,7 +45,32 @@ const asset: Asset = {
   createdAt: '2026-08-07T10:00:00.000Z',
 }
 
-const editsOf = () => audioEditsOf(useAudioEdits.getState(), 'doc-1')
+/** The block every test here edits — the editor below the montage shows the selected one. */
+const CLIP = 'clip-1'
+
+const editsOf = (): TakeChain => chainOf(audioEditsOf(useAudioEdits.getState(), 'doc-1'), CLIP)
+
+/** That block's chain written back, out of the history, as the editor writes a region. */
+function writeChain(fields: Partial<TakeChain>): void {
+  const store = useAudioEdits.getState()
+  const current = audioEditsOf(store, 'doc-1')
+  store.replace('doc-1', withChain(current, CLIP, { ...chainOf(current, CLIP), ...fields }))
+}
+
+const laidAssetIds = (): string[] =>
+  sequenceOf(useSequences.getState(), 'doc-1')
+    .tracks.flatMap(track => track.clips)
+    .map(clip => clip.assetId)
+
+/** A montage holding one two-second block of `asset-1`, selected — what the editor shows. */
+function montageWithTake(): void {
+  const laid = addClip(
+    'A1',
+    makeClip({ id: CLIP, assetId: 'asset-1', start: 0, duration: 2 * SECOND }),
+  ).apply(EMPTY_SOUND_SEQUENCE)
+
+  useSequences.setState({ states: { 'doc-1': { ...laid, selectedId: CLIP } }, histories: {} })
+}
 
 // Every suite in this file, not one: a document left behind sends `useRestoredDocument`
 // reaching for a bridge these tests do not mount.
@@ -54,10 +79,8 @@ beforeEach(() => {
 })
 
 async function openTake({ inFront = true }: { inFront?: boolean } = {}): Promise<void> {
-  useAudioEdits.setState({
-    states: { 'doc-1': { ...EMPTY_AUDIO_EDIT, assetId: 'asset-1' } },
-    histories: {},
-  })
+  useAudioEdits.setState({ states: { 'doc-1': EMPTY_AUDIO_EDIT }, histories: {} })
+  montageWithTake()
   // Two tabs when the take is meant to be behind: what puts another document in front is
   // another document, not an empty `activeId`.
   installDocuments(
@@ -82,9 +105,7 @@ describe('AudioDocument', () => {
     await openTake()
     expect(screen.getByText(/Glissez sur l’onde/)).toBeInTheDocument()
 
-    useAudioEdits
-      .getState()
-      .replace('doc-1', { ...editsOf(), region: { from: SECOND / 2, to: SECOND } })
+    writeChain({ region: { from: SECOND / 2, to: SECOND } })
 
     expect(await screen.findByText('Sélection 00:00.50 – 00:01.00')).toBeInTheDocument()
     // And the invitation goes: the bar says one thing at a time, or it says both at once.
@@ -96,9 +117,7 @@ describe('AudioDocument', () => {
   it('takes a selection the take no longer holds for no selection at all', async () => {
     await openTake()
 
-    useAudioEdits
-      .getState()
-      .replace('doc-1', { ...editsOf(), region: { from: 9 * SECOND, to: 12 * SECOND } })
+    writeChain({ region: { from: 9 * SECOND, to: 12 * SECOND } })
 
     expect(await screen.findByText(/Glissez sur l’onde/)).toBeInTheDocument()
   })
@@ -134,24 +153,35 @@ describe('AudioDocument', () => {
     // off, precisely so that one press never undoes both halves.
     it('gives the key to the montage when the chain has nothing to undo', async () => {
       await openTake()
-      const clip = makeClip({ id: 'clip-1', assetId: 'asset-a', start: 0, duration: SECOND })
+      const clip = makeClip({
+        id: 'clip-2',
+        assetId: 'asset-a',
+        start: 5 * SECOND,
+        duration: SECOND,
+      })
       useSequences.getState().runCommand('doc-1', addClip('A1', clip))
 
       await userEvent.keyboard('{Meta>}{z}{/Meta}')
 
-      expect(sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips).toEqual([])
+      // The block the editor is on stays: it was laid outside the history, as `loadTake` lays it.
+      expect(laidAssetIds()).toEqual(['asset-1'])
     })
 
     it('undoes the chain first, leaving the montage where it stands', async () => {
       await openTake()
-      const clip = makeClip({ id: 'clip-1', assetId: 'asset-a', start: 0, duration: SECOND })
+      const clip = makeClip({
+        id: 'clip-2',
+        assetId: 'asset-a',
+        start: 5 * SECOND,
+        duration: SECOND,
+      })
       useSequences.getState().runCommand('doc-1', addClip('A1', clip))
       await userEvent.click(screen.getByRole('button', { name: /Normaliser/ }))
 
       await userEvent.keyboard('{Meta>}{z}{/Meta}')
 
       expect(editsOf().edits).toEqual([])
-      expect(sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips).toHaveLength(1)
+      expect(laidAssetIds()).toEqual(['asset-1', 'asset-a'])
     })
   })
 
@@ -159,18 +189,10 @@ describe('AudioDocument', () => {
   describe('the clip it keeps in step', () => {
     const takeClip = () => sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips[0]
 
-    /** A document whose take is already laid down on the strip, as `loadTake` leaves it. */
+    /** A document whose take is laid on the strip and selected, as `loadTake` leaves it. */
     async function openLaidTake(): Promise<void> {
-      useSequences
-        .getState()
-        .runCommand(
-          'doc-1',
-          addClip('A1', makeClip({ id: 'clip-1', assetId: 'asset-1', start: 0, duration: SECOND })),
-        )
-      useAudioEdits.setState({
-        states: { 'doc-1': { ...EMPTY_AUDIO_EDIT, assetId: 'asset-1', takeClipId: 'clip-1' } },
-        histories: {},
-      })
+      montageWithTake()
+      useAudioEdits.setState({ states: { 'doc-1': EMPTY_AUDIO_EDIT }, histories: {} })
       installDocuments({ 'doc-1': 'audio' }, 'doc-1')
       render(<AudioDocument documentId="doc-1" />)
       await waitFor(() => expect(screen.queryByText(/Chargement/)).not.toBeInTheDocument())
@@ -184,10 +206,45 @@ describe('AudioDocument', () => {
       await openLaidTake()
       await waitFor(() => expect(takeClip()?.duration).toBe(2_000_000))
 
-      useAudioEdits.getState().replace('doc-1', { ...editsOf(), region: { from: 0, to: 500_000 } })
+      writeChain({ region: { from: 0, to: 500_000 } })
       await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
 
       await waitFor(() => expect(takeClip()?.duration).toBe(CROPPED))
+    })
+
+    /**
+     * The other half of that, and the half a count of steps could not tell: an emptied chain is
+     * a chain that emptied ON PURPOSE. Left to itself, the editor plays the whole take again
+     * while the strip below keeps the block the crop shortened — the two halves saying different
+     * things about one take, which is the very thing this pair exists to stop.
+     */
+    it('gives the block its length back when the crop is undone', async () => {
+      await openLaidTake()
+      writeChain({ region: { from: 0, to: 500_000 } })
+      await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
+      await waitFor(() => expect(takeClip()?.duration).toBe(CROPPED))
+
+      await userEvent.keyboard('{Meta>}{z}{/Meta}')
+
+      await waitFor(() => expect(takeClip()?.duration).toBe(2_000_000))
+    })
+
+    /**
+     * "Apply" writes the chain INTO the file, so the block has to be laid flat with it: it
+     * carries the crop and the gain too, and a block left describing them plays them a second
+     * time over bytes that already hold them — six decibels above what the editor sounds like,
+     * or a block pointing two seconds into a file that no longer has them.
+     */
+    it('lays the block flat once the take has been written over', async () => {
+      await openLaidTake()
+      writeChain({ region: { from: 0, to: 500_000 } })
+      await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
+      await waitFor(() => expect(takeClip()?.duration).toBe(CROPPED))
+
+      await userEvent.click(screen.getByRole('button', { name: /Appliquer/ }))
+
+      await waitFor(() => expect(takeClip()?.duration).toBe(2_000_000))
+      expect(takeClip()?.inPoint).toBe(0)
     })
 
     /**
@@ -197,7 +254,7 @@ describe('AudioDocument', () => {
      */
     it('leaves the clip alone while A/B is held on the source', async () => {
       await openLaidTake()
-      useAudioEdits.getState().replace('doc-1', { ...editsOf(), region: { from: 0, to: 500_000 } })
+      writeChain({ region: { from: 0, to: 500_000 } })
       await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
       await waitFor(() => expect(takeClip()?.duration).toBe(CROPPED))
 
@@ -211,7 +268,7 @@ describe('AudioDocument', () => {
     // has landed, so what is in hand at that moment is still the BYPASSED answer.
     it('leaves the clip alone on the press that comes back off A/B', async () => {
       await openLaidTake()
-      useAudioEdits.getState().replace('doc-1', { ...editsOf(), region: { from: 0, to: 500_000 } })
+      writeChain({ region: { from: 0, to: 500_000 } })
       await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
       await waitFor(() => expect(takeClip()?.duration).toBe(CROPPED))
 
@@ -253,9 +310,11 @@ describe('AudioDocument', () => {
     expect(montage?.style.width).toBe('')
   })
 
-  it('asks for a take when none is open', () => {
+  // A montage with nothing selected: the editor below has no block to show, and says which
+  // gesture would give it one rather than looking broken.
+  it('asks for a selection when no block is picked', () => {
     render(<AudioDocument documentId="doc-1" />)
-    expect(screen.getByText(/Aucun son ouvert/)).toBeInTheDocument()
+    expect(screen.getByText(/Sélectionnez un clip du montage/)).toBeInTheDocument()
   })
 
   it('appends a step rather than rewriting the take', async () => {
@@ -282,7 +341,7 @@ describe('AudioDocument', () => {
 
   it('crops to the selected region', async () => {
     await openTake()
-    useAudioEdits.getState().replace('doc-1', { ...editsOf(), region: { from: 0, to: 500_000 } })
+    writeChain({ region: { from: 0, to: 500_000 } })
 
     await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
 
@@ -339,7 +398,9 @@ describe('AudioDocument', () => {
     await userEvent.click(screen.getByRole('button', { name: /Appliquer/ }))
     await waitFor(() => expect(editsOf().edits).toEqual([]))
 
-    expect(editsOf().assetId).toBe('asset-1')
+    // The block stays where it is, holding the take it always held: what was emptied is its
+    // chain, not the montage under it.
+    expect(laidAssetIds()).toEqual(['asset-1'])
     expect(canUndo(audioHistoryOf(useAudioEdits.getState(), 'doc-1'))).toBe(false)
   })
 
@@ -358,11 +419,16 @@ describe('AudioDocument', () => {
 describe('dropping a take on the editor', () => {
   const emptyEditor = (): Element => {
     render(<AudioDocument documentId="doc-1" />)
-    return screen.getByText(/Déposez une prise/).closest('div[class]') ?? document.body
+    return (
+      screen.getByText(/Sélectionnez un clip du montage/).closest('div[class]') ?? document.body
+    )
   }
 
+  // The montage too, and not only the chain: a block left selected by the suite above is a
+  // block the editor would show, and this one is about the editor with nothing in it.
   beforeEach(() => {
     useAudioEdits.setState({ states: {}, histories: {} })
+    useSequences.setState({ states: { 'doc-1': EMPTY_SOUND_SEQUENCE }, histories: {} })
   })
 
   // The last space that accepted nothing: a take had to be double-clicked from the shelf, and
@@ -378,7 +444,10 @@ describe('dropping a take on the editor', () => {
     // before handing it over, so the answer lands a microtask later even when nothing was fetched.
     await Promise.resolve()
 
-    expect(editsOf().assetId).toBe('asset-1')
+    // A block, and the selection that puts it under the editor: dropping on the editor is the
+    // gesture, laying it on the montage is what the gesture now means.
+    expect(laidAssetIds()).toEqual(['asset-1'])
+    expect(sequenceOf(useSequences.getState(), 'doc-1').selectedId).not.toBeNull()
   })
 
   // A tab that only says "undecodable" is a dead end: the gesture that would replace the take
@@ -386,10 +455,7 @@ describe('dropping a take on the editor', () => {
   it('still takes a drop once the take it holds turned out to be undecodable', async () => {
     decodeAsset.mockRejectedValueOnce(new Error('not audio'))
     useAssets.setState({ items: [asset, { ...asset, id: 'asset-2', name: 'other.wav' }] })
-    useAudioEdits.setState({
-      states: { 'doc-1': { ...EMPTY_AUDIO_EDIT, assetId: 'asset-1' } },
-      histories: {},
-    })
+    montageWithTake()
 
     render(<AudioDocument documentId="doc-1" />)
     const dead = await screen.findByText(/n’a pas pu être décodé/)
@@ -399,7 +465,8 @@ describe('dropping a take on the editor', () => {
     fireEvent.drop(dead.closest('div[class]') ?? document.body, { dataTransfer })
     await Promise.resolve()
 
-    expect(editsOf().assetId).toBe('asset-2')
+    // Laid over the block the head stands on, which is the one that would not decode.
+    expect(laidAssetIds()).toEqual(['asset-2'])
   })
 
   it('refuses a picture, which the editor has nothing to do with', () => {

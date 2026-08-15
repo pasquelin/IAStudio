@@ -1,6 +1,6 @@
 import type { Asset } from '@shared/domain/asset'
 import type { TakeShape } from '@/engines/audio/edits'
-import { addClips, removeClip } from '@/engines/timeline/commands'
+import { addClips } from '@/engines/timeline/commands'
 import { placementsForAsset, trackForAsset } from '@/engines/timeline/insert'
 import {
   clampFades,
@@ -85,14 +85,6 @@ export function addTakeToSequence(documentId: string, asset: Asset): string | nu
 
   current.replace(documentId, addClips(placements).apply(sequence))
   return laid.clip.id
-}
-
-/** Takes a clip back off a montage, outside the history and for the same reason. */
-export function removeClipFromSequence(documentId: string, clipId: string): void {
-  const current = store.use.getState()
-  if (!store.hasState(current, documentId)) return
-
-  current.replace(documentId, removeClip(clipId).apply(store.stateOf(current, documentId)))
 }
 
 /**

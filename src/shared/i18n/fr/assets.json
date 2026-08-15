@@ -102,7 +102,7 @@
   },
   "audio": {
     "takeRole": "La prise que vous éditez, avant montage",
-    "noAsset": "Aucun son ouvert. Déposez une prise ici, ou double-cliquez sur un asset audio.",
+    "noClip": "Sélectionnez un clip du montage pour l’éditer ici, ou déposez une prise.",
     "unreadable": "Ce fichier n’a pas pu être décodé.",
     "copyName": "{{name}} (édité)",
     "selection": "Sélection {{from}} – {{to}}",

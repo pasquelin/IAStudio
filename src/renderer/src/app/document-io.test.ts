@@ -25,7 +25,7 @@ import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvas-state'
 import { addLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas, type CanvasHost } from '@/spaces/image/canvas-hosts'
 import { canvasStore, useCanvases } from '@/stores/canvases'
-import { pushEdit } from '@/engines/audio/edits'
+import { EMPTY_AUDIO_EDIT, pushEdit } from '@/engines/audio/edits'
 import { addClip, removeTrack } from '@/engines/timeline/commands'
 import { EMPTY_SOUND_SEQUENCE, makeClip } from '@/engines/timeline/timeline-state'
 import { setSunAngles } from '@/engines/skybox/commands'
@@ -584,7 +584,7 @@ describe('saveDocument', () => {
         .getState()
         .create('audio', { title: 'pad.wav', sourceAssetId: 'asset-take' })
       if (!created) throw new Error('expected a document')
-      useAudioEdits.getState().runCommand(created.id, pushEdit({ kind: 'trimSilence' }))
+      useAudioEdits.getState().runCommand(created.id, pushEdit('clip-a', { kind: 'trimSilence' }))
 
       await expect(saveDocument(created.id)).resolves.toBe(true)
 
@@ -1202,14 +1202,7 @@ describe('the kinds a string holds', () => {
     diskBackedBridge('audio')
     const documentId = await open('audio')
 
-    useAudioEdits.getState().replace(documentId, {
-      assetId: 'asset-a',
-      edits: [],
-      region: null,
-      bypassed: false,
-      takeClipId: null,
-    })
-    useAudioEdits.getState().runCommand(documentId, pushEdit({ kind: 'gain', db: -6 }))
+    useAudioEdits.getState().runCommand(documentId, pushEdit('clip-a', { kind: 'gain', db: -6 }))
     const before = useAudioEdits.getState().states[documentId]
     await saveDocument(documentId)
 
@@ -1253,21 +1246,30 @@ describe('the kinds a string holds', () => {
     expect(useSequences.getState().states[documentId]).toEqual(EMPTY_SOUND_SEQUENCE)
   })
 
-  // A file written before takes had a montage. It reopens with an empty one rather than refusing.
+  /**
+   * A file written before takes had a montage, and before a chain belonged to a block. It
+   * reopens with an empty montage rather than refusing — and its chain, which named no block,
+   * has nowhere to land: the editor edits blocks now. The take is an asset and is not lost.
+   */
   it('opens a take saved with no montage at all', async () => {
     diskBackedBridge('audio')
     const documentId = await open('audio')
 
     await getBridge()?.documents.write(documentId, 'audio', {
       title: 'Untitled',
-      content: JSON.stringify({ assetId: 'asset-a', edits: [], region: null, bypassed: false }),
+      content: JSON.stringify({
+        assetId: 'asset-a',
+        edits: [{ kind: 'trimSilence' }],
+        region: null,
+        bypassed: false,
+      }),
     })
 
     useSequences.getState().drop(documentId)
     useAudioEdits.getState().drop(documentId)
     await restoreDocument(documentId)
 
-    expect(useAudioEdits.getState().states[documentId]?.assetId).toBe('asset-a')
+    expect(useAudioEdits.getState().states[documentId]).toEqual(EMPTY_AUDIO_EDIT)
     expect(useSequences.getState().states[documentId]).toEqual(EMPTY_SOUND_SEQUENCE)
   })
 

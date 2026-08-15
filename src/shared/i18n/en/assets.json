@@ -102,7 +102,7 @@
   },
   "audio": {
     "takeRole": "The take you are editing, before montage",
-    "noAsset": "No sound open. Drop a take here, or double-click an audio asset.",
+    "noClip": "Select a clip from the montage to edit it here, or drop a take.",
     "unreadable": "This file could not be decoded.",
     "copyName": "{{name}} (edited)",
     "selection": "Selection {{from}} – {{to}}",
