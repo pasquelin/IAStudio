@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
+import { fakeMenu } from '@/helpers/menu-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -17,9 +18,13 @@ const POSTER: DocumentDescriptor = {
   fileName: 'Poster.img',
 }
 
+/** Reset per case, as every menu-raising suite of this studio does. */
+let menu = fakeMenu()
+
 beforeEach(() => {
   vi.clearAllMocks()
-  installFakeBridge({})
+  menu = fakeMenu()
+  installFakeBridge({ menu: menu.bridge })
   useDocuments.setState({ documents: {}, stored: [POSTER], activeId: null })
   useProject.setState({
     project: {
@@ -71,6 +76,31 @@ describe('the documents panel', () => {
     render(<Documents />)
 
     expect(screen.getByText('Ouvert')).toBeInTheDocument()
+  })
+
+  /**
+   * The name is read here as much as in the explorer and on the tab, so it is changed here too:
+   * a gesture offered by one list and not by the one beside it is a gesture nobody finds twice.
+   */
+  it('renames a document where it is listed', async () => {
+    const rename = vi.fn(() => Promise.resolve({ ...POSTER, title: 'Affiche' }))
+    // `list` too: the panel relists on mount, and a bridge that answers nothing empties it.
+    installFakeBridge({
+      documents: { list: () => Promise.resolve([POSTER]), rename },
+      menu: menu.bridge,
+    })
+    menu.picks('Renommer')
+    const { container } = render(<Documents />)
+
+    const cell = container.querySelector('[data-cell="0"]')
+    expect(cell).not.toBeNull()
+    if (cell) fireEvent.contextMenu(cell)
+
+    const field = await screen.findByRole('textbox', { name: 'Nom du document' })
+    await userEvent.clear(field)
+    await userEvent.type(field, 'Affiche{Enter}')
+
+    await vi.waitFor(() => expect(rename).toHaveBeenCalledWith('a', 'image', 'Affiche'))
   })
 
   // An open folder that holds nothing yet is not the same silence as no folder at all.

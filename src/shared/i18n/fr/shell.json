@@ -61,7 +61,7 @@
     "empty": "Ce dossier de projet n’a pas pu être lu.",
     "open": "Ouvert",
     "revealHint": "Ouvre le gestionnaire de fichiers sur le fichier sélectionné",
-    "renameHint": "Change le nom du fichier sur le disque, pas seulement à l’écran",
+    "renameHint": "Change le nom, à l’écran comme sur le disque — c’est le même",
     "trashHint": "Envoie le fichier à la corbeille du système ; rien n’est effacé tout de suite"
   },
   "menu": {

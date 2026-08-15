@@ -26,6 +26,7 @@ export const sequenceStore = store
 export const useSequences = store.use
 export const sequenceOf = store.stateOf
 export const sequenceHistoryOf = store.historyOf
+export const isSequenceDirty = store.isDirty
 
 /**
  * Whether any track of that montage would hold this asset — what keeps the cascade from

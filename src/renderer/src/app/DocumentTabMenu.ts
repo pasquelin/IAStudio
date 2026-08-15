@@ -1,4 +1,4 @@
-import { mdiClose, mdiCloseBoxMultipleOutline, mdiTrashCanOutline } from '@mdi/js'
+import { mdiClose, mdiCloseBoxMultipleOutline, mdiRenameOutline, mdiTrashCanOutline } from '@mdi/js'
 import type { TFunction } from 'i18next'
 import { showContextMenu } from '@/helpers/context-menu'
 import { reportFailure } from '@/services/diagnostics'
@@ -10,6 +10,8 @@ export type DocumentTabMenuProps = {
   documentId: string
   /** The window's translator, as every menu of this studio takes it — see `openAssetMenu`. */
   t: TFunction
+  /** Hands the rename back to the tab, which owns the field — as `openLayerMenu` does its row. */
+  onRename: () => void
 }
 
 /**
@@ -21,8 +23,14 @@ export type DocumentTabMenuProps = {
  *
  * The menu is gone by the time any of these fails, so the journal is where a failure lands.
  */
-export function openDocumentTabMenu({ documentId, t }: DocumentTabMenuProps): void {
+export function openDocumentTabMenu({ documentId, t, onRename }: DocumentTabMenuProps): void {
   void showContextMenu([
+    {
+      label: t('documents.rename'),
+      icon: mdiRenameOutline,
+      tooltip: t('documents.renameHint'),
+      onSelect: onRename,
+    },
     {
       label: t('documents.close'),
       icon: mdiClose,

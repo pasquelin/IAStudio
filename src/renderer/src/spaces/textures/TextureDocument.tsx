@@ -20,7 +20,8 @@ import { EmptyState } from '@/design/EmptyState'
 import { loadTexture } from '@/engines/scene/texture-cache'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
-import { textureOf, useTextures } from '@/stores/textures'
+import { useDocumentTitle } from '@/app/useDocumentTitle'
+import { isTextureDirty, textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
@@ -76,6 +77,8 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   const texture = useTextures(state => textureOf(state, documentId))
   const inspected = useTextureViews(state => inspectedChannel(state, documentId))
   const active = useDocuments(state => state.activeId === documentId)
+
+  useDocumentTitle(documentId, useTextures(state => isTextureDirty(state, documentId)))
 
   useRestoredDocument(documentId)
 

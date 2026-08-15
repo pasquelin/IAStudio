@@ -87,6 +87,8 @@
     "missing": "This document is no longer open.",
     "close": "Close tab",
     "closeOthers": "Close other tabs",
+    "rename": "Rename",
+    "renameLabel": "Document name",
     "delete": "Delete document…",
     "saveTitle": "Save changes to “{{title}}”?",
     "saveBody": "If you do not save them, they will be lost.",
@@ -98,7 +100,12 @@
     "deleteConfirm": "Delete",
     "closeHint": "Takes the tab off the bar; the document stays in the project",
     "closeOthersHint": "Closes every other tab, one after another",
-    "deleteHint": "Removes the document from the project, its file included"
+    "renameHint": "Changes the document’s name everywhere it is written — its file included",
+    "deleteHint": "Removes the document from the project, its file included",
+    "nameEmpty": "A document needs a name.",
+    "nameTooLong": "That name is too long for a file.",
+    "nameInvalid": "That name holds a character a file name cannot carry.",
+    "nameTaken": "The project already holds a document of that name."
   },
   "audio": {
     "takeRole": "The take you are editing, before it goes into the edit",

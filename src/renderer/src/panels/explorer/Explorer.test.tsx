@@ -251,7 +251,7 @@ describe('the project explorer', () => {
       declareGauge('--sc-row-stacked', '32px')
 
       render(<Explorer />)
-      await screen.findByText('a3f1.scene')
+      await screen.findByText('Niveau')
 
       const row = screen.getByRole('treeitem').closest('li')
       expect(row).toHaveStyle({ height: '24px' })
@@ -338,7 +338,7 @@ describe('the project explorer', () => {
 
       render(<Explorer />)
       await userEvent.dblClick(await screen.findByText('documents'))
-      await userEvent.dblClick(await screen.findByText('a3f1.scene'))
+      await userEvent.dblClick(await screen.findByText('Niveau'))
 
       expect(openDocument).toHaveBeenCalledWith(scene)
     })
@@ -354,7 +354,7 @@ describe('the project explorer', () => {
       install({ '': [folder('a3f1.img')] }, [picture])
 
       render(<Explorer />)
-      await userEvent.dblClick(await screen.findByText('a3f1.img'))
+      await userEvent.dblClick(await screen.findByText('Planche'))
 
       expect(openDocument).toHaveBeenCalledWith(picture)
       expect(screen.getByRole('treeitem')).not.toHaveAttribute('aria-expanded')
@@ -490,12 +490,14 @@ describe('the project explorer', () => {
       install({ '': [file('a3f1.scene'), file('other.scene')] }, [scene])
 
       render(<Explorer />)
-      await screen.findByText('a3f1.scene')
+      await screen.findByText('Niveau')
 
       const marked = (name: string): Element | null | undefined =>
         screen.getByText(name).closest('[role="treeitem"]')?.querySelector('.text-accent-ink')
 
-      expect(marked('a3f1.scene')).toBeInTheDocument()
+      // `Niveau` is the document's name; `other.scene` is a file no descriptor came back for,
+      // so it keeps the name the folder gives it.
+      expect(marked('Niveau')).toBeInTheDocument()
       expect(marked('other.scene')).not.toBeInTheDocument()
     })
   })
@@ -685,27 +687,41 @@ describe('the explorer menu', () => {
     expect(menu.offers('Afficher dans le dossier')).toBe(true)
   })
 
-  // A document's file name IS its identifier: renaming one a tab is holding orphans that tab,
-  // and the next save writes the old name back beside the new file.
-  it('refuses to rename a document a tab is holding', async () => {
+  /**
+   * The one gesture the old identity forbade: a document's file name WAS its id, so renaming an
+   * open one orphaned its tab and the next save wrote the old name back beside the new file. The
+   * id lives in the envelope now and stays put, so a tab can hold a document being renamed.
+   */
+  it('renames a document a tab is holding', async () => {
     withProject()
     useDocuments.setState({ documents: { a3f1: scene } })
     install({ '': [file('a3f1.scene')] }, [scene])
 
     render(<Explorer />)
-    await open('a3f1.scene')
-
-    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
-  })
-
-  it('renames a document no tab is holding', async () => {
-    withProject()
-    install({ '': [file('a3f1.scene')] }, [scene])
-
-    render(<Explorer />)
-    await open('a3f1.scene')
+    await open('Niveau')
 
     await waitFor(() => expect(menu.offers('Renommer')).toBe(true))
+  })
+
+  it('renames a document through its own channel, never as a plain file', async () => {
+    withProject()
+    const { renameFile } = install({ '': [file('a3f1.scene')] }, [scene])
+    const rename = vi.fn(() => Promise.resolve({ ...scene, title: 'Décor' }))
+    installFakeBridge({
+      project: { listFolder: () => Promise.resolve([file('a3f1.scene')]) },
+      documents: { list: () => Promise.resolve([scene]), rename },
+      menu: menu.bridge,
+    })
+    menu.picks('Renommer')
+
+    render(<Explorer />)
+    await open('Niveau')
+    const field = await screen.findByRole('textbox', { name: 'Renommer' })
+    await userEvent.clear(field)
+    await userEvent.type(field, 'Décor{Enter}')
+
+    expect(rename).toHaveBeenCalledWith('a3f1', 'scene', 'Décor')
+    expect(renameFile).not.toHaveBeenCalled()
   })
 
   it('renames where the name is read', async () => {
@@ -748,7 +764,7 @@ describe('the explorer menu', () => {
     menu.picks('Renommer')
 
     render(<Explorer />)
-    await open('a3f1.scene')
+    await open('Niveau')
     const field = await screen.findByRole('textbox', { name: 'Renommer' })
     await userEvent.dblClick(field)
 

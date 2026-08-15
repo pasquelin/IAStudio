@@ -11,3 +11,4 @@ export const audioEditStore = store
 export const useAudioEdits = store.use
 export const audioEditsOf = store.stateOf
 export const audioHistoryOf = store.historyOf
+export const isAudioEditDirty = store.isDirty

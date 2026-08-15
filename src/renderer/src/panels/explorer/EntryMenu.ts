@@ -7,8 +7,6 @@ import type { FolderNode } from './use-folder-tree'
 
 export type EntryMenuProps = {
   node: FolderNode
-  /** True while a tab is showing this file, which is what forbids renaming it. */
-  openInTab: boolean
   /** The window's translator, as every menu of this studio takes it — see `openAssetMenu`. */
   t: TFunction
   onRename: () => void
@@ -24,7 +22,7 @@ export type EntryMenuProps = {
  * **Nothing is deleted** — `trashItem` puts the file where the user can get it back. It is their
  * folder, and erasing something in it is a gesture the studio does not take.
  */
-export function openEntryMenu({ node, openInTab, t, onRename }: EntryMenuProps): void {
+export function openEntryMenu({ node, t, onRename }: EntryMenuProps): void {
   // The catalogue stores every asset by a path under `assets/`, so moving one of the studio's
   // own folders orphans rows nobody can find again. The main process refuses it too — this is
   // what says so before the click rather than after it.
@@ -41,10 +39,11 @@ export function openEntryMenu({ node, openInTab, t, onRename }: EntryMenuProps):
       label: t('explorer.rename'),
       icon: mdiRenameOutline,
       tooltip: t('explorer.renameHint'),
-      // A document's file name IS its identifier. Renaming a closed one gives it a new id and
-      // costs nothing; renaming one a tab is holding orphans that tab, and the next save would
-      // write the old name back beside the new file.
-      disabled: ownFolder || openInTab,
+      // No longer refused while a tab holds it. A document's file name WAS its identifier, so
+      // renaming an open one orphaned its tab and the next save wrote the old name back beside
+      // the new file; the id now lives in the envelope and stays put, which is what the whole
+      // of that change bought.
+      disabled: ownFolder,
       onSelect: onRename,
     },
     {

@@ -361,7 +361,9 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
     // parallel runs the process out of file descriptors, and every failed read would come
     // back as a document silently missing from the list.
     const found: DocumentDescriptor[] = []
-    for (const entry of entries.sort()) {
+    // By code unit, and said so: this ordering reaches no reader — it only settles WHICH of two
+    // files claiming one id keeps it, and that answer has to be the same on every machine.
+    for (const entry of [...entries].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
       const descriptor = await descriptorOf(folder, entry)
       if (!descriptor) continue
 

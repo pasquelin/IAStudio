@@ -1,9 +1,10 @@
 import { mdiClose } from '@mdi/js'
 import { DockviewDefaultTab, type IDockviewPanelHeaderProps } from 'dockview-react'
-import { type MouseEvent } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
+import { InlineRename } from '@/design/InlineRename'
 import { workspaceById, workspaceLabelKey } from '@/helpers/workspaces'
 import { useDocuments } from '@/stores/documents'
 import { closeTab } from './close-tab'
@@ -26,6 +27,8 @@ import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
 export function DocumentTab(props: IDockviewPanelHeaderProps) {
   const { t } = useTranslation()
   const workspace = useDocuments(state => state.documents[props.api.id]?.workspace)
+  const title = useDocuments(state => state.documents[props.api.id]?.title)
+  const [renaming, setRenaming] = useState(false)
 
   const close = (event: MouseEvent): void => {
     // Dockview reads a click on the tab as "activate me"; this one is not that.
@@ -35,8 +38,32 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
 
   const openMenu = (event: MouseEvent): void => {
     event.preventDefault()
-    openDocumentTabMenu({ documentId: props.api.id, t })
+    openDocumentTabMenu({ documentId: props.api.id, t, onRename: () => setRenaming(true) })
   }
+
+  const commitRename = (name: string): void => {
+    setRenaming(false)
+    // `InlineRename` gives back the original name when the edit was abandoned, so this is what
+    // tells a rename from an escape — the idiom every other host of that field follows.
+    if (title && name !== title) void useDocuments.getState().rename(props.api.id, name)
+  }
+
+  /**
+   * The field takes the whole tab while it is open — the drag, the close button and the space
+   * glyph all step aside. Dockview's own tab is what carries the drag, and leaving it mounted
+   * under a field would have a rename begin a drag on the first pointer move.
+   */
+  if (renaming && title)
+    return (
+      <span className="flex-1 px-1">
+        <InlineRename
+          value={title}
+          label={t('documents.renameLabel')}
+          onCommit={commitRename}
+          gauge="inline"
+        />
+      </span>
+    )
 
   return (
     <>
@@ -52,7 +79,14 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
           <UiIcon path={workspaceById(workspace).icon} size={14} className="text-muted" />
         </span>
       )}
-      <DockviewDefaultTab {...props} hideClose onContextMenu={openMenu} />
+      {/* Double-click renames, as it does in the layer stack, the outliner and the track
+          headers — the gesture a title one can edit is expected to answer. */}
+      <DockviewDefaultTab
+        {...props}
+        hideClose
+        onContextMenu={openMenu}
+        onDoubleClick={() => setRenaming(true)}
+      />
       {/* Same footprint as the cross it replaces, so a tab does not change width for having
           its own close button. */}
       <ToolButton

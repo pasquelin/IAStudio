@@ -5,7 +5,7 @@ import { renameNode, setNodeVisible } from '@/engines/scene/commands'
 import { iconOf } from '@/engines/scene/node-factory'
 import type { SceneNode, SceneState } from '@/engines/scene/scene-state'
 import { useScenes } from '@/stores/scenes'
-import { InlineRename } from './InlineRename'
+import { InlineRename } from '@/design/InlineRename'
 import { VisibilityToggle } from './VisibilityToggle'
 
 export type SceneNodeRowProps = {

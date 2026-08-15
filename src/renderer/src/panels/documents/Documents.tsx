@@ -1,5 +1,5 @@
 import { mdiFolderOpenOutline } from '@mdi/js'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { Collection } from '@/design/Collection'
@@ -8,6 +8,7 @@ import { openDocument } from '@/app/dockview-api'
 import { NoProject } from '@/panels/shared/NoProject'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
+import { openDocumentMenu } from './DocumentMenu'
 import { DocumentRow } from './DocumentRow'
 
 /**
@@ -28,6 +29,7 @@ export function Documents() {
   const stored = useDocuments(state => state.stored)
   const open = useDocuments(state => state.documents)
   const projectPath = useProject(state => state.project?.path ?? null)
+  const [renaming, setRenaming] = useState<string | null>(null)
 
   // Opening a project already lists it; this is for what has been written since. `relist` and
   // not `refresh`: settling which tabs are open is the project's business, not this panel's.
@@ -49,8 +51,23 @@ export function Documents() {
       // No `selectedIds`: nothing is picked here. "Open" used to borrow the prop, which painted
       // the selection tint on rows the user had never chosen. `DocumentRow` carries its own mark.
       onActivate={openDocument}
+      onContextMenu={(document: DocumentDescriptor) =>
+        openDocumentMenu({ document, t, onRename: () => setRenaming(document.id) })
+      }
       renderRow={(document: DocumentDescriptor) => (
-        <DocumentRow document={document} open={open[document.id] !== undefined} />
+        <DocumentRow
+          document={document}
+          open={open[document.id] !== undefined}
+          {...(renaming === document.id
+            ? {
+                onRename: (name: string) => {
+                  setRenaming(null)
+                  // `InlineRename` gives back the original on escape; only a change is a rename.
+                  if (name !== document.title) void useDocuments.getState().rename(document.id, name)
+                },
+              }
+            : {})}
+        />
       )}
       empty={<EmptyState icon={mdiFolderOpenOutline} message={t('home.documents.none')} />}
     />

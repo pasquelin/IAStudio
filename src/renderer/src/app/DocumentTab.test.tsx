@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { IDockviewPanelHeaderProps } from 'dockview-react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { DocumentDescriptor } from '@shared/domain/document'
 import { fakeMenu } from '@/helpers/menu-fixtures'
 import { workspaceById } from '@/helpers/workspaces'
 import { installFakeBridge } from '@/services/fake-bridge'
@@ -124,11 +125,40 @@ describe('a document tab', () => {
 
     await vi.waitFor(() =>
       expect(menu.labels()).toEqual([
+        'Renommer',
         'Fermer l’onglet',
         'Fermer les autres onglets',
         'Supprimer le document…',
       ]),
     )
+  })
+
+  /**
+   * The tab is where a document's name is read most, so it is where renaming has to be reachable
+   * — and the field takes the whole tab while it is open: Dockview's own tab carries the drag,
+   * and leaving it mounted underneath would have a rename begin one on the first pointer move.
+   */
+  it('renames the document in place, from the menu', async () => {
+    const document: DocumentDescriptor = {
+      id: 'doc-1',
+      kind: 'scene',
+      title: 'Niveau',
+      workspace: '3d',
+      fileName: 'Niveau.scene',
+    }
+    useDocuments.setState({ documents: { 'doc-1': document }, stored: [document] })
+
+    const rename = vi.fn(() => Promise.resolve({ ...document, title: 'Décor' }))
+    installFakeBridge({ documents: { rename }, menu: menu.bridge })
+    menu.picks('Renommer')
+    render(<DocumentTab {...props('doc-1')} />)
+
+    await rightClick()
+    const field = await screen.findByRole('textbox', { name: 'Nom du document' })
+    await userEvent.clear(field)
+    await userEvent.type(field, 'Décor{Enter}')
+
+    await vi.waitFor(() => expect(rename).toHaveBeenCalledWith('doc-1', 'scene', 'Décor'))
   })
 
   it('offers to delete the document, which nothing else in the studio does', async () => {

@@ -53,11 +53,14 @@ export function Explorer() {
     void useDocuments.getState().relist()
   }, [projectPath])
 
-  // Keyed by the file name the folder shows, which is what a directory entry carries — the
-  // descriptor knows its id and kind, and `documentPath` builds the same name from them.
+  // Keyed by the file name the folder shows, which is what a directory entry carries — and it
+  // is the descriptor's own `fileName`, read off the disk. It used to be the id, which worked
+  // only for as long as the id WAS the file name: the day the two parted, this answered null
+  // for every document at once — no space glyph, no "open" mark, and a double-click handing the
+  // document to whatever application the system opens a `.scene` with.
   const documentsByFile = useMemo(() => {
     const found = new Map<string, DocumentDescriptor>()
-    for (const document of stored) found.set(document.id, document)
+    for (const document of stored) found.set(document.fileName, document)
     return found
   }, [stored])
 
@@ -72,11 +75,10 @@ export function Explorer() {
    */
   const documentOf = useCallback(
     (node: FolderNode): DocumentDescriptor | null => {
-      const extension = extensionOf(node.name)
-      const kind = kindForExtension(extension)
+      const kind = kindForExtension(extensionOf(node.name))
       if (!kind) return null
       if (node.kind === 'folder' && !FOLDER_KINDS.has(kind)) return null
-      return documentsByFile.get(node.name.slice(0, -extension.length)) ?? null
+      return documentsByFile.get(node.name) ?? null
     },
     [documentsByFile],
   )
@@ -116,11 +118,26 @@ export function Explorer() {
   const isOpen = (document: DocumentDescriptor | null): boolean =>
     document !== null && open[document.id] !== undefined
 
-  // The name the disk shows is what is renamed, so the answer settles when the folder is read
-  // again — the watch does that on its own, and this only closes the field.
+  /**
+   * A document is renamed through its own channel, which moves the file AND rewrites its
+   * envelope; anything else is a plain file and is renamed as one. Told apart because the two
+   * cannot be the same gesture: renaming a document as a file would leave its envelope saying
+   * the old thing, and the main process refuses it outright — `isStudioOwned`.
+   *
+   * Nothing is written on faith either way. A file's new name settles when the watch reads the
+   * folder again; a document's comes back from the rename itself, which is what puts it in the
+   * tab that may be showing it.
+   */
   const commitRename = (node: FolderNode, name: string): void => {
     setRenaming(null)
-    if (name !== node.name) void getBridge()?.project.renameFile(node.path, name)
+    const document = documentOf(node)
+
+    if (!document) {
+      if (name !== node.name) void getBridge()?.project.renameFile(node.path, name)
+      return
+    }
+
+    if (name !== document.title) void useDocuments.getState().rename(document.id, name)
   }
 
   if (nodes.length === 0)
@@ -149,12 +166,7 @@ export function Explorer() {
       onDrop={(path, folder) => void getBridge()?.project.moveFile(path, folder)}
       onActivate={node => void activate(node)}
       onContextMenu={node =>
-        openEntryMenu({
-          node,
-          openInTab: isOpen(documentOf(node)),
-          t,
-          onRename: () => setRenaming(node.id),
-        })
+        openEntryMenu({ node, t, onRename: () => setRenaming(node.id) })
       }
       renderRow={row => {
         const document = documentOf(row.node)
@@ -173,7 +185,10 @@ export function Explorer() {
 
         return (
           <EntryRow
-            name={row.node.name}
+            // The document's name where there is one — which is its file name for anything
+            // written since documents came to be named, and its title for the older ones whose
+            // file still wears a uuid.
+            name={document?.title ?? row.node.name}
             icon={icon}
             open={isOpen(document)}
             {...(renaming === row.node.id

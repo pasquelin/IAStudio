@@ -36,7 +36,8 @@ import {
   rotateImage,
 } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
-import { canvasOf, useCanvases } from '@/stores/canvases'
+import { useDocumentTitle } from '@/app/useDocumentTitle'
+import { canvasOf, isCanvasDirty, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, canvasViewOf } from '@/stores/canvas-views'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
@@ -156,6 +157,8 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
   // After the engine is registered, never before: the pixels are handed to it, and it has to be
   // reachable.
+  useDocumentTitle(documentId, useCanvases(state => isCanvasDirty(state, documentId)))
+
   useRestoredDocument(documentId)
 
   // The engine holds the pixels, never the stack: every state change is pushed into it.
