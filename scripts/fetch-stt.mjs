@@ -4,7 +4,7 @@
  * Only the detector, and deliberately so: it weighs 640 KB while the recognition model weighs
  * 640 MB. The small one ships, so the studio can open the microphone, draw a level and know
  * whether anyone is speaking without a download; the large one is fetched at runtime, once, by
- * `main/dictation/model-download.ts` — see docs/stt/03-model-management.md.
+ * `main/dictation/model-download.ts`.
  *
  *     node scripts/fetch-stt.mjs
  *     node scripts/fetch-stt.mjs --digests    # after rotating the URL
@@ -91,7 +91,7 @@ export async function fetchStt(options = {}) {
         'It is read by the recognition engine, never executed.',
         '',
         'The recognition model itself is NOT here. It is fetched on first use into the user',
-        'data folder — see docs/stt/03-model-management.md.',
+        'data folder.',
         '',
       ].join('\n'),
     )
