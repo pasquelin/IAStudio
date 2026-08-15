@@ -89,7 +89,11 @@
     "mirror": "Return window",
     "mirrorHint": "Opens the edit in a window of its own, to put on a second screen",
     "decibels": "dB",
-    "outputLevel": "Output level"
+    "outputLevel": "Output level",
+    "spectrum": "Spectrum",
+    "spectrumHint": "Shows what the edit is made of while it plays, from bass to treble",
+    "hertz": "Hz",
+    "kilohertz": "kHz"
   },
   "timeline": {
     "noDocument": "No sequence open. Create one to start editing.",

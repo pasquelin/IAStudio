@@ -1,5 +1,5 @@
-import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
-import { useCallback, useEffect, useRef, type PointerEvent } from 'react'
+import { mdiEqualizer, mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clamp } from '@shared/numeric'
 import { MonitorFrame } from '@/design/MonitorFrame'
@@ -20,6 +20,7 @@ import {
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { usePeaks } from '@/stores/peaks'
 import { OutputMeter } from './OutputMeter'
+import { SpectrumBand } from './SpectrumBand'
 import type { SoundTransport } from './useSoundTransport'
 
 /** The scale's own face, as the ruler above it takes one: monospace, so digits keep their column. */
@@ -44,6 +45,12 @@ export type ProgramMonitorProps = {
 export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorProps) {
   const { t, i18n } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  /**
+   * Folded away to start with. It is the third reading of one panel, and the two above it are
+   * the ones a montage is judged on — an analyser opened by default would be the very crowding
+   * this monitor was asked to avoid.
+   */
+  const [spectrum, setSpectrum] = useState(false)
   // Read on paint rather than subscribed to: a waveform arriving is a repaint, never a render.
   const latest = useRef(sequence)
 
@@ -89,6 +96,12 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
 
   useRepaintOnResize(canvasRef, paint)
 
+  const onTool = (id: string): void => {
+    if (id === 'rewind') return transport.rewind()
+    if (id === 'spectrum') return setSpectrum(open => !open)
+    transport.toggle()
+  }
+
   const seek = (event: PointerEvent<HTMLCanvasElement>): void => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -112,9 +125,17 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
               icon: transport.playing ? mdiPause : mdiPlay,
               shortcut: t('keys.Space'),
             },
+            {
+              id: 'spectrum',
+              labelKey: 'transport.spectrum',
+              descriptionKey: 'transport.spectrumHint',
+              icon: mdiEqualizer,
+              pressed: spectrum,
+              separatorBefore: true,
+            },
           ]}
           activeTool={transport.playing ? 'play' : undefined}
-          onTool={id => (id === 'rewind' ? transport.rewind() : transport.toggle())}
+          onTool={onTool}
           extras={
             <>
               <span className={TOOLBAR_LABEL}>{t('transport.program')}</span>
@@ -124,11 +145,14 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
         />
       }
     >
-      {/* The meter beside the wave rather than over it: the wave is clicked to seek, and a
-          surface one drags on has no room for a strip that is only ever read. */}
-      <div className="absolute inset-0 flex gap-(--sc-gutter)">
-        <canvas ref={canvasRef} className="h-full min-w-0 flex-1" onPointerDown={seek} />
-        <OutputMeter tap={transport.tap} playing={transport.playing} />
+      <div className="absolute inset-0 flex flex-col gap-(--sc-gutter)">
+        {/* The meter beside the wave rather than over it: the wave is clicked to seek, and a
+            surface one drags on has no room for a strip that is only ever read. */}
+        <div className="flex min-h-0 flex-1 gap-(--sc-gutter)">
+          <canvas ref={canvasRef} className="h-full min-w-0 flex-1" onPointerDown={seek} />
+          <OutputMeter tap={transport.tap} playing={transport.playing} />
+        </div>
+        {spectrum && <SpectrumBand tap={transport.tap} playing={transport.playing} />}
       </div>
     </MonitorFrame>
   )

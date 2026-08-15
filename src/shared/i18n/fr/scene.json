@@ -89,7 +89,11 @@
     "mirror": "Fenêtre de retour",
     "mirrorHint": "Ouvre le montage dans une fenêtre à part, à poser sur un autre écran",
     "decibels": "dB",
-    "outputLevel": "Niveau de sortie"
+    "outputLevel": "Niveau de sortie",
+    "spectrum": "Spectre",
+    "spectrumHint": "Montre pendant la lecture ce que contient le montage, des graves aux aigus",
+    "hertz": "Hz",
+    "kilohertz": "kHz"
   },
   "timeline": {
     "noDocument": "Aucune séquence ouverte. Créez-en une pour monter.",

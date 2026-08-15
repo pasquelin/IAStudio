@@ -81,4 +81,36 @@ describe('ProgramMonitor', () => {
 
     expect(screen.getByRole('button', { name: /Pause/ })).toBeInTheDocument()
   })
+
+  /**
+   * Three readings in a panel a third of a screen tall is the crowding this monitor was asked to
+   * avoid: the two a montage is judged on stand, the third is offered.
+   */
+  it('keeps the spectrum folded away until it is asked for', () => {
+    show()
+
+    expect(screen.queryByRole('img', { name: 'Spectre' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Spectre/ }))
+
+    expect(screen.getByRole('img', { name: 'Spectre' })).toBeInTheDocument()
+  })
+
+  it('folds it back without touching the transport', () => {
+    const { player } = show()
+    const button = screen.getByRole('button', { name: /Spectre/ })
+
+    fireEvent.click(button)
+    fireEvent.click(button)
+
+    expect(screen.queryByRole('img', { name: 'Spectre' })).not.toBeInTheDocument()
+    expect(player.toggle).not.toHaveBeenCalled()
+    expect(player.rewind).not.toHaveBeenCalled()
+  })
+
+  it('shows the output level beside the wave, whether or not anything is playing', () => {
+    show()
+
+    expect(screen.getByRole('img', { name: 'Niveau de sortie' })).toBeInTheDocument()
+  })
 })
