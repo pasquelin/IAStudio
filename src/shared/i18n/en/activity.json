@@ -94,6 +94,7 @@
       "assets.save": "The asset could not be rewritten",
       "assets.copy": "The copy could not be completed",
       "assets.extract": "The images inside this model could not be taken out",
+      "assets.rename": "This asset could not be renamed",
       "project.reveal": "The project folder could not be shown",
       "project.forget": "The project could not be removed from the list",
       "project.rename": "The project could not be renamed",

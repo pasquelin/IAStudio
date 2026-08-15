@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import type { AssetBadge as BadgeName } from '@shared/domain/asset'
 import { AssetBadge } from '@/design/AssetBadge'
+import { InlineRename } from '@/design/InlineRename'
 import { Row } from '@/design/Row'
 import { ROW_QUIET } from '@/design/styles'
 import { cn } from '@/helpers/cn'
@@ -16,6 +17,8 @@ export type AssetRowProps = {
   badgeLabels: Map<BadgeName, string>
   /** Built once by the panel — see `AssetCardProps.hints`. */
   hints: { fetch: Record<string, string>; generating: Record<string, string> }
+  /** Renaming, when this row is the one being renamed — see `AssetCardProps.rename`. */
+  rename?: { open: boolean; start: () => void; commit: (name: string) => void; label: string }
 }
 
 // The type ends the line rather than sitting under the name: a subtitle would stack two lines
@@ -26,8 +29,12 @@ export const AssetRow = memo(function AssetRow({
   badge,
   badgeLabels,
   hints,
+  rename,
 }: AssetRowProps) {
-  const line = (
+  // The row becomes the field, as the explorer's and the document list's do.
+  const line = rename?.open ? (
+    <InlineRename value={nameOfRow(row)} label={rename.label} onCommit={rename.commit} />
+  ) : (
     <Row
       title={nameOfRow(row)}
       actions={
@@ -54,7 +61,11 @@ export const AssetRow = memo(function AssetRow({
 
   // `h-full` on the wrapper: `Row` sizes itself against its parent, which is this div.
   return (
-    <DraggableAsset asset={row.asset} className="h-full">
+    <DraggableAsset
+      asset={row.asset}
+      className="h-full"
+      {...(rename ? { onRename: rename.start } : {})}
+    >
       {line}
     </DraggableAsset>
   )

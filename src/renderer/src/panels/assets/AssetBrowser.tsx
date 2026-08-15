@@ -123,6 +123,34 @@ export function AssetBrowser() {
    * asks again, which is when a stale answer would actually mislead.
    */
   const [absent, setAbsent] = useState<ReadonlySet<string>>(EMPTY_IDS)
+  const [renaming, setRenaming] = useState<string | null>(null)
+  // Resolved once here rather than per tile, for the reason `badgeLabels` and `hints` are: a
+  // `useTranslation` inside a cell subscribes every one of two hundred of them.
+  const renameLabel = t('assets.renameLabel')
+
+  /**
+   * What a row needs to be renamed, or nothing at all.
+   *
+   * Only a row the catalogue holds: a library asset has no row of this project's to name yet,
+   * and a job still generating has no asset behind its tile.
+   */
+  const renameOf = (
+    row: AssetRowModel,
+  ): { rename: { open: boolean; start: () => void; commit: (name: string) => void; label: string } } | null =>
+    row.from === 'local'
+      ? {
+          rename: {
+            open: renaming === row.asset.id,
+            start: () => setRenaming(row.asset.id),
+            label: renameLabel,
+            commit: (name: string) => {
+              setRenaming(null)
+              // `InlineRename` gives back the original on escape; only a change is a rename.
+              if (name !== row.asset.name) void useAssets.getState().rename(row.asset.id, name)
+            },
+          },
+        }
+      : null
   const asked = useRef<Set<string>>(new Set())
 
   const checkPresence = useCallback((visible: readonly AssetRowModel[]) => {
@@ -314,6 +342,7 @@ export function AssetBrowser() {
             badgeLabels={badgeLabels}
             typeLabels={typeLabels}
             hints={hints}
+            {...(renameOf(row) ?? {})}
           />
         )}
         renderRow={row => (
@@ -323,6 +352,7 @@ export function AssetBrowser() {
             badge={row.badge}
             badgeLabels={badgeLabels}
             hints={hints}
+            {...(renameOf(row) ?? {})}
           />
         )}
         empty={<EmptyState icon={mdiImageMultipleOutline} message={emptyMessage} />}

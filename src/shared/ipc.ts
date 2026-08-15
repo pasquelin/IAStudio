@@ -453,6 +453,9 @@ export type LogScope =
   // journal denied a write that had just succeeded.
   | 'assets.copy'
   | 'assets.extract'
+  // The catalogue refusing a new name. The field has closed by then — it commits on blur as much
+  // as on Enter — so the journal is the only place left to say the name did not take.
+  | 'assets.rename'
   // The home's shelf: a folder moved since it was last opened is the ordinary case there, so
   // all three of its gestures need somewhere to say they did nothing.
   | 'project.reveal'
@@ -495,6 +498,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.save',
   'assets.copy',
   'assets.extract',
+  'assets.rename',
   'project.reveal',
   'project.forget',
   'project.rename',

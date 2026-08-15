@@ -10,6 +10,12 @@ export type MediaTileProps = {
   /** Overlaid on the picture, at the bottom. */
   caption: string
   /**
+   * Drawn in the caption's place while it is being edited — the field that renames what the
+   * tile shows. The caption itself stays: it is what the tile is titled by, and a name being
+   * typed is not yet the name of anything.
+   */
+  captionField?: ReactNode
+  /**
    * Overlaid on the picture — a standing or a state, never an action. WHICH corner is the badge's
    * own business: this slot renders it as handed over, `AssetBadge` places itself top right, and a
    * channel tile puts its origin top left because the menu button owns the other corner.
@@ -48,6 +54,7 @@ export type MediaTileProps = {
 export function MediaTile({
   url,
   caption,
+  captionField,
   badge,
   fallbackIcon = mdiImageOffOutline,
   face,
@@ -84,7 +91,7 @@ export function MediaTile({
           'text-tiny text-white drop-shadow-[0_1px_2px_black]',
         )}
       >
-        {caption}
+        {captionField ?? caption}
       </figcaption>
     </figure>
   )

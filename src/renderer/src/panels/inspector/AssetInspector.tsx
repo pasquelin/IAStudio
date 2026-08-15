@@ -3,15 +3,17 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import { FAVORITES_MAX, sameRecipe } from '@shared/domain/favorite'
+import { InlineRename } from '@/design/InlineRename'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { formatBytes, formatMoment } from '@/helpers/format'
 import { generationOf, openGeneratorOn } from '@/helpers/generation'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
+import { useAssets } from '@/stores/assets'
 import { useFavorites } from '@/stores/favorites'
 import { useJobs } from '@/stores/jobs'
 import { useLayouts } from '@/stores/layouts'
@@ -25,6 +27,13 @@ export function AssetInspector({ asset }: { asset: Asset }) {
   const jobs = useJobs(state => state.jobs)
   const bodies = useJobs(state => state.bodies)
   const [missing, setMissing] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+
+  const commitRename = (name: string): void => {
+    setRenaming(false)
+    // `InlineRename` gives back the original when the edit was abandoned; only a change is one.
+    if (name !== asset.name) void useAssets.getState().rename(asset.id, name)
+  }
 
   // Answers false when the file has moved since it was linked, and rejects when the project
   // closed under us: a button that silently does nothing reads as a broken button.
@@ -41,7 +50,29 @@ export function AssetInspector({ asset }: { asset: Asset }) {
   return (
     <>
       <PropertyGroup title={t('inspector.identity')}>
-        <PropertyRow label={t('inspector.name')}>{asset.name}</PropertyRow>
+        {/* Edited where it is read, on a double-click — the gesture every other name of this
+            studio answers. The row is the field's host, so the tooltip explains rather than
+            repeats: the name is already on screen. */}
+        <PropertyRow label={t('inspector.name')}>
+          {renaming ? (
+            <InlineRename
+              value={asset.name}
+              label={t('assets.renameLabel')}
+              gauge="inline"
+              onCommit={commitRename}
+            />
+          ) : (
+            // The hint explains rather than repeats — the name is already on screen, and what
+            // is not is that a double-click opens it.
+            <span
+              className="block w-full truncate"
+              onDoubleClick={() => setRenaming(true)}
+              {...HINT_LEFT(t('assets.renameHint'))}
+            >
+              {asset.name}
+            </span>
+          )}
+        </PropertyRow>
         <PropertyRow label={t('inspector.type')}>{t(`assetTypes.${asset.type}`)}</PropertyRow>
         {probe?.duration !== undefined && (
           <PropertyRow label={t('inspector.duration')}>

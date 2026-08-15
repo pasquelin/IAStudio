@@ -39,7 +39,12 @@
     "extractTextures": "Extraire ses textures",
     "extractTexturesHint": "Sort les images contenues dans ce modèle vers le projet, où elles peuvent être ouvertes et peintes",
     "editPixels": "Modifier l’image",
-    "editPixelsHint": "Ouvre cette image dans l’espace Image, où ⌘S la réécrit sur place"
+    "editPixelsHint": "Ouvre cette image dans l’espace Image, où ⌘S la réécrit sur place",
+    "rename": "Renommer",
+    "renameLabel": "Nom de l’asset",
+    "renameHint": "Change le nom dans ce projet ; celui du compte Scenario ne bouge pas",
+    "nameEmpty": "Un asset a besoin d’un nom.",
+    "nameTooLong": "Ce nom est trop long."
   },
   "ingest": {
     "queued": "En attente…",

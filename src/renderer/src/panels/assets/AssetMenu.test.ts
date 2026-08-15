@@ -140,4 +140,24 @@ describe('what the shelf offers to do with an asset', () => {
 
     expect(row(/Modifier l’image/)).toBeUndefined()
   })
+
+  /**
+   * Handed back to the host rather than commanded here — the field belongs to the tile the name
+   * is read on, and this menu is gone by the time it opens. The layer menu is the same shape.
+   */
+  it('hands the rename back to the row instead of commanding it', async () => {
+    const onRename = vi.fn()
+    menu.picks(i18next.t('assets.rename'))
+
+    openAssetMenu({ asset: asset(), t: i18next.t, onRename })
+
+    await vi.waitFor(() => expect(onRename).toHaveBeenCalled())
+  })
+
+  // A host that draws no name has nothing to open — a job still generating has a tile and no row.
+  it('says nothing about renaming where no name is drawn', () => {
+    raise()
+
+    expect(row(/Renommer/)).toBeUndefined()
+  })
 })

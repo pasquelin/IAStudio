@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { posterUrl, type AssetBadge as BadgeName, type AssetType } from '@shared/domain/asset'
 import { AssetBadge } from '@/design/AssetBadge'
 import { AssetTypeMark } from '@/design/AssetTypeMark'
+import { InlineRename } from '@/design/InlineRename'
 import { MediaTile } from '@/design/MediaTile'
 import { MEDIA_FRAME } from '@/design/styles'
 import { ProgressBar } from '@/design/ProgressBar'
@@ -33,6 +34,11 @@ export type AssetCardProps = {
    * subscribes every one of two hundred cells and allocates a fresh attribute object per frame.
    */
   hints: { fetch: Record<string, string>; generating: Record<string, string> }
+  /**
+   * Renaming, when this tile is the one being renamed. Two callbacks rather than one flag: the
+   * panel owns which row is open, and the tile owns neither the name nor where it is written.
+   */
+  rename?: { open: boolean; start: () => void; commit: (name: string) => void; label: string }
 }
 
 export const AssetCard = memo(function AssetCard({
@@ -41,6 +47,7 @@ export const AssetCard = memo(function AssetCard({
   badgeLabels,
   typeLabels,
   hints,
+  rename,
 }: AssetCardProps) {
   const type = typeOfRow(row)
 
@@ -61,10 +68,20 @@ export const AssetCard = memo(function AssetCard({
   // yet. Dragging either would drop an identifier no document can resolve.
   if (row.from === 'local') {
     return (
-      <DraggableAsset asset={row.asset}>
+      <DraggableAsset asset={row.asset} {...(rename ? { onRename: rename.start } : {})}>
         <MediaTile
           url={posterUrl(row.asset) ?? undefined}
           caption={row.asset.name}
+          captionField={
+            rename?.open ? (
+              <InlineRename
+                value={row.asset.name}
+                label={rename.label}
+                gauge="inline"
+                onCommit={rename.commit}
+              />
+            ) : undefined
+          }
           fallbackIcon={assetIcon(row.asset.type)}
           // A sound is the one kind the studio deliberately writes no poster for — a still would
           // be painted under the waveform of every clip it becomes (`POSTER_KINDS`). Its shape is
