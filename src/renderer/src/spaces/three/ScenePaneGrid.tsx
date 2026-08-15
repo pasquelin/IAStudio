@@ -75,7 +75,10 @@ function PaneMenu({
         // The label is on screen, so the tooltip explains instead of repeating it.
         {...HINT_TOP(t('sceneViews.paneHint'))}
         aria-expanded={open}
-        aria-label={t('sceneViews.pane', { number: pane + 1 })}
+        // The visible word comes FIRST in the accessible name: a reader who says "click Top"
+        // has to reach the button that reads Top, and four panes make the number the only way
+        // to tell them apart (WCAG SC 2.5.3).
+        aria-label={t('sceneViews.pane', { number: pane + 1, view: t(`sceneViews.${view}`) })}
         onClick={() => setOpen(current => !current)}
         className={CANVAS_TRIGGER}
       >

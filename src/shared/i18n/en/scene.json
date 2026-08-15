@@ -144,7 +144,7 @@
   "sceneViews": {
     "free": "Perspective",
     "freeHint": "The view being flown: the only one that turns",
-    "pane": "View {{number, number}}",
+    "pane": "{{view}} — view {{number, number}}",
     "paneHint": "Chooses what this quarter shows — a perspective, or an axis that does not turn",
     "front": "Front",
     "back": "Back",

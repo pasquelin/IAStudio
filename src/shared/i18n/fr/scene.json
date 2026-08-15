@@ -144,7 +144,7 @@
   "sceneViews": {
     "free": "Perspective",
     "freeHint": "La vue qu’on pilote : c’est la seule qui tourne",
-    "pane": "Vue {{number, number}}",
+    "pane": "{{view}} — vue {{number, number}}",
     "paneHint": "Choisit ce que ce quart montre — une perspective, ou un axe qui ne tourne pas",
     "front": "De face",
     "back": "De dos",
