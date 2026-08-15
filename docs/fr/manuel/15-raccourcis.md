@@ -561,23 +561,35 @@ ils sont liés à la bande, pas à un contexte.
 | `⇧⌘S` | Enregistrer sous |  |  |  |  |  |  |  |
 | `⌘,` | Réglages |  |  |  |  |  |  |  |
 | `⌘K` | Assistant |  |  |  |  |  |  |  |
+| `⌥D` | Dicter |  |  |  |  |  |  |  |
 | `⌃⌘F` | Plein écran |  |  |  |  |  |  |  |
 | `⌘Z` |  |  | Annuler | Annuler | Annuler | Annuler | Annuler | Annuler |
 | `⇧⌘Z` |  |  | Rétablir | Rétablir | Rétablir | Rétablir | Rétablir | Rétablir |
 | `⌘G` |  |  | Grouper |  |  |  |  |  |
 | `⌘D` |  |  | Dupliquer |  | Désélectionner |  |  |  |
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copier / Couper / Coller |  |  |  |  |  |
-| `O` |  |  | Projection |  |  |  |  |  |
+| `O` |  |  | Projection |  | Forme Ellipse |  |  |  |
 | `Z` |  |  | Mode de rendu |  |  |  |  |  |
 | `B` |  |  | Afficher les squelettes |  |  |  |  |  |
-| `V` |  |  | Sélectionner |  |  | Changer de vue |  |  |
-| `P` |  |  | Mode pose |  |  | Sondes de lumière |  |  |
-| `G` |  |  | Déplacer |  |  |  |  |  |
-| `R` |  |  | Pivoter |  |  |  |  |  |
+| `V` |  |  | Sélectionner |  | Outil Déplacement | Changer de vue |  |  |
+| `P` |  |  | Mode pose |  | Outil Pinceau | Sondes de lumière |  |  |
+| `G` |  |  | Déplacer |  | Outil Pot de peinture |  |  |  |
+| `R` |  |  | Pivoter |  | Forme Rectangle |  |  |  |
 | `S` |  |  | Redimensionner *(et reculer)* | Couper le clip |  |  |  |  |
-| `M` |  |  | Magnétisme |  |  |  |  |  |
-| `L` |  |  | Repère local |  |  |  |  |  |
+| `M` |  |  | Magnétisme |  | Sélection rectangulaire |  |  |  |
+| `L` |  |  | Repère local |  | Lasso |  |  |  |
 | `F` |  |  | Cadrer la sélection | Fenêtre de retour | Recadrage |  |  |  |
+| `H` |  |  |  |  | Outil Main |  |  |  |
+| `K` |  |  |  |  | Outil Échelle |  |  |  |
+| `A` |  |  |  |  | Forme Flèche |  |  |  |
+| `T` |  |  |  |  | Outil Texte |  |  |  |
+| `I` |  |  |  |  | Outil Pipette |  |  |  |
+| `E` |  |  |  |  | Outil Gomme |  |  |  |
+| `⇧Q` |  |  | Quatre vues |  |  |  |  |  |
+| `⇧W` |  |  | Arêtes en quads |  |  |  |  |  |
+| `⇧R` |  |  |  |  | Forme Ligne |  |  |  |
+| `⇧P` |  |  |  |  | Outil Crayon |  |  |  |
+| `[` / `]` |  |  |  |  | Réduire / Agrandir le pinceau |  |  |  |
 | `Suppr` |  |  | Supprimer l’objet | Supprimer le clip |  |  |  |  |
 | `W A S D` |  |  | Voler |  |  |  |  |  |
 | `Q` / `E` |  |  | Descendre / Monter |  |  |  |  |  |
@@ -587,12 +599,16 @@ ils sont liés à la bande, pas à un contexte.
 | `⌘=` |  |  |  | Zoomer | Zoom avant |  |  |  |
 | `⌘−` |  |  |  | Dézoomer | Zoom arrière |  |  |  |
 | `⇧Z` |  |  |  | Tout afficher |  |  |  |  |
+| `⌘L` |  |  |  | Délier l’image et le son |  |  |  |  |
 | `⌘0` |  |  |  |  | Ajuster à la fenêtre |  |  |  |
 | `⌘1` |  |  |  |  | Taille réelle |  |  |  |
+| `⌘E` |  |  |  |  | Fusionner vers le bas |  |  |  |
 | `⌘R` |  |  |  |  | Règles |  |  |  |
 | `⌘;` |  |  |  |  | Repères |  |  |  |
 | `⇧⌘;` |  |  |  |  | Magnétisme |  |  |  |
 | `⇧⌘E` |  |  |  |  | Exporter l’image |  |  |  |
+| `Entrée` |  |  |  |  | Appliquer le recadrage |  |  |  |
+| `Échap` |  |  |  |  | Abandonner le recadrage |  |  |  |
 | `⌥←` |  | Déplacer à gauche |  |  |  |  |  |  |
 | `⌥→` |  | Déplacer à droite |  |  |  |  |  |  |
 

@@ -550,23 +550,35 @@ are bound to the band, not to a context.
 | `⇧⌘S` | Save as |  |  |  |  |  |  |  |
 | `⌘,` | Settings |  |  |  |  |  |  |  |
 | `⌘K` | Assistant |  |  |  |  |  |  |  |
+| `⌥D` | Dictate |  |  |  |  |  |  |  |
 | `⌃⌘F` | Full screen |  |  |  |  |  |  |  |
 | `⌘Z` |  |  | Undo | Undo | Undo | Undo | Undo | Undo |
 | `⇧⌘Z` |  |  | Redo | Redo | Redo | Redo | Redo | Redo |
 | `⌘G` |  |  | Group |  |  |  |  |  |
 | `⌘D` |  |  | Duplicate |  | Deselect |  |  |  |
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copy / Cut / Paste |  |  |  |  |  |
-| `O` |  |  | Projection |  |  |  |  |  |
+| `O` |  |  | Projection |  | Ellipse shape |  |  |  |
 | `Z` |  |  | Display mode |  |  |  |  |  |
 | `B` |  |  | Show skeletons |  |  |  |  |  |
-| `V` |  |  | Select |  |  | Change the view |  |  |
-| `P` |  |  | Pose mode |  |  | Light probes |  |  |
-| `G` |  |  | Move |  |  |  |  |  |
-| `R` |  |  | Rotate |  |  |  |  |  |
+| `V` |  |  | Select |  | Move tool | Change the view |  |  |
+| `P` |  |  | Pose mode |  | Brush tool | Light probes |  |  |
+| `G` |  |  | Move |  | Paint bucket tool |  |  |  |
+| `R` |  |  | Rotate |  | Rectangle shape |  |  |  |
 | `S` |  |  | Scale *(and back up)* | Split clip |  |  |  |  |
-| `M` |  |  | Snap |  |  |  |  |  |
-| `L` |  |  | Local frame |  |  |  |  |  |
+| `M` |  |  | Snap |  | Rectangular selection |  |  |  |
+| `L` |  |  | Local frame |  | Lasso |  |  |  |
 | `F` |  |  | Frame selection | Return window | Crop |  |  |  |
+| `H` |  |  |  |  | Hand tool |  |  |  |
+| `K` |  |  |  |  | Scale tool |  |  |  |
+| `A` |  |  |  |  | Arrow shape |  |  |  |
+| `T` |  |  |  |  | Text tool |  |  |  |
+| `I` |  |  |  |  | Eyedropper tool |  |  |  |
+| `E` |  |  |  |  | Eraser tool |  |  |  |
+| `⇧Q` |  |  | Four views |  |  |  |  |  |
+| `⇧W` |  |  | Quad edges |  |  |  |  |  |
+| `⇧R` |  |  |  |  | Line shape |  |  |  |
+| `⇧P` |  |  |  |  | Pencil tool |  |  |  |
+| `[` / `]` |  |  |  |  | Smaller / Larger brush |  |  |  |
 | `Delete` |  |  | Delete object | Delete clip |  |  |  |  |
 | `W A S D` |  |  | Fly |  |  |  |  |  |
 | `Q` / `E` |  |  | Down / Up |  |  |  |  |  |
@@ -576,12 +588,16 @@ are bound to the band, not to a context.
 | `⌘=` |  |  |  | Zoom in | Zoom in |  |  |  |
 | `⌘−` |  |  |  | Zoom out | Zoom out |  |  |  |
 | `⇧Z` |  |  |  | Fit to view |  |  |  |  |
+| `⌘L` |  |  |  | Unlink picture and sound |  |  |  |  |
 | `⌘0` |  |  |  |  | Fit to window |  |  |  |
 | `⌘1` |  |  |  |  | Actual size |  |  |  |
+| `⌘E` |  |  |  |  | Merge down |  |  |  |
 | `⌘R` |  |  |  |  | Rulers |  |  |  |
 | `⌘;` |  |  |  |  | Guides |  |  |  |
 | `⇧⌘;` |  |  |  |  | Snap |  |  |  |
 | `⇧⌘E` |  |  |  |  | Export the image |  |  |  |
+| `Enter` |  |  |  |  | Apply the crop |  |  |  |
+| `Esc` |  |  |  |  | Abandon the crop |  |  |  |
 | `⌥←` |  | Move left |  |  |  |  |  |  |
 | `⌥→` |  | Move right |  |  |  |  |  |  |
 
