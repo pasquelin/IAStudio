@@ -11,6 +11,14 @@ type AssistantQuestion = { request: ConfirmRequest; answer: (granted: boolean) =
 
 type AssistantState = {
   open: boolean
+  /**
+   * Whether the spoken word belongs to the assistant while the window is CLOSED.
+   *
+   * The point of the whole arrangement: one talks to the studio to watch it act, and a modal over
+   * the screen hides the very thing the sentence is about. Open, the window claims the words on
+   * its own — see `assistantHearsSpeech`, which is the pair of them.
+   */
+  listening: boolean
   turns: AssistantTurn[]
   /** From the moment a sentence is sent until its last action has run or been refused. */
   busy: boolean
@@ -28,6 +36,15 @@ type AssistantState = {
   show: () => void
   hide: () => void
   toggle: () => void
+  /**
+   * Claims the spoken word, and nothing else — not the window, and not the microphone.
+   *
+   * The microphone is opened by the modal once it has claimed the words, so the ORDER is held by
+   * the mount rather than by a race: `start()` crosses to the main process before a stream opens,
+   * and a sentence settling in that window with no target goes to the caret instead.
+   */
+  listen: () => void
+  stopListening: () => void
   /** Sends one sentence, then runs what came back, in order. */
   say: (utterance: string) => Promise<void>
   /** Asks the person, on screen. Registered as the studio's confirmer by the modal. */
@@ -54,6 +71,7 @@ let lastTurnId = 0
  */
 export const useAssistant = create<AssistantState>()((set, get) => ({
   open: false,
+  listening: false,
   turns: [],
   busy: false,
   asked: null,
@@ -65,10 +83,17 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
     // Closing IS declining. A question left unanswered would hold `busy` for the rest of the
     // session, and the promise behind it belongs to an action that is about to spend something.
     get().answer(false)
-    set({ open: false })
+    // And closing the door stops the talking. The window is what claims the spoken word while it
+    // is up, so leaving the microphone open would pour the next sentence into whatever field the
+    // caret happens to sit in — a prompt, a layer name — with nothing on screen saying so.
+    set({ open: false, listening: false })
   },
 
   toggle: () => (get().open ? get().hide() : get().show()),
+
+  listen: () => set({ listening: true }),
+
+  stopListening: () => set({ listening: false }),
 
   ask: request =>
     new Promise<boolean>(resolve => {
@@ -169,6 +194,20 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
     void useSettings.getState().setValue('assistant.model', model)
   },
 }))
+
+/**
+ * Whether what is spoken belongs to the assistant rather than to the caret.
+ *
+ * The two ways in are one question: the window claims the words while it is up, and `listening` is
+ * the same claim made without it. Read by the status line, which is the only thing on screen once
+ * the window is closed — and saying "microphone on" without saying to WHOM is half an answer.
+ *
+ * Named for its domain, as every export of `stores/` is: `hears` alone would be one more bare word
+ * for an editor's auto-import to pick the wrong one of.
+ */
+export function assistantHearsSpeech(state: Pick<AssistantState, 'open' | 'listening'>): boolean {
+  return state.open || state.listening
+}
 
 /** Rewrites one turn in place, leaving the others as they were. */
 function patch(

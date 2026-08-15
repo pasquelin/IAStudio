@@ -76,6 +76,13 @@
       "text": "Texte à traduire"
     },
     "title": "Assistant",
+    "write": "Écrire à l’assistant",
+    "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",
+    "speak": "Parler à l’assistant",
+    "speakHint": "Ouvre le micro et donne vos phrases à l’assistant, sans rien masquer du studio",
+    "stopSpeaking": "Cesser de parler à l’assistant",
+    "stopSpeakingHint": "Ferme le micro. La phrase en cours est abandonnée",
+    "listening": "L’assistant vous écoute",
     "empty": "Dites ce que vous voulez faire, et l’assistant s’en charge.",
     "placeholder": "Ouvre un fichier 3D, cherche un modèle, prépare une génération…",
     "send": "Envoyer",

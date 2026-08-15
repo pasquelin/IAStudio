@@ -8,6 +8,7 @@ import { HomeView } from '@/home/HomeView'
 import { DocumentArea } from './DocumentArea'
 import { showWorkspace } from './dockview-api'
 import { guardUnsavedWork } from './unsaved-guard'
+import { AssistantEntries } from '@/assistant/AssistantEntries'
 import { AssistantOverlay } from '@/assistant/AssistantOverlay'
 import { DictationStatus } from '@/dictation/DictationStatus'
 import { Breadcrumb } from './Breadcrumb'
@@ -18,6 +19,7 @@ import { JobsStatus } from './JobsStatus'
 import { UpdateStatus } from './UpdateStatus'
 import { Rail } from './Rail'
 import { ResizeHandle } from '@/design/ResizeHandle'
+import { Separator } from '@/design/Separator'
 import { AccountSelect } from './AccountSelect'
 import { ProjectSelect } from './ProjectSelect'
 import { TitleBar } from './TitleBar'
@@ -65,8 +67,12 @@ export function Shell() {
         onHome={homeEnabled ? () => setHome(true) : undefined}
         // Local then remote: the folder everything is written into, then the key it is
         // generated on. The pair is the studio's "where am I" in one corner.
+        // The two ways to reach the assistant, then the pair that says where one is. Parted by a
+        // hairline because they are not the same kind of thing: one acts, the other points.
         actions={
           <>
+            <AssistantEntries />
+            <Separator orientation="vertical" />
             <ProjectSelect />
             <AccountSelect />
           </>

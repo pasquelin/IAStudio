@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SttFailure, SttState } from '@shared/domain/dictation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fake-bridge'
+import { useAssistant } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { DictationStatus } from './DictationStatus'
@@ -23,16 +24,39 @@ function show(
 beforeEach(() => {
   installFakeBridge()
   useSettings.setState({ settings: DEFAULT_SETTINGS })
-  useDictation.setState({ state: 'idle', failure: null, download: null })
+  useAssistant.setState({ open: false, listening: false })
+  useDictation.setState({ state: 'idle', partial: '', failure: null, download: null })
 })
 
 describe('what dictation says to the whole application', () => {
-  // An application that records has to show it, and the button that started the session may be
-  // behind a panel or in another workspace by then.
-  it('says the microphone is on while it listens', () => {
+  /**
+   * An application that records has to show it, and the button that started the session may be
+   * behind a panel or in another workspace by then.
+   *
+   * Saying WHERE the words are going rather than only that the microphone is on: the same
+   * microphone types into a prompt and talks to the assistant, and nothing else on screen tells
+   * the two apart — the assistant claims the spoken word without necessarily showing its window.
+   */
+  it('says the words are going to the field it is dictating into', () => {
     show('listening')
 
-    expect(screen.getByRole('status')).toHaveTextContent('Micro actif')
+    expect(screen.getByRole('status')).toHaveTextContent('Dictée vers le champ')
+  })
+
+  it('says the words are going to the assistant when the assistant has claimed them', () => {
+    useAssistant.setState({ listening: true })
+    show('listening')
+
+    expect(screen.getByRole('status')).toHaveTextContent('L’assistant vous écoute')
+  })
+
+  // The proof that it is hearing, which no indicator can give. It is also the only place the
+  // hypothesis shows at all once the assistant's window is closed.
+  it('shows the sentence as it is still being weighed', () => {
+    useDictation.setState({ partial: 'ouvre un nouveau fichier 3D' })
+    show('listening')
+
+    expect(screen.getByText('ouvre un nouveau fichier 3D')).toBeInTheDocument()
   })
 
   it('says nothing when there is nothing to say', () => {

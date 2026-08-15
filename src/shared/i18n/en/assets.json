@@ -144,7 +144,7 @@
     "downloading": "Downloading the model: {{done}} of {{total}}",
     "cancelDownload": "Stop the download",
     "openPrivacySettings": "Open the system settings",
-    "active": "Microphone on",
+    "active": "Dictating to the field",
     "device": "Microphone",
     "defaultDevice": "Default device",
     "noDevice": "No microphone was found on this computer.",

@@ -15,10 +15,11 @@ import { CONTROL, FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP, TIP_BOTTOM, TIP_LEFT } from '@/helpers/tooltip'
 import { useDismiss } from '@/hooks/useDismiss'
-import { useAssistant } from '@/stores/assistant'
+import { assistantHearsSpeech, useAssistant } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { formatUnits } from '@/usage/format'
+import { DictationField } from '@/dictation/DictationField'
 import { registerDictationTarget } from '@/dictation/destination'
 import type { ConfirmRequest } from './confirm'
 import { registerConfirmer } from './confirm'
@@ -45,6 +46,8 @@ export function AssistantOverlay() {
   const asked = useAssistant(state => state.asked)
   const spent = useAssistant(state => state.spent)
   const hide = useAssistant(state => state.hide)
+  const listening = useAssistant(state => state.listening)
+  const hears = useAssistant(assistantHearsSpeech)
   const model = useSettings(state => state.settings.assistant.model)
 
   const surface = useRef<HTMLDivElement>(null)
@@ -61,15 +64,19 @@ export function AssistantOverlay() {
   useDismiss(open && !asked ? hide : undefined, surface)
 
   /**
-   * The spoken word, while the modal is up.
+   * The spoken word, whether or not this window is showing.
    *
    * Claimed from here rather than branched on inside the dictation session, which knows nothing
-   * about this modal. Being OPEN is the test, and not a caret inside it: one dictates with the
-   * hands off the keyboard, so asking for a focused field would make the voice path unreachable
-   * by voice.
+   * about this modal. Not a caret inside it either: one dictates with the hands off the keyboard,
+   * so asking for a focused field would make the voice path unreachable by voice.
+   *
+   * **Declared before the microphone's effect below, and that is the whole ordering.** React runs
+   * effects in the order they are written, so the words are claimed before anything opens a
+   * stream — a sentence settling with no target goes to the caret, and that is the defect these
+   * two entries exist to remove.
    */
   useEffect(() => {
-    if (!open) return
+    if (!hears) return
 
     return registerDictationTarget(text => {
       // While a plan is running the assistant takes no new sentence — but the words were spoken,
@@ -83,7 +90,35 @@ export function AssistantOverlay() {
 
       void useAssistant.getState().say(text)
     })
-  }, [open])
+  }, [hears])
+
+  /**
+   * The microphone, for the entry that talks to the studio without showing this window.
+   *
+   * Opened here rather than by the button, so it can only open once the effect above has claimed
+   * the words. The cleanup is the other half of that: it is what closes the microphone when the
+   * window is dismissed mid-sentence, since `hide` clears `listening` along with `open`.
+   *
+   * Nothing here when the words are dictated INTO the open window — `DictationField` below owns
+   * that session, and its button is what ends it.
+   */
+  useEffect(() => {
+    if (!listening) return
+
+    void useDictation
+      .getState()
+      .start()
+      // A microphone that never opened — the model still to fetch, a refused device — must not
+      // leave the claim standing: every later sentence dictated into a field would come here
+      // instead, and nothing on screen would explain why.
+      .then(() => {
+        if (useDictation.getState().state !== 'listening') {
+          useAssistant.getState().stopListening()
+        }
+      })
+
+    return () => void useDictation.getState().stop()
+  }, [listening])
 
   useEffect(() => {
     if (open) field.current?.focus()
@@ -167,7 +202,10 @@ export function AssistantOverlay() {
 
         {asked && <Question request={asked.request} />}
 
-        <Heard />
+        {/* The microphone the studio hangs under every long field, and the running hypothesis
+            under it. The label is what makes it this window's: it says where the words are going,
+            which "Listening…" does not — the same microphone dictates into a prompt. */}
+        <DictationField listeningLabel={t('assistant.listening')} />
 
         <form
           className="flex shrink-0 items-center gap-2"
@@ -207,21 +245,6 @@ export function AssistantOverlay() {
  */
 function asModel(value: string): AssistantModel {
   return value as AssistantModel
-}
-
-/**
- * The sentence still being spoken, shown as the fields show it: a hypothesis, replaced by the
- * next one, and never something one could mistake for what was sent.
- *
- * A component of its own, and that is the whole reason it exists: the hypothesis is replaced
- * several times a second, and subscribing to it from the modal's own body would re-render the
- * entire thread — every turn, every step — at the speed of speech.
- */
-function Heard() {
-  const heard = useDictation(state => state.partial)
-  if (heard === '') return null
-
-  return <p className="text-muted m-0 shrink-0 px-2 text-xs italic">{heard}</p>
 }
 
 /** One exchange: what was asked, what came back, and what each action actually did. */

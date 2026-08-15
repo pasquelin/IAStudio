@@ -5,6 +5,17 @@ import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { DictationButton } from './DictationButton'
 import { useDictation } from './useDictation'
 
+export type DictationFieldProps = {
+  /**
+   * What is said while nothing has been heard yet, in place of "Listening…".
+   *
+   * For the one host whose words do not go to the caret: the assistant claims them while it is
+   * up, and a microphone that only says it is open leaves "to whom" unanswered. Every other site
+   * dictates into the field beside it, where the question does not arise.
+   */
+  listeningLabel?: string
+}
+
 /**
  * The microphone, and the words as they are still being weighed.
  *
@@ -14,9 +25,10 @@ import { useDictation } from './useDictation'
  * Only the settled text is inserted, at the caret.
  *
  * Meant to sit under any field. It holds nothing about the field it sits under: what a settled
- * sentence does is decided by `useDictation`, which puts it where the caret is.
+ * sentence does is decided by `useDictation`, which puts it where the caret is — or hands it to
+ * whoever claimed it.
  */
-export function DictationField() {
+export function DictationField({ listeningLabel }: DictationFieldProps = {}) {
   const { t } = useTranslation()
   const { partial, isListening, enabled } = useDictation()
 
@@ -36,7 +48,7 @@ export function DictationField() {
       */}
       {isListening && (
         <p aria-live="off" className="text-muted text-tiny italic">
-          {partial || t('dictation.listening')}
+          {partial || listeningLabel || t('dictation.listening')}
         </p>
       )}
     </div>

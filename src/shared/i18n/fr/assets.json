@@ -144,7 +144,7 @@
     "downloading": "Téléchargement du modèle : {{done}} sur {{total}}",
     "cancelDownload": "Interrompre le téléchargement",
     "openPrivacySettings": "Ouvrir les réglages du système",
-    "active": "Micro actif",
+    "active": "Dictée vers le champ",
     "device": "Micro",
     "defaultDevice": "Périphérique par défaut",
     "noDevice": "Aucun micro n’a été trouvé sur cet ordinateur.",
