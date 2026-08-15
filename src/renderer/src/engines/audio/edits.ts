@@ -8,9 +8,8 @@ import {
   crop,
   DEFAULT_TARGET_LUFS,
   durationOf,
-  edgeSilences,
-  normalize,
   rms,
+  silentBounds,
   toDb,
   type AudioData,
 } from './audio-data'
@@ -130,19 +129,19 @@ export function replayEdits(
         shape = { ...shape, gain: shape.gain + edit.db }
         return applyGain(current, edit.db)
       case 'normalize': {
-        // Measured on what reaches this step, exactly as `normalize` measures it — an infinite
-        // level is silence, which it leaves alone and so does the shape.
+        // The level is measured once and spent twice — on the shape and on the samples. Calling
+        // `normalize` here would walk every sample a second time only to find it again, and this
+        // runs on a take of eight million of them.
         const level = toDb(rms(current))
-        if (Number.isFinite(level)) {
-          shape = { ...shape, gain: shape.gain + (edit.targetLufs - level) }
-        }
-        return normalize(current, edit.targetLufs)
+        if (!Number.isFinite(level)) return current
+
+        const db = edit.targetLufs - level
+        shape = { ...shape, gain: shape.gain + db }
+        return applyGain(current, db)
       }
       case 'trimSilence': {
         const total = durationOf(current)
-        const silences = edgeSilences(current)
-        const head = silences.find(range => range.from === 0)?.to ?? 0
-        const tail = silences.find(range => range.from > 0)?.from ?? total
+        const { head, tail } = silentBounds(current)
         if (head === 0 && tail === total) return current
 
         shape = cropShape(shape, head, tail)

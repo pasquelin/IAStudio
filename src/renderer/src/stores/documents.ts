@@ -161,7 +161,7 @@ export const activeAudioId = (state: DocumentsSlice): string | null =>
  * picked in the Audio workspace, so gain, speed and fades were editable from nowhere.
  */
 export const activeMontageId = (state: DocumentsSlice): string | null =>
-  activeIdOfKind(state, 'sequence') ?? activeIdOfKind(state, 'audio')
+  activeSequenceId(state) ?? activeAudioId(state)
 
 /** The sky in front, as a selector. Same reason again, for the skybox panel. */
 export const activeSkyboxId = (state: DocumentsSlice): string | null =>

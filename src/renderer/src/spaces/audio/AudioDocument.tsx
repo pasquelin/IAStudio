@@ -8,21 +8,26 @@ import { EmptyState } from '@/design/EmptyState'
 import { Toolbar } from '@/design/Toolbar'
 import { durationOf } from '@/engines/audio/audio-data'
 import type { RenderedAudio } from '@/engines/audio/audio-render'
-import { clampRegion, pushEdit, type AudioEdit, type Region } from '@/engines/audio/edits'
+import {
+  clampRegion,
+  EMPTY_AUDIO_EDIT,
+  pushEdit,
+  type AudioEdit,
+  type Region,
+} from '@/engines/audio/edits'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { SECOND, type Us } from '@/engines/timeline/timeline-state'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { assetsById, useAssets } from '@/stores/assets'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
-import { useSequences } from '@/stores/sequences'
+import { useSequences, writeTakeClip } from '@/stores/sequences'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { useDocuments } from '@/stores/documents'
 import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
 import { decodeAsset } from './decode'
 import { loadTake } from './load-take'
 import { useAudioRenderer } from './useAudioRenderer'
-import { useTakeClip } from './useTakeClip'
 import { useWaveSurfer } from './useWaveSurfer'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 
@@ -63,6 +68,9 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const [output, setOutput] = useState<{ assetId: string; audio: RenderedAudio | null } | null>(
     null,
   )
+  // Bumped by "apply", which rewrites the take under its own id: nothing else would tell the
+  // decode below that the bytes it read are no longer the ones on disk.
+  const [reread, setReread] = useState(0)
 
   const asset = state.assetId ? (byId.get(state.assetId) ?? null) : null
 
@@ -88,7 +96,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
     return () => {
       live = false
     }
-  }, [state.assetId, renderer])
+  }, [state.assetId, renderer, reread])
 
   const settled = loaded?.assetId === state.assetId ? loaded : null
   const failed = settled?.ok === false
@@ -115,9 +123,19 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const answered = output?.assetId === state.assetId ? output : null
   const rendered = answered?.audio ?? null
 
-  // What ties the two halves of this document: the clip on the strip below is this very take,
-  // and every edit above has to reach it.
-  useTakeClip(documentId, state.takeClipId, rendered?.shape ?? null)
+  /**
+   * What ties the two halves of this document: the clip on the strip below is this very take,
+   * and every edit above has to reach it.
+   *
+   * Never while A/B is held on the source, and that is not a detail — a bypassed render is asked
+   * for an EMPTY chain, so the shape that comes back is the whole untouched take. Written down,
+   * one press of A/B would stretch the clip back to the source and the next would shrink it,
+   * turning a listening aid into an edit of the montage.
+   */
+  useEffect(() => {
+    const shape = state.bypassed ? null : (rendered?.shape ?? null)
+    if (state.takeClipId && shape) writeTakeClip(documentId, state.takeClipId, shape)
+  }, [documentId, state.takeClipId, state.bypassed, rendered])
 
   // Either half of the pipeline giving up leaves the same take unplayable, and says so the same
   // way — the decode, and the chain replayed over it.
@@ -143,6 +161,25 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const run = (edit: AudioEdit): void =>
     useAudioEdits.getState().runCommand(documentId, pushEdit(edit))
 
+  /**
+   * What "apply" leaves behind: the file on disk now HOLDS the chain, so the chain has to go.
+   *
+   * Replaying it over the new bytes would lay every fade and gain down a second time — and the
+   * montage clip below, which carries them too, would then play them a third. The take is read
+   * again for the same reason: the samples in the worker are the file as it was.
+   *
+   * The history goes with it, exactly as it does when another take is loaded: a step undone
+   * after "apply" would describe a length the file no longer has. This is the one destructive
+   * button of the editor, and it says so.
+   */
+  const applied = (): void => {
+    const store = useAudioEdits.getState()
+    const { assetId, takeClipId } = audioEditsOf(store, documentId)
+    store.drop(documentId)
+    store.replace(documentId, { ...EMPTY_AUDIO_EDIT, assetId, takeClipId })
+    setReread(count => count + 1)
+  }
+
   const save = async (replaces: string | undefined): Promise<void> => {
     const bridge = getBridge()
     if (!bridge || !rendered || !asset) return
@@ -154,6 +191,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
       wav: rendered.wav,
     })
     await useAssets.getState().refresh()
+    if (replaces) applied()
   }
 
   const act = (id: AudioToolId): void => {

@@ -152,15 +152,23 @@ export function edgeSilences(
   return ranges
 }
 
-/** The take with its leading and trailing silence gone. */
-export function trimSilence(
+/**
+ * What is left of a take once its leading and trailing silence is dropped — the bounds, not the
+ * samples.
+ *
+ * Bounds rather than a cropped take, because two callers need two different things from the same
+ * decision: the chain wants the samples, and the montage clip under it wants where they came
+ * from in the source. Deriving one from the other twice is how the two come to disagree.
+ */
+export function silentBounds(
   data: AudioData,
   thresholdDb = DEFAULT_SILENCE_DB,
   minLength: Us = DEFAULT_MIN_SILENCE,
-): AudioData {
+): { head: Us; tail: Us } {
   const silences = edgeSilences(data, thresholdDb, minLength)
-  const head = silences.find(range => range.from === 0)?.to ?? 0
-  const tail = silences.find(range => range.from > 0)?.from ?? durationOf(data)
 
-  return head === 0 && tail === durationOf(data) ? data : crop(data, head, tail)
+  return {
+    head: silences.find(range => range.from === 0)?.to ?? 0,
+    tail: silences.find(range => range.from > 0)?.from ?? durationOf(data),
+  }
 }

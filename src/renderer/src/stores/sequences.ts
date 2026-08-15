@@ -3,15 +3,16 @@ import type { TakeShape } from '@/engines/audio/edits'
 import { addClips, removeClip } from '@/engines/timeline/commands'
 import { placementsForAsset, trackForAsset } from '@/engines/timeline/insert'
 import {
+  clampFades,
   clipById,
   EMPTY_SEQUENCE,
   updateClip,
   updateTrack,
   wholeFrames,
-  type Clip,
   type SequenceState,
   type Track,
 } from '@/engines/timeline/timeline-state'
+import { sameValues } from '@/helpers/objects'
 import { createDocumentStore } from './document-store'
 
 /** One sequence per document, in memory like the documents themselves. */
@@ -99,28 +100,22 @@ export function writeTakeClip(documentId: string, clipId: string, shape: TakeSha
   const clip = clipById(sequence, clipId)
   if (!clip) return
 
-  // On the frame grid, exactly as `clipForAsset` lays it down: a duration that is not a whole
-  // number of frames leaves a tail nothing can snap to.
-  const duration = wholeFrames(shape.duration, sequence.settings)
-  const shaped: Clip = {
+  // Clamped HERE rather than left to `updateClip`, which clamps on the way in: comparing against
+  // the unclamped shape would answer "changed" forever as soon as the two ramps outlast the
+  // clip — the very case `replayEdits` documents as approximate — and every render would repaint
+  // the strip. On the frame grid too, exactly as `clipForAsset` lays a clip down: a duration
+  // that is not a whole number of frames leaves a tail nothing can snap to.
+  const shaped = clampFades({
     ...clip,
     inPoint: shape.inPoint,
-    duration,
+    duration: wholeFrames(shape.duration, sequence.settings),
     fadeIn: shape.fadeIn,
     fadeOut: shape.fadeOut,
     gain: shape.gain,
-  }
-  // A render answers on every open of a document, not only on an edit: writing an unchanged clip
-  // would repaint the strip and wake every reader of the montage for nothing.
-  if (
-    clip.inPoint === shaped.inPoint &&
-    clip.duration === shaped.duration &&
-    clip.fadeIn === shaped.fadeIn &&
-    clip.fadeOut === shaped.fadeOut &&
-    clip.gain === shaped.gain
-  ) {
-    return
-  }
+  })
+  // A render answers on every open of a document, not only on an edit, and writing an unchanged
+  // clip would wake every reader of the montage for nothing.
+  if (sameValues(clip, shaped)) return
 
   current.replace(
     documentId,

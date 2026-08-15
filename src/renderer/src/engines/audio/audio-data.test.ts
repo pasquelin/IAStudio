@@ -10,7 +10,7 @@ import {
   normalize,
   rms,
   toDb,
-  trimSilence,
+  silentBounds,
   type AudioData,
 } from './audio-data'
 
@@ -149,16 +149,15 @@ describe('silences', () => {
     expect(edgeSilences({ sampleRate: RATE, channels: [channel] })).toEqual([])
   })
 
-  it('cuts both ends off', () => {
-    expect(frameCount(trimSilence(withEdges()))).toBe(100)
+  it('bounds a take to what lies between its two silences', () => {
+    expect(silentBounds(withEdges())).toEqual({ head: 1_000_000, tail: 2_000_000 })
   })
 
-  it('shares a take that has nothing to cut', () => {
-    const source = tone(300, 0.5)
-    expect(trimSilence(source)).toBe(source)
+  it('bounds a take with nothing to cut to the whole of it', () => {
+    expect(silentBounds(tone(300, 0.5))).toEqual({ head: 0, tail: 3_000_000 })
   })
 
   it('reads a take that is silent throughout as silence at the head, and keeps nothing', () => {
-    expect(frameCount(trimSilence(tone(300, 0)))).toBe(0)
+    expect(silentBounds(tone(300, 0))).toEqual({ head: 3_000_000, tail: 3_000_000 })
   })
 })

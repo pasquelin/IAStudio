@@ -130,6 +130,59 @@ describe('AudioDocument', () => {
     })
   })
 
+  // The take under the editor and the clip on the strip are two views of one thing.
+  describe('the clip it keeps in step', () => {
+    const takeClip = () => sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips[0]
+
+    /** A document whose take is already laid down on the strip, as `loadTake` leaves it. */
+    async function openLaidTake(): Promise<void> {
+      useSequences
+        .getState()
+        .runCommand(
+          'doc-1',
+          addClip('A1', makeClip({ id: 'clip-1', assetId: 'asset-1', start: 0, duration: SECOND })),
+        )
+      useAudioEdits.setState({
+        states: { 'doc-1': { ...EMPTY_AUDIO_EDIT, assetId: 'asset-1', takeClipId: 'clip-1' } },
+        histories: {},
+      })
+      installDocuments({ 'doc-1': 'audio' }, 'doc-1')
+      render(<AudioDocument documentId="doc-1" />)
+      await waitFor(() => expect(screen.queryByText(/Chargement/)).not.toBeInTheDocument())
+    }
+
+    // 13 frames at 25 fps rather than the 12.5 the crop asked for: a clip lands on the frame
+    // grid, exactly as one laid down by hand does — a tail off the grid snaps to nothing.
+    const CROPPED = 520_000
+
+    it('shortens the clip when the take is cropped', async () => {
+      await openLaidTake()
+      await waitFor(() => expect(takeClip()?.duration).toBe(2_000_000))
+
+      useAudioEdits.getState().replace('doc-1', { ...editsOf(), region: { from: 0, to: 500_000 } })
+      await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
+
+      await waitFor(() => expect(takeClip()?.duration).toBe(CROPPED))
+    })
+
+    /**
+     * A bypassed render is asked for an EMPTY chain, so the shape that comes back is the whole
+     * untouched take. Written down, one press of A/B would stretch the clip back to the source —
+     * turning a listening aid into an edit of the montage.
+     */
+    it('leaves the clip alone while A/B is held on the source', async () => {
+      await openLaidTake()
+      useAudioEdits.getState().replace('doc-1', { ...editsOf(), region: { from: 0, to: 500_000 } })
+      await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
+      await waitFor(() => expect(takeClip()?.duration).toBe(CROPPED))
+
+      await userEvent.click(screen.getByRole('button', { name: /A\/B/ }))
+
+      await waitFor(() => expect(editsOf().bypassed).toBe(true))
+      expect(takeClip()?.duration).toBe(CROPPED)
+    })
+  })
+
   it('asks for a take when none is open', () => {
     render(<AudioDocument documentId="doc-1" />)
     expect(screen.getByText(/Aucun son ouvert/)).toBeInTheDocument()
@@ -201,6 +254,34 @@ describe('AudioDocument', () => {
     const wav = saveAudio.mock.calls[0]?.[0].wav ?? new Uint8Array()
     // 200 mono frames at 16 bits, behind a 44-byte header.
     expect(wav.byteLength).toBe(44 + 200 * 2)
+  })
+
+  /**
+   * The file now HOLDS the chain. Replaying it over the new bytes would lay every fade and gain
+   * down a second time, and the montage clip below — which carries them too — would play them a
+   * third. A step undone afterwards would describe a length the file no longer has.
+   */
+  it('empties the chain and its history once the take has been written over', async () => {
+    await openTake()
+    await userEvent.click(screen.getByRole('button', { name: /Normaliser/ }))
+    expect(editsOf().edits).toHaveLength(1)
+
+    await userEvent.click(screen.getByRole('button', { name: /Appliquer/ }))
+    await waitFor(() => expect(editsOf().edits).toEqual([]))
+
+    expect(editsOf().assetId).toBe('asset-1')
+    expect(canUndo(audioHistoryOf(useAudioEdits.getState(), 'doc-1'))).toBe(false)
+  })
+
+  // "Save as" writes a NEW asset: the take under the editor is untouched, and so is its chain.
+  it('keeps the chain when the take is written beside the source', async () => {
+    await openTake()
+    await userEvent.click(screen.getByRole('button', { name: /Normaliser/ }))
+
+    await userEvent.click(screen.getByRole('button', { name: /Enregistrer comme nouveau/ }))
+    await waitFor(() => expect(saveAudio).toHaveBeenCalled())
+
+    expect(editsOf().edits).toHaveLength(1)
   })
 })
 

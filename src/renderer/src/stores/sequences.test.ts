@@ -125,4 +125,20 @@ describe('the montage clip of an edited take', () => {
 
     expect(sequenceOf(useSequences.getState(), 'doc-1')).toBe(settled)
   })
+
+  /**
+   * The case that made the guard above useless: a montage clip cannot hold two ramps longer than
+   * itself, so what is stored is clamped. Comparing against the UNCLAMPED shape then answers
+   * "changed" for ever, and every render of the document repaints the strip.
+   */
+  it('settles when the ramps of the chain outlast the clip they are on', () => {
+    laid()
+    const overlong = { ...shape, fadeIn: 900_000, fadeOut: 900_000 }
+    writeTakeClip('doc-1', 'clip-1', overlong)
+    const settled = sequenceOf(useSequences.getState(), 'doc-1')
+
+    writeTakeClip('doc-1', 'clip-1', overlong)
+
+    expect(sequenceOf(useSequences.getState(), 'doc-1')).toBe(settled)
+  })
 })
