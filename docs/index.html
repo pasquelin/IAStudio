@@ -588,13 +588,22 @@
 
 <!-- three 0.185.1, la version que l'application embarque. Depuis 0.16x la bibliothèque ne
      publie plus de build global : seul le module existe, d'où la carte d'import. Le module
-     tire `./three.core.min.js` en relatif, résolu contre cette même URL — rien à déclarer
-     de plus. `integrity` ne s'applique pas à un module résolu par carte d'import : la seule
-     protection réelle contre un CDN altéré serait d'héberger le fichier ici. -->
+     tire `./three.core.min.js` en relatif, résolu contre cette même URL.
+
+     Les deux empreintes sont celles publiées par cdnjs. Un fichier altéré chez l'hébergeur
+     ne s'exécute pas : le navigateur refuse le module. Le `<script integrity>` habituel ne
+     s'applique pas ici — un module chargé par carte d'import passe par CE champ, qui prend
+     l'URL pour clé, y compris celle que le module résout tout seul. Les navigateurs qui ne
+     connaissent pas encore ce champ l'ignorent sans erreur et chargent le module sans
+     vérification : l'unique garantie de bout en bout serait d'héberger le fichier ici. -->
 <script type="importmap">
 {
   "imports": {
     "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.185.1/three.module.min.js"
+  },
+  "integrity": {
+    "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.185.1/three.module.min.js": "sha512-I68i240tOgV4+XEaWOhSb6g0DSYHBZvh5xV/OD4r8gMQLzMlCiGLKJMv2cLv/NSSclI/1OOqBQbcCa2GtLKToQ==",
+    "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.185.1/three.core.min.js": "sha512-WzP39n+gKzHN+GRInj+FL4+JPbBPkGQiJf8oCBXqaqlqc57jW+sPYFn48ds+slQBe18f4Mctw5c+RAEVrhCO3g=="
   }
 }
 </script>
