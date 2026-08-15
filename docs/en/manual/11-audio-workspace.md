@@ -38,24 +38,40 @@ which of the two you are looking at.
 2. **Double-click an audio asset** in the shelf — the take goes into the tab. You can also **drop
    it on the lower monitor**, or use the right-click row **Open in the audio editor**.
 
-While no sound is loaded, the lower monitor shows: "No sound open. Drop a take here, or
-double-click an audio asset."
+While no clip is selected, the lower monitor shows: "Select a clip from the montage to edit it
+here, or drop a take."
 
 > **Double-clicking without having opened a tab does nothing**, and nothing says so. Double-click
 > always sends the asset into the tab in front; with no tab, it has nowhere to send it. This is
 > explained in full in [Assets](07-assets.md).
 
-**A take you open is laid on the edit straight away**, at the playhead, on a sound track the
-studio picks — the double-click rule of the [Video workspace](10-video-workspace.md). This is what
-ties the two halves together: the clip in the bottom strip **is** the take in the lower monitor,
-and it follows what you do to it — a crop shortens it, a fade shows on its edges,
+### The edit leads, the editor follows
+
+This is the rule that explains the rest of the chapter, and it fits in one sentence: **the editor
+below shows the clip the edit has selected.** Exactly as the Source monitor of the
+[Video workspace](10-video-workspace.md) shows the clip you picked.
+
+**A take you open is therefore laid on the edit, then selected** — at the playhead, on a sound
+track the studio picks. That is what brings it into the editor: it does not go there directly, it
+arrives because it has just been selected.
+
+**Click another clip in the bottom strip and that is what the editor shows.** No opening gesture
+is needed; selecting is enough.
+
+### Every clip keeps its own settings
+
+**Takes accumulate, they do not replace one another.** Open a second one: it lands beside the
+first, selected, and **the first stays on the edit with everything you did to it**. Crop, fades,
+normalising — the tool chain belongs to the **clip**, not to the tab. Come back to it by selecting
+it, and you find its state again.
+
+This is what ties the two halves together: the clip in the bottom strip **is** the take in the
+lower monitor, and it follows what you do to it — a crop shortens it, a fade shows on its edges,
 normalising changes its gain. Two things stay its own, because they belong to the edit rather than
 to the take: **where it starts** and **how fast it runs**.
 
-**Swapping takes works the same way**: double-click another sound and it replaces the previous
-one. Beware — **everything you had set is lost**. Cuts and fades are measured against the take
-that received them, and would mean nothing carried over to another. The previous take's clip
-**leaves the edit** with it; the ones you laid down yourself stay.
+> **Reopening the take already under the editor does nothing**, and that is deliberate: a second
+> clip on the same sound would leave the first one's chain with nothing to call it back.
 
 If the file cannot be decoded, it says that too: "This file could not be decoded." That is usually
 an unusual format, or a damaged file.
@@ -75,6 +91,10 @@ It is the universal representation of sound. At a glance you can see:
 ### Selecting a portion
 
 **Drag across the waveform** to draw a selection. That is the portion the tools work on.
+
+**The editor's bar always says where you stand**: both bounds of the selection when there is one,
+and "Drag across the wave to select" when there is not. An area nobody knows how to draw is not
+explained by a sentence that only appears once a pointer rests on a tool.
 
 Playback loops over the selection while it exists, which lets you judge a passage by hearing it
 again.
@@ -103,8 +123,14 @@ Making the sound **neither too quiet nor too loud**, at a standard level.
 sound normalised to that value will play at roughly the same volume as whatever surrounds it,
 instead of making people jump or reach for the volume knob.
 
-"LUFS" measures **perceived** loudness, not measured level: it accounts for how the human ear
-hears. That is why it beats simply hunting for the loudest peak.
+"LUFS" is the unit of **perceived** loudness, the one that accounts for how the human ear hears —
+far more useful than simply hunting for the loudest peak.
+
+> **The studio computes an approximation of it, and it is worth knowing.** The standard measure
+> (ITU-R BS.1770) applies a weighting filter and gates silent passages out; the studio settles for
+> a **root mean square** across the whole take. On a **generated** sound — one texture, no
+> dialogue, no silence to gate out — the two land very close together. On a voice recording with
+> gaps they drift apart: **do not compare this figure with a professional LUFS meter's.**
 
 ### What the A/B button is for
 
@@ -137,10 +163,15 @@ Only when you explicitly ask is anything written:
 | **Apply** | **rewrites the asset** with your changes. The original is replaced — unless it is a [linked medium](07-assets.md), which then enters the project without your file being touched |
 | **Save as new** | creates a **new asset** alongside, named "*(edited)*" |
 
-**After "Apply", the chain is empty and `⌘Z` no longer walks back up it.** That is deliberate, and
-it is the price of the button: the file now **holds** your settings, and replaying them over it
-would lay them down a second time — a fade twice as long, a gain twice as strong. The waveform
-that comes back is the one of the rewritten file.
+**After "Apply", this clip's chain is empty and `⌘Z` no longer walks back up it.** That is
+deliberate, and it is the price of the button: the file now **holds** your settings, and replaying
+them over it would lay them down a second time — a fade twice as long, a gain twice as strong. The
+waveform that comes back is the one of the rewritten file.
+
+> **The whole tab's history goes, not just that clip's.** The other clips keep their chains —
+> their crops and fades are untouched — but no step undoes with `⌘Z` any more, on any of them. The
+> history is the document's, and it cannot rewind for one block alone. This is the editor's one
+> destructive button.
 
 > **When in doubt, take "Save as new".** You keep the original, and you can always delete the copy
 > if it does not work out.
@@ -182,10 +213,14 @@ its width, from start to finish: this is a view you read at a glance, not one yo
 
 `⌘Z` / `Ctrl+Z` undoes the last step of the chain. `⇧⌘Z` redoes it.
 
-**One key for both halves, and it always takes the chain first.** As long as the tool chain has
-anything to give back, `⌘Z` undoes it; only once the chain is back to the bare take does the key
-address the edit. To undo an edit gesture you therefore have to have unwound the whole chain — or
-never to have applied any.
+**One key for both halves, and it always takes the tools first.** As long as one tool step is left
+to undo, `⌘Z` undoes it; only once none is left does the key address the edit. To undo an edit
+gesture you therefore have to have unwound every tool step — or never to have applied any.
+
+> **The history is the TAB's, not the displayed clip's.** Chains belong to each clip, but their
+> steps are stacked together: `⌘Z` undoes the last one you laid down, **even if that was on a clip
+> other than the one under the editor**. The selection does not follow — it is up to you to look
+> at what moved.
 
 As everywhere in the studio, the history belongs to the document: the tab you mean has to be in
 front.
