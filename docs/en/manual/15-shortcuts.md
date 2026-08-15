@@ -260,7 +260,12 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 | Action | Key | What it does |
 |---|---|---|
 | **Split clip** | `S` | cuts in two at the playhead |
+| **Return window** | `F` | opens the edit in a window of its own, to put on a second screen |
 | **Delete clip** | `Delete` | removes the clip from the edit. The original file stays in the assets |
+
+**`F` serves three times, and clashes with nothing.** It **frames the selection** in the 3D view and
+arms **Crop** in the image. All three belong to different contexts, which are never listening at the
+same time.
 
 ### Zoom
 
@@ -561,7 +566,7 @@ are bound to the band, not to a context.
 | `S` |  |  | Scale *(and back up)* | Split clip |  |  |  |  |
 | `M` |  |  | Snap |  |  |  |  |  |
 | `L` |  |  | Local frame |  |  |  |  |  |
-| `F` |  |  | Frame selection |  |  |  |  |  |
+| `F` |  |  | Frame selection | Return window | Crop |  |  |  |
 | `Delete` |  |  | Delete object | Delete clip |  |  |  |  |
 | `W A S D` |  |  | Fly |  |  |  |  |  |
 | `Q` / `E` |  |  | Down / Up |  |  |  |  |  |

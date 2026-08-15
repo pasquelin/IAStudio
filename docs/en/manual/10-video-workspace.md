@@ -129,6 +129,7 @@ Below each monitor:
 | `⌘−` / `Ctrl+−` | zoom out |
 | `⇧Z` | fit — the whole edit fits on screen |
 | `S` | **cut the clip at the playhead** |
+| `F` | open the **return window**, for a second screen |
 | `Del` | delete the selected clip |
 | `⌘Z` / `⇧⌘Z` | undo / redo |
 
@@ -138,6 +139,55 @@ Below each monitor:
 **Only one player is active at a time.** If you open two sequences, only the one in front answers
 the space bar. That is what keeps playback smooth: two video decoders running at once fight over
 the machine.
+
+---
+
+## The return window — watching on a second screen
+
+**`F`**, or the **Return window** button under the **Program** monitor. A window opens holding
+nothing but the picture of the edit: no timeline, no tools, no bar. Put it on a second screen, and
+you watch your edit while you cut it.
+
+It is the gesture one makes while **watching** rather than editing, which is why the key is bare —
+no `⌘`, no `⇧`.
+
+### What it shows, and what it does not
+
+**The Program, always.** The whole edit, as it will be exported. Never the **Source**: the key
+belongs to the monitor that holds playback, and that is the edit's own.
+
+**It is MUTE, and that is not an oversight.** The studio is already playing the sound of this very
+edit. Two outputs on one machine drift a few milliseconds apart and **sound like an echo** — what
+you watch on the second screen is the picture; what you listen to stays where the work is.
+
+### It follows, playback included
+
+Everything you do to the edit shows there: a cut, a clip moved, a fade. When you move the playhead,
+it moves with you, **frame by frame**.
+
+**And when you play, it plays.** It is not handed the frames one by one — it runs its own playback,
+from the point you are at. That is what stops it trailing a step behind the picture it is meant to
+mirror.
+
+### One window, never two
+
+**A second press of `F` does not open a second window.** There is only one, and it shows **the edit
+in front of you**. Switch to another sequence tab and ask for the return again, and **the same
+window turns towards it** — not a third one stacking up on the desk.
+
+### On opening, and on closing
+
+**You have nothing to do to fill it.** It asks for the edit's state as soon as it opens, even when
+the edit was opened long before it.
+
+While no edit is in front, it shows:
+
+> *Waiting for the studio. Open an edit to see it here.*
+
+**And it goes back to that if you close the edit's tab**, rather than freezing on the last frame of
+work that is no longer open.
+
+It closes like any other window. Nothing under way stops when it goes.
 
 ---
 

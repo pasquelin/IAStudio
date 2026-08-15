@@ -132,6 +132,7 @@ Sous chaque moniteur :
 | `⌘−` / `Ctrl+−` | dézoomer |
 | `⇧Z` | tout afficher — le montage entier tient à l’écran |
 | `S` | **couper le clip à la tête de lecture** |
+| `F` | ouvrir la **fenêtre de retour**, pour un second écran |
 | `Suppr` | supprimer le clip sélectionné |
 | `⌘Z` / `⇧⌘Z` | annuler / rétablir |
 
@@ -141,6 +142,58 @@ Sous chaque moniteur :
 **Un seul lecteur est actif à la fois.** Si vous ouvrez deux séquences, seule celle qui est en
 avant répond à la barre d’espace. C’est ce qui garde la lecture fluide : deux décodeurs vidéo qui
 tournent en même temps se disputent la machine.
+
+---
+
+## La fenêtre de retour — regarder sur un second écran
+
+**`F`**, ou le bouton **Fenêtre de retour** sous le moniteur **Programme**. Une fenêtre s’ouvre,
+qui ne contient rien d’autre que l’image du montage : ni timeline, ni outils, ni barre. Posez-la
+sur un second écran, et vous regardez votre montage pendant que vous le montez.
+
+C’est le geste qu’on fait en **regardant** plutôt qu’en éditant, et c’est pourquoi la touche est
+nue — pas de `⌘`, pas de `⇧`.
+
+### Ce qu’elle montre, et ce qu’elle ne montre pas
+
+**Le Programme, toujours.** Le montage entier, tel qu’il sera exporté. Jamais la **Source** : la
+touche appartient au moniteur qui tient la lecture, et c’est celui du montage.
+
+**Elle est MUETTE, et ce n’est pas un oubli.** Le studio joue déjà le son de ce montage-là. Deux
+sorties sur la même machine se décalent de quelques millisecondes et **s’entendent comme un
+écho** — ce qu’on regarde sur le second écran, c’est l’image ; ce qu’on écoute reste là où l’on
+travaille.
+
+### Elle suit, y compris pendant la lecture
+
+Tout ce que vous faites au montage s’y voit : une coupe, un déplacement de clip, un fondu. Quand
+vous déplacez la tête de lecture, elle bouge avec vous, **image par image**.
+
+**Et quand vous lisez, elle lit.** Elle ne reçoit pas les images une par une — elle lance sa
+propre lecture, à partir du point où vous en êtes. C’est ce qui l’empêche de traîner d’un cran
+derrière l’image qu’elle est censée reproduire.
+
+### Une seule fenêtre, jamais deux
+
+**Un second appui sur `F` n’ouvre pas une deuxième fenêtre.** Il n’y en a qu’une, et elle montre
+**le montage qui est devant vous**. Si vous passez à un autre onglet de séquence et redemandez le
+retour, **c’est la même fenêtre qui se tourne vers lui** — pas une troisième qui vient s’empiler
+sur le bureau.
+
+### À l’ouverture, et à la fermeture
+
+**Vous n’avez rien à faire pour la remplir.** Elle réclame l’état du montage dès qu’elle
+s’ouvre, même si le montage a été ouvert bien avant elle.
+
+Tant qu’aucun montage n’est devant, elle affiche :
+
+> *En attente du studio. Ouvrez un montage pour le voir ici.*
+
+**Et elle y revient si vous fermez l’onglet du montage**, plutôt que de rester figée sur la
+dernière image d’un travail qui n’est plus ouvert.
+
+Elle se ferme comme n’importe quelle fenêtre. Rien de ce qui est en cours ne s’arrête quand elle
+part.
 
 ---
 

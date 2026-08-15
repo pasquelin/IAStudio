@@ -245,7 +245,7 @@ src/main/
 ├── ipc/                     `handle`, `register`, `broadcast` — the machinery of invariant 2
 ├── persistence.ts           the atomic write of the small files kept for the user
 ├── update/                  the update check
-└── window/                  lifecycle and navigation lockdown
+└── window/                  lifecycle, navigation lockdown, the video return window
 ```
 
 > **`persistence.ts` was written at the third copy**, and that is the rule it carries: the job
@@ -467,6 +467,37 @@ between them, halves that split a zone — is not what a docking library models.
 Tool windows are memoised: a zone drag writes a new size on every `pointermove`, and without it
 each frame re-renders both halves and everything inside, including a virtualised asset grid.
 Their callbacks are kept stable for that memo to bite.
+
+### The return window does not go through the bridge, and that is no breach
+
+`sequence.mirror` opens a second window mirroring the Program monitor, for a second screen. **The
+IPC bridge carries one thing only: opening that window** (`main/window/mirror.ts`). Everything else
+— the edit, the playhead, playback — travels over a `BroadcastChannel`
+(`spaces/video/mirror-channel.ts`).
+
+**This is no way around invariant 2**, which guards the boundary between PROCESSES. Both windows
+load the same renderer bundle: they already share `SequenceState` as a type, and routing it through
+the main process would mean restating that shape in `shared/`, where it does not belong — a sequence
+is the video workspace's own, and the main process has no use for one.
+
+Three choices show through, all of them measured:
+
+- **Two kinds of message rather than one.** `edit` carries the whole sequence and goes out only on a
+  real change; `time` carries a number. A scrub emits a few hundred of those a second, and
+  re-posting every track with each would be the one thing making this return cost anything.
+- **Playback is not streamed frame by frame.** `playing` tells the return to run ITS own transport
+  from the time it already has. A message per frame would put it one hop behind the picture it is
+  meant to mirror, and drift on top of that.
+- **The return ASKS for the state when it opens** (`ask`). A channel replays nothing and the window
+  opens long after the studio published: without that handshake, the return sat on its waiting
+  screen until the next edit.
+
+The engine is **rebuilt** on that side rather than moved — invariant 3, for the reason that founds
+it: a WebGL context does not cross the boundary between documents. And it is **mute**, because the
+studio is already playing that sound; two outputs would sound like an echo.
+
+Finally, only **the tab in front publishes**. Two open sequences would otherwise fight over one
+window, and the return would show whichever re-rendered last rather than the one being worked on.
 
 ### Registries, not lists
 
