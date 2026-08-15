@@ -20,7 +20,7 @@ import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
 import { TimelineHeaderColumn, TimelineRow } from './TimelineRow'
-import { TRACK_FLAGS } from './track-flags'
+import { isFlagOnAll, TRACK_FLAGS } from './track-flags'
 
 /** A row id back into the pair its channels are addressed by — the inverse of `subjectKey`. */
 function subjectOf(rowId: string): { nodeId: string; bone?: string } {
@@ -166,15 +166,15 @@ function SubjectHeader({ documentId, row, shown }: SubjectRowProps) {
         {TRACK_FLAGS.map(flag => (
           <ToolButton
             key={flag.key}
-            icon={flag.iconFor(row.tracks.every(track => track[flag.key]))}
+            icon={flag.iconFor(isFlagOnAll(row.tracks, flag))}
             label={t(flag.labelKey, { name: row.name })}
             tooltip={TIP_RIGHT}
             variant="header"
-            active={row.tracks.every(track => track[flag.key])}
+            active={isFlagOnAll(row.tracks, flag)}
             onClick={() => {
               // Every channel takes the opposite of what they ALL are, so a mixed subject turns
               // fully on rather than each channel flipping its own way.
-              const next = !row.tracks.every(track => track[flag.key])
+              const next = !isFlagOnAll(row.tracks, flag)
               for (const track of row.tracks) {
                 writeAnimationTrack(documentId, track.id, current => ({
                   ...current,

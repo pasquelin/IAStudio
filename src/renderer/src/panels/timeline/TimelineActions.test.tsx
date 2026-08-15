@@ -33,6 +33,17 @@ describe('TimelineActions', () => {
     expect(screen.getByRole('button', { name: /Lame/ })).toBeInTheDocument()
   })
 
+  // The three bands open on the same row. The montage had none: its transport lived under the
+  // programme monitor alone, so the same panel said the time in Audio and in 3D and not here.
+  it('opens the montage bar on the transport the other two bands carry', () => {
+    installSequence('doc-1')
+    render(<TimelineActions />)
+
+    expect(screen.getByRole('button', { name: /Retour au début/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Lire/ })).toBeInTheDocument()
+    expect(screen.getByText('00:00:00:00')).toBeInTheDocument()
+  })
+
   it('arms the tool the bar picks', async () => {
     installSequence('doc-1')
     render(<TimelineActions />)

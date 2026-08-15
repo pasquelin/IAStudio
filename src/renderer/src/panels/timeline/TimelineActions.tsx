@@ -1,5 +1,6 @@
 import { activeAudioId, activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
 import { AnimationActions } from './AnimationActions'
+import { ProgramTransport } from './ProgramTransport'
 import { SequenceActions } from './SequenceActions'
 import { SoundActions } from './SoundActions'
 
@@ -19,5 +20,9 @@ export function TimelineActions() {
   if (audioId) return <SoundActions documentId={audioId} />
   if (!documentId) return null
 
-  return <SequenceActions documentId={documentId} />
+  // The three bands open on the same row — back to the start, play, the time. Video's player is
+  // the programme monitor's, so this one only asks it; the two others carry their own.
+  return (
+    <SequenceActions documentId={documentId} lead={<ProgramTransport documentId={documentId} />} />
+  )
 }

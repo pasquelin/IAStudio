@@ -2121,9 +2121,6 @@
     "hideHint": "Retire la section de l’accueil ; une ligne en bas de la page la rétablit"
   },
   "animation": {
-    "play": "Lire",
-    "pause": "Mettre en pause",
-    "toStart": "Revenir au début",
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Échelle",

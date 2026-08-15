@@ -2121,9 +2121,6 @@
     "hideHint": "Takes the section off the home; a line at the foot of the page brings it back"
   },
   "animation": {
-    "play": "Play",
-    "pause": "Pause",
-    "toStart": "Back to the start",
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Scale",

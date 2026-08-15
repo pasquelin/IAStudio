@@ -1,17 +1,8 @@
-import {
-  mdiMovieOpenOutline,
-  mdiPause,
-  mdiPlay,
-  mdiRecordCircleOutline,
-  mdiRhombus,
-  mdiSkipPrevious,
-} from '@mdi/js'
+import { mdiMovieOpenOutline, mdiRecordCircleOutline, mdiRhombus } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { secondsToUs, snapToFrame, usToSeconds, type Us } from '@shared/domain/time'
 import { NumberField } from '@/design/NumberField'
-import { Separator } from '@/design/Separator'
-import { Timecode } from '@/design/Timecode'
 import { ToolButton } from '@/design/ToolButton'
 import { CONTROL } from '@/design/styles'
 import { keySubject, setTimelineSettings } from '@/engines/scene/animation-commands'
@@ -26,6 +17,7 @@ import { bonesOfNode, useModelClips } from '@/stores/model-clips'
 import { sceneEngineOf } from '@/stores/scene-engines'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/scene-views'
+import { TimelineTransport } from './TimelineTransport'
 
 export type AnimationActionsProps = { documentId: string }
 
@@ -78,20 +70,12 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
   // the montage's, on controls of the very same gauge.
   return (
     <>
-      <ToolButton
-        icon={mdiSkipPrevious}
-        label={t('animation.toStart')}
-        tooltip={TIP_BOTTOM}
-        variant="header"
-        onClick={() => useSceneViews.getState().setPlayhead(documentId, 0)}
-      />
-      <ToolButton
-        icon={view.playing ? mdiPause : mdiPlay}
-        label={view.playing ? t('animation.pause') : t('animation.play')}
-        tooltip={TIP_BOTTOM}
-        variant="header"
-        active={view.playing}
-        onClick={() => {
+      <TimelineTransport
+        playing={view.playing}
+        time={view.playhead}
+        fps={timeline.fps}
+        onRewind={() => useSceneViews.getState().setPlayhead(documentId, 0)}
+        onToggle={() => {
           const views = useSceneViews.getState()
           // Rewound first when the head is already at the end: pressing Play there would stop on
           // the very frame it started, which reads as a button that does nothing.
@@ -101,9 +85,6 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
           views.setPlaying(documentId, !view.playing)
         }}
       />
-      <Timecode time={view.playhead} fps={timeline.fps} />
-
-      <Separator />
       <ToolButton
         icon={mdiRecordCircleOutline}
         label={t('animation.autoKey')}

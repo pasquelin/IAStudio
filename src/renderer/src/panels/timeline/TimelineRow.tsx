@@ -133,7 +133,13 @@ export function TimelineRow({
   )
 }
 
-type Grab = { pointerId: number; y: number; applied: number }
+type Grab = {
+  pointerId: number
+  y: number
+  applied: number
+  /** The grip itself, kept so a teardown can say whether the row really left — see the effect. */
+  node: HTMLElement
+}
 
 /**
  * The grip a row is dragged by. A button rather than a bare div: reordering has to be reachable
@@ -172,12 +178,16 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
   useEffect(() => {
     if (!dragging) return
 
-    const finish = (): void => {
-      if (!grabbed.current) return
+    const release = (): void => {
       grabbed.current = null
-      setDragging(false)
       latest.current.onHeld(false)
       latest.current.reorder.end?.()
+    }
+
+    const finish = (): void => {
+      if (!grabbed.current) return
+      release()
+      setDragging(false)
     }
 
     const onMove = (event: globalThis.PointerEvent): void => {
@@ -220,20 +230,26 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
       window.removeEventListener('blur', finish)
       // Torn down with the pointer still down — a panel closed, a workspace left, a module
       // swapped under a running gesture. BOTH halves have to be given back: the gesture the store
-      // is holding open, and the row's own "I am held", which nothing else would ever clear —
-      // it would stay dimmed with no drag behind it.
-      if (grabbed.current) {
-        grabbed.current = null
-        latest.current.onHeld(false)
-        latest.current.reorder.end?.()
-      }
+      // is holding open, and the row's own "I am held", which nothing else would ever clear.
+      //
+      // But a teardown is not always the end. StrictMode runs this effect again whenever React
+      // RE-INSERTS the row's node, and React only ever relocates the child that is out of order:
+      // climbing that is the neighbour, descending it is the row one is holding. Releasing here
+      // is what ended every downward drag on the first rank it crossed, while climbing crossed
+      // as many as it liked. A grip still standing in the document is only being moved.
+      if (grabbed.current && !grabbed.current.node.isConnected) release()
     }
   }, [dragging])
 
   const onPointerDown = (event: PointerEvent<HTMLButtonElement>): void => {
     // The row under the grip must not also take the press as a selection.
     event.stopPropagation()
-    grabbed.current = { pointerId: event.pointerId, y: event.clientY, applied: 0 }
+    grabbed.current = {
+      pointerId: event.pointerId,
+      y: event.clientY,
+      applied: 0,
+      node: event.currentTarget,
+    }
     setDragging(true)
     onHeld(true)
     reorder.begin?.()
