@@ -34,19 +34,29 @@ une ligne rappelle lequel des deux on regarde.
 
 ## Ouvrir un son
 
-**Deux gestes, dans cet ordre, et l’ordre compte :**
+**Trois gestes, et ils ne mènent pas au même endroit :**
 
-1. **Le bouton `+` du rail gauche** — il ouvre un onglet audio, vide pour l’instant.
-2. **Double-cliquez sur un asset audio** dans l’étagère — la prise entre dans l’onglet. Vous
-   pouvez aussi **la déposer sur le moniteur du bas**, ou passer par le clic droit, ligne
-   **Ouvrir dans l’éditeur audio**.
+| Geste | Où la prise atterrit |
+|---|---|
+| **Double-clic** sur un asset audio de l’étagère | dans un **onglet à lui**, ouvert pour l’occasion |
+| **Déposer** la prise sur le moniteur du bas | dans l’onglet **que vous avez devant vous** |
+| **Clic droit ▸ Ouvrir dans l’éditeur audio** | idem |
+
+**Le double-clic ne regarde jamais l’onglet en avant.** C’est la règle de tout le studio, décrite
+dans [Les assets](07-assets.md) : il ouvre l’asset dans l’espace de son type, quoi qu’il y ait à
+l’écran. Il n’a donc besoin d’aucun onglet préalable — et **rouvrir la même prise revient à son
+onglet**, il n’en naît pas un second.
+
+**Le bouton `+` du rail gauche** ouvre un onglet audio vide. Ce n’est pas un préalable au
+double-clic : il sert quand vous voulez le montage avant d’avoir une prise à y poser.
 
 Tant qu’aucun clip n’est sélectionné, le moniteur du bas affiche : « Sélectionnez un clip du
 montage pour l’éditer ici, ou déposez une prise. »
 
-> **Double-cliquer sans avoir ouvert d’onglet ne fait rien**, et rien ne le dit. Le double-clic
-> envoie toujours l’asset dans l’onglet en avant ; s’il n’y en a pas, il n’a nulle part où
-> l’envoyer. C’est expliqué en détail dans [Les assets](07-assets.md).
+> **C’est ce geste qui décide si vos prises se retrouvent ensemble.** Deux double-clics sur deux
+> sons différents ouvrent **deux onglets**, chacun avec son propre montage. Pour les monter côte à
+> côte, il faut les faire entrer dans le **même** onglet : dépôt sur le moniteur du bas, ou clic
+> droit.
 
 ### Le montage commande, l’éditeur suit
 
@@ -103,8 +113,8 @@ travaillent.
 y en a une, et « Glissez sur l’onde pour sélectionner » quand il n’y en a pas. Une zone que
 personne ne sait tracer ne s’explique pas par une infobulle qui n’apparaît qu’au survol.
 
-La lecture boucle sur la sélection tant qu’elle existe, ce qui permet de juger un passage en le
-réécoutant.
+**La lecture, elle, ignore la sélection** : elle joue la prise entière depuis la position du
+curseur, et ne reboucle pas sur la zone. Pour juger un passage, replacez le curseur avant lui.
 
 Sans sélection, les outils qui en ont besoin travaillent sur des valeurs par défaut — un fondu
 d’une seconde, par exemple.
@@ -166,7 +176,12 @@ Deux conséquences très pratiques :
 
 **Rogner** et **Couper les silences** font exception, et pour une bonne raison : ils ne changent
 pas le son, ils changent **les bornes du clip** sur le montage — exactement comme si vous aviez
-tiré son bord à la souris. Là aussi rien n’est écrit dans le fichier, et `⌘Z` les défait.
+tiré son bord à la souris. Là aussi rien n’est écrit dans le fichier.
+
+> **`⌘Z` les défait, mais pas forcément en premier.** Ce sont des gestes de **montage**, et la
+> touche remonte toujours les **outils** d’abord : après un fondu puis un rognage, la première
+> pression défait le fondu, pas le rognage. Rien n’est perdu, l’ordre surprend — la règle
+> complète est [plus bas](#annuler-et-rétablir).
 
 Ce n’est qu’au moment où vous le demandez explicitement qu’un fichier est écrit :
 

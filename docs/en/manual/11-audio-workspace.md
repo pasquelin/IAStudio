@@ -32,18 +32,28 @@ which of the two you are looking at.
 
 ## Opening a sound
 
-**Two gestures, in this order, and the order matters:**
+**Three gestures, and they do not lead to the same place:**
 
-1. **The `+` button on the left rail** — it opens an audio tab, empty for now.
-2. **Double-click an audio asset** in the shelf — the take goes into the tab. You can also **drop
-   it on the lower monitor**, or use the right-click row **Open in the audio editor**.
+| Gesture | Where the take lands |
+|---|---|
+| **Double-click** an audio asset in the shelf | in **a tab of its own**, opened for it |
+| **Drop** the take on the lower monitor | in the tab **you have in front of you** |
+| **Right-click ▸ Open in the audio editor** | the same |
+
+**Double-click never looks at the tab in front of you.** That is the studio-wide rule, described
+in [Assets](07-assets.md): it opens the asset in the workspace of its type, whatever is on screen.
+It therefore needs no tab beforehand — and **reopening the same take returns to its tab**, no
+second one is born.
+
+**The `+` button on the left rail** opens an empty audio tab. It is not a prerequisite for the
+double-click: it is there for when you want the edit before you have a take to lay on it.
 
 While no clip is selected, the lower monitor shows: "Select a clip from the montage to edit it
 here, or drop a take."
 
-> **Double-clicking without having opened a tab does nothing**, and nothing says so. Double-click
-> always sends the asset into the tab in front; with no tab, it has nowhere to send it. This is
-> explained in full in [Assets](07-assets.md).
+> **This gesture is what decides whether your takes end up together.** Two double-clicks on two
+> different sounds open **two tabs**, each with an edit of its own. To assemble them side by side
+> they have to enter the **same** tab: drop on the lower monitor, or right-click.
 
 ### The edit leads, the editor follows
 
@@ -99,8 +109,8 @@ It is the universal representation of sound. At a glance you can see:
 and "Drag across the wave to select" when there is not. An area nobody knows how to draw is not
 explained by a sentence that only appears once a pointer rests on a tool.
 
-Playback loops over the selection while it exists, which lets you judge a passage by hearing it
-again.
+**Playback itself ignores the selection**: it plays the whole take from where the cursor stands,
+and does not loop back over the area. To judge a passage, put the cursor before it.
 
 Without a selection, the tools that need one work on default values — a one-second fade, for
 example.
@@ -161,7 +171,12 @@ Two very practical consequences:
 
 **Crop** and **Trim silence** are the exception, and for a good reason: they do not change the
 sound, they change **the clip's bounds** on the edit — exactly as if you had dragged its edge
-with the mouse. Nothing is written into the file there either, and `⌘Z` undoes them.
+with the mouse. Nothing is written into the file there either.
+
+> **`⌘Z` undoes them, but not necessarily first.** These are **edit** gestures, and the key always
+> walks back up the **tools** first: after a fade and then a crop, the first press undoes the
+> fade, not the crop. Nothing is lost, the order surprises — the full rule is
+> [further down](#undo-and-redo).
 
 Only when you explicitly ask is a file written:
 
