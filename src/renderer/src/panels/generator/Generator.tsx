@@ -1,7 +1,8 @@
 import { mdiCreationOutline } from '@mdi/js'
 import { useQuery } from '@tanstack/react-query'
-import { Suspense } from 'react'
+import { Suspense, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { Job } from '@shared/domain/job'
 import type { ModelDescriptor } from '@shared/domain/model'
 import { isBeyondPlan } from '@shared/domain/plan'
 import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
@@ -9,6 +10,7 @@ import { useModelForFamily } from '@/helpers/model-for-family'
 import { usePlanAccess } from '@/helpers/plan-access'
 import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
+import { registerGenerator } from '@/assistant/generator-bridge'
 import { PromptAssistant } from '@/design/PromptAssistant'
 import { dictationAccessory } from '@/dictation/DictationField'
 import { failureKeyOf } from '@/services/failure-message'
@@ -100,6 +102,52 @@ export function Generator() {
   const plan = usePlanAccess()
 
   /**
+   * The body as the form stands, kept for whoever asks from outside — today the assistant, which
+   * has to see what would be sent before it may quote a cost and ask for a yes.
+   *
+   * A ref rather than state: this changes on every keystroke, and the panel has no reason to
+   * re-render because something that is not on screen wants to read it. `useCostEstimate`
+   * subscribes to the same feed for the same reason.
+   */
+  const body = useRef<FormValues>({})
+
+  /**
+   * Runs the generation and answers the job, which the button's own handler discards.
+   *
+   * The claim is part of it, not around it: which workspace has somewhere to put the result is
+   * settled at the click, and a second path that skipped it would land generations nowhere.
+   */
+  const runGeneration = useCallback(
+    (values: FormValues): Promise<Job | null> => {
+      if (!modelId) return Promise.resolve(null)
+      const claim = claimOnSubmit()
+      return submit({ id: modelId }, values).then(job => {
+        claim(job)
+        return job
+      })
+    },
+    [modelId, submit],
+  )
+
+  useEffect(
+    () =>
+      registerGenerator({
+        body: () => (modelId ? { modelId, values: body.current } : null),
+        submit: () => runGeneration(body.current),
+      }),
+    [modelId, runGeneration],
+  )
+
+  const watchValues = cost.onValuesChange
+  const onValuesChange = useCallback(
+    (values: FormValues) => {
+      body.current = values
+      watchValues(values)
+    },
+    [watchValues],
+  )
+
+  /**
    * The last door before the spend, for everything that arms a model without opening the picker:
    * a stored default, "recreate", "regenerate with these parameters", a Spark idea and the canvas
    * edits all land here. Greying the picker alone would leave every one of them to discover the
@@ -130,10 +178,7 @@ export function Generator() {
 
   // Claimed at the click and settled when the job id arrives: which workspace has somewhere to
   // put a result is not this panel's business — it serves every one of them.
-  const generate = (body: FormValues): void => {
-    const claim = claimOnSubmit()
-    void submit({ id: modelId }, body).then(claim)
-  }
+  const generate = (values: FormValues): void => void runGeneration(values)
 
   // Adopting the settings goes through the preset "regenerate with these parameters" already
   // uses: `DynamicForm` rebuilds on it, so the whole form fills without a line of its own. The
@@ -167,7 +212,7 @@ export function Generator() {
               submitLabel={t('actions.generate')}
               submitHint={t('actions.generateHint')}
               submitNote={cost.note}
-              onValuesChange={cost.onValuesChange}
+              onValuesChange={onValuesChange}
               // `project` is not in this: the panel returns before the form when there is none.
               busy={refused}
               preset={preset}
