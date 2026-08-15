@@ -6,8 +6,9 @@ export type SplitPair = {
   pairRef: RefObject<HTMLDivElement | null>
   /** The leading pane: an equal share of the pair until the divider is dragged, its own size after. */
   leadStyle: CSSProperties
-  dividerSize: number
-  onDividerSize: (size: number, room: number) => void
+  /** What the divider STARTS FROM — the leading pane's size, which is what a drag moves. */
+  leadSize: number
+  onLeadSize: (size: number, room: number) => void
 }
 
 /**
@@ -25,7 +26,7 @@ export type SplitPair = {
 export function useSplitPair(axis: 'vertical' | 'horizontal'): SplitPair {
   const pairRef = useRef<HTMLDivElement>(null)
   /** Null until the divider is dragged: the two panes share the pair equally before that. */
-  const [leadSize, setLeadSize] = useState<number | null>(null)
+  const [draggedSize, setDraggedSize] = useState<number | null>(null)
   /** The pair's own size, so the handle starts a drag from where the divider actually is. */
   const [available, setAvailable] = useState(0)
   const lying = axis === 'vertical'
@@ -37,22 +38,22 @@ export function useSplitPair(axis: 'vertical' | 'horizontal'): SplitPair {
     const observer = new ResizeObserver(() => {
       const room = lying ? pair.clientHeight : pair.clientWidth
       setAvailable(room)
-      setLeadSize(current => (current === null ? null : fitSplit(current, room)))
+      setDraggedSize(current => (current === null ? null : fitSplit(current, room)))
     })
     observer.observe(pair)
     return () => observer.disconnect()
   }, [lying])
 
-  const onDividerSize = useCallback(
-    (size: number, room: number) => setLeadSize(fitSplit(size, room)),
+  const onLeadSize = useCallback(
+    (size: number, room: number) => setDraggedSize(fitSplit(size, room)),
     [],
   )
 
   return {
     pairRef,
-    leadStyle: leadStyleOf(leadSize, lying),
-    dividerSize: leadSize ?? available / 2,
-    onDividerSize,
+    leadStyle: leadStyleOf(draggedSize, lying),
+    leadSize: draggedSize ?? available / 2,
+    onLeadSize,
   }
 }
 

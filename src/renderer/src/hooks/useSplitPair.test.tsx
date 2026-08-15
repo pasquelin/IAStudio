@@ -25,12 +25,12 @@ class ObserverStub {
 }
 
 function Pair({ axis }: { axis: 'vertical' | 'horizontal' }) {
-  const { pairRef, leadStyle, dividerSize, onDividerSize } = useSplitPair(axis)
+  const { pairRef, leadStyle, leadSize, onLeadSize } = useSplitPair(axis)
 
   return (
     <div ref={pairRef}>
       <div data-testid="lead" style={leadStyle} />
-      <ResizeHandle axis={axis} size={dividerSize} onSize={onDividerSize} />
+      <ResizeHandle axis={axis} size={leadSize} onSize={onLeadSize} />
     </div>
   )
 }
@@ -69,13 +69,6 @@ afterEach(() => {
 })
 
 describe('useSplitPair', () => {
-  it('shares the pair equally until the divider is dragged', () => {
-    render(<Pair axis="horizontal" />)
-
-    expect(lead().style.flexGrow).toBe('1')
-    expect(lead().style.width).toBe('')
-  })
-
   // The drag starts from the middle of the measured pair: `-200` reaching 300 says so on its own.
   it('gives the leading pane a width of its own once dragged side by side', () => {
     render(<Pair axis="horizontal" />)
@@ -112,6 +105,7 @@ describe('useSplitPair', () => {
     expect(lead().style.width).toBe('300px')
   })
 
+  // Also the state a pair opens on: an equal share is what a size nobody made up looks like.
   it('makes up no size for a pair nobody has dragged', () => {
     render(<Pair axis="horizontal" />)
 

@@ -236,6 +236,23 @@ describe('AudioDocument', () => {
     expect(screen.getByText(/Le montage entier/)).toBeInTheDocument()
   })
 
+  /**
+   * The pair is stacked here, so the divider sets a HEIGHT — and it is the montage above that
+   * keeps it. `useSplitPair` is tested on its own arithmetic; this is the only thing that says
+   * its answer landed on the right box of this tab, on the right axis.
+   */
+  it('gives the montage a height of its own once the divider is dragged', async () => {
+    await openTake()
+    const divider = screen.getByRole('separator', { hidden: true })
+
+    fireEvent.pointerDown(divider, { pointerId: 1, clientY: 400 })
+    fireEvent.pointerMove(divider, { pointerId: 1, clientY: 200 })
+
+    const montage = screen.getByText(/Le montage entier/).closest('section')?.parentElement
+    expect(montage?.style.height).not.toBe('')
+    expect(montage?.style.width).toBe('')
+  })
+
   it('asks for a take when none is open', () => {
     render(<AudioDocument documentId="doc-1" />)
     expect(screen.getByText(/Aucun son ouvert/)).toBeInTheDocument()

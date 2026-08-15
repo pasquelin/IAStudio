@@ -39,7 +39,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
    */
   const transport = useSoundTransport(documentId, sequence)
 
-  const { pairRef, leadStyle, dividerSize, onDividerSize } = useSplitPair('vertical')
+  const { pairRef, leadStyle, leadSize, onLeadSize } = useSplitPair('vertical')
 
   const seek = useCallback(
     (playhead: Us) => {
@@ -115,7 +115,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
       </div>
 
       {/* The same handle the shell splits its zones with, so the gesture is the one gesture. */}
-      <ResizeHandle axis="vertical" size={dividerSize} onSize={onDividerSize} />
+      <ResizeHandle axis="vertical" size={leadSize} onSize={onLeadSize} />
 
       <div className="flex min-h-0 flex-1">
         <TakeEditor documentId={documentId} />
