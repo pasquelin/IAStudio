@@ -640,8 +640,14 @@ main, .footer { position: relative; z-index: 1; }
 }
 .footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
 .footer a:hover { color: var(--bone); }
+/* Pleine largeur, pour que les quatre filets s'alignent sur les colonnes du dessus au lieu de
+   s'arrêter à mi-parcours — c'est le `max-width` qui coupait le trait, pas seulement le texte.
+   Le texte, lui, se recoupe en colonnes : à cette largeur une ligne ferait deux cents signes,
+   et l'aligner ne l'aurait pas rendue lisible. Le dernier paragraphe est trop court pour se
+   couper, il garde la pleine mesure. */
 .legal {
   margin-top: 52px; padding-top: 26px; border-top: 1px solid var(--edge);
-  font-size: .8rem; color: var(--dim); max-width: 78ch;
+  font-size: .8rem; color: var(--dim);
 }
+.legal:not(:last-child) { columns: 34rem; column-gap: 56px; }
 .legal strong { color: var(--mist); font-weight: 500; }
