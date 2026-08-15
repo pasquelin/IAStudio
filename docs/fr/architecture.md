@@ -793,13 +793,20 @@ qui est au-dessus. C’est une décision de métier, pas d’esthétique.
 
 ## Internationalisation
 
-Un JSON par langue dans `src/shared/i18n/` — français et anglais, tenus en parité stricte. Ils
-vivent dans `shared/` parce que le menu natif est bâti par le processus principal et l’UI par le
-renderer, et que les deux doivent dire la même chose.
+Un dossier par langue dans `src/shared/i18n/` — `fr/` et `en/`, douze sections JSON chacun
+(`inspector`, `commands`, `settings`, `usage`, `activity`, `shell`, `image`, `texture`, `scene`,
+`assets`, `models`, `common`), recomposées en un seul objet par l’index du dossier. Les deux
+langues sont tenues en parité stricte. Elles vivent dans `shared/` parce que le menu natif est
+bâti par le processus principal et l’UI par le renderer, et que les deux doivent dire la même
+chose.
+
+Le découpage est un choix de **stockage**, pas de contrat : l’espace de noms reste unique, et
+`main/i18n-sections.test.ts` refuse qu’un fichier plat réapparaisse à la racine du dossier — il
+détournerait l’import et ferait disparaître la langue entière.
 
 - **Tous les identifiants, commentaires, JSDoc, noms de fichiers, clés i18n, canaux IPC et
   descriptions de tests sont en anglais**, partout dans `src/`.
-- Les seules exceptions sont `fr.json` lui-même, et les valeurs attendues dans les tests
+- Les seules exceptions sont les sections de `fr/` elles-mêmes, et les valeurs attendues dans les tests
   lorsqu’elles proviennent du bundle français.
 - Aucune chaîne visible par l’utilisateur en dur dans un composant. Les clés dynamiques
   (`assetTypes.${type}`, `capabilities.${capability}`) se résolvent contre les mêmes bundles,
@@ -925,7 +932,7 @@ Ils se partagent l’arbre sans se recouvrir, et tournent tous dans `pnpm valida
 
 | Garde | Ce qu’il refuse |
 |---|---|
-| `shared/i18n/bundles.test.ts` | une clé présente d’un côté et pas de l’autre, un ordre qui diverge, une valeur vide, une apostrophe ASCII en français, **une espace sécable devant `; : ! ?` ou dans les guillemets français**, un trou d’interpolation perdu — **et une phrase anglaise recopiée dans `fr.json`** |
+| `shared/i18n/bundles.test.ts` | une clé présente d’un côté et pas de l’autre, un ordre qui diverge, une valeur vide, une apostrophe ASCII en français, **une espace sécable devant `; : ! ?` ou dans les guillemets français**, un trou d’interpolation perdu — **et une phrase anglaise recopiée dans le bundle français** |
 | `renderer/src/no-hardcoded-text.test.ts` | dans un `.tsx` : du texte entre balises, un littéral entre accolades, derrière un ternaire ou un `&&`, et tout attribut qu’un humain lit |
 | `main/no-hardcoded-text.test.ts`, § *the main process* | un mot écrit dans un dialogue natif ou dans un `label` de menu |
 | `main/no-hardcoded-text.test.ts`, § *the registries* | dans `renderer`, `shared` ou `preload` : un libellé écrit là où une clé est attendue |
@@ -975,7 +982,7 @@ sur trois clés d’un lot fusionné en parallèle : le motif étant invisible d
 ne l’aurait vu à la relecture.
 
 **Le premier voit ce qu’aucun des trois autres ne peut voir.** Une phrase anglaise collée dans
-`fr.json` passe *par* le bundle : elle est irréprochable pour les gardes qui traquent le texte en
+une section de `fr/` passe *par* le bundle : elle est irréprochable pour les gardes qui traquent le texte en
 dur, et elle s’affiche pourtant en anglais devant un utilisateur français. Le test la reconnaît à
 ceci qu’elle est **identique dans les deux fichiers**. Il ne compare que les phrases, jamais les
 mots seuls : `Position`, `Rotation`, `Saturation` s’écrivent pareil dans les deux langues —

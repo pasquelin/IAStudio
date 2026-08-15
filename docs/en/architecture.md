@@ -763,13 +763,19 @@ everything above it. It is a domain decision, not a style one.
 
 ## Internationalisation
 
-One JSON per language in `src/shared/i18n/` — French and English, kept at strict parity. They
-live in `shared/` because the native menu is built by the main process and the UI by the
-renderer, and the two must say the same thing.
+One directory per language in `src/shared/i18n/` — `fr/` and `en/`, twelve JSON sections each
+(`inspector`, `commands`, `settings`, `usage`, `activity`, `shell`, `image`, `texture`, `scene`,
+`assets`, `models`, `common`), merged back into a single object by the directory's index. Both
+languages are kept at strict parity. They live in `shared/` because the native menu is built by
+the main process and the UI by the renderer, and the two must say the same thing.
+
+The split is a **storage** choice, not a contract one: the namespace stays single, and
+`main/i18n-sections.test.ts` refuses a flat file reappearing at the root of the directory — it
+would hijack the import and take the whole language down with it.
 
 - **All identifiers, comments, JSDoc, file names, i18n keys, IPC channels and test descriptions
   are in English**, everywhere in `src/`.
-- The only exceptions are `fr.json` itself, and the expected values in tests when they come from
+- The only exceptions are the sections of `fr/` themselves, and the expected values in tests when they come from
   the French bundle.
 - No hard-coded user-facing string in a component. Dynamic keys (`assetTypes.${type}`,
   `capabilities.${capability}`) resolve against the same bundles, with the raw API name as a
@@ -889,7 +895,7 @@ They share the tree without overlapping, and all of them run in `pnpm validate`.
 
 | Guard | What it refuses |
 |---|---|
-| `shared/i18n/bundles.test.ts` | a key on one side and not the other, a diverging order, a blank value, an ASCII apostrophe in French, **a breaking space before `; : ! ?` or inside French quotation marks**, a lost interpolation hole — **and an English sentence copied into `fr.json`** |
+| `shared/i18n/bundles.test.ts` | a key on one side and not the other, a diverging order, a blank value, an ASCII apostrophe in French, **a breaking space before `; : ! ?` or inside French quotation marks**, a lost interpolation hole — **and an English sentence copied into the French bundle** |
 | `renderer/src/no-hardcoded-text.test.ts` | in a `.tsx`: text between tags, a literal in braces, one behind a ternary or an `&&`, and any attribute a human reads |
 | `main/no-hardcoded-text.test.ts`, § *the main process* | a word written into a native dialog or a menu `label` |
 | `main/no-hardcoded-text.test.ts`, § *the registries* | in `renderer`, `shared` or `preload`: a label written where a key is expected |
@@ -926,8 +932,8 @@ what every font has. The guard bit **ten minutes after it shipped**, on three ke
 merged in parallel: the pattern being invisible in an editor, nobody would have caught it by
 reading.
 
-**The first sees what none of the other three can.** An English sentence pasted into `fr.json`
-goes *through* the bundle: it is spotless to the guards hunting hardcoded text, and it still
+**The first sees what none of the other three can.** An English sentence pasted into a section of
+`fr/` goes *through* the bundle: it is spotless to the guards hunting hardcoded text, and it still
 shows in English to a French reader. The test knows it by one sign — it is **identical in both
 files**. It compares sentences only, never single words: `Position`, `Rotation`, `Saturation`
 are spelled the same in both languages — ninety-four keys — and listing those would cost far

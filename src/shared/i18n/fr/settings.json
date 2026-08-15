@@ -1,0 +1,229 @@
+{
+  "settings": {
+    "title": "Réglages",
+    "sections": "Sections de réglages",
+    "search": "Rechercher un réglage",
+    "results": "Résultats",
+    "noResult": "Aucun réglage ne correspond à cette recherche.",
+    "restoreDefault": "Restaurer la valeur par défaut",
+    "restoreDefaultHint": "Remet la valeur d’origine, celle d’avant toute modification",
+    "account": "Compte",
+    "appearance": "Apparence",
+    "generation": "Génération",
+    "media": "Médias",
+    "dictation": "Dictée",
+    "accountDescription": "Identifiants API, chiffrés par le trousseau du système.",
+    "appearanceDescription": "Thème et densité des contrôles.",
+    "generationDescription": "File de génération et modèles par défaut, par famille.",
+    "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
+    "dictationDescription": "Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous dites n’est envoyé nulle part.",
+    "theme": {
+      "title": "Thème",
+      "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour. « Système » suit le réglage de votre ordinateur et bascule tout seul, par exemple le soir venu.",
+      "dark": "Sombre",
+      "light": "Clair",
+      "system": "Système"
+    },
+    "density": {
+      "title": "Densité",
+      "help": "Règle la taille des boutons et la hauteur des lignes. « Compact » fait tenir plus de choses à l’écran ; « Confort » laisse plus d’air entre elles, ce qui les rend plus faciles à viser à la souris.",
+      "comfortable": "Confort",
+      "compact": "Compact"
+    },
+    "concurrentJobs": {
+      "title": "Générations simultanées",
+      "help": "Nombre de créations qui travaillent en même temps. Plus ce nombre est grand, plus vous en lancez d’un coup — mais chacune peut mettre plus longtemps à revenir, et le service peut refuser celles qui arrivent en trop. Trois est un bon équilibre."
+    },
+    "captionArrivals": {
+      "title": "Nommer les assets rapatriés",
+      "help": "Nommer automatiquement une image qui arrive sans nom utile. Consomme des unités créatives."
+    },
+    "maxRetries": {
+      "title": "Tentatives maximum",
+      "help": "Quand une génération échoue à cause d’une coupure réseau ou d’un serveur occupé, l’application réessaie toute seule. Ce nombre dit combien de fois avant d’abandonner. À 0, elle n’essaie jamais deux fois. Une clé API invalide n’est jamais réessayée : réessayer ne la corrigerait pas."
+    },
+    "ffmpegPath": {
+      "title": "Chemin de ffmpeg",
+      "help": "Emplacement d’un programme ffmpeg à utiliser à la place de celui fourni avec l’application. Laissez vide, sauf si vous tenez au vôtre.",
+      "placeholder": "/opt/homebrew/bin/ffmpeg"
+    },
+    "dictationEnabled": {
+      "title": "Activer la dictée",
+      "help": "Propose un bouton de micro à côté des champs de texte, et met en service le raccourci qui écoute. Désactivée, la dictée ne charge rien et ne demande jamais l’accès au micro."
+    },
+    "dictationMode": {
+      "title": "Façon de déclencher",
+      "help": "« Maintenir » écoute tant que vous gardez le raccourci enfoncé, et s’arrête dès que vous le relâchez : c’est le plus sûr, on ne laisse jamais le micro ouvert par oubli. « Basculer » démarre à la première pression et s’arrête à la suivante, ce qui repose la main sur les longues dictées.",
+      "pushToTalk": "Maintenir la touche",
+      "continuous": "Basculer marche/arrêt"
+    },
+    "dictationSilence": {
+      "title": "Silence qui termine une phrase",
+      "help": "Durée de blanc, en millisecondes, au bout de laquelle ce que vous venez de dire est considéré comme fini et transcrit. Augmentez-la si vos phrases sont coupées en deux parce que vous marquez des pauses pour réfléchir."
+    },
+    "dictationPreview": {
+      "title": "Aperçu pendant que vous parlez",
+      "help": "Intervalle, en millisecondes, entre deux aperçus du texte en cours. Le modèle n’écrit pas au fil de la parole : chaque aperçu relit tout ce qui a été dit depuis le début de la phrase, et coûte donc du calcul. Mettez 0 pour n’afficher que le texte définitif de chaque phrase."
+    },
+    "dictationThreads": {
+      "title": "Fils de calcul",
+      "help": "Nombre de cœurs que la reconnaissance a le droit d’occuper. Plus haut va plus vite jusqu’à un certain point, mais chaque fil est un cœur en moins pour le reste de l’application."
+    },
+    "dictationIdleUnload": {
+      "title": "Libérer la mémoire après",
+      "help": "Minutes sans dicter au bout desquelles le modèle est déchargé, rendant environ 700 Mo de mémoire. Il se recharge tout seul à la dictée suivante, ce qui prend quelques secondes. Mettez 0 pour le garder chargé en permanence."
+    },
+    "dictationModelFolder": {
+      "title": "Dossier du modèle",
+      "help": "Emplacement d’un modèle de reconnaissance déjà présent sur ce disque, à utiliser au lieu de celui que l’application télécharge. Laissez vide dans le cas normal.",
+      "placeholder": "/Volumes/Modeles/parakeet-tdt-0.6b-v3-int8"
+    },
+    "defaultModel": "Modèle par défaut",
+    "noDefaultModel": "Demander à chaque fois",
+    "ffmpegFound": "ffmpeg est disponible : proxies et waveforms seront préparés.",
+    "ffmpegMissing": "ffmpeg reste introuvable. L’import fonctionne, sans proxy ni waveform.",
+    "browse": "Parcourir…",
+    "accent": {
+      "title": "Couleur d’accent",
+      "help": "La couleur qui signale ce qui est sélectionné ou en cours : le contour d’un panneau actif, la tête de lecture de la timeline, le cadre d’une sélection. Elle ne change rien à ce que vous fabriquez, seulement à la façon dont l’application vous montre où vous en êtes. Laissez-la telle quelle pour garder celle du thème."
+    },
+    "fontScale": {
+      "title": "Taille du texte",
+      "help": "Agrandit ou réduit tous les textes de l’application d’un seul coup. 1 est la taille d’origine ; au-dessus, les mots deviennent plus gros et il en tient moins à l’écran ; en dessous, c’est l’inverse. Les boutons, eux, gardent leur taille : c’est la densité qui s’en occupe."
+    },
+    "reduceMotion": {
+      "title": "Limiter les animations",
+      "help": "Coupe les petits mouvements de l’interface : les panneaux apparaissent d’un coup au lieu de glisser. Utile si les animations vous fatiguent ou vous donnent mal au cœur, et sur une machine un peu lente où elles saccadent."
+    },
+    "general": "Général",
+    "generalDescription": "Langue de l’application et ce qu’elle fait en s’ouvrant.",
+    "language": {
+      "title": "Langue",
+      "help": "La langue de tous les textes de l’application : menus, boutons, messages. « Système » reprend la langue de votre ordinateur. Le changement prend effet dès que vous cliquez sur Appliquer ou OK, sans rien relancer. Cela ne touche pas vos projets ni ce que vous écrivez dedans.",
+      "system": "Système"
+    },
+    "startup": {
+      "title": "À l’ouverture",
+      "help": "Ce que l’application fait quand vous la lancez. « Rouvrir le dernier projet » vous remet là où vous vous étiez arrêté. « Ne rien ouvrir » démarre sur une fenêtre vide, ce qui est plus rapide et plus reposant si vous jonglez entre beaucoup de projets.",
+      "lastProject": "Rouvrir le dernier projet",
+      "nothing": "Ne rien ouvrir"
+    },
+    "home": {
+      "title": "Afficher l’accueil",
+      "help": "L’écran pleine largeur sur lequel le studio s’ouvre : vos projets, ce sur quoi vous travailliez, ce qui tourne, et ce que les modèles savent faire. Désactivez-le pour aller droit à l’espace que vous aviez quitté. Les sections affichées et leur ordre se règlent sur l’accueil lui-même."
+    },
+    "modified": "Modifié, pas encore appliqué",
+    "apply": "Appliquer",
+    "cancel": "Annuler",
+    "confirm": "OK",
+    "discardTitle": "Des réglages n’ont pas été appliqués",
+    "discardBody": "Vous avez changé des réglages sans les appliquer. Que voulez-vous faire ?",
+    "discard": "Ne pas appliquer",
+    "shortcuts": "Raccourcis",
+    "shortcutsDescription": "Les touches qui déclenchent chaque action. Cliquez sur une touche pour la remplacer.",
+    "pressAKey": "Appuyez…",
+    "unbound": "Aucune",
+    "shortcutConflict": "Deux actions se disputent cette touche : une seule répondra.",
+    "findByChord": "Chercher par touche",
+    "showAll": "Tout afficher",
+    "chordFree": "Aucune action n’utilise cette touche : elle est libre.",
+    "scope": {
+      "global": "Partout dans l’application",
+      "spaces": "Dans la barre des espaces",
+      "scene": "Dans la vue 3D",
+      "sequence": "Dans le montage",
+      "canvas": "Dans l’image",
+      "skybox": "Dans le ciel",
+      "audio": "Dans l’éditeur audio",
+      "texture": "Dans la matière"
+    },
+    "spaces": "Espaces de travail",
+    "spacesDescription": "Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.",
+    "requires": "Sans effet tant que « {{setting}} » est désactivé.",
+    "showGrid": {
+      "title": "Afficher la grille",
+      "help": "Le quadrillage posé au sol de la vue 3D. Il ne fait pas partie de ce que vous fabriquez : c’est un repère pour savoir où sont les choses et à quelle hauteur. On le cache pour juger une image sans rien autour."
+    },
+    "gridSize": {
+      "title": "Taille de la grille",
+      "help": "Jusqu’où le quadrillage s’étend, en mètres, et donc combien de carreaux il compte — un carreau vaut toujours un mètre. Agrandissez-le pour une scène vaste, réduisez-le pour un petit objet posé près de la caméra."
+    },
+    "flySpeed": {
+      "title": "Vitesse de déplacement",
+      "help": "À quelle vitesse la caméra avance quand vous volez dans la vue 3D, en mètres par seconde. Trop lent, on met dix secondes à traverser la scène ; trop rapide, on la dépasse sans la voir."
+    },
+    "boostFactor": {
+      "title": "Accélération",
+      "help": "Par combien la vitesse est multipliée tant que vous maintenez la touche d’accélération. À 3, vous allez trois fois plus vite : de quoi traverser une grande scène sans changer le réglage du dessus."
+    },
+    "shadowQuality": {
+      "title": "Douceur des ombres",
+      "help": "Le grain du bord d’une ombre. « Dure » découpe net et coûte le moins ; « Douce » adoucit le bord. Ce qui projette une ombre, en revanche, se décide objet par objet dans l’inspecteur.",
+      "hard": "Dure",
+      "soft": "Douce"
+    },
+    "shadowMapSize": {
+      "title": "Finesse des ombres",
+      "help": "La taille de la carte d’ombre que calcule chaque lumière qui en projette une, en pixels de côté. Doubler ce nombre quadruple la mémoire utilisée : 2048 suffit à une scène de quelques objets, 4096 sert quand une lumière éclaire un décor entier."
+    },
+    "snapTranslate": {
+      "title": "Pas de déplacement",
+      "help": "De combien un objet avance d’un cran quand le magnétisme est actif, en mètres. Le magnétisme s’allume dans la barre d’outils de la scène ; cette valeur dit seulement à quel point il est fin."
+    },
+    "snapRotate": {
+      "title": "Pas de rotation",
+      "help": "L’angle d’un cran de rotation quand le magnétisme est actif, en degrés. La rotation avance par crans depuis là où elle a commencé : 15° donne vingt-quatre crans par tour, 90° des quarts de tour."
+    },
+    "snapScale": {
+      "title": "Pas d’échelle",
+      "help": "De combien l’échelle avance d’un cran quand le magnétisme est actif. Les valeurs atteignables sont les multiples du pas : 0,1 tombe pile sur les dixièmes et les demis, 0,25 sur les quarts."
+    },
+    "fieldOfView": {
+      "title": "Angle de vue",
+      "help": "Ce que la caméra embrasse, en degrés. Un petit angle rapproche et aplatit, comme un téléobjectif ; un grand angle montre beaucoup plus mais déforme les bords. 60 est proche de ce que voit un œil."
+    },
+    "advanced": "Avancé",
+    "advancedDescription": "Ce dont on n’a besoin que pour comprendre un problème, ou pour repartir de zéro.",
+    "reveal": "Montrer",
+    "open": "Ouvrir",
+    "logLevel": {
+      "title": "Détail du journal",
+      "help": "Combien l’application raconte ce qu’elle fait, dans la console. « Rien » ne dit plus rien du tout ; « Erreurs » ne signale que ce qui a échoué ; « Tout » raconte chaque étape, ce qui est utile pour comprendre un problème et bavard le reste du temps.",
+      "silent": "Rien",
+      "error": "Erreurs seulement",
+      "warn": "Erreurs et avertissements",
+      "info": "Tout"
+    },
+    "openSettingsFile": {
+      "title": "Fichier de réglages",
+      "help": "Montre dans le gestionnaire de fichiers l’endroit où vos réglages sont enregistrés. Utile pour en faire une copie avant de changer de machine, ou pour l’envoyer à quelqu’un qui vous aide."
+    },
+    "openDevtools": {
+      "title": "Outils de développement",
+      "help": "Ouvre la console technique du navigateur intégré. Elle affiche les messages du journal et les erreurs. Réservé au dépannage : rien de ce qui s’y trouve n’est nécessaire pour se servir du logiciel."
+    },
+    "resetAll": {
+      "title": "Tout réinitialiser",
+      "help": "Remet TOUS les réglages dans l’état d’une installation neuve : thème, langue, raccourcis, tout. Vos projets, vos images et vos montages ne sont pas touchés — seuls les réglages le sont. C’est sans retour.",
+      "button": "Réinitialiser",
+      "confirm": "Remettre tous les réglages à zéro ? Vos projets ne sont pas touchés, mais ce retour en arrière est définitif."
+    },
+    "storage": "Stockage",
+    "storageDescription": "Où vos projets sont rangés sur le disque.",
+    "projectsFolder": {
+      "title": "Dossier des projets",
+      "help": "Le dossier que l’application vous propose quand vous créez ou ouvrez un projet. Cela ne déplace rien : les projets déjà créés restent où ils sont. Laissez vide pour repartir à chaque fois du dernier endroit visité."
+    },
+    "cancelHint": "Abandonne les changements en attente, sans fermer la fenêtre",
+    "applyHint": "Écrit les changements maintenant, et laisse la fenêtre ouverte",
+    "confirmHint": "Écrit les changements, puis ferme la fenêtre",
+    "browseHint": "Choisir le dossier dans une fenêtre du système",
+    "findByChordHint": "Cliquez, puis appuyez sur une combinaison : la liste ne garde que ce qui l’utilise",
+    "showAllHint": "Enlève le filtre et remontre tous les raccourcis",
+    "captureHint": "Cliquez, puis appuyez sur la combinaison à affecter",
+    "sectionHint": "Affiche les réglages de cette section",
+    "sectionStagedHint": "Cette section a des changements non appliqués",
+    "searchSectionHint": "Ouvre la section entière, au lieu du seul résultat",
+    "searchResultHint": "Va au réglage, dans la section à laquelle il appartient"
+  }
+}
