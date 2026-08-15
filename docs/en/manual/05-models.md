@@ -184,8 +184,8 @@ Cut out, Vectorise — that use them.
 | Cut out | background removal | **Settings ▸ Generation ▸ Background removal** |
 | Vectorise | vectorisation | **Settings ▸ Generation ▸ Vectorisation** |
 
-With no model set, the edit does not leave and opens the screen where you choose one. Nothing is
-sent, nothing is billed.
+With no model set, the edit request does not leave and opens the screen where you choose one.
+Nothing is sent, nothing is billed.
 
 **The thumbnails are not all the same kind.** Most public models have no presentation image. The
 studio then shows one of their generation samples instead. It is representative of what the model
