@@ -46,11 +46,19 @@ Two gestures, and **they do not put the clip in the same place**:
 | Gesture | On which track | At what time |
 |---|---|---|
 | **Drag and drop** from the shelf | the one you are hovering, **exactly** | where you release |
+| **Drag and drop** into the empty space below the last track | a **new** track, opened for it | where you release |
 | **Double-click** the asset | the studio chooses | at the **playhead** |
 
 **Drag and drop obeys you to the pixel.** You aim at the track, so you decide — including
-deciding on a track where the clip will not be heard. Releasing on the **time ruler** at the top,
-or outside any track, **does nothing**: there is no track under the pointer.
+deciding on a track where the clip will not be heard.
+
+**Releasing below the last track opens the tracks it needs** rather than doing nothing: a picture
+track, and the sound track beside it for a take that carries sound. Both arrive in one gesture,
+and **⌘Z takes them back in one** — the clips and the tracks.
+
+Two places still take nothing: the **time ruler** at the top, and a montage with no picture track
+at all — the one in the Audio workspace — where releasing a rush only opens the asset, since
+there is no monitor there to show it.
 
 **Double-click chooses for you**, and it chooses well: a sound goes on a sound track, everything
 else on a picture track, and **locked** or **muted** tracks are avoided — a clip landing there

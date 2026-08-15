@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
 import {
   addClip,
   addClips,
+  addClipsOnNewTracks,
   addTrack,
   moveClip,
   moveTrack,
@@ -577,5 +579,50 @@ describe('track commands', () => {
       ['A1', 1],
       ['V1', 0],
     ])
+  })
+})
+
+describe('a drop into the empty space below the last track', () => {
+  const montage = (): SequenceState =>
+    sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
+
+  const take: Asset = {
+    id: 'asset-1',
+    name: 'take.mp4',
+    type: 'video',
+    location: 'local',
+    tags: [],
+    createdAt: '2026-08-15T10:00:00.000Z',
+    probe: { duration: 5_000_000, codec: 'h264', channels: 2 },
+  }
+
+  it('opens the rows it needs and lays the take across them, tied together', () => {
+    const next = addClipsOnNewTracks(take, 'asset-1', 0).apply(montage())
+    const [, , picture, sound] = next.tracks
+
+    expect(next.tracks.map(track => track.id)).toEqual(['V1', 'A1', 'V2', 'A2'])
+    expect(picture?.clips).toHaveLength(1)
+    expect(sound?.clips).toHaveLength(1)
+    expect(picture?.clips[0]?.linkId).toBe(sound?.clips[0]?.linkId)
+  })
+
+  // The rows are half of what the gesture did: undoing only the clips leaves a montage that
+  // grows an empty pair every time a drop is taken back.
+  it('takes the rows back with the clips', () => {
+    const command = addClipsOnNewTracks(take, 'asset-1', 0)
+    const state = montage()
+    expect(command.revert(command.apply(state))).toEqual(state)
+  })
+
+  it('lays the redo on the very rows undo had taken away', () => {
+    const command = addClipsOnNewTracks(take, 'asset-1', 0)
+    const state = montage()
+    const dropped = command.apply(state)
+    expect(command.apply(command.revert(dropped))).toEqual(dropped)
+  })
+
+  it('leaves a montage that holds no picture row untouched', () => {
+    const sound = sequenceWith([trackFixture('A1', 'audio')])
+    expect(addClipsOnNewTracks(take, 'asset-1', 0).apply(sound)).toEqual(sound)
   })
 })

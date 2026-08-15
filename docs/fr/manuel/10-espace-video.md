@@ -47,12 +47,19 @@ Deux gestes, et **ils ne posent pas le clip au même endroit** :
 | Geste | Sur quelle piste | À quel instant |
 |---|---|---|
 | **Glisser-déposer** depuis l’étagère | celle que vous survolez, **exactement** | là où vous lâchez |
+| **Glisser-déposer** dans le vide, sous la dernière piste | une **nouvelle** piste, ouverte pour lui | là où vous lâchez |
 | **Double-clic** sur l’asset | le studio choisit | à la **tête de lecture** |
 
 **Le glisser-déposer vous obéit au pixel près.** C’est vous qui visez la piste, donc c’est vous
-qui décidez — y compris de viser une piste où le clip ne s’entendra pas. Lâcher sur la **règle des
-temps**, en haut, ou en dehors de toute piste, **ne fait rien** : il n’y a pas de piste sous le
-pointeur.
+qui décidez — y compris de viser une piste où le clip ne s’entendra pas.
+
+**Lâcher sous la dernière piste ouvre les pistes qu’il faut** plutôt que de ne rien faire : une
+piste image, et la piste son à côté pour une prise qui porte du son. Les deux arrivent d’un seul
+geste, et **⌘Z les reprend d’un seul coup** — les clips et les pistes.
+
+Deux endroits ne prennent toujours rien : la **règle des temps**, en haut, et un montage qui n’a
+aucune piste image — celui de l’espace Audio — où lâcher un rush ne fait qu’ouvrir l’asset,
+puisqu’il n’y a là aucun moniteur pour l’afficher.
 
 **Le double-clic choisit à votre place**, et il choisit bien : un son va sur une piste son, tout
 le reste sur une piste image, et les pistes **verrouillées** ou **rendues muettes** sont évitées —
