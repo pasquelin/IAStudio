@@ -277,6 +277,16 @@ export type TimelineRowProps = Omit<HTMLAttributes<HTMLDivElement>, 'style' | 'c
    * row of controls — a nested row has never had both.
    */
   nested?: boolean
+  /**
+   * The rank a reader announces the row at, for the rows the DOM cannot place: the column is one
+   * flat list, so a channel is the SIBLING of the subject it hangs off.
+   *
+   * Separate from `nested` on purpose, and the exposure sheet is why: a clip row is indented like
+   * a channel but stacked in its own run at the END of the sheet, after every subject. Announced
+   * at rank 2 it would claim to hang off whichever subject came last — the sheet was flat and
+   * neutral before, and that would make it say something false.
+   */
+  level?: 1 | 2
   children: ReactNode
 }
 
@@ -292,6 +302,7 @@ export function TimelineRow({
   height,
   reorder,
   nested,
+  level = 1,
   className,
   children,
   ...rest
@@ -304,6 +315,10 @@ export function TimelineRow({
       // a row of this component is a line of a header column and never anything else. Before
       // `...rest`, so a caller that means something else still wins.
       role="listitem"
+      // Said in words, or a sheet of four subjects and two channels each reads as "list, twelve
+      // items", all at one rank — the indentation says it to the eye and to nobody else. `Tree`
+      // says the same thing the same way, on `treeitem`.
+      aria-level={level}
       className={cn(
         'flex items-stretch gap-0.5 px-1.5',
         // The row the hand is holding, for the length of the gesture — the same dimming the

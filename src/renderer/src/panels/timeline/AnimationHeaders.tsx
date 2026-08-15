@@ -199,7 +199,7 @@ function ChannelHeader({ documentId, row }: ChannelRowProps) {
   const { t } = useTranslation()
 
   return (
-    <TimelineRow height={row.height} nested data-testid={`anim-channel-${row.id}`}>
+    <TimelineRow height={row.height} nested level={2} data-testid={`anim-channel-${row.id}`}>
       <div className="flex items-center gap-0.5">
         <span className="text-muted text-tiny min-w-0 flex-1 truncate" {...HINT_RIGHT(row.name)}>
           {row.name}
