@@ -175,10 +175,13 @@ describe('familyOf', () => {
     expect(familyOf(['txt2img'], [])).toBe('image')
   })
 
-  // `skybox-upscale` is not `image-upscale`: the four upscaling tags are disjoint, and this one
-  // enlarges panoramas. Classifying it is another errand — it stays where it was.
-  it('does not claim a skybox upscaler', () => {
-    expect(familyOf(['img2img'], ['sc:scenario', 'skybox-upscale'])).toBe('image')
+  // Scenario Skybox Upscale, the fourth model of the space, carries `skybox-upscale` and no
+  // `SKYBOX_TAG` — so the tag that defines the family does not name it, and the space listed
+  // three of the four skyboxes the catalogue holds. `image-upscale` is a different tag and
+  // stays a different family: measured 2026-08-15, no model carries both.
+  it('claims a skybox upscaler, which no capability and no namespaced tag names', () => {
+    expect(familyOf(['img2img'], ['sc:scenario', 'skybox-upscale'])).toBe('skybox')
+    expect(familyOf(['img2img'], ['image-upscale'])).toBe('upscale')
   })
 
   // The capability enum holds no upscale, no cutout and no vectorize value — measured against

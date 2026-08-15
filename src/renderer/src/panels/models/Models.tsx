@@ -18,7 +18,7 @@ import { Row } from '@/design/Row'
 import { useDebounced } from '@/hooks/useDebounced'
 import { getBridge } from '@/services/bridge'
 import { useLayouts } from '@/stores/layouts'
-import { useModels } from '@/stores/models'
+import { modelCollectionOf, useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
 import { workspaceById } from '@/helpers/workspaces'
 import { EmptyState } from '@/design/EmptyState'
@@ -101,7 +101,9 @@ export function Models() {
   const workspace = useLayouts(state => state.activeWorkspace)
   const { family } = workspaceById(workspace)
 
-  const collection = useModels(state => state.collection)
+  // Per family: the bar follows the workspace like the rest of this panel, and a filter set
+  // under Image narrowing the Skyboxes space is a filter nobody can find to relax.
+  const collection = useModels(state => modelCollectionOf(state, family))
   const setCollection = useModels(state => state.setCollection)
   // Through the same answer the rail and the generator read. Reading the session choice alone
   // left this panel saying "no model chosen" about the very model the generator was running.
@@ -210,7 +212,12 @@ export function Models() {
     <div className="flex h-full flex-col">
       <SelectedModel model={selected} picture={selected ? pictureOf(selected) : undefined} />
 
-      <CollectionBar state={collection} onChange={setCollection} facets={facets} sorts={sorts} />
+      <CollectionBar
+        state={collection}
+        onChange={next => setCollection(family, next)}
+        facets={facets}
+        sorts={sorts}
+      />
 
       <div className="min-h-0 flex-1">
         <Collection
