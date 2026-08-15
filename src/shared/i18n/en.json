@@ -13,7 +13,6 @@
     "moveLeft": "Move left",
     "moveRight": "Move right",
     "moved": "{{label}} moved, position {{position}} of {{total}}",
-    "switchHint": "Opens this space — drag it to change the order of the bar",
     "moveLeftHint": "Puts this space before its left-hand neighbour on the bar",
     "moveRightHint": "Puts this space after its right-hand neighbour on the bar"
   },

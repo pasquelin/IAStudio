@@ -22,7 +22,6 @@ import {
 import { workspaceLabelKey } from '@/helpers/workspaces'
 import { dragChannel } from '@/helpers/drag'
 import { useSettings } from '@/stores/settings'
-import { HINT_BOTTOM } from '@/helpers/tooltip'
 
 /** Its own MIME type, so a file from the desktop never reads as one of the bar's pills. */
 const SPACES = dragChannel('application/x-scenario-workspace')
@@ -215,12 +214,10 @@ function reorderKeyshortcuts(): string | undefined {
 /** One destination of the bar. The home and the spaces are read as one row, so they wear
  * the same chrome — the home is not a control of a different kind. */
 function BarButton({ icon, label, current, onClick, reorder }: BarButtonProps) {
-  const { t } = useTranslation()
   return (
     <button
       type="button"
       aria-current={current ? 'page' : undefined}
-      {...HINT_BOTTOM(t('workspaces.switchHint'))}
       onClick={onClick}
       draggable={reorder !== undefined}
       onDragStart={reorder?.onStart}

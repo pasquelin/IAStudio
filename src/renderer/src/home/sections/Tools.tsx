@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { UiIcon } from '@/design/UiIcon'
 import { rowSkin, TILE_QUIET } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { HINT_TOP } from '@/helpers/tooltip'
 import { workspaceLabelKey } from '@/helpers/workspaces'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
 import { getBridge } from '@/services/bridge'
@@ -89,10 +88,6 @@ function Group({ title, entries }: { title: string; entries: readonly Entry[] })
           <button
             key={entry.key}
             type="button"
-            // The entry's own help, under the pointer: it is drawn under the label, and a narrow
-            // cell clamps it before the button goes with it. Opening up, as the band's own
-            // controls do — the page scrolls, and a tip below the last row opens off screen.
-            {...HINT_TOP(entry.help)}
             onClick={entry.onClick}
             // `rowSkin` rather than the hover and the focus ring written out again — the same
             // answer to "the pointer is here" as every list row. Its radius is overridden below:

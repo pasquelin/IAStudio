@@ -13,7 +13,6 @@
     "moveLeft": "Déplacer à gauche",
     "moveRight": "Déplacer à droite",
     "moved": "{{label}} en position {{position}} sur {{total}}",
-    "switchHint": "Ouvre cet espace — glissez-le pour changer l’ordre de la barre",
     "moveLeftHint": "Place cet espace avant son voisin de gauche dans la barre",
     "moveRightHint": "Place cet espace après son voisin de droite dans la barre"
   },

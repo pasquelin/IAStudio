@@ -27,10 +27,16 @@ export function TooltipHost() {
       delayShow={1000}
       offset={8}
       noArrow
-      /* Wrapped at `--sc-tooltip` rather than running as wide as its longest line — see
+      /* The same plate a menu wears — `MENU_SURFACE`'s pair, a `surface` fill inside a `border`
+         line — rather than a lone `elevated` block: a bubble floats over panels, tiles and the
+         canvas alike, and only the line tells it apart from whatever it covers. Tight with it:
+         a tooltip is one line read in passing, and the padding a menu row needs to be clicked
+         made it a plaque.
+
+         Wrapped at `--sc-tooltip` rather than running as wide as its longest line — see
          `index.css`. `break-words` with it: a path or an id has no space to wrap at, and would
          push the bubble back past the measure this sets. */
-      className="bg-elevated! text-text! text-tiny! z-50! max-w-(--sc-tooltip)! rounded-(--radius-sc-sm)! px-2! py-1! break-words! shadow-(--sc-shadow-floating)!"
+      className="bg-surface! border-border! text-text! text-tiny! z-50! max-w-(--sc-tooltip)! rounded-(--radius-sc-md)! border! px-2! py-0.5! break-words! shadow-(--sc-shadow-floating)!"
     />
   )
 }
