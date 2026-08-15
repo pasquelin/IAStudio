@@ -76,6 +76,11 @@ unlike the Models panel which queries the Scenario catalogue remotely.
 Both views are **virtualised**: only what is actually on screen is drawn. A project with several
 thousand assets therefore scrolls without stutter.
 
+**A sound shows itself as its waveform** on a tile, rather than as a speaker glyph: two takes of
+the same length looked identical until one of them had been played. The waveform is the one the
+montage draws, derived at import — so it appears a fraction of a second after the tile, once it
+has arrived.
+
 ### When the shelf is empty
 
 The message says which of the three cases you are in, because they call for different answers:

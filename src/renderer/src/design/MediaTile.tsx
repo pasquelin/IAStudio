@@ -21,6 +21,16 @@ export type MediaTileProps = {
    */
   fallbackIcon?: string
   /**
+   * A face of its own for a medium no picture stands for — a sound, drawn as its waveform.
+   *
+   * Under the caption and the badge rather than over them, which is the whole reason it is a
+   * slot here instead of something laid over the tile by the caller: an overlay would cover the
+   * name, and a tile whose name is hidden is a shelf one has to hover to read.
+   *
+   * Wins over `fallbackIcon`, never over the picture: an asset that HAS a still shows it.
+   */
+  face?: ReactNode
+  /**
    * Fills the box it is given instead of squaring itself off. For a caller that has already
    * reserved the exact place — the masonry does, from the asset's own dimensions, and a square
    * forced on top of that would crop every picture that is not one.
@@ -40,6 +50,7 @@ export function MediaTile({
   caption,
   badge,
   fallbackIcon = mdiImageOffOutline,
+  face,
   fill = false,
 }: MediaTileProps) {
   const { src, onError } = useLoadable(url)
@@ -54,6 +65,8 @@ export function MediaTile({
           onError={onError}
           className="absolute inset-0 size-full object-cover"
         />
+      ) : face ? (
+        <div className="absolute inset-0">{face}</div>
       ) : (
         <UiIcon path={fallbackIcon} size={20} className="text-muted/80 absolute inset-0 m-auto" />
       )}

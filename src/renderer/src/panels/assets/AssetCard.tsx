@@ -9,6 +9,7 @@ import { Spinner } from '@/design/Spinner'
 import { cloudTileFace } from '@/helpers/cloud-tile'
 import { cn } from '@/helpers/cn'
 import { assetIcon } from '@/helpers/workspaces'
+import { AssetWaveform } from './AssetWaveform'
 import { DraggableAsset } from './DraggableAsset'
 import { LibraryAsset } from './LibraryAsset'
 import { nameOfRow, typeOfRow, type AssetRowModel } from './rows'
@@ -65,6 +66,11 @@ export const AssetCard = memo(function AssetCard({
           url={posterUrl(row.asset) ?? undefined}
           caption={row.asset.name}
           fallbackIcon={assetIcon(row.asset.type)}
+          // A sound is the one kind the studio deliberately writes no poster for — a still would
+          // be painted under the waveform of every clip it becomes (`POSTER_KINDS`). Its shape is
+          // drawn here instead, from the peaks the montage already reads. A library row gets
+          // none: the waveform is derived from a file, and that one has none in the project yet.
+          face={row.asset.type === 'audio' ? <AssetWaveform assetId={row.asset.id} /> : undefined}
           badge={mark}
         />
       </DraggableAsset>
