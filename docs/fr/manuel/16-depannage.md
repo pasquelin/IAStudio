@@ -632,7 +632,7 @@ choisi dans un dialogue n’apprendrait rien de plus. Un projet ouvert garde la 
 
 ### Le fichier de réglages
 
-Réglages → **Avancé** → **Fichier de réglages** → **Montrer**. Il s’ouvre dans votre gestionnaire
+Réglages → **Avancé** → **Fichier de réglages** → **Afficher dans le dossier**. Il s’ouvre dans votre gestionnaire
 de fichiers.
 
 **Vous pouvez le partager sans crainte pour vos identifiants** : ils y sont chiffrés par le

@@ -54,7 +54,7 @@
     "page": "Page {{number}}"
   },
   "explorer": {
-    "reveal": "Reveal in folder",
+    "reveal": "Show in folder",
     "rename": "Rename",
     "trash": "Move to trash",
     "noProject": "No project open. Create or open one to see its documents.",
@@ -150,7 +150,7 @@
       "openedAt": "Opened {{when}}",
       "actions": "Project actions",
       "actionsHint": "Show this project’s folder, or remove it from the list.",
-      "reveal": "Reveal in folder",
+      "reveal": "Show in folder",
       "revealHint": "Opens the file manager on this project",
       "forget": "Remove from the list",
       "forgetHint": "Removes the project from this list, leaving its folder and everything in it untouched",

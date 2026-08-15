@@ -44,7 +44,7 @@ tooltip, along with the whole path, which a narrow panel truncates.
 
 | Entry | What it does |
 |---|---|
-| **Reveal in folder** | opens the file manager on this project |
+| **Show in folder** | opens the file manager on this project |
 | **Remove from the list** | removes the project from this list, **leaving its folder and everything in it untouched** |
 
 **Removing asks for no confirmation**: nothing is lost, and reopening the project puts its row
@@ -198,7 +198,7 @@ already taken in the destination is refused rather than overwritten, and the jou
 
 | Gesture | What it does |
 |---|---|
-| **Reveal in folder** | opens the folder in Finder or Windows Explorer, with the row selected |
+| **Show in folder** | opens the folder in Finder or Windows Explorer, with the row selected |
 | **Rename** | changes the name on disk, where it is read |
 | **Move to trash** | sends the file to your system's trash |
 
@@ -271,7 +271,7 @@ position inside the folder, not a location on your disk.
 > link to where it sits. If you move the project without taking those files along, the links break.
 >
 > **Nothing will tell you until you click.** The inspector does not show "File not found" of its
-> own accord: it shows the **Show in the file manager** button, and it is the click, finding
+> own accord: it offers the **Show in the file manager** button, and it is the click, finding
 > nothing, that brings the message up. See [Assets](07-assets.md).
 
 ---

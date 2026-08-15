@@ -613,7 +613,7 @@ its lines either way.
 
 ### Settings file
 
-**Button: Reveal.**
+**Button: Show in folder.**
 
 Opens your file manager where your settings are saved, in a file called `settings.json`.
 

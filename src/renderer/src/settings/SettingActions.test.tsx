@@ -26,7 +26,7 @@ describe('the buttons of a section', () => {
     installFakeBridge({ settings: { runAction } })
     render(<SettingActions section="advanced" />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Montrer' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Afficher dans le dossier' }))
 
     expect(runAction).toHaveBeenCalledWith('advanced.openSettingsFile')
   })

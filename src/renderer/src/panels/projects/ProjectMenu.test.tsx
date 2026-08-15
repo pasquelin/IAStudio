@@ -27,7 +27,7 @@ describe('the menu of a recent project', () => {
   it('says what each row does rather than reading its label back', () => {
     open()
 
-    expect(screen.getByRole('menuitem', { name: 'Révéler dans le dossier' })).toHaveAttribute(
+    expect(screen.getByRole('menuitem', { name: 'Afficher dans le dossier' })).toHaveAttribute(
       'data-tooltip-content',
       'Ouvre le gestionnaire de fichiers sur ce projet',
     )
@@ -55,7 +55,7 @@ describe('the menu of a recent project', () => {
     install({ project: { revealFolder } })
     open(onClose)
 
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Révéler dans le dossier' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Afficher dans le dossier' }))
 
     expect(revealFolder).toHaveBeenCalledWith(PATH)
     expect(onClose).toHaveBeenCalled()
@@ -121,7 +121,7 @@ describe('the menu of a recent project', () => {
       install({ project: { revealFolder: () => Promise.resolve(false) } })
       open()
 
-      await userEvent.click(screen.getByRole('menuitem', { name: 'Révéler dans le dossier' }))
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Afficher dans le dossier' }))
 
       expect(report).toHaveBeenCalledWith(
         expect.objectContaining({ level: 'error', scope: 'project.reveal' }),
@@ -134,7 +134,7 @@ describe('the menu of a recent project', () => {
       })
       open()
 
-      await userEvent.click(screen.getByRole('menuitem', { name: 'Révéler dans le dossier' }))
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Afficher dans le dossier' }))
 
       expect(report).toHaveBeenCalledWith(
         expect.objectContaining({ level: 'error', scope: 'project.reveal' }),

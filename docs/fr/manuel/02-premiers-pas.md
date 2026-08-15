@@ -198,7 +198,7 @@ Quand la ligne affiche **Terminée**, votre image est arrivée. Elle est rangée
 taille, son poids, le modèle qui l’a faite, le prompt que vous avez écrit, et la *graine* qui
 permettra d’y revenir.
 
-Le bouton **Révéler dans le gestionnaire de fichiers**, dans l’inspecteur, ouvre le dossier où
+Le bouton **Afficher dans le gestionnaire de fichiers**, dans l’inspecteur, ouvre le dossier où
 elle se trouve. C’est de là que vous l’enverrez à qui vous voudrez.
 
 > **Pour la retoucher**, passez dans l’espace **Image** : le `+` du rail gauche ouvre un

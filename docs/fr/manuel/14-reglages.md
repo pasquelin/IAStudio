@@ -631,7 +631,7 @@ il reçoit ses lignes quoi qu’il arrive.
 
 ### Fichier de réglages
 
-**Bouton : Montrer.**
+**Bouton : Afficher dans le dossier.**
 
 Ouvre votre gestionnaire de fichiers sur l’endroit où vos réglages sont enregistrés, un fichier
 nommé `settings.json`.
