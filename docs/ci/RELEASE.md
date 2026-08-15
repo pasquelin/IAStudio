@@ -154,14 +154,25 @@ la recevoir.
    | `scenario-studio-0.2.0-darwin-arm64.dmg` / `.zip` | macOS Apple Silicon |
    | `scenario-studio-0.2.0-darwin-x64.dmg` / `.zip` | macOS Intel |
    | `scenario-studio-0.2.0-win32-x64.exe` | Windows |
-   | `scenario-studio-0.2.0-linux-x64.AppImage` / `.deb` | Linux |
+   | `scenario-studio-0.2.0-linux-x86_64.AppImage` | Linux |
+   | `scenario-studio-0.2.0-linux-amd64.deb` | Debian, Ubuntu |
    | `latest.yml`, `latest-mac.yml`, `latest-linux.yml` | manifestes d’auto-update |
 
+   > **Ces noms sont relevés sur un vrai run, pas déduits** — dry run du 15 août 2026. Deux pièges,
+   > et les deux ont déjà fait écrire une table fausse :
+   >
    > **`darwin` et `win32`, pas `mac` et `win`.** `artifactName` d’`electron-builder.yml` interpole
    > `${platform}`, qui vaut `process.platform` — la plateforme de la machine **qui construit**.
-   > En CI chaque runner construit sa propre cible, donc les trois noms tombent juste ; un
+   > En CI chaque runner construit sa propre cible, donc les noms tombent juste ; un
    > `pnpm dist --win` lancé depuis le Mac écrirait `darwin-x64.exe`, et les cartes du site ne le
    > reconnaîtraient pas.
+   >
+   > **`${arch}` n’a pas la même valeur selon la CIBLE**, et Linux en produit deux différentes dans
+   > le même run : `x86_64` pour l’AppImage, `amd64` pour le `.deb` — chaque format garde la
+   > convention de son écosystème. Ce n’est pas `x64`, qui ne sort nulle part côté Linux.
+   >
+   > Le site ne s’y trompe pas : le `jq` de `pages.yml` reconnaît ces deux-là par leur extension
+   > seule, précisément parce que leur architecture ne s’écrit pas comme ailleurs.
 
    Contrôler que les tailles sont cohérentes (170–240 Mo par installeur) et que les manifestes
    portent bien `version: 0.2.0`.
