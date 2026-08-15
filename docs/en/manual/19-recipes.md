@@ -1,6 +1,6 @@
 # 19. How do I…
 
-[← What does not exist yet](18-limits.md) · [Contents](../user-guide.md)
+[← What does not exist yet](18-limits.md) · [Contents](../user-guide.md) · [Next chapter: Driving the studio from outside →](20-driving-from-outside.md)
 
 The previous chapters explain **every piece** of the studio. This one does the opposite: it
 starts from what you want to end up with, and gives the whole path, from the first click to the
@@ -365,4 +365,4 @@ All of it is spelled out, with nothing hidden, in
 
 ---
 
-[← What does not exist yet](18-limits.md) · [Contents](../user-guide.md)
+[← What does not exist yet](18-limits.md) · [Contents](../user-guide.md) · [Next chapter: Driving the studio from outside →](20-driving-from-outside.md)

@@ -235,6 +235,8 @@ src/main/
 │   ├── auto-caption.ts      nommer une image d'après ce que l’API y voit
 │   └── protocol.ts          le protocole scenario://
 ├── dictation/               la reconnaissance vocale : permissions, modèle, découpage, handlers
+├── assistant/               la pensée de l'assistant, derrière un port, et ce qu'on en relit
+├── mcp/                     le même catalogue d'actions, offert à un client extérieur
 ├── settings/                le store chiffré, son adaptateur, ses handlers
 ├── favorites/               les recettes épinglées, gardées hors des projets
 ├── styles/                  les réglages de matière qu'on rejoue d'une texture à l'autre
@@ -333,6 +335,48 @@ indisponible plutôt que d’échouer opaquement.
 
 `pnpm rebuild:native` est obligatoire après toute montée d’Electron, sinon le module natif refuse
 de se charger.
+
+### Un registre d’actions, deux lecteurs
+
+`ACTION_REGISTRY` (`shared/domain/assistant.ts`) déclare ce que le studio sait faire sur demande —
+dix actions, leurs champs, et **ce que chacune engage** (`none`, `asset`, `credits`). Il a deux
+lecteurs, et **aucun des deux ne décide** :
+
+- **l’assistant**, dans la fenêtre, qui le liste à son modèle comme un vocabulaire ;
+- **`main/mcp/tools.ts`**, qui le republie en outils MCP pour un client extérieur.
+
+Le nom change de dialecte au passage — `command.run` devient `command_run`, parce que la grammaire
+des noms d’outils n’accepte pas le point — et `actionOfTool` fait le chemin inverse. **Une seule
+substitution, jamais une seconde colonne dans le registre** : elle dériverait de la première.
+
+**L’exécution, elle, est au même endroit pour les deux** : la fenêtre au premier plan. C’est ce qui
+fait que la confirmation d’une action coûteuse est posée à l’écran quel que soit le côté qui a
+demandé — et qu’une demande arrivant sans fenêtre est **refusée** (`noWindow`) plutôt que mise en
+file. `main/mcp/asking.ts` compose l’aller-retour que l’IPC n’a pas dans ce sens : `invoke` monte,
+`broadcast` redescend, un `callId` recoud les deux moitiés, et **toute façon d’échouer répond**,
+parce qu’à l’autre bout il y a un client qui attendrait sinon.
+
+`commitmentOfCommand` est **le seul niveau dérivé plutôt que déclaré**, et le seul gardé commande
+par commande : cinq commandes du canevas aplatissent et téléversent l’image, ce qui crée un asset
+permanent. Un oubli y passerait sans que rien en aval ne le rattrape.
+
+### La porte du MCP, et ses quatre verrous
+
+Le serveur (`main/mcp/server.ts`) est **éteint par défaut** et suit `settings.mcp.enabled`. Allumé,
+il écoute sur la boucle locale IPv4 — `127.0.0.1` écrit en toutes lettres, le nom `localhost`
+résolvant d’abord en IPv6 sur certaines machines — sur un port que le système choisit, derrière un
+jeton neuf à chaque lancement, et refuse toute requête portant une `Origin` qui n’est pas
+loopback. `access.ts` décide à partir des seuls en-têtes, ce qui rend les deux refus démontrables
+sans ouvrir de socket.
+
+Port et jeton sont écrits dans `mcp.json` à côté des réglages, en `0600` : **ce fichier EST la
+porte**, puisqu’un appelant sans `Origin` est admis par construction. `control.ts` l’efface à
+l’arrêt **et au démarrage** — un fichier laissé par un plantage désigne un port que le processus
+suivant héritera.
+
+**Le SDK MCP n’est chargé qu’à l’allumage**, par un `import()` dans `control.ts` : il tire quelque
+deux cents modules, et ce réglage est éteint par défaut. Un import statique les mettrait sur le
+démarrage de tous les studios qui n’ouvrent jamais cette porte.
 
 ---
 

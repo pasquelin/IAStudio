@@ -482,6 +482,50 @@ piste et garde sa durée ; seule son image manque.
 
 ---
 
+## Quand le studio se pilote depuis l’extérieur
+
+Ce qui suit ne concerne que le point d’entrée pour un programme extérieur, décrit au
+[chapitre 20](20-piloter-de-l-exterieur.md). Les refus d’action y sont tous listés ; ici, ce sont
+les ennuis de branchement.
+
+### « La case est cochée, mais mon client ne se connecte pas »
+
+**La cause la plus fréquente : la ligne date d’un lancement précédent.** Le port et le jeton
+changent à chaque démarrage du studio. Celle d’hier désigne un port où plus rien n’écoute.
+
+**Quoi faire.** Réglages ▸ Avancé ▸ **Commande de connexion ▸ Copier**, et recollez la ligne dans
+votre terminal. Un client déjà enregistré sous le même nom est remplacé, il n’y a rien à supprimer
+avant.
+
+### « La case est cochée et la ligne est fraîche, et rien n’écoute quand même »
+
+**Ce que ça veut dire.** Le point d’entrée n’a pas réussi à démarrer — un autre programme occupait
+la place, ou le système a refusé. **La case reste cochée**, parce qu’elle décrit ce que vous avez
+demandé, pas ce qui a abouti.
+
+**Quoi faire. Décochez-la, puis recochez-la.** C’est ce qui redemande un démarrage — et il en faut
+un : après un échec, recocher une case déjà cochée ne relance rien. Un redémarrage du studio a le
+même effet.
+
+### « Une action refuse en disant qu’aucune fenêtre n’est au premier plan »
+
+**Ce que ça veut dire.** Le studio tourne, mais aucune de ses fenêtres n’est là pour agir — ni pour
+vous poser la question qu’une action coûteuse exige.
+
+**Quoi faire.** Ouvrez une fenêtre du studio, et redemandez. **Ce refus n’est jamais un oui
+silencieux** : rien n’a été exécuté, rien n’a été dépensé.
+
+### « Mon client attend, puis abandonne »
+
+**Ce que ça veut dire.** Une question est restée à l’écran sans réponse. Le studio l’abandonne au
+bout de **deux minutes** et répond un refus, plutôt que de laisser le client attendre
+indéfiniment.
+
+**Quoi faire.** Regardez la fenêtre du studio avant de relancer : la demande y attendait un
+**Autoriser** ou un **Refuser**.
+
+---
+
 ## Les ennuis qui n’affichent aucun message
 
 Ceux-là sont les plus déroutants : rien ne s’écrit, mais quelque chose ne va pas.

@@ -461,6 +461,48 @@ keeps its duration; only its picture is missing.
 
 ---
 
+## When the studio is driven from outside
+
+What follows concerns only the way in for a program outside, covered in
+[chapter 20](20-driving-from-outside.md). Every action refusal is listed there; these are the
+connection troubles.
+
+### "The box is ticked, but my client will not connect"
+
+**The commonest cause: the line is from an earlier launch.** The port and the token change every
+time the studio starts. Yesterday's points at a port where nothing is listening any more.
+
+**What to do.** Settings ▸ Advanced ▸ **Connection command ▸ Copy**, and paste the line into your
+terminal again. A client already registered under the same name is replaced, so there is nothing to
+remove first.
+
+### "The box is ticked, the line is fresh, and still nothing is listening"
+
+**What it means.** The way in failed to start — another program held the place, or the system
+refused. **The box stays ticked**, because it describes what you asked for, not what succeeded.
+
+**What to do. Untick it, then tick it again.** That is what asks for a start — and one is needed:
+after a failure, ticking an already-ticked box relaunches nothing. Restarting the studio has the
+same effect.
+
+### "An action refuses, saying no window is in front"
+
+**What it means.** The studio is running, but none of its windows is there to act — nor to put the
+question a costly action requires to you.
+
+**What to do.** Open a studio window, and ask again. **That refusal is never a silent yes**:
+nothing ran, and nothing was spent.
+
+### "My client waits, then gives up"
+
+**What it means.** A question stood on screen unanswered. The studio gives up on it after **two
+minutes** and answers a refusal, rather than leaving the client waiting for good.
+
+**What to do.** Look at the studio window before asking again: the request was waiting there for an
+**Allow** or a **Refuse**.
+
+---
+
 ## The troubles that show no message
 
 These are the most disconcerting: nothing is written, but something is wrong.

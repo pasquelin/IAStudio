@@ -72,6 +72,7 @@ toujours un vrai conflit.
 | **Enregistrer le document** | `⌘S` | écrit le document en avant dans le projet — **et réécrit l’asset dont il vient**, dans l’espace Image |
 | **Enregistrer sous** | `⇧⌘S` | écrit une copie de l’asset à côté de l’original et continue sur elle, sans demander de nom |
 | **Réglages** | `⌘,` | ouvre la fenêtre des réglages |
+| **Assistant** | `⌘K` | ouvre la fenêtre où l’on dit ce que l’on veut faire, à la voix ou au clavier |
 | **Dicter** | `⌥D` | écoute le micro et écrit ce que vous dites au curseur |
 | **Plein écran** | `⌃⌘F` | fait occuper tout l’écran à la fenêtre |
 | **Réinitialiser la disposition** | *aucune* | remet les panneaux là où ils étaient au départ |
@@ -554,6 +555,7 @@ ils sont liés à la bande, pas à un contexte.
 | `⌘S` | Enregistrer |  |  |  |  |  |  |  |
 | `⇧⌘S` | Enregistrer sous |  |  |  |  |  |  |  |
 | `⌘,` | Réglages |  |  |  |  |  |  |  |
+| `⌘K` | Assistant |  |  |  |  |  |  |  |
 | `⌃⌘F` | Plein écran |  |  |  |  |  |  |  |
 | `⌘Z` |  |  | Annuler | Annuler | Annuler | Annuler | Annuler | Annuler |
 | `⇧⌘Z` |  |  | Rétablir | Rétablir | Rétablir | Rétablir | Rétablir | Rétablir |

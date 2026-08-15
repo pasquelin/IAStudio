@@ -71,6 +71,7 @@ menu, which catches them before anybody else. They are therefore the only ones t
 | **Save document** | `⌘S` | writes the document in front into the project — **and rewrites the asset it came from**, in the Image workspace |
 | **Save as** | `⇧⌘S` | writes a copy of the asset beside the original and carries on with it, asking for no name |
 | **Settings** | `⌘,` | opens the settings window |
+| **Assistant** | `⌘K` | opens the window where you say what you want to do, by voice or by keyboard |
 | **Dictate** | `⌥D` | listens to the microphone and writes what you say at the caret |
 | **Full screen** | `⌃⌘F` | makes the window take the whole screen |
 | **Reset layout** | *none* | puts the panels back where they started |
@@ -543,6 +544,7 @@ are bound to the band, not to a context.
 | `⌘S` | Save |  |  |  |  |  |  |  |
 | `⇧⌘S` | Save as |  |  |  |  |  |  |  |
 | `⌘,` | Settings |  |  |  |  |  |  |  |
+| `⌘K` | Assistant |  |  |  |  |  |  |  |
 | `⌃⌘F` | Full screen |  |  |  |  |  |  |  |
 | `⌘Z` |  |  | Undo | Undo | Undo | Undo | Undo | Undo |
 | `⇧⌘Z` |  |  | Redo | Redo | Redo | Redo | Redo | Redo |

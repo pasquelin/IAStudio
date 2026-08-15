@@ -59,6 +59,11 @@ Assets live in the **Assets** panel, familiarly called *the shelf*.
 What the studio does when a *job* fails for a reason another attempt can mend: a dropped
 connection, a busy service, too many requests. See *Exponential backoff*.
 
+**Assistant**
+The window where you say what you want to do, in an ordinary sentence, rather than clicking it.
+`⌘K`. It picks the actions itself and runs them, and asks for your yes before anything that spends
+or uploads. See [Driving the studio from outside](20-driving-from-outside.md).
+
 **Azimuth**
 The direction of something all around you, measured by turning on the spot. For a *skybox*'s sun:
 east, south, west, north. It pairs with *elevation*, which gives its height.
@@ -376,6 +381,12 @@ pixels are still there, they are not displayed. You paint it, adjust it, remove 
 picture never moved.
 
 A mask can also be made from a *selection*, in one command.
+
+**MCP** *(Model Context Protocol)*
+The common tongue coding assistants speak to the tools they drive. The studio can present itself as
+one of those tools: a client such as Claude Code then runs the same actions the *assistant* runs.
+Shut to start with, opened in Settings → **Advanced**. See
+[Driving the studio from outside](20-driving-from-outside.md).
 
 **Mesh**
 A 3D object, described by its points and the triangles joining them. It is the shape, without the

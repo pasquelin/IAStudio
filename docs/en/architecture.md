@@ -231,6 +231,8 @@ src/main/
 │   ├── auto-caption.ts      naming a picture from what the API sees in it
 │   └── protocol.ts          the scenario:// protocol
 ├── dictation/               speech recognition: permissions, model, segmenting, handlers
+├── assistant/               the assistant's thinking, behind a port, and how its reply is read
+├── mcp/                     the same catalogue of actions, offered to a client outside
 ├── settings/                the encrypted store, its adapter, its handlers
 ├── favorites/               the pinned recipes, kept outside every project
 ├── styles/                  the material settings replayed from one texture to the next
@@ -324,6 +326,46 @@ directly is a test that will fail strangely — bind the port instead.
 
 `pnpm rebuild:native` is mandatory after any Electron upgrade, or the native module refuses to
 load.
+
+### One action registry, two readers
+
+`ACTION_REGISTRY` (`shared/domain/assistant.ts`) declares what the studio can be asked to do — ten
+actions, their fields, and **what each one commits** (`none`, `asset`, `credits`). It has two
+readers, and **neither of them decides**:
+
+- **the assistant**, inside the window, which lists it to its model as a vocabulary;
+- **`main/mcp/tools.ts`**, which republishes it as MCP tools for a client outside.
+
+The name changes dialect on the way — `command.run` becomes `command_run`, because the tool-name
+grammar takes no dot — and `actionOfTool` walks it back. **One substitution, never a second column
+in the registry**: that column would drift from the first.
+
+**Running it, though, happens in the same place for both**: the window in front. That is what makes
+the confirmation of a costly action appear on screen whichever side asked for it — and what makes a
+request arriving with no window **refused** (`noWindow`) rather than queued. `main/mcp/asking.ts`
+composes the round trip the IPC does not have in that direction: `invoke` goes up, `broadcast` comes
+back, a `callId` sews the halves together, and **every way of failing answers**, because at the
+other end there is a client that would otherwise sit there.
+
+`commitmentOfCommand` is **the one level derived rather than declared**, and the one guarded command
+by command: five canvas commands flatten and upload the picture, which creates a permanent asset. A
+miss there would go through with nothing downstream to catch it.
+
+### The MCP door, and its four locks
+
+The server (`main/mcp/server.ts`) is **off by default** and follows `settings.mcp.enabled`. On, it
+listens on the IPv4 loopback — `127.0.0.1` written out, since the name `localhost` resolves to IPv6
+first on some machines — on a port the operating system picks, behind a token minted per launch, and
+refuses any request carrying an `Origin` that is not loopback. `access.ts` decides from headers
+alone, which makes both refusals demonstrable without opening a socket.
+
+Port and token are written to `mcp.json` beside the settings, at `0600`: **that file IS the door**,
+since a caller with no `Origin` is admitted by design. `control.ts` removes it on stop **and on
+start** — a file left by a crash names a port the next process will inherit.
+
+**The MCP SDK is only loaded when the door opens**, through an `import()` in `control.ts`: it pulls
+some two hundred modules, and this setting is off by default. A static import would put them on the
+launch of every studio that never opens that door.
 
 ---
 
