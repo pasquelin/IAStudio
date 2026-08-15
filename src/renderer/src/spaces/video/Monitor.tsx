@@ -10,6 +10,7 @@ import {
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
+import { MonitorFrame } from '@/design/MonitorFrame'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
 import { openAssetSink } from '@/engines/timeline/sink-port'
@@ -69,7 +70,6 @@ export function Monitor({
   program = false,
 }: MonitorProps) {
   const { t } = useTranslation()
-  const pictureRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<TimelineEngine | null>(null)
   // Published rather than held: the timeline's own bar draws the same transport, and neither of
@@ -184,48 +184,39 @@ export function Monitor({
   ]
 
   return (
-    // No padding of its own: what separates the two monitors is the row's gutter and the handle
-    // between them, exactly as two panels are separated. A padding here would add itself to both
-    // sides of that gutter and read as a gap three times too wide.
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col items-center gap-2">
-      {/* The element that goes full screen — see `showLarge`, and `index.css` for the black it
-          takes there, which is the monitor's own token and not the panel's chassis. */}
-      <div ref={pictureRef} className="bg-chassis relative min-h-0 w-full flex-1">
-        <div ref={hostRef} className="absolute inset-0" />
-        {/* Positioned, like `TextureDocument` does over its own viewport: the canvas host is
-            absolute, so anything left in normal flow is painted under the opaque backdrop. */}
-        <div className="pointer-events-none absolute inset-0">
-          {/* Ahead of the host's own placeholder: a clip that is there and shows nothing is the
-              more precise thing to say about a black picture. */}
-          {unreadable ? (
-            <EmptyState icon={mdiAlertCircleOutline} message={t('transport.unreadable')} />
-          ) : (
-            placeholder
-          )}
-        </div>
+    <MonitorFrame
+      role={role}
+      toolbar={
+        <Toolbar
+          orientation="horizontal"
+          tools={transport}
+          activeTool={playing ? 'play' : undefined}
+          onTool={id => {
+            if (id === 'rewind') return rewind()
+            if (id === 'mirror') return showReturn()
+            return toggle()
+          }}
+          extras={
+            <>
+              <span className="text-muted text-tiny px-1">{title}</span>
+              <Timecode time={sequence.playhead} fps={sequence.settings.fps} />
+            </>
+          }
+        />
+      }
+    >
+      <div ref={hostRef} className="absolute inset-0" />
+      {/* Positioned, like `TextureDocument` does over its own viewport: the canvas host is
+          absolute, so anything left in normal flow is painted under the opaque backdrop. */}
+      <div className="pointer-events-none absolute inset-0">
+        {/* Ahead of the host's own placeholder: a clip that is there and shows nothing is the
+            more precise thing to say about a black picture. */}
+        {unreadable ? (
+          <EmptyState icon={mdiAlertCircleOutline} message={t('transport.unreadable')} />
+        ) : (
+          placeholder
+        )}
       </div>
-
-      <Toolbar
-        orientation="horizontal"
-        tools={transport}
-        activeTool={playing ? 'play' : undefined}
-        onTool={id => {
-          if (id === 'rewind') return rewind()
-          if (id === 'mirror') return showReturn()
-          return toggle()
-        }}
-        extras={
-          <>
-            <span className="text-muted text-tiny px-1">{title}</span>
-            <Timecode time={sequence.playhead} fps={sequence.settings.fps} />
-          </>
-        }
-      />
-
-      {/* Under the transport rather than over the picture: two monitors showing the same black
-          rectangle is the one thing this space cannot explain by itself, and the answer has to
-          still be there once both are showing something. */}
-      <p className="text-muted text-tiny m-0 text-center">{role}</p>
-    </section>
+    </MonitorFrame>
   )
 }

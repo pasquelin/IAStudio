@@ -2,6 +2,7 @@ import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
 import { useCallback, useEffect, useRef, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clamp } from '@shared/numeric'
+import { MonitorFrame } from '@/design/MonitorFrame'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar } from '@/design/Toolbar'
 import { fitToDisplay } from '@/engines/core/canvas-2d'
@@ -16,7 +17,6 @@ import {
 } from '@/engines/timeline/timeline-state'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { usePeaks } from '@/stores/peaks'
-import { MonitorFrame } from './MonitorFrame'
 import type { SoundTransport } from './useSoundTransport'
 
 export type ProgramMonitorProps = {
