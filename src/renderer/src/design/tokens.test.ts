@@ -747,3 +747,64 @@ describe('the contrast of the inks', () => {
     expect(offenders).toEqual([])
   })
 })
+
+/**
+ * The take editor's selection, measured here for the reason `clip-audio` is: both of its marks
+ * are drawn by a library reading `engines/core/palette.ts`, so no class names them and not one
+ * of the sweeps above composes them. The surface under both is `bg-chassis`, from `MonitorFrame`.
+ *
+ * It is a PAIR, and the numbers are why. A veil that let the wave through could never clear the
+ * 3:1 WCAG 1.4.11 asks of a control — the accent needs 98% of the mix on the dark chassis to get
+ * there, which is not a veil at all — so the EDGES carry the state at the full token and the
+ * veil is emphasis on top. The same reading `ALPHA_FILL_ALLOWED` takes of `Spotlight`.
+ */
+describe('the selection of the take editor', () => {
+  const VEIL =
+    /--color-accent-veil:\s*color-mix\(in srgb, var\(--color-accent\) (\d+)%, transparent\)/
+
+  it('carries its state on edges at the full accent, the veil being what the wave shows through', () => {
+    const [, percent = ''] = stylesheet.match(VEIL) ?? []
+    // Read from the sheet, never recopied: a veil composed at an alpha nobody measures is the
+    // defect this whole file exists to refuse.
+    expect(percent).toMatch(/^\d+$/)
+
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+      const veiled = blend(tokens.accent ?? '', tokens.chassis ?? '', Number(percent) / 100)
+
+      // The edges, at the bar a control owes — the same one the accent answers as a line.
+      expect(contrastRatio(tokens.accent ?? '', tokens.chassis ?? '')).toBeGreaterThanOrEqual(
+        AA_NON_TEXT,
+      )
+      // The veil, which does NOT reach it. Written as a measurement rather than left unsaid:
+      // this is the fact the edges exist for, and raising the alpha would not fix it.
+      expect(contrastRatio(veiled, tokens.chassis ?? '')).toBeLessThan(AA_NON_TEXT)
+      // And what the veil is for: the wave under it stays a shape one can still read.
+      expect(contrastRatio(tokens.muted ?? '', veiled)).toBeGreaterThanOrEqual(AA_NON_TEXT)
+    }
+  })
+
+  /**
+   * The edges and their colour are joined by a class name and a shadow part, and by nothing a
+   * compiler can follow: rename either and the border quietly falls back to the plugin's own
+   * black, with every suite green — the failure `--sc-tooltip` taught this file.
+   */
+  it('is joined to its surface by a class the editor actually writes', () => {
+    const editor = WRITTEN_SOURCES.find(([path]) => path.endsWith('/TakeEditor.tsx'))
+
+    expect(editor?.[1]).toContain('sc-wave')
+    expect(stylesheet).toContain('.sc-wave div::part(region-handle-left)')
+  })
+
+  /**
+   * Tailwind prunes the `@theme` variables nothing names, and this one is never a class: it is
+   * read by NAME in JavaScript. Composing that name would drop the declaration from `:root`
+   * altogether, and the editor would hand the region an empty string — an invisible selection,
+   * with nothing on screen or in a suite to say why.
+   */
+  it('names the veil in full somewhere, which is what keeps it in the sheet at all', () => {
+    const written = WRITTEN_SOURCES.filter(([, source]) => source.includes("'--color-accent-veil'"))
+
+    expect(written).not.toEqual([])
+  })
+})

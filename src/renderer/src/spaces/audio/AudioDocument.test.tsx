@@ -78,6 +78,31 @@ describe('AudioDocument', () => {
     useSequences.setState({ states: { 'doc-1': EMPTY_SOUND_SEQUENCE }, histories: {} })
   })
 
+  it('says what its tools act on: the gesture while there is nothing, the range once there is', async () => {
+    await openTake()
+    expect(screen.getByText(/Glissez sur l’onde/)).toBeInTheDocument()
+
+    useAudioEdits
+      .getState()
+      .replace('doc-1', { ...editsOf(), region: { from: SECOND / 2, to: SECOND } })
+
+    expect(await screen.findByText('Sélection 00:00.50 – 00:01.00')).toBeInTheDocument()
+    // And the invitation goes: the bar says one thing at a time, or it says both at once.
+    expect(screen.queryByText(/Glissez sur l’onde/)).not.toBeInTheDocument()
+  })
+
+  // Clamped like the tools clamp it: the take is two seconds long, so a range past its end is a
+  // range no tool would touch, and announcing it would be the bar promising what nothing does.
+  it('takes a selection the take no longer holds for no selection at all', async () => {
+    await openTake()
+
+    useAudioEdits
+      .getState()
+      .replace('doc-1', { ...editsOf(), region: { from: 9 * SECOND, to: 12 * SECOND } })
+
+    expect(await screen.findByText(/Glissez sur l’onde/)).toBeInTheDocument()
+  })
+
   // The bar carried the only undo this space had until `audio.undo` was registered — which is
   // what let the pair leave every bar in the studio.
   describe('its history', () => {
