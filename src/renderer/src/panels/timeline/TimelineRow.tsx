@@ -39,8 +39,14 @@ function reorderSteps(travelled: number, height: number): number {
  * height of the whole stack: a row knows neither, and the store keeps no viewport size.
  */
 type BandScroll = {
-  /** Opens and closes the band's own gesture — it only travels while a row is held. */
-  onDrag: (dragging: boolean) => void
+  /**
+   * Opens the band's own gesture, and closes it with `null` — it only travels while a row is held.
+   *
+   * The pointer comes with it, both halves of it: the band answers to THAT pointer and no other,
+   * as the grip does, and it starts from where the press landed rather than waiting for a first
+   * move that a hand holding still never makes.
+   */
+  onDrag: (from: { pointerId: number; y: number } | null) => void
   /** Read at every step of a drag: an auto-scroll moves the stack under a pointer that is still. */
   scrollTop: () => number
 }
@@ -85,7 +91,7 @@ export function TimelineHeaderColumn({
   const column = useRef<HTMLDivElement>(null)
   const clip = useRef<HTMLDivElement>(null)
   const stack = useRef<HTMLDivElement>(null)
-  const [dragging, setDragging] = useState(false)
+  const [held, setHeld] = useState<{ pointerId: number; y: number } | null>(null)
 
   /**
    * Every offset this column writes, within its own bounds.
@@ -113,14 +119,16 @@ export function TimelineHeaderColumn({
   // every grip inside binds to it, mid-gesture. State rather than a ref, which no component may
   // read while it renders.
   const [band] = useState<BandScroll>(() => ({
-    onDrag: setDragging,
+    onDrag: setHeld,
     scrollTop: () => latest.current.scrollTop,
   }))
 
   useEffect(() => {
-    if (!dragging) return
+    if (!held) return
 
-    let y: number | null = null
+    // Seeded from the press: a hand that takes a row already inside the margin and holds it
+    // perfectly still makes no move at all, and the band would wait for one that never comes.
+    let y: number | null = held.y
     // `null` and not zero: a clock that starts at zero would read every frame as the first.
     let previous: number | null = null
     let frame = 0
@@ -129,7 +137,23 @@ export function TimelineHeaderColumn({
     let carry = 0
 
     const onMove = (event: globalThis.PointerEvent): void => {
-      y = event.clientY
+      // That pointer and no other — the same guard the grip carries, for the same reason: a
+      // second finger crossing the top margin would drag the held row up by itself.
+      if (event.pointerId === held.pointerId) y = event.clientY
+    }
+
+    /**
+     * The pointer has left the document, and nothing can be heard from it any more.
+     *
+     * A release out there never reaches this window: there is no capture to cost a `pointerup`,
+     * and the window keeps its focus so no `blur` comes either. Travelling on the last known
+     * position would then run the stack to its end and reorder a row through every rank of it,
+     * with the hand no longer holding anything. Standing still is what this cost before the band
+     * could travel at all, and it is what it costs again — the margin lies INSIDE the window, so
+     * nothing needed for the gesture is given up.
+     */
+    const onOut = (event: globalThis.PointerEvent): void => {
+      if (!event.relatedTarget) y = null
     }
 
     const step = (now: number): void => {
@@ -157,13 +181,15 @@ export function TimelineHeaderColumn({
     }
 
     window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerout', onOut)
     frame = requestAnimationFrame(step)
 
     return () => {
       window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerout', onOut)
       cancelAnimationFrame(frame)
     }
-  }, [dragging])
+  }, [held])
 
   return (
     <BandScrollContext value={band}>
@@ -325,7 +351,7 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
     const release = (): void => {
       grabbed.current = null
       latest.current.onHeld(false)
-      latest.current.band?.onDrag(false)
+      latest.current.band?.onDrag(null)
       latest.current.reorder.end?.()
     }
 
@@ -419,7 +445,7 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
     }
     setDragging(true)
     onHeld(true)
-    band?.onDrag(true)
+    band?.onDrag({ pointerId: event.pointerId, y: event.clientY })
     reorder.begin?.()
   }
 

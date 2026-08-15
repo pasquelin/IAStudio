@@ -134,6 +134,41 @@ describe('a band that comes to the pointer', () => {
     expect(scrollTop()).toBe(reached)
   })
 
+  /**
+   * A release out THERE never reaches this window: no capture means no `pointerup`, and the
+   * window keeps its focus so no `blur` either. Travelling on the last position seen would run
+   * the stack to its end and carry the row through every rank of it, hand long since open.
+   */
+  it('stands still while the pointer is somewhere it cannot be heard from', () => {
+    held()
+    advance(100)
+    const reached = scrollTop()
+
+    fireEvent.pointerOut(window, { relatedTarget: null })
+    for (let tick = 0; tick < 20; tick++) advance(100)
+
+    expect(scrollTop()).toBe(reached)
+    expect(ids().at(-1)).not.toBe('A1')
+  })
+
+  /**
+   * The offset outlives the stack that justified it: no store bounds it, and the clamp lives in
+   * whoever writes. Deleting tracks left the names translated off a band that now fits, with
+   * nothing on this side able to bring them back.
+   */
+  it('brings a stale offset back within bounds on the first wheel', () => {
+    const view = render(<TrackHeaders documentId="doc-1" />, { wrapper: StrictMode })
+    layout(view, VISIBLE)
+    useTimelineView.getState().set('doc-1', {
+      ...viewportOf(useTimelineView.getState(), 'doc-1'),
+      scrollTop: 3 * DEFAULT_TRACK_HEIGHT,
+    })
+
+    fireEvent.wheel(view.container.firstElementChild ?? view.container, { deltaY: 1 })
+
+    expect(scrollTop()).toBe(0)
+  })
+
   // Nothing to come to: a band whose whole stack is on screen must not creep when a row is
   // dragged over its edge, which would move the strip beside it for no reason at all.
   it('leaves a band alone when its whole stack is already on screen', () => {
