@@ -74,11 +74,19 @@ function roomBelow(clip: HTMLElement | null, stack: HTMLElement | null): number 
  */
 export function TimelineHeaderColumn({
   scrollTop,
+  label,
   viewportNow,
   setViewport,
   children,
 }: {
   scrollTop: number
+  /**
+   * What the list is called, already translated — the column draws what it is handed and looks
+   * nothing up. Required rather than optional, as `Collection` and `Tree` require theirs and for
+   * their reason: unnamed, a reader announces the bare word "list", and three surfaces of the
+   * studio draw one.
+   */
+  label: string
   /**
    * The band's whole viewport, read at the moment of a gesture rather than subscribed to: the
    * wheel zooms, which needs the scale, and a column that re-drew every header on a zoom would
@@ -219,7 +227,16 @@ export function TimelineHeaderColumn({
         {/* Named because its height IS the bound the band scrolls within, and a test that had to
             find it by the transform was guessing at two things at once. */}
         <div ref={clip} data-testid="band-clip" className="min-h-0 flex-1 overflow-hidden">
-          <div ref={stack} style={{ transform: `translateY(${-scrollTop}px)` }}>
+          {/* On the stack and not on the box that clips it: a `listitem` counts only where the
+              list OWNS it, and the rows are children of THIS node. It buys the announcement and
+              nothing else — `InlineRename` hands the focus back to a `[tabindex="0"]` inside the
+              list, and no row of any band carries a tab stop for it to find. */}
+          <div
+            ref={stack}
+            role="list"
+            aria-label={label}
+            style={{ transform: `translateY(${-scrollTop}px)` }}
+          >
             {children}
           </div>
         </div>
@@ -283,6 +300,10 @@ export function TimelineRow({
 
   return (
     <div
+      // Held here rather than left to the bands, as the padding and the grip column already are:
+      // a row of this component is a line of a header column and never anything else. Before
+      // `...rest`, so a caller that means something else still wins.
+      role="listitem"
       className={cn(
         'flex items-stretch gap-0.5 px-1.5',
         // The row the hand is holding, for the length of the gesture — the same dimming the

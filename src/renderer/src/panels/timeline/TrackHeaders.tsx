@@ -54,6 +54,7 @@ function moveTrackBy(documentId: string, trackId: string, by: number): number {
  * canvas would be rebuilding the browser. The clips stay painted; only their labels are here.
  */
 export function TrackHeaders({ documentId }: TrackHeadersProps) {
+  const { t } = useTranslation()
   const sequence = useSequences(state => sequenceOf(state, documentId))
   const scrollTop = useTimelineView(state => viewportOf(state, documentId).scrollTop)
 
@@ -69,7 +70,14 @@ export function TrackHeaders({ documentId }: TrackHeadersProps) {
   )
 
   return (
-    <TimelineHeaderColumn scrollTop={scrollTop} viewportNow={viewportNow} setViewport={setViewport}>
+    <TimelineHeaderColumn
+      scrollTop={scrollTop}
+      // The same name in the Video montage and the Audio one: they mount this very component,
+      // and a sound montage is a montage — see `MontagePanel`.
+      label={t('timeline.trackList')}
+      viewportNow={viewportNow}
+      setViewport={setViewport}
+    >
       {sequence.tracks.map((track, row) => (
         <TrackHeader
           key={track.id}
