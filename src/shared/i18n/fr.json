@@ -2021,7 +2021,9 @@
       "nothingPrepared": "Le Générateur n’a aucun modèle armé pour l’instant.",
       "notSubmitted": "La génération n’est pas partie.",
       "badInput": "Les paramètres fournis ne conviennent pas à cette action.",
-      "noBridge": "Le studio ne répond pas."
+      "noBridge": "Le studio ne répond pas.",
+      "noConfirmer": "Cette action demande un accord, et aucune fenêtre n’était là pour le donner.",
+      "declined": "Vous avez refusé cette action."
     },
     "fields": {
       "command": "Identifiant de la commande",

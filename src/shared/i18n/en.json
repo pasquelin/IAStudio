@@ -2021,7 +2021,9 @@
       "nothingPrepared": "The Generator has no model armed at the moment.",
       "notSubmitted": "The generation did not go out.",
       "badInput": "The parameters given do not suit this action.",
-      "noBridge": "The studio is not answering."
+      "noBridge": "The studio is not answering.",
+      "noConfirmer": "That action needs a yes, and no window was there to give one.",
+      "declined": "You turned that action down."
     },
     "fields": {
       "command": "Command identifier",

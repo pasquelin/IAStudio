@@ -265,6 +265,9 @@ export type ActionRefusal =
   | 'notSubmitted'
   | 'badInput'
   | 'noBridge'
+  /** Nobody was there to be asked — see `runConfirmedAction`. Never a silent yes. */
+  | 'noConfirmer'
+  | 'declined'
 
 export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'unknownCommand',
@@ -275,6 +278,8 @@ export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'notSubmitted',
   'badInput',
   'noBridge',
+  'noConfirmer',
+  'declined',
 ]
 
 export function refusalKey(refusal: ActionRefusal): string {
@@ -288,4 +293,29 @@ export function assistantAction(name: string): AssistantAction | null {
 /** Whether running this needs a yes first. `asset` and `credits` do; only `credits` quotes a figure. */
 export function needsConfirmation(commitment: ActionCommitment): boolean {
   return commitment !== 'none'
+}
+
+/**
+ * What one particular call would engage, which for `command.run` is a fact of the command named
+ * rather than of the action.
+ *
+ * Shared because both sides ask: the window asks before it acts, and the MCP server asks before
+ * it tells a window to. A second copy of this arithmetic is the one that would drift, and it
+ * would drift towards spending something without asking.
+ */
+export function commitmentOfCall(name: ActionName, input: Record<string, unknown>): ActionCommitment {
+  if (name === 'generator.submit') return 'credits'
+  if (name !== 'command.run') return assistantAction(name)?.commitment ?? 'none'
+
+  const id = input.command
+  return typeof id === 'string' ? commitmentOfCommand(asCommandId(id)) : 'none'
+}
+
+/**
+ * The one cast here, and why it is safe: every reader of the result checks the command against
+ * the registry, and an id nothing declares rates as `none` — which is the level of a call that
+ * will be refused before it runs anyway.
+ */
+function asCommandId(id: string): CommandId {
+  return id as CommandId
 }

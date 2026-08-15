@@ -1,8 +1,8 @@
 import {
-  type ActionCommitment,
   type ActionName,
   type ActionRefusal,
-  commitmentOfCommand,
+  commitmentOfCall,
+  needsConfirmation,
 } from '@shared/domain/assistant'
 import { commandDescriptor, type CommandId, scopeOfWorkspace } from '@shared/domain/command'
 import { MODEL_FAMILIES } from '@shared/domain/model'
@@ -17,6 +17,7 @@ import { publishCommand } from '@/services/command-bus'
 import { useJobs } from '@/stores/jobs'
 import { toolSurface } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
+import { mountedConfirmer } from './confirm'
 import { mountedGenerator } from './generator-bridge'
 
 /**
@@ -186,19 +187,50 @@ export async function runAction(
 }
 
 /**
- * What this call would engage, which for `command.run` is a fact of the command it names.
+ * Runs an action, asking first when it engages anything.
  *
- * Answered here rather than read off the registry row, because the row can only state the floor:
- * running `canvas.cutout` uploads a picture and running `canvas.zoomIn` does not, and both are
- * the same action.
+ * The gate sits here rather than in the main process, and that is deliberate: the figure quoted
+ * comes from the form the window is showing, which the main process cannot see, and the question
+ * is asked on a screen only the window has. It also means there is one gate rather than two —
+ * whether the call came from the modal or from an MCP client on the other side of the machine,
+ * it arrives at this function and is asked about the same way.
  */
-export function commitmentOfCall(
+export async function runConfirmedAction(
   name: ActionName,
   input: Record<string, unknown>,
-): ActionCommitment {
-  if (name === 'generator.submit') return 'credits'
-  if (name !== 'command.run') return 'none'
+): Promise<ActionOutcome> {
+  const commitment = commitmentOfCall(name, input)
+  if (!needsConfirmation(commitment)) return runAction(name, input)
 
-  const id = textOf(input, 'command')
-  return id === null ? 'none' : commitmentOfCommand(asCommandId(id))
+  const ask = mountedConfirmer()
+  // No one to ask. Refusing is the only honest answer: the alternative is spending on a question
+  // nobody was shown.
+  if (!ask) return refused('noConfirmer')
+
+  const granted = await ask({
+    action: name,
+    commitment,
+    ...(commitment === 'credits' ? { estimate: await estimateOfSubmission() } : {}),
+  })
+
+  return granted ? runAction(name, input) : refused('declined')
+}
+
+/**
+ * What the prepared form would cost, for the question that is about to be asked.
+ *
+ * `null` is a legitimate answer and is shown as such: the API declines to price some models, and
+ * a figure invented to fill the sentence would be worse than admitting there is none.
+ */
+async function estimateOfSubmission(): Promise<number | null> {
+  const prepared = mountedGenerator()?.body()
+  const bridge = getBridge()
+  if (!prepared || !bridge) return null
+
+  try {
+    const estimate = await bridge.scenario.estimateCost({ id: prepared.modelId }, prepared.values)
+    return estimate?.creativeUnits ?? null
+  } catch {
+    return null
+  }
 }

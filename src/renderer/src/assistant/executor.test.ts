@@ -7,7 +7,9 @@ import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useJobs } from '@/stores/jobs'
 import { registerGenerator } from './generator-bridge'
-import { commitmentOfCall, runAction } from './executor'
+import { commitmentOfCall } from '@shared/domain/assistant'
+import { registerConfirmer } from './confirm'
+import { runAction, runConfirmedAction } from './executor'
 
 const showWorkspace = vi.hoisted(() => vi.fn())
 const createDocumentIn = vi.hoisted(() => vi.fn())
@@ -196,6 +198,113 @@ describe('listing the jobs', () => {
       ok: true,
       data: [{ id: 'job_1', label: 'Knight', status: 'running', progress: 0.5 }],
     })
+  })
+})
+
+/**
+ * The gate. Everything that outlives the window passes through it, whether the call came from
+ * the modal or from an MCP client on the other side of the machine — there is one gate, not two.
+ */
+describe('asking before acting', () => {
+  it('does not ask for what is free and undoable', async () => {
+    const ask = vi.fn(() => Promise.resolve(true))
+    const stop = registerConfirmer(ask)
+
+    await runConfirmedAction('workspace.open', { workspace: '3d' })
+
+    expect(ask).not.toHaveBeenCalled()
+    expect(showWorkspace).toHaveBeenCalledWith('3d')
+    stop()
+  })
+
+  it('asks before spending, and quotes what the form would cost', async () => {
+    const ask = vi.fn(() => Promise.resolve(true))
+    const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
+    installFakeBridge({
+      scenario: { estimateCost: () => Promise.resolve({ creativeUnits: 4 }) },
+    })
+    const stopGenerator = registerGenerator({
+      body: () => ({ modelId: 'model_x', values: { prompt: 'a knight' } }),
+      submit,
+    })
+    const stopConfirmer = registerConfirmer(ask)
+
+    await runConfirmedAction('generator.submit', {})
+
+    expect(ask).toHaveBeenCalledWith({
+      action: 'generator.submit',
+      commitment: 'credits',
+      estimate: 4,
+    })
+    expect(submit).toHaveBeenCalled()
+    stopGenerator()
+    stopConfirmer()
+  })
+
+  it('does not act when the answer is no', async () => {
+    const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
+    const stopGenerator = registerGenerator({
+      body: () => ({ modelId: 'model_x', values: {} }),
+      submit,
+    })
+    const stopConfirmer = registerConfirmer(() => Promise.resolve(false))
+
+    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+      ok: false,
+      refusal: 'declined',
+    })
+    expect(submit).not.toHaveBeenCalled()
+    stopGenerator()
+    stopConfirmer()
+  })
+
+  /**
+   * The answer that matters for the MCP server: an action arriving from outside while no window
+   * is showing the assistant is refused, never granted by default. Spending on a question nobody
+   * was shown is the one outcome this whole mechanism exists to prevent.
+   */
+  it('refuses rather than assuming a yes when nobody can be asked', async () => {
+    const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
+    const stop = registerGenerator({ body: () => ({ modelId: 'm', values: {} }), submit })
+
+    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+      ok: false,
+      refusal: 'noConfirmer',
+    })
+    expect(submit).not.toHaveBeenCalled()
+    stop()
+  })
+
+  // An upload is a permanent asset and earns the question, but there is no figure to quote for
+  // it — and one invented to fill the sentence would be worse than none.
+  it('asks about an upload without quoting a price', async () => {
+    const ask = vi.fn(() => Promise.resolve(false))
+    const stop = registerConfirmer(ask)
+
+    await runConfirmedAction('command.run', { command: 'canvas.cutout' })
+
+    expect(ask).toHaveBeenCalledWith({ action: 'command.run', commitment: 'asset' })
+    stop()
+  })
+
+  it('says the estimate is unknown rather than inventing one', async () => {
+    const ask = vi.fn(() => Promise.resolve(false))
+    installFakeBridge({ scenario: { estimateCost: () => Promise.reject(new Error('no price')) } })
+    const stopGenerator = registerGenerator({
+      body: () => ({ modelId: 'm', values: {} }),
+      submit: () => Promise.resolve(null),
+    })
+    const stopConfirmer = registerConfirmer(ask)
+
+    await runConfirmedAction('generator.submit', {})
+
+    expect(ask).toHaveBeenCalledWith({
+      action: 'generator.submit',
+      commitment: 'credits',
+      estimate: null,
+    })
+    stopGenerator()
+    stopConfirmer()
   })
 })
 
