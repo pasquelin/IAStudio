@@ -6,14 +6,14 @@ import {
   SKYBOX_VIEWS,
   type SkyboxView,
 } from '@shared/domain/skybox'
+import { Chip } from '@/design/Chip'
 import { EmptyState } from '@/design/EmptyState'
 import { PropertySection } from '@/design/PropertySection'
 import { SliderField } from '@/design/SliderField'
 import { ToggleField } from '@/design/ToggleField'
-import { chipSkin, FIELD_LABEL, FIELD_ROW, PANEL_SCROLL } from '@/design/styles'
+import { FIELD_LABEL, FIELD_ROW, PANEL_SCROLL } from '@/design/styles'
 import { activeSkyboxId, useDocuments } from '@/stores/documents'
 import { useSkyboxViews, skyboxViewOf } from '@/stores/skybox-views'
-import { HINT_LEFT } from '@/helpers/tooltip'
 
 /** i18n key of a projection — never the label itself, as `SkyboxDocument` did before it. */
 const VIEW_LABELS: Record<SkyboxView, string> = {
@@ -54,16 +54,13 @@ export function View() {
 
           <div className="flex min-w-0 flex-wrap gap-2">
             {SKYBOX_VIEWS.map(candidate => (
-              <button
+              <Chip
                 key={candidate}
-                type="button"
-                {...HINT_LEFT(t('view.modeHint'))}
+                label={t(VIEW_LABELS[candidate])}
+                hint={t('view.modeHint')}
+                selected={settings.view === candidate}
                 onClick={() => set(documentId, { view: candidate })}
-                aria-pressed={settings.view === candidate}
-                className={chipSkin(settings.view === candidate)}
-              >
-                {t(VIEW_LABELS[candidate])}
-              </button>
+              />
             ))}
           </div>
         </div>

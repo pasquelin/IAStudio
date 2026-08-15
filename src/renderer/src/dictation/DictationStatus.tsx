@@ -2,6 +2,7 @@ import { mdiMicrophone } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { STT_MODEL_BYTES } from '@shared/domain/dictation'
 import { ProgressBar } from '@/design/ProgressBar'
+import { STATUS_BUTTON } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { formatBytes } from '@/helpers/format'
 import { useDictation } from './useDictation'
@@ -40,7 +41,7 @@ export function DictationStatus() {
         type="button"
         {...HINT_TOP(t('dictation.downloadHint'))}
         onClick={() => void dictation.downloadModel()}
-        className="hover:text-text flex items-center gap-1.5"
+        className={STATUS_BUTTON}
       >
         <UiIcon path={mdiMicrophone} size={12} />
         <span>{t('dictation.download', { size })}</span>
@@ -87,7 +88,7 @@ export function DictationStatus() {
         type="button"
         {...HINT_TOP(t('dictation.openPrivacySettingsHint'))}
         onClick={() => void dictation.openPrivacySettings()}
-        className="hover:text-text flex items-center gap-1.5"
+        className={STATUS_BUTTON}
       >
         <UiIcon path={mdiMicrophone} size={12} />
         <span>{t('dictation.openPrivacySettings')}</span>
