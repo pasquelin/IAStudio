@@ -6,6 +6,7 @@ import {
   FLOOR_DB,
   HOT_AMPLITUDE,
   HOT_DB,
+  levelAtFraction,
   levelOf,
   meterFraction,
   meterFrom,
@@ -55,6 +56,19 @@ describe('the meter scale', () => {
     expect(meterFraction(1)).toBe(1)
     expect(meterFraction(fromDb(FLOOR_DB / 2))).toBeCloseTo(0.5, 6)
     expect(meterFraction(fromDb(HOT_DB))).toBeCloseTo(1 - HOT_DB / FLOOR_DB, 6)
+  })
+
+  /**
+   * An analyser bin arrives as a point on this scale, not as an amplitude. Read as one, a bass
+   * bin sitting fifty decibels under the ceiling came out amber — the fraction 0.6 looking like
+   * an amplitude of 0.6, which is very nearly hot.
+   */
+  it('reads a point on the scale by the decibels it stands at, not by its number', () => {
+    expect(levelAtFraction(meterFraction(fromDb(HOT_DB)))).toBe('hot')
+    expect(levelAtFraction(1)).toBe('clip')
+    expect(levelAtFraction(0)).toBe('safe')
+    // The very reading that was wrong: six tenths up a −48 dB scale is −19 dB, nowhere near hot.
+    expect(levelAtFraction(0.6)).toBe('safe')
   })
 
   it('bottoms out at silence rather than falling off the scale', () => {

@@ -1,8 +1,6 @@
 import { fromDb } from '@/engines/audio/audio-data'
 import { CLIP_AMPLITUDE, HOT_AMPLITUDE, SCALE_DB } from '@/engines/audio/level'
 import type { Size } from '@/engines/core/geometry'
-import { NO_BREAK_SPACE } from '@shared/i18n/typography'
-import { formatDecimal } from '@/helpers/format'
 import { paintWaveform } from './painter'
 import { paintRuler, type RulerStyle } from './ruler'
 import { RULER_HEIGHT, timeToX, type Viewport } from './timeline-geometry'
@@ -65,36 +63,28 @@ export function programColumns(
     .sort((left, right) => left.x - right.x)
 }
 
-/**
- * The graduated scale drawn behind the wave, and the words on it.
- *
- * `unit` arrives already translated and `language` decides how the number reads, exactly as
- * `formatBytes` takes its unit from its caller: a painter reads tokens, never a bundle.
- */
-export type ScaleStyle = {
-  line: string
-  text: string
-  /** What a label is written on, so the ink keeps the surface it was measured against. */
-  background: string
-  font: string
-  unit: string
-  language: string
-}
-
 export type ProgramPalette = {
   /** The three bands a level is read in, by height rather than by column. */
   safe: string
   hot: string
   clip: string
   /**
-   * The line traced through the body of the wave. The chassis colour, so it reads as a groove cut
-   * into whichever band it crosses — `design/tokens.test.ts` holds all three apart from it.
+   * The line traced through the body of the wave, or ABSENT when the reader has taken the curve
+   * away — it is the one mark here that answers a question not everyone is asking.
+   *
+   * The chassis colour when it is drawn, so it reads as a groove cut into whichever band it
+   * crosses: `design/tokens.test.ts` holds all three of those apart from it.
    */
-  envelope: string
+  envelope?: string
   playhead: string
   background: string
   ruler: RulerStyle
-  scale: ScaleStyle
+  /**
+   * The graduations behind the wave — a colour and nothing else. They carried their decibels in
+   * writing until 2026-08-16, and three labels on a linear axis stacked on top of one another
+   * around the middle, where −12 and −18 are a few pixels apart.
+   */
+  scale: string
 }
 
 /**
@@ -103,10 +93,6 @@ export type ProgramPalette = {
  * whether the montage runs a minute or an hour.
  */
 const ENVELOPE_SPAN = 9
-
-/** How far a scale label sits from the edge and from its own line. */
-const LABEL_INSET = 3
-const LABEL_LIFT = 2
 
 /**
  * The average reach of the wave around each column — the body of the sound, under the crests.
@@ -162,8 +148,9 @@ export function paintProgram(
 
   paintScale(context, size, top, height, palette.scale)
   paintBandedWave(context, columns, size.width, top, height, palette)
-  paintEnvelope(context, programEnvelope(columns), top, height, palette.envelope)
-  paintScaleLabels(context, top, height, palette.scale)
+  if (palette.envelope) {
+    paintEnvelope(context, programEnvelope(columns), top, height, palette.envelope)
+  }
 
   paintRuler(context, {
     viewport,
@@ -256,9 +243,9 @@ function paintEnvelope(
   }
 }
 
-/** Where a graduation sits on the wave, as a distance either side of the axis. */
-function scaleOffsets(height: number): { db: number; offset: number }[] {
-  return SCALE_DB.map(db => ({ db, offset: fromDb(db) * reachOf(height) }))
+/** Where each graduation sits on the wave, as a distance either side of the axis. */
+function scaleOffsets(height: number): number[] {
+  return SCALE_DB.map(db => fromDb(db) * reachOf(height))
 }
 
 /** The graduations, behind the wave: a grid is read through what stands on it, never over it. */
@@ -267,51 +254,15 @@ function paintScale(
   size: Size,
   top: number,
   height: number,
-  style: ScaleStyle,
+  colour: string,
 ): void {
   const middle = top + height / 2
 
-  context.fillStyle = style.line
-  for (const { offset } of scaleOffsets(height)) {
+  context.fillStyle = colour
+  for (const offset of scaleOffsets(height)) {
     // Half a pixel, so a one-pixel line lands on a pixel instead of across two.
     context.fillRect(0, Math.round(middle - offset) + 0.5, size.width, 1)
     context.fillRect(0, Math.round(middle + offset) + 0.5, size.width, 1)
-  }
-}
-
-/**
- * What each graduation is worth, written once above its upper line.
- *
- * On a plate of the background, and that is not decoration: `muted` on the calm green carries
- * 1.1:1, so a label laid straight over a loud passage would vanish exactly where the scale is
- * worth reading. The plate gives every label the one surface the ink was measured against.
- */
-function paintScaleLabels(
-  context: CanvasRenderingContext2D,
-  top: number,
-  height: number,
-  style: ScaleStyle,
-): void {
-  const middle = top + height / 2
-
-  context.font = style.font
-  context.textBaseline = 'bottom'
-
-  for (const { db, offset } of scaleOffsets(height)) {
-    const label = `${formatDecimal(db, style.language, { digits: 0 })}${NO_BREAK_SPACE}${style.unit}`
-    const baseline = Math.round(middle - offset) - LABEL_LIFT
-    const measured = context.measureText(label)
-    if (baseline - measured.actualBoundingBoxAscent < top) continue
-
-    context.fillStyle = style.background
-    context.fillRect(
-      0,
-      baseline - measured.actualBoundingBoxAscent - LABEL_LIFT,
-      measured.width + LABEL_INSET * 2,
-      measured.actualBoundingBoxAscent + LABEL_LIFT * 2,
-    )
-    context.fillStyle = style.text
-    context.fillText(label, LABEL_INSET, baseline)
   }
 }
 

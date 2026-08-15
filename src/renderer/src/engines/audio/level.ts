@@ -43,6 +43,19 @@ export function meterFraction(amplitude: number): number {
 export type Level = 'safe' | 'hot' | 'clip'
 
 /**
+ * The band a point already ON that scale falls in, for the readers handed a fraction rather than
+ * an amplitude — an analyser bin is one, being a byte spread between the floor and the ceiling.
+ *
+ * Converted back and passed to `levelOf` rather than compared against fractions of its own: the
+ * two thresholds are written once, and a spectrum bar cannot come to mean something a meter bar
+ * does not. Reading a fraction as if it were an amplitude is how the bass bars came out amber
+ * while sitting fifty decibels under the ceiling.
+ */
+export function levelAtFraction(fraction: number): Level {
+  return levelOf(fromDb(FLOOR_DB + fraction * (CLIP_DB - FLOOR_DB)))
+}
+
+/**
  * The band an amplitude falls in, sign ignored — a waveform is symmetric, and a trough at −1
  * clips exactly as a crest at 1 does.
  */

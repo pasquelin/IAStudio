@@ -2,7 +2,7 @@ import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import type { Size } from '@/engines/core/geometry'
 import { memoPalette, rootColour, rootFont } from '@/engines/core/palette'
 import { formatDecimal } from '@/helpers/format'
-import { levelOf } from './level'
+import { levelAtFraction } from './level'
 import { spectrumFraction, SPECTRUM_MARKS, type SpectrumBand } from './spectrum'
 
 /** What a spectrum needs of a palette. The three bands are the wave's own, and mean the same. */
@@ -72,7 +72,7 @@ export function paintSpectrum(
     if (band.level <= 0) continue
 
     const reach = band.level * height
-    context.fillStyle = ink[levelOf(band.level)]
+    context.fillStyle = ink[levelAtFraction(band.level)]
     context.fillRect(index * width, height - reach, Math.max(1, width - BAR_GAP), reach)
   }
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { CLIP_DB, FLOOR_DB } from '@/engines/audio/level'
 import { createSoundPort, playFrom, type SoundOutput } from './sound-port'
 import type { SoundCue } from './sound-schedule'
 
@@ -25,6 +26,8 @@ const outputWith = () => {
   })
   const analyser = {
     fftSize: 0,
+    minDecibels: -100,
+    maxDecibels: -30,
     frequencyBinCount: 4,
     connect: vi.fn(<T>(node: T): T => node),
     getFloatTimeDomainData: vi.fn(),
@@ -183,6 +186,21 @@ describe('the browser sound port', () => {
 
     expect(output.createAnalyser).toHaveBeenCalledTimes(1)
     expect(analyser.fftSize).toBe(2048)
+  })
+
+  /**
+   * The browser's own range stops at −30 dB. Left there, no spectrum bin could ever stand within
+   * six decibels of full scale, and every bar would have been coloured by a number meaning
+   * nothing — which is exactly what happened before this was set.
+   */
+  it('spreads the analyser over the studio scale rather than the browser default', () => {
+    const { output, analyser } = outputWith()
+    const port = createSoundPort(() => output)
+    port.resume()
+    port.tap()
+
+    expect(analyser.minDecibels).toBe(FLOOR_DB)
+    expect(analyser.maxDecibels).toBe(CLIP_DB)
   })
 
   /**

@@ -113,4 +113,19 @@ describe('ProgramMonitor', () => {
 
     expect(screen.getByRole('img', { name: 'Niveau de sortie' })).toBeInTheDocument()
   })
+
+  /**
+   * The curves are drawn inside the wave, so they cost no room — but they cross the very crests
+   * one may be reading instead, and a reader who has no use for them can put them away.
+   */
+  it('offers the curves as something to take away, and starts with them shown', () => {
+    show()
+    const button = screen.getByRole('button', { name: /Courbes/ })
+
+    expect(button).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(button)
+
+    expect(button).toHaveAttribute('aria-pressed', 'false')
+  })
 })

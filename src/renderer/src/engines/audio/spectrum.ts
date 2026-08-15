@@ -14,7 +14,11 @@ export const HIGHEST_HZ = 16_000
 export type SpectrumBand = {
   /** The lower edge, in hertz — the bar's own place on the scale. */
   from: number
-  /** 0 to 1, from the analyser's own byte range. */
+  /**
+   * Where this register stands on the METER's scale, from nothing at its floor to one at full
+   * scale — a fraction, never an amplitude. That is what the analyser hands over, its byte range
+   * being spread across the decibels `sound-port.ts` sets on it.
+   */
   level: number
 }
 

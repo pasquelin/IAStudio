@@ -1,3 +1,4 @@
+import { CLIP_DB, FLOOR_DB } from '@/engines/audio/level'
 import { fetchAsset } from '@/helpers/asset-fetch'
 import type { AudioTap, LoadedSound, SoundCue, SoundPort } from './sound-schedule'
 
@@ -38,6 +39,12 @@ function busFor(output: SoundOutput): SoundBus {
 
   const analyser = output.createAnalyser()
   analyser.fftSize = FFT_SIZE
+  // The studio's own scale rather than the browser's −100/−30 default, and this is what lets a
+  // spectrum bin be READ: a byte then lands where the meter's bar would, so the same two
+  // thresholds colour both. Left at the default, no bin could ever reach −6 dB — the range stops
+  // at −30 — and every bar would have been coloured by a number that meant nothing.
+  analyser.minDecibels = FLOOR_DB
+  analyser.maxDecibels = CLIP_DB
   const input = output.createGain()
   input.connect(analyser).connect(output.destination)
 

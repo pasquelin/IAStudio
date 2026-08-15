@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { fromDb } from './audio-data'
-import { HOT_DB } from './level'
+import { HOT_DB, meterFraction } from './level'
 import { paintSpectrum, type SpectrumInk, type SpectrumMarks } from './spectrum-painter'
 import type { SpectrumBand } from './spectrum'
 
@@ -59,11 +59,15 @@ describe('the spectrum band', () => {
     expect(paint([]).filled).toContain('grid')
   })
 
-  /** The wave's own three bands, so an amber bar means here what an amber crest means there. */
-  it('colours a bar by the level it stands at', () => {
+  /**
+   * The wave's own three bands, so an amber bar means here what an amber crest means there — and
+   * a bar is coloured by the DECIBELS it stands at, never by the size of its own number. Read the
+   * other way, a bass register fifty decibels under the ceiling came out amber.
+   */
+  it('colours a bar by the decibels it stands at', () => {
     const { filled } = paint([
-      { from: 100, level: 0.2 },
-      { from: 1_000, level: fromDb(HOT_DB / 2) },
+      { from: 100, level: 0.6 },
+      { from: 1_000, level: meterFraction(fromDb(HOT_DB)) },
       { from: 10_000, level: 1 },
     ])
 

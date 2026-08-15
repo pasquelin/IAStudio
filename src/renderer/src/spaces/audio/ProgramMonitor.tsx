@@ -1,4 +1,10 @@
-import { mdiEqualizer, mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
+import {
+  mdiChartBellCurveCumulative,
+  mdiEqualizer,
+  mdiPause,
+  mdiPlay,
+  mdiSkipPrevious,
+} from '@mdi/js'
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clamp } from '@shared/numeric'
@@ -7,7 +13,7 @@ import { TOOLBAR_LABEL } from '@/design/styles'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar } from '@/design/Toolbar'
 import { paintOn } from '@/engines/core/canvas-2d'
-import { rootColour, rootFont } from '@/engines/core/palette'
+import { rootColour } from '@/engines/core/palette'
 import { paintProgram, programViewport } from '@/engines/timeline/program-wave'
 import { readRulerStyle } from '@/engines/timeline/ruler'
 import { xToTime } from '@/engines/timeline/timeline-geometry'
@@ -22,10 +28,6 @@ import { usePeaks } from '@/stores/peaks'
 import { OutputMeter } from './OutputMeter'
 import { SpectrumBand } from './SpectrumBand'
 import type { SoundTransport } from './useSoundTransport'
-
-/** The scale's own face, as the ruler above it takes one: monospace, so digits keep their column. */
-const SCALE_FAMILY = 'ui-monospace, monospace'
-const SCALE_SIZE = '9px'
 
 export type ProgramMonitorProps = {
   sequence: SequenceState
@@ -43,7 +45,7 @@ export type ProgramMonitorProps = {
  * fits the width, this being the view one reads rather than one one scrolls.
  */
 export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   /**
    * Folded away to start with. It is the third reading of one panel, and the two above it are
@@ -51,6 +53,12 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
    * this monitor was asked to avoid.
    */
   const [spectrum, setSpectrum] = useState(false)
+  /**
+   * The envelope, on unless it is taken away. Shown by default because it costs no room — it is
+   * drawn inside the wave — but it answers a question about dynamics that not every pass is
+   * asking, and it crosses the crests one may be reading instead.
+   */
+  const [curves, setCurves] = useState(true)
   // Read on paint rather than subscribed to: a waveform arriving is a repaint, never a render.
   const latest = useRef(sequence)
 
@@ -70,21 +78,14 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
         safe: rootColour('--color-level-safe'),
         hot: rootColour('--color-warning'),
         clip: rootColour('--color-danger'),
-        envelope: rootColour('--color-chassis'),
+        ...(curves ? { envelope: rootColour('--color-chassis') } : {}),
         playhead: rootColour('--color-accent'),
         // The strip's own ruler, not one of this monitor's making: the pair reads as one grid.
         ruler: readRulerStyle(),
-        scale: {
-          line: rootColour('--color-border'),
-          text: rootColour('--color-muted'),
-          background: rootColour('--color-chassis'),
-          font: rootFont('--text-micro', SCALE_SIZE, SCALE_FAMILY),
-          unit: t('transport.decibels'),
-          language: i18n.language,
-        },
+        scale: rootColour('--color-border'),
       })
     })
-  }, [peaksOf, t, i18n.language])
+  }, [peaksOf, curves])
 
   useEffect(() => {
     latest.current = sequence
@@ -99,6 +100,7 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
   const onTool = (id: string): void => {
     if (id === 'rewind') return transport.rewind()
     if (id === 'spectrum') return setSpectrum(open => !open)
+    if (id === 'curves') return setCurves(shown => !shown)
     transport.toggle()
   }
 
@@ -126,12 +128,19 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
               shortcut: t('keys.Space'),
             },
             {
+              id: 'curves',
+              labelKey: 'transport.envelope',
+              descriptionKey: 'transport.envelopeHint',
+              icon: mdiChartBellCurveCumulative,
+              pressed: curves,
+              separatorBefore: true,
+            },
+            {
               id: 'spectrum',
               labelKey: 'transport.spectrum',
               descriptionKey: 'transport.spectrumHint',
               icon: mdiEqualizer,
               pressed: spectrum,
-              separatorBefore: true,
             },
           ]}
           activeTool={transport.playing ? 'play' : undefined}

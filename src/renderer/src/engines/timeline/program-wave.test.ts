@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
-import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { paintProgram, programColumns, programEnvelope } from './program-wave'
 import type { Viewport } from './timeline-geometry'
 import { clipFixture } from './timeline-fixtures'
@@ -41,15 +40,15 @@ const peaks = flat(1, 0.25)
  * a scale.
  */
 describe('the programme monitor', () => {
-  const painted = (): { labels: string[]; filled: string[]; context: CanvasRenderingContext2D } => {
+  const painted = () => {
     const labels: string[] = []
     const filled: string[] = []
+    const strokes = { count: 0 }
     let ink = ''
     const context = {
       fillRect: () => filled.push(ink),
       fill: () => filled.push(ink),
       fillText: (text: string) => labels.push(text),
-      measureText: (text: string) => ({ width: text.length * 6, actualBoundingBoxAscent: 7 }),
       save: () => {},
       restore: () => {},
       beginPath: () => {},
@@ -57,7 +56,7 @@ describe('the programme monitor', () => {
       rect: () => {},
       clip: () => {},
       lineTo: () => {},
-      stroke: () => {},
+      stroke: () => strokes.count++,
       set fillStyle(colour: string) {
         ink = colour
       },
@@ -68,19 +67,17 @@ describe('the programme monitor', () => {
       // `as`: what these painters ask of a 2D context is the members above, and jsdom builds none.
     } as unknown as CanvasRenderingContext2D
 
-    return { labels, filled, context }
+    return {
+      labels,
+      filled,
+      context,
+      get stroked() {
+        return strokes.count
+      },
+    }
   }
 
   const style = { background: 'a', tick: 'b', text: 'c', font: '10px monospace' }
-
-  const scale = {
-    line: 'grid',
-    text: 'ink',
-    background: 'plate',
-    font: '9px monospace',
-    unit: 'dB',
-    language: 'en',
-  }
 
   const palette = {
     safe: 'green',
@@ -90,12 +87,21 @@ describe('the programme monitor', () => {
     playhead: 'p',
     background: 'bg',
     ruler: style,
-    scale,
+    scale: 'grid',
   }
 
-  const paint = (state: SequenceState, height = 120) => {
+  const paint = (state: SequenceState, over: Partial<typeof palette> = {}) => {
     const surface = painted()
-    paintProgram(surface.context, state, () => peaks, { width: 400, height }, palette)
+    paintProgram(
+      surface.context,
+      state,
+      () => peaks,
+      { width: 400, height: 120 },
+      {
+        ...palette,
+        ...over,
+      },
+    )
     return surface
   }
 
@@ -121,19 +127,22 @@ describe('the programme monitor', () => {
     expect(filled.indexOf('amber')).toBeLessThan(filled.indexOf('red'))
   })
 
-  it('writes each graduation with the unit it was handed, in the language it was handed', () => {
-    const { labels } = paint(montage([sounding('A1', 'a')]))
+  it('graduates the levels behind the wave, and writes nothing on them', () => {
+    const { filled, labels } = paint(montage([sounding('A1', 'a')]))
 
-    expect(labels).toContain(`-6${NO_BREAK_SPACE}dB`)
-    expect(labels).toContain(`-18${NO_BREAK_SPACE}dB`)
+    expect(filled).toContain('grid')
+    // The lines carried their decibels in writing until 2026-08-16: on a linear axis the three
+    // stacked on top of one another around the middle, −12 and −18 a few pixels apart.
+    expect(labels.some(label => /dB/.test(label))).toBe(false)
   })
 
-  /** A monitor squeezed to a sliver has no room to write on, and a label over the ruler is worse
-      than no label at all. */
-  it('drops the graduations it cannot write above the ruler', () => {
-    const { labels } = paint(montage([sounding('A1', 'a')]), 40)
+  /** The one mark here that answers a question not every pass is asking, so it can be taken away. */
+  it('leaves the envelope out when the reader has taken the curves away', () => {
+    const shown = paint(montage([sounding('A1', 'a')]))
+    const hidden = paint(montage([sounding('A1', 'a')]), { envelope: undefined })
 
-    expect(labels).not.toContain(`-6${NO_BREAK_SPACE}dB`)
+    expect(shown.stroked).toBeGreaterThan(0)
+    expect(hidden.stroked).toBe(0)
   })
 })
 
