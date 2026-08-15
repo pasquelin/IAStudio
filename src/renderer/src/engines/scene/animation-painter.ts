@@ -9,16 +9,11 @@
 import type { Us } from '@shared/domain/time'
 import { placeRows } from '../timeline/band'
 import { paintBandEnd } from '../timeline/band-end'
-import { paintRuler, type RulerStyle } from '../timeline/ruler'
+import { paintRuler, readRulerStyle } from '../timeline/ruler'
 import { RULER_HEIGHT, timeToX, type Viewport } from '../timeline/timeline-geometry'
-import { memoPalette, rootColour, rootFont } from '../core/palette'
+import { memoPalette, rootColour } from '../core/palette'
 import type { Size } from '../core/geometry'
 import type { AnimationRow } from './animation-rows'
-
-const RULER_FAMILY = 'ui-monospace, monospace'
-
-/** `--text-mini` at scale 1, for a paint with no document to read from. */
-const RULER_SIZE = '10px'
 
 /** Half the diagonal of a key, in pixels. A diamond reads at this size and crowds beyond it. */
 const KEY_REACH = 4
@@ -39,7 +34,6 @@ type Palette = {
   block: string
   playhead: string
   muted: string
-  rulerFont: string
 }
 
 const readPalette = memoPalette((): Palette => ({
@@ -52,7 +46,6 @@ const readPalette = memoPalette((): Palette => ({
   block: rootColour('--color-elevated'),
   playhead: rootColour('--color-accent'),
   muted: rootColour('--color-muted'),
-  rulerFont: rootFont('--text-mini', RULER_SIZE, RULER_FAMILY),
 }))
 
 export type AnimationPaint = {
@@ -134,13 +127,12 @@ export function paintAnimation(
 
   paintRows(context, paint, size, palette)
 
-  const style: RulerStyle = {
-    background: palette.ruler,
-    tick: palette.border,
-    text: palette.muted,
-    font: palette.rulerFont,
-  }
-  paintRuler(context, { viewport: paint.viewport, width: size.width, fps: paint.fps, style })
+  paintRuler(context, {
+    viewport: paint.viewport,
+    width: size.width,
+    fps: paint.fps,
+    style: readRulerStyle(),
+  })
 
   // A ruler graduated to seventeen seconds over a five-second scene says the scene is longer than
   // it is, and there is nowhere for a key to go out there — the head is clamped to the duration.

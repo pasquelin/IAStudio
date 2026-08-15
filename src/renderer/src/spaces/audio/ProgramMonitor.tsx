@@ -9,6 +9,7 @@ import { Toolbar } from '@/design/Toolbar'
 import { paintOn } from '@/engines/core/canvas-2d'
 import { rootColour } from '@/engines/core/palette'
 import { paintProgram, programViewport } from '@/engines/timeline/program-wave'
+import { readRulerStyle } from '@/engines/timeline/ruler'
 import { xToTime } from '@/engines/timeline/timeline-geometry'
 import {
   sequenceDuration,
@@ -56,6 +57,8 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
         // that informs — 3:1, by 1.4.11. Read this way, both halves of the pair draw alike.
         wave: rootColour('--color-muted'),
         playhead: rootColour('--color-accent'),
+        // The strip's own ruler, not one of this monitor's making: the pair reads as one grid.
+        ruler: readRulerStyle(),
       })
     })
   }, [peaksOf])

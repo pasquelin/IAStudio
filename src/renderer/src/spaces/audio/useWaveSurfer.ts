@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js'
+import TimelinePlugin, { type TimelinePluginOptions } from 'wavesurfer.js/dist/plugins/timeline.js'
 import { playbackToken } from '@/engines/timeline/playback'
 import { useToken } from '@/hooks/useToken'
 import { durationOf } from '@/engines/audio/audio-data'
 import type { RenderedAudio } from '@/engines/audio/audio-render'
 import type { Region } from '@/engines/audio/edits'
+import { formatDuration } from '@/engines/timeline/timecode'
+import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import { SECOND, type Us } from '@/engines/timeline/timeline-state'
 
 export type WaveSurferHandle = {
@@ -35,6 +38,29 @@ const BAR_RADIUS = 2
 
 /** Wide enough to read as a line against the veil the selection is tinted with, and no wider. */
 const CURSOR_WIDTH = 2
+
+/**
+ * The graduations above the wave — where the strip and the programme monitor both wear
+ * `paintRuler`, this one is wavesurfer's own plugin, the take being drawn by wavesurfer.
+ *
+ * `RULER_HEIGHT` is the strip's, so the three rulers of an Audio tab stand the same height. Its
+ * INK is not set here: the wrapper carries `part="timeline-wrapper"`, so `index.css` dresses it
+ * the way it already dresses the region handles — which is what keeps a theme switched with the
+ * editor open from leaving this one surface behind, and the values where they belong.
+ *
+ * Labels through `formatDuration`, the one the editor's own bar announces a selection with. The
+ * strip reads timecode in frames; a take has no frame grid of its own to read against.
+ */
+const TIMELINE: TimelinePluginOptions = {
+  height: RULER_HEIGHT,
+  insertPosition: 'beforebegin',
+  // One label per graduation. The plugin's own default is one every TEN, which on a generated
+  // take — five seconds, thirty at most — put a single "00:00.00" at the far left and nothing
+  // after it. The graduation itself already adapts to the width, so following it adapts too:
+  // a second apart on a short take, a minute apart on a long one.
+  primaryLabelInterval: 1,
+  formatTimeCallback: seconds => formatDuration(Math.round(seconds * SECOND)),
+}
 
 /**
  * Wavesurfer, driven from the edit chain rather than from the file on disk.
@@ -89,7 +115,7 @@ export function useWaveSurfer({
       barGap: BAR_GAP,
       barRadius: BAR_RADIUS,
       height: 'auto',
-      plugins: [plugin],
+      plugins: [plugin, TimelinePlugin.create(TIMELINE)],
     })
 
     surfer.current = instance

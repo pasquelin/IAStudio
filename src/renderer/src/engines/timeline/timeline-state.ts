@@ -290,6 +290,15 @@ export function editableTrack(state: SequenceState, id: string): Track | null {
   return track && !track.locked ? track : null
 }
 
+/**
+ * Whether the montage holds a row of this kind — the question two callers were each answering
+ * for themselves: what a drop may open a row for, and whether a pair of halves can exist here
+ * at all. It belongs to the state, not to the inserter nor to the painter.
+ */
+export function hasTrackOfKind(state: SequenceState, kind: TrackKind): boolean {
+  return state.tracks.some(track => track.kind === kind)
+}
+
 export function trackOfClip(state: SequenceState, clipId: string): Track | null {
   return state.tracks.find(track => track.clips.some(clip => clip.id === clipId)) ?? null
 }

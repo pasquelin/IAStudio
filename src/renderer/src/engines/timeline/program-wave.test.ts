@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
-import { programColumns } from './program-wave'
+import { paintProgram, programColumns } from './program-wave'
 import type { Viewport } from './timeline-geometry'
 import { clipFixture } from './timeline-fixtures'
 import { EMPTY_SOUND_SEQUENCE, makeTrack, type SequenceState } from './timeline-state'
@@ -33,6 +33,46 @@ const sounding = (id: string, clipId: string, gain = 0) =>
   })
 
 const peaks = flat(1, 0.25)
+
+/**
+ * The monitor says WHERE in the montage one is, which a waveform alone never did: the strip below
+ * carries the same graduations, and the pair now reads as one grid rather than as a picture above
+ * a scale.
+ */
+describe('the programme monitor', () => {
+  const painted = (): { labels: string[]; context: CanvasRenderingContext2D } => {
+    const labels: string[] = []
+    const context = {
+      fillRect: () => {},
+      fillText: (text: string) => labels.push(text),
+      set fillStyle(_ink: string) {},
+      set font(_font: string) {},
+      set textBaseline(_baseline: string) {},
+      // `as`: what a ruler asks of a 2D context is these five members, and jsdom builds none.
+      // The take is left without peaks on purpose — the wave is `paintWaveform`'s own suite.
+    } as unknown as CanvasRenderingContext2D
+
+    return { labels, context }
+  }
+
+  const style = { background: 'a', tick: 'b', text: 'c', font: '10px monospace' }
+
+  it('graduates the time across its width', () => {
+    const { labels, context } = painted()
+
+    paintProgram(
+      context,
+      montage([sounding('A1', 'a')]),
+      () => null,
+      { width: 400, height: 120 },
+      { wave: 'w', playhead: 'p', background: 'bg', ruler: style },
+    )
+
+    expect(labels.length).toBeGreaterThan(0)
+    // A timecode, not a bare number of microseconds: the same reading as the strip's.
+    expect(labels[0]).toMatch(/^\d\d:\d\d:\d\d/)
+  })
+})
 
 describe('the waveform of a whole montage', () => {
   it('adds up what two tracks put on the same pixel', () => {

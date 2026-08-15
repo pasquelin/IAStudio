@@ -15,9 +15,10 @@ import {
 } from './timeline-geometry'
 import { MDI_VIEWBOX, mdiPath } from '@/helpers/mdi-canvas'
 import { paintBandEnd } from './band-end'
-import { paintRuler as paintBandRuler } from './ruler'
+import { paintRuler as paintBandRuler, readRulerStyle } from './ruler'
 import {
   clipEnd,
+  hasTrackOfKind,
   sequenceDuration,
   type Clip,
   type SequenceState,
@@ -44,6 +45,23 @@ const LINK_GLYPHS: Record<'tied' | 'alone', string> = {
   alone: mdiLinkVariantOff,
 }
 
+/**
+ * Whether a pair can still HOLD on this montage — which is what decides that the mark above is
+ * worth drawing.
+ *
+ * A `linkId` is only ever laid by `insert.ts`, on the two halves of a rush that has both a picture
+ * and a sound. With no picture row there is no half to travel with, and the Audio workspace has
+ * none by construction: every clip there wore the broken link, forever, saying the same thing
+ * about all of them. A mark that cannot vary is not a state, it is decoration.
+ *
+ * A sound clip CAN outlive its picture — `removeTrack` takes a row without clearing the ids of
+ * the clips left behind — and its `linkId` then names a half that is gone. Drawing nothing is the
+ * honest answer there too: the full link would promise a pair that no longer exists.
+ */
+function pairsPossible(state: SequenceState): boolean {
+  return hasTrackOfKind(state, 'video')
+}
+
 /** Which fill a row's clips take. Keyed by kind, so a third one cannot be added without one. */
 const CLIP_FILLS: Record<TrackKind, 'clip' | 'clipAudio'> = {
   video: 'clip',
@@ -61,11 +79,9 @@ function paintGlyph(context: CanvasRenderingContext2D, glyph: string, at: Point)
 }
 
 const CLIP_FAMILY = 'ui-sans-serif, system-ui'
-const RULER_FAMILY = 'ui-monospace, monospace'
 
-/** `--text-tiny` and `--text-mini` at scale 1, for a paint with no document to read from. */
+/** `--text-tiny` at scale 1, for a paint with no document to read from. */
 const CLIP_SIZE = '11px'
-const RULER_SIZE = '10px'
 
 export type PaintOptions = {
   /** What a clip is called. Absent falls back to its asset id, which is always available. */
@@ -88,7 +104,6 @@ type Palette = {
   text: string
   muted: string
   clipFont: string
-  rulerFont: string
 }
 
 const readPalette = memoPalette((): Palette => ({
@@ -103,7 +118,6 @@ const readPalette = memoPalette((): Palette => ({
   text: rootColour('--color-text'),
   muted: rootColour('--color-muted'),
   clipFont: rootFont('--text-tiny', CLIP_SIZE, CLIP_FAMILY),
-  rulerFont: rootFont('--text-mini', RULER_SIZE, RULER_FAMILY),
 }))
 
 function paintRuler(
@@ -111,18 +125,12 @@ function paintRuler(
   state: SequenceState,
   viewport: Viewport,
   size: Size,
-  palette: Palette,
 ): void {
   paintBandRuler(context, {
     viewport,
     width: size.width,
     fps: state.settings.fps,
-    style: {
-      background: palette.ruler,
-      tick: palette.border,
-      text: palette.muted,
-      font: palette.rulerFont,
-    },
+    style: readRulerStyle(),
   })
 }
 
@@ -250,6 +258,13 @@ function paintEdgeBars(
   context.fillRect(right - EDGE_BAR_WIDTH, barTop, EDGE_BAR_WIDTH, barHeight)
 }
 
+/**
+ * What every clip of one paint shares — read once for the strip, where the nine arguments above
+ * vary per clip. `linkable` is derived from the montage rather than taken from `PaintOptions`:
+ * that one is the caller's, and a caller has no business claiming a montage holds pairs.
+ */
+type ClipPaint = { palette: Palette; options: PaintOptions; linkable: boolean }
+
 function paintClip(
   context: CanvasRenderingContext2D,
   clip: Clip,
@@ -260,9 +275,8 @@ function paintClip(
   top: number,
   height: number,
   selected: boolean,
-  palette: Palette,
-  options: PaintOptions,
   kind: TrackKind,
+  { palette, options, linkable }: ClipPaint,
 ): void {
   const boxTop = top + CLIP_INSET
   const boxHeight = height - CLIP_INSET * 2 - 1
@@ -303,7 +317,7 @@ function paintClip(
 
   // From the row's top, not the box's: the placement is measured against the bands `hitTest`
   // reads, and those are the row's.
-  const badge = badgeAt(left, right, top)
+  const badge = linkable ? badgeAt(left, right, top) : null
   if (badge) {
     // Full ink for a pair that holds, the quiet one for a clip standing alone: the state is read
     // from the glyph, and the ink only says which of the two is the ordinary case. A picked clip
@@ -343,6 +357,10 @@ export function paintTimeline(
   context.font = palette.clipFont
   context.textBaseline = 'top'
 
+  // Read once for the whole strip rather than per clip: `linkable` answers about the MONTAGE, and
+  // asking it five hundred times a frame would walk the tracks five hundred times.
+  const shared: ClipPaint = { palette, options, linkable: pairsPossible(state) }
+
   for (const { track, offset } of trackRows(state)) {
     const top = RULER_HEIGHT + offset - viewport.scrollTop
     if (top > size.height || top + track.height < RULER_HEIGHT) continue
@@ -363,14 +381,13 @@ export function paintTimeline(
         top,
         track.height,
         state.selectedId === clip.id,
-        palette,
-        options,
         track.kind,
+        shared,
       )
     }
   }
 
-  paintRuler(context, state, viewport, size, palette)
+  paintRuler(context, state, viewport, size)
 
   // Where the montage stops, marked exactly as a scene's duration is: the two bands had said the
   // same thing in two different languages — a wash of scrim there, nothing at all here.

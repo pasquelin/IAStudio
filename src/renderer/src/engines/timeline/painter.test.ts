@@ -480,4 +480,17 @@ describe('the mark saying a clip travels with its other half', () => {
     // 200 ms is 20 px wide, under the three badge widths a corner mark asks of a clip.
     expect(paintOne(clip('a', 0, 200_000))).toHaveLength(0)
   })
+
+  /**
+   * A `linkId` is only ever laid on the two halves of a rush that has a picture AND a sound, so a
+   * montage with no picture track can never hold one. The Audio workspace has none by
+   * construction: every clip there wore the broken link forever, saying the same thing about all
+   * of them — a mark that cannot vary is decoration, not a state.
+   */
+  it('is left off entirely where no pair could exist', () => {
+    const painted = spyContext()
+    paintTimeline(painted.context, soundWith([clip('a', 0, 1_000_000)]), viewport, size)
+
+    expect(painted.glyphs).toHaveLength(0)
+  })
 })
