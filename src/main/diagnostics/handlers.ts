@@ -64,7 +64,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'shell.menu': 'shell',
   // A monitor belongs to the sequence it shows, so this is read where that document's own
   // failures are — not with the shell's, which is where the window and its menus report.
-  'sequence.fullScreen': 'document',
+  'sequence.mirror': 'document',
 }
 
 /**

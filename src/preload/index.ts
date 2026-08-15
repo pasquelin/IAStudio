@@ -174,6 +174,9 @@ const bridge: StudioBridge = {
     openPrivacySettings: () => ipcRenderer.invoke(CHANNELS.dictationOpenPrivacy),
     onEvent: callback => subscribe<SttEvent>(EVENTS.dictation, callback),
   },
+  mirror: {
+    open: () => ipcRenderer.invoke(CHANNELS.mirrorOpen),
+  },
   window: {
     toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),
     state: () => ipcRenderer.invoke(CHANNELS.windowState),

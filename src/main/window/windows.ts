@@ -1,7 +1,9 @@
 import { BrowserWindow, dialog, screen, type WebPreferences } from 'electron'
 import { join } from 'node:path'
 import { chromeColor } from './theme'
+import { MIRROR_BACKGROUND } from '@shared/constants'
 import { LICENCES_ROUTE } from '@shared/domain/licence'
+import { MIRROR_ROUTE } from '@shared/domain/mirror'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
 import { USAGE_ROUTE } from '@shared/domain/usage'
 import { TRANSLATIONS } from '@shared/i18n'
@@ -283,4 +285,48 @@ export function openUsageWindow(): BrowserWindow {
     minWidth: 680,
     minHeight: 440,
   })
+}
+
+/** The one video return, held apart from the auxiliary ones — see `openMirrorWindow`. */
+let mirrorWindow: BrowserWindow | null = null
+
+/**
+ * The video return: the program monitor on a screen of its own.
+ *
+ * NOT an auxiliary window, and the difference is the whole point of a separate function. Those
+ * refuse full screen — macOS would give one a space of its own and hide the studio behind it,
+ * which is exactly right for a settings panel and exactly wrong for a monitor one puts on the
+ * second screen and fills. It also wears no title bar inset and no chrome colour: what is behind
+ * the picture is the monitor's own black, so that nothing beside the image tints the judgement.
+ *
+ * One window, revealed rather than stacked: a second return would decode the same sequence twice
+ * more for nothing, and there is only ever one screen to watch.
+ */
+export function openMirrorWindow(): BrowserWindow {
+  if (mirrorWindow && !mirrorWindow.isDestroyed()) {
+    revealWindow(mirrorWindow)
+    return mirrorWindow
+  }
+
+  const window = new BrowserWindow({
+    width: 960,
+    height: 560,
+    minWidth: 320,
+    minHeight: 200,
+    show: false,
+    backgroundColor: MIRROR_BACKGROUND,
+    title: TRANSLATIONS[windowLanguage()].mirror.title,
+    icon: WINDOW_ICON,
+    webPreferences: WEB_PREFERENCES,
+  })
+
+  trackWindowState(window)
+  window.once('ready-to-show', () => window.show())
+  window.on('closed', () => {
+    if (mirrorWindow === window) mirrorWindow = null
+  })
+
+  load(window, { hash: MIRROR_ROUTE })
+  mirrorWindow = window
+  return window
 }

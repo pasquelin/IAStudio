@@ -1,6 +1,7 @@
 import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { isLicencesRoute } from '@shared/domain/licence'
+import { isMirrorRoute } from '@shared/domain/mirror'
 import { isSettingsRoute } from '@shared/domain/settings'
 import { isUsageRoute } from '@shared/domain/usage'
 import { UNKNOWN_SYSTEM_LANGUAGE } from '@shared/i18n'
@@ -38,6 +39,11 @@ const LicencesWindow = lazy(async () => ({
 }))
 
 /** Lazy for a harder reason than size: the charting library must stay out of the first frame. */
+/** Split like its neighbours: the return is opened on purpose, and rarely. */
+const MirrorWindow = lazy(async () => ({
+  default: (await import('@/spaces/video/MirrorWindow')).MirrorWindow,
+}))
+
 const UsageWindow = lazy(async () => ({
   default: (await import('@/usage/UsageWindow')).UsageWindow,
 }))
@@ -67,6 +73,13 @@ function Route({ hash }: { hash: string }) {
     return (
       <Suspense fallback={null}>
         <UsageWindow />
+      </Suspense>
+    )
+  }
+  if (isMirrorRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <MirrorWindow />
       </Suspense>
     )
   }

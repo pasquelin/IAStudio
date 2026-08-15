@@ -2,11 +2,10 @@ import { type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import {
   mdiAlertCircleOutline,
-  mdiFullscreen,
-  mdiFullscreenExit,
   mdiPause,
   mdiPlay,
   mdiSkipPrevious,
+  mdiTelevisionPlay,
 } from '@mdi/js'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -19,6 +18,7 @@ import { transports } from '@/engines/timeline/playback'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useBinding } from '@/stores/bindings'
 import { playbackOf, usePlayback } from '@/stores/playback'
@@ -46,6 +46,12 @@ export type MonitorProps = {
   placeholder?: ReactNode
   /** The monitor the space bar drives. One per tab: two would fight over the playback token. */
   keyboard?: boolean
+  /**
+   * Whether this monitor shows the EDIT, which is what the video return mirrors. Its own prop
+   * rather than read off `keyboard`: that one says who hears the space bar, and a return offered
+   * on the take being trimmed would be the source monitor copied onto the second screen.
+   */
+  program?: boolean
 }
 
 /**
@@ -60,6 +66,7 @@ export function Monitor({
   onTime,
   placeholder,
   keyboard = false,
+  program = false,
 }: MonitorProps) {
   const { t } = useTranslation()
   const pictureRef = useRef<HTMLDivElement>(null)
@@ -118,31 +125,20 @@ export function Monitor({
 
   const toggle = useCallback(() => transports.toggle(owner), [owner])
 
-  // The PICTURE goes full screen, not the section around it: the transport and the timecode are
-  // the studio's furniture, and what one shows a room is the edit alone. The escape hatch is the
-  // platform's own — every browser exits full screen on Escape, and none of them can be talked
-  // out of it, so a button promising anything else would be the second answer to one gesture.
-  const showLarge = useCallback(() => {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen()
-      return
-    }
-    // Reported and not dropped: the API refuses by REJECTING, and a refusal leaves the monitor
-    // exactly where it was — a button that appears to do nothing, with nothing said anywhere.
-    pictureRef.current
-      ?.requestFullscreen()
-      .catch(error => reportFailure('sequence.fullScreen', title, error))
+  /**
+   * A WINDOW rather than this element blown up, and it took a measurement to land there: asked on
+   * the picture, `requestFullscreen()` neither resolved nor rejected — Chromium hands the request
+   * to Electron and, in this window, nothing ever comes back. There was no refusal to report, and
+   * a button that stays pressed with nothing on screen is the worst of both.
+   *
+   * A window is also the better answer to what it is for: it goes on the SECOND screen, beside
+   * the studio rather than over it, and one keeps editing while it plays.
+   */
+  const showReturn = useCallback(() => {
+    void getBridge()
+      ?.mirror.open()
+      .catch(error => reportFailure('sequence.mirror', title, error))
   }, [title])
-
-  // Read from the document rather than kept as ours: Escape and the platform's own chrome both
-  // leave full screen without passing through this component, and a boolean of our own would
-  // then say the opposite of what is on screen.
-  const [large, setLarge] = useState(false)
-  useEffect(() => {
-    const sync = (): void => setLarge(document.fullscreenElement === pictureRef.current)
-    document.addEventListener('fullscreenchange', sync)
-    return () => document.removeEventListener('fullscreenchange', sync)
-  }, [])
 
   const rewind = useCallback(() => {
     engine.current?.pause()
@@ -152,14 +148,14 @@ export function Monitor({
   const playPause = useBinding('sequence.playPause')
   const label = useShortcutLabel()
 
-  const fullScreen = useBinding('sequence.fullScreen')
+  const mirror = useBinding('sequence.mirror')
 
   const run = useCallback(
     (command: CommandId) => {
       if (command === 'sequence.playPause') toggle()
-      if (command === 'sequence.fullScreen') showLarge()
+      if (command === 'sequence.mirror') showReturn()
     },
-    [toggle, showLarge],
+    [toggle, showReturn],
   )
 
   useShortcuts({ scope: 'sequence', enabled: keyboard, onCommand: run })
@@ -173,19 +169,25 @@ export function Monitor({
       // Advertised only where it is armed: a tooltip promising a key nothing listens to lies.
       shortcut: keyboard ? label(playPause) : undefined,
     },
-    {
-      id: 'fullScreen',
-      labelKey: large ? 'transport.exitLarge' : 'transport.large',
-      descriptionKey: large ? 'transport.exitLargeHint' : 'transport.largeHint',
-      icon: large ? mdiFullscreenExit : mdiFullscreen,
-      pressed: large,
-      shortcut: keyboard ? label(fullScreen) : undefined,
-      separatorBefore: true,
-    },
+    ...(program
+      ? [
+          {
+            id: 'mirror',
+            labelKey: 'transport.mirror',
+            descriptionKey: 'transport.mirrorHint',
+            icon: mdiTelevisionPlay,
+            shortcut: label(mirror),
+            separatorBefore: true,
+          },
+        ]
+      : []),
   ]
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col items-center gap-2 p-2">
+    // No padding of its own: what separates the two monitors is the row's gutter and the handle
+    // between them, exactly as two panels are separated. A padding here would add itself to both
+    // sides of that gutter and read as a gap three times too wide.
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col items-center gap-2">
       {/* The element that goes full screen — see `showLarge`, and `index.css` for the black it
           takes there, which is the monitor's own token and not the panel's chassis. */}
       <div ref={pictureRef} className="bg-chassis relative min-h-0 w-full flex-1">
@@ -209,7 +211,7 @@ export function Monitor({
         activeTool={playing ? 'play' : undefined}
         onTool={id => {
           if (id === 'rewind') return rewind()
-          if (id === 'fullScreen') return showLarge()
+          if (id === 'mirror') return showReturn()
           return toggle()
         }}
         extras={
