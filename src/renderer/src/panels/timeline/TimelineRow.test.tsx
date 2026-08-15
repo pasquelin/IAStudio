@@ -204,4 +204,41 @@ describe('TimelineRow', () => {
 
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
+
+  /**
+   * The column is one flat list: a channel is the sibling of its subject in the DOM, and only the
+   * indentation says otherwise. A reader that is told nothing announces a subject and what hangs
+   * off it as equals.
+   */
+  it('says which rows hang off the one above them, since the DOM does not', () => {
+    render(
+      <>
+        {rowWith({ move: () => 0 })}
+        <TimelineRow height={ROW_HEIGHT} nested level={2}>
+          <span>position</span>
+        </TimelineRow>
+      </>,
+      strictly,
+    )
+
+    const [subject, channel] = screen.getAllByRole('listitem')
+    expect(subject).toHaveAttribute('aria-level', '1')
+    expect(channel).toHaveAttribute('aria-level', '2')
+  })
+
+  /**
+   * Indentation is not filiation, and the exposure sheet is where the two part: a clip row is
+   * indented like a channel but stacked in its own run after every subject. Announced at rank 2
+   * it would claim to hang off whichever subject came last.
+   */
+  it('leaves an indented row at the top rank until a caller says otherwise', () => {
+    render(
+      <TimelineRow height={ROW_HEIGHT} nested>
+        <span>Walk</span>
+      </TimelineRow>,
+      strictly,
+    )
+
+    expect(screen.getByRole('listitem')).toHaveAttribute('aria-level', '1')
+  })
 })
