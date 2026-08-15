@@ -271,7 +271,7 @@ position inside the folder, not a location on your disk.
 > link to where it sits. If you move the project without taking those files along, the links break.
 >
 > **Nothing will tell you until you click.** The inspector does not show "File not found" of its
-> own accord: it offers the **Show in the file manager** button, and it is the click, finding
+> own accord: it offers the **Show in folder** button, and it is the click, finding
 > nothing, that brings the message up. See [Assets](07-assets.md).
 
 ---

@@ -286,7 +286,7 @@ result.
 
 A project is **an ordinary folder**. Copy it, that is all.
 
-1. find where it sits — the **Show in the file manager** button in an asset's inspector;
+1. find where it sits — the **Show in folder** button in an asset's inspector;
 2. copy the whole folder: USB stick, disk, sync service, it makes no difference;
 3. on the other machine, `⌘O` and open it.
 

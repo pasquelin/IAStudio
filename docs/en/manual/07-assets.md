@@ -135,7 +135,7 @@ Right-click lists every destination, always in the same order:
 | **Place as a layer** | the open image, Image workspace | pictures |
 | **Add to the montage** | the open sequence, Video workspace | all |
 | **Use as base colour** | the open material, Textures workspace | pictures |
-| **Show in the file manager** | opens the folder holding the file | all |
+| **Show in folder** | opens the file manager on the file | all |
 
 Each row carries its workspace's icon, the same one as in the title bar. The menu only shows
 destinations able to take **that type**: right-clicking a sound does not offer to lay it out as a
@@ -210,8 +210,8 @@ knows:
 | **Generation** | the model, the seed, the prompt — and two buttons, **Pin this recipe** and **Regenerate** |
 | **File** | the **Location** on disk, and nothing else — the group only appears for an asset held locally |
 
-The **Show in the file manager** button opens the folder containing the file, in Finder, Explorer or
-your file manager.
+The **Show in folder** button steps out of the studio: it opens Finder, Explorer or your file
+manager, with the file already selected.
 
 > "**File not found**" means a linked medium has been moved or deleted from its original location.
 > See the next section.
@@ -331,7 +331,7 @@ Two consequences:
 
 - **Upside** — a 12 GB video rush is not duplicated. Your project stays light.
 - **Downside** — if you move, rename or delete the original file, the link breaks **silently**:
-  nothing reports it until you click **Show in the file manager**, and it is that click, finding
+  nothing reports it until you click **Show in folder**, and it is that click, finding
   nothing, that brings "File not found" up in the inspector.
 
 If you have to take a project elsewhere, take the media it points at too — or copy them into the
@@ -340,7 +340,7 @@ project folder yourself before importing them.
 **But EDITING one brings it into the project.** A linked medium you retouch and then save — `⌘S`
 on an image, **Apply** on a sound take — is written into the project folder, and it is that copy
 the studio shows everywhere afterwards: the shelf, the scene, the inspector. The link is replaced
-by a real file, and **Show in the file manager** now leads there.
+by a real file, and **Show in folder** now leads there.
 
 **The file you pointed at is not touched.** It stays where it is, in the state you left it in:
 writing into a folder you merely showed the studio is a different act from editing an asset. If
