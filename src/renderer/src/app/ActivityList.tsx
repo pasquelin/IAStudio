@@ -20,6 +20,7 @@ import { EmptyState } from '@/design/EmptyState'
 import { UiIcon } from '@/design/UiIcon'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
+import { TONE_TEXT, type StatusTone } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { formatList, kept } from '@/helpers/format'
 import { workspaceLabelKey } from '@/helpers/workspaces'
@@ -35,11 +36,14 @@ export const GLYPHS: Record<ActivityLevel, string> = {
 /**
  * Shared with the toasts, which stopped holding failures alone: a warning that paints itself red
  * says the studio broke where it meant to say the studio is about to do something surprising.
+ *
+ * The SENSE, never the ink — `TONE_TEXT` holds the colour, as it does for every status of the
+ * studio. A second table of shades here is a second place for `danger` to drift.
  */
-export const TINTS: Record<ActivityLevel, string> = {
-  info: 'text-muted',
-  warn: 'text-warning',
-  error: 'text-danger',
+export const TONES: Record<ActivityLevel, StatusTone> = {
+  info: 'muted',
+  warn: 'warning',
+  error: 'danger',
 }
 
 /**
@@ -133,7 +137,7 @@ function ActivityRow({ entry, time }: { entry: ActivityEntry; time: string | nul
       <UiIcon
         path={GLYPHS[entry.level]}
         size={14}
-        className={cn('mt-px shrink-0', TINTS[entry.level])}
+        className={cn('mt-px shrink-0', TONE_TEXT[TONES[entry.level]])}
       />
       <ActivityMessage entry={entry} />
       <span className="text-muted text-tiny shrink-0 tabular-nums">{time}</span>
