@@ -51,6 +51,24 @@ export function selectedAssetIds(state: Pick<SelectionState, 'selection'>): read
 }
 
 /**
+ * Whether the inspector is looking at this very track, in this very document.
+ *
+ * The owner is compared as well as the id, for the reason this store carries one at all: every
+ * sequence names its first tracks `V1` and `A1`, so a track picked in one tab matches by id in
+ * the next. A boolean rather than the descriptor: a header row re-renders when ITS answer moves,
+ * not when the selection moves anywhere.
+ */
+export function isTrackSelected(
+  state: Pick<SelectionState, 'selection'>,
+  documentId: string,
+  trackId: string,
+): boolean {
+  const { selection } = state
+  if (selection.kind !== 'track' || selection.ownerId !== documentId) return false
+  return selection.ids.includes(trackId)
+}
+
+/**
  * Whether a write would say the same thing as what is already there.
  *
  * Worth asking on every one of them: the canvas re-selects the same clip on every pointer down

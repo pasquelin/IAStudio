@@ -18,7 +18,7 @@ import { cn } from '@/helpers/cn'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { isTyping } from '@/helpers/typing'
 import { InlineRename } from '@/panels/shared/InlineRename'
-import { useSelection } from '@/stores/selection'
+import { isTrackSelected, useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
 import { TimelineHeaderColumn, TimelineRow } from './TimelineRow'
@@ -109,6 +109,7 @@ function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHea
   const write = (change: (current: Track) => Track): void =>
     writeTrack(documentId, track.id, change)
 
+  const selected = useSelection(state => isTrackSelected(state, documentId, track.id))
   const audible = playsThrough(sequence, track)
   const rows = { documentId, trackId: track.id, canRise, canFall }
 
@@ -124,6 +125,10 @@ function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHea
         end: () => useSequences.getState().endGesture(documentId),
       }}
       data-testid={`track-header-${track.id}`}
+      // The one row the inspector is describing. Nothing else on this line says so: a click sends
+      // the track to the inspector, which then talks about a row the column does not mark.
+      // `true` rather than `page`, which is for navigation — this is a selection within a list.
+      aria-current={selected ? 'true' : undefined}
       onPointerDown={() => useSelection.getState().selectTrack(documentId, track.id)}
       onContextMenu={event => {
         // A right-click in the rename field belongs to the native clipboard and spelling menu
