@@ -801,8 +801,16 @@ bâti par le processus principal et l’UI par le renderer, et que les deux doiv
 chose.
 
 Le découpage est un choix de **stockage**, pas de contrat : l’espace de noms reste unique, et
-`main/i18n-sections.test.ts` refuse qu’un fichier plat réapparaisse à la racine du dossier — il
-détournerait l’import et ferait disparaître la langue entière.
+`main/i18n-sections.test.ts` refuse qu’un fichier plat réapparaisse à la racine du dossier.
+
+**Les deux résolveurs ne sont pas d’accord sur ce cas, et c’est ce qui le rend dangereux** :
+`tsc` lit `./fr` comme le dossier, donc **le typecheck reste vert** ; Vite lit le JSON, l’export
+nommé disparaît, et `TRANSLATIONS.fr` vaut `undefined` à l’exécution — la langue entière. Ce
+n’est donc pas le compilateur qui garde ce cas, mais cette suite, et elle seule. Elle tient aussi
+la frontière entre les imports : dans `en/index.ts`, douze imports **de type** pointent vers
+`../fr/` — c’est ainsi que la forme attendue d’une section anglaise est dérivée de sa jumelle
+plutôt que recopiée — et douze imports **de valeur** pointent vers `./`. Un import de valeur qui
+part vers `fr/` compile vert et rend toute une section en français.
 
 ### Une branche antérieure à la découpe entre en conflit : quoi faire
 

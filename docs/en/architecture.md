@@ -770,8 +770,16 @@ languages are kept at strict parity. They live in `shared/` because the native m
 the main process and the UI by the renderer, and the two must say the same thing.
 
 The split is a **storage** choice, not a contract one: the namespace stays single, and
-`main/i18n-sections.test.ts` refuses a flat file reappearing at the root of the directory — it
-would hijack the import and take the whole language down with it.
+`main/i18n-sections.test.ts` refuses a flat file reappearing at the root of the directory.
+
+**The two resolvers disagree about that case, which is what makes it dangerous**: `tsc` reads
+`./fr` as the directory, so **the typecheck stays green**; Vite reads the JSON, the named export
+is gone, and `TRANSLATIONS.fr` is undefined at run time — the whole language. So it is not the
+compiler that guards this case but that suite, and it alone. It also holds the line between the
+two kinds of import: in `en/index.ts`, twelve **type** imports point at `../fr/` — that is how an
+English section's expected shape is derived from its twin rather than copied out — and twelve
+**value** imports point at `./`. A value import straying into `fr/` compiles green and renders a
+whole section in French.
 
 ### A branch older than the split conflicts: what to do
 

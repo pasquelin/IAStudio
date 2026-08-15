@@ -31,9 +31,10 @@ describe('i18n sections', () => {
 
     // A merge conflict between a branch that split the bundle and one that edited the flat file
     // is offered as "deleted by us / modified by them", and keeping the flat file looks like the
-    // safe answer. Measured: it is the worst one. `./fr` then resolves to `fr.json` rather than
-    // to the directory, the named export is gone, and `TRANSLATIONS.fr` is undefined — the whole
-    // language, not one key.
+    // safe answer. Measured: it is the worst one, and the two resolvers disagree about it.
+    // `tsc` reads `./fr` as the directory index, so the typecheck stays GREEN; Vite reads it as
+    // `fr.json`, the named export is gone, and `TRANSLATIONS.fr` is undefined at run time — the
+    // whole language, not one key. This suite is the only thing that says so.
     expect(flat).toEqual([])
   })
 
@@ -42,6 +43,19 @@ describe('i18n sections', () => {
     const reference = sectionFiles(DEFAULT_LANGUAGE)
 
     expect(found).toEqual(Object.fromEntries(CODES.map(code => [code, reference])))
+  })
+
+  it.each(CODES)('takes the sections of %s from its own directory', language => {
+    const index = readFileSync(new URL(`${language}/index.ts`, I18N), 'utf8')
+    const valueImports = [...index.matchAll(/^import (?!type )[^']+'([^']+\.json)'/gm)]
+
+    // `en/index.ts` carries twelve `'../fr/…'` type imports right above twelve `'./…'` value
+    // ones, and swapping a value import for its French twin compiles green and satisfies every
+    // other assertion here — the roots match, only the words change language. Measured: the whole
+    // of `scene` turns French that way, 183 leaves, caught by nothing but `bundles.test.ts`.
+    expect(valueImports.map(([, path]) => path)).toEqual(
+      sectionFiles(language).map(file => `./${file}`),
+    )
   })
 
   it.each(CODES)('spreads every section of %s into the bundle', language => {
