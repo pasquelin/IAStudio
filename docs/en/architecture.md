@@ -328,8 +328,8 @@ load.
 
 ### One action registry, two readers
 
-`ACTION_REGISTRY` (`shared/domain/assistant.ts`) declares what the studio can be asked to do — ten
-actions, their fields, and **what each one commits** (`none`, `asset`, `credits`). It has two
+`ACTION_REGISTRY` (`shared/domain/assistant.ts`) declares what the studio can be asked to do —
+eleven actions, their fields, and **what each one commits** (`none`, `asset`, `credits`). It has two
 readers, and **neither of them decides**:
 
 - **the assistant**, inside the window, which lists it to its model as a vocabulary;

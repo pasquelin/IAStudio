@@ -14,7 +14,7 @@ Elle a deux portes, et **elles donnent sur la même pièce** :
 | **L’assistant** | dans la fenêtre, sur `⌘K` | vous, en français ou en anglais |
 | **Le point d’entrée** | fermé au départ, à ouvrir dans les réglages | un programme extérieur, comme Claude Code |
 
-Les deux exécutent **exactement le même catalogue de dix actions**, décrit plus bas. Rien n’est
+Les deux exécutent **exactement le même catalogue de onze actions**, décrit plus bas. Rien n’est
 possible d’un côté qui ne le soit de l’autre, et **rien qui engage quelque chose ne part sans que
 vous l’ayez vu à l’écran** — d’où que vienne la demande.
 
@@ -89,7 +89,7 @@ Le micro à côté du champ est le même que partout ailleurs, avec les mêmes r
 
 ## Le point d’entrée pour un programme extérieur
 
-C’est la seconde porte : **un autre logiciel installé sur votre machine peut lancer les mêmes dix
+C’est la seconde porte : **un autre logiciel installé sur votre machine peut lancer les mêmes onze
 actions**. Un assistant de programmation comme Claude Code, par exemple, ou tout client parlant le
 protocole **MCP**.
 
@@ -140,7 +140,7 @@ lancement-ci**. Ils ne sont pas dans ce manuel parce qu’ils ne peuvent pas y �
 ### 3. Coller dans un terminal
 
 Ouvrez un terminal **dans le dossier du projet où vous travaillez avec Claude Code**, et collez la
-ligne. C’est tout : Claude Code connaît désormais le studio, et voit ses dix outils.
+ligne. C’est tout : Claude Code connaît désormais le studio, et voit ses onze outils.
 
 Pour vérifier, demandez-lui la liste de ses serveurs MCP — le studio doit y figurer, connecté.
 
@@ -173,7 +173,7 @@ n’est parti.
 
 ---
 
-## Les dix actions
+## Les onze actions
 
 Le même catalogue des deux côtés. La colonne de droite dit ce que l’action **engage** — c’est elle
 qui décide si le studio vous demandera quelque chose.
@@ -190,6 +190,12 @@ qui décide si le studio vous demandera quelque chose.
 | **Proposer des variantes de prompt** | réécrit une phrase en plusieurs variantes taillées pour le modèle armé | rien |
 | **Traduire un prompt en anglais** | porte un texte dans la langue sur laquelle les modèles sont entraînés | rien |
 | **Décrire le style des références** | lit les images de référence du formulaire et en rend une description | rien |
+| **Refermer la conversation** | efface la conversation de l’écran pour laisser voir ce qui vient d’être fait | rien |
+
+**La dernière est la dernière pour une raison.** L’assistant lit ce catalogue dans l’ordre, et
+refermer la conversation est le dernier geste d’un plan : on le fait quand le résultat est à
+l’écran — un espace ouvert, un formulaire rempli. Il ne le fait pas quand la réponse EST le texte
+qu’il vient d’écrire, ni quand une autorisation vous est demandée.
 
 ### Les cinq commandes qui font exception
 
@@ -271,11 +277,11 @@ dans la fenêtre : il y a toujours quelqu’un pour être demandé.
 
 ## Ce que ce chemin ne fait pas
 
-- **Il n’ouvre pas vos fichiers à qui que ce soit.** Les dix actions conduisent le studio ; aucune
+- **Il n’ouvre pas vos fichiers à qui que ce soit.** Les onze actions conduisent le studio ; aucune
   ne lit un dossier, n’envoie un document, ni ne rend le contenu d’un projet.
 - **Il ne remplace pas votre clé API.** Ce qui part vers Scenario part comme d’habitude, avec vos
   identifiants, depuis votre machine.
-- **Il ne dépense jamais de lui-même.** Une seule des dix actions dépense, et elle demande.
+- **Il ne dépense jamais de lui-même.** Une seule des onze actions dépense, et elle demande.
 - **Il ne survit pas à la fermeture.** Le studio fermé, le point d’entrée n’existe plus, et le
   jeton du lancement avec lui.
 

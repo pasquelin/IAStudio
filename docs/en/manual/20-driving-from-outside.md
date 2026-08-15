@@ -14,7 +14,7 @@ It has two doors, and **they open onto the same room**:
 | **The assistant** | in the window, on `⌘K` | you, in English or in French |
 | **The way in** | shut to start with, opened in the settings | a program outside, such as Claude Code |
 
-Both run **exactly the same catalogue of ten actions**, listed further down. Nothing is possible
+Both run **exactly the same catalogue of eleven actions**, listed further down. Nothing is possible
 on one side that is not possible on the other, and **nothing that commits anything goes out
 without your seeing it on screen** — wherever the request came from.
 
@@ -88,7 +88,7 @@ nothing about what it does with the sentence.
 
 ## The way in for a program outside
 
-This is the second door: **another program installed on your machine can run the same ten
+This is the second door: **another program installed on your machine can run the same eleven
 actions**. A coding assistant such as Claude Code, for instance, or any client speaking the **MCP**
 protocol.
 
@@ -138,7 +138,7 @@ are not in this manual because they cannot be: they change.
 ### 3. Paste it in a terminal
 
 Open a terminal **in the project folder where you work with Claude Code**, and paste the line.
-That is all: Claude Code now knows the studio, and sees its ten tools.
+That is all: Claude Code now knows the studio, and sees its eleven tools.
 
 To check, ask it for its MCP servers — the studio should be there, connected.
 
@@ -170,7 +170,7 @@ the prepared generation** has had your yes on screen, nothing has gone out.
 
 ---
 
-## The ten actions
+## The eleven actions
 
 The same catalogue on both sides. The right-hand column says what the action **commits** — that is
 what decides whether the studio will ask you anything.
@@ -187,6 +187,12 @@ what decides whether the studio will ask you anything.
 | **Suggest prompt variants** | rewrites a sentence into variants cut for the armed model | nothing |
 | **Translate a prompt into English** | carries a text into the language the models are trained on | nothing |
 | **Describe the style of the references** | reads the form's reference images and returns a description | nothing |
+| **Close the conversation** | clears the conversation off the screen so that what was just done can be seen | nothing |
+
+**The last one is last for a reason.** The assistant reads this catalogue in order, and closing the
+conversation is the last move of a plan: it does it when the result is on screen — a workspace
+opened, a form filled. It does not when the answer IS the words it has just written, nor when
+permission is being asked of you.
 
 ### The five commands that are the exception
 
@@ -265,11 +271,11 @@ program outside**. The assistant is in the window: there is always someone there
 
 ## What this route does not do
 
-- **It does not open your files to anyone.** The ten actions drive the studio; none reads a folder,
+- **It does not open your files to anyone.** The eleven actions drive the studio; none reads a folder,
   sends a document, or returns the contents of a project.
 - **It does not replace your API key.** What goes to Scenario goes as usual, with your credentials,
   from your machine.
-- **It never spends on its own.** One of the ten spends, and it asks.
+- **It never spends on its own.** One of the eleven spends, and it asks.
 - **It does not outlive the studio.** With the studio closed the way in no longer exists, and the
   launch's token with it.
 

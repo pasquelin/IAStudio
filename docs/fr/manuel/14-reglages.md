@@ -664,7 +664,7 @@ que la case n’est pas cochée.
 demandé vous-même dans l’assistant. Un programme extérieur ne peut pas se le donner à votre place.
 
 > **Le [chapitre 20](20-piloter-de-l-exterieur.md) est celui de ce réglage** : ce qui garde ce
-> point d’entrée, comment y brancher Claude Code, les dix actions accessibles et ce que chacune
+> point d’entrée, comment y brancher Claude Code, les onze actions accessibles et ce que chacune
 > engage.
 
 ### Commande de connexion

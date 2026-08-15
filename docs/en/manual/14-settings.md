@@ -644,7 +644,7 @@ as long as the box stays unticked.
 yourself in the assistant. A program outside cannot give it on your behalf.
 
 > **[Chapter 20](20-driving-from-outside.md) is this setting's own**: what guards that way in, how
-> to connect Claude Code to it, the ten actions it reaches and what each one commits.
+> to connect Claude Code to it, the eleven actions it reaches and what each one commits.
 
 ### Connection command
 
