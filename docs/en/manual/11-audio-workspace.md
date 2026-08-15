@@ -24,6 +24,17 @@ full width, one under the other:
 A **handle** separates them: drag it to give one or the other more room. Under each, a line says
 which of the two you are looking at.
 
+**All three surfaces carry graduations, at the same height** — the edit monitor, the take monitor
+and the bottom strip. They do not count the same thing, and that is deliberate:
+
+| Surface | What its ruler counts |
+|---|---|
+| The edit, on top | the **edit's time**, in frames — the very ruler of the bottom strip |
+| The take, below | the **take's duration**, in minutes and seconds |
+
+A take has no frame grid of its own: it is a sound, not a run of frames. That is why its ruler
+counts duration where the other two count frames.
+
 > **An audio tab holds two halves, and they are saved together.** Below, the **one-take editor**:
 > the waveform and its tools. On top and in the bottom strip, the **edit**, where takes are laid
 > side by side — described [further down](#the-edit). One tab, one `⌘S`, one file.
