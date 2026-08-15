@@ -109,6 +109,16 @@ describe('the column beside the band', () => {
     expect(screen.getByTestId('anim-subject-cube-1')).toHaveTextContent('Cube')
     expect(screen.queryByTestId('anim-channel-t1')).not.toBeInTheDocument()
   })
+
+  // `[].every()` is `true`, so an object with no channel used to draw its three switches pressed
+  // — muted, soloed and locked — while the montage beside it drew the same three flat and off.
+  it('leaves the switches off on an object that holds no channel', () => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('cube-1')] })
+    headers()
+
+    for (const name of [/Rendre muette/, /Écouter seule/, /Verrouiller/])
+      expect(subject().getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false')
+  })
 })
 
 describe('taking a key back off', () => {
