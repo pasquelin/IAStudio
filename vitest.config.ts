@@ -143,6 +143,7 @@ const DOM_BOUND = [
   'src/renderer/src/panels/layers/LayerMenu.test.ts',
   'src/renderer/src/spaces/three/SceneNodeMenu.test.ts',
   'src/renderer/src/helpers/model-for-family.test.ts',
+  'src/renderer/src/helpers/plan-access.test.ts',
   'src/renderer/src/helpers/scroll-parent.test.ts',
   'src/renderer/src/helpers/tool-registry.test.ts',
   'src/renderer/src/helpers/typing.test.ts',

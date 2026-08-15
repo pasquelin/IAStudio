@@ -4,9 +4,8 @@ import { Suspense, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Job } from '@shared/domain/job'
 import type { ModelDescriptor } from '@shared/domain/model'
-import { isBeyondPlan } from '@shared/domain/plan'
 import { useModelForFamily } from '@/helpers/model-for-family'
-import { usePlanAccess } from '@/helpers/plan-access'
+import { usePlanAccess, usePlanRefusal } from '@/helpers/plan-access'
 import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
 import { registerGenerator } from '@/assistant/generator-bridge'
@@ -68,6 +67,7 @@ export function Generator() {
   // Before the guards below return early: a hook cannot be called conditionally.
   const cost = useCostEstimate(modelId, descriptor.data?.fields)
   const plan = usePlanAccess()
+  const refusalFor = usePlanRefusal(plan)
 
   /**
    * The body as the form stands, kept for whoever asks from outside — today the assistant, which
@@ -124,7 +124,7 @@ export function Generator() {
    * edits all land here. Greying the picker alone would leave every one of them to discover the
    * 403.
    */
-  const refused = plan !== null && isBeyondPlan(descriptor.data?.requiredPlanLevel, plan)
+  const refusal = refusalFor(descriptor.data?.requiredPlanLevel)
 
   if (!authenticated) return <MissingCredentials icon={mdiCreationOutline} />
 
@@ -156,9 +156,7 @@ export function Generator() {
       <FormHeader title={descriptor.data?.name ?? t('collection.loading')} />
 
       {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}
-      {refused && (
-        <p className="text-muted px-2 text-xs">{t('models.planLockedHint', { plan: plan.name })}</p>
-      )}
+      {refusal && <p className="text-muted px-2 text-xs">{refusal}</p>}
 
       {/* Gated on the descriptor, which is what makes the deferred form free to the eye: it only
           renders once that round trip has come back, so the wait its chunk adds sits inside one
@@ -178,7 +176,7 @@ export function Generator() {
               submitNote={cost.note}
               onValuesChange={onValuesChange}
               // `project` is not in this: the panel returns before the form when there is none.
-              busy={refused}
+              busy={refusal !== undefined}
               preset={preset}
               // Dictation alone now. Rewriting a prompt, translating it and reading the style of
               // the references left this panel for the assistant: they are things one ASKS for,

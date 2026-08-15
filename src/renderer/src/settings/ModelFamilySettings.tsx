@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelFamily, ModelSummary } from '@shared/domain/model'
-import { isBeyondPlan } from '@shared/domain/plan'
 import { ModelOptions, type PickableModel } from '@/design/ModelOptions'
 import { getBridge } from '@/services/bridge'
-import { usePlanAccess } from '@/helpers/plan-access'
+import { usePlanAccess, usePlanRefusal } from '@/helpers/plan-access'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
 
@@ -60,6 +59,7 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
   const { t } = useTranslation()
   const fetched = useFamilyModels(family)
   const plan = usePlanAccess()
+  const refusalFor = usePlanRefusal(plan)
   const stored = useSettings(state => state.settings.generation.defaultModels)
   const stageBranch = useSettingsDraft(state => state.stageBranch)
   // Staged like every other setting: this screen writes a branch no path can name, which is
@@ -77,8 +77,7 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
    * generator would then open armed on it and fail on every submission.
    */
   const selectedModel = models.find(model => model.id === selected)
-  const selectedRefused =
-    plan !== null && isBeyondPlan(selectedModel?.requiredPlanLevel, plan) ? plan : null
+  const selectedRefusal = refusalFor(selectedModel?.requiredPlanLevel)
 
   return (
     <div className="flex max-w-md flex-col gap-3">
@@ -101,11 +100,7 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
         </select>
       </label>
 
-      {selectedRefused && (
-        <p className="text-warning text-xs">
-          {t('models.planLockedHint', { plan: selectedRefused.name })}
-        </p>
-      )}
+      {selectedRefusal && <p className="text-warning text-xs">{selectedRefusal}</p>}
     </div>
   )
 }
