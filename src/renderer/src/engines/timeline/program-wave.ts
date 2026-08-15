@@ -121,11 +121,12 @@ export function programEnvelope(columns: readonly WaveColumn[]): WaveColumn[] {
 }
 
 /**
- * The programme monitor: the montage from end to end, its graduations, and where the head stands.
+ * The programme monitor: a montage over a span of time, its graduations, and where the head stands.
  *
- * The whole montage always fits the width — this is not a strip one scrolls, it is the "what am
- * I making" view, and a monitor that had to be scrolled to be read would answer a question
- * nobody asked it. An empty montage draws its background and nothing else.
+ * The whole montage fitting the width is the view it OPENS on — `programViewport` builds that one
+ * — but no longer the only one it can show: ten minutes of music squeezed into a panel is a green
+ * band with no shape in it, and nothing to read. The viewport comes in from the host, which owns
+ * the wheel and the fit button. An empty montage draws its background and nothing else.
  *
  * The ruler is `paintRuler`, the very one the strip below wears, and that is the point: the same
  * graduations and the same timecode in both places, or the eye has two grids to reconcile. The
@@ -137,11 +138,11 @@ export function paintProgram(
   peaksOf: (clip: Clip) => Float32Array | null,
   size: Size,
   palette: ProgramPalette,
+  viewport: Viewport,
 ): void {
   context.fillStyle = palette.background
   context.fillRect(0, 0, size.width, size.height)
 
-  const viewport = programViewport(state, size.width)
   const top = RULER_HEIGHT
   const height = size.height - RULER_HEIGHT
   const columns = programColumns(state, peaksOf, viewport, 0, size.width)

@@ -89,6 +89,8 @@
     "mirror": "Fenêtre de retour",
     "mirrorHint": "Ouvre le montage dans une fenêtre à part, à poser sur un autre écran",
     "outputLevel": "Niveau de sortie",
+    "fit": "Tout le montage",
+    "fitHint": "Ramène la vue sur le montage entier. Molette pour défiler, ⌘ + molette pour zoomer",
     "envelope": "Courbes",
     "envelopeHint": "Trace le niveau moyen à l’intérieur de l’onde, sous les crêtes",
     "spectrum": "Spectre",

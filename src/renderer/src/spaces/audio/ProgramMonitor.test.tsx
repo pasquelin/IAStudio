@@ -115,6 +115,44 @@ describe('ProgramMonitor', () => {
   })
 
   /**
+   * Ten minutes of music fitted to a panel is a green band with no shape in it. The wheel is the
+   * one the strip and the dope sheet answer, so the gesture carries across surfaces.
+   */
+  it('zooms under the pointer, and says so by disarming the fit', () => {
+    show()
+    const canvas = wave()
+    const fit = screen.getByRole('button', { name: /Tout le montage/ })
+
+    expect(fit).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.wheel(canvas, { deltaY: -100, ctrlKey: true, clientX: 200 })
+
+    expect(fit).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('goes back to the whole montage when the fit is asked for', () => {
+    show()
+    fireEvent.wheel(wave(), { deltaY: -100, ctrlKey: true, clientX: 200 })
+    const fit = screen.getByRole('button', { name: /Tout le montage/ })
+
+    fireEvent.click(fit)
+
+    expect(fit).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  /** Fitted to the width there is nowhere to scroll to, so a plain wheel must change nothing. */
+  it('stays fitted under a wheel that only scrolls', () => {
+    show()
+
+    fireEvent.wheel(wave(), { deltaY: 100, clientX: 200 })
+
+    expect(screen.getByRole('button', { name: /Tout le montage/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  /**
    * The curves are drawn inside the wave, so they cost no room — but they cross the very crests
    * one may be reading instead, and a reader who has no use for them can put them away.
    */

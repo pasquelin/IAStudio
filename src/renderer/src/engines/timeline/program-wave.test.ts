@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
-import { paintProgram, programColumns, programEnvelope } from './program-wave'
+import { paintProgram, programColumns, programEnvelope, programViewport } from './program-wave'
 import type { Viewport } from './timeline-geometry'
 import { clipFixture } from './timeline-fixtures'
 import { EMPTY_SOUND_SEQUENCE, makeTrack, type SequenceState } from './timeline-state'
@@ -97,10 +97,8 @@ describe('the programme monitor', () => {
       state,
       () => peaks,
       { width: 400, height: 120 },
-      {
-        ...palette,
-        ...over,
-      },
+      { ...palette, ...over },
+      programViewport(state, 400),
     )
     return surface
   }

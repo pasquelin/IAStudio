@@ -9,11 +9,19 @@ const loadBlob = vi.fn(() => Promise.resolve())
 const destroy = vi.fn()
 const setOptions = vi.fn((_options: unknown) => {})
 const dragSelection = vi.fn((_options: unknown) => {})
+const zoom = vi.fn((_pxPerSecond: number) => {})
+const setScroll = vi.fn((_pixels: number) => {})
 const create = vi.fn((_options: unknown) => ({
   on: vi.fn(),
   loadBlob,
   destroy,
   setOptions,
+  zoom,
+  setScroll,
+  getScroll: () => 40,
+  // A two-second take across a 400 px panel: fitted, it is drawn at 200 pixels a second.
+  getDuration: () => 2,
+  getWidth: () => 400,
   isPlaying: () => false,
   play: vi.fn(),
   pause: vi.fn(),
@@ -123,6 +131,51 @@ describe('useWaveSurfer', () => {
       expect(dragSelection).toHaveBeenLastCalledWith({ color: 'rgba(7, 7, 7, 0.35)' })
       // Repainted, not rebuilt: a new instance would come up empty and the take would vanish.
       expect(create).not.toHaveBeenCalled()
+    })
+  })
+
+  /**
+   * The same wheel vocabulary the strip and the programme monitor answer — the state behind it is
+   * wavesurfer's pixels-per-second rather than a viewport, but the gesture must not differ.
+   */
+  describe('the wheel over a take', () => {
+    const wheeled = (event: Partial<WheelEvent>): void => {
+      const { container } = render(<Editor surface />)
+      const surface = container.querySelector('div')
+      if (!surface) throw new Error('the editor drew no surface')
+
+      act(() => {
+        surface.dispatchEvent(
+          new WheelEvent('wheel', { bubbles: true, cancelable: true, ...event }),
+        )
+      })
+    }
+
+    it('zooms in on a modified wheel, from whatever the take was fitted at', () => {
+      wheeled({ deltaY: -100, ctrlKey: true })
+
+      // 200 px a second fitted, one notch of 1.25 in.
+      expect(zoom).toHaveBeenLastCalledWith(250)
+    })
+
+    it('never dezooms past the take laid across the panel', () => {
+      wheeled({ deltaY: 100, ctrlKey: true })
+
+      expect(zoom).toHaveBeenLastCalledWith(200)
+    })
+
+    it('scrolls the take sideways on a plain wheel, touching no zoom', () => {
+      zoom.mockClear()
+      wheeled({ deltaX: 30 })
+
+      expect(setScroll).toHaveBeenLastCalledWith(70)
+      expect(zoom).not.toHaveBeenCalled()
+    })
+
+    it('turns a vertical wheel horizontal under shift, for a single-axis mouse', () => {
+      wheeled({ deltaY: 30, shiftKey: true })
+
+      expect(setScroll).toHaveBeenLastCalledWith(70)
     })
   })
 })
