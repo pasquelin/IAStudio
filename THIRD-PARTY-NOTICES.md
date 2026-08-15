@@ -376,7 +376,7 @@ Licence: GPL-3.0-or-later / LGPL-2.1-or-later
 Corresponding sources:
 
 ```
-ffmpeg 7.1.1: https://ffmpeg.org/releases/ffmpeg-7.1.1.tar.xz
+ffmpeg 7.1.1: https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n7.1.1.tar.gz
 ffmpeg 7.1.5: https://github.com/FFmpeg/FFmpeg/archive/1fdbca85aa.tar.gz
 ```
 

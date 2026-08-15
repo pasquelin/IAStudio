@@ -76,7 +76,9 @@ describe('LicencesWindow', () => {
     render(<LicencesWindow />)
     await userEvent.click(screen.getByRole('button', { name: /FFmpeg/ }))
 
-    expect(screen.getByText(/ffmpeg-7\.1\.1\.tar\.xz/)).toBeInTheDocument()
+    // The archive the ledger points at, which moved off ffmpeg.org on 2026-08-15 — see the note
+    // in RELEASE.md. What is guarded is that the window shows the offer, not where it is hosted.
+    expect(screen.getByText(/n7\.1\.1\.tar\.gz/)).toBeInTheDocument()
   })
 
   /**
