@@ -338,10 +338,10 @@ At **0**, it never tries twice.
 ### Default model, per family
 
 Seven sub-sections: **Image**, **Video**, **3D**, **Audio**, **Upscaling**,
-**Background removal**, **Vectorization**.
+**Background removal**, **Vectorisation**.
 
 The last three have no workspace of their own: they are the families the canvas edits — Enlarge,
-Cut out, Vectorize — reach for. The **Models** panel only shows the open workspace's family, so
+Cut out, Vectorise — reach for. The **Models** panel only shows the open workspace's family, so
 **this is where, and only where, their model is chosen**.
 
 > **The Texture family does not have one yet.** It has nevertheless been a model family in its own
@@ -358,7 +358,7 @@ workspace.
 
 Set it once you have found the model you work with most: it saves a click every session.
 
-> **For Upscaling, Background removal and Vectorization, this setting is not a convenience.** It is what
+> **For Upscaling, Background removal and Vectorisation, this setting is not a convenience.** It is what
 > decides whether the matching edit can leave at all: with no model set, **Enlarge** opens this
 > screen instead of sending the picture.
 

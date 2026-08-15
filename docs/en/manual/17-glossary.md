@@ -591,8 +591,8 @@ plausible matter where there was only a smeared pixel.
 
 **Vectorisation**
 Turning a picture into paths — lines and curves, which scale up without ever going blurry. The
-**Vectorize** command lives in the Image menu; its model is set in
-**Settings ▸ Generation ▸ Vectorization**.
+**Vectorise** command lives in the Image menu; its model is set in
+**Settings ▸ Generation ▸ Vectorisation**.
 
 ---
 

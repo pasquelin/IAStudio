@@ -367,14 +367,14 @@ key pressed by mistake has no business spending any.
 | **Extend** | has the model paint beyond the edges of the image |
 | **Cut out** | removes the background of the flattened image |
 | **Enlarge** | raises the definition of the flattened image |
-| **Vectorize** | turns the flattened image into paths |
+| **Vectorise** | turns the flattened image into paths |
 
 **None of them leaves on its own.** Each flattens the document, sends it, then **fills in the
 Generation panel's form** and shows it to you. You are the one who presses Generate, having seen
 what is going and with which settings.
 
 **They live in the Image menu**, and nowhere else: with no default shortcut, that is the only
-door. Cut out, Enlarge and Vectorize each ask for a model of a family that has no workspace of its
+door. Cut out, Enlarge and Vectorise each ask for a model of a family that has no workspace of its
 own; it is set in **Settings ▸ Generation**. Until one is set, the edit does not leave and opens
 the screen where you choose it.
 

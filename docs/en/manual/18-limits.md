@@ -337,7 +337,7 @@ disk for nothing.
 ### Two families have no default model
 
 **Settings ▸ Generation** offers seven sub-sections: Image, Video, 3D, Audio, Upscaling, Background
-removal, Vectorization. **Texture** and **Skybox** are missing, even though both are now model
+removal, Vectorisation. **Texture** and **Skybox** are missing, even though both are now model
 families in their own right.
 
 The consequence: in the Textures and Skyboxes workspaces the **Generate** panel only appears once a
