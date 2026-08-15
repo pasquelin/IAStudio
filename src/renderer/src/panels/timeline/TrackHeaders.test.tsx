@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { canUndo } from '@/engines/core/history'
 import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import { DEFAULT_TRACK_HEIGHT, type Track } from '@/engines/timeline/timeline-state'
-import { sequenceHistoryOf, sequenceOf, useSequences } from '@/stores/sequences'
+import { sequenceHistoryOf, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { useTimelineView } from '@/stores/timeline-view'
 import { TrackHeaders } from './TrackHeaders'
 
@@ -90,6 +90,20 @@ describe('TrackHeaders', () => {
 
     expect(trackOf('V1')?.name).toBe('V1')
     expect(canUndo(sequenceHistoryOf(useSequences.getState(), 'doc-1'))).toBe(false)
+  })
+
+  // The order `forgetDocument` closes in: the store drops the document, and only THEN is the
+  // panel unmounted — so the field's own cleanup commits after the document is gone.
+  it('does not put a closed document back in the store when the field is torn out', async () => {
+    const view = headers()
+
+    await userEvent.dblClick(screen.getByText('V1'))
+    await userEvent.type(screen.getByLabelText('Nom de la piste'), 'Ambience')
+
+    useSequences.getState().drop('doc-1')
+    view.unmount()
+
+    expect(sequenceStore.hasState(useSequences.getState(), 'doc-1')).toBe(false)
   })
 
   it('follows the vertical scroll, so a row never drifts from the clips it names', () => {
