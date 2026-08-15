@@ -36,7 +36,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
 
   useRestoredDocument(documentId)
 
-  const { pairRef, leadStyle, dividerSize, onDividerSize } = useSplitPair('horizontal')
+  const { pairRef, leadStyle, leadSize, onLeadSize } = useSplitPair('horizontal')
 
   /**
    * What the video return shows, published from the tab in FRONT only. Two open sequences would
@@ -167,7 +167,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
 
       {/* The same handle the shell splits its zones with, so the gesture is the one gesture. It
           replaces a `Separator`, which drew the line and refused to be moved. */}
-      <ResizeHandle axis="horizontal" size={dividerSize} onSize={onDividerSize} />
+      <ResizeHandle axis="horizontal" size={leadSize} onSize={onLeadSize} />
 
       <div className="flex min-w-0 flex-1">
         <Monitor
