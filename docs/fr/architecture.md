@@ -249,7 +249,7 @@ src/main/
 ├── ipc/                     `handle`, `register`, `broadcast` — la mécanique de l'invariant 2
 ├── persistence.ts           l'écriture atomique des petits fichiers de l'utilisateur
 ├── update/                  la vérification de mise à jour
-└── window/                  cycle de vie et verrouillage de la navigation
+└── window/                  cycle de vie, verrouillage de la navigation, fenêtre de retour vidéo
 ```
 
 > **`persistence.ts` a été écrit à la troisième copie**, et c'est la règle qu'il porte : les notes
@@ -484,6 +484,38 @@ Les fenêtres d’outil sont mémoïsées : un glissement de zone écrit une nou
 `pointermove`, et sans cela chaque frame re-rend les deux moitiés et tout ce qu’elles
 contiennent, y compris une grille d’assets virtualisée. Leurs callbacks sont maintenus stables
 pour que cette mémoïsation morde.
+
+### La fenêtre de retour ne passe pas par le pont, et ce n’est pas une entorse
+
+`sequence.mirror` ouvre une seconde fenêtre qui miroite le moniteur Programme, pour un second
+écran. **Le pont IPC n’y porte qu’une chose : l’ouverture de la fenêtre** (`main/window/mirror.ts`).
+Tout le reste — l’édition, le point de lecture, la lecture — voyage par un `BroadcastChannel`
+(`spaces/video/mirror-channel.ts`).
+
+**Ce n’est pas un contournement de l’invariant 2**, qui garde la frontière entre PROCESSUS. Les
+deux fenêtres chargent le même bundle de rendu : elles partagent déjà `SequenceState` comme type,
+et le faire transiter par le main obligerait à redéclarer cette forme dans `shared/`, où elle n’a
+rien à faire — une séquence appartient à l’espace Vidéo, et le processus principal n’en fait rien.
+
+Trois choix s’y lisent, tous mesurés :
+
+- **Deux sortes de message plutôt qu’une.** `edit` porte la séquence entière et ne part qu’à un
+  vrai changement ; `time` ne porte qu’un nombre. Un scrub en émet quelques centaines par seconde,
+  et reposter chaque piste à chacun serait la seule chose qui rendrait ce retour coûteux.
+- **La lecture n’est pas diffusée image par image.** `playing` dit au retour de lancer SON
+  transport depuis le temps qu’il a déjà. Un message par image le mettrait un saut derrière
+  l’image qu’il est censé reproduire, et dériverait par-dessus.
+- **Le retour RÉCLAME l’état à son ouverture** (`ask`). Un canal ne rejoue rien et la fenêtre
+  s’ouvre longtemps après la publication : sans cette poignée de main, le retour restait sur son
+  écran d’attente jusqu’à la retouche suivante.
+
+Le moteur, lui, est **reconstruit** de ce côté plutôt que déplacé — invariant 3, pour la raison qui
+le fonde : un contexte WebGL ne traverse pas la frontière entre documents. Et il est **muet**, parce
+que le studio joue déjà ce son ; deux sorties s’entendraient comme un écho.
+
+Enfin, seul **l’onglet au premier plan publie**. Deux séquences ouvertes se disputeraient sinon la
+même fenêtre, et le retour montrerait celle qui a re-rendu en dernier plutôt que celle qu’on
+travaille.
 
 ### Des registres, pas des listes
 

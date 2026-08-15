@@ -267,7 +267,12 @@ La vitesse et l’accélération se règlent dans les [réglages](14-reglages.md
 | Action | Touche | Ce qu’elle fait |
 |---|---|---|
 | **Couper le clip** | `S` | coupe en deux à la tête de lecture |
+| **Fenêtre de retour** | `F` | ouvre le montage dans une fenêtre à part, à poser sur un second écran |
 | **Supprimer le clip** | `Suppr` | retire le clip du montage. Le fichier d’origine reste dans les assets |
+
+**`F` sert trois fois, et ne se dispute avec rien.** Elle **cadre la sélection** dans la vue 3D et
+arme le **Recadrage** dans l’image. Les trois appartiennent à des contextes différents, qui ne sont
+jamais à l’écoute en même temps.
 
 ### Zoom
 
@@ -572,7 +577,7 @@ ils sont liés à la bande, pas à un contexte.
 | `S` |  |  | Redimensionner *(et reculer)* | Couper le clip |  |  |  |  |
 | `M` |  |  | Magnétisme |  |  |  |  |  |
 | `L` |  |  | Repère local |  |  |  |  |  |
-| `F` |  |  | Cadrer la sélection |  |  |  |  |  |
+| `F` |  |  | Cadrer la sélection | Fenêtre de retour | Recadrage |  |  |  |
 | `Suppr` |  |  | Supprimer l’objet | Supprimer le clip |  |  |  |  |
 | `W A S D` |  |  | Voler |  |  |  |  |  |
 | `Q` / `E` |  |  | Descendre / Monter |  |  |  |  |  |
