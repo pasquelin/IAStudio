@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { canUndo } from '@/engines/core/history'
 import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import { DEFAULT_TRACK_HEIGHT, type Track } from '@/engines/timeline/timeline-state'
+import { useSelection } from '@/stores/selection'
 import { sequenceHistoryOf, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { useTimelineView } from '@/stores/timeline-view'
 import { TrackHeaders } from './TrackHeaders'
@@ -30,6 +31,9 @@ const headers = (): ReturnType<typeof render> =>
 describe('TrackHeaders', () => {
   beforeEach(() => {
     useTimelineView.setState({ viewports: {} })
+    // The selection is one store for the whole window: a case that picks a track leaves it picked
+    // for the next one, which then reads an answer it never asked for.
+    useSelection.getState().clear()
     installTracks([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
   })
 
@@ -247,5 +251,35 @@ describe('TrackHeaders', () => {
 
     expect(raised).toBe(true)
     expect(screen.queryByRole('menuitem')).not.toBeInTheDocument()
+  })
+
+  /**
+   * A press hands the track to the inspector, which then describes a row the column marks
+   * nowhere: not in the accessibility tree, and not to the eye either — the visual side of this
+   * is a separate decision.
+   */
+  describe('the row the inspector is describing', () => {
+    const row = (id: string): HTMLElement => screen.getByTestId(`track-header-${id}`)
+
+    it('says which one it is, and only that one', () => {
+      headers()
+
+      fireEvent.pointerDown(screen.getByText('A1'))
+
+      expect(row('A1')).toHaveAttribute('aria-current', 'true')
+      expect(row('V1')).not.toHaveAttribute('aria-current')
+    })
+
+    /**
+     * Every sequence names its first tracks `V1` and `A1`, so an id alone matches across tabs.
+     * A track picked in another document must leave this column saying nothing.
+     */
+    it('says nothing for a track of the same name picked in another document', () => {
+      headers()
+
+      act(() => useSelection.getState().selectTrack('doc-2', 'A1'))
+
+      expect(row('A1')).not.toHaveAttribute('aria-current')
+    })
   })
 })
