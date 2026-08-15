@@ -73,6 +73,9 @@ bas, et il suit ce que vous lui faites — un rognage le raccourcit, un fondu se
 bords, une normalisation change son gain. Deux choses lui restent propres, parce qu’elles
 appartiennent au montage et non à la prise : **où il commence** et **à quelle vitesse il joue**.
 
+**Et l’éditeur ne travaille que sur la tranche du clip.** Si vous avez raccourci un clip en tirant
+son bord sur la bande, les outils agissent sur ce qui reste, jamais sur le fichier entier.
+
 > **Rouvrir la prise déjà sous l’éditeur ne fait rien**, et c’est voulu : un second clip sur les
 > mêmes sons laisserait la chaîne du premier sans rien pour la rappeler.
 
@@ -112,11 +115,11 @@ d’une seconde, par exemple.
 
 | Outil | Ce qu’il fait |
 |---|---|
-| **Rogner** | ne garde que la sélection, jette le reste |
+| **Rogner** | ramène le clip à la sélection, sur le montage |
 | **Fondu d’entrée** | fait monter le son depuis le silence, sur la sélection |
 | **Fondu de sortie** | fait descendre le son vers le silence, sur la sélection |
 | **Normaliser** | ramène le niveau général à −14 LUFS |
-| **Couper les silences** | retire le silence au début et à la fin |
+| **Couper les silences** | resserre le clip sur ce qui n’est pas silence, aux deux bouts |
 | **A/B** | fait entendre la source d’origine, sans rien annuler |
 
 ### Ce que « normaliser » veut dire
@@ -153,34 +156,40 @@ dit la vérité en trois secondes.
 
 C’est le point important de cet espace.
 
-Vos outils **n’écrivent pas dans le fichier**. Ils empilent une liste d’instructions — « rogner
-ici », « fondu d’une seconde », « normaliser » — qui est rejouée par-dessus le son d’origine à
-chaque fois.
+Vos outils **n’écrivent pas dans le fichier**. Ils empilent une liste d’instructions — « fondu
+d’une seconde », « normaliser » — qui est rejouée par-dessus le son d’origine à chaque fois.
 
 Deux conséquences très pratiques :
 
 - **annuler ne coûte rien**, quel que soit le nombre d’étapes ;
 - **l’A/B est instantané**, parce que la source est toujours là, intacte.
 
-Ce n’est qu’au moment où vous le demandez explicitement que quelque chose est écrit :
+**Rogner** et **Couper les silences** font exception, et pour une bonne raison : ils ne changent
+pas le son, ils changent **les bornes du clip** sur le montage — exactement comme si vous aviez
+tiré son bord à la souris. Là aussi rien n’est écrit dans le fichier, et `⌘Z` les défait.
+
+Ce n’est qu’au moment où vous le demandez explicitement qu’un fichier est écrit :
 
 | Bouton | Ce qu’il fait |
 |---|---|
-| **Appliquer** | **réécrit l’asset** avec vos modifications. L’original est remplacé — sauf s’il s’agit d’un [média lié](07-assets.md), qui entre alors dans le projet sans que votre fichier soit touché |
-| **Enregistrer comme nouveau** | crée un **nouvel asset** à côté, nommé « *(édité)* » |
+| **Appliquer** | crée un **nouvel asset** contenant la tranche telle que vous l’entendez, et **le clip du montage pointe désormais dessus**. L’original n’est jamais touché |
+| **Enregistrer comme nouveau** | crée le même asset, mais **laisse le montage où il est**. À prendre quand vous voulez la version éditée à l’étagère, sans changer ce que joue le montage |
+
+Les deux nomment le nouvel asset « *(édité)* ».
 
 **Après « Appliquer », la chaîne de ce clip est vide et `⌘Z` ne la remonte plus.** C’est voulu, et
-c’est la contrepartie du bouton : le fichier **porte** désormais vos réglages, les rejouer
+c’est la contrepartie du bouton : le nouveau fichier **porte** vos réglages, les rejouer
 par-dessus les poserait une seconde fois — un fondu deux fois plus long, un gain deux fois plus
-fort. La forme d’onde qui revient est celle du fichier réécrit.
+fort. La forme d’onde qui revient est celle de ce nouveau fichier.
 
 > **C’est tout l’historique de l’onglet qui part, pas seulement celui du clip.** Les autres clips
-> gardent leurs chaînes — leurs coupes et leurs fondus sont intacts —, mais plus aucune étape ne
+> gardent leurs chaînes — leurs fondus et leurs niveaux sont intacts —, mais plus aucune étape ne
 > se défait par `⌘Z`, sur aucun d’eux. L’historique est celui du document, et il ne peut pas se
-> rembobiner pour un seul bloc. C’est le seul bouton destructeur de l’éditeur.
+> rembobiner pour un seul bloc. C’est le seul bouton irréversible de l’éditeur.
 
-> **En cas de doute, prenez « Enregistrer comme nouveau ».** Vous gardez l’original, et vous
-> pourrez toujours supprimer la copie si elle ne va pas.
+> **Un même son peut servir à plusieurs clips**, ici comme dans d’autres onglets. C’est pourquoi
+> « Appliquer » écrit à côté plutôt que par-dessus : réécrire l’original changerait tous ces
+> clips d’un coup, sans rien dire.
 
 ---
 

@@ -131,7 +131,7 @@ Right-click lists every destination, always in the same order:
 |---|---|---|
 | **Use as sky** | the open sky, Skyboxes workspace | pictures |
 | **Add to the scene** | the open 3D scene | meshes |
-| **Open in the audio editor** | the open take, Audio workspace | sounds |
+| **Open in the audio editor** | the open edit, Audio workspace | sounds |
 | **Place as a layer** | the open image, Image workspace | pictures |
 | **Add to the montage** | the open sequence, Video workspace | all |
 | **Use as base colour** | the open material, Textures workspace | pictures |
@@ -190,7 +190,7 @@ editor takes, or an asset not yet down on your disk — not a broken one.
 | an image | a specific **channel**'s thumbnail | it becomes that channel |
 | a panoramic image | a **sky** preview | it becomes the sky |
 | a mesh | the **3D view** | it enters the scene, at the origin |
-| a sound | the **audio editor** | it becomes the open take |
+| a sound | the **audio editor** | it joins the edit as a clip, and that clip is what you edit |
 | an asset | an **asset field** of a generation form | it becomes that field's input |
 
 **The timeline does not sort.** It takes what it is given: an asset with no duration of its own

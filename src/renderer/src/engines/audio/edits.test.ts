@@ -1,18 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import { redo, run, undo, type History } from '@/engines/core/history'
 import { emptyHistory } from '@/engines/core/history'
+import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
+import { SECOND } from '@/engines/timeline/timeline-state'
 import { durationOf, frameCount, rms, toDb, type AudioData } from './audio-data'
 import {
   chainOf,
+  chainsOnMontage,
   clampRegion,
+  cropShape,
   EMPTY_AUDIO_EDIT,
   EMPTY_TAKE_CHAIN,
   parseAudioEdits,
   pushEdit,
-  renderEdits,
   replayEdits,
+  takeSliceOf,
+  type AudioEdit,
   type AudioEditState,
   type TakeChain,
+  type TakeShape,
 } from './edits'
 import { encodeWav } from './wav'
 
@@ -23,35 +29,106 @@ const tone = (frames: number, level = 0.5): AudioData => ({
   channels: [new Float32Array(frames).fill(level)],
 })
 
+/** A block covering the whole of what it was handed — what every take starts out as. */
+const whole = (frames: number): TakeShape => ({
+  inPoint: 0,
+  duration: Math.round((frames / RATE) * 1_000_000),
+  fadeIn: 0,
+  fadeOut: 0,
+  gain: 0,
+})
+
+const render = (source: AudioData, edits: AudioEdit[], start = whole(frameCount(source))) =>
+  replayEdits(source, edits, start).data
+
 describe('the edit chain', () => {
   it('leaves the take alone when nothing has been done to it', () => {
-    const source = tone(100)
-    expect(renderEdits(source, [])).toBe(source)
+    expect(render(tone(100), [])).toEqual(tone(100))
   })
 
-  it('applies its steps in order', () => {
-    const rendered = renderEdits(tone(200, 1), [
-      { kind: 'crop', from: 0, to: 1_000_000 },
-      { kind: 'gain', db: -6.02 },
-    ])
+  /**
+   * The defect this replaced: a block is a SLICE of the file behind it, and replaying from the
+   * whole of that file made every render hand the strip the whole of it back. One gain — which
+   * says nothing about bounds — undid a trim laid by hand on the strip.
+   */
+  it('replays over the block’s slice, never the file behind it', () => {
+    const { data, shape } = replayEdits(tone(200, 1), [{ kind: 'gain', db: -6.02 }], {
+      inPoint: 500_000,
+      duration: 1_000_000,
+      fadeIn: 0,
+      fadeOut: 0,
+      gain: 0,
+    })
 
-    expect(frameCount(rendered)).toBe(100)
-    expect(rendered.channels[0]?.[0]).toBeCloseTo(0.5, 2)
+    expect(frameCount(data)).toBe(100)
+    expect(data.channels[0]?.[0]).toBeCloseTo(0.5, 2)
+    expect(shape.inPoint).toBe(500_000)
+    expect(shape.duration).toBe(1_000_000)
   })
 
   it('replays from the source, so the same chain always gives the same take', () => {
     const source = tone(200, 1)
-    const chain: Parameters<typeof renderEdits>[1] = [{ kind: 'normalize', targetLufs: -20 }]
+    const chain: AudioEdit[] = [{ kind: 'normalize', targetLufs: -20 }]
 
-    expect(renderEdits(source, chain).channels[0]?.[0]).toBe(
-      renderEdits(source, chain).channels[0]?.[0],
-    )
+    expect(render(source, chain).channels[0]?.[0]).toBe(render(source, chain).channels[0]?.[0])
   })
 
   it('fades from whichever end the step names', () => {
-    const rendered = renderEdits(tone(100, 1), [{ kind: 'fade', edge: 'out', length: 200_000 }])
+    const rendered = render(tone(100, 1), [{ kind: 'fade', edge: 'out', length: 200_000 }])
     expect(rendered.channels[0]?.[0]).toBe(1)
     expect(rendered.channels[0]?.[99]).toBeCloseTo(0, 1)
+  })
+
+  /**
+   * The ramps are laid once, at the end, from the lengths the shape came to — where each step
+   * used to burn its own in as it arrived. A clip carries one length per edge, so two fades on
+   * one edge left the samples holding a curve the strip had no way to describe.
+   */
+  it('lays one ramp per edge, whatever the chain asked for twice', () => {
+    const { data, shape } = replayEdits(
+      tone(100, 1),
+      [
+        { kind: 'fade', edge: 'in', length: 500_000 },
+        { kind: 'fade', edge: 'in', length: 200_000 },
+      ],
+      whole(100),
+    )
+
+    expect(shape.fadeIn).toBe(200_000)
+    // Past the shorter ramp the take is untouched: the longer one is not burnt in underneath it.
+    expect(data.channels[0]?.[30]).toBe(1)
+  })
+})
+
+/**
+ * The bounds of the block, and nothing else. Its ramps and its level are deliberately left out:
+ * the chain PRODUCES those two and `writeTakeClip` writes them back, so seeding them here would
+ * have every render start from its own last answer — one +3 dB step reading 3, then 6, then 9.
+ */
+describe('the slice a block shows', () => {
+  it('is the block’s own bounds, with no ramp and no level', () => {
+    const clip = {
+      ...clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' }),
+      inPoint: 400_000,
+      fadeIn: 100_000,
+      gain: -6,
+    }
+
+    expect(takeSliceOf(clip)).toEqual({
+      inPoint: 400_000,
+      duration: 1_000_000,
+      fadeIn: 0,
+      fadeOut: 0,
+      gain: 0,
+    })
+  })
+
+  // A clip's duration is TIMELINE time and the samples are SOURCE time, the two differing by the
+  // speed it runs at. `writeTakeClip` divides by that same speed on the way back.
+  it('reads a duration in source time, whatever speed the block runs at', () => {
+    const fast = { ...clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' }), speed: 2 }
+
+    expect(takeSliceOf(fast).duration).toBe(2_000_000)
   })
 })
 
@@ -62,7 +139,7 @@ describe('undo', () => {
     let state = EMPTY_AUDIO_EDIT
     let history: History<AudioEditState> = emptyHistory()
 
-    ;[state, history] = run(state, history, pushEdit('clip-1', { kind: 'trimSilence' }))
+    ;[state, history] = run(state, history, pushEdit('clip-1', { kind: 'gain', db: -3 }))
     expect(stepsOf(state)).toHaveLength(1)
     ;[state, history] = undo(state, history)
     expect(stepsOf(state)).toHaveLength(0)
@@ -76,12 +153,16 @@ describe('undo', () => {
     let state = EMPTY_AUDIO_EDIT
     let history: History<AudioEditState> = emptyHistory()
 
-    ;[state, history] = run(state, history, pushEdit('clip-1', { kind: 'trimSilence' }))
+    ;[state, history] = run(
+      state,
+      history,
+      pushEdit('clip-1', { kind: 'normalize', targetLufs: -14 }),
+    )
     ;[state, history] = run(state, history, pushEdit('clip-2', { kind: 'gain', db: -3 }))
     ;[state] = undo(state, history)
 
     expect(chainOf(state, 'clip-2').edits).toEqual([])
-    expect(chainOf(state, 'clip-1').edits).toEqual([{ kind: 'trimSilence' }])
+    expect(chainOf(state, 'clip-1').edits).toEqual([{ kind: 'normalize', targetLufs: -14 }])
   })
 
   it('keeps the chain and not the samples, which is what makes it affordable', () => {
@@ -94,6 +175,32 @@ describe('undo', () => {
       }),
     )
     expect(stepsOf(state)[0]).toEqual({ kind: 'normalize', targetLufs: -14 })
+  })
+})
+
+/**
+ * A block deleted from the montage leaves its chain behind, on purpose — ⌘Z has to give the
+ * block its settings back. The file is where a block is gone for good.
+ */
+describe('the chains a montage still holds', () => {
+  const montage = sequenceWith([trackFixture('A1', 'audio', [clipFixture('clip-a', 0, SECOND)])])
+
+  const state: AudioEditState = {
+    chains: {
+      'clip-a': { ...EMPTY_TAKE_CHAIN, edits: [{ kind: 'gain', db: -3 }] },
+      'clip-gone': { ...EMPTY_TAKE_CHAIN, edits: [{ kind: 'gain', db: 2 }] },
+    },
+  }
+
+  it('drops the chains of blocks the montage no longer holds', () => {
+    expect(Object.keys(chainsOnMontage(state, montage).chains)).toEqual(['clip-a'])
+  })
+
+  it('hands back the very same state when every chain still has its block', () => {
+    const whole: AudioEditState = {
+      chains: { 'clip-a': state.chains['clip-a'] ?? EMPTY_TAKE_CHAIN },
+    }
+    expect(chainsOnMontage(whole, montage)).toBe(whole)
   })
 })
 
@@ -159,11 +266,9 @@ describe('writing a wav back', () => {
 describe('reading an edit chain back', () => {
   const chain: TakeChain = {
     edits: [
-      { kind: 'crop', from: 10, to: 400 },
       { kind: 'fade', edge: 'out', length: 50 },
       { kind: 'gain', db: -3 },
       { kind: 'normalize', targetLufs: -20 },
-      { kind: 'trimSilence' },
     ],
     region: { from: 0, to: 200 },
     bypassed: false,
@@ -208,9 +313,31 @@ describe('reading an edit chain back', () => {
   // Saved before the montage held the take at all: there is no block to carry it, and the
   // editor now edits blocks. The take itself is an asset and is not lost with it.
   it('drops a chain that names no block, having nowhere to put it', () => {
-    expect(parseAudioEdits({ assetId: 'asset-a', edits: [{ kind: 'trimSilence' }] })).toEqual(
+    expect(parseAudioEdits({ assetId: 'asset-a', edits: [{ kind: 'gain', db: -3 }] })).toEqual(
       EMPTY_AUDIO_EDIT,
     )
+  })
+
+  /**
+   * Chains saved while cutting was a STEP. Dropped rather than converted, and there is nothing
+   * to convert: what they cut to is already in the block's bounds, written there by the very
+   * projection that ran on every render. A file saved before the change reopens on the slice it
+   * was saved showing.
+   */
+  it('drops the steps that used to cut, the block already holding where they cut to', () => {
+    const raw = {
+      chains: {
+        'clip-a': {
+          edits: [
+            { kind: 'crop', from: 10, to: 400 },
+            { kind: 'gain', db: 2 },
+            { kind: 'trimSilence' },
+          ],
+        },
+      },
+    }
+
+    expect(stepsIn(raw)).toEqual([{ kind: 'gain', db: 2 }])
   })
 
   // A step this build cannot replay is dropped rather than kept as a no-op, which would
@@ -225,12 +352,6 @@ describe('reading an edit chain back', () => {
     }
 
     expect(stepsIn(raw)).toEqual([{ kind: 'gain', db: 2 }])
-  })
-
-  it('drops a crop that spans nothing', () => {
-    expect(
-      stepsIn({ chains: { 'clip-a': { edits: [{ kind: 'crop', from: 5, to: 5 }] } } }),
-    ).toEqual([])
   })
 
   it('drops a region that has collapsed, which every tool would then act on', () => {
@@ -251,29 +372,19 @@ describe('reading an edit chain back', () => {
 // The strip has to play what the editor plays, not merely look like it — a clip points at the
 // source file, so the chain has to come back out in the source's own coordinates.
 describe('the chain read as a montage clip', () => {
-  const shapeOf = (source: AudioData, edits: Parameters<typeof replayEdits>[1]) =>
-    replayEdits(source, edits).shape
+  const shapeOf = (source: AudioData, edits: AudioEdit[], start = whole(frameCount(source))) =>
+    replayEdits(source, edits, start).shape
 
-  it('is the whole take when nothing has been done to it', () => {
-    expect(shapeOf(tone(200), [])).toEqual({
-      inPoint: 0,
-      duration: 2_000_000,
+  it('hands the block back unchanged when nothing has been done to it', () => {
+    const slice: TakeShape = {
+      inPoint: 300_000,
+      duration: 900_000,
       fadeIn: 0,
       fadeOut: 0,
       gain: 0,
-    })
-  })
+    }
 
-  // Each crop measures against what reaches it; the shape has to answer in source time, so the
-  // second one's offset is added to the first's rather than replacing it.
-  it('composes two crops back into one slice of the source', () => {
-    const shape = shapeOf(tone(200), [
-      { kind: 'crop', from: 500_000, to: 1_500_000 },
-      { kind: 'crop', from: 200_000, to: 700_000 },
-    ])
-
-    expect(shape.inPoint).toBe(700_000)
-    expect(shape.duration).toBe(500_000)
+    expect(shapeOf(tone(200), [], slice)).toEqual(slice)
   })
 
   it('carries a fade to the edge it was laid on', () => {
@@ -286,17 +397,6 @@ describe('the chain read as a montage clip', () => {
     expect(shape.fadeOut).toBe(100_000)
   })
 
-  // The documented limit of the projection: a clip holds one ramp length per edge, so what it
-  // can say of a ramp cut into is what is left of it.
-  it('keeps only what a later crop leaves of a ramp', () => {
-    const shape = shapeOf(tone(200), [
-      { kind: 'fade', edge: 'in', length: 500_000 },
-      { kind: 'crop', from: 200_000, to: 2_000_000 },
-    ])
-
-    expect(shape.fadeIn).toBe(300_000)
-  })
-
   it('adds up the decibels a chain of gains comes to', () => {
     expect(
       shapeOf(tone(100), [
@@ -306,18 +406,49 @@ describe('the chain read as a montage clip', () => {
     ).toBe(-4)
   })
 
-  // Neither of these two can be read off the instruction: one is a level measured on what
-  // reaches it, the other a pair of bounds found in the samples.
+  // The one step that cannot be read off its instruction: a level measured on what reaches it.
   it('reads a normalize as the level it actually applied', () => {
     expect(shapeOf(tone(100, 1), [{ kind: 'normalize', targetLufs: -14 }]).gain).toBeCloseTo(-14)
   })
 
-  it('reads a silence trim as the bounds it actually found', () => {
-    const quiet = new Float32Array(200)
-    quiet.fill(0.5, 50, 150)
-    const shape = shapeOf({ sampleRate: RATE, channels: [quiet] }, [{ kind: 'trimSilence' }])
+  // No step moves the bounds any more, and that is what makes the chain replayable: seeded from
+  // the block it just wrote, a step that cut would eat into its own result on every render.
+  it('never moves the bounds, whatever the chain holds', () => {
+    const shape = shapeOf(tone(200, 1), [
+      { kind: 'normalize', targetLufs: -14 },
+      { kind: 'fade', edge: 'in', length: 300_000 },
+      { kind: 'gain', db: -3 },
+    ])
 
-    expect(shape.inPoint).toBe(500_000)
-    expect(shape.duration).toBe(1_000_000)
+    expect(shape.inPoint).toBe(0)
+    expect(shape.duration).toBe(2_000_000)
+  })
+})
+
+/**
+ * What the two cutting tools land on the block, now that cutting is a montage gesture. A clip
+ * holds one ramp length per edge, so of a ramp cut into it can only say what is left.
+ */
+describe('cutting a shape down to a stretch of itself', () => {
+  const shape: TakeShape = {
+    inPoint: 1_000_000,
+    duration: 2_000_000,
+    fadeIn: 500_000,
+    fadeOut: 400_000,
+    gain: -3,
+  }
+
+  it('moves the in point by where the stretch begins, and keeps the level', () => {
+    expect(cropShape(shape, 200_000, 900_000)).toEqual({
+      inPoint: 1_200_000,
+      duration: 700_000,
+      fadeIn: 300_000,
+      fadeOut: 0,
+      gain: -3,
+    })
+  })
+
+  it('cannot describe a slice the samples do not have', () => {
+    expect(cropShape(shape, 0, 9_000_000).duration).toBe(2_000_000)
   })
 })

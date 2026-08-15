@@ -9,7 +9,7 @@ import type { AudioData } from './audio-data'
  */
 export type AudioWorkerRequest =
   | { kind: 'load'; sampleRate: number; channels: Float32Array[] }
-  | { kind: 'render'; id: number; edits: readonly AudioEdit[] }
+  | { kind: 'render'; id: number; edits: readonly AudioEdit[]; start: TakeShape }
 
 export type AudioWorkerResponse =
   | {
@@ -26,8 +26,8 @@ export type AudioWorkerResponse =
  * The take as the chain leaves it, with the bytes the editor plays and writes to disk — and the
  * shape the montage clip under it takes.
  *
- * The shape rides along rather than being worked out on this side, because two of the five steps
- * are measured on the samples, and the samples are over there.
+ * The shape rides along rather than being worked out on this side, because `normalize` is a level
+ * measured on the samples, and the samples are over there.
  */
 export type RenderedAudio = { data: AudioData; wav: Uint8Array<ArrayBuffer>; shape: TakeShape }
 
@@ -49,8 +49,11 @@ export type WorkerPort = {
 export type AudioRenderer = {
   /** Hands the take over. Its buffers move: the caller must not read them afterwards. */
   load: (source: AudioData) => void
-  /** The chain replayed and encoded. A call overtaken by a newer one resolves to null. */
-  render: (edits: readonly AudioEdit[]) => Promise<RenderedAudio | null>
+  /**
+   * The chain replayed over `start` — the slice of the take one block shows — and encoded. A
+   * call overtaken by a newer one resolves to null.
+   */
+  render: (edits: readonly AudioEdit[], start: TakeShape) => Promise<RenderedAudio | null>
   dispose: () => void
 }
 
@@ -111,7 +114,7 @@ export function createAudioRenderer(open: () => WorkerPort): AudioRenderer {
         source.channels.map(channel => channel.buffer),
       ),
 
-    render: edits =>
+    render: (edits, start) =>
       new Promise(resolve => {
         const id = nextId++
         latest = id
@@ -121,7 +124,7 @@ export function createAudioRenderer(open: () => WorkerPort): AudioRenderer {
         // Safe in this order because a worker cannot answer during `postMessage`: its message
         // event is always a turn later.
         try {
-          ensure().postMessage({ kind: 'render', id, edits }, [])
+          ensure().postMessage({ kind: 'render', id, edits, start }, [])
         } catch {
           // `null`, not a rejection: that is what `render` already answers when a worker dies
           // mid-take, and no caller of it catches. The port goes with it, so the next take
@@ -163,7 +166,7 @@ export function handleRequest(
     return { response: { kind: 'failed', id: request.id, message: 'no take loaded' }, transfer: [] }
   }
 
-  const { data, shape } = replayEdits(source, request.edits)
+  const { data, shape } = replayEdits(source, request.edits, request.start)
   // A chain that changed nothing hands its input straight back, and transferring that would
   // take the source away from every render after this one.
   const channels = data.channels.map(channel =>

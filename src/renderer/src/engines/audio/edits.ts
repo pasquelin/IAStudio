@@ -1,7 +1,13 @@
 import { isRecord, readNumber, readPositive, readString } from '@shared/guards'
 import { clamp } from '@shared/numeric'
 import type { Command } from '@/engines/core/history'
-import { CLIP_EDGES, type ClipEdge, type Us } from '@/engines/timeline/timeline-state'
+import {
+  CLIP_EDGES,
+  type Clip,
+  type ClipEdge,
+  type SequenceState,
+  type Us,
+} from '@/engines/timeline/timeline-state'
 import {
   applyFades,
   applyGain,
@@ -9,7 +15,6 @@ import {
   DEFAULT_TARGET_LUFS,
   durationOf,
   rms,
-  silentBounds,
   toDb,
   type AudioData,
 } from './audio-data'
@@ -19,13 +24,16 @@ import {
  * three-minute take is seventy megabytes, and an undo stack of those would be gigabytes for
  * five clicks. The chain is replayed from the source instead, which is also what makes A/B a
  * boolean rather than a second copy.
+ *
+ * Nothing here moves the block's BOUNDS, and that is what keeps the chain replayable. A step
+ * that cut — the old `crop` and `trimSilence` — was projected onto the block, and the block is
+ * where the next replay reads its slice from: the cut then landed on its own result, again on
+ * every render. Cutting is a montage gesture, and it is written as one — see `trimTakeClip`.
  */
 export type AudioEdit =
-  | { kind: 'crop'; from: Us; to: Us }
   | { kind: 'fade'; edge: ClipEdge; length: Us }
   | { kind: 'gain'; db: number }
   | { kind: 'normalize'; targetLufs: number }
-  | { kind: 'trimSilence' }
 
 export type Region = { from: Us; to: Us }
 
@@ -69,6 +77,23 @@ export function withChain(state: AudioEditState, clipId: string, chain: TakeChai
 }
 
 /**
+ * Only the chains of blocks the montage still holds — what goes to the FILE, never to the store.
+ *
+ * Nothing prunes when a block is deleted, and that is on purpose: ⌘Z has to give a deleted block
+ * its settings back, and a chain dropped with it would come back empty. Saving is where a block
+ * is gone for good, so it is where the file stops carrying it. Left in, a long session leaves a
+ * document growing without bound behind chains nothing on screen can reach.
+ */
+export function chainsOnMontage(state: AudioEditState, montage: SequenceState): AudioEditState {
+  const alive = new Set(montage.tracks.flatMap(track => track.clips.map(clip => clip.id)))
+  const kept = Object.entries(state.chains).filter(([clipId]) => alive.has(clipId))
+
+  return kept.length === Object.keys(state.chains).length
+    ? state
+    : { chains: Object.fromEntries(kept) }
+}
+
+/**
  * The chain expressed as a montage clip: where it starts in the source, how long it runs, its
  * two ramps and its level.
  *
@@ -84,8 +109,34 @@ export type TakeShape = {
   gain: number
 }
 
+/**
+ * The slice a block shows, as the shape the editor replays over — its bounds, and nothing else.
+ *
+ * The block's own ramps and level are deliberately NOT read back, and that is not an oversight:
+ * the chain PRODUCES those two, and `writeTakeClip` writes them onto the block. Seeded from the
+ * block, each render would then start from its own last answer — a chain holding one +3 dB step
+ * would hand the strip 3, then 6, then 9. The bounds are safe because no step moves them any
+ * more, which is the whole reason cutting became a montage gesture.
+ *
+ * What it costs, said plainly: a ramp or a level laid by HAND on the strip is still overwritten
+ * by the first tool used on that block. Only the trim survives.
+ *
+ * `duration` is SOURCE time where a clip holds timeline time, the two differing by the speed it
+ * runs at. `writeTakeClip` divides by that same speed on the way back, so the round trip lands
+ * on the clip it started from and the strip is not repainted for nothing.
+ */
+export function takeSliceOf(clip: Clip): TakeShape {
+  return {
+    inPoint: clip.inPoint,
+    duration: clip.duration * clip.speed,
+    fadeIn: 0,
+    fadeOut: 0,
+    gain: 0,
+  }
+}
+
 /** What a crop leaves of a shape — bounds moved, and of each ramp only the part still inside. */
-function cropShape(shape: TakeShape, from: Us, to: Us): TakeShape {
+export function cropShape(shape: TakeShape, from: Us, to: Us): TakeShape {
   // Clamped as `crop` clamps, so the projection cannot describe a slice the samples do not have.
   const start = clamp(from, 0, shape.duration)
   const end = clamp(to, start, shape.duration)
@@ -100,34 +151,27 @@ function cropShape(shape: TakeShape, from: Us, to: Us): TakeShape {
 }
 
 /**
- * The chain replayed, and the shape it comes to, in one pass.
+ * The chain replayed over the BLOCK's slice, and the shape it comes to, in one pass.
  *
- * Two of the five steps cannot be projected from the instruction alone — `normalize` is a level
- * measured on what reaches it, and `trimSilence` a pair of bounds found in the samples. Rejoining
- * the two answers here is what keeps the strip honest without a second walk over the take.
+ * `start` is the block as the montage holds it, and everything begins there: the file behind a
+ * block is longer than the block, and replaying from the whole of it handed the strip a shape
+ * describing the entire take — one gain was enough to undo a trim laid by hand on the strip.
  *
- * **Where the projection stops being exact**: a ramp already burnt into the samples by an earlier
- * `fade`, then cut into by a later `crop`. A clip holds one ramp length per edge, so what it can
- * say is what is left of that ramp — the audible curve inside the cut is not expressible. The
- * editor stays the truth; the clip approaches it in that one composed case.
+ * `normalize` cannot be projected from the instruction alone: it is a level measured on whatever
+ * reaches it. Rejoining that answer with the shape here is what keeps the strip honest without a
+ * second walk over the take.
  */
 export function replayEdits(
   source: AudioData,
   edits: readonly AudioEdit[],
+  start: TakeShape,
 ): { data: AudioData; shape: TakeShape } {
-  let shape: TakeShape = {
-    inPoint: 0,
-    duration: durationOf(source),
-    fadeIn: 0,
-    fadeOut: 0,
-    gain: 0,
-  }
+  let shape: TakeShape = start
+
+  const slice = applyGain(crop(source, start.inPoint, start.inPoint + start.duration), start.gain)
 
   const data = edits.reduce((current, edit) => {
     switch (edit.kind) {
-      case 'crop':
-        shape = cropShape(shape, edit.from, edit.to)
-        return crop(current, edit.from, edit.to)
       case 'fade':
         // The last one wins, where the samples would carry both: a clip holds one length per
         // edge, and two fades on the same edge is a gesture nobody makes twice on purpose.
@@ -135,9 +179,7 @@ export function replayEdits(
           edit.edge === 'in'
             ? { ...shape, fadeIn: edit.length }
             : { ...shape, fadeOut: edit.length }
-        return edit.edge === 'in'
-          ? applyFades(current, edit.length, 0)
-          : applyFades(current, 0, edit.length)
+        return current
       case 'gain':
         shape = { ...shape, gain: shape.gain + edit.db }
         return applyGain(current, edit.db)
@@ -152,26 +194,13 @@ export function replayEdits(
         shape = { ...shape, gain: shape.gain + db }
         return applyGain(current, db)
       }
-      case 'trimSilence': {
-        const total = durationOf(current)
-        const { head, tail } = silentBounds(current)
-        if (head === 0 && tail === total) return current
-
-        shape = cropShape(shape, head, tail)
-        return crop(current, head, tail)
-      }
     }
-  }, source)
+  }, slice)
 
-  return { data, shape }
-}
-
-/**
- * The take as the chain leaves it. Pure, and replayed from the source every time: that is what
- * makes every step reversible without keeping a buffer per step.
- */
-export function renderEdits(source: AudioData, edits: readonly AudioEdit[]): AudioData {
-  return replayEdits(source, edits).data
+  // Both ramps laid once, at the end, from the lengths the shape came to — where each `fade`
+  // used to burn its own into the samples as it arrived. A clip carries one length per edge and
+  // so does this, so the samples can no longer hold a curve the strip has no way to describe.
+  return { data: applyFades(data, shape.fadeIn, shape.fadeOut), shape }
 }
 
 /** A region clamped to the take it belongs to, or nothing when it has collapsed. */
@@ -217,16 +246,16 @@ export function pushEdit(clipId: string, edit: AudioEdit): Command<AudioEditStat
  * One step read back. `null` for anything this build cannot replay, and the caller drops it:
  * a chain is replayed in order, so a step that does nothing would silently change what the
  * take sounds like — dropping it says the same thing without pretending to have applied it.
+ *
+ * `crop` and `trimSilence` were steps until cutting became a montage gesture, and they are
+ * dropped here on purpose rather than converted. There is nothing to convert: what they cut is
+ * already in the BLOCK's bounds, written there by the very projection that ran on every render.
+ * A file saved before the change reopens on the slice it was saved showing.
  */
 function readEdit(raw: unknown): AudioEdit | null {
   if (!isRecord(raw)) return null
 
   switch (raw.kind) {
-    case 'crop': {
-      const from = readPositive(raw, 'from', 0)
-      const to = readPositive(raw, 'to', 0)
-      return to > from ? { kind: 'crop', from, to } : null
-    }
     case 'fade': {
       const edge = CLIP_EDGES.find(candidate => candidate === raw.edge)
       const length = readPositive(raw, 'length', 0)
@@ -236,8 +265,6 @@ function readEdit(raw: unknown): AudioEdit | null {
       return { kind: 'gain', db: readNumber(raw, 'db', 0) }
     case 'normalize':
       return { kind: 'normalize', targetLufs: readNumber(raw, 'targetLufs', DEFAULT_TARGET_LUFS) }
-    case 'trimSilence':
-      return { kind: 'trimSilence' }
     default:
       return null
   }

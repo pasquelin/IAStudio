@@ -110,7 +110,7 @@
   },
   "audioTools": {
     "crop": "Crop",
-    "cropHint": "Keep the selection and nothing else",
+    "cropHint": "Bring the montage clip down to the selection",
     "fadeIn": "Fade in",
     "fadeInHint": "Rise from silence across the selection",
     "fadeOut": "Fade out",
@@ -118,11 +118,11 @@
     "normalize": "Normalise",
     "normalizeHint": "Bring the level to −14 LUFS",
     "trimSilence": "Trim silence",
-    "trimSilenceHint": "Remove the silence at each end",
+    "trimSilenceHint": "Pull the clip in to what is not silence",
     "compare": "A/B",
     "compareHint": "Hear the source, without undoing anything",
     "apply": "Apply",
-    "applyHint": "Write the edits back over the asset",
+    "applyHint": "Create the edited asset and use it in the montage",
     "saveAs": "Save as new",
     "saveAsHint": "Create an asset beside the source"
   },

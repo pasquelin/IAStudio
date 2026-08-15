@@ -335,7 +335,7 @@ describe('opening an asset', () => {
     await openAsset(asset())
     const tab = opened().id
     const laid = sequenceOf(useSequences.getState(), tab).selectedId ?? ''
-    useAudioEdits.getState().runCommand(tab, pushEdit(laid, { kind: 'trimSilence' }))
+    useAudioEdits.getState().runCommand(tab, pushEdit(laid, { kind: 'gain', db: -3 }))
 
     // The tab is the asset's, so the second take reaches it the way a drop does. The head has
     // not moved, so it lands over the first block — what any drop at the head does.
@@ -343,7 +343,7 @@ describe('opening an asset', () => {
     loadTake(tab, asset({ id: 'asset-2' }))
 
     const edits = audioEditsOf(useAudioEdits.getState(), tab)
-    expect(chainOf(edits, laid).edits).toEqual([{ kind: 'trimSilence' }])
+    expect(chainOf(edits, laid).edits).toEqual([{ kind: 'gain', db: -3 }])
     expect(chainOf(edits, sequenceOf(useSequences.getState(), tab).selectedId).edits).toEqual([])
   })
 

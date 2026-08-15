@@ -110,7 +110,7 @@
   },
   "audioTools": {
     "crop": "Rogner",
-    "cropHint": "Ne garder que la sélection",
+    "cropHint": "Ramener le clip du montage à la sélection",
     "fadeIn": "Fondu d’entrée",
     "fadeInHint": "Monter depuis le silence sur la sélection",
     "fadeOut": "Fondu de sortie",
@@ -118,11 +118,11 @@
     "normalize": "Normaliser",
     "normalizeHint": "Ramener le niveau à −14 LUFS",
     "trimSilence": "Couper les silences",
-    "trimSilenceHint": "Retirer le silence au début et à la fin",
+    "trimSilenceHint": "Resserrer le clip sur ce qui n’est pas silence",
     "compare": "A/B",
     "compareHint": "Écouter la source, sans rien annuler",
     "apply": "Appliquer",
-    "applyHint": "Réécrire l’asset avec les modifications",
+    "applyHint": "Créer l’asset édité et l’utiliser dans le montage",
     "saveAs": "Enregistrer comme nouveau",
     "saveAsHint": "Créer un asset à côté de la source"
   },
