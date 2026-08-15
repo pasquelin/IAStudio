@@ -16,9 +16,8 @@ import { useSoundTransport } from './useSoundTransport'
 export type AudioDocumentProps = { documentId: string }
 
 /**
- * Two monitors, on the picture pair's convention: the take being edited on the left, the montage
- * it lands in on the right. The montage itself is the `timeline` tool window — a strip the width
- * of the app, not a corner of this tab.
+ * Two monitors, stacked: the montage above, the take being edited below. The montage itself is
+ * the `timeline` tool window — a strip the width of the app, not a corner of this tab.
  *
  * The pair is what the space was missing. An editor alone showed one take while the strip below
  * showed several, and nothing on screen said how the two were related — the centre simply did
@@ -42,7 +41,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
   const columnRef = useRef<HTMLDivElement>(null)
   /** Null until the divider is dragged: the two monitors share the column equally before that. */
-  const [sourceHeight, setSourceHeight] = useState<number | null>(null)
+  const [programHeight, setProgramHeight] = useState<number | null>(null)
   /** The column's own height, so the handle starts a drag from where the divider actually is. */
   const [available, setAvailable] = useState(0)
 
@@ -55,7 +54,9 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
     const observer = new ResizeObserver(() => {
       setAvailable(column.clientHeight)
-      setSourceHeight(current => (current === null ? null : fitSplit(current, column.clientHeight)))
+      setProgramHeight(current =>
+        current === null ? null : fitSplit(current, column.clientHeight),
+      )
     })
     observer.observe(column)
     return () => observer.disconnect()
@@ -127,22 +128,25 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
      * the handle and the pair read as two panes pushed apart rather than two panels stacked.
      */
     <div ref={columnRef} className="flex h-full min-h-0 flex-col p-(--sc-gutter)">
+      {/* The whole above the part, and the part above the strip it sits on: what one is making
+          reads top to bottom, and the take being worked on stays next to the montage it lands
+          in rather than a monitor's width away from it. */}
       <div
         className="flex min-h-0"
-        style={sourceHeight === null ? { flex: 1 } : { height: sourceHeight, flexShrink: 0 }}
+        style={programHeight === null ? { flex: 1 } : { height: programHeight, flexShrink: 0 }}
       >
-        <TakeEditor documentId={documentId} />
+        <ProgramMonitor sequence={sequence} transport={transport} onSeek={seek} />
       </div>
 
       {/* The same handle the shell splits its zones with, so the gesture is the one gesture. */}
       <ResizeHandle
         axis="vertical"
-        size={sourceHeight ?? available / 2}
-        onSize={(size, room) => setSourceHeight(fitSplit(size, room))}
+        size={programHeight ?? available / 2}
+        onSize={(size, room) => setProgramHeight(fitSplit(size, room))}
       />
 
       <div className="flex min-h-0 flex-1">
-        <ProgramMonitor sequence={sequence} transport={transport} onSeek={seek} />
+        <TakeEditor documentId={documentId} />
       </div>
     </div>
   )
