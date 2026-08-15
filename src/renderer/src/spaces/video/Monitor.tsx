@@ -21,6 +21,7 @@ import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { reportFailure } from '@/services/diagnostics'
 import { useBinding } from '@/stores/bindings'
+import { playbackOf, usePlayback } from '@/stores/playback'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2
@@ -64,7 +65,9 @@ export function Monitor({
   const pictureRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<TimelineEngine | null>(null)
-  const [playing, setPlaying] = useState(false)
+  // Published rather than held: the timeline's own bar draws the same transport, and neither of
+  // the two trees contains the other — see `stores/playback`.
+  const playing = usePlayback(state => playbackOf(state, owner))
   const [unreadable, setUnreadable] = useState(false)
 
   useEffect(() => {
@@ -82,7 +85,7 @@ export function Monitor({
       maxPictures: MAX_PICTURES,
       owner,
       onTime,
-      onPlayingChange: setPlaying,
+      onPlayingChange: running => usePlayback.getState().setRunning(owner, running),
       onUnreadable: setUnreadable,
     })
 
@@ -92,6 +95,7 @@ export function Monitor({
     return () => {
       created.dispose()
       engine.current = null
+      usePlayback.getState().forget(owner)
     }
   }, [owner, onTime])
 

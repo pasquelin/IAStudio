@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { transports } from '@/engines/timeline/playback'
 import { openAssetSink } from '@/engines/timeline/sink-port'
 import { createSoundPort } from '@/engines/timeline/sound-port'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
+import { playbackOf, usePlayback } from '@/stores/playback'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 
 /**
@@ -34,7 +35,8 @@ export type SoundTransport = {
  */
 export function useSoundTransport(documentId: string, sequence: SequenceState): SoundTransport {
   const engine = useRef<TimelineEngine | null>(null)
-  const [playing, setPlaying] = useState(false)
+  // Published rather than held: the bar of a montage reads it exactly as the monitor's does.
+  const playing = usePlayback(state => playbackOf(state, documentId))
 
   const setTime = useCallback(
     (playhead: Us): void => {
@@ -61,13 +63,14 @@ export function useSoundTransport(documentId: string, sequence: SequenceState): 
       maxPictures: MAX_PICTURES,
       owner: documentId,
       onTime: setTime,
-      onPlayingChange: setPlaying,
+      onPlayingChange: running => usePlayback.getState().setRunning(documentId, running),
     })
 
     engine.current = created
     return () => {
       created.dispose()
       engine.current = null
+      usePlayback.getState().forget(documentId)
     }
   }, [documentId, setTime])
 

@@ -58,7 +58,7 @@ describe('the animation bar', () => {
   it('runs the head back to the start', async () => {
     useSceneViews.getState().setPlayhead(DOCUMENT, 2_000_000)
     bar()
-    await userEvent.click(screen.getByRole('button', { name: /Revenir au début/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Retour au début/ }))
 
     expect(screen.getByText('00:00:00:00')).toBeInTheDocument()
   })
@@ -67,7 +67,7 @@ describe('the animation bar', () => {
     bar()
     await userEvent.click(screen.getByRole('button', { name: /^Lire/ }))
 
-    expect(screen.getByRole('button', { name: /Mettre en pause/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Pause/ })).toBeInTheDocument()
   })
 
   it('« comme vidéo et audio » — the band carries a ruler in timecode', () => {
