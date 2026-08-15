@@ -6,7 +6,7 @@ import { animationRows } from '@/engines/scene/animation-rows'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 import { addAnimationTrack } from '@/engines/scene/animation-commands'
-import { useAnimationViews } from '@/stores/animation-view'
+import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneHistoryOf, sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/scene-views'
@@ -168,5 +168,45 @@ describe('taking a key back off', () => {
     await userEvent.click(subject().getByRole('button', { name: /Retirer la clé/ }))
 
     expect(tracks()[0]?.keys.map(key => key.time)).toEqual([0])
+  })
+})
+
+describe('arranging the lines', () => {
+  const TWO = [
+    { id: 'cube-1', name: 'Cube' },
+    { id: 'cube-2', name: 'Sphere' },
+  ]
+
+  beforeEach(() => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('cube-1'), meshNode('cube-2')] })
+    useAnimationViews.setState({ views: {} })
+
+    render(
+      <AnimationHeaders
+        documentId={DOCUMENT}
+        rows={animationRows(timelineOf(), { nodes: TWO, expanded: new Set() })}
+      />,
+    )
+  })
+
+  const grip = (name: string) => screen.getByRole('button', { name: new RegExp(name) })
+  const orderOf = () => animationViewOf(useAnimationViews.getState(), DOCUMENT).order
+
+  it('records the whole arrangement, not the line that moved, so nothing falls behind it', async () => {
+    grip('Déplacer la ligne Sphere').focus()
+    await userEvent.keyboard('{ArrowUp}')
+
+    expect(orderOf()).toEqual(['cube-2', 'cube-1'])
+  })
+
+  it('leaves the scene exactly as it was: the arrangement belongs to the sheet alone', async () => {
+    grip('Déplacer la ligne Sphere').focus()
+    await userEvent.keyboard('{ArrowUp}')
+
+    expect(sceneOf(useScenes.getState(), DOCUMENT).nodes.map(node => node.id)).toEqual([
+      'cube-1',
+      'cube-2',
+    ])
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(0)
   })
 })

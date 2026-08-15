@@ -512,6 +512,7 @@ export function removeTrack(trackId: string): Command<SequenceState> {
  */
 export function moveTrack(trackId: string, by: number): Command<SequenceState> {
   let from: number | null = null
+  let target: number | null = null
 
   const reorder = (tracks: readonly Track[], position: number, to: number): Track[] => {
     const track = tracks[position]
@@ -526,14 +527,27 @@ export function moveTrack(trackId: string, by: number): Command<SequenceState> {
     id: `track:move:${trackId}`,
     apply: state => {
       const position = state.tracks.findIndex(track => track.id === trackId)
-      const to = position + by
+      // The destination is remembered on the way out and replayed on the way back in: after a
+      // coalesced drag this apply is the LAST step's, and recomputing `position + by` on redo put
+      // the track one row down instead of the three it had been dragged.
+      const to = target ?? position + by
       if (position < 0 || to < 0 || to >= state.tracks.length) return state
 
-      from = position
+      from ??= position
+      target = to
       return { ...state, tracks: reorder(state.tracks, position, to) }
     },
-    revert: state =>
-      from === null ? state : { ...state, tracks: reorder(state.tracks, from + by, from) },
+    /**
+     * The track is found again rather than computed from `from + by`, and that is what makes a
+     * DRAG undoable in one press: successive steps of one gesture coalesce into a single entry
+     * keeping the FIRST revert (`coalesce`), by which time the track stands three places away
+     * from where that arithmetic expects it — and ⌘Z put it back in the wrong row.
+     */
+    revert: state => {
+      if (from === null) return state
+      const position = state.tracks.findIndex(track => track.id === trackId)
+      return position < 0 ? state : { ...state, tracks: reorder(state.tracks, position, from) }
+    },
   }
 }
 

@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { secondsToUs, snapToFrame, usToSeconds, type Us } from '@shared/domain/time'
 import { NumberField } from '@/design/NumberField'
+import { Separator } from '@/design/Separator'
 import { Timecode } from '@/design/Timecode'
 import { ToolButton } from '@/design/ToolButton'
 import { CONTROL } from '@/design/styles'
@@ -71,8 +72,12 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
     onGestureEnd: () => useScenes.getState().endGesture(documentId),
   }
 
+  // No box of its own: `PanelHeader` already lays its actions out — same gutter, same alignment,
+  // and it is the one that knows whether this panel's row may take the free width (`fillActions`).
+  // A second flex row inside it was what let this bar space its buttons three times wider than
+  // the montage's, on controls of the very same gauge.
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+    <>
       <ToolButton
         icon={mdiSkipPrevious}
         label={t('animation.toStart')}
@@ -98,6 +103,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
       />
       <Timecode time={view.playhead} fps={timeline.fps} />
 
+      <Separator />
       <ToolButton
         icon={mdiRecordCircleOutline}
         label={t('animation.autoKey')}
@@ -153,7 +159,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
       </div>
 
       <RenderButton documentId={documentId} />
-    </div>
+    </>
   )
 }
 

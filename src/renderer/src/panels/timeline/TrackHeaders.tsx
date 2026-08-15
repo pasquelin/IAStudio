@@ -4,24 +4,45 @@ import { useTranslation } from 'react-i18next'
 import { MenuButton } from '@/design/MenuButton'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { ToolButton } from '@/design/ToolButton'
-import { renameTrack } from '@/engines/timeline/commands'
-import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
+import { moveTrack, renameTrack } from '@/engines/timeline/commands'
 import {
   clampTrackHeight,
   playsThrough,
   type SequenceState,
   type Track,
 } from '@/engines/timeline/timeline-state'
+import { clamp } from '@shared/numeric'
 import { cn } from '@/helpers/cn'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { isTyping } from '@/helpers/typing'
 import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
+import { TimelineHeaderColumn, TimelineRow } from './TimelineRow'
 import { TRACK_FLAGS } from './track-flags'
 import { TrackMenu, TrackMenuRows, TRACK_MENU_ROWS } from './TrackMenu'
 
 export type TrackHeadersProps = { documentId: string }
+
+/**
+ * Moves a track through the stack and answers how far it went — nothing at either end.
+ *
+ * The refusal is decided HERE rather than left to the command, for the reason `sequence.unlink`
+ * gives a few files away: every command that runs lands on the undo stack, so a step that moves
+ * nothing would still mark the document modified and leave a ⌘Z that visibly does nothing.
+ */
+function moveTrackBy(documentId: string, trackId: string, by: number): number {
+  const store = useSequences.getState()
+  const tracks = sequenceOf(store, documentId).tracks
+  const from = tracks.findIndex(track => track.id === trackId)
+  if (from === -1) return 0
+
+  const to = clamp(from + by, 0, tracks.length - 1)
+  if (to === from) return 0
+
+  store.runCommand(documentId, moveTrack(trackId, to - from))
+  return to - from
+}
 
 /**
  * The column standing beside the canvas: one row per track, aligned with the rows it names.
@@ -35,24 +56,18 @@ export function TrackHeaders({ documentId }: TrackHeadersProps) {
   const scrollTop = useTimelineView(state => viewportOf(state, documentId).scrollTop)
 
   return (
-    <div className="border-border flex w-(--sc-track-header) shrink-0 flex-col overflow-hidden border-r">
-      {/* Empty band facing the ruler, so row one lines up with track one. */}
-      <div style={{ height: RULER_HEIGHT }} />
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <div style={{ transform: `translateY(${-scrollTop}px)` }}>
-          {sequence.tracks.map((track, row) => (
-            <TrackHeader
-              key={track.id}
-              documentId={documentId}
-              sequence={sequence}
-              track={track}
-              canRise={row > 0}
-              canFall={row < sequence.tracks.length - 1}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
+    <TimelineHeaderColumn scrollTop={scrollTop}>
+      {sequence.tracks.map((track, row) => (
+        <TrackHeader
+          key={track.id}
+          documentId={documentId}
+          sequence={sequence}
+          track={track}
+          canRise={row > 0}
+          canFall={row < sequence.tracks.length - 1}
+        />
+      ))}
+    </TimelineHeaderColumn>
   )
 }
 
@@ -76,9 +91,16 @@ function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHea
   const rows = { documentId, trackId: track.id, canRise, canFall }
 
   return (
-    <div
-      className="flex flex-col justify-between px-1.5 py-1"
-      style={{ height: track.height }}
+    <TimelineRow
+      height={track.height}
+      reorder={{
+        label: t('timeline.reorderTrack', { name: track.name }),
+        move: by => moveTrackBy(documentId, track.id, by),
+        // A drag across three places is one thing the user did: without the gesture, `runCommand`
+        // pushes an entry per step, and ⌘Z gives the stack back a row at a time.
+        begin: () => useSequences.getState().beginGesture(documentId),
+        end: () => useSequences.getState().endGesture(documentId),
+      }}
       data-testid={`track-header-${track.id}`}
       onPointerDown={() => useSelection.getState().selectTrack(documentId, track.id)}
       onContextMenu={event => {
@@ -124,7 +146,7 @@ function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHea
       />
 
       {menuAt && <TrackMenu {...rows} at={menuAt} onClose={() => setMenuAt(null)} />}
-    </div>
+    </TimelineRow>
   )
 }
 

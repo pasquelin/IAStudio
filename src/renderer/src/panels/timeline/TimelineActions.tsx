@@ -1,6 +1,7 @@
-import { activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
+import { activeAudioId, activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
 import { AnimationActions } from './AnimationActions'
 import { SequenceActions } from './SequenceActions'
+import { SoundActions } from './SoundActions'
 
 /**
  * What the timeline panel puts on its own title bar — the montage tools for a sequence, the
@@ -10,9 +11,12 @@ import { SequenceActions } from './SequenceActions'
  */
 export function TimelineActions() {
   const sceneId = useDocuments(activeSceneId)
+  const audioId = useDocuments(activeAudioId)
   const documentId = useDocuments(activeSequenceId)
 
   if (sceneId) return <AnimationActions documentId={sceneId} />
+  // The sound montage carries its own transport: the Audio workspace has no monitor to hold one.
+  if (audioId) return <SoundActions documentId={audioId} />
   if (!documentId) return null
 
   return <SequenceActions documentId={documentId} />

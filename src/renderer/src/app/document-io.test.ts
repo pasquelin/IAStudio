@@ -12,6 +12,7 @@ import type {
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
+import { getBridge } from '@/services/bridge'
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { showPanels } from '@/stores/layout-fixtures'
@@ -25,8 +26,8 @@ import { addLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas, type CanvasHost } from '@/spaces/image/canvas-hosts'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import { pushEdit } from '@/engines/audio/edits'
-import { addClip } from '@/engines/timeline/commands'
-import { makeClip } from '@/engines/timeline/timeline-state'
+import { addClip, removeTrack } from '@/engines/timeline/commands'
+import { EMPTY_SOUND_SEQUENCE, makeClip } from '@/engines/timeline/timeline-state'
 import { setSunAngles } from '@/engines/skybox/commands'
 import { useAudioEdits } from '@/stores/audio-edits'
 import { sequenceStore, useSequences } from '@/stores/sequences'
@@ -1214,6 +1215,59 @@ describe('the kinds a string holds', () => {
     useAudioEdits.getState().drop(documentId)
     await restoreDocument(documentId)
     expect(useAudioEdits.getState().states[documentId]).toEqual(before)
+  })
+
+  // Both halves of a take are one document: the chain over the sample, and the montage under it.
+  it('carries the sound montage of a take to disk and back', async () => {
+    diskBackedBridge('audio')
+    const documentId = await open('audio')
+
+    const clip = makeClip({ id: 'clip-1', assetId: 'asset-a', start: 0, duration: 2_000_000 })
+    useSequences.getState().runCommand(documentId, addClip('A1', clip))
+    const before = useSequences.getState().states[documentId]
+    await saveDocument(documentId)
+
+    useSequences.getState().drop(documentId)
+    useAudioEdits.getState().drop(documentId)
+    await restoreDocument(documentId)
+
+    expect(useSequences.getState().states[documentId]).toEqual(before)
+  })
+
+  // `parseSequence` answers `EMPTY_SEQUENCE` — a PICTURE track — for a montage with nothing left
+  // in it, and removing the last track is a gesture the menu offers.
+  it('reopens a take whose montage was emptied without handing it a picture track', async () => {
+    diskBackedBridge('audio')
+    const documentId = await open('audio')
+
+    for (const track of useSequences.getState().states[documentId]?.tracks ?? []) {
+      useSequences.getState().runCommand(documentId, removeTrack(track.id))
+    }
+    await saveDocument(documentId)
+
+    useSequences.getState().drop(documentId)
+    useAudioEdits.getState().drop(documentId)
+    await restoreDocument(documentId)
+
+    expect(useSequences.getState().states[documentId]).toEqual(EMPTY_SOUND_SEQUENCE)
+  })
+
+  // A file written before takes had a montage. It reopens with an empty one rather than refusing.
+  it('opens a take saved with no montage at all', async () => {
+    diskBackedBridge('audio')
+    const documentId = await open('audio')
+
+    await getBridge()?.documents.write(documentId, 'audio', {
+      title: 'Untitled',
+      content: JSON.stringify({ assetId: 'asset-a', edits: [], region: null, bypassed: false }),
+    })
+
+    useSequences.getState().drop(documentId)
+    useAudioEdits.getState().drop(documentId)
+    await restoreDocument(documentId)
+
+    expect(useAudioEdits.getState().states[documentId]?.assetId).toBe('asset-a')
+    expect(useSequences.getState().states[documentId]).toEqual(EMPTY_SOUND_SEQUENCE)
   })
 
   it('carries a sky to disk and back', async () => {

@@ -13,7 +13,7 @@ import {
   unlinkClip,
 } from './commands'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
-import type { Clip, SequenceState } from './timeline-state'
+import { reindexTracks, type Clip, type SequenceState } from './timeline-state'
 
 const clip = clipFixture
 
@@ -528,6 +528,47 @@ describe('track commands', () => {
     const command = moveTrack('V1', 1)
     const state = twoTracks()
     expect(command.revert(command.apply(state))).toEqual(state)
+  })
+
+  // What a DRAG costs: successive steps coalesce into one entry keeping the first revert, and by
+  // then the track stands several rows from where a `from + by` arithmetic would look for it.
+  it('reverts a run of steps in one press, from wherever the track ended up', () => {
+    // Already reindexed, as every montage on screen is: a fixture's own indices are not the
+    // stack's, and the comparison below is about rows, not about numbering.
+    const state = sequenceWith(
+      reindexTracks([
+        trackFixture('V1', 'video'),
+        trackFixture('V2', 'video'),
+        trackFixture('A1', 'audio'),
+      ]),
+    )
+    const first = moveTrack('V1', 1)
+    const second = moveTrack('V1', 1)
+
+    const dragged = second.apply(first.apply(state))
+    expect(dragged.tracks.map(track => track.id)).toEqual(['V2', 'A1', 'V1'])
+    expect(first.revert(dragged)).toEqual(state)
+  })
+
+  // The other half of the same entry: ⌘⇧Z has to put the track back where the drag left it, and
+  // the last step alone knows only its own `by`.
+  it('replays the whole drag on redo, not its last step', () => {
+    const state = sequenceWith(
+      reindexTracks([
+        trackFixture('V1', 'video'),
+        trackFixture('V2', 'video'),
+        trackFixture('A1', 'audio'),
+      ]),
+    )
+    const first = moveTrack('V1', 1)
+    const second = moveTrack('V1', 1)
+    const dragged = second.apply(first.apply(state))
+
+    expect(second.apply(first.revert(dragged)).tracks.map(track => track.id)).toEqual([
+      'V2',
+      'A1',
+      'V1',
+    ])
   })
 
   it('re-reads depth after a move, so what is drawn follows what is shown', () => {

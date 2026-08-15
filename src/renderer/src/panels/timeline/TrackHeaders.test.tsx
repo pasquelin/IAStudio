@@ -131,6 +131,63 @@ describe('TrackHeaders', () => {
     expect(trackOf('V1')).toBeUndefined()
   })
 
+  describe('dragged by its grip', () => {
+    const grip = (name: string): HTMLElement =>
+      screen.getByRole('button', { name: `Déplacer la piste ${name}` })
+
+    /**
+     * The gesture listens on the window — see `TimelineRow`, which says why it has to. `buttons`
+     * is part of the move: one carrying none is how a release out of sight is found out about.
+     */
+    const dragTo = (clientY: number): void => {
+      fireEvent.pointerMove(window, { clientY, buttons: 1 })
+    }
+    const drop = (): void => {
+      fireEvent.pointerUp(window)
+    }
+
+    const ids = (): (string | undefined)[] =>
+      sequenceOf(useSequences.getState(), 'doc-1').tracks.map(track => track.id)
+
+    it('moves the track through the stack', () => {
+      render(<TrackHeaders documentId="doc-1" />)
+
+      fireEvent.pointerDown(grip('V1'), { clientY: 0 })
+      dragTo(60)
+      drop()
+
+      expect(ids()).toEqual(['A1', 'V1'])
+    })
+
+    // A drag across the stack is one thing the user did: without the gesture it lands as one
+    // entry per step, and ⌘Z gives the stack back a row at a time.
+    it('costs one entry in the history, however many rows it crossed', () => {
+      render(<TrackHeaders documentId="doc-1" />)
+      const before = sequenceHistoryOf(useSequences.getState(), 'doc-1').past.length
+
+      fireEvent.pointerDown(grip('V1'), { clientY: 0 })
+      dragTo(60)
+      dragTo(120)
+      drop()
+
+      expect(sequenceHistoryOf(useSequences.getState(), 'doc-1').past).toHaveLength(before + 1)
+    })
+
+    // Held against the end of the stack, the drag banks nothing — otherwise bringing the pointer
+    // back where it started would spend those steps the other way, and the track would climb.
+    it('writes nothing at all when there is nowhere to go', () => {
+      render(<TrackHeaders documentId="doc-1" />)
+
+      fireEvent.pointerDown(grip('A1'), { clientY: 0 })
+      dragTo(60)
+      dragTo(0)
+      drop()
+
+      expect(ids()).toEqual(['V1', 'A1'])
+      expect(sequenceHistoryOf(useSequences.getState(), 'doc-1').past).toHaveLength(0)
+    })
+  })
+
   /**
    * The rename field sits inside the header, so this row's own menu would take a press meant for
    * the native clipboard one — and `preventDefault` is what keeps Chromium from ever asking the

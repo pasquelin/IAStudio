@@ -53,9 +53,22 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
 import type { VideoToolId } from './video-tools'
 
-export type TimelineCanvasProps = { documentId: string; tool: VideoToolId }
+export type TimelineCanvasProps = {
+  documentId: string
+  tool: VideoToolId
+  /**
+   * Whether ⌘Z and ⌘⇧Z belong to this strip.
+   *
+   * The host decides, and only for those two: a sound montage sits under a take that already
+   * answers ⌘Z on its own scope, and two listeners undoing at once is one press taking a step
+   * off BOTH halves of the document — the studio's oldest trap. Everything else the strip binds
+   * — the blade, Delete, the zoom, the ends — stays live, or the one timeline this lot exists to
+   * make consistent would be the only one with a dead keyboard.
+   */
+  history?: boolean
+}
 
-export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
+export function TimelineCanvas({ documentId, tool, history = true }: TimelineCanvasProps) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The gesture and the state it started from: one history entry per gesture, not per pixel.
@@ -231,15 +244,17 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
           return seek(0)
         case 'sequence.end':
           return seek(sequenceDuration(state))
+        // Left alone where the host owns the history — see `history`. Not the same as being
+        // absent: the key is still swallowed by this scope, and it is the host that answers it.
         case 'sequence.undo':
-          return store.undo(documentId)
+          return history ? store.undo(documentId) : undefined
         case 'sequence.redo':
-          return store.redo(documentId)
+          return history ? store.redo(documentId) : undefined
         default:
           return
       }
     },
-    [documentId, seek, setViewport],
+    [documentId, history, seek, setViewport],
   )
 
   // The strip is only mounted for the document in front, so it always listens while it is there.

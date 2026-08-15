@@ -14,7 +14,9 @@ import { SECOND, type Us } from '@/engines/timeline/timeline-state'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { assetsById, useAssets } from '@/stores/assets'
-import { audioEditsOf, useAudioEdits } from '@/stores/audio-edits'
+import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
+import { useSequences } from '@/stores/sequences'
+import { canRedo, canUndo } from '@/engines/core/history'
 import { useDocuments } from '@/stores/documents'
 import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
 import { decodeAsset } from './decode'
@@ -172,11 +174,30 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
     }
   }
 
+  /**
+   * ⌘Z, for a document holding TWO stories: the chain over the take, and the sound montage under
+   * it. One key, one document, so it has to choose — and it chooses the chain whenever the chain
+   * has anything to give back, the montage otherwise.
+   *
+   * The montage cannot answer for itself: its own scope is `sequence`, and a second listener on
+   * that scope would undo BOTH halves on one press — the studio's "two diverging undo stacks",
+   * which is why `SoundPanel` mounts the strip with its shortcuts off.
+   */
   const onCommand = useCallback(
     (command: CommandId) => {
-      const store = useAudioEdits.getState()
-      if (command === 'audio.undo') return store.undo(documentId)
-      if (command === 'audio.redo') return store.redo(documentId)
+      const takes = useAudioEdits.getState()
+      const montage = useSequences.getState()
+
+      if (command === 'audio.undo') {
+        return canUndo(audioHistoryOf(takes, documentId))
+          ? takes.undo(documentId)
+          : montage.undo(documentId)
+      }
+      if (command === 'audio.redo') {
+        return canRedo(audioHistoryOf(takes, documentId))
+          ? takes.redo(documentId)
+          : montage.redo(documentId)
+      }
     },
     [documentId],
   )

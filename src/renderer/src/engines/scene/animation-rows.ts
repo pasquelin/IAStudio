@@ -7,7 +7,9 @@
  * rather than stored. Folding a subject away must never lose a key.
  */
 import type { AnimationTimeline, AnimationTrack } from '@shared/domain/animation'
+import { reconcileOrder } from '@shared/domain/order'
 import type { Us } from '@shared/domain/time'
+import { ROW_PADDING } from '../timeline/timeline-geometry'
 
 /** One object, or one bone of one object. Its channels are the tracks that drive it. */
 export type Subject = {
@@ -70,7 +72,6 @@ export const CLIP_HEIGHT = 24
  */
 const CONTROL_ROW = 28
 const NAME_ROW = 16
-const ROW_PADDING = 4
 
 export const SUBJECT_HEIGHT = NAME_ROW + CONTROL_ROW + ROW_PADDING
 
@@ -108,6 +109,49 @@ export type SheetNode = {
   name: string
 }
 
+/**
+ * The subjects in the order the sheet shows them: the arrangement the user made first, then
+ * whatever the scene has added since, in the order the scene holds it.
+ *
+ * The arrangement is a WAY OF WORKING and nothing else — objects one returns to are brought to
+ * the top. It never touches the scene: the outliner keeps its own order, and an object moved here
+ * stays exactly where the hierarchy put it.
+ */
+export function orderedSubjects(
+  natural: readonly string[],
+  preferred: readonly string[],
+): string[] {
+  const known = new Set(natural)
+  // `reconcileOrder` rather than appending the newcomers at the end, and the difference is what
+  // one SEES: an object added to the scene lands under the neighbours the hierarchy already gives
+  // it, instead of at the bottom of a sheet somebody has arranged. Its header says as much — this
+  // reconciliation had already been written twice before it was named.
+  return reconcileOrder(
+    preferred.filter(id => known.has(id)),
+    natural,
+    id => id,
+  )
+}
+
+/**
+ * The same list with one entry moved by that many places. Clamped at both ends rather than
+ * wrapping: a row dragged past the top has arrived, it has not gone to the bottom.
+ */
+export function movedWithin(ids: readonly string[], id: string, by: number): readonly string[] {
+  const from = ids.indexOf(id)
+  if (from === -1 || by === 0) return ids
+
+  const to = Math.min(Math.max(from + by, 0), ids.length - 1)
+  // The SAME array back when nothing moved — a line dragged against the top is asked to move on
+  // every step of the gesture, and a fresh array each time rebuilds the whole sheet for nothing.
+  if (to === from) return ids
+
+  const moved = [...ids]
+  moved.splice(from, 1)
+  moved.splice(to, 0, id)
+  return moved
+}
+
 export type RowsOptions = {
   /**
    * The objects on stage, in outliner order. EVERY one gets a line, keyed or not: a scene's
@@ -123,6 +167,8 @@ export type RowsOptions = {
    * GLB, so nothing that reads only the document can know how long a block runs.
    */
   clips?: readonly ClipBlock[]
+  /** How the user has arranged the lines. Empty leaves the scene's own order — see `orderedSubjects`. */
+  order?: readonly string[]
 }
 
 /**
@@ -146,10 +192,11 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
   const rows: AnimationRow[] = []
 
   /** The objects first, in the order the scene holds them, then the bones keyed inside them. */
-  const order = [
+  const natural = [
     ...options.nodes.map(node => node.id),
     ...[...grouped.keys()].filter(key => !named.has(key)),
   ]
+  const order = orderedSubjects(natural, options.order ?? [])
 
   for (const key of order) {
     const tracks = grouped.get(key) ?? []

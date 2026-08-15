@@ -6,7 +6,11 @@ import { canUndo } from '@/engines/core/history'
 import { EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
+import { SECOND } from '@shared/domain/time'
+import { addClip } from '@/engines/timeline/commands'
+import { makeClip, EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timeline-state'
 import { useAssets } from '@/stores/assets'
+import { sequenceOf, useSequences } from '@/stores/sequences'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
 import { useDocuments } from '@/stores/documents'
 import { installDocuments } from '@/stores/document-fixtures'
@@ -70,6 +74,7 @@ describe('AudioDocument', () => {
     saveAudio.mockClear()
     useAssets.setState({ items: [asset] })
     useAudioEdits.setState({ states: {}, histories: {} })
+    useSequences.setState({ states: { 'doc-1': EMPTY_SOUND_SEQUENCE }, histories: {} })
   })
 
   // The bar carried the only undo this space had until `audio.undo` was registered — which is
@@ -96,6 +101,31 @@ describe('AudioDocument', () => {
       await userEvent.keyboard('{Meta>}{z}{/Meta}')
 
       expect(editsOf().edits).toEqual([{ kind: 'trimSilence' }])
+    })
+
+    // One key, one document, two stores: the montage under the take answers ⌘Z only when the
+    // chain has nothing left to give back. Nothing else can reach it — the strip's own scope is
+    // off, precisely so that one press never undoes both halves.
+    it('gives the key to the montage when the chain has nothing to undo', async () => {
+      await openTake()
+      const clip = makeClip({ id: 'clip-1', assetId: 'asset-a', start: 0, duration: SECOND })
+      useSequences.getState().runCommand('doc-1', addClip('A1', clip))
+
+      await userEvent.keyboard('{Meta>}{z}{/Meta}')
+
+      expect(sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips).toEqual([])
+    })
+
+    it('undoes the chain first, leaving the montage where it stands', async () => {
+      await openTake()
+      const clip = makeClip({ id: 'clip-1', assetId: 'asset-a', start: 0, duration: SECOND })
+      useSequences.getState().runCommand('doc-1', addClip('A1', clip))
+      await userEvent.click(screen.getByRole('button', { name: /Normaliser/ }))
+
+      await userEvent.keyboard('{Meta>}{z}{/Meta}')
+
+      expect(editsOf().edits).toEqual([])
+      expect(sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips).toHaveLength(1)
     })
   })
 

@@ -1,11 +1,10 @@
 import { mdiVideoVintage } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
-import { TimelineCanvas } from '@/spaces/video/TimelineCanvas'
-import { activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
-import { useVideoTool } from '@/stores/video-tool'
+import { activeAudioId, activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
 import { AnimationPanel } from './AnimationPanel'
-import { TrackHeaders } from './TrackHeaders'
+import { MontagePanel } from './MontagePanel'
+import { SoundPanel } from './SoundPanel'
 
 /**
  * The montage of whatever sequence is in front. A tool window has no props — it sits on the
@@ -16,19 +15,15 @@ export function TimelinePanel() {
   const { t } = useTranslation()
   const documentId = useDocuments(activeSequenceId)
   const sceneId = useDocuments(activeSceneId)
-  const tool = useVideoTool(state => state.tool)
+  const audioId = useDocuments(activeAudioId)
 
   // A scene reads its time along the same band, and it is a different timeline entirely: tracks
   // that add up rather than clips that take turns.
   if (sceneId) return <AnimationPanel documentId={sceneId} />
+  // A take reads its time along the same band as a sequence — and it IS the same band: sound laid
+  // beside sound is what makes Audio a place music is built rather than one take trimmed.
+  if (audioId) return <SoundPanel documentId={audioId} />
   if (!documentId) return <EmptyState icon={mdiVideoVintage} message={t('timeline.noDocument')} />
 
-  return (
-    <div className="flex h-full min-h-0">
-      <TrackHeaders documentId={documentId} />
-      <div className="min-w-0 flex-1">
-        <TimelineCanvas documentId={documentId} tool={tool} />
-      </div>
-    </div>
-  )
+  return <MontagePanel documentId={documentId} />
 }
