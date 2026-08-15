@@ -8,10 +8,11 @@ import {
   type UsageReport,
 } from '@shared/domain/usage'
 import { UiIcon } from '@/design/UiIcon'
+import { WindowChip } from '@/design/WindowChip'
 import { WindowShell } from '@/design/WindowShell'
 import { CLICKABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
-import { HINT_BOTTOM, HINT_RIGHT } from '@/helpers/tooltip'
+import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { UsageActivities } from './UsageActivities'
 import { UsageJournal } from './UsageJournal'
@@ -55,16 +56,13 @@ export function UsageWindow() {
           className="ml-auto flex gap-0.5"
         >
           {USAGE_PERIODS.map(days => (
-            <button
+            <WindowChip
               key={days}
-              type="button"
-              aria-pressed={days === period}
-              {...HINT_BOTTOM(t('usage.period.hint', { count: days }))}
+              label={t('usage.period.short', { count: days })}
+              hint={t('usage.period.hint', { count: days })}
+              selected={days === period}
               onClick={() => setPeriod(days)}
-              className={cn(windowControl(days === period), 'justify-center px-2.5 font-normal')}
-            >
-              {t('usage.period.short', { count: days })}
-            </button>
+            />
           ))}
         </div>
       }

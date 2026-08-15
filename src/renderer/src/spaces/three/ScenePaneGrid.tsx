@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flyout } from '@/design/Flyout'
 import { MenuRow } from '@/design/MenuRow'
+import { CANVAS_TRIGGER } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
-import { cn } from '@/helpers/cn'
 import { HINT_RIGHT, HINT_TOP } from '@/helpers/tooltip'
 import { PANE_VIEWS, type PaneView } from '@/engines/scene/scene-view'
 import { PANE_VIEW_ICONS } from './scene-tools'
@@ -77,12 +77,7 @@ function PaneMenu({
         aria-expanded={open}
         aria-label={t('sceneViews.pane', { number: pane + 1 })}
         onClick={() => setOpen(current => !current)}
-        className={cn(
-          // Pointer events back on: the grid above turns them off so a drag reaches the canvas.
-          'text-muted hover:text-text bg-panel/80 pointer-events-auto cursor-pointer',
-          'text-mini flex items-center gap-1.5 whitespace-nowrap',
-          'rounded-(--radius-sc-sm) border-none px-1.5 py-0.5',
-        )}
+        className={CANVAS_TRIGGER}
       >
         {t(`sceneViews.${view}`)}
         {/* The chevron is what says "this opens": a bare word reads as a caption, and the menu
