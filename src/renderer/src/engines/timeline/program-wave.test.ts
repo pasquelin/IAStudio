@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
-import { paintProgram, programColumns } from './program-wave'
+import { NO_BREAK_SPACE } from '@shared/i18n/typography'
+import { paintProgram, programColumns, programEnvelope } from './program-wave'
 import type { Viewport } from './timeline-geometry'
 import { clipFixture } from './timeline-fixtures'
 import { EMPTY_SOUND_SEQUENCE, makeTrack, type SequenceState } from './timeline-state'
@@ -40,37 +41,128 @@ const peaks = flat(1, 0.25)
  * a scale.
  */
 describe('the programme monitor', () => {
-  const painted = (): { labels: string[]; context: CanvasRenderingContext2D } => {
+  const painted = (): { labels: string[]; filled: string[]; context: CanvasRenderingContext2D } => {
     const labels: string[] = []
+    const filled: string[] = []
+    let ink = ''
     const context = {
-      fillRect: () => {},
+      fillRect: () => filled.push(ink),
+      fill: () => filled.push(ink),
       fillText: (text: string) => labels.push(text),
-      set fillStyle(_ink: string) {},
+      measureText: (text: string) => ({ width: text.length * 6, actualBoundingBoxAscent: 7 }),
+      save: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      closePath: () => {},
+      rect: () => {},
+      clip: () => {},
+      lineTo: () => {},
+      stroke: () => {},
+      set fillStyle(colour: string) {
+        ink = colour
+      },
+      set strokeStyle(_ink: string) {},
+      set lineWidth(_width: number) {},
       set font(_font: string) {},
       set textBaseline(_baseline: string) {},
-      // `as`: what a ruler asks of a 2D context is these five members, and jsdom builds none.
-      // The take is left without peaks on purpose — the wave is `paintWaveform`'s own suite.
+      // `as`: what these painters ask of a 2D context is the members above, and jsdom builds none.
     } as unknown as CanvasRenderingContext2D
 
-    return { labels, context }
+    return { labels, filled, context }
   }
 
   const style = { background: 'a', tick: 'b', text: 'c', font: '10px monospace' }
 
+  const scale = {
+    line: 'grid',
+    text: 'ink',
+    background: 'plate',
+    font: '9px monospace',
+    unit: 'dB',
+    language: 'en',
+  }
+
+  const palette = {
+    safe: 'green',
+    hot: 'amber',
+    clip: 'red',
+    envelope: 'groove',
+    playhead: 'p',
+    background: 'bg',
+    ruler: style,
+    scale,
+  }
+
+  const paint = (state: SequenceState, height = 120) => {
+    const surface = painted()
+    paintProgram(surface.context, state, () => peaks, { width: 400, height }, palette)
+    return surface
+  }
+
   it('graduates the time across its width', () => {
-    const { labels, context } = painted()
+    const { labels } = paint(montage([sounding('A1', 'a')]))
 
-    paintProgram(
-      context,
-      montage([sounding('A1', 'a')]),
-      () => null,
-      { width: 400, height: 120 },
-      { wave: 'w', playhead: 'p', background: 'bg', ruler: style },
-    )
-
-    expect(labels.length).toBeGreaterThan(0)
     // A timecode, not a bare number of microseconds: the same reading as the strip's.
-    expect(labels[0]).toMatch(/^\d\d:\d\d:\d\d/)
+    expect(labels.some(label => /^\d\d:\d\d:\d\d/.test(label))).toBe(true)
+  })
+
+  /**
+   * The three bands are what the monitor gained: a montage is read by how close it stands to the
+   * ceiling, and one grey said nothing about that.
+   */
+  it('lays the wave down in all three bands of the level scale', () => {
+    const { filled } = paint(montage([sounding('A1', 'a')]))
+
+    expect(filled).toContain('green')
+    expect(filled).toContain('amber')
+    expect(filled).toContain('red')
+    // Calm first: the louder bands are painted over it, showing only what reaches past them.
+    expect(filled.indexOf('green')).toBeLessThan(filled.indexOf('amber'))
+    expect(filled.indexOf('amber')).toBeLessThan(filled.indexOf('red'))
+  })
+
+  it('writes each graduation with the unit it was handed, in the language it was handed', () => {
+    const { labels } = paint(montage([sounding('A1', 'a')]))
+
+    expect(labels).toContain(`-6${NO_BREAK_SPACE}dB`)
+    expect(labels).toContain(`-18${NO_BREAK_SPACE}dB`)
+  })
+
+  /** A monitor squeezed to a sliver has no room to write on, and a label over the ruler is worse
+      than no label at all. */
+  it('drops the graduations it cannot write above the ruler', () => {
+    const { labels } = paint(montage([sounding('A1', 'a')]), 40)
+
+    expect(labels).not.toContain(`-6${NO_BREAK_SPACE}dB`)
+  })
+})
+
+describe('the envelope of a montage', () => {
+  it('smooths the crests into the body of the sound, symmetric about the axis', () => {
+    const columns = [
+      { x: 0, min: -1, max: 1 },
+      { x: 1, min: 0, max: 0 },
+      { x: 2, min: 0, max: 0 },
+    ]
+
+    const envelope = programEnvelope(columns)
+
+    // A lone transient is averaged down rather than kept: what this line shows is the body of the
+    // sound, and the crests it stands under are drawn beside it.
+    expect(envelope[0]?.max).toBeCloseTo(1 / 3, 5)
+    expect(envelope[0]?.min).toBeCloseTo(-1 / 3, 5)
+    expect(envelope.map(column => column.x)).toEqual([0, 1, 2])
+  })
+
+  it('never reaches past the crests it averages', () => {
+    const columns = Array.from({ length: 20 }, (_unused, x) => ({ x, min: -0.4, max: 0.8 }))
+
+    // Extremes of ±0.4 and ±0.8 average to a reach of 0.6 either side.
+    expect(programEnvelope(columns)[10]?.max).toBeCloseTo(0.6, 5)
+  })
+
+  it('has nothing to smooth on an empty montage', () => {
+    expect(programEnvelope([])).toEqual([])
   })
 })
 

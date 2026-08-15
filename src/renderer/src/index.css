@@ -164,6 +164,17 @@
    */
   --color-clip-audio: #264a31;
   /*
+   * A sound that is nowhere near the ceiling, on the meters of the Audio workspace. The other two
+   * bands are `warning` and `danger`, which already mean "watch this" and "this went wrong" — the
+   * scale needed a third and only the calm end was missing.
+   *
+   * NOT `--color-create`, which the rail's one creating button owns: a waveform painted in it
+   * would say "new" on a surface where nothing is being created, and the two greens would then be
+   * held to the same value by nothing at all. Painted on the chassis and read as a shape, so its
+   * bar is the 3:1 of WCAG 1.4.11 — `design/tokens.test.ts` measures it, no class ever names it.
+   */
+  --color-level-safe: #4caf72;
+  /*
    * Untextured geometry. Its own token and not `--color-muted`, which is a TEXT colour: raising
    * the contrast of a dimmed label would otherwise repaint every mesh in the scene. That is not
    * a hypothesis — `muted` was raised for exactly that reason and this value stayed where it was,
@@ -423,6 +434,9 @@
   /* The same trade as the dark theme's green: `elevated`'s luminance here, so the label and the
      waveform read on it exactly as they do on a picture clip. */
   --color-clip-audio: #d5ecdb;
+  /* Darkened rather than lightened, as every ink is here: the meters keep the same chassis under
+     them, and a mid green that carried 5:1 on the dark one carries 1.6 on this. */
+  --color-level-safe: #2f7d4f;
   /*
    * Restated identically, and for the same reason as the monitor: the marching ants are drawn
    * over the document, not over the studio's chrome, and the document does not change with the
@@ -520,6 +534,13 @@
      measures its prose the same way. Held out of the density block on purpose: a tooltip is
      read, not operated. */
   --sc-tooltip: 42ch;
+  /* The output meter standing beside the programme monitor, and the spectrum band under it. Two
+     gauges rather than two constants because both are painted on a canvas, which is given a
+     NUMBER: `useGauge` is the one door for that, and a constant would only be right at one
+     density. Narrow on purpose — the meter is read at a glance, and every pixel it takes is one
+     the waveform beside it loses. */
+  --sc-meter: 14px;
+  --sc-spectrum: 72px;
   --sc-shadow-furniture: 0 1px 2px rgb(0 0 0 / 0.25);
   --sc-shadow-floating: 0 8px 24px rgb(0 0 0 / 0.55);
 }
@@ -536,6 +557,8 @@
   --sc-tab: 32px;
   --sc-track-header: 120px;
   --sc-label: 72px;
+  --sc-meter: 12px;
+  --sc-spectrum: 56px;
 }
 
 html,

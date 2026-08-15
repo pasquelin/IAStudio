@@ -87,7 +87,8 @@
     "sourceRole": "The clip you picked, as it is before the edit",
     "programRole": "The whole edit, as it will be exported",
     "mirror": "Return window",
-    "mirrorHint": "Opens the edit in a window of its own, to put on a second screen"
+    "mirrorHint": "Opens the edit in a window of its own, to put on a second screen",
+    "decibels": "dB"
   },
   "timeline": {
     "noDocument": "No sequence open. Create one to start editing.",

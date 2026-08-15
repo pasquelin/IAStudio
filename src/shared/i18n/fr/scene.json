@@ -87,7 +87,8 @@
     "sourceRole": "Le clip choisi, tel qu’il est avant montage",
     "programRole": "Le montage entier, tel qu’il sera exporté",
     "mirror": "Fenêtre de retour",
-    "mirrorHint": "Ouvre le montage dans une fenêtre à part, à poser sur un autre écran"
+    "mirrorHint": "Ouvre le montage dans une fenêtre à part, à poser sur un autre écran",
+    "decibels": "dB"
   },
   "timeline": {
     "noDocument": "Aucune séquence ouverte. Créez-en une pour monter.",

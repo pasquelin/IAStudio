@@ -7,7 +7,7 @@ import { TOOLBAR_LABEL } from '@/design/styles'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar } from '@/design/Toolbar'
 import { paintOn } from '@/engines/core/canvas-2d'
-import { rootColour } from '@/engines/core/palette'
+import { rootColour, rootFont } from '@/engines/core/palette'
 import { paintProgram, programViewport } from '@/engines/timeline/program-wave'
 import { readRulerStyle } from '@/engines/timeline/ruler'
 import { xToTime } from '@/engines/timeline/timeline-geometry'
@@ -20,6 +20,10 @@ import {
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { usePeaks } from '@/stores/peaks'
 import type { SoundTransport } from './useSoundTransport'
+
+/** The scale's own face, as the ruler above it takes one: monospace, so digits keep their column. */
+const SCALE_FAMILY = 'ui-monospace, monospace'
+const SCALE_SIZE = '9px'
 
 export type ProgramMonitorProps = {
   sequence: SequenceState
@@ -37,7 +41,7 @@ export type ProgramMonitorProps = {
  * fits the width, this being the view one reads rather than one one scrolls.
  */
 export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // Read on paint rather than subscribed to: a waveform arriving is a repaint, never a render.
   const latest = useRef(sequence)
@@ -52,16 +56,27 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
     paintOn(canvasRef.current, (context, box) => {
       paintProgram(context, latest.current, peaksOf, box, {
         background: rootColour('--color-chassis'),
-        // The ink a clip draws its own waveform in, not the green it is filled with: green on the
-        // chassis is the one pairing this token was never balanced against, and a wave is a glyph
-        // that informs — 3:1, by 1.4.11. Read this way, both halves of the pair draw alike.
-        wave: rootColour('--color-muted'),
+        // Three bands rather than one grey, and each is a token the palette already holds: the
+        // amber and the red are the studio's own "watch this" and "this went wrong", which is
+        // exactly what −6 dB and full scale mean on a montage.
+        safe: rootColour('--color-level-safe'),
+        hot: rootColour('--color-warning'),
+        clip: rootColour('--color-danger'),
+        envelope: rootColour('--color-chassis'),
         playhead: rootColour('--color-accent'),
         // The strip's own ruler, not one of this monitor's making: the pair reads as one grid.
         ruler: readRulerStyle(),
+        scale: {
+          line: rootColour('--color-border'),
+          text: rootColour('--color-muted'),
+          background: rootColour('--color-chassis'),
+          font: rootFont('--text-micro', SCALE_SIZE, SCALE_FAMILY),
+          unit: t('transport.decibels'),
+          language: i18n.language,
+        },
       })
     })
-  }, [peaksOf])
+  }, [peaksOf, t, i18n.language])
 
   useEffect(() => {
     latest.current = sequence
