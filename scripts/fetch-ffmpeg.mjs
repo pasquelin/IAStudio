@@ -76,9 +76,13 @@ const MACOS_VERSION = '7.1.1'
  * The build configuration is not reproduced here: every ffmpeg binary carries its own, and
  * `ffmpeg -buildconf` prints it. Pointing at the binary beats a copy that can drift from it.
  */
+// The upstream tag rather than ffmpeg.org's release tarball — same tree, and it is what actually
+// arrives. Measured on the v0.1.0 attempts of 2026-08-15: ffmpeg.org answered in 5.5 s from a
+// workstation and simply failed from the GitHub runners, twice, taking the whole release down with
+// it. The tag mirror answers in 0.6 s, and it is the host `BTBN_SOURCE` below already relies on.
 const VANILLA_MACOS = {
-  url: `https://ffmpeg.org/releases/ffmpeg-${MACOS_VERSION}.tar.xz`,
-  file: `ffmpeg-${MACOS_VERSION}-source.tar.xz`,
+  url: `https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${MACOS_VERSION}.tar.gz`,
+  file: `ffmpeg-${MACOS_VERSION}-source.tar.gz`,
 }
 
 const BTBN_SOURCE = {

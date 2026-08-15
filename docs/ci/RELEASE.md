@@ -237,6 +237,12 @@ Changer l’URL sans l’empreinte fait échouer le build au packaging — c’e
 `BTBN_BUILD` ; la ligne macOS est écrite à la main. Une version sans archive de sources déclarée
 fait échouer `fetch-ffmpeg.mjs --sources`, donc la release — voir ci-dessous.
 
+**Les deux archives viennent de `github.com/FFmpeg/FFmpeg`, et cela se garde.** La source macOS
+pointait sur `ffmpeg.org`, qui a fait échouer la v0.1.0 deux fois de suite : mesuré le 15 août
+2026, il répondait en 5,5 s depuis un poste et **pas du tout** depuis les runners, emportant la
+release avec lui. Le miroir du tag amont porte le même arbre et répond en 0,6 s. Une future
+rotation ne doit pas revenir à un hôte dont la disponibilité conditionne chaque publication.
+
 ---
 
 ## Les sources de ffmpeg voyagent avec la release
@@ -254,7 +260,7 @@ node scripts/fetch-ffmpeg.mjs --sources dist
 Deux archives, environ 26 Mo, attachées aux installeurs. Rien à faire à la main — mais **deux
 choses à vérifier sur la draft** avant de la publier :
 
-- `ffmpeg-7.1.1-source.tar.xz` et `ffmpeg-n7.1.5-…-source.tar.gz` sont bien dans les assets ;
+- `ffmpeg-7.1.1-source.tar.gz` et `ffmpeg-n7.1.5-…-source.tar.gz` sont bien dans les assets ;
 - leur numéro correspond à celui de `TARGETS`.
 
 Si le téléchargement échoue, la release échoue. C’est délibéré : publier les binaires sans leurs
