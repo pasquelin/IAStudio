@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { MonitorFrame } from '@/design/MonitorFrame'
+import { TOOLBAR_LABEL } from '@/design/styles'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
 import { openAssetSink } from '@/engines/timeline/sink-port'
@@ -198,7 +199,7 @@ export function Monitor({
           }}
           extras={
             <>
-              <span className="text-muted text-tiny px-1">{title}</span>
+              <span className={TOOLBAR_LABEL}>{title}</span>
               <Timecode time={sequence.playhead} fps={sequence.settings.fps} />
             </>
           }

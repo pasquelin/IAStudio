@@ -5,6 +5,7 @@ import type { Asset, AssetType } from '@shared/domain/asset'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { MonitorFrame } from '@/design/MonitorFrame'
+import { TOOLBAR_LABEL } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
 import { durationOf } from '@/engines/audio/audio-data'
 import type { RenderedAudio } from '@/engines/audio/audio-render'
@@ -19,6 +20,7 @@ import {
 } from '@/engines/audio/edits'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { SECOND, trackOfClip, type Us } from '@/engines/timeline/timeline-state'
+import { cn } from '@/helpers/cn'
 import { getBridge } from '@/services/bridge'
 import { assetsById, useAssets } from '@/stores/assets'
 import { audioEditsOf, useAudioEdits } from '@/stores/audio-edits'
@@ -324,7 +326,7 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
               <>
                 {/* On the bar rather than in the tooltips alone: an area nobody knows how to draw
                     is not explained by a sentence that appears once a pointer rests on a tool. */}
-                <span className="text-muted text-tiny px-1">
+                <span className={TOOLBAR_LABEL}>
                   {region
                     ? t('audio.selection', {
                         from: formatDuration(region.from),
@@ -332,7 +334,7 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
                       })
                     : t('audio.noSelection')}
                 </span>
-                <span className="text-muted text-tiny px-1 font-mono">
+                <span className={cn(TOOLBAR_LABEL, 'font-mono')}>
                   {formatDuration(player.currentTime)}
                   {rendered && ` / ${formatDuration(durationOf(rendered.data))}`}
                 </span>

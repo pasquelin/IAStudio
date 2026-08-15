@@ -403,6 +403,17 @@ export const MENU_SURFACE = cn(
  */
 export const PANE_TOOLBAR = 'absolute top-2 left-2'
 
+/**
+ * The word a bar sets beside its buttons: which take is loaded, which half of a pair this
+ * monitor is, how far along the playhead sits. It answers a question asked OF the bar, so it
+ * takes the muted ink rather than the ink of something to reach for.
+ *
+ * `Timecode` wears it too, under its own figures. The label and the time sit in the same bar,
+ * inches apart, and a shade drifting between them would read as two ranks of information where
+ * there is one.
+ */
+export const TOOLBAR_LABEL = 'text-muted text-tiny px-1'
+
 /** The frame every picture sits in, so a tile and a thumbnail cut their corners the same way. */
 export const MEDIA_FRAME =
   'border-border bg-surface overflow-hidden rounded-(--radius-sc-sm) border'
