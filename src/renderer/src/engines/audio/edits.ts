@@ -29,30 +29,43 @@ export type AudioEdit =
 
 export type Region = { from: Us; to: Us }
 
-export type AudioEditState = {
-  /** What is being edited. Null until a tab is pointed at an asset. */
-  assetId: string | null
+/** What one block of the montage has been asked for, over the take it holds. */
+export type TakeChain = {
   edits: AudioEdit[]
   /** The stretch the transport loops over and the tools act on. */
   region: Region | null
   /** A/B: hear the source rather than the chain, without undoing anything. */
   bypassed: boolean
-  /**
-   * The montage clip this take was laid down as, in the sound sequence of the same document.
-   *
-   * Held here rather than found by asset id, because the two are not the same question: a
-   * montage may well hold the same take twice, and only one of them is what the editor above is
-   * working on. Null when no track would take it — a montage whose sound tracks are all locked.
-   */
-  takeClipId: string | null
 }
 
-export const EMPTY_AUDIO_EDIT: AudioEditState = {
-  assetId: null,
-  edits: [],
-  region: null,
-  bypassed: false,
-  takeClipId: null,
+export const EMPTY_TAKE_CHAIN: TakeChain = { edits: [], region: null, bypassed: false }
+
+/**
+ * Every chain of a document, keyed by the montage BLOCK it edits.
+ *
+ * Per block and not per document, because that is what the editor below the montage shows: the
+ * block one selected, exactly as the Video workspace's source monitor shows the clip one
+ * selected. A chain held per document made the two halves argue — the strip showed several
+ * blocks and the editor showed a take that had been loaded from the shelf, with nothing on
+ * screen tying one to the other.
+ *
+ * The block also carries what the chain USED to hold beside it: which asset is being edited is
+ * `clip.assetId`, and which clip the chain writes back to is the key itself.
+ */
+export type AudioEditState = {
+  chains: Record<string, TakeChain>
+}
+
+export const EMPTY_AUDIO_EDIT: AudioEditState = { chains: {} }
+
+/** The chain of one block, or an empty one — a block nobody has edited yet has no entry. */
+export function chainOf(state: AudioEditState, clipId: string | null): TakeChain {
+  return (clipId ? state.chains[clipId] : null) ?? EMPTY_TAKE_CHAIN
+}
+
+/** The same chain written back, out of the history — a region moved, an A/B pressed. */
+export function withChain(state: AudioEditState, clipId: string, chain: TakeChain): AudioEditState {
+  return { chains: { ...state.chains, [clipId]: chain } }
 }
 
 /**
@@ -162,8 +175,8 @@ export function renderEdits(source: AudioData, edits: readonly AudioEdit[]): Aud
 }
 
 /** What the editor plays: the chain, or the source when A/B is held on the source side. */
-export function audibleData(source: AudioData, state: AudioEditState): AudioData {
-  return state.bypassed ? source : renderEdits(source, state.edits)
+export function audibleData(source: AudioData, chain: TakeChain): AudioData {
+  return chain.bypassed ? source : renderEdits(source, chain.edits)
 }
 
 /** A region clamped to the take it belongs to, or nothing when it has collapsed. */
@@ -183,17 +196,25 @@ export function clampRegion(region: Region, data: AudioData): Region | null {
  * `history.ts` promises that `revert` undoes its own `apply`, and a blind `slice(0, -1)` would
  * hold only for as long as appending stays the only audio command there is.
  */
-export function pushEdit(edit: AudioEdit): Command<AudioEditState> {
+export function pushEdit(clipId: string, edit: AudioEdit): Command<AudioEditState> {
   let at = -1
 
   return {
     id: `audio:${edit.kind}`,
     apply: state => {
-      at = state.edits.length
-      return { ...state, edits: [...state.edits, edit] }
+      const chain = chainOf(state, clipId)
+      at = chain.edits.length
+      return withChain(state, clipId, { ...chain, edits: [...chain.edits, edit] })
     },
-    revert: state =>
-      at < 0 ? state : { ...state, edits: state.edits.filter((_step, index) => index !== at) },
+    revert: state => {
+      if (at < 0) return state
+
+      const chain = chainOf(state, clipId)
+      return withChain(state, clipId, {
+        ...chain,
+        edits: chain.edits.filter((_step, index) => index !== at),
+      })
+    },
   }
 }
 
@@ -241,28 +262,42 @@ function readRegion(raw: unknown): Region | null {
  * document reader: text that is not JSON at all is a file that failed to read, and that is the
  * caller's to refuse — a shape that is merely wrong opens on an empty chain.
  */
-export function parseAudioEdits(content: unknown): AudioEditState {
-  if (!isRecord(content)) return EMPTY_AUDIO_EDIT
-
-  const assetId = readString(content, 'assetId', '')
-  const takeClipId = readString(content, 'takeClipId', '')
+function readChain(raw: unknown): TakeChain {
   const edits: AudioEdit[] = []
-  if (Array.isArray(content.edits)) {
-    for (const entry of content.edits) {
+  if (isRecord(raw) && Array.isArray(raw.edits)) {
+    for (const entry of raw.edits) {
       const edit = readEdit(entry)
       if (edit) edits.push(edit)
     }
   }
 
   return {
-    assetId: assetId || null,
     edits,
-    // Absent from every take written before the montage had a clip of its own: those reopen
-    // with the two halves untied, which is what they were saved as.
-    takeClipId: takeClipId || null,
-    region: readRegion(content.region),
+    region: readRegion(isRecord(raw) ? raw.region : null),
     // Never restored as bypassed: A/B is which of two things one is listening to right now,
     // and a document that reopens on the source would look like a chain that stopped working.
     bypassed: false,
   }
+}
+
+export function parseAudioEdits(content: unknown): AudioEditState {
+  if (!isRecord(content)) return EMPTY_AUDIO_EDIT
+
+  if (isRecord(content.chains)) {
+    const chains: Record<string, TakeChain> = {}
+    for (const [clipId, raw] of Object.entries(content.chains)) chains[clipId] = readChain(raw)
+    return { chains }
+  }
+
+  /*
+   * A document saved while the chain belonged to the DOCUMENT rather than to a block. Its one
+   * chain names the block it was laid down as, and that block is where it now lives — read any
+   * other way, a project reopened after this change would come back with its fades undone.
+   *
+   * A chain with no block has nowhere to land: those were saved before the montage held the take
+   * at all, and the editor now edits blocks. The take itself is not lost — it is an asset, and
+   * the montage is read from its own half of the file.
+   */
+  const takeClipId = readString(content, 'takeClipId', '')
+  return takeClipId ? { chains: { [takeClipId]: readChain(content) } } : EMPTY_AUDIO_EDIT
 }

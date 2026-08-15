@@ -2,10 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { Project } from '@shared/domain/project'
-import { pushEdit } from '@/engines/audio/edits'
-import { canUndo } from '@/engines/core/history'
+import { chainOf, pushEdit } from '@/engines/audio/edits'
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
-import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
+import { audioEditsOf, useAudioEdits } from '@/stores/audio-edits'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
@@ -85,7 +84,12 @@ describe('opening an asset', () => {
   it('opens a take in the audio editor, in a tab of its own', async () => {
     await openAsset(asset())
 
-    expect(audioEditsOf(useAudioEdits.getState(), opened().id).assetId).toBe('asset-1')
+    // A block on the montage, selected — which is what the editor below the montage shows.
+    const montage = sequenceOf(useSequences.getState(), opened().id)
+    expect(montage.tracks.flatMap(track => track.clips).map(clip => clip.assetId)).toEqual([
+      'asset-1',
+    ])
+    expect(montage.selectedId).not.toBeNull()
     expect(useLayouts.getState().activeWorkspace).toBe('audio')
   })
 
@@ -323,21 +327,24 @@ describe('opening an asset', () => {
   })
 
   /**
-   * A chain is a length and a region measured against the take it was made on. Carried over to
-   * another take it describes nothing, and "apply" would write that nothing over the file.
+   * A chain is a length and a region measured against the block it was made on, and it stays
+   * with that block. Where a second take used to wipe the first one's work, it now lands beside
+   * it — the montage holds both, and each keeps what was asked of it.
    */
-  it('drops the chain when a take is loaded into a tab pointed elsewhere', async () => {
+  it('leaves the first take its chain when a second is loaded into the same tab', async () => {
     await openAsset(asset())
     const tab = opened().id
-    useAudioEdits.getState().runCommand(tab, pushEdit({ kind: 'trimSilence' }))
+    const laid = sequenceOf(useSequences.getState(), tab).selectedId ?? ''
+    useAudioEdits.getState().runCommand(tab, pushEdit(laid, { kind: 'trimSilence' }))
 
-    // The tab is the asset's, so the second take reaches it the way a drop does.
+    // The tab is the asset's, so the second take reaches it the way a drop does. The head has
+    // not moved, so it lands over the first block — what any drop at the head does.
     const { loadTake } = await import('@/spaces/audio/load-take')
     loadTake(tab, asset({ id: 'asset-2' }))
 
     const edits = audioEditsOf(useAudioEdits.getState(), tab)
-    expect(edits).toMatchObject({ assetId: 'asset-2', edits: [], region: null, bypassed: false })
-    expect(canUndo(audioHistoryOf(useAudioEdits.getState(), tab))).toBe(false)
+    expect(chainOf(edits, laid).edits).toEqual([{ kind: 'trimSilence' }])
+    expect(chainOf(edits, sequenceOf(useSequences.getState(), tab).selectedId).edits).toEqual([])
   })
 
   // The panel shows this field under "what produced this sky". Left in place, it would credit

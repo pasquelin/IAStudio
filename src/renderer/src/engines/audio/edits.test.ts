@@ -4,13 +4,16 @@ import { emptyHistory } from '@/engines/core/history'
 import { durationOf, frameCount, rms, toDb, type AudioData } from './audio-data'
 import {
   audibleData,
+  chainOf,
   clampRegion,
   EMPTY_AUDIO_EDIT,
+  EMPTY_TAKE_CHAIN,
   parseAudioEdits,
   pushEdit,
   renderEdits,
   replayEdits,
   type AudioEditState,
+  type TakeChain,
 } from './edits'
 import { encodeWav } from './wav'
 
@@ -55,45 +58,58 @@ describe('the edit chain', () => {
 
 describe('A/B', () => {
   const source = tone(100, 1)
-  const state: AudioEditState = {
-    ...EMPTY_AUDIO_EDIT,
-    edits: [{ kind: 'gain', db: -20 }],
-  }
+  const chain: TakeChain = { ...EMPTY_TAKE_CHAIN, edits: [{ kind: 'gain', db: -20 }] }
 
   it('plays the chain by default', () => {
-    expect(audibleData(source, state).channels[0]?.[0]).toBeCloseTo(0.1, 1)
+    expect(audibleData(source, chain).channels[0]?.[0]).toBeCloseTo(0.1, 1)
   })
 
   it('plays the source untouched while bypassed, without dropping the chain', () => {
-    const bypassed = { ...state, bypassed: true }
+    const bypassed = { ...chain, bypassed: true }
     expect(audibleData(source, bypassed)).toBe(source)
     expect(bypassed.edits).toHaveLength(1)
   })
 })
 
 describe('undo', () => {
+  const stepsOf = (state: AudioEditState) => chainOf(state, 'clip-1').edits
+
   it('drops the last step and puts it back', () => {
     let state = EMPTY_AUDIO_EDIT
     let history: History<AudioEditState> = emptyHistory()
 
-    ;[state, history] = run(state, history, pushEdit({ kind: 'trimSilence' }))
-    expect(state.edits).toHaveLength(1)
+    ;[state, history] = run(state, history, pushEdit('clip-1', { kind: 'trimSilence' }))
+    expect(stepsOf(state)).toHaveLength(1)
     ;[state, history] = undo(state, history)
-    expect(state.edits).toHaveLength(0)
+    expect(stepsOf(state)).toHaveLength(0)
     ;[state] = redo(state, history)
-    expect(state.edits).toHaveLength(1)
+    expect(stepsOf(state)).toHaveLength(1)
+  })
+
+  // Two blocks of one montage, each with its own story: an undo on one that reached into the
+  // other is the defect a chain held per document could not even express.
+  it('walks back the block the step was made on, and leaves its neighbour alone', () => {
+    let state = EMPTY_AUDIO_EDIT
+    let history: History<AudioEditState> = emptyHistory()
+
+    ;[state, history] = run(state, history, pushEdit('clip-1', { kind: 'trimSilence' }))
+    ;[state, history] = run(state, history, pushEdit('clip-2', { kind: 'gain', db: -3 }))
+    ;[state] = undo(state, history)
+
+    expect(chainOf(state, 'clip-2').edits).toEqual([])
+    expect(chainOf(state, 'clip-1').edits).toEqual([{ kind: 'trimSilence' }])
   })
 
   it('keeps the chain and not the samples, which is what makes it affordable', () => {
     const [state] = run(
       EMPTY_AUDIO_EDIT,
       emptyHistory<AudioEditState>(),
-      pushEdit({
+      pushEdit('clip-1', {
         kind: 'normalize',
         targetLufs: -14,
       }),
     )
-    expect(state.edits[0]).toEqual({ kind: 'normalize', targetLufs: -14 })
+    expect(stepsOf(state)[0]).toEqual({ kind: 'normalize', targetLufs: -14 })
   })
 })
 
@@ -157,8 +173,7 @@ describe('writing a wav back', () => {
 })
 
 describe('reading an edit chain back', () => {
-  const filled: AudioEditState = {
-    assetId: 'asset-a',
+  const chain: TakeChain = {
     edits: [
       { kind: 'crop', from: 10, to: 400 },
       { kind: 'fade', edge: 'out', length: 50 },
@@ -168,8 +183,10 @@ describe('reading an edit chain back', () => {
     ],
     region: { from: 0, to: 200 },
     bypassed: false,
-    takeClipId: 'clip-a',
   }
+  const filled: AudioEditState = { chains: { 'clip-a': chain, 'clip-b': EMPTY_TAKE_CHAIN } }
+
+  const stepsIn = (raw: unknown) => chainOf(parseAudioEdits(raw), 'clip-a').edits
 
   it('survives a serialize/parse round trip unchanged', () => {
     expect(parseAudioEdits(JSON.parse(JSON.stringify(filled)))).toEqual(filled)
@@ -177,34 +194,73 @@ describe('reading an edit chain back', () => {
 
   it('falls back to an empty chain rather than throwing on a shape it cannot read', () => {
     expect(parseAudioEdits('not a record')).toEqual(EMPTY_AUDIO_EDIT)
-    expect(parseAudioEdits({ edits: 'nope' })).toEqual(EMPTY_AUDIO_EDIT)
+    expect(parseAudioEdits({ chains: 'nope' })).toEqual(EMPTY_AUDIO_EDIT)
+  })
+
+  /**
+   * A project saved while the chain belonged to the DOCUMENT. Its one chain names the block it
+   * was laid down as, and that block is where it now lives — read any other way, every project
+   * made before this change would reopen with its fades undone.
+   */
+  it('gives a chain saved for the whole document to the block it was laid down as', () => {
+    const old = {
+      assetId: 'asset-a',
+      takeClipId: 'clip-a',
+      edits: [{ kind: 'gain', db: -3 }],
+      region: { from: 0, to: 200 },
+    }
+
+    expect(parseAudioEdits(old)).toEqual({
+      chains: {
+        'clip-a': {
+          edits: [{ kind: 'gain', db: -3 }],
+          region: { from: 0, to: 200 },
+          bypassed: false,
+        },
+      },
+    })
+  })
+
+  // Saved before the montage held the take at all: there is no block to carry it, and the
+  // editor now edits blocks. The take itself is an asset and is not lost with it.
+  it('drops a chain that names no block, having nowhere to put it', () => {
+    expect(parseAudioEdits({ assetId: 'asset-a', edits: [{ kind: 'trimSilence' }] })).toEqual(
+      EMPTY_AUDIO_EDIT,
+    )
   })
 
   // A step this build cannot replay is dropped rather than kept as a no-op, which would
   // silently change what the take sounds like.
   it('drops a step of an unknown kind, and a fade naming no edge', () => {
-    const state = parseAudioEdits({
-      edits: [{ kind: 'reverb' }, { kind: 'fade', length: 10 }, { kind: 'gain', db: 2 }],
-    })
-    expect(state.edits).toEqual([{ kind: 'gain', db: 2 }])
+    const raw = {
+      chains: {
+        'clip-a': {
+          edits: [{ kind: 'reverb' }, { kind: 'fade', length: 10 }, { kind: 'gain', db: 2 }],
+        },
+      },
+    }
+
+    expect(stepsIn(raw)).toEqual([{ kind: 'gain', db: 2 }])
   })
 
   it('drops a crop that spans nothing', () => {
-    expect(parseAudioEdits({ edits: [{ kind: 'crop', from: 5, to: 5 }] }).edits).toEqual([])
+    expect(
+      stepsIn({ chains: { 'clip-a': { edits: [{ kind: 'crop', from: 5, to: 5 }] } } }),
+    ).toEqual([])
   })
 
   it('drops a region that has collapsed, which every tool would then act on', () => {
-    expect(parseAudioEdits({ region: { from: 5, to: 5 } }).region).toBeNull()
-  })
+    const raw = { chains: { 'clip-a': { region: { from: 5, to: 5 } } } }
 
-  it('reads a missing asset id as no take rather than as an empty one', () => {
-    expect(parseAudioEdits({ assetId: '' }).assetId).toBeNull()
+    expect(chainOf(parseAudioEdits(raw), 'clip-a').region).toBeNull()
   })
 
   // A/B is what one is listening to right now; a document reopening on the source would look
   // like a chain that stopped working.
   it('never reopens bypassed', () => {
-    expect(parseAudioEdits({ ...filled, bypassed: true }).bypassed).toBe(false)
+    const raw = { chains: { 'clip-a': { ...chain, bypassed: true } } }
+
+    expect(chainOf(parseAudioEdits(raw), 'clip-a').bypassed).toBe(false)
   })
 })
 
