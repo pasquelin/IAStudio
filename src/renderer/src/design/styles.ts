@@ -59,8 +59,8 @@ export const OVERLAY_BUTTON = 'absolute inset-0 cursor-pointer border-none bg-tr
 export const CONTROL = 'bg-surface text-text h-(--sc-control) rounded-(--radius-sc-md) text-tiny'
 
 /**
- * A button of the status line, of which there are three. Icon-only, each measured 12 x 12 —
- * half of what WCAG 2.2 SC 2.5.8 asks — and only the criterion's spacing exception saved them.
+ * A button of the status line. Icon-first, the glyph measured 12 x 12 — half of what WCAG 2.2
+ * SC 2.5.8 asks — and only the criterion's spacing exception saved them.
  *
  * The pull-back is what lets the target grow without the line growing under it: the footer has
  * no height of its own, so a control-tall button takes it from 29px to 40 (measured, both ways).
@@ -68,6 +68,20 @@ export const CONTROL = 'bg-surface text-text h-(--sc-control) rounded-(--radius-
 export const STATUS_BUTTON = cn(
   'hover:text-text -my-(--sc-gutter) flex h-(--sc-control) min-w-(--sc-control)',
   'items-center justify-center gap-1.5',
+)
+
+/**
+ * A control laid over a canvas rather than in a bar: the view name on each 3D pane, which opens
+ * that pane's menu.
+ *
+ * Pointer events are turned back ON here because the grid above the canvas turns them off — a
+ * drag has to reach the viewport, and only the words are allowed to catch it. The translucent
+ * panel fill is what keeps the word readable over whatever the scene renders behind it.
+ */
+export const CANVAS_TRIGGER = cn(
+  'text-muted hover:text-text bg-panel/80 pointer-events-auto cursor-pointer',
+  'text-mini flex items-center gap-1.5 whitespace-nowrap',
+  'rounded-(--radius-sc-sm) border-none px-1.5 py-0.5',
 )
 
 /**
