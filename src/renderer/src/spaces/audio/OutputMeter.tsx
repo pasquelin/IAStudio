@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { meterFrom, peakOf, RESTING_METER, type MeterState } from '@/engines/audio/level'
+import {
+  meterFrom,
+  peakOf,
+  RESTING_METER,
+  restedFrom,
+  type MeterState,
+} from '@/engines/audio/level'
 import { paintMeter, readMeterPalette } from '@/engines/audio/meter-painter'
 import { paintOn } from '@/engines/core/canvas-2d'
 import type { AudioTap } from '@/engines/timeline/sound-schedule'
@@ -36,10 +42,15 @@ export function OutputMeter({ tap, playing }: OutputMeterProps) {
   }, [])
 
   useEffect(() => {
-    if (!playing) return
+    if (!playing) {
+      // The bar falls with the sound; the lamp does not — `restedFrom` carries why.
+      meter.current = restedFrom(meter.current)
+      paint()
+      return
+    }
 
-    // Pressing play rearms the overload lamp. A witness that outlived the pass it belonged to
-    // would keep saying something about a montage nobody is listening to any more.
+    // Pressing play rearms the lamp too. A witness that outlived the pass it belonged to would
+    // keep saying something about a montage nobody is listening to any more.
     meter.current = RESTING_METER
 
     let frame = requestAnimationFrame(function step(stamp: number) {

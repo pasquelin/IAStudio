@@ -93,6 +93,17 @@ export type MeterState = {
 
 export const RESTING_METER: MeterState = { level: 0, peak: 0, at: 0, peakAt: 0, clipped: false }
 
+/**
+ * The meter once the sound has stopped: the bar and its witness fall, the overload stays.
+ *
+ * The two halves answer different questions. A bar frozen at the level a stopped montage last
+ * reached reads as a montage still going out, which is the one thing a meter must never say; the
+ * lamp is a fact about the pass just heard, and outliving it is what it is for.
+ */
+export function restedFrom(meter: MeterState): MeterState {
+  return { ...RESTING_METER, clipped: meter.clipped }
+}
+
 /** The loudest sample of a window, which is what a meter reads rather than an average. */
 export function peakOf(samples: Float32Array): number {
   let loudest = 0

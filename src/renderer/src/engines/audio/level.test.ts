@@ -12,6 +12,7 @@ import {
   meterFrom,
   peakOf,
   RESTING_METER,
+  restedFrom,
   SCALE_DB,
 } from './level'
 
@@ -112,6 +113,17 @@ describe('the meter', () => {
     expect(soonAfter.peakAt).toBe(1)
     // A second and a half gone by: it drops to the bar rather than hanging on for good.
     expect(wellAfter.peak).toBeCloseTo(wellAfter.level, 6)
+  })
+
+  /**
+   * The two halves of a stopped meter answer different questions: what is going out RIGHT NOW —
+   * nothing — and whether the pass just heard ever touched the ceiling.
+   */
+  it('drops the bar and its witness at rest, and keeps the overload', () => {
+    const struck = meterFrom(1, RESTING_METER, 1)
+
+    expect(restedFrom(struck)).toMatchObject({ level: 0, peak: 0, clipped: true })
+    expect(restedFrom(meterFrom(0.5, RESTING_METER, 1)).clipped).toBe(false)
   })
 
   it('latches an overload, so one frame at full scale is not missed between two glances', () => {
