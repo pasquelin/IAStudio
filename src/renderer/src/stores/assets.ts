@@ -4,6 +4,7 @@ import type { Asset, AssetType } from '@shared/domain/asset'
 import {
   COLLECTION_PERSIST_VERSION,
   DEFAULT_COLLECTION_STATE,
+  withoutSearch,
   type CollectionState,
 } from '@/helpers/collection-state'
 import { isRecord } from '@shared/guards'
@@ -217,9 +218,7 @@ export const useAssets = create<AssetsState>()(
         const view = readView(persisted)
         return view ? { collection: { ...DEFAULT_COLLECTION_STATE, view } } : undefined
       },
-      // The search text is dropped on purpose: reopening on a narrowed catalogue nobody typed
-      // reads as a catalogue gone missing.
-      partialize: state => ({ collection: { ...state.collection, search: '' } }),
+      partialize: state => ({ collection: withoutSearch(state.collection) }),
     },
   ),
 )

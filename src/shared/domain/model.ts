@@ -74,7 +74,7 @@ export const MODEL_FAMILIES: readonly ModelFamily[] = [
 
 /**
  * Who published the model. The API exposes no author name — only an opaque `authorId` — so
- * the `sc:scenario` tag is the single authorship signal there is to filter on.
+ * `SCENARIO_MAINTAINER` is the closest thing to an authorship signal there is to filter on.
  */
 export type ModelOrigin = 'official' | 'community'
 
@@ -87,9 +87,25 @@ export const MODEL_ORIGINS: readonly ModelOrigin[] = ['official', 'community']
  */
 export const MODEL_IDS_BATCH_LIMIT = 100
 
-export const OFFICIAL_TAG = 'sc:scenario'
+/**
+ * What puts a model in Scenario's own catalogue, read off `complianceMetadata.maintainer`.
+ *
+ * MEASURED 2026-08-15 over the 640 public models: the field is set on EVERY one of them and
+ * holds four values — Scenario 425, Fal 106, Replicate 82, Provider 27.
+ *
+ * It names who PUBLISHES a model and answers for it, not who designed it: 216 of those 425
+ * name someone else in `modelProvider` — Google, Tencent, BFL. That is the reading this filter
+ * wants, and the one the manual promises. Said here because the field giving the other answer
+ * sits in the same object, and the next reader would take it for an oversight.
+ *
+ * It replaces the `sc:scenario` tag, which named 220 of those same 425 — every model carrying
+ * it is maintained by Scenario, so it was a subset nobody kept up, not a second opinion.
+ * Neither Scenario Skybox was in it, which is how "Official" emptied a space whose every model
+ * Scenario maintains.
+ */
+export const SCENARIO_MAINTAINER = 'Scenario'
 
-/** Scenario's own highlight, and the badge their grid shows: 23 of the 642 public models. */
+/** Scenario's own highlight, and the badge their grid shows: 29 of the 640 public models. */
 export const FEATURED_TAG = 'sc:featured'
 
 /**
@@ -114,14 +130,20 @@ export const SKYBOX_TAG = 'sc:skybox'
 export const SYSTEM_TAG_PREFIX = 'sc:'
 
 /**
- * The families no capability can name, and the tag that names each one. Skyboxes were the first;
+ * The families no capability can name, and the tags that name each one. Skyboxes were the first;
  * upscaling, cutout and vectorization are the same case — the capability enum holds no value for
- * any of them, and all 29 of those models answer `img2img` like every other image model.
+ * any of them, and all 30 of those models answer `img2img` like every other image model.
  *
  * Read in both directions, which is why it is a list of pairs: `familyOf` classifies a model by
  * it, and the registry narrows a listing server-side by the ones the API indexes — every family
- * but the skyboxes, whose tag lives in the namespace above. Twenty-six models out of 642 are not
+ * but the skyboxes, whose tag lives in the namespace above. Twenty-six models out of 640 are not
  * worth walking six pages of catalogue to find.
+ *
+ * A family may claim MORE THAN ONE tag, and the skyboxes do: Scenario Skybox Upscale carries
+ * `skybox-upscale` and no `sc:skybox`, so the tag that DEFINES the family does not name it and
+ * the space listed three of the four skyboxes the catalogue holds. Measured 2026-08-15, the two
+ * tags never meet on one model, and neither meets `image-upscale` — which is precisely why such
+ * a family can no longer be pre-filtered at all, see `tagOfFamily`.
  *
  * A tag alone never decides — see `familyOf`: two of the nine models carrying `remove-background`
  * remove it from video, and they belong to the montage, not to the canvas.
@@ -130,22 +152,32 @@ export const SYSTEM_TAG_PREFIX = 'sc:'
  * elsewhere would filter a listing down to models that listing has already excluded. Under its
  * own family it is just as useless — every row already carries it.
  *
- * ORDER IS A PRIORITY. A model carrying two of these tags has no right answer — they name
- * different outputs — and the first entry here wins. That is a choice for a stable answer over
- * the order the API happens to serve its tags in.
+ * ORDER IS A PRIORITY: a model carrying two of these tags has no right answer — they name
+ * different outputs — and the first entry here wins, a choice for a stable answer over the order
+ * the API happens to serve its tags in.
  */
 export type FamilyTag = { family: ModelFamily; tag: string }
 
 export const FAMILY_TAGS: readonly FamilyTag[] = [
   { family: 'skybox', tag: SKYBOX_TAG },
+  { family: 'skybox', tag: 'skybox-upscale' },
   { family: 'upscale', tag: 'image-upscale' },
   { family: 'background-removal', tag: 'remove-background' },
   { family: 'vectorization', tag: 'vectorize' },
 ]
 
-/** The tag that stands for a family, when one does. */
+/**
+ * The one tag a listing may be narrowed by server-side, or nothing.
+ *
+ * NOTHING for a family claiming several, because no model carries them all: asking for one
+ * would drop every model that carries only another. Skyboxes would come back one model deep
+ * instead of four, and nothing would redden or say why. Read off the data rather than left to
+ * the order the entries happen to be written in — the alternative was keeping an unindexed tag
+ * first on purpose, an invariant no reader could see and no test could name.
+ */
 export function tagOfFamily(family: ModelFamily): string | undefined {
-  return FAMILY_TAGS.find(entry => entry.family === family)?.tag
+  const [only, second] = FAMILY_TAGS.filter(entry => entry.family === family)
+  return second ? undefined : only?.tag
 }
 
 export type ModelSummary = {
@@ -166,7 +198,7 @@ export type ModelSummary = {
   thumbnail?: string
   /**
    * An example picture published by the model's owner, to stand in when `thumbnail` is unset —
-   * which it is on 482 of the 642 public models. Its URL is signed and short-lived, so it is
+   * which it is on 480 of the 640 public models. Its URL is signed and short-lived, so it is
    * resolved when the card is actually seen, never here.
    */
   previewAssetId?: string
@@ -206,8 +238,8 @@ export const CAPABILITIES_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   '3d': ['txt23d', 'img23d', '3d23d'],
   audio: ['txt2audio', 'audio2audio', 'video2audio'],
   texture: ['txt2img_texture', 'img2img_texture', 'controlnet_texture', 'reference_texture'],
-  // Empty like its tags and its publishers below, and for the same reason: the family is three
-  // models wide, and a two-option menu narrowing three rows only ever answers "fewer".
+  // Empty like its tags and its publishers below, and for the same reason: the family is four
+  // models wide, and a two-option menu narrowing four rows only ever answers "fewer".
   skybox: [],
   upscale: [],
   'background-removal': [],
@@ -216,7 +248,7 @@ export const CAPABILITIES_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
 }
 
 /**
- * Tags worth offering per family, taken from a count over the 642 public models rather than
+ * Tags worth offering per family, taken from a count over the 640 public models rather than
  * invented. They cannot be read off the API: `GET /tags` answers with the caller's OWN tags —
  * measured: zero on a fresh account — and deriving them from the loaded page would make the
  * menu change while scrolling. Case matters: the API matches tags exactly.
@@ -248,8 +280,8 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   // Empty until the same count is run over the family: it was split out of `image` on its
   // capabilities, and borrowing that list would offer tags no texture model may carry.
   texture: [],
-  // Left empty on purpose: the family is three models wide — `SKYBOX_TAG` already selected
-  // them — and a facet menu narrowing three rows offers a filter whose only answer is fewer.
+  // Empty for the reason `CAPABILITIES_BY_FAMILY` gives above: four rows leave a facet nothing
+  // to narrow.
   skybox: [],
   upscale: [],
   'background-removal': [],

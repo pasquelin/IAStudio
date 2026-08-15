@@ -111,9 +111,11 @@ function chosen<T extends string>(
  * Turns what the bar holds into what the API is asked. Only some of it narrows server-side —
  * family and capability are applied by the registry, which is why walking is bounded there.
  *
- * Every value is checked against what THIS family offers. The bar's state is shared by all
- * workspaces, so a capability picked under Image survives a switch to 3D: the menu no longer
- * lists it and shows nothing selected, while the query still carried it and emptied the panel.
+ * Every value is checked against what THIS family offers. Not because the state travels between
+ * spaces — it no longer does, `useModels` files one per family — but because a state PERSISTED
+ * before a facet's options changed still holds what it offered then: the menu shows nothing
+ * selected while the query carries a value, and the panel comes back empty with nothing on
+ * screen to relax. That is the shape the crossing bug took, and it outlived the crossing.
  */
 export function queryFrom(state: CollectionState, family: ModelFamily, search: string): ModelQuery {
   const capabilities = offered(state, CAPABILITY_FACET, CAPABILITIES_BY_FAMILY[family])

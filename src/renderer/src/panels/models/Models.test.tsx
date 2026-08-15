@@ -35,7 +35,7 @@ describe('Models panel', () => {
     // The panel reads the preference too, so a model preferred by one test would be shown as
     // chosen in the next.
     preferModels()
-    useModels.setState({ selected: {}, collection: DEFAULT_COLLECTION_STATE })
+    useModels.setState({ selected: {}, collections: {} })
     useLayouts.setState({ activeWorkspace: 'image' })
   })
 
@@ -187,7 +187,7 @@ describe('Models panel', () => {
   })
 
   /**
-   * `thumbnail` is set on 160 of the 642 public models; the rest are pictured by an example
+   * `thumbnail` is set on 160 of the 640 public models; the rest are pictured by an example
    * asset whose URL is signed and short-lived, so it is fetched when the card is seen.
    */
   it('resolves the example picture only for the cards that lack a thumbnail', async () => {
@@ -249,10 +249,62 @@ describe('Models panel', () => {
     const { rerender } = renderPanel()
     expect(await screen.findByText(/Aucun modèle dans cet espace/)).toBeInTheDocument()
 
-    useModels.setState({ collection: { ...DEFAULT_COLLECTION_STATE, search: 'nothing' } })
+    useModels.setState({
+      collections: { image: { ...DEFAULT_COLLECTION_STATE, search: 'nothing' } },
+    })
     rerender(withQueries(<Models />))
 
     expect(await screen.findByText(/Aucun résultat pour ce filtre/)).toBeInTheDocument()
+  })
+
+  /**
+   * The reading half of the per-family split; the store test covers the writing one. A single
+   * state was shared by all seven spaces, so a filter set under Image narrowed the Skyboxes
+   * space as well — and there it matched nothing at all, none of its models carrying the tag
+   * "Official" was read from. Without the split this panel answers "no result" instead.
+   */
+  it('reads the filters of the space it shows, not those of the space next door', async () => {
+    installFakeBridge({
+      scenario: { searchModels: () => Promise.resolve({ items: [], cursor: null }) },
+    })
+    useModels.setState({
+      collections: { image: { ...DEFAULT_COLLECTION_STATE, search: 'nothing' } },
+    })
+    useLayouts.setState({ activeWorkspace: 'skyboxes' })
+
+    renderPanel()
+
+    expect(await screen.findByText(/Aucun modèle dans cet espace/)).toBeInTheDocument()
+  })
+
+  /**
+   * Filing the search text per family made it change on a space switch, which it never did when
+   * it was shared — and the debounce holds a value back for 250 ms without asking why it moved.
+   * The word left behind would ask the search endpoint for it under the new family, then blame
+   * the empty answer on a filter that space never had.
+   */
+  it('does not carry the word typed in one space into the next', async () => {
+    const searchModels = vi.fn((_query?: ModelQuery): Promise<ModelPage> =>
+      Promise.resolve({ items: [], cursor: null }),
+    )
+    installFakeBridge({ scenario: { searchModels } })
+    useModels.setState({
+      collections: { image: { ...DEFAULT_COLLECTION_STATE, search: 'flux' } },
+    })
+
+    const { rerender } = renderPanel()
+    await waitFor(() => expect(searchModels).toHaveBeenCalled())
+
+    useLayouts.setState({ activeWorkspace: 'skyboxes' })
+    rerender(withQueries(<Models />))
+
+    await waitFor(() =>
+      expect(searchModels.mock.calls.at(-1)?.[0]).toMatchObject({ family: 'skybox' }),
+    )
+    expect(
+      searchModels.mock.calls.every(call => call[0]?.family !== 'skybox' || !call[0]?.search),
+    ).toBe(true)
+    expect(screen.queryByText(/Aucun résultat pour ce filtre/)).not.toBeInTheDocument()
   })
 
   /**
@@ -318,7 +370,7 @@ describe('Models panel', () => {
     })
 
     it('says why on a row too, where the badge has nowhere to sit', async () => {
-      useModels.setState({ collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' } })
+      useModels.setState({ collections: { image: { ...DEFAULT_COLLECTION_STATE, view: 'list' } } })
       renderPanel()
 
       const title = await screen.findByText('Model pro')

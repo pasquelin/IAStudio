@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import type { ModelFamily } from '@shared/domain/model'
 import { DEFAULT_COLLECTION_STATE, setFacetValue } from '@/helpers/collection-state'
 import { ORIGIN_FACET } from '@/panels/models/model-filters'
 import { useModels } from './models'
 
 beforeEach(() => {
-  useModels.setState({ selected: {}, preset: {}, prepared: null })
+  useModels.setState({ selected: {}, collections: {}, preset: {}, prepared: null })
 })
 
 describe('choosing a model', () => {
@@ -39,18 +40,32 @@ describe('choosing a model', () => {
    * this is the only place that says what a restart restores.
    */
   describe('what survives a restart', () => {
-    const stored = (): { selections?: Record<string, readonly string[]> } => {
+    const stored = (family: ModelFamily): { selections?: Record<string, readonly string[]> } => {
       const raw = localStorage.getItem('scenario-studio:models')
-      return raw ? (JSON.parse(raw).state?.collection ?? {}) : {}
+      return raw ? (JSON.parse(raw).state?.collections?.[family] ?? {}) : {}
     }
 
-    const narrowTo = (facet: string, value: string): void =>
-      useModels.getState().setCollection(setFacetValue(DEFAULT_COLLECTION_STATE, facet, value))
+    const narrowTo = (family: ModelFamily, facet: string, value: string): void =>
+      useModels
+        .getState()
+        .setCollection(family, setFacetValue(DEFAULT_COLLECTION_STATE, facet, value))
 
     it('keeps the facets the user did set by hand', () => {
-      narrowTo(ORIGIN_FACET, 'official')
+      narrowTo('image', ORIGIN_FACET, 'official')
 
-      expect(stored().selections).toEqual({ [ORIGIN_FACET]: ['official'] })
+      expect(stored('image').selections).toEqual({ [ORIGIN_FACET]: ['official'] })
+    })
+
+    /**
+     * THE defect the split was made for. One state was shared by all seven spaces AND persisted,
+     * so "Official" ticked under Image narrowed the Skyboxes space too — where, its models
+     * carrying no `sc:scenario` tag, it matched nothing at all — and went on doing so across
+     * restarts, in a space the user had never filtered and could not think to unfilter.
+     */
+    it('leaves the spaces the user did not filter alone', () => {
+      narrowTo('image', ORIGIN_FACET, 'official')
+
+      expect(stored('skybox').selections).toBeUndefined()
     })
   })
 

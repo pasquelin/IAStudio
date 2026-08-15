@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { arrangementOf, useTools } from '@/stores/tools'
 import { useLayouts } from '@/stores/layouts'
@@ -14,7 +13,7 @@ beforeEach(() => {
   installFakeBridge({ settings: { open: section => (opened.push(section), Promise.resolve()) } })
   useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
   useLayouts.setState({ activeWorkspace: 'image', home: false })
-  useModels.setState({ collection: DEFAULT_COLLECTION_STATE, selected: {} })
+  useModels.setState({ collections: {}, selected: {} })
 })
 
 /**
