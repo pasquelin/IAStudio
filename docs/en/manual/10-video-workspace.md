@@ -240,9 +240,14 @@ The buttons are for when you want the track **before** you have anything to put 
 
 ### Moving them through the stack
 
-**The order of the tracks matters**: when you **double-click** an asset, the studio lays it on the
-**first track of the right kind that reaches the output**, counting from the top. Moving a track up
-therefore makes it the default destination. Every header carries a **grip** on its left edge.
+**The order of the tracks decides what you see.** Several picture tracks may carry a clip at the
+same instant; the one **highest in the column** is the one shown, and it covers the others — V1
+comes in front of V2, as in every editing suite. Moving a track therefore changes the picture in
+the monitor, the moment you release it.
+
+**The order matters for double-click too**: the studio then lays the asset on the **first track of
+the right kind that reaches the output**, counting from the top. Moving a track up therefore makes
+it the default destination. Every header carries a **grip** on its left edge.
 
 - **Drag it** up or down. The row you are holding **dims** for the length of the gesture: it is
   the only thing that says a move is under way, the stack renumbering a rank at a time. A drag
