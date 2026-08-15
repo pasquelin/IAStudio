@@ -6,9 +6,8 @@ import { descriptorsIn, sectionEntry, SETTING_REGISTRY } from '@shared/domain/se
 import { hitId, matchSettings, sectionsOf, type SearchHit } from '@shared/domain/settings-search'
 import { bindingOf } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
-import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
-import { TooltipHost } from '@/design/TooltipHost'
+import { WindowShell } from '@/design/WindowShell'
 import { HINT_RIGHT, HINT_TOP } from '@/helpers/tooltip'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
@@ -18,7 +17,7 @@ import { isSettingsDraftDirty, useSettingsDraft } from '@/stores/settings-draft'
 import { SettingActions } from './SettingActions'
 import { SettingList } from './SettingList'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
-import { WINDOW_CAPTION, WINDOW_HELP } from '@/design/window-styles'
+import { windowControl, WINDOW_CAPTION, WINDOW_HELP } from '@/design/window-styles'
 
 /** Whether anything under a section is staged — its own settings, or a sub-section's. */
 function sectionIsStaged(touched: ReadonlySet<SettingPath>, section: SettingsSection): boolean {
@@ -53,10 +52,7 @@ function NavigationEntry({
         {...HINT_RIGHT(t(staged ? 'settings.sectionStagedHint' : 'settings.sectionHint'))}
         onClick={() => onSelect(section.id)}
         style={{ paddingLeft: `calc(var(--sc-indent) * ${depth + 1})` }}
-        className={cn(
-          'flex h-(--sc-control) w-full items-center gap-1.5 rounded-(--radius-sc-sm) pr-3 text-left text-xs',
-          active ? 'bg-primary text-primary-content' : 'hover:bg-base-300',
-        )}
+        className={cn(windowControl(active), 'w-full gap-1.5 pr-3 text-left')}
       >
         {t(section.labelKey)}
         {staged && (
@@ -222,19 +218,12 @@ export function SettingsWindow() {
   const searching = query.trim() !== ''
 
   return (
-    <div className="bg-base-200 text-base-content flex h-full flex-col">
-      <header
-        style={DRAGGABLE}
-        className="text-body flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 font-medium"
-      >
-        {t('settings.title')}
-      </header>
-
-      <div className="flex min-h-0 flex-1">
-        <nav
-          aria-label={t('settings.sections')}
-          className="border-base-300 flex w-56 shrink-0 flex-col gap-2 border-r p-2"
-        >
+    <WindowShell
+      title={t('settings.title')}
+      navLabel={t('settings.sections')}
+      footer={<DraftBar />}
+      nav={
+        <>
           {/*
             Outside the scrolling part, deliberately. Inside it the field was `w-full` of a box
             the scrollbar had already taken its width from, so it narrowed and widened as the
@@ -263,39 +252,34 @@ export function SettingsWindow() {
               />
             ))}
           </ul>
-        </nav>
-
-        <main className="min-w-0 flex-1 overflow-auto px-6 py-4">
-          {searching ? (
-            <>
-              <h2 className="mb-4 text-base font-semibold">{t('settings.results')}</h2>
-              <SearchResults
-                found={found}
-                onGo={id => {
-                  setQuery('')
-                  setSelected(id)
-                }}
-              />
-            </>
-          ) : (
-            section && (
-              <>
-                <h2 className="mb-1 text-base font-semibold">{t(section.labelKey)}</h2>
-                {section.descriptionKey && (
-                  <p className={cn(WINDOW_CAPTION, 'mb-4')}>{t(section.descriptionKey)}</p>
-                )}
-                <SettingList descriptors={descriptorsIn(section.id)} />
-                <SettingActions section={section.id} />
-                {section.Content && <section.Content />}
-              </>
-            )
-          )}
-        </main>
-      </div>
-
-      <DraftBar />
-      <TooltipHost />
-    </div>
+        </>
+      }
+    >
+      {searching ? (
+        <>
+          <h2 className="mb-4 text-base font-semibold">{t('settings.results')}</h2>
+          <SearchResults
+            found={found}
+            onGo={id => {
+              setQuery('')
+              setSelected(id)
+            }}
+          />
+        </>
+      ) : (
+        section && (
+          <>
+            <h2 className="mb-1 text-base font-semibold">{t(section.labelKey)}</h2>
+            {section.descriptionKey && (
+              <p className={cn(WINDOW_CAPTION, 'mb-4')}>{t(section.descriptionKey)}</p>
+            )}
+            <SettingList descriptors={descriptorsIn(section.id)} />
+            <SettingActions section={section.id} />
+            {section.Content && <section.Content />}
+          </>
+        )
+      )}
+    </WindowShell>
   )
 }
 

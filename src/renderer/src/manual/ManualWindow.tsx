@@ -11,16 +11,20 @@ import {
 import { isSupportedLanguage, UNKNOWN_SYSTEM_LANGUAGE } from '@shared/i18n'
 import manual from '@shared/manual.json'
 import { foldForSearch } from '@shared/text'
-import { TooltipHost } from '@/design/TooltipHost'
-import { DRAGGABLE } from '@/helpers/app-region'
-import { useAppliedSettings } from '@/hooks/useAppliedSettings'
+import { WindowShell } from '@/design/WindowShell'
+import { windowControl, WINDOW_CAPTION } from '@/design/window-styles'
 import { cn } from '@/helpers/cn'
+import { HINT_RIGHT } from '@/helpers/tooltip'
+import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 
 /**
  * The user manual, offline and in the reader's language — the same nineteen chapters as
  * `docs/`, compiled into `shared/manual.json` by `pnpm manual:collect`.
  *
- * Outside the docks, so this is the application being an application rather than a studio.
+ * Built on the settings window's shape, as the usage window is: chapters on the left, the open
+ * one on the right, the search over the list and the results in the pane. The first version of
+ * this file wore the STUDIO's tokens instead of DaisyUI's, which made a window that passed every
+ * test and still did not look like the application it opens from.
  *
  * Its links are the whole reason the manual is compiled rather than fetched: every one of them
  * was resolved at build time, so a chapter reference here cannot be a click that does nothing.
@@ -38,11 +42,10 @@ export function ManualWindow() {
   const [query, setQuery] = useState('')
 
   const chapter = chapters.find(entry => entry.slug === slug) ?? chapters[0]
+  const searching = query.trim() !== ''
 
-  // Over the markdown itself rather than a prepared index: four hundred kilobytes of one
-  // language answers a keystroke in under a millisecond, and an index is one more thing that can
-  // disagree with what it indexes. Folded whole rather than searched raw — `etape` has to find
-  // "Étape", the settings search having settled that question already.
+  // Folded once per language rather than per keystroke: `foldForSearch` decomposes and strips
+  // accents over the whole manual, which is four hundred thousand characters of one language.
   const folded = useMemo(
     () =>
       chapters.map(entry => ({
@@ -54,9 +57,14 @@ export function ManualWindow() {
 
   const found = useMemo(() => {
     const needle = foldForSearch(query.trim())
-    if (needle === '') return null
+    if (needle === '') return []
     return folded.filter(entry => entry.text.includes(needle)).map(entry => entry.chapter)
   }, [folded, query])
+
+  const open = useCallback((next: string) => {
+    setQuery('')
+    setSlug(next)
+  }, [])
 
   const go = useCallback((target: ManualTarget) => {
     if (target.kind === 'external') return
@@ -70,141 +78,96 @@ export function ManualWindow() {
     })
   }, [])
 
-  const components = useMemo<Components>(
-    () => ({
-      a: ({ href, children, ...rest }) => {
-        const target = href === undefined ? null : manualTargetOf(href)
-        // `null` cannot happen — `collect-manual.ts` refuses to write one — and is rendered as
-        // plain text rather than a dead anchor if the day ever comes.
-        if (!target) return <span {...rest}>{children}</span>
-        if (target.kind === 'external') {
-          return (
-            <a
-              {...rest}
-              href={target.url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-accent-ink underline"
-            >
-              {children}
-            </a>
-          )
-        }
-        return (
-          <button
-            type="button"
-            onClick={() => go(target)}
-            className="text-accent-ink cursor-pointer underline"
-          >
-            {children}
-          </button>
-        )
-      },
-      h1: ({ children }) => (
-        <Heading tag="h1" className="pt-5 pb-1 text-base font-semibold">
-          {children}
-        </Heading>
-      ),
-      h2: ({ children }) => (
-        <Heading tag="h2" className="pt-4 pb-1 text-sm font-semibold">
-          {children}
-        </Heading>
-      ),
-      h3: ({ children }) => (
-        <Heading tag="h3" className="text-body pt-3 pb-1 font-semibold">
-          {children}
-        </Heading>
-      ),
-      h4: ({ children }) => (
-        <Heading tag="h4" className="pt-2 pb-1 text-xs font-semibold">
-          {children}
-        </Heading>
-      ),
-      // The manual has 1367 table rows and a window narrower than GitHub: the table scrolls
-      // inside itself rather than pushing the prose sideways.
-      table: ({ children }) => (
-        <div className="border-border my-3 overflow-x-auto rounded border">
-          <table className="w-full border-collapse text-left">{children}</table>
-        </div>
-      ),
-      th: ({ children }) => (
-        <th className="border-border text-muted border-b px-2 py-1 font-semibold">{children}</th>
-      ),
-      td: ({ children }) => (
-        <td className="border-border border-b px-2 py-1 align-top">{children}</td>
-      ),
-      blockquote: ({ children }) => (
-        <blockquote className="border-accent-soft bg-surface my-3 border-l-2 py-2 pr-3 pl-3">
-          {children}
-        </blockquote>
-      ),
-      code: ({ children }) => (
-        <code className="bg-surface text-tiny rounded px-1 py-0.5">{children}</code>
-      ),
-      pre: ({ children }) => (
-        <pre className="bg-surface text-tiny my-3 overflow-x-auto rounded p-3">{children}</pre>
-      ),
-      ul: ({ children }) => <ul className="my-2 list-disc pl-5">{children}</ul>,
-      ol: ({ children }) => <ol className="my-2 list-decimal pl-5">{children}</ol>,
-      p: ({ children }) => <p className="my-2">{children}</p>,
-      hr: () => <hr className="border-border my-4" />,
-    }),
-    [go],
-  )
+  const components = useMarkdownComponents(go)
 
   return (
-    <div className="bg-chassis text-text flex h-screen flex-col">
-      <header style={DRAGGABLE} className="flex shrink-0 items-center gap-3 px-4 pt-6 pb-3 pl-24">
-        <h1 className="text-body font-semibold">{t('manual.title')}</h1>
-        <input
-          type="search"
-          value={query}
-          onChange={event => setQuery(event.target.value)}
-          placeholder={t('manual.search')}
-          aria-label={t('manual.search')}
-          className="bg-surface border-border ml-auto w-56 rounded border px-2 py-1 text-xs"
-        />
-      </header>
+    <WindowShell
+      title={t('manual.title')}
+      navLabel={t('manual.chapters')}
+      nav={
+        <>
+          {/* Outside the scrolling list, as the settings search is: a field that scrolls away
+              with what it filters is a field one has to go looking for. */}
+          <input
+            type="search"
+            className="input input-xs w-full shrink-0"
+            aria-label={t('manual.search')}
+            placeholder={t('manual.search')}
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+          />
 
-      <div className="flex min-h-0 flex-1">
-        <nav className="border-border w-56 shrink-0 overflow-auto border-r px-2 pb-4">
-          {(found ?? chapters).map(entry => (
-            <button
-              key={entry.slug}
-              type="button"
-              onClick={() => {
-                setSlug(entry.slug)
-                setQuery('')
-              }}
-              className={cn(
-                'hover:bg-surface flex w-full cursor-pointer gap-2 rounded px-2 py-1 text-left',
-                entry.slug === chapter?.slug && found === null && 'bg-surface',
-              )}
-            >
-              <span className="text-muted text-tiny w-5 shrink-0 text-right">{entry.number}</span>
-              <span className="text-xs">{entry.title}</span>
-            </button>
-          ))}
-          {found?.length === 0 && (
-            <p className="text-muted text-tiny px-2 py-2">{t('manual.noResult')}</p>
-          )}
-        </nav>
+          <ul className="m-0 flex min-h-0 flex-1 list-none flex-col gap-0.5 overflow-auto p-0">
+            {chapters.map(entry => (
+              <li key={entry.slug}>
+                <button
+                  type="button"
+                  aria-current={!searching && entry.slug === chapter?.slug ? 'page' : undefined}
+                  {...HINT_RIGHT(t('manual.chapterHint'))}
+                  onClick={() => open(entry.slug)}
+                  className={cn(
+                    windowControl(!searching && entry.slug === chapter?.slug),
+                    'w-full gap-2 px-3 text-left',
+                  )}
+                >
+                  {/* The token, not an opacity: a number dimmed by `opacity-N` is a word the
+                      contrast guard cannot reason about, and this window has a caption ink. */}
+                  <span className={WINDOW_CAPTION}>{entry.number}</span>
+                  <span className="truncate">{entry.title}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      }
+    >
+      {searching ? (
+        <>
+          <h2 className="mb-4 text-base font-semibold">{t('manual.results')}</h2>
+          <SearchResults found={found} onOpen={open} />
+        </>
+      ) : (
+        chapter && (
+          <>
+            <h2 className="mb-4 text-base font-semibold">
+              <span className={WINDOW_CAPTION}>{chapter.number}</span> {chapter.title}
+            </h2>
+            <ChapterBody markdown={chapter.markdown} components={components} />
+          </>
+        )
+      )}
+    </WindowShell>
+  )
+}
 
-        <article className="min-h-0 flex-1 overflow-auto px-6 pb-10 text-xs">
-          {chapter && (
-            <>
-              <h2 className="pt-4 pb-2 text-lg font-semibold">
-                <span className="text-muted pr-2">{chapter.number}</span>
-                {chapter.title}
-              </h2>
-              <ChapterBody markdown={chapter.markdown} components={components} />
-            </>
-          )}
-        </article>
-      </div>
+/** The chapters the words appear in, as the settings window lists what it found. */
+function SearchResults({
+  found,
+  onOpen,
+}: {
+  found: readonly ManualChapter[]
+  onOpen: (slug: string) => void
+}) {
+  const { t } = useTranslation()
 
-      <TooltipHost />
-    </div>
+  if (found.length === 0) return <p className={WINDOW_CAPTION}>{t('manual.noResult')}</p>
+
+  return (
+    <ul className="m-0 flex list-none flex-col p-0">
+      {found.map(entry => (
+        <li key={entry.slug}>
+          <button
+            type="button"
+            {...HINT_RIGHT(t('manual.searchResultHint'))}
+            onClick={() => onOpen(entry.slug)}
+            className="border-base-300 hover:bg-base-300 flex w-full items-baseline gap-2 border-b py-3 text-left last:border-b-0"
+          >
+            <span className={WINDOW_CAPTION}>{entry.number}</span>
+            <span className="text-xs font-medium">{entry.title}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -232,6 +195,88 @@ const ChapterBody = memo(function ChapterBody({
     </Markdown>
   )
 })
+
+/**
+ * How the manual's markdown is dressed, in the vocabulary of an application window.
+ *
+ * A table scrolls inside itself: the manual holds 1367 table rows and this window is narrower
+ * than a browser, so the alternative is prose pushed sideways by one wide table.
+ */
+function useMarkdownComponents(go: (target: ManualTarget) => void): Components {
+  return useMemo<Components>(
+    () => ({
+      a: ({ href, children, ...rest }) => {
+        const target = href === undefined ? null : manualTargetOf(href)
+        // `null` cannot happen — `collect-manual.ts` refuses to write one — and is rendered as
+        // plain text rather than a dead anchor if the day ever comes.
+        if (!target) return <span {...rest}>{children}</span>
+        if (target.kind === 'external') {
+          return (
+            <a
+              {...rest}
+              href={target.url}
+              target="_blank"
+              rel="noreferrer"
+              className="link link-primary"
+            >
+              {children}
+            </a>
+          )
+        }
+        return (
+          <button
+            type="button"
+            onClick={() => go(target)}
+            className="link link-primary cursor-pointer"
+          >
+            {children}
+          </button>
+        )
+      },
+      h1: ({ children }) => (
+        <Heading tag="h1" className="pt-5 pb-1 text-base font-semibold">
+          {children}
+        </Heading>
+      ),
+      h2: ({ children }) => (
+        <Heading tag="h2" className="pt-4 pb-1 text-sm font-semibold">
+          {children}
+        </Heading>
+      ),
+      h3: ({ children }) => (
+        <Heading tag="h3" className="text-body pt-3 pb-1 font-semibold">
+          {children}
+        </Heading>
+      ),
+      h4: ({ children }) => (
+        <Heading tag="h4" className="pt-2 pb-1 text-xs font-semibold">
+          {children}
+        </Heading>
+      ),
+      table: ({ children }) => (
+        <div className="border-base-300 my-3 overflow-x-auto rounded border">
+          <table className="table-xs table">{children}</table>
+        </div>
+      ),
+      blockquote: ({ children }) => (
+        <blockquote className="border-primary bg-base-100 my-3 border-l-2 py-2 pr-3 pl-3">
+          {children}
+        </blockquote>
+      ),
+      code: ({ children }) => (
+        <code className="bg-base-300 text-tiny rounded px-1 py-0.5">{children}</code>
+      ),
+      pre: ({ children }) => (
+        <pre className="bg-base-100 text-tiny my-3 overflow-x-auto rounded p-3">{children}</pre>
+      ),
+      ul: ({ children }) => <ul className="my-2 list-disc pl-5">{children}</ul>,
+      ol: ({ children }) => <ol className="my-2 list-decimal pl-5">{children}</ol>,
+      p: ({ children }) => <p className="my-2 text-xs">{children}</p>,
+      hr: () => <hr className="border-base-300 my-4" />,
+    }),
+    [go],
+  )
+}
 
 /**
  * A heading carrying the `id` its own anchor names, computed by the shared rule rather than by

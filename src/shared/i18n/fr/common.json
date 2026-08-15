@@ -70,8 +70,12 @@
   },
   "manual": {
     "title": "Manuel utilisateur",
+    "chapters": "Chapitres",
     "search": "Chercher dans le manuel",
-    "noResult": "Aucun chapitre ne contient ces mots."
+    "results": "Résultats",
+    "noResult": "Aucun chapitre ne contient ces mots.",
+    "chapterHint": "Ouvre ce chapitre dans le panneau de droite",
+    "searchResultHint": "Ouvre le chapitre où ces mots apparaissent"
   },
   "units": {
     "byte": "o",

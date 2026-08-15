@@ -70,8 +70,12 @@
   },
   "manual": {
     "title": "User manual",
+    "chapters": "Chapters",
     "search": "Search the manual",
-    "noResult": "No chapter contains those words."
+    "results": "Results",
+    "noResult": "No chapter contains those words.",
+    "chapterHint": "Opens this chapter in the pane on the right",
+    "searchResultHint": "Opens the chapter these words appear in"
   },
   "units": {
     "byte": "B",

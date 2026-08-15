@@ -18,3 +18,20 @@ export const WINDOW_CAPTION = 'text-base-content/70 text-xs'
  * width of a maximised window is read twice and understood once.
  */
 export const WINDOW_HELP = cn(WINDOW_CAPTION, 'max-w-lg')
+
+/**
+ * A control of one of these windows: a section of the column, a period, a refresh.
+ *
+ * One look for all of them, and one definition. Usage held this as a local `control()` while
+ * Settings wrote the same two lines inline on its navigation entries — the manual then made a
+ * third copy, in the studio's tokens, which is what sent this to `design/`.
+ *
+ * The height comes from the gauge, never from a number: a control is 24 px in compact and 28 in
+ * comfort, and a constant would be right at exactly one density.
+ */
+export function windowControl(active: boolean): string {
+  return cn(
+    'flex h-(--sc-control) cursor-pointer items-center rounded-(--radius-sc-sm) border-none text-xs',
+    active ? 'bg-primary text-primary-content' : 'hover:bg-base-300 bg-transparent',
+  )
+}

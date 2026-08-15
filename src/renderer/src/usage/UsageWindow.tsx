@@ -7,9 +7,9 @@ import {
   type UsagePeriod,
   type UsageReport,
 } from '@shared/domain/usage'
-import { TooltipHost } from '@/design/TooltipHost'
 import { UiIcon } from '@/design/UiIcon'
-import { CLICKABLE, DRAGGABLE } from '@/helpers/app-region'
+import { WindowShell } from '@/design/WindowShell'
+import { CLICKABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { HINT_BOTTOM, HINT_RIGHT } from '@/helpers/tooltip'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
@@ -19,19 +19,11 @@ import { UsageModels } from './UsageModels'
 import { UsageNotes } from './UsageNotes'
 import { UsageOverview } from './UsageOverview'
 import { useUsageReport } from './useUsageReport'
-import { WINDOW_CAPTION } from '@/design/window-styles'
+import { windowControl, WINDOW_CAPTION } from '@/design/window-styles'
 
 export type UsageSectionId = 'overview' | 'models' | 'activities' | 'journal'
 
 export const SECTIONS: readonly UsageSectionId[] = ['overview', 'models', 'activities', 'journal']
-
-/** Periods, sections and the refresh answer to one look: active is primary, idle is a hover. */
-function control(active: boolean): string {
-  return cn(
-    'flex h-(--sc-control) cursor-pointer items-center rounded-(--radius-sc-sm) border-none text-xs',
-    active ? 'bg-primary text-primary-content' : 'hover:bg-base-300 bg-transparent',
-  )
-}
 
 /**
  * What every stored key has spent, in its own window off the Help menu.
@@ -51,14 +43,11 @@ export function UsageWindow() {
   const { report, loading, failure, reload } = useUsageReport(period)
 
   return (
-    <div className="bg-base-200 text-base-content flex h-full flex-col">
-      <header
-        style={DRAGGABLE}
-        className="text-body flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 font-medium"
-      >
-        {t('usage.title')}
-
-        {/* A dragged surface swallows clicks; every control inside has to switch back. */}
+    <WindowShell
+      title={t('usage.title')}
+      navLabel={t('usage.title')}
+      headerActions={
+        // A dragged surface swallows clicks; every control inside has to switch back.
         <div
           style={CLICKABLE}
           role="group"
@@ -72,20 +61,18 @@ export function UsageWindow() {
               aria-pressed={days === period}
               {...HINT_BOTTOM(t('usage.period.hint', { count: days }))}
               onClick={() => setPeriod(days)}
-              className={cn(control(days === period), 'justify-center px-2.5 font-normal')}
+              className={cn(windowControl(days === period), 'justify-center px-2.5 font-normal')}
             >
               {t('usage.period.short', { count: days })}
             </button>
           ))}
         </div>
-      </header>
-
-      <div className="flex min-h-0 flex-1">
-        <nav
-          aria-label={t('usage.title')}
-          className="border-base-300 flex w-56 shrink-0 flex-col gap-2 overflow-auto border-r p-2"
-        >
-          <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+      }
+      nav={
+        <>
+          {/* The list scrolls, not the column: refresh stays reachable however long the list
+              grows, which it did not when the whole nav scrolled. */}
+          <ul className="m-0 flex min-h-0 flex-1 list-none flex-col gap-0.5 overflow-auto p-0">
             {SECTIONS.map(id => (
               <li key={id}>
                 <button
@@ -94,7 +81,7 @@ export function UsageWindow() {
                   // The sentence the pane already carries, said before one gets there.
                   {...HINT_RIGHT(t(`usage.descriptions.${id}`))}
                   onClick={() => setSection(id)}
-                  className={cn(control(id === section), 'w-full px-3 text-left')}
+                  className={cn(windowControl(id === section), 'w-full px-3 text-left')}
                 >
                   {t(`usage.sections.${id}`)}
                 </button>
@@ -108,25 +95,21 @@ export function UsageWindow() {
             onClick={reload}
             disabled={loading}
             className={cn(
-              control(false),
-              'mt-auto w-full gap-1.5 px-3 text-left disabled:cursor-default disabled:opacity-50',
+              windowControl(false),
+              'w-full shrink-0 gap-1.5 px-3 text-left disabled:cursor-default disabled:opacity-50',
             )}
           >
             <UiIcon path={mdiRefresh} size={14} />
             {t('usage.refresh')}
           </button>
-        </nav>
+        </>
+      }
+    >
+      <h2 className="mb-1 text-base font-semibold">{t(`usage.sections.${section}`)}</h2>
+      <p className={cn(WINDOW_CAPTION, 'mb-4')}>{t(`usage.descriptions.${section}`)}</p>
 
-        <main className="min-w-0 flex-1 overflow-auto px-6 py-4">
-          <h2 className="mb-1 text-base font-semibold">{t(`usage.sections.${section}`)}</h2>
-          <p className={cn(WINDOW_CAPTION, 'mb-4')}>{t(`usage.descriptions.${section}`)}</p>
-
-          <Body id={section} period={period} report={report} failure={failure} onRetry={reload} />
-        </main>
-      </div>
-
-      <TooltipHost />
-    </div>
+      <Body id={section} period={period} report={report} failure={failure} onRetry={reload} />
+    </WindowShell>
   )
 }
 

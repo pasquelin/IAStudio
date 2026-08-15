@@ -45,8 +45,8 @@ describe('ManualWindow', () => {
     render(<ManualWindow />)
     await pick(/Espace Audio/)
 
-    const article = within(screen.getByRole('article'))
-    await userEvent.click(article.getByRole('button', { name: 'Espace Vidéo' }))
+    const pane = within(screen.getByRole('main'))
+    await userEvent.click(pane.getByRole('button', { name: 'Espace Vidéo' }))
 
     expect(screen.getByRole('heading', { name: /Le vocabulaire du montage/ })).toBeInTheDocument()
   })
@@ -63,17 +63,20 @@ describe('ManualWindow', () => {
     )
   })
 
-  // Over the prose, not over the titles: no chapter is called "dé-esseur", and the two that
-  // explain why the studio has none are exactly what a reader typing it is after.
-  it('narrows the chapter list to what the search words appear in', async () => {
+  /**
+   * Results in the pane, the chapter list left whole — the settings window's answer to the same
+   * question. Searched over the prose, not the titles: no chapter is called "dé-esseur", and the
+   * two explaining why the studio has none are exactly what a reader typing it is after.
+   */
+  it('lists in the pane the chapters the search words appear in', async () => {
     render(<ManualWindow />)
 
     await userEvent.type(screen.getByRole('searchbox'), 'dé-esseur')
 
-    const list = within(screen.getByRole('navigation'))
+    const pane = within(screen.getByRole('main'))
 
-    expect(list.getByRole('button', { name: /Espace Audio/ })).toBeInTheDocument()
-    expect(list.queryByRole('button', { name: /Glossaire/ })).not.toBeInTheDocument()
+    expect(pane.getByRole('button', { name: /Espace Audio/ })).toBeInTheDocument()
+    expect(pane.queryByRole('button', { name: /Glossaire/ })).not.toBeInTheDocument()
   })
 
   // A search box that demands a circumflex is a search box nobody uses — `foldForSearch` is
@@ -84,7 +87,7 @@ describe('ManualWindow', () => {
     await userEvent.type(screen.getByRole('searchbox'), 'de-esseur')
 
     expect(
-      within(screen.getByRole('navigation')).getByRole('button', { name: /Espace Audio/ }),
+      within(screen.getByRole('main')).getByRole('button', { name: /Espace Audio/ }),
     ).toBeInTheDocument()
   })
 
@@ -105,7 +108,7 @@ describe('ManualWindow', () => {
     render(<ManualWindow />)
     await pick(/Premiers pas/)
 
-    const outward = within(screen.getByRole('article')).getAllByRole('link').at(0)
+    const outward = within(screen.getByRole('main')).getAllByRole('link').at(0)
 
     expect(outward).toHaveAttribute('target', '_blank')
     expect(outward?.getAttribute('href')).toMatch(/^https:\/\//)
