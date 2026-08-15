@@ -195,6 +195,19 @@ describe('catalog', () => {
     expect(catalog.find('asset_missing')).toBeNull()
   })
 
+  // The emoji is the case: `find` and the page path used to order tags by two rules that agree
+  // over the whole BMP and part ways above it, so any tag staying inside it — accents included —
+  // hid the split. See `catalog.ts`.
+  it('answers one order for the tags of an asset, read alone or through a page', () => {
+    catalog.add(asset({ id: 'asset_1', tags: ['Zoom', 'Éclairage', 'ﬀusion', '🌟etoile'] }))
+
+    const alone = catalog.find('asset_1')?.tags
+    const [inPage] = catalog.search({})
+
+    expect(alone).toEqual(inPage?.tags)
+    expect(alone).toEqual(['Zoom', 'Éclairage', '🌟etoile', 'ﬀusion'])
+  })
+
   it('finds an asset by name, whatever the case', () => {
     catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
     catalog.add(asset({ id: 'asset_2', name: 'Sky' }))
