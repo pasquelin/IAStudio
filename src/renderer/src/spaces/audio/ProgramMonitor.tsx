@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clamp } from '@shared/numeric'
 import { MonitorFrame } from '@/design/MonitorFrame'
+import { TOOLBAR_LABEL } from '@/design/styles'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar } from '@/design/Toolbar'
 import { paintOn } from '@/engines/core/canvas-2d'
@@ -97,7 +98,7 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
           onTool={id => (id === 'rewind' ? transport.rewind() : transport.toggle())}
           extras={
             <>
-              <span className="text-muted text-tiny px-1">{t('transport.program')}</span>
+              <span className={TOOLBAR_LABEL}>{t('transport.program')}</span>
               <Timecode time={sequence.playhead} fps={sequence.settings.fps} />
             </>
           }

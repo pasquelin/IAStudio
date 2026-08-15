@@ -7,6 +7,7 @@ import {
   rowSkin,
   TILE_QUIET,
   TITLE_BAR_GHOST,
+  TOOLBAR_LABEL,
 } from './styles'
 import { WRITTEN_SOURCES } from './test-harness'
 
@@ -326,5 +327,52 @@ describe('the neutral fill of a button', () => {
     )
 
     expect(wearing.length).toBeGreaterThanOrEqual(1)
+  })
+})
+
+/**
+ * The three together, in the order the tailwind plugin sorts them into — which is what makes an
+ * order-blind rule unnecessary here, where its neighbour above needed one.
+ *
+ * All three are required, and `text-tiny` is what does the work: `text-muted … px-1` alone is
+ * worn by the zoom readout of the image space, which is a BUTTON one clicks to return to 100 %
+ * and not a word the bar sets down. A rule without it would call that a violation and be wrong.
+ *
+ * **What it cannot see**: the trio reached across two strings of one `cn()`, or assembled from a
+ * variable. A site determined to write the shade again can still do it; this catches the copy
+ * that happens by habit, which is the one that happened four times.
+ */
+const REWRITTEN_LABEL = /text-muted[^'"`]*\btext-tiny\b[^'"`]*\bpx-1\b/
+
+describe('the word a bar sets beside its buttons', () => {
+  it('carries the ink, the size and the room around it', () => {
+    expect(TOOLBAR_LABEL).toContain('text-muted')
+    expect(TOOLBAR_LABEL).toContain('text-tiny')
+    expect(TOOLBAR_LABEL).toContain('px-1')
+  })
+
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && REWRITTEN_LABEL.test(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone what only shares two of the three', () => {
+    // The four sites as they stood before this batch, then the zoom readout and the manual's
+    // inline code — both of which a looser rule would have called violations.
+    expect(REWRITTEN_LABEL.test('"text-muted text-tiny px-1"')).toBe(true)
+    expect(REWRITTEN_LABEL.test('"text-muted w-auto px-1 tabular-nums"')).toBe(false)
+    expect(REWRITTEN_LABEL.test('"bg-base-300 text-tiny rounded px-1 py-0.5"')).toBe(false)
+  })
+
+  // The partner of the rule above, and the same reason: a constant nobody wears is a dead export.
+  it('is worn by the sites it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('TOOLBAR_LABEL'),
+    )
+
+    expect(wearing.length).toBeGreaterThanOrEqual(4)
   })
 })
