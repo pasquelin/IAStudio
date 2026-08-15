@@ -2,6 +2,7 @@ import { mdiDotsHorizontal } from '@mdi/js'
 import { memo, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MaterialStyle } from '@shared/domain/style'
+import { useContextMenu } from '@/design/ContextMenu'
 import { MenuButton } from '@/design/MenuButton'
 import { Row } from '@/design/Row'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -27,11 +28,9 @@ export type StyleRowProps = { style: MaterialStyle }
  */
 export const StyleRow = memo(function StyleRow({ style }: StyleRowProps) {
   const { t } = useTranslation()
-  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
+  const menu = useContextMenu()
   const [renaming, setRenaming] = useState(false)
 
-  // Stable, or the open menu re-subscribes its three global listeners on every list refresh.
-  const closeMenu = useCallback(() => setMenuAt(null), [])
   const startRename = useCallback(() => setRenaming(true), [])
 
   if (renaming) {
@@ -50,13 +49,7 @@ export const StyleRow = memo(function StyleRow({ style }: StyleRowProps) {
   }
 
   return (
-    <div
-      className="h-full min-w-0"
-      onContextMenu={event => {
-        event.preventDefault()
-        setMenuAt({ x: event.clientX, y: event.clientY })
-      }}
-    >
+    <div className="h-full min-w-0" onContextMenu={menu.open}>
       <Row
         title={style.name}
         actions={
@@ -75,7 +68,9 @@ export const StyleRow = memo(function StyleRow({ style }: StyleRowProps) {
           />
         }
       />
-      {menuAt && <StyleMenu id={style.id} at={menuAt} onRename={startRename} onClose={closeMenu} />}
+      {menu.at && (
+        <StyleMenu id={style.id} at={menu.at} onRename={startRename} onClose={menu.close} />
+      )}
     </div>
   )
 })

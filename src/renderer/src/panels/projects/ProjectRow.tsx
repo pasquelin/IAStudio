@@ -1,7 +1,8 @@
 import { mdiDotsHorizontal, mdiFolderOutline } from '@mdi/js'
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { RecentProject } from '@shared/domain/project'
+import { useContextMenu } from '@/design/ContextMenu'
 import { MenuButton } from '@/design/MenuButton'
 import { Row } from '@/design/Row'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -50,10 +51,7 @@ export const ProjectRow = memo(function ProjectRow({
   onRenameCommit,
 }: ProjectRowProps) {
   const { t, i18n } = useTranslation()
-  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
-
-  // Stable, or the open menu re-subscribes its listeners on every settings write.
-  const closeMenu = useCallback(() => setMenuAt(null), [])
+  const menu = useContextMenu()
 
   // Where the row's own identity joins the panel's handlers: bound HERE and not in `renderRow`,
   // which runs on every render of the collection and would hand this row a new prop each time.
@@ -93,10 +91,7 @@ export const ProjectRow = memo(function ProjectRow({
   return (
     <div
       className="h-full min-w-0"
-      onContextMenu={event => {
-        event.preventDefault()
-        setMenuAt({ x: event.clientX, y: event.clientY })
-      }}
+      onContextMenu={menu.open}
       // The gesture every file manager renames with. Caught here rather than through the
       // collection's `onActivate`, which is also what Enter fires: taking that slot would make
       // Enter rename a row while Space opened it, backwards from every other list in the studio.
@@ -140,11 +135,11 @@ export const ProjectRow = memo(function ProjectRow({
       {/* The date lives in the tooltip otherwise, and a tooltip is hover-only: a keyboard walking
           the shelf with the arrows would never reach the answer it exists to give. */}
       {when && <span className="sr-only">{t('home.projects.openedAt', { when })}</span>}
-      {menuAt && (
+      {menu.at && (
         <ProjectMenu
           path={project.path}
-          at={menuAt}
-          onClose={closeMenu}
+          at={menu.at}
+          onClose={menu.close}
           onRename={onRenameStart && startRename}
         />
       )}

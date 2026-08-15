@@ -1,6 +1,7 @@
 import { mdiDotsHorizontal } from '@mdi/js'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useContextMenu } from '@/design/ContextMenu'
 import { MenuButton } from '@/design/MenuButton'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { ToolButton } from '@/design/ToolButton'
@@ -102,7 +103,7 @@ type TrackHeaderProps = {
 
 function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHeaderProps) {
   const { t } = useTranslation()
-  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
+  const menu = useContextMenu()
 
   // Renaming is an edit and goes through a command; the rest is state — see `writeTrack`.
   const write = (change: (current: Track) => Track): void =>
@@ -127,9 +128,9 @@ function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHea
       onContextMenu={event => {
         // A right-click in the rename field belongs to the native clipboard and spelling menu
         // (`main/window/context-menu.ts`), which `preventDefault` would keep from ever being asked.
+        // Decided before `open`, which prevents it unconditionally — that is the hook's contract.
         if (isTyping(event.target)) return
-        event.preventDefault()
-        setMenuAt({ x: event.clientX, y: event.clientY })
+        menu.open(event)
       }}
     >
       <TrackName documentId={documentId} track={track} dimmed={!audible} />
@@ -166,7 +167,7 @@ function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHea
         onSize={height => write(current => ({ ...current, height: clampTrackHeight(height) }))}
       />
 
-      {menuAt && <TrackMenu {...rows} at={menuAt} onClose={() => setMenuAt(null)} />}
+      {menu.at && <TrackMenu {...rows} at={menu.at} onClose={menu.close} />}
     </TimelineRow>
   )
 }
