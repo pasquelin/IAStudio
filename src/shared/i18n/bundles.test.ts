@@ -9,6 +9,7 @@ import { ASSISTANT_MODELS } from '../domain/assistant'
 import { STT_ERROR_CODES } from '../domain/dictation'
 import { breakableSpots } from './typography'
 import { isRecord } from '../guards'
+import { foldForSearch } from '../text'
 import { NAMED_KEYS } from '../domain/shortcut'
 import {
   CAPABILITIES_BY_FAMILY,
@@ -108,6 +109,16 @@ const BUNDLES: Record<Language, Map<string, string>> = {
 }
 
 const REFERENCE = BUNDLES.fr
+
+/**
+ * The words a reader would notice twice: folded the way the search box folds them, holes dropped
+ * — a `{{name}}` is written by the caller, not by the label — and short ones left out, articles
+ * and prepositions being shared by any two French sentences.
+ */
+const longWords = (text: string): string[] =>
+  foldForSearch(text.replace(/{{[^}]*}}/g, ' '))
+    .split(/[^\p{Letter}\p{Number}]+/u)
+    .filter(word => word.length > 3)
 
 /**
  * Named one key at a time rather than by its subtree: `usage.actionNames` also holds labels the
@@ -564,6 +575,53 @@ describe('the translation bundles', () => {
     ]
 
     expect(stale).toEqual([])
+  })
+
+  /**
+   * A tooltip on a button whose label is already visible EXPLAINS instead of repeating: read
+   * aloud, a tooltip that says the label back is the same words twice.
+   *
+   * What it measures is that the tooltip adds almost NOTHING — the whole label, back, plus one
+   * word at most. Not that it echoes: `Rectangle` / `Tracer un rectangle — Maj pour un carré`
+   * repeats its label word for word and is the form this repository writes, because the words
+   * AFTER the echo are the explanation. `Sélection rectangulaire` / `Tracer une sélection
+   * rectangulaire` had nothing after it, and that is what was caught.
+   *
+   * The bar sits there because a stricter one is unusable: of the 213 label/tooltip pairs, 80
+   * share a word — `Supprimer le calque` beside `Supprimer le calque actif — le dernier ne peut
+   * pas l'être` among them — and nearly all of those explain something real. A guard on shared
+   * words would report eighty labels and be turned off within the day.
+   *
+   * Its blind spots, measured, and they are wide:
+   * - a label with no word over three letters is never read — `OK`, `Fit`, `Top`, `Pen`, `A/B`,
+   *   nine such in English and four in French, and short labels are the likeliest to be echoed;
+   * - French inflection hides an echo from it: `Fermer les autres onglets` beside `Ferme tous les
+   *   autres onglets` compares `fermer` to `ferme` and finds two words, so the guard is weaker in
+   *   the language this repository writes its labels in first;
+   * - pairing is by name, `fooHint` beside `foo`, and 45 of the 158 tooltip keys escape it — 20
+   *   `*Hint` whose label lives under another name, 25 spelled otherwise (`activity.filters.hint`
+   *   is a real tooltip), 9 composed at runtime (`sceneViews.${view}Hint`).
+   *
+   * A concise tooltip can therefore be flagged where it was right — `Delete layer` beside
+   * `Delete the active layer` would be. The fix then is to say the second useful thing, not to
+   * exempt the key.
+   */
+  it.each(CODES)('explains a label in %s rather than saying it back', code => {
+    const echoed = [...BUNDLES[code]]
+      .filter(([key]) => key.endsWith('Hint') && BUNDLES[code].has(key.slice(0, -'Hint'.length)))
+      .filter(([key, hint]) => {
+        const label = new Set(longWords(BUNDLES[code].get(key.slice(0, -'Hint'.length)) ?? ''))
+        const spoken = longWords(hint)
+
+        return (
+          label.size > 0 &&
+          [...label].every(word => spoken.includes(word)) &&
+          spoken.filter(word => !label.has(word)).length <= 1
+        )
+      })
+      .map(([key]) => key)
+
+    expect(echoed).toEqual([])
   })
 
   /**
