@@ -113,7 +113,7 @@
     "moveTrackDownHint": "Swaps this track with the one below it",
     "removeTrackHint": "Removes the track and every clip it carries",
     "reorderTrack": "Move the {{name}} track",
-    "trackList": "Montage tracks"
+    "trackList": "Tracks in the edit"
   },
   "videoTools": {
     "select": "Selection",

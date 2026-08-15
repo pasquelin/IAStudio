@@ -59,7 +59,7 @@ second one is born.
 **The `+` button on the left rail** opens an empty audio tab. It is not a prerequisite for the
 double-click: it is there for when you want the edit before you have a take to lay on it.
 
-While no clip is selected, the lower monitor shows: "Select a clip from the montage to edit it
+While no clip is selected, the lower monitor shows: "Select a clip from the edit to work on it
 here, or drop a take."
 
 > **This gesture is what decides whether your takes end up together.** Two double-clicks on two
@@ -222,7 +222,7 @@ strong. The waveform that comes back is the one of that new file.
 The bottom strip holds the **same edit as the Video workspace**, with one difference: there is
 **no picture track**. A fresh audio tab opens on **four empty sound tracks**, `A1` to `A4`.
 
-This is what makes Audio a montage workspace rather than a plain take editor: music is built by
+This is what makes Audio an editing workspace rather than a plain take editor: music is built by
 laying sounds side by side.
 
 **The gestures are exactly those of the previous chapter** — dragging a take in from the shelf,

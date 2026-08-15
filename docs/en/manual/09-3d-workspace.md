@@ -649,7 +649,7 @@ keying.
 **Playing with the head already at the end rewinds** instead of stopping on the frame it starts on.
 
 **Animation composes with the object's pose, it does not replace it** — and not the same way for
-every property: moves **add up**, scales **multiply**. That is the opposite of a video montage,
+every property: moves **add up**, scales **multiply**. That is the opposite of a video edit,
 where the clip on top hides the one below.
 
 > **To stack the same property twice on one object, lock its lines**: the next key opens fresh

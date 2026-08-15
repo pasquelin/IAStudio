@@ -78,7 +78,7 @@ thousand assets therefore scrolls without stutter.
 
 **A sound shows itself as its waveform** on a tile, rather than as a speaker glyph: two takes of
 the same length looked identical until one of them had been played. The waveform is the one the
-montage draws, derived at import — so it appears a fraction of a second after the tile, once it
+timeline draws, derived at import — so it appears a fraction of a second after the tile, once it
 has arrived.
 
 ### When the shelf is empty
@@ -133,7 +133,7 @@ Right-click lists every destination, always in the same order:
 | **Add to the scene** | the open 3D scene | meshes |
 | **Open in the audio editor** | the open edit, Audio workspace | sounds |
 | **Place as a layer** | the open image, Image workspace | pictures |
-| **Add to the montage** | the open sequence, Video workspace | all |
+| **Add to the edit** | the open sequence, Video workspace | all |
 | **Use as base colour** | the open material, Textures workspace | pictures |
 | **Show in folder** | opens the file manager on the file | all |
 

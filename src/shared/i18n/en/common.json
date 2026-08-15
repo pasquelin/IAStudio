@@ -74,7 +74,7 @@
     "search": "Search the manual",
     "results": "Results",
     "noResult": "No chapter contains those words.",
-    "chapterHint": "Opens this chapter in the pane on the right",
+    "chapterHint": "Opens this chapter in the panel on the right",
     "searchResultHint": "Opens the chapter these words appear in"
   },
   "units": {

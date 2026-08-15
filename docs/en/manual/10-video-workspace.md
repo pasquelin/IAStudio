@@ -63,7 +63,7 @@ place in the edit where the gesture does not do what it shows.
 track, and the sound track beside it for a take that carries sound. Both arrive in one gesture,
 and **⌘Z takes them back in one** — the clips and the tracks.
 
-Two places still take nothing: the **time ruler** at the top, and a montage with no picture track
+Two places still take nothing: the **time ruler** at the top, and an edit with no picture track
 at all — the one in the Audio workspace — where releasing a rush only opens the asset, since
 there is no monitor there to show it.
 
