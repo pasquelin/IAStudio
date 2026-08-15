@@ -287,4 +287,25 @@ describe('a line of the sheet dragged by its grip', () => {
 
     expect(shown()).toEqual(['cube-2', 'cube-3', 'cube-1'])
   })
+
+  /**
+   * The sheet writes its scroll into ANOTHER store than the montage does, and into a nested field
+   * — `animationViewOf(...).viewport`. The column is shared; the wiring on this side is not, and a
+   * wrong field there would go through every gate green.
+   */
+  it('scrolls the sheet from the wheel over its own names', () => {
+    const clip = screen.getByTestId('band-clip')
+    const stack = clip.firstElementChild
+    const column = clip.parentElement
+    if (!(stack instanceof HTMLElement) || !column) throw new Error('the sheet has no column')
+
+    Object.defineProperty(stack, 'offsetHeight', { configurable: true, value: 3 * SUBJECT_HEIGHT })
+    Object.defineProperty(clip, 'clientHeight', { configurable: true, value: SUBJECT_HEIGHT })
+
+    fireEvent.wheel(column, { deltaY: 10_000 })
+
+    expect(animationViewOf(useAnimationViews.getState(), DOCUMENT).viewport.scrollTop).toBe(
+      2 * SUBJECT_HEIGHT,
+    )
+  })
 })
