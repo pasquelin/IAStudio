@@ -182,6 +182,7 @@
       "shell.render": "Une partie de l’interface n’a pas pu s’afficher",
       "shell.layout": "L’agencement enregistré d’un espace était illisible",
       "shell.menu": "Un menu contextuel n’a pas pu être ouvert",
+      "sequence.fullScreen": "Le moniteur n’a pas pu passer en plein écran",
       "scene": {
         "render": "Le rendu vidéo a échoué"
       }
@@ -793,7 +794,13 @@
     "program": "Programme",
     "noClip": "Sélectionnez un clip pour le voir ici.",
     "unreadable": "Ce clip n’a pas pu être affiché : son média est introuvable, ou son format n’est pas lisible ici.",
-    "rewind": "Retour au début"
+    "rewind": "Retour au début",
+    "sourceRole": "Le clip choisi, tel qu’il est avant montage",
+    "programRole": "Le montage entier, tel qu’il sera exporté",
+    "large": "Plein écran",
+    "largeHint": "Montre l’image seule sur tout l’écran, sans rien du studio autour",
+    "exitLarge": "Quitter le plein écran",
+    "exitLargeHint": "Revient au studio. La touche Échap le fait aussi"
   },
   "audio": {
     "noAsset": "Aucun son ouvert. Déposez une prise ici, ou double-cliquez sur un asset audio.",
@@ -1428,6 +1435,10 @@
     "sequencePlayPause": {
       "title": "Lire / Pause",
       "help": "Lance la lecture du montage, ou l’arrête là où elle en est. Relancer repart d’où l’on s’était arrêté."
+    },
+    "sequenceFullScreen": {
+      "title": "Plein écran",
+      "help": "Montre le moniteur Programme seul sur tout l’écran, pour juger le montage ou le présenter. Échap revient au studio."
     },
     "sequenceSplit": {
       "title": "Couper le clip",

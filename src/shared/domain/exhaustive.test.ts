@@ -180,6 +180,7 @@ describe('the lists that stand for a union', () => {
       'shell.render': true,
       'shell.layout': true,
       'shell.menu': true,
+      'sequence.fullScreen': true,
     }
 
     expect(sorted(LOG_SCOPES)).toEqual(sorted(Object.keys(all)))

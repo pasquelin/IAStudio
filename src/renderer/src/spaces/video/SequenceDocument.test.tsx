@@ -163,4 +163,35 @@ describe('SequenceDocument', () => {
     // The key is named from the bundle: the French interface used to announce `Space`.
     expect(names).toEqual(['Lire', 'Lire (Espace)'])
   })
+
+  /**
+   * The two monitors used to share the row down the middle with a `Separator` between them, which
+   * draws a line and refuses to be moved. One of the two is always the one being judged — the
+   * program while cutting, the source while choosing a take — and it is the one that needs room.
+   */
+  describe('the divider between the two monitors', () => {
+    it('gives the source a width of its own once dragged, and the program the rest', () => {
+      render(<SequenceDocument documentId="doc-1" />)
+      const divider = screen.getByRole('separator', { hidden: true })
+
+      fireEvent.pointerDown(divider, { pointerId: 1, clientX: 500 })
+      fireEvent.pointerMove(divider, { pointerId: 1, clientX: 700 })
+
+      // The source is the first monitor's own box, which only exists once a width was set on it.
+      const source = screen.getByText('Source').closest('section')?.parentElement
+      expect(source?.style.width).not.toBe('')
+    })
+
+    it('refuses to swallow either monitor, whichever way it is dragged', () => {
+      render(<SequenceDocument documentId="doc-1" />)
+      const divider = screen.getByRole('separator', { hidden: true })
+
+      fireEvent.pointerDown(divider, { pointerId: 1, clientX: 500 })
+      fireEvent.pointerMove(divider, { pointerId: 1, clientX: -4000 })
+
+      const source = screen.getByText('Source').closest('section')?.parentElement
+      // `MIN_SPLIT`, through the same `fitSplit` the shell's own zones are clamped by.
+      expect(Number.parseInt(source?.style.width ?? '0', 10)).toBeGreaterThanOrEqual(100)
+    })
+  })
 })

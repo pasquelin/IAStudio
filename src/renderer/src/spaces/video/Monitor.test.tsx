@@ -1,4 +1,5 @@
 import { act, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TimelineEngineDeps } from '@/engines/timeline/TimelineEngine'
 import { sequenceWith } from '@/engines/timeline/timeline-fixtures'
@@ -43,6 +44,7 @@ describe('Monitor', () => {
       <Monitor
         owner="doc-1:program"
         title="Programme"
+        role="Le montage entier, tel qu’il sera exporté"
         sequence={sequenceWith([])}
         onTime={onTime}
         placeholder={placeholder ? <p>{placeholder}</p> : undefined}
@@ -80,5 +82,50 @@ describe('Monitor', () => {
 
     expect(screen.queryByText(/Sélectionnez un clip/)).not.toBeInTheDocument()
     expect(screen.getByText(/n’a pas pu être affiché/)).toBeInTheDocument()
+  })
+
+  /**
+   * Two monitors showing the same black rectangle is what this space cannot explain by itself,
+   * and the answer stays under the transport once both are showing something — an empty state
+   * would take it away exactly when the pair is hardest to tell apart.
+   */
+  it('says what it shows, whether or not there is a picture in it', () => {
+    mounted()
+
+    expect(screen.getByText(/Le montage entier/)).toBeInTheDocument()
+  })
+
+  describe('full screen', () => {
+    it('asks the platform for the picture alone, not for the transport around it', async () => {
+      const request = vi.fn(() => Promise.resolve())
+      Element.prototype.requestFullscreen = request
+      mounted()
+
+      await userEvent.click(screen.getByRole('button', { name: /Plein écran/ }))
+
+      expect(request).toHaveBeenCalledTimes(1)
+      // The element that asked is the one holding the canvas, so the studio's furniture stays out.
+      const asked = request.mock.instances[0]
+      expect(asked).toBeInstanceOf(HTMLElement)
+      expect((asked as HTMLElement).querySelector('canvas, div')).not.toBeNull()
+    })
+
+    /**
+     * Escape leaves full screen without passing through this component, and so does the platform's
+     * own chrome. A boolean of our own would then offer to leave a full screen nobody is in.
+     */
+    it('reads the state off the document rather than remembering its own', async () => {
+      Element.prototype.requestFullscreen = vi.fn(() => Promise.resolve())
+      mounted()
+      const picture = screen.getByRole('button', { name: /Plein écran/ })
+      await userEvent.click(picture)
+
+      act(() => {
+        document.dispatchEvent(new Event('fullscreenchange'))
+      })
+
+      // Nothing entered full screen in jsdom, so the button still offers to.
+      expect(screen.getByRole('button', { name: /Plein écran/ })).toBeInTheDocument()
+    })
   })
 })

@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  */
 const destroy = vi.fn()
 const render = vi.fn()
+const resizeCall = vi.fn()
 const on = vi.fn<(event: string, listener: () => void) => void>()
 const off = vi.fn()
 let resolveInit: (() => void) | null = null
@@ -31,6 +32,7 @@ vi.mock('pixi.js', () => ({
     renderer = { on, off, texture: { initSource: vi.fn() } }
     destroy = destroy
     render = render
+    resize = resizeCall
     init = (options: Record<string, unknown>): Promise<void> => {
       started = options
       return new Promise(resolve => (resolveInit = () => resolve()))
@@ -57,6 +59,41 @@ vi.mock('pixi.js', () => ({
   },
   Texture: { EMPTY: EMPTY_TEXTURE, from: () => PAINTED_TEXTURE },
 }))
+
+/**
+ * A `ResizeObserver` a test can shake, which the suite's own stub is not: that one reports once
+ * on `observe` and never again, and what is under test here is precisely the second report — the
+ * one a Dockview splitter causes and a window resize does not.
+ */
+const watching = new Set<{ target: Element; notify: () => void }>()
+
+class TestResizeObserver {
+  private entry: { target: Element; notify: () => void } | null = null
+
+  constructor(private readonly callback: () => void) {}
+
+  observe(target: Element): void {
+    this.entry = { target, notify: this.callback }
+    watching.add(this.entry)
+    // The real one reports the current size straight away, and the engine lays out on it.
+    this.callback()
+  }
+
+  unobserve(): void {}
+
+  disconnect(): void {
+    if (this.entry) watching.delete(this.entry)
+    this.entry = null
+  }
+}
+
+// `as`: the stub answers the three methods this file uses, not the full DOM interface.
+globalThis.ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver
+
+/** Reports a new size to whoever is still watching `host`. Nobody left means nothing fires. */
+const resize = (host: Element): void => {
+  for (const observer of watching) if (observer.target === host) observer.notify()
+}
 
 const { TimelineEngine } = await import('./TimelineEngine')
 const { clipFixture, sequenceWith, settled, trackFixture } = await import('./timeline-fixtures')
@@ -125,6 +162,32 @@ describe('mounting a monitor', () => {
     await mounted(engineFor(host))
 
     expect(host.querySelector('canvas')).not.toBeNull()
+  })
+
+  /**
+   * The defect this replaced: Pixi honours `resizeTo` through a `window.resize` listener and
+   * nothing else, so dragging a Dockview splitter — which resizes the panel and not the window —
+   * left the drawing buffer at its mounted size. The picture was then letterboxed against a
+   * rectangle that no longer existed, and did not move by a pixel while the panel grew.
+   */
+  it('follows the panel it sits in, which no window resize announces', async () => {
+    await mounted(engineFor(host))
+    resizeCall.mockClear()
+
+    resize(host)
+
+    expect(resizeCall).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops following it once disposed, so a closed tab holds neither observer nor canvas', async () => {
+    const engine = engineFor(host)
+    await mounted(engine)
+    resizeCall.mockClear()
+
+    engine.dispose()
+    resize(host)
+
+    expect(resizeCall).not.toHaveBeenCalled()
   })
 
   /**

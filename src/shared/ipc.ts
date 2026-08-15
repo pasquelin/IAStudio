@@ -449,6 +449,9 @@ export type LogScope =
   // A menu the system refused to draw. It leaves nothing on screen to look at — no surface, no
   // half-open flyout — so a right-click that does nothing at all is the only symptom there is.
   | 'shell.menu'
+  // The Fullscreen API refuses without a user gesture, and answers with a rejected promise rather
+  // than an exception: dropped, a monitor that stays exactly where it is is the whole symptom.
+  | 'sequence.fullScreen'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -482,6 +485,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'shell.render',
   'shell.layout',
   'shell.menu',
+  'sequence.fullScreen',
 ]
 
 /**

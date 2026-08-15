@@ -19,7 +19,7 @@ import {
   type Track,
   type Us,
 } from './timeline-state'
-import { mountApplication } from '../core/mount'
+import { followHostSize, mountApplication } from '../core/mount'
 import { tokenAsHex } from '../core/palette'
 import type { Size } from '../core/geometry'
 
@@ -168,6 +168,8 @@ export class TimelineEngine {
   private disposed = false
   /** The canvas and screen sizes the frame was last laid out for — see `layout`. */
   private laidOut = ''
+  /** Stops watching the panel this monitor sits in — see `followHostSize`. */
+  private unfollow: (() => void) | null = null
 
   private readonly clock: Clock
   private readonly sound: SoundScheduler
@@ -300,6 +302,8 @@ export class TimelineEngine {
     // The panel resizes without the window doing so, and a frame laid out once would drift.
     // Pixi renders right after emitting this, so laying out is all this listener owes it.
     application.renderer.on('resize', this.layout)
+    // What actually makes that resize happen: `resizeTo` alone answers to the window only.
+    this.unfollow = followHostSize(application, element)
 
     this.application = application
     this.layout()
@@ -382,6 +386,8 @@ export class TimelineEngine {
     this.pause()
     this.generation += 1
     this.pool.dispose()
+    this.unfollow?.()
+    this.unfollow = null
     this.application?.renderer.off('resize', this.layout)
     this.application?.destroy(true, { children: true, texture: true })
     this.application = null

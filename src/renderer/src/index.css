@@ -565,6 +565,17 @@ body,
   outline: none !important;
 }
 
+/*
+ * What the picture sits on once it fills the screen. The monitor keeps `chassis` inside the
+ * studio, where the panel it floats in is what says "this is a surface" — full screen there is
+ * no panel, and a dark grey field around a film is the one thing a room notices. Chromium paints
+ * the layer behind it too, hence the backdrop: without it the page shows through at the edges.
+ */
+:fullscreen,
+:fullscreen::backdrop {
+  background: var(--color-monitor);
+}
+
 body {
   margin: 0;
   background: var(--color-chassis);

@@ -48,6 +48,7 @@ export type CommandId =
   | 'scene.undo'
   | 'scene.redo'
   | 'sequence.playPause'
+  | 'sequence.fullScreen'
   | 'sequence.split'
   | 'sequence.delete'
   | 'sequence.unlink'
@@ -417,6 +418,18 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sequencePlayPause.title',
     helpKey: 'commands.sequencePlayPause.help',
     defaultBinding: 'Space',
+  }),
+  // The program monitor alone answers it: `Monitor` arms the sequence scope on the one that
+  // holds the playback token, so the key means "show the edit", never "show the take".
+  command({
+    id: 'sequence.fullScreen',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceFullScreen.title',
+    helpKey: 'commands.sequenceFullScreen.help',
+    // Bare, as DaVinci has it: this is the one gesture taken while WATCHING rather than editing.
+    // `KeyF` is spoken for in the scene and the canvas, which are other scopes and never heard
+    // at the same time.
+    defaultBinding: 'KeyF',
   }),
   command({
     id: 'sequence.split',

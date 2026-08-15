@@ -182,6 +182,7 @@
       "shell.render": "Part of the interface could not be drawn",
       "shell.layout": "A workspace’s stored layout could not be read",
       "shell.menu": "A context menu could not be opened",
+      "sequence.fullScreen": "The monitor could not go full screen",
       "scene": {
         "render": "Rendering the video failed"
       }
@@ -793,7 +794,13 @@
     "program": "Program",
     "noClip": "Select a clip to see it here.",
     "unreadable": "This clip could not be shown: its media is missing, or its format cannot be read here.",
-    "rewind": "Back to start"
+    "rewind": "Back to start",
+    "sourceRole": "The clip you picked, as it is before the edit",
+    "programRole": "The whole edit, as it will be exported",
+    "large": "Full screen",
+    "largeHint": "Shows the image alone on the whole screen, with none of the studio around it",
+    "exitLarge": "Leave full screen",
+    "exitLargeHint": "Back to the studio; the Escape key does it too"
   },
   "audio": {
     "noAsset": "No sound open. Drop a take here, or double-click an audio asset.",
@@ -1428,6 +1435,10 @@
     "sequencePlayPause": {
       "title": "Play / Pause",
       "help": "Starts playing the edit, or stops it where it is. Starting again picks up where you left off."
+    },
+    "sequenceFullScreen": {
+      "title": "Full screen",
+      "help": "Shows the Program monitor alone on the whole screen, to judge the edit or to present it. Escape comes back to the studio."
     },
     "sequenceSplit": {
       "title": "Split clip",

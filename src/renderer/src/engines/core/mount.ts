@@ -33,3 +33,26 @@ export async function mountApplication(
   application.destroy({ removeView: true }, { children: true, texture: true, textureSource: true })
   return null
 }
+
+/**
+ * Makes `resizeTo` tell the truth, and returns the way to stop.
+ *
+ * Pixi's `ResizePlugin` honours that option through ONE listener —
+ * `globalThis.addEventListener('resize', …)` — so a canvas only ever follows the WINDOW. Every
+ * surface of this studio lives in a Dockview panel instead, and dragging a splitter resizes the
+ * panel without resizing the window: no event fires, the drawing buffer keeps the size it had at
+ * mount, and the picture is laid out against a rectangle that no longer exists. That is what the
+ * video monitors were doing — the panel grew, the image did not move by a pixel.
+ *
+ * `resize` and not `queueResize`, which was the first shape of this and was measured wrong twice
+ * over. A `ResizeObserver` already delivers once per layout pass, before the paint — so deferring
+ * to an animation frame coalesces nothing that the browser has not coalesced, and only puts the
+ * drawing buffer one frame behind the box for the length of a drag. And an animation frame is
+ * exactly what Chromium stops handing out to a window nobody is looking at: with the studio in
+ * the background, `document.hidden` true, the queued resize never ran at all.
+ */
+export function followHostSize(application: Application, host: HTMLElement): () => void {
+  const observer = new ResizeObserver(() => application.resize())
+  observer.observe(host)
+  return () => observer.disconnect()
+}
