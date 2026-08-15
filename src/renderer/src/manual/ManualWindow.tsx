@@ -18,7 +18,7 @@ import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 
 /**
- * The user manual, offline and in the reader's language — the same nineteen chapters as
+ * The user manual, offline and in the reader's language — the same twenty chapters as
  * `docs/`, compiled into `shared/manual.json` by `pnpm manual:collect`.
  *
  * Built on the settings window's shape, as the usage window is: chapters on the left, the open

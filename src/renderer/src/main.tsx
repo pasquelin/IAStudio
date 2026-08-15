@@ -50,7 +50,7 @@ const UsageWindow = lazy(async () => ({
 }))
 
 /**
- * Lazy for the plainest reason of the four: `manual.json` is nineteen chapters in two languages,
+ * Lazy for the plainest reason of the four: `manual.json` is twenty chapters in two languages,
  * and the markdown renderer comes with it. None of it belongs in the chunk the splash waits for.
  */
 const ManualWindow = lazy(async () => ({
