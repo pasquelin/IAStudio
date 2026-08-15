@@ -2,8 +2,8 @@
 
 [← Espace Vidéo](10-espace-video.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Textures →](12-espace-textures.md)
 
-L’espace où l’on met un son en forme : le raccourcir, le faire monter en douceur, égaliser son
-volume.
+L’espace où l’on met un son en forme — le raccourcir, le faire monter en douceur, égaliser son
+volume — puis où on le pose à côté des autres.
 
 ---
 
@@ -14,9 +14,10 @@ haute de la **colonne de droite**, pour qu’une prise se glisse de l’une vers
 changer de panneau. La colonne de gauche porte les Modèles et la Génération, comme partout
 ailleurs.
 
-> **La bande basse est réservée, pas encore remplie.** Le montage multipiste de l’espace Audio
-> n’existe pas : le panneau y affiche l’état vide de la Timeline tant qu’aucune séquence n’est en
-> avant. La place lui est gardée ; ce chapitre décrit l’éditeur d’une prise à la fois.
+> **L’onglet audio porte deux moitiés, et elles s’enregistrent ensemble.** Au centre,
+> l’**éditeur d’une prise** : la forme d’onde et ses outils. Dans la bande basse, le **montage**,
+> où l’on pose des prises les unes à côté des autres — décrit [plus bas](#le-montage). Un seul
+> onglet, un seul `⌘S`, un seul fichier.
 
 ---
 
@@ -128,9 +129,43 @@ Ce n’est qu’au moment où vous le demandez explicitement que quelque chose e
 
 ---
 
+## Le montage
+
+La bande basse tient le **même montage que l’espace Vidéo**, à une chose près : il n’y a **pas de
+piste image**. Un onglet audio neuf s’ouvre sur **quatre pistes son vides**, `A1` à `A4`.
+
+C’est ce qui fait de l’Audio un espace de montage et non un simple éditeur de prise : une musique
+se construit en posant des sons les uns à côté des autres.
+
+**Les gestes sont exactement ceux du chapitre précédent** — glisser une prise depuis l’étagère,
+tailler un clip par ses bords, la lame, les fondus, le gain, l’inspecteur, les en-têtes de piste
+avec leur muet, leur solo et leur verrou. Tout est décrit dans
+[Espace Vidéo](10-espace-video.md), et rien n’en change ici.
+
+La barre du panneau porte en plus un bouton **Ajouter une piste audio** — un seul, là où la Vidéo
+en a deux : il n’y a pas de piste image à ajouter.
+
+Deux différences seulement, et elles viennent de la même cause : **cet espace n’a pas de
+moniteur.**
+
+- **Le transport est sur la barre de titre du panneau**, et non sous une image : lecture/pause et
+  retour au début. `Espace` lit et met en pause, comme partout.
+- **Il n’y a rien à regarder** — un montage sonore s’écoute.
+
+> **Deux lectures, jamais en même temps.** La forme d’onde du centre fait entendre la **chaîne
+> d’outils** appliquée à la prise ouverte ; le montage fait entendre les **clips posés sur les
+> pistes**. Lancer l’une arrête l’autre : le studio n’a qu’un seul lecteur.
+
+---
+
 ## Annuler et rétablir
 
 `⌘Z` / `Ctrl+Z` défait la dernière étape de la chaîne. `⇧⌘Z` la refait.
+
+**Une seule touche pour les deux moitiés, et elle choisit toujours la chaîne d’abord.** Tant que
+la chaîne d’outils a quelque chose à rendre, `⌘Z` la défait ; c’est seulement lorsqu’elle est
+revenue à la prise nue que la touche s’adresse au montage. Pour défaire un geste de montage, il
+faut donc avoir remonté toute la chaîne — ou n’en avoir posé aucune.
 
 Comme partout dans le studio, l’historique appartient au document : l’onglet visé doit être en
 avant.
@@ -156,7 +191,9 @@ faire entrer et sortir proprement. C’est exactement ce que fait cet espace.
 Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 
 > **Deux gestes différents, et il faut les distinguer.** `⌘S` enregistre le **document** — vos
-> coupes, vos fondus, vos réglages — dans un fichier `.aud` du projet, qui se rouvre tel quel.
+> coupes, vos fondus, vos réglages, **et le montage de la bande basse** — dans un fichier `.aud`
+> du projet, qui se rouvre tel quel. Une seule touche pour les deux moitiés : un montage bâti
+> sur une prise qu’on n’a pas touchée est du travail, et il est enregistré comme tel.
 > **Appliquer** et **Enregistrer comme nouveau** écrivent un **asset audio**, c’est-à-dire un son
 > utilisable ailleurs, avec les réglages fondus dedans.
 >
