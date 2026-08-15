@@ -1,5 +1,6 @@
 import { mdiChevronDown, mdiChevronRight, mdiDeleteOutline, mdiRhombus } from '@mdi/js'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
+import type { Viewport } from '@/engines/timeline/timeline-geometry'
 import { useTranslation } from 'react-i18next'
 import type { TrackProperty } from '@shared/domain/animation'
 import { ToolButton } from '@/design/ToolButton'
@@ -62,17 +63,19 @@ export function AnimationHeaders({ documentId, rows }: AnimationHeadersProps) {
   // frame of playback, and two arrays allocated per frame is two arrays nobody reads.
   const shown = useMemo(() => shownSubjects(rows), [rows])
 
+  // Read out of the store rather than subscribed to: the column asks for the whole viewport only
+  // at the moment of a gesture, and a subscription would redraw every line on a zoom.
+  const viewportNow = useCallback(
+    () => animationViewOf(useAnimationViews.getState(), documentId).viewport,
+    [documentId],
+  )
+  const setViewport = useCallback(
+    (next: Viewport) => useAnimationViews.getState().setViewport(documentId, next),
+    [documentId],
+  )
+
   return (
-    <TimelineHeaderColumn
-      scrollTop={scrollTop}
-      // Read from the store rather than subscribed to: the whole viewport as a dependency would
-      // redraw every line on a zoom, and this only ever writes one of its three fields.
-      onScrollTop={top => {
-        const views = useAnimationViews.getState()
-        const view = animationViewOf(views, documentId)
-        views.setViewport(documentId, { ...view.viewport, scrollTop: top })
-      }}
-    >
+    <TimelineHeaderColumn scrollTop={scrollTop} viewportNow={viewportNow} setViewport={setViewport}>
       {rows.map(row => (
         <HeaderRow key={row.id} documentId={documentId} row={row} shown={shown} />
       ))}

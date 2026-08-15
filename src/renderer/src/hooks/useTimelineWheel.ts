@@ -6,7 +6,9 @@ import type { Viewport } from '@/engines/timeline/timeline-geometry'
  * The wheel over a time band: zoom under the pointer with a modifier, scroll otherwise.
  *
  * Written once because the animation band and the video timeline spelt it identically — the same
- * gesture over the same kind of surface, and a fix to one of them left the other behind.
+ * gesture over the same kind of surface, and a fix to one of them left the other behind. The
+ * column of NAMES takes it too: the two halves of a band answer one vocabulary, or the same wheel
+ * zooms on the right of a gutter and scrolls on its left.
  *
  * Native and NON-PASSIVE, which is the whole reason this is an effect rather than an `onWheel`
  * prop: React delivers `wheel` passively, where `preventDefault` is a no-op and the panel behind
@@ -19,7 +21,7 @@ import type { Viewport } from '@/engines/timeline/timeline-geometry'
  * is what the non-passive registration costs.
  */
 export function useTimelineWheel(
-  ref: RefObject<HTMLCanvasElement | null>,
+  ref: RefObject<HTMLElement | null>,
   viewportNow: () => Viewport,
   setViewport: (next: Viewport) => void,
 ) {
@@ -30,15 +32,15 @@ export function useTimelineWheel(
   }, [viewportNow])
 
   useEffect(() => {
-    const canvas = ref.current
-    if (!canvas) return
+    const element = ref.current
+    if (!element) return
 
     const onWheel = (event: WheelEvent): void => {
       event.preventDefault()
       const current = latest.current()
 
       if (event.ctrlKey || event.metaKey) {
-        const bounds = canvas.getBoundingClientRect()
+        const bounds = element.getBoundingClientRect()
         const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP
         setViewport(zoomAt(current, factor, event.clientX - bounds.left))
         return
@@ -50,7 +52,7 @@ export function useTimelineWheel(
       setViewport(scrollBy(current, horizontal, vertical))
     }
 
-    canvas.addEventListener('wheel', onWheel, { passive: false })
-    return () => canvas.removeEventListener('wheel', onWheel)
+    element.addEventListener('wheel', onWheel, { passive: false })
+    return () => element.removeEventListener('wheel', onWheel)
   }, [ref, setViewport])
 }

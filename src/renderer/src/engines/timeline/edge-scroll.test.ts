@@ -16,18 +16,14 @@ describe('edgeScroll', () => {
     expect(edgeScroll(BAND.top, BAND, SECOND)).toBe(-EDGE_SPEED)
   })
 
-  /**
-   * A step change makes the stack bolt the instant the pointer grazes the edge, and the row one
-   * is placing overshoots by a rank before the hand can answer.
-   */
   it('ramps across the margin rather than switching on', () => {
     const halfway = edgeScroll(BAND.bottom - EDGE_MARGIN / 2, BAND, SECOND)
 
     expect(halfway).toBeCloseTo(EDGE_SPEED / 2)
   })
 
-  // The pointer leaves the window while a row is held at the bottom edge — which is the whole
-  // reason this exists. Speed proportional to how far out would be unusable.
+  // The pointer leaves the window while a row is held at the bottom edge — the case this exists
+  // for, and the one where a speed proportional to the overshoot would be unusable.
   it('holds at full speed however far past the edge the pointer goes', () => {
     expect(edgeScroll(BAND.bottom + 500, BAND, SECOND)).toBe(EDGE_SPEED)
   })

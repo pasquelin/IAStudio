@@ -2,6 +2,7 @@ import { mdiDragVertical } from '@mdi/js'
 import {
   createContext,
   use,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -9,14 +10,15 @@ import {
   type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
-  type WheelEvent,
 } from 'react'
 import { clamp } from '@shared/numeric'
 import { UiIcon } from '@/design/UiIcon'
+import { maxScrollTopFor } from '@/engines/timeline/band'
 import { edgeScroll } from '@/engines/timeline/edge-scroll'
-import { ROW_PADDING, RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
+import { ROW_PADDING, RULER_HEIGHT, type Viewport } from '@/engines/timeline/timeline-geometry'
 import { cn } from '@/helpers/cn'
 import { isGoneForGood } from '@/helpers/teardown'
+import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 
 /**
  * How many places a row has travelled, dragged by this much over rows of this height.
@@ -46,14 +48,15 @@ type BandScroll = {
 const BandScrollContext = createContext<BandScroll | null>(null)
 
 /**
- * How far the band could still travel — the stack it renders, less what it shows.
+ * How far the band may still travel, by the studio's own rule — measured off the DOM because the
+ * column is the only place that knows the height of the stack it renders AND of the box that
+ * clips it, neither of which the store keeps.
  *
- * Measured off the DOM and not off the store, which holds no viewport size: the column is the
- * only place in the studio that knows both numbers.
+ * No ruler in the sum: the spacer facing it is a sibling of the clipping box, not inside it.
  */
 function roomBelow(clip: HTMLElement | null, stack: HTMLElement | null): number {
   if (!clip) return 0
-  return (stack?.offsetHeight ?? 0) - clip.clientHeight
+  return maxScrollTopFor(stack?.offsetHeight ?? 0, clip.clientHeight, 0)
 }
 
 /**
@@ -65,26 +68,45 @@ function roomBelow(clip: HTMLElement | null, stack: HTMLElement | null): number 
  */
 export function TimelineHeaderColumn({
   scrollTop,
-  onScrollTop,
+  viewportNow,
+  setViewport,
   children,
 }: {
   scrollTop: number
   /**
-   * Where the band writes the offset it reaches on its own, ALREADY within its bounds — the
-   * column measures the stack it renders, and nothing else in the studio can. Absent leaves the
-   * band still: a stack no one can reorder never needs to come to the pointer.
+   * The band's whole viewport, read at the moment of a gesture rather than subscribed to: the
+   * wheel zooms, which needs the scale, and a column that re-drew every header on a zoom would
+   * pay for a gesture that never touches a name.
    */
-  onScrollTop?: (top: number) => void
+  viewportNow: () => Viewport
+  setViewport: (next: Viewport) => void
   children: ReactNode
 }) {
+  const column = useRef<HTMLDivElement>(null)
   const clip = useRef<HTMLDivElement>(null)
   const stack = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState(false)
 
+  /**
+   * Every offset this column writes, within its own bounds.
+   *
+   * The bound is the column's because it is the one that measured the stack — `scrollBy` leaves
+   * the far end open, and the canvas beside it clamps against a height this side does not have.
+   */
+  const bounded = useCallback(
+    (next: Viewport): void => {
+      const room = roomBelow(clip.current, stack.current)
+      setViewport({ ...next, scrollTop: clamp(Math.round(next.scrollTop), 0, room) })
+    },
+    [setViewport],
+  )
+
+  useTimelineWheel(column, viewportNow, bounded)
+
   // Read by the frame loop below, bound once for the whole gesture.
-  const latest = useRef({ scrollTop, onScrollTop })
+  const latest = useRef({ scrollTop, viewportNow, bounded })
   useEffect(() => {
-    latest.current = { scrollTop, onScrollTop }
+    latest.current = { scrollTop, viewportNow, bounded }
   })
 
   // Stable for the column's whole life: a fresh object every draw would re-run the effect that
@@ -116,11 +138,10 @@ export function TimelineHeaderColumn({
       const seconds = previous === null ? 0 : (now - previous) / 1000
       previous = now
 
-      const write = latest.current.onScrollTop
       const box = clip.current
-      if (y === null || !write || !box) return
+      if (y === null || !box) return
 
-      const room = roomBelow(clip.current, stack.current)
+      const room = roomBelow(box, stack.current)
       if (room <= 0) return
 
       const edges = box.getBoundingClientRect()
@@ -130,8 +151,9 @@ export function TimelineHeaderColumn({
       if (whole === 0) return
       carry -= whole
 
-      const next = clamp(latest.current.scrollTop + whole, 0, room)
-      if (next !== latest.current.scrollTop) write(next)
+      const held = latest.current
+      const next = clamp(held.scrollTop + whole, 0, room)
+      if (next !== held.scrollTop) held.bounded({ ...held.viewportNow(), scrollTop: next })
     }
 
     window.addEventListener('pointermove', onMove)
@@ -143,30 +165,17 @@ export function TimelineHeaderColumn({
     }
   }, [dragging])
 
-  /**
-   * The wheel over the NAMES, not only over the band beside them.
-   *
-   * The strip has always answered it; the column never did, so reading a stack meant carrying the
-   * pointer off the very rows one was reading. Same offset, same bounds — the two halves of a
-   * band cannot be scrolled apart.
-   */
-  const onWheel = (event: WheelEvent<HTMLDivElement>): void => {
-    const room = roomBelow(clip.current, stack.current)
-    if (!onScrollTop || room <= 0) return
-
-    const next = clamp(Math.round(scrollTop + event.deltaY), 0, room)
-    if (next !== scrollTop) onScrollTop(next)
-  }
-
   return (
     <BandScrollContext value={band}>
       <div
-        onWheel={onWheel}
+        ref={column}
         className="border-border flex w-(--sc-track-header) shrink-0 flex-col overflow-hidden border-r"
       >
         {/* Empty band facing the ruler, so line one lines up with row one. */}
         <div style={{ height: RULER_HEIGHT }} />
-        <div ref={clip} className="min-h-0 flex-1 overflow-hidden">
+        {/* Named because its height IS the bound the band scrolls within, and a test that had to
+            find it by the transform was guessing at two things at once. */}
+        <div ref={clip} data-testid="band-clip" className="min-h-0 flex-1 overflow-hidden">
           <div ref={stack} style={{ transform: `translateY(${-scrollTop}px)` }}>
             {children}
           </div>

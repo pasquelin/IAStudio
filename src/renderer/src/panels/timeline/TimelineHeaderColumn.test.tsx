@@ -35,17 +35,11 @@ const advance = (ms: number): void => {
   })
 }
 
-/**
- * The box the column clips with, and the stack inside it — neither of which jsdom measures.
- *
- * Found by the transform, which is the column's own mechanism: it scrolls by moving the stack
- * rather than by a native scroller, which is what keeps the headers in step with the strip
- * painted beside them.
- */
+/** The box the column clips with, and the stack inside it — neither of which jsdom measures. */
 const layout = (view: RenderResult, content: number): void => {
-  const stack = view.container.querySelector<HTMLElement>('[style*="translateY"]')
-  const clip = stack?.parentElement
-  if (!stack || !clip) throw new Error('the column no longer scrolls by transform')
+  const clip = view.getByTestId('band-clip')
+  const stack = clip.firstElementChild
+  if (!(stack instanceof HTMLElement)) throw new Error('the clipping box holds no stack')
 
   Object.defineProperty(stack, 'offsetHeight', { configurable: true, value: content })
   Object.defineProperty(clip, 'clientHeight', { configurable: true, value: VISIBLE })
@@ -146,6 +140,23 @@ describe('a band that comes to the pointer', () => {
     held(VISIBLE)
 
     advance(1_000)
+
+    expect(scrollTop()).toBe(0)
+  })
+
+  // The way back, and the only place the lower bound is ever reached: a row carried to the top
+  // edge has to bring the head of the stack with it, or the first ranks stay unreachable.
+  it('travels the other way while a row is held against its top edge', () => {
+    const view = render(<TrackHeaders documentId="doc-1" />, { wrapper: StrictMode })
+    layout(view, CONTENT)
+    useTimelineView.getState().set('doc-1', { ...viewportOf(useTimelineView.getState(), 'doc-1') })
+    fireEvent.wheel(view.container.firstElementChild ?? view.container, { deltaY: 10_000 })
+    expect(scrollTop()).toBe(CONTENT - VISIBLE)
+
+    grab('A6', BOTTOM - 10)
+    fireEvent.pointerMove(window, { clientY: TOP + 4, buttons: 1 })
+    advance(0)
+    for (let tick = 0; tick < 60; tick++) advance(100)
 
     expect(scrollTop()).toBe(0)
   })

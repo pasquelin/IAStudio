@@ -1,5 +1,5 @@
 import { mdiDotsHorizontal } from '@mdi/js'
-import { useState, type KeyboardEvent } from 'react'
+import { useCallback, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MenuButton } from '@/design/MenuButton'
 import { ResizeHandle } from '@/design/ResizeHandle'
@@ -11,6 +11,7 @@ import {
   type SequenceState,
   type Track,
 } from '@/engines/timeline/timeline-state'
+import type { Viewport } from '@/engines/timeline/timeline-geometry'
 import { clamp } from '@shared/numeric'
 import { cn } from '@/helpers/cn'
 import { TIP_RIGHT } from '@/helpers/tooltip'
@@ -55,16 +56,19 @@ export function TrackHeaders({ documentId }: TrackHeadersProps) {
   const sequence = useSequences(state => sequenceOf(state, documentId))
   const scrollTop = useTimelineView(state => viewportOf(state, documentId).scrollTop)
 
+  // Read out of the store rather than subscribed to: the column asks for the whole viewport only
+  // at the moment of a gesture, and a subscription would redraw every header on a zoom.
+  const viewportNow = useCallback(
+    () => viewportOf(useTimelineView.getState(), documentId),
+    [documentId],
+  )
+  const setViewport = useCallback(
+    (next: Viewport) => useTimelineView.getState().set(documentId, next),
+    [documentId],
+  )
+
   return (
-    <TimelineHeaderColumn
-      scrollTop={scrollTop}
-      // Read from the store rather than subscribed to: the whole viewport as a dependency would
-      // redraw every header on a zoom, and this only ever writes one of its three fields.
-      onScrollTop={top => {
-        const store = useTimelineView.getState()
-        store.set(documentId, { ...viewportOf(store, documentId), scrollTop: top })
-      }}
-    >
+    <TimelineHeaderColumn scrollTop={scrollTop} viewportNow={viewportNow} setViewport={setViewport}>
       {sequence.tracks.map((track, row) => (
         <TrackHeader
           key={track.id}
