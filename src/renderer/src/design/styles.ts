@@ -59,6 +59,17 @@ export const OVERLAY_BUTTON = 'absolute inset-0 cursor-pointer border-none bg-tr
 export const CONTROL = 'bg-surface text-text h-(--sc-control) rounded-(--radius-sc-md) text-tiny'
 
 /**
+ * The OS list, wearing the studio's control language — a blend mode, an animation clip, a bone,
+ * a model. Four of them, chosen native each time for the same reason: past a dozen entries the
+ * OS list is searchable by keystroke and a flyout is a menu to scroll.
+ *
+ * The room around the text is the whole of what this adds to `CONTROL`, and it is here because
+ * it was the same decision four times. The WIDTH is not: it belongs to the host — a full row in
+ * an inspector, a capped one on a toolbar — and stays at the call site.
+ */
+export const NATIVE_SELECT = cn(CONTROL, 'px-1')
+
+/**
  * A button of the status line. Icon-first, the glyph measured 12 x 12 — half of what WCAG 2.2
  * SC 2.5.8 asks — and only the criterion's spacing exception saved them.
  *

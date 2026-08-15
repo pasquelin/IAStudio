@@ -4,7 +4,7 @@ import { DEFAULT_ANIMATION, type AnimationRef } from '@shared/domain/scene'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { SliderField } from '@/design/SliderField'
-import { CONTROL } from '@/design/styles'
+import { NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
 import { setModelAnimation } from '@/engines/scene/commands'
@@ -55,7 +55,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
             aria-label={t('inspector.clip')}
             value={animation?.clip ?? ''}
             onChange={event => choose(event.target.value)}
-            className={cn(CONTROL, 'min-w-0 flex-1 px-1')}
+            className={cn(NATIVE_SELECT, 'min-w-0 flex-1')}
           >
             <option value="">{t('inspector.noClip')}</option>
             {clips.map(clip => (
