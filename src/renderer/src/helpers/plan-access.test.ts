@@ -27,14 +27,15 @@ describe('usePlanRefusal', () => {
     expect(result.current(50)).toBeUndefined()
   })
 
-  // The model panel asks per mounted cell, on every keystroke and every scroll frame, and feeds
-  // the answer to a virtualised list: a fresh closure per render would rebuild every row.
-  it('holds the same function across renders', () => {
-    const { result, rerender } = renderHook(() => usePlanRefusal(BASIC))
-    const first = result.current
+  // The plan is passed in, so nothing re-reads it on its own: an account switch that lands a
+  // different plan on the same mounted panel must move the sentence with it.
+  it('names the new plan once the account switches', () => {
+    const { result, rerender } = renderHook(plan => usePlanRefusal(plan), { initialProps: BASIC })
 
-    rerender()
+    rerender({ name: 'cu-free', level: 0 })
 
-    expect(result.current).toBe(first)
+    expect(result.current(25)).toBe(
+      'Ce modèle n’est pas inclus dans l’abonnement cu-free. La génération serait refusée.',
+    )
   })
 })

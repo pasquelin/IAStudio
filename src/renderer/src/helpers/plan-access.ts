@@ -63,13 +63,19 @@ export function usePlanAccess(): PlanAccess | null {
 /**
  * Why a model is out of reach, or `undefined` when it is not.
  *
- * The plan it takes is the caller's own `usePlanAccess()`: reading it here instead would give the
- * two surfaces that already hold it a second copy of that state, hence a second round trip on
- * every mount.
+ * A sentence exactly when `isBeyondPlan` is true, which is what lets a caller read `!== undefined`
+ * as the predicate itself — the model panel greys a cell on that answer and explains it with the
+ * same one, so no cell can end up dimmed with nothing to say why. The three cases of
+ * `plan-access.test.ts` are what keeps the two halves of that in step.
  *
- * The sentence names the plan, not the model, so it is interpolated once per plan rather than
- * once per question — the model panel asks it for up to 36 mounted cells, on every keystroke and
- * every scroll frame.
+ * The plan is passed in rather than read here because `usePlanAccess` is state per caller, not a
+ * cache: a surface holding the plan for something else would end up with two copies of it, and
+ * `ModelFamilySettings` — which greys its `<option>`s from one and would take its sentence from
+ * the other — is that surface today.
+ *
+ * The sentence names the plan, not the model, so `useMemo` interpolates it once per plan instead
+ * of once per render. Same bracket as `facetsFor` in the model panel, memoised for the same
+ * reason: that panel re-renders on every keystroke and every scroll frame.
  */
 export function usePlanRefusal(
   plan: PlanAccess | null,
