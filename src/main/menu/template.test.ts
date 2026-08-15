@@ -11,6 +11,7 @@ import { menuTemplate, type MenuActions, type MenuOptions } from './template'
 const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   openSettings: () => {},
   openLicences: () => {},
+  openManual: () => {},
   openUsage: () => {},
   toggleFullScreen: () => {},
   openTool: () => {},

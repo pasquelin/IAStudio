@@ -31,6 +31,7 @@
     "ffmpeg:fetch": "node scripts/fetch-ffmpeg.mjs",
     "stt:fetch": "node scripts/fetch-stt.mjs",
     "licences:collect": "node scripts/collect-licences.mjs",
+    "manual:collect": "node scripts/collect-manual.ts",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "decoders:copy": "node scripts/copy-decoders.mjs",
     "postinstall": "node scripts/dev-app-identity.mjs && node scripts/copy-decoders.mjs"
@@ -86,7 +87,9 @@
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.85.0",
     "react-i18next": "^17.0.11",
+    "react-markdown": "^10.1.0",
     "react-tooltip": "^6.0.8",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",

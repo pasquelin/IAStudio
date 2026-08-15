@@ -113,6 +113,7 @@
     "help": "Aide",
     "about": "À propos de {{name}}",
     "licences": "Licences",
+    "manual": "Manuel utilisateur",
     "imageTools": "Outils",
     "usage": "Consommation…",
     "sceneDisplay": "Mode de rendu",

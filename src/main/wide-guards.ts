@@ -59,6 +59,12 @@ function readsAnchoredFile(code: string): boolean {
  * the window, which have no filesystem to walk. Either way the borrower is left with no
  * `readdirSync`, no `import.meta.url` and no glob of its own to recognise.
  *
+ * A third family joined them: a **collector under `scripts/`**. Those are filesystem tools by
+ * construction — `collect-manual.ts` reads all of `docs/` — so a suite importing one reads the
+ * tree without a single `readdirSync` of its own. Found by an adversarial review the day
+ * `manual.test.ts` was written, which sat outside the net while comparing the shipped manual to
+ * thirty-eight markdown files.
+ *
  * Measured the day the first module was extracted: the detector found 36 guards and
  * `no-bare-locale-compare.test.ts` was not among them — a guard silently outside the short loop,
  * which is the exact failure the ways below exist to prevent. **Extracting shared reading is a
@@ -69,7 +75,7 @@ function borrowsTheSweep(code: string): boolean {
   // Any depth of `../`, not just the sibling: a guard one folder down imports `'../source-files'`
   // and would have dropped out of the net exactly like the one this function was added for. The
   // review caught the two literal spellings before anyone wrote that guard.
-  return /from '\.[./]*\/(source-files|window-sources)'|from '@main\/source-files'|from '@\/window-sources'/.test(
+  return /from '\.[./]*\/(source-files|window-sources)'|from '@main\/source-files'|from '@\/window-sources'|from '\.[./]*\/scripts\/[\w-]+\.ts'/.test(
     code,
   )
 }
