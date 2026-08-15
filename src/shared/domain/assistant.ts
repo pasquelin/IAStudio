@@ -59,6 +59,7 @@ export type ActionName =
   | 'prompt.suggest'
   | 'prompt.translate'
   | 'prompt.describeStyle'
+  | 'chat.close'
 
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.
@@ -276,6 +277,24 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
     name: 'prompt.describeStyle',
     titleKey: 'assistant.actions.promptDescribeStyle.title',
     descriptionKey: 'assistant.actions.promptDescribeStyle.description',
+    commitment: 'none',
+    fields: [],
+  }),
+  /**
+   * The one action about the conversation rather than about the studio.
+   *
+   * It exists because the window is what one asked to be moved OUT of the way: a request whose
+   * whole point is visible on screen — a space opened, a form filled — is answered behind the very
+   * surface that answered it. The model is told to call this when what it did is now the thing to
+   * look at, and to leave it alone when the answer is the words themselves.
+   *
+   * Last in the registry on purpose: it is the last thing a plan does, and the model reads this
+   * list in order.
+   */
+  action({
+    name: 'chat.close',
+    titleKey: 'assistant.actions.chatClose.title',
+    descriptionKey: 'assistant.actions.chatClose.description',
     commitment: 'none',
     fields: [],
   }),

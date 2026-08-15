@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SttEvent } from '@shared/domain/dictation'
+import type { SttEvent, SttState } from '@shared/domain/dictation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { MicrophoneRefused, NoInputDevice } from '@/dictation/capture'
@@ -26,17 +26,29 @@ vi.mock('@/dictation/capture', async importActual => {
 /** Installs a bridge and hands back the way to push an event through it. */
 function connected(overrides: Record<string, unknown> = {}) {
   let emit: ((event: SttEvent) => void) | null = null
+  // What the main process would answer if asked right now. Kept because `start` asks it rather
+  // than reading the store: the two channels are not ordered, and a fake that always answered
+  // `idle` would describe a main process that never starts.
+  let held: SttState = 'idle'
+
   const bridge = installFakeBridge({
     dictation: {
       onEvent: (callback: (event: SttEvent) => void) => {
         emit = callback
         return () => {}
       },
+      state: () => Promise.resolve({ state: held, partial: '', failure: null, download: null }),
       ...overrides,
     },
   })
 
-  return { bridge, emit: (event: SttEvent) => emit?.(event) }
+  return {
+    bridge,
+    emit: (event: SttEvent) => {
+      if (event.type === 'state') held = event.state
+      emit?.(event)
+    },
+  }
 }
 
 beforeEach(async () => {

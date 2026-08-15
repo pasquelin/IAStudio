@@ -11,6 +11,14 @@ type AssistantQuestion = { request: ConfirmRequest; answer: (granted: boolean) =
 
 type AssistantState = {
   open: boolean
+  /**
+   * Whether the spoken word belongs to the assistant while the window is CLOSED.
+   *
+   * The point of the whole arrangement: one talks to the studio to watch it act, and a modal over
+   * the screen hides the very thing the sentence is about. Open, the window claims the words on
+   * its own — see `assistantHearsSpeech`, which is the pair of them.
+   */
+  listening: boolean
   turns: AssistantTurn[]
   /** From the moment a sentence is sent until its last action has run or been refused. */
   busy: boolean
@@ -28,6 +36,25 @@ type AssistantState = {
   show: () => void
   hide: () => void
   toggle: () => void
+  /**
+   * Claims the spoken word, and nothing else — not the window, and not the microphone.
+   *
+   * The microphone is opened by the modal once it has claimed the words, so the ORDER is held by
+   * the mount rather than by a race: `start()` crosses to the main process before a stream opens,
+   * and a sentence settling in that window with no target goes to the caret instead.
+   */
+  listen: () => void
+  stopListening: () => void
+  /**
+   * The last turn the person has actually SEEN, by id.
+   *
+   * Because one now talks to the studio without its window up: the sentence goes, something
+   * happens on screen, and nothing said it had been taken, was being worked on, or came back
+   * empty. The status line reads this to know whether it still has something to report — and
+   * showing the window is what marks it read, as dismissing a toast is.
+   */
+  seen: number
+  markSeen: () => void
   /** Sends one sentence, then runs what came back, in order. */
   say: (utterance: string) => Promise<void>
   /** Asks the person, on screen. Registered as the studio's confirmer by the modal. */
@@ -54,21 +81,44 @@ let lastTurnId = 0
  */
 export const useAssistant = create<AssistantState>()((set, get) => ({
   open: false,
+  listening: false,
   turns: [],
   busy: false,
   asked: null,
   spent: 0,
+  seen: 0,
 
-  show: () => set({ open: true }),
+  /**
+   * Showing IS reading — but only of what there is to read.
+   *
+   * The `busy` guard is the whole subtlety: a turn joins `turns` when it is SENT, not when it is
+   * answered, so opening the window while a plan runs would mark an answer seen before it exists.
+   * Close again before it lands and nothing would ever report it — the status line only speaks
+   * while `busy`, and the toast would think it had been read. What marks a running turn seen is
+   * the end of `say`, and only if the window is still up to show it.
+   */
+  show: () => set(state => ({ open: true, seen: state.busy ? state.seen : lastSeen(state) })),
+
+  // Read off the turns rather than off `lastTurnId`, which counts what this module has ALLOCATED
+  // rather than what the window holds: a state restored from anywhere else leaves the counter at
+  // zero, so every turn stayed unread for ever and the reminder never went away.
+  markSeen: () => set(state => ({ seen: lastSeen(state) })),
 
   hide: () => {
     // Closing IS declining. A question left unanswered would hold `busy` for the rest of the
     // session, and the promise behind it belongs to an action that is about to spend something.
     get().answer(false)
-    set({ open: false })
+    // And closing the door stops the talking. The window is what claims the spoken word while it
+    // is up, so leaving the microphone open would pour the next sentence into whatever field the
+    // caret happens to sit in — a prompt, a layer name — with nothing on screen saying so.
+    set({ open: false, listening: false })
   },
 
   toggle: () => (get().open ? get().hide() : get().show()),
+
+  listen: () => set({ listening: true }),
+
+  stopListening: () => set({ listening: false }),
 
   ask: request =>
     new Promise<boolean>(resolve => {
@@ -90,7 +140,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
         return
       }
 
-      set({ open: true, asked: { request, answer: resolve } })
+      set(state => ({ open: true, seen: lastSeen(state), asked: { request, answer: resolve } }))
     }),
 
   answer: granted => {
@@ -163,12 +213,50 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
     } finally {
       set({ busy: false })
     }
+
+    /**
+     * The model asking to be got out of the way, once its plan has run.
+     *
+     * The window is the surface that answered, and it is also the one covering the answer: a
+     * space opened or a form filled is behind it. `chat.close` is how the model says "what I did
+     * is now the thing to look at" — carried out here rather than in the executor, because the
+     * window belongs to the conversation.
+     *
+     * Never while a question is on screen: closing IS declining, so a plan that asked for
+     * something and then asked to be dismissed would refuse its own request.
+     */
+    if (answer.calls.some(call => call.action === 'chat.close') && !get().asked) {
+      set({ open: false, listening: false })
+    }
+
+    // Read, if the window was there to be read: this is the other half of the `busy` guard in
+    // `show`. A turn answered under an open window needs no toast afterwards.
+    if (get().open) set({ seen: id })
   },
 
   setModel: model => {
     void useSettings.getState().setValue('assistant.model', model)
   },
 }))
+
+/**
+ * Whether what is spoken belongs to the assistant rather than to the caret.
+ *
+ * The two ways in are one question: the window claims the words while it is up, and `listening` is
+ * the same claim made without it. Read by the status line, which is the only thing on screen once
+ * the window is closed — and saying "microphone on" without saying to WHOM is half an answer.
+ *
+ * Named for its domain, as every export of `stores/` is: `hears` alone would be one more bare word
+ * for an editor's auto-import to pick the wrong one of.
+ */
+export function assistantHearsSpeech(state: Pick<AssistantState, 'open' | 'listening'>): boolean {
+  return state.open || state.listening
+}
+
+/** The turn a reader would have taken in by looking — the last one there is. */
+function lastSeen(state: Pick<AssistantState, 'turns'>): number {
+  return state.turns.at(-1)?.id ?? 0
+}
 
 /** Rewrites one turn in place, leaving the others as they were. */
 function patch(

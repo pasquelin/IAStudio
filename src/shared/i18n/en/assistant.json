@@ -37,6 +37,10 @@
         "title": "Translate a prompt into English",
         "description": "Carries a text into the language the models are trained on, and says which language it recognised. Spends nothing and changes nothing on screen."
       },
+      "chatClose": {
+        "title": "Close the conversation",
+        "description": "Clears the conversation off the screen so that what was just done can be seen. Call it last, when the result is on screen — a space opened, a form filled. Do not call it when the answer is the words themselves, nor when permission is being asked for."
+      },
       "promptDescribeStyle": {
         "title": "Describe the style of the references",
         "description": "Reads the reference images sitting on the Generator’s form and returns a description usable as a prompt. Spends nothing."
@@ -76,6 +80,11 @@
       "text": "Text to translate"
     },
     "title": "Assistant",
+    "writeHint": "Opens the assistant so you can write what you want done",
+    "listening": "The assistant is listening",
+    "done": "The assistant has answered",
+    "reviewHint": "Opens the assistant on what it understood and what it did",
+    "dismissHint": "Removes this reminder. What the assistant did stays in its window",
     "empty": "Say what you want done, and the assistant does it.",
     "placeholder": "Open a 3D file, find a model, prepare a generation…",
     "send": "Send",

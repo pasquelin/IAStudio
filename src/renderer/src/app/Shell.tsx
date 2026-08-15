@@ -8,7 +8,10 @@ import { HomeView } from '@/home/HomeView'
 import { DocumentArea } from './DocumentArea'
 import { showWorkspace } from './dockview-api'
 import { guardUnsavedWork } from './unsaved-guard'
+import { AssistantEntry } from '@/assistant/AssistantEntry'
 import { AssistantOverlay } from '@/assistant/AssistantOverlay'
+import { AssistantStatus } from '@/assistant/AssistantStatus'
+import { AssistantToast } from '@/assistant/AssistantToast'
 import { DictationStatus } from '@/dictation/DictationStatus'
 import { Breadcrumb } from './Breadcrumb'
 import { Footer } from './Footer'
@@ -18,6 +21,7 @@ import { JobsStatus } from './JobsStatus'
 import { UpdateStatus } from './UpdateStatus'
 import { Rail } from './Rail'
 import { ResizeHandle } from '@/design/ResizeHandle'
+import { Separator } from '@/design/Separator'
 import { AccountSelect } from './AccountSelect'
 import { ProjectSelect } from './ProjectSelect'
 import { TitleBar } from './TitleBar'
@@ -65,8 +69,12 @@ export function Shell() {
         onHome={homeEnabled ? () => setHome(true) : undefined}
         // Local then remote: the folder everything is written into, then the key it is
         // generated on. The pair is the studio's "where am I" in one corner.
+        // The two ways to reach the assistant, then the pair that says where one is. Parted by a
+        // hairline because they are not the same kind of thing: one acts, the other points.
         actions={
           <>
+            <AssistantEntry />
+            <Separator orientation="vertical" />
             <ProjectSelect />
             <AccountSelect />
           </>
@@ -101,8 +109,11 @@ export function Shell() {
         left={<Breadcrumb />}
         right={
           <>
-            {/* First of the indicators: a live microphone outranks a download. */}
+            {/* First of the indicators: a live microphone outranks a download. The assistant
+                follows it, because the two are read as one sentence — what is being heard, then
+                what became of it. */}
             <DictationStatus />
+            <AssistantStatus />
             <UpdateStatus />
             <JobsStatus />
             <ActivityStatus />
@@ -110,6 +121,7 @@ export function Shell() {
         }
       />
       <ActivityToasts />
+      <AssistantToast />
       {/* Over everything, and mounted whether or not it shows: it is the window's confirmer, and
           an action that needs a yes must be able to raise one from a closed modal. */}
       <AssistantOverlay />

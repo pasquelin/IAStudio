@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next'
 import type { ReactNode } from 'react'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { DictationButton } from './DictationButton'
+import { Heard } from './Heard'
 import { useDictation } from './useDictation'
 
 /**
@@ -17,8 +17,7 @@ import { useDictation } from './useDictation'
  * sentence does is decided by `useDictation`, which puts it where the caret is.
  */
 export function DictationField() {
-  const { t } = useTranslation()
-  const { partial, isListening, enabled } = useDictation()
+  const { isListening, enabled } = useDictation()
 
   if (!enabled) return null
 
@@ -28,17 +27,7 @@ export function DictationField() {
         <DictationButton variant="header" tooltip={TIP_BOTTOM} />
       </div>
 
-      {/*
-        Not a live region. The hypothesis is replaced about every 700 ms and each one is the
-        whole sentence so far, never a delta: announced politely, they queue up and the reader
-        falls further behind the voice with every pass. What settles goes into the field, which
-        a screen reader follows on its own.
-      */}
-      {isListening && (
-        <p aria-live="off" className="text-muted text-tiny italic">
-          {partial || t('dictation.listening')}
-        </p>
-      )}
+      {isListening && <Heard className="text-tiny" />}
     </div>
   )
 }

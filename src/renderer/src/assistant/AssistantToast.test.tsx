@@ -1,0 +1,96 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { act } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAssistant } from '@/stores/assistant'
+import { AssistantToast } from './AssistantToast'
+
+const turn = (id: number, lost = false) => ({
+  id,
+  said: 'ouvre un nouveau fichier 3D',
+  answered: '',
+  steps: [],
+  lost,
+})
+
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  useAssistant.setState({ open: false, busy: false, seen: 0, turns: [turn(1)] })
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+describe('what became of the sentence, once', () => {
+  /**
+   * The half that talking without the window was missing: the sentence went, something happened
+   * on screen, and nothing ever said it had come back. The echo is the point of it — one checks
+   * that THESE words are the ones that left, not some other transcription of them.
+   */
+  it('says the assistant answered, and echoes what it heard', () => {
+    render(<AssistantToast />)
+
+    expect(screen.getByText('L’assistant a répondu')).toBeInTheDocument()
+    expect(screen.getByText('ouvre un nouveau fichier 3D')).toBeInTheDocument()
+  })
+
+  it('says so when the assistant did not manage', () => {
+    useAssistant.setState({ turns: [turn(1, true)] })
+    render(<AssistantToast />)
+
+    expect(screen.getByText(/n’a pas su répondre/)).toBeInTheDocument()
+  })
+
+  it('opens the window on the detail', async () => {
+    render(<AssistantToast />)
+
+    await userEvent.click(screen.getByText('L’assistant a répondu'))
+
+    expect(useAssistant.getState().open).toBe(true)
+  })
+
+  /**
+   * It expires where the failure toasts deliberately do not, and the difference is who asked:
+   * this answers a sentence spoken a moment ago, at the screen the person is watching precisely
+   * because they are waiting for it.
+   */
+  it('takes itself away after a while', () => {
+    render(<AssistantToast />)
+
+    act(() => vi.advanceTimersByTime(6000))
+
+    expect(screen.queryByText('L’assistant a répondu')).not.toBeInTheDocument()
+  })
+
+  // Nothing to report while the thread itself is on screen saying all of this at length.
+  it('stays out of the way while the window is up', () => {
+    useAssistant.setState({ open: true })
+    const { container } = render(<AssistantToast />)
+
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('waits for the plan to finish before saying anything', () => {
+    useAssistant.setState({ busy: true })
+    const { container } = render(<AssistantToast />)
+
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  /**
+   * A turn joins the thread when it is SENT, not when it is answered. Opening the window while a
+   * plan runs used to mark that answer read before it existed — close again before it landed and
+   * nothing ever reported it: the status line only speaks while the plan runs, and this thought
+   * it had been read.
+   */
+  it('still reports an answer that landed after the window was opened and closed again', () => {
+    useAssistant.setState({ busy: true, turns: [turn(1)] })
+    useAssistant.getState().show()
+    useAssistant.getState().hide()
+    useAssistant.setState({ busy: false })
+    render(<AssistantToast />)
+
+    expect(screen.getByText('L’assistant a répondu')).toBeInTheDocument()
+  })
+})

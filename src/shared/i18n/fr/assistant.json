@@ -37,6 +37,10 @@
         "title": "Traduire un prompt en anglais",
         "description": "Porte un texte dans la langue sur laquelle les modèles sont entraînés, et dit quelle langue il a reconnue. Ne consomme rien et ne change rien à l’écran."
       },
+      "chatClose": {
+        "title": "Refermer la conversation",
+        "description": "Efface la conversation de l’écran pour laisser voir ce qui vient d’être fait. À appeler en dernier, quand le résultat est à l’écran — un espace ouvert, un formulaire rempli. À ne pas appeler quand la réponse est le texte lui-même, ni quand une autorisation est demandée."
+      },
       "promptDescribeStyle": {
         "title": "Décrire le style des références",
         "description": "Lit les images de référence posées sur le formulaire du Générateur et en rend une description utilisable comme prompt. Ne consomme rien."
@@ -76,6 +80,11 @@
       "text": "Texte à traduire"
     },
     "title": "Assistant",
+    "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",
+    "listening": "L’assistant vous écoute",
+    "done": "L’assistant a répondu",
+    "reviewHint": "Ouvre l’assistant sur ce qu’il a compris et sur ce qu’il a fait",
+    "dismissHint": "Retire ce rappel. Ce que l’assistant a fait reste dans sa fenêtre",
     "empty": "Dites ce que vous voulez faire, et l’assistant s’en charge.",
     "placeholder": "Ouvre un fichier 3D, cherche un modèle, prépare une génération…",
     "send": "Envoyer",

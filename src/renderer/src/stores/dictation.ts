@@ -131,9 +131,19 @@ export const useDictation = create<DictationState>()((set, get) => ({
     set({ failure: null })
     await bridge.dictation.start()
 
-    // Only once the main process says it is listening: the model may be missing, or the
-    // microphone refused, and opening a stream then would ask for a device for nothing.
-    if (mine !== session || get().state !== 'listening') return
+    /**
+     * Only once the main process says it is listening: the model may be missing, or the
+     * microphone refused, and opening a stream then would ask for a device for nothing.
+     *
+     * ASKED rather than read off the store, and that is the whole fix. The main process publishes
+     * `listening` on the event channel while `start()` answers on the invoke channel, and nothing
+     * orders the two: read here, the cached state was still the previous one often enough that
+     * this returned without ever opening a stream — and the event landed a moment later, so the
+     * status line said "the assistant is listening" over a microphone that was never on. macOS
+     * showed no recording indicator, which is how it was caught.
+     */
+    const live = await bridge.dictation.state().catch(() => null)
+    if (mine !== session || live?.state !== 'listening') return
 
     const chosen = useSettings.getState().settings.dictation.inputDeviceId
 
