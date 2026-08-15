@@ -7,7 +7,7 @@ import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { job as jobOf } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
-import { registerGenerator } from './generator-bridge'
+import { registerGenerator, type GeneratorBridge } from './generator-bridge'
 import { commitmentOfCall } from '@shared/domain/assistant'
 import { registerConfirmer } from './confirm'
 import { runAction, runConfirmedAction } from './executor'
@@ -37,6 +37,14 @@ const aModel = (id: string, name: string): ModelSummary => ({
 
 /** The shared factory, told the label and the progress this suite reads a job by. */
 const aJob = (id: string): Job => jobOf({ id, label: 'Knight', progress: 0.5 })
+
+/** A mounted generator, armed on a model and carrying no references unless a case says so. */
+const aGenerator = (overrides: Partial<GeneratorBridge> = {}): GeneratorBridge => ({
+  body: () => ({ modelId: 'm', values: {} }),
+  submit: () => Promise.resolve(null),
+  references: () => [],
+  ...overrides,
+})
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -156,7 +164,7 @@ describe('choosing and preparing a model', () => {
 describe('submitting what was prepared', () => {
   it('sends the form the panel is showing, and answers the job', async () => {
     const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
-    const stop = registerGenerator({ body: () => ({ modelId: 'm', values: {} }), submit })
+    const stop = registerGenerator(aGenerator({ submit }))
 
     expect(await runAction('generator.submit', {})).toEqual({
       ok: true,
@@ -174,11 +182,75 @@ describe('submitting what was prepared', () => {
   })
 
   it('refuses when the panel is up but nothing is armed', async () => {
-    const stop = registerGenerator({ body: () => null, submit: () => Promise.resolve(null) })
+    const stop = registerGenerator(aGenerator({ body: () => null }))
 
     expect(await runAction('generator.submit', {})).toEqual({
       ok: false,
       refusal: 'nothingPrepared',
+    })
+    stop()
+  })
+})
+
+/**
+ * The three the prompt field used to carry as buttons. The channels are untouched — what
+ * changed is who presses — so what is worth saying here is where each one reads its input from.
+ */
+describe('the prompt assistance, now asked for', () => {
+  it('writes variants for the model the generator has armed', async () => {
+    const suggestPrompts = vi.fn(() => Promise.resolve([{ text: 'a knight', parameters: {} }]))
+    installFakeBridge({ scenario: { suggestPrompts } })
+    const stop = registerGenerator(aGenerator({ body: () => ({ modelId: 'model_x', values: {} }) }))
+
+    const outcome = await runAction('prompt.suggest', { draft: 'un chevalier' })
+
+    expect(suggestPrompts).toHaveBeenCalledWith({ modelId: 'model_x', prompt: 'un chevalier' })
+    expect(outcome).toEqual({ ok: true, data: [{ text: 'a knight', parameters: {} }] })
+    stop()
+  })
+
+  // Suggestions are written FOR a model, so there is no useful answer without one armed.
+  it('refuses to suggest with no model armed', async () => {
+    installFakeBridge()
+
+    expect(await runAction('prompt.suggest', { draft: 'un chevalier' })).toEqual({
+      ok: false,
+      refusal: 'generatorClosed',
+    })
+  })
+
+  it('translates what it was handed, and says which language it recognised', async () => {
+    installFakeBridge({
+      scenario: {
+        translatePrompt: () => Promise.resolve({ text: 'a knight', detectedLanguage: 'french' }),
+      },
+    })
+
+    expect(await runAction('prompt.translate', { text: 'un chevalier' })).toEqual({
+      ok: true,
+      data: { text: 'a knight', detectedLanguage: 'french' },
+    })
+  })
+
+  it('reads the style off the pictures the form carries, never off a named list', async () => {
+    const describeStyle = vi.fn(() => Promise.resolve({ description: 'flat', synthesis: '' }))
+    installFakeBridge({ scenario: { describeStyle } })
+    const stop = registerGenerator(aGenerator({ references: () => ['asset_1'] }))
+
+    const outcome = await runAction('prompt.describeStyle', {})
+
+    expect(describeStyle).toHaveBeenCalledWith(['asset_1'])
+    expect(outcome).toEqual({ ok: true, data: { description: 'flat', synthesis: '' } })
+    stop()
+  })
+
+  it('says there is nothing to read rather than asking about an empty list', async () => {
+    installFakeBridge()
+    const stop = registerGenerator(aGenerator())
+
+    expect(await runAction('prompt.describeStyle', {})).toEqual({
+      ok: false,
+      refusal: 'noReference',
     })
     stop()
   })
@@ -217,10 +289,9 @@ describe('asking before acting', () => {
     installFakeBridge({
       scenario: { estimateCost: () => Promise.resolve({ creativeUnits: 4 }) },
     })
-    const stopGenerator = registerGenerator({
-      body: () => ({ modelId: 'model_x', values: { prompt: 'a knight' } }),
-      submit,
-    })
+    const stopGenerator = registerGenerator(
+      aGenerator({ body: () => ({ modelId: 'model_x', values: { prompt: 'a knight' } }), submit }),
+    )
     const stopConfirmer = registerConfirmer(ask)
 
     await runConfirmedAction('generator.submit', {})
@@ -237,10 +308,7 @@ describe('asking before acting', () => {
 
   it('does not act when the answer is no', async () => {
     const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
-    const stopGenerator = registerGenerator({
-      body: () => ({ modelId: 'model_x', values: {} }),
-      submit,
-    })
+    const stopGenerator = registerGenerator(aGenerator({ submit }))
     const stopConfirmer = registerConfirmer(() => Promise.resolve(false))
 
     expect(await runConfirmedAction('generator.submit', {})).toEqual({
@@ -259,7 +327,7 @@ describe('asking before acting', () => {
    */
   it('refuses rather than assuming a yes when nobody can be asked', async () => {
     const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
-    const stop = registerGenerator({ body: () => ({ modelId: 'm', values: {} }), submit })
+    const stop = registerGenerator(aGenerator({ submit }))
 
     expect(await runConfirmedAction('generator.submit', {})).toEqual({
       ok: false,
@@ -284,10 +352,7 @@ describe('asking before acting', () => {
   it('says the estimate is unknown rather than inventing one', async () => {
     const ask = vi.fn(() => Promise.resolve(false))
     installFakeBridge({ scenario: { estimateCost: () => Promise.reject(new Error('no price')) } })
-    const stopGenerator = registerGenerator({
-      body: () => ({ modelId: 'm', values: {} }),
-      submit: () => Promise.resolve(null),
-    })
+    const stopGenerator = registerGenerator(aGenerator())
     const stopConfirmer = registerConfirmer(ask)
 
     await runConfirmedAction('generator.submit', {})

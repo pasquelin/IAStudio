@@ -25,12 +25,12 @@ export const BUTTON_BASE = cn(
  * `ToolButton` is the witness**: it takes `BUTTON_BASE` over `bg-transparent`, because a tool sits
  * on the bar it belongs to rather than on a surface of its own.
  *
- * Worn by `Button`'s neutral variant and by `Spark`'s idea card, which takes the fill and lays
- * itself out from the top — an idea is two lines of prose beside a glyph, where `Button` is one
- * word centred at a control's height. Rendering a `Button` there would mean overriding its whole
- * geometry, which would be a worse copy than the one this closes.
+ * Worn by `Button`'s neutral variant, and by that alone since `Spark`'s idea card was removed —
+ * this paragraph named it as a second site for a good while after it had gone. It stays a shared
+ * constant all the same: `Counts` reaches the same PAIR of classes by another road, and the day
+ * a second component wants the fill without `Button`'s geometry, the answer must not be a copy.
  *
- * **`Counts` reaches the same pair and is NOT a third site**, which is worth writing because the
+ * **`Counts` reaches the same pair and is NOT a second site**, which is worth writing because the
  * classes look identical: it gets its hover from `rowSkin` and writes `bg-surface` beside it, so
  * what it is is a ROW that happens to sit on a surface — smaller radius, a `group/row` its
  * subtitle reads, and a refused state. Unifying the two was measured and refused on 2026-08-12.

@@ -56,6 +56,9 @@ export type ActionName =
   | 'generator.prepare'
   | 'generator.submit'
   | 'jobs.list'
+  | 'prompt.suggest'
+  | 'prompt.translate'
+  | 'prompt.describeStyle'
 
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.
@@ -241,6 +244,38 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
     commitment: 'none',
     fields: [],
   }),
+  /**
+   * The three the prompt field used to carry as buttons.
+   *
+   * All `none`, and measured rather than assumed: the three channels behind them answer in one
+   * round trip, spend nothing, and produce no job — which is why they were free to press and are
+   * free to ask for.
+   */
+  action({
+    name: 'prompt.suggest',
+    titleKey: 'assistant.actions.promptSuggest.title',
+    descriptionKey: 'assistant.actions.promptSuggest.description',
+    commitment: 'none',
+    fields: [
+      { key: 'draft', kind: 'longText', labelKey: 'assistant.fields.draft', required: true },
+    ],
+  }),
+  action({
+    name: 'prompt.translate',
+    titleKey: 'assistant.actions.promptTranslate.title',
+    descriptionKey: 'assistant.actions.promptTranslate.description',
+    commitment: 'none',
+    fields: [{ key: 'text', kind: 'longText', labelKey: 'assistant.fields.text', required: true }],
+  }),
+  action({
+    // No input: what it reads is the pictures already on the form, which is the only place
+    // references exist. Asking the model to name them would have it invent asset ids.
+    name: 'prompt.describeStyle',
+    titleKey: 'assistant.actions.promptDescribeStyle.title',
+    descriptionKey: 'assistant.actions.promptDescribeStyle.description',
+    commitment: 'none',
+    fields: [],
+  }),
 ]
 
 export const ACTION_COMMITMENTS: readonly ActionCommitment[] = ['none', 'asset', 'credits']
@@ -296,6 +331,8 @@ export type ActionRefusal =
   | 'noWindow'
   /** The question stood on screen and nobody answered it. Same reason, same one caller. */
   | 'timedOut'
+  /** Nothing to read a style from: the form carries no reference picture. */
+  | 'noReference'
 
 export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'unknownCommand',
@@ -310,6 +347,7 @@ export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'declined',
   'noWindow',
   'timedOut',
+  'noReference',
 ]
 
 /**

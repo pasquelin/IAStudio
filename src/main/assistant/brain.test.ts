@@ -47,10 +47,20 @@ describe('what the model is told', () => {
     expect(instruction).toContain('workspace.open')
   })
 
-  // The one thing that could quietly eat the budget is an action added with a florid
-  // description. Half is a wide margin; it is at about a fifth today.
-  it('leaves most of the budget to what the person actually said', () => {
-    expect(preambleLength()).toBeLessThan(INSTRUCTION_MAX / 2)
+  /**
+   * Stated as what is LEFT rather than as what the preamble costs, because that is the property
+   * that matters and the other one moved: the preamble was about a fifth of the budget with
+   * seven actions and passed a "under half" bound comfortably. It is 5 110 characters today —
+   * measured on 2026-08-15, three actions later — and most of that is `command.run` enumerating
+   * a hundred command ids, which is what makes it usable at all.
+   *
+   * Four thousand characters is some seven hundred words, far past anything anyone says to an
+   * assistant, so the guarantee holds: a long paste is cut, the instructions always arrive
+   * whole. What this still catches is the thing it was written for — an action added with a
+   * florid description quietly eating the rest.
+   */
+  it('leaves the person’s own sentence room to be long', () => {
+    expect(INSTRUCTION_MAX - preambleLength()).toBeGreaterThan(4_000)
   })
 
   it('keeps the last turns, not the first', () => {

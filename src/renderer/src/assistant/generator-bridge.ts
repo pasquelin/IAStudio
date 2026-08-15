@@ -20,6 +20,14 @@ export type GeneratorBridge = {
   /** What would be sent, as the form stands. `null` when nothing is armed. */
   body: () => { modelId: string; values: Record<string, unknown> } | null
   submit: () => Promise<Job | null>
+  /**
+   * The reference pictures sitting on the form, as asset ids.
+   *
+   * Read from here rather than named by whoever asks: which fields hold a picture is a fact of
+   * the model's schema, and only the panel has it. Asking a language model to name them would
+   * have it invent ids.
+   */
+  references: () => string[]
 }
 
 let mounted: GeneratorBridge | null = null

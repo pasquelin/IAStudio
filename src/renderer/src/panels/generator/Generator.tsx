@@ -5,13 +5,11 @@ import { useTranslation } from 'react-i18next'
 import type { Job } from '@shared/domain/job'
 import type { ModelDescriptor } from '@shared/domain/model'
 import { isBeyondPlan } from '@shared/domain/plan'
-import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
 import { useModelForFamily } from '@/helpers/model-for-family'
 import { usePlanAccess } from '@/helpers/plan-access'
 import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
 import { registerGenerator } from '@/assistant/generator-bridge'
-import { PromptAssistant } from '@/design/PromptAssistant'
 import { dictationAccessory } from '@/dictation/DictationField'
 import { failureKeyOf } from '@/services/failure-message'
 import { getBridge } from '@/services/bridge'
@@ -28,35 +26,6 @@ import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { NoProject } from '@/panels/shared/NoProject'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
-
-/**
- * Free — measured at 0 creative units — and answered in one round trip, so no job is involved
- * and there is nothing for the jobs bar to show.
- */
-function suggestPrompts(modelId: string, draft: string): Promise<PromptSuggestion[]> {
-  const bridge = getBridge()
-  if (!bridge) return Promise.resolve([])
-  return bridge.scenario.suggestPrompts({ modelId, prompt: draft })
-}
-
-/** A field's value as text. Anything else reads as an empty draft rather than as `[object …]`. */
-function textOf(value: unknown): string {
-  return typeof value === 'string' ? value : ''
-}
-
-/** Carries a draft into the language the models read. Nothing is proposed: the text changes. */
-function translateDraft(draft: string): Promise<PromptTranslation> {
-  const bridge = getBridge()
-  if (!bridge) return Promise.resolve({ text: draft, detectedLanguage: 'english' })
-  return bridge.scenario.translatePrompt(draft)
-}
-
-/** Reads the style of the pictures already on the form, to write a prompt from it. */
-function describeStyle(images: readonly string[]): Promise<PromptStyle> {
-  const bridge = getBridge()
-  if (!bridge) return Promise.resolve({ description: '', synthesis: '' })
-  return bridge.scenario.describeStyle(images)
-}
 
 function useDescriptor(modelId: string | null) {
   return useQuery<ModelDescriptor | null>({
@@ -89,7 +58,6 @@ export function Generator() {
   // preset changes, so dropping it would blank the form under the hand that is filling it. It
   // stays until the next "regenerate" replaces it, which reads as the last settings used.
   const preset = useModels(state => state.preset[family])
-  const prepare = useModels(state => state.prepare)
   const modelId = useModelForFamily(family)
 
   const authenticated = useSettings(state => state.auth.authenticated)
@@ -134,8 +102,11 @@ export function Generator() {
       registerGenerator({
         body: () => (modelId ? { modelId, values: body.current } : null),
         submit: () => runGeneration(body.current),
+        // Which fields hold a picture is a fact of the model's schema, and this panel is the
+        // only place that has it — see `GeneratorBridge`.
+        references: () => referencePictures(descriptor.data?.fields ?? [], body.current),
       }),
-    [modelId, runGeneration],
+    [modelId, runGeneration, descriptor.data],
   )
 
   const watchValues = cost.onValuesChange
@@ -180,13 +151,6 @@ export function Generator() {
   // put a result is not this panel's business — it serves every one of them.
   const generate = (values: FormValues): void => void runGeneration(values)
 
-  // Adopting the settings goes through the preset "regenerate with these parameters" already
-  // uses: `DynamicForm` rebuilds on it, so the whole form fills without a line of its own. The
-  // model is passed unchanged — `prepare` writes both, and the suggestion was made for it.
-  const adoptCall = (promptKey: string, suggestion: PromptSuggestion): void => {
-    prepare(family, modelId, { ...suggestion.parameters, [promptKey]: suggestion.text })
-  }
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto">
       <FormHeader title={descriptor.data?.name ?? t('collection.loading')} />
@@ -216,29 +180,10 @@ export function Generator() {
               // `project` is not in this: the panel returns before the form when there is none.
               busy={refused}
               preset={preset}
-              // Two accessories, on two different sets of fields. Assistance hangs on the one
-              // the API marks as its prompt, because only that one can be rewritten for the
-              // model. Dictation hangs on anything a sentence can be spoken into — a negative
-              // prompt is worth dictating too, and the API marks none of those.
-              accessory={(field, handle) => (
-                <>
-                  {dictationAccessory(field)}
-                  {field.promptSpark === true && (
-                    <PromptAssistant
-                      readDraft={() => textOf(handle.read())}
-                      request={draft => suggestPrompts(modelId, draft)}
-                      translate={translateDraft}
-                      describeStyle={describeStyle}
-                      readReferences={() =>
-                        referencePictures(descriptor.data?.fields ?? [], handle.readAll())
-                      }
-                      onAdoptText={handle.write}
-                      onAdoptCall={suggestion => adoptCall(field.key, suggestion)}
-                      failureMessage={error => t(failureKeyOf(error))}
-                    />
-                  )}
-                </>
-              )}
+              // Dictation alone now. Rewriting a prompt, translating it and reading the style of
+              // the references left this panel for the assistant: they are things one ASKS for,
+              // and three buttons under a field could only ever offer three of them.
+              accessory={field => dictationAccessory(field)}
             />
           </Suspense>
         </ErrorBoundary>

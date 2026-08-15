@@ -175,7 +175,64 @@ export async function runAction(
           progress: job.progress,
         })),
       }
+    case 'prompt.suggest':
+      return suggestPrompts(input)
+    case 'prompt.translate':
+      return translatePrompt(input)
+    case 'prompt.describeStyle':
+      return describeStyle()
   }
+}
+
+/**
+ * The three the prompt field used to carry as buttons.
+ *
+ * The channels behind them are untouched — the whole of what changed is who presses. Each
+ * answers in one round trip and spends nothing, which is what made them buttons and what makes
+ * them free to ask for.
+ */
+async function suggestPrompts(input: Record<string, unknown>): Promise<ActionOutcome> {
+  const bridge = getBridge()
+  if (!bridge) return refused('noBridge')
+
+  const draft = textOf(input, 'draft')
+  if (draft === null) return refused('badInput')
+
+  // Suggestions are written FOR a model — its own vocabulary, its own parameters — so there is
+  // no useful answer without one armed.
+  const prepared = mountedGenerator()?.body()
+  if (!prepared) return refused('generatorClosed')
+
+  const suggestions = await bridge.scenario.suggestPrompts({
+    modelId: prepared.modelId,
+    prompt: draft,
+  })
+  return { ok: true, data: suggestions }
+}
+
+async function translatePrompt(input: Record<string, unknown>): Promise<ActionOutcome> {
+  const bridge = getBridge()
+  if (!bridge) return refused('noBridge')
+
+  const text = textOf(input, 'text')
+  if (text === null) return refused('badInput')
+
+  return { ok: true, data: await bridge.scenario.translatePrompt(text) }
+}
+
+async function describeStyle(): Promise<ActionOutcome> {
+  const bridge = getBridge()
+  if (!bridge) return refused('noBridge')
+
+  const generator = mountedGenerator()
+  if (!generator) return refused('generatorClosed')
+
+  const references = generator.references()
+  // Not a failure and not a guess: with nothing on the form there is no style to read, and the
+  // channel refuses an empty list anyway.
+  if (references.length === 0) return refused('noReference')
+
+  return { ok: true, data: await bridge.scenario.describeStyle(references) }
 }
 
 /**

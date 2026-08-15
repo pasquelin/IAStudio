@@ -2024,6 +2024,18 @@
       "jobsList": {
         "title": "Lister les tâches",
         "description": "Rend les générations en cours et leur avancement, tels que le studio les suit. Ne change rien à l’écran."
+      },
+      "promptSuggest": {
+        "title": "Proposer des variantes de prompt",
+        "description": "Réécrit une phrase en plusieurs variantes taillées pour le modèle armé dans le Générateur, avec les réglages qui vont avec. Ne consomme rien et ne change rien à l’écran."
+      },
+      "promptTranslate": {
+        "title": "Traduire un prompt en anglais",
+        "description": "Porte un texte dans la langue sur laquelle les modèles sont entraînés, et dit quelle langue il a reconnue. Ne consomme rien et ne change rien à l’écran."
+      },
+      "promptDescribeStyle": {
+        "title": "Décrire le style des références",
+        "description": "Lit les images de référence posées sur le formulaire du Générateur et en rend une description utilisable comme prompt. Ne consomme rien."
       }
     },
     "refusals": {
@@ -2038,7 +2050,8 @@
       "noConfirmer": "Cette action demande un accord, et aucune fenêtre n’était là pour le donner.",
       "declined": "Vous avez refusé cette action.",
       "noWindow": "Aucune fenêtre du studio n’était au premier plan pour exécuter cette action.",
-      "timedOut": "La demande est restée à l’écran sans réponse, et a été abandonnée."
+      "timedOut": "La demande est restée à l’écran sans réponse, et a été abandonnée.",
+      "noReference": "Le formulaire ne porte aucune image de référence dont lire le style."
     },
     "fields": {
       "command": "Identifiant de la commande",
@@ -2047,7 +2060,9 @@
       "query": "Mots-clés",
       "family": "Famille de génération",
       "modelId": "Identifiant du modèle",
-      "parameters": "Paramètres du modèle"
+      "parameters": "Paramètres du modèle",
+      "draft": "Phrase à retravailler",
+      "text": "Texte à traduire"
     },
     "title": "Assistant",
     "empty": "Dites ce que vous voulez faire, et l’assistant s’en charge.",
@@ -2070,19 +2085,6 @@
       "no": "Refuser",
       "noHint": "N’exécute rien, et l’assistant en tient compte pour la suite"
     }
-  },
-  "prompt": {
-    "suggest": "Proposer des variantes",
-    "suggesting": "Rédaction des variantes…",
-    "noSuggestion": "Aucune variante proposée.",
-    "useText": "Utiliser le texte",
-    "useTextAndSettings": "Texte + réglages",
-    "translate": "Traduire en anglais",
-    "alreadyEnglish": "Ce texte est déjà en anglais.",
-    "describeStyle": "Décrire le style des références",
-    "noReference": "Déposez une image de référence pour en décrire le style.",
-    "useTextHint": "Ne reprend que la phrase, et laisse vos réglages tels quels",
-    "useTextAndSettingsHint": "Reprend la phrase ET les réglages listés au-dessus"
   },
   "dictation": {
     "start": "Dicter",

@@ -2024,6 +2024,18 @@
       "jobsList": {
         "title": "List the jobs",
         "description": "Returns the generations under way and how far along they are, as the studio tracks them. Changes nothing on screen."
+      },
+      "promptSuggest": {
+        "title": "Suggest prompt variants",
+        "description": "Rewrites a sentence into several variants cut for the model armed in the Generator, with the settings that go with them. Spends nothing and changes nothing on screen."
+      },
+      "promptTranslate": {
+        "title": "Translate a prompt into English",
+        "description": "Carries a text into the language the models are trained on, and says which language it recognised. Spends nothing and changes nothing on screen."
+      },
+      "promptDescribeStyle": {
+        "title": "Describe the style of the references",
+        "description": "Reads the reference images sitting on the Generator’s form and returns a description usable as a prompt. Spends nothing."
       }
     },
     "refusals": {
@@ -2038,7 +2050,8 @@
       "noConfirmer": "That action needs a yes, and no window was there to give one.",
       "declined": "You turned that action down.",
       "noWindow": "No studio window was in front to run that action.",
-      "timedOut": "The request stood on screen unanswered, and was given up on."
+      "timedOut": "The request stood on screen unanswered, and was given up on.",
+      "noReference": "The form carries no reference image to read a style from."
     },
     "fields": {
       "command": "Command identifier",
@@ -2047,7 +2060,9 @@
       "query": "Keywords",
       "family": "Generation family",
       "modelId": "Model identifier",
-      "parameters": "Model parameters"
+      "parameters": "Model parameters",
+      "draft": "Sentence to rework",
+      "text": "Text to translate"
     },
     "title": "Assistant",
     "empty": "Say what you want done, and the assistant does it.",
@@ -2070,19 +2085,6 @@
       "no": "Refuse",
       "noHint": "Runs nothing, and the assistant takes it into account for what follows"
     }
-  },
-  "prompt": {
-    "suggest": "Suggest variants",
-    "suggesting": "Writing variants…",
-    "noSuggestion": "No variant proposed.",
-    "useText": "Use the text",
-    "useTextAndSettings": "Text + settings",
-    "translate": "Translate to English",
-    "alreadyEnglish": "This text is already in English.",
-    "describeStyle": "Describe the style of the references",
-    "noReference": "Drop a reference image to describe its style.",
-    "useTextHint": "Takes the sentence only, and leaves your settings as they are",
-    "useTextAndSettingsHint": "Takes the sentence AND the settings listed above"
   },
   "dictation": {
     "start": "Dictate",
