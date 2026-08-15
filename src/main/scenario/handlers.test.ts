@@ -36,6 +36,7 @@ const jobs: JobManager = {
   submit: () => {
     throw new Error('unused')
   },
+  run: () => Promise.reject(new Error('unused')),
   cancel: () => Promise.resolve(),
   list: () => [],
   resume: () => {},

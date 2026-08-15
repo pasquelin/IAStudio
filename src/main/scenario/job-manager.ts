@@ -116,6 +116,17 @@ export type JobManagerDeps = {
 
 export type JobManager = {
   submit: (target: JobTarget, label: string, body: Record<string, unknown>) => Job
+  /**
+   * Runs a model the user did not ask to watch, and answers what became of it.
+   *
+   * For the assistant's own reasoning: it needs the same queue, the same concurrency bound and
+   * the same retries as any other call to the API — polling anywhere else is a bug — but none of
+   * what surrounds a generation. Nothing is collected, listed, journalled or persisted.
+   *
+   * The job carries the API's own asset ids rather than local ones, because nothing was
+   * downloaded: the answer is read from the asset itself.
+   */
+  run: (target: JobTarget, label: string, body: Record<string, unknown>) => Promise<Job>
   cancel: (jobId: string) => Promise<void>
   list: () => Job[]
   /**
@@ -211,6 +222,20 @@ export function jobProgressOf(reported: number): number {
 
 type Entry = {
   job: Job
+  /**
+   * A job nobody asked to see.
+   *
+   * The assistant runs a text model to work out what a sentence meant, and that is machinery,
+   * not a generation: it must not appear in the jobs bar, must not be written to the journal,
+   * must not be resumed on the next launch, and above all its output must not be collected —
+   * the answer is a fragment of JSON, and the asset browser is for the user's own work.
+   *
+   * Everything else it keeps: the queue, the concurrency bound, the retries, the single poll
+   * loop. That is the whole reason it lives here rather than in a poller of its own.
+   */
+  discreet: boolean
+  /** Resolved once the job has settled, for a caller that awaits its outcome rather than watching. */
+  settled: ((job: Job) => void) | null
   /** Captured when the user asked for it: the credits and the output belong to that account. */
   account: JobAccount | null
   /** Kept beside the account itself, because it is the half that survives the session. */
@@ -268,6 +293,10 @@ export function createJobManager({
     Math.max(pollIntervalMs, Math.ceil((running * 60_000) / POLL_REQUESTS_PER_MINUTE))
 
   const emit = (entry: Entry): void => {
+    // Nothing is drawing it, and a window told about a job it will never list would merge
+    // progress into an entry it has no row for.
+    if (entry.discreet) return
+
     const progress: JobProgress = {
       id: entry.job.id,
       status: entry.job.status,
@@ -284,6 +313,7 @@ export function createJobManager({
 
   const listed = (): Job[] =>
     [...entries.values()]
+      .filter(entry => !entry.discreet)
       .map(entry => entry.job)
       .sort((left, right) => byCodeUnit(right.createdAt, left.createdAt))
 
@@ -299,6 +329,9 @@ export function createJobManager({
     for (const entry of entries.values()) {
       const { accountId, projectPath, remoteId } = entry
       if (entry.done) continue
+      // A conversation does not resume across launches: picked up tomorrow, a reasoning step
+      // would answer a question nobody is still asking, on an account it would charge for it.
+      if (entry.discreet) continue
       if (remoteId === null || accountId === null || projectPath === null) continue
 
       unfinished.push({
@@ -368,6 +401,8 @@ export function createJobManager({
     // Assigned onto the job rather than replacing it: `collect` holds this very object across an
     // await, and `list` hands it out — a fresh one here would leave both on the unsettled job.
     Object.assign(entry.job, settlementOf(status, now()))
+    const awaiting = entry.settled
+    entry.settled = null
     entry.body = {}
     // Released with the body, and for the same reason: the SDK client behind it holds an HTTP
     // agent and its sockets, and a finished job would keep a switched-away account's alive for
@@ -376,9 +411,14 @@ export function createJobManager({
     entry.account = null
     if (error !== undefined) entry.job.error = error
     emit(entry)
-    journal(entry.job, status, workspaces)
+    // A discreet job is machinery: the journal exists so a generation that ended while nobody
+    // was watching can still be read about, and there is nothing here for anyone to read.
+    if (!entry.discreet) journal(entry.job, status, workspaces)
     evictOldFinished()
     remember()
+    // Last, and outside everything above: whoever awaited this resumes on it, and a throw there
+    // must not leave the bookkeeping half done.
+    awaiting?.(entry.job)
   }
 
   /**
@@ -460,6 +500,20 @@ export function createJobManager({
       // nothing would keep drawing this job as running for the rest of the session, with a
       // cancel button the manager no longer has an entry for.
       announceList()
+      return
+    }
+
+    /**
+     * Nothing is brought down for a discreet job, and the ids kept are the API's own.
+     *
+     * This is the line that keeps the assistant out of the asset browser: its answers stay
+     * where Scenario put them — useful as a history, over there — and the studio's library goes
+     * on holding only what the person made.
+     */
+    if (entry.discreet) {
+      entry.job.assetIds = [...remote.assetIds]
+      entry.done = true
+      settle(entry, 'succeeded')
       return
     }
 
@@ -548,40 +602,54 @@ export function createJobManager({
     }
   }
 
+  /** Puts a job in the queue and starts the loop on it. Shared by both ways of asking. */
+  const enqueue = (
+    target: JobTarget,
+    label: string,
+    body: Record<string, unknown>,
+    discreet: boolean,
+    settledCallback: ((job: Job) => void) | null,
+  ): Job => {
+    const job: Job = {
+      id: newId(),
+      targetId: target.id,
+      label,
+      status: 'queued',
+      progress: 0,
+      createdAt: now(),
+      assetIds: [],
+    }
+
+    const active = accounts.active()
+    const entry: Entry = {
+      job,
+      discreet,
+      settled: settledCallback,
+      account: active?.account ?? null,
+      accountId: active?.id ?? null,
+      projectPath: projectPath(),
+      body,
+      remoteId: null,
+      cancelled: false,
+      done: false,
+    }
+    entries.set(job.id, entry)
+    queue.push(job.id)
+    emit(entry)
+    // The window that asked already holds this job — it pushed what the IPC call returned —
+    // but every other one only ever hears progress, which it cannot merge into a job it has
+    // never seen. A gain is a gain whichever window caused it.
+    if (!discreet) announceList()
+    pump()
+
+    return job
+  }
+
   return {
-    submit: (target, label, body) => {
-      const job: Job = {
-        id: newId(),
-        targetId: target.id,
-        label,
-        status: 'queued',
-        progress: 0,
-        createdAt: now(),
-        assetIds: [],
-      }
+    submit: (target, label, body) => enqueue(target, label, body, false, null),
 
-      const active = accounts.active()
-      const entry: Entry = {
-        job,
-        account: active?.account ?? null,
-        accountId: active?.id ?? null,
-        projectPath: projectPath(),
-        body,
-        remoteId: null,
-        cancelled: false,
-        done: false,
-      }
-      entries.set(job.id, entry)
-      queue.push(job.id)
-      emit(entry)
-      // The window that asked already holds this job — it pushed what the IPC call returned —
-      // but every other one only ever hears progress, which it cannot merge into a job it has
-      // never seen. A gain is a gain whichever window caused it.
-      announceList()
-      pump()
-
-      return job
-    },
+    run: (target, label, body) =>
+      new Promise<Job>(resolve => void enqueue(target, label, body, true, resolve)),
 
     resume: stored => {
       let added = false
@@ -602,6 +670,9 @@ export function createJobManager({
 
         const entry: Entry = {
           job,
+          // Nothing discreet is ever written down, so nothing resumed can be one.
+          discreet: false,
+          settled: null,
           account: accounts.of(remembered.accountId),
           accountId: remembered.accountId,
           projectPath: remembered.projectPath,
