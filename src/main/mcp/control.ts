@@ -1,8 +1,9 @@
-import { rmSync, writeFileSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import type { Settings } from '@shared/domain/settings'
 import { log } from '@main/log'
+import { writeAtomic, writeQueue } from '@main/persistence'
 import type { McpEndpoint } from './endpoint'
-import { startMcp, type McpDeps, type RunningMcp } from './server'
+import type { McpDeps, RunningMcp } from './server'
 
 /**
  * Turning the server on and off, and telling the disk where it landed.
@@ -27,79 +28,62 @@ export type McpControlDeps = McpDeps & {
 export function createMcpControl({ configPath, ...deps }: McpControlDeps): McpControl {
   let running: RunningMcp | null = null
   let wanted = false
-  // Changes are serialised through one chain: the toggle is a checkbox, and two clicks in
-  // quick succession would otherwise start a second server before the first had a port.
-  let settling: Promise<void> = Promise.resolve()
+  // The toggle is a checkbox, and two clicks in quick succession would otherwise start a second
+  // server before the first had a port. The same queue the studio's other small files use.
+  const queue = writeQueue()
 
-  const publish = ({ port, token }: McpEndpoint): void => {
-    // `0o600`: the token in it is the whole of the authentication, and the profile folder is
-    // readable by every process running as this user.
-    writeFileSync(configPath, `${JSON.stringify({ port, token }, null, 2)}\n`, { mode: 0o600 })
+  const publish = async ({ port, token }: McpEndpoint): Promise<void> => {
+    // Through a staging copy, like every other file the studio keeps: a client reading while
+    // this is written would otherwise catch a truncated token and be refused for it.
+    await writeAtomic(configPath, `${JSON.stringify({ port, token }, null, 2)}\n`)
   }
 
-  const unpublish = (): void => {
+  const unpublish = async (): Promise<void> => {
     // The file names a port nothing is listening on the moment the server stops, and a stale
     // one is how a client ends up talking to whatever took that port next.
-    rmSync(configPath, { force: true })
+    await rm(configPath, { force: true })
   }
 
-  const settle = (): void => {
-    settling = settling
-      .then(async () => {
+  const settle = (): Promise<void> =>
+    queue
+      .next(async () => {
         if (wanted && !running) {
+          /**
+           * Loaded here and not at the top of the file, which is the point of the whole
+           * arrangement: the MCP SDK pulls some two hundred modules, zod among them, and this
+           * setting is off by default. A static import would put that on the launch of every
+           * studio that never opens the door — on the one path that blocks the main loop from
+           * end to end.
+           */
+          const { startMcp } = await import('./server')
           running = await startMcp(deps)
-          publish(running)
+          await publish(running)
           return
         }
 
         if (!wanted && running) {
           const stopping = running
           running = null
-          unpublish()
+          await unpublish()
           await stopping.close()
         }
       })
-      .catch(error => {
+      .catch((error: unknown) => {
         log.warn('mcp', `could not settle the server: ${String(error)}`)
       })
-  }
 
   return {
     apply: settings => {
       if (settings.mcp.enabled === wanted) return
       wanted = settings.mcp.enabled
-      settle()
+      void settle()
     },
 
     endpoint: () => (running ? { port: running.port, token: running.token } : null),
 
     stop: async () => {
       wanted = false
-      settle()
-      await settling
+      await settle()
     },
   }
-}
-
-/**
- * The one control this process has, reachable from where the settings change.
- *
- * A registry rather than a parameter, and for a plain reason of order: the settings store is
- * built before the services the server needs, and it is the store that hears a change. The same
- * shape the window uses to declare its confirmer.
- */
-let followed: McpControl | null = null
-
-export function followMcp(control: McpControl): void {
-  followed = control
-}
-
-/** Called on every settings change. Does nothing until a control has been declared. */
-export function applyMcpSettings(settings: Settings): void {
-  followed?.apply(settings)
-}
-
-/** Where the server is, for the button that offers the command to reach it. */
-export function mcpEndpoint(): McpEndpoint | null {
-  return followed?.endpoint() ?? null
 }

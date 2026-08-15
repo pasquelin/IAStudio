@@ -41,6 +41,7 @@ export function registerIpc(services: Services): void {
     runAction: runSettingAction({
       settings: services.settings,
       settingsPath: services.settings.path,
+      mcpEndpoint: services.mcp.endpoint,
     }),
   })
   registerScenarioHandlers(services)

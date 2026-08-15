@@ -1,4 +1,5 @@
 import type { Job } from '@shared/domain/job'
+import { createMountedHost } from '@/helpers/host-registry'
 
 /**
  * The generator's form, reachable from outside it.
@@ -30,19 +31,10 @@ export type GeneratorBridge = {
   references: () => string[]
 }
 
-let mounted: GeneratorBridge | null = null
+const host = createMountedHost<GeneratorBridge>()
 
 /** Declares the generator while it is on screen. Returns the way to take it back down. */
-export function registerGenerator(bridge: GeneratorBridge): () => void {
-  mounted = bridge
-  return () => {
-    // Only if it is still ours: two generators never coexist, but a panel torn down after its
-    // replacement mounted would otherwise unregister the live one.
-    if (mounted === bridge) mounted = null
-  }
-}
+export const registerGenerator = host.hold
 
 /** The generator, if one is mounted. `null` is an answer, not a failure: the panel may be closed. */
-export function mountedGenerator(): GeneratorBridge | null {
-  return mounted
-}
+export const mountedGenerator = host.get

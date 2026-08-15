@@ -43,16 +43,17 @@ function bodyFor(
   numOutputs: number
   textInputs?: string[]
 } {
-  const history = recentHistory(request.history)
   // The complaint rides with the history rather than in the instruction: the instruction already
   // states the format, and saying it a second time there displaced the sentence being answered.
-  const inputs = complaint ? [...history, complaint] : history
+  // Trimmed once, at the end: the history arrives already bounded by the channel, so trimming it
+  // before adding the complaint could only ever drop the complaint's room and nothing else.
+  const inputs = recentHistory(complaint ? [...request.history, complaint] : request.history)
 
   return {
     instruction: instructionFor(request.utterance),
     model,
     numOutputs: 1,
-    ...(inputs.length > 0 ? { textInputs: recentHistory(inputs) } : {}),
+    ...(inputs.length > 0 ? { textInputs: inputs } : {}),
   }
 }
 

@@ -10,6 +10,14 @@ import {
 } from './activity'
 import { ASSET_BADGES, ASSET_TYPES, type AssetBadge, type AssetType } from './asset'
 import {
+  ACTION_COMMITMENTS,
+  ACTION_REFUSALS,
+  ASSISTANT_MODELS,
+  type ActionCommitment,
+  type ActionRefusal,
+  type AssistantModel,
+} from './assistant'
+import {
   MODEL_FAMILIES,
   MODEL_PERIODS,
   MODEL_SORTS,
@@ -213,5 +221,48 @@ describe('the lists that stand for a union', () => {
     }
 
     expect(sorted(TEXTURE_SLOTS)).toEqual(sorted(Object.keys(all)))
+  })
+
+  /**
+   * The assistant's three, and they carry a sharper cost than the rest: `ACTION_REFUSALS` and
+   * `ASSISTANT_MODELS` are each handed to a `z.enum` at an IPC boundary. A value missing from a
+   * list is then a legitimate answer REJECTED at the frontier — and the walk that checks the
+   * bundles never reaches it either, so the gap reads as coverage twice over.
+   */
+  it('names every reason an action can be refused', () => {
+    const all: Record<ActionRefusal, true> = {
+      unknownCommand: true,
+      globalCommand: true,
+      wrongSurface: true,
+      generatorClosed: true,
+      nothingPrepared: true,
+      notSubmitted: true,
+      badInput: true,
+      noBridge: true,
+      noConfirmer: true,
+      declined: true,
+      noWindow: true,
+      timedOut: true,
+      noReference: true,
+    }
+
+    expect(sorted(ACTION_REFUSALS)).toEqual(sorted(Object.keys(all)))
+  })
+
+  it('names every model the assistant may think with', () => {
+    const all: Record<AssistantModel, true> = {
+      'claude-haiku-4-5': true,
+      'claude-sonnet-4-6': true,
+      'claude-opus-4-8': true,
+      'gemini-3.5-flash': true,
+    }
+
+    expect(sorted(ASSISTANT_MODELS)).toEqual(sorted(Object.keys(all)))
+  })
+
+  it('names every level of commitment an action can carry', () => {
+    const all: Record<ActionCommitment, true> = { none: true, asset: true, credits: true }
+
+    expect(sorted(ACTION_COMMITMENTS)).toEqual(sorted(Object.keys(all)))
   })
 })

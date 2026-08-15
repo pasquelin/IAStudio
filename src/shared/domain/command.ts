@@ -982,7 +982,16 @@ export function commandIn(scope: CommandScope, suffix: string): CommandId | null
   return commandsIn(scope).find(descriptor => descriptor.id.endsWith(`.${suffix}`))?.id ?? null
 }
 
-export function commandDescriptor(id: CommandId): CommandDescriptor | null {
+/**
+ * The descriptor of a command, or `null` for anything the registry does not declare.
+ *
+ * Takes a `string` rather than a `CommandId`, the way `assistantAction` does next door, and for
+ * the same reason: what asks is often something that has only a name — a language model's answer,
+ * an MCP client's call. Narrowing before the call meant two identical casts in two files, each
+ * with four lines explaining why it was safe. The check IS this function; there is no gap for a
+ * cast to close.
+ */
+export function commandDescriptor(id: string): CommandDescriptor | null {
   return COMMAND_REGISTRY.find(descriptor => descriptor.id === id) ?? null
 }
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AssistantModel } from '@shared/domain/assistant'
+import { HISTORY_MAX, type AssistantModel } from '@shared/domain/assistant'
 import type { ConfirmRequest } from '@/assistant/confirm'
 import { assistantHistory, type AssistantStep, type AssistantTurn } from '@/assistant/conversation'
 import { runConfirmedAction } from '@/assistant/executor'
@@ -94,8 +94,15 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
 
     const bridge = getBridge()
     const id = (lastTurnId += 1)
-    // The history is read before the new turn joins it: a turn does not precede itself.
-    const history = assistantHistory(get().turns)
+    /**
+     * The history is read before the new turn joins it — a turn does not precede itself — and
+     * trimmed HERE rather than left to the main process.
+     *
+     * Not an optimisation: the channel VALIDATES the length before the brain trims it, so an
+     * eleventh turn made `parseThought` throw, the catch below swallowed it, and every sentence
+     * from then on was marked lost. A conversation quietly stopped working at its eleventh turn.
+     */
+    const history = assistantHistory(get().turns.slice(-HISTORY_MAX))
     const turn: AssistantTurn = { id, said, answered: '', steps: [], lost: false }
     set(state => ({ turns: [...state.turns, turn], busy: true }))
 

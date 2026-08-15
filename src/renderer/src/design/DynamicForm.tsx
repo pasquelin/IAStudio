@@ -49,28 +49,15 @@ export type DynamicFormProps = {
    */
   preset?: FormValues
   /**
-   * Rendered under each field, for whatever the caller wants to hang there — prompt assistance
-   * hangs on the one the model marks. Called for every field so that nothing about any
+   * Rendered under each field, for whatever the caller wants to hang there — dictation hangs on
+   * anything a sentence can be spoken into. Called for every field so that nothing about any
    * particular feature is decided here; answering `null` leaves the field alone.
    *
-   * The handle is what makes it worth a hook rather than a sibling: both halves live inside
-   * this component. `read` is a getter rather than a value on purpose — watching the field
-   * would re-render it on every keystroke, for something only a click ever asks for.
+   * The field alone, with no handle onto its value. It carried one — `read`, `write`, `readAll`
+   * — for prompt assistance, which rewrote the field it hung under. That moved to the assistant,
+   * which reaches the form through `GeneratorBridge` instead, and nothing was left reading it.
    */
-  accessory?: (field: FieldDescriptor, handle: FieldHandle) => ReactNode
-}
-
-export type FieldHandle = {
-  /** The field's value as it stands. Call it when acting, never while rendering. */
-  read: () => unknown
-  /** Fills this field alone, leaving every other one as the user set it. */
-  write: (value: string) => void
-  /**
-   * Every field's value, for an accessory whose action depends on more than the one it hangs
-   * under — prompt assistance conditions on the reference pictures sitting elsewhere on the
-   * form. Same rule as `read`: call it when acting, never while rendering.
-   */
-  readAll: () => FormValues
+  accessory?: (field: FieldDescriptor) => ReactNode
 }
 
 function Control({
@@ -246,11 +233,7 @@ export function DynamicForm({
                 )}
               </label>
 
-              {accessory?.(field, {
-                read: () => getValues(field.key),
-                write: value => setValue(field.key, value),
-                readAll: () => getValues(),
-              })}
+              {accessory?.(field)}
             </Fragment>
           ))}
         </fieldset>

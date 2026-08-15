@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { mountedDictationTarget } from '@/dictation/destination'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssistant } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
@@ -73,6 +74,22 @@ describe('the assistant modal', () => {
     render(<AssistantOverlay />)
 
     expect(screen.getByText('ouvre un fichier')).toBeInTheDocument()
+  })
+
+  /**
+   * Being OPEN is the test, and not a caret inside the field: one dictates with the hands off
+   * the keyboard, so asking for a focused field would make the voice path unreachable by voice.
+   * Closed, the words go back to the caret, which is where they have always gone.
+   */
+  it('claims the spoken word while it is up, and gives it back when it closes', () => {
+    const { rerender } = render(<AssistantOverlay />)
+    mountedDictationTarget()?.('ouvre un fichier 3D')
+    expect(say).toHaveBeenCalledWith('ouvre un fichier 3D')
+
+    useAssistant.setState({ open: false })
+    rerender(<AssistantOverlay />)
+
+    expect(mountedDictationTarget()).toBeNull()
   })
 
   /** The decision this modal exists to hold: what a conversation has cost, as it costs it. */

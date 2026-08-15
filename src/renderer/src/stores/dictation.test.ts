@@ -3,7 +3,7 @@ import type { SttEvent } from '@shared/domain/dictation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { MicrophoneRefused, NoInputDevice } from '@/dictation/capture'
-import { useAssistant } from './assistant'
+import { registerDictationTarget } from '@/dictation/destination'
 import { useDictation } from './dictation'
 import { useSettings } from './settings'
 
@@ -48,8 +48,6 @@ beforeEach(async () => {
   vi.clearAllMocks()
   startCapture.mockImplementation(() => Promise.resolve({ stop }))
   useSettings.setState({ settings: DEFAULT_SETTINGS })
-  // Closed, so a settled sentence goes to the caret unless a case says otherwise.
-  useAssistant.setState({ open: false })
   useDictation.setState({
     state: 'idle',
     partial: '',
@@ -140,13 +138,13 @@ describe('where a settled sentence goes', () => {
   })
 
   /**
-   * The one thing talking to the studio changed about dictation. The modal being OPEN is the
-   * test, not a caret inside it: one dictates with the hands off the keyboard, so asking for a
-   * focused field would make the voice path unreachable by voice.
+   * The one thing talking to the studio changed about dictation — and it changed it here rather
+   * than in a branch on who is on screen. This session knows only that somebody may have claimed
+   * the words; which surface, and while it is up, is that surface's business.
    */
-  it('goes to the assistant instead while its modal is up', async () => {
-    const say = vi.fn(() => Promise.resolve())
-    useAssistant.setState({ open: true, say })
+  it('goes to whoever claimed the words instead, when somebody has', async () => {
+    const claimed: string[] = []
+    const release = registerDictationTarget(text => claimed.push(text))
 
     const input = document.createElement('input')
     document.body.append(input)
@@ -156,8 +154,9 @@ describe('where a settled sentence goes', () => {
     await useDictation.getState().connect()
     emit({ type: 'final', text: 'ouvre un fichier 3D', latencyMs: 300 })
 
-    expect(say).toHaveBeenCalledWith('ouvre un fichier 3D')
+    expect(claimed).toEqual(['ouvre un fichier 3D'])
     expect(input.value).toBe('')
+    release()
     input.remove()
   })
 })

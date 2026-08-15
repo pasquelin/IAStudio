@@ -46,7 +46,7 @@ import { createFfmpegResolver } from './media/ffmpeg'
 import { bundledFfmpeg, bundledVad, resourcesRoot } from './resources'
 import { createAssetText } from './assistant/asset-text'
 import { createRemoteActions, type RemoteActions } from './mcp/asking'
-import { applyMcpSettings } from './mcp/control'
+import { createMcpControl, type McpControl } from './mcp/control'
 import type { AssistantBrain } from './assistant/brain-port'
 import { createScenarioBrain } from './assistant/brain-scenario'
 import { createSession, type DictationSession } from './dictation/session'
@@ -189,6 +189,8 @@ export type Services = {
    * which asks, and the IPC handler, which hears the reply.
    */
   remoteActions: RemoteActions
+  /** The MCP server, off unless the setting says otherwise. Followed from `index.ts`. */
+  mcp: McpControl
   /** Speaking instead of typing. Holds the engine, the model and the state of a session. */
   dictation: DictationSession
   /** Opens the system screen where microphone access is granted back after a refusal. */
@@ -372,9 +374,6 @@ export function createSettings(): SettingsStore {
       // Every native surface follows this one call, the menu bar included.
       setWindowLanguage(effectiveLanguage(current.general.language, machineLanguages()))
       buildMenu(current.shortcuts.overrides)
-      // Started or stopped from here because this is where a change is heard. It does nothing
-      // until `followMcp` has been handed a control, which happens once the services exist.
-      applyMcpSettings(current)
       broadcast(EVENTS.settingsChanged, current)
     },
   })
@@ -1062,6 +1061,19 @@ export function createServices(settings: SettingsStore): Services {
     send: request => sendToFront(EVENTS.assistantAction, request),
   })
 
+  /**
+   * The door onto the machine, built here and opened only if the setting says so.
+   *
+   * Built rather than reached for: the composition root says nothing here reaches for a
+   * singleton, and this used to be the exception — a module-level registry, because the settings
+   * store is constructed before this is. `SettingsStore.subscribe` closed that hole.
+   */
+  const mcp = createMcpControl({
+    run: remoteActions.run,
+    version: app.getVersion(),
+    configPath: join(app.getPath('userData'), 'mcp.json'),
+  })
+
   const captioner = createCaptioner({
     queue: assistQueue.run,
     caption: images => prompts.caption(images),
@@ -1135,6 +1147,7 @@ export function createServices(settings: SettingsStore): Services {
     media,
     assistant: brain,
     remoteActions,
+    mcp,
     dictation,
     openMicrophoneSettings: () => openMicrophoneSettings(url => void shell.openExternal(url)),
     link: async (source, type) =>

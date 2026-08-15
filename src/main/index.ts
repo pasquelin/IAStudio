@@ -1,4 +1,3 @@
-import { join } from 'node:path'
 import { app, session } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import { EVENTS } from '@shared/ipc'
@@ -10,7 +9,6 @@ import { broadcast } from '@main/ipc/broadcast'
 import { isDevelopment } from '@main/environment'
 import { registerIpc } from '@main/ipc/register'
 import { log, mirrorLogsTo } from '@main/log'
-import { applyMcpSettings, createMcpControl, followMcp } from '@main/mcp/control'
 import { createServices, createSettings } from '@main/services'
 import { createShutdown } from '@main/shutdown'
 import type { SettingsStore } from '@main/settings/store'
@@ -55,19 +53,12 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   void services.updates.check()
 
   /**
-   * The way in from outside, declared here and started only if the setting says so.
-   *
-   * Declared after the services because it needs one of them, and applied straight away with
-   * the settings as they stand: `applyMcpSettings` is otherwise only reached by a CHANGE, and a
-   * user who left it on would find nothing listening until they toggled it twice.
+   * The way in from outside follows the setting from here on — and is applied straight away with
+   * the settings as they stand. Subscribing alone would only ever hear a CHANGE, so a user who
+   * left it on would find nothing listening until they toggled it twice.
    */
-  const mcp = createMcpControl({
-    run: services.remoteActions.run,
-    version: app.getVersion(),
-    configPath: join(app.getPath('userData'), 'mcp.json'),
-  })
-  followMcp(mcp)
-  applyMcpSettings(settings.read())
+  services.mcp.apply(settings.read())
+  settings.subscribe(services.mcp.apply)
 
   // The journal batches, so up to a flush's worth of it is still in memory at any moment — and
   // the most ordinary way to lose it is the one that matters: an export fails, the user quits.
@@ -77,7 +68,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
     services.dictation.dispose()
     // Stopped with the rest: the file beside the settings names a port, and one left behind
     // points the next client at whatever takes that port after this process is gone.
-    void mcp.stop()
+    void services.mcp.stop()
     // The note of what is still running goes out with the journal: a job whose submission
     // landed in the last moments would otherwise be lost, and it has already been paid for.
     // The manifest stamp joins them — quitting right after a save is the ordinary way to do it.

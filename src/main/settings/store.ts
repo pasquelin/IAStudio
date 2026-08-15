@@ -87,6 +87,14 @@ export type SettingsStore = {
    * for it — by the key rather than by the book entry, which a remove-and-re-add renews.
    */
   credentialsOf: (fingerprint: string) => Credentials | null
+  /**
+   * Follows every change from here on. Returns the way to stop.
+   *
+   * Beside `onChange`, which is the ONE listener wired at construction and cannot be a second:
+   * the store is built before the services are, so anything built later — the MCP control is the
+   * first — had no way in but a module-level global. This is that way in.
+   */
+  subscribe: (listener: (settings: Settings) => void) => () => void
   /** Where the settings are written. */
   path: () => string
 }
@@ -262,20 +270,33 @@ export function createSettingsStore(
     return { accounts: summariesOf(after), credentialsChanged: movedKey(before, after) }
   }
 
+  const listeners = new Set<(settings: Settings) => void>()
+
+  /** The one wired at construction, then whoever subscribed later. */
+  const announce = (settings: Settings): void => {
+    onChange?.(settings)
+    for (const listener of listeners) listener(settings)
+  }
+
   return {
     read,
 
     write: partial => {
       const merged = merge(read(), partial)
       adapter.write(SETTINGS_KEY, merged)
-      onChange?.(merged)
+      announce(merged)
       return merged
     },
 
     reset: () => {
       adapter.write(SETTINGS_KEY, DEFAULT_SETTINGS)
-      onChange?.(DEFAULT_SETTINGS)
+      announce(DEFAULT_SETTINGS)
       return DEFAULT_SETTINGS
+    },
+
+    subscribe: listener => {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
     },
 
     accounts: () => summariesOf(readBook()),

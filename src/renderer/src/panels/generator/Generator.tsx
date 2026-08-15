@@ -183,7 +183,7 @@ export function Generator() {
               // Dictation alone now. Rewriting a prompt, translating it and reading the style of
               // the references left this panel for the assistant: they are things one ASKS for,
               // and three buttons under a field could only ever offer three of them.
-              accessory={field => dictationAccessory(field)}
+              accessory={dictationAccessory}
             />
           </Suspense>
         </ErrorBoundary>

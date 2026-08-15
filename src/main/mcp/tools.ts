@@ -120,6 +120,14 @@ function toolOf(action: AssistantAction): McpTool {
   }
 }
 
-export function mcpTools(actions: readonly AssistantAction[] = ACTION_REGISTRY): McpTool[] {
-  return actions.map(toolOf)
+/**
+ * The catalogue, built once.
+ *
+ * The registry is a module constant and so is the English bundle it reads, so every `tools/list`
+ * was rebuilding the same objects — a split-and-reduce over the bundle per action and per field.
+ */
+const TOOLS: readonly McpTool[] = ACTION_REGISTRY.map(toolOf)
+
+export function mcpTools(): readonly McpTool[] {
+  return TOOLS
 }

@@ -137,8 +137,11 @@ const UPLOADING_COMMANDS: readonly CommandId[] = [
  * one guarded command by command: a miss here is a permanent asset created without a yes, and
  * nothing downstream would catch it.
  */
-export function commitmentOfCommand(id: CommandId): ActionCommitment {
-  return UPLOADING_COMMANDS.includes(id) ? 'asset' : 'none'
+export function commitmentOfCommand(id: string): ActionCommitment {
+  // A `string` for the same reason `commandDescriptor` takes one: what asks holds a name, not a
+  // narrowed id. An id nothing declares rates as `none`, which is the level of a call that will
+  // be refused before it runs anyway.
+  return UPLOADING_COMMANDS.some(uploading => uploading === id) ? 'asset' : 'none'
 }
 
 export const ACTION_REGISTRY: readonly AssistantAction[] = [
@@ -388,14 +391,5 @@ export function commitmentOfCall(
   if (name !== 'command.run') return assistantAction(name)?.commitment ?? 'none'
 
   const id = input.command
-  return typeof id === 'string' ? commitmentOfCommand(asCommandId(id)) : 'none'
-}
-
-/**
- * The one cast here, and why it is safe: every reader of the result checks the command against
- * the registry, and an id nothing declares rates as `none` — which is the level of a call that
- * will be refused before it runs anyway.
- */
-function asCommandId(id: string): CommandId {
-  return id as CommandId
+  return typeof id === 'string' ? commitmentOfCommand(id) : 'none'
 }

@@ -10,9 +10,15 @@ import { englishText } from '@shared/i18n'
 /**
  * What the model is told before it answers.
  *
- * Written from the English bundle rather than from sentences in this file, for the reason every
- * word bound for a screen is: there are no sentences in `src/`. English specifically — see
- * `englishText`, which the window uses for the other half of the same conversation.
+ * Two kinds of sentence live here, and the difference is worth stating because they sit five
+ * lines apart. The CATALOGUE — what each action is and what its fields mean — comes from the
+ * English bundle, because those same sentences are shown on screen and one source is the only
+ * way they stay one thing. `ROLE` and `FORMAT` are written here as literals, because they are
+ * shown to nobody: they are a prompt, which is code, and putting a prompt in a translation
+ * bundle would invite someone to translate the one thing that must not move.
+ *
+ * English throughout either way — see `englishText`, which the window uses for the other half of
+ * the same conversation.
  */
 
 /** One field, as a line the model can read: name, type, whether it must be there, what it takes. */
@@ -32,11 +38,12 @@ function actionBlock(action: AssistantAction): string {
 /**
  * The catalogue, as the model sees it.
  *
- * Rebuilt on every call rather than cached: it is a few hundred characters, and a cache would
- * be one more thing to invalidate the day an action is added.
+ * Rebuilt on every call rather than cached: it is a few thousand characters against a round trip
+ * that takes seconds, and a cache would be one more thing to invalidate the day an action is
+ * added.
  */
-export function actionCatalogue(actions: readonly AssistantAction[] = ACTION_REGISTRY): string {
-  return actions.map(actionBlock).join('\n')
+export function actionCatalogue(): string {
+  return ACTION_REGISTRY.map(actionBlock).join('\n')
 }
 
 /**
@@ -89,15 +96,12 @@ export function recentHistory(history: readonly string[], limit = HISTORY_MAX): 
  * loud rather than trusting it: an action added with a florid description is the one thing that
  * could quietly eat it.
  */
-export function instructionFor(
-  utterance: string,
-  actions: readonly AssistantAction[] = ACTION_REGISTRY,
-): string {
+export function instructionFor(utterance: string): string {
   const preamble = [
     ROLE,
     '',
     'Catalogue:',
-    actionCatalogue(actions),
+    actionCatalogue(),
     '',
     FORMAT,
     '',
@@ -109,6 +113,6 @@ export function instructionFor(
 }
 
 /** What the fixed part of an instruction costs, leaving the rest of the budget to the sentence. */
-export function preambleLength(actions: readonly AssistantAction[] = ACTION_REGISTRY): number {
-  return instructionFor('', actions).length
+export function preambleLength(): number {
+  return instructionFor('').length
 }

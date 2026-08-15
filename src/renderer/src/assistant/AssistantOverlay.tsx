@@ -19,6 +19,7 @@ import { useAssistant } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { formatUnits } from '@/usage/format'
+import { registerDictationTarget } from '@/dictation/destination'
 import type { ConfirmRequest } from './confirm'
 import { registerConfirmer } from './confirm'
 import type { AssistantStep, AssistantTurn } from './conversation'
@@ -45,9 +46,6 @@ export function AssistantOverlay() {
   const spent = useAssistant(state => state.spent)
   const hide = useAssistant(state => state.hide)
   const model = useSettings(state => state.settings.assistant.model)
-  // The sentence in flight. Read straight off the dictation store rather than pushed here: the
-  // hypothesis is replaced several times a second, and nothing else in the modal re-renders on it.
-  const heard = useDictation(state => state.partial)
 
   const surface = useRef<HTMLDivElement>(null)
   const thread = useRef<HTMLOListElement>(null)
@@ -61,6 +59,19 @@ export function AssistantOverlay() {
   // A question is answered, never walked away from: Escape and a press outside would otherwise
   // leave the action that raised it waiting for an answer that can no longer come.
   useDismiss(open && !asked ? hide : undefined, surface)
+
+  /**
+   * The spoken word, while the modal is up.
+   *
+   * Claimed from here rather than branched on inside the dictation session, which knows nothing
+   * about this modal. Being OPEN is the test, and not a caret inside it: one dictates with the
+   * hands off the keyboard, so asking for a focused field would make the voice path unreachable
+   * by voice.
+   */
+  useEffect(() => {
+    if (!open) return
+    return registerDictationTarget(text => void useAssistant.getState().say(text))
+  }, [open])
 
   useEffect(() => {
     if (open) field.current?.focus()
@@ -142,9 +153,7 @@ export function AssistantOverlay() {
 
         {asked && <Question request={asked.request} />}
 
-        {/* The sentence still being spoken, shown as the fields show it: a hypothesis, replaced
-            by the next one, and never something one could mistake for what was sent. */}
-        {heard !== '' && <p className="text-muted m-0 shrink-0 px-2 text-xs italic">{heard}</p>}
+        <Heard />
 
         <form
           className="flex shrink-0 items-center gap-2"
@@ -184,6 +193,21 @@ export function AssistantOverlay() {
  */
 function asModel(value: string): AssistantModel {
   return value as AssistantModel
+}
+
+/**
+ * The sentence still being spoken, shown as the fields show it: a hypothesis, replaced by the
+ * next one, and never something one could mistake for what was sent.
+ *
+ * A component of its own, and that is the whole reason it exists: the hypothesis is replaced
+ * several times a second, and subscribing to it from the modal's own body would re-render the
+ * entire thread — every turn, every step — at the speed of speech.
+ */
+function Heard() {
+  const heard = useDictation(state => state.partial)
+  if (heard === '') return null
+
+  return <p className="text-muted m-0 shrink-0 px-2 text-xs italic">{heard}</p>
 }
 
 /** One exchange: what was asked, what came back, and what each action actually did. */

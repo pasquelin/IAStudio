@@ -5,7 +5,7 @@ import {
   commitmentOfCall,
   needsConfirmation,
 } from '@shared/domain/assistant'
-import { commandDescriptor, type CommandId, scopeOfWorkspace } from '@shared/domain/command'
+import { commandDescriptor, scopeOfWorkspace } from '@shared/domain/command'
 import { MODEL_FAMILIES } from '@shared/domain/model'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import { isRecord } from '@shared/guards'
@@ -24,13 +24,19 @@ import { mountedGenerator } from './generator-bridge'
 const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })
 
 /**
- * The inputs are read rather than asserted.
+ * The inputs are read rather than asserted, and these guards are the ONLY thing checking them.
  *
- * They arrive validated — the main process checks them against the registry's fields before it
- * asks for any of this — so a guard here is belt and braces. It is worth the four lines all the
- * same: what fills these values is a language model, the one caller in the studio that answers
- * something plausible instead of failing, and a wrong `workspace` would otherwise reach
- * `showWorkspace` as a string it has no panel for.
+ * Said plainly because the opposite was written here first: nothing upstream validates a call
+ * against `action.fields`. The IPC boundary checks the envelope (`main/assistant/validation.ts`),
+ * the reply parser checks that the action NAME is declared (`main/assistant/reply.ts`), and the
+ * MCP server passes `params.arguments` through untouched — its `additionalProperties: false` is
+ * a promise to the client, not an enforcement.
+ *
+ * Which makes these four lines the guard rather than belt and braces: what fills these values is
+ * a language model, the one caller in the studio that answers something plausible instead of
+ * failing, and a wrong `workspace` would otherwise reach `showWorkspace` as a string it has no
+ * panel for. Deriving a validator from `action.fields` would serve all three callers at once and
+ * is the right shape; it is not this batch.
  */
 function textOf(input: Record<string, unknown>, key: string): string | null {
   const value = input[key]
@@ -56,7 +62,7 @@ function oneOf<T extends string>(
  */
 function runCommand(input: Record<string, unknown>): ActionOutcome {
   const id = textOf(input, 'command')
-  const descriptor = id === null ? null : commandDescriptor(asCommandId(id))
+  const descriptor = id === null ? null : commandDescriptor(id)
   if (!descriptor) return refused('unknownCommand')
 
   // `global` commands are the native menu's own, and Electron fires them itself — the bus never
@@ -67,15 +73,6 @@ function runCommand(input: Record<string, unknown>): ActionOutcome {
 
   publishCommand(descriptor.id)
   return { ok: true }
-}
-
-/**
- * The one cast in the file, and the reason it is safe: `commandDescriptor` answers `null` for
- * anything the registry does not declare, so the value is checked by the very call it is passed
- * to. Narrowing it beforehand would mean walking the registry twice.
- */
-function asCommandId(id: string): CommandId {
-  return id as CommandId
 }
 
 async function submitPrepared(): Promise<ActionOutcome> {

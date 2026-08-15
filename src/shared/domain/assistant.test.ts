@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { isRecord } from '../guards'
 import { LANGUAGES, TRANSLATIONS } from '../i18n'
 import {
-  ACTION_COMMITMENTS,
   ACTION_REFUSALS,
   ACTION_REGISTRY,
   assistantAction,
@@ -51,12 +50,6 @@ describe('the action registry', () => {
         String(description).length,
         `${action.descriptionKey} explains nothing`,
       ).toBeGreaterThan(40)
-    }
-  })
-
-  it('files every action under a commitment that exists', () => {
-    for (const action of ACTION_REGISTRY) {
-      expect(ACTION_COMMITMENTS, action.name).toContain(action.commitment)
     }
   })
 

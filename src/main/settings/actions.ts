@@ -1,21 +1,22 @@
 import { BrowserWindow, clipboard, shell } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import type { SettingActionId } from '@shared/domain/settings-registry'
-import { mcpAddCommand } from '@main/mcp/endpoint'
-import { mcpEndpoint } from '@main/mcp/control'
+import { mcpAddCommand, type McpEndpoint } from '@main/mcp/endpoint'
 import type { SettingsStore } from './store'
 
 export type ActionDeps = {
   settings: SettingsStore
   /** Where the settings file lives, so it can be revealed without guessing the path. */
   settingsPath: () => string
+  /** Where the MCP server is listening, or `null` while it is off. */
+  mcpEndpoint: () => McpEndpoint | null
 }
 
 /**
  * What the buttons of the settings window do. Kept apart from the handlers: each one reaches
  * straight into Electron, and the handler that routes them stays testable without it.
  */
-export function runSettingAction({ settings, settingsPath }: ActionDeps) {
+export function runSettingAction({ settings, settingsPath, mcpEndpoint }: ActionDeps) {
   return (id: SettingActionId): void => {
     switch (id) {
       case 'advanced.openSettingsFile':

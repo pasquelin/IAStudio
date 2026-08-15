@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'node:crypto'
+
 /**
  * Who is allowed to reach the server at all.
  *
@@ -56,17 +58,18 @@ export function admits(headers: RequestHeaders, token: string): AccessVerdict {
 }
 
 /**
- * Compared in constant time, so the number of leading characters that matched cannot be read
- * off how long the answer took. The tokens are the same length by construction, and the length
- * check below is on public information: whether a guess is 8 or 32 characters long is something
+ * Compared in constant time, so the number of leading characters that matched cannot be read off
+ * how long the answer took.
+ *
+ * Node's own rather than a loop of our making: it compares BYTES, which a loop over
+ * `charCodeAt` does not — the two agree while the token is hex and would part company the day it
+ * is not. `timingSafeEqual` throws on a length mismatch, so the length is checked first; that
+ * check is on public information, since whether a guess is 8 or 64 characters long is something
  * the guesser already knows.
  */
 function safeEqual(offered: string, token: string): boolean {
-  if (offered.length !== token.length) return false
+  const guess = Buffer.from(offered, 'utf8')
+  const secret = Buffer.from(token, 'utf8')
 
-  let difference = 0
-  for (let index = 0; index < token.length; index += 1) {
-    difference |= offered.charCodeAt(index) ^ token.charCodeAt(index)
-  }
-  return difference === 0
+  return guess.length === secret.length && timingSafeEqual(guess, secret)
 }

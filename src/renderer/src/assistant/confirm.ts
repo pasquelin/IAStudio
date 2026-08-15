@@ -1,4 +1,5 @@
 import type { ActionCommitment, ActionName } from '@shared/domain/assistant'
+import { createMountedHost } from '@/helpers/host-registry'
 
 /**
  * The question asked before the assistant does anything that outlives the window.
@@ -22,17 +23,10 @@ export type ConfirmRequest = {
 
 export type Confirmer = (request: ConfirmRequest) => Promise<boolean>
 
-let mounted: Confirmer | null = null
+const host = createMountedHost<Confirmer>()
 
 /** Declares the modal as the place questions are asked. Returns the way to take it back down. */
-export function registerConfirmer(confirmer: Confirmer): () => void {
-  mounted = confirmer
-  return () => {
-    if (mounted === confirmer) mounted = null
-  }
-}
+export const registerConfirmer = host.hold
 
 /** Whoever is able to ask, or `null` when no window is showing the assistant. */
-export function mountedConfirmer(): Confirmer | null {
-  return mounted
-}
+export const mountedConfirmer = host.get

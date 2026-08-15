@@ -8,8 +8,8 @@ import {
   startCapture,
   type Capture,
 } from '@/dictation/capture'
+import { mountedDictationTarget } from '@/dictation/destination'
 import { insertAtCaret } from '@/dictation/insert-at-caret'
-import { useAssistant } from './assistant'
 import { useSettings } from './settings'
 
 type DictationState = {
@@ -200,24 +200,14 @@ export const useDictation = create<DictationState>()((set, get) => ({
 /**
  * Where a settled sentence goes.
  *
- * The assistant while its modal is up, the caret otherwise — and that is the whole of what
- * talking to the studio changed about dictation. The microphone, the engine, the worker and the
- * IPC contract have no idea the destination moved: one sentence arrives, one of two things reads
- * it.
- *
- * The modal being OPEN is the test, not the caret being inside it: one dictates with the hands
- * off the keyboard, so requiring a focused field would make the voice path unreachable by voice.
+ * Whoever claimed it, and the caret otherwise — which is what makes dictation work in every
+ * input of the studio without any of them being rewritten. This session knows nothing about who
+ * claims it or why; the assistant's modal does the claiming while it is up.
  */
 function settle(text: string): void {
-  const assistant = useAssistant.getState()
-  if (assistant.open) {
-    void assistant.say(text)
-    return
-  }
-
-  // Into the field the caret is in — which is what makes dictation work in every input of the
-  // studio without any of them being rewritten.
-  insertAtCaret(text)
+  const target = mountedDictationTarget()
+  if (target) target(text)
+  else insertAtCaret(text)
 }
 
 async function closeCapture(): Promise<void> {
