@@ -3,7 +3,15 @@ import type { TakeShape } from '@/engines/audio/edits'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
-import { EMPTY_SEQUENCE, EMPTY_SOUND_SEQUENCE, type Clip } from '@/engines/timeline/timeline-state'
+import {
+  EMPTY_SEQUENCE,
+  EMPTY_SOUND_SEQUENCE,
+  MAX_GAIN_DB,
+  SECOND,
+  updateClip,
+  type Clip,
+  type SequenceState,
+} from '@/engines/timeline/timeline-state'
 import { sequenceHistoryOf, sequenceOf, useSequences, writeTakeClip } from './sequences'
 
 const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
@@ -72,6 +80,8 @@ describe('the montage clip of an edited take', () => {
     gain: -6,
   }
 
+  const montageOf = (): SequenceState => sequenceOf(useSequences.getState(), 'doc-1')
+
   const laid = (): Clip => {
     useSequences.getState().replace('doc-1', EMPTY_SOUND_SEQUENCE)
     useSequences.getState().runCommand('doc-1', addClip('A1', clip))
@@ -124,6 +134,47 @@ describe('the montage clip of an edited take', () => {
     writeTakeClip('doc-1', 'clip-1', shape)
 
     expect(sequenceOf(useSequences.getState(), 'doc-1')).toBe(settled)
+  })
+
+  // A quiet take normalised to −14 LUFS asks for +26 dB. `applyGain` absorbs it on samples it
+  // clamps; the strip does not — the output would be handed a twentyfold gain on the raw source.
+  it('bounds the level to what every other writer of a clip bounds it to', () => {
+    laid()
+    writeTakeClip('doc-1', 'clip-1', { ...shape, gain: 26 })
+
+    expect(clipsOf('doc-1')[0]?.gain).toBe(MAX_GAIN_DB)
+  })
+
+  // A clip's duration is TIMELINE time; the chain answers in SOURCE time. The two agree only at
+  // speed 1, and the inspector makes speed reachable for a sound clip.
+  it('reads the length of the chain against the speed the clip runs at', () => {
+    laid()
+    useSequences.getState().replace(
+      'doc-1',
+      updateClip(montageOf(), 'clip-1', clip => ({ ...clip, speed: 2 })),
+    )
+
+    // 1.6 s of source at double speed is 0.8 s on the strip — and a whole number of frames, so
+    // what this case reads is the speed rather than the grid.
+    writeTakeClip('doc-1', 'clip-1', { ...shape, duration: 1_600_000 })
+
+    expect(clipsOf('doc-1')[0]?.duration).toBe(800_000)
+  })
+
+  // Clips of a track are sorted and never overlap, and every later edit assumes it. `updateClip`
+  // writes in place, with none of the overwrite insertion a drop performs.
+  it('stops a take growing back at the clip that follows it', () => {
+    laid()
+    useSequences
+      .getState()
+      .runCommand(
+        'doc-1',
+        addClip('A1', clipFixture('clip-2', 1_500_000, SECOND, { assetId: 'asset-2' })),
+      )
+
+    writeTakeClip('doc-1', 'clip-1', { ...shape, duration: 4_000_000 })
+
+    expect(clipsOf('doc-1')[0]?.duration).toBe(1_500_000)
   })
 
   /**

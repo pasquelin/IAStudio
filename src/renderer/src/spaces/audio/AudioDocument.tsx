@@ -65,9 +65,14 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   // The audio is nullable and that is the point: a render that answers nothing is how a dead
   // worker shows up here, and holding no entry at all for it would leave "loading" on screen
   // for as long as the tab lives.
-  const [output, setOutput] = useState<{ assetId: string; audio: RenderedAudio | null } | null>(
-    null,
-  )
+  // Tagged with the SIDE of A/B it was asked for as well as with its asset: a bypassed render is
+  // asked for an empty chain, so its shape is the whole untouched take. Read without that tag,
+  // the press that comes back OFF bypass writes the answer of the press that went on.
+  const [output, setOutput] = useState<{
+    assetId: string
+    bypassed: boolean
+    audio: RenderedAudio | null
+  } | null>(null)
   // Bumped by "apply", which rewrites the take under its own id: nothing else would tell the
   // decode below that the bytes it read are no longer the ones on disk.
   const [reread, setReread] = useState(0)
@@ -107,12 +112,13 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
     const assetId = state.assetId
     if (!renderer || !assetId || settled?.ok !== true) return
 
+    const bypassed = state.bypassed
     let live = true
-    void renderer.render(state.bypassed ? [] : state.edits).then(audio => {
+    void renderer.render(bypassed ? [] : state.edits).then(audio => {
       // `live` is what tells the two nulls apart. A render overtaken by a newer one was
       // overtaken because these deps changed, which ran the cleanup below first; a null that
       // still arrives on a live effect is the worker having died, and it has to be said.
-      if (live) setOutput({ assetId, audio })
+      if (live) setOutput({ assetId, bypassed, audio })
     })
 
     return () => {
@@ -127,15 +133,18 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
    * What ties the two halves of this document: the clip on the strip below is this very take,
    * and every edit above has to reach it.
    *
-   * Never while A/B is held on the source, and that is not a detail — a bypassed render is asked
-   * for an EMPTY chain, so the shape that comes back is the whole untouched take. Written down,
-   * one press of A/B would stretch the clip back to the source and the next would shrink it,
-   * turning a listening aid into an edit of the montage.
+   * Read off the ANSWER's own tag rather than off the current state, and that is not a detail. A
+   * bypassed render is asked for an empty chain, so its shape is the whole untouched take; the
+   * press that comes back off bypass re-runs this before its own render has landed, and reading
+   * `state.bypassed` here would write the answer of the press that went ON. One press would
+   * stretch the clip back to the source, turning a listening aid into an edit of the montage.
    */
   useEffect(() => {
-    const shape = state.bypassed ? null : (rendered?.shape ?? null)
+    if (!answered || answered.bypassed) return
+
+    const shape = answered.audio?.shape
     if (state.takeClipId && shape) writeTakeClip(documentId, state.takeClipId, shape)
-  }, [documentId, state.takeClipId, state.bypassed, rendered])
+  }, [documentId, state.takeClipId, answered])
 
   // Either half of the pipeline giving up leaves the same take unplayable, and says so the same
   // way — the decode, and the chain replayed over it.

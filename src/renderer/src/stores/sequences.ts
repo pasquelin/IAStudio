@@ -4,13 +4,17 @@ import { addClips, removeClip } from '@/engines/timeline/commands'
 import { placementsForAsset, trackForAsset } from '@/engines/timeline/insert'
 import {
   clampFades,
+  clampGain,
   clipById,
   EMPTY_SEQUENCE,
+  trackOfClip,
   updateClip,
   updateTrack,
   wholeFrames,
+  type Clip,
   type SequenceState,
   type Track,
+  type Us,
 } from '@/engines/timeline/timeline-state'
 import { sameValues } from '@/helpers/objects'
 import { createDocumentStore } from './document-store'
@@ -55,9 +59,10 @@ export function addAssetToSequence(documentId: string, asset: Asset): void {
  * Null when no track would take it, on the same reasoning: a montage whose sound tracks are all
  * locked has nowhere to put this, and refusing beats laying a clip where nothing plays it.
  *
- * Outside any gesture, unlike its neighbour: this hangs off a double-click or a drop, never off
- * a cursor being held, and merged into one it would take an undo entry away from whoever holds
- * that cursor.
+ * Outside the HISTORY, not merely outside a gesture, and that is what its neighbour cannot do:
+ * loading a take is not something ⌘Z gives back — the editor half drops its chain outright. Left
+ * on the stack, one press right after a load undid the clip while the chain went on naming it,
+ * and every later edit stopped reaching a strip that no longer held it.
  */
 export function addTakeToSequence(documentId: string, asset: Asset): string | null {
   const current = store.use.getState()
@@ -72,13 +77,29 @@ export function addTakeToSequence(documentId: string, asset: Asset): string | nu
   const laid = placements[0]
   if (!laid) return null
 
-  current.runOutsideGesture(documentId, addClips(placements))
+  current.replace(documentId, addClips(placements).apply(sequence))
   return laid.clip.id
 }
 
-/** Takes a clip back off a montage, outside any gesture and for the same reason. */
+/** Takes a clip back off a montage, outside the history and for the same reason. */
 export function removeClipFromSequence(documentId: string, clipId: string): void {
-  store.use.getState().runOutsideGesture(documentId, removeClip(clipId))
+  const current = store.use.getState()
+  if (!store.hasState(current, documentId)) return
+
+  current.replace(documentId, removeClip(clipId).apply(store.stateOf(current, documentId)))
+}
+
+/**
+ * A length that stops where the next clip on the track begins.
+ *
+ * `updateClip` writes in place, with none of the overwrite insertion `insertClip` performs, and
+ * a take growing back — a crop undone, a chain emptied by "apply" — would otherwise run over its
+ * neighbour. Clips of a track are sorted and never overlap, and every later edit assumes it.
+ */
+function fits(state: SequenceState, clip: Clip, duration: Us): Us {
+  const track = trackOfClip(state, clip.id)
+  const next = track?.clips.find(other => other.start > clip.start)
+  return next ? Math.min(duration, next.start - clip.start) : duration
 }
 
 /**
@@ -108,10 +129,15 @@ export function writeTakeClip(documentId: string, clipId: string, shape: TakeSha
   const shaped = clampFades({
     ...clip,
     inPoint: shape.inPoint,
-    duration: wholeFrames(shape.duration, sequence.settings),
+    // Source time divided by the speed, because a clip's duration is TIMELINE time — the two are
+    // the same only at speed 1. `sourceTimeAt` multiplies by it going the other way.
+    duration: fits(sequence, clip, wholeFrames(shape.duration / clip.speed, sequence.settings)),
     fadeIn: shape.fadeIn,
     fadeOut: shape.fadeOut,
-    gain: shape.gain,
+    // Bounded like every other writer of this field. A quiet take normalised to −14 LUFS asks
+    // for +26 dB, which `applyGain` absorbs on the samples it clamps and the strip does not:
+    // `sound-schedule` would hand the output a twentyfold gain on the raw source.
+    gain: clampGain(shape.gain),
   })
   // A render answers on every open of a document, not only on an edit, and writing an unchanged
   // clip would wake every reader of the montage for nothing.

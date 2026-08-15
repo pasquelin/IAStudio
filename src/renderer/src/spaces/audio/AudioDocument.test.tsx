@@ -181,6 +181,22 @@ describe('AudioDocument', () => {
       await waitFor(() => expect(editsOf().bypassed).toBe(true))
       expect(takeClip()?.duration).toBe(CROPPED)
     })
+
+    // And on the way back: the press that leaves bypass re-runs the write before its own render
+    // has landed, so what is in hand at that moment is still the BYPASSED answer.
+    it('leaves the clip alone on the press that comes back off A/B', async () => {
+      await openLaidTake()
+      useAudioEdits.getState().replace('doc-1', { ...editsOf(), region: { from: 0, to: 500_000 } })
+      await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
+      await waitFor(() => expect(takeClip()?.duration).toBe(CROPPED))
+
+      await userEvent.click(screen.getByRole('button', { name: /A\/B/ }))
+      await waitFor(() => expect(editsOf().bypassed).toBe(true))
+      await userEvent.click(screen.getByRole('button', { name: /A\/B/ }))
+      await waitFor(() => expect(editsOf().bypassed).toBe(false))
+
+      expect(takeClip()?.duration).toBe(CROPPED)
+    })
   })
 
   it('asks for a take when none is open', () => {
