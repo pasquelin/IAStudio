@@ -1,6 +1,7 @@
 import type { Asset } from '@shared/domain/asset'
+import { clipById } from '@/engines/timeline/timeline-state'
 import { useSelection } from '@/stores/selection'
-import { addTakeToSequence } from '@/stores/sequences'
+import { addTakeToSequence, sequenceOf, useSequences } from '@/stores/sequences'
 
 /**
  * Puts a take on the montage — which is all it takes to open it in the editor below, the editor
@@ -15,6 +16,13 @@ import { addTakeToSequence } from '@/stores/sequences'
  */
 export function loadTake(documentId: string, asset: Asset): void {
   if (asset.type !== 'audio') return
+
+  // Already under the editor: nothing to do, and it is not a nicety. Asking a second time would
+  // lay a NEW block over the one that holds these bytes — same take, new id — and the chain
+  // that named the old id would be orphaned with every setting in it, unreachable and unsaid.
+  const montage = sequenceOf(useSequences.getState(), documentId)
+  const shown = montage.selectedId ? clipById(montage, montage.selectedId) : null
+  if (shown?.assetId === asset.id) return
 
   const clipId = addTakeToSequence(documentId, asset)
   // The montage's own selection comes with `addClips`; this is the studio-wide one the inspector

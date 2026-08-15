@@ -213,6 +213,41 @@ describe('AudioDocument', () => {
     })
 
     /**
+     * The other half of that, and the half a count of steps could not tell: an emptied chain is
+     * a chain that emptied ON PURPOSE. Left to itself, the editor plays the whole take again
+     * while the strip below keeps the block the crop shortened — the two halves saying different
+     * things about one take, which is the very thing this pair exists to stop.
+     */
+    it('gives the block its length back when the crop is undone', async () => {
+      await openLaidTake()
+      writeChain({ region: { from: 0, to: 500_000 } })
+      await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
+      await waitFor(() => expect(takeClip()?.duration).toBe(CROPPED))
+
+      await userEvent.keyboard('{Meta>}{z}{/Meta}')
+
+      await waitFor(() => expect(takeClip()?.duration).toBe(2_000_000))
+    })
+
+    /**
+     * "Apply" writes the chain INTO the file, so the block has to be laid flat with it: it
+     * carries the crop and the gain too, and a block left describing them plays them a second
+     * time over bytes that already hold them — six decibels above what the editor sounds like,
+     * or a block pointing two seconds into a file that no longer has them.
+     */
+    it('lays the block flat once the take has been written over', async () => {
+      await openLaidTake()
+      writeChain({ region: { from: 0, to: 500_000 } })
+      await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
+      await waitFor(() => expect(takeClip()?.duration).toBe(CROPPED))
+
+      await userEvent.click(screen.getByRole('button', { name: /Appliquer/ }))
+
+      await waitFor(() => expect(takeClip()?.duration).toBe(2_000_000))
+      expect(takeClip()?.inPoint).toBe(0)
+    })
+
+    /**
      * A bypassed render is asked for an EMPTY chain, so the shape that comes back is the whole
      * untouched take. Written down, one press of A/B would stretch the clip back to the source —
      * turning a listening aid into an edit of the montage.

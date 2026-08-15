@@ -139,11 +139,17 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
   /**
    * What ties the editor to the block it edits: the chain's own shape, written onto it.
    *
-   * Only once the chain HAS a step, and that guard is the whole subtlety of editing the selected
-   * block. A block also carries bounds nothing here knows about — a trim made on the strip by
-   * dragging its edges — and a chain with no step renders the take whole, so writing then would
-   * stretch every block one merely LOOKED at back to its full source. The tools win where both
-   * describe the same block, which is the only rule that leaves neither of them lying.
+   * Written for a block the chain OWNS, and an entry in `chains` is exactly that — the tools
+   * have touched this block at least once. A count of steps was tried and is the wrong
+   * question: a chain empties on purpose too. ⌘Z of the last step has to give the block its
+   * length back, and "apply" rewrites the file flat, so the block that carried the crop and the
+   * gain must be laid flat with it — read off a length, both left the block describing an edit
+   * the file already holds, and the montage played it a second time.
+   *
+   * A block with no entry keeps the bounds a hand gave it on the strip. That is all the
+   * protection there is, and it is not enough: the chain is replayed over the WHOLE asset, so
+   * the first tool used on a block trimmed by its edges stretches it back to the full source.
+   * The fix is not a guard — it is for the editor to work on the block's own slice.
    *
    * Read off the ANSWER's own tag rather than off the current state, and that is not a detail. A
    * bypassed render is asked for an empty chain, so its shape is the whole untouched take; the
@@ -151,12 +157,14 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
    * `chain.bypassed` here would write the answer of the press that went ON. One press would
    * stretch the clip back to the source, turning a listening aid into an edit of the montage.
    */
+  const owned = clipId !== null && clipId in edits.chains
+
   useEffect(() => {
-    if (!answered || answered.bypassed || !chain.edits.length) return
+    if (!answered || answered.bypassed || !owned) return
 
     const shape = answered.audio?.shape
     if (clipId && shape) writeTakeClip(documentId, clipId, shape)
-  }, [documentId, clipId, chain.edits.length, answered])
+  }, [documentId, clipId, owned, answered])
 
   // Either half of the pipeline giving up leaves the same take unplayable, and says so the same
   // way — the decode, and the chain replayed over it.

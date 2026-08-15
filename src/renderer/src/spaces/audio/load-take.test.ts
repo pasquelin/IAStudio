@@ -75,6 +75,20 @@ describe('putting a take onto the montage', () => {
     expect(clipsOf().map(clip => clip.assetId)).toEqual(['take-0', 'take-1'])
   })
 
+  /**
+   * Asking for the take that is already under the editor. Without this, the second ask lays a
+   * new block over the one holding these very bytes — same take, new id — and the chain that
+   * named the old id goes with it, settings and all, with nothing on screen to say so.
+   */
+  it('changes nothing when the take asked for is the one already shown', () => {
+    loadTake('doc-1', take())
+    const before = useSequences.getState().states['doc-1']
+
+    loadTake('doc-1', take())
+
+    expect(useSequences.getState().states['doc-1']).toBe(before)
+  })
+
   it('lays it over what the head stands on, as any other drop would', () => {
     loadTake('doc-1', take({ id: 'take-0' }))
     loadTake('doc-1', take())

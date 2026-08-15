@@ -174,11 +174,6 @@ export function renderEdits(source: AudioData, edits: readonly AudioEdit[]): Aud
   return replayEdits(source, edits).data
 }
 
-/** What the editor plays: the chain, or the source when A/B is held on the source side. */
-export function audibleData(source: AudioData, chain: TakeChain): AudioData {
-  return chain.bypassed ? source : renderEdits(source, chain.edits)
-}
-
 /** A region clamped to the take it belongs to, or nothing when it has collapsed. */
 export function clampRegion(region: Region, data: AudioData): Region | null {
   const total = durationOf(data)

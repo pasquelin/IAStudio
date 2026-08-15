@@ -3,7 +3,6 @@ import { redo, run, undo, type History } from '@/engines/core/history'
 import { emptyHistory } from '@/engines/core/history'
 import { durationOf, frameCount, rms, toDb, type AudioData } from './audio-data'
 import {
-  audibleData,
   chainOf,
   clampRegion,
   EMPTY_AUDIO_EDIT,
@@ -53,21 +52,6 @@ describe('the edit chain', () => {
     const rendered = renderEdits(tone(100, 1), [{ kind: 'fade', edge: 'out', length: 200_000 }])
     expect(rendered.channels[0]?.[0]).toBe(1)
     expect(rendered.channels[0]?.[99]).toBeCloseTo(0, 1)
-  })
-})
-
-describe('A/B', () => {
-  const source = tone(100, 1)
-  const chain: TakeChain = { ...EMPTY_TAKE_CHAIN, edits: [{ kind: 'gain', db: -20 }] }
-
-  it('plays the chain by default', () => {
-    expect(audibleData(source, chain).channels[0]?.[0]).toBeCloseTo(0.1, 1)
-  })
-
-  it('plays the source untouched while bypassed, without dropping the chain', () => {
-    const bypassed = { ...chain, bypassed: true }
-    expect(audibleData(source, bypassed)).toBe(source)
-    expect(bypassed.edits).toHaveLength(1)
   })
 })
 
