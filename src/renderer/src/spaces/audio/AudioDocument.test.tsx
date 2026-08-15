@@ -26,7 +26,7 @@ const decodeAsset = vi.hoisted(() =>
   vi.fn(() => Promise.resolve({ sampleRate: 100, channels: [new Float32Array(200).fill(0.5)] })),
 )
 
-vi.mock('./decode', () => ({ decodeAsset }))
+vi.mock('@/helpers/audio-decode', () => ({ decodeAsset }))
 
 vi.mock('./useWaveSurfer', () => ({
   useWaveSurfer: () => ({ playing: false, currentTime: 0, toggle: vi.fn(), seek: vi.fn() }),

@@ -10,6 +10,7 @@ import {
   normalize,
   rms,
   toDb,
+  peaksFromSamples,
   silentBounds,
   type AudioData,
 } from './audio-data'
@@ -159,5 +160,37 @@ describe('silences', () => {
 
   it('reads a take that is silent throughout as silence at the head, and keeps nothing', () => {
     expect(silentBounds(tone(300, 0))).toEqual({ head: 3_000_000, tail: 3_000_000 })
+  })
+})
+
+// The same shape, and the same cadence, as the file ffmpeg writes at ingest — a strip cannot
+// tell the two apart, which is the whole point of deriving one when that file is missing.
+describe('folding a take into the pairs a strip draws', () => {
+  it('gives one pair per slice of time, whatever the rate the take was decoded at', () => {
+    // 3 s at 100 Hz, folded at 50 pairs a second.
+    expect(peaksFromSamples(tone(300, 0.5), 50)).toHaveLength(150 * 2)
+  })
+
+  it('keeps the loudest of each slice, in both directions', () => {
+    const channel = new Float32Array(100).fill(0.1)
+    channel[10] = 0.9
+    channel[11] = -0.8
+
+    const peaks = peaksFromSamples({ sampleRate: 100, channels: [channel] }, 50)
+
+    // Frames 10 and 11 fall in the second pair, two frames wide at this rate.
+    expect(peaks[10]).toBeCloseTo(-0.8)
+    expect(peaks[11]).toBeCloseTo(0.9)
+  })
+
+  // What a clip draws is what the output sums, so the two channels fold into one pair.
+  it('folds the channels together rather than drawing one of them', () => {
+    const left = new Float32Array(100).fill(0.2)
+    const right = new Float32Array(100).fill(-0.7)
+
+    const peaks = peaksFromSamples({ sampleRate: 100, channels: [left, right] }, 50)
+
+    expect(peaks[0]).toBeCloseTo(-0.7)
+    expect(peaks[1]).toBeCloseTo(0.2)
   })
 })

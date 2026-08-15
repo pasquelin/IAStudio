@@ -1,4 +1,7 @@
 import { create } from 'zustand'
+import { PEAKS_PER_SECOND } from '@shared/domain/asset'
+import { peaksFromSamples } from '@/engines/audio/audio-data'
+import { decodeAsset } from '@/helpers/audio-decode'
 import { getBridge } from '@/services/bridge'
 
 type ByAsset = Record<string, Float32Array | null>
@@ -43,9 +46,29 @@ function withinBudget(byAsset: ByAsset): ByAsset {
 }
 
 /**
+ * The waveform of a take the ingest never derived one for, read from the file itself.
+ *
+ * A FALLBACK, and only that: the ingest writes these at import, and decoding a three-minute take
+ * to draw a rectangle is the kind of work that turns a scroll into a slideshow. But an asset
+ * that came down from the API before ffmpeg was reachable — or a machine whose ffmpeg does not
+ * start, which is how this was found — has no file to read, and a montage of clips that draw
+ * nothing while the editor above them draws a full waveform is the studio contradicting itself.
+ *
+ * Once per asset, cached like any other: the cost is paid on the first paint that needs it.
+ */
+async function derivePeaks(assetId: string): Promise<Float32Array | null> {
+  try {
+    return peaksFromSamples(await decodeAsset(assetId), PEAKS_PER_SECOND)
+  } catch {
+    // An asset that is not sound at all reaches here too — every clip asks, and a picture has no
+    // waveform to fail at deriving.
+    return null
+  }
+}
+
+/**
  * Waveforms, fetched once per asset and kept for the session. They come from the file written
- * at ingest, never recomputed here: decoding a three-minute take to draw a rectangle is the
- * kind of work that turns a scroll into a slideshow.
+ * at ingest, and are derived from the take itself only when that file is missing.
  */
 export const usePeaks = create<PeaksState>()((set, get) => {
   // Outside the state: an in-flight request is not something anything renders, and putting it
@@ -65,6 +88,7 @@ export const usePeaks = create<PeaksState>()((set, get) => {
       void bridge.assets
         .peaks(assetId)
         .catch(() => null)
+        .then(peaks => peaks ?? derivePeaks(assetId))
         .then(peaks => {
           pending.delete(assetId)
           set(state => ({ byAsset: withinBudget({ ...state.byAsset, [assetId]: peaks }) }))
