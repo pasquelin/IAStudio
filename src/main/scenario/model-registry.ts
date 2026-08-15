@@ -147,12 +147,18 @@ const PREVIEW_BATCH = 50
 type Grades = Map<string, number>
 
 /**
- * Whether the model is Scenario's own rather than the user's or a partner's.
+ * Whether the model belongs to Scenario's public catalogue rather than to this account.
  *
- * BOTH conditions, and the privacy one is not redundant: measured 2026-08-15, the one model
- * this account has trained answers `maintainer: Scenario` like the catalogue does — the field
- * names who HOSTS a model, not who published it. On its own it would have filed the user's own
- * models as official, and "Community" would have hidden the very models only they can see.
+ * BOTH conditions, and the privacy one is not redundant: measured 2026-08-15, the one model this
+ * account has trained answers `maintainer: Scenario` like the catalogue does, so that field
+ * alone filed the user's own models as official — and "Community" then hid the very models only
+ * they can see.
+ *
+ * It buys the PRIVATE case and only that: a model the user trained and then PUBLISHED would
+ * read as official. `ownerId` would tell it apart — measured, all 640 public models share one,
+ * where this account's own model carries its project's — but keying authorship to an opaque id
+ * held in no contract is worse than the case it fixes: the day Scenario publishes under a
+ * second owner, the whole catalogue turns community and nothing reddens. Left as is knowingly.
  */
 const isOfficial = (model: RemoteModel): boolean =>
   model.privacy === 'public' && model.complianceMetadata?.maintainer === SCENARIO_MAINTAINER

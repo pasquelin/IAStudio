@@ -278,6 +278,36 @@ describe('Models panel', () => {
   })
 
   /**
+   * Filing the search text per family made it change on a space switch, which it never did when
+   * it was shared — and the debounce holds a value back for 250 ms without asking why it moved.
+   * The word left behind would ask the search endpoint for it under the new family, then blame
+   * the empty answer on a filter that space never had.
+   */
+  it('does not carry the word typed in one space into the next', async () => {
+    const searchModels = vi.fn((_query?: ModelQuery): Promise<ModelPage> =>
+      Promise.resolve({ items: [], cursor: null }),
+    )
+    installFakeBridge({ scenario: { searchModels } })
+    useModels.setState({
+      collections: { image: { ...DEFAULT_COLLECTION_STATE, search: 'flux' } },
+    })
+
+    const { rerender } = renderPanel()
+    await waitFor(() => expect(searchModels).toHaveBeenCalled())
+
+    useLayouts.setState({ activeWorkspace: 'skyboxes' })
+    rerender(withQueries(<Models />))
+
+    await waitFor(() =>
+      expect(searchModels.mock.calls.at(-1)?.[0]).toMatchObject({ family: 'skybox' }),
+    )
+    expect(
+      searchModels.mock.calls.every(call => call[0]?.family !== 'skybox' || !call[0]?.search),
+    ).toBe(true)
+    expect(screen.queryByText(/Aucun résultat pour ce filtre/)).not.toBeInTheDocument()
+  })
+
+  /**
    * Measured on this account: 41 of the first 100 public models are graded above `cu-basic`,
    * so picking one is the common case, not the edge one. The API answers 403
    * `ModelAccessRestrictedError` — the studio says so first instead.

@@ -165,7 +165,9 @@ export function familyOf(
   if (!matched) return 'other'
   if (matched.family !== 'image') return matched.family
 
-  // `SKYBOX_TAG`'s own entry is unreachable here — the tag above already answered — but it is
-  // what the registry narrows a listing by, so the table carries it.
+  // `SKYBOX_TAG`'s own entry is unreachable here — the tag above already answered. Do not drop
+  // it as dead weight: it is the SECOND skybox row, and `tagOfFamily` answers nothing only for
+  // a family holding more than one. Alone, `skybox-upscale` would become the pre-filter and cut
+  // that space to the single model carrying it. `model.test.ts` is what catches the removal.
   return FAMILY_TAGS.find(entry => tags.includes(entry.tag))?.family ?? matched.family
 }

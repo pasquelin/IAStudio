@@ -114,7 +114,13 @@ export function Models() {
 
   const refusalFor = usePlanRefusal(plan)
 
-  const search = useDebounced(collection.search, SEARCH_DELAY_MS)
+  // Debounced WITH the family it was typed under, because the two now change independently: the
+  // search text used to be shared, so leaving a space never altered it. It does now, and a word
+  // left over from the space just left would spend its 250 ms sending the walk down the search
+  // endpoint and flashing "no result" over a space nobody had searched.
+  const typed = useMemo(() => ({ family, search: collection.search }), [family, collection.search])
+  const settled = useDebounced(typed, SEARCH_DELAY_MS)
+  const search = settled.family === family ? settled.search : ''
   // No memo, and only for this one: react-query hashes the key structurally, so a fresh object
   // costs nothing, and `queryFrom` translates nothing.
   const query = queryFrom(collection, family, search)
