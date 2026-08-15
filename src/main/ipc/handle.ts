@@ -107,6 +107,7 @@ type ChannelMethod = {
   [CHANNELS.mediaAvailable]: StudioBridge['media']['capabilities']
 
   [CHANNELS.assistantThink]: StudioBridge['assistant']['think']
+  [CHANNELS.assistantActionResult]: StudioBridge['assistant']['actionResult']
 
   [CHANNELS.dictationState]: StudioBridge['dictation']['state']
   [CHANNELS.dictationStart]: StudioBridge['dictation']['start']

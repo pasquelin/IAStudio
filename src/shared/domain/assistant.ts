@@ -292,6 +292,10 @@ export type ActionRefusal =
   /** Nobody was there to be asked — see `runConfirmedAction`. Never a silent yes. */
   | 'noConfirmer'
   | 'declined'
+  /** No window at the front to act at all. Only an action arriving from outside can meet this. */
+  | 'noWindow'
+  /** The question stood on screen and nobody answered it. Same reason, same one caller. */
+  | 'timedOut'
 
 export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'unknownCommand',
@@ -304,7 +308,18 @@ export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'noBridge',
   'noConfirmer',
   'declined',
+  'noWindow',
+  'timedOut',
 ]
+
+/**
+ * What running an action answered.
+ *
+ * Shared rather than the window's own, since an action asked for from outside is answered back
+ * across the boundary: the MCP server hands this to its client. A refusal carries a key rather
+ * than a sentence, for the reason the list above gives — it is read in two languages.
+ */
+export type ActionOutcome = { ok: true; data?: unknown } | { ok: false; refusal: ActionRefusal }
 
 export function refusalKey(refusal: ActionRefusal): string {
   return `assistant.refusals.${refusal}`

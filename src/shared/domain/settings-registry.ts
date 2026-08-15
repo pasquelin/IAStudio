@@ -527,6 +527,13 @@ export const SETTING_REGISTRY = [
     dependsOn: { path: 'dictation.enabled', equals: true },
   }),
   setting({
+    path: 'mcp.enabled',
+    kind: 'boolean',
+    section: 'advanced',
+    titleKey: 'settings.mcpEnabled.title',
+    helpKey: 'settings.mcpEnabled.help',
+  }),
+  setting({
     path: 'media.ffmpegPath',
     kind: 'path',
     pathKind: 'file',
@@ -543,7 +550,10 @@ export const SETTING_REGISTRY = [
  * of the same shape: an id, a section, and the two texts that name and explain it.
  */
 export type SettingActionId =
-  'advanced.openSettingsFile' | 'advanced.openDevtools' | 'advanced.reset'
+  | 'advanced.openSettingsFile'
+  | 'advanced.openDevtools'
+  | 'advanced.copyMcpCommand'
+  | 'advanced.reset'
 
 export type SettingAction = {
   id: SettingActionId
@@ -572,6 +582,15 @@ export const ACTION_REGISTRY: readonly SettingAction[] = [
     titleKey: 'settings.openDevtools.title',
     helpKey: 'settings.openDevtools.help',
     buttonKey: 'settings.open',
+  },
+  {
+    // The port and the token are minted per launch, so there is nothing to write down and
+    // nothing to show on this screen — only a line to paste, which is what this hands over.
+    id: 'advanced.copyMcpCommand',
+    section: 'advanced',
+    titleKey: 'settings.copyMcpCommand.title',
+    helpKey: 'settings.copyMcpCommand.help',
+    buttonKey: 'settings.copyMcpCommand.button',
   },
   {
     id: 'advanced.reset',

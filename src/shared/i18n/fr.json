@@ -1257,6 +1257,15 @@
       "title": "Fichier de réglages",
       "help": "Montre dans le gestionnaire de fichiers l’endroit où vos réglages sont enregistrés. Utile pour en faire une copie avant de changer de machine, ou pour l’envoyer à quelqu’un qui vous aide."
     },
+    "mcpEnabled": {
+      "title": "Piloter le studio depuis l’extérieur",
+      "help": "Ouvre un point d’entrée sur cette machine seule, par lequel un client comme Claude Code peut lancer les mêmes actions que l’assistant. Tout ce qui coûte ou téléverse demande votre accord à l’écran, exactement comme ici. Désactivé, rien n’écoute."
+    },
+    "copyMcpCommand": {
+      "title": "Commande de connexion",
+      "help": "Copie la ligne à coller dans un terminal pour brancher un client. Le jeton et le port changent à chaque démarrage du studio, la ligne est donc à recopier après chaque lancement.",
+      "button": "Copier"
+    },
     "openDevtools": {
       "title": "Outils de développement",
       "help": "Ouvre la console technique du navigateur intégré. Elle affiche les messages du journal et les erreurs. Réservé au dépannage : rien de ce qui s’y trouve n’est nécessaire pour se servir du logiciel."
@@ -2027,7 +2036,9 @@
       "badInput": "Les paramètres fournis ne conviennent pas à cette action.",
       "noBridge": "Le studio ne répond pas.",
       "noConfirmer": "Cette action demande un accord, et aucune fenêtre n’était là pour le donner.",
-      "declined": "Vous avez refusé cette action."
+      "declined": "Vous avez refusé cette action.",
+      "noWindow": "Aucune fenêtre du studio n’était au premier plan pour exécuter cette action.",
+      "timedOut": "La demande est restée à l’écran sans réponse, et a été abandonnée."
     },
     "fields": {
       "command": "Identifiant de la commande",

@@ -3,6 +3,7 @@ import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { HOME_SURFACE, placementOf, type ToolId, type ToolSurface } from '@shared/domain/tool'
 import type { BindingOverrides, MenuCheck } from '@shared/domain/command'
 import { CHANNELS, EVENTS } from '@shared/ipc'
+import { frontWindow, sendToFront } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 import { isDevelopment } from '@main/environment'
 import { followWindowLanguage, windowLanguage } from '@main/window/language'
@@ -14,27 +15,6 @@ import {
   openUsageWindow,
 } from '@main/window/windows'
 import { menuTemplate } from './template'
-
-/**
- * The native menu belongs to the focused window. Broadcasting would run ⌘N in every window at
- * once — the very "two windows holding the same document" trap listed in CLAUDE.md.
- *
- * On macOS the app outlives its last window, so the menu stays usable with nothing focused;
- * we fall back to the first live window rather than dropping the command in silence. The
- * splash is skipped by `isFocusable`: it has no bridge, so a command sent there is lost.
- */
-function applicationWindows(): BrowserWindow[] {
-  return BrowserWindow.getAllWindows().filter(window => window.isFocusable())
-}
-
-function focusedWindow(): BrowserWindow | null {
-  const target = BrowserWindow.getFocusedWindow() ?? applicationWindows()[0]
-  return target && !target.isDestroyed() ? target : null
-}
-
-function sendToFocused(channel: string, payload: unknown): void {
-  focusedWindow()?.webContents.send(channel, payload)
-}
 
 /**
  * Which surface each window is showing. Per window and not per app: the menu is a single
@@ -62,17 +42,17 @@ let shownChecks: readonly MenuCheck[] = []
 let overrides: BindingOverrides = {}
 
 function focusedWorkspace(): ToolSurface | null {
-  const target = focusedWindow()
+  const target = frontWindow()
   return target ? (workspaces.get(target.webContents.id) ?? null) : null
 }
 
 function focusedTools(): readonly ToolId[] {
-  const target = focusedWindow()
+  const target = frontWindow()
   return (target && availableTools.get(target.webContents.id)) || []
 }
 
 function focusedChecks(): readonly MenuCheck[] {
-  const target = focusedWindow()
+  const target = frontWindow()
   return (target && checkedRows.get(target.webContents.id)) || []
 }
 
@@ -100,14 +80,14 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
       openManual: () => void openManualWindow(),
       openUsage: () => void openUsageWindow(),
       toggleFullScreen: () => toggleFullScreen(BrowserWindow.getFocusedWindow()),
-      openTool: request => sendToFocused(EVENTS.openTool, request),
-      runCommand: command => sendToFocused(EVENTS.menuCommand, command),
-      addNode: request => sendToFocused(EVENTS.sceneAdd, request),
-      viewFrom: request => sendToFocused(EVENTS.sceneView, request),
-      setDisplay: request => sendToFocused(EVENTS.sceneDisplay, request),
-      exportScene: command => sendToFocused(EVENTS.sceneExport, command),
-      exportTexture: command => sendToFocused(EVENTS.textureExport, command),
-      exportSkybox: command => sendToFocused(EVENTS.skyboxExport, command),
+      openTool: request => void sendToFront(EVENTS.openTool, request),
+      runCommand: command => void sendToFront(EVENTS.menuCommand, command),
+      addNode: request => void sendToFront(EVENTS.sceneAdd, request),
+      viewFrom: request => void sendToFront(EVENTS.sceneView, request),
+      setDisplay: request => void sendToFront(EVENTS.sceneDisplay, request),
+      exportScene: command => void sendToFront(EVENTS.sceneExport, command),
+      exportTexture: command => void sendToFront(EVENTS.textureExport, command),
+      exportSkybox: command => void sendToFront(EVENTS.skyboxExport, command),
     },
   })
 

@@ -1,5 +1,11 @@
 import { z } from 'zod'
-import { HISTORY_MAX, INSTRUCTION_MAX, type AssistantThought } from '@shared/domain/assistant'
+import {
+  ACTION_REFUSALS,
+  HISTORY_MAX,
+  INSTRUCTION_MAX,
+  type AssistantThought,
+} from '@shared/domain/assistant'
+import type { AssistantActionResult } from '@shared/ipc'
 
 /**
  * What a window may ask the assistant to think about.
@@ -16,4 +22,23 @@ const THOUGHT = z.object({
 
 export function parseThought(value: unknown): AssistantThought {
   return THOUGHT.parse(value)
+}
+
+/**
+ * What a window answers when it has run — or refused — an action asked for from outside.
+ *
+ * `data` is left as `unknown`: it is whatever the action had to say, a list of models or a job
+ * id, and the shape belongs to the action rather than to this boundary. It reaches an MCP
+ * client as JSON and nothing here reads it.
+ */
+const ACTION_RESULT = z.object({
+  callId: z.string().min(1),
+  outcome: z.union([
+    z.object({ ok: z.literal(true), data: z.unknown().optional() }),
+    z.object({ ok: z.literal(false), refusal: z.enum(ACTION_REFUSALS) }),
+  ]),
+})
+
+export function parseActionResult(value: unknown): AssistantActionResult {
+  return ACTION_RESULT.parse(value)
 }

@@ -64,7 +64,10 @@ export function registerIpc(services: Services): void {
   })
   registerStyleHandlers(services.styles)
   registerMediaHandlers(services)
-  registerAssistantHandlers({ brain: services.assistant })
+  registerAssistantHandlers({
+    brain: services.assistant,
+    settleAction: services.remoteActions.settle,
+  })
   registerDictationHandlers({
     session: services.dictation,
     openPrivacySettings: services.openMicrophoneSettings,

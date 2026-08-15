@@ -1,5 +1,8 @@
-import { BrowserWindow, shell } from 'electron'
+import { BrowserWindow, clipboard, shell } from 'electron'
+import { APP_NAME } from '@shared/constants'
 import type { SettingActionId } from '@shared/domain/settings-registry'
+import { mcpAddCommand } from '@main/mcp/endpoint'
+import { mcpEndpoint } from '@main/mcp/control'
 import type { SettingsStore } from './store'
 
 export type ActionDeps = {
@@ -24,6 +27,14 @@ export function runSettingAction({ settings, settingsPath }: ActionDeps) {
       case 'advanced.openDevtools':
         BrowserWindow.getFocusedWindow()?.webContents.openDevTools({ mode: 'detach' })
         return
+
+      case 'advanced.copyMcpCommand': {
+        // Nothing to copy while the server is off, and nothing to say about it either: the
+        // button sits under the switch that turns it on, which is the answer.
+        const endpoint = mcpEndpoint()
+        if (endpoint) clipboard.writeText(mcpAddCommand(endpoint, APP_NAME.toLowerCase()))
+        return
+      }
 
       case 'advanced.reset':
         // `reset`, not `write(DEFAULT_SETTINGS)`: a write merges, and the settings with no

@@ -127,6 +127,7 @@ function merge(base: Settings, partial: PartialSettings): Settings {
     media: { ...base.media, ...partial.media },
     advanced: { ...base.advanced, ...partial.advanced },
     assistant: { ...base.assistant, ...partial.assistant },
+    mcp: { ...base.mcp, ...partial.mcp },
     dictation: { ...base.dictation, ...partial.dictation },
   }
 }

@@ -1257,6 +1257,15 @@
       "title": "Settings file",
       "help": "Shows where your settings are saved, in the file manager. Useful to copy them before moving to another machine, or to send them to someone helping you."
     },
+    "mcpEnabled": {
+      "title": "Drive the studio from outside",
+      "help": "Opens a way in on this machine alone, through which a client such as Claude Code can run the same actions the assistant runs. Anything that spends or uploads asks for a yes on screen, exactly as it does here. Switched off, nothing is listening."
+    },
+    "copyMcpCommand": {
+      "title": "Connection command",
+      "help": "Copies the line to paste in a terminal to connect a client. The token and the port change every time the studio starts, so the line has to be copied again after each launch.",
+      "button": "Copy"
+    },
     "openDevtools": {
       "title": "Developer tools",
       "help": "Opens the technical console of the embedded browser. It shows the log messages and the errors. For troubleshooting only: nothing in there is needed to use the software."
@@ -2027,7 +2036,9 @@
       "badInput": "The parameters given do not suit this action.",
       "noBridge": "The studio is not answering.",
       "noConfirmer": "That action needs a yes, and no window was there to give one.",
-      "declined": "You turned that action down."
+      "declined": "You turned that action down.",
+      "noWindow": "No studio window was in front to run that action.",
+      "timedOut": "The request stood on screen unanswered, and was given up on."
     },
     "fields": {
       "command": "Command identifier",

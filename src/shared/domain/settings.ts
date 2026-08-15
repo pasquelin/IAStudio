@@ -176,6 +176,17 @@ export type Settings = {
      */
     model: AssistantModel
   }
+  /**
+   * The same actions the assistant runs, offered to a client outside the application — see
+   * `main/mcp/`.
+   *
+   * Off unless asked for, and that is the setting's whole reason to exist: it opens a port on
+   * the machine. Nothing about it survives a launch either — the port is whichever was free and
+   * the token is new — so turning it on is a decision taken again each time it matters.
+   */
+  mcp: {
+    enabled: boolean
+  }
   /** Speaking a prompt instead of typing it. Everything runs on this machine — see `domain/dictation.ts`. */
   dictation: {
     enabled: boolean
@@ -230,6 +241,7 @@ export const DEFAULT_SETTINGS: Settings = {
   advanced: { logLevel: 'info' },
   media: {},
   assistant: { model: DEFAULT_ASSISTANT_MODEL },
+  mcp: { enabled: false },
   dictation: {
     enabled: true,
     mode: 'pushToTalk',

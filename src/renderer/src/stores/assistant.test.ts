@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ActionName, AssistantAnswer, AssistantThought } from '@shared/domain/assistant'
-import type { ActionOutcome } from '@/assistant/executor'
+import type {
+  ActionName,
+  ActionOutcome,
+  AssistantAnswer,
+  AssistantThought,
+} from '@shared/domain/assistant'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssistant } from './assistant'
 

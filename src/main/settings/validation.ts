@@ -182,6 +182,8 @@ const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })
 // file, and the defaults are a better answer than a failing assistant.
 const assistant = z.object({ model: z.enum(ASSISTANT_MODELS).optional() })
 
+const mcp = z.object({ enabled: z.boolean().optional() })
+
 const silence = boundsOf('dictation.silenceMs')
 const preview = boundsOf('dictation.previewMs')
 const threads = boundsOf('dictation.threads')
@@ -212,6 +214,7 @@ const partialSettings = z.object({
   media: media.optional(),
   advanced: advanced.optional(),
   assistant: assistant.optional(),
+  mcp: mcp.optional(),
   dictation: dictation.optional(),
 })
 

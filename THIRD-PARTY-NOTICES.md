@@ -11,6 +11,7 @@ Studio itself (LICENSE) nor by the application's terms of use (EULA.md).
 | @hookform/resolvers | 5.7.1 | MIT |
 | @mdi/js | 7.4.47 | Apache-2.0 |
 | @mdi/react | 1.6.1 | MIT |
+| @modelcontextprotocol/sdk | 1.30.0 | MIT |
 | @scenario-labs/sdk | 3.0.0 | MIT |
 | @tanstack/react-query | 5.101.4 | MIT |
 | @tanstack/react-virtual | 3.14.9 | MIT |
@@ -114,6 +115,34 @@ Licence: MIT
 MIT License
 
 Copyright (c) 2018 Austin Andrews
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+## @modelcontextprotocol/sdk
+
+Version: 1.30.0  
+Licence: MIT
+
+```
+MIT License
+
+Copyright (c) 2024 Anthropic, PBC
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

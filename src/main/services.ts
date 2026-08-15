@@ -45,6 +45,8 @@ import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
 import { bundledFfmpeg, bundledVad, resourcesRoot } from './resources'
 import { createAssetText } from './assistant/asset-text'
+import { createRemoteActions, type RemoteActions } from './mcp/asking'
+import { applyMcpSettings } from './mcp/control'
 import type { AssistantBrain } from './assistant/brain-port'
 import { createScenarioBrain } from './assistant/brain-scenario'
 import { createSession, type DictationSession } from './dictation/session'
@@ -68,7 +70,7 @@ import { catchUpMedia } from './media/catch-up'
 import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { createTextureExtraction, type TextureExtraction } from './assets/texture-extraction'
-import { broadcast } from './ipc/broadcast'
+import { broadcast, sendToFront } from './ipc/broadcast'
 import { setLogVerbosity } from './log'
 import type Scenario from '@scenario-labs/sdk'
 import {
@@ -181,6 +183,12 @@ export type Services = {
   media: MediaService
   /** Works out what a sentence said to the studio meant. Decides nothing and runs nothing. */
   assistant: AssistantBrain
+  /**
+   * Asking the window in front to run an action that came from outside the application, and
+   * waiting for its answer. Held here because two places need the same one: the MCP server,
+   * which asks, and the IPC handler, which hears the reply.
+   */
+  remoteActions: RemoteActions
   /** Speaking instead of typing. Holds the engine, the model and the state of a session. */
   dictation: DictationSession
   /** Opens the system screen where microphone access is granted back after a refusal. */
@@ -364,6 +372,9 @@ export function createSettings(): SettingsStore {
       // Every native surface follows this one call, the menu bar included.
       setWindowLanguage(effectiveLanguage(current.general.language, machineLanguages()))
       buildMenu(current.shortcuts.overrides)
+      // Started or stopped from here because this is where a change is heard. It does nothing
+      // until `followMcp` has been handed a control, which happens once the services exist.
+      applyMcpSettings(current)
       broadcast(EVENTS.settingsChanged, current)
     },
   })
@@ -1045,6 +1056,12 @@ export function createServices(settings: SettingsStore): Services {
     model: () => settings.read().assistant.model,
   })
 
+  // To the window in front alone, and it says when there is none — which is the difference
+  // between an MCP client hearing "no window was there" and hearing nothing at all.
+  const remoteActions = createRemoteActions({
+    send: request => sendToFront(EVENTS.assistantAction, request),
+  })
+
   const captioner = createCaptioner({
     queue: assistQueue.run,
     caption: images => prompts.caption(images),
@@ -1117,6 +1134,7 @@ export function createServices(settings: SettingsStore): Services {
     newAssetId,
     media,
     assistant: brain,
+    remoteActions,
     dictation,
     openMicrophoneSettings: () => openMicrophoneSettings(url => void shell.openExternal(url)),
     link: async (source, type) =>

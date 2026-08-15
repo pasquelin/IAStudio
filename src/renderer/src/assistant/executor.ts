@@ -1,5 +1,6 @@
 import {
   type ActionName,
+  type ActionOutcome,
   type ActionRefusal,
   commitmentOfCall,
   needsConfirmation,
@@ -19,15 +20,6 @@ import { toolSurface } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { mountedConfirmer } from './confirm'
 import { mountedGenerator } from './generator-bridge'
-
-/**
- * What running an action answered.
- *
- * A refusal carries a key rather than a sentence, for the usual reason and for a second one: the
- * same outcome is read twice, by the person watching the modal in their own language and by the
- * model deciding what to do next, which reads English. One key, two renderings.
- */
-export type ActionOutcome = { ok: true; data?: unknown } | { ok: false; refusal: ActionRefusal }
 
 const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })
 
