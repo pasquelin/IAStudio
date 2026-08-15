@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { PlanAccess } from '@shared/domain/plan'
+import { isBeyondPlan } from '@shared/domain/plan'
 import { getBridge } from '@/services/bridge'
 import { useAccountChange } from '@/hooks/useAccountChange'
 import { useSettings } from '@/stores/settings'
@@ -56,4 +58,26 @@ export function usePlanAccess(): PlanAccess | null {
   }, [authenticated, attempt])
 
   return access
+}
+
+/**
+ * Why a model is out of reach, or `undefined` when it is not.
+ *
+ * The plan it takes is the caller's own `usePlanAccess()`: reading it here instead would give the
+ * two surfaces that already hold it a second copy of that state, hence a second round trip on
+ * every mount.
+ *
+ * The sentence names the plan, not the model, so it is interpolated once per plan rather than
+ * once per question — the model panel asks it for up to 36 mounted cells, on every keystroke and
+ * every scroll frame.
+ */
+export function usePlanRefusal(
+  plan: PlanAccess | null,
+): (requiredLevel: number | undefined) => string | undefined {
+  const { t } = useTranslation()
+
+  return useMemo(() => {
+    const sentence = plan ? t('models.planLockedHint', { plan: plan.name }) : undefined
+    return requiredLevel => (isBeyondPlan(requiredLevel, plan) ? sentence : undefined)
+  }, [plan, t])
 }

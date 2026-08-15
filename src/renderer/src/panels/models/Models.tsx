@@ -4,9 +4,8 @@ import type { TFunction } from 'i18next'
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MODEL_IDS_BATCH_LIMIT, type ModelPage, type ModelSummary } from '@shared/domain/model'
-import { isBeyondPlan } from '@shared/domain/plan'
 import { failureKeyOf } from '@/services/failure-message'
-import { usePlanAccess } from '@/helpers/plan-access'
+import { usePlanAccess, usePlanRefusal } from '@/helpers/plan-access'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { cn } from '@/helpers/cn'
 import { Collection } from '@/design/Collection'
@@ -111,26 +110,7 @@ export function Models() {
   const authenticated = useSettings(state => state.auth.authenticated)
   const plan = usePlanAccess()
 
-  /**
-   * The sentence is the same for every refused model — it names the plan, not the model — so it
-   * is translated once per plan rather than once per row. The panel re-renders on each keystroke
-   * and on each scroll frame, with up to 36 cells mounted: interpolating it per row put it in
-   * the same bracket as `facetsFor` above, which is memoised for exactly that reason.
-   */
-  const planRefusal = useMemo(
-    () => (plan ? t('models.planLockedHint', { plan: plan.name }) : undefined),
-    [plan, t],
-  )
-
-  /**
-   * Why a model is refused, or `undefined` when it is not. The greying and the sentence read the
-   * same predicate, so a row cannot end up dimmed with nothing to explain it.
-   */
-  const refusalOf = useCallback(
-    (model: ModelSummary): string | undefined =>
-      isBeyondPlan(model.requiredPlanLevel, plan) ? planRefusal : undefined,
-    [plan, planRefusal],
-  )
+  const refusalFor = usePlanRefusal(plan)
 
   const search = useDebounced(collection.search, SEARCH_DELAY_MS)
   // No memo, and only for this one: react-query hashes the key structurally, so a fresh object
@@ -241,15 +221,23 @@ export function Models() {
           onSelect={model => select(model.family, model.id)}
           onReachEnd={loadMore}
           onVisible={onVisible}
-          // The predicate directly, not `refusalOf`: this runs for every mounted cell and has no
-          // use for the sentence it would build.
-          isDisabled={model => isBeyondPlan(model.requiredPlanLevel, plan)}
+          // The same answer greys the cell and explains it, so a row cannot end up dimmed with
+          // nothing to say why.
+          isDisabled={model => refusalFor(model.requiredPlanLevel) !== undefined}
           rowHeight={ROW_HEIGHT}
           renderCard={model => (
-            <ModelCard model={model} picture={pictureOf(model)} refusal={refusalOf(model)} />
+            <ModelCard
+              model={model}
+              picture={pictureOf(model)}
+              refusal={refusalFor(model.requiredPlanLevel)}
+            />
           )}
           renderRow={model => (
-            <ModelRow model={model} picture={pictureOf(model)} refusal={refusalOf(model)} />
+            <ModelRow
+              model={model}
+              picture={pictureOf(model)}
+              refusal={refusalFor(model.requiredPlanLevel)}
+            />
           )}
           empty={
             <EmptyState
