@@ -804,10 +804,35 @@ Le découpage est un choix de **stockage**, pas de contrat : l’espace de noms 
 `main/i18n-sections.test.ts` refuse qu’un fichier plat réapparaisse à la racine du dossier — il
 détournerait l’import et ferait disparaître la langue entière.
 
+### Une branche antérieure à la découpe entre en conflit : quoi faire
+
+Une branche née avant le 15/08 modifie `fr.json` et `en.json`, que la découpe a supprimés. Git
+propose alors un conflit **modify/delete** sur ces deux fichiers, et, si la branche a aussi touché
+`shared/i18n/index.ts`, un conflit de contenu sur lui.
+
+**Les deux résolutions réflexes sont fausses, et aucune ne rougit.** Garder le fichier plat —
+ce que git laisse par défaut dans l’arbre — détourne l’import et rend `TRANSLATIONS.fr`
+indéfini ; c’est le seul des deux cas que `main/i18n-sections.test.ts` attrape. Le supprimer
+par `git rm`
+**perd en silence toutes les clés que la branche avait ajoutées** : la parité reste bonne, le
+typecheck passe, les gardes des bundles passent.
+
+Le geste juste, dans cet ordre :
+
+1. relever les clés que la branche ajoutait, avant de résoudre quoi que ce soit —
+   `git diff <base>...<branche> -- src/shared/i18n/fr.json` ;
+2. les réécrire dans la section de leur surface, des deux côtés (`fr/<section>.json` et
+   `en/<section>.json`) ; une racine neuve qui n’appartient à aucune des douze demande de
+   trancher entre une section existante et un treizième fichier — lequel se déclare dans les
+   **deux** `index.ts` ;
+3. `git rm` les deux fichiers plats seulement à ce moment-là ;
+4. rejouer `main/i18n-sections.test.ts` et le typecheck, puis vérifier que le compte de clés a
+   bien augmenté du nombre relevé à l’étape 1.
+
 - **Tous les identifiants, commentaires, JSDoc, noms de fichiers, clés i18n, canaux IPC et
   descriptions de tests sont en anglais**, partout dans `src/`.
-- Les seules exceptions sont les sections de `fr/` elles-mêmes, et les valeurs attendues dans les tests
-  lorsqu’elles proviennent du bundle français.
+- Les seules exceptions sont les sections de `fr/` elles-mêmes, et les valeurs attendues dans
+  les tests lorsqu’elles proviennent du bundle français.
 - Aucune chaîne visible par l’utilisateur en dur dans un composant. Les clés dynamiques
   (`assetTypes.${type}`, `capabilities.${capability}`) se résolvent contre les mêmes bundles,
   avec le nom brut de l’API en repli, de sorte qu’une valeur inconnue affiche quelque chose de
