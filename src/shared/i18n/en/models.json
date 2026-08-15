@@ -60,7 +60,7 @@
     "skybox": "Sky",
     "upscale": "Upscaling",
     "background-removal": "Background removal",
-    "vectorization": "Vectorization",
+    "vectorization": "Vectorisation",
     "other": "Other"
   },
   "capabilities": {

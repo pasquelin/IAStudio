@@ -221,7 +221,7 @@
       "help": "Raises the resolution of the flattened image with the default model."
     },
     "canvasVectorize": {
-      "title": "Vectorize",
+      "title": "Vectorise",
       "help": "Turns the flattened image into paths with the default model."
     },
     "canvasExtend": {

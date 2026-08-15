@@ -93,8 +93,8 @@ Once, before the first time: **Settings ▸ Generation ▸ Upscaling**, pick a m
 command sends nothing and opens that screen — the **Models** panel cannot serve here, it only
 shows the open workspace's family.
 
-**Cut out** and **Vectorize** work exactly the same way, with their own settings sub-sections:
-**Background removal** and **Vectorization**.
+**Cut out** and **Vectorise** work exactly the same way, with their own settings sub-sections:
+**Background removal** and **Vectorisation**.
 
 **Do not look for it in the Image workspace's Models panel**: that panel only ever lists its own
 workspace's family, and an upscaler is not part of it — you could look for a long time. The
@@ -335,7 +335,7 @@ on screen says so at the moment you try.
 |---|---|---|
 | **find the history** of a reopened document | the undo stack is empty | only the state is saved, not the gestures that led to it |
 | **import an `.hdr`**, an `.obj` or an `.fbx` | it is refused | on the 3D side, only `.glb` comes in |
-| **cut out or vectorize** a picture | **Settings ▸ Generation** opens on the right section | the model is chosen there, once and for all |
+| **cut out or vectorise** a picture | **Settings ▸ Generation** opens on the right section | the model is chosen there, once and for all |
 | **export a video** | no button | video export is not written — a picture does go out with `⇧⌘E` |
 | **undo a crop** | the size comes back, the cropped pixels do not | the history does not keep the whole picture from before |
 
