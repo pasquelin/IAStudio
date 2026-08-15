@@ -1,4 +1,5 @@
 import { isRecord, readNumber, readPositive, readString } from '@shared/guards'
+import { clamp } from '@shared/numeric'
 import type { Command } from '@/engines/core/history'
 import { CLIP_EDGES, type ClipEdge, type Us } from '@/engines/timeline/timeline-state'
 import {
@@ -7,8 +8,9 @@ import {
   crop,
   DEFAULT_TARGET_LUFS,
   durationOf,
-  normalize,
-  trimSilence,
+  rms,
+  silentBounds,
+  toDb,
   type AudioData,
 } from './audio-data'
 
@@ -35,6 +37,14 @@ export type AudioEditState = {
   region: Region | null
   /** A/B: hear the source rather than the chain, without undoing anything. */
   bypassed: boolean
+  /**
+   * The montage clip this take was laid down as, in the sound sequence of the same document.
+   *
+   * Held here rather than found by asset id, because the two are not the same question: a
+   * montage may well hold the same take twice, and only one of them is what the editor above is
+   * working on. Null when no track would take it — a montage whose sound tracks are all locked.
+   */
+  takeClipId: string | null
 }
 
 export const EMPTY_AUDIO_EDIT: AudioEditState = {
@@ -42,6 +52,105 @@ export const EMPTY_AUDIO_EDIT: AudioEditState = {
   edits: [],
   region: null,
   bypassed: false,
+  takeClipId: null,
+}
+
+/**
+ * The chain expressed as a montage clip: where it starts in the source, how long it runs, its
+ * two ramps and its level.
+ *
+ * Everything here is in SOURCE coordinates, because that is what a clip holds — it points at the
+ * file on disk and takes a slice of it. Which is also why the projection is worth having at all:
+ * the strip then plays what the editor plays, rather than merely looking like it.
+ */
+export type TakeShape = {
+  inPoint: Us
+  duration: Us
+  fadeIn: Us
+  fadeOut: Us
+  gain: number
+}
+
+/** What a crop leaves of a shape — bounds moved, and of each ramp only the part still inside. */
+function cropShape(shape: TakeShape, from: Us, to: Us): TakeShape {
+  // Clamped as `crop` clamps, so the projection cannot describe a slice the samples do not have.
+  const start = clamp(from, 0, shape.duration)
+  const end = clamp(to, start, shape.duration)
+
+  return {
+    ...shape,
+    inPoint: shape.inPoint + start,
+    duration: end - start,
+    fadeIn: Math.max(0, shape.fadeIn - start),
+    fadeOut: Math.max(0, shape.fadeOut - (shape.duration - end)),
+  }
+}
+
+/**
+ * The chain replayed, and the shape it comes to, in one pass.
+ *
+ * Two of the five steps cannot be projected from the instruction alone — `normalize` is a level
+ * measured on what reaches it, and `trimSilence` a pair of bounds found in the samples. Rejoining
+ * the two answers here is what keeps the strip honest without a second walk over the take.
+ *
+ * **Where the projection stops being exact**: a ramp already burnt into the samples by an earlier
+ * `fade`, then cut into by a later `crop`. A clip holds one ramp length per edge, so what it can
+ * say is what is left of that ramp — the audible curve inside the cut is not expressible. The
+ * editor stays the truth; the clip approaches it in that one composed case.
+ */
+export function replayEdits(
+  source: AudioData,
+  edits: readonly AudioEdit[],
+): { data: AudioData; shape: TakeShape } {
+  let shape: TakeShape = {
+    inPoint: 0,
+    duration: durationOf(source),
+    fadeIn: 0,
+    fadeOut: 0,
+    gain: 0,
+  }
+
+  const data = edits.reduce((current, edit) => {
+    switch (edit.kind) {
+      case 'crop':
+        shape = cropShape(shape, edit.from, edit.to)
+        return crop(current, edit.from, edit.to)
+      case 'fade':
+        // The last one wins, where the samples would carry both: a clip holds one length per
+        // edge, and two fades on the same edge is a gesture nobody makes twice on purpose.
+        shape =
+          edit.edge === 'in'
+            ? { ...shape, fadeIn: edit.length }
+            : { ...shape, fadeOut: edit.length }
+        return edit.edge === 'in'
+          ? applyFades(current, edit.length, 0)
+          : applyFades(current, 0, edit.length)
+      case 'gain':
+        shape = { ...shape, gain: shape.gain + edit.db }
+        return applyGain(current, edit.db)
+      case 'normalize': {
+        // The level is measured once and spent twice — on the shape and on the samples. Calling
+        // `normalize` here would walk every sample a second time only to find it again, and this
+        // runs on a take of eight million of them.
+        const level = toDb(rms(current))
+        if (!Number.isFinite(level)) return current
+
+        const db = edit.targetLufs - level
+        shape = { ...shape, gain: shape.gain + db }
+        return applyGain(current, db)
+      }
+      case 'trimSilence': {
+        const total = durationOf(current)
+        const { head, tail } = silentBounds(current)
+        if (head === 0 && tail === total) return current
+
+        shape = cropShape(shape, head, tail)
+        return crop(current, head, tail)
+      }
+    }
+  }, source)
+
+  return { data, shape }
 }
 
 /**
@@ -49,22 +158,7 @@ export const EMPTY_AUDIO_EDIT: AudioEditState = {
  * makes every step reversible without keeping a buffer per step.
  */
 export function renderEdits(source: AudioData, edits: readonly AudioEdit[]): AudioData {
-  return edits.reduce((data, edit) => {
-    switch (edit.kind) {
-      case 'crop':
-        return crop(data, edit.from, edit.to)
-      case 'fade':
-        return edit.edge === 'in'
-          ? applyFades(data, edit.length, 0)
-          : applyFades(data, 0, edit.length)
-      case 'gain':
-        return applyGain(data, edit.db)
-      case 'normalize':
-        return normalize(data, edit.targetLufs)
-      case 'trimSilence':
-        return trimSilence(data)
-    }
-  }, source)
+  return replayEdits(source, edits).data
 }
 
 /** What the editor plays: the chain, or the source when A/B is held on the source side. */
@@ -151,6 +245,7 @@ export function parseAudioEdits(content: unknown): AudioEditState {
   if (!isRecord(content)) return EMPTY_AUDIO_EDIT
 
   const assetId = readString(content, 'assetId', '')
+  const takeClipId = readString(content, 'takeClipId', '')
   const edits: AudioEdit[] = []
   if (Array.isArray(content.edits)) {
     for (const entry of content.edits) {
@@ -162,6 +257,9 @@ export function parseAudioEdits(content: unknown): AudioEditState {
   return {
     assetId: assetId || null,
     edits,
+    // Absent from every take written before the montage had a clip of its own: those reopen
+    // with the two halves untied, which is what they were saved as.
+    takeClipId: takeClipId || null,
     region: readRegion(content.region),
     // Never restored as bypassed: A/B is which of two things one is listening to right now,
     // and a document that reopens on the source would look like a chain that stopped working.

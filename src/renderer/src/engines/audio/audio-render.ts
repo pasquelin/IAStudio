@@ -1,4 +1,4 @@
-import { renderEdits, type AudioEdit } from './edits'
+import { replayEdits, type AudioEdit, type TakeShape } from './edits'
 import { encodeWav } from './wav'
 import type { AudioData } from './audio-data'
 
@@ -18,11 +18,18 @@ export type AudioWorkerResponse =
       sampleRate: number
       channels: Float32Array[]
       wav: Uint8Array<ArrayBuffer>
+      shape: TakeShape
     }
   | { kind: 'failed'; id: number; message: string }
 
-/** The take as the chain leaves it, with the bytes the editor plays and writes to disk. */
-export type RenderedAudio = { data: AudioData; wav: Uint8Array<ArrayBuffer> }
+/**
+ * The take as the chain leaves it, with the bytes the editor plays and writes to disk — and the
+ * shape the montage clip under it takes.
+ *
+ * The shape rides along rather than being worked out on this side, because two of the five steps
+ * are measured on the samples, and the samples are over there.
+ */
+export type RenderedAudio = { data: AudioData; wav: Uint8Array<ArrayBuffer>; shape: TakeShape }
 
 /**
  * What the renderer needs of a worker. Narrowed to three members so a test can stand in for
@@ -81,6 +88,7 @@ export function createAudioRenderer(open: () => WorkerPort): AudioRenderer {
       settle(message.id, {
         data: { sampleRate: message.sampleRate, channels: message.channels },
         wav: message.wav,
+        shape: message.shape,
       })
     })
 
@@ -155,7 +163,7 @@ export function handleRequest(
     return { response: { kind: 'failed', id: request.id, message: 'no take loaded' }, transfer: [] }
   }
 
-  const data = renderEdits(source, request.edits)
+  const { data, shape } = replayEdits(source, request.edits)
   // A chain that changed nothing hands its input straight back, and transferring that would
   // take the source away from every render after this one.
   const channels = data.channels.map(channel =>
@@ -164,7 +172,14 @@ export function handleRequest(
   const wav = encodeWav({ sampleRate: data.sampleRate, channels })
 
   return {
-    response: { kind: 'rendered', id: request.id, sampleRate: data.sampleRate, channels, wav },
+    response: {
+      kind: 'rendered',
+      id: request.id,
+      sampleRate: data.sampleRate,
+      channels,
+      wav,
+      shape,
+    },
     transfer: [...channels.map(channel => channel.buffer), wav.buffer],
   }
 }

@@ -9,6 +9,7 @@ import {
   parseAudioEdits,
   pushEdit,
   renderEdits,
+  replayEdits,
   type AudioEditState,
 } from './edits'
 import { encodeWav } from './wav'
@@ -167,6 +168,7 @@ describe('reading an edit chain back', () => {
     ],
     region: { from: 0, to: 200 },
     bypassed: false,
+    takeClipId: 'clip-a',
   }
 
   it('survives a serialize/parse round trip unchanged', () => {
@@ -203,5 +205,79 @@ describe('reading an edit chain back', () => {
   // like a chain that stopped working.
   it('never reopens bypassed', () => {
     expect(parseAudioEdits({ ...filled, bypassed: true }).bypassed).toBe(false)
+  })
+})
+
+// The strip has to play what the editor plays, not merely look like it — a clip points at the
+// source file, so the chain has to come back out in the source's own coordinates.
+describe('the chain read as a montage clip', () => {
+  const shapeOf = (source: AudioData, edits: Parameters<typeof replayEdits>[1]) =>
+    replayEdits(source, edits).shape
+
+  it('is the whole take when nothing has been done to it', () => {
+    expect(shapeOf(tone(200), [])).toEqual({
+      inPoint: 0,
+      duration: 2_000_000,
+      fadeIn: 0,
+      fadeOut: 0,
+      gain: 0,
+    })
+  })
+
+  // Each crop measures against what reaches it; the shape has to answer in source time, so the
+  // second one's offset is added to the first's rather than replacing it.
+  it('composes two crops back into one slice of the source', () => {
+    const shape = shapeOf(tone(200), [
+      { kind: 'crop', from: 500_000, to: 1_500_000 },
+      { kind: 'crop', from: 200_000, to: 700_000 },
+    ])
+
+    expect(shape.inPoint).toBe(700_000)
+    expect(shape.duration).toBe(500_000)
+  })
+
+  it('carries a fade to the edge it was laid on', () => {
+    const shape = shapeOf(tone(200), [
+      { kind: 'fade', edge: 'in', length: 300_000 },
+      { kind: 'fade', edge: 'out', length: 100_000 },
+    ])
+
+    expect(shape.fadeIn).toBe(300_000)
+    expect(shape.fadeOut).toBe(100_000)
+  })
+
+  // The documented limit of the projection: a clip holds one ramp length per edge, so what it
+  // can say of a ramp cut into is what is left of it.
+  it('keeps only what a later crop leaves of a ramp', () => {
+    const shape = shapeOf(tone(200), [
+      { kind: 'fade', edge: 'in', length: 500_000 },
+      { kind: 'crop', from: 200_000, to: 2_000_000 },
+    ])
+
+    expect(shape.fadeIn).toBe(300_000)
+  })
+
+  it('adds up the decibels a chain of gains comes to', () => {
+    expect(
+      shapeOf(tone(100), [
+        { kind: 'gain', db: -6 },
+        { kind: 'gain', db: 2 },
+      ]).gain,
+    ).toBe(-4)
+  })
+
+  // Neither of these two can be read off the instruction: one is a level measured on what
+  // reaches it, the other a pair of bounds found in the samples.
+  it('reads a normalize as the level it actually applied', () => {
+    expect(shapeOf(tone(100, 1), [{ kind: 'normalize', targetLufs: -14 }]).gain).toBeCloseTo(-14)
+  })
+
+  it('reads a silence trim as the bounds it actually found', () => {
+    const quiet = new Float32Array(200)
+    quiet.fill(0.5, 50, 150)
+    const shape = shapeOf({ sampleRate: RATE, channels: [quiet] }, [{ kind: 'trimSilence' }])
+
+    expect(shape.inPoint).toBe(500_000)
+    expect(shape.duration).toBe(1_000_000)
   })
 })

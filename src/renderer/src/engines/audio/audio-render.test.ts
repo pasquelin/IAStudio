@@ -8,7 +8,11 @@ import {
   type AudioWorkerState,
   type WorkerPort,
 } from './audio-render'
+import type { TakeShape } from './edits'
 import { encodeWav } from './wav'
+
+/** What an untouched take comes to. These suites are about the wiring, not about the shape. */
+const UNTOUCHED: TakeShape = { inPoint: 0, duration: 0, fadeIn: 0, fadeOut: 0, gain: 0 }
 
 function fakePort(): {
   port: WorkerPort
@@ -70,11 +74,19 @@ describe('createAudioRenderer', () => {
 
     const pending = renderer.render([{ kind: 'gain', db: 3 }])
     const channels = [new Float32Array([0.25])]
-    reply({ kind: 'rendered', id: 0, sampleRate: 48_000, channels, wav: new Uint8Array([1, 2]) })
+    reply({
+      kind: 'rendered',
+      id: 0,
+      sampleRate: 48_000,
+      channels,
+      wav: new Uint8Array([1, 2]),
+      shape: UNTOUCHED,
+    })
 
     await expect(pending).resolves.toEqual({
       data: { sampleRate: 48_000, channels },
       wav: new Uint8Array([1, 2]),
+      shape: UNTOUCHED,
     })
   })
 
@@ -90,6 +102,7 @@ describe('createAudioRenderer', () => {
       sampleRate: 48_000,
       channels: [new Float32Array([0.5])],
       wav: new Uint8Array([9]),
+      shape: UNTOUCHED,
     })
 
     await expect(first).resolves.toBeNull()
@@ -239,7 +252,14 @@ describe('the worker it opens', () => {
 
     renderer.load(take([0, 1]))
     const pending = renderer.render([])
-    reply({ kind: 'rendered', id: 0, sampleRate: 48_000, channels: [], wav: new Uint8Array() })
+    reply({
+      kind: 'rendered',
+      id: 0,
+      sampleRate: 48_000,
+      channels: [],
+      wav: new Uint8Array(),
+      shape: UNTOUCHED,
+    })
     await pending
 
     expect(open).toHaveBeenCalledTimes(1)
@@ -348,6 +368,7 @@ describe('a worker that refuses the take', () => {
       sampleRate: 48_000,
       channels: [new Float32Array([0.5])],
       wav: new Uint8Array([9]),
+      shape: UNTOUCHED,
     })
 
     await expect(second).resolves.not.toBeNull()

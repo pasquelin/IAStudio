@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js'
 import { playbackToken } from '@/engines/timeline/playback'
@@ -14,7 +14,12 @@ export type WaveSurferHandle = {
 }
 
 export type UseWaveSurferOptions = {
-  container: RefObject<HTMLDivElement | null>
+  /**
+   * The surface to draw on — the ELEMENT, not a ref holding it. The host only mounts it once a
+   * take is loaded, so it is null on the first render of every path in; a ref would not run
+   * this hook's effects again when it finally arrives, and nothing would ever be drawn.
+   */
+  container: HTMLDivElement | null
   /** The take to draw and play, already encoded. Null while it is still being rendered. */
   rendered: RenderedAudio | null
   /** Identifies this player to the single playback token — the document id does. */
@@ -57,12 +62,11 @@ export function useWaveSurfer({
   // Created once per container. Kept out of the data effect below on purpose: rebuilding the
   // instance on every edit would destroy the very region the pointer is dragging.
   useEffect(() => {
-    const element = container.current
-    if (!element) return
+    if (!container) return
 
     const plugin = RegionsPlugin.create()
     const instance = WaveSurfer.create({
-      container: element,
+      container,
       barWidth: BAR_WIDTH,
       barGap: BAR_GAP,
       barRadius: BAR_RADIUS,
@@ -108,6 +112,10 @@ export function useWaveSurfer({
    * chain and not the file on disk. The WAV arrives already encoded, from the worker that
    * replayed the chain: encoding it here would put 206 ms back on the window's thread.
    */
+  // `container` is in the deps though nothing here reads it, and it is load-bearing: it is what
+  // stands for the INSTANCE, which a ref cannot announce. A surface replaced — a panel
+  // reattached — builds a new instance holding nothing, and the take has to go back into it.
+  // The effect above runs first, being declared first, so the ref is already the fresh one.
   useEffect(() => {
     const instance = surfer.current
     if (!instance || !rendered) return
@@ -118,7 +126,7 @@ export function useWaveSurfer({
       .catch(() => {
         // Rejects when the take is swapped mid-load, which is not a failure worth reporting.
       })
-  }, [rendered])
+  }, [container, rendered])
 
   return {
     playing,

@@ -154,6 +154,15 @@ export const activeSequenceId = (state: DocumentsSlice): string | null =>
 export const activeAudioId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'audio')
 
+/**
+ * The montage in front, whichever workspace shows it — a sequence in Video, a take's sound half
+ * in Audio. Both hold a `SequenceState` in the same store, and a surface that reads only
+ * `activeSequenceId` is blind to half of them: the inspector showed nothing at all for a clip
+ * picked in the Audio workspace, so gain, speed and fades were editable from nowhere.
+ */
+export const activeMontageId = (state: DocumentsSlice): string | null =>
+  activeSequenceId(state) ?? activeAudioId(state)
+
 /** The sky in front, as a selector. Same reason again, for the skybox panel. */
 export const activeSkyboxId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'skybox')
