@@ -1,7 +1,7 @@
 import { mdiFileOutline, mdiFolderOpenOutline, mdiFolderOutline } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
+import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
 import { canMoveInto, isStudioFolder } from '@shared/domain/folder'
 import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
@@ -61,21 +61,33 @@ export function Explorer() {
     return found
   }, [stored])
 
+  /**
+   * The descriptor behind a folder entry, or nothing.
+   *
+   * A folder is not disqualified by being one: an image document IS a directory — `<id>.img/`
+   * holding its manifest and its parts (`FOLDER_KINDS`) — and the reader that walks the project
+   * folder can only see that it is a directory. Refusing every folder here left image documents
+   * with no workspace glyph, no "open" mark, unfoldable instead of openable, and renameable
+   * while a tab held them, which is the one case `openInTab` exists to forbid.
+   */
   const documentOf = useCallback(
     (node: FolderNode): DocumentDescriptor | null => {
-      if (node.kind === 'folder') return null
       const extension = extensionOf(node.name)
-      if (!kindForExtension(extension)) return null
+      const kind = kindForExtension(extension)
+      if (!kind) return null
+      if (node.kind === 'folder' && !FOLDER_KINDS.has(kind)) return null
       return documentsByFile.get(node.name.slice(0, -extension.length)) ?? null
     },
     [documentsByFile],
   )
 
   const activate = async (node: FolderNode): Promise<void> => {
-    if (node.kind === 'folder') return toggle(node.id)
-
+    // Asked before the folder question, not after: an image document is a directory, and folding
+    // it open showed the user the parts the studio writes for itself instead of opening it.
     const document = documentOf(node)
     if (document) return openDocument(document)
+
+    if (node.kind === 'folder') return toggle(node.id)
 
     // A file the catalogue knows is an asset, and it opens like one from the shelf — the folder
     // shows `asset_2604…png` where the shelf shows the name, so only the catalogue can tell.
@@ -124,7 +136,9 @@ export function Explorer() {
       onToggle={toggle}
       // A folder is expandable before anything under it has been read: what the tree can see is
       // only what is loaded, and a folder nobody has opened has nothing loaded by definition.
-      expandable={node => node.kind === 'folder'}
+      // Except a document that happens to be one — it opens, and what it holds is the studio's
+      // own business rather than something to browse.
+      expandable={node => node.kind === 'folder' && !documentOf(node)}
       // Dragging moves; the menu's "Rename" stays in the folder it is already in, deliberately.
       // Both refusals are the same one, read from `shared/` so the main process refuses the
       // same things — and read on BOTH sides of the gesture, what moves and what receives.
@@ -144,17 +158,18 @@ export function Explorer() {
       }
       renderRow={row => {
         const document = documentOf(row.node)
-        const icon =
-          row.node.kind === 'folder'
+        // The descriptor carries its own workspace, so the glyph comes off the same table the
+        // rail and the asset menu read — never derived from the kind a second time, which would
+        // be a second answer free to disagree with the first. Asked before the folder question
+        // for the reason `activate` is: an image document is a directory, and the folder glyph
+        // said so where every other document showed its space.
+        const icon = document
+          ? workspaceById(document.workspace).icon
+          : row.node.kind === 'folder'
             ? row.expanded
               ? mdiFolderOpenOutline
               : mdiFolderOutline
-            : // The descriptor carries its own workspace, so the glyph comes off the same table
-              // the rail and the asset menu read — never derived from the kind a second time,
-              // which would be a second answer free to disagree with the first.
-              document
-              ? workspaceById(document.workspace).icon
-              : mdiFileOutline
+            : mdiFileOutline
 
         return (
           <EntryRow

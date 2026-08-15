@@ -23,6 +23,14 @@ vi.mock('@/helpers/open-asset', () => ({ openAsset }))
 
 const scene: DocumentDescriptor = { id: 'a3f1', kind: 'scene', title: 'Niveau', workspace: '3d' }
 
+/** Written as a folder — `FOLDER_KINDS` — which is what the folder reader sees of it. */
+const picture: DocumentDescriptor = {
+  id: 'a3f1',
+  kind: 'image',
+  title: 'Planche',
+  workspace: 'image',
+}
+
 const folder = (name: string, at = ''): FolderEntry => ({
   path: at === '' ? name : `${at}/${name}`,
   name,
@@ -326,6 +334,23 @@ describe('the project explorer', () => {
       await userEvent.dblClick(await screen.findByText('a3f1.scene'))
 
       expect(openDocument).toHaveBeenCalledWith(scene)
+    })
+
+    /**
+     * An image document IS a directory — `<id>.img/` holding its manifest and its parts — and
+     * the folder reader can only see the directory. Taken for an ordinary folder, it folded
+     * open on the studio's own files instead of opening, wore a folder glyph where every other
+     * document wears its space, and could be renamed while a tab held it.
+     */
+    it('opens an image document rather than folding it open', async () => {
+      withProject()
+      install({ '': [folder('a3f1.img')] }, [picture])
+
+      render(<Explorer />)
+      await userEvent.dblClick(await screen.findByText('a3f1.img'))
+
+      expect(openDocument).toHaveBeenCalledWith(picture)
+      expect(screen.getByRole('treeitem')).not.toHaveAttribute('aria-expanded')
     })
 
     // A folder the user owns can hold anything, and the studio has no business refusing a
@@ -703,5 +728,23 @@ describe('the explorer menu', () => {
     await userEvent.keyboard('{Escape}')
 
     expect(renameFile).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Selecting a word in the field is a double-click, and the row underneath read it as "open
+   * me": the document opened mid-rename, which greyed "Rename" out — the gesture cancelled
+   * itself, and it looked like the field had simply refused to work.
+   */
+  it('leaves the row alone while its name is being typed in', async () => {
+    withProject()
+    install({ '': [file('a3f1.scene')] }, [scene])
+    menu.picks('Renommer')
+
+    render(<Explorer />)
+    await open('a3f1.scene')
+    const field = await screen.findByRole('textbox', { name: 'Renommer' })
+    await userEvent.dblClick(field)
+
+    expect(openDocument).not.toHaveBeenCalled()
   })
 })

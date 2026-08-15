@@ -605,7 +605,11 @@ export function Tree<T extends TreeNode>({
                 // as a toggle — the row a menu was raised on left the very selection the menu was
                 // about to act on.
                 onPointerDown={event => event.button !== 2 && pick(row.node, event)}
-                onDoubleClick={() => onActivate?.(row.node)}
+                // A double-click inside a row's rename field is someone selecting a word, not
+                // asking for the row: activating it here opened the document being renamed —
+                // which, in the explorer, then greyed "Rename" out and cancelled the gesture.
+                // Same reading as the right-click below, and the same reason.
+                onDoubleClick={event => !isTyping(event.target) && onActivate?.(row.node)}
                 onContextMenu={event => {
                   // A right-click in a row's rename field belongs to the native clipboard and
                   // spelling menu (`main/window/context-menu.ts`), which `preventDefault` would
