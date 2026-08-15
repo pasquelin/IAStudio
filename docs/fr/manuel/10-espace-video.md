@@ -246,9 +246,14 @@ servent quand on veut la piste **avant** d’avoir quoi que ce soit à y mettre.
 
 ### Les déplacer dans la pile
 
-**L’ordre des pistes compte** : quand vous **double-cliquez** un asset, le studio le pose sur la
-**première piste du bon genre qui se fait entendre**, en partant du haut. Monter une piste, c’est
-donc en faire la destination par défaut. Chaque en-tête porte une **poignée** sur son bord gauche.
+**L’ordre des pistes décide de ce que vous voyez.** À un instant donné, plusieurs pistes image
+peuvent porter un clip ; c’est celle qui est **le plus haut dans la colonne** qui s’affiche, et
+elle recouvre les autres — V1 passe devant V2, comme dans tout logiciel de montage. Déplacer une
+piste change donc l’image du moniteur, à l’instant du lâcher.
+
+**L’ordre compte aussi pour le double-clic** : le studio pose alors l’asset sur la **première
+piste du bon genre qui se fait entendre**, en partant du haut. Monter une piste, c’est donc en
+faire la destination par défaut. Chaque en-tête porte une **poignée** sur son bord gauche.
 
 - **Tirez-la** vers le haut ou vers le bas. La ligne tenue **s’estompe** le temps du geste : c’est
   la seule chose qui dise qu’un déplacement est en cours, la pile se renumérotant d’un rang à la
