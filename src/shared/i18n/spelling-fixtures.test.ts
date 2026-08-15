@@ -28,6 +28,9 @@ describe('the British spelling of the repository', () => {
     // Settled the British way, though Electron names the API `dialog`.
     expect(americanWords('A save dialog opens')).toEqual(['dialog'])
     expect(americanWords('A save dialogue opens')).toEqual([])
+    // The prefix the studio uses: a word boundary alone would have let this one through.
+    expect(americanWords('Recenter the camera')).toEqual(['Recenter'])
+    expect(americanWords('Recentre the camera')).toEqual([])
   })
 
   /**
