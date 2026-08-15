@@ -3,7 +3,7 @@
     "actions": {
       "commandRun": {
         "title": "Run a command",
-        "description": "Fires a studio command by its identifier, exactly as a keyboard shortcut or a menu row would. The document it applies to has to be in front."
+        "description": "Fires a studio command by its identifier, exactly as a keyboard shortcut or a menu item would. The document it applies to has to be in front."
       },
       "workspaceOpen": {
         "title": "Open a workspace",
@@ -65,7 +65,7 @@
     "models": {
       "claude-haiku-4-5": "Haiku 4.5 — the fastest and the cheapest",
       "claude-sonnet-4-6": "Sonnet 4.6 — the balance",
-      "claude-opus-4-8": "Opus 4.8 — the steadiest over several steps",
+      "claude-opus-4-8": "Opus 4.8 — the most reliable over several steps",
       "gemini-3.5-flash": "Gemini 3.5 Flash — the quick alternative"
     },
     "fields": {
@@ -83,7 +83,7 @@
     "writeHint": "Opens the assistant so you can write what you want done",
     "listening": "The assistant is listening",
     "done": "The assistant has answered",
-    "reviewHint": "Opens the assistant on what it understood and what it did",
+    "reviewHint": "Opens the assistant to show what it understood and what it did",
     "dismissHint": "Removes this reminder. What the assistant did stays in its window",
     "empty": "Say what you want done, and the assistant does it.",
     "placeholder": "Open a 3D file, find a model, prepare a generation…",
@@ -94,7 +94,7 @@
     "model": "Assistant model",
     "modelHint": "Picks the model that reads your sentences. The cheapest is enough to open a workspace, the others hold up better on requests that take several steps.",
     "thinking": "The assistant is thinking…",
-    "lost": "The assistant could not make sense of that one.",
+    "lost": "The assistant could not answer that one.",
     "refused": "{{action}} — {{reason}}",
     "confirm": {
       "credits": "This action will spend {{cost}}.",
@@ -102,7 +102,7 @@
       "asset": "This action will upload an image, which then stays in your library. It costs no creative units.",
       "yes": "Allow",
       "yesHint": "Runs the action above, and commits what it commits",
-      "no": "Refuse",
+      "no": "Don’t allow",
       "noHint": "Runs nothing, and the assistant takes it into account for what follows"
     }
   }
