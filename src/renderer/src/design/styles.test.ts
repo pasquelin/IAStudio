@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   BUTTON_NEUTRAL,
+  CONTROL,
+  NATIVE_SELECT,
   OVERLAY_BUTTON,
   ROW_INK,
   ROW_QUIET,
@@ -381,6 +383,54 @@ describe('the word a bar sets beside its buttons', () => {
   it('is worn by the sites it was extracted from', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && source.includes('TOOLBAR_LABEL'),
+    )
+
+    expect(wearing.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+/**
+ * The padding written back on top of `CONTROL`, which is the shape the four native pickers had
+ * before they were given a constant. Read at the CALL, not over the whole file: a component is
+ * free to wear `CONTROL` and to have `px-1` somewhere else entirely on another element, and a
+ * rule by file would call that a violation.
+ *
+ * **What it cannot see**: `cn(CONTROL, someVariable)`, or a padding reached through a second
+ * argument — `cn(CONTROL, 'w-full', 'px-1')`. Both are ways of writing it again on purpose;
+ * this catches the shape the habit produces.
+ */
+const REPADS_CONTROL = /cn\(\s*CONTROL\s*,\s*['"`]([^'"`\n]*)['"`]/g
+
+const repadsControl = (source: string): boolean =>
+  [...source.matchAll(REPADS_CONTROL)].some(match => (match[1] ?? '').split(/\s+/).includes('px-1'))
+
+describe('the OS list wearing the control language', () => {
+  it('is the control, plus the room around its text and nothing more', () => {
+    expect(NATIVE_SELECT.split(' ')).toEqual([...CONTROL.split(' '), 'px-1'])
+  })
+
+  it('is worn rather than padded again at the call', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && repadsControl(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone the callers whose own padding is not this one', () => {
+    // The search field of `CollectionBar`, which pulls its left inset in for the magnifier, and
+    // the colour swatch of the image space — both wear `CONTROL` and neither is a picker.
+    expect(repadsControl("cn(CONTROL, 'w-full px-1')")).toBe(true)
+    expect(repadsControl("cn(CONTROL, 'w-full py-0 pr-2 pl-7')")).toBe(false)
+    expect(repadsControl("cn(CONTROL, 'w-(--sc-control) cursor-pointer border-none p-0.5')")).toBe(
+      false,
+    )
+  })
+
+  // The partner of the rule above: a constant nobody wears is a dead export.
+  it('is worn by the four pickers it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('NATIVE_SELECT'),
     )
 
     expect(wearing.length).toBeGreaterThanOrEqual(4)

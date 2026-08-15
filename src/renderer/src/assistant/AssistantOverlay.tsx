@@ -11,7 +11,7 @@ import { Button } from '@/design/Button'
 import { QuietNote } from '@/design/QuietNote'
 import { Spinner } from '@/design/Spinner'
 import { ToolButton } from '@/design/ToolButton'
-import { CONTROL } from '@/design/styles'
+import { NATIVE_SELECT } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
 import { HINT_TOP, TIP_LEFT, TIP_TOP } from '@/helpers/tooltip'
@@ -270,7 +270,7 @@ export function AssistantOverlay() {
                 {...TIP_TOP(t('assistant.model'), false, t('assistant.modelHint'))}
                 value={model}
                 onChange={event => useAssistant.getState().setModel(asModel(event.target.value))}
-                className={cn(CONTROL, 'max-w-44 px-1')}
+                className={cn(NATIVE_SELECT, 'max-w-44')}
               >
                 {/* Named from the bundle, never from the union: a raw `gemini-3.5-flash` in an
                   otherwise French list is the defect this repository pays for most. */}

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { secondsToUs, snapToFrame, usToSeconds, type Us } from '@shared/domain/time'
 import { NumberField } from '@/design/NumberField'
 import { ToolButton } from '@/design/ToolButton'
-import { CONTROL } from '@/design/styles'
+import { NATIVE_SELECT } from '@/design/styles'
 import { keySubject, setTimelineSettings } from '@/engines/scene/animation-commands'
 import { selectedNodes } from '@/engines/scene/scene-state'
 import { cn } from '@/helpers/cn'
@@ -103,7 +103,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
           aria-label={t('animation.bone')}
           value={bone}
           onChange={event => setChosen(event.target.value)}
-          className={cn(CONTROL, 'max-w-32 px-1')}
+          className={cn(NATIVE_SELECT, 'max-w-32')}
         >
           <option value="">{t('animation.wholeModel')}</option>
           {bones.map(name => (
