@@ -26,6 +26,7 @@ import {
 } from '@shared/domain/asset'
 import { isPbrChannel } from '@shared/domain/texture'
 import { LOG_SCOPES } from '@shared/ipc'
+import { byCodeUnit } from '@shared/text'
 import type { SqliteDriver, SqlRow, SqlValue } from './sqlite'
 
 /**
@@ -465,7 +466,12 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   `)
   const deleteTags = driver.prepare('DELETE FROM asset_tags WHERE asset_id = ?')
   const insertTag = driver.prepare('INSERT OR IGNORE INTO asset_tags (asset_id, tag) VALUES (?, ?)')
-  const selectTags = driver.prepare('SELECT tag FROM asset_tags WHERE asset_id = ? ORDER BY tag')
+  // Not `ORDER BY tag`: SQLite answers that in BINARY collation over UTF-8 bytes, where the page
+  // path below sorted by UTF-16 code unit — the same asset listed its tags two ways past the BMP.
+  // Both order in JavaScript now, and what this port owes is the same answer twice, not a reading
+  // order: nothing displays these tags yet, and the catalogue runs on a worker holding a database
+  // path and nothing else, so a collation here could not follow the reader's language anyway.
+  const selectTags = driver.prepare('SELECT tag FROM asset_tags WHERE asset_id = ?')
   const selectAsset = driver.prepare('SELECT * FROM assets WHERE id = ?')
   // Oldest first: re-importing the same API asset must not move where its children point.
   const selectByRemoteId = driver.prepare(
@@ -500,7 +506,11 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     'UPDATE assets SET derived_from = NULL WHERE derived_from = ?',
   )
 
-  const tagsOf = (assetId: string): string[] => selectTags.all(assetId).map(row => text(row, 'tag'))
+  const tagsOf = (assetId: string): string[] =>
+    selectTags
+      .all(assetId)
+      .map(row => text(row, 'tag'))
+      .sort(byCodeUnit)
 
   /**
    * One query for the whole page rather than one per row: a 200-asset search was 201
@@ -522,7 +532,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       else grouped.set(assetId, [text(row, 'tag')])
     }
 
-    for (const tags of grouped.values()) tags.sort()
+    for (const tags of grouped.values()) tags.sort(byCodeUnit)
     return grouped
   }
 

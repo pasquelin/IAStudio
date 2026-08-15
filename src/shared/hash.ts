@@ -11,6 +11,7 @@
  * worth taking so far: the bench that priced it read a small fraction of a frame. It went with
  * the space that ran it, so a trade for a faster hash needs a fresh measurement first.
  */
+import { byCodeUnit } from './text'
 
 const OFFSET_BASIS = 14695981039346656037n
 const PRIME = 1099511628211n
@@ -44,7 +45,7 @@ export function stableKey(value: unknown): string {
 
   if (value !== null && typeof value === 'object') {
     const written = Object.keys(value)
-      .sort()
+      .sort(byCodeUnit)
       .flatMap(key => {
         const held = Reflect.get(value, key)
         return isDropped(held) ? [] : [`${JSON.stringify(key)}:${stableKey(held)}`]

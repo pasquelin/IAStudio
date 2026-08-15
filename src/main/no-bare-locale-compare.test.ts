@@ -6,15 +6,17 @@ import { sitesIn } from './ast-sites'
 import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './source-files'
 
 /**
- * Whether the argument in the language's place says anything at all.
+ * Whether the argument that would carry the decision says anything at all.
  *
  * `(other, undefined)` is spelled longer and means exactly `(other)`, so counting arguments is not
- * enough — the one in that position has to say something. Used for BOTH shapes the defect takes:
- * argument two of `localeCompare`, argument one of a collator. The first version of this file
- * counted the collator's, which is the very mistake this paragraph warns about, one function down;
- * the batch's code review caught it.
+ * enough — the one in that position has to say something. Used for ALL THREE shapes the defect
+ * takes: argument two of `localeCompare`, argument one of a collator, argument one of `sort`. The
+ * first version of this file counted the collator's, which is the very mistake this paragraph
+ * warns about, one function down; the batch's code review caught it. The `sort` rule was added
+ * counting arguments too, and the batch's own review caught THAT — `[…].sort(undefined)` sorts by
+ * code unit exactly as `[…].sort()` does, measured.
  */
-function saysNoLanguage(argument: ts.Expression | undefined): boolean {
+function saysNothing(argument: ts.Expression | undefined): boolean {
   if (!argument) return true
 
   return ts.isIdentifier(argument) && argument.text === 'undefined'
@@ -65,13 +67,28 @@ function isIntlCollator(node: ts.Node): node is ts.NewExpression | ts.CallExpres
 }
 
 const localelessCollatorsIn = (file: ts.SourceFile, path: string): string[] =>
-  sitesIn(file, path, node => isIntlCollator(node) && saysNoLanguage(node.arguments?.[0]))
+  sitesIn(file, path, node => isIntlCollator(node) && saysNothing(node.arguments?.[0]))
+
+// `toSorted` is the same order under the spelling ES2023 encourages, and Electron 43 ships it.
+const SORTING_METHODS = ['sort', 'toSorted']
 
 /**
  * Every comparison of two strings that leaves the language to the machine.
  *
- * Two rules over one file rather than one: a held `Intl.Collator` and a bare `localeCompare` are
- * the same defect written two ways, and a guard catching one of them reads as covering both.
+ * Three rules over one file rather than three files: a held `Intl.Collator`, a bare
+ * `localeCompare` and a `.sort()` handed no comparator are one defect written three ways, and a
+ * guard catching one of them reads as covering all. The three share one parse — the sweep below
+ * reads every file of four trees, and parsing is the whole cost of it.
+ *
+ * The bare `.sort()` is the spelling that says nothing at all: a reader cannot tell whether the
+ * author meant a machine order or forgot the reader's language. `byCodeUnit` (`shared/text.ts`)
+ * costs one import and answers that at the site, which is why this rule needs no exemption list —
+ * `shared/hash.ts` was the last bare sort of `src/`, and naming its comparator changed no byte.
+ *
+ * Two edges of the `sort` rule, both found by the batch's adversarial review and neither closed
+ * because nothing in `src/` writes them: `Array.prototype.sort.call(list)` names no method on the
+ * list, and a home-made `sort()` on something that is not an array would be reported — the rule
+ * reads the name, never the receiver's type.
  */
 function bareCallsIn(path: string, source: string): string[] {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
@@ -84,7 +101,15 @@ function bareCallsIn(path: string, source: string): string[] {
       node =>
         ts.isCallExpression(node) &&
         calledName(node) === 'localeCompare' &&
-        saysNoLanguage(node.arguments[1]),
+        saysNothing(node.arguments[1]),
+    ),
+    ...sitesIn(
+      file,
+      path,
+      node =>
+        ts.isCallExpression(node) &&
+        SORTING_METHODS.includes(calledName(node) ?? '') &&
+        saysNothing(node.arguments[0]),
     ),
   ]
 }
@@ -112,16 +137,18 @@ function bareCallsIn(path: string, source: string): string[] {
  *   names against a held `Intl.Collator`, and under 0.1 ms at the 4000 rushes of `assets/vid`,
  *   the largest list the studio sorts. Too small to route a sort through `kept`, and the figures
  *   are here so the next reader can re-decide rather than re-measure.
- * - **this reads TWO spellings, and the class of defect has more.** Both found by the batch's own
- *   adversarial review, both in `main/project/catalog.ts`, both on the asset tags a person types
- *   and reads: `.sort()` with no comparator at line 518, and `ORDER BY tag` at line 461, which
- *   SQLite answers in BINARY collation. A French project tagged `Éclairage`, `Extérieur`, `Zoom`
- *   lists as `Extérieur, Zoom, Éclairage`. Neither is reachable from here — one is a call this
- *   rule does not name, the other is a string in a query — and **a rule banning the bare `.sort()`
- *   would cry wolf four times out of five**: counted, five live in `src/` and four order keys a
- *   machine reads, where determinism is the point. Those two sites are a batch of their own,
- *   because the catalogue is a SQL port that knows nothing but `@shared`, and whether it should
- *   order names at all is a question about layers rather than about a comparator.
+ * - **an order written in SQL passes in silence, and the reach is partial.** SQLite answers
+ *   `ORDER BY <text>` in BINARY collation, over UTF-8 bytes. The batch that closed the two sites
+ *   this paragraph used to name — the asset tags of `main/project/catalog.ts`, ordered one way by
+ *   `ORDER BY tag` and another by a bare `.sort()`, measured to disagree above the BMP — left
+ *   every remaining `ORDER BY` of `src/` on a timestamp, an id or `output_index`. A new one over
+ *   text would not redden. Most are literals under a `prepare(`, which this sweep could read; the
+ *   one that matters is not. `catalog.ts` builds `ORDER BY ${order}` from a value chosen a line
+ *   earlier, so the only VARIABLE ordering of the repository is exactly the site an AST rule
+ *   cannot decide — which is why this stays written down rather than half-closed.
+ *
+ *   That batch also caught this paragraph pricing the bare `.sort()` at "four wolves out of five",
+ *   counting five in `src/`. The rule above replays that count now and finds none.
  *
  * And one it CANNOT close, rather than a choice: this reads a file at a time, so it sees that a
  * language was named, never what that name holds at runtime. `localeCompare(other, language)`
@@ -139,7 +166,7 @@ describe('no sort hands its language to the machine', () => {
     )
 
   it(
-    'calls localeCompare with a language everywhere in the project',
+    'names a language or a comparator on every ordering in the project',
     () => {
       expect(findingsOf()).toEqual([])
     },
@@ -148,6 +175,26 @@ describe('no sort hands its language to the machine', () => {
 
   // That the four trees were actually opened is held by `source-files.test.ts`, on the walk both
   // guards borrow — an empty result here proves nothing unless the files were read.
+
+  it('reads the sort that names nothing, and lets the one with a comparator through', () => {
+    expect(bareCallsIn('probe.ts', 'const kept = names.sort()')).toEqual(['probe.ts:1'])
+    expect(bareCallsIn('probe.ts', "const kept = names['sort']()")).toEqual(['probe.ts:1'])
+    expect(bareCallsIn('probe.ts', 'const kept = names.sort(byCodeUnit)')).toEqual([])
+    expect(
+      bareCallsIn('probe.ts', "const kept = names.sort((a, b) => a.localeCompare(b, 'fr'))"),
+    ).toEqual([])
+  })
+
+  /**
+   * The two the review measured, and the reason the rule reads the argument rather than count it:
+   * `[…].sort(undefined)` orders by code unit exactly as `[…].sort()` does, and `toSorted` is the
+   * spelling ES2023 encourages for the same order. Counting arguments passed both.
+   */
+  it('reads the sort whose comparator is spelled undefined, and the copying spelling', () => {
+    expect(bareCallsIn('probe.ts', 'const kept = names.sort(undefined)')).toEqual(['probe.ts:1'])
+    expect(bareCallsIn('probe.ts', 'const kept = names.toSorted()')).toEqual(['probe.ts:1'])
+    expect(bareCallsIn('probe.ts', 'const kept = names.toSorted(byCodeUnit)')).toEqual([])
+  })
 
   it('sees the bare call, and the one that spells the absence out', () => {
     expect(bareCallsIn('probe.ts', 'const n = a.localeCompare(b)')).toEqual(['probe.ts:1'])
