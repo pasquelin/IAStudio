@@ -169,6 +169,31 @@ describe('a band that comes to the pointer', () => {
     expect(scrollTop()).toBe(0)
   })
 
+  /**
+   * The strip bounds its own horizontal travel against its width and the sequence's duration, and
+   * anchors a zoom on the instant under the pointer. The names have neither: written from here,
+   * a pan ran the montage off into the empty space `maxOffset` exists to refuse, and a zoom took
+   * its anchor from a box that measures no time at all.
+   */
+  it('moves the stack and nothing else, whatever modifier the wheel carries', () => {
+    const view = render(<TrackHeaders documentId="doc-1" />, { wrapper: StrictMode })
+    layout(view, CONTENT)
+    const column = view.container.firstElementChild ?? view.container
+    const before = viewportOf(useTimelineView.getState(), 'doc-1')
+
+    // Diagonal, as a trackpad sends it: the only shape where the stack moves AND the strip is
+    // asked to move in the same event, so the only one that catches an offset written from here.
+    fireEvent.wheel(column, { deltaX: 10_000, deltaY: DEFAULT_TRACK_HEIGHT })
+    fireEvent.wheel(column, { deltaY: 10_000, shiftKey: true })
+    fireEvent.wheel(column, { deltaY: -10_000, ctrlKey: true })
+
+    const after = viewportOf(useTimelineView.getState(), 'doc-1')
+    expect({ offset: after.offset, scale: after.scale }).toEqual({
+      offset: before.offset,
+      scale: before.scale,
+    })
+  })
+
   // Nothing to come to: a band whose whole stack is on screen must not creep when a row is
   // dragged over its edge, which would move the strip beside it for no reason at all.
   it('leaves a band alone when its whole stack is already on screen', () => {
