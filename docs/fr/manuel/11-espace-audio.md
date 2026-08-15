@@ -41,25 +41,40 @@ une ligne rappelle lequel des deux on regarde.
    pouvez aussi **la déposer sur le moniteur du bas**, ou passer par le clic droit, ligne
    **Ouvrir dans l’éditeur audio**.
 
-Tant qu’aucun son n’est chargé, le moniteur du bas affiche : « Aucun son ouvert. Déposez une
-prise ici, ou double-cliquez sur un asset audio. »
+Tant qu’aucun clip n’est sélectionné, le moniteur du bas affiche : « Sélectionnez un clip du
+montage pour l’éditer ici, ou déposez une prise. »
 
 > **Double-cliquer sans avoir ouvert d’onglet ne fait rien**, et rien ne le dit. Le double-clic
 > envoie toujours l’asset dans l’onglet en avant ; s’il n’y en a pas, il n’a nulle part où
 > l’envoyer. C’est expliqué en détail dans [Les assets](07-assets.md).
 
-**Une prise ouverte est aussitôt posée sur le montage**, à la tête de lecture, sur une piste son
-que le studio choisit — la règle du double-clic de l’[espace Vidéo](10-espace-video.md). C’est ce
-qui relie les deux moitiés : le clip de la bande basse **est** la prise du moniteur du bas, et
-il suit ce que vous lui faites — un rognage le raccourcit, un fondu se voit sur ses bords, une
-normalisation change son gain. Deux choses lui restent propres, parce qu’elles appartiennent au
-montage et non à la prise : **où il commence** et **à quelle vitesse il joue**.
+### Le montage commande, l’éditeur suit
 
-**Changer de prise se fait de la même façon** : double-cliquez sur un autre son, il remplace le
-précédent. Attention, **tout ce que vous aviez réglé est perdu** — les coupes et les fondus se
-mesurent sur la prise qui les a reçus, et n’auraient aucun sens reportés sur une autre. Le clip
-de la prise précédente **quitte le montage** avec elle ; ceux que vous y avez posés vous-même
-restent.
+C’est la règle qui explique tout le reste de ce chapitre, et elle tient en une phrase :
+**l’éditeur du bas montre le clip que le montage a sélectionné.** Exactement comme le moniteur
+Source de l’[espace Vidéo](10-espace-video.md) montre le clip choisi.
+
+**Une prise ouverte est donc posée sur le montage, puis sélectionnée** — à la tête de lecture,
+sur une piste son que le studio choisit. C’est ce qui la fait apparaître dans l’éditeur : elle
+n’y entre pas directement, elle y arrive parce qu’elle vient d’être sélectionnée.
+
+**Cliquez sur un autre clip de la bande basse, et c’est lui que l’éditeur montre.** Aucun geste
+d’ouverture n’est nécessaire ; la sélection suffit.
+
+### Chaque clip garde ses propres réglages
+
+**Les prises s’accumulent, elles ne se remplacent pas.** Ouvrez-en une seconde : elle se pose à
+côté de la première, sélectionnée, et **la première reste sur le montage avec tout ce que vous
+lui aviez fait**. Rognage, fondus, normalisation — la chaîne d’outils appartient au **clip**, pas
+à l’onglet. Revenez dessus en le sélectionnant, et vous retrouvez son état.
+
+C’est ce qui relie les deux moitiés : le clip de la bande basse **est** la prise du moniteur du
+bas, et il suit ce que vous lui faites — un rognage le raccourcit, un fondu se voit sur ses
+bords, une normalisation change son gain. Deux choses lui restent propres, parce qu’elles
+appartiennent au montage et non à la prise : **où il commence** et **à quelle vitesse il joue**.
+
+> **Rouvrir la prise déjà sous l’éditeur ne fait rien**, et c’est voulu : un second clip sur les
+> mêmes sons laisserait la chaîne du premier sans rien pour la rappeler.
 
 Si le fichier ne peut pas être décodé, il le dit aussi : « Ce fichier n’a pas pu être décodé. »
 C’est généralement un format inhabituel, ou un fichier abîmé.
@@ -80,6 +95,10 @@ C’est la représentation universelle du son. On y voit d’un coup d’œil :
 
 **Glissez sur la forme d’onde** pour tracer une sélection. C’est sur cette portion que les outils
 travaillent.
+
+**La barre de l’éditeur dit toujours où vous en êtes** : les deux bornes de la sélection quand il
+y en a une, et « Glissez sur l’onde pour sélectionner » quand il n’y en a pas. Une zone que
+personne ne sait tracer ne s’explique pas par une infobulle qui n’apparaît qu’au survol.
 
 La lecture boucle sur la sélection tant qu’elle existe, ce qui permet de juger un passage en le
 réécoutant.
@@ -144,10 +163,15 @@ Ce n’est qu’au moment où vous le demandez explicitement que quelque chose e
 | **Appliquer** | **réécrit l’asset** avec vos modifications. L’original est remplacé — sauf s’il s’agit d’un [média lié](07-assets.md), qui entre alors dans le projet sans que votre fichier soit touché |
 | **Enregistrer comme nouveau** | crée un **nouvel asset** à côté, nommé « *(édité)* » |
 
-**Après « Appliquer », la chaîne est vide et `⌘Z` ne la remonte plus.** C’est voulu, et c’est la
-contrepartie du bouton : le fichier **porte** désormais vos réglages, les rejouer par-dessus les
-poserait une seconde fois — un fondu deux fois plus long, un gain deux fois plus fort. La forme
-d’onde qui revient est celle du fichier réécrit.
+**Après « Appliquer », la chaîne de ce clip est vide et `⌘Z` ne la remonte plus.** C’est voulu, et
+c’est la contrepartie du bouton : le fichier **porte** désormais vos réglages, les rejouer
+par-dessus les poserait une seconde fois — un fondu deux fois plus long, un gain deux fois plus
+fort. La forme d’onde qui revient est celle du fichier réécrit.
+
+> **C’est tout l’historique de l’onglet qui part, pas seulement celui du clip.** Les autres clips
+> gardent leurs chaînes — leurs coupes et leurs fondus sont intacts —, mais plus aucune étape ne
+> se défait par `⌘Z`, sur aucun d’eux. L’historique est celui du document, et il ne peut pas se
+> rembobiner pour un seul bloc. C’est le seul bouton destructeur de l’éditeur.
 
 > **En cas de doute, prenez « Enregistrer comme nouveau ».** Vous gardez l’original, et vous
 > pourrez toujours supprimer la copie si elle ne va pas.
@@ -191,10 +215,15 @@ qu’on lit d’un coup d’œil, pas une qu’on fait défiler.
 
 `⌘Z` / `Ctrl+Z` défait la dernière étape de la chaîne. `⇧⌘Z` la refait.
 
-**Une seule touche pour les deux moitiés, et elle choisit toujours la chaîne d’abord.** Tant que
-la chaîne d’outils a quelque chose à rendre, `⌘Z` la défait ; c’est seulement lorsqu’elle est
-revenue à la prise nue que la touche s’adresse au montage. Pour défaire un geste de montage, il
-faut donc avoir remonté toute la chaîne — ou n’en avoir posé aucune.
+**Une seule touche pour les deux moitiés, et elle choisit toujours les outils d’abord.** Tant
+qu’une étape d’outil reste à défaire, `⌘Z` la défait ; c’est seulement quand il n’en reste plus
+que la touche s’adresse au montage. Pour défaire un geste de montage, il faut donc avoir remonté
+tous les outils — ou n’en avoir posé aucun.
+
+> **L’historique est celui de l’ONGLET, pas celui du clip affiché.** Les chaînes sont propres à
+> chaque clip, mais leurs étapes sont empilées ensemble : `⌘Z` défait la dernière que vous avez
+> posée, **même si c’était sur un autre clip que celui sous l’éditeur**. La sélection ne suit pas
+> — c’est à vous de regarder ce qui a bougé.
 
 Comme partout dans le studio, l’historique appartient au document : l’onglet visé doit être en
 avant.
