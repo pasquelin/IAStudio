@@ -13,8 +13,19 @@ As in Video, the **bottom strip belongs to the edit** and the asset shelf takes 
 the **right column**, so a take can be dragged from one to the other without switching panels. The
 left column holds Models and Generate, as it does everywhere else.
 
-> **An audio tab holds two halves, and they are saved together.** In the middle, the **one-take
-> editor**: the waveform and its tools. In the bottom strip, the **edit**, where takes are laid
+In the middle, **two stacked monitors** — where Video puts its own side by side. They take the
+full width, one under the other:
+
+| Monitor | What it shows |
+|---|---|
+| **The edit**, on top | every track put together, from start to finish |
+| **The take**, below | the sound you are editing, with its tools |
+
+A **handle** separates them: drag it to give one or the other more room. Under each, a line says
+which of the two you are looking at.
+
+> **An audio tab holds two halves, and they are saved together.** Below, the **one-take editor**:
+> the waveform and its tools. On top and in the bottom strip, the **edit**, where takes are laid
 > side by side — described [further down](#the-edit). One tab, one `⌘S`, one file.
 
 ---
@@ -24,19 +35,27 @@ left column holds Models and Generate, as it does everywhere else.
 **Two gestures, in this order, and the order matters:**
 
 1. **The `+` button on the left rail** — it opens an audio tab, empty for now.
-2. **Double-click an audio asset** in the shelf — the take goes into the tab. You can also **drag
-   it there** from the shelf, or use the right-click row **Open in the audio editor**.
+2. **Double-click an audio asset** in the shelf — the take goes into the tab. You can also **drop
+   it on the lower monitor**, or use the right-click row **Open in the audio editor**.
 
-While no sound is loaded, the tab shows: "No sound open. Drop a take here, or double-click an
-audio asset."
+While no sound is loaded, the lower monitor shows: "No sound open. Drop a take here, or
+double-click an audio asset."
 
 > **Double-clicking without having opened a tab does nothing**, and nothing says so. Double-click
 > always sends the asset into the tab in front; with no tab, it has nowhere to send it. This is
 > explained in full in [Assets](07-assets.md).
 
+**A take you open is laid on the edit straight away**, at the playhead, on a sound track the
+studio picks — the double-click rule of the [Video workspace](10-video-workspace.md). This is what
+ties the two halves together: the clip in the bottom strip **is** the take in the lower monitor,
+and it follows what you do to it — a crop shortens it, a fade shows on its edges,
+normalising changes its gain. Two things stay its own, because they belong to the edit rather than
+to the take: **where it starts** and **how fast it runs**.
+
 **Swapping takes works the same way**: double-click another sound and it replaces the previous
 one. Beware — **everything you had set is lost**. Cuts and fades are measured against the take
-that received them, and would mean nothing carried over to another.
+that received them, and would mean nothing carried over to another. The previous take's clip
+**leaves the edit** with it; the ones you laid down yourself stay.
 
 If the file cannot be decoded, it says that too: "This file could not be decoded." That is usually
 an unusual format, or a damaged file.
@@ -118,6 +137,11 @@ Only when you explicitly ask is anything written:
 | **Apply** | **rewrites the asset** with your changes. The original is replaced — unless it is a [linked medium](07-assets.md), which then enters the project without your file being touched |
 | **Save as new** | creates a **new asset** alongside, named "*(edited)*" |
 
+**After "Apply", the chain is empty and `⌘Z` no longer walks back up it.** That is deliberate, and
+it is the price of the button: the file now **holds** your settings, and replaying them over it
+would lay them down a second time — a fade twice as long, a gain twice as strong. The waveform
+that comes back is the one of the rewritten file.
+
 > **When in doubt, take "Save as new".** You keep the original, and you can always delete the copy
 > if it does not work out.
 
@@ -139,15 +163,18 @@ with their mute, solo and lock. All of it is described in
 The panel's bar carries one extra button, **Add an audio track** — one where Video has two: there
 is no picture track to add.
 
-Only two differences, and both come from the same cause: **this workspace has no monitor.**
+One difference only with Video, and it comes from a sound edit having no picture: **the upper
+monitor draws a waveform** — every track put together, as it will be exported. The whole edit fits
+its width, from start to finish: this is a view you read at a glance, not one you scroll.
 
-- **The transport sits on the panel's title bar**, not under a picture: play/pause and rewind to
-  the start. `Space` plays and pauses, as it does everywhere.
-- **There is nothing to watch** — a sound edit is listened to.
+- **Click inside it to move the playhead.** That is not a change: nothing enters the history.
+- **The transport sits under that monitor**: play/pause, rewind to the start, and the timecode.
+  `Space` plays and pauses, as it does everywhere. The bottom strip's title bar carries the same
+  buttons, and they drive the same playback.
 
-> **Two players, never at once.** The waveform in the middle plays the **tool chain** applied to
-> the open take; the edit plays the **clips laid on the tracks**. Starting one stops the other:
-> the studio has a single player.
+> **Two players, never at once.** The lower monitor plays the **tool chain** applied to the open
+> take; the upper one plays the **clips laid on the tracks**. Starting one stops the other: the
+> studio has a single player.
 
 ---
 
