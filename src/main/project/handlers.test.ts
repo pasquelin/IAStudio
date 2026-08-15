@@ -742,6 +742,10 @@ describe('project handlers', () => {
       expect(wrote(assets).request).toMatchObject({
         id: 'asset-new',
         type: 'texture',
+        // Read here because this is the only place the extracted name reaches: it carries TWO
+        // holes, and nothing else in the suite would notice `{{name}} — {{channel}}` going out
+        // whole. See `main/no-unfilled-placeholder.test.ts`.
+        name: 'Skeleton — Couleur de base',
         // The channel the glTF slot means, so the shelf can badge it and the catalogue answer
         // "which base colours does this project hold".
         map: 'baseColor',
