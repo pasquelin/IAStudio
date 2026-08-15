@@ -38,22 +38,24 @@ export const americanVerbs = (text: string): string[] =>
  *
  * `dialogue` was the one the manual had not settled — four chapters each way, `04-projects`
  * spelling both. Settled on the British form: what Electron names `dialog` is an API, and the
- * chapters speak to a reader. The key `common.dialog.*` keeps the API's spelling, being an
- * identifier this guard never reads.
+ * chapters speak to a reader. The key `dialog.*` keeps the API's spelling, being an identifier,
+ * and this reading is asked of VALUES only.
  *
- * Asked of prose only, never of a bundle: measured over the English bundle, the only three hits
- * are `blend.color`, `blend.color-burn` and `blend.color-dodge`, spelled the way `mix-blend-mode`
- * spells them.
+ * Asked of the bundle as well as of the manual since then, with three keys exempt: the blend
+ * modes `mix-blend-mode` names. Which reading each exemption covers is written where it lives.
+ *
+ * `re` is optional where the studio uses the prefix — `Recentre the camera` is written in
+ * `scene`, and the word boundary alone would have let `Recenter` through.
  */
 const AMERICAN_FORMS: readonly string[] = [
-  'color(?:s|ed|ing)?',
-  'center(?:s|ed|ing)?',
-  'gray(?:scale)?',
-  'cancel(?:ed|ing)',
-  'catalogs?',
+  '(?:re)?color(?:s|ed|ing|ful)?',
+  '(?:re)?center(?:s|ed|ing)?',
+  'gray(?:scale|ed|ing)?',
+  'cancel(?:ed|ing|ation)',
+  'catalog(?:s|ing)?',
   'behavior(?:s|al)?',
   'neighbor(?:s|ing|hood)?',
-  'favorites?',
+  'favorite[sd]?',
   'dialogs?',
 ]
 
