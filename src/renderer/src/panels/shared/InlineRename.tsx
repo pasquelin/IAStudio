@@ -9,6 +9,17 @@ export type InlineRenameProps = {
   label: string
   /** Fired with the trimmed name. Never with an empty one — a nameless row cannot be found. */
   onCommit: (name: string) => void
+  /**
+   * How tall the field stands. `control` fills the row, which is what a row that shows nothing
+   * else while the name is edited wants. `inline` is for a row that keeps its own controls on
+   * screen beside the field, and has to leave them their gauge.
+   */
+  gauge?: 'control' | 'inline'
+}
+
+const GAUGE = {
+  control: '',
+  inline: 'text-tiny h-(--sc-control-inline)',
 }
 
 /**
@@ -19,7 +30,7 @@ export type InlineRenameProps = {
  * are virtualized and re-key their rows on every change, so a layer added while a name is being
  * typed tears the field out of the tree — and React fires no blur for an input it unmounts.
  */
-export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
+export function InlineRename({ value, label, onCommit, gauge = 'control' }: InlineRenameProps) {
   const [draft, setDraft] = useState(value)
   // Read by the unmount cleanup, which must not re-run on every keystroke to see the last one.
   const latest = useRef({ draft, onCommit, value })
@@ -118,7 +129,7 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
       autoFocus
       aria-label={label}
       value={draft}
-      className={cn(FIELD, 'w-full')}
+      className={cn(FIELD, 'w-full', GAUGE[gauge])}
       onPointerDown={event => event.stopPropagation()}
       onChange={event => setDraft(event.target.value)}
       onBlur={done}
