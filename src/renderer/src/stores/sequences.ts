@@ -1,6 +1,6 @@
 import type { Asset } from '@shared/domain/asset'
-import type { TakeShape } from '@/engines/audio/edits'
-import { addClips } from '@/engines/timeline/commands'
+import type { TakeBounds, TakeShape } from '@/engines/audio/edits'
+import { addClips, editClip } from '@/engines/timeline/commands'
 import { placementsForAsset, trackForAsset } from '@/engines/timeline/insert'
 import {
   clampFades,
@@ -161,19 +161,6 @@ export function writeTakeClip(documentId: string, clipId: string, shape: TakeSha
 }
 
 /**
- * The slice a block shows, set outright from the editor — cropping to a selection, dropping the
- * silence at the two ends.
- *
- * On the history, where its neighbour above deliberately is not, and that is the whole difference
- * between them: this is a montage gesture that happens to be made from the editor, so ⌘Z has to
- * give the block its bounds back. It goes on the SEQUENCE's stack for the same reason — the
- * bounds are the montage's, and `AudioDocument` already arbitrates between the two stacks.
- *
- * `trimClip` is the other way to move these bounds and stays what a hand does on the strip: it
- * drags one edge and lets the block grow over its neighbour. This lands both edges at once and
- * never lengthens, a selection being a stretch of what is already there.
- */
-/**
  * Points a block at the file "apply" has just written, and lays it flat: the whole of that file,
  * no ramps, no level. Everything the block described is now IN the bytes, and a block still
  * describing it would have the montage play it twice.
@@ -182,6 +169,8 @@ export function writeTakeClip(documentId: string, clipId: string, shape: TakeSha
  * "apply" drops the chain and the undo stack that named it, so a press giving the block its old
  * take back would leave it playing raw samples with the settings gone.
  */
+const FLAT_TAKE = { inPoint: 0, fadeIn: 0, fadeOut: 0, gain: 0 }
+
 export function flattenTakeClip(
   documentId: string,
   clipId: string,
@@ -195,17 +184,7 @@ export function flattenTakeClip(
   const clip = clipById(sequence, clipId)
   if (!clip) return
 
-  const flat = shapedClip(
-    sequence,
-    { ...clip, assetId },
-    {
-      inPoint: 0,
-      duration,
-      fadeIn: 0,
-      fadeOut: 0,
-      gain: 0,
-    },
-  )
+  const flat = shapedClip(sequence, { ...clip, assetId }, { ...FLAT_TAKE, duration })
 
   current.replace(
     documentId,
@@ -213,26 +192,35 @@ export function flattenTakeClip(
   )
 }
 
-export function trimTakeClip(documentId: string, clipId: string, shape: TakeShape): void {
-  const current = store.use.getState()
-  if (!store.hasState(current, documentId)) return
-
-  let before: Clip | null = null
-
-  current.runCommand(documentId, {
-    id: `takeSlice:${clipId}`,
-    apply: state => {
-      const clip = clipById(state, clipId)
-      if (!clip) return state
-
-      before = clip
-      return updateClip(state, clipId, () => shapedClip(state, clip, shape))
-    },
-    revert: state => {
-      const origin = before
-      return origin ? updateClip(state, clipId, () => origin) : state
-    },
-  })
+/**
+ * The slice a block shows, set outright from the editor — cropping to a selection, dropping the
+ * silence at the two ends.
+ *
+ * On the history, where its neighbour above deliberately is not, and that is the whole difference
+ * between them: this is a montage gesture that happens to be made from the editor, so ⌘Z has to
+ * give the block its bounds back. It goes on the SEQUENCE's stack for the same reason — the
+ * bounds are the montage's, and `AudioDocument` already arbitrates between the two stacks.
+ *
+ * The RAMPS AND THE LEVEL are the clip's own and ride through untouched: what a cut leaves of a
+ * ramp is `clampFades`' answer, and a hand's gain has nothing to do with where one cut. Written
+ * from a slice — where they are zero by construction — a crop wiped both.
+ *
+ * `trimClip` is the other way to move these bounds and stays what a hand does on the strip: it
+ * drags one edge and lets the block grow over its neighbour. This lands both edges at once and
+ * never lengthens, a selection being a stretch of what is already there.
+ */
+export function trimTakeClip(documentId: string, clipId: string, slice: TakeBounds): void {
+  store.use.getState().runCommand(
+    documentId,
+    editClip(`takeSlice:${clipId}`, clipId, (clip, state) =>
+      shapedClip(state, clip, {
+        ...slice,
+        fadeIn: clip.fadeIn,
+        fadeOut: clip.fadeOut,
+        gain: clip.gain,
+      }),
+    ),
+  )
 }
 
 /**

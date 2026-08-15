@@ -1,6 +1,7 @@
-import { replayEdits, type AudioEdit, type TakeShape } from './edits'
+import type { Us } from '@/engines/timeline/timeline-state'
+import { replayEdits, type AudioEdit, type TakeBounds, type TakeShape } from './edits'
 import { encodeWav } from './wav'
-import type { AudioData } from './audio-data'
+import { silentBounds, type AudioData } from './audio-data'
 
 /**
  * Replaying a five-step chain over a three-minute take costs 287 ms, and encoding the result
@@ -9,7 +10,7 @@ import type { AudioData } from './audio-data'
  */
 export type AudioWorkerRequest =
   | { kind: 'load'; sampleRate: number; channels: Float32Array[] }
-  | { kind: 'render'; id: number; edits: readonly AudioEdit[]; start: TakeShape }
+  | { kind: 'render'; id: number; edits: readonly AudioEdit[]; start: TakeBounds }
 
 export type AudioWorkerResponse =
   | {
@@ -19,17 +20,26 @@ export type AudioWorkerResponse =
       channels: Float32Array[]
       wav: Uint8Array<ArrayBuffer>
       shape: TakeShape
+      silence: { head: Us; tail: Us }
     }
   | { kind: 'failed'; id: number; message: string }
 
 /**
- * The take as the chain leaves it, with the bytes the editor plays and writes to disk — and the
- * shape the montage clip under it takes.
+ * The take as the chain leaves it, with the bytes the editor plays and writes to disk — the shape
+ * the montage clip under it takes, and where the silence at its two ends stops.
  *
- * The shape rides along rather than being worked out on this side, because `normalize` is a level
- * measured on the samples, and the samples are over there.
+ * All three ride along rather than being worked out on this side, because all three are measured
+ * on the samples and the samples are over there. `silence` on EVERY render rather than on a
+ * request of its own: `edgeSilences` walks in from each end until it hears something, so it reads
+ * a handful of frames on anything but a wholly silent take — and on that one, a walk of eight
+ * million frames is precisely what must not happen on the window's thread.
  */
-export type RenderedAudio = { data: AudioData; wav: Uint8Array<ArrayBuffer>; shape: TakeShape }
+export type RenderedAudio = {
+  data: AudioData
+  wav: Uint8Array<ArrayBuffer>
+  shape: TakeShape
+  silence: { head: Us; tail: Us }
+}
 
 /**
  * What the renderer needs of a worker. Narrowed to three members so a test can stand in for
@@ -50,10 +60,15 @@ export type AudioRenderer = {
   /** Hands the take over. Its buffers move: the caller must not read them afterwards. */
   load: (source: AudioData) => void
   /**
-   * The chain replayed over `start` — the slice of the take one block shows — and encoded. A
-   * call overtaken by a newer one resolves to null.
+   * The chain replayed over the slice of the take one block shows, and encoded. A call overtaken
+   * by a newer one resolves to null.
+   *
+   * The slice comes as two NUMBERS rather than as an object, and that is not a style: React's
+   * compiler cannot preserve a memo whose value is handed to a function it cannot see into, so
+   * an object here forced the caller to depend on the clip by reference — and the write-back
+   * mints a new clip, which bought a second render of half a second to answer the first one.
    */
-  render: (edits: readonly AudioEdit[], start: TakeShape) => Promise<RenderedAudio | null>
+  render: (edits: readonly AudioEdit[], inPoint: Us, duration: Us) => Promise<RenderedAudio | null>
   dispose: () => void
 }
 
@@ -92,6 +107,7 @@ export function createAudioRenderer(open: () => WorkerPort): AudioRenderer {
         data: { sampleRate: message.sampleRate, channels: message.channels },
         wav: message.wav,
         shape: message.shape,
+        silence: message.silence,
       })
     })
 
@@ -114,7 +130,7 @@ export function createAudioRenderer(open: () => WorkerPort): AudioRenderer {
         source.channels.map(channel => channel.buffer),
       ),
 
-    render: (edits, start) =>
+    render: (edits, inPoint, duration) =>
       new Promise(resolve => {
         const id = nextId++
         latest = id
@@ -124,7 +140,7 @@ export function createAudioRenderer(open: () => WorkerPort): AudioRenderer {
         // Safe in this order because a worker cannot answer during `postMessage`: its message
         // event is always a turn later.
         try {
-          ensure().postMessage({ kind: 'render', id, edits, start }, [])
+          ensure().postMessage({ kind: 'render', id, edits, start: { inPoint, duration } }, [])
         } catch {
           // `null`, not a rejection: that is what `render` already answers when a worker dies
           // mid-take, and no caller of it catches. The port goes with it, so the next take
@@ -177,6 +193,7 @@ export function handleRequest(
   return {
     response: {
       kind: 'rendered',
+      silence: silentBounds(data),
       id: request.id,
       sampleRate: data.sampleRate,
       channels,

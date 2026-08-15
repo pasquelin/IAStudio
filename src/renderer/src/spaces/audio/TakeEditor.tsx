@@ -7,12 +7,12 @@ import { EmptyState } from '@/design/EmptyState'
 import { MonitorFrame } from '@/design/MonitorFrame'
 import { TOOLBAR_LABEL } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
-import { durationOf, silentBounds } from '@/engines/audio/audio-data'
+import { durationOf } from '@/engines/audio/audio-data'
 import type { RenderedAudio } from '@/engines/audio/audio-render'
 import {
   chainOf,
   clampRegion,
-  cropShape,
+  cropBounds,
   EMPTY_TAKE_CHAIN,
   pushEdit,
   takeSliceOf,
@@ -49,9 +49,10 @@ const TAKES: readonly AssetType[] = ['audio']
 /**
  * One take, edited — the source half of the pair.
  *
- * Nothing is written to disk until "apply" or "save as": every tool appends a step to the
- * chain, and what is heard is the chain replayed over the decoded source. That is what makes
- * undo free and A/B a boolean rather than a second copy of the audio.
+ * Nothing is written to disk until "apply" or "save as". A sound tool appends a step to the
+ * chain, and what is heard is the chain replayed over the block's slice of the decoded take —
+ * that is what makes undo free and A/B a boolean rather than a second copy of the audio. The two
+ * tools that CUT append nothing: they move the block's own bounds, on the montage's history.
  */
 export function TakeEditor({ documentId }: TakeEditorProps) {
   const { t } = useTranslation()
@@ -82,10 +83,18 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
   /**
    * What the chain is replayed over: the block's slice of its take, never the whole file.
    *
-   * Memoised on the clip itself, which `find` hands back by reference out of the montage — so a
-   * render is asked for again when the strip moves the block's edges, and not on every paint.
+   * Two NUMBERS rather than one object, so that the effect below depends on VALUES. The write-back
+   * mints a new clip object with the same bounds, and a render asked for by reference was then
+   * asked for twice — half a second of worker to answer exactly what the first one had.
+   *
+   * The memo is around the DURATION alone, and its shape is not a matter of taste: React's
+   * compiler assumes a function it cannot see into may mutate what it is handed, so
+   * `takeSliceOf(clip)` called bare marks the clip mutable and every manual memo of this
+   * component stops being preservable — `pnpm lint` says so and is right. Inside a memo the
+   * mutation is bounded; `inPoint` needs none, being a field read.
    */
-  const slice = useMemo(() => (clip ? takeSliceOf(clip) : null), [clip])
+  const inPoint = clip?.inPoint ?? 0
+  const sourceDuration = useMemo(() => (clip ? takeSliceOf(clip).duration : 0), [clip])
 
   const renderer = useAudioRenderer()
 
@@ -134,11 +143,11 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
   // The chain is replayed in the worker, never here: five steps over a three-minute take is
   // 287 ms, and encoding the result another 206 ms — § 8.8 puts both off this thread.
   useEffect(() => {
-    if (!renderer || !assetId || !slice || settled?.ok !== true) return
+    if (!renderer || !assetId || !clipId || settled?.ok !== true) return
 
     const bypassed = chain.bypassed
     let live = true
-    void renderer.render(bypassed ? [] : chain.edits, slice).then(audio => {
+    void renderer.render(bypassed ? [] : chain.edits, inPoint, sourceDuration).then(audio => {
       // `live` is what tells the two nulls apart. A render overtaken by a newer one was
       // overtaken because these deps changed, which ran the cleanup below first; a null that
       // still arrives on a live effect is the worker having died, and it has to be said.
@@ -148,7 +157,7 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
     return () => {
       live = false
     }
-  }, [renderer, settled, assetId, slice, chain.edits, chain.bypassed])
+  }, [renderer, settled, assetId, clipId, inPoint, sourceDuration, chain.edits, chain.bypassed])
 
   const answered = output?.assetId === assetId ? output : null
   const rendered = answered?.audio ?? null
@@ -157,13 +166,12 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
    * What ties the editor to the block it edits: the ramps and the level the chain came to,
    * written onto it. The bounds ride along untouched — the chain is replayed FROM them.
    *
-   * Written only for a block the chain OWNS, and an entry in `chains` is exactly that: the tools
-   * have touched this block at least once. What that guards is no longer a length, it is those
-   * two fields. A block nobody has edited answers an empty chain, an empty chain projects no
-   * ramp and no level, and writing that back would wipe a fade and a gain laid by hand on the
-   * strip — on the mere opening of the document, before anyone has clicked anything. A count of
-   * steps is the wrong question for the same reason a chain empties on purpose: "apply" empties
-   * it to lay the block flat over a file that now holds everything it described.
+   * Written only once a TOOL has run on this block. What that guards is no longer a length, it
+   * is those two fields: a block nobody has tooled answers an empty chain, an empty chain
+   * projects no ramp and no level, and writing that back would wipe a fade and a gain laid by
+   * hand on the strip. `chain.touched` says so outright where an entry in `chains` was read
+   * before — dragging a REGION writes an entry too, and a region is where one is looking, so one
+   * drag on the wave was enough to flatten the block.
    *
    * Bypass is that hazard reached from the other side, which is why it is read off the ANSWER's
    * own tag rather than off the current state. A bypassed render is asked for an empty chain,
@@ -171,7 +179,7 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
    * reading `chain.bypassed` here would write the answer of the press that went ON. One press,
    * and a listening aid would flatten the block on the strip.
    */
-  const owned = clipId !== null && clipId in edits.chains
+  const owned = chain.touched
 
   useEffect(() => {
     if (!answered || answered.bypassed || !owned) return
@@ -267,7 +275,8 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
    * silence are measured on the rendered take, which begins where the block begins.
    */
   const cutTo = (from: Us, to: Us): void => {
-    if (clipId && slice) trimTakeClip(documentId, clipId, cropShape(slice, from, to))
+    const slice = { inPoint, duration: sourceDuration }
+    if (clipId) trimTakeClip(documentId, clipId, cropBounds(slice, from, to))
   }
 
   const act = (id: AudioToolId): void => {
@@ -291,12 +300,12 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
       case 'normalize':
         return run({ kind: 'normalize', targetLufs: -14 })
       case 'trimSilence': {
-        // Measured here rather than in the worker, where the chain itself runs: `edgeSilences`
-        // walks in from each end and stops at the first sample it hears, so on anything but a
-        // wholly silent take it reads a few frames, not eight million.
+        // Measured in the WORKER, and handed over with the render: `edgeSilences` walks frame by
+        // frame until it hears something, so a wholly silent take is a walk of eight million of
+        // them — one to two orders of magnitude over this thread's budget.
         if (!rendered) return
 
-        const { head, tail } = silentBounds(rendered.data)
+        const { head, tail } = rendered.silence
         if (tail > head) cutTo(head, tail)
         return
       }

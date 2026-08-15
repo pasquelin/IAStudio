@@ -3,6 +3,9 @@ import { clamp } from '@shared/numeric'
 import type { Command } from '@/engines/core/history'
 import {
   CLIP_EDGES,
+  clipById,
+  clipEnd,
+  sourceTimeAt,
   type Clip,
   type ClipEdge,
   type SequenceState,
@@ -44,9 +47,25 @@ export type TakeChain = {
   region: Region | null
   /** A/B: hear the source rather than the chain, without undoing anything. */
   bypassed: boolean
+  /**
+   * Whether a TOOL has ever run on this block — what says the chain may write its ramps and its
+   * level onto the clip.
+   *
+   * Said outright rather than read off the presence of an entry in `chains`, which is what this
+   * replaced: dragging a region writes an entry too, and a region is where one is LOOKING. A
+   * block whose chain is empty projects no ramp and no level, so one drag on the wave was enough
+   * to wipe a fade laid by hand on the strip. A count of steps is the wrong question in the other
+   * direction: a chain empties on purpose, and the block has to be laid flat with it.
+   */
+  touched: boolean
 }
 
-export const EMPTY_TAKE_CHAIN: TakeChain = { edits: [], region: null, bypassed: false }
+export const EMPTY_TAKE_CHAIN: TakeChain = {
+  edits: [],
+  region: null,
+  bypassed: false,
+  touched: false,
+}
 
 /**
  * Every chain of a document, keyed by the montage BLOCK it edits.
@@ -85,8 +104,9 @@ export function withChain(state: AudioEditState, clipId: string, chain: TakeChai
  * document growing without bound behind chains nothing on screen can reach.
  */
 export function chainsOnMontage(state: AudioEditState, montage: SequenceState): AudioEditState {
-  const alive = new Set(montage.tracks.flatMap(track => track.clips.map(clip => clip.id)))
-  const kept = Object.entries(state.chains).filter(([clipId]) => alive.has(clipId))
+  // `clipById` rather than an index of our own: it is how the whole repository asks this
+  // question, and there are as many chains as blocks — saving is not a hot path.
+  const kept = Object.entries(state.chains).filter(([clipId]) => clipById(montage, clipId))
 
   return kept.length === Object.keys(state.chains).length
     ? state
@@ -110,44 +130,47 @@ export type TakeShape = {
 }
 
 /**
- * The slice a block shows, as the shape the editor replays over — its bounds, and nothing else.
+ * The stretch of a take one block shows — where the chain is replayed FROM.
  *
- * The block's own ramps and level are deliberately NOT read back, and that is not an oversight:
- * the chain PRODUCES those two, and `writeTakeClip` writes them onto the block. Seeded from the
- * block, each render would then start from its own last answer — a chain holding one +3 dB step
- * would hand the strip 3, then 6, then 9. The bounds are safe because no step moves them any
- * more, which is the whole reason cutting became a montage gesture.
+ * Bounds only, and that is the point: the chain PRODUCES the ramps and the level, and
+ * `writeTakeClip` writes them onto the block. Were they read back here, every render would start
+ * from its own last answer — a chain holding one +3 dB step would hand the strip 3, then 6, then
+ * 9. The bounds are safe from that because no step moves them any more, which is the whole reason
+ * cutting became a montage gesture.
  *
  * What it costs, said plainly: a ramp or a level laid by HAND on the strip is still overwritten
  * by the first tool used on that block. Only the trim survives.
- *
- * `duration` is SOURCE time where a clip holds timeline time, the two differing by the speed it
- * runs at. `writeTakeClip` divides by that same speed on the way back, so the round trip lands
- * on the clip it started from and the strip is not repainted for nothing.
  */
-export function takeSliceOf(clip: Clip): TakeShape {
-  return {
-    inPoint: clip.inPoint,
-    duration: clip.duration * clip.speed,
-    fadeIn: 0,
-    fadeOut: 0,
-    gain: 0,
-  }
+export type TakeBounds = { inPoint: Us; duration: Us }
+
+/**
+ * `duration` is SOURCE time where a clip holds timeline time, the two differing by the speed it
+ * runs at. Through `sourceTimeAt`, which is where that conversion lives and which rounds — a
+ * fractional speed otherwise sends `crop` a duration in fractional microseconds.
+ */
+export function takeSliceOf(clip: Clip): TakeBounds {
+  return { inPoint: clip.inPoint, duration: sourceTimeAt(clip, clipEnd(clip)) - clip.inPoint }
 }
 
-/** What a crop leaves of a shape — bounds moved, and of each ramp only the part still inside. */
-export function cropShape(shape: TakeShape, from: Us, to: Us): TakeShape {
-  // Clamped as `crop` clamps, so the projection cannot describe a slice the samples do not have.
-  const start = clamp(from, 0, shape.duration)
-  const end = clamp(to, start, shape.duration)
+/**
+ * The stretch `[from, to)` OF a slice, back in the take's own coordinates — what the two cutting
+ * tools land on the block.
+ *
+ * Bounds alone, like the slice it narrows: what a cut does to a ramp is `clampFades`' business,
+ * on the clip, where the ramps actually live.
+ */
+export function cropBounds(slice: TakeBounds, from: Us, to: Us): TakeBounds {
+  // Clamped as `crop` clamps, so this cannot describe a stretch the samples do not have.
+  const start = clamp(from, 0, slice.duration)
+  const end = clamp(to, start, slice.duration)
 
-  return {
-    ...shape,
-    inPoint: shape.inPoint + start,
-    duration: end - start,
-    fadeIn: Math.max(0, shape.fadeIn - start),
-    fadeOut: Math.max(0, shape.fadeOut - (shape.duration - end)),
-  }
+  return { inPoint: slice.inPoint + start, duration: end - start }
+}
+
+/** The samples one block shows, without copying a file the block happens to cover whole. */
+function sliceOf(source: AudioData, slice: TakeBounds): AudioData {
+  const covered = slice.inPoint <= 0 && slice.duration >= durationOf(source)
+  return covered ? source : crop(source, slice.inPoint, slice.inPoint + slice.duration)
 }
 
 /**
@@ -164,11 +187,14 @@ export function cropShape(shape: TakeShape, from: Us, to: Us): TakeShape {
 export function replayEdits(
   source: AudioData,
   edits: readonly AudioEdit[],
-  start: TakeShape,
+  start: TakeBounds,
 ): { data: AudioData; shape: TakeShape } {
-  let shape: TakeShape = start
+  let shape: TakeShape = { ...start, fadeIn: 0, fadeOut: 0, gain: 0 }
 
-  const slice = applyGain(crop(source, start.inPoint, start.inPoint + start.duration), start.gain)
+  // A block covering the whole file is handed the file: `crop` allocates even for the full
+  // range, and that is seventy megabytes memcpy'd for nothing on every open of a document.
+  // `handleRequest` is what keeps the source from being transferred away in that case.
+  const slice = sliceOf(source, start)
 
   const data = edits.reduce((current, edit) => {
     switch (edit.kind) {
@@ -219,6 +245,9 @@ export function clampRegion(region: Region, data: AudioData): Region | null {
  * The index is captured as the command is applied rather than assumed to be the last one:
  * `history.ts` promises that `revert` undoes its own `apply`, and a blind `slice(0, -1)` would
  * hold only for as long as appending stays the only audio command there is.
+ *
+ * `touched` is not put back on the way out, and that is deliberate: undoing the last step has to
+ * lay the block flat again, which is exactly what an empty chain projects.
  */
 export function pushEdit(clipId: string, edit: AudioEdit): Command<AudioEditState> {
   let at = -1
@@ -228,7 +257,11 @@ export function pushEdit(clipId: string, edit: AudioEdit): Command<AudioEditStat
     apply: state => {
       const chain = chainOf(state, clipId)
       at = chain.edits.length
-      return withChain(state, clipId, { ...chain, edits: [...chain.edits, edit] })
+      return withChain(state, clipId, {
+        ...chain,
+        edits: [...chain.edits, edit],
+        touched: true,
+      })
     },
     revert: state => {
       if (at < 0) return state
@@ -299,6 +332,10 @@ function readChain(raw: unknown): TakeChain {
     // Never restored as bypassed: A/B is which of two things one is listening to right now,
     // and a document that reopens on the source would look like a chain that stopped working.
     bypassed: false,
+    // Read as a fact rather than trusted from the file, which would let a document written
+    // before the field existed reopen able to flatten a block nobody had tooled. A chain
+    // emptied by "apply" reopens as flat too, and its block is already flat on the strip.
+    touched: edits.length > 0,
   }
 }
 

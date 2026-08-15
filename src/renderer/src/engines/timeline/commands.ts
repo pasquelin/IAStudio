@@ -409,13 +409,17 @@ function splitOneClip(clipId: string, at: Us, tailLink: string): Command<Sequenc
 
 /**
  * One clip rewritten in place, reverted by putting back what was there. Every property edit —
- * fade, gain, speed — is this command with a different change, so none of them re-derives how
- * to find a clip, refuse a locked track or restore the original.
+ * fade, gain, speed, the slice the audio editor cuts to — is this command with a different
+ * change, so none of them re-derives how to find a clip, refuse a locked track or restore the
+ * original.
+ *
+ * `change` is handed the sequence as well as the clip: a slice has to land on the frame grid and
+ * stop at the next clip, and both are read off the montage rather than off the clip alone.
  */
-function editClip(
+export function editClip(
   id: string,
   clipId: string,
-  change: (clip: Clip) => Clip,
+  change: (clip: Clip, state: SequenceState) => Clip,
 ): Command<SequenceState> {
   let before: Clip | null = null
 
@@ -427,7 +431,7 @@ function editClip(
       if (!track || track.locked || !clip) return state
 
       before = clip
-      return updateClip(state, clipId, change)
+      return updateClip(state, clipId, current => change(current, state))
     },
     revert: state => {
       const origin = before

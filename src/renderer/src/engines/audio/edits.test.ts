@@ -8,7 +8,7 @@ import {
   chainOf,
   chainsOnMontage,
   clampRegion,
-  cropShape,
+  cropBounds,
   EMPTY_AUDIO_EDIT,
   EMPTY_TAKE_CHAIN,
   parseAudioEdits,
@@ -17,6 +17,7 @@ import {
   takeSliceOf,
   type AudioEdit,
   type AudioEditState,
+  type TakeBounds,
   type TakeChain,
   type TakeShape,
 } from './edits'
@@ -30,12 +31,9 @@ const tone = (frames: number, level = 0.5): AudioData => ({
 })
 
 /** A block covering the whole of what it was handed — what every take starts out as. */
-const whole = (frames: number): TakeShape => ({
+const whole = (frames: number): TakeBounds => ({
   inPoint: 0,
   duration: Math.round((frames / RATE) * 1_000_000),
-  fadeIn: 0,
-  fadeOut: 0,
-  gain: 0,
 })
 
 const render = (source: AudioData, edits: AudioEdit[], start = whole(frameCount(source))) =>
@@ -55,9 +53,6 @@ describe('the edit chain', () => {
     const { data, shape } = replayEdits(tone(200, 1), [{ kind: 'gain', db: -6.02 }], {
       inPoint: 500_000,
       duration: 1_000_000,
-      fadeIn: 0,
-      fadeOut: 0,
-      gain: 0,
     })
 
     expect(frameCount(data)).toBe(100)
@@ -106,7 +101,7 @@ describe('the edit chain', () => {
  * have every render start from its own last answer — one +3 dB step reading 3, then 6, then 9.
  */
 describe('the slice a block shows', () => {
-  it('is the block’s own bounds, with no ramp and no level', () => {
+  it('is the block’s own bounds, whatever else the block carries', () => {
     const clip = {
       ...clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' }),
       inPoint: 400_000,
@@ -114,13 +109,7 @@ describe('the slice a block shows', () => {
       gain: -6,
     }
 
-    expect(takeSliceOf(clip)).toEqual({
-      inPoint: 400_000,
-      duration: 1_000_000,
-      fadeIn: 0,
-      fadeOut: 0,
-      gain: 0,
-    })
+    expect(takeSliceOf(clip)).toEqual({ inPoint: 400_000, duration: 1_000_000 })
   })
 
   // A clip's duration is TIMELINE time and the samples are SOURCE time, the two differing by the
@@ -129,6 +118,14 @@ describe('the slice a block shows', () => {
     const fast = { ...clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' }), speed: 2 }
 
     expect(takeSliceOf(fast).duration).toBe(2_000_000)
+  })
+
+  // Through `sourceTimeAt`, which rounds: read as a bare multiplication, a fractional speed sent
+  // `crop` a duration in fractional microseconds.
+  it('answers a whole number of microseconds at a fractional speed', () => {
+    const odd = { ...clipFixture('clip-1', 0, 1_000_001, { assetId: 'asset-1' }), speed: 1.1 }
+
+    expect(Number.isInteger(takeSliceOf(odd).duration)).toBe(true)
   })
 })
 
@@ -272,6 +269,7 @@ describe('reading an edit chain back', () => {
     ],
     region: { from: 0, to: 200 },
     bypassed: false,
+    touched: true,
   }
   const filled: AudioEditState = { chains: { 'clip-a': chain, 'clip-b': EMPTY_TAKE_CHAIN } }
 
@@ -305,6 +303,7 @@ describe('reading an edit chain back', () => {
           edits: [{ kind: 'gain', db: -3 }],
           region: { from: 0, to: 200 },
           bypassed: false,
+          touched: true,
         },
       },
     })
@@ -426,29 +425,21 @@ describe('the chain read as a montage clip', () => {
 })
 
 /**
- * What the two cutting tools land on the block, now that cutting is a montage gesture. A clip
- * holds one ramp length per edge, so of a ramp cut into it can only say what is left.
+ * What the two cutting tools land on the block, now that cutting is a montage gesture. Bounds
+ * only: a region is measured on the rendered take, which begins where the block begins, and what
+ * a cut leaves of a ramp is `clampFades`' answer on the clip.
  */
-describe('cutting a shape down to a stretch of itself', () => {
-  const shape: TakeShape = {
-    inPoint: 1_000_000,
-    duration: 2_000_000,
-    fadeIn: 500_000,
-    fadeOut: 400_000,
-    gain: -3,
-  }
+describe('cutting a slice down to a stretch of itself', () => {
+  const slice: TakeBounds = { inPoint: 1_000_000, duration: 2_000_000 }
 
-  it('moves the in point by where the stretch begins, and keeps the level', () => {
-    expect(cropShape(shape, 200_000, 900_000)).toEqual({
+  it('moves the in point by where the stretch begins', () => {
+    expect(cropBounds(slice, 200_000, 900_000)).toEqual({
       inPoint: 1_200_000,
       duration: 700_000,
-      fadeIn: 300_000,
-      fadeOut: 0,
-      gain: -3,
     })
   })
 
-  it('cannot describe a slice the samples do not have', () => {
-    expect(cropShape(shape, 0, 9_000_000).duration).toBe(2_000_000)
+  it('cannot describe a stretch the samples do not have', () => {
+    expect(cropBounds(slice, 0, 9_000_000).duration).toBe(2_000_000)
   })
 })

@@ -8,7 +8,7 @@ import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { SECOND } from '@shared/domain/time'
 import { addClip } from '@/engines/timeline/commands'
-import { makeClip, EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timeline-state'
+import { makeClip, updateClip, EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timeline-state'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
@@ -57,7 +57,8 @@ function writeChain(fields: Partial<TakeChain>): void {
   store.replace('doc-1', withChain(current, CLIP, { ...chainOf(current, CLIP), ...fields }))
 }
 
-const laidClip = () => sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips[0]
+/** The block the editor is on — the montage of these suites holds it first on its only track. */
+const takeClip = () => sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips[0]
 
 const laidAssetIds = (): string[] =>
   sequenceOf(useSequences.getState(), 'doc-1')
@@ -189,8 +190,6 @@ describe('AudioDocument', () => {
 
   // The take under the editor and the clip on the strip are two views of one thing.
   describe('the clip it keeps in step', () => {
-    const takeClip = () => sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips[0]
-
     /** A document whose take is laid on the strip and selected, as `loadTake` leaves it. */
     async function openLaidTake(): Promise<void> {
       montageWithTake()
@@ -250,6 +249,32 @@ describe('AudioDocument', () => {
       // The new file IS the slice, so the block spans the whole of it from its first sample.
       expect(takeClip()?.inPoint).toBe(0)
       expect(takeClip()?.duration).toBe(CROPPED)
+    })
+
+    /**
+     * Dragging a region writes an entry into `chains` — a region is where one is LOOKING, and it
+     * has to be remembered. Read as "the tools own this block", that entry let an empty chain
+     * project no ramp and no level onto a clip that carried both from the strip: one drag on the
+     * wave, and a fade laid by hand was gone. `touched` is what answers that question now.
+     */
+    it('leaves a hand-laid fade alone when the wave is merely dragged over', async () => {
+      await openLaidTake()
+      useSequences.setState(state => ({
+        states: {
+          ...state.states,
+          'doc-1': updateClip(sequenceOf(state, 'doc-1'), CLIP, clip => ({
+            ...clip,
+            fadeIn: 300_000,
+            gain: -4,
+          })),
+        },
+      }))
+
+      writeChain({ region: { from: 0, to: 500_000 } })
+
+      await waitFor(() => expect(editsOf().region).not.toBeNull())
+      expect(takeClip()?.fadeIn).toBe(300_000)
+      expect(takeClip()?.gain).toBe(-4)
     })
 
     /**
@@ -343,8 +368,8 @@ describe('AudioDocument', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Couper les silences/ }))
 
-    await waitFor(() => expect(laidClip()?.inPoint).toBe(500_000))
-    expect(laidClip()?.duration).toBe(1_000_000)
+    await waitFor(() => expect(takeClip()?.inPoint).toBe(500_000))
+    expect(takeClip()?.duration).toBe(1_000_000)
     expect(editsOf().edits).toEqual([])
   })
 
@@ -352,7 +377,7 @@ describe('AudioDocument', () => {
     await openTake()
     await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
 
-    expect(laidClip()?.duration).toBe(2 * SECOND)
+    expect(takeClip()?.duration).toBe(2 * SECOND)
   })
 
   it('crops the block to the selected region', async () => {
@@ -363,8 +388,34 @@ describe('AudioDocument', () => {
 
     // 13 frames at 25 fps rather than the 12.5 asked for: a block lands on the frame grid,
     // exactly as one laid down by hand does.
-    await waitFor(() => expect(laidClip()?.duration).toBe(520_000))
+    await waitFor(() => expect(takeClip()?.duration).toBe(520_000))
     expect(editsOf().edits).toEqual([])
+  })
+
+  /**
+   * Cutting says nothing about a level, and only `clampFades` may say what is left of a ramp.
+   * Written from the SLICE — where both are zero by construction — a crop wiped what a hand had
+   * laid on the strip, which is the very defect the slice was introduced to stop.
+   */
+  it('leaves the block its ramps and its level when it crops', async () => {
+    await openTake()
+    useSequences.setState(state => ({
+      states: {
+        ...state.states,
+        'doc-1': updateClip(sequenceOf(state, 'doc-1'), CLIP, clip => ({
+          ...clip,
+          fadeIn: 200_000,
+          gain: -4,
+        })),
+      },
+    }))
+    writeChain({ region: { from: 0, to: 500_000 } })
+
+    await userEvent.click(screen.getByRole('button', { name: /Rogner/ }))
+
+    await waitFor(() => expect(takeClip()?.duration).toBe(520_000))
+    expect(takeClip()?.fadeIn).toBe(200_000)
+    expect(takeClip()?.gain).toBe(-4)
   })
 
   it('keeps A/B off the undo stack: it changes what is heard, not what was done', async () => {
