@@ -1,5 +1,5 @@
 import type { CloseChoice } from '@shared/domain/document'
-import { TRANSLATIONS } from '@shared/i18n'
+import { fillHoles, TRANSLATIONS } from '@shared/i18n'
 import { windowLanguage } from '@main/window/language'
 
 /**
@@ -22,9 +22,6 @@ export type AskUser = (options: {
   cancelId: number
 }) => Promise<number>
 
-/** Interpolated here: the main process has no i18next, and one placeholder does not need one. */
-const withTitle = (text: string, title: string): string => text.replace('{{title}}', title)
-
 /**
  * What to do with a document that has unsaved work.
  *
@@ -35,7 +32,7 @@ export async function askCloseChoice(ask: AskUser, title: string): Promise<Close
   const t = TRANSLATIONS[windowLanguage()].documents
 
   const chosen = await ask({
-    message: withTitle(t.saveTitle, title),
+    message: fillHoles(t.saveTitle, { title }),
     detail: t.saveBody,
     // Save first: it is the platform order on macOS and the answer that loses nothing.
     buttons: [t.save, t.dontSave, t.cancel],
@@ -52,7 +49,7 @@ export async function askDeleteDocument(ask: AskUser, title: string): Promise<bo
   const t = TRANSLATIONS[windowLanguage()].documents
 
   const chosen = await ask({
-    message: withTitle(t.deleteTitle, title),
+    message: fillHoles(t.deleteTitle, { title }),
     detail: t.deleteBody,
     buttons: [t.cancel, t.deleteConfirm],
     defaultId: 0,

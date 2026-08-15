@@ -26,7 +26,7 @@ import {
   type MenuCheck,
 } from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
-import { TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
+import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
 import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/texture-export'
 import { FACE_SIZES } from '@shared/domain/skybox'
 import type {
@@ -149,7 +149,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
 
   // Interpolated rather than spelled out in both bundles: `constants.test.ts` pins the product
   // name to one place, and a hard-coded copy here would drift past it unnoticed.
-  const named = (sentence: string): string => sentence.replace('{{name}}', APP_NAME)
+  const named = (sentence: string): string => fillHoles(sentence, { name: APP_NAME })
   const aboutLabel = named(t.menu.about)
 
   // `named` rides along: only `hide` and `quit` carry a placeholder, and a sentence without one
@@ -252,7 +252,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    */
   const skyboxItems = (): MenuItemConstructorOptions[] =>
     FACE_SIZES.map(size => ({
-      label: t.skyboxFaceSize.replace(/\{\{size\}\}/g, String(size)),
+      label: fillHoles(t.skyboxFaceSize, { size }),
       click: () => actions.exportSkybox({ size }),
     }))
 

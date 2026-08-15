@@ -5,7 +5,7 @@ import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
 import { DISPLAY_MODES, LIGHT_ENTRIES, MESH_ENTRIES, VIEW_DIRECTIONS } from '@shared/domain/scene'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
-import type { WorkspaceId } from '@shared/domain/workspace'
+import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
 
 const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
@@ -371,6 +371,26 @@ describe('menuTemplate', () => {
     const about = Array.isArray(appMenu?.submenu) ? appMenu.submenu[0] : undefined
     expect(about?.label).toBe('À propos de Scenario Studio')
     expect(about?.label).not.toContain('{{name}}')
+  })
+
+  // The case above pins one sentence; a hole left standing anywhere else reaches the menu bar
+  // spelled `{{name}}`, and only reading every label says nobody forgot to fill one.
+  it('leaves no hole standing in a label, in either language or any workspace', () => {
+    const labelsUnder = (items: MenuItemConstructorOptions[]): string[] =>
+      items.flatMap(item => [
+        typeof item.label === 'string' ? item.label : '',
+        ...(Array.isArray(item.submenu) ? labelsUnder(item.submenu) : []),
+      ])
+
+    const holed = LANGUAGES.map(({ code }) => code).flatMap(language =>
+      WORKSPACE_IDS.flatMap(workspace =>
+        labelsUnder(menuTemplate(options({ language, workspace }))).filter(one =>
+          one.includes('{{'),
+        ),
+      ),
+    )
+
+    expect(holed).toEqual([])
   })
 
   it('lets Electron render the About panel rather than hand-rolling a dialog', () => {

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import type { ActivityReport } from '@main/project/activity-log'
-import { TRANSLATIONS } from '@shared/i18n'
+import { fillHoles, TRANSLATIONS } from '@shared/i18n'
 import { windowLanguage } from '@main/window/language'
 import { embeddedTextures, type EmbeddedTexture } from './glb-textures'
 import { isPngBytes, probePng } from '@main/media/png'
@@ -31,7 +31,7 @@ function extractedTextureName(modelName: string, texture: EmbeddedTexture): stri
   const t = TRANSLATIONS[windowLanguage()].texture
   const role = texture.channel ? t.channel[texture.channel] : texture.slot
 
-  return t.derivedName.replace('{{name}}', modelName).replace('{{channel}}', role)
+  return fillHoles(t.derivedName, { name: modelName, channel: role })
 }
 
 export type TextureExtractionDeps = {
