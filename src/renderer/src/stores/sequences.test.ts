@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
 import type { TakeShape } from '@/engines/audio/edits'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { addClip } from '@/engines/timeline/commands'
@@ -12,9 +13,24 @@ import {
   type Clip,
   type SequenceState,
 } from '@/engines/timeline/timeline-state'
-import { sequenceHistoryOf, sequenceOf, useSequences, writeTakeClip } from './sequences'
+import {
+  addAssetToSequence,
+  sequenceHistoryOf,
+  sequenceOf,
+  useSequences,
+  writeTakeClip,
+} from './sequences'
 
 const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
+
+const asset: Asset = {
+  id: 'asset-1',
+  name: 'rush.mp4',
+  type: 'video',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-08-07T10:00:00.000Z',
+}
 
 const clipsOf = (documentId: string): Clip[] =>
   sequenceOf(useSequences.getState(), documentId).tracks[0]?.clips ?? []
@@ -66,6 +82,26 @@ describe('sequences store', () => {
 
     expect(useSequences.getState().states['doc-1']).toBeUndefined()
     expect(useSequences.getState().histories['doc-1']).toBeUndefined()
+  })
+
+  // The window between a tab appearing and its file being read, where `stateOf` answers with the
+  // default rather than with the montage on disk — the same one `loadTake` refuses to write in.
+  // A drop taken there is a montage built on that default, and a file that lands on top of it.
+  // A document id of its own, and that is not cosmetic: `drop` above leaves `doc-1` in the
+  // store's dropped set, which refuses a command on its own — this would then pass without the
+  // guard it is written for. The state a `beforeEach` clears is not all the state there is.
+  it('lays no clip on a document whose file is still on its way', () => {
+    addAssetToSequence('doc-new', asset)
+
+    expect(useSequences.getState().states['doc-new']).toBeUndefined()
+  })
+
+  it('lays one on the same document once its file is there', () => {
+    useSequences.getState().replace('doc-new', EMPTY_SEQUENCE)
+
+    addAssetToSequence('doc-new', asset)
+
+    expect(clipsOf('doc-new')).toHaveLength(1)
   })
 })
 

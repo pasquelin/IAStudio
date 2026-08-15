@@ -344,6 +344,11 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
       if (!deps.ffmpeg() || !deps.projectPath()) return
 
       const controller = new AbortController()
+      // A second derivation of the same asset REPLACES the first, which two rapid "apply" do:
+      // both would write the same proxy and the same peaks from two ffmpeg processes, over one
+      // another. Unlike an ingest, whose id is minted per pick, this one names a row that
+      // already exists — so the collision is the ordinary case rather than the odd one.
+      running.get(assetId)?.abort()
       running.set(assetId, controller)
       const cancelled = (): boolean => controller.signal.aborted
       const fields: Partial<Asset> = {}
@@ -379,7 +384,9 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         stage = 'failed'
       } finally {
         release()
-        running.delete(assetId)
+        // Only if the entry is still MINE: the run this one replaced ends after it, and a blind
+        // delete would take the live controller out — leaving "cancel" with nothing to abort.
+        if (running.get(assetId) === controller) running.delete(assetId)
 
         // Never discarded, whatever happened: the row stands for an asset the account holds,
         // and a proxy that failed is a take that plays without one — not a take that is gone.

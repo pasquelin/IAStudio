@@ -45,6 +45,12 @@ export function sequenceTakes(documentId: string, asset: Asset): boolean {
  */
 export function addAssetToSequence(documentId: string, asset: Asset): void {
   const current = store.use.getState()
+  // The guard its neighbour below carries, and for the same window: `stateOf` answers with the
+  // SEQUENCE DEFAULT for a document whose file is still being read, so a drop landing there
+  // writes a montage of that default — and the file, arriving after it, has a state to argue
+  // with. Silence, like every other refusal of this function.
+  if (!store.hasState(current, documentId)) return
+
   const sequence = store.stateOf(current, documentId)
 
   const placements = placementsForAsset(sequence, asset, asset.id, sequence.playhead)
