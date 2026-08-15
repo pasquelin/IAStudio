@@ -111,10 +111,34 @@ const LINK = /\[[^\]]*\]\(([^)]+)\)/g
  */
 export function deadManualLinks(chapters: readonly ManualChapter[], language: Language): string[] {
   const slugs = new Set(chapters.map(chapter => chapter.slug))
-  const anchors = new Map(
-    chapters.map(chapter => [chapter.slug, new Set(chapter.headings.map(entry => entry.anchor))]),
-  )
   const dead: string[] = []
+
+  // Counted rather than collected into a set, and that is the whole of the rule below: a title
+  // repeated in one chapter yields ONE anchor for several headings.
+  const anchors = new Map(
+    chapters.map(chapter => {
+      const counts = new Map<string, number>()
+      for (const entry of chapter.headings) {
+        counts.set(entry.anchor, (counts.get(entry.anchor) ?? 0) + 1)
+      }
+      return [chapter.slug, counts]
+    }),
+  )
+
+  /**
+   * Why an ambiguous anchor is refused rather than resolved to the first heading.
+   *
+   * GitHub numbers repeats — `#undo-and-redo`, then `-1`, then `-2` — and this rule does not,
+   * because the window resolves an anchor with `getElementById`, which answers the FIRST match
+   * and cannot be told to mean the third. Chapter 15 carries three "Annuler et rétablir", so the
+   * case is real; no link points at one today, and this is what says so tomorrow.
+   */
+  const missing = (slug: string, anchor: string): string | null => {
+    const count = anchors.get(slug)?.get(anchor) ?? 0
+    if (count === 0) return 'names no heading'
+    if (count > 1) return `names ${count} headings, so it cannot land where it means`
+    return null
+  }
 
   for (const chapter of chapters) {
     for (const [, href = ''] of chapter.markdown.matchAll(LINK)) {
@@ -123,11 +147,13 @@ export function deadManualLinks(chapters: readonly ManualChapter[], language: La
 
       if (!target) say('is none of the three shapes a manual link takes')
       else if (target.kind === 'anchor') {
-        if (!anchors.get(chapter.slug)?.has(target.anchor)) say('has no heading')
+        const fault = missing(chapter.slug, target.anchor)
+        if (fault) say(fault)
       } else if (target.kind === 'chapter') {
         if (!slugs.has(target.slug)) say('is not a shipped chapter')
-        else if (target.anchor && !anchors.get(target.slug)?.has(target.anchor)) {
-          say('has no such heading')
+        else if (target.anchor) {
+          const fault = missing(target.slug, target.anchor)
+          if (fault) say(fault)
         }
       }
     }
@@ -142,6 +168,10 @@ export function deadManualLinks(chapters: readonly ManualChapter[], language: La
  *
  * Shared with the collector rather than reimplemented there: an anchor computed two ways is an
  * anchor that resolves in the build and not on screen.
+ *
+ * GitHub's `-1`, `-2` suffixes for a repeated title are NOT reproduced, and deliberately: the
+ * window resolves by `getElementById`, which answers the first match. `deadManualLinks` refuses
+ * a link into an ambiguous anchor instead of pretending to honour it.
  */
 export function manualAnchorOf(title: string): string {
   return title
