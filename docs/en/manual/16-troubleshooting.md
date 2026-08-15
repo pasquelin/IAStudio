@@ -608,7 +608,7 @@ later.
 
 ### The settings file
 
-Settings → **Advanced** → **Settings file** → **Reveal**. It opens in your file manager.
+Settings → **Advanced** → **Settings file** → **Show in folder**. It opens in your file manager.
 
 **You can share it without fear for your credentials**: they are encrypted by your session's
 keychain, and unreadable elsewhere. But you may also prefer not to send it at all — it holds all your

@@ -47,7 +47,7 @@ tronque.
 
 | Entrée | Ce qu’elle fait |
 |---|---|
-| **Révéler dans le dossier** | ouvre le gestionnaire de fichiers sur ce projet |
+| **Afficher dans le dossier** | ouvre le gestionnaire de fichiers sur ce projet |
 | **Retirer de la liste** | retire le projet de cette liste, **sans toucher au dossier ni à ce qu’il contient** |
 
 **Retirer ne demande pas confirmation** : rien n’est perdu, et rouvrir le projet remet sa ligne.
@@ -208,7 +208,7 @@ déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et l
 
 | Geste | Ce qu’il fait |
 |---|---|
-| **Révéler dans le dossier** | ouvre le dossier dans le Finder ou l’Explorateur Windows, la ligne sélectionnée |
+| **Afficher dans le dossier** | ouvre le dossier dans le Finder ou l’Explorateur Windows, la ligne sélectionnée |
 | **Renommer** | change le nom sur le disque, là où il est lu |
 | **Mettre à la corbeille** | envoie le fichier à la corbeille de votre système |
 
@@ -285,7 +285,7 @@ qu’ils décrivent une position à l’intérieur du dossier, pas un emplacemen
 > fichiers-là, les liens se cassent.
 >
 > **Rien ne vous le dira tant que vous n’aurez pas cliqué.** L’inspecteur ne montre pas « Fichier
-> introuvable » de lui-même : il affiche le bouton **Révéler dans le gestionnaire de fichiers**, et
+> introuvable » de lui-même : il propose le bouton **Afficher dans le gestionnaire de fichiers**, et
 > c’est le clic qui, ne trouvant rien, fait apparaître le message. Voir
 > [Les assets](07-assets.md).
 

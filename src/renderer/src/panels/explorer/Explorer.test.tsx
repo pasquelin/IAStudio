@@ -617,7 +617,7 @@ describe('the explorer menu', () => {
   it('shows a file in the system file manager', async () => {
     withProject()
     const { revealFile } = install({ '': [file('brief.pdf')] })
-    menu.picks('Révéler dans le dossier')
+    menu.picks('Afficher dans le dossier')
 
     render(<Explorer />)
     await open('brief.pdf')
@@ -650,7 +650,7 @@ describe('the explorer menu', () => {
 
     await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
     expect(menu.offers('Mettre à la corbeille')).toBe(false)
-    expect(menu.offers('Révéler dans le dossier')).toBe(true)
+    expect(menu.offers('Afficher dans le dossier')).toBe(true)
   })
 
   // A document's file name IS its identifier: renaming one a tab is holding orphans that tab,

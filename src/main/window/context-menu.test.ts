@@ -253,7 +253,7 @@ describe('the menu a window raises over its own surfaces', () => {
   const rows = [
     {
       id: 'reveal',
-      label: 'Révéler dans le dossier',
+      label: 'Afficher dans le dossier',
       icon: PIXEL,
       tooltip: 'Ouvre le gestionnaire de fichiers sur le fichier sélectionné',
     },
@@ -263,7 +263,7 @@ describe('the menu a window raises over its own surfaces', () => {
   it('answers the row that was chosen, though the menu closed before sending it', async () => {
     const menu = raise(rows)
 
-    menu.choose('Révéler dans le dossier')
+    menu.choose('Afficher dans le dossier')
 
     await expect(menu.answer).resolves.toBe('reveal')
   })

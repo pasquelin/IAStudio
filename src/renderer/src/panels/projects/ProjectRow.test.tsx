@@ -79,7 +79,7 @@ describe('one row of the projects shelf', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Actions du projet' }))
 
-    expect(screen.getByRole('menuitem', { name: 'Révéler dans le dossier' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Afficher dans le dossier' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Retirer de la liste' })).toBeInTheDocument()
   })
 })

@@ -54,7 +54,7 @@
     "page": "Page {{number}}"
   },
   "explorer": {
-    "reveal": "Révéler dans le dossier",
+    "reveal": "Afficher dans le dossier",
     "rename": "Renommer",
     "trash": "Mettre à la corbeille",
     "noProject": "Aucun projet ouvert. Créez-en un ou ouvrez-en un pour voir ses documents.",
@@ -149,8 +149,8 @@
       "rowHint": "{{path}} — ouvert {{when}}",
       "openedAt": "Ouvert {{when}}",
       "actions": "Actions du projet",
-      "actionsHint": "Montrer le dossier de ce projet, ou le retirer de la liste.",
-      "reveal": "Révéler dans le dossier",
+      "actionsHint": "Afficher le dossier de ce projet, ou le retirer de la liste.",
+      "reveal": "Afficher dans le dossier",
       "revealHint": "Ouvre le gestionnaire de fichiers sur ce projet",
       "forget": "Retirer de la liste",
       "forgetHint": "Retire le projet de cette liste, sans toucher au dossier ni à ce qu’il contient",

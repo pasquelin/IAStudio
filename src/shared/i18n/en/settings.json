@@ -184,7 +184,7 @@
     },
     "advanced": "Advanced",
     "advancedDescription": "What is only needed to understand a problem, or to start over.",
-    "reveal": "Reveal",
+    "reveal": "Show in folder",
     "open": "Open",
     "logLevel": {
       "title": "Log detail",
@@ -196,7 +196,7 @@
     },
     "openSettingsFile": {
       "title": "Settings file",
-      "help": "Shows where your settings are saved, in the file manager. Useful to copy them before moving to another machine, or to send them to someone helping you."
+      "help": "Opens the file manager where your settings are saved. Useful to copy them before moving to another machine, or to send them to someone helping you."
     },
     "openDevtools": {
       "title": "Developer tools",
