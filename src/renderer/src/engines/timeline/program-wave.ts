@@ -1,7 +1,8 @@
 import { fromDb } from '@/engines/audio/audio-data'
 import type { Size } from '@/engines/core/geometry'
 import { paintWaveform } from './painter'
-import { timeToX, type Viewport } from './timeline-geometry'
+import { paintRuler, type RulerStyle } from './ruler'
+import { RULER_HEIGHT, timeToX, type Viewport } from './timeline-geometry'
 import {
   playsThrough,
   sequenceDuration,
@@ -61,14 +62,23 @@ export function programColumns(
     .sort((left, right) => left.x - right.x)
 }
 
-export type ProgramPalette = { wave: string; playhead: string; background: string }
+export type ProgramPalette = {
+  wave: string
+  playhead: string
+  background: string
+  ruler: RulerStyle
+}
 
 /**
- * The programme monitor: the montage from end to end, and where the head stands in it.
+ * The programme monitor: the montage from end to end, its graduations, and where the head stands.
  *
  * The whole montage always fits the width — this is not a strip one scrolls, it is the "what am
  * I making" view, and a monitor that had to be scrolled to be read would answer a question
  * nobody asked it. An empty montage draws its background and nothing else.
+ *
+ * The ruler is `paintRuler`, the very one the strip below wears, and that is the point: the same
+ * graduations and the same timecode in both places, or the eye has two grids to reconcile. The
+ * wave keeps the rest of the height, so the head crosses both without a break.
  */
 export function paintProgram(
   context: CanvasRenderingContext2D,
@@ -84,10 +94,17 @@ export function paintProgram(
   paintWaveform(
     context,
     programColumns(state, peaksOf, viewport, 0, size.width),
-    0,
-    size.height,
+    RULER_HEIGHT,
+    size.height - RULER_HEIGHT,
     palette.wave,
   )
+
+  paintRuler(context, {
+    viewport,
+    width: size.width,
+    fps: state.settings.fps,
+    style: palette.ruler,
+  })
 
   context.fillStyle = palette.playhead
   context.fillRect(Math.round(timeToX(state.playhead, viewport)), 0, 1, size.height)

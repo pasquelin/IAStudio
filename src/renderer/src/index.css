@@ -606,6 +606,22 @@ body,
 }
 
 /*
+ * The graduations above the take, drawn by wavesurfer's timeline plugin — dressed here rather
+ * than through the plugin's own `style` option so that a theme switched with the editor open
+ * reaches them: the instance is built once per surface and never rebuilt on a palette change,
+ * precisely so a drag in progress survives.
+ *
+ * The ink and the type are the strip's, which `readRulerStyle` gives the two canvas rulers of the
+ * same tab: one grid to read, in three places. Monospace for the reason a timecode always is —
+ * proportional digits shuffle the label sideways as the numbers change.
+ */
+.sc-wave div::part(timeline-wrapper) {
+  color: var(--color-muted);
+  font-family: ui-monospace, monospace;
+  font-size: var(--text-mini);
+}
+
+/*
  * NO focus ring anywhere in the studio — the owner's call, taken on 2026-08-15 after the one on
  * the title bar was seen clipped by the bar's own `overflow-hidden`.
  *

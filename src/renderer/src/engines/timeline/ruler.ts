@@ -5,6 +5,7 @@
  * second `getComputedStyle` per paint is the frame budget — see `painter.ts`.
  */
 import { frameDuration, SECOND, type Us } from '@shared/domain/time'
+import { memoPalette, rootColour, rootFont } from '@/engines/core/palette'
 import { RULER_HEIGHT, timeToX, visibleRange, type Viewport } from './timeline-geometry'
 import { formatTimecode } from './timecode'
 
@@ -15,6 +16,25 @@ export type RulerStyle = {
   text: string
   font: string
 }
+
+/** Monospace, so a timecode does not shuffle sideways as its digits change. */
+const RULER_FAMILY = 'ui-monospace, monospace'
+const RULER_SIZE = '10px'
+
+/**
+ * The ruler's own inks, read once per theme rather than per paint — `memoPalette` is what keeps
+ * `getComputedStyle` out of the frame budget, and it is why `paintRuler` takes a style instead of
+ * reading tokens itself.
+ *
+ * Shared by every surface that graduates time: the strip, and the programme monitor above it.
+ * Two copies of these four values is two grids for one eye to reconcile.
+ */
+export const readRulerStyle = memoPalette((): RulerStyle => ({
+  background: rootColour('--color-chassis'),
+  tick: rootColour('--color-border'),
+  text: rootColour('--color-muted'),
+  font: rootFont('--text-mini', RULER_SIZE, RULER_FAMILY),
+}))
 
 /** How tall a graduation is, and how far its label sits from it. */
 const TICK_HEIGHT = 6
