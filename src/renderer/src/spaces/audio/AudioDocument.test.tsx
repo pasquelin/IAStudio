@@ -78,6 +78,25 @@ describe('AudioDocument', () => {
     useSequences.setState({ states: { 'doc-1': EMPTY_SOUND_SEQUENCE }, histories: {} })
   })
 
+  /**
+   * The wave carries two marks at once — the area a drag laid down and the head a click moved —
+   * and the tools act on the first. The bar is where that is said in words: the tooltips only
+   * answer a pointer already resting on a tool, which is not where somebody looking for the
+   * gesture is.
+   */
+  describe('what its tools act on', () => {
+    it('invites a selection while there is none, and reads it back once there is', async () => {
+      await openTake()
+      expect(screen.getByText(/Glissez sur l’onde/)).toBeInTheDocument()
+
+      useAudioEdits
+        .getState()
+        .replace('doc-1', { ...editsOf(), region: { from: 2 * SECOND, to: 5 * SECOND } })
+
+      expect(await screen.findByText('Sélection 00:02.00 – 00:05.00')).toBeInTheDocument()
+    })
+  })
+
   // The bar carried the only undo this space had until `audio.undo` was registered — which is
   // what let the pair leave every bar in the studio.
   describe('its history', () => {

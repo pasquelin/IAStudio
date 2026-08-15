@@ -275,10 +275,27 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
             activeTool={state.bypassed ? 'compare' : undefined}
             onTool={id => (id === 'transport' ? player.toggle() : isAudioTool(id) && act(id))}
             extras={
-              <span className="text-muted text-tiny px-1 font-mono">
-                {formatDuration(player.currentTime)}
-                {rendered && ` / ${formatDuration(durationOf(rendered.data))}`}
-              </span>
+              <>
+                {/*
+                 * What the tools act on, said in words. The wave carries two marks at once — the
+                 * area a drag laid down and the head a click moved — and every editor of this
+                 * kind leaves a reader to work out which one "the selection" means. Written here
+                 * rather than in the tooltips alone: an area nobody knows how to draw is not
+                 * explained by a sentence that only appears once the pointer rests on a tool.
+                 */}
+                <span className="text-muted text-tiny px-1">
+                  {state.region
+                    ? t('audio.selection', {
+                        from: formatDuration(state.region.from),
+                        to: formatDuration(state.region.to),
+                      })
+                    : t('audio.noSelection')}
+                </span>
+                <span className="text-muted text-tiny px-1 font-mono">
+                  {formatDuration(player.currentTime)}
+                  {rendered && ` / ${formatDuration(durationOf(rendered.data))}`}
+                </span>
+              </>
             }
           />
         }

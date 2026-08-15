@@ -61,6 +61,9 @@ describe('the light theme', () => {
       // And the fill under the pointer, for the same reason and derived from the same blue —
       // `hoverFor` draws it, so it parts from the dark value on the day the accent does.
       '--color-accent-hover',
+      // And the veil, which is not a value at all: it composes whatever `--color-accent` holds
+      // where it is read, so both themes — and a picked accent — reach it through that one token.
+      '--color-accent-veil',
       '--color-monitor',
       '--color-marquee-light',
       '--color-marquee-dark',

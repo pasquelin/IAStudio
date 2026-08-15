@@ -104,7 +104,9 @@
     "takeRole": "The take you are editing, before montage",
     "noAsset": "No sound open. Drop a take here, or double-click an audio asset.",
     "unreadable": "This file could not be decoded.",
-    "copyName": "{{name}} (edited)"
+    "copyName": "{{name}} (edited)",
+    "selection": "Selection {{from}} – {{to}}",
+    "noSelection": "Drag across the wave to select"
   },
   "audioTools": {
     "crop": "Crop",

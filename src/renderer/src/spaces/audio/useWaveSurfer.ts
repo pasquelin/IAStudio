@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import WaveSurfer from 'wavesurfer.js'
+import WaveSurfer, { type WaveSurferOptions } from 'wavesurfer.js'
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js'
 import { playbackToken } from '@/engines/timeline/playback'
+import { rootColour } from '@/engines/core/palette'
 import { durationOf } from '@/engines/audio/audio-data'
 import type { RenderedAudio } from '@/engines/audio/audio-render'
 import type { Region } from '@/engines/audio/edits'
@@ -31,6 +32,34 @@ export type UseWaveSurferOptions = {
 const BAR_WIDTH = 2
 const BAR_GAP = 1
 const BAR_RADIUS = 2
+
+/** Wide enough to read as a line against the veil the selection is tinted with, and no wider. */
+const CURSOR_WIDTH = 2
+
+/**
+ * The studio's palette, where wavesurfer would otherwise draw in its own greys — read here rather
+ * than written, for the reason `engines/core/palette.ts` carries.
+ *
+ * The two marks of this surface are the SELECTION and the head, they overlap, and telling them
+ * apart is the whole point of reading these tokens: the selection is the accent as a veil, an
+ * area; the head is the accent at full, a line — the same opposition the strip below already
+ * draws between a selected clip and the playhead. Which is also why the played part is NOT
+ * tinted: a third fill sliding under the veil is what made the two unreadable in the first place.
+ */
+function studioColours(): Pick<
+  WaveSurferOptions,
+  'waveColor' | 'progressColor' | 'cursorColor' | 'cursorWidth'
+> {
+  const wave = rootColour('--color-muted')
+
+  return {
+    // The ink the programme monitor draws its own wave in: one pair, one reading.
+    waveColor: wave,
+    progressColor: wave,
+    cursorColor: rootColour('--color-accent'),
+    cursorWidth: CURSOR_WIDTH,
+  }
+}
 
 /**
  * Wavesurfer, driven from the edit chain rather than from the file on disk.
@@ -71,11 +100,14 @@ export function useWaveSurfer({
       barGap: BAR_GAP,
       barRadius: BAR_RADIUS,
       height: 'auto',
+      ...studioColours(),
       plugins: [plugin],
     })
 
     surfer.current = instance
-    plugin.enableDragSelection({})
+    // The colour goes in HERE and not on the region once it lands: the drag draws the area as it
+    // is being traced, and a region left to its own default traces it in wavesurfer's black.
+    plugin.enableDragSelection({ color: rootColour('--color-accent-veil') })
 
     instance.on('play', () => setPlaying(true))
     instance.on('pause', () => setPlaying(false))

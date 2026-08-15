@@ -104,7 +104,9 @@
     "takeRole": "La prise que vous éditez, avant montage",
     "noAsset": "Aucun son ouvert. Déposez une prise ici, ou double-cliquez sur un asset audio.",
     "unreadable": "Ce fichier n’a pas pu être décodé.",
-    "copyName": "{{name}} (édité)"
+    "copyName": "{{name}} (édité)",
+    "selection": "Sélection {{from}} – {{to}}",
+    "noSelection": "Glissez sur l’onde pour sélectionner"
   },
   "audioTools": {
     "crop": "Rogner",
