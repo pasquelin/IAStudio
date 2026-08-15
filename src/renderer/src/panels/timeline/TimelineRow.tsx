@@ -101,12 +101,29 @@ export function TimelineHeaderColumn({
    */
   const bounded = useCallback(
     (next: Viewport): void => {
+      const current = viewportNow()
       const room = roomBelow(clip.current, stack.current)
-      setViewport({ ...next, scrollTop: clamp(Math.round(next.scrollTop), 0, room) })
+      const scrollTop = clamp(Math.round(next.scrollTop), 0, room)
+
+      // The same viewport back when nothing moved, as `clampViewport` does and for its reason:
+      // a wheel held against the end of the stack would otherwise write on every notch and
+      // repaint the strip beside it for nothing.
+      if (scrollTop === current.scrollTop) return
+      setViewport({ ...current, scrollTop })
     },
-    [setViewport],
+    [setViewport, viewportNow],
   )
 
+  /**
+   * The wheel over the names moves the stack, and NOTHING else.
+   *
+   * `useTimelineWheel` is reused for the gesture — non-passive, so the panel behind never scrolls
+   * in its place — but only its vertical answer is kept. The other two are the strip's and cannot
+   * be honoured here: a zoom holds an instant under the pointer, and there is no instant over a
+   * name; a horizontal pan is bounded by the strip's own width and the sequence's duration, which
+   * this side does not have. Writing them from here ran the montage off into empty space, which
+   * `maxOffset` exists to refuse.
+   */
   useTimelineWheel(column, viewportNow, bounded)
 
   // Read by the frame loop below, bound once for the whole gesture.
