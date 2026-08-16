@@ -68,21 +68,26 @@ describe('the explore band', () => {
     )
   })
 
-  it('captions each tile with the model that made it', async () => {
+  /**
+   * The asset's own name, where this used to draw the model that made it: a band of model names
+   * is a band where everything of one model reads the same, and a name says the thing.
+   */
+  it('captions each tile with what the asset is called', async () => {
     install()
     render(<Explore />)
 
-    expect(await screen.findByText('FLUX.2')).toBeInTheDocument()
+    expect(await screen.findByText('boulder.png')).toBeInTheDocument()
   })
 
-  it('draws the thumbnail, which is the only URL a width may be appended to', async () => {
-    // The asset's own URL is signed: a parameter of ours invalidates it and the CDN answers 403.
+  it('asks the CDN for the width one column draws, and no more', async () => {
+    // The column is 220 CSS pixels and jsdom reports a density of 1. On a Retina display the
+    // same tile asks for 440 — the number follows the screen rather than a factor written here.
     install()
     const { container } = render(<Explore />)
 
     await waitFor(() =>
       expect(container.querySelector('img')?.getAttribute('src')).toBe(
-        'https://cdn.example/thumb.png?width=440',
+        'https://cdn.example/thumb.png?width=220',
       ),
     )
   })

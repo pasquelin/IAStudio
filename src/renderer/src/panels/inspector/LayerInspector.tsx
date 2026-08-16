@@ -5,7 +5,7 @@ import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { SliderField } from '@/design/SliderField'
 import { TextField } from '@/design/TextField'
-import { CONTROL } from '@/design/styles'
+import { NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import {
   BLEND_MODES,
@@ -74,7 +74,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
             aria-label={t('inspector.blend')}
             value={layer.blend}
             onChange={event => edit.run(setLayerBlend(layer.id, asBlendMode(event.target.value)))}
-            className={cn(CONTROL, 'w-full px-1')}
+            className={cn(NATIVE_SELECT, 'w-full')}
           >
             {BLEND_MODES.map(mode => (
               <option key={mode} value={mode}>

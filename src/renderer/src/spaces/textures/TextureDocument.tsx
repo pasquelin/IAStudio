@@ -3,7 +3,8 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetUrl, PICTURES, posterUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
-import { safeFileName, type TextureExportTarget } from '@shared/domain/texture-export'
+import { safeFileName } from '@shared/domain/file-name'
+import { type TextureExportTarget } from '@shared/domain/texture-export'
 import { exportChannelsOf } from '@/engines/texture/export/channels'
 import { activation } from '@/helpers/activation'
 import { pixelEditorIntent } from '@/helpers/asset-intents'
@@ -19,7 +20,8 @@ import { EmptyState } from '@/design/EmptyState'
 import { loadTexture } from '@/engines/scene/texture-cache'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
-import { textureOf, useTextures } from '@/stores/textures'
+import { useDocumentTitle } from '@/app/useDocumentTitle'
+import { isTextureDirty, textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
@@ -75,6 +77,11 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   const texture = useTextures(state => textureOf(state, documentId))
   const inspected = useTextureViews(state => inspectedChannel(state, documentId))
   const active = useDocuments(state => state.activeId === documentId)
+
+  useDocumentTitle(
+    documentId,
+    useTextures(state => isTextureDirty(state, documentId)),
+  )
 
   useRestoredDocument(documentId)
 

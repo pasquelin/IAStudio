@@ -76,38 +76,41 @@ describe('worthCaptioning', () => {
 })
 
 function captionerOf(overrides: Partial<Parameters<typeof createCaptioner>[0]> = {}) {
-  const save = vi.fn(async (given: Asset) => given)
+  // Two arguments and not a written row: the caller moves the FILE with the name, and a port
+  // handed `{ ...asset, name }` could only ever write half of that — which is how the shelf came
+  // to read a caption over a file still called `IMG_1234.png`.
+  const rename = vi.fn(async (given: Asset, name: string) => ({ ...given, name }))
   const reports: ActivityReport[] = []
   const caption = vi.fn(async (images: readonly string[]) => images.map(() => 'a mossy boulder'))
 
   const captioner = createCaptioner({
     queue: task => task(),
     caption,
-    save,
+    rename,
     record: report => void reports.push(report),
     enabled: () => true,
     ...overrides,
   })
 
-  return { run: captioner.onArrival, describe: captioner.describe, save, caption, reports }
+  return { run: captioner.onArrival, describe: captioner.describe, rename, caption, reports }
 }
 
 describe('the captioner, on arrival', () => {
   it('names what arrived without a name of its own', async () => {
-    const { run, save } = captionerOf()
+    const { run, rename } = captionerOf()
 
     await run([asset()])
 
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ name: 'a mossy boulder' }))
+    expect(rename).toHaveBeenCalledWith(expect.anything(), 'a mossy boulder')
   })
 
   it('asks nothing about what is not worth describing', async () => {
-    const { run, caption, save } = captionerOf()
+    const { run, caption, rename } = captionerOf()
 
     await run([asset({ name: 'mossy boulder' }), asset({ remoteAssetId: undefined })])
 
     expect(caption).not.toHaveBeenCalled()
-    expect(save).not.toHaveBeenCalled()
+    expect(rename).not.toHaveBeenCalled()
   })
 
   it('stays out of the way when the preference is off', async () => {
@@ -133,41 +136,43 @@ describe('the captioner, on arrival', () => {
 
   // The API answers in the order it was asked, and the pairing depends on it.
   it('pairs each caption with the picture of the same rank', async () => {
-    const { run, save } = captionerOf({
+    const { run, rename } = captionerOf({
       caption: async () => ['a boulder', 'a clearing'],
     })
 
     await run([asset({ id: 'local-1' }), asset({ id: 'local-2' })])
 
-    expect(save).toHaveBeenNthCalledWith(
+    expect(rename).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ id: 'local-1', name: 'a boulder' }),
+      expect.objectContaining({ id: 'local-1' }),
+      'a boulder',
     )
-    expect(save).toHaveBeenNthCalledWith(
+    expect(rename).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ id: 'local-2', name: 'a clearing' }),
+      expect.objectContaining({ id: 'local-2' }),
+      'a clearing',
     )
   })
 
   // The rename channel refuses more, and this path writes straight into the catalogue.
   it('holds a long caption to the length a name is allowed', async () => {
-    const { run, save } = captionerOf({
+    const { run, rename } = captionerOf({
       caption: async () => ['a mossy boulder '.repeat(40)],
     })
 
     await run([asset()])
 
-    const written = save.mock.calls[0]?.[0].name ?? ''
+    const written = rename.mock.calls[0]?.[1] ?? ''
     expect(written.length).toBeLessThanOrEqual(ASSET_NAME_MAX_LENGTH)
     expect(written).not.toMatch(/\s$/)
   })
 
   it('leaves an asset alone when its caption came back empty', async () => {
-    const { run, save } = captionerOf({ caption: async () => ['   '] })
+    const { run, rename } = captionerOf({ caption: async () => ['   '] })
 
     await run([asset()])
 
-    expect(save).not.toHaveBeenCalled()
+    expect(rename).not.toHaveBeenCalled()
   })
 
   it('passes through the queue rather than calling straight out', async () => {
@@ -217,7 +222,7 @@ describe('the captioner, on arrival', () => {
 
     it('carries on to the next batch when one is refused', async () => {
       let calls = 0
-      const { run, save } = captionerOf({
+      const { run, rename } = captionerOf({
         caption: async images => {
           calls++
           if (calls === 1) throw new Error('rate-limited')
@@ -231,17 +236,17 @@ describe('the captioner, on arrival', () => {
 
       await run(arriving)
 
-      expect(save).toHaveBeenCalledTimes(1)
+      expect(rename).toHaveBeenCalledTimes(1)
     })
   })
 })
 
 describe('the captioner, asked directly', () => {
   it('names a picture that already had a name, because it was pointed at', async () => {
-    const { describe: run, save } = captionerOf()
+    const { describe: run, rename } = captionerOf()
 
     await expect(run([asset({ name: 'mossy boulder' })])).resolves.toBe(1)
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ name: 'a mossy boulder' }))
+    expect(rename).toHaveBeenCalledWith(expect.anything(), 'a mossy boulder')
   })
 
   // Still bounded by what the API can look up, however explicit the request.
@@ -255,9 +260,9 @@ describe('the captioner, asked directly', () => {
   })
 
   it('ignores the preference, which governs arrivals alone', async () => {
-    const { describe: run, save } = captionerOf({ enabled: () => false })
+    const { describe: run, rename } = captionerOf({ enabled: () => false })
 
     await expect(run([asset()])).resolves.toBe(1)
-    expect(save).toHaveBeenCalled()
+    expect(rename).toHaveBeenCalled()
   })
 })

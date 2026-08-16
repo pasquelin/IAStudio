@@ -18,7 +18,9 @@ let started: Record<string, unknown> | null = null
 const EMPTY_TEXTURE = {}
 const PAINTED_TEXTURE = { source: {}, width: 8, height: 6, destroy: vi.fn() }
 /** Every sprite the engine builds, in order: the map that holds them is its own business. */
-const sprites: { visible: boolean; texture: unknown }[] = []
+const sprites: { visible: boolean; texture: unknown; zIndex: number }[] = []
+/** Every container it builds, in order. The first is the frame every sprite is added to. */
+const containers: { sortableChildren: boolean }[] = []
 
 vi.mock('pixi.js/advanced-blend-modes', () => ({}))
 
@@ -42,8 +44,15 @@ vi.mock('pixi.js', () => ({
     addChild = vi.fn()
     position = { set: vi.fn() }
     scale = { set: vi.fn() }
+    // Pixi bulk-copies its options onto the instance; only this one is read back here.
+    sortableChildren = false
+    constructor(options: { sortableChildren?: boolean } = {}) {
+      this.sortableChildren = options.sortableChildren ?? false
+      containers.push(this)
+    }
   },
   Graphics: class {
+    zIndex = 0
     clear = (): this => this
     rect = (): this => this
     fill = (): this => this
@@ -51,6 +60,7 @@ vi.mock('pixi.js', () => ({
   Sprite: class {
     texture = EMPTY_TEXTURE
     visible = true
+    zIndex = 0
     position = { set: vi.fn() }
     scale = { set: vi.fn() }
     constructor() {
@@ -97,10 +107,12 @@ const resize = (host: Element): void => {
 
 const { TimelineEngine } = await import('./TimelineEngine')
 const { clipFixture, sequenceWith, settled, trackFixture } = await import('./timeline-fixtures')
+const { reindexTracks } = await import('./timeline-state')
 
 /** No output in jsdom: the suite plays nothing, and every load is refused. */
 const silence = () => ({
   now: () => null,
+  tap: () => null,
   resume: vi.fn(),
   load: () => Promise.reject(new Error('no output')),
 })
@@ -146,6 +158,7 @@ describe('mounting a monitor', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     sprites.length = 0
+    containers.length = 0
     resolveInit = null
     started = null
     host = document.createElement('div')
@@ -317,6 +330,61 @@ describe('mounting a monitor', () => {
     await engine.seek(0)
 
     expect(onUnreadable).toHaveBeenLastCalledWith(false)
+  })
+
+  /**
+   * The defect: a sprite joins the frame the FIRST time its track is painted, so the children
+   * were stacked in the order the tracks first carried something. V2, opened by a drop under V1
+   * — which already had a sprite — composited over it, and the montage showed the row the column
+   * says is underneath. Depth is therefore restated on every seek rather than at creation.
+   */
+  it('keeps the row highest in the column on top, however late its track was opened', async () => {
+    const engine = engineFor(host)
+    await mounted(engine)
+    engine.apply(sequenceWith([trackFixture('V1', 'video', [clipFixture('a', 0, 1_000_000)])]))
+    await engine.seek(0)
+
+    engine.apply(
+      sequenceWith(
+        reindexTracks([
+          trackFixture('V1', 'video', [clipFixture('a', 0, 1_000_000)]),
+          trackFixture('V2', 'video', [clipFixture('b', 0, 1_000_000)]),
+        ]),
+      ),
+    )
+    await engine.seek(0)
+
+    const [v1, v2] = sprites
+    expect(v1?.zIndex).toBeGreaterThan(v2?.zIndex ?? 0)
+  })
+
+  // And the other half of the same question: a track dragged to another row keeps neither its
+  // old depth nor the order it was created in.
+  it('follows a track dragged to another row', async () => {
+    const engine = engineFor(host)
+    await mounted(engine)
+    const rows = (top: string, under: string) =>
+      sequenceWith(
+        reindexTracks([
+          trackFixture(top, 'video', [clipFixture(top, 0, 1_000_000)]),
+          trackFixture(under, 'video', [clipFixture(under, 0, 1_000_000)]),
+        ]),
+      )
+
+    engine.apply(rows('V1', 'V2'))
+    await engine.seek(0)
+    engine.apply(rows('V2', 'V1'))
+    await engine.seek(0)
+
+    const [v1, v2] = sprites
+    expect(v2?.zIndex).toBeGreaterThan(v1?.zIndex ?? 0)
+  })
+
+  // zIndex alone reorders nothing: Pixi renders children in array order unless the parent sorts.
+  it('sorts the frame it stacks them in', async () => {
+    await mounted(engineFor(host))
+
+    expect(containers[0]?.sortableChildren).toBe(true)
   })
 
   it('takes the report back where the playhead leaves the clip', async () => {

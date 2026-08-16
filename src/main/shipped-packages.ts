@@ -52,3 +52,45 @@ export const SHIPPED: string[] = [
   'zod',
   'zustand',
 ]
+
+/**
+ * The other half of the same partition: declared, never shipped. They run on the machine that
+ * builds and never reach a user, so the notice owes them nothing.
+ *
+ * Beside `SHIPPED` rather than in the suite that reads it, and that is the whole point: the two
+ * lists are one decision written twice, and they lived in different folders — a package added to
+ * the manifest had to be classified in `src/main` or in a test of `src/shared`, and whoever added
+ * it saw only one of the two. `licences.test.ts` confronts them with the manifest.
+ *
+ * Neither list is DERIVED from the other, and that is deliberate: a new dependency belongs to
+ * neither until someone says which, and the red is what asks. Deriving one would make the answer
+ * "build tool" by default — silently, for a package that may well ship.
+ */
+export const BUILD_ONLY: string[] = [
+  '@electron/rebuild',
+  '@eslint/js',
+  '@tailwindcss/vite',
+  '@testing-library/jest-dom',
+  '@testing-library/react',
+  '@testing-library/user-event',
+  '@types/better-sqlite3',
+  '@types/node',
+  '@types/react',
+  '@types/react-dom',
+  '@types/react-is',
+  '@types/three',
+  '@vitejs/plugin-react',
+  'electron-builder',
+  'electron-vite',
+  'eslint',
+  'eslint-plugin-react-hooks',
+  'jscpd',
+  'jsdom',
+  'knip',
+  'prettier',
+  'prettier-plugin-tailwindcss',
+  'typescript',
+  'typescript-eslint',
+  'vite',
+  'vitest',
+]

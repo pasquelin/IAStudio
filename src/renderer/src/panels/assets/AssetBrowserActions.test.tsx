@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
 import type { Project } from '@shared/domain/project'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { TOOLTIP_ID } from '@/helpers/tooltip'
@@ -16,10 +17,19 @@ const PROJECT: Project = {
   manifest: { version: 1, name: 'Project', createdAt: '', updatedAt: '' },
 }
 
+const ASSET: Asset = {
+  id: 'asset_1',
+  name: 'Asset',
+  type: 'image',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-01-01T00:00:00.000Z',
+}
+
 // The count and the import button, on the tool window's own title bar.
 describe('AssetBrowserActions', () => {
   beforeEach(() => {
-    useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
+    useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE, shownCount: null })
     useProject.setState({ project: null })
     useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
   })
@@ -31,6 +41,37 @@ describe('AssetBrowserActions', () => {
 
     expect(screen.queryByLabelText('Rechercher…')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Importer un média')).toBeInTheDocument()
+  })
+
+  /**
+   * A project holding one picture beside seven rows of the account's library read "1 asset" over
+   * a list of eight: the count answered for the catalogue while the shelf drew three provenances
+   * through the filters. Whoever draws the lines says how many there are.
+   */
+  it('counts the lines the shelf draws, not the catalogue behind them', () => {
+    useAssets.setState({ items: [ASSET], shownCount: 8 })
+    render(<AssetBrowserActions />)
+
+    expect(screen.getByText('8 assets')).toBeInTheDocument()
+  })
+
+  it('falls back to the catalogue while no shelf is mounted to answer', () => {
+    useAssets.setState({ items: [ASSET], shownCount: null })
+    render(<AssetBrowserActions />)
+
+    expect(screen.getByText('1 asset')).toBeInTheDocument()
+  })
+
+  // The number alone cannot say WHICH shelves it counts, and that ambiguity is what made it
+  // misread in the first place. No `aria-label`: the number is already its visible name.
+  it('says what it is counting, without renaming the number', () => {
+    useAssets.setState({ shownCount: 3 })
+    render(<AssetBrowserActions />)
+
+    const count = screen.getByText('3 assets')
+    expect(count).toHaveAttribute('data-tooltip-id', TOOLTIP_ID)
+    expect(count).toHaveAttribute('data-tooltip-content', expect.stringContaining('bibliothèque'))
+    expect(count).not.toHaveAttribute('aria-label')
   })
 
   it('imports a media file into the open project', async () => {
@@ -115,7 +156,7 @@ describe('AssetBrowserActions', () => {
 
 describe('sending the selection to the library', () => {
   beforeEach(() => {
-    useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
+    useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE, shownCount: null })
     useProject.setState({ project: PROJECT })
     useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
     useCloud.getState().clear()

@@ -125,6 +125,12 @@ export type TreeProps<T extends TreeNode> = {
    */
   draggable?: (node: T) => boolean
   /**
+   * A row has just been picked up, so its owner may announce the drag on a channel of its own —
+   * a scene document laid on a montage, say. The tree has already announced its own by then,
+   * and neither channel knows about the other.
+   */
+  onDragStart?: (node: T, event: React.DragEvent<HTMLElement>) => void
+  /**
    * Which rows may receive `dragged`. Refused rows take no outline and no drop, which is why
    * the tree keeps the dragged node rather than reading the drag payload: `getData` answers
    * nothing until the drop itself, so a target asked at hover has no other way to know what is
@@ -179,6 +185,7 @@ export function Tree<T extends TreeNode>({
   onDrop,
   onInsert,
   draggable,
+  onDragStart,
   droppable,
   onActivate,
   onContextMenu,
@@ -560,6 +567,10 @@ export function Tree<T extends TreeNode>({
                 onDragStart={event => {
                   if (event.target !== event.currentTarget) return event.preventDefault()
                   ROWS.start(event, row.node.id)
+                  // After the tree's own channel, so a row can be BOTH: a document moved within
+                  // the folder, and the same document laid on a montage. The two are told apart
+                  // by the type each target asks for, never by which one was announced first.
+                  onDragStart?.(row.node, event)
                   setDragged(row.node)
                 }}
                 onDragOver={event => {
@@ -605,7 +616,11 @@ export function Tree<T extends TreeNode>({
                 // as a toggle — the row a menu was raised on left the very selection the menu was
                 // about to act on.
                 onPointerDown={event => event.button !== 2 && pick(row.node, event)}
-                onDoubleClick={() => onActivate?.(row.node)}
+                // A double-click inside a row's rename field is someone selecting a word, not
+                // asking for the row: activating it here opened the document being renamed —
+                // which, in the explorer, then greyed "Rename" out and cancelled the gesture.
+                // Same reading as the right-click below, and the same reason.
+                onDoubleClick={event => !isTyping(event.target) && onActivate?.(row.node)}
                 onContextMenu={event => {
                   // A right-click in a row's rename field belongs to the native clipboard and
                   // spelling menu (`main/window/context-menu.ts`), which `preventDefault` would

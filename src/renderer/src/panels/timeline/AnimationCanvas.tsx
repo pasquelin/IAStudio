@@ -20,7 +20,7 @@ import { clampScale } from '@/engines/timeline/viewport'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import type { Size } from '@/engines/core/geometry'
-import { fitToDisplay } from '@/engines/core/canvas-2d'
+import { paintOn } from '@/engines/core/canvas-2d'
 import { trackIdsOf, type AnimationRow } from '@/engines/scene/animation-rows'
 import { clamp } from '@shared/numeric'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animation-view'
@@ -70,26 +70,23 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   const size = useRef<Size>({ width: 0, height: 0 })
 
   const paint = useCallback((): void => {
-    const canvas = canvasRef.current
-    const context = canvas?.getContext('2d')
-    if (!canvas || !context) return
+    paintOn(canvasRef.current, (context, box) => {
+      size.current = box
 
-    const { width, height } = fitToDisplay(canvas, context)
-    size.current = { width, height }
-
-    const current = latest.current
-    paintAnimation(
-      context,
-      {
-        rows: current.rows,
-        viewport: current.viewport,
-        fps: current.timeline.fps,
-        duration: current.timeline.duration,
-        playhead: current.playhead,
-        selected: current.selected,
-      },
-      { width, height },
-    )
+      const current = latest.current
+      paintAnimation(
+        context,
+        {
+          rows: current.rows,
+          viewport: current.viewport,
+          fps: current.timeline.fps,
+          duration: current.timeline.duration,
+          playhead: current.playhead,
+          selected: current.selected,
+        },
+        box,
+      )
+    })
   }, [])
 
   useEffect(() => {

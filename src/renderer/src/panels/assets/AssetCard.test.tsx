@@ -27,6 +27,16 @@ const picture: Asset = {
   createdAt: '2026-08-07T10:00:00.000Z',
 }
 
+const sound: Asset = {
+  id: 'asset_2',
+  name: 'pad.wav',
+  type: 'audio',
+  location: 'local',
+  path: 'assets/audio/pad.wav',
+  tags: [],
+  createdAt: '2026-08-07T10:00:00.000Z',
+}
+
 const remote: CloudAsset = {
   id: 'asset_remote',
   name: 'A skeleton',
@@ -84,6 +94,18 @@ describe('one cell of the shelf, whatever it stands for', () => {
     draw({ id: 'asset_1', from: 'local', asset: picture }, 'local-only')
 
     expect(screen.getByRole('img', { name: 'Image' })).toBeInTheDocument()
+  })
+
+  /**
+   * A sound is the one kind the studio writes no poster for — a still would be painted under the
+   * waveform of every clip it becomes. Every sound of the shelf therefore wore the same speaker
+   * glyph, and two takes of the same length were told apart only by playing them.
+   */
+  it('draws a sound as its own waveform rather than as a glyph', () => {
+    const { container } = draw({ id: 'asset_2', from: 'local', asset: sound }, 'local-only')
+
+    expect(container.querySelector('canvas')).toBeInTheDocument()
+    expect(screen.getByText('pad.wav')).toBeInTheDocument()
   })
 
   it('tells a mesh from a picture, which their two previews do not', () => {

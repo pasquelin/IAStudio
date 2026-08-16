@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
+// Where `safeFileName` moved when documents came to need it too — the cases below stay here
+// because one of them carries a literal NUL byte, which no editor of this repository can retype.
+import { safeFileName } from './file-name'
 import { PBR_CHANNELS, type PbrChannel } from './texture'
 import {
   assetsOf,
   boundedSize,
   maxSizeOf,
   resolvePictures,
-  safeFileName,
   TEXTURE_EXPORT_TARGETS,
   type ExportChannels,
   type ResolvedComponent,

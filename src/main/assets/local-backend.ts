@@ -11,6 +11,7 @@ import {
 import { POSTERS_FOLDER } from '@shared/domain/project'
 import type { PbrChannel } from '@shared/domain/texture'
 import type { AsyncCatalog } from '@main/project/catalog-client'
+import { freeAssetPath } from './asset-file'
 
 const FALLBACK_EXTENSION: Record<AssetType, string> = {
   image: '.png',
@@ -110,19 +111,28 @@ function safeExtension(extension: string, type: AssetType): string {
 }
 
 /**
- * A URL carries a name, and a name carries whatever the API put in it. Only the extension is
- * kept, and only if it looks like one — the file name itself comes from our own asset id.
+ * The same file, re-suffixed — a take re-encoded on the way out keeps the name it is known by.
+ *
+ * Which is also what makes it the only path an asset's own file ever needs: it cannot collide,
+ * being the file that is already there. `freeAssetPath` is for a file that does not exist yet.
  */
-export function extensionOf(url: string, type: AssetType): string {
+function withExtension(relativePath: string, extension: string): string {
+  // `extname` and not `stemOf`, which is for a NAME: this takes a path, and only `node:path`
+  // knows that the last dot of `assets/v1.2/take` belongs to a folder rather than to the file.
+  const suffix = extname(relativePath)
+  return `${suffix ? relativePath.slice(0, -suffix.length) : relativePath}${extension}`
+}
+
+/**
+ * A URL carries a name, and a name carries whatever the API put in it. Only the extension is
+ * kept, and only if it looks like one — the file name itself comes from the asset's own name.
+ */
+export function extensionFromUrl(url: string, type: AssetType): string {
   try {
     return safeExtension(extname(new URL(url).pathname), type)
   } catch {
     return FALLBACK_EXTENSION[type]
   }
-}
-
-export function relativePathFor(id: string, extension: string, type: AssetType): string {
-  return `${ASSET_FOLDERS[type]}/${id}${safeExtension(extension, type)}`
 }
 
 /**
@@ -191,7 +201,7 @@ export function createLocalBackend({
 
     try {
       const poster = await download(request.thumbnailUrl)
-      const relative = `${POSTERS_FOLDER}/${request.id}${extensionOf(request.thumbnailUrl, 'image')}`
+      const relative = `${POSTERS_FOLDER}/${request.id}${extensionFromUrl(request.thumbnailUrl, 'image')}`
       await writeFile(join(projectPath(), relative), poster)
       return relative
     } catch {
@@ -200,23 +210,40 @@ export function createLocalBackend({
   }
 
   const write = async (request: WriteRequest, bytes: Uint8Array): Promise<Asset> => {
-    const relativePath = relativePathFor(request.id, request.extension, request.type)
-
-    // All at once. Three of these are the only thing the fourth waits on: the still is a second
-    // download over the network, the probe spawns ffprobe, and the row is a catalogue read —
-    // run in a file, each one's latency lands on every import that carries the others.
+    // Read BEFORE the write, where it used to run beside it: the file is named after the row
+    // now, so where the bytes go depends on what this id already has. Pulling a twin a second
+    // time must land on the file it landed on the first — not beside it, under a suffixed name.
     //
-    // What the row already held survives being written again. Pulling a twin a second time
-    // lands on the same id on purpose, and rebuilding the asset from the request alone dropped
-    // the tags the user had put on it and moved its creation date to now — which also sent it
-    // back to the top of a shelf sorted newest first, for a file that had not changed.
+    // What the row already held survives being written again: rebuilding the asset from the
+    // request alone dropped the tags the user had put on it and moved its creation date to now,
+    // which also sent it back to the top of a shelf sorted newest first, for a file that had
+    // not changed.
+    // Started before the catalogue is asked anything, and awaited at the end: it is a second
+    // download over the network and it reads nothing of the row — leaving it behind the read
+    // below would put its whole latency in series for no reason. It resolves `undefined` rather
+    // than rejecting, so nothing can be left unhandled while it floats.
+    const poster = savePoster(request)
+
+    const existing = await catalog().find(request.id)
+    const extension = safeExtension(request.extension, request.type)
+
+    // The name the ROW carries wins over the request's: a second pull of an asset the user has
+    // since renamed must not put the API's wording back — neither on their disk NOR in their
+    // catalogue, and writing `request.name` here while the file took the other one is the two
+    // names apart again, in the opposite direction.
+    const name = existing?.name ?? request.name
+
+    const relativePath = existing?.path
+      ? withExtension(existing.path, extension)
+      : await freeAssetPath(projectPath(), ASSET_FOLDERS[request.type], name, extension)
+
+    // The probe spawns ffprobe, so it runs beside the still rather than after it.
     const written = writeFile(join(projectPath(), relativePath), bytes)
-    const [, posterPath, probe, existing] = await Promise.all([
+    const [, posterPath, probe] = await Promise.all([
       written,
-      savePoster(request),
+      poster,
       // After the write, and only after it: this one reads the file that was just laid down.
       written.then(() => probeWritten(request, relativePath)),
-      catalog().find(request.id),
     ])
 
     const at = now()
@@ -231,7 +258,7 @@ export function createLocalBackend({
     const asset: Asset = {
       ...existing,
       id: request.id,
-      name: request.name,
+      name,
       type: request.type,
       location: 'local',
       path: relativePath,
@@ -256,24 +283,31 @@ export function createLocalBackend({
       ...twinOf(request, at),
     }
 
-    const added = await catalog().add(asset)
-    // After the catalogue, never before: a listener that goes looking for what just arrived —
-    // extracting a model's pictures does exactly that — would find nothing at all. Caught, as
-    // the deps promise: the row is committed by now, so a listener throwing here would fail an
-    // import that has already happened.
+    return announce(await catalog().add(asset))
+  }
+
+  /**
+   * Tells whoever derives files from an asset that its bytes are on disk.
+   *
+   * After the catalogue, never before: a listener that goes looking for what just arrived —
+   * extracting a model's pictures does exactly that — would find nothing at all. Caught, as the
+   * deps promise: the row is committed by now, so a listener throwing here would fail a write
+   * that has already happened.
+   */
+  const announce = (asset: Asset): Asset => {
     try {
-      onImported?.(added)
+      onImported?.(asset)
     } catch {
       // Nothing to say from here: what a listener does is its own errand, and the one this
       // exists for reports its own failures to the journal.
     }
-    return added
+    return asset
   }
 
   return {
     importFromUrl: async request =>
       write(
-        { ...request, extension: extensionOf(request.url, request.type) },
+        { ...request, extension: extensionFromUrl(request.url, request.type) },
         await download(request.url),
       ),
 
@@ -292,7 +326,18 @@ export function createLocalBackend({
       // folder the user only pointed at is a different act from editing an asset, and the one
       // guard that keeps every other write inside the project — `assetFilePath` — exists
       // precisely because a catalogue row is user-editable territory.
-      const relativePath = relativePathFor(assetId, extension, existing.type)
+      // The stem the file already has, so that applying an edit is not also a rename: a take
+      // imported before names reached the disk keeps its id there until somebody renames it,
+      // which is the one gesture that moves a file.
+      const relativePath = existing.path
+        ? withExtension(existing.path, safeExtension(extension, existing.type))
+        : await freeAssetPath(
+            projectPath(),
+            ASSET_FOLDERS[existing.type],
+            existing.name,
+            safeExtension(extension, existing.type),
+          )
+
       await writeFile(join(projectPath(), relativePath), bytes)
 
       // The extension follows the bytes: an edited take goes back as a `.wav`, and leaving it
@@ -307,7 +352,9 @@ export function createLocalBackend({
       //
       // `peaksPath` goes, always: the waveform on disk describes the take before the edit, and
       // a stale one is worse than none — the strip would draw a shape the ear no longer hears.
-      // A fresh one comes back when the take is ingested again.
+      // A fresh one is derived from the new bytes below, on the same path every other write
+      // takes. Nothing used to do that, and applying an edit left every clip of the take
+      // waveform-less for good.
       const rewritten: Asset = {
         ...existing,
         path: relativePath,
@@ -320,7 +367,7 @@ export function createLocalBackend({
       }
       delete rewritten.peaksPath
 
-      return await catalog().add(rewritten)
+      return announce(await catalog().add(rewritten))
     },
   }
 }

@@ -12,7 +12,7 @@ import { canvasOf, useCanvases } from '@/stores/canvases'
 import {
   activeImageId,
   activeSceneId,
-  activeSequenceId,
+  activeMontageId,
   activeTextureId,
   useDocuments,
 } from '@/stores/documents'
@@ -46,7 +46,9 @@ export function Inspector() {
 function Face() {
   const selection = useSelection(state => state.selection)
   const sceneId = useDocuments(activeSceneId)
-  const sequenceId = useDocuments(activeSequenceId)
+  // The MONTAGE in front, not the sequence: the Audio workspace shows one too, and reading only
+  // the sequence left every clip and track picked there with an empty inspector.
+  const sequenceId = useDocuments(activeMontageId)
   const sequence = useSequences(state => (sequenceId ? sequenceOf(state, sequenceId) : null))
   const textureId = useDocuments(activeTextureId)
   const imageId = useDocuments(activeImageId)

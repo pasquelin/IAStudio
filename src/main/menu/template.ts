@@ -280,6 +280,16 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       return [{ type: 'separator' }, { label: t.menu.exportSkybox, submenu: skyboxItems() }]
     }
 
+    // A command rather than an action of its own, unlike the three above: what a montage exports
+    // is composed by the window — decoders, scenes and all — so the main process asks the
+    // surface in front to do it instead of describing what to write.
+    if (workspace === 'video') {
+      return [
+        { type: 'separator' },
+        commandItem('sequence.export', t.commands.sequenceExport.title),
+      ]
+    }
+
     return []
   }
 

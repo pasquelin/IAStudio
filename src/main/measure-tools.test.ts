@@ -81,25 +81,31 @@ describe('the duplication detector still looking at the tree', () => {
  */
 describe('the dead-code detector still looking at the tree', () => {
   /**
-   * Two macOS binaries `dev-app-identity.mjs` shells out to, and ONE entry point.
+   * Two macOS binaries `dev-app-identity.mjs` shells out to, and what knip cannot see is used.
    *
-   * The entry is not a widening of the reach — the probe above shows nothing widens it. It names
-   * the one file knip cannot see is used: `electron-builder.yml` calls `before-pack.mjs` through
-   * its `beforePack` hook, which is configuration rather than an import, so knip reported it as
-   * a dead file. Deleting it on that word would stop ffmpeg being fetched at packaging time, and
-   * the build would ship without an encoder rather than fail.
+   * These are not a widening of the reach — the probe above shows nothing widens it. Each names
+   * a file reached by something other than an import:
    *
-   * It is here because a detector that always reports one false positive is a detector whose red
-   * gets read as normal. The three entry points for `src/main`, `src/preload` and the renderer
-   * are NOT here: knip finds them itself and reports each as redundant, which is what separates
-   * a genuine blind spot from a second description of the build drifting from the first.
+   * `before-pack.mjs` is called by `electron-builder.yml` through its `beforePack` hook, which is
+   * configuration. Deleting it on knip's word would stop ffmpeg being fetched at packaging time,
+   * and the build would ship without an encoder rather than fail.
+   *
+   * `docs/assets/js/*.js` and the stylesheet beside them are loaded by `docs/index.html` — the
+   * public site, which knip does not parse. The scripts are entry points because they hold code;
+   * the CSS is ignored outright, having no graph to enter.
+   *
+   * They are here because a detector that always reports the same false positives is a detector
+   * whose red gets read as normal. The three entry points for `src/main`, `src/preload` and the
+   * renderer are NOT here: knip finds them itself and reports each as redundant, which is what
+   * separates a genuine blind spot from a second description of the build drifting from the first.
    */
-  it('exempts the two shelled-out binaries and the one entry knip cannot see', () => {
+  it('exempts the two shelled-out binaries and what knip cannot see is used', () => {
     const config = readJson('knip.json')
     expect(config).toEqual({
       $schema: 'https://unpkg.com/knip@6/schema.json',
       ignoreBinaries: ['sips', 'iconutil'],
-      entry: ['scripts/before-pack.mjs'],
+      entry: ['scripts/before-pack.mjs', 'docs/assets/js/*.js'],
+      ignore: ['docs/assets/css/**'],
     })
   })
 

@@ -76,6 +76,11 @@ unlike the Models panel which queries the Scenario catalogue remotely.
 Both views are **virtualised**: only what is actually on screen is drawn. A project with several
 thousand assets therefore scrolls without stutter.
 
+**A sound shows itself as its waveform** on a tile, rather than as a speaker glyph: two takes of
+the same length looked identical until one of them had been played. The waveform is the one the
+timeline draws, derived at import — so it appears a fraction of a second after the tile, once it
+has arrived.
+
 ### When the shelf is empty
 
 The message says which of the three cases you are in, because they call for different answers:
@@ -126,11 +131,26 @@ Right-click lists every destination, always in the same order:
 |---|---|---|
 | **Use as sky** | the open sky, Skyboxes workspace | pictures |
 | **Add to the scene** | the open 3D scene | meshes |
-| **Open in the audio editor** | the open take, Audio workspace | sounds |
+| **Open in the audio editor** | the open edit, Audio workspace | sounds |
 | **Place as a layer** | the open image, Image workspace | pictures |
-| **Add to the montage** | the open sequence, Video workspace | all |
+| **Add to the edit** | the open sequence, Video workspace | all |
 | **Use as base colour** | the open material, Textures workspace | pictures |
-| **Show in the file manager** | opens the folder holding the file | all |
+| **Rename** | opens the name on the thumbnail itself | all |
+| **Show in folder** | opens the file manager on the file | all |
+
+**Renaming changes the name in this project only** — the one on the Scenario account stays as it
+is. One asset is pulled into several projects and named for what each one does with it. The name
+can also be changed in the Inspector, by double-clicking the **Name** row, and in the Explorer.
+
+**The file follows, and it is the same name everywhere.** A generated asset lands on disk under
+its prompt — `Blue alley at dusk.png` — and renaming it really does move the file. What the shelf,
+the Inspector, the tab editing it and your own file manager read is therefore one and the same
+thing. A name your file system would refuse is refused here too, rather than silently corrected;
+so is a name the folder already holds, rather than overwriting another picture.
+
+> Files that arrived **before** this rule keep the technical name they were given —
+> `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png`. They take their real name the day you rename
+> them, and not before: the studio does not stir your folder on its own.
 
 Each row carries its workspace's icon, the same one as in the title bar. The menu only shows
 destinations able to take **that type**: right-clicking a sound does not offer to lay it out as a
@@ -185,7 +205,7 @@ editor takes, or an asset not yet down on your disk — not a broken one.
 | an image | a specific **channel**'s thumbnail | it becomes that channel |
 | a panoramic image | a **sky** preview | it becomes the sky |
 | a mesh | the **3D view** | it enters the scene, at the origin |
-| a sound | the **audio editor** | it becomes the open take |
+| a sound | the **audio editor** | it joins the edit as a clip, and that clip is what you edit |
 | an asset | an **asset field** of a generation form | it becomes that field's input |
 
 **The timeline does not sort.** It takes what it is given: an asset with no duration of its own
@@ -205,8 +225,8 @@ knows:
 | **Generation** | the model, the seed, the prompt — and two buttons, **Pin this recipe** and **Regenerate** |
 | **File** | the **Location** on disk, and nothing else — the group only appears for an asset held locally |
 
-The **Show in the file manager** button opens the folder containing the file, in Finder, Explorer or
-your file manager.
+The **Show in folder** button steps out of the studio: it opens Finder, Explorer or your file
+manager, with the file already selected.
 
 > "**File not found**" means a linked medium has been moved or deleted from its original location.
 > See the next section.
@@ -326,7 +346,7 @@ Two consequences:
 
 - **Upside** — a 12 GB video rush is not duplicated. Your project stays light.
 - **Downside** — if you move, rename or delete the original file, the link breaks **silently**:
-  nothing reports it until you click **Show in the file manager**, and it is that click, finding
+  nothing reports it until you click **Show in folder**, and it is that click, finding
   nothing, that brings "File not found" up in the inspector.
 
 If you have to take a project elsewhere, take the media it points at too — or copy them into the
@@ -335,7 +355,7 @@ project folder yourself before importing them.
 **But EDITING one brings it into the project.** A linked medium you retouch and then save — `⌘S`
 on an image, **Apply** on a sound take — is written into the project folder, and it is that copy
 the studio shows everywhere afterwards: the shelf, the scene, the inspector. The link is replaced
-by a real file, and **Show in the file manager** now leads there.
+by a real file, and **Show in folder** now leads there.
 
 **The file you pointed at is not touched.** It stays where it is, in the state you left it in:
 writing into a folder you merely showed the studio is a different act from editing an asset. If

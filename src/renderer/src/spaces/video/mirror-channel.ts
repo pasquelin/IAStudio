@@ -48,20 +48,19 @@ export function openMirrorChannel(): BroadcastChannel {
  */
 export function mirrorMessageOf(data: unknown): MirrorMessage | null {
   if (typeof data !== 'object' || data === null || !('kind' in data)) return null
-  const message = data as { kind: unknown }
 
-  if (message.kind === 'gone') return { kind: 'gone' }
-  if (message.kind === 'ask') return { kind: 'ask' }
-  if (message.kind === 'edit' && 'sequence' in data) {
-    const { sequence } = data as { sequence: unknown }
+  if (data.kind === 'gone') return { kind: 'gone' }
+  if (data.kind === 'ask') return { kind: 'ask' }
+  if (data.kind === 'edit' && 'sequence' in data) {
+    const { sequence } = data
     return isSequence(sequence) ? { kind: 'edit', sequence } : null
   }
-  if (message.kind === 'time' && 'playhead' in data) {
-    const { playhead } = data as { playhead: unknown }
+  if (data.kind === 'time' && 'playhead' in data) {
+    const { playhead } = data
     return typeof playhead === 'number' ? { kind: 'time', playhead } : null
   }
-  if (message.kind === 'playing' && 'playing' in data && 'playhead' in data) {
-    const { playing, playhead } = data as { playing: unknown; playhead: unknown }
+  if (data.kind === 'playing' && 'playing' in data && 'playhead' in data) {
+    const { playing, playhead } = data
     if (typeof playing !== 'boolean' || typeof playhead !== 'number') return null
     return { kind: 'playing', playing, playhead }
   }

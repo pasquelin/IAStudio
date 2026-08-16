@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { transports } from '@/engines/timeline/playback'
 import { openAssetSink } from '@/engines/timeline/sink-port'
 import { createSoundPort } from '@/engines/timeline/sound-port'
+import type { AudioTap, SoundPort } from '@/engines/timeline/sound-schedule'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
 import { playbackOf, usePlayback } from '@/stores/playback'
@@ -20,6 +21,13 @@ export type SoundTransport = {
   playing: boolean
   toggle: () => void
   rewind: () => void
+  /**
+   * Where to listen to the output, for the surfaces that draw what is being heard.
+   *
+   * Published here because this hook is what builds the port, and nothing else in the tab can
+   * reach it. Answers null until a sound has actually opened an output.
+   */
+  tap: () => AudioTap | null
 }
 
 /**
@@ -35,6 +43,8 @@ export type SoundTransport = {
  */
 export function useSoundTransport(documentId: string, sequence: SequenceState): SoundTransport {
   const engine = useRef<TimelineEngine | null>(null)
+  // Kept beside the engine because the meter needs it and the engine does not hand it back.
+  const port = useRef<SoundPort | null>(null)
   // Published rather than held: the bar of a montage reads it exactly as the monitor's does.
   const playing = usePlayback(state => playbackOf(state, documentId))
 
@@ -53,6 +63,7 @@ export function useSoundTransport(documentId: string, sequence: SequenceState): 
 
   useEffect(() => {
     const sound = createSoundPort()
+    port.current = sound
     const created = new TimelineEngine({
       openSink: openAssetSink,
       sound,
@@ -70,6 +81,7 @@ export function useSoundTransport(documentId: string, sequence: SequenceState): 
     return () => {
       created.dispose()
       engine.current = null
+      port.current = null
       usePlayback.getState().forget(documentId)
     }
   }, [documentId, setTime])
@@ -98,5 +110,6 @@ export function useSoundTransport(documentId: string, sequence: SequenceState): 
       engine.current?.pause()
       setTime(0)
     }, [setTime]),
+    tap: useCallback(() => port.current?.tap() ?? null, []),
   }
 }

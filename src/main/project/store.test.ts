@@ -2,7 +2,12 @@ import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/pr
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MANIFEST_FILE, MANIFEST_VERSION, PROJECT_FOLDERS } from '@shared/domain/project'
+import {
+  LEGACY_MANIFEST_FILE,
+  MANIFEST_FILE,
+  MANIFEST_VERSION,
+  PROJECT_FOLDERS,
+} from '@shared/domain/project'
 import { isRecord } from '@shared/guards'
 import { createProjectStore, NoProjectError, ProjectOpenError, type ProjectStore } from './store'
 import { memoryCatalog } from './catalog-fixtures'
@@ -55,9 +60,9 @@ describe('project store', () => {
   it('creates the whole tree and its manifest', async () => {
     const project = await store.create(root, 'My project')
 
-    // The folder is named, not suffixed: an extension nothing is registered against decorates
-    // a folder the system opens as a folder anyway.
-    expect(project.path).toBe(join(root, 'My project'))
+    // The folder handed in IS the project. Nothing is made from the name — a name that fabricated
+    // a subfolder put a project inside the folder the user had just made for it.
+    expect(project.path).toBe(root)
     for (const folder of PROJECT_FOLDERS) {
       expect(await exists(join(project.path, folder))).toBe(true)
     }
@@ -371,6 +376,87 @@ describe('project store', () => {
     expect(store.current()).toEqual(project)
   })
 
+  describe('inspecting a folder before creating in it', () => {
+    it('calls an empty folder blank, and one with files of its own occupied', async () => {
+      expect(await store.inspect(root)).toBe('blank')
+
+      await writeFile(join(root, 'rush.mp4'), 'x', 'utf8')
+      expect(await store.inspect(root)).toBe('occupied')
+    })
+
+    // Every folder made on a Mac gets one, and asking the user about it would put a dialog in
+    // front of a folder they would rightly call empty.
+    it('does not count a hidden entry as content', async () => {
+      await writeFile(join(root, '.DS_Store'), 'x', 'utf8')
+      expect(await store.inspect(root)).toBe('blank')
+    })
+
+    it('recognises a folder that is already a project', async () => {
+      const created = await store.create(root, 'My project')
+      expect(await store.inspect(created.path)).toBe('project')
+    })
+
+    // The catalogue would have two owners for the same files, and the outer project indexes the
+    // inner one's assets as its own.
+    it('refuses a folder sitting anywhere under a project', async () => {
+      await store.create(root, 'Outer')
+
+      await expect(store.inspect(join(root, 'documents'))).rejects.toMatchObject({
+        reason: 'nested',
+      })
+      await expect(store.inspect(join(root, 'assets', 'img', 'deep'))).rejects.toMatchObject({
+        reason: 'nested',
+      })
+    })
+
+    /**
+     * The other direction, and the one the picker makes easy: it opens on the folder the last
+     * project was made in, so choosing without descending would wrap every project already
+     * there — and every later creation under it would then be refused as nested, curable only
+     * by deleting a hidden file by hand.
+     */
+    it('refuses a folder that already holds projects', async () => {
+      await store.create(join(root, 'Reel'), 'Reel')
+      store.close()
+
+      await expect(store.inspect(root)).rejects.toMatchObject({ reason: 'holds-projects' })
+    })
+
+    // `project.json` is one of the commonest filenames there is, and taking a stray one for a
+    // project would refuse every folder under a checkout that holds one, with no way past it.
+    it('does not take a stray project.json above the folder for a project', async () => {
+      await writeFile(join(root, LEGACY_MANIFEST_FILE), JSON.stringify({ name: 'some tool' }))
+      const below = join(root, 'Reel')
+      await mkdir(below)
+
+      expect(await store.inspect(below)).toBe('blank')
+    })
+
+    // The reason this exists at all: `create` writes a manifest unconditionally, so a caller
+    // that took "cannot read it" for "there is none" would replace an identity the user still
+    // has documents under.
+    it('raises rather than answering, for a manifest that exists but will not parse', async () => {
+      await writeFile(join(root, MANIFEST_FILE), 'not json at all', 'utf8')
+
+      await expect(store.inspect(root)).rejects.toThrow(ProjectOpenError)
+    })
+
+    it('raises for a project made by a newer build', async () => {
+      await writeFile(
+        join(root, MANIFEST_FILE),
+        JSON.stringify({
+          version: MANIFEST_VERSION + 1,
+          name: 'Future',
+          createdAt: '',
+          updatedAt: '',
+        }),
+        'utf8',
+      )
+
+      await expect(store.inspect(root)).rejects.toMatchObject({ reason: 'too-new' })
+    })
+  })
+
   it('reopens a project it created', async () => {
     const created = await store.create(root, 'My project')
     store.close()
@@ -421,8 +507,8 @@ describe('project store', () => {
       onChange,
     })
 
-    const first = await fragile.create(root, 'First')
-    const second = await fragile.create(root, 'Second')
+    const first = await fragile.create(join(root, 'first'), 'First')
+    const second = await fragile.create(join(root, 'second'), 'Second')
     await fragile.open(first.path)
 
     failNext = true
@@ -535,8 +621,8 @@ describe('renaming a project', () => {
 
   // The home's shelf lists projects that are not open, and renaming one must not open it.
   it('renames a project that is not open, without opening it', async () => {
-    const other = await store.create(root, 'Other')
-    const open = await store.create(root, 'Open')
+    const other = await store.create(join(root, 'other'), 'Other')
+    const open = await store.create(join(root, 'open'), 'Open')
 
     const renamed = await store.rename(other.path, 'Renamed')
 

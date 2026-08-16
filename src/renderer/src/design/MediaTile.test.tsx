@@ -41,6 +41,26 @@ describe('MediaTile', () => {
     expect(document.querySelector('path')).toHaveAttribute('d', 'M1 1')
   })
 
+  /**
+   * A sound has a face of its own — its waveform — and it must sit UNDER the caption: laid over
+   * the tile by the caller instead, it covered the name and the shelf had to be hovered to read.
+   */
+  it('draws the face it was given in place of the icon, caption and all', () => {
+    render(<MediaTile caption="pad.wav" fallbackIcon="M1 1" face={<canvas />} />)
+
+    expect(document.querySelector('canvas')).toBeInTheDocument()
+    expect(document.querySelector('path')).toBeNull()
+    expect(screen.getByText('pad.wav')).toBeInTheDocument()
+  })
+
+  // Never over the picture: an asset that HAS a still shows the still.
+  it('keeps the picture when there is both a picture and a face', () => {
+    render(<MediaTile url="https://cdn/one.png" caption="Take" face={<canvas />} />)
+
+    expect(picture()).toHaveAttribute('src', 'https://cdn/one.png')
+    expect(document.querySelector('canvas')).toBeNull()
+  })
+
   // The caption has to stay readable over a picture; it is never the picture's own text.
   it('keeps the caption when a badge is given too', () => {
     render(<MediaTile url="https://cdn/one.png" caption="Flux" badge={<span>Featured</span>} />)

@@ -120,20 +120,31 @@ neither your projects nor what you write in them.
 
 `⌘N` / `Ctrl+N`, or menu **File ▸ New project…**
 
-The studio asks **where** to create the folder and **what** to call it. Choose somewhere you will
-find again: your documents, your desktop, an external drive.
+The studio asks for **a folder**, and that folder *becomes* the project — nothing is built above
+or below it. Make one from the picker if you need to (**New Folder**) and give it the name you
+want the project to carry: that is the name it takes.
 
-What it builds:
+What it lays inside:
 
 ```
-My first project/
+My first project/          ← the folder YOU chose
 ├── assets/           everything you make and import
 ├── documents/        your works in progress
 ├── .project.json     the project's identity card — hidden
 └── .index/           the catalogue and its caches — keep this, hidden
 ```
 
-The project's name appears at the top of the window. You always know what you are working in.
+The project's name appears at the top of the window. You always know what you are working in. To
+change it later, double-click its row in **Your projects**: that renames the project, not the
+folder.
+
+Three answers are possible, and none of them overwrites anything:
+
+- **the folder is already a project** — the studio opens it instead of creating one over it;
+- **it already holds files** — the studio asks before settling in, and touches nothing that is
+  already there;
+- **it sits inside a project, or holds projects** — the studio refuses: two overlapping projects
+  would claim the same files. Pick a folder beside it instead.
 
 The chapter [Projects](04-projects.md) details each folder.
 
@@ -192,7 +203,7 @@ the project's shelf — and on your disk, in `assets/img/`.
 size, its weight, the model that made it, the prompt you wrote, and the *seed* that will let you
 come back to it.
 
-The **Show in the file manager** button, in the inspector, opens the folder it sits in. That is
+The **Show in folder** button, in the inspector, opens your file manager on it. That is
 where you take it from to send it to anyone.
 
 > **To retouch it**, move to the **Image** workspace: the `+` button on the left rail opens a

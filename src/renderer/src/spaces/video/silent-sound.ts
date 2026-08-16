@@ -15,6 +15,9 @@ import type { SoundPort } from '@/engines/timeline/sound-schedule'
 export function silentSound(): SoundPort {
   return {
     now: () => null,
+    // Nothing goes out here, so there is nothing to listen to: a meter fed by this port would
+    // read a flat zero over an edit the other window is playing aloud.
+    tap: () => null,
     resume: () => undefined,
     load: () => Promise.reject(new Error('the video return plays no sound')),
   }

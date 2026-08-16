@@ -2,6 +2,7 @@ import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import { startAssetDrag } from '@/helpers/asset-drag'
+import { isTyping } from '@/helpers/typing'
 import { useSelection } from '@/stores/selection'
 import { openAssetMenu } from './AssetMenu'
 
@@ -9,6 +10,8 @@ export type DraggableAssetProps = {
   asset: Asset
   className?: string
   children: ReactNode
+  /** Opens the name for editing, where the host draws one. Absent leaves the row out of it. */
+  onRename?: () => void
 }
 
 /**
@@ -22,7 +25,7 @@ export type DraggableAssetProps = {
  * Two gestures onto one table of destinations: right-click lists them all, and a drag hands the
  * kind to whatever it flies over.
  */
-export function DraggableAsset({ asset, className, children }: DraggableAssetProps) {
+export function DraggableAsset({ asset, className, children, onRename }: DraggableAssetProps) {
   const { t } = useTranslation()
 
   /**
@@ -48,9 +51,13 @@ export function DraggableAsset({ asset, className, children }: DraggableAssetPro
         startAssetDrag(event, asset)
       }}
       onContextMenu={event => {
+        // A right-click inside the rename field belongs to the native clipboard and spelling
+        // menu, which `preventDefault` would keep from ever being asked — the reading `Tree`
+        // and `Collection` both give it.
+        if (isTyping(event.target)) return
         event.preventDefault()
         takeSelection()
-        openAssetMenu({ asset, t })
+        openAssetMenu({ asset, t, ...(onRename ? { onRename } : {}) })
       }}
     >
       {children}

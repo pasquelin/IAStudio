@@ -165,6 +165,7 @@ describe('driving the sound', () => {
     const stop = vi.fn()
     const port: SoundPort = {
       now: () => 0,
+      tap: () => null,
       resume: vi.fn(),
       load: vi.fn(async assetId => {
         loaded.push(assetId)

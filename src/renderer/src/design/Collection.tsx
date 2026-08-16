@@ -1,6 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import { isTyping } from '@/helpers/typing'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { rowSkin, type RowTone } from './styles'
@@ -57,6 +58,12 @@ export type CollectionProps<T extends { id: string }> = {
    * caller that wired the gesture itself would leave its rows out of the keyboard's reach.
    */
   onActivate?: (item: T) => void
+  /**
+   * What a right-click on a row offers. The item is handed over rather than a pointer: this
+   * studio's menus are the system's own — `showContextMenu` — and the system pops them where
+   * the pointer is, so nothing here has to know about coordinates.
+   */
+  onContextMenu?: (item: T) => void
   /**
    * Opening on a SINGLE click, for a list whose row leads somewhere instead of being picked —
    * the projects shelf, whose row opens the project it names.
@@ -168,6 +175,7 @@ export function Collection<T extends { id: string }>({
   selectedIds,
   onSelect,
   onActivate,
+  onContextMenu,
   onOpen,
   onReachEnd,
   onVisible,
@@ -337,6 +345,7 @@ export function Collection<T extends { id: string }>({
                           : onOpen && (() => onOpen(item))
                       }
                       onActivate={onActivate ? () => onActivate(item) : undefined}
+                      onContextMenu={onContextMenu ? () => onContextMenu(item) : undefined}
                       onArrow={event => onCellKeyDown(index, event)}
                     >
                       {card ? card(item) : renderRow?.(item)}
@@ -374,6 +383,7 @@ type CollectionCellProps = {
   total: number
   onSelect?: (modifiers: Modifiers) => void
   onActivate?: () => void
+  onContextMenu?: () => void
   onArrow: (event: KeyboardEvent) => void
   className?: string
   children: ReactNode
@@ -394,6 +404,7 @@ function CollectionCell({
   total,
   onSelect,
   onActivate,
+  onContextMenu,
   onArrow,
   className,
   children,
@@ -417,11 +428,30 @@ function CollectionCell({
    */
   const accented = (selected && tone === 'strong') || undefined
 
+  /**
+   * The same reading `Tree` gives a right-click: one landing in a row's rename field belongs to
+   * the native clipboard and spelling menu, which `preventDefault` would keep from ever being
+   * asked. Nothing is aimed or selected here — the cell hands over the item it draws, and a
+   * menu raised on a row acts on that row.
+   */
+  const raiseMenu = onContextMenu
+    ? (event: MouseEvent): void => {
+        if (isTyping(event.target)) return
+        event.preventDefault()
+        onContextMenu()
+      }
+    : undefined
+
   // What the cell answers to is not what puts it in reach: a row that only opens is walked to
   // and pressed like one that only selects.
   if (!onSelect && !onActivate)
     return (
-      <div className={skin} data-selected={selected || undefined} data-accented={accented}>
+      <div
+        className={skin}
+        data-selected={selected || undefined}
+        data-accented={accented}
+        onContextMenu={raiseMenu}
+      >
         {children}
       </div>
     )
@@ -444,6 +474,7 @@ function CollectionCell({
       aria-selected={role === 'option' ? selected : undefined}
       onClick={disabled ? undefined : onSelect}
       onDoubleClick={disabled ? undefined : onActivate}
+      onContextMenu={raiseMenu}
       onKeyDown={event => {
         // Before the refusal, never after: the arrows walk THROUGH a disabled row. Stopping
         // them there would strand the keyboard on it, since it keeps its place in the list.

@@ -92,14 +92,14 @@ describe('the library panel', () => {
   })
 
   /**
-   * The thumbnail, not the asset: its URL is public and stable, while the asset's own carries a
-   * signature that appending anything to would invalidate — the CDN answers 403.
+   * The thumbnail here, the asset having none of its own to give, and resized to the width the
+   * tile draws — jsdom reports a density of 1, so that width is the tile's own.
    */
-  it('captions each tile with the model, and draws the thumbnail it may resize', async () => {
+  it('captions each tile with the asset name, and draws the thumbnail it may resize', async () => {
     install([cloudAsset()])
     const { container } = render(<Library />)
 
-    expect(await screen.findByText('FLUX.2')).toBeInTheDocument()
+    expect(await screen.findByText('boulder.png')).toBeInTheDocument()
     expect(container.querySelector('img')?.getAttribute('src')).toBe(
       'https://cdn.example/thumb.png?width=264',
     )
@@ -136,8 +136,8 @@ describe('the library panel', () => {
     install([cloudAsset()])
     render(<Library />)
 
-    expect(await screen.findByText('FLUX.2')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /boulder\.png/ })).not.toBeInTheDocument()
+    expect(await screen.findByText('boulder.png')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Récupérer/ })).not.toBeInTheDocument()
   })
 
   /**
@@ -209,14 +209,14 @@ describe('the library panel', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Réessayer' }))
 
-    expect(await screen.findByText('FLUX.2')).toBeInTheDocument()
+    expect(await screen.findByText('boulder.png')).toBeInTheDocument()
   })
 
   it('reads the library again when the active key changes', async () => {
     const { browse } = install([cloudAsset()])
     render(<Library />)
 
-    await screen.findByText('FLUX.2')
+    await screen.findByText('boulder.png')
     useSettings.setState({ auth: { authenticated: true, ownerId: 'team_2' } })
 
     await vi.waitFor(() => expect(browse).toHaveBeenCalledTimes(2))

@@ -1,4 +1,4 @@
-import { rename, rm, writeFile } from 'node:fs/promises'
+import { access, rename, rm, writeFile } from 'node:fs/promises'
 
 /**
  * How the studio writes the small files it keeps for the user — the job notes, the pinned
@@ -70,3 +70,14 @@ export function writeQueue(): WriteQueue {
 /** Node reports a missing path this way, and it is the one failure that is not an error. */
 export const isMissing = (error: unknown): boolean =>
   error instanceof Error && 'code' in error && error.code === 'ENOENT'
+
+/**
+ * Whether a path is there at all. Anything that is not a plain absence — a permission that
+ * refuses, a volume that unmounted — answers `false` too: what asks this is deciding whether to
+ * go and look, and it has to look either way.
+ */
+export const exists = (path: string): Promise<boolean> =>
+  access(path).then(
+    () => true,
+    () => false,
+  )

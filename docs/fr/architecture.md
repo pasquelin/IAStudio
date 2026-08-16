@@ -338,7 +338,7 @@ de se charger.
 ### Un registre d’actions, deux lecteurs
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) déclare ce que le studio sait faire sur demande —
-dix actions, leurs champs, et **ce que chacune engage** (`none`, `asset`, `credits`). Il a deux
+onze actions, leurs champs, et **ce que chacune engage** (`none`, `asset`, `credits`). Il a deux
 lecteurs, et **aucun des deux ne décide** :
 
 - **l’assistant**, dans la fenêtre, qui le liste à son modèle comme un vocabulaire ;
@@ -742,8 +742,13 @@ liés et le journal d’activité — les fichiers restent, plus rien ne dit ce 
 Un asset est soit `local` (un fichier du projet), soit `cloud` (encore uniquement chez Scenario).
 Une image locale est servie au renderer sous la forme `scenario://<id>`.
 
-Les **documents** sont des fichiers JSON dans `documents/`, un par document, nommé d’après son
-identifiant — `<id>.scene`, `<id>.seq`. Le dossier fait foi : un fichier dont l’en-tête annonce un
+Les **documents** sont des fichiers JSON dans `documents/`, un par document, **nommé d’après le
+document** — `Niveau.scene`, `Bande annonce.seq`. Son identifiant vit dans l’enveloppe (version 3
+du format) et non dans le nom du fichier : c’est ce qui permet de renommer un document, y compris
+ouvert, sans qu’il devienne un autre document — la mise en page, la liste des récents et chaque
+onglet sont indexés par cet identifiant. Un fichier écrit avant cette version porte son
+identifiant comme nom (`<id>.scene`) et se lit exactement comme avant ; rien n’est réécrit à
+l’ouverture, le tampon vient au prochain enregistrement. Le dossier fait foi : un fichier dont l’en-tête annonce un
 type que son extension dément est refusé plutôt qu’ouvert dans le mauvais éditeur. L’écriture
 passe par un fichier de transit puis un `rename`, atomique dans un même dossier, de sorte qu’une
 coupure en cours d’écriture ne laisse jamais un document tronqué là où était le travail.

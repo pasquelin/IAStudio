@@ -1,6 +1,6 @@
 import { Object3D, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { carry, centreOf, placePivot, release, transformOf } from './pivot'
+import { applyTransform, carry, centreOf, placePivot, release, transformOf } from './pivot'
 
 function node(id: string, x: number, y = 0, z = 0): Object3D {
   const object = new Object3D()
@@ -142,5 +142,27 @@ describe('transformOf', () => {
       rotation: { x: 0.1, y: 0.2, z: 0.3 },
       scale: { x: 2, y: 3, z: 4 },
     })
+  })
+})
+
+/**
+ * The way back, and it had no test at all while four sites leaned on it — the fourth being the
+ * bone poses of `SceneRenderer`, which wrote the nine `.set()` arguments out by hand until the
+ * clone report named it.
+ *
+ * Asserted through `transformOf` rather than on the three vectors: what the pair owes a caller
+ * is that a transform read out and written back is the same transform, which is exactly what
+ * the renderer does with a bone's rest pose.
+ */
+describe('applyTransform', () => {
+  it('writes back what transformOf read, part for part', () => {
+    const source = node('a', 1, 2, 3)
+    source.rotation.set(0.1, 0.2, 0.3)
+    source.scale.set(2, 3, 4)
+    const target = node('b', 9, 9, 9)
+
+    applyTransform(target, transformOf(source))
+
+    expect(transformOf(target)).toEqual(transformOf(source))
   })
 })

@@ -62,6 +62,17 @@ export const LIST_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, view: '
  */
 export const TILES_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, thumbnailSize: 96 }
 
+/**
+ * The state as it goes to storage. `search` is the one field no store persists: reopening the
+ * studio on a catalogue narrowed by a word nobody typed reads as a catalogue gone missing.
+ *
+ * Here rather than in each `partialize`, because it is a policy of `CollectionState` and not of
+ * any one store — two of them persist one, and the rule had drifted into two paraphrases.
+ */
+export function withoutSearch(state: CollectionState): CollectionState {
+  return { ...state, search: '' }
+}
+
 export function resizeThumbnails(state: CollectionState, delta: number): CollectionState {
   const thumbnailSize = clamp(state.thumbnailSize + delta, MIN_THUMBNAIL, MAX_THUMBNAIL)
   return thumbnailSize === state.thumbnailSize ? state : { ...state, thumbnailSize }

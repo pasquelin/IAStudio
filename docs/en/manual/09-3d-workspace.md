@@ -527,7 +527,7 @@ writes only the chosen objects — a group takes along whatever hangs from it.
 | **glTF (`.gltf`)** | the same thing as readable JSON | to inspect or diff what is in it |
 | **USDZ (`.usdz`)** | the format Apple's viewers open | to look at the scene on an iPhone or a Mac |
 
-A save dialog opens to choose where the file goes. Its name is the document's; the extension
+A save dialogue opens to choose where the file goes. Its name is the document's; the extension
 follows the chosen format.
 
 **What does not come out.** The floor grid, the corner trihedron, the transform handles and the
@@ -649,7 +649,7 @@ keying.
 **Playing with the head already at the end rewinds** instead of stopping on the frame it starts on.
 
 **Animation composes with the object's pose, it does not replace it** — and not the same way for
-every property: moves **add up**, scales **multiply**. That is the opposite of a video montage,
+every property: moves **add up**, scales **multiply**. That is the opposite of a video edit,
 where the clip on top hides the one below.
 
 > **To stack the same property twice on one object, lock its lines**: the next key opens fresh

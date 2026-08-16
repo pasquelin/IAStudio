@@ -44,7 +44,15 @@ function meshesOf(documentId: string): SceneNode[] {
 
 function openSecondScene(): void {
   useDocuments.setState({
-    documents: { 'doc-2': { id: 'doc-2', kind: 'scene', workspace: '3d', title: 'Other' } },
+    documents: {
+      'doc-2': {
+        id: 'doc-2',
+        kind: 'scene',
+        workspace: '3d',
+        title: 'Other',
+        fileName: 'Other.scene',
+      },
+    },
     activeId: 'doc-2',
   })
   render(<SceneDocument documentId="doc-2" />)
@@ -54,7 +62,9 @@ beforeEach(() => {
   clearScenes()
   useSceneClipboard.setState({ nodes: [] })
   useDocuments.setState({
-    documents: { 'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Set' } },
+    documents: {
+      'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Set', fileName: 'Set.scene' },
+    },
     activeId: 'doc-1',
   })
   useScenes.getState().runCommand('doc-1', addNode(meshNode('box-1')))

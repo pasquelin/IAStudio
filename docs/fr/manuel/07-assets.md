@@ -80,6 +80,11 @@ mémoire, contrairement au panneau Modèles qui interroge le catalogue Scenario 
 Les deux vues sont **virtualisées** : seul ce qui est réellement à l’écran est dessiné. Un
 projet de plusieurs milliers d’assets défile donc sans à-coups.
 
+**Un son se montre par son onde**, en vignette, et non par un pictogramme de haut-parleur : deux
+prises de même durée se ressemblaient trait pour trait tant qu’on ne les avait pas écoutées.
+L’onde est celle que le montage dessine, calculée à l’import — elle apparaît donc une fraction de
+seconde après la vignette, le temps qu’elle arrive.
+
 ### Quand l’étagère est vide
 
 Le message dit lequel des trois cas vous êtes, parce qu’ils appellent des réponses différentes :
@@ -131,11 +136,26 @@ Le clic droit liste toutes les destinations, toujours dans le même ordre :
 |---|---|---|
 | **Utiliser comme ciel** | le ciel ouvert, espace Skyboxes | images |
 | **Ajouter à la scène** | la scène 3D ouverte | maillages |
-| **Ouvrir dans l’éditeur audio** | la prise ouverte, espace Audio | sons |
+| **Ouvrir dans l’éditeur audio** | le montage ouvert, espace Audio | sons |
 | **Placer comme calque** | l’image ouverte, espace Image | images |
 | **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
 | **Utiliser comme couleur de base** | la matière ouverte, espace Textures | images |
-| **Afficher dans le gestionnaire de fichiers** | ouvre le dossier qui contient le fichier | tous |
+| **Renommer** | ouvre le nom sur la vignette elle-même | tous |
+| **Afficher dans le dossier** | ouvre le gestionnaire de fichiers sur le fichier | tous |
+
+**Renommer ne change le nom que dans ce projet** — celui du compte Scenario ne bouge pas. Un même
+asset est tiré dans plusieurs projets et nommé pour ce que chacun en fait. Le nom est aussi
+modifiable dans l’Inspecteur, d’un double-clic sur la ligne **Nom**, et dans l’Explorateur.
+
+**Le fichier suit, et c’est le même nom partout.** Un asset généré se pose sur le disque sous son
+prompt — `Ruelle bleue au crépuscule.png` — et le renommer déplace vraiment le fichier. Ce que
+lisent l’étagère, l’Inspecteur, l’onglet qui l’édite et votre Finder est donc une seule et même
+chose. Un nom que le système de fichiers refuserait est refusé ici aussi, plutôt que corrigé en
+silence ; un nom que le dossier tient déjà l’est également, plutôt que d’écraser une autre image.
+
+> Les fichiers arrivés **avant** cette règle gardent le nom technique qu’ils portaient
+> — `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png`. Ils prennent leur vrai nom le jour où vous
+> les renommez, et pas avant : le studio ne remue pas votre dossier tout seul.
 
 Chaque ligne porte l’icône de son espace, la même que dans la barre de titre. Le menu ne montre
 que les destinations capables de recevoir **ce type-là** : le clic droit sur un son n’offre pas
@@ -192,7 +212,7 @@ disque — pas d’un asset abîmé.
 | une image | la vignette d’un **canal** précis | elle devient ce canal-là |
 | une image panoramique | l’aperçu d’un **ciel** | elle devient le ciel |
 | un maillage | la **vue 3D** | il entre dans la scène, à l’origine |
-| un son | l’**éditeur audio** | il devient la prise ouverte |
+| un son | l’**éditeur audio** | il s’ajoute au montage comme un clip, et c’est lui qu’on édite |
 | un asset | un **champ d’asset** d’un formulaire de génération | il devient l’entrée du champ |
 
 **La timeline ne trie pas.** Elle prend ce qu’on lui donne : un asset sans durée propre reçoit une
@@ -212,8 +232,8 @@ ce qu’il sait :
 | **Génération** | le modèle, la graine, le prompt — et deux boutons, **Épingler la recette** et **Régénérer** |
 | **Fichier** | l’**Emplacement** sur le disque, et rien d’autre — le groupe n’apparaît que pour un asset présent localement |
 
-Le bouton **Afficher dans le gestionnaire de fichiers** ouvre le dossier contenant le fichier,
-dans le Finder, l’Explorateur ou votre gestionnaire de fichiers.
+Le bouton **Afficher dans le dossier** sort du studio : il ouvre le Finder, l’Explorateur ou
+votre gestionnaire de fichiers, le fichier déjà sélectionné.
 
 > « **Fichier introuvable** » signifie qu’un média lié a été déplacé ou supprimé de son
 > emplacement d’origine. Voir la section suivante.
@@ -342,7 +362,7 @@ Deux conséquences :
 - **Avantage** — un rush vidéo de 12 Go n’est pas dupliqué. Votre projet reste léger.
 - **Inconvénient** — si vous déplacez, renommez ou supprimez le fichier d’origine, le lien se
   casse **en silence** : rien ne le signale tant que vous n’avez pas cliqué sur **Afficher dans le
-  gestionnaire de fichiers**, et c’est ce clic, ne trouvant rien, qui fait apparaître
+  dossier**, et c’est ce clic, ne trouvant rien, qui fait apparaître
   « Fichier introuvable » dans l’inspecteur.
 
 Si vous devez emporter un projet ailleurs, emportez aussi les médias qu’il pointe — ou copiez-les
@@ -351,7 +371,7 @@ vous-même dans le dossier du projet avant de les importer.
 **Mais l’ÉDITER le fait entrer dans le projet.** Un média lié que vous retouchez puis enregistrez —
 `⌘S` sur une image, **Appliquer** sur une prise sonore — est écrit dans le dossier du projet, et
 c’est cette copie que le studio montre ensuite partout : l’étagère, la scène, l’inspecteur.
-Le lien est remplacé par un vrai fichier, et **Afficher dans le gestionnaire de fichiers** mène
+Le lien est remplacé par un vrai fichier, et **Afficher dans le dossier** mène
 désormais là.
 
 **Le fichier que vous aviez pointé n’est pas touché.** Il reste où il est, dans l’état où vous

@@ -108,6 +108,9 @@ const TEST_POOL = 'threads'
  */
 const DOM_BOUND = [
   'src/renderer/src/app/document-io.test.ts',
+  // Not for a DOM: the name it proposes is « Sans titre N », composed by `i18next` — only the
+  // renderer setup initialises it, and an uninitialised `t` answers with no string at all.
+  'src/renderer/src/app/new-document.test.ts',
   // Imports the definition of all twenty-one panels, so it loads every panel component. It
   // PASSES under node — and covers less: the branches those modules run at import take the
   // other path without a browser, and `panels/**` went four branches over its budget.
@@ -117,6 +120,7 @@ const DOM_BOUND = [
   'src/renderer/src/engines/audio/audio-render.test.ts',
   'src/renderer/src/engines/canvas/CanvasEngine.test.ts',
   'src/renderer/src/engines/canvas/CanvasOverlay.test.ts',
+  'src/renderer/src/engines/core/canvas-2d.test.ts',
   'src/renderer/src/engines/core/palette.test.ts',
   'src/renderer/src/engines/scene/animation-painter.test.ts',
   'src/renderer/src/engines/scene/bvh-builder.test.ts',
@@ -135,6 +139,8 @@ const DOM_BOUND = [
   'src/renderer/src/engines/texture/TextureRenderer.test.ts',
   'src/renderer/src/engines/timeline/TimelineEngine.mount.test.ts',
   'src/renderer/src/engines/timeline/painter.test.ts',
+  // The stage it stands in for hands back a canvas, and a canvas is what the sink wraps.
+  'src/renderer/src/engines/timeline/scene-sink.test.ts',
   'src/renderer/src/engines/viewport/ViewportEngine.test.ts',
   'src/renderer/src/helpers/menu-icon.test.ts',
   // Not for a DOM of their own: they read the labels a menu is raised with, and `i18next` is only
@@ -187,6 +193,12 @@ export default defineConfig({
           pool: 'forks',
           testTimeout: TEST_TIMEOUT,
           include: ['src/{main,preload,shared}/**/*.test.ts'],
+          // Anchored like the line above, and for a reason `include` alone does not cover: the
+          // benchmark glob is a SEPARATE setting with its own default, `**/*.bench.*`, which is
+          // not anchored at all. Left to it, `pnpm bench` walked into `.claude/worktrees/` and
+          // measured the branches of other sessions — 72 lines of another checkout's numbers,
+          // presented as this one's.
+          benchmark: { include: ['src/{main,preload,shared}/**/*.bench.ts'] },
           setupFiles: ['src/main/test-setup.ts'],
         },
       },
@@ -199,6 +211,11 @@ export default defineConfig({
           testTimeout: TEST_TIMEOUT,
           // Every component test, plus the `.test.ts` that were measured to need a browser.
           include: ['src/renderer/**/*.test.tsx', ...DOM_BOUND],
+          // The same split as the tests, and it has to be stated: a project with no benchmark
+          // glob of its own keeps the unanchored default and runs EVERY bench of the tree —
+          // this one was measuring the main process's, under jsdom, on top of the `node` project
+          // already doing it. No `.bench.tsx` exists today; the day one does, it lands here.
+          benchmark: { include: ['src/renderer/**/*.bench.tsx'] },
           // Stylesheets are stubbed to an empty string by default, `?raw` included — which
           // silently empties the checks that read a rule back. Only the raw reads are spared;
           // nothing that a component imports for its styles is processed.
@@ -218,7 +235,12 @@ export default defineConfig({
           pool: TEST_POOL,
           testTimeout: TEST_TIMEOUT,
           include: ['src/renderer/**/*.test.ts'],
+          // The three renderer benchmarks, anchored for the reason the `node` project gives.
+          benchmark: { include: ['src/renderer/**/*.bench.ts'] },
           exclude: DOM_BOUND,
+          // The half of the renderer setup that needs no browser. Without it these suites kept
+          // the defect the DOM ones were cured of, and each had to write its own reset.
+          setupFiles: ['src/renderer/src/test-setup-stores.ts'],
           // Three files read a stylesheet back through `?raw` and fail without this, which is how
           // it was found: they are not DOM-bound, they were parser-bound.
           css: { include: [/\.css\?raw$/] },

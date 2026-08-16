@@ -10,7 +10,7 @@ import { getBridge } from '@/services/bridge'
 import { CollectionBar } from '@/design/CollectionBar'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
 import { useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { useMedia } from '@/stores/media'
@@ -29,7 +29,9 @@ async function describeSelection(assetIds: readonly string[]): Promise<void> {
 // out of the frame, which is what put it under the title in the first place.
 export function AssetBrowserActions() {
   const { t } = useTranslation()
-  const count = useAssets(state => state.items.length)
+  // What the shelf is drawing — project, library and generations in flight, filters included.
+  // Its own catalogue only while no shelf is mounted, which is the one moment nothing is drawn.
+  const count = useAssets(state => state.shownCount ?? state.items.length)
   const collection = useAssets(state => state.collection)
   const setCollection = useAssets(state => state.setCollection)
   // A file cannot be linked into a catalogue that is not open.
@@ -72,7 +74,12 @@ export function AssetBrowserActions() {
           <UiIcon path={mdiAlertOutline} size={14} />
         </span>
       )}
-      <span className="text-muted text-tiny mr-1">{t('assets.count', { count })}</span>
+      {/* A hint and not a tooltip factory: the number is already on screen, and an `aria-label`
+          over it would answer to a name nobody can see (WCAG 2.5.3). What it adds is the half
+          the number cannot say — which shelves it is counting. */}
+      <span className="text-muted text-tiny mr-1" {...HINT_BOTTOM(t('assets.countHint'))}>
+        {t('assets.count', { count })}
+      </span>
       <ToolButton
         icon={mdiFileImportOutline}
         label={t('assets.import')}

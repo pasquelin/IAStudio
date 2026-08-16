@@ -35,12 +35,14 @@ import {
   ViewportEngine,
   type ProjectionKind,
   type ViewportCamera,
+  type ViewportOutput,
 } from '../viewport/ViewportEngine'
 import {
   canReceiveShadow,
   type ModelNode,
   type NodeMove,
   type SceneNode,
+  type SceneNodeType,
   type SceneState,
   type SpriteNode,
   type TextNode,
@@ -91,7 +93,9 @@ import {
   showsEdges,
   directionOf,
   framingPlacement,
+  plainVector,
   viewPosition,
+  type CameraPlacement,
   type PaneView,
 } from './scene-view'
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
@@ -147,6 +151,14 @@ export type SceneRendererOptions = {
    * a model actually brought: the document holds an asset id, not the triangles behind it.
    */
   onStats?: (stats: SceneStats, selected: SceneStats) => void
+  /**
+   * Where the free camera came to rest, once a drag of it is over.
+   *
+   * It is what lets a montage look through the view the person is actually working in: a scene
+   * with no camera of its own has no other framing anybody chose. Published rather than read,
+   * because only the controls know when a gesture ended.
+   */
+  onView?: (placement: CameraPlacement) => void
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
@@ -223,6 +235,18 @@ function isBone(object: Object3D): boolean {
 const DEFAULT_VIEW_DISTANCE = 8
 
 /**
+ * The node types an automatic framing counts — see `frameContents`. Lights and cameras are
+ * placed away from what they light or watch, and a group is only ever as big as its children,
+ * which are counted on their own.
+ */
+const FRAMED_NODES: ReadonlySet<SceneNodeType> = new Set<SceneNodeType>([
+  'mesh',
+  'model',
+  'text',
+  'sprite',
+])
+
+/**
  * How far a side view stands off its target. Distance changes nothing an orthographic camera
  * shows — its frustum does that — but it decides what falls behind the near plane, and a camera
  * standing on the origin clips away the model it is aimed at.
@@ -255,6 +279,8 @@ export class SceneRenderer {
     onFrame: delta => this.advance(delta),
     onOverlay: renderer => this.viewHelper?.render(renderer),
     onPane: (index, camera) => this.dressPane(index, camera),
+    // Read back rather than computed here: only the controls know where an orbit ended up.
+    onCameraSettled: () => this.options.onView?.(this.viewPlacement()),
     // Only here: the texture and skybox viewports show what they show without any light told to
     // cast, so a depth pass per frame would buy them nothing.
     shadows: true,
@@ -355,6 +381,8 @@ export class SceneRenderer {
   private readonly bvh: BvhBuilder
   private readonly fonts: FontLibrary
   private stopPaletteWatch: (() => void) | null = null
+  /** Set by `prepareOffscreen`: what stops the backdrop being painted over a montage. */
+  private transparent = false
 
   constructor(private readonly options: SceneRendererOptions) {
     // Injected rather than built here, so a test can drive the whole model path without a
@@ -525,17 +553,10 @@ export class SceneRenderer {
       if (!object) continue
 
       const key = `${track.target.nodeId}/${bone}`
-      const rest = this.boneRests.get(key) ?? {
-        position: { x: object.position.x, y: object.position.y, z: object.position.z },
-        rotation: { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z },
-        scale: { x: object.scale.x, y: object.scale.y, z: object.scale.z },
-      }
+      const rest = this.boneRests.get(key) ?? transformOf(object)
       this.boneRests.set(key, rest)
 
-      const pose = poseAt(rest, timeline, track.target.nodeId, this.playhead, bone)
-      object.position.set(pose.position.x, pose.position.y, pose.position.z)
-      object.rotation.set(pose.rotation.x, pose.rotation.y, pose.rotation.z)
-      object.scale.set(pose.scale.x, pose.scale.y, pose.scale.z)
+      applyTransform(object, poseAt(rest, timeline, track.target.nodeId, this.playhead, bone))
     }
   }
 
@@ -905,6 +926,145 @@ export class SceneRenderer {
   }
 
   /**
+   * Readies this renderer to draw somewhere other than a screen, before it is mounted.
+   *
+   * Transparency is the point: a scene laid over a montage has to hand back the pixels it
+   * painted and nothing behind them, or every clip under it would be hidden by a backdrop.
+   */
+  prepareOffscreen(output: ViewportOutput): void {
+    this.transparent = output.alpha === true
+    this.viewport.configureOutput(output)
+  }
+
+  /** Where the free camera stands and what it looks at, as plain numbers anything may hold. */
+  viewPlacement(): CameraPlacement {
+    const camera = this.viewport.perspective
+    // The orbit's target when there is one, and a point ahead of the camera otherwise: a
+    // viewport with no controls still has a direction, and `lookAt(0,0,0)` would be a lie.
+    const target =
+      this.viewport.orbit?.target ??
+      camera.position.clone().add(camera.getWorldDirection(new ThreeVector3()))
+
+    return { position: plainVector(camera.position), target: plainVector(target) }
+  }
+
+  /**
+   * Points the free camera at what the scene SHOWS, from a direction of the caller's choosing.
+   *
+   * Only the nodes that draw something are counted. A lamp stands where it lights FROM, ten
+   * units up and to the side of what it lights: counted in the bounding box, a new scene's
+   * three default lights make the box ten times the subject, and the subject lands small and
+   * off in a corner. That is exactly what an automatic framing must not do.
+   *
+   * `from` is a direction, never a position — the studio's three-quarter view when nothing is
+   * asked for. It is what a montage hands the ANGLE of the 3D tab's own camera through: a
+   * working view sits well back, with room around the subject to see the grid, and taken whole
+   * it would hand the montage a character a few pixels tall. The angle is a decision somebody
+   * made; the distance is this function's, always.
+   *
+   * The camera is moved directly rather than through the orbit: a viewport drawing into a video
+   * frame has no one dragging it, and the orbit's target would only be read on the next drag.
+   * It asks for no render of its own, unlike `frameSelection`: its caller draws the very next
+   * line, and a frame loop woken per aim would run the viewport's pass forever behind a canvas
+   * nobody is looking at.
+   *
+   * Answers whether it actually framed SOMETHING — false while every model is still a node with
+   * no file behind it, which encloses no box at all. That is what lets a caller aim once and
+   * stop: re-aiming per frame makes the camera chase a walking character's own bounding box,
+   * and the picture breathes with every step.
+   */
+  frameContents(from?: CameraPlacement): boolean {
+    const objects: Object3D[] = []
+    for (const [id, object] of this.objects) {
+      if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) objects.push(object)
+    }
+    if (objects.length === 0) return false
+
+    const bounds = new Box3()
+    for (const object of objects) bounds.expandByObject(object)
+    // Empty means the files have not landed: `framingPlacement` would fall back to averaging
+    // the placements of empty groups, which is a framing of nothing dressed up as one.
+    if (bounds.isEmpty()) return false
+
+    const direction = from
+      ? new ThreeVector3(
+          from.position.x - from.target.x,
+          from.position.y - from.target.y,
+          from.position.z - from.target.z,
+        )
+      : undefined
+
+    const { target, position } = framingPlacement(objects, this.view.fieldOfView, direction)
+    const camera = this.viewport.perspective
+    camera.position.copy(position)
+    camera.lookAt(target)
+    this.viewport.orbit?.target.copy(target)
+    return true
+  }
+
+  /**
+   * Draws ONE frame, now, through a camera of the scene, and hands back the canvas it landed on.
+   *
+   * Straight onto the drawing buffer rather than through a render target: the caller wraps that
+   * canvas in a `VideoFrame` on the very next line, and a read back through the CPU would cost
+   * eight megabytes a frame for pixels the GPU already holds. It follows that the frame must be
+   * taken before this task yields — which is what `scene-sink` promises.
+   *
+   * `null` before the viewport is mounted, which is the whole of what can go wrong here.
+   */
+  drawFrom(cameraNodeId: string | null, time: Us): HTMLCanvasElement | null {
+    const gl = this.viewport.gl
+    const canvas = this.viewport.canvas
+    if (!gl || !canvas) return null
+
+    const aimed = cameraNodeId ? this.objects.get(cameraNodeId) : null
+    const camera = aimed instanceof PerspectiveCamera ? aimed : this.viewport.perspective
+
+    this.setPlayhead(time)
+
+    const restore = this.hideWorkshop()
+    camera.aspect = canvas.width / canvas.height
+    camera.updateProjectionMatrix()
+
+    try {
+      gl.setRenderTarget(null)
+      gl.render(this.viewport.scene, camera)
+    } finally {
+      restore()
+    }
+    return canvas
+  }
+
+  /**
+   * Hides everything the workshop draws for the person editing — light helpers, camera
+   * frustums, skeletons, the grid — and hands back the call that puts them all back.
+   *
+   * A render is the scene, not the tools it was built with. A directional light's helper is a
+   * line drawn clean across the picture, and it was in every frame of both the film and the
+   * montage. Only what was actually visible is restored: a helper already hidden by a setting
+   * must not be turned on by a render passing through.
+   */
+  private hideWorkshop(): () => void {
+    const hidden: Object3D[] = []
+    const hide = (object: Object3D | null | undefined): void => {
+      if (!object?.visible) return
+      object.visible = false
+      hidden.push(object)
+    }
+
+    for (const helper of this.helpers.values()) hide(helper)
+    for (const skeleton of this.skeletons.values()) hide(skeleton)
+    hide(this.grid)
+    for (const object of this.objects.values()) {
+      hide(object.children.find(child => child instanceof CameraHelper))
+    }
+
+    return () => {
+      for (const object of hidden) object.visible = true
+    }
+  }
+
+  /**
    * Draws the film one frame at a time, from a camera of the scene, and hands each one over
    * already encoded as a PNG.
    *
@@ -937,9 +1097,7 @@ export class SceneRenderer {
     // a thousand-frame film would hand the collector sixteen gigabytes for nothing.
     const image = context.createImageData(width, height)
 
-    const helper = camera.children.find(child => child instanceof CameraHelper)
-    const wasVisible = helper?.visible ?? false
-    if (helper) helper.visible = false
+    const restore = this.hideWorkshop()
 
     camera.aspect = width / height
     camera.updateProjectionMatrix()
@@ -964,7 +1122,7 @@ export class SceneRenderer {
     } finally {
       gl.setRenderTarget(null)
       target.dispose()
-      if (helper) helper.visible = wasVisible
+      restore()
       // Where the head was before the film was asked for: a render is not an edit.
       this.setPlayhead(head)
       this.viewport.requestRender()
@@ -1115,6 +1273,12 @@ export class SceneRenderer {
 
   /** The backdrop, unless a sky is hanging behind the scene — in which case the sky is it. */
   private paintBackground(): void {
+    // A scene drawn for compositing keeps nothing behind it: a backdrop would hide every clip
+    // this one is laid over, and the sky — when there is one — is scenery the user asked for.
+    if (this.transparent && !this.sky.showsSky()) {
+      this.viewport.scene.background = null
+      return
+    }
     if (this.sky.showsSky()) return
     this.viewport.setBackgroundColor(this.viewport.paletteToken('--color-viewport'))
   }

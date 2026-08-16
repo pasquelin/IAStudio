@@ -13,6 +13,7 @@ import {
   VIEW_DIRECTIONS,
   isViewDirection,
   type DisplayMode,
+  type Vector3 as PlainVector3,
   type ViewDirection,
 } from '@shared/domain/scene'
 import { centreOf } from './pivot'
@@ -268,10 +269,25 @@ const FRAME_MARGIN = 1.2
 export type Framing = { target: Vector3; position: Vector3 }
 
 /**
+ * The same pair as plain numbers, for whoever has to store or hand it across — a store holds no
+ * three.js object, and a placement read back into a fresh engine must survive the trip.
+ */
+export type CameraPlacement = { position: PlainVector3; target: PlainVector3 }
+
+/** Three's vector as the studio spells one everywhere else. */
+export function plainVector({ x, y, z }: Vector3): PlainVector3 {
+  return { x, y, z }
+}
+
+/**
  * The whole of what framing decides. Its own function because `frameSelection` needs mounted orbit
  * controls, which jsdom cannot give — leaving the decision inside it left it measured by nothing.
  */
-export function framingPlacement(objects: readonly Object3D[], fieldOfView: number): Framing {
+export function framingPlacement(
+  objects: readonly Object3D[],
+  fieldOfView: number,
+  from: Vector3 = FRAME_FROM,
+): Framing {
   const bounds = new Box3()
   for (const object of objects) bounds.expandByObject(object)
 
@@ -282,7 +298,13 @@ export function framingPlacement(objects: readonly Object3D[], fieldOfView: numb
   const size = empty ? new Vector3() : bounds.getSize(new Vector3())
   const distance = framingDistance(Math.max(size.x, size.y, size.z) / 2, fieldOfView)
 
-  return { target, position: target.clone().addScaledVector(FRAME_FROM, distance) }
+  // The direction is the caller's, the DISTANCE is always this function's: that is what lets a
+  // montage keep the angle somebody chose in the 3D tab while still filling the frame with the
+  // subject. A working view is usually pulled well back — there is a grid to see around it —
+  // and taken whole it hands the montage a character three pixels tall.
+  const direction = from.lengthSq() > 0 ? from.clone().normalize() : FRAME_FROM
+
+  return { target, position: target.clone().addScaledVector(direction, distance) }
 }
 
 /** Where framing stands from what it frames — the studio's three-quarter view, distance apart. */

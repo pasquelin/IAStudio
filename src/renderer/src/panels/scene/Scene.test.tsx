@@ -8,12 +8,19 @@ import { clearScenes } from '@/stores/scene-fixtures'
 import { useScenes } from '@/stores/scenes'
 import { Scene } from './Scene'
 
-const scene: DocumentDescriptor = { id: 'doc-1', kind: 'scene', title: 'Niveau', workspace: '3d' }
+const scene: DocumentDescriptor = {
+  id: 'doc-1',
+  kind: 'scene',
+  title: 'Niveau',
+  workspace: '3d',
+  fileName: 'Niveau.scene',
+}
 const image: DocumentDescriptor = {
   id: 'doc-2',
   kind: 'image',
   title: 'Affiche',
   workspace: 'image',
+  fileName: 'Affiche.img',
 }
 
 beforeEach(() => {

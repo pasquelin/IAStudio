@@ -14,22 +14,34 @@ import type { Viewport } from '@/engines/timeline/timeline-geometry'
  * prop: React delivers `wheel` passively, where `preventDefault` is a no-op and the panel behind
  * the band scrolls instead.
  *
- * `viewportNow` is read at the moment of the gesture rather than closed over: a viewport captured
- * when the listener was hung would undo every scroll since. It is kept in a ref, refreshed by an
- * effect rather than during the render — `react-hooks/refs` refuses the latter — so a caller may
- * pass a fresh closure on every render without the listener being torn down and hung again, which
- * is what the non-passive registration costs.
+ * BOTH callbacks are read at the moment of the gesture rather than closed over: a viewport
+ * captured when the listener was hung would undo every scroll since, and a `setViewport` in the
+ * deps would tear the listener down and hang it again on every render of the host — sixty times a
+ * second while a montage plays, since the playhead re-renders it. They are kept in refs, refreshed
+ * by an effect rather than during the render (`react-hooks/refs` refuses the latter), so a caller
+ * may pass fresh closures on every render and still be listened to.
  */
+export type WheelOptions = {
+  /**
+   * Whether the surface has rows to scroll through. False turns a plain vertical wheel sideways,
+   * as shift already does — a surface with one lane has nowhere to send it, and swallowing it
+   * leaves an ordinary mouse (which reports no `deltaX` at all) unable to scroll at all while the
+   * page behind stays blocked by `preventDefault`.
+   */
+  rows?: boolean
+}
+
 export function useTimelineWheel(
   ref: RefObject<HTMLElement | null>,
   viewportNow: () => Viewport,
   setViewport: (next: Viewport) => void,
+  { rows = true }: WheelOptions = {},
 ) {
-  const latest = useRef(viewportNow)
+  const latest = useRef({ viewportNow, setViewport })
 
   useEffect(() => {
-    latest.current = viewportNow
-  }, [viewportNow])
+    latest.current = { viewportNow, setViewport }
+  }, [viewportNow, setViewport])
 
   useEffect(() => {
     const element = ref.current
@@ -37,22 +49,24 @@ export function useTimelineWheel(
 
     const onWheel = (event: WheelEvent): void => {
       event.preventDefault()
-      const current = latest.current()
+      const { viewportNow: read, setViewport: write } = latest.current
+      const current = read()
 
       if (event.ctrlKey || event.metaKey) {
         const bounds = element.getBoundingClientRect()
         const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP
-        setViewport(zoomAt(current, factor, event.clientX - bounds.left))
+        write(zoomAt(current, factor, event.clientX - bounds.left))
         return
       }
 
-      // Shift turns a vertical wheel horizontal, as every editor does for a single-axis mouse.
-      const horizontal = event.shiftKey ? event.deltaY : event.deltaX
-      const vertical = event.shiftKey ? 0 : event.deltaY
-      setViewport(scrollBy(current, horizontal, vertical))
+      // Shift turns a vertical wheel horizontal, as every editor does for a single-axis mouse —
+      // and a surface with no rows turns it sideways whether shift is held or not.
+      const sideways = event.shiftKey || !rows
+      const horizontal = sideways ? event.deltaY || event.deltaX : event.deltaX
+      write(scrollBy(current, horizontal, sideways ? 0 : event.deltaY))
     }
 
     element.addEventListener('wheel', onWheel, { passive: false })
     return () => element.removeEventListener('wheel', onWheel)
-  }, [ref, setViewport])
+  }, [ref, rows])
 }

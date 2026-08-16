@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SphericalAngles } from '@shared/domain/angles'
 import { PICTURES, type Asset } from '@shared/domain/asset'
-import { safeFileName } from '@shared/domain/texture-export'
+import { safeFileName } from '@shared/domain/file-name'
 import { EmptyState } from '@/design/EmptyState'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -11,7 +11,8 @@ import { setSunAngles } from '@/engines/skybox/commands'
 import { loadTexture } from '@/engines/scene/texture-cache'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
-import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import { useDocumentTitle } from '@/app/useDocumentTitle'
+import { isSkyboxDirty, setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { useDocuments } from '@/stores/documents'
 import { useSkyboxViews, skyboxViewOf } from '@/stores/skybox-views'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
@@ -72,6 +73,11 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   // the centre carries the toolbar and the rulers only. Session state all the same — none of it
   // is saved with the document, and ⌘Z never touches it.
   const { fieldOfView, probes, view } = useSkyboxViews(state => skyboxViewOf(state, documentId))
+
+  useDocumentTitle(
+    documentId,
+    useSkyboxes(state => isSkyboxDirty(state, documentId)),
+  )
 
   useRestoredDocument(documentId)
 

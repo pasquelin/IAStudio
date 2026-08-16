@@ -1,6 +1,5 @@
 import {
   assetBadgeOf,
-  assetCaption,
   movedSince,
   type Asset,
   type AssetBadge,
@@ -34,12 +33,20 @@ const REMOTE_PREFIX = 'remote:'
 const JOB_PREFIX = 'job:'
 
 /**
- * Through `assetCaption` for both asset provenances, and that is what the grid already draws:
- * a tile shows the model that made it, so a list — and the search that reads this — must say
- * the same word. Looking for what is on screen has to find it.
+ * The asset's own name, for both provenances — which is what the grid draws, what this list
+ * draws, and what the search reads. Looking for what is on screen has to find it.
+ *
+ * It used to be the model that made it, on the grounds that a grid of file names says what one
+ * already knows. Two things took that away: a name is now derived from the PROMPT rather than
+ * from the model, so it says the thing rather than the machine; and an asset can be renamed, so
+ * a caption ignoring the name meant renaming one left it under its old word in the list and
+ * unfindable by the new one. The model is still read, where it informs — the inspector's
+ * Generation group.
+ *
+ * A job has no asset behind it yet, so it answers with the label it was submitted under.
  */
 export function nameOfRow(row: AssetRowModel): string {
-  return row.from === 'job' ? row.job.label : assetCaption(row.asset)
+  return row.from === 'job' ? row.job.label : row.asset.name
 }
 
 /** `null` for a generation: nothing says what it will produce until it answers. */
@@ -206,6 +213,21 @@ function madeAt(row: AssetRowModel): number {
   const at = Date.parse(row.asset.createdAt)
   // An unreadable stamp sorts last rather than throwing the whole list into an arbitrary order.
   return Number.isNaN(at) ? 0 : at
+}
+
+/**
+ * What a tile or a line needs to have its name renamed in place.
+ *
+ * The panel owns WHICH row is open — one at a time, across both views — and the row owns neither
+ * the name nor where it is written; these four are the whole of what crosses between them. Named
+ * here rather than written out per host, which is what the grid and the list were each doing.
+ */
+export type AssetRenameHandle = {
+  open: boolean
+  start: () => void
+  commit: (name: string) => void
+  /** Already translated: resolving it per tile runs i18next over two hundred cells. */
+  label: string
 }
 
 /** The library's page keyed by its own ids, so a local row can find the twin it records. */

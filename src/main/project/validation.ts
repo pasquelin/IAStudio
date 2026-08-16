@@ -196,7 +196,9 @@ const documentPart = z.object({
 })
 
 const documentDraft = z.object({
-  title,
+  // Trimmed and non-empty, where the envelope's twin is not: a title is now the NAME OF THE
+  // FILE, and a document nobody named is a document nothing can be written to.
+  title: z.string().trim().min(1).max(200),
   content,
   parts: z.array(documentPart).max(1024).optional(),
   // The asset this document edits. Same reason as `parts`: a field the schema does not name is
@@ -210,13 +212,15 @@ export function parseDocumentTitle(value: unknown): string {
 }
 
 /**
- * A project's DISPLAY name, on its way into a manifest — deliberately not `parseProjectName`, which
- * is a path segment because creating a project names its folder. A rename never touches the folder,
- * so forbidding a slash there would refuse `Été 2026 / v2` for a constraint that no longer applies;
- * the manifest already allows the name and the folder to differ, which is why `RecentProject` stores
- * the name instead of deriving it.
+ * A project's DISPLAY name, on its way into a manifest — the only validator it has, at creation
+ * as at rename. Deliberately NOT a path segment: no folder is ever made from this name. Creating
+ * lays the project into the folder the user chose and takes that folder's name as a starting
+ * point; renaming writes the manifest and leaves the folder alone. Forbidding a slash would
+ * refuse `Été 2026 / v2` for a constraint that does not exist — the manifest lets the name and
+ * the folder differ, which is why `RecentProject` stores the name instead of deriving it.
  *
- * Trimmed and non-empty: a nameless project is a row nobody can find. Capped like every other string
+ * Trimmed and non-empty: a nameless project is a row nobody can find, and it is also how the root
+ * of a volume is turned away — its basename is the empty string. Capped like every other string
  * crossing this boundary — the renderer is the sandboxed side, and this one is written to disk.
  */
 const projectTitle = z.string().trim().min(1).max(200)
@@ -234,11 +238,19 @@ const documentEnvelope = z.object({
   // read as if it were this one and silently flattened by the next save.
   version: z.number().int().min(1).max(DOCUMENT_VERSION),
   kind: documentKind,
+  // Left permissive where a draft's is not, and the asymmetry is deliberate: this is the READ
+  // side. Refusing an empty title here would drop the document from the listing altogether —
+  // present on disk, absent from every list — where `descriptorOf` instead falls back on the
+  // file name. What may be WRITTEN is where the rule belongs.
   title,
   updatedAt: z.string().min(1),
   // Absent on every document written before assets could be opened, and on every document that
   // edits none — so an absent field means "not linked" rather than a file to migrate.
   sourceAssetId: z.string().min(1).optional(),
+  // Absent before version 3, where the file name was the id. Declared here or zod STRIPS it and
+  // the field is written by the main process and never seen again — the very defect the comment
+  // on `parts` records, which cost a save its pixels.
+  id: z.string().min(1).optional(),
 })
 
 /** A document file is user territory, like the manifest: hand-edited, truncated, or older. */

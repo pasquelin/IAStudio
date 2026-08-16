@@ -17,3 +17,14 @@ const SOURCES: Record<string, string> = import.meta.glob('../**/*.{ts,tsx}', {
 export const WRITTEN_SOURCES = Object.entries(SOURCES).filter(
   ([path]) => !/\.(test|bench)\.tsx?$/.test(path),
 )
+
+/**
+ * The other half: the suites themselves, for the few rules that are ABOUT how tests are written.
+ * Kept rare on purpose — a rule over test text is a rule nobody reads before writing a test, so
+ * it earns its place only where the cost of getting it wrong is a defect that stays silent.
+ *
+ * Shared rather than globbed per guard, and that is not only tidiness: `import.meta.glob` never
+ * yields the module calling it, so a guard sweeping from its own file leaves ITSELF unread. The
+ * sweep anchored here reads all 429 (2026-08-16), including the guards.
+ */
+export const SUITE_SOURCES = Object.entries(SOURCES).filter(([path]) => /\.test\.tsx?$/.test(path))

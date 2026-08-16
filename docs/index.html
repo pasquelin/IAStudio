@@ -52,7 +52,6 @@
   <symbol id="i-audio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><path d="M15.6 9.4a4 4 0 0 1 0 5.2"/><path d="M18.4 6.9a7.6 7.6 0 0 1 0 10.2"/></symbol>
   <symbol id="i-tex" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M3.5 14 14 3.5M9 20.5 20.5 9"/></symbol>
   <symbol id="i-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8" cy="10" r="1.7"/><path d="M2.5 16.5 8.5 12l4.5 3.4L17 12.6l4.5 3.4"/></symbol>
-  <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 6.5 18 12l-9 5.5z" stroke-linejoin="round"/></symbol>
 </svg>
 
 <!-- ===================================================================
@@ -128,7 +127,7 @@
       <div class="stage__pin">
         <div class="stage__frame frame frame--glow">
           <img src="assets/images/accueil.webp" width="1800" height="1129"
-               alt="Écran d'accueil : liste des projets, raccourcis vers les six ateliers, galerie de générations récentes et panneau bibliothèque." loading="eager">
+               alt="Écran d'accueil : bandeau de reprise du dernier projet, liste des projets ouverts, raccourcis vers les six ateliers, explorateur des générations et panneau bibliothèque." loading="eager">
         </div>
         <p class="stage__hint">Continuer à défiler</p>
       </div>
@@ -174,10 +173,10 @@
       <figure class="mode__shot" data-fx data-still data-speed="0.07">
         <div class="frame" data-fx data-rise="0" data-zoom="0.05">
           <img src="assets/images/video.webp" width="1800" height="1129" data-depth
-               alt="Atelier Vidéo : moniteurs Source et Programme, panneau Assets, timeline avec pistes V1 et A1." loading="lazy">
+               alt="Atelier Vidéo : moniteurs Source et Programme côte à côte, panneau Assets, inspecteur de clip, timeline à quatre pistes V1, A1, V2 et A2." loading="lazy">
         </div>
         <figcaption class="chipset" data-stagger="50" data-stagger-rise="14">
-          <span>Source 00:00:00:00</span><span>V1 · A1</span><span>25 img/s</span><span>Assets du projet</span>
+          <span>Source 00:00:00:00</span><span>V1 · A1 · V2 · A2</span><span>25 img/s</span><span>Assets du projet</span>
         </figcaption>
       </figure>
     </div>
@@ -204,7 +203,7 @@
       <figure class="mode__shot" data-fx data-still data-speedx="-0.036">
         <div class="frame" data-fx data-rise="0" data-zoom="0.05">
           <img src="assets/images/3d.webp" width="1800" height="1129" data-depth
-               alt="Atelier 3D : viewport avec grille et gizmo, panneau Assets de maillages, timeline des lumières." loading="lazy">
+               alt="Atelier 3D : voiture générée posée dans un décor de montagne, gizmo de déplacement et compteur de triangles en surimpression, arbre de scène et inspecteur à droite, timeline des lumières en bas." loading="lazy">
         </div>
         <figcaption class="chipset" data-stagger="50" data-stagger-rise="0" data-stagger-shift="-18">
           <span>Triangles · Sommets · Appels</span><span>Durée 5 s</span><span>25 img/s</span><span>Environnement Studio</span>
@@ -234,10 +233,10 @@
       <figure class="mode__shot" data-fx data-still data-speed="0.05" data-speedx="0.024">
         <div class="frame" data-fx data-rise="0" data-zoom="0.05">
           <img src="assets/images/image.webp" width="1800" height="1129" data-depth
-               alt="Atelier Image : canevas avec un personnage détouré, panneau Calques, inspecteur détaillant le modèle générateur." loading="lazy">
+               alt="Atelier Image : canevas à fond transparent avec un squelette détouré, catalogue de modèles à gauche, panneaux Calques et Inspecteur à droite, bandeau d'assets en bas." loading="lazy">
         </div>
         <figcaption class="chipset" data-stagger="50" data-stagger-rise="10" data-stagger-shift="-10">
-          <span>Calques</span><span>Zoom 78,9 %</span><span>Modèle conservé</span><span>Bandeau d'assets</span>
+          <span>Calques</span><span>Zoom 84,6 %</span><span>Modèle conservé</span><span>Bandeau d'assets</span>
         </figcaption>
       </figure>
     </div>
@@ -262,11 +261,13 @@
         </ul>
       </div>
       <figure class="mode__shot" data-fx data-still data-speed="0.07">
-        <div class="empty" data-fx data-rise="0" data-zoom="0.04">
-          <p>Capture à venir.</p>
-          <p>Déposez <code>assets/images/audio.webp</code>, puis remplacez ce bloc par le même
-             <code>&lt;div class="frame"&gt;</code> que les autres ateliers.</p>
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="assets/images/audio.webp" width="1800" height="1129" data-depth
+               alt="Atelier Audio : moniteur Programme affichant la forme d'onde du montage, moniteur Source en dessous, catalogue de modèles de génération sonore, timeline à quatre pistes audio." loading="lazy">
         </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="14">
+          <span>Programme 00:00:00:00</span><span>A1 · A2 · A3 · A4</span><span>Formes d'onde</span><span>Assets du projet</span>
+        </figcaption>
       </figure>
     </div>
   </section>
@@ -285,17 +286,17 @@
         <p class="lede" data-fx data-rise="0" data-shift="-24" data-delay="220">Un matériau, pas une image : chaque canal est produit puis vérifié séparément.</p>
         <ul class="mode__list" data-stagger="60" data-stagger-rise="0" data-stagger-shift="-26">
           <li><b>Canaux</b>Couleur de base, Normale, Rugosité, Métal. Générés ensemble, exportés fichier par fichier.</li>
-          <li><b>Aperçu</b>Le matériau est appliqué sur une sphère et éclairé en temps réel, avant l'export.</li>
+          <li><b>Aperçu</b>Le matériau est appliqué sur un volume de test — sphère, cube, cylindre, plan — et éclairé en temps réel, avant l'export.</li>
           <li><b>Raccords</b>Canaux tuilables en 4096 × 4096, utilisables tels quels dans un moteur.</li>
         </ul>
       </div>
       <figure class="mode__shot" data-fx data-still data-speedx="0.036">
         <div class="frame" data-fx data-rise="0" data-zoom="0.05">
           <img src="assets/images/textures.webp" width="1800" height="1129" data-depth
-               alt="Atelier Textures : sphère de prévisualisation du matériau, panneau Canaux avec couleur de base, normale, rugosité et métal." loading="lazy">
+               alt="Atelier Textures : cube de prévisualisation portant le matériau, panneau Canaux avec couleur de base et normale, inspecteur du matériau, bandeau de textures générées." loading="lazy">
         </div>
         <figcaption class="chipset" data-stagger="50" data-stagger-rise="0" data-stagger-shift="-18">
-          <span>4096 × 4096</span><span>4 canaux</span><span>Aperçu sur sphère</span><span>Export séparé</span>
+          <span>4096 × 4096</span><span>4 canaux</span><span>Aperçu sur volume</span><span>Export séparé</span>
         </figcaption>
       </figure>
     </div>
@@ -322,7 +323,7 @@
       <figure class="mode__shot" data-fx data-still data-speed="0.05" data-speedx="-0.024">
         <div class="frame" data-fx data-rise="0" data-zoom="0.05">
           <img src="assets/images/skyboxes.webp" width="1800" height="1129" data-depth
-               alt="Atelier Skyboxes : ciel orange en projection 360 degrés avec deux sphères de test posées au sol." loading="lazy">
+               alt="Atelier Skyboxes : ciel de montagnes enneigées en projection 360 degrés, deux sphères de test posées au sol — l'une mate, l'autre miroir — et réglages du soleil à droite." loading="lazy">
         </div>
         <figcaption class="chipset" data-stagger="50" data-stagger-rise="10" data-stagger-shift="-10">
           <span>360°</span><span>Équirect</span><span>Croix</span><span>6 faces</span><span>Objets de test</span>
@@ -425,17 +426,10 @@
   <!-- ================================================================
        DOCUMENTATION + DÉMO
 
-       LA VIDÉO DE PRÉSENTATION SE POSE ICI. Déposer le fichier dans
-       `assets/video/demo.mp4`, puis remplacer le CONTENU de `.player`
-       — en gardant la div elle-même, qui porte le ratio 16/9 — par :
-
-         <video src="assets/video/demo.mp4"
-                poster="assets/images/accueil.webp"
-                controls playsinline preload="none"></video>
-
-       `preload="none"` : sans lui, le navigateur télécharge la vidéo
-       avant même qu'on ait défilé jusqu'ici. Le poster suffit à montrer
-       de quoi il s'agit. Un <iframe> 16/9 convient aussi.
+       `preload="none"` : sans lui, le navigateur télécharge les 12 Mo de
+       la démo avant même qu'on ait défilé jusqu'ici. Le poster — une
+       image tirée de la vidéo elle-même, donc au même 16/9 que `.player`
+       — suffit à montrer de quoi il s'agit.
        ================================================================ -->
   <section class="panel" id="docs">
     <div class="wrap">
@@ -446,8 +440,9 @@
 
       <div class="split">
         <div class="player" data-fx data-rise="0" data-zoom="0.04" data-speedx="0.026">
-          <span class="play"><svg width="22" height="22"><use href="#i-play"/></svg></span>
-          <p>La vidéo de présentation arrive ici.</p>
+          <video src="assets/video/demo.mp4" poster="assets/images/demo-poster.webp"
+                 controls playsinline preload="none"
+                 aria-label="Démonstration de Scenario Studio : parcours des six ateliers, d'une génération 3D jusqu'au montage."></video>
         </div>
 
         <!-- `blob/HEAD` suit la branche par défaut du dépôt : un renommage de branche

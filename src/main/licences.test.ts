@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import licences from '@shared/licences.json'
 import { isCopyleft, type Licence, NO_VERSION } from '@shared/domain/licence'
 import manifest from '../../package.json'
-import { SHIPPED } from './shipped-packages'
+import { BUILD_ONLY, SHIPPED } from './shipped-packages'
 
 // Under `src/main` because `src/shared` compiles for the renderer, where `node:fs` has no types.
 const ROOT = join(import.meta.dirname, '..', '..')
@@ -62,6 +62,34 @@ describe('the list the collector ships from', () => {
   it('has an entry in the notice for each of its names', () => {
     const named = new Set(entries.map(entry => entry.name))
     expect(SHIPPED.filter(name => !named.has(name))).toEqual([])
+  })
+
+  /**
+   * Every declared dependency is either shipped — hence in the notice — or a tool that never
+   * leaves the machine that built it. A new one is neither until someone says which, and this is
+   * what asks: reading `dependencies` alone would miss the twenty packages Vite bundles out of
+   * `devDependencies`, which is most of what the notice owes.
+   *
+   * It moved here from `shared/domain/licence.test.ts` on 2026-08-16, and it brought the second
+   * list with it: the two halves were written in different folders, so a package added to the
+   * manifest was classified by whoever saw the half they happened to open.
+   */
+  it('accounts for every declared dependency, as shipped or as a build tool', () => {
+    const declared = [
+      ...Object.keys(manifest.dependencies),
+      ...Object.keys(manifest.devDependencies),
+    ]
+    expect(declared.length).toBeGreaterThan(20)
+
+    const classified = new Set([...SHIPPED, ...BUILD_ONLY])
+    expect(declared.filter(name => !classified.has(name))).toEqual([])
+  })
+
+  /** A name in both halves is a decision taken twice, which is what the split invites. */
+  it('puts no package on both sides of the line', () => {
+    const shipped = new Set(SHIPPED)
+
+    expect(BUILD_ONLY.filter(name => shipped.has(name))).toEqual([])
   })
 })
 

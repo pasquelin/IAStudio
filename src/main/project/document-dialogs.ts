@@ -44,17 +44,36 @@ export async function askCloseChoice(ask: AskUser, title: string): Promise<Close
   return chosen === 1 ? 'discard' : 'cancel'
 }
 
-/** Whether the file really goes. Irreversible, so Cancel is both the default and the dismissal. */
-export async function askDeleteDocument(ask: AskUser, title: string): Promise<boolean> {
-  const t = TRANSLATIONS[windowLanguage()].documents
-
+/**
+ * A yes-or-no the studio must not assume the answer to: Cancel is the default AND what a
+ * dismissed dialog gives back, so neither Return nor Escape can reach the answer that writes.
+ *
+ * Shared, because that button arrangement is the whole of the decision — the two questions asked
+ * this way sit in different files and would drift apart on which id means yes.
+ */
+export async function askConfirm(
+  ask: AskUser,
+  wording: { message: string; detail: string; confirm: string; cancel: string },
+): Promise<boolean> {
   const chosen = await ask({
-    message: fillHoles(t.deleteTitle, { title }),
-    detail: t.deleteBody,
-    buttons: [t.cancel, t.deleteConfirm],
+    message: wording.message,
+    detail: wording.detail,
+    buttons: [wording.cancel, wording.confirm],
     defaultId: 0,
     cancelId: 0,
   })
 
   return chosen === 1
+}
+
+/** Whether the file really goes. Irreversible, so Cancel is both the default and the dismissal. */
+export async function askDeleteDocument(ask: AskUser, title: string): Promise<boolean> {
+  const t = TRANSLATIONS[windowLanguage()].documents
+
+  return await askConfirm(ask, {
+    message: fillHoles(t.deleteTitle, { title }),
+    detail: t.deleteBody,
+    confirm: t.deleteConfirm,
+    cancel: t.cancel,
+  })
 }

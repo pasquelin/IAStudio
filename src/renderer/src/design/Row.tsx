@@ -70,7 +70,7 @@ export function Row({
     //
     // `LayerRow` and `SceneNodeRow` had reached for the same pair in a wrapper of their own, which
     // is why only the explorer showed it: `EntryRow` renders this directly.
-    <div className={cn(ROW_LINE, 'min-w-0 flex-1 gap-1.5')}>
+    <div className={cn(ROW_LINE, 'min-w-0 flex-1 gap-2')}>
       {leading}
       {media ?? (icon && <UiIcon path={icon} size={14} className="shrink-0" />)}
       <div className="min-w-0 flex-1 leading-tight">

@@ -9,7 +9,7 @@
  * are one JSON object.
  */
 
-export type TextAsset = {
+type TextAsset = {
   url?: string
   properties?: { preview?: string; hasFullPreview?: boolean }
 }

@@ -4,8 +4,15 @@ import type { Asset, AssetType } from '@shared/domain/asset'
 import {
   COLLECTION_PERSIST_VERSION,
   DEFAULT_COLLECTION_STATE,
+  withoutSearch,
   type CollectionState,
 } from '@/helpers/collection-state'
+import {
+  ASSET_NAME_FAILURES,
+  checkAssetName,
+  type AssetNameFailure,
+} from '@shared/domain/asset-name'
+import { nameFailureOf } from '@shared/domain/file-name'
 import { isRecord } from '@shared/guards'
 import { getBridge } from '@/services/bridge'
 
@@ -23,6 +30,21 @@ type AssetsState = {
    */
   scope: readonly AssetType[] | null
   setScope: (scope: readonly AssetType[] | null) => void
+  /**
+   * How many lines the browser is actually drawing, or nothing while none is mounted.
+   *
+   * The header's count used to read `items.length`, which is the project catalogue ALONE — the
+   * shelf also draws the account's library and the generations in flight, then narrows all three
+   * by the search and the facets. A project holding one picture beside seven library rows read
+   * "1 asset" over a list of eight, and nothing on screen said which of the two numbers was
+   * being answered.
+   *
+   * Published by the panel rather than derived here: the library page and the running jobs live
+   * in other stores, and merging them a second time for the header would ask the same question
+   * twice — with the filters, that is the whole of `AssetBrowser`.
+   */
+  shownCount: number | null
+  setShownCount: (count: number | null) => void
   refresh: () => Promise<void>
   /**
    * Hears the writes the MAIN process makes on its own — the pictures a model sheds on import.
@@ -35,6 +57,17 @@ type AssetsState = {
    * otherwise freeze every window forty times over.
    */
   invalidate: () => void
+  /**
+   * Calls an asset something else, in this project's catalogue.
+   *
+   * Local on purpose: the name on the Scenario account is not touched. One asset is pulled into
+   * several projects and named for what each one does with it, and a rename that travelled would
+   * have a project rename someone else's library.
+   *
+   * Answers with the refusal, or `null` when it went through. The field has closed by then, so
+   * the answer is for the caller to journal rather than to draw — see `helpers/rename.ts`.
+   */
+  rename: (assetId: string, name: string) => Promise<AssetNameFailure | null>
   /**
    * Drops the coalesced read still waiting, if there is one.
    *
@@ -145,6 +178,11 @@ export const useAssets = create<AssetsState>()(
         items: [],
         scope: null,
 
+        shownCount: null,
+        setShownCount: shownCount => {
+          if (get().shownCount !== shownCount) set({ shownCount })
+        },
+
         // A change of space changes what the catalogue is asked for, so the rows follow at once
         // rather than on the next invalidation.
         setScope: scope => {
@@ -199,6 +237,37 @@ export const useAssets = create<AssetsState>()(
           }, COALESCE_MS)
         },
 
+        rename: async (assetId, name) => {
+          const refused = checkAssetName(name)
+          if (refused) return refused
+
+          let refusal: AssetNameFailure | null = null
+          const written = await getBridge()
+            ?.assets.update(assetId, { name: name.trim() })
+            .catch((error: unknown) => {
+              // Read off the message, as a document's refusal is: the name reached the file, so
+              // the folder can now refuse what no field could see — a name it already holds.
+              // Answering `too-long` for all of them, which is what this did while length was
+              // the only thing that could be wrong, would tell the user to shorten a name whose
+              // only fault is that it is taken.
+              //
+              // Journalled by the CALLER, on the code this hands back (`helpers/rename.ts`), and
+              // no longer here as well: the sole caller wrote a second line for the same failure.
+              refusal = nameFailureOf(error, ASSET_NAME_FAILURES, 'invalid')
+              return null
+            })
+          if (!written) return refusal ?? 'invalid'
+
+          // Written into the shelf rather than waited for: `assets:update` broadcasts nothing —
+          // it is answered where it was ordered, which is the doctrine every other write follows.
+          // Straight into `items` and not through `invalidate`, so the tile shows the new name on
+          // the next paint instead of a third of a second later.
+          set(state => ({
+            items: state.items.map(item => (item.id === assetId ? written : item)),
+          }))
+          return null
+        },
+
         cancelInvalidate: () => {
           if (pending) clearTimeout(pending)
           pending = null
@@ -217,9 +286,7 @@ export const useAssets = create<AssetsState>()(
         const view = readView(persisted)
         return view ? { collection: { ...DEFAULT_COLLECTION_STATE, view } } : undefined
       },
-      // The search text is dropped on purpose: reopening on a narrowed catalogue nobody typed
-      // reads as a catalogue gone missing.
-      partialize: state => ({ collection: { ...state.collection, search: '' } }),
+      partialize: state => ({ collection: withoutSearch(state.collection) }),
     },
   ),
 )

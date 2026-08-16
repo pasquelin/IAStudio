@@ -15,7 +15,6 @@ const sky = (content: Partial<SkyboxContent> = {}): SkyboxContent => ({
 
 beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
-  useSkyboxes.setState({ states: {}, histories: {}, saved: {} })
 })
 
 describe('the skybox panel', () => {

@@ -9,6 +9,7 @@ import { ASSISTANT_MODELS } from '../domain/assistant'
 import { STT_ERROR_CODES } from '../domain/dictation'
 import { breakableSpots } from './typography'
 import { isRecord } from '../guards'
+import { foldForSearch } from '../text'
 import { NAMED_KEYS } from '../domain/shortcut'
 import {
   CAPABILITIES_BY_FAMILY,
@@ -25,6 +26,7 @@ import { PBR_CHANNELS } from '../domain/texture'
 import { WORKSPACE_IDS } from '../domain/workspace'
 import { USAGE_ACTIONS, USAGE_ASSET_KINDS, USAGE_EVENT_ACTIONS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
+import { americanVerbs, americanWords } from './spelling-fixtures'
 
 function flatten(
   bundle: unknown,
@@ -109,11 +111,14 @@ const BUNDLES: Record<Language, Map<string, string>> = {
 const REFERENCE = BUNDLES.fr
 
 /**
- * `ize` is the root here, not the suffix, so no British twin exists — a guard that flagged
- * `resize` would cry wolf on the word the image workspace uses most. Keyed by the `-ize` form so
- * that `resizing` and `sizes` fold onto their entry rather than needing one each.
+ * The words a reader would notice twice: folded the way the search box folds them, holes dropped
+ * — a `{{name}}` is written by the caller, not by the label — and short ones left out, articles
+ * and prepositions being shared by any two French sentences.
  */
-const IZE_IS_THE_ROOT: ReadonlySet<string> = new Set(['size', 'resize'])
+const longWords = (text: string): string[] =>
+  foldForSearch(text.replace(/{{[^}]*}}/g, ' '))
+    .split(/[^\p{Letter}\p{Number}]+/u)
+    .filter(word => word.length > 3)
 
 /**
  * Named one key at a time rather than by its subtree: `usage.actionNames` also holds labels the
@@ -123,16 +128,20 @@ const IZE_IS_THE_ROOT: ReadonlySet<string> = new Set(['size', 'resize'])
 const NAMED_AS_THE_API_BILLS_IT: ReadonlySet<string> = new Set(['usage.actionNames.vectorization'])
 
 /**
- * Anchored, so that it strips the SAME `iz` the match found: a word carrying two of them would
- * otherwise fold onto the wrong root and slip through exempt.
+ * The three blend modes carrying `color`, spelled as `mix-blend-mode` spells them. Exempt from
+ * the WORDS reading only — one exemption per reading, never one per key: written as a single set,
+ * these three would also stop being read for `-ize`, and `usage.actionNames.vectorization` would
+ * stop being read for `color`. Measured, both holes; the same trap `SETTLED_WORDS.except`
+ * documents further down.
+ *
+ * Keys are flat, the section files being merged into one bundle: `blend.color`, never
+ * `image.blend.color` — the guard is what said so, the prefixed spelling failed it.
  */
-const izeRootOf = (word: string): string =>
-  word.toLowerCase().replace(/iz(?:es?|ed|ing|ations?|ers?)$/, 'ize')
-
-const americanVerbs = (text: string): string[] =>
-  [...text.matchAll(/\b\w*?iz(?:es?|ed|ing|ations?|ers?)\b/gi)]
-    .map(([word]) => word)
-    .filter(word => !IZE_IS_THE_ROOT.has(izeRootOf(word)))
+const NAMED_AS_CSS_BLENDS_THEM: ReadonlySet<string> = new Set([
+  'blend.color',
+  'blend.color-burn',
+  'blend.color-dodge',
+])
 
 describe('the translation bundles', () => {
   // The typecheck only catches a bundle that MISSES a key: an extra one is still assignable.
@@ -522,23 +531,97 @@ describe('the translation bundles', () => {
 
   /**
    * The English bundle is British throughout — `colour` ×26, `centre`, `licence`, `cancelled`,
-   * `grey`, the sixteen `blend.*` names excepted because `mix-blend-mode` spells them. The `-ize`
+   * `grey`. Of the sixteen `blend.*` names `mix-blend-mode` spells, only the three carrying
+   * `color` need an exemption; the other thirteen say nothing this reads, measured. The `-ize`
    * suffix was the one thing that had drifted, and nothing in this file could see it: the guard
    * above compares a label to its OTHER readings, so a term written once anywhere is invisible
    * to it. The manual was already spelling `vectorisation` in prose while the bundle it quotes
    * said `Vectorization`.
    *
-   * Its blind spot, and it is a wide one: only `BUNDLES.en`. The nineteen chapters of
-   * `docs/en/manual/`, rendered verbatim from `manual.json` by the Help window, pass through no
-   * bundle at all — `manual.i18n.test.ts` is where that reading would go, and nothing does it
-   * today. Measured clean the day this guard was written; a chapter is one edit from drifting.
+   * It reads only `BUNDLES.en`, which used to be its blind spot: the twenty chapters the Help
+   * window renders from `manual.json` pass through no bundle at all. `manual.i18n.test.ts` reads
+   * them now, with the same two readings — shared through `spelling-fixtures`, so a root exempted
+   * for one side is exempt for both. The key-by-key exemption stays here: it names bundle paths,
+   * which the manual has none of.
+   *
+   * The words are asked of the bundle since the manual settled `dialogue`: the two texts quote
+   * each other, and a label the manual explains in British while the bundle spells it American
+   * reads as two products. Four keys are exempt in all, one reading each, measured.
    */
-  it('spells its English verbs the British way', () => {
-    const american = [...BUNDLES.en]
-      .filter(([key]) => !NAMED_AS_THE_API_BILLS_IT.has(key))
-      .flatMap(([key, text]) => americanVerbs(text).map(word => `${key} — ${word}`))
+  it('spells its English the British way', () => {
+    const american = [...BUNDLES.en].flatMap(([key, text]) =>
+      [
+        ...(NAMED_AS_THE_API_BILLS_IT.has(key) ? [] : americanVerbs(text)),
+        ...(NAMED_AS_CSS_BLENDS_THEM.has(key) ? [] : americanWords(text)),
+      ].map(word => `${key} — ${word}`),
+    )
 
     expect(american).toEqual([])
+  })
+
+  /**
+   * The same reasoning as the `SETTLED_WORDS.except` guard above, applied to the two sets the
+   * spelling guard reads: an exemption whose key no longer says the word — or no longer exists —
+   * is one nobody would think to delete, and the next reader takes it for a rule.
+   */
+  it('drops a spelling exemption once its key stops needing it', () => {
+    const stale = [
+      ...[...NAMED_AS_THE_API_BILLS_IT].filter(
+        key => americanVerbs(BUNDLES.en.get(key) ?? '').length === 0,
+      ),
+      ...[...NAMED_AS_CSS_BLENDS_THEM].filter(
+        key => americanWords(BUNDLES.en.get(key) ?? '').length === 0,
+      ),
+    ]
+
+    expect(stale).toEqual([])
+  })
+
+  /**
+   * A tooltip on a button whose label is already visible EXPLAINS instead of repeating: read
+   * aloud, a tooltip that says the label back is the same words twice.
+   *
+   * What it measures is that the tooltip adds almost NOTHING — the whole label, back, plus one
+   * word at most. Not that it echoes: `Rectangle` / `Tracer un rectangle — Maj pour un carré`
+   * repeats its label word for word and is the form this repository writes, because the words
+   * AFTER the echo are the explanation. `Sélection rectangulaire` / `Tracer une sélection
+   * rectangulaire` had nothing after it, and that is what was caught.
+   *
+   * The bar sits there because a stricter one is unusable: of the 213 label/tooltip pairs, 80
+   * share a word — `Supprimer le calque` beside `Supprimer le calque actif — le dernier ne peut
+   * pas l'être` among them — and nearly all of those explain something real. A guard on shared
+   * words would report eighty labels and be turned off within the day.
+   *
+   * Its blind spots, measured, and they are wide:
+   * - a label with no word over three letters is never read — `OK`, `Fit`, `Top`, `Pen`, `A/B`,
+   *   nine such in English and four in French, and short labels are the likeliest to be echoed;
+   * - French inflection hides an echo from it: `Fermer les autres onglets` beside `Ferme tous les
+   *   autres onglets` compares `fermer` to `ferme` and finds two words, so the guard is weaker in
+   *   the language this repository writes its labels in first;
+   * - pairing is by name, `fooHint` beside `foo`, and 45 of the 158 tooltip keys escape it — 20
+   *   `*Hint` whose label lives under another name, 25 spelled otherwise (`activity.filters.hint`
+   *   is a real tooltip), 9 composed at runtime (`sceneViews.${view}Hint`).
+   *
+   * A concise tooltip can therefore be flagged where it was right — `Delete layer` beside
+   * `Delete the active layer` would be. The fix then is to say the second useful thing, not to
+   * exempt the key.
+   */
+  it.each(CODES)('explains a label in %s rather than saying it back', code => {
+    const echoed = [...BUNDLES[code]]
+      .filter(([key]) => key.endsWith('Hint') && BUNDLES[code].has(key.slice(0, -'Hint'.length)))
+      .filter(([key, hint]) => {
+        const label = new Set(longWords(BUNDLES[code].get(key.slice(0, -'Hint'.length)) ?? ''))
+        const spoken = longWords(hint)
+
+        return (
+          label.size > 0 &&
+          [...label].every(word => spoken.includes(word)) &&
+          spoken.filter(word => !label.has(word)).length <= 1
+        )
+      })
+      .map(([key]) => key)
+
+    expect(echoed).toEqual([])
   })
 
   /**
@@ -603,13 +686,6 @@ describe('what the guards would catch', () => {
 
   it('walks into the nested keys rather than stopping at the first level', () => {
     expect([...flatten({ panel: { title: 'Assets' } }).keys()]).toEqual(['panel.title'])
-  })
-
-  it('tells an American verb from a word that merely ends that way', () => {
-    expect(americanVerbs('Vectorize the image')).toEqual(['Vectorize'])
-    expect(americanVerbs('Vectorise, then resize the layer')).toEqual([])
-    // Folded onto the LAST `iz`, so an exempt root at the front cannot smuggle a verb in.
-    expect(americanVerbs('sizeorganize')).toEqual(['sizeorganize'])
   })
 })
 

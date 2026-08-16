@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { clipForAsset, placementsForAsset, trackForAsset, TIMELESS_DURATION } from './insert'
+import {
+  clipForAsset,
+  newTracksForAsset,
+  opensTrackFor,
+  placementsForAsset,
+  trackForAsset,
+  TIMELESS_DURATION,
+} from './insert'
 import { sequenceWith, trackFixture } from './timeline-fixtures'
 import { DEFAULT_SETTINGS } from './timeline-state'
 
@@ -149,5 +156,49 @@ describe('laying an asset down', () => {
     const [picture] = placementsForAsset(muted, take(), 'asset-1', 0, 'V1')
 
     expect(picture?.trackId).toBe('V2')
+  })
+})
+
+describe('the rows a drop below the last track opens', () => {
+  const montage = sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
+  const soundMontage = sequenceWith([trackFixture('A1', 'audio'), trackFixture('A2', 'audio')])
+  const take = (channels?: number): Asset =>
+    asset({
+      type: 'video',
+      probe: { duration: 5_000_000, codec: 'h264', ...(channels ? { channels } : {}) },
+    })
+
+  it('opens a picture row and the sound row beside it for a take that carries a sound', () => {
+    expect(newTracksForAsset(montage, take(2))).toEqual(['video', 'audio'])
+  })
+
+  it('opens only a picture row for a silent take', () => {
+    expect(newTracksForAsset(montage, take())).toEqual(['video'])
+  })
+
+  it('opens a sound row for a sound', () => {
+    expect(newTracksForAsset(montage, asset())).toEqual(['audio'])
+  })
+
+  /**
+   * The Audio workspace opens on sound tracks alone so a rush lands nowhere rather than being
+   * montaged into a space with no monitor to show it. Opening a picture row on demand would go
+   * behind that decision — silently, since a clip on it would look laid down.
+   */
+  it('opens nothing for a rush over a montage that holds no picture row', () => {
+    expect(newTracksForAsset(soundMontage, take(2))).toEqual([])
+  })
+
+  it('still opens a sound row there: every montage plays one', () => {
+    expect(newTracksForAsset(soundMontage, asset())).toEqual(['audio'])
+  })
+
+  // Read during the drag, where only the announced TYPE is legible: this is what decides whether
+  // the strip consumes the drop or leaves the shell to answer it by opening the asset.
+  it('answers for a kind alone, and takes an unannounced drag rather than refusing it', () => {
+    expect(opensTrackFor(soundMontage, 'video')).toBe(false)
+    expect(opensTrackFor(soundMontage, 'audio')).toBe(true)
+    expect(opensTrackFor(montage, 'video')).toBe(true)
+    expect(opensTrackFor(soundMontage, null)).toBe(true)
   })
 })

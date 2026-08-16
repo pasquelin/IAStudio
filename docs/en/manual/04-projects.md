@@ -209,14 +209,22 @@ already taken in the destination is refused rather than overwritten, and the jou
 > menu, takes the file out of the folder without going through the trash. Its dialogue announces
 > "This cannot be undone.", and it means it.
 
-**Two refusals, greyed rather than hidden.** The folders the studio creates itself — `assets/`,
-its six per-kind subfolders, `documents/`, `.index/` and its own — cannot be renamed or trashed:
-the index files every asset by its path under `assets/`, and moving that
-folder would leave rows nothing can find again. **The same refusal holds on both sides of a
-drag**: those folders cannot be picked up, and nothing can be dropped into them either — a file
-landing there would be a file no index row speaks of. And **a document a tab is holding cannot be
-renamed**: its file name is its identifier, the tab would lose the link, and the next `⌘S` would
-write the old name back beside the new file. Close the tab first.
+**One refusal, greyed rather than hidden.** What the studio files itself — `assets/`, its six
+per-kind subfolders, `documents/`, `.index/` — cannot be renamed or trashed: the index files every
+asset by its path under `assets/`, and renaming one of those folders would leave rows nothing can
+find again. **The same refusal holds on both sides of a drag**: those folders cannot be picked up,
+and nothing can be dropped into them either — a file landing there would be a file no index row
+speaks of.
+
+**Their contents can be renamed.** An asset and a document each have a gesture of their own, and
+the Explorer leads to it: the name changes, and the file follows in the same move. A document
+renamed here keeps its tab open, which takes the new name. An asset renamed here changes name
+everywhere at once — the Explorer, the shelf, the Inspector, the tab editing it — because there
+is only **one name**: its index row's name IS its file's name.
+
+> A name your file system would not accept is refused rather than silently corrected — a slash,
+> for instance. So is a name the folder already holds, rather than overwriting somebody else's
+> file. The field has closed by the time the answer comes: the activity journal is what says so.
 
 - documents already on screen are marked **Open**;
 - a document's icon says which workspace it belongs to, the same one the rail uses;
@@ -239,7 +247,7 @@ network volume sometimes emits no event at all, and that second net catches it.
 > is written to your disk, the contents of documents are not — the `documents/` folder stands for
 > them, and what was never written there has nothing to reopen.
 
-There is no "Open file" dialog, and none is planned: the studio only opens what is in the
+There is no "Open file" dialogue, and none is planned: the studio only opens what is in the
 project.
 
 ### How a document is written
@@ -271,7 +279,7 @@ position inside the folder, not a location on your disk.
 > link to where it sits. If you move the project without taking those files along, the links break.
 >
 > **Nothing will tell you until you click.** The inspector does not show "File not found" of its
-> own accord: it offers the **Show in the file manager** button, and it is the click, finding
+> own accord: it offers the **Show in folder** button, and it is the click, finding
 > nothing, that brings the message up. See [Assets](07-assets.md).
 
 ---

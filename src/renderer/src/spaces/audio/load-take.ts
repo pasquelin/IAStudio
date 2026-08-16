@@ -1,23 +1,31 @@
 import type { Asset } from '@shared/domain/asset'
-import { EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
-import { audioEditsOf, useAudioEdits } from '@/stores/audio-edits'
+import { clipById } from '@/engines/timeline/timeline-state'
+import { useSelection } from '@/stores/selection'
+import { addTakeToSequence, sequenceOf, useSequences } from '@/stores/sequences'
 
 /**
- * Puts a take into the audio editor.
+ * Puts a take on the montage — which is all it takes to open it in the editor below, the editor
+ * showing whichever block is selected and `addClips` selecting what it lays down.
  *
- * Shared by the drop on the waveform and by "open in the audio editor" in the shelf menu, so
- * the two cannot come to disagree about what loading a take means.
+ * Shared by the drop on the waveform and by "open in the audio editor" in the shelf menu, so the
+ * two cannot come to disagree about what loading a take means.
  *
- * Everything goes, chain and history: an edit is a length and a region measured against the take
- * it was made on. Carried over to another take they describe nothing, and "apply" would write
- * that nothing over the file.
+ * Nothing is dropped on the way in, where this used to clear the chain and take the previous
+ * take's block off the strip: blocks accumulate on a montage, and each carries its own chain.
+ * Loading a second take is now what it looks like — a second block, selected.
  */
 export function loadTake(documentId: string, asset: Asset): void {
   if (asset.type !== 'audio') return
 
-  const store = useAudioEdits.getState()
-  if (audioEditsOf(store, documentId).assetId === asset.id) return
+  // Already under the editor: nothing to do, and it is not a nicety. Asking a second time would
+  // lay a NEW block over the one that holds these bytes — same take, new id — and the chain
+  // that named the old id would be orphaned with every setting in it, unreachable and unsaid.
+  const montage = sequenceOf(useSequences.getState(), documentId)
+  const shown = montage.selectedId ? clipById(montage, montage.selectedId) : null
+  if (shown?.assetId === asset.id) return
 
-  store.drop(documentId)
-  store.replace(documentId, { ...EMPTY_AUDIO_EDIT, assetId: asset.id })
+  const clipId = addTakeToSequence(documentId, asset)
+  // The montage's own selection comes with `addClips`; this is the studio-wide one the inspector
+  // reads, and a block in the editor that the inspector describes as nothing is half a selection.
+  if (clipId) useSelection.getState().selectClip(documentId, clipId)
 }

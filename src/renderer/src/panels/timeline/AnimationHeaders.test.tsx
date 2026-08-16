@@ -51,6 +51,18 @@ describe('the column beside the band', () => {
     expect(screen.getByTestId('anim-subject-cube-1')).toHaveTextContent('Cube')
   })
 
+  /**
+   * The name a screen reader announces for the list itself. `TimelineHeaderColumn` requires the
+   * label, so an absent one does not compile — what nothing held is the label being the RIGHT
+   * one: the montage column beside it is the same component with a different key, and a
+   * copy-paste between the two reads as correct everywhere the compiler and the key guard look.
+   */
+  it('announces itself as the rows of the animation, not as the tracks of the montage', () => {
+    headers()
+
+    expect(screen.getByRole('list', { name: 'Lignes de l’animation' })).toBeInTheDocument()
+  })
+
   it('names each channel once the subject is unfolded', () => {
     headers(['cube-1'])
 

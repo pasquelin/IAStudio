@@ -188,6 +188,23 @@ describe('starting and stopping', () => {
     expect(startCapture).toHaveBeenCalled()
   })
 
+  // Only the first press of a run crosses `loadingEngine`, which is why turning the microphone
+  // off and on again worked and hid this for so long.
+  it('opens the microphone when the engine had to be loaded first', async () => {
+    const { emit } = connected({
+      start: () => {
+        emit({ type: 'state', state: 'loadingEngine' })
+        emit({ type: 'state', state: 'listening' })
+        return Promise.resolve()
+      },
+    })
+    await useDictation.getState().connect()
+
+    await useDictation.getState().start()
+
+    expect(startCapture).toHaveBeenCalled()
+  })
+
   // The model may be missing or the microphone refused: asking the platform for a device then
   // would put a recording indicator on screen for a session that never happens.
   it('opens nothing when the session did not start', async () => {

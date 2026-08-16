@@ -67,7 +67,7 @@ the **Image…** tool: it becomes a layer. See [Image workspace](08-image-worksp
 
 Reopening a document composed earlier goes through the **Explorer** panel, which lists the
 documents of the project: double-clicking a row opens it, switching workspace if it belongs to
-another. That is the door, and there is no file dialog — the studio only opens what is in the
+another. That is the door, and there is no file dialogue — the studio only opens what is in the
 project.
 
 `⇧⌘E` still writes a flattened `.png`; reimported, that PNG comes back as a picture and not as

@@ -50,6 +50,21 @@ export type LoadedSound = (cue: SoundCue) => PlayingSound
  * output clock. Everything above this line is arithmetic, and the arithmetic is where the bugs
  * are — a sound planned a frame late is heard, a picture painted a frame late is not.
  */
+/**
+ * A listening point on the output, for the surfaces that draw what is being heard.
+ *
+ * Deliberately not an `AnalyserNode`: what a meter and a spectrum need of one is these three
+ * members, and a port that handed the node over would drag Web Audio into every test that draws.
+ * Both readers hand back a buffer they own and refill — copy it if you mean to keep it.
+ */
+export type AudioTap = {
+  /** Where the signal stands right now, sample by sample, between −1 and 1. */
+  levels: () => Float32Array
+  /** The same instant by frequency, 0 to 255 a bin, spread from nothing to half the rate. */
+  frequencies: () => Uint8Array
+  sampleRate: number
+}
+
 export type SoundPort = {
   /**
    * Seconds on the output's own clock, or `null` while it is not running.
@@ -58,6 +73,8 @@ export type SoundPort = {
    * instant that never moves, and the same answer feeds the engine's clock.
    */
   now: () => number | null
+  /** Where to listen to what is going out, or null while nothing has opened an output yet. */
+  tap: () => AudioTap | null
   /** An output built before any gesture starts suspended, and every cue lands in silence. */
   resume: () => void
   load: (assetId: string) => Promise<LoadedSound>

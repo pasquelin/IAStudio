@@ -7,7 +7,7 @@ import { MenuButton } from '@/design/MenuButton'
 import { Row } from '@/design/Row'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { timeAgo } from '@/helpers/relative-time'
-import { InlineRename } from '@/panels/shared/InlineRename'
+import { InlineRename } from '@/design/InlineRename'
 import { ProjectMenu, ProjectMenuRows, PROJECT_MENU_ROWS } from './ProjectMenu'
 
 export type ProjectRowProps = {

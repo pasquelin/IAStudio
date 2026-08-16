@@ -11,11 +11,14 @@ import { QuietNote } from '@/design/QuietNote'
 import { useExplore } from '../use-explore'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
 
-/** What one column aims for. Wider than a shelf tile: this is the band people browse. */
+/**
+ * What one column aims for. Wider than a shelf tile: this is the band people browse.
+ *
+ * Also what a tile asks the CDN to resize to, once the display's density is applied — hence one
+ * constant here where there used to be two, the second holding a doubling `cloudTileFace` now
+ * works out from the screen it is actually drawn on.
+ */
 const COLUMN_WIDTH = 220
-
-/** The CDN resizes. Twice the column, so the tiles hold up on a dense display. */
-const PREVIEW_WIDTH = 440
 
 /**
  * What everyone published, by kind — the one band of the home that is not about this account.
@@ -106,5 +109,5 @@ function Tab({ type, current, onSelect }: TabProps) {
  * owns. Showing a fetch button that may refuse is worse than showing none.
  */
 function Tile({ asset }: { asset: CloudAsset }) {
-  return <MediaTile fill {...cloudTileFace(asset, PREVIEW_WIDTH)} />
+  return <MediaTile fill {...cloudTileFace(asset, COLUMN_WIDTH)} />
 }

@@ -1,11 +1,13 @@
 import { watch, type FSWatcher } from 'node:fs'
-import { access, readdir, rename } from 'node:fs/promises'
+import { readdir, rename } from 'node:fs/promises'
 import { basename, join } from 'node:path'
+import { exists } from '@main/persistence'
 import {
   canMoveInto,
   entriesByName,
   isHiddenEntry,
   isStudioFolder,
+  isStudioOwned,
   parentOf,
   type FolderEntry,
 } from '@shared/domain/folder'
@@ -168,7 +170,11 @@ export function createFolderEditor(
 
   return {
     rename: async (relative, name) => {
-      if (isStudioFolder(relative)) return false
+      // Everything the studio owns, not just the folders themselves: a document is renamed
+      // through `document:rename`, which moves its file AND rewrites its envelope, and an asset
+      // is renamed in the catalogue. Renaming either as a plain file leaves the studio pointing
+      // at a path that is no longer there — a row nobody can find, a tab that opens nothing.
+      if (isStudioOwned(relative)) return false
 
       const parent = parentOf(relative)
       return moveTo(relative, parent === null ? name : `${parent}/${name}`)
@@ -192,14 +198,5 @@ export function createFolderEditor(
         return false
       }
     },
-  }
-}
-
-async function exists(file: string): Promise<boolean> {
-  try {
-    await access(file)
-    return true
-  } catch {
-    return false
   }
 }

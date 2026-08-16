@@ -12,6 +12,7 @@ export const canvasStore = store
 export const useCanvases = store.use
 export const canvasOf = store.stateOf
 export const canvasHistoryOf = store.historyOf
+export const isCanvasDirty = store.isDirty
 
 /**
  * Selection stays out of the history, so it writes the whole canvas back — and the canvas has

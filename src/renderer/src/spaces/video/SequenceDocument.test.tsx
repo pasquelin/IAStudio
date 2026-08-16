@@ -2,10 +2,12 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addClip } from '@/engines/timeline/commands'
+import { programOwner, sourceOwner } from '@/engines/timeline/playback'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
 import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timeline-state'
 import { TimelinePanel } from '@/panels/timeline/TimelinePanel'
 import { useDocuments } from '@/stores/documents'
+import { usePlayback } from '@/stores/playback'
 import { sequenceStore, useSequences } from '@/stores/sequences'
 import { SequenceDocument } from './SequenceDocument'
 
@@ -44,10 +46,22 @@ const sourceTrack = () =>
     .filter(Boolean)
     .at(-1)
 
+/** Where the source monitor stands, as the engine last received it. */
+const sourcePlayhead = () =>
+  applied.mock.calls
+    .filter(([state]) => state.tracks.some(track => track.id === 'S1'))
+    .map(([state]) => state.playhead)
+    .at(-1)
+
+/** Moves the montage's own head, the way playing or scrubbing does. */
+const seekMontage = (playhead: number): void => {
+  const store = useSequences.getState()
+  act(() => store.replace('doc-1', { ...sequenceStore.stateOf(store, 'doc-1'), playhead }))
+}
+
 describe('SequenceDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useSequences.setState({ states: {}, histories: {} })
     useDocuments.setState({ activeId: 'doc-1' })
   })
 
@@ -146,6 +160,117 @@ describe('SequenceDocument', () => {
     act(() => useSequences.getState().runCommand('doc-1', addClip('A1', later)))
 
     expect(sourceTrack()?.clips[0]?.id).toBe('clip-2')
+  })
+
+  /**
+   * What makes the source monitor a way to SEE the clip you picked: a track above may cover it
+   * in the programme, and its own picture is the only place left to watch it.
+   */
+  it('follows the montage head, offset into the clip it is showing', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+    seekMontage(2_400_000)
+
+    expect(sourcePlayhead()).toBe(400_000)
+  })
+
+  /**
+   * Following is for SCRUBBING. While the programme plays, the head moves sixty times a second,
+   * and following it would animate both pictures at once — two decodes, and for a scene clip
+   * two whole 3D renders per frame, to show twice what one monitor already shows.
+   */
+  it('stops following while the programme plays, so one picture moves at a time', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+    seekMontage(2_400_000)
+    act(() => usePlayback.getState().setRunning(programOwner('doc-1'), true))
+    seekMontage(2_800_000)
+
+    expect(sourcePlayhead()).toBe(400_000)
+  })
+
+  /**
+   * The other half of the same rule, and the one nothing covered: the source stops following when
+   * IT plays too, and what it stops on has to be where the scrub left it. Its transport reports a
+   * time only once it has played a frame, so a take frozen on that instead opens at frame zero —
+   * the head of the clip rather than the moment being judged.
+   */
+  it('starts the take where the scrub left it when the source itself plays', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+    seekMontage(2_400_000)
+    act(() => usePlayback.getState().setRunning(sourceOwner('doc-1'), true))
+
+    expect(sourcePlayhead()).toBe(400_000)
+  })
+
+  /**
+   * Following moves the take on every montage move, which leaves it nowhere to be PUT: recomputed
+   * on every render instead, the position the monitor reports lasts one render and the rewind
+   * button does nothing whatever. It holds until the head moves again, which resumes following.
+   */
+  it('lets the source be rewound, and follows the head again once it moves', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+    seekMontage(2_400_000)
+    act(() => {
+      screen.getAllByRole('button', { name: /début/i })[0]?.click()
+    })
+    expect(sourcePlayhead()).toBe(0)
+
+    seekMontage(2_600_000)
+    expect(sourcePlayhead()).toBe(600_000)
+  })
+
+  it('catches up with the head as soon as playback stops', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+    act(() => usePlayback.getState().setRunning(programOwner('doc-1'), true))
+    seekMontage(2_800_000)
+    act(() => usePlayback.getState().setRunning(programOwner('doc-1'), false))
+
+    expect(sourcePlayhead()).toBe(800_000)
+  })
+
+  // The head spends most of its time outside any one clip, and a take has no frame to show for
+  // a moment it does not span.
+  it('holds at the clip ends while the head is outside it', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+
+    seekMontage(0)
+    expect(sourcePlayhead()).toBe(0)
+
+    // A frame short of the end: a clip spans up to but not including it, so landing exactly on
+    // the end would show nothing at all.
+    seekMontage(9_000_000)
+    expect(sourcePlayhead()).toBe(1_000_000 - 1_000_000 / 25)
+  })
+
+  /**
+   * Two pictures playing at once is two audible streams and two hardware decoders fighting over
+   * the GPU. The token already revokes whoever held it; this is the half that stops the key
+   * from being aimed at two players in the first place.
+   */
+  it('hands the space bar to whichever monitor was clicked, and to only one of them', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    // A press on the source, which is what taking the focus comes to. `pointerDown` rather than
+    // a click: aiming a monitor must not also start it.
+    const playButtons = (): (string | null)[] =>
+      screen
+        .getAllByRole('button', { name: /Lire/ })
+        .map(button => button.getAttribute('aria-label'))
+    fireEvent.pointerDown(screen.getAllByRole('button', { name: /Lire/ })[0] ?? document.body)
+
+    // The armed one advertises the key and the other stops claiming it — the pair is never both.
+    expect(playButtons()).toEqual(['Lire (Espace)', 'Lire'])
   })
 
   it('starts the program monitor when its play button is pressed', () => {

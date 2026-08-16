@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Project, RecentProject } from '@shared/domain/project'
 import { installFakeBridge } from '@/services/fake-bridge'
 import type { ActivityEntry } from '@shared/domain/activity'
@@ -189,14 +189,28 @@ describe('picking a folder in the dialog', () => {
     expect(useProject.getState().project).toBeNull()
   })
 
-  it('creates a project in the folder that was picked', async () => {
-    const create = vi.fn(() => Promise.resolve({ path: '/p/new', manifest: MANIFEST }))
+  // The folder chosen IS the project: nothing but its path crosses, and the name comes from it
+  // on the other side. Sending a name made a subfolder inside the folder the user had picked.
+  it('makes the folder that was picked into the project', async () => {
+    const create = vi.fn(() => Promise.resolve({ path: '/p', manifest: MANIFEST }))
     installFakeBridge({ ...picking('/p'), project: { create } })
 
     await useProject.getState().createPicked()
 
-    expect(create).toHaveBeenCalled()
-    expect(useProject.getState().project?.path).toBe('/p/new')
+    expect(create).toHaveBeenCalledWith('/p')
+    expect(useProject.getState().project?.path).toBe('/p')
+  })
+
+  // The main process asks before writing into a folder that holds files, and a "no" comes back
+  // as `null`. Read as a project, it would blank the one that is open.
+  it('leaves the open project alone when the creation is declined', async () => {
+    const create = vi.fn(() => Promise.resolve(null))
+    installFakeBridge({ ...picking('/p'), project: { create } })
+    useProject.setState({ project: { path: '/open', manifest: MANIFEST }, known: true })
+
+    await useProject.getState().createPicked()
+
+    expect(useProject.getState().project?.path).toBe('/open')
   })
 
   it('survives a folder that cannot be written', async () => {
@@ -213,6 +227,33 @@ describe('picking a folder in the dialog', () => {
     await useProject.getState().openPicked()
 
     expect(open).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Where the dialog starts, and it is not cosmetic: the system reopens one wherever it was last
+   * left, which after a creation is INSIDE the project just made — so the second project of a
+   * session was created within the first, and nothing said so. Which folder that should be is
+   * `projectPickerFolder`'s to decide and its own suite's to check; this is the wiring.
+   */
+  it('starts the dialog where the settings say projects live', async () => {
+    const pickPath = vi.fn(() => Promise.resolve(null))
+    installFakeBridge({ dialog: { pickPath } })
+    const { storage } = useSettings.getState().settings
+    // Put back on the way out: this store is module state, and a preference left behind would
+    // reach every case below it — including ones written later that never set one.
+    onTestFinished(() => {
+      useSettings.setState(state => ({ settings: { ...state.settings, storage } }))
+    })
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: { ...storage, projectsFolder: '/Users/someone/Projets' },
+      },
+    }))
+
+    await useProject.getState().createPicked()
+
+    expect(pickPath).toHaveBeenCalledWith('folder', '/Users/someone/Projets')
   })
 })
 

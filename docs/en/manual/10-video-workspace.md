@@ -41,22 +41,39 @@ its place; a sound clip whose media is missing stays black and silent, announcin
 
 ## Placing a first clip
 
-Two gestures, and **they do not put the clip in the same place**:
+Three gestures, and **they do not put the clip in the same place**:
 
 | Gesture | On which track | At what time |
 |---|---|---|
-| **Drag and drop** from the shelf | the one you are hovering, **exactly** | where you release |
+| **Drag and drop** from the shelf | the one you are hovering, **if it can take it** | where you release |
+| **Drag and drop** into the empty space below the last track | a **new** track, opened for it | where you release |
 | **Double-click** the asset | the studio chooses | at the **playhead** |
 
-**Drag and drop obeys you to the pixel.** You aim at the track, so you decide — including
-deciding on a track where the clip will not be heard. Releasing on the **time ruler** at the top,
-or outside any track, **does nothing**: there is no track under the pointer.
+**Drag and drop obeys you to the pixel for the TIME; for the track, it corrects you.** You release
+exactly where you mean to in time. But **aiming at a track that cannot take the clip does not put
+it there**: a picture track for a sound, a locked track, a muted one, or one silenced by another
+track's solo. The studio then chooses for you, as double-click does, and the clip lands **somewhere
+other than under the pointer**.
+
+That is one rule rather than two: a muted track accepted under the pointer and avoided everywhere
+else would answer the same question twice. But **nothing on screen says so**, and it is the one
+place in the edit where the gesture does not do what it shows.
+
+**Releasing below the last track opens the tracks it needs** rather than doing nothing: a picture
+track, and the sound track beside it for a take that carries sound. Both arrive in one gesture,
+and **⌘Z takes them back in one** — the clips and the tracks.
+
+Two places still take nothing: the **time ruler** at the top, and an edit with no picture track
+at all — the one in the Audio workspace — where releasing a rush only opens the asset, since
+there is no monitor there to show it.
 
 **Double-click chooses for you**, and it chooses well: a sound goes on a sound track, everything
-else on a picture track, and **locked** or **muted** tracks are avoided — a clip landing there
-would look like it did nothing.
+else on a picture track, and **any track that does not reach the output is avoided** — a clip
+landing there would look like it did nothing. That covers **locked** and **muted** tracks, and also
+those silenced by **another track's solo**: a track nothing sets apart to the eye, and on which
+double-click will nonetheless lay nothing.
 
-Either way, the studio settles two things:
+Whichever way, the studio settles two things:
 
 - **the duration** — that of the media. A still image, or a medium whose duration is unknown,
   lasts **5 seconds** by default. That is only a starting point: how long an image stays on
@@ -108,6 +125,31 @@ track back as it was.
 > **A still image has no media to exceed**: both of its ends lengthen it as far as you like, and
 > the only bound is the start of the sequence. That is how you decide how long a title card stays
 > on screen.
+
+### Linked clips, and the little link that says so
+
+**A video carrying sound arrives as TWO clips**: the picture on a picture track, the sound on a
+sound track facing it. They are **linked**.
+
+**A small link, at the right end of each clip, tells you which case you are in:**
+
+| What you see | What it means |
+|---|---|
+| a **chain** | this clip is linked to another |
+| a **broken chain** | this clip stands alone |
+
+The link **disappears on a clip too narrow** to hold it — that is room running out, not the link
+changing. And **it is not a button**: clicking it unlinks nothing, it only informs you.
+
+**While two clips are linked, what you do to one happens to the other** — moving it, cutting it
+with the blade, deleting it.
+
+> **And it is all or nothing.** If either half cannot follow — its track is locked, the cut falls
+> outside it — **the other does not move either**. Lock `A1`, drag the picture on `V1`: nothing
+> happens. That is deliberate — a half-moved pair is exactly what a link exists to prevent.
+
+**`⌘L` separates them.** Each becomes an ordinary clip again, and its link turns to the broken
+chain.
 
 ---
 
@@ -205,6 +247,58 @@ The left column of the timeline, facing each line.
 
 **Solo beats mute.** As soon as one track goes solo, every track that is not falls silent, muted or
 not. That is the convention in every editing application.
+
+### Adding one
+
+**Two buttons, on the Timeline panel's bar** — at the top, beside the tools: **Add a video track**
+and **Add an audio track**. The track arrives empty, **at the foot of the column**.
+
+They are at the top rather than under the column for a practical reason: the foot of the column
+travels down with the edit, and a button sitting there ends up behind whatever you are looking at.
+
+**A third gesture makes tracks too**: releasing an asset in the empty space below the last track
+opens the tracks it needs and lays the clip on them — [described above](#placing-a-first-clip).
+The buttons are for when you want the track **before** you have anything to put on it.
+
+> **The Audio workspace has only one**, for sound tracks: there is no picture to show there. See
+> [Audio workspace](11-audio-workspace.md).
+
+### Moving them through the stack
+
+**The order of the tracks decides what you see.** Several picture tracks may carry a clip at the
+same instant; the one **highest in the column** is the one shown, and it covers the others — V1
+comes in front of V2, as in every editing suite. Moving a track therefore changes the picture in
+the monitor, the moment you release it.
+
+**The order matters for double-click too**: the studio then lays the asset on the **first track of
+the right kind that reaches the output**, counting from the top. Moving a track up therefore makes
+it the default destination. Every header carries a **grip** on its left edge.
+
+- **Drag it** up or down. The row you are holding **dims** for the length of the gesture: it is
+  the only thing that says a move is under way, the stack renumbering a rank at a time. A drag
+  across three ranks stays **one gesture** — `⌘Z` undoes it in one, not rank by rank.
+- **From the keyboard**: the grip is a button. Give it the focus, then `↑` and `↓`.
+
+**Nothing moves at either end.** The first track does not rise, the last does not fall, and trying
+leaves no step to undo.
+
+### Removing one
+
+**Right-click the header**, or the row's **Track actions** button — a right-click not being a
+keyboard gesture, that button is what makes these three rows reachable without a mouse. The menu
+holds three:
+
+| Row | Effect |
+|---|---|
+| **Move track up** | swaps it with the one above. Greyed out on the first |
+| **Move track down** | swaps it with the one below. Greyed out on the last |
+| **Remove track** | takes it away **with every clip it carries** |
+
+> **A locked track cannot be removed, and the menu does not say so**: the row stays clickable, and
+> the click does nothing. The lock covers the track itself, not only its clips — unlock it first.
+
+As with everything else, removal is undone with `⌘Z`, and the track comes back **at its rank**,
+with everything it carried.
 
 ---
 

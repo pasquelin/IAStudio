@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { layerNow } from '@/stores/canvas-fixtures'
 import { canvasHistoryOf, useCanvases } from '@/stores/canvases'
 import { layerPort } from './layer-port'
@@ -9,10 +9,6 @@ const transform = (documentId = DOCUMENT) => layerNow(documentId, 'layer-1')?.tr
 const entries = () => canvasHistoryOf(useCanvases.getState(), DOCUMENT).past.length
 
 describe('layerPort', () => {
-  beforeEach(() => {
-    useCanvases.setState({ states: {}, histories: {} })
-  })
-
   it('writes the layer position into the document it was built for', () => {
     const port = layerPort(DOCUMENT)
     port.beginDrag()

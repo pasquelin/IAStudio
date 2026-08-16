@@ -10,6 +10,12 @@ export type MediaTileProps = {
   /** Overlaid on the picture, at the bottom. */
   caption: string
   /**
+   * Drawn in the caption's place while it is being edited — the field that renames what the
+   * tile shows. The caption itself stays: it is what the tile is titled by, and a name being
+   * typed is not yet the name of anything.
+   */
+  captionField?: ReactNode
+  /**
    * Overlaid on the picture — a standing or a state, never an action. WHICH corner is the badge's
    * own business: this slot renders it as handed over, `AssetBadge` places itself top right, and a
    * channel tile puts its origin top left because the menu button owns the other corner.
@@ -20,6 +26,16 @@ export type MediaTileProps = {
    * was expected: a sound has no thumbnail to fail at, and saying otherwise reads as a bug.
    */
   fallbackIcon?: string
+  /**
+   * A face of its own for a medium no picture stands for — a sound, drawn as its waveform.
+   *
+   * Under the caption and the badge rather than over them, which is the whole reason it is a
+   * slot here instead of something laid over the tile by the caller: an overlay would cover the
+   * name, and a tile whose name is hidden is a shelf one has to hover to read.
+   *
+   * Wins over `fallbackIcon`, never over the picture: an asset that HAS a still shows it.
+   */
+  face?: ReactNode
   /**
    * Fills the box it is given instead of squaring itself off. For a caller that has already
    * reserved the exact place — the masonry does, from the asset's own dimensions, and a square
@@ -38,8 +54,10 @@ export type MediaTileProps = {
 export function MediaTile({
   url,
   caption,
+  captionField,
   badge,
   fallbackIcon = mdiImageOffOutline,
+  face,
   fill = false,
 }: MediaTileProps) {
   const { src, onError } = useLoadable(url)
@@ -54,6 +72,8 @@ export function MediaTile({
           onError={onError}
           className="absolute inset-0 size-full object-cover"
         />
+      ) : face ? (
+        <div className="absolute inset-0">{face}</div>
       ) : (
         <UiIcon path={fallbackIcon} size={20} className="text-muted/80 absolute inset-0 m-auto" />
       )}
@@ -71,7 +91,7 @@ export function MediaTile({
           'text-tiny text-white drop-shadow-[0_1px_2px_black]',
         )}
       >
-        {caption}
+        {captionField ?? caption}
       </figcaption>
     </figure>
   )

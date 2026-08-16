@@ -18,7 +18,7 @@ import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 
 /**
- * The user manual, offline and in the reader's language — the same nineteen chapters as
+ * The user manual, offline and in the reader's language — the same twenty chapters as
  * `docs/`, compiled into `shared/manual.json` by `pnpm manual:collect`.
  *
  * Built on the settings window's shape, as the usage window is: chapters on the left, the open
@@ -307,7 +307,9 @@ function childrenText(children: React.ReactNode): string {
   if (children && typeof children === 'object' && 'props' in children) {
     const props: unknown = children.props
     if (props && typeof props === 'object' && 'children' in props) {
-      return childrenText((props as { children: React.ReactNode }).children)
+      // `in` narrows the key to `unknown`, and every branch above takes one — so the recursion
+      // decides what it is rather than this line asserting it.
+      return childrenText(props.children as React.ReactNode)
     }
   }
   return ''

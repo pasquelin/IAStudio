@@ -1,7 +1,7 @@
 import {
   FEATURED_TAG,
-  OFFICIAL_TAG,
   PERIOD_DAYS,
+  SCENARIO_MAINTAINER,
   SYSTEM_TAG_PREFIX,
   tagOfFamily,
   type ModelDescriptor,
@@ -28,8 +28,20 @@ export type RemoteModel = {
   shortDescription?: string
   createdAt?: string
   thumbnail?: { url?: string }
-  /** Pictures the model's owner published. Measured: 629 of the 642 public models have some. */
+  /** Pictures the model's owner published. Measured: 628 of the 640 public models have some. */
   exampleAssetIds?: readonly string[]
+  /**
+   * Read against `SCENARIO_MAINTAINER`. Listing, search index and `GET /models/{id}` all carry
+   * it — measured on every public model of all three, unlike `accessRestrictions` below.
+   */
+  complianceMetadata?: { maintainer?: string }
+  /**
+   * Whose catalogue the model sits in, carried by the record on all three paths — which is what
+   * lets `summaryOf` answer without being told which pass fetched it.
+   *
+   * A plain string, for the reason `ModelSummary.source` is one.
+   */
+  privacy?: string
   /**
    * The plan grade below which the API refuses this model. Widened from the SDK's union on
    * purpose — see `ModelSummary.requiredPlanLevel`, which two models already contradict.
@@ -134,6 +146,23 @@ const PREVIEW_BATCH = 50
  */
 type Grades = Map<string, number>
 
+/**
+ * Whether the model belongs to Scenario's public catalogue rather than to this account.
+ *
+ * BOTH conditions, and the privacy one is not redundant: measured 2026-08-15, the one model this
+ * account has trained answers `maintainer: Scenario` like the catalogue does, so that field
+ * alone filed the user's own models as official — and "Community" then hid the very models only
+ * they can see.
+ *
+ * It buys the PRIVATE case and only that: a model the user trained and then PUBLISHED would
+ * read as official. `ownerId` would tell it apart — measured, all 640 public models share one,
+ * where this account's own model carries its project's — but keying authorship to an opaque id
+ * held in no contract is worse than the case it fixes: the day Scenario publishes under a
+ * second owner, the whole catalogue turns community and nothing reddens. Left as is knowingly.
+ */
+const isOfficial = (model: RemoteModel): boolean =>
+  model.privacy === 'public' && model.complianceMetadata?.maintainer === SCENARIO_MAINTAINER
+
 function summaryOf(model: RemoteModel, grades: Grades): ModelSummary {
   const tags = model.tags ?? []
   const summary: ModelSummary = {
@@ -142,13 +171,13 @@ function summaryOf(model: RemoteModel, grades: Grades): ModelSummary {
     name: model.name ?? model.id,
     family: familyOf(model.capabilities, tags),
     source: model.source ?? 'other',
-    origin: tags.includes(OFFICIAL_TAG) ? 'official' : 'community',
+    origin: isOfficial(model) ? 'official' : 'community',
     featured: tags.includes(FEATURED_TAG),
     capabilities: model.capabilities ?? [],
     tags,
   }
 
-  // `thumbnail` is set on 160 of the 642 public models; the rest are pictured by an example.
+  // `thumbnail` is set on 160 of the 640 public models; the rest are pictured by an example.
   const [preview] = model.exampleAssetIds ?? []
   if (preview) summary.previewAssetId = preview
 
@@ -212,8 +241,8 @@ function deserialize(value: string | undefined): Cursor | null {
 }
 
 /**
- * Where a listing starts. `official` skips the private pass outright: a model the user
- * trained is theirs, never Scenario's, so that page could only be discarded.
+ * Where a listing starts. `official` skips the private pass outright: `isOfficial` refuses a
+ * private model whatever else it says, so that page could only be discarded.
  */
 function firstCursor(query: ModelQuery): Cursor {
   if (query.search?.trim()) return { mode: 'search', offset: 0 }
@@ -277,9 +306,12 @@ function matches(summary: ModelSummary, query: ModelQuery, since: string | null)
  *
  * Nothing from `SYSTEM_TAG_PREFIX` leaves, whichever of the two it came from: the endpoint
  * answers zero models for those, so the pre-filter would not shorten the walk but empty it.
- * That is the fourth family, the skyboxes: `matches` classifies them from the records instead.
- * Measured 2026-08-14, that walk does reach them — the three sit at offsets 100 to 299 of the
- * score-ordered public listing, so one request's five pages of a hundred bring them all back.
+ *
+ * The skyboxes are narrowed by nothing at all — `tagOfFamily` already answers nothing for a
+ * family holding several tags, and this refuses `sc:skybox` besides, should one ever be asked
+ * for by hand. `matches` classifies them off the records instead. Measured 2026-08-15, the walk
+ * does reach them: the four sit at offsets 178, 231, 248 and 302 of the score-ordered public
+ * listing, so one request's five pages of a hundred bring them all back.
  */
 function preFilter(query: ModelQuery): string | undefined {
   const wanted = query.tags?.[0] ?? (query.family ? tagOfFamily(query.family) : undefined)

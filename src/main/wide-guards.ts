@@ -70,12 +70,27 @@ function readsAnchoredFile(code: string): boolean {
  * which is the exact failure the ways below exist to prevent. **Extracting shared reading is a
  * good move that MUST come with a line here**, and the count is the only proof: the three window
  * guards that gave up their own glob were counted before and after, 41 both times.
+ *
+ * `design/test-harness` joined on 2026-08-16, and it had been missing since the day it was
+ * written: 49 guards before, 53 after. Found by an adversarial review, not by the floor, which a
+ * silent drop of four never reaches.
+ *
+ * **That fix was half of one, and the count is what hid it.** It taught the rule the qualified
+ * spelling only, so it caught the five consumers that live elsewhere and none of the five that
+ * sit beside the module — the count went up, which reads as success. A second review found them
+ * the next day: 53 before, 55 after, `styles.test.ts` and `spacing.test.ts` having had no other
+ * way in. *A count that rises says a rule caught something, never that it caught everything.*
  */
 function borrowsTheSweep(code: string): boolean {
   // Any depth of `../`, not just the sibling: a guard one folder down imports `'../source-files'`
   // and would have dropped out of the net exactly like the one this function was added for. The
   // review caught the two literal spellings before anyone wrote that guard.
-  return /from '\.[./]*\/(source-files|window-sources)'|from '@main\/source-files'|from '@\/window-sources'|from '\.[./]*\/scripts\/[\w-]+\.ts'/.test(
+  //
+  // `(design/)?` is the third spelling, and it cost a day: the five guards that SIT BESIDE
+  // `test-harness.ts` write `'./test-harness'`, which the folder-qualified form does not match.
+  // The line added for it on 2026-08-16 caught its five distant consumers and none of its
+  // neighbours — a fix measured by a count that went up, which is exactly how a half-fix looks.
+  return /from '\.[./]*\/(source-files|window-sources|(design\/)?test-harness)'|from '@main\/source-files'|from '@\/(window-sources|design\/test-harness)'|from '\.[./]*\/scripts\/[\w-]+\.ts'/.test(
     code,
   )
 }

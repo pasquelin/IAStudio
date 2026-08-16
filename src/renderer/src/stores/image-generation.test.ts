@@ -41,7 +41,6 @@ let stop = (): void => undefined
 
 beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
-  useCanvases.setState({ states: {}, histories: {} })
   useJobs.setState({ jobs: [] })
   useAssets.setState({ items: [] })
   installDocument('doc-1', 'image')

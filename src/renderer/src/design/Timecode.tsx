@@ -1,6 +1,7 @@
 import type { Us } from '@shared/domain/time'
 import { formatTimecode } from '@/engines/timeline/timecode'
 import { cn } from '@/helpers/cn'
+import { TOOLBAR_LABEL } from './styles'
 
 export type TimecodeProps = {
   time: Us
@@ -14,7 +15,7 @@ export type TimecodeProps = {
  */
 export function Timecode({ time, fps, className }: TimecodeProps) {
   return (
-    <span className={cn('text-muted text-tiny px-1 font-mono tabular-nums', className)}>
+    <span className={cn(TOOLBAR_LABEL, 'font-mono tabular-nums', className)}>
       {formatTimecode(time, fps)}
     </span>
   )

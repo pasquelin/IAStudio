@@ -11,8 +11,9 @@ import { Button } from '@/design/Button'
 import { QuietNote } from '@/design/QuietNote'
 import { Spinner } from '@/design/Spinner'
 import { ToolButton } from '@/design/ToolButton'
-import { CONTROL } from '@/design/styles'
+import { NATIVE_SELECT } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { isComposing } from '@/helpers/composition'
 import { HINT_TOP, TIP_LEFT, TIP_TOP } from '@/helpers/tooltip'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useAssistant } from '@/stores/assistant'
@@ -157,9 +158,8 @@ export function AssistantOverlay() {
     // under there. It blurs the layer BEHIND this element, so the window itself stays opaque:
     // the rule against vibrancy is about judging colours in the studio, and nothing is being
     // judged while this is up.
-    <div className="bg-scrim-deep fixed inset-0 z-50 flex justify-center p-8 backdrop-blur-sm">
+    <div className="bg-scrim-deep fixed inset-0 z-50 flex justify-center p-8 backdrop-blur-lg">
       <div
-        ref={surface}
         // Still a dialog for anyone not looking at it: Escape closes, focus goes to the field, and
         // the studio behind is out of reach. What changed is the chrome, not the behaviour.
         role="dialog"
@@ -168,7 +168,7 @@ export function AssistantOverlay() {
         // No border, no panel fill, no shadow: nothing frames it, because there is no box. The
         // room of a conversation, since the thread is what one reads here — a container the height
         // of its content put five exchanges behind a scrollbar with two thirds of the window empty.
-        className="flex h-full w-full max-w-3xl flex-col gap-3"
+        className="flex h-full w-full flex-col gap-3"
       >
         {/* No title: the window carries one for a screen reader (`aria-label` above) and nothing
             else needs telling — a conversation one just opened is not a thing to label. What is
@@ -191,8 +191,9 @@ export function AssistantOverlay() {
         {/* Centred while there is nothing to read, so the first sentence is written where the eye
             already is rather than at the foot of an empty page. */}
         <div
+          ref={surface}
           className={cn(
-            'flex min-h-0 flex-1 flex-col gap-3',
+            'mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-4 p-4',
             turns.length === 0 && 'justify-center',
           )}
         >
@@ -230,7 +231,7 @@ export function AssistantOverlay() {
           <form
             className={cn(
               'border-border bg-surface flex shrink-0 flex-col gap-2',
-              'rounded-(--radius-sc-lg) border p-2',
+              'rounded-sc-lg border p-2',
             )}
             onSubmit={event => {
               event.preventDefault()
@@ -253,11 +254,13 @@ export function AssistantOverlay() {
               // Enter still sends, as it did when this was one line: a textarea's own default would
               // have made the keyboard path to sending disappear. Shift+Enter is the new line.
               onKeyDown={event => {
-                if (event.key !== 'Enter' || event.shiftKey) return
+                // While an input method composes, Enter picks the candidate character — see
+                // `isComposing`. Sending here would cut the word being written.
+                if (event.key !== 'Enter' || event.shiftKey || isComposing(event)) return
                 event.preventDefault()
                 send()
               }}
-              className="text-text w-full resize-none border-none bg-transparent px-1 text-sm"
+              className="text-text w-full resize-none border-none bg-transparent px-1 text-base"
             />
 
             <div className="flex items-center gap-2">
@@ -267,7 +270,7 @@ export function AssistantOverlay() {
                 {...TIP_TOP(t('assistant.model'), false, t('assistant.modelHint'))}
                 value={model}
                 onChange={event => useAssistant.getState().setModel(asModel(event.target.value))}
-                className={cn(CONTROL, 'max-w-44 px-1')}
+                className={cn(NATIVE_SELECT, 'max-w-44')}
               >
                 {/* Named from the bundle, never from the union: a raw `gemini-3.5-flash` in an
                   otherwise French list is the defect this repository pays for most. */}
@@ -338,7 +341,7 @@ function Turn({ turn }: { turn: AssistantTurn }) {
           bounded because a dictated request runs long, and a bubble the width of the thread
           stops reading as one side of an exchange. */}
       <div className="flex justify-end">
-        <p className="bg-surface text-text m-0 max-w-4/5 rounded-(--radius-sc-lg) px-3 py-2 text-sm">
+        <p className="bg-surface text-text rounded-sc-lg m-0 max-w-4/5 px-3 py-2 text-base">
           {turn.said}
         </p>
       </div>
@@ -346,7 +349,7 @@ function Turn({ turn }: { turn: AssistantTurn }) {
       {/* What came back carries no bubble, and the asymmetry is the point: one side of this
           conversation is a request and the other is the studio answering for itself. Bubbles on
           both sides read as two people talking, which is not what this is. */}
-      {turn.answered !== '' && <p className="text-text m-0 text-sm">{turn.answered}</p>}
+      {turn.answered !== '' && <p className="text-text m-0 text-base">{turn.answered}</p>}
 
       {turn.steps.map((step, index) => (
         // Keyed by position: the same action can legitimately run twice in one plan, and the

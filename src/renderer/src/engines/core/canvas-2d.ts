@@ -21,7 +21,7 @@ import type { Size } from './geometry'
  * The transform is set outside that guard: it is lost with the backing store, and a display
  * change — a window dragged to another screen — moves the ratio while the pixel size stands.
  */
-export function fitToDisplay(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D): Size {
+function fitToDisplay(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D): Size {
   const ratio = window.devicePixelRatio
   const width = canvas.clientWidth
   const height = canvas.clientHeight
@@ -34,4 +34,27 @@ export function fitToDisplay(canvas: HTMLCanvasElement, context: CanvasRendering
   context.setTransform(ratio, 0, 0, ratio, 0, 0)
 
   return { width, height }
+}
+
+/**
+ * Hands `draw` a context already matched to the display, or does nothing at all.
+ *
+ * The four surfaces that paint on screen opened with the same four lines — the ref, the context,
+ * the guard, the fit. The guard is the part worth having written once: a canvas is null before
+ * the first commit and after unmount, and a context is null on a canvas already claimed by
+ * another kind — a repaint that reached either would throw inside a `ResizeObserver`, where
+ * nothing catches it.
+ *
+ * The size is passed along rather than re-read: `fitToDisplay` is what may resize the backing
+ * store, so reading `clientWidth` again after it is a second layout for an answer already held.
+ * A painter may keep that object — two hosts hold it in a ref — so it must not write into it.
+ */
+export function paintOn(
+  canvas: HTMLCanvasElement | null,
+  draw: (context: CanvasRenderingContext2D, box: Size) => void,
+): void {
+  const context = canvas?.getContext('2d')
+  if (!canvas || !context) return
+
+  draw(context, fitToDisplay(canvas, context))
 }

@@ -35,6 +35,26 @@ export default defineConfig([
     },
   },
   {
+    /**
+     * The eleven build scripts, which `pnpm lint` did not reach while they hold what the build
+     * and the legal notices run on. They are Node programs: reading `process` and writing to the
+     * console is their job, not a slip, so `no-undef` needs to be told — and `no-console` above
+     * is scoped to `.ts`/`.tsx`, which leaves them free to print, as a command-line tool must.
+     *
+     * The three are spelled out rather than pulled from a `globals` package: adding a dependency
+     * to name three identifiers costs more than the list, and the list says what these scripts
+     * actually touch.
+     */
+    files: ['scripts/**/*.{mjs,ts}'],
+    languageOptions: {
+      globals: { console: 'readonly', fetch: 'readonly', process: 'readonly' },
+    },
+    // Lifted for the one `.ts` among them, which the block above catches by extension: the rule
+    // exists because the renderer's journal belongs to the main process, and a build script has
+    // no journal to belong to — printing IS its output.
+    rules: { 'no-console': 'off' },
+  },
+  {
     files: ['src/renderer/**/*.{ts,tsx}'],
     // `configs.recommended` is still in legacy format (plugins as an array); only
     // `configs.flat.*` works in a flat config.

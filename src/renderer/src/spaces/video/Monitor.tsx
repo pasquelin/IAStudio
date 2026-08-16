@@ -10,9 +10,11 @@ import {
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
+import { MonitorFrame } from '@/design/MonitorFrame'
+import { TOOLBAR_LABEL } from '@/design/styles'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
-import { openAssetSink } from '@/engines/timeline/sink-port'
+import { createStudioSink } from '@/engines/timeline/sink-port'
 import { createSoundPort } from '@/engines/timeline/sound-port'
 import { transports } from '@/engines/timeline/playback'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
@@ -20,8 +22,12 @@ import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
+import { assetsById, useAssets } from '@/stores/assets'
 import { useBinding } from '@/stores/bindings'
 import { playbackOf, usePlayback } from '@/stores/playback'
+import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/scene-sources'
+import { useScenes } from '@/stores/scenes'
+import { useSceneViews } from '@/stores/scene-views'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2
@@ -69,9 +75,16 @@ export function Monitor({
   program = false,
 }: MonitorProps) {
   const { t } = useTranslation()
-  const pictureRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<TimelineEngine | null>(null)
+  // A ref rather than a dependency: the engine is built once per monitor, and a 3D source opened
+  // later still has to be drawn at whatever size the sequence stands at then.
+  const frameSize = useRef({
+    width: sequence.settings.width,
+    height: sequence.settings.height,
+  })
+  /** Where this monitor stands, for a redraw that no state change of its own asked for. */
+  const playhead = useRef(sequence.playhead)
   // Published rather than held: the timeline's own bar draws the same transport, and neither of
   // the two trees contains the other — see `stores/playback`.
   const playing = usePlayback(state => playbackOf(state, owner))
@@ -83,7 +96,17 @@ export function Monitor({
 
     const sound = createSoundPort()
     const created = new TimelineEngine({
-      openSink: openAssetSink,
+      // The 3D is rendered at the SEQUENCE's frame size, never the monitor's: what a montage
+      // composites has to be the same picture whichever window is looking at it.
+      openSink: createStudioSink({
+        sceneOf: montageSceneOf,
+        wantScene: loadSceneSource,
+        viewOf: montageViewOf,
+        // A Map, never an object: indexing it with brackets answers `undefined` for every asset
+        // there is, which sent every model down the media path to be written off as undecodable.
+        assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
+        size: () => frameSize.current,
+      }),
       sound,
       // The output is the master clock whenever it runs: driving sound from the frame loop
       // drifts against it audibly in under a minute, and both media then tell a different time.
@@ -108,8 +131,25 @@ export function Monitor({
 
   // The engine holds decoders and textures, never the stack: every state change is pushed in.
   useEffect(() => {
+    frameSize.current = { width: sequence.settings.width, height: sequence.settings.height }
+    playhead.current = sequence.playhead
     engine.current?.apply(sequence)
   }, [sequence])
+
+  // What makes a 3D clip LIVE: a scene edited in its own tab changes no sequence at all, so
+  // nothing above would repaint. Redrawn at the head it already stands on — a scene sink reads
+  // the document afresh on every frame, so one seek is the whole of the refresh.
+  useEffect(() => {
+    const redraw = (): void => {
+      void engine.current?.seek(playhead.current)
+    }
+    // Two stores, one reason: a scene edited in its own tab, and a camera moved in it, both
+    // change what this monitor should show while changing no sequence at all.
+    const stops = [useScenes.subscribe(redraw), useSceneViews.subscribe(redraw)]
+    return () => {
+      for (const stop of stops) stop()
+    }
+  }, [])
 
   // Published by name so the timeline strip can drive it: the space bar is pressed on a tool
   // window, and neither tree contains the other.
@@ -184,48 +224,39 @@ export function Monitor({
   ]
 
   return (
-    // No padding of its own: what separates the two monitors is the row's gutter and the handle
-    // between them, exactly as two panels are separated. A padding here would add itself to both
-    // sides of that gutter and read as a gap three times too wide.
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col items-center gap-2">
-      {/* The element that goes full screen — see `showLarge`, and `index.css` for the black it
-          takes there, which is the monitor's own token and not the panel's chassis. */}
-      <div ref={pictureRef} className="bg-chassis relative min-h-0 w-full flex-1">
-        <div ref={hostRef} className="absolute inset-0" />
-        {/* Positioned, like `TextureDocument` does over its own viewport: the canvas host is
-            absolute, so anything left in normal flow is painted under the opaque backdrop. */}
-        <div className="pointer-events-none absolute inset-0">
-          {/* Ahead of the host's own placeholder: a clip that is there and shows nothing is the
-              more precise thing to say about a black picture. */}
-          {unreadable ? (
-            <EmptyState icon={mdiAlertCircleOutline} message={t('transport.unreadable')} />
-          ) : (
-            placeholder
-          )}
-        </div>
+    <MonitorFrame
+      role={role}
+      toolbar={
+        <Toolbar
+          orientation="horizontal"
+          tools={transport}
+          activeTool={playing ? 'play' : undefined}
+          onTool={id => {
+            if (id === 'rewind') return rewind()
+            if (id === 'mirror') return showReturn()
+            return toggle()
+          }}
+          extras={
+            <>
+              <span className={TOOLBAR_LABEL}>{title}</span>
+              <Timecode time={sequence.playhead} fps={sequence.settings.fps} />
+            </>
+          }
+        />
+      }
+    >
+      <div ref={hostRef} className="absolute inset-0" />
+      {/* Positioned, like `TextureDocument` does over its own viewport: the canvas host is
+          absolute, so anything left in normal flow is painted under the opaque backdrop. */}
+      <div className="pointer-events-none absolute inset-0">
+        {/* Ahead of the host's own placeholder: a clip that is there and shows nothing is the
+            more precise thing to say about a black picture. */}
+        {unreadable ? (
+          <EmptyState icon={mdiAlertCircleOutline} message={t('transport.unreadable')} />
+        ) : (
+          placeholder
+        )}
       </div>
-
-      <Toolbar
-        orientation="horizontal"
-        tools={transport}
-        activeTool={playing ? 'play' : undefined}
-        onTool={id => {
-          if (id === 'rewind') return rewind()
-          if (id === 'mirror') return showReturn()
-          return toggle()
-        }}
-        extras={
-          <>
-            <span className="text-muted text-tiny px-1">{title}</span>
-            <Timecode time={sequence.playhead} fps={sequence.settings.fps} />
-          </>
-        }
-      />
-
-      {/* Under the transport rather than over the picture: two monitors showing the same black
-          rectangle is the one thing this space cannot explain by itself, and the answer has to
-          still be there once both are showing something. */}
-      <p className="text-muted text-tiny m-0 text-center">{role}</p>
-    </section>
+    </MonitorFrame>
   )
 }

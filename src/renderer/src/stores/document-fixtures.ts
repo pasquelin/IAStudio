@@ -1,6 +1,28 @@
 import { kindForWorkspace, type DocumentDescriptor } from '@shared/domain/document'
+import { documentFileName } from '@shared/domain/document-name'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import type { DocumentStore } from './document-store'
 import { useDocuments } from './documents'
+
+/**
+ * The whole of what an `install<X>` does: a store put back as it was built, one document in it,
+ * and a tab in front of it. Written once because the five differ only by their store and their
+ * workspace — and because the sixth document store, `audio-edits`, has no fixture of its own.
+ *
+ * The document arrives through `replace`, the door production uses to bring one in, rather than
+ * through a `setState` of its own shape: a fixture that reaches past the store's own actions is
+ * how the marks `resetForTests` clears came to outlive a case in the first place.
+ */
+export function installIn<S>(
+  store: DocumentStore<S>,
+  documentId: string,
+  state: S,
+  workspace: WorkspaceId,
+): void {
+  store.resetForTests()
+  store.use.getState().replace(documentId, state)
+  installDocument(documentId, workspace)
+}
 
 /**
  * Puts one document of a workspace in front of a panel under test. Every panel resolves its
@@ -24,7 +46,13 @@ export function installDocuments(tabs: Record<string, WorkspaceId>, activeId: st
   for (const [documentId, workspace] of Object.entries(tabs)) {
     const kind = kindForWorkspace(workspace)
     if (!kind) throw new Error(`workspace "${workspace}" has no document kind`)
-    documents[documentId] = { id: documentId, kind, workspace, title: documentId }
+    documents[documentId] = {
+      id: documentId,
+      kind,
+      workspace,
+      title: documentId,
+      fileName: documentFileName(documentId, kind),
+    }
   }
 
   useDocuments.setState({ documents, activeId })

@@ -178,6 +178,39 @@ describe('what a line is called and what mark it wears', () => {
     expect(rows.map(nameOfRow)).toEqual(['A skeleton', 'skeleton'])
   })
 
+  /**
+   * The name and nothing else, where this used to answer with the model that made it. Two things
+   * took that away: a name is derived from the PROMPT now, so it says the thing rather than the
+   * machine — and an asset can be renamed, which left it listed under its old word and
+   * unfindable by its new one, the search reading exactly this.
+   */
+  it('calls a generated asset by its name, not by the model that made it', () => {
+    const rows = mergeRows({
+      local: [
+        {
+          id: 'asset_1',
+          name: 'Pas courus dans les feuilles',
+          type: 'audio',
+          location: 'local',
+          tags: [],
+          createdAt: '2026-08-07',
+          generation: {
+            modelId: 'model_1',
+            modelLabel: 'ElevenLabs Sound Effects',
+            prompt: 'Background footsteps and rustling sounds',
+            params: {},
+          },
+        },
+      ],
+      remote: [],
+      jobs: [],
+      scope: null,
+      absent: NONE,
+    })
+
+    expect(rows.map(nameOfRow)).toEqual(['Pas courus dans les feuilles'])
+  })
+
   it('marks the two provenances the catalogue cannot answer for', () => {
     const rows = mergeRows({
       local: [],

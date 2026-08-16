@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { StrictMode, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -14,6 +14,30 @@ function Owner({ onCommit }: { onCommit: (name: string) => void }) {
   return (
     <div role="list">
       <div tabIndex={0}>
+        {editing ? (
+          <InlineRename
+            value="Summer"
+            label="Rename"
+            onCommit={name => {
+              setEditing(false)
+              onCommit(name)
+            }}
+          />
+        ) : (
+          'Summer'
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** The same wiring, in a row that can be picked up — the explorer, the shelf, the tab strip. */
+function DraggableOwner({ onCommit }: { onCommit: (name: string) => void }) {
+  const [editing, setEditing] = useState(true)
+
+  return (
+    <div role="list">
+      <div tabIndex={0} draggable data-testid="row">
         {editing ? (
           <InlineRename
             value="Summer"
@@ -63,6 +87,24 @@ describe('a name edited where it is read', () => {
   })
 
   /**
+   * Typed through an input method, Enter picks the candidate character rather than ending the
+   * name — a Japanese layer name committed on the first Enter would keep whatever syllable was
+   * on screen at the time. `fireEvent` rather than `userEvent` because the composition flag lives
+   * on the native event, which only a raw event carries.
+   */
+  it('leaves Enter to the input method while it is composing a character', () => {
+    const onCommit = vi.fn()
+    render(<Owner onCommit={onCommit} />, { wrapper: StrictMode })
+
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Rename' }), {
+      key: 'Enter',
+      isComposing: true,
+    })
+
+    expect(onCommit).not.toHaveBeenCalled()
+  })
+
+  /**
    * Why the cleanup reaches for the focus at all, and what the guard must not cost: a field torn
    * out of the tree leaves the focus on `document.body`, so the next Tab restarts from the top of
    * the window and whoever renamed at the keyboard is thrown out of the list they were editing.
@@ -73,5 +115,35 @@ describe('a name edited where it is read', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Rename' }), '{Escape}')
 
     expect(screen.getByText('Summer')).toHaveFocus()
+  })
+
+  /** A rename opens on a name about to be replaced: typing writes the new one outright. */
+  it('opens with the whole name selected', () => {
+    render(<Owner onCommit={vi.fn()} />, { wrapper: StrictMode })
+    const field = screen.getByRole<HTMLInputElement>('textbox', { name: 'Rename' })
+
+    expect([field.selectionStart, field.selectionEnd]).toEqual([0, 'Summer'.length])
+  })
+
+  /**
+   * Measured in the app on 16 August: selecting a word inside the field dragged the row instead.
+   *
+   * `draggable` on an ancestor swallows the pointer — Chromium begins a native drag as soon as it
+   * moves with a button down, and the field never sees the gesture. Correcting one letter of a
+   * name is exactly what a rename is FOR, so the row gives up its handle while it is being typed
+   * in, and takes it back when the field closes.
+   *
+   * Neither can be reached by a click in jsdom, which implements no drag at all: the attribute
+   * is what production reads, and the attribute is what this asserts.
+   */
+  it('takes the drag handle off the row it is opened in, and hands it back', async () => {
+    render(<DraggableOwner onCommit={vi.fn()} />, { wrapper: StrictMode })
+    const row = screen.getByTestId('row')
+
+    expect(row.draggable).toBe(false)
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Rename' }), '{Escape}')
+
+    expect(row.draggable).toBe(true)
   })
 })

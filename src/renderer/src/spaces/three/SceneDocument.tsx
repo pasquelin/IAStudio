@@ -11,7 +11,7 @@ import { movesToCommand } from '@/engines/scene/animation-commands'
 import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
 import { snapToFrame } from '@shared/domain/time'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
-import { setDocumentTitle } from '@/app/dockview-api'
+import { useDocumentTitle } from '@/app/useDocumentTitle'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
@@ -128,7 +128,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
   const scene = useScenes(state => sceneOf(state, documentId))
   const modified = useScenes(state => isSceneDirty(state, documentId))
-  const title = useDocuments(state => state.documents[documentId]?.title)
   const bindings = useBindingOverrides()
   const label = useShortcutLabel()
   const active = useDocuments(state => state.activeId === documentId)
@@ -139,9 +138,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   // the default scene — an unlit viewport reads as broken rather than as empty.
   useRestoredDocument(documentId)
 
-  useEffect(() => {
-    if (title) setDocumentTitle(documentId, title, modified)
-  }, [documentId, title, modified])
+  useDocumentTitle(documentId, modified)
 
   useEffect(() => {
     const element = host.current
@@ -158,6 +155,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onContextMenu: nodeId => openNodeMenu(documentId, nodeId),
       onStats: (scene, selected) => setStats({ scene, selected }),
+      // Published so a montage can look through this very view: a scene with no camera of its
+      // own has no other framing anybody chose. Once per orbit, never per frame of one.
+      onView: placement => useSceneViews.getState().setCamera(documentId, placement),
       assetVersion: assetVersionOf,
     })
 

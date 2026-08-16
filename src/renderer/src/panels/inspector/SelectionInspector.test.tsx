@@ -47,7 +47,6 @@ describe('Inspector, on what a panel selected', () => {
     useAssets.setState({ items: [asset()] })
     useJobs.setState({ jobs: [], bodies: {} })
     useDocuments.setState({ documents: {}, activeId: null })
-    useSequences.setState({ states: {}, histories: {} })
   })
 
   it('asks for a selection when there is none', () => {
@@ -175,8 +174,20 @@ describe('Inspector, on what a panel selected', () => {
     // the tab behind; describing the one in front would be silently the wrong track.
     useDocuments.setState({
       documents: {
-        'doc-1': { id: 'doc-1', kind: 'sequence', title: 'Montage', workspace: 'video' },
-        'doc-2': { id: 'doc-2', kind: 'sequence', title: 'Autre', workspace: 'video' },
+        'doc-1': {
+          id: 'doc-1',
+          kind: 'sequence',
+          title: 'Montage',
+          workspace: 'video',
+          fileName: 'Montage.seq',
+        },
+        'doc-2': {
+          id: 'doc-2',
+          kind: 'sequence',
+          title: 'Autre',
+          workspace: 'video',
+          fileName: 'Autre.seq',
+        },
       },
       activeId: 'doc-2',
     })

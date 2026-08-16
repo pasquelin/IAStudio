@@ -146,10 +146,11 @@ const FAMILY_BY_CAPABILITY: readonly { pattern: RegExp; family: ModelFamily }[] 
  * namespace, so only the platform posts it, and it is the only signal there is — a panorama
  * model answers `txt2img` like every other image model.
  *
- * The three other tagged families are settled AFTER the capabilities, and only when those
- * answered `image`. Their tags are authors' words, which land where they please: two of the
- * nine models carrying `remove-background` remove it from video, and the canvas cannot use
- * them. Trusting that tag first would file them under cutout.
+ * Every other tag is settled AFTER the capabilities, and only when those answered `image`. Those
+ * are authors' words, which land where they please: two of the nine models carrying
+ * `remove-background` remove it from video, and the canvas cannot use them. Trusting that tag
+ * first would file them under cutout. `skybox-upscale` is judged there too, with the rest of
+ * them — it is Scenario's word for one model, not a namespaced claim like `SKYBOX_TAG`.
  */
 export function familyOf(
   capabilities: readonly string[] | undefined,
@@ -164,7 +165,9 @@ export function familyOf(
   if (!matched) return 'other'
   if (matched.family !== 'image') return matched.family
 
-  // The skybox entry is unreachable here — the tag above already answered — but it is what the
-  // registry narrows a listing by, so the table carries it.
+  // `SKYBOX_TAG`'s own entry is unreachable here — the tag above already answered. Do not drop
+  // it as dead weight: it is the SECOND skybox row, and `tagOfFamily` answers nothing only for
+  // a family holding more than one. Alone, `skybox-upscale` would become the pre-filter and cut
+  // that space to the single model carrying it. `model.test.ts` is what catches the removal.
   return FAMILY_TAGS.find(entry => tags.includes(entry.tag))?.family ?? matched.family
 }

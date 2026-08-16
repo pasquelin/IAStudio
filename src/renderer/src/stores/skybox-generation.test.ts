@@ -46,7 +46,13 @@ function openBoth(): void {
   useDocuments.setState(state => ({
     documents: {
       ...state.documents,
-      'doc-2': { id: 'doc-2', kind: 'skybox', title: 'Other', workspace: 'skyboxes' },
+      'doc-2': {
+        id: 'doc-2',
+        kind: 'skybox',
+        title: 'Other',
+        workspace: 'skyboxes',
+        fileName: 'Other.sky',
+      },
     },
   }))
 }
@@ -55,7 +61,6 @@ describe('landing a generation in the sky that asked for it', () => {
   let disconnect: () => void = () => {}
 
   beforeEach(() => {
-    useSkyboxes.setState({ states: {}, histories: {} })
     useAssets.setState({ items: [] })
     useJobs.setState({ jobs: [], bodies: {} })
     catalogueHolds([panorama])

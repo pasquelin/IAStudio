@@ -215,6 +215,20 @@ describe('catalog', () => {
     expect(catalog.search({ text: 'boulder' }).map(found => found.id)).toEqual(['asset_1'])
   })
 
+  /**
+   * A renamed asset must not answer to the name it no longer has. The full-text index is an
+   * external-content fts5 table kept by three triggers, and a row written over does not fire the
+   * DELETE one unless `recursive_triggers` is on — so the old name stayed indexed under a rowid
+   * the write had just freed, and searching for it found the asset under its new name.
+   */
+  it('stops answering to the name an asset no longer has', () => {
+    catalog.add(asset({ id: 'asset_1', name: 'Mossy boulder' }))
+    catalog.add(asset({ id: 'asset_1', name: 'Rocher moussu' }))
+
+    expect(catalog.search({ text: 'boulder' })).toEqual([])
+    expect(catalog.search({ text: 'moussu' }).map(found => found.id)).toEqual(['asset_1'])
+  })
+
   it('treats a wildcard typed by the user as a literal character', () => {
     catalog.add(asset({ id: 'asset_1', name: 'Boulder' }))
     catalog.add(asset({ id: 'asset_2', name: '100%' }))

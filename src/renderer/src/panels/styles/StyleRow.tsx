@@ -6,7 +6,7 @@ import { useContextMenu } from '@/design/ContextMenu'
 import { MenuButton } from '@/design/MenuButton'
 import { Row } from '@/design/Row'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { InlineRename } from '@/panels/shared/InlineRename'
+import { InlineRename } from '@/design/InlineRename'
 import { useStyles } from '@/stores/styles'
 import { StyleMenu, StyleMenuRows, STYLE_MENU_ROWS } from './StyleMenu'
 

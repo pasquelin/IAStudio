@@ -3,6 +3,14 @@ import {
   type DocumentDescriptor,
   type DocumentKind,
 } from '@shared/domain/document'
+import {
+  checkDocumentName,
+  documentFileName,
+  DOCUMENT_NAME_FAILURES,
+  type DocumentNameFailure,
+  type NamedDocument,
+} from '@shared/domain/document-name'
+import { foldForFileName, nameFailureOf } from '@shared/domain/file-name'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
 import i18next from 'i18next'
@@ -60,13 +68,15 @@ type DocumentsState = {
   /**
    * `null` when the workspace has no editable document kind yet.
    *
-   * `of` is what opening an asset passes: the two fields travel together because a tab named
-   * after an asset it is not linked to would be a title that lies. Without it the document is
-   * numbered, which is what the rail's plus button and the home want.
+   * `of` carries the name the document is to be given, and where it came from. `sourceAssetId`
+   * travels with it when opening an asset — a tab named after an asset it is not linked to would
+   * be a title that lies — and stays out when the name was TYPED, which is what the dialog the
+   * plus button raises hands over. Without `of` the document is numbered, for a caller with
+   * nobody to ask.
    */
   create: (
     workspace: WorkspaceId,
-    of?: { title: string; sourceAssetId: string },
+    of?: { title: string; sourceAssetId?: string },
   ) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
   /**
@@ -75,6 +85,18 @@ type DocumentsState = {
    * the one the tab has been renaming, and the listing it came from is a snapshot.
    */
   adopt: (document: DocumentDescriptor) => void
+  /**
+   * Calls a document something else — on disk and on screen at once, which is the whole point:
+   * the file is named after the document, so there is only ever one name to change.
+   *
+   * The id does not move, so an OPEN document renames without its tab noticing.
+   *
+   * Answers with the refusal, or `null` when it went through. The field has closed by the time
+   * this resolves — `InlineRename` commits on blur as much as on Enter — so the answer is for
+   * the caller to JOURNAL, not to draw: `reportFailure('document.rename', …)`, which is what
+   * puts a refused name in the activity list instead of nowhere.
+   */
+  rename: (id: string, title: string) => Promise<DocumentNameFailure | null>
   close: (id: string) => void
 }
 
@@ -153,6 +175,15 @@ export const activeSequenceId = (state: DocumentsSlice): string | null =>
  */
 export const activeAudioId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'audio')
+
+/**
+ * The montage in front, whichever workspace shows it — a sequence in Video, a take's sound half
+ * in Audio. Both hold a `SequenceState` in the same store, and a surface that reads only
+ * `activeSequenceId` is blind to half of them: the inspector showed nothing at all for a clip
+ * picked in the Audio workspace, so gain, speed and fades were editable from nowhere.
+ */
+export const activeMontageId = (state: DocumentsSlice): string | null =>
+  activeSequenceId(state) ?? activeAudioId(state)
 
 /** The sky in front, as a selector. Same reason again, for the skybox panel. */
 export const activeSkyboxId = (state: DocumentsSlice): string | null =>
@@ -282,12 +313,21 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     // store neither has written to yet, and two tabs open called « Sans titre 1 ».
     const stored = of ? [] : ((await listed()) ?? [])
 
+    const title =
+      of?.title ??
+      untitledDocumentName(takenDocumentNames({ documents: get().documents, stored }), kind)
+
     const document: DocumentDescriptor = {
       id: newId(),
       kind,
       workspace,
-      title: of ? of.title : untitled(stored, get(), workspace),
-      ...(of ? { sourceAssetId: of.sourceAssetId } : {}),
+      title,
+      // Where it WOULD go, nothing having been written yet. Not a second answer disagreeing with
+      // the disk — there is no file to disagree with — and the first save answers for good: it
+      // may land on a suffixed name if the folder meanwhile took this one, and `relist` reads
+      // back what the folder actually holds.
+      fileName: documentFileName(title, kind),
+      ...(of?.sourceAssetId ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 
     // Nothing is written yet, and nothing should be: a document appears in the folder when it
@@ -304,6 +344,33 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
         : { documents: { ...state.documents, [document.id]: document } },
     ),
 
+  rename: async (id, title) => {
+    const document = get().documents[id] ?? get().stored.find(entry => entry.id === id)
+    if (!document) return 'invalid'
+
+    // Asked here as well as in the main process, and neither is the redundant one: this spares a
+    // round trip for what the window can already see, and the main process is what makes the
+    // refusal true whatever the window believed.
+    const taken = get().stored.map(entry => ({ id: entry.id, fileName: entry.fileName }))
+    const refused = checkDocumentName(title, document.kind, taken, id)
+    if (refused) return refused
+
+    const renamed = await getBridge()
+      ?.documents.rename(id, document.kind, title)
+      .catch(error => asNameFailure(error))
+    if (renamed === undefined) return 'invalid'
+    if (typeof renamed === 'string') return renamed
+
+    // Both halves, and that is the point of doing it here: `documents` is what the tab reads and
+    // `stored` is what the Explorer and the document list read, so writing one leaves the other
+    // showing the name the document has just stopped having.
+    set(state => ({
+      documents: state.documents[id] ? { ...state.documents, [id]: renamed } : state.documents,
+      stored: state.stored.map(entry => (entry.id === id ? renamed : entry)),
+    }))
+    return null
+  },
+
   close: id =>
     set(state => {
       const remaining = { ...state.documents }
@@ -311,6 +378,11 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       return { documents: remaining, activeId: state.activeId === id ? null : state.activeId }
     }),
 }))
+
+/** The four refusals travel as the error's message; anything else is not one of them. */
+function asNameFailure(error: unknown): DocumentNameFailure {
+  return nameFailureOf(error, DOCUMENT_NAME_FAILURES, 'invalid')
+}
 
 /**
  * Bumped per listing, so one that comes back late cannot install itself — and one PER QUESTION.
@@ -326,34 +398,41 @@ const generations = { relist: 0, refresh: 0 }
 let listing: Promise<DocumentDescriptor[] | null> | null = null
 
 /**
- * The next free name for a blank document — « Sans titre 3 ».
+ * Every name already spoken for — the folder's and the open tabs' alike.
  *
- * Numbered against the folder as much as against the open tabs: a document saved and then closed
- * still holds its name, and counting only what is open hands that name out twice.
+ * The FILE names, and every document's rather than the blank ones of one workspace: what makes a
+ * name unusable is that the folder already holds it, whoever holds it. The open tabs count as
+ * much as the folder, and one of them is why: a tab opened and not yet typed in writes no file,
+ * so a listing alone would hand its name straight out a second time.
  *
- * Only the BLANK ones count. A document opened for an asset carries the asset's name and skips
- * this entirely — counting it would make the first untitled document of a space « Sans titre 4 »
- * because three pictures had been opened before it.
- *
- * Synchronous, and the listing is handed in rather than read here: its caller has to write to the
- * store in the same run it reads it, and an await inside would put a gap between the two.
+ * The listing is handed in rather than read off the store: `create` has to read the store and
+ * write to it in one synchronous run, and it holds a fresher listing than the one `stored` has.
  */
-function untitled(
-  stored: readonly DocumentDescriptor[],
-  state: Pick<DocumentsState, 'documents'>,
-  workspace: WorkspaceId,
-): string {
-  const blank = (document: DocumentDescriptor): boolean =>
-    document.workspace === workspace && document.sourceAssetId === undefined
+export function takenDocumentNames(state: {
+  documents: Record<string, DocumentDescriptor>
+  stored: readonly DocumentDescriptor[]
+}): NamedDocument[] {
+  return [...state.stored, ...Object.values(state.documents)].map(({ id, fileName }) => ({
+    id,
+    fileName,
+  }))
+}
 
-  const taken = new Set([
-    ...stored.filter(blank).map(document => document.id),
-    ...documentsIn(state, workspace)
-      .filter(blank)
-      .map(document => document.id),
-  ])
+/**
+ * The next free name for a blank document — « Sans titre 3 ». What the studio proposes when it
+ * makes one, and what the naming dialog opens on.
+ *
+ * Only the BLANK ones are numbered. A document opened for an asset carries the asset's name and
+ * never collides with « Sans titre N », so nothing needs skipping for it.
+ */
+export function untitledDocumentName(taken: readonly NamedDocument[], kind: DocumentKind): string {
+  const names = new Set(taken.map(document => foldForFileName(document.fileName)))
 
-  return i18next.t('documents.untitled', { n: taken.size + 1 })
+  // Ends on the first free one, and there are only ever as many taken as the folder holds.
+  for (let n = 1; ; n += 1) {
+    const title = i18next.t('documents.untitled', { n })
+    if (!names.has(foldForFileName(documentFileName(title, kind)))) return title
+  }
 }
 
 /**

@@ -35,8 +35,17 @@ export const CLIP_EDGES: readonly ClipEdge[] = ['in', 'out']
 
 export type Clip = {
   id: string
-  /** Resolved against the project catalogue, never against a file path. */
+  /**
+   * Resolved against the project catalogue, never against a file path. Empty for a clip whose
+   * picture is a scene: a document is not a catalogue row, and `sceneId` names it instead.
+   */
   assetId: string
+  /**
+   * The scene document this clip draws, rendered as the head passes over it rather than read
+   * from a file. That is what makes an edit to the scene show up in the montage at once — the
+   * whole point of a live clip, and what a rendered film can never do.
+   */
+  sceneId?: string
   start: Us
   duration: Us
   /** Entry point inside the source media. */
@@ -230,6 +239,28 @@ export function clipEnd(clip: Clip): Us {
   return clip.start + clip.duration
 }
 
+/**
+ * What tells a scene source from a catalogue one, in the single string the decoder pool keys on.
+ *
+ * Spelled into the key rather than looked up: the pool opens a source ONCE and keeps it, so the
+ * kind has to be known at that moment — a scene whose document is still being read off disk
+ * would otherwise be opened as a media file and written off as undecodable for good.
+ */
+export const SCENE_SOURCE_PREFIX = 'scene:'
+
+/**
+ * What a clip draws from, as one key. The decoder pool holds one sink per source, and a scene
+ * and an asset must never collide in it — they are two different things to open.
+ */
+export function clipSource(clip: Clip): string {
+  return clip.sceneId ? `${SCENE_SOURCE_PREFIX}${clip.sceneId}` : clip.assetId
+}
+
+/** The document a source names, or `null` when it names a catalogue asset instead. */
+export function sceneIdOfSource(source: string): string | null {
+  return source.startsWith(SCENE_SOURCE_PREFIX) ? source.slice(SCENE_SOURCE_PREFIX.length) : null
+}
+
 /** Timeline time → time inside the source, through the in point and the speed. */
 export function sourceTimeAt(clip: Clip, time: Us): Us {
   return clip.inPoint + Math.round((time - clip.start) * clip.speed)
@@ -288,6 +319,15 @@ export function trackById(state: SequenceState, id: string): Track | null {
 export function editableTrack(state: SequenceState, id: string): Track | null {
   const track = trackById(state, id)
   return track && !track.locked ? track : null
+}
+
+/**
+ * Whether the montage holds a row of this kind — the question two callers were each answering
+ * for themselves: what a drop may open a row for, and whether a pair of halves can exist here
+ * at all. It belongs to the state, not to the inserter nor to the painter.
+ */
+export function hasTrackOfKind(state: SequenceState, kind: TrackKind): boolean {
+  return state.tracks.some(track => track.kind === kind)
 }
 
 export function trackOfClip(state: SequenceState, clipId: string): Track | null {
@@ -421,9 +461,11 @@ function readClip(raw: unknown): Clip | null {
 
   const id = readString(raw, 'id', '')
   const assetId = readString(raw, 'assetId', '')
+  const sceneId = readString(raw, 'sceneId', '')
   const duration = readNumber(raw, 'duration', 0)
-  // A clip with no identity, no source or no length cannot be drawn, selected or played.
-  if (!id || !assetId || duration <= 0) return null
+  // A clip with no identity, no source or no length cannot be drawn, selected or played. Either
+  // source will do: a scene clip carries no asset, and an asset clip carries no scene.
+  if (!id || (!assetId && !sceneId) || duration <= 0) return null
 
   const linkId = readString(raw, 'linkId', '')
 
@@ -432,6 +474,8 @@ function readClip(raw: unknown): Clip | null {
       id,
       assetId,
       duration,
+      // Absent rather than empty, exactly as `linkId` is: `isSceneClip` reads its presence.
+      ...(sceneId ? { sceneId } : {}),
       // Absent rather than empty: `linkedClipIds` reads its presence, and an empty string would
       // tie together every clip a file was written without one.
       ...(linkId ? { linkId } : {}),

@@ -49,6 +49,7 @@ export type CommandId =
   | 'scene.undo'
   | 'scene.redo'
   | 'sequence.playPause'
+  | 'sequence.export'
   | 'sequence.mirror'
   | 'sequence.split'
   | 'sequence.delete'
@@ -428,6 +429,17 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sequencePlayPause.title',
     helpKey: 'commands.sequencePlayPause.help',
     defaultBinding: 'Space',
+  }),
+  command({
+    id: 'sequence.export',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExport.title',
+    helpKey: 'commands.sequenceExport.help',
+    // NOT ⌘M, which Premiere uses and macOS has already spoken for: `roleItem('minimize')` puts
+    // it on the Window menu, and two menu rows carrying one accelerator is a key nobody owns.
+    // Shift+⌘E is taken too, so this ships without one until someone chooses it — legitimate,
+    // and better than a row that quietly steals Minimise.
+    defaultBinding: null,
   }),
   // The program monitor alone answers it: `Monitor` arms the sequence scope on the one that
   // holds the playback token, so the key opens a return on the EDIT, never on the take.

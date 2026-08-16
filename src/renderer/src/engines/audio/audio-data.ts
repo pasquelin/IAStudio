@@ -116,6 +116,44 @@ export function normalize(data: AudioData, targetLufs = DEFAULT_TARGET_LUFS): Au
   return applyGain(data, targetLufs - level)
 }
 
+/**
+ * Decoded samples folded into the min/max pairs a strip draws from — the same shape, and the
+ * same cadence, as the file ffmpeg writes at ingest.
+ *
+ * Written here so a montage can draw a take the ingest never derived one for: an asset that came
+ * down from the API before ffmpeg was available, or a build with no ffmpeg to reach at all. The
+ * browser decodes the file either way — that is how the take editor draws its own waveform — so
+ * the pairs are one walk over samples already in memory rather than a second decode.
+ *
+ * Channels are folded together, because what a clip draws is what the output sums.
+ */
+export function peaksFromSamples(data: AudioData, perSecond: number): Float32Array {
+  const total = frameCount(data)
+  const width = Math.max(1, Math.round(data.sampleRate / perSecond))
+  const buckets = Math.ceil(total / width)
+  const peaks = new Float32Array(buckets * 2)
+
+  for (let bucket = 0; bucket < buckets; bucket++) {
+    const from = bucket * width
+    const to = Math.min(total, from + width)
+
+    let min = 0
+    let max = 0
+    for (const channel of data.channels) {
+      for (let frame = from; frame < to; frame++) {
+        const sample = channel[frame] ?? 0
+        if (sample < min) min = sample
+        if (sample > max) max = sample
+      }
+    }
+
+    peaks[bucket * 2] = min
+    peaks[bucket * 2 + 1] = max
+  }
+
+  return peaks
+}
+
 export type SilenceRange = { from: Us; to: Us }
 
 /** Anything below this is silence, unless the caller says otherwise. */
@@ -152,15 +190,23 @@ export function edgeSilences(
   return ranges
 }
 
-/** The take with its leading and trailing silence gone. */
-export function trimSilence(
+/**
+ * What is left of a take once its leading and trailing silence is dropped — the bounds, not the
+ * samples.
+ *
+ * Bounds rather than a cropped take, because two callers need two different things from the same
+ * decision: the chain wants the samples, and the montage clip under it wants where they came
+ * from in the source. Deriving one from the other twice is how the two come to disagree.
+ */
+export function silentBounds(
   data: AudioData,
   thresholdDb = DEFAULT_SILENCE_DB,
   minLength: Us = DEFAULT_MIN_SILENCE,
-): AudioData {
+): { head: Us; tail: Us } {
   const silences = edgeSilences(data, thresholdDb, minLength)
-  const head = silences.find(range => range.from === 0)?.to ?? 0
-  const tail = silences.find(range => range.from > 0)?.from ?? durationOf(data)
 
-  return head === 0 && tail === durationOf(data) ? data : crop(data, head, tail)
+  return {
+    head: silences.find(range => range.from === 0)?.to ?? 0,
+    tail: silences.find(range => range.from > 0)?.from ?? durationOf(data),
+  }
 }

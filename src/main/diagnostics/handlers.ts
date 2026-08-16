@@ -15,6 +15,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'scene.texture': 'document',
   'scene.export': 'document',
   'scene.render': 'document',
+  // With the document, as every other export is: it writes outside the project, and what its
+  // failure says something about is the sequence that was open.
+  'sequence.export': 'document',
   'texture.map': 'document',
   'texture.channel': 'document',
   'texture.seam': 'document',
@@ -36,7 +39,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'document.save': 'document',
   'document.close': 'document',
   'document.delete': 'document',
+  'document.rename': 'document',
   'assets.reveal': 'library',
+  'assets.rename': 'library',
   // An asset with nowhere to go is read with the shelf it was double-clicked in, not with the
   // document that refused it — there is none, and that is exactly what the line says.
   'assets.open': 'library',

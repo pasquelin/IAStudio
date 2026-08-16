@@ -21,7 +21,22 @@ vi.mock('@/app/dockview-api', () => ({
 const openAsset = vi.hoisted(() => vi.fn<(asset: Asset) => Promise<void>>(() => Promise.resolve()))
 vi.mock('@/helpers/open-asset', () => ({ openAsset }))
 
-const scene: DocumentDescriptor = { id: 'a3f1', kind: 'scene', title: 'Niveau', workspace: '3d' }
+const scene: DocumentDescriptor = {
+  id: 'a3f1',
+  kind: 'scene',
+  title: 'Niveau',
+  workspace: '3d',
+  fileName: 'a3f1.scene',
+}
+
+/** Written as a folder — `FOLDER_KINDS` — which is what the folder reader sees of it. */
+const picture: DocumentDescriptor = {
+  id: 'a3f1',
+  kind: 'image',
+  title: 'Planche',
+  workspace: 'image',
+  fileName: 'a3f1.img',
+}
 
 const folder = (name: string, at = ''): FolderEntry => ({
   path: at === '' ? name : `${at}/${name}`,
@@ -64,6 +79,12 @@ function install(
   const renameFile = vi.fn(() => Promise.resolve(true))
   const moveFile = vi.fn(() => Promise.resolve(true))
   const trashFile = vi.fn(() => Promise.resolve(true))
+  // What renaming an asset goes through: its file moves with its name, so the catalogue's
+  // channel carries both — never `project.renameFile`, which refuses everything under `assets/`.
+  const update = vi.fn((assetId: string) => {
+    const held = catalogued.find(asset => asset.id === assetId)
+    return held ? Promise.resolve(held) : Promise.reject(new Error('asset-not-found'))
+  })
   installFakeBridge({
     project: { listFolder, openFile, revealFile, renameFile, moveFile, trashFile },
     documents: { list: () => Promise.resolve(documents) },
@@ -71,9 +92,10 @@ function install(
     assets: {
       search: (query: AssetQuery) =>
         Promise.resolve(catalogued.filter(asset => asset.path === query.path)),
+      update,
     },
   })
-  return { listFolder, openFile, revealFile, renameFile, moveFile, trashFile }
+  return { listFolder, openFile, revealFile, renameFile, moveFile, trashFile, update }
 }
 
 /** A gauge the stylesheet would apply, which jsdom does not. Dropped after every case. */
@@ -236,7 +258,7 @@ describe('the project explorer', () => {
       declareGauge('--sc-row-stacked', '32px')
 
       render(<Explorer />)
-      await screen.findByText('a3f1.scene')
+      await screen.findByText('Niveau')
 
       const row = screen.getByRole('treeitem').closest('li')
       expect(row).toHaveStyle({ height: '24px' })
@@ -323,9 +345,26 @@ describe('the project explorer', () => {
 
       render(<Explorer />)
       await userEvent.dblClick(await screen.findByText('documents'))
-      await userEvent.dblClick(await screen.findByText('a3f1.scene'))
+      await userEvent.dblClick(await screen.findByText('Niveau'))
 
       expect(openDocument).toHaveBeenCalledWith(scene)
+    })
+
+    /**
+     * An image document IS a directory — `<id>.img/` holding its manifest and its parts — and
+     * the folder reader can only see the directory. Taken for an ordinary folder, it folded
+     * open on the studio's own files instead of opening, wore a folder glyph where every other
+     * document wears its space, and could be renamed while a tab held it.
+     */
+    it('opens an image document rather than folding it open', async () => {
+      withProject()
+      install({ '': [folder('a3f1.img')] }, [picture])
+
+      render(<Explorer />)
+      await userEvent.dblClick(await screen.findByText('Planche'))
+
+      expect(openDocument).toHaveBeenCalledWith(picture)
+      expect(screen.getByRole('treeitem')).not.toHaveAttribute('aria-expanded')
     })
 
     // A folder the user owns can hold anything, and the studio has no business refusing a
@@ -458,12 +497,14 @@ describe('the project explorer', () => {
       install({ '': [file('a3f1.scene'), file('other.scene')] }, [scene])
 
       render(<Explorer />)
-      await screen.findByText('a3f1.scene')
+      await screen.findByText('Niveau')
 
       const marked = (name: string): Element | null | undefined =>
         screen.getByText(name).closest('[role="treeitem"]')?.querySelector('.text-accent-ink')
 
-      expect(marked('a3f1.scene')).toBeInTheDocument()
+      // `Niveau` is the document's name; `other.scene` is a file no descriptor came back for,
+      // so it keeps the name the folder gives it.
+      expect(marked('Niveau')).toBeInTheDocument()
       expect(marked('other.scene')).not.toBeInTheDocument()
     })
   })
@@ -653,27 +694,124 @@ describe('the explorer menu', () => {
     expect(menu.offers('Afficher dans le dossier')).toBe(true)
   })
 
-  // A document's file name IS its identifier: renaming one a tab is holding orphans that tab,
-  // and the next save writes the old name back beside the new file.
-  it('refuses to rename a document a tab is holding', async () => {
+  /**
+   * The one gesture the old identity forbade: a document's file name WAS its id, so renaming an
+   * open one orphaned its tab and the next save wrote the old name back beside the new file. The
+   * id lives in the envelope now and stays put, so a tab can hold a document being renamed.
+   */
+  it('renames a document a tab is holding', async () => {
     withProject()
     useDocuments.setState({ documents: { a3f1: scene } })
     install({ '': [file('a3f1.scene')] }, [scene])
 
     render(<Explorer />)
-    await open('a3f1.scene')
-
-    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
-  })
-
-  it('renames a document no tab is holding', async () => {
-    withProject()
-    install({ '': [file('a3f1.scene')] }, [scene])
-
-    render(<Explorer />)
-    await open('a3f1.scene')
+    await open('Niveau')
 
     await waitFor(() => expect(menu.offers('Renommer')).toBe(true))
+  })
+
+  it('renames a document through its own channel, never as a plain file', async () => {
+    withProject()
+    const { renameFile } = install({ '': [file('a3f1.scene')] }, [scene])
+    const rename = vi.fn(() => Promise.resolve({ ...scene, title: 'Décor' }))
+    installFakeBridge({
+      project: { listFolder: () => Promise.resolve([file('a3f1.scene')]) },
+      documents: { list: () => Promise.resolve([scene]), rename },
+      menu: menu.bridge,
+    })
+    menu.picks('Renommer')
+
+    render(<Explorer />)
+    await open('Niveau')
+    const field = await screen.findByRole('textbox', { name: 'Nom du document' })
+    await userEvent.clear(field)
+    await userEvent.type(field, 'Décor{Enter}')
+
+    expect(rename).toHaveBeenCalledWith('a3f1', 'scene', 'Décor')
+    expect(renameFile).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The complaint this answers, and the whole of the change behind it: the explorer showed
+   * `asset_40f76c36-8ad4-….png` where the shelf showed « je veux un model avec son skeleton »,
+   * and « Renommer » was greyed out on both. One name now stands for the row and its file, so
+   * the gesture exists — through the catalogue's channel, never as a plain file, which the main
+   * process refuses under `assets/`.
+   */
+  it('renames an asset through the catalogue, never as a plain file', async () => {
+    withProject()
+    const boulder: Asset = {
+      id: 'asset_1',
+      name: 'Boulder',
+      type: 'image',
+      location: 'local',
+      path: 'assets/Boulder.png',
+      tags: [],
+      createdAt: '2026-08-16T10:00:00.000Z',
+    }
+    const { renameFile, update } = install(
+      { '': [folder('assets')], assets: [file('Boulder.png', 'assets')] },
+      [],
+      [boulder],
+    )
+    menu.picks('Renommer')
+
+    render(<Explorer />)
+    await userEvent.dblClick(await screen.findByText('assets'))
+    await open('Boulder.png')
+    const field = await screen.findByRole('textbox', { name: 'Nom du document' })
+    await userEvent.clear(field)
+    await userEvent.type(field, 'Ruelle bleue.png{Enter}')
+
+    // The stem, without the extension the panel draws: the suffix follows the bytes, and a name
+    // carrying one would grow a second on the next rename — `Ruelle.png.png`.
+    await waitFor(() => expect(update).toHaveBeenCalledWith('asset_1', { name: 'Ruelle bleue' }))
+    expect(renameFile).not.toHaveBeenCalled()
+  })
+
+  /** Greyed for years, on a refusal that was about the channel rather than about the gesture. */
+  it('offers the gesture on a file the catalogue holds', async () => {
+    withProject()
+    install(
+      { '': [folder('assets')], assets: [file('Boulder.png', 'assets')] },
+      [],
+      [
+        {
+          id: 'asset_1',
+          name: 'Boulder',
+          type: 'image',
+          location: 'local',
+          path: 'assets/Boulder.png',
+          tags: [],
+          createdAt: '2026-08-16T10:00:00.000Z',
+        },
+      ],
+    )
+
+    render(<Explorer />)
+    await userEvent.dblClick(await screen.findByText('assets'))
+    await open('Boulder.png')
+
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(true))
+  })
+
+  /**
+   * A picture the user dropped into `assets/` themselves is no row of ours: `renameFile` refuses
+   * everything under there, and no other channel claims it. Offering the gesture opened a field
+   * that closed on a failure only the journal mentioned — worse than the grey it replaced, which
+   * is why the catalogue is asked BEFORE the menu is drawn.
+   */
+  it('greys it out for a file under assets the catalogue never heard of', async () => {
+    withProject()
+    install({ '': [folder('assets')], assets: [file('dropped.png', 'assets')] })
+
+    render(<Explorer />)
+    await userEvent.dblClick(await screen.findByText('assets'))
+    await open('dropped.png')
+
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
+    // Not a refusal of the row itself: showing it in the folder is what still works.
+    expect(menu.offers('Afficher dans le dossier')).toBe(true)
   })
 
   it('renames where the name is read', async () => {
@@ -683,7 +821,7 @@ describe('the explorer menu', () => {
 
     render(<Explorer />)
     await open('brief.pdf')
-    const field = await screen.findByRole('textbox', { name: 'Renommer' })
+    const field = await screen.findByRole('textbox', { name: 'Nom du document' })
     await userEvent.clear(field)
     await userEvent.type(field, 'note.pdf{Enter}')
 
@@ -699,9 +837,27 @@ describe('the explorer menu', () => {
 
     render(<Explorer />)
     await open('brief.pdf')
-    await screen.findByRole('textbox', { name: 'Renommer' })
+    await screen.findByRole('textbox', { name: 'Nom du document' })
     await userEvent.keyboard('{Escape}')
 
     expect(renameFile).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Selecting a word in the field is a double-click, and the row underneath read it as "open
+   * me": the document opened mid-rename, which greyed "Rename" out — the gesture cancelled
+   * itself, and it looked like the field had simply refused to work.
+   */
+  it('leaves the row alone while its name is being typed in', async () => {
+    withProject()
+    install({ '': [file('a3f1.scene')] }, [scene])
+    menu.picks('Renommer')
+
+    render(<Explorer />)
+    await open('Niveau')
+    const field = await screen.findByRole('textbox', { name: 'Nom du document' })
+    await userEvent.dblClick(field)
+
+    expect(openDocument).not.toHaveBeenCalled()
   })
 })

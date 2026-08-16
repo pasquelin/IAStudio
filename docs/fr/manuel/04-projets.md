@@ -219,16 +219,23 @@ déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et l
 > d’un onglet, retire le fichier du dossier sans passer par la corbeille. Son dialogue annonce
 > « Cette action est irréversible », et c’est exact.
 
-**Deux refus, et ils sont grisés plutôt que cachés.** Les dossiers que le studio crée lui-même —
-`assets/`, ses six sous-dossiers par type, `documents/`, `.index/` et les siens — ne se renomment
-ni ne se jettent : l’index range chaque asset par son chemin sous
-`assets/`, et déplacer ce dossier laisserait des lignes que plus rien ne retrouve. **Le même
-refus vaut des deux côtés du glisser** : ces dossiers ne se prennent pas, et rien ne s’y dépose
-non plus — un fichier qui y atterrirait serait un fichier dont aucune ligne d’index ne parle. Et
-**un
-document qu’un onglet tient ouvert ne se renomme pas** : le nom de son fichier est son
-identifiant, l’onglet perdrait le lien, et le prochain `⌘S` réécrirait l’ancien nom à côté du
-nouveau. Fermez l’onglet d’abord.
+**Un refus, et il est grisé plutôt que caché.** Ce que le studio range lui-même — `assets/`, ses
+six sous-dossiers par type, `documents/`, `.index/` — ne se renomme ni ne se jette : l’index range
+chaque asset par son chemin sous `assets/`, et renommer un de ces dossiers laisserait des lignes
+que plus rien ne retrouve. **Le même refus vaut des deux côtés du glisser** : ces dossiers ne se
+prennent pas, et rien ne s’y dépose non plus — un fichier qui y atterrirait serait un fichier dont
+aucune ligne d’index ne parle.
+
+**Leur contenu, lui, se renomme.** Un asset et un document ont chacun leur propre geste, et
+l’Explorateur y mène : le nom change, et le fichier suit dans le même mouvement. Un document
+renommé ici garde son onglet ouvert, qui prend le nouveau nom. Un asset renommé ici change de nom
+partout à la fois — l’Explorateur, l’étagère, l’Inspecteur, l’onglet qui l’édite — parce qu’il
+n’y a **qu’un seul nom** : celui de sa ligne d’index EST celui de son fichier.
+
+> Un nom que votre système de fichiers n’accepterait pas est refusé plutôt que corrigé en
+> silence — une barre oblique, par exemple. Un nom que le dossier tient déjà l’est aussi, plutôt
+> que d’écraser le fichier de quelqu’un d’autre. Le champ s’est refermé quand la réponse arrive :
+> c’est le journal d’activité qui le dit.
 
 - les documents déjà à l’écran sont marqués **Ouvert** ;
 - l’icône d’un document dit de quel espace il relève, la même que dans le rail ;
@@ -285,7 +292,7 @@ qu’ils décrivent une position à l’intérieur du dossier, pas un emplacemen
 > fichiers-là, les liens se cassent.
 >
 > **Rien ne vous le dira tant que vous n’aurez pas cliqué.** L’inspecteur ne montre pas « Fichier
-> introuvable » de lui-même : il propose le bouton **Afficher dans le gestionnaire de fichiers**, et
+> introuvable » de lui-même : il propose le bouton **Afficher dans le dossier**, et
 > c’est le clic qui, ne trouvant rien, fait apparaître le message. Voir
 > [Les assets](07-assets.md).
 

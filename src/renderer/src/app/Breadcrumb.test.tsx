@@ -33,7 +33,13 @@ describe('Breadcrumb', () => {
     useDocuments.setState({
       activeId: 'doc-1',
       documents: {
-        'doc-1': { id: 'doc-1', kind: 'sequence', title: 'Sans titre 1', workspace: 'video' },
+        'doc-1': {
+          id: 'doc-1',
+          kind: 'sequence',
+          title: 'Sans titre 1',
+          workspace: 'video',
+          fileName: 'Sans titre 1.seq',
+        },
       },
     })
     render(<Breadcrumb />)

@@ -1,12 +1,15 @@
-import { memo } from 'react'
-import type { AssetBadge as BadgeName } from '@shared/domain/asset'
+import { memo, type ReactNode } from 'react'
+import { assetUrl, posterUrl, type AssetBadge as BadgeName } from '@shared/domain/asset'
+import { cloudPreviewUrl } from '@shared/domain/cloud-asset'
 import { AssetBadge } from '@/design/AssetBadge'
+import { InlineRename } from '@/design/InlineRename'
 import { Row } from '@/design/Row'
-import { ROW_QUIET } from '@/design/styles'
+import { ROW_QUIET, FIELD_THUMBNAIL } from '@/design/styles'
+import { Thumbnail } from '@/design/Thumbnail'
 import { cn } from '@/helpers/cn'
 import { DraggableAsset } from './DraggableAsset'
 import { LibraryAsset } from './LibraryAsset'
-import { nameOfRow, type AssetRowModel } from './rows'
+import { nameOfRow, type AssetRenameHandle, type AssetRowModel } from './rows'
 
 export type AssetRowProps = {
   row: AssetRowModel
@@ -16,6 +19,8 @@ export type AssetRowProps = {
   badgeLabels: Map<BadgeName, string>
   /** Built once by the panel — see `AssetCardProps.hints`. */
   hints: { fetch: Record<string, string>; generating: Record<string, string> }
+  /** Renaming, when this row is the one being renamed. */
+  rename?: AssetRenameHandle
 }
 
 // The type ends the line rather than sitting under the name: a subtitle would stack two lines
@@ -26,9 +31,25 @@ export const AssetRow = memo(function AssetRow({
   badge,
   badgeLabels,
   hints,
+  rename,
 }: AssetRowProps) {
-  const line = (
+  const thumbnailUrl =
+    row.from === 'local'
+      ? (posterUrl(row.asset) ?? assetUrl(row.asset.id))
+      : row.from === 'remote'
+        ? cloudPreviewUrl(row.asset, 40)
+        : undefined
+
+  const thumbnail: ReactNode = thumbnailUrl ? (
+    <Thumbnail url={thumbnailUrl} className={FIELD_THUMBNAIL} />
+  ) : null
+
+  // The row becomes the field, as the explorer's and the document list's do.
+  const line = rename?.open ? (
+    <InlineRename value={nameOfRow(row)} label={rename.label} onCommit={rename.commit} />
+  ) : (
     <Row
+      media={thumbnail}
       title={nameOfRow(row)}
       actions={
         <span className="flex shrink-0 items-center gap-2">
@@ -54,7 +75,11 @@ export const AssetRow = memo(function AssetRow({
 
   // `h-full` on the wrapper: `Row` sizes itself against its parent, which is this div.
   return (
-    <DraggableAsset asset={row.asset} className="h-full">
+    <DraggableAsset
+      asset={row.asset}
+      className="h-full"
+      {...(rename ? { onRename: rename.start } : {})}
+    >
       {line}
     </DraggableAsset>
   )

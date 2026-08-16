@@ -3,21 +3,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { ResizeHandle } from '@/design/ResizeHandle'
-import { programOwner } from '@/engines/timeline/playback'
+import { programOwner, sourceOwner } from '@/engines/timeline/playback'
 import {
   EMPTY_SEQUENCE,
+  frameDuration,
   makeTrack,
   trackOfClip,
   type SequenceState,
   type Us,
 } from '@/engines/timeline/timeline-state'
+import { clamp } from '@shared/numeric'
 import { useDocuments } from '@/stores/documents'
 import { playbackOf, usePlayback } from '@/stores/playback'
-import { fitSplit } from '@/stores/tools'
 import { mirrorMessageOf, openMirrorChannel } from './mirror-channel'
-import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
+import { useDocumentTitle } from '@/app/useDocumentTitle'
+import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
+import { useSplitPair } from '@/hooks/useSplitPair'
 
 export type SequenceDocumentProps = { documentId: string }
 
@@ -29,33 +32,18 @@ export type SequenceDocumentProps = { documentId: string }
 export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const { t } = useTranslation()
   const sequence = useSequences(state => sequenceOf(state, documentId))
-  const [sourceTime, setSourceTime] = useState<Us>(0)
   // Dockview keeps hidden tabs mounted: without this every open sequence would answer the
   // space bar at once, and the playback token would arbitrate a fight nobody started.
   const active = useDocuments(state => state.activeId === documentId)
 
+  useDocumentTitle(
+    documentId,
+    useSequences(state => isSequenceDirty(state, documentId)),
+  )
+
   useRestoredDocument(documentId)
 
-  const rowRef = useRef<HTMLDivElement>(null)
-  /** Null until the divider is dragged: the two monitors share the row equally before that. */
-  const [sourceWidth, setSourceWidth] = useState<number | null>(null)
-  /** The row's own width, so the handle starts a drag from where the divider actually is. */
-  const [available, setAvailable] = useState(0)
-
-  // The row changes width without any drag — the window, a panel, the timeline being opened. A
-  // width kept in pixels through that either overflows the row or leaves the program nothing, so
-  // it is re-clamped the way the shell re-clamps its zones after a window resize.
-  useEffect(() => {
-    const row = rowRef.current
-    if (!row) return
-
-    const observer = new ResizeObserver(() => {
-      setAvailable(row.clientWidth)
-      setSourceWidth(current => (current === null ? null : fitSplit(current, row.clientWidth)))
-    })
-    observer.observe(row)
-    return () => observer.disconnect()
-  }, [])
+  const { pairRef, leadStyle, leadSize, onLeadSize } = useSplitPair('horizontal')
 
   /**
    * What the video return shows, published from the tab in FRONT only. Two open sequences would
@@ -126,6 +114,78 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const holder = sequence.selectedId ? trackOfClip(sequence, sequence.selectedId) : null
   const selected = holder?.clips.find(clip => clip.id === sequence.selectedId) ?? null
 
+  const owner = sourceOwner(documentId)
+  const sourcePlaying = usePlayback(state => playbackOf(state, owner))
+
+  /**
+   * Which of the two monitors the space bar drives — taken by clicking one, and the programme
+   * until somebody does.
+   *
+   * The programme by default because that is what a montage is FOR: a space bar pressed with
+   * nothing aimed at plays the edit, never the take. Only one of them is ever armed, so the key
+   * cannot start both — and neither can anything else, `playbackToken` revoking whoever held it.
+   *
+   * It shows without being drawn: a monitor advertises the key on its play button only while it
+   * is the one listening (`shortcut` in `Monitor`), so the armed one says so and the other does
+   * not claim a key that would go elsewhere.
+   */
+  const [focus, setFocus] = useState<'source' | 'program'>('program')
+
+  /**
+   * Where the montage's head falls INSIDE the selected clip, which is what following it comes to.
+   *
+   * Clamped to the clip: the head is often outside it, and the take has no frame to show for a
+   * moment it does not span. A frame short of the end, since a clip spans up to but not
+   * including it — landing exactly on the end shows nothing at all.
+   */
+  const followedTime: Us = useMemo(() => {
+    if (!selected) return 0
+    const last = Math.max(0, selected.duration - frameDuration(sequence.settings))
+    return clamp(sequence.playhead - selected.start, 0, last)
+  }, [selected, sequence.playhead, sequence.settings])
+
+  /**
+   * Where the source monitor stands. One state, written by the two things that move it: its own
+   * transport, through `onTime` below, and the montage's head through the adjustment underneath.
+   */
+  const [sourceTime, setSourceTime] = useState<Us>(followedTime)
+  /**
+   * The head and the take this has ALREADY been moved for, which is what keeps the two writers
+   * from fighting: following applies once per montage move rather than on every render, so a
+   * position the monitor itself reported — rewinding to zero — holds until the head moves again.
+   * Recomputing it unconditionally instead put the take straight back onto the montage, and the
+   * source monitor's rewind button did nothing whatever.
+   */
+  const [followed, setFollowed] = useState({
+    head: sequence.playhead,
+    clipId: selected?.id ?? null,
+  })
+
+  /**
+   * The source follows the montage's own head, offset into the clip — which is what makes it a
+   * way to SEE the clip you picked even when a track above covers it, rather than a picture of
+   * its first frame and nothing else.
+   *
+   * While NEITHER of them is playing, and that is the whole of the rule.
+   *
+   * Not while the source plays, because pressing play there runs the whole take from where it
+   * stands and recentring it every frame would fight its own transport. And not while the
+   * PROGRAMME plays either: the head then moves sixty times a second, so following it would
+   * animate both pictures at once — two decodes, and for a scene clip two whole 3D renders per
+   * frame, to show twice what one monitor is already showing. Following is for scrubbing.
+   *
+   * It catches up the moment playback stops, the head having moved meanwhile.
+   *
+   * Adjusted during the render rather than from an effect, which React runs only after painting
+   * the frame the take had not moved to yet.
+   */
+  const clipId = selected?.id ?? null
+  const playing = sourcePlaying || running
+  if (!playing && (followed.head !== sequence.playhead || followed.clipId !== clipId)) {
+    setFollowed({ head: sequence.playhead, clipId })
+    setSourceTime(followedTime)
+  }
+
   // The source monitor plays one clip, which is a sequence of one — same engine, same painter.
   const source: SequenceState = useMemo(
     () => ({
@@ -168,19 +228,17 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   return (
     // The inset belongs to the ROW, not to each monitor: carried by both, it doubled around the
     // handle and the pair read as two panes pushed apart rather than as two panels side by side.
-    <div ref={rowRef} className="flex h-full min-h-0 p-(--sc-gutter)">
+    <div ref={pairRef} className="flex h-full min-h-0 p-(--sc-gutter)">
       {/* Fixed width once it has been dragged, an equal share until then: a document opens on two
           monitors of the same size, and only a gesture makes one of them the wide one. */}
-      <div
-        className="flex min-w-0"
-        style={sourceWidth === null ? { flex: 1 } : { width: sourceWidth, flexShrink: 0 }}
-      >
+      <div className="flex min-w-0" style={leadStyle} onPointerDown={() => setFocus('source')}>
         <Monitor
-          owner={`${documentId}:source`}
+          owner={owner}
           title={t('transport.source')}
           role={t('transport.sourceRole')}
           sequence={source}
           onTime={setSourceTime}
+          keyboard={active && focus === 'source'}
           placeholder={
             selected ? null : <EmptyState icon={mdiVideoOutline} message={t('transport.noClip')} />
           }
@@ -189,20 +247,16 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
 
       {/* The same handle the shell splits its zones with, so the gesture is the one gesture. It
           replaces a `Separator`, which drew the line and refused to be moved. */}
-      <ResizeHandle
-        axis="horizontal"
-        size={sourceWidth ?? available / 2}
-        onSize={(size, room) => setSourceWidth(fitSplit(size, room))}
-      />
+      <ResizeHandle axis="horizontal" size={leadSize} onSize={onLeadSize} />
 
-      <div className="flex min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1" onPointerDown={() => setFocus('program')}>
         <Monitor
           owner={programOwner(documentId)}
           title={t('transport.program')}
           role={t('transport.programRole')}
           sequence={sequence}
           onTime={setProgramTime}
-          keyboard={active}
+          keyboard={active && focus === 'program'}
           program
         />
       </div>

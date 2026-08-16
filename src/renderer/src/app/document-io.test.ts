@@ -25,7 +25,7 @@ import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvas-state'
 import { addLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas, type CanvasHost } from '@/spaces/image/canvas-hosts'
 import { canvasStore, useCanvases } from '@/stores/canvases'
-import { pushEdit } from '@/engines/audio/edits'
+import { EMPTY_AUDIO_EDIT, pushEdit } from '@/engines/audio/edits'
 import { addClip, removeTrack } from '@/engines/timeline/commands'
 import { EMPTY_SOUND_SEQUENCE, makeClip } from '@/engines/timeline/timeline-state'
 import { setSunAngles } from '@/engines/skybox/commands'
@@ -75,7 +75,7 @@ const savedFile = (): DocumentFile => ({
 })
 
 function scene(id: string): DocumentDescriptor {
-  return { id, kind: 'scene', title: 'Set dressing', workspace: '3d' }
+  return { id, kind: 'scene', title: 'Set dressing', workspace: '3d', fileName: `${id}.scene` }
 }
 
 beforeEach(() => {
@@ -480,7 +480,15 @@ describe('saveDocument', () => {
       const read = vi.fn(() => Promise.resolve(null))
       installFakeBridge({ documents: { write: () => Promise.resolve(), read } })
       useDocuments.setState({
-        documents: { 'doc-1': { id: 'doc-1', kind: 'image', title: 'x', workspace: 'image' } },
+        documents: {
+          'doc-1': {
+            id: 'doc-1',
+            kind: 'image',
+            title: 'x',
+            workspace: 'image',
+            fileName: 'x.img',
+          },
+        },
       })
 
       await rehydrateDocument('doc-1')
@@ -572,9 +580,9 @@ describe('saveDocument', () => {
 
     /**
      * The take is a REPLAYABLE chain over a decoded source: baking it into that source would
-     * leave the chain in the document and apply it a second time on the next open — normalized
-     * twice, trimmed twice, with the pre-edit audio nowhere. The editor's own toolbar offers
-     * both writes, where a hand asks for them.
+     * leave the chain in the document and apply it a second time on the next open — normalised
+     * twice, faded twice, with the pre-edit audio nowhere. The editor's own toolbar offers both
+     * writes, where a hand asks for them.
      */
     it('leaves a take alone too, chain and all', async () => {
       const saveAudio = vi.fn(() => Promise.resolve(picture()))
@@ -584,7 +592,9 @@ describe('saveDocument', () => {
         .getState()
         .create('audio', { title: 'pad.wav', sourceAssetId: 'asset-take' })
       if (!created) throw new Error('expected a document')
-      useAudioEdits.getState().runCommand(created.id, pushEdit({ kind: 'trimSilence' }))
+      useAudioEdits
+        .getState()
+        .runCommand(created.id, pushEdit('clip-a', { kind: 'normalize', targetLufs: -14 }))
 
       await expect(saveDocument(created.id)).resolves.toBe(true)
 
@@ -896,7 +906,9 @@ describe('restoreDocument', () => {
       const workspace = workspaceForKind(kind)
       if (!workspace) throw new Error(`no workspace opens ${kind}`)
       const id = `doc-${kind}`
-      useDocuments.setState({ documents: { [id]: { id, kind, title: kind, workspace } } })
+      useDocuments.setState({
+        documents: { [id]: { id, kind, title: kind, workspace, fileName: `${kind}${id}` } },
+      })
       await restoreDocument(id)
     }
 
@@ -1088,7 +1100,13 @@ describe('an image document', () => {
     const documentId = 'doc-img'
     useDocuments.setState({
       documents: {
-        [documentId]: { id: documentId, kind: 'image', workspace: 'image', title: 'Poster' },
+        [documentId]: {
+          id: documentId,
+          kind: 'image',
+          workspace: 'image',
+          title: 'Poster',
+          fileName: 'Poster.img',
+        },
       },
       activeId: documentId,
     })
@@ -1127,7 +1145,13 @@ describe('an image document', () => {
     const documentId = 'doc-img-2'
     useDocuments.setState({
       documents: {
-        [documentId]: { id: documentId, kind: 'image', workspace: 'image', title: 'Poster' },
+        [documentId]: {
+          id: documentId,
+          kind: 'image',
+          workspace: 'image',
+          title: 'Poster',
+          fileName: 'Poster.img',
+        },
       },
       activeId: documentId,
     })
@@ -1202,19 +1226,34 @@ describe('the kinds a string holds', () => {
     diskBackedBridge('audio')
     const documentId = await open('audio')
 
-    useAudioEdits.getState().replace(documentId, {
-      assetId: 'asset-a',
-      edits: [],
-      region: null,
-      bypassed: false,
-    })
-    useAudioEdits.getState().runCommand(documentId, pushEdit({ kind: 'gain', db: -6 }))
+    const clip = makeClip({ id: 'clip-a', assetId: 'asset-a', start: 0, duration: 2_000_000 })
+    useSequences.getState().runCommand(documentId, addClip('A1', clip))
+    useAudioEdits.getState().runCommand(documentId, pushEdit('clip-a', { kind: 'gain', db: -6 }))
     const before = useAudioEdits.getState().states[documentId]
     await saveDocument(documentId)
 
     useAudioEdits.getState().drop(documentId)
     await restoreDocument(documentId)
     expect(useAudioEdits.getState().states[documentId]).toEqual(before)
+  })
+
+  /**
+   * A block deleted from the montage leaves its chain in the STORE, and has to: ⌘Z of the
+   * deletion gives the block back, and its settings with it. But the file is where a block is
+   * gone for good — left in, a long session grows a document without bound behind chains
+   * nothing on screen can reach.
+   */
+  it('leaves behind the chains of blocks the montage no longer holds', async () => {
+    diskBackedBridge('audio')
+    const documentId = await open('audio')
+
+    useAudioEdits.getState().runCommand(documentId, pushEdit('clip-gone', { kind: 'gain', db: -6 }))
+    await saveDocument(documentId)
+
+    useAudioEdits.getState().drop(documentId)
+    await restoreDocument(documentId)
+
+    expect(useAudioEdits.getState().states[documentId]).toEqual(EMPTY_AUDIO_EDIT)
   })
 
   // Both halves of a take are one document: the chain over the sample, and the montage under it.
@@ -1252,21 +1291,30 @@ describe('the kinds a string holds', () => {
     expect(useSequences.getState().states[documentId]).toEqual(EMPTY_SOUND_SEQUENCE)
   })
 
-  // A file written before takes had a montage. It reopens with an empty one rather than refusing.
+  /**
+   * A file written before takes had a montage, and before a chain belonged to a block. It
+   * reopens with an empty montage rather than refusing — and its chain, which named no block,
+   * has nowhere to land: the editor edits blocks now. The take is an asset and is not lost.
+   */
   it('opens a take saved with no montage at all', async () => {
     diskBackedBridge('audio')
     const documentId = await open('audio')
 
     await getBridge()?.documents.write(documentId, 'audio', {
       title: 'Untitled',
-      content: JSON.stringify({ assetId: 'asset-a', edits: [], region: null, bypassed: false }),
+      content: JSON.stringify({
+        assetId: 'asset-a',
+        edits: [{ kind: 'trimSilence' }],
+        region: null,
+        bypassed: false,
+      }),
     })
 
     useSequences.getState().drop(documentId)
     useAudioEdits.getState().drop(documentId)
     await restoreDocument(documentId)
 
-    expect(useAudioEdits.getState().states[documentId]?.assetId).toBe('asset-a')
+    expect(useAudioEdits.getState().states[documentId]).toEqual(EMPTY_AUDIO_EDIT)
     expect(useSequences.getState().states[documentId]).toEqual(EMPTY_SOUND_SEQUENCE)
   })
 

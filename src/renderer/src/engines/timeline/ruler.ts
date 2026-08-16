@@ -1,10 +1,13 @@
 /**
- * The graduated strip above a band, painted the same way for a montage and for a scene.
+ * The graduated strip above a band, painted the same way for a montage, for a scene, and for the
+ * programme monitor of the Audio workspace.
  *
- * It takes a style rather than reading tokens itself: each band caches its own palette, and a
- * second `getComputedStyle` per paint is the frame budget — see `painter.ts`.
+ * `paintRuler` takes its style as an argument, so a surface with a palette of its own could hand
+ * it another; `readRulerStyle` is the one every surface actually uses, memoised so that reading
+ * the tokens costs one `getComputedStyle` per theme rather than one per paint.
  */
 import { frameDuration, SECOND, type Us } from '@shared/domain/time'
+import { memoPalette, rootColour, rootFont } from '@/engines/core/palette'
 import { RULER_HEIGHT, timeToX, visibleRange, type Viewport } from './timeline-geometry'
 import { formatTimecode } from './timecode'
 
@@ -15,6 +18,24 @@ export type RulerStyle = {
   text: string
   font: string
 }
+
+/** Monospace, so a timecode does not shuffle sideways as its digits change. */
+const RULER_FAMILY = 'ui-monospace, monospace'
+const RULER_SIZE = '10px'
+
+/**
+ * The ruler's own inks, read once per theme rather than per paint.
+ *
+ * Shared by every surface that graduates time — the montage strip, the scene's dope sheet, the
+ * programme monitor. These four values stood in three copies, and three copies is three grids
+ * for one eye to reconcile.
+ */
+export const readRulerStyle = memoPalette((): RulerStyle => ({
+  background: rootColour('--color-chassis'),
+  tick: rootColour('--color-border'),
+  text: rootColour('--color-muted'),
+  font: rootFont('--text-mini', RULER_SIZE, RULER_FAMILY),
+}))
 
 /** How tall a graduation is, and how far its label sits from it. */
 const TICK_HEIGHT = 6

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
 import type { Viewport } from './timeline-geometry'
 import { clipFixture } from './timeline-fixtures'
-import { waveformColumns } from './waveform'
+import { tileColumns, waveformColumns } from './waveform'
 
 /** 100 px per second. One peak pair covers 20 ms, so a pair is two pixels wide here. */
 const viewport: Viewport = { scale: 100 / 1_000_000, offset: 0, scrollTop: 0 }
@@ -71,5 +71,28 @@ describe('waveform columns', () => {
 
     // One second of peaks at 100 px/s: nothing beyond x = 100 exists to draw.
     expect(columns.at(-1)?.x).toBeLessThanOrEqual(100)
+  })
+})
+
+describe('a whole take spread over a tile', () => {
+  it('fills the width, whatever the take lasts', () => {
+    const columns = tileColumns(flat(180, 0.5), 60)
+
+    expect(columns).toHaveLength(60)
+    expect(columns[0]).toMatchObject({ x: 0, min: -0.5, max: 0.5 })
+    expect(columns.at(-1)?.x).toBe(59)
+  })
+
+  // A tile is sixty pixels for what may be thousands of pairs: an average would flatten a take
+  // into a band, and two takes of the same length would look alike — the very thing it is for.
+  it('keeps the loudest pair of everything a column swallows', () => {
+    const peaks = flat(60, 0.1)
+    peaks[1_000 * 2 + 1] = 1
+
+    expect(Math.max(...tileColumns(peaks, 60).map(column => column.max))).toBe(1)
+  })
+
+  it('draws nothing at all for a take with no peaks', () => {
+    expect(tileColumns(new Float32Array(), 60)).toEqual([])
   })
 })

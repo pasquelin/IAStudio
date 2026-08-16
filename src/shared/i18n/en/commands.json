@@ -124,6 +124,10 @@
       "title": "Play / Pause",
       "help": "Starts playing the edit, or stops it where it is. Starting again picks up where you left off."
     },
+    "sequenceExport": {
+      "title": "Export video…",
+      "help": "Writes the edit out as a video file, frame by frame, 3D scenes included. The sound is not in it yet."
+    },
     "sequenceMirror": {
       "title": "Return window",
       "help": "Opens the edit in a window of its own, to put on a second screen. It follows the studio frame by frame, without the sound, and closes like any window."

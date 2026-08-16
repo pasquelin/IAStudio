@@ -87,26 +87,37 @@ export type ExploreQuery = {
   pageSize?: number
 }
 
-/** How large a preview should come down. The CDN resizes; downloading a 4K to draw 112 px does not. */
-export type PreviewSize = { width?: number; quality?: number }
+/**
+ * The kinds whose own file IS a still picture, and can therefore be drawn as one.
+ *
+ * A take or a clip has a URL too, and it is the sound or the film itself — an `<img>` pointed at
+ * one draws nothing. Those keep the thumbnail, which is a picture OF them rather than them.
+ */
+const DRAWABLE_TYPES: readonly AssetType[] = ['image', 'texture', 'skybox']
 
 /**
- * The picture that stands for a cloud asset, or `null` when it has none to show.
+ * The picture that stands for a cloud asset, or `null` when it has none to show, resized to
+ * `width` pixels when one is asked for.
  *
- * Transformations are applied to the thumbnail alone, and that restriction is the whole point:
- * the asset's own URL carries `Policy`, `Signature` and `Key-Pair-Id`, and appending anything
- * to it invalidates the signature — the CDN answers 403 for a query string we added ourselves.
- * The thumbnail is public, so it can be resized freely.
+ * The asset's own URL wins for the kinds that are a picture, because it is the one carrying the
+ * pixels: it points at `/assets-transform/`, which resizes on demand. The thumbnail is a small
+ * fixed rendition, and a tile drawn from it is soft the moment the tile is larger than it.
+ *
+ * Appending to that URL is safe, which this file long claimed it was not. Measured on
+ * 16 August 2026: the signed policy names `…?p=100*` — a WILDCARD, so anything added after
+ * `p=100` falls inside the signature. Added BEFORE it would fall outside; the order is what a
+ * 403 would depend on, not the presence of a parameter.
+ *
+ * `width` alone, and the two parameters that used to sit beside it are gone on the same
+ * measurement: `quality` changes nothing on a PNG (40 and 80 answered the same 131 526 bytes),
+ * and `format=jpeg` drops the alpha channel to save 2 ko over WebP.
  */
-export function cloudPreviewUrl(asset: CloudAsset, size: PreviewSize = {}): string | null {
-  if (asset.thumbnailUrl === undefined) return asset.url ?? null
+export function cloudPreviewUrl(asset: CloudAsset, width?: number): string | null {
+  const drawable = DRAWABLE_TYPES.includes(asset.type)
+  const baseUrl = drawable ? (asset.url ?? asset.thumbnailUrl) : (asset.thumbnailUrl ?? asset.url)
 
-  const params = new URLSearchParams()
-  if (size.width !== undefined) params.set('width', String(size.width))
-  if (size.quality !== undefined) params.set('quality', String(size.quality))
+  if (baseUrl === undefined) return null
+  if (width === undefined) return baseUrl
 
-  const query = params.toString()
-  if (query === '') return asset.thumbnailUrl
-
-  return `${asset.thumbnailUrl}${asset.thumbnailUrl.includes('?') ? '&' : '?'}${query}`
+  return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}width=${width}`
 }

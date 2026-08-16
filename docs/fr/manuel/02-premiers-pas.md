@@ -123,13 +123,14 @@ cela ne touche ni vos projets ni ce que vous écrivez dedans.
 
 `⌘N` / `Ctrl+N`, ou menu **Fichier ▸ Nouveau projet…**
 
-Le studio vous demande **où** créer le dossier et **comment** l’appeler. Choisissez un endroit
-que vous retrouverez : vos documents, votre bureau, un disque externe.
+Le studio vous demande **un dossier**, et ce dossier *devient* le projet — il ne fabrique rien
+au-dessus ni en dessous. Créez-le au besoin depuis le sélecteur (bouton **Nouveau dossier**) et
+donnez-lui le nom que vous voulez pour le projet : c’est celui qu’il portera.
 
-Ce qu’il fabrique :
+Ce qu’il installe dedans :
 
 ```
-Mon premier projet/
+Mon premier projet/        ← le dossier que VOUS avez choisi
 ├── assets/           tout ce que vous fabriquez et importez
 ├── documents/        vos travaux en cours
 ├── .project.json     la carte d'identité du projet — caché
@@ -137,6 +138,16 @@ Mon premier projet/
 ```
 
 Le nom du projet s’affiche en haut de la fenêtre. Vous savez toujours dans quoi vous travaillez.
+Pour le changer plus tard, double-cliquez sur sa ligne dans **Vos projets** : cela renomme le
+projet, pas le dossier.
+
+Trois réponses possibles, et aucune n’écrase quoi que ce soit :
+
+- **le dossier est déjà un projet** — le studio l’ouvre au lieu d’en créer un par-dessus ;
+- **il contient déjà des fichiers** — le studio demande confirmation avant de s’y installer, et
+  ne touche à rien de ce qui s’y trouve ;
+- **il est dans un projet, ou il contient des projets** — le studio refuse : deux projets qui se
+  chevauchent revendiqueraient les mêmes fichiers. Choisissez un dossier à côté.
 
 Le chapitre [Les projets](04-projets.md) détaille chaque dossier.
 
@@ -198,8 +209,8 @@ Quand la ligne affiche **Terminée**, votre image est arrivée. Elle est rangée
 taille, son poids, le modèle qui l’a faite, le prompt que vous avez écrit, et la *graine* qui
 permettra d’y revenir.
 
-Le bouton **Afficher dans le gestionnaire de fichiers**, dans l’inspecteur, ouvre le dossier où
-elle se trouve. C’est de là que vous l’enverrez à qui vous voudrez.
+Le bouton **Afficher dans le dossier**, dans l’inspecteur, ouvre votre gestionnaire de fichiers
+sur elle. C’est de là que vous l’enverrez à qui vous voudrez.
 
 > **Pour la retoucher**, passez dans l’espace **Image** : le `+` du rail gauche ouvre un
 > document, puis glissez votre image sur la toile — elle y devient un calque, et le pinceau, la

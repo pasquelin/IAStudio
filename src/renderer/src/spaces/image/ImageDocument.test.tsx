@@ -59,7 +59,6 @@ describe('ImageDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useLayouts.setState({ activeWorkspace: 'image', home: false })
-    useCanvases.setState({ states: {}, histories: {} })
   })
 
   /**
@@ -501,9 +500,16 @@ describe('merging the layer below', () => {
 describe('exporting the canvas', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useCanvases.setState({ states: {}, histories: {} })
     useDocuments.setState({
-      documents: { 'doc-1': { id: 'doc-1', kind: 'image', workspace: 'image', title: 'Poster' } },
+      documents: {
+        'doc-1': {
+          id: 'doc-1',
+          kind: 'image',
+          workspace: 'image',
+          title: 'Poster',
+          fileName: 'Poster.img',
+        },
+      },
       activeId: 'doc-1',
     })
   })

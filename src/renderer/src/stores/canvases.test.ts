@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { canvasOf, canvasHistoryOf, useCanvases } from './canvases'
 import { canUndo, canRedo } from '@/engines/core/history'
 import { addLayer, renameLayer } from '@/engines/canvas/commands'
@@ -9,10 +9,6 @@ import { layerNow } from './canvas-fixtures'
 const layer = layerFixture()
 
 describe('canvases store', () => {
-  beforeEach(() => {
-    useCanvases.setState({ states: {}, histories: {} })
-  })
-
   it('gives a fresh document for one never opened', () => {
     expect(canvasOf(useCanvases.getState(), 'unknown')).toEqual(DEFAULT_CANVAS)
   })

@@ -1,6 +1,7 @@
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { isFinished, JOB_STATUSES, type Job } from '@shared/domain/job'
+import { SUITE_SOURCES } from '@/design/test-harness'
 import { job } from './job-fixtures'
 
 const FINISHED = JOB_STATUSES.filter(isFinished)
@@ -74,21 +75,6 @@ describe('job fixture', () => {
 })
 
 /**
- * Every suite of the renderer, as text. Read through Vite rather than `fs`, as
- * `no-hardcoded-text.test.ts` does and for its reason: the renderer has no filesystem, and a
- * test living here does not get one.
- *
- * One short of what the disk holds, always: `import.meta.glob` never yields the module that
- * calls it. This file is therefore the one suite the walk does not read — measured, 361 against
- * 362 on 2026-08-11 — and it builds no job of its own.
- */
-const SUITES: Record<string, string> = import.meta.glob(['../**/*.test.ts', '../**/*.test.tsx'], {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-})
-
-/**
  * What says "this object is a `Job`", and nothing else in the studio.
  *
  * Three keys rather than the whole shape: a suite is allowed to say LESS than the type — `label`
@@ -156,9 +142,7 @@ const isFactoryArgument = (node: ts.ObjectLiteralExpression): boolean =>
   FACTORY_NAMES.has(node.parent.expression.text)
 
 const suitesBuildingAJob = (): string[] =>
-  Object.entries(SUITES)
-    .filter(([file, code]) => jobLiteralsIn(file, code) > 0)
-    .map(([file]) => file)
+  SUITE_SOURCES.filter(([file, code]) => jobLiteralsIn(file, code) > 0).map(([file]) => file)
 
 /**
  * The lock, and why it exists at all.
@@ -182,12 +166,19 @@ describe('no suite of the renderer builds its own job', () => {
    * does notice a walk that stopped walking — which is how this check would watch nothing.
    */
   it('opened the suites to say so', () => {
-    expect(Object.keys(SUITES).length).toBeGreaterThan(300)
+    const opened = SUITE_SOURCES.map(([file]) => file)
+
+    expect(opened.length).toBeGreaterThan(300)
     // The floor is load-bearing, and these two do NOT replace it — they close what it alone
     // misses. One per extension, because a glob narrowed to `.tsx` keeps a `.tsx` anchor green
     // while 219 `.ts` suites go unread: measured by a reviewer, who built exactly that.
-    expect(Object.keys(SUITES)).toContain('../app/JobsStatus.test.tsx')
-    expect(Object.keys(SUITES)).toContain('../helpers/generation.test.ts')
+    expect(opened).toContain('../app/JobsStatus.test.tsx')
+    expect(opened).toContain('../helpers/generation.test.ts')
+    // The sweep it borrows lives in `design/`, so THIS file is read like any other — its own
+    // glob never yielded the module calling it, and left itself the one suite nobody walked.
+    // The paths are anchored THERE too, which is why this one carries `stores/` where the two
+    // above look relative to this file and are not.
+    expect(opened).toContain('../stores/job-fixtures.test.ts')
   })
 
   /** And it can fail: the shape the lot removed, and the near-misses it must not claim. */

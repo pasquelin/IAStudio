@@ -12,11 +12,18 @@ import {
 const OFFERED_TAGS = [...new Set(MODEL_FAMILIES.flatMap(family => TAGS_BY_FAMILY[family]))]
 
 describe('the tags that name a family', () => {
-  it('names a family that exists, and each one at most once', () => {
+  /**
+   * A family may claim SEVERAL tags — the skyboxes do, `SKYBOX_TAG` naming three models and
+   * `skybox-upscale` the fourth — but a tag names one family and one only: `familyOf` answers
+   * with the first entry it matches, so a tag written twice would file the same model under
+   * whichever family happened to come first in this list.
+   */
+  it('names a family that exists, and never lets one tag name two', () => {
     const families = FAMILY_TAGS.map(entry => entry.family)
+    const tags = FAMILY_TAGS.map(entry => entry.tag)
 
     expect(families.every(family => MODEL_FAMILIES.includes(family))).toBe(true)
-    expect(new Set(families).size).toBe(families.length)
+    expect(new Set(tags).size).toBe(tags.length)
   })
 
   /**
@@ -31,8 +38,15 @@ describe('the tags that name a family', () => {
     expect(FAMILY_TAGS.filter(entry => offered.includes(entry.tag))).toEqual([])
   })
 
-  it('answers the tag of a family that has one, and nothing for the others', () => {
+  /**
+   * A family claiming several tags can be narrowed by NONE of them — no model carries them all,
+   * so the listing would come back missing whichever the others named. The skyboxes are the
+   * case: `skybox-upscale` is indexed by the API where `SKYBOX_TAG` is not, so answering it
+   * here would quietly cut that space from four models to the one carrying it.
+   */
+  it('answers the tag of a family that has exactly one, and nothing for the others', () => {
     expect(tagOfFamily('upscale')).toBe('image-upscale')
+    expect(tagOfFamily('skybox')).toBeUndefined()
     expect(tagOfFamily('image')).toBeUndefined()
   })
 })

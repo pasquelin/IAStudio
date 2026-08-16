@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LANGUAGES } from './i18n/languages'
 import { deadManualLinks, type ManualChapter } from './domain/manual'
+import { americanVerbs, americanWords, proseOf } from './i18n/spelling-fixtures'
 import manual from './manual.json'
 
 /**
@@ -53,6 +54,30 @@ describe('the manual the application carries', () => {
     const dead = languages.flatMap(language => deadManualLinks(chaptersOf(language), language))
 
     expect(dead).toEqual([])
+  })
+
+  /**
+   * The English bundle is British throughout, and `bundles.test.ts` holds it there. The manual
+   * quotes those same labels and explains them in prose, so a chapter written American reads as a
+   * second spelling of the product — which is what the bundle's own `Vectorization` was, sitting
+   * beside the `vectorisation` these chapters already spelled.
+   *
+   * Prose only, and `proseOf` says what that costs: the `Authorization` header of two chapters
+   * would fail this guard on its first run.
+   *
+   * What it does not read: the French chapters, which have no British side to keep, and the two
+   * pairs `AMERICAN_FORMS` leaves out, where British English spells both words.
+   */
+  it('spells its English prose the British way', () => {
+    const american = chaptersOf('en').flatMap(chapter => {
+      const prose = `${chapter.title}\n${proseOf(chapter.markdown)}`
+
+      return [...americanVerbs(prose), ...americanWords(prose)].map(
+        word => `${chapter.slug} — ${word}`,
+      )
+    })
+
+    expect(american).toEqual([])
   })
 
   // The range a literal union would have held, had a JSON import been able to keep one.

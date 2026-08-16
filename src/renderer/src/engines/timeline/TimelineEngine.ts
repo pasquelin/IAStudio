@@ -10,6 +10,7 @@ import {
 } from './sound-schedule'
 import {
   clipEnd,
+  clipSource,
   EMPTY_SEQUENCE,
   playsThrough,
   sequenceDuration,
@@ -43,7 +44,13 @@ export function spritesOffFrame<T>(
   return [...sprites].filter(([trackId]) => !inFrame.has(trackId)).map(([, sprite]) => sprite)
 }
 
-/** Lowest index first: the sprite added last is the one the eye sees on top. */
+/** Under every track: the depths handed to the sprites start at zero — see `seek`. */
+const BACKDROP_DEPTH = -1
+
+/**
+ * Lowest index first, which is the order the sprites are given their depths in: the LAST of this
+ * list is the row highest in the column, and the one the eye sees on top.
+ */
 export function videoTracksByDepth(state: SequenceState): Track[] {
   return state.tracks
     .filter(track => track.kind === 'video')
@@ -90,6 +97,17 @@ function place(target: Container, placement: Placement): void {
 /** The sequence canvas, behind every layer — see `--color-monitor`. */
 const CANVAS_TOKEN = '--color-monitor'
 const CANVAS_FALLBACK = 0x000000
+
+/**
+ * The bytes behind a `data:` URL. Pixi hands a picture back as one, and what crosses to the
+ * main process is bytes — encoding them again as text would cost a third of the size per frame.
+ */
+export function bytesOfDataUrl(url: string): Uint8Array {
+  const binary = atob(url.slice(url.indexOf(',') + 1))
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+  return bytes
+}
 
 /** What a renderer must offer to take a frame now rather than at its next pass. */
 export type TextureUploader = { initSource: (source: TextureSource) => void }
@@ -156,8 +174,13 @@ export type TimelineEngineDeps = {
  */
 export class TimelineEngine {
   private application: Application | null = null
-  /** The sequence canvas: laid out once against the screen, so layers stay registered to it. */
-  private readonly frame = new Container()
+  /**
+   * The sequence canvas: laid out once against the screen, so layers stay registered to it.
+   *
+   * Sorted, because the order children were ADDED in says nothing about which track is on top:
+   * a sprite joins the frame the first time its track paints. Every seek restates the depths.
+   */
+  private readonly frame = new Container({ sortableChildren: true })
   private readonly backdrop = new Graphics()
   private readonly sprites = new Map<string, Sprite>()
   private readonly pool: DecoderPool
@@ -185,7 +208,9 @@ export class TimelineEngine {
   private transport = 0
 
   constructor(private readonly deps: TimelineEngineDeps) {
-    // First child, so every layer added later composites over it.
+    // Below every track, and said as a depth rather than left to the order it was added in:
+    // the frame sorts its children, and a sprite of depth 0 would otherwise tie with it.
+    this.backdrop.zIndex = BACKDROP_DEPTH
     this.frame.addChild(this.backdrop)
     this.sound = createSoundScheduler({ port: deps.sound, horizon: SOUND_HORIZON })
     this.pool = createDecoderPool({
@@ -336,14 +361,20 @@ export class TimelineEngine {
     // Every track asked BEFORE any is awaited: each holds a sink of its own, so their decodes
     // are independent, and awaiting them one after another made a frame of a two-track montage
     // cost the sum of two decodes rather than the longer of them.
-    const asked = painting.map(track => {
+    const asked = painting.map((track, depth) => {
       // Asked here rather than by filtering the list: a track dropped from it would keep the
       // sprite it last painted on screen, which is the opposite of muting it.
       const clip = playsThrough(this.state, track) ? clipAt(track, time) : null
+      const sprite = this.spriteFor(track.id)
+      // Restated on EVERY seek, and that is the whole point: a sprite joins the frame the first
+      // time its track is painted, so the order the children were added in is the order the
+      // tracks first appeared — never the order of the column. V2, opened after V1 already had
+      // a sprite, composited OVER it, and a track dragged to another row kept its old depth.
+      sprite.zIndex = depth
       return {
-        sprite: this.spriteFor(track.id),
+        sprite,
         clip,
-        frame: clip ? this.pool.frameAt(clip.assetId, sourceTimeAt(clip, time)) : null,
+        frame: clip ? this.pool.frameAt(clipSource(clip), sourceTimeAt(clip, time)) : null,
       }
     })
 
@@ -357,7 +388,7 @@ export class TimelineEngine {
       const frame = decoded[index]
       if (!frame) {
         sprite.visible = false
-        if (clip && this.pool.undecodable(clip.assetId)) unreadable = true
+        if (clip && this.pool.undecodable(clipSource(clip))) unreadable = true
         return
       }
 
@@ -397,6 +428,23 @@ export class TimelineEngine {
   /** Pixi's own ticker is off — see `mount`. Every visible change ends here. */
   private draw(): void {
     this.application?.render()
+  }
+
+  /**
+   * The composited frame as it stands, as PNG bytes — one call per frame of an export.
+   *
+   * Extracted from the frame container rather than read off the canvas: a WebGL drawing buffer
+   * is only guaranteed to hold its pixels until the task ends, and an export awaits between
+   * every frame. Pixi renders the container into a texture of its own, which has no such rule.
+   *
+   * `null` before the application exists, which is the only thing that can go wrong here.
+   */
+  async snapshot(): Promise<Uint8Array | null> {
+    const application = this.application
+    if (!application) return null
+
+    const url = await application.renderer.extract.base64({ target: this.frame, format: 'png' })
+    return bytesOfDataUrl(url)
   }
 
   /** The sequence canvas, in its own pixels — what every layer is composited against. */
