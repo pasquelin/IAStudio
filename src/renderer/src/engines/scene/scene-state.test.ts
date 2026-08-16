@@ -39,7 +39,13 @@ describe('sceneWithoutSelfPlay', () => {
     return {
       ...EMPTY_SCENE,
       nodes: [
-        { ...node, model: { ...node.model, animation: { ...DEFAULT_ANIMATION, clip: 'Walk', playing: state } } },
+        {
+          ...node,
+          model: {
+            ...node.model,
+            animation: { ...DEFAULT_ANIMATION, clip: 'Walk', playing: state },
+          },
+        },
       ],
     }
   }

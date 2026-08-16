@@ -229,7 +229,9 @@ describe('SequenceDocument', () => {
     // A press on the source, which is what taking the focus comes to. `pointerDown` rather than
     // a click: aiming a monitor must not also start it.
     const playButtons = (): (string | null)[] =>
-      screen.getAllByRole('button', { name: /Lire/ }).map(button => button.getAttribute('aria-label'))
+      screen
+        .getAllByRole('button', { name: /Lire/ })
+        .map(button => button.getAttribute('aria-label'))
     fireEvent.pointerDown(screen.getAllByRole('button', { name: /Lire/ })[0] ?? document.body)
 
     // The armed one advertises the key and the other stops claiming it — the pair is never both.
