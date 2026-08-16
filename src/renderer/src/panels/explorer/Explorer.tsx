@@ -1,4 +1,4 @@
-import { mdiFileOutline, mdiFolderOpenOutline, mdiFolderOutline } from '@mdi/js'
+import { mdiFileOutline, mdiFolderOpenOutline, mdiFolderOutline, mdiMagnify } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
@@ -20,11 +20,14 @@ import { getBridge } from '@/services/bridge'
 import { currentOverrides } from '@/stores/bindings'
 import { useDocuments } from '@/stores/documents'
 import { fileClipboardCut, useFileClipboard } from '@/stores/file-clipboard'
+import { explorerSearch, useExplorerView } from '@/stores/explorer-view'
 import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { NoProject } from '@/panels/shared/NoProject'
+import { entriesSorted } from './folder-sort'
 import { openEntryMenu } from './EntryMenu'
 import { EntryRow } from './EntryRow'
+import { useFolderSearch } from './use-folder-search'
 import { useFolderTree, type FolderNode } from './use-folder-tree'
 
 /** Nothing held, nothing to take back — the state the panel starts in and falls back to. */
@@ -52,11 +55,24 @@ const NO_HISTORY: FileHistory = { undo: false, redo: false }
  * an asset this studio edits, and handing it to a picture viewer was the whole complaint.
  */
 export function Explorer() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const language = i18n.language
   const projectPath = useProject(state => state.project?.path ?? null)
   const stored = useDocuments(state => state.stored)
   const open = useDocuments(state => state.documents)
-  const { nodes, expandedIds, toggle, reload } = useFolderTree()
+  const collection = useExplorerView(state => state.collection)
+  const hidden = useExplorerView(state => state.hidden)
+  const term = useExplorerView(explorerSearch)
+  const tree = useFolderTree(hidden)
+  const search = useFolderSearch(term, hidden)
+  /** Which of the two sources is drawing: the folders unfolded, or the word being searched. */
+  const searching = term !== ''
+  const source = searching ? search : tree
+  const { expandedIds, toggle, reload } = source
+  const nodes = useMemo(
+    () => entriesSorted(source.nodes, collection.sort, language),
+    [source.nodes, collection.sort, language],
+  )
   const selectedIds = useSelection(selectedFilePaths)
   const clipboard = useFileClipboard(state => state.paths)
   const cut = useFileClipboard(fileClipboardCut)
@@ -108,6 +124,17 @@ export function Explorer() {
   )
 
   const nodeById = useMemo(() => new Map(nodes.map(node => [node.id, node])), [nodes])
+
+  /**
+   * The folders something in the list sits in. Only a search asks: there, the tree already holds
+   * every node it will ever hold, so a folder with no match under it must not draw a chevron
+   * that opens onto nothing.
+   */
+  const withChildren = useMemo(() => {
+    const parents = new Set<string>()
+    for (const node of nodes) if (node.parentId !== null) parents.add(node.parentId)
+    return parents
+  }, [nodes])
 
   // A set rather than the array: this is asked once per VISIBLE ROW, on every render the tree
   // does — and a drag re-renders it on each hover tick.
@@ -276,8 +303,17 @@ export function Explorer() {
     void getBridge()?.project.renameFile(node.path, name).then(settled)
   }
 
-  if (nodes.length === 0)
-    return <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.empty')} />
+  // Three different silences, and telling them apart is the whole of it: a folder that would not
+  // be read, a walk still running, and a word nothing in the project answers to.
+  if (nodes.length === 0) {
+    if (!searching) return <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.empty')} />
+    return (
+      <EmptyState
+        icon={mdiMagnify}
+        message={search.answered ? t('explorer.noMatch') : t('collection.loading')}
+      />
+    )
+  }
 
   return (
     // Focus rather than a click: the scope has to answer the keyboard, and a panel reached by
@@ -301,7 +337,9 @@ export function Explorer() {
         // only what is loaded, and a folder nobody has opened has nothing loaded by definition.
         // Except a document that happens to be one — it opens, and what it holds is the studio's
         // own business rather than something to browse.
-        expandable={node => node.kind === 'folder' && !documentOf(node)}
+        expandable={node =>
+          node.kind === 'folder' && !documentOf(node) && (!searching || withChildren.has(node.id))
+        }
         // Read from `shared/` so the main process refuses the same things — and read on BOTH
         // sides of the gesture, what moves and what receives.
         draggable={node => !isStudioOwned(node.path)}

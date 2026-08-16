@@ -8,8 +8,10 @@ import type { FolderEntry } from '@shared/domain/folder'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { fakeMenu } from '@/helpers/menu-fixtures'
+import { LIST_ONLY } from '@/helpers/collection-state'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
+import { useExplorerView } from '@/stores/explorer-view'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { Explorer } from './Explorer'
@@ -77,8 +79,17 @@ function install(
   byFolder: Record<string, FolderEntry[]>,
   documents: DocumentDescriptor[] = [],
   catalogued: readonly Asset[] = [],
+  /** What the whole folder answers per term — the panel's other source of nodes. */
+  found: Record<string, FolderEntry[]> = {},
 ) {
-  const listFolder = vi.fn((relative: string) => Promise.resolve(byFolder[relative] ?? []))
+  // The second argument is what the reader asked to SEE — the filtering is the main process's,
+  // and is held there (`folder.test.ts`). What a case reads here is that the panel asked.
+  const listFolder = vi.fn((relative: string, _hidden?: boolean) =>
+    Promise.resolve(byFolder[relative] ?? []),
+  )
+  const searchFolder = vi.fn((term: string, _hidden?: boolean) =>
+    Promise.resolve(found[term] ?? []),
+  )
   const openFile = vi.fn(() => Promise.resolve(true))
   const revealFile = vi.fn(() => Promise.resolve())
   const renameFile = vi.fn(nothingMoved)
@@ -98,6 +109,7 @@ function install(
   installFakeBridge({
     project: {
       listFolder,
+      searchFolder,
       openFile,
       revealFile,
       renameFile,
@@ -119,6 +131,7 @@ function install(
   })
   return {
     listFolder,
+    searchFolder,
     openFile,
     revealFile,
     renameFile,
@@ -150,6 +163,8 @@ beforeEach(() => {
   // every case below is about what it says once it has.
   useProject.setState({ project: null, known: true })
   useLayouts.setState({ layout: null })
+  // Persisted, so a term one case typed would narrow the tree of the next one.
+  useExplorerView.setState({ collection: LIST_ONLY, hidden: false })
   menu = fakeMenu()
   installFakeBridge({})
 })
@@ -249,7 +264,7 @@ describe('the project explorer', () => {
       await screen.findByText('assets')
 
       expect(listFolder).toHaveBeenCalledTimes(1)
-      expect(listFolder).toHaveBeenCalledWith('')
+      expect(listFolder).toHaveBeenCalledWith('', false)
     })
 
     it('reads it when it is opened, and shows what it holds', async () => {
@@ -1101,5 +1116,71 @@ describe('the explorer menu', () => {
     await userEvent.dblClick(field)
 
     expect(openDocument).not.toHaveBeenCalled()
+  })
+})
+
+describe('searching the explorer', () => {
+  const searching = (term: string): void => {
+    useExplorerView.setState({ collection: { ...LIST_ONLY, search: term } })
+  }
+
+  /**
+   * What the whole second source exists for. The tree reads one folder at a time, so a file
+   * three folds down is a file it has never seen — and the chain of folders above the match has
+   * to be rebuilt here, `flattenTree` dropping a node whose parent it does not hold.
+   */
+  it('draws a match nobody had unfolded, and the folders leading to it', async () => {
+    withProject()
+    searching('ruelle')
+    install({ '': [folder('Repérages')] }, [], [], {
+      ruelle: [file('ruelle-bleue.png', 'Repérages/Ruelles')],
+    })
+
+    render(<Explorer />)
+
+    expect(await screen.findByText('ruelle-bleue.png')).toBeInTheDocument()
+    expect(screen.getByText('Repérages')).toBeInTheDocument()
+    expect(screen.getByText('Ruelles')).toBeInTheDocument()
+  })
+
+  it('says so when nothing in the project answers to the word', async () => {
+    withProject()
+    searching('licorne')
+    install({ '': [folder('Repérages')] })
+
+    render(<Explorer />)
+
+    expect(await screen.findByText(/Aucun fichier de ce projet/)).toBeInTheDocument()
+  })
+
+  /** The lazy source comes back untouched — it is the one the panel never stopped holding. */
+  it('puts the folders back when the search is left', async () => {
+    withProject()
+    searching('ruelle')
+    install({ '': [folder('Repérages')] }, [], [], {
+      ruelle: [file('ruelle-bleue.png', 'Repérages/Ruelles')],
+    })
+
+    render(<Explorer />)
+    await screen.findByText('ruelle-bleue.png')
+    act(() => searching(''))
+
+    expect(await screen.findByText('Repérages')).toBeInTheDocument()
+    expect(screen.queryByText('ruelle-bleue.png')).not.toBeInTheDocument()
+  })
+
+  /**
+   * Shown, and only shown: what a dot hides is refused by every gesture on both sides
+   * (`file-plan.test.ts`). Which entries come back is the main process's answer, so what is read
+   * here is that the panel asked for them.
+   */
+  it('asks the folder for what a dot hides once the reader wants it', async () => {
+    withProject()
+    useExplorerView.setState({ hidden: true })
+    const { listFolder } = install({ '': [file('.project.json')] })
+
+    render(<Explorer />)
+
+    await waitFor(() => expect(listFolder).toHaveBeenCalledWith('', true))
   })
 })

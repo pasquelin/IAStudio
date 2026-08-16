@@ -83,7 +83,14 @@
     "trashTitle": "These {{count, number}} items are going to the trash",
     "trashBody": "You will be able to get them back from the system trash. The studio itself cannot put them back.",
     "trashConfirm": "Move to trash",
-    "trashCancel": "Cancel"
+    "trashCancel": "Cancel",
+    "noMatch": "No file in this project is called that.",
+    "hidden": "Hidden items",
+    "hiddenHint": "Shows what the studio keeps under a dot; those files stay read-only",
+    "sort": {
+      "name": "Name: A to Z",
+      "nameDesc": "Name: Z to A"
+    }
   },
   "menu": {
     "file": "File",

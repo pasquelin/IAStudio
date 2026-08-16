@@ -2,11 +2,37 @@ import { watch, type FSWatcher } from 'node:fs'
 import { cp, mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import { exists } from '@main/persistence'
+import { kindForExtension } from '@shared/domain/document'
+import { extensionOf } from '@shared/domain/file-name'
 import { entriesByName, isHiddenEntry, type FolderEntry } from '@shared/domain/folder'
+import { foldForSearch } from '@shared/text'
+
+/**
+ * How far a search walks. A project is someone's own folder and can hold a checkout of anything;
+ * the studio's own layout is three levels deep, and a match twelve folders down is a match
+ * nobody was looking for by the time the tree has drawn its ancestors.
+ */
+const MAX_SEARCH_DEPTH = 12
 
 export type FolderReader = {
-  /** One level of the project folder. `''` is the project root. */
-  list: (relative: string) => Promise<FolderEntry[]>
+  /**
+   * One level of the project folder. `''` is the project root.
+   *
+   * `hidden` shows what a leading dot hides — the studio's own bookkeeping, which the explorer
+   * offers to reveal. Shown, never written to: `isHiddenPath` refuses every gesture over them.
+   * Left out, nothing under a dot comes back, which is what a reader sees by default.
+   */
+  list: (relative: string, hidden?: boolean) => Promise<FolderEntry[]>
+  /**
+   * Every entry of the WHOLE project folder whose name holds `term`, files and folders alike.
+   *
+   * A second source of nodes rather than a filter over the first: the explorer loads one folder
+   * at a time, so it cannot filter what it has never read — a word matching a file nobody has
+   * unfolded would answer nothing. The tree rebuilds the ancestors of what comes back.
+   *
+   * Folded on both sides (`foldForSearch`), so `foret` finds `Forêt`.
+   */
+  search: (term: string, hidden?: boolean) => Promise<FolderEntry[]>
   /**
    * Every name one level holds, hidden ones included and in no particular order — what a
    * planner needs to know which names are taken.
@@ -36,18 +62,46 @@ export type FolderReader = {
  * express the language they depend on, while an unrelated suite's `beforeEach` was free to move it.
  */
 export function createFolderReader(rootOf: () => string, languageOf: () => string): FolderReader {
-  return {
-    list: async relative => {
-      const entries = await readdir(join(rootOf(), relative), { withFileTypes: true })
+  const level = async (relative: string, hidden = false): Promise<FolderEntry[]> => {
+    const entries = await readdir(join(rootOf(), relative), { withFileTypes: true })
 
-      return entries
-        .filter(entry => !isHiddenEntry(entry.name))
-        .map((entry): FolderEntry => ({
-          path: relative === '' ? entry.name : `${relative}/${entry.name}`,
-          name: entry.name,
-          kind: entry.isDirectory() ? 'folder' : 'file',
-        }))
-        .sort(entriesByName(languageOf()))
+    return entries
+      .filter(entry => hidden || !isHiddenEntry(entry.name))
+      .map((entry): FolderEntry => ({
+        path: relative === '' ? entry.name : `${relative}/${entry.name}`,
+        name: entry.name,
+        kind: entry.isDirectory() ? 'folder' : 'file',
+      }))
+      .sort(entriesByName(languageOf()))
+  }
+
+  return {
+    list: level,
+
+    search: async (term, hidden) => {
+      // Trimmed here as well as in the panel: a term of spaces alone would otherwise match every
+      // name holding one, which is most of them.
+      const wanted = foldForSearch(term.trim())
+      if (wanted === '') return []
+
+      const found: FolderEntry[] = []
+      const walk = async (relative: string, depth: number): Promise<void> => {
+        // A folder that will not answer contributes nothing rather than failing the search: it
+        // may have gone between the listing that named it and this call.
+        const entries = await level(relative, hidden).catch((): FolderEntry[] => [])
+
+        for (const entry of entries) {
+          if (foldForSearch(entry.name).includes(wanted)) found.push(entry)
+          if (entry.kind !== 'folder' || depth >= MAX_SEARCH_DEPTH) continue
+          // An image document IS a folder, and what it holds is the studio's own writing — a
+          // search that walked into it would offer the parts instead of the document.
+          if (kindForExtension(extensionOf(entry.name))) continue
+          await walk(entry.path, depth + 1)
+        }
+      }
+
+      await walk('', 0)
+      return found
     },
 
     names: async relative => await readdir(join(rootOf(), relative)).catch(() => null),

@@ -32,14 +32,14 @@ const nodeOf = (entry: FolderEntry): FolderNode => ({
  * often the event itself that says the folder went, and the parent's own listing is what takes
  * its row off the tree.
  */
-async function listing(folders: readonly string[]): Promise<Listing[]> {
+async function listing(folders: readonly string[], hidden: boolean): Promise<Listing[]> {
   const bridge = getBridge()
   if (!bridge) return []
 
   return await Promise.all(
     folders.map(folder =>
       bridge.project
-        .listFolder(folder)
+        .listFolder(folder, hidden)
         .then(entries => ({ folder, entries }))
         .catch(() => ({ folder, entries: [] })),
     ),
@@ -54,7 +54,7 @@ async function listing(folders: readonly string[]): Promise<Listing[]> {
  * why a folder that has never been opened cannot say whether it has children, and why the tree
  * is told which nodes are expandable rather than deriving it.
  */
-export function useFolderTree(): FolderTree {
+export function useFolderTree(hidden: boolean): FolderTree {
   const projectPath = useProject(state => state.project?.path ?? null)
   const [nodes, setNodes] = useState<readonly FolderNode[]>([])
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set())
@@ -86,13 +86,16 @@ export function useFolderTree(): FolderTree {
     setExpandedIds(new Set())
   }
 
+  // Every open folder rather than the root alone once `hidden` moves: what a dot hides sits at
+  // every level, and re-reading the root would reveal `.project.json` while leaving `.index/`
+  // out of a folder already unfolded.
   useEffect(() => {
-    if (projectPath) void listing([FOLDER_ROOT]).then(absorb)
-  }, [projectPath, absorb])
+    if (projectPath) void listing([FOLDER_ROOT, ...open.current], hidden).then(absorb)
+  }, [projectPath, hidden, absorb])
 
   const reload = useCallback(() => {
-    if (projectPath) void listing([FOLDER_ROOT, ...open.current]).then(absorb)
-  }, [projectPath, absorb])
+    if (projectPath) void listing([FOLDER_ROOT, ...open.current], hidden).then(absorb)
+  }, [projectPath, hidden, absorb])
 
   // The disk, and the window coming back to the front. The second is not a duplicate of the
   // first: a recursive watch is not offered everywhere, and a project on a network volume can
@@ -115,11 +118,11 @@ export function useFolderTree(): FolderTree {
         next.add(path)
         // Read on the way open, every time rather than once: a folder opened again after an
         // hour would otherwise show what it held the first time.
-        void listing([path]).then(absorb)
+        void listing([path], hidden).then(absorb)
         return next
       })
     },
-    [absorb],
+    [absorb, hidden],
   )
 
   return { nodes, expandedIds, toggle, reload }

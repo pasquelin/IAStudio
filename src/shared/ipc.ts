@@ -92,6 +92,7 @@ export type Channels = {
   projectOpen: 'project:open'
   projectCurrent: 'project:current'
   projectListFolder: 'project:list-folder'
+  projectSearchFolder: 'project:search-folder'
   projectOpenFile: 'project:open-file'
   projectRevealFile: 'project:reveal-file'
   projectRevealFolder: 'project:reveal-folder'
@@ -229,6 +230,7 @@ export const CHANNELS: Channels = {
   projectOpen: 'project:open',
   projectCurrent: 'project:current',
   projectListFolder: 'project:list-folder',
+  projectSearchFolder: 'project:search-folder',
   projectOpenFile: 'project:open-file',
   projectRevealFile: 'project:reveal-file',
   projectRevealFolder: 'project:reveal-folder',
@@ -750,8 +752,19 @@ export type StudioBridge = {
      * One level of the project folder, `''` being the root. The explorer walks it a folder at a
      * time: `assets/img` holds thousands of files in an ordinary project, and a reader who never
      * opens it must not pay for them.
+     *
+     * `hidden` reveals what a leading dot hides — `.index/` and `.project.json`, the studio's own
+     * bookkeeping. They are shown and stay READ-ONLY: every gesture over them is refused.
      */
-    listFolder: (relative: string) => Promise<FolderEntry[]>
+    listFolder: (relative: string, hidden: boolean) => Promise<FolderEntry[]>
+    /**
+     * Every entry of the whole project folder whose name holds `term` — the explorer's second
+     * source of nodes, and the only one that can answer for a folder nobody has unfolded.
+     *
+     * A flat list, in no order the reader should rely on: the tree rebuilds the ancestors of each
+     * match and sorts what it draws. An empty term answers nothing rather than the whole folder.
+     */
+    searchFolder: (term: string, hidden: boolean) => Promise<FolderEntry[]>
     /**
      * Hands a file the studio cannot open to the system — a `.pdf` to its viewer. Answers
      * whether it was taken; a refusal is already in the journal, since a folder someone chose

@@ -79,6 +79,15 @@ describe('reading the project folder', () => {
     expect(entries.map(entry => entry.name)).not.toContain('.project.json')
   })
 
+  it('shows them to a reader who asked for them', async () => {
+    const root = await project()
+
+    const entries = await createFolderReader(() => root, inFrench).list('', true)
+
+    expect(entries.map(entry => entry.name)).toContain('.index')
+    expect(entries.map(entry => entry.name)).toContain('.project.json')
+  })
+
   // The path is the tree's id as well as the path, and it is what the next read is asked for.
   it('names each entry relative to the project root', async () => {
     const root = await project()
@@ -99,6 +108,62 @@ describe('reading the project folder', () => {
     open = second
 
     expect((await reader.list('')).map(entry => entry.name)).toContain('only-here.txt')
+  })
+})
+
+describe('searching the project folder', () => {
+  const namesFound = async (root: string, term: string, hidden?: boolean): Promise<string[]> =>
+    (await createFolderReader(() => root, inFrench).search(term, hidden)).map(entry => entry.path)
+
+  /**
+   * The whole reason this channel exists: the tree reads one folder at a time, so a file three
+   * folds down is a file it has never seen — and a search that filtered what is loaded would
+   * answer nothing for it.
+   */
+  it('finds a file no reader has unfolded, folders included', async () => {
+    const root = await project()
+    await mkdir(join(root, 'Repérages', 'Ruelles'), { recursive: true })
+    await writeFile(join(root, 'Repérages', 'Ruelles', 'ruelle-bleue.png'), '')
+
+    expect(await namesFound(root, 'ruelle')).toEqual([
+      'Repérages/Ruelles',
+      'Repérages/Ruelles/ruelle-bleue.png',
+    ])
+  })
+
+  // The hand that types into a search box is looking, not spelling.
+  it('answers a term typed without its accents', async () => {
+    const root = await project()
+    await writeFile(join(root, 'Forêt.png'), '')
+
+    expect(await namesFound(root, 'foret')).toEqual(['Forêt.png'])
+  })
+
+  it('leaves out what the studio keeps for itself, unless it was asked for', async () => {
+    const root = await project()
+    await writeFile(join(root, '.index', 'catalog.db'), '')
+
+    expect(await namesFound(root, 'catalog')).toEqual([])
+    expect(await namesFound(root, 'catalog', true)).toEqual(['.index/catalog.db'])
+  })
+
+  /**
+   * An image document IS a folder — `<id>.img/` holding its manifest and its parts. What it
+   * holds is the studio's own writing, and offering those parts as results would hand the reader
+   * files no space can open in place of the document they belong to.
+   */
+  it('does not walk into a document that happens to be a folder', async () => {
+    const root = await project()
+    await mkdir(join(root, 'ruelle.img'))
+    await writeFile(join(root, 'ruelle.img', 'ruelle-part.png'), '')
+
+    expect(await namesFound(root, 'ruelle')).toEqual(['ruelle.img'])
+  })
+
+  it('answers nothing at all for an empty term', async () => {
+    const root = await project()
+
+    expect(await namesFound(root, '   ')).toEqual([])
   })
 })
 

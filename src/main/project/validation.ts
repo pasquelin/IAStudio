@@ -82,6 +82,22 @@ export function parseFolderPaths(value: unknown): string[] {
   return folderPaths.parse(value)
 }
 
+/**
+ * What a search box holds. Bounded like every string this side takes from a window — a term
+ * longer than a file name can be matches nothing, and walking the whole folder to prove it is
+ * work the process that owns every window would pay for.
+ */
+const searchTerm = z.string().max(200)
+
+export function parseSearchTerm(value: unknown): string {
+  return searchTerm.parse(value)
+}
+
+/** Whether a reader asked to see the studio's own bookkeeping. Read, never written to. */
+export function parseHiddenShown(value: unknown): boolean {
+  return z.boolean().parse(value)
+}
+
 // `z.custom` rather than `z.enum`: the values live in `shared/domain/asset.ts`, and zod's enum
 // wants a literal tuple, which the project's ban on `as const` rules out.
 const assetQuery = z.object({

@@ -1,6 +1,13 @@
 import type { PathChange, Refusal } from '@shared/domain/file-op'
 import { extensionOf, foldForFileName, stemForSuffix, stemOf } from '@shared/domain/file-name'
-import { isStudioFolder, isStudioOwned, moveRefusal, nameOf, parentOf } from '@shared/domain/folder'
+import {
+  isHiddenPath,
+  isStudioFolder,
+  isStudioOwned,
+  moveRefusal,
+  nameOf,
+  parentOf,
+} from '@shared/domain/folder'
 
 /**
  * One thing the disk is asked to do. The planner speaks these; `file-ops` carries them out.
@@ -115,8 +122,9 @@ export function planFiles(request: FileRequest, folders: FolderSnapshot): FilePl
 
   if (request.op === 'createFolder') {
     const parent = request.folder
-    if (isStudioOwned(parent) || !folders.has(parent)) {
-      refused.push({ path: parent, reason: isStudioOwned(parent) ? 'private' : 'missing' })
+    const own = isStudioOwned(parent) || isHiddenPath(parent)
+    if (own || !folders.has(parent)) {
+      refused.push({ path: parent, reason: own ? 'private' : 'missing' })
       return { acts, refused }
     }
 
@@ -132,7 +140,7 @@ export function planFiles(request: FileRequest, folders: FolderSnapshot): FilePl
     const { path, name } = request
     const parent = parentOf(path) ?? ''
 
-    if (isStudioOwned(path)) refused.push({ path, reason: 'private' })
+    if (isStudioOwned(path) || isHiddenPath(path)) refused.push({ path, reason: 'private' })
     else if (!present(folders, path)) refused.push({ path, reason: 'missing' })
     else {
       const target = parent === '' ? name : `${parent}/${name}`
@@ -152,7 +160,10 @@ export function planFiles(request: FileRequest, folders: FolderSnapshot): FilePl
       // `isStudioFolder` and not `isStudioOwned`: what a folder of the studio HOLDS may be
       // thrown away — the catalogue lets go of the rows underneath — where the folder itself is
       // the layout the project is read by.
-      if (isStudioFolder(path)) refused.push({ path, reason: 'private' })
+      // The hidden ones are the exception to that reading: `.index/` holds a catalogue the
+      // studio rebuilds and `.project.json` is what makes the folder a project, so neither the
+      // folders nor what they hold may go.
+      if (isStudioFolder(path) || isHiddenPath(path)) refused.push({ path, reason: 'private' })
       else if (!present(folders, path)) refused.push({ path, reason: 'missing' })
       else acts.push({ act: 'trash', from: path })
     }
@@ -166,11 +177,12 @@ export function planFiles(request: FileRequest, folders: FolderSnapshot): FilePl
   const moving = request.op === 'move'
   const into = request.folder
 
-  if (into !== null && (isStudioOwned(into) || !folders.has(into))) {
-    for (const path of request.paths) {
-      refused.push({ path, reason: isStudioOwned(into) ? 'private' : 'missing' })
+  if (into !== null) {
+    const own = isStudioOwned(into) || isHiddenPath(into)
+    if (own || !folders.has(into)) {
+      for (const path of request.paths) refused.push({ path, reason: own ? 'private' : 'missing' })
+      return { acts, refused }
     }
-    return { acts, refused }
   }
 
   const claimed = new Map<string, Set<string>>()

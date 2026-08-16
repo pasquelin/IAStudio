@@ -83,7 +83,14 @@
     "trashTitle": "Ces {{count, number}} éléments partent à la corbeille",
     "trashBody": "Vous pourrez les récupérer depuis la corbeille du système. Le studio, lui, ne sait pas les remettre en place.",
     "trashConfirm": "Mettre à la corbeille",
-    "trashCancel": "Annuler"
+    "trashCancel": "Annuler",
+    "noMatch": "Aucun fichier de ce projet ne porte ce nom.",
+    "hidden": "Éléments cachés",
+    "hiddenHint": "Montre ce que le studio range sous un point, en lecture seule",
+    "sort": {
+      "name": "Nom, de A à Z",
+      "nameDesc": "Nom, de Z à A"
+    }
   },
   "menu": {
     "file": "Fichier",
