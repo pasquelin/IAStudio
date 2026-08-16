@@ -188,6 +188,27 @@ describe('starting and stopping', () => {
     expect(startCapture).toHaveBeenCalled()
   })
 
+  /**
+   * The first press of a session crosses `loadingEngine` on its way to `listening` — the
+   * 700 MB are only read once, so every later press goes straight through. That one event used
+   * to end the session the press had just opened, and the microphone stayed shut under a button
+   * that said it was listening. Turning it off and on again worked, which is how it was found.
+   */
+  it('opens the microphone when the engine had to be loaded first', async () => {
+    const { emit } = connected({
+      start: () => {
+        emit({ type: 'state', state: 'loadingEngine' })
+        emit({ type: 'state', state: 'listening' })
+        return Promise.resolve()
+      },
+    })
+    await useDictation.getState().connect()
+
+    await useDictation.getState().start()
+
+    expect(startCapture).toHaveBeenCalled()
+  })
+
   // The model may be missing or the microphone refused: asking the platform for a device then
   // would put a recording indicator on screen for a session that never happens.
   it('opens nothing when the session did not start', async () => {

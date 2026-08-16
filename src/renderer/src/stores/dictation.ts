@@ -59,6 +59,17 @@ let capture: Capture | null = null
  */
 let session = 0
 
+/**
+ * Whether an announced state ends the session, as opposed to being crossed on the way into one.
+ *
+ * `loadingEngine` is the only state of the second kind, and it is published while `start` is
+ * still awaiting the main process. Ending the session on it invalidated the very press that had
+ * opened it: the first dictation of a run — the one that reads the 700 MB — left the microphone
+ * shut under a button that already said it was listening, and only turning it off and on again
+ * worked, because by then the engine was resident and no such event was published.
+ */
+const endsSession = (state: SttState): boolean => state !== 'listening' && state !== 'loadingEngine'
+
 const failureOf = (error: unknown): SttFailure => {
   if (error instanceof MicrophoneRefused) {
     return { code: 'permissionDenied', message: error.message }
@@ -96,7 +107,7 @@ export const useDictation = create<DictationState>()((set, get) => ({
       if (event.type === 'state') {
         // A session that ends stops the microphone even when the ending came from the main
         // process — an engine that crashed leaves a capture nobody is reading.
-        if (event.state !== 'listening') void closeCapture()
+        if (endsSession(event.state)) void closeCapture()
         set({ state: event.state, ...(event.state === 'listening' ? { partial: '' } : {}) })
         return
       }
