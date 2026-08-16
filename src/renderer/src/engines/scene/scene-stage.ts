@@ -108,8 +108,10 @@ export function createSceneStage({
   }
 
   let shown: SceneState | null = null
-  /** Whether the free camera has been aimed at the contents — done once, see `draw`. */
+  /** Whether the free camera has been aimed at the contents — done once per angle, see `draw`. */
   let framed = false
+  /** The published view the current aim was taken from, so a new one re-aims and nothing else. */
+  let aimedFrom = ''
 
   return {
     show: state => {
@@ -130,21 +132,22 @@ export function createSceneStage({
 
       const camera = shown ? firstCameraId(shown.nodes) : null
 
+      // The ANGLE its author is working in, never their distance: a scene with no camera of its
+      // own has no other direction anybody actually chose, but a working view sits well back to
+      // leave room around the subject — taken whole it drew a character a few pixels tall. So
+      // the direction is theirs and the framing is ours.
+      //
+      // Aimed once per angle rather than per frame, and from the REST pose: re-aiming every
+      // frame makes the camera chase a walking character's bounding box and the picture
+      // breathes, while framing under whatever pose each monitor happens to be at would have
+      // two monitors of the same clip disagree for good.
       if (!camera) {
-        // The view its author is working in wins over anything computed here: a scene with no
-        // camera of its own has no other framing that anybody actually chose. Re-read on every
-        // frame, so orbiting the 3D tab moves the montage with it — the same liveness that
-        // makes an edit to the scene show up here at once.
         const working = viewOf?.() ?? null
-        if (working) active.applyView(working)
-        // Nothing published yet — the 3D tab has never been opened, or never moved. Aimed ONCE,
-        // on the first frame where there is something to aim at, and from the REST pose: two
-        // monitors sit at two different playheads, and framing under the pose of each would
-        // have them disagree for good. Re-aiming per frame instead made the camera chase a
-        // walking character's bounding box, and the picture breathed with every step.
-        else if (!framed) {
+        const angle = working ? JSON.stringify(working) : ''
+        if (!framed || angle !== aimedFrom) {
           active.setPlayhead(0)
-          framed = active.frameContents()
+          framed = active.frameContents(working ?? undefined)
+          if (framed) aimedFrom = angle
         }
       }
 

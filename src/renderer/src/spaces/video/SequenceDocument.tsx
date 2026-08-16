@@ -137,19 +137,26 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
    * way to SEE the clip you picked even when a track above covers it, rather than a picture of
    * its first frame and nothing else.
    *
-   * Only while it is not playing: pressing play there runs the whole take from where it stands,
-   * and recentring it on the montage every frame would fight its own transport.
+   * While NEITHER of them is playing, and that is the whole of the rule.
+   *
+   * Not while the source plays, because pressing play there runs the whole take from where it
+   * stands and recentring it every frame would fight its own transport. And not while the
+   * PROGRAMME plays either: the head then moves sixty times a second, so following it would
+   * animate both pictures at once — two decodes, and for a scene clip two whole 3D renders per
+   * frame, to show twice what one monitor is already showing. Following is for scrubbing.
+   *
+   * It catches up the moment playback stops, since that is when this runs again.
    *
    * Clamped to the clip: the head is often outside it, and the take has no frame to show for a
    * moment it does not span. A frame short of the end, since a clip spans up to but not
    * including it — landing exactly on the end shows nothing at all.
    */
   useEffect(() => {
-    if (sourcePlaying || !selected) return
+    if (sourcePlaying || running || !selected) return
 
     const last = Math.max(0, selected.duration - frameDuration(sequence.settings))
     setSourceTime(clamp(sequence.playhead - selected.start, 0, last))
-  }, [sourcePlaying, selected, sequence.playhead, sequence.settings])
+  }, [sourcePlaying, running, selected, sequence.playhead, sequence.settings])
 
   // The source monitor plays one clip, which is a sequence of one — same engine, same painter.
   const source: SequenceState = useMemo(
