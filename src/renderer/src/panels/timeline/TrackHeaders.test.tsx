@@ -44,6 +44,13 @@ describe('TrackHeaders', () => {
     expect(screen.getByText('A1')).toBeInTheDocument()
   })
 
+  /** The pendant of the same case in `AnimationHeaders.test.tsx` — see there for what it holds. */
+  it('announces itself as the tracks of the montage, not as the rows of the animation', () => {
+    headers()
+
+    expect(screen.getByRole('list', { name: 'Pistes du montage' })).toBeInTheDocument()
+  })
+
   it('gives each row the height its track carries', () => {
     installTracks([trackFixture('V1', 'video', [], { height: 90 })])
     headers()
