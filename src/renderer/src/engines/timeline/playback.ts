@@ -75,3 +75,8 @@ export const transports = createTransportRegistry()
 export function programOwner(documentId: string): string {
   return `${documentId}:program`
 }
+
+/** The take being judged, which runs its own transport beside the programme's. */
+export function sourceOwner(documentId: string): string {
+  return `${documentId}:source`
+}

@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addClip } from '@/engines/timeline/commands'
-import { programOwner } from '@/engines/timeline/playback'
+import { programOwner, sourceOwner } from '@/engines/timeline/playback'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
 import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timeline-state'
 import { TimelinePanel } from '@/panels/timeline/TimelinePanel'
@@ -189,6 +189,41 @@ describe('SequenceDocument', () => {
     seekMontage(2_800_000)
 
     expect(sourcePlayhead()).toBe(400_000)
+  })
+
+  /**
+   * The other half of the same rule, and the one nothing covered: the source stops following when
+   * IT plays too, and what it stops on has to be where the scrub left it. Its transport reports a
+   * time only once it has played a frame, so a take frozen on that instead opens at frame zero —
+   * the head of the clip rather than the moment being judged.
+   */
+  it('starts the take where the scrub left it when the source itself plays', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+    seekMontage(2_400_000)
+    act(() => usePlayback.getState().setRunning(sourceOwner('doc-1'), true))
+
+    expect(sourcePlayhead()).toBe(400_000)
+  })
+
+  /**
+   * Following moves the take on every montage move, which leaves it nowhere to be PUT: recomputed
+   * on every render instead, the position the monitor reports lasts one render and the rewind
+   * button does nothing whatever. It holds until the head moves again, which resumes following.
+   */
+  it('lets the source be rewound, and follows the head again once it moves', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+    seekMontage(2_400_000)
+    act(() => {
+      screen.getAllByRole('button', { name: /début/i })[0]?.click()
+    })
+    expect(sourcePlayhead()).toBe(0)
+
+    seekMontage(2_600_000)
+    expect(sourcePlayhead()).toBe(600_000)
   })
 
   it('catches up with the head as soon as playback stops', () => {
