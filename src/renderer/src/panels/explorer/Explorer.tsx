@@ -10,6 +10,7 @@ import { Tree } from '@/design/Tree'
 import { openDocument } from '@/app/dockview-api'
 import { assetAt } from '@/helpers/asset-at'
 import { renameAsset, renameDocument } from '@/helpers/rename'
+import { startSceneDrag } from '@/helpers/scene-drag'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
@@ -164,6 +165,13 @@ export function Explorer() {
       // Both refusals are the same one, read from `shared/` so the main process refuses the
       // same things — and read on BOTH sides of the gesture, what moves and what receives.
       draggable={node => !isStudioFolder(node.path)}
+      // A scene row is dragged for two different reasons, and both are legitimate: into another
+      // folder, or onto a montage. The tree's own channel carries the first, this one the
+      // second, and each target reads only the type it knows.
+      onDragStart={(node, event) => {
+        const document = documentOf(node)
+        if (document?.kind === 'scene') startSceneDrag(event, document.id)
+      }}
       droppable={(node, dragged) => node.kind === 'folder' && canMoveInto(dragged.path, node.path)}
       // Nothing is written here on faith: the watch says the folder changed and the tree reads
       // it again, so what appears in the new folder is what the disk actually holds.

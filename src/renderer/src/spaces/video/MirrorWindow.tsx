@@ -2,9 +2,11 @@ import { mdiTelevisionPlay } from '@mdi/js'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
-import { openAssetSink } from '@/engines/timeline/sink-port'
+import { createStudioSink } from '@/engines/timeline/sink-port'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timeline-state'
+import { assetsById, useAssets } from '@/stores/assets'
+import { loadSceneSource, montageSceneOf } from '@/stores/scene-sources'
 import { mirrorMessageOf, openMirrorChannel } from './mirror-channel'
 import { silentSound } from './silent-sound'
 
@@ -23,6 +25,11 @@ export function MirrorWindow() {
   const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<TimelineEngine | null>(null)
+  // What the 3D is drawn at here: the sequence the studio publishes, never this window's size.
+  const frameSize = useRef({
+    width: EMPTY_SEQUENCE.settings.width,
+    height: EMPTY_SEQUENCE.settings.height,
+  })
   const [showing, setShowing] = useState(false)
 
   useEffect(() => {
@@ -31,7 +38,15 @@ export function MirrorWindow() {
 
     const sound = silentSound()
     const created = new TimelineEngine({
-      openSink: openAssetSink,
+      // The same router the studio's own monitors use, or the return would show black where
+      // the edit shows a scene — and a return that disagrees with the programme is worse than
+      // no return. It renders 3D of its own: a WebGL context cannot cross a window.
+      openSink: createStudioSink({
+        sceneOf: montageSceneOf,
+        wantScene: loadSceneSource,
+        assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
+        size: () => frameSize.current,
+      }),
       sound,
       audioTime: sound.now,
       maxDecoders: 2,
@@ -67,6 +82,7 @@ export function MirrorWindow() {
       }
       if (message.kind === 'edit') {
         sequence = message.sequence
+        frameSize.current = { width: sequence.settings.width, height: sequence.settings.height }
         setShowing(true)
         engine.current?.apply(sequence)
         return
