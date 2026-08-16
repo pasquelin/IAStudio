@@ -98,3 +98,89 @@ describe('renaming from wherever a name is read', () => {
     )
   })
 })
+
+/**
+ * Measured in the app on 16 August: renaming an asset in the explorer changed the shelf and left
+ * the TAB editing it reading `asset_UjmhYgPhewvzGCx2tD1jxvwL`. A document opened from an asset is
+ * called after it — `openAsset` copies the name across — and nothing carried a later rename over.
+ */
+describe('the tabs editing a renamed asset', () => {
+  const editor: DocumentDescriptor = {
+    id: 'doc-2',
+    kind: 'image',
+    title: 'Pas courus',
+    workspace: 'image',
+    fileName: 'Pas courus.img',
+    sourceAssetId: 'asset_1',
+  }
+
+  const renamedAsset = { ...ASSET, name: 'Pas dans les feuilles' }
+
+  it('take the name with it', async () => {
+    const rename = vi.fn(() => Promise.resolve({ ...editor, title: 'Pas dans les feuilles' }))
+    useDocuments.setState({ documents: { 'doc-2': editor }, stored: [editor] })
+    installFakeBridge({
+      assets: { update: () => Promise.resolve(renamedAsset) },
+      documents: { rename },
+    })
+
+    renameAsset('asset_1', 'Pas courus', 'Pas dans les feuilles')
+
+    await vi.waitFor(() =>
+      expect(rename).toHaveBeenCalledWith('doc-2', 'image', 'Pas dans les feuilles'),
+    )
+  })
+
+  /** A document of its own is not one of the asset's, however alike the two names happen to be. */
+  it('leaves a document that was not opened from it alone', async () => {
+    const rename = vi.fn()
+    installFakeBridge({
+      assets: { update: () => Promise.resolve(renamedAsset) },
+      documents: { rename },
+    })
+
+    renameAsset('asset_1', 'Pas courus', 'Pas dans les feuilles')
+
+    await vi.waitFor(() =>
+      expect(useAssets.getState().items[0]?.name).toBe('Pas dans les feuilles'),
+    )
+    expect(rename).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A tab is renamed once, not twice: an open document is listed in `documents` AND in `stored`,
+   * and the second call would come back `duplicate` against the name the first one just took.
+   */
+  it('rename an open document once, though it is listed twice', async () => {
+    const rename = vi.fn(() => Promise.resolve({ ...editor, title: 'Pas dans les feuilles' }))
+    useDocuments.setState({ documents: { 'doc-2': editor }, stored: [editor] })
+    installFakeBridge({
+      assets: { update: () => Promise.resolve(renamedAsset) },
+      documents: { rename },
+    })
+
+    renameAsset('asset_1', 'Pas courus', 'Pas dans les feuilles')
+
+    await vi.waitFor(() => expect(rename).toHaveBeenCalled())
+    expect(rename).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * A document saved for an asset and then CLOSED lives only in the folder listing. Left behind,
+   * it would hand the old name back the day it is reopened — the same defect, on a delay.
+   */
+  it('follow a document that is no longer open', async () => {
+    const rename = vi.fn(() => Promise.resolve({ ...editor, title: 'Pas dans les feuilles' }))
+    useDocuments.setState({ documents: {}, stored: [editor] })
+    installFakeBridge({
+      assets: { update: () => Promise.resolve(renamedAsset) },
+      documents: { rename },
+    })
+
+    renameAsset('asset_1', 'Pas courus', 'Pas dans les feuilles')
+
+    await vi.waitFor(() =>
+      expect(rename).toHaveBeenCalledWith('doc-2', 'image', 'Pas dans les feuilles'),
+    )
+  })
+})

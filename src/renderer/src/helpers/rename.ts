@@ -35,6 +35,41 @@ export function renameAsset(assetId: string, was: string, name: string): void {
     .getState()
     .rename(assetId, name)
     .then(failure => {
-      if (failure) reportFailure('assets.rename', name, new Error(failure))
+      if (failure) return reportFailure('assets.rename', name, new Error(failure))
+
+      renameDocumentsOfAsset(assetId, name)
     })
+}
+
+/**
+ * The tabs editing this asset take its new name too.
+ *
+ * A document opened FROM an asset is called after it — `openAsset` copies the name across when
+ * the tab is created — and nothing carried a later rename over: the shelf said « squelette »
+ * while the tab above it still read `asset_UjmhYgPhewvzGCx2tD1jxvwL`, which is the two-name
+ * problem back in the one place a user cannot miss it.
+ *
+ * All of them, not the first: one asset is legitimately edited by two documents — a texture is a
+ * channel in the Textures space and pixels in the Images one.
+ *
+ * A document keeps its OWN name once somebody types one; this only follows the asset because the
+ * asset is where the name came from. Renaming the tab does not travel back the other way — a
+ * montage of layers is not its source picture, and one gesture writing two things is one gesture
+ * too many.
+ *
+ * Failures land in the journal per document rather than undoing the asset's rename: the asset is
+ * what was asked for, and a tab whose name did not follow is a smaller wrong than a rename that
+ * silently did not happen.
+ */
+function renameDocumentsOfAsset(assetId: string, name: string): void {
+  const { documents, stored } = useDocuments.getState()
+
+  // Closed ones too, and by id so an open document listed in both is renamed once. A document
+  // saved for an asset and then closed lives only in the folder listing: leaving it behind would
+  // hand the old name back the day it is reopened, which is the same defect on a delay.
+  const byId = new Map([...stored, ...Object.values(documents)].map(entry => [entry.id, entry]))
+
+  for (const document of byId.values()) {
+    if (document.sourceAssetId === assetId) renameDocument(document.id, document.title, name)
+  }
 }
