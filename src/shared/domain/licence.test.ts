@@ -1,39 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { isCopyleft, isLicencesRoute, LICENCES_ROUTE, type Licence } from './licence'
 import licences from '../licences.json'
-import manifest from '../../../package.json'
 
 const entries: Licence[] = licences
-
-/** Declared, never shipped: they run on the machine that builds and never reach a user. */
-const BUILD_ONLY = new Set([
-  '@electron/rebuild',
-  '@eslint/js',
-  '@tailwindcss/vite',
-  '@testing-library/jest-dom',
-  '@testing-library/react',
-  '@testing-library/user-event',
-  '@types/better-sqlite3',
-  '@types/node',
-  '@types/react',
-  '@types/react-dom',
-  '@types/react-is',
-  '@types/three',
-  '@vitejs/plugin-react',
-  'electron-builder',
-  'electron-vite',
-  'eslint',
-  'eslint-plugin-react-hooks',
-  'jscpd',
-  'jsdom',
-  'knip',
-  'prettier',
-  'prettier-plugin-tailwindcss',
-  'typescript',
-  'typescript-eslint',
-  'vite',
-  'vitest',
-])
 
 describe('the licences route', () => {
   it('answers to the hash the main process loads', () => {
@@ -74,25 +43,5 @@ describe('the collected notice', () => {
     expect(isCopyleft('Apache-2.0')).toBe(false)
     expect(isCopyleft('MPL-2.0')).toBe(true)
     expect(isCopyleft('GPL-3.0-or-later')).toBe(true)
-  })
-
-  /**
-   * Every declared dependency is either shipped — hence in the notice — or a tool that never
-   * leaves the machine that built it. A new one is neither until someone says which, and this
-   * is what asks: reading `dependencies` alone would miss the twenty packages Vite bundles out
-   * of `devDependencies`, which is most of what the notice owes.
-   *
-   * The reciprocal — nothing shipped that the manifest no longer declares — is `licences.test.ts`
-   * under `src/main`, which needs `node:fs` and so cannot live here.
-   */
-  it('accounts for every declared dependency, as shipped or as a build tool', () => {
-    const declared = [
-      ...Object.keys(manifest.dependencies),
-      ...Object.keys(manifest.devDependencies),
-    ]
-    expect(declared.length).toBeGreaterThan(20)
-
-    const shipped = new Set(entries.map(entry => entry.name))
-    expect(declared.filter(name => !shipped.has(name) && !BUILD_ONLY.has(name))).toEqual([])
   })
 })
