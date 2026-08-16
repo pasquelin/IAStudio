@@ -60,15 +60,21 @@ let capture: Capture | null = null
 let session = 0
 
 /**
- * Whether an announced state ends the session, as opposed to being crossed on the way into one.
+ * Which announced states end the session, as opposed to being crossed on the way into one.
  *
- * `loadingEngine` is the only state of the second kind, and it is published while `start` is
- * still awaiting the main process. Ending the session on it invalidated the very press that had
- * opened it: the first dictation of a run — the one that reads the 700 MB — left the microphone
- * shut under a button that already said it was listening, and only turning it off and on again
- * worked, because by then the engine was resident and no such event was published.
+ * Exhaustive rather than a comparison: a ninth state added to `SttState` stops compiling here,
+ * and a transitional one would otherwise fall in as an ending and void the start still in flight.
  */
-const endsSession = (state: SttState): boolean => state !== 'listening' && state !== 'loadingEngine'
+const ENDS_SESSION: Record<SttState, boolean> = {
+  idle: true,
+  permissionRequired: true,
+  modelMissing: true,
+  downloadingModel: true,
+  loadingEngine: false,
+  ready: true,
+  listening: false,
+  error: true,
+}
 
 const failureOf = (error: unknown): SttFailure => {
   if (error instanceof MicrophoneRefused) {
@@ -105,9 +111,14 @@ export const useDictation = create<DictationState>()((set, get) => ({
       pushed = true
 
       if (event.type === 'state') {
-        // A session that ends stops the microphone even when the ending came from the main
-        // process — an engine that crashed leaves a capture nobody is reading.
-        if (endsSession(event.state)) void closeCapture()
+        // Any state but `listening` stops the microphone, even when it came from the main
+        // process — an engine that crashed leaves a capture nobody is reading. Only an ending
+        // also voids the start in flight: `loadingEngine` is published while that start is
+        // still awaiting the main process, and voiding it there left the first dictation of a
+        // run with a shut microphone under a button that already said it was listening.
+        if (event.state !== 'listening') {
+          void (ENDS_SESSION[event.state] ? closeCapture() : stopCapture())
+        }
         set({ state: event.state, ...(event.state === 'listening' ? { partial: '' } : {}) })
         return
       }
@@ -236,7 +247,11 @@ async function closeCapture(): Promise<void> {
   // was about to keep. Every path that ends a session comes through here, the engine crashing
   // included.
   session += 1
+  await stopCapture()
+}
 
+/** The microphone alone. A start still opening one keeps its claim on the session. */
+async function stopCapture(): Promise<void> {
   const running = capture
   capture = null
   useDictation.setState({ level: 0 })

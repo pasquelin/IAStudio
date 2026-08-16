@@ -71,13 +71,17 @@ describe('starting a session', () => {
   })
 
   it('keeps the engine between sessions rather than forking one each time', async () => {
-    const { session, opened } = harness()
+    const { session, states, opened } = harness()
 
     await session.start()
     await session.stop()
     await session.start()
 
     expect(opened).toHaveBeenCalledTimes(1)
+    // The window depends on this: a resident engine announces nothing between `ready` and
+    // `listening`, so a second `loadingEngine` here would reach a renderer that reads it as a
+    // state crossed while no start is in flight.
+    expect(states()).toEqual(['loadingEngine', 'listening', 'ready', 'listening'])
   })
 
   // Asked first, so the interface can tell "you said no" from "there is no microphone" — which

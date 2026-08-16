@@ -188,12 +188,8 @@ describe('starting and stopping', () => {
     expect(startCapture).toHaveBeenCalled()
   })
 
-  /**
-   * The first press of a session crosses `loadingEngine` on its way to `listening` — the
-   * 700 MB are only read once, so every later press goes straight through. That one event used
-   * to end the session the press had just opened, and the microphone stayed shut under a button
-   * that said it was listening. Turning it off and on again worked, which is how it was found.
-   */
+  // Only the first press of a run crosses `loadingEngine`, which is why turning the microphone
+  // off and on again worked and hid this for so long.
   it('opens the microphone when the engine had to be loaded first', async () => {
     const { emit } = connected({
       start: () => {
