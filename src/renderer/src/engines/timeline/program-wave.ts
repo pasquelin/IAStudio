@@ -4,7 +4,7 @@ import type { Size } from '@/engines/core/geometry'
 import { memoPalette, rootColour } from '@/engines/core/palette'
 import { paintWaveform, waveAxis } from './painter'
 import { paintRuler, readRulerStyle, type RulerStyle } from './ruler'
-import { clampScale } from './viewport'
+import { DEFAULT_VIEWPORT, MAX_SCALE } from './viewport'
 import { RULER_HEIGHT, timeToX, type Viewport } from './timeline-geometry'
 import {
   playsThrough,
@@ -319,11 +319,18 @@ function paintScale(
 /**
  * The viewport that fits a montage to a width, and the one the head is placed against.
  *
- * Clamped to the scale the wheel is clamped to: a montage of a few tenths of a second across a
- * wide panel fits at a scale past `MAX_SCALE`, and the first zoom IN would then have zoomed out —
- * `zoomAt` cannot go past the ceiling, so it would have landed under where the fit already was.
+ * Held under the CEILING and nowhere near the floor. Past the ceiling, a montage of a few tenths
+ * of a second fits at a scale `zoomAt` cannot reach, and the first zoom in would have zoomed out.
+ * `MIN_SCALE` must NOT be applied: it is one pixel a second, so clamping there would have made a
+ * montage longer than the panel is wide impossible to fit at all — a ten-minute piece in a
+ * four-hundred-pixel monitor would show its first four hundred seconds and call that the whole
+ * thing, which is the very reading this monitor was opened up to stop.
  */
 export function programViewport(state: SequenceState, width: number): Viewport {
+  // A surface not laid out yet, as `fitToWidth` guards the same way: a fit of zero is a scale of
+  // zero, and the very next scroll divides a delta by it and carries a NaN into the view.
+  if (width <= 0) return DEFAULT_VIEWPORT
+
   const span: Us = Math.max(1, sequenceDuration(state))
-  return { scale: clampScale(width / span), offset: 0, scrollTop: 0 }
+  return { scale: Math.min(width / span, MAX_SCALE), offset: 0, scrollTop: 0 }
 }

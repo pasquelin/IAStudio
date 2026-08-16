@@ -1,6 +1,6 @@
 import { act, render } from '@testing-library/react'
 import { useState } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RenderedAudio } from '@/engines/audio/audio-render'
 import { refreshPalette } from '@/engines/core/palette'
 import { useWaveSurfer } from './useWaveSurfer'
@@ -10,6 +10,7 @@ const destroy = vi.fn()
 const setOptions = vi.fn((_options: unknown) => {})
 const dragSelection = vi.fn((_options: unknown) => {})
 const zoom = vi.fn((_pxPerSecond: number) => {})
+const duration = vi.fn(() => 2)
 const setScroll = vi.fn((_pixels: number) => {})
 const create = vi.fn((_options: unknown) => ({
   on: vi.fn(),
@@ -20,7 +21,7 @@ const create = vi.fn((_options: unknown) => ({
   setScroll,
   getScroll: () => 40,
   // A two-second take across a 400 px panel: fitted, it is drawn at 200 pixels a second.
-  getDuration: () => 2,
+  getDuration: duration,
   getWidth: () => 400,
   isPlaying: () => false,
   play: vi.fn(),
@@ -48,9 +49,17 @@ const rendered: RenderedAudio = {
   silence: { head: 0, tail: 2_000_000 },
 }
 
-function Editor({ surface, nodeKey = 'one' }: { surface: boolean; nodeKey?: string }) {
+function Editor({
+  surface,
+  nodeKey = 'one',
+  rendered: take = rendered,
+}: {
+  surface: boolean
+  nodeKey?: string
+  rendered?: RenderedAudio
+}) {
   const [element, setElement] = useState<HTMLDivElement | null>(null)
-  useWaveSurfer({ container: element, rendered, owner: 'take', onRegionChange: () => {} })
+  useWaveSurfer({ container: element, rendered: take, owner: 'take', onRegionChange: () => {} })
   return surface ? <div key={nodeKey} ref={setElement} /> : null
 }
 
@@ -139,6 +148,10 @@ describe('useWaveSurfer', () => {
    * wavesurfer's pixels-per-second rather than a viewport, but the gesture must not differ.
    */
   describe('the wheel over a take', () => {
+    // Restated per case: one of them shortens the take, and a mock left short would silently
+    // rescale the cases after it.
+    beforeEach(() => duration.mockReturnValue(2))
+
     const wheeled = (event: Partial<WheelEvent>): void => {
       const { container } = render(<Editor surface />)
       const surface = container.querySelector('div')
@@ -164,6 +177,18 @@ describe('useWaveSurfer', () => {
       expect(zoom).toHaveBeenLastCalledWith(200)
     })
 
+    /**
+     * A two-tenths bang on a wide panel fits at a scale past the ceiling, and `clamp` answers its
+     * HIGH bound when the two bounds cross — so the first zoom IN would have zoomed out.
+     */
+    it('does not zoom out on a take too short to fill the panel at full scale', () => {
+      duration.mockReturnValue(0.1)
+      wheeled({ deltaY: -100, ctrlKey: true })
+
+      // 400 px over a tenth of a second is 4 000 px a second, past the 2 000 ceiling.
+      expect(zoom).toHaveBeenLastCalledWith(2_000)
+    })
+
     it('scrolls the take sideways on a plain wheel, touching no zoom', () => {
       zoom.mockClear()
       wheeled({ deltaX: 30 })
@@ -176,6 +201,40 @@ describe('useWaveSurfer', () => {
       wheeled({ deltaY: 30, shiftKey: true })
 
       expect(setScroll).toHaveBeenLastCalledWith(70)
+    })
+
+    /**
+     * A take arriving is drawn fitted to the panel. Kept, the zoom would have been the PREVIOUS
+     * take's pixels-per-second, and the first notch would have jumped from the fit straight to a
+     * scale nothing on screen was ever drawn at.
+     */
+    it('forgets the zoom when another take is loaded', () => {
+      const view = render(<Editor surface />)
+      const surface = view.container.querySelector('div')
+      if (!surface) throw new Error('the editor drew no surface')
+
+      const wheel = () =>
+        act(() => {
+          surface.dispatchEvent(
+            new WheelEvent('wheel', {
+              bubbles: true,
+              cancelable: true,
+              deltaY: -100,
+              ctrlKey: true,
+            }),
+          )
+        })
+
+      wheel()
+      wheel()
+      expect(zoom).toHaveBeenLastCalledWith(312.5)
+
+      // A shorter take, fitted at 400 pixels a second — one notch in is 500, never 390.
+      duration.mockReturnValue(1)
+      view.rerender(<Editor surface rendered={{ ...rendered, wav: new Uint8Array(16) }} />)
+      wheel()
+
+      expect(zoom).toHaveBeenLastCalledWith(500)
     })
   })
 })

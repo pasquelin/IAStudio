@@ -98,6 +98,16 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
     [],
   )
 
+  /**
+   * The surface as it stands, for the gestures — a wheel notch, a click. It forces a layout, which
+   * is why the frame loop reads `box` instead: the box is only true once something has been
+   * painted, and a wheel can arrive before that (a panel just unfolded, a tab just shown).
+   */
+  const measure = useCallback(
+    (): Size => canvasRef.current?.getBoundingClientRect() ?? { width: 0, height: 0 },
+    [],
+  )
+
   const paint = useCallback((): void => {
     paintOn(canvasRef.current, (context, size) => {
       box.current = size
@@ -114,12 +124,19 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
     })
   }, [peaksOf, curves, viewportFor])
 
-  // The view sits in this effect beside the montage, and that is load-bearing: it is read on
-  // paint rather than rendered, so nothing else would repaint after a wheel — and a montage that
-  // is not playing has no other reason to repaint at all.
+  /**
+   * The view sits in this effect beside the montage, and that is load-bearing: it is read on
+   * paint rather than rendered, so nothing else would repaint after a wheel — and a montage that
+   * is not playing has no other reason to repaint at all.
+   *
+   * Re-bounded against the montage as it lands, because the montage is what the bound is made of:
+   * zoomed into the fourth minute of a five-minute piece and then cut back to thirty seconds, the
+   * view was left looking past the end — chassis, no playhead, and every click on it landing at
+   * the last frame.
+   */
   useEffect(() => {
     latest.current = sequence
-    view.current = zoom
+    view.current = zoom && clampViewport(zoom, sequence, box.current)
     paint()
   }, [sequence, zoom, paint])
 
@@ -139,15 +156,24 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
    */
   useTimelineWheel(
     canvasRef,
-    useCallback(() => viewportFor(box.current.width), [viewportFor]),
+    useCallback(() => viewportFor(measure().width), [viewportFor, measure]),
     useCallback(
       (next: Viewport) => {
-        const current = viewportFor(box.current.width)
-        const clamped = clampViewport(next, latest.current, box.current)
+        const box = measure()
+        const current = viewportFor(box.width)
+        const clamped = clampViewport(next, latest.current, box)
+        // Only a ZOOM leaves the whole montage. The strip lets a fitted view scroll on — there is
+        // room past the end to drop a clip into — but this monitor has nothing to drop and
+        // nothing past the end to show, so a wheel there would slide the montage off its own
+        // surface for no gain, and quietly stop the fit from following the montage's length.
+        if (clamped.scale === current.scale && view.current === null) return
         if (clamped.scale !== current.scale || clamped.offset !== current.offset) setZoom(clamped)
       },
-      [viewportFor],
+      [viewportFor, measure],
     ),
+    // One lane, so a plain wheel scrolls sideways: this monitor sums every track into a single
+    // wave, and a vertical delta swallowed here is a mouse that cannot scroll it at all.
+    { rows: false },
   )
 
   /**

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
+import { SECOND } from '@shared/domain/time'
 import { paintProgram, programColumns, programEnvelope, programViewport } from './program-wave'
 import type { Viewport } from './timeline-geometry'
 import { clipFixture } from './timeline-fixtures'
 import { EMPTY_SOUND_SEQUENCE, makeTrack, type SequenceState } from './timeline-state'
+import { MAX_SCALE } from './viewport'
 
 /** 100 px per second, as the strip's own suite reads it. */
 const viewport: Viewport = { scale: 100 / 1_000_000, offset: 0, scrollTop: 0 }
@@ -161,6 +163,37 @@ describe('the programme monitor', () => {
 
     expect(shown.stroked).toBeGreaterThan(0)
     expect(hidden.stroked).toBe(0)
+  })
+})
+
+/**
+ * The view the monitor opens on, and the one its fit button goes back to. Both bounds are wrong
+ * here in opposite ways, and only one of them belongs.
+ */
+describe('fitting a montage to the monitor', () => {
+  const lasting = (seconds: number): SequenceState =>
+    montage([
+      makeTrack({
+        id: 'A1',
+        kind: 'audio',
+        index: 0,
+        clips: [clipFixture('long', 0, seconds * SECOND, { assetId: 'long' })],
+      }),
+    ])
+
+  it('shows the whole montage however far past the panel it runs', () => {
+    // Ten minutes across four hundred pixels: two thirds of a pixel a second, well under the
+    // strip's own floor of one. Clamped there, the fit would have shown the first four hundred
+    // seconds and called it the whole montage.
+    const fitted = programViewport(lasting(600), 400)
+
+    expect(fitted.scale * 600 * SECOND).toBeCloseTo(400, 6)
+  })
+
+  it('never fits past the scale a wheel could zoom to', () => {
+    // A fifth of a second across a wide panel fits beyond the ceiling; `zoomAt` cannot follow it
+    // there, so the first zoom in would have landed BELOW the fit it started at.
+    expect(programViewport(lasting(0.2), 1_000).scale).toBe(MAX_SCALE)
   })
 })
 

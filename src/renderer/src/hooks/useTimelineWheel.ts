@@ -21,10 +21,21 @@ import type { Viewport } from '@/engines/timeline/timeline-geometry'
  * by an effect rather than during the render (`react-hooks/refs` refuses the latter), so a caller
  * may pass fresh closures on every render and still be listened to.
  */
+export type WheelOptions = {
+  /**
+   * Whether the surface has rows to scroll through. False turns a plain vertical wheel sideways,
+   * as shift already does — a surface with one lane has nowhere to send it, and swallowing it
+   * leaves an ordinary mouse (which reports no `deltaX` at all) unable to scroll at all while the
+   * page behind stays blocked by `preventDefault`.
+   */
+  rows?: boolean
+}
+
 export function useTimelineWheel(
   ref: RefObject<HTMLElement | null>,
   viewportNow: () => Viewport,
   setViewport: (next: Viewport) => void,
+  { rows = true }: WheelOptions = {},
 ) {
   const latest = useRef({ viewportNow, setViewport })
 
@@ -48,13 +59,14 @@ export function useTimelineWheel(
         return
       }
 
-      // Shift turns a vertical wheel horizontal, as every editor does for a single-axis mouse.
-      const horizontal = event.shiftKey ? event.deltaY : event.deltaX
-      const vertical = event.shiftKey ? 0 : event.deltaY
-      write(scrollBy(current, horizontal, vertical))
+      // Shift turns a vertical wheel horizontal, as every editor does for a single-axis mouse —
+      // and a surface with no rows turns it sideways whether shift is held or not.
+      const sideways = event.shiftKey || !rows
+      const horizontal = sideways ? event.deltaY || event.deltaX : event.deltaX
+      write(scrollBy(current, horizontal, sideways ? 0 : event.deltaY))
     }
 
     element.addEventListener('wheel', onWheel, { passive: false })
     return () => element.removeEventListener('wheel', onWheel)
-  }, [ref])
+  }, [ref, rows])
 }

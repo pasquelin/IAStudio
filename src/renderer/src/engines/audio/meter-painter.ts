@@ -47,17 +47,21 @@ export function paintMeter(
   context.fillStyle = palette.rail
   context.fillRect(0, 0, size.width, size.height)
 
+  // The scale starts UNDER the lamp and runs to the foot of the rail. Measured from the top
+  // instead, it left the bar floating a lamp's height above the bottom and put full scale
+  // straight under the lamp — which then covered the peak witness at the very moment it mattered.
+  const foot = size.height
   const scale = size.height - LAMP_HEIGHT - LAMP_GAP
   const level = meterFraction(meter.level)
   const hot = meterFraction(HOT_AMPLITUDE)
 
-  paintBand(context, size.width, scale, 0, Math.min(level, hot), palette.safe)
-  paintBand(context, size.width, scale, hot, level, palette.hot)
+  paintBand(context, size.width, foot, scale, 0, Math.min(level, hot), palette.safe)
+  paintBand(context, size.width, foot, scale, hot, level, palette.hot)
 
   const peak = meterFraction(meter.peak)
   if (peak > 0) {
     context.fillStyle = palette.peak
-    context.fillRect(0, Math.round(scale * (1 - peak)), size.width, PEAK_HEIGHT)
+    context.fillRect(0, Math.round(foot - scale * peak), size.width, PEAK_HEIGHT)
   }
 
   if (meter.clipped) {
@@ -66,10 +70,11 @@ export function paintMeter(
   }
 }
 
-/** One segment of the bar, between two fractions of the scale, counted from the bottom. */
+/** One segment of the bar, between two fractions of the scale, counted up from the rail's foot. */
 function paintBand(
   context: CanvasRenderingContext2D,
   width: number,
+  foot: number,
   scale: number,
   from: number,
   to: number,
@@ -77,8 +82,8 @@ function paintBand(
 ): void {
   if (to <= from) return
 
-  const top = scale * (1 - to)
-  const bottom = scale * (1 - from)
+  const top = foot - scale * to
+  const bottom = foot - scale * from
   context.fillStyle = colour
   context.fillRect(0, top, width, bottom - top)
 }

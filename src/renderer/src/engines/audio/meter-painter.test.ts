@@ -41,9 +41,21 @@ describe('the output meter', () => {
     const [rail, bar] = paint({ ...RESTING_METER, level: fromDb(-24), peak: fromDb(-24) })
 
     expect(bar?.ink).toBe('green')
-    // Standing ON the bottom of the scale, under the lamp: a bar that floated would read as a
-    // level twice, once by its top and once by its length.
-    expect((bar?.top ?? 0) + (bar?.height ?? 0)).toBe((rail?.height ?? 0) - 5)
+    // Standing ON the foot of the rail. Measured from the top instead, the bar floated a lamp's
+    // height above it, and read as a level twice — once by its top, once by its length.
+    expect((bar?.top ?? 0) + (bar?.height ?? 0)).toBe(rail?.height)
+  })
+
+  /**
+   * Full scale is the top of the SCALE, not the top of the rail — the lamp lives there. Painted
+   * over one another, the witness disappeared under the lamp at the one moment it is read.
+   */
+  it('keeps the witness clear of the lamp at full scale', () => {
+    const drawn = paint({ ...RESTING_METER, level: 1, peak: 1, clipped: true })
+    const witness = drawn.find(band => band.ink === 'witness')
+    const lamp = drawn.find(band => band.ink === 'red')
+
+    expect(witness?.top).toBeGreaterThanOrEqual((lamp?.top ?? 0) + (lamp?.height ?? 0))
   })
 
   /** Amber says the same thing as the amber band of the wave: six decibels of room left, no more. */

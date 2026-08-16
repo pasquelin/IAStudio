@@ -208,6 +208,11 @@ export function useWaveSurfer({
     const instance = surfer.current
     if (!instance || !rendered) return
 
+    // A take arriving is drawn fitted to the panel, so the zoom goes back to meaning that.
+    // Kept, it would have been the PREVIOUS take's pixels-per-second, and the first notch of the
+    // wheel would have jumped from the fit straight to a scale nothing here was ever drawn at.
+    zoomed.current = 0
+
     const blob = new Blob([rendered.wav], { type: 'audio/wav' })
     instance
       .loadBlob(blob, rendered.data.channels, durationOf(rendered.data) / SECOND)
@@ -249,8 +254,11 @@ export function useWaveSurfer({
       if (duration <= 0) return
 
       // The floor is the take laid across the panel: there is nothing to see further out, and
-      // dezooming past it would leave the wave stranded in a corner of its own surface.
-      const fitted = instance.getWidth() / duration
+      // dezooming past it would leave the wave stranded in a corner of its own surface. Held
+      // under the ceiling because a very short take — a two-tenths bang on a wide panel — fits at
+      // a scale past it, and `clamp` answers its HIGH bound when the two cross: the first zoom in
+      // would have zoomed out, below the fit it started at.
+      const fitted = Math.min(instance.getWidth() / duration, MAX_PX_PER_SECOND)
       const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP
       zoomed.current = clamp((zoomed.current || fitted) * factor, fitted, MAX_PX_PER_SECOND)
       instance.zoom(zoomed.current)
