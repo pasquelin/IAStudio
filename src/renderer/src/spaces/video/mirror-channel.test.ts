@@ -9,7 +9,7 @@ import { mirrorMessageOf } from './mirror-channel'
 describe('what the video return accepts off the wire', () => {
   const sequence = { tracks: [], settings: { width: 1920, height: 1080 }, playhead: 0 }
 
-  it('takes the four messages the studio publishes', () => {
+  it('takes the five messages the studio publishes', () => {
     expect(mirrorMessageOf({ kind: 'edit', sequence })).toEqual({ kind: 'edit', sequence })
     expect(mirrorMessageOf({ kind: 'time', playhead: 42 })).toEqual({ kind: 'time', playhead: 42 })
     expect(mirrorMessageOf({ kind: 'playing', playing: true, playhead: 8 })).toEqual({
@@ -18,6 +18,8 @@ describe('what the video return accepts off the wire', () => {
       playhead: 8,
     })
     expect(mirrorMessageOf({ kind: 'gone' })).toEqual({ kind: 'gone' })
+    // The fifth, which the title claimed away: the return asking the studio to say where it is.
+    expect(mirrorMessageOf({ kind: 'ask' })).toEqual({ kind: 'ask' })
   })
 
   it('refuses anything else, whatever it calls itself', () => {
