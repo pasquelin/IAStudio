@@ -215,6 +215,21 @@ function madeAt(row: AssetRowModel): number {
   return Number.isNaN(at) ? 0 : at
 }
 
+/**
+ * What a tile or a line needs to have its name renamed in place.
+ *
+ * The panel owns WHICH row is open — one at a time, across both views — and the row owns neither
+ * the name nor where it is written; these four are the whole of what crosses between them. Named
+ * here rather than written out per host, which is what the grid and the list were each doing.
+ */
+export type AssetRenameHandle = {
+  open: boolean
+  start: () => void
+  commit: (name: string) => void
+  /** Already translated: resolving it per tile runs i18next over two hundred cells. */
+  label: string
+}
+
 /** The library's page keyed by its own ids, so a local row can find the twin it records. */
 export function twinsById(remote: readonly CloudAsset[]): ReadonlyMap<string, CloudAsset> {
   return new Map(remote.map(asset => [asset.id, asset]))

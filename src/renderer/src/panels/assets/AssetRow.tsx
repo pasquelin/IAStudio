@@ -7,7 +7,7 @@ import { ROW_QUIET } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { DraggableAsset } from './DraggableAsset'
 import { LibraryAsset } from './LibraryAsset'
-import { nameOfRow, type AssetRowModel } from './rows'
+import { nameOfRow, type AssetRenameHandle, type AssetRowModel } from './rows'
 
 export type AssetRowProps = {
   row: AssetRowModel
@@ -17,8 +17,8 @@ export type AssetRowProps = {
   badgeLabels: Map<BadgeName, string>
   /** Built once by the panel — see `AssetCardProps.hints`. */
   hints: { fetch: Record<string, string>; generating: Record<string, string> }
-  /** Renaming, when this row is the one being renamed — see `AssetCardProps.rename`. */
-  rename?: { open: boolean; start: () => void; commit: (name: string) => void; label: string }
+  /** Renaming, when this row is the one being renamed. */
+  rename?: AssetRenameHandle
 }
 
 // The type ends the line rather than sitting under the name: a subtitle would stack two lines

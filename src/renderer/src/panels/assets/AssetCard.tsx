@@ -13,7 +13,7 @@ import { assetIcon } from '@/helpers/workspaces'
 import { AssetWaveform } from './AssetWaveform'
 import { DraggableAsset } from './DraggableAsset'
 import { LibraryAsset } from './LibraryAsset'
-import { nameOfRow, typeOfRow, type AssetRowModel } from './rows'
+import { nameOfRow, typeOfRow, type AssetRenameHandle, type AssetRowModel } from './rows'
 
 /** What the CDN is asked to resize a library thumbnail to. A tile is never wider than this. */
 const PREVIEW_WIDTH = 220
@@ -34,11 +34,8 @@ export type AssetCardProps = {
    * subscribes every one of two hundred cells and allocates a fresh attribute object per frame.
    */
   hints: { fetch: Record<string, string>; generating: Record<string, string> }
-  /**
-   * Renaming, when this tile is the one being renamed. Two callbacks rather than one flag: the
-   * panel owns which row is open, and the tile owns neither the name nor where it is written.
-   */
-  rename?: { open: boolean; start: () => void; commit: (name: string) => void; label: string }
+  /** Renaming, when this tile is the one being renamed. */
+  rename?: AssetRenameHandle
 }
 
 export const AssetCard = memo(function AssetCard({

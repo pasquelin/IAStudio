@@ -28,7 +28,15 @@ import { ImportProgress } from './ImportProgress'
 import { useAssetFacets } from './facets'
 import { LOCATION_FACET, useBadgeLabels } from './location-facet'
 import { TYPE_FACET, useTypeLabels } from './type-facet'
-import { markOf, mergeRows, nameOfRow, twinsById, typeOfRow, type AssetRowModel } from './rows'
+import {
+  markOf,
+  mergeRows,
+  nameOfRow,
+  twinsById,
+  typeOfRow,
+  type AssetRenameHandle,
+  type AssetRowModel,
+} from './rows'
 
 /** How much of the account's library one panel reads. It pages no further today. */
 const LIBRARY_PAGE = 60
@@ -134,9 +142,7 @@ export function AssetBrowser() {
    * Only a row the catalogue holds: a library asset has no row of this project's to name yet,
    * and a job still generating has no asset behind its tile.
    */
-  const renameOf = (
-    row: AssetRowModel,
-  ): { rename: { open: boolean; start: () => void; commit: (name: string) => void; label: string } } | null =>
+  const renameOf = (row: AssetRowModel): { rename: AssetRenameHandle } | null =>
     row.from === 'local'
       ? {
           rename: {
