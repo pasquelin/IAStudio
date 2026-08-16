@@ -243,6 +243,52 @@ describe('createDocumentFiles', () => {
   })
 
   /**
+   * A document whose extension is gone — renamed to a bare word, here or in the Finder — was a
+   * document the studio stopped seeing altogether: sitting in the folder, absent from every
+   * list, unopenable, and unrepairable from inside the studio since the explorer only renames
+   * what it recognises. With no extension there is no claim for the envelope to contradict.
+   */
+  it('reads a document whose extension was lost, and names it after its envelope', async () => {
+    await mkdir(join(root, 'documents'), { recursive: true })
+    const envelope = {
+      version: 2,
+      kind: 'audio',
+      title: 'ElevenLabs Sound Effects 2',
+      updatedAt: NOW,
+    }
+    await writeFile(join(root, 'documents', 'demo'), `${JSON.stringify(envelope)}\n{}`, 'utf8')
+
+    expect(await documents.list()).toEqual([
+      {
+        id: 'demo',
+        kind: 'audio',
+        title: 'ElevenLabs Sound Effects 2',
+        workspace: 'audio',
+        fileName: 'demo',
+      },
+    ])
+  })
+
+  // Renaming it is what puts the extension back, so the repair is one gesture from the explorer.
+  it('gives the extension back to such a document when it is renamed', async () => {
+    await mkdir(join(root, 'documents'), { recursive: true })
+    const envelope = { version: 2, kind: 'audio', title: 'Perdu', updatedAt: NOW }
+    await writeFile(join(root, 'documents', 'demo'), `${JSON.stringify(envelope)}\n{}`, 'utf8')
+
+    await documents.rename('demo', 'audio', 'Retrouvé')
+
+    expect(await readdir(join(root, 'documents'))).toEqual(['Retrouvé.aud'])
+  })
+
+  // A stray note the user dropped in there is not a document, and must stay a plain file.
+  it('leaves a file that is not a document alone', async () => {
+    await mkdir(join(root, 'documents'), { recursive: true })
+    await writeFile(join(root, 'documents', 'notes'), 'a note of mine', 'utf8')
+
+    expect(await documents.list()).toEqual([])
+  })
+
+  /**
    * The identity is the envelope's, so a file renamed in the Finder is the same document under
    * another name — which is what lets the studio rename one without it becoming a different
    * document, and what the tabs, the layout and the recent list all depend on.
