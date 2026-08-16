@@ -87,7 +87,16 @@
     "sourceRole": "The clip you picked, as it is before the edit",
     "programRole": "The whole edit, as it will be exported",
     "mirror": "Return window",
-    "mirrorHint": "Opens the edit in a window of its own, to put on a second screen"
+    "mirrorHint": "Opens the edit in a window of its own, to put on a second screen",
+    "outputLevel": "Output level",
+    "fit": "Whole edit",
+    "fitHint": "Brings the view back to the whole edit. Wheel to scroll, ⌘ + wheel to zoom",
+    "envelope": "Curves",
+    "envelopeHint": "Traces the average level inside the wave, under the crests",
+    "spectrum": "Spectrum",
+    "spectrumHint": "Shows what the edit is made of while it plays, from bass to treble",
+    "hertz": "Hz",
+    "kilohertz": "kHz"
   },
   "timeline": {
     "noDocument": "No sequence open. Create one to start editing.",

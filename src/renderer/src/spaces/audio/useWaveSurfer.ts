@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js'
 import TimelinePlugin, { type TimelinePluginOptions } from 'wavesurfer.js/dist/plugins/timeline.js'
+import { clamp } from '@shared/numeric'
 import { playbackToken } from '@/engines/timeline/playback'
+import { MAX_SCALE, ZOOM_STEP } from '@/engines/timeline/viewport'
 import { useToken } from '@/hooks/useToken'
 import { durationOf } from '@/engines/audio/audio-data'
 import type { RenderedAudio } from '@/engines/audio/audio-render'
@@ -38,6 +40,12 @@ const BAR_RADIUS = 2
 
 /** Wide enough to read as a line against the veil the selection is tinted with, and no wider. */
 const CURSOR_WIDTH = 2
+
+/**
+ * How far in a take can be read, in pixels a second. The strip's own ceiling — `MAX_SCALE` is
+ * that many pixels per microsecond — so the two surfaces of an Audio tab stop zooming together.
+ */
+const MAX_PX_PER_SECOND = MAX_SCALE * SECOND
 
 /**
  * The graduations above the wave — where the strip and the programme monitor both wear
@@ -79,6 +87,8 @@ export function useWaveSurfer({
   onRegionChange,
 }: UseWaveSurferOptions): WaveSurferHandle {
   const surfer = useRef<WaveSurfer | null>(null)
+  /** Pixels a second the take is drawn at, or 0 while that is still whatever fits the panel. */
+  const zoomed = useRef(0)
   const regions = useRef<ReturnType<typeof RegionsPlugin.create> | null>(null)
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState<Us>(0)
@@ -198,6 +208,11 @@ export function useWaveSurfer({
     const instance = surfer.current
     if (!instance || !rendered) return
 
+    // A take arriving is drawn fitted to the panel, so the zoom goes back to meaning that.
+    // Kept, it would have been the PREVIOUS take's pixels-per-second, and the first notch of the
+    // wheel would have jumped from the fit straight to a scale nothing here was ever drawn at.
+    zoomed.current = 0
+
     const blob = new Blob([rendered.wav], { type: 'audio/wav' })
     instance
       .loadBlob(blob, rendered.data.channels, durationOf(rendered.data) / SECOND)
@@ -205,6 +220,53 @@ export function useWaveSurfer({
         // Rejects when the take is swapped mid-load, which is not a failure worth reporting.
       })
   }, [container, rendered])
+
+  /**
+   * The wheel over the take: zoom with a modifier, scroll otherwise — the vocabulary the strip,
+   * the dope sheet and the programme monitor all answer, so one gesture reads the same over every
+   * surface that lays time out sideways.
+   *
+   * Not `useTimelineWheel`: that one drives a `Viewport`, and what a take is drawn at is a
+   * pixels-per-second wavesurfer owns. The gesture is the same, the state behind it is not — and
+   * it is not the same to the pixel: `zoomAt` keeps the instant under the cursor where it was,
+   * which `zoom()` cannot be asked to do. Zooming a take walks toward its middle. Living with
+   * that is the price of not reaching into wavesurfer's scroll on every notch.
+   *
+   * Native and NON-PASSIVE for the reason written there too — React delivers `wheel` passively,
+   * where `preventDefault` does nothing and the panel behind scrolls instead.
+   */
+  useEffect(() => {
+    if (!container) return
+
+    const onWheel = (event: WheelEvent): void => {
+      const instance = surfer.current
+      if (!instance) return
+      event.preventDefault()
+
+      if (!event.ctrlKey && !event.metaKey) {
+        // Shift turns a vertical wheel horizontal, as every editor does for a single-axis mouse.
+        const along = event.shiftKey ? event.deltaY : event.deltaX || event.deltaY
+        instance.setScroll(instance.getScroll() + along)
+        return
+      }
+
+      const duration = instance.getDuration()
+      if (duration <= 0) return
+
+      // The floor is the take laid across the panel: there is nothing to see further out, and
+      // dezooming past it would leave the wave stranded in a corner of its own surface. Held
+      // under the ceiling because a very short take — a two-tenths bang on a wide panel — fits at
+      // a scale past it, and `clamp` answers its HIGH bound when the two cross: the first zoom in
+      // would have zoomed out, below the fit it started at.
+      const fitted = Math.min(instance.getWidth() / duration, MAX_PX_PER_SECOND)
+      const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP
+      zoomed.current = clamp((zoomed.current || fitted) * factor, fitted, MAX_PX_PER_SECOND)
+      instance.zoom(zoomed.current)
+    }
+
+    container.addEventListener('wheel', onWheel, { passive: false })
+    return () => container.removeEventListener('wheel', onWheel)
+  }, [container])
 
   return {
     playing,

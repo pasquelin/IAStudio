@@ -87,7 +87,16 @@
     "sourceRole": "Le clip choisi, tel qu’il est avant montage",
     "programRole": "Le montage entier, tel qu’il sera exporté",
     "mirror": "Fenêtre de retour",
-    "mirrorHint": "Ouvre le montage dans une fenêtre à part, à poser sur un autre écran"
+    "mirrorHint": "Ouvre le montage dans une fenêtre à part, à poser sur un autre écran",
+    "outputLevel": "Niveau de sortie",
+    "fit": "Tout le montage",
+    "fitHint": "Ramène la vue sur le montage entier. Molette pour défiler, ⌘ + molette pour zoomer",
+    "envelope": "Courbes",
+    "envelopeHint": "Trace le niveau moyen à l’intérieur de l’onde, sous les crêtes",
+    "spectrum": "Spectre",
+    "spectrumHint": "Montre pendant la lecture ce que contient le montage, des graves aux aigus",
+    "hertz": "Hz",
+    "kilohertz": "kHz"
   },
   "timeline": {
     "noDocument": "Aucune séquence ouverte. Créez-en une pour monter.",

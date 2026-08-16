@@ -39,6 +39,7 @@ const outputAt = (now = 0) => {
   const stops = vi.fn()
   const port: SoundPort = {
     now: () => now,
+    tap: () => null,
     resume: vi.fn(),
     load: vi.fn(async assetId => {
       loaded.push(assetId)
@@ -492,6 +493,7 @@ describe('scheduling a sequence', () => {
     const cues: SoundCue[] = []
     const port: SoundPort = {
       now: () => now,
+      tap: () => null,
       resume: vi.fn(),
       // The load spends two seconds of output time — longer than the clip it was asked for.
       load: vi.fn(async () => {
