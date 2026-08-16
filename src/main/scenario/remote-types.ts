@@ -47,8 +47,12 @@ const REMOTE_TYPES: Partial<Record<AssetType, readonly RemoteAssetType[]>> = {
 export function remoteTypesFor(
   types: readonly AssetType[] | undefined,
 ): readonly RemoteAssetType[] | undefined {
-  if (!types?.length || types.includes('image')) return undefined
+  if (!types?.length) return undefined
 
-  const wanted = types.flatMap(type => REMOTE_TYPES[type] ?? [])
+  // Remove 'image' (residue type) and process the rest — images come back with everything.
+  const nonImageTypes = types.filter(t => t !== 'image')
+  if (nonImageTypes.length === 0) return undefined
+
+  const wanted = nonImageTypes.flatMap(type => REMOTE_TYPES[type] ?? [])
   return wanted.length > 0 ? wanted : undefined
 }

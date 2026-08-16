@@ -13,9 +13,11 @@ import { assetIcon } from '@/helpers/workspaces'
 export function cloudTileFace(
   asset: CloudAsset,
   width: number,
+  quality?: number,
+  format?: string,
 ): { url: string | undefined; caption: string; fallbackIcon: string } {
   return {
-    url: cloudPreviewUrl(asset, { width }) ?? undefined,
+    url: cloudPreviewUrl(asset, { width, quality, format }) ?? undefined,
     caption: asset.name,
     fallbackIcon: assetIcon(asset.type),
   }

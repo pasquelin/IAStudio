@@ -96,10 +96,13 @@ export const AssetCard = memo(function AssetCard({
   // lines need said is the GESTURE — a picture that is not here yet does not look any different
   // from one that is, and nothing else on the tile says what a double-click will do.
   if (row.from === 'remote') {
+    const previewWidth = type === 'image' ? 880 : PREVIEW_WIDTH
+    const quality = type === 'image' ? 80 : undefined
+    const format = type === 'image' ? 'jpeg' : undefined
     return (
       <LibraryAsset asset={row.asset}>
         <div className="relative" {...hints.fetch}>
-          <MediaTile {...cloudTileFace(row.asset, PREVIEW_WIDTH)} badge={mark} />
+          <MediaTile {...cloudTileFace(row.asset, previewWidth, quality, format)} badge={mark} />
           {/* A veil and a spinner, and the badge alone is why they exist: `remote-only` and
               `fetching` are two blue download glyphs in a 12 px corner, and a 45 Ko picture is
               here in 200 ms — the mark changed faster than an eye can tell two similar ones

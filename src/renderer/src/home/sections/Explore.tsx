@@ -64,7 +64,7 @@ export function Explore() {
             {t(exhausted ? 'home.explore.none' : 'home.explore.loading')}
           </QuietNote>
         }
-        renderCard={asset => <Tile asset={asset} />}
+        renderCard={asset => <Tile asset={asset} assetType={type} />}
       />
     </Section>
   )
@@ -105,6 +105,9 @@ function Tab({ type, current, onSelect }: TabProps) {
  * measured way to bring one in — `cloud.pull` is the library's errand, over assets this key
  * owns. Showing a fetch button that may refuse is worse than showing none.
  */
-function Tile({ asset }: { asset: CloudAsset }) {
-  return <MediaTile fill {...cloudTileFace(asset, PREVIEW_WIDTH)} />
+function Tile({ asset, assetType }: { asset: CloudAsset; assetType: AssetType }) {
+  const previewWidth = assetType === 'image' ? PREVIEW_WIDTH * 2 : PREVIEW_WIDTH
+  const quality = assetType === 'image' ? 80 : undefined
+  const format = assetType === 'image' ? 'jpeg' : undefined
+  return <MediaTile fill {...cloudTileFace(asset, previewWidth, quality, format)} />
 }

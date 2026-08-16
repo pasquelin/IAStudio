@@ -88,7 +88,7 @@ export type ExploreQuery = {
 }
 
 /** How large a preview should come down. The CDN resizes; downloading a 4K to draw 112 px does not. */
-export type PreviewSize = { width?: number; quality?: number }
+export type PreviewSize = { width?: number; quality?: number; format?: string }
 
 /**
  * The picture that stands for a cloud asset, or `null` when it has none to show.
@@ -99,14 +99,19 @@ export type PreviewSize = { width?: number; quality?: number }
  * The thumbnail is public, so it can be resized freely.
  */
 export function cloudPreviewUrl(asset: CloudAsset, size: PreviewSize = {}): string | null {
-  if (asset.thumbnailUrl === undefined) return asset.url ?? null
+  // For images, prefer the full asset URL over thumbnail for better quality
+  const useFullUrl = asset.url && size.quality !== undefined
+  const baseUrl = useFullUrl ? asset.url : (asset.thumbnailUrl ?? asset.url)
+
+  if (!baseUrl) return null
 
   const params = new URLSearchParams()
   if (size.width !== undefined) params.set('width', String(size.width))
   if (size.quality !== undefined) params.set('quality', String(size.quality))
+  if (size.format !== undefined) params.set('format', size.format)
 
   const query = params.toString()
-  if (query === '') return asset.thumbnailUrl
+  if (query === '') return baseUrl
 
-  return `${asset.thumbnailUrl}${asset.thumbnailUrl.includes('?') ? '&' : '?'}${query}`
+  return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${query}`
 }
