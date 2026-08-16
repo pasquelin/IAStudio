@@ -44,6 +44,19 @@ const sourceTrack = () =>
     .filter(Boolean)
     .at(-1)
 
+/** Where the source monitor stands, as the engine last received it. */
+const sourcePlayhead = () =>
+  applied.mock.calls
+    .filter(([state]) => state.tracks.some(track => track.id === 'S1'))
+    .map(([state]) => state.playhead)
+    .at(-1)
+
+/** Moves the montage's own head, the way playing or scrubbing does. */
+const seekMontage = (playhead: number): void => {
+  const store = useSequences.getState()
+  act(() => store.replace('doc-1', { ...sequenceStore.stateOf(store, 'doc-1'), playhead }))
+}
+
 describe('SequenceDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -145,6 +158,35 @@ describe('SequenceDocument', () => {
     act(() => useSequences.getState().runCommand('doc-1', addClip('A1', later)))
 
     expect(sourceTrack()?.clips[0]?.id).toBe('clip-2')
+  })
+
+  /**
+   * What makes the source monitor a way to SEE the clip you picked: a track above may cover it
+   * in the programme, and its own picture is the only place left to watch it.
+   */
+  it('follows the montage head, offset into the clip it is showing', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+    seekMontage(2_400_000)
+
+    expect(sourcePlayhead()).toBe(400_000)
+  })
+
+  // The head spends most of its time outside any one clip, and a take has no frame to show for
+  // a moment it does not span.
+  it('holds at the clip ends while the head is outside it', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+
+    seekMontage(0)
+    expect(sourcePlayhead()).toBe(0)
+
+    // A frame short of the end: a clip spans up to but not including it, so landing exactly on
+    // the end would show nothing at all.
+    seekMontage(9_000_000)
+    expect(sourcePlayhead()).toBe(1_000_000 - 1_000_000 / 25)
   })
 
   it('starts the program monitor when its play button is pressed', () => {
