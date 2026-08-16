@@ -66,6 +66,22 @@ export type ViewportEngineOptions = {
   far?: number
 }
 
+/**
+ * What a viewport drawing for something other than a screen asks for — see `configureOutput`.
+ *
+ * Both have to be settled before the renderer exists: `alpha` is a context attribute WebGL only
+ * reads at creation, and a device ratio applied afterwards would resize a buffer already sized.
+ */
+export type ViewportOutput = {
+  /**
+   * Device pixels per CSS pixel. Left to the screen's own by default; a viewport rendering into
+   * a video frame wants exactly one, since the frame's size IS the pixel count asked for.
+   */
+  pixelRatio?: number
+  /** Whether the drawing buffer keeps an alpha channel, so what is behind the scene stays clear. */
+  alpha?: boolean
+}
+
 /** Seconds. Longer than this and a background tab would fly the camera across the scene. */
 const MAX_DELTA = 0.1
 
@@ -108,6 +124,7 @@ export class ViewportEngine {
   private projection: ProjectionKind = 'perspective'
 
   private renderer: WebGLRenderer | null = null
+  private output: ViewportOutput = {}
   private controls: OrbitControls | null = null
   private observer: ResizeObserver | null = null
   private layout: PaneLayout = 'single'
@@ -396,6 +413,17 @@ export class ViewportEngine {
     return this.rects[0] ?? { x: 0, y: 0, width, height }
   }
 
+  /**
+   * How the next mount builds its renderer. A method rather than a constructor option because
+   * the engine that owns this one builds it as a field — so it has nothing to hand over yet —
+   * and because both values are read once, when the WebGL context is created.
+   *
+   * Has no effect on a viewport already mounted: `dispose` then `mount` is what applies it.
+   */
+  configureOutput(output: ViewportOutput): void {
+    this.output = output
+  }
+
   /** Makes its own canvas: React must never own it — see the engine invariants in CLAUDE.md. */
   mount(host: HTMLElement): void {
     const canvas = document.createElement('canvas')
@@ -406,8 +434,11 @@ export class ViewportEngine {
     // tokens once the element is actually in the document.
     host.appendChild(canvas)
 
-    const renderer = new WebGLRenderer({ canvas, antialias: true })
-    renderer.setPixelRatio(window.devicePixelRatio)
+    const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: this.output.alpha })
+    renderer.setPixelRatio(this.output.pixelRatio ?? window.devicePixelRatio)
+    // Clear to nothing rather than to a colour, so a scene drawn for compositing hands back the
+    // pixels it painted and nothing else. `setClearAlpha` alone is ignored without `alpha`.
+    if (this.output.alpha) renderer.setClearAlpha(0)
     renderer.toneMapping = this.options.toneMapping ? ACESFilmicToneMapping : NoToneMapping
     renderer.shadowMap.enabled = this.options.shadows ?? false
     // three.js clears the counters at the top of every `render`, and the overlay pass calls

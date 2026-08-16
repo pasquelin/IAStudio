@@ -6,7 +6,7 @@ import { NumberField } from '@/design/NumberField'
 import { ToolButton } from '@/design/ToolButton'
 import { NATIVE_SELECT } from '@/design/styles'
 import { keySubject, setTimelineSettings } from '@/engines/scene/animation-commands'
-import { selectedNodes } from '@/engines/scene/scene-state'
+import { firstCameraId, selectedNodes } from '@/engines/scene/scene-state'
 import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
@@ -185,7 +185,9 @@ function RenderButton({ documentId }: AnimationActionsProps) {
   const { t } = useTranslation()
   const [busy, setBusy] = useState(false)
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
-  const camera = nodes.find(node => node.type === 'camera')
+  // The same rule a montage draws a live scene by — one place decides which camera a scene is
+  // seen through, or the film and the clip would show two different shots of it.
+  const camera = firstCameraId(nodes)
 
   const render = async (): Promise<void> => {
     const engine = sceneEngineOf(documentId)
@@ -204,7 +206,7 @@ function RenderButton({ documentId }: AnimationActionsProps) {
 
     try {
       await engine.renderFilm(
-        camera.id,
+        camera,
         {
           width: FILM_WIDTH,
           height: FILM_HEIGHT,

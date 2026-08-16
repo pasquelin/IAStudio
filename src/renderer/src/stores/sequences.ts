@@ -1,12 +1,18 @@
 import type { Asset } from '@shared/domain/asset'
 import type { TakeBounds, TakeShape } from '@/engines/audio/edits'
 import { addClips, editClip } from '@/engines/timeline/commands'
-import { placementsForAsset, trackForAsset } from '@/engines/timeline/insert'
+import {
+  clipForScene,
+  placementsForAsset,
+  trackForAsset,
+  trackForScene,
+} from '@/engines/timeline/insert'
 import {
   clampFades,
   clampGain,
   clipById,
   EMPTY_SEQUENCE,
+  trackById,
   trackOfClip,
   updateClip,
   updateTrack,
@@ -56,6 +62,37 @@ export function addAssetToSequence(documentId: string, asset: Asset): void {
 
   const placements = placementsForAsset(sequence, asset, asset.id, sequence.playhead)
   if (placements.length > 0) current.runCommand(documentId, addClips(placements))
+}
+
+/**
+ * Drops a 3D scene onto a montage as a live clip: what it shows is rendered from the document
+ * as the head passes over it, so editing the scene shows up here without anything being written
+ * out first.
+ *
+ * `trackId` is what the pointer landed on; without one the clip goes to the first picture row
+ * that would take it. Nothing happens when the montage paints no picture at all — the Audio
+ * workspace, where a scene has nothing to be shown on.
+ */
+export function addSceneToSequence(
+  documentId: string,
+  sceneId: string,
+  duration: Us | null,
+  start?: Us,
+  trackId?: string,
+): void {
+  const current = store.use.getState()
+  // The same window its neighbours guard against: a montage still being read off disk answers
+  // with the default, and a clip laid there argues with the file that arrives after it.
+  if (!store.hasState(current, documentId)) return
+
+  const sequence = store.stateOf(current, documentId)
+  const aimed = trackId ? trackById(sequence, trackId) : null
+  // A scene is a picture: a sound row accepted under the pointer would paint nothing at all.
+  const target = aimed?.kind === 'video' && !aimed.locked ? aimed : trackForScene(sequence)
+  if (!target) return
+
+  const clip = clipForScene(sceneId, duration, start ?? sequence.playhead, sequence.settings)
+  current.runCommand(documentId, addClips([{ trackId: target.id, clip }]))
 }
 
 /**

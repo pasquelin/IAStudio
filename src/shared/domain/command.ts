@@ -49,6 +49,7 @@ export type CommandId =
   | 'scene.undo'
   | 'scene.redo'
   | 'sequence.playPause'
+  | 'sequence.export'
   | 'sequence.mirror'
   | 'sequence.split'
   | 'sequence.delete'
@@ -428,6 +429,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sequencePlayPause.title',
     helpKey: 'commands.sequencePlayPause.help',
     defaultBinding: 'Space',
+  }),
+  command({
+    id: 'sequence.export',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExport.title',
+    helpKey: 'commands.sequenceExport.help',
+    // What Premiere and Final Cut both bind their export to, and the gesture is the same one.
+    defaultBinding: 'Meta+KeyM',
   }),
   // The program monitor alone answers it: `Monitor` arms the sequence scope on the one that
   // holds the playback token, so the key opens a return on the EDIT, never on the take.
