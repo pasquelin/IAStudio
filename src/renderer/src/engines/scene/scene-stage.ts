@@ -100,7 +100,6 @@ export function createSceneStage({
   }
 
   let shown: SceneState | null = null
-  let framed = false
 
   return {
     show: state => {
@@ -111,21 +110,23 @@ export function createSceneStage({
       const active = engine()
       if (!active) return
 
-      const hadCamera = shown ? firstCameraId(shown.nodes) !== null : false
       shown = state
       active.apply(state)
-
-      // Aimed once, and only while the scene has no camera to aim itself: a model dropped
-      // straight onto a montage would otherwise be drawn from wherever the free camera started.
-      // Re-aimed when the scene gains or loses its camera, never on an ordinary edit — that
-      // would snap the framing back on every keystroke in the inspector.
-      if (firstCameraId(state.nodes) === null && (!framed || hadCamera)) {
-        active.frameContents()
-        framed = true
-      }
     },
 
-    draw: time => engine()?.drawFrom(shown ? firstCameraId(shown.nodes) : null, time) ?? null,
+    draw: time => {
+      const active = engine()
+      if (!active) return null
+
+      const camera = shown ? firstCameraId(shown.nodes) : null
+      // Re-aimed on every frame while the scene has no camera of its own, rather than once when
+      // the document arrives: a model's FILE lands long after the document naming it does, so a
+      // framing taken at `show` frames a scene that is still empty. That is why two monitors
+      // showing the same clip disagreed — each had framed at a different moment of the load.
+      if (!camera) active.frameContents()
+
+      return active.drawFrom(camera, time)
+    },
 
     dispose: () => {
       renderer?.dispose()
