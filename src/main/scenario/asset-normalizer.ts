@@ -1,6 +1,7 @@
 import { defined, isRecord } from '@shared/guards'
 import { probeNumber, type AssetGeneration } from '@shared/domain/asset'
 import { assetTypeOfRemote } from '@shared/domain/asset-kind'
+import { generatedAssetName } from '@shared/domain/asset-name'
 import type { AssetPrivacy, CloudAsset } from '@shared/domain/cloud-asset'
 
 /**
@@ -68,7 +69,13 @@ function nameOf(metadata: Record<string, unknown>, id: string): string {
   if (name !== undefined) return name
 
   const prompt = text(metadata, 'prompt')
-  return prompt === undefined ? id : prompt.slice(0, 80)
+  if (prompt === undefined) return id
+
+  // Through the same cut the project's own generations take, rather than a `slice` of its own:
+  // one asset pulled in from here and generated there would otherwise wear two different names
+  // for the same prompt — and `slice` counts UTF-16 units, so a prompt of emoji came back ending
+  // on half a surrogate pair.
+  return generatedAssetName({ prompt, label: id, index: 0, total: 1 })
 }
 
 /**
