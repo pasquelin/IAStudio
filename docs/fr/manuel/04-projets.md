@@ -220,16 +220,22 @@ déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et l
 > « Cette action est irréversible », et c’est exact.
 
 **Un refus, et il est grisé plutôt que caché.** Ce que le studio range lui-même — `assets/`, ses
-six sous-dossiers par type, `documents/`, `.index/` — ne se renomme ni ne se jette, **son contenu
-compris** : l’index range chaque asset par son chemin sous `assets/`, et renommer un fichier
-là-dedans laisserait une ligne que plus rien ne retrouve. **Le même refus vaut des deux côtés du
-glisser** : ces dossiers ne se prennent pas, et rien ne s’y dépose non plus — un fichier qui y
-atterrirait serait un fichier dont aucune ligne d’index ne parle.
+six sous-dossiers par type, `documents/`, `.index/` — ne se renomme ni ne se jette : l’index range
+chaque asset par son chemin sous `assets/`, et renommer un de ces dossiers laisserait des lignes
+que plus rien ne retrouve. **Le même refus vaut des deux côtés du glisser** : ces dossiers ne se
+prennent pas, et rien ne s’y dépose non plus — un fichier qui y atterrirait serait un fichier dont
+aucune ligne d’index ne parle.
 
-**Un document fait exception, parce qu’il a son propre geste.** Renommer un document dans
-l’Explorateur change son nom et celui de son fichier d’un seul mouvement — même si un onglet le
-tient ouvert : l’onglet suit. Un asset, lui, se renomme dans l’Inspecteur ou depuis sa vignette,
-pas comme un fichier.
+**Leur contenu, lui, se renomme.** Un asset et un document ont chacun leur propre geste, et
+l’Explorateur y mène : le nom change, et le fichier suit dans le même mouvement. Un document
+renommé ici garde son onglet ouvert, qui prend le nouveau nom. Un asset renommé ici change de nom
+partout à la fois — l’Explorateur, l’étagère, l’Inspecteur, l’onglet qui l’édite — parce qu’il
+n’y a **qu’un seul nom** : celui de sa ligne d’index EST celui de son fichier.
+
+> Un nom que votre système de fichiers n’accepterait pas est refusé plutôt que corrigé en
+> silence — une barre oblique, par exemple. Un nom que le dossier tient déjà l’est aussi, plutôt
+> que d’écraser le fichier de quelqu’un d’autre. Le champ s’est refermé quand la réponse arrive :
+> c’est le journal d’activité qui le dit.
 
 - les documents déjà à l’écran sont marqués **Ouvert** ;
 - l’icône d’un document dit de quel espace il relève, la même que dans le rail ;

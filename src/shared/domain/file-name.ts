@@ -74,6 +74,73 @@ export function isSafeFileName(name: string): boolean {
 }
 
 /**
+ * A name with room kept for a ` 2` before anything is tried, for whoever suffixes until free.
+ *
+ * The bound is why this is shared rather than written at each of the two loops that need it:
+ * `safeFileName` cuts at `FILE_NAME_MAX_LENGTH`, so a base already that long comes back from
+ * `${base} 2` as `base` itself — every candidate then reads as taken, and the loop never ends.
+ * Synchronously, in the process that owns every window.
+ *
+ * Six code points is ` 99999`, past any number of files one folder holds.
+ */
+export function stemForSuffix(base: string): string {
+  return [...base]
+    .slice(0, FILE_NAME_MAX_LENGTH - 6)
+    .join('')
+    .trimEnd()
+}
+
+/**
+ * Which refusal a rename channel answered with, read back off the error's message.
+ *
+ * The contract is the message CONTAINS the code — `main/project/documents.ts` says so where it
+ * throws. It travels that way because an `invoke` rejection carries a string and nothing else,
+ * and both name channels now answer the same four things.
+ *
+ * Generic over the failure union rather than written twice: the day this becomes a code on the
+ * error rather than a substring of it, there is one place to change instead of one per domain,
+ * and the second one would be found by nobody — it lives inside a `.catch`.
+ */
+export function nameFailureOf<Failure extends string>(
+  error: unknown,
+  failures: readonly Failure[],
+  fallback: Failure,
+): Failure {
+  const message = error instanceof Error ? error.message : ''
+  return failures.find(failure => message.includes(failure)) ?? fallback
+}
+
+/**
+ * A file name without its extension — `Ruelle bleue.png` is `Ruelle bleue`.
+ *
+ * A leading dot is not an extension: `.gitignore` is a file called that, and three sites had
+ * quietly disagreed about it. Shared for that reason rather than for its two lines — the panel
+ * that strips a suffix and the backend that swaps one have to answer the same thing, and one of
+ * them runs where `node:path` does not exist.
+ */
+export function stemOf(fileName: string): string {
+  const cut = fileName.lastIndexOf('.')
+  return cut <= 0 ? fileName : fileName.slice(0, cut)
+}
+
+/** What `stemOf` left behind — `.png`, or nothing at all. */
+export function extensionOf(fileName: string): string {
+  const cut = fileName.lastIndexOf('.')
+  return cut <= 0 ? '' : fileName.slice(cut)
+}
+
+/**
+ * Whether two names are the same FILE, which is not the same question as being equal.
+ *
+ * Its one caller in each domain used to spell it out: renaming `Ruelle.png` to `ruelle.png` is
+ * one file changing case, not a collision with another — and asking the disk would refuse the
+ * rename against the very file being renamed.
+ */
+export function isSameFileName(one: string, other: string): boolean {
+  return foldForFileName(one) === foldForFileName(other)
+}
+
+/**
  * Two names that would land on the same file, folded together.
  *
  * Case, because APFS and NTFS both ignore it; and NFC, because APFS stores decomposed while

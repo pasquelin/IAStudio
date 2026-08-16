@@ -140,7 +140,17 @@ Right-click lists every destination, always in the same order:
 
 **Renaming changes the name in this project only** — the one on the Scenario account stays as it
 is. One asset is pulled into several projects and named for what each one does with it. The name
-can also be changed in the Inspector, by double-clicking the **Name** row.
+can also be changed in the Inspector, by double-clicking the **Name** row, and in the Explorer.
+
+**The file follows, and it is the same name everywhere.** A generated asset lands on disk under
+its prompt — `Blue alley at dusk.png` — and renaming it really does move the file. What the shelf,
+the Inspector, the tab editing it and your own file manager read is therefore one and the same
+thing. A name your file system would refuse is refused here too, rather than silently corrected;
+so is a name the folder already holds, rather than overwriting another picture.
+
+> Files that arrived **before** this rule keep the technical name they were given —
+> `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png`. They take their real name the day you rename
+> them, and not before: the studio does not stir your folder on its own.
 
 Each row carries its workspace's icon, the same one as in the title bar. The menu only shows
 destinations able to take **that type**: right-clicking a sound does not offer to lay it out as a

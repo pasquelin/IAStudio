@@ -210,15 +210,21 @@ already taken in the destination is refused rather than overwritten, and the jou
 > "This cannot be undone.", and it means it.
 
 **One refusal, greyed rather than hidden.** What the studio files itself — `assets/`, its six
-per-kind subfolders, `documents/`, `.index/` — cannot be renamed or trashed, **its contents
-included**: the index files every asset by its path under `assets/`, and renaming a file in
-there would leave a row nothing can find again. **The same refusal holds on both sides of a
-drag**: those folders cannot be picked up, and nothing can be dropped into them either — a file
-landing there would be a file no index row speaks of.
+per-kind subfolders, `documents/`, `.index/` — cannot be renamed or trashed: the index files every
+asset by its path under `assets/`, and renaming one of those folders would leave rows nothing can
+find again. **The same refusal holds on both sides of a drag**: those folders cannot be picked up,
+and nothing can be dropped into them either — a file landing there would be a file no index row
+speaks of.
 
-**A document is the exception, because it has a gesture of its own.** Renaming a document in the
-Explorer changes its name and its file name in one move — even while a tab is holding it: the tab
-follows. An asset is renamed in the Inspector or from its thumbnail, not as a file.
+**Their contents can be renamed.** An asset and a document each have a gesture of their own, and
+the Explorer leads to it: the name changes, and the file follows in the same move. A document
+renamed here keeps its tab open, which takes the new name. An asset renamed here changes name
+everywhere at once — the Explorer, the shelf, the Inspector, the tab editing it — because there
+is only **one name**: its index row's name IS its file's name.
+
+> A name your file system would not accept is refused rather than silently corrected — a slash,
+> for instance. So is a name the folder already holds, rather than overwriting somebody else's
+> file. The field has closed by the time the answer comes: the activity journal is what says so.
 
 - documents already on screen are marked **Open**;
 - a document's icon says which workspace it belongs to, the same one the rail uses;

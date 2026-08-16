@@ -1,12 +1,15 @@
 import { mdiFileOutline, mdiFolderOpenOutline, mdiFolderOutline } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { Asset } from '@shared/domain/asset'
 import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
+import { extensionOf, stemOf } from '@shared/domain/file-name'
 import { canMoveInto, isStudioFolder } from '@shared/domain/folder'
 import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
 import { openDocument } from '@/app/dockview-api'
-import { renameDocument } from '@/helpers/rename'
+import { assetAt } from '@/helpers/asset-at'
+import { renameAsset, renameDocument } from '@/helpers/rename'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
@@ -15,12 +18,6 @@ import { NoProject } from '@/panels/shared/NoProject'
 import { openEntryMenu } from './EntryMenu'
 import { EntryRow } from './EntryRow'
 import { useFolderTree, type FolderNode } from './use-folder-tree'
-
-/** What a file's name says it is, or nothing — `boulder.png` has no dot-less extension either. */
-function extensionOf(name: string): string {
-  const cut = name.lastIndexOf('.')
-  return cut <= 0 ? '' : name.slice(cut)
-}
 
 /**
  * The project folder, as a tree.
@@ -46,7 +43,12 @@ export function Explorer() {
   const open = useDocuments(state => state.documents)
   const { nodes, expandedIds, toggle } = useFolderTree()
   const [selectedIds, setSelectedIds] = useState<readonly string[]>([])
-  const [renaming, setRenaming] = useState<string | null>(null)
+  /**
+   * The row being renamed, and WHAT it turned out to be — the catalogue was asked when the menu
+   * opened, and that answer is what decided the menu row was offered at all. Kept rather than
+   * asked again on commit: two answers to one question are free to disagree.
+   */
+  const [renaming, setRenaming] = useState<{ nodeId: string; asset: Asset | null } | null>(null)
 
   // Opening a project already lists its documents; this is for what has been written since.
   // `relist` and not `refresh`: settling which tabs are open is the project's business.
@@ -91,17 +93,9 @@ export function Explorer() {
 
     if (node.kind === 'folder') return toggle(node.id)
 
-    // A file the catalogue knows is an asset, and it opens like one from the shelf — the folder
-    // shows `asset_2604…png` where the shelf shows the name, so only the catalogue can tell.
-    //
-    // Caught rather than awaited bare: a project being switched has no catalogue to answer, and
-    // a rejection here would take the system fallback below with it — a row that does nothing at
-    // all, which is strictly worse than the viewer it used to open.
-    const found = await getBridge()
-      ?.assets.search({ path: node.path, limit: 1 })
-      .catch(() => [])
-
-    const asset = found?.[0]
+    // A file the catalogue knows is an asset, and it opens like one from the shelf — a folder
+    // holds paths, and only the catalogue can say whether one of them is an asset.
+    const asset = await assetAt(node.path)
     if (asset) {
       const { openAsset } = await import('@/helpers/open-asset')
       return openAsset(asset)
@@ -119,25 +113,35 @@ export function Explorer() {
     document !== null && open[document.id] !== undefined
 
   /**
-   * A document is renamed through its own channel, which moves the file AND rewrites its
-   * envelope; anything else is a plain file and is renamed as one. Told apart because the two
-   * cannot be the same gesture: renaming a document as a file would leave its envelope saying
-   * the old thing, and the main process refuses it outright — `isStudioOwned`.
+   * Three names for three things, and the row cannot tell them apart by looking.
    *
-   * Nothing is written on faith either way. A file's new name settles when the watch reads the
-   * folder again; a document's comes back from the rename itself, which is what puts it in the
-   * tab that may be showing it.
+   * A document is renamed through its own channel, which moves the file AND rewrites its
+   * envelope. An asset through the catalogue's, which moves the file AND rewrites its row —
+   * both refused as plain files by the main process, `isStudioOwned`, because renaming either
+   * behind the studio's back leaves it pointing at a path that is gone. Everything else the
+   * user put in the folder is a plain file and is renamed as one.
+   *
+   * WHICH of the three this row is was settled when the menu opened — the catalogue was asked
+   * then, and the answer is what decided whether the gesture was offered at all. Asking again
+   * here would be a second answer free to disagree with the one the user was shown.
+   *
+   * The asset takes a stem: what this panel draws is a file name, extension included, and that
+   * suffix belongs to the bytes rather than to the name. Everything else keeps what was typed,
+   * suffix and all — a `.txt` the user renames to `.md` is their business.
+   *
+   * Nothing is written on faith. A file's new name settles when the watch reads the folder
+   * again; a document's comes back from the rename itself, which is what puts it in the tab
+   * that may be showing it.
    */
-  const commitRename = (node: FolderNode, name: string): void => {
+  const commitRename = (node: FolderNode, asset: Asset | null, name: string): void => {
     setRenaming(null)
     const document = documentOf(node)
 
-    if (!document) {
-      if (name !== node.name) void getBridge()?.project.renameFile(node.path, name)
-      return
-    }
+    if (document) return renameDocument(document.id, document.title, name)
+    if (name === node.name) return
+    if (asset) return renameAsset(asset.id, asset.name, stemOf(name))
 
-    renameDocument(document.id, document.title, name)
+    void getBridge()?.project.renameFile(node.path, name)
   }
 
   if (nodes.length === 0)
@@ -165,13 +169,20 @@ export function Explorer() {
       // it again, so what appears in the new folder is what the disk actually holds.
       onDrop={(path, folder) => void getBridge()?.project.moveFile(path, folder)}
       onActivate={node => void activate(node)}
+      // Asked BEFORE the menu is drawn, and that round trip is the point: only the catalogue
+      // knows whether a file under `assets/` is an asset, and the answer decides whether
+      // « Renommer » is offered or greyed. Offering it for a file nobody catalogued opens a
+      // field on a gesture that has no channel — the worst of the three outcomes.
       onContextMenu={node =>
-        openEntryMenu({
-          node,
-          document: documentOf(node),
-          t,
-          onRename: () => setRenaming(node.id),
-        })
+        void assetAt(node.path).then(asset =>
+          openEntryMenu({
+            node,
+            document: documentOf(node),
+            asset,
+            t,
+            onRename: () => setRenaming({ nodeId: node.id, asset }),
+          }),
+        )
       }
       renderRow={row => {
         const document = documentOf(row.node)
@@ -196,8 +207,8 @@ export function Explorer() {
             name={document?.title ?? row.node.name}
             icon={icon}
             open={isOpen(document)}
-            {...(renaming === row.node.id
-              ? { onRename: (name: string) => commitRename(row.node, name) }
+            {...(renaming?.nodeId === row.node.id
+              ? { onRename: (name: string) => commitRename(row.node, renaming.asset, name) }
               : {})}
           />
         )

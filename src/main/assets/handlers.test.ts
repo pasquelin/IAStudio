@@ -8,7 +8,7 @@ import { createActivityLog, type ActivityLog } from '@main/project/activity-log'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
-import { registerAssetHandlers } from './handlers'
+import { registerAssetHandlers, type AssetHandlerDeps } from './handlers'
 import type { CloudBackend } from './cloud-backend'
 
 vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
@@ -61,10 +61,16 @@ type Harness = {
   pulled: string[]
   pushed: string[]
   removedFiles: string[]
+  /** The moves a rename ordered, in order — a name is a file name now, and this is that half. */
+  renamedFiles: { id: string; name: string }[]
 }
 
 function setup(
-  overrides: { remote?: Partial<RemoteAssetCatalog>; push?: CloudBackend['push'] } = {},
+  overrides: {
+    remote?: Partial<RemoteAssetCatalog>
+    push?: CloudBackend['push']
+    renameFile?: AssetHandlerDeps['renameFile']
+  } = {},
 ): Harness {
   resetHandlers()
   const catalog = memoryCatalog()
@@ -76,6 +82,7 @@ function setup(
   const pulled: string[] = []
   const pushed: string[] = []
   const removedFiles: string[] = []
+  const renamedFiles: { id: string; name: string }[] = []
 
   const remote: RemoteAssetCatalog = {
     list: request => {
@@ -137,6 +144,14 @@ function setup(
     removeFile: async asset => {
       removedFiles.push(asset.id)
     },
+    // The disk itself is exercised in `asset-file.test.ts`; what this harness has to show is
+    // that the handler moves the file BEFORE the row, and files the path it comes back with.
+    renameFile:
+      overrides.renameFile ??
+      (async (asset, name) => {
+        renamedFiles.push({ id: asset.id, name })
+        return asset.path ? `assets/img/${name}.png` : undefined
+      }),
     activeOwnerId: () => 'proj_a',
     journal: () => journal,
   })
@@ -153,6 +168,7 @@ function setup(
     pulled,
     pushed,
     removedFiles,
+    renamedFiles,
   }
 }
 
@@ -499,6 +515,67 @@ describe('renaming and tagging', () => {
 
   it('says so rather than inventing a row for an asset that is gone', async () => {
     await expect(invoke(CHANNELS.assetsUpdate, 'asset_gone', { name: 'x' })).rejects.toThrow()
+  })
+
+  /**
+   * The whole of this change: the shelf read « je veux un model avec son skeleton » where the
+   * explorer read `asset_40f76c36-8ad4-….png`, and renaming wrote the catalogue alone — so the
+   * two only ever drifted further apart.
+   */
+  it('moves the file with the name, and files it where it landed', async () => {
+    await harness.catalog.add(localAsset({ path: 'assets/img/asset_1.png' }))
+
+    const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { name: 'Ruelle' })
+
+    expect(harness.renamedFiles).toEqual([{ id: 'asset_1', name: 'Ruelle' }])
+    expect(updated).toMatchObject({ name: 'Ruelle', path: 'assets/img/Ruelle.png' })
+  })
+
+  /** Tagging is not renaming: a row whose name nobody touched has no file to move. */
+  it('leaves the file alone when only the tags changed', async () => {
+    await harness.catalog.add(localAsset({ path: 'assets/img/asset_1.png' }))
+    await invoke(CHANNELS.assetsUpdate, 'asset_1', { tags: ['hero'] })
+
+    expect(harness.renamedFiles).toEqual([])
+  })
+
+  /**
+   * A linked rush keeps its bytes where the user left them, and its row keeps the path it had —
+   * `undefined` from the move must not erase it.
+   */
+  it('keeps the path of an asset whose file is not ours to move', async () => {
+    const renameFile = async (): Promise<undefined> => undefined
+    const linked = setup({ renameFile })
+    await linked.catalog.add(localAsset({ path: 'assets/img/asset_1.png' }))
+
+    const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { name: 'Prise 4' })
+    expect(updated).toMatchObject({ name: 'Prise 4', path: 'assets/img/asset_1.png' })
+  })
+
+  /**
+   * Refused rather than cleaned on the way to the disk: `safeFileName` would turn `Vue 3/4` into
+   * `Vue 3 4` in the folder while the catalogue kept the slash — the two names apart again.
+   */
+  it('refuses a name no file system would hold', async () => {
+    await harness.catalog.add(localAsset({ path: 'assets/img/asset_1.png' }))
+
+    await expect(invoke(CHANNELS.assetsUpdate, 'asset_1', { name: 'Vue 3/4' })).rejects.toThrow(
+      'invalid',
+    )
+    expect(harness.renamedFiles).toEqual([])
+  })
+
+  /** The row must not be renamed over a move that failed: it would name a file that is gone. */
+  it('leaves the row untouched when the folder refused the move', async () => {
+    const clash = setup({
+      renameFile: () => Promise.reject(new Error('duplicate')),
+    })
+    await clash.catalog.add(localAsset({ name: 'Ruelle', path: 'assets/img/Ruelle.png' }))
+
+    await expect(invoke(CHANNELS.assetsUpdate, 'asset_1', { name: 'Photo' })).rejects.toThrow(
+      'duplicate',
+    )
+    expect(await clash.catalog.find('asset_1')).toMatchObject({ name: 'Ruelle' })
   })
 })
 

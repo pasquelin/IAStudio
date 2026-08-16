@@ -1,3 +1,4 @@
+import { FILE_NAME_MAX_LENGTH } from './file-name'
 import type { PbrChannel } from './texture'
 
 export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'texture' | 'skybox'
@@ -82,8 +83,13 @@ export const PEAKS_PER_SECOND = 50
  * a name written straight into the catalogue — as automatic captioning does — must be held to
  * the same rule. A caption is a sentence, and a row whose name is a paragraph is unreadable in
  * every list that shows it.
+ *
+ * It IS the file name's bound, and not a bound of its own, since the name reached the file:
+ * a catalogue holding 200 characters over a file cut at 80 is the two-name problem back, one
+ * layer down — the shelf would read one thing and the explorer another, which is exactly what
+ * `assetFileName` exists to stop.
  */
-export const ASSET_NAME_MAX_LENGTH = 200
+export const ASSET_NAME_MAX_LENGTH = FILE_NAME_MAX_LENGTH
 
 /** What probing a media file tells us. Durations are microseconds, like the timeline. */
 export type MediaProbe = {
