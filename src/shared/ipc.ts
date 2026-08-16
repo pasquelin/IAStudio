@@ -20,6 +20,7 @@ import type {
   DocumentDraft,
   DocumentFile,
   DocumentKind,
+  DocumentWrite,
 } from './domain/document'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
@@ -108,6 +109,7 @@ export type Channels = {
   documentRemove: 'document:remove'
   documentConfirmClose: 'document:confirm-close'
   documentConfirmDelete: 'document:confirm-delete'
+  documentConfirmOverwrite: 'document:confirm-overwrite'
 
   assetsSearch: 'assets:search'
   assetsCounts: 'assets:counts'
@@ -238,6 +240,7 @@ export const CHANNELS: Channels = {
   documentRemove: 'document:remove',
   documentConfirmClose: 'document:confirm-close',
   documentConfirmDelete: 'document:confirm-delete',
+  documentConfirmOverwrite: 'document:confirm-overwrite',
 
   assetsSearch: 'assets:search',
   assetsCounts: 'assets:counts',
@@ -807,8 +810,18 @@ export type StudioBridge = {
     list: () => Promise<DocumentDescriptor[]>
     /** `null` when nothing has been saved under that id yet. */
     read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
-    /** The envelope — version, kind, timestamp — is stamped by the main process, not here. */
-    write: (id: string, kind: DocumentKind, draft: DocumentDraft) => Promise<void>
+    /**
+     * The envelope — version, kind, timestamp — is stamped by the main process, not here.
+     *
+     * Answers `stale` and writes NOTHING when the file changed underneath — see `DocumentWrite`.
+     * Ask with `confirmOverwrite`, then write again with `force`.
+     */
+    write: (
+      id: string,
+      kind: DocumentKind,
+      draft: DocumentDraft,
+      force?: boolean,
+    ) => Promise<DocumentWrite>
     /**
      * Gives a document another name — which, the file being named after the document, moves it.
      *
@@ -829,6 +842,11 @@ export type StudioBridge = {
     confirmClose: (title: string) => Promise<CloseChoice>
     /** Whether the document's file really goes. Destructive, so the safe answer is the default. */
     confirmDelete: (title: string) => Promise<boolean>
+    /**
+     * Whether to write over changes another application made. Asked only after `write` answered
+     * `stale`, and answering no is what a dismissed dialog gives back.
+     */
+    confirmOverwrite: (title: string) => Promise<boolean>
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>

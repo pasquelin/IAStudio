@@ -232,6 +232,19 @@ export type DocumentEnvelope = Omit<DocumentFile, 'content'>
 export type CloseChoice = 'save' | 'discard' | 'cancel'
 
 /**
+ * What a write did, and the reason it is not a `void`.
+ *
+ * `stale` says the file changed under the studio since it was last read or written — another
+ * application, or a sync service bringing a different copy back. Writing anyway destroys that
+ * work without a word: the window asks, and writes again with `force` if the user says so.
+ *
+ * The freshness is held by the main process rather than stamped in the file, and it cannot be
+ * otherwise: a file's modification time is set by the write that finishes it, so no value
+ * written INSIDE it can ever match what the filesystem then reports.
+ */
+export type DocumentWrite = 'written' | 'stale'
+
+/**
  * How much of a file the envelope may take. It holds a capped title and three short fields; a
  * head longer than this is not one, and reading further would be reading the document itself.
  */

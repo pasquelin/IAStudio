@@ -167,6 +167,13 @@ export function parseDocumentKind(value: unknown): DocumentKind {
   return documentKind.parse(value)
 }
 
+const forceWrite = z.boolean().optional()
+
+/** Absent reads as no: a payload that lost this field must not read as consent to overwrite. */
+export function parseForceWrite(value: unknown): boolean {
+  return forceWrite.parse(value) ?? false
+}
+
 const title = z.string().max(200)
 
 /*

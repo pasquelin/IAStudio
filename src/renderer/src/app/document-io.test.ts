@@ -1,7 +1,12 @@
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import type { Asset } from '@shared/domain/asset'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DOCUMENT_KINDS, DOCUMENT_VERSION, workspaceForKind } from '@shared/domain/document'
+import {
+  DOCUMENT_KINDS,
+  DOCUMENT_VERSION,
+  workspaceForKind,
+  type DocumentWrite,
+} from '@shared/domain/document'
 import type {
   CloseChoice,
   DocumentDescriptor,
@@ -35,6 +40,7 @@ import { useSkyboxes } from '@/stores/skyboxes'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import {
+  autosaveOpenDocuments,
   closeDocument,
   deleteDocument,
   refreshDocuments,
@@ -109,7 +115,7 @@ describe('saveDocument', () => {
   }
 
   it('writes the scene, and only what a scene is — never its selection', async () => {
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({ documents: { write } })
 
     const documentId = await openScene()
@@ -126,13 +132,114 @@ describe('saveDocument', () => {
   })
 
   it('marks the document clean once it is written', async () => {
-    installFakeBridge({ documents: { write: () => Promise.resolve() } })
+    installFakeBridge({ documents: { write: () => Promise.resolve<DocumentWrite>('written') } })
 
     const documentId = await openScene()
     expect(isSceneDirty(useScenes.getState(), documentId)).toBe(true)
 
     await saveDocument(documentId)
     expect(isSceneDirty(useScenes.getState(), documentId)).toBe(false)
+  })
+
+  /**
+   * A file something else wrote is not the studio's to replace on its own. Refusing leaves the
+   * tab modified, which is the only place the window can say the work is not on disk.
+   */
+  it('asks before writing over an outside change, and writes nothing when refused', async () => {
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('stale'))
+    const confirmOverwrite = vi.fn(() => Promise.resolve(false))
+    installFakeBridge({ documents: { write, confirmOverwrite } })
+
+    const documentId = await openScene()
+
+    await expect(saveDocument(documentId)).resolves.toBe(false)
+    expect(confirmOverwrite).toHaveBeenCalled()
+    expect(write).toHaveBeenCalledTimes(1)
+    expect(isSceneDirty(useScenes.getState(), documentId)).toBe(true)
+  })
+
+  it('writes over an outside change once the user agrees, and says it insisted', async () => {
+    const forced: (boolean | undefined)[] = []
+    const write = (
+      _id: string,
+      _kind: DocumentKind,
+      _draft: DocumentDraft,
+      force?: boolean,
+    ): Promise<DocumentWrite> => {
+      forced.push(force)
+      return Promise.resolve('stale')
+    }
+    installFakeBridge({ documents: { write, confirmOverwrite: () => Promise.resolve(true) } })
+
+    const documentId = await openScene()
+    await expect(saveDocument(documentId)).resolves.toBe(true)
+
+    // The second call is the whole point: the first asked, the second insisted.
+    expect(forced).toEqual([undefined, true])
+  })
+
+  describe('autosave', () => {
+    it('writes an open document that has work in it', async () => {
+      const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
+      installFakeBridge({ documents: { write } })
+      const documentId = await openScene()
+
+      await autosaveOpenDocuments()
+
+      expect(write).toHaveBeenCalled()
+      expect(isSceneDirty(useScenes.getState(), documentId)).toBe(false)
+    })
+
+    // The layers are read back off the GPU, and that cost is unmeasured: a save on a timer would
+    // stutter the canvas every half-minute. ⌘S still writes it.
+    it('never writes an image document', async () => {
+      const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
+      installFakeBridge({ documents: { write } })
+      const created = await useDocuments.getState().create('image')
+      if (!created) throw new Error('expected a document')
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+      useCanvases.getState().runCommand(created.id, addLayer(pixelLayer('layer-1', 'Layer')))
+
+      await autosaveOpenDocuments()
+
+      expect(write).not.toHaveBeenCalled()
+    })
+
+    /**
+     * A native dialog blocks the user's input, not the renderer's timers. Writing while the
+     * "Save / Don't Save" question is on screen answers it for them: the tab then closes over
+     * work the user had just declined to save.
+     */
+    it('writes nothing while a close question is on screen', async () => {
+      const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
+      let answer: (choice: CloseChoice) => void = () => {}
+      installFakeBridge({
+        documents: { write, confirmClose: () => new Promise<CloseChoice>(r => (answer = r)) },
+      })
+      const documentId = await openScene()
+
+      const closing = closeDocument(documentId)
+      await autosaveOpenDocuments()
+      expect(write).not.toHaveBeenCalled()
+
+      answer('discard')
+      await closing
+    })
+
+    // A dialog nobody summoned, in front of work someone is in the middle of, is worse than the
+    // save it was trying to make.
+    it('asks nothing when the file changed outside, and leaves it for ⌘S', async () => {
+      const confirmOverwrite = vi.fn(() => Promise.resolve(true))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('stale'), confirmOverwrite },
+      })
+      const documentId = await openScene()
+
+      await autosaveOpenDocuments()
+
+      expect(confirmOverwrite).not.toHaveBeenCalled()
+      expect(isSceneDirty(useScenes.getState(), documentId)).toBe(true)
+    })
   })
 
   // The marker is the only place the studio can say a document is not on disk; a failed write
@@ -156,8 +263,8 @@ describe('saveDocument', () => {
       documents: {
         write: () => {
           started()
-          return new Promise<void>(resolve => {
-            release = resolve
+          return new Promise<DocumentWrite>(resolve => {
+            release = () => resolve('written')
           })
         },
       },
@@ -179,7 +286,7 @@ describe('saveDocument', () => {
   // The file on disk is the only copy. A read that failed leaves the tab empty and modified, and
   // the bullet invites a ⌘S — which would write `{ nodes: [] }` over the scene it could not read.
   it('refuses to write a document whose state never loaded', async () => {
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({ documents: { write, read: () => Promise.reject(new Error('gone')) } })
     useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
 
@@ -193,7 +300,7 @@ describe('saveDocument', () => {
   // draws in it, the state exists, and the guard on `holds` alone would let ⌘S overwrite the
   // scene nothing could read.
   it('keeps refusing to write once the user has drawn in a document that would not load', async () => {
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({ documents: { write, read: () => Promise.reject(new Error('gone')) } })
     useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
 
@@ -256,7 +363,7 @@ describe('saveDocument', () => {
         documents: {
           write: () => {
             order.push('document')
-            return Promise.resolve()
+            return Promise.resolve<DocumentWrite>('written')
           },
         },
         assets: { savePicture },
@@ -283,7 +390,7 @@ describe('saveDocument', () => {
      */
     it('tells the engine to forget the picture it has just overwritten', async () => {
       installFakeBridge({
-        documents: { write: () => Promise.resolve() },
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture: () => Promise.resolve(picture()) },
       })
       const { documentId, release } = await openImage('asset-1')
@@ -303,7 +410,7 @@ describe('saveDocument', () => {
     it('writes the asset even when the document no longer measures what it did', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
       installFakeBridge({
-        documents: { write: () => Promise.resolve() },
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture },
       })
       const { documentId, release } = await openImage('asset-1')
@@ -325,7 +432,7 @@ describe('saveDocument', () => {
      * consults: a tab whose picture has been painted on is work worth a question.
      */
     it('counts a painted picture among the work a window would lose', async () => {
-      installFakeBridge({ documents: { write: () => Promise.resolve() } })
+      installFakeBridge({ documents: { write: () => Promise.resolve<DocumentWrite>('written') } })
       const { documentId, release } = await openImage('asset-1')
       expect(unsavedDocumentIds()).toEqual([])
 
@@ -343,7 +450,7 @@ describe('saveDocument', () => {
     it('leaves an untouched tab’s asset exactly as it was', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
       installFakeBridge({
-        documents: { write: () => Promise.resolve() },
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture },
       })
       const { documentId, release } = await openImage('asset-1')
@@ -358,7 +465,7 @@ describe('saveDocument', () => {
     it('writes no asset for a document that edits none', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
       installFakeBridge({
-        documents: { write: () => Promise.resolve() },
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture },
       })
       const { documentId, release } = await openImage()
@@ -381,7 +488,7 @@ describe('saveDocument', () => {
       const restored: string[] = []
       installFakeBridge({
         documents: {
-          write: () => Promise.resolve(),
+          write: () => Promise.resolve<DocumentWrite>('written'),
           read: () =>
             Promise.resolve({
               version: DOCUMENT_VERSION,
@@ -416,7 +523,7 @@ describe('saveDocument', () => {
     it('says so when the file it would read back refuses', async () => {
       const { entries } = bridgeWatchingLogs({
         documents: {
-          write: () => Promise.resolve(),
+          write: () => Promise.resolve<DocumentWrite>('written'),
           read: () => Promise.reject(new Error('gone')),
         },
       })
@@ -434,7 +541,9 @@ describe('saveDocument', () => {
      */
     it('reads nothing back for a kind that keeps everything in its state', async () => {
       const read = vi.fn(() => Promise.resolve(savedFile()))
-      installFakeBridge({ documents: { write: () => Promise.resolve(), read } })
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written'), read },
+      })
 
       const documentId = await openScene()
       await rehydrateDocument(documentId)
@@ -446,7 +555,7 @@ describe('saveDocument', () => {
     it('hands nothing back when the file carries no pixels', async () => {
       installFakeBridge({
         documents: {
-          write: () => Promise.resolve(),
+          write: () => Promise.resolve<DocumentWrite>('written'),
           read: () =>
             Promise.resolve({
               version: DOCUMENT_VERSION,
@@ -478,7 +587,9 @@ describe('saveDocument', () => {
     // `restoreDocument` owns the empty tab; both reading would race two installs onto it.
     it('leaves a document that has not been filled to the reader that fills it', async () => {
       const read = vi.fn(() => Promise.resolve(null))
-      installFakeBridge({ documents: { write: () => Promise.resolve(), read } })
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written'), read },
+      })
       useDocuments.setState({
         documents: {
           'doc-1': {
@@ -508,7 +619,7 @@ describe('saveDocument', () => {
         return Promise.resolve(picture())
       })
       bridgeWatchingLogs({
-        documents: { write: () => Promise.resolve() },
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture },
       })
       const { documentId, release } = await openImage('asset-1')
@@ -531,7 +642,7 @@ describe('saveDocument', () => {
     it('says so, and retries, when there was nothing to bake yet', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
       const { entries } = bridgeWatchingLogs({
-        documents: { write: () => Promise.resolve() },
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture },
       })
       const created = await useDocuments
@@ -565,7 +676,7 @@ describe('saveDocument', () => {
      */
     it('keeps the document written when the asset is refused', async () => {
       const { entries } = bridgeWatchingLogs({
-        documents: { write: () => Promise.resolve() },
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture: () => Promise.reject(new Error('disk full')) },
       })
       const { documentId, release } = await openImage('asset-1')
@@ -586,7 +697,10 @@ describe('saveDocument', () => {
      */
     it('leaves a take alone too, chain and all', async () => {
       const saveAudio = vi.fn(() => Promise.resolve(picture()))
-      installFakeBridge({ documents: { write: () => Promise.resolve() }, assets: { saveAudio } })
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { saveAudio },
+      })
 
       const created = await useDocuments
         .getState()
@@ -638,7 +752,7 @@ describe('saveDocument', () => {
     it('writes a copy beside the asset rather than over it', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
       installFakeBridge({
-        documents: { write: () => Promise.resolve() },
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture },
       })
       const { documentId, release } = await openLinkedImage()
@@ -658,7 +772,7 @@ describe('saveDocument', () => {
     // The tab carries on with the copy: a second ⌘S must land on the new asset, not the old one.
     it('opens a document linked to the copy, and leaves the first one alone', async () => {
       installFakeBridge({
-        documents: { write: () => Promise.resolve() },
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture: () => Promise.resolve(picture()) },
       })
       const { documentId, release } = await openLinkedImage()
@@ -678,7 +792,9 @@ describe('saveDocument', () => {
 
     /** A blank document edits no asset, so there is nothing to copy — and it says so. */
     it('refuses a document that edits no asset, out loud', async () => {
-      const { entries } = bridgeWatchingLogs({ documents: { write: () => Promise.resolve() } })
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+      })
 
       await expect(saveDocumentAs(await openScene())).resolves.toBe(false)
 
@@ -691,7 +807,9 @@ describe('saveDocument', () => {
     // Nothing baked means nothing to copy: no second document is opened onto an asset that was
     // never written, which would be a tab pointing at a picture that does not exist.
     it('opens nothing when the picture cannot be extracted yet', async () => {
-      const { entries } = bridgeWatchingLogs({ documents: { write: () => Promise.resolve() } })
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+      })
       const created = await useDocuments
         .getState()
         .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
@@ -710,7 +828,9 @@ describe('saveDocument', () => {
     // No engine at all, as opposed to one whose context is still coming up: both mean there are
     // no pixels to bake, and neither may open a tab onto an asset that was never written.
     it('opens nothing when no engine holds the document', async () => {
-      const { entries } = bridgeWatchingLogs({ documents: { write: () => Promise.resolve() } })
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+      })
       const created = await useDocuments
         .getState()
         .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
@@ -724,7 +844,7 @@ describe('saveDocument', () => {
 
     it('says so when the copy itself is refused', async () => {
       const { entries } = bridgeWatchingLogs({
-        documents: { write: () => Promise.resolve() },
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture: () => Promise.reject(new Error('disk full')) },
       })
       const { documentId, release } = await openLinkedImage()
@@ -743,7 +863,7 @@ describe('saveDocument', () => {
      */
     it('leaves the original tab modified, since nothing was written for it', async () => {
       installFakeBridge({
-        documents: { write: () => Promise.resolve() },
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture: () => Promise.resolve(picture()) },
       })
       const { documentId, release } = await openLinkedImage()
@@ -763,7 +883,7 @@ describe('saveDocument', () => {
     it('refuses a document whose file would not read', async () => {
       installFakeBridge({
         documents: {
-          write: () => Promise.resolve(),
+          write: () => Promise.resolve<DocumentWrite>('written'),
           read: () => Promise.reject(new Error('gone')),
         },
       })
@@ -775,7 +895,7 @@ describe('saveDocument', () => {
   })
 
   it('writes nothing for a space that has no serialized form yet', async () => {
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({ documents: { write } })
 
     const created = await useDocuments.getState().create('image')
@@ -925,7 +1045,7 @@ describe('what reaches the bridge', () => {
       documents: {
         write: (_id: string, _kind: DocumentKind, given: DocumentDraft) => {
           draft = given
-          return Promise.resolve()
+          return Promise.resolve<DocumentWrite>('written')
         },
       },
     })
@@ -955,7 +1075,7 @@ describe('an image document', () => {
   }
 
   it('writes one file per surface, named after the layer it belongs to', async () => {
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({ documents: { write } })
     const documentId = await openImage()
     const release = holdCanvas(documentId, () =>
@@ -990,7 +1110,7 @@ describe('an image document', () => {
       documents: {
         write: (_id, _kind, draft) => {
           written.push(draft)
-          return Promise.resolve()
+          return Promise.resolve<DocumentWrite>('written')
         },
       },
     })
@@ -1014,7 +1134,7 @@ describe('an image document', () => {
    * boots its GPU context, which is exactly when a ⌘S after switching workspace lands.
    */
   it('refuses to save rather than write a document without its pixels', async () => {
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({ documents: { write } })
     const documentId = await openImage()
 
@@ -1032,7 +1152,7 @@ describe('an image document', () => {
       documents: {
         write: (_id, _kind, draft) => {
           written.push(draft)
-          return Promise.resolve()
+          return Promise.resolve<DocumentWrite>('written')
         },
       },
     })
@@ -1061,7 +1181,7 @@ describe('an image document', () => {
       documents: {
         write: (_id, _kind, draft) => {
           written.push(draft)
-          return Promise.resolve()
+          return Promise.resolve<DocumentWrite>('written')
         },
       },
     })
@@ -1181,7 +1301,7 @@ describe('the kinds a string holds', () => {
       documents: {
         write: (id: string, _kind: DocumentKind, draft: DocumentDraft) => {
           written.set(id, draft.content)
-          return Promise.resolve()
+          return Promise.resolve<DocumentWrite>('written')
         },
         read: (id: string) => {
           const content = written.get(id)
@@ -1348,7 +1468,7 @@ describe('the kinds a string holds', () => {
   // A file that is not JSON at all is a read that failed, and the tab must not then write an
   // empty document over the only copy.
   it('refuses to save a sequence whose file would not read', async () => {
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({
       documents: {
         write,
@@ -1380,7 +1500,7 @@ describe('the kinds a string holds', () => {
  */
 describe('closing a document', () => {
   const openDirtyScene = async (): Promise<string> => {
-    installFakeBridge({ documents: { write: () => Promise.resolve() } })
+    installFakeBridge({ documents: { write: () => Promise.resolve<DocumentWrite>('written') } })
     const created = await useDocuments.getState().create('3d')
     if (!created) throw new Error('expected a document')
     useScenes.getState().runCommand(created.id, addNode(box))
@@ -1420,7 +1540,7 @@ describe('closing a document', () => {
    * used to close the tab anyway: nothing written, and the state thrown away.
    */
   it('keeps the tab open when the save it was asked for is refused', async () => {
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({
       documents: {
         write,
@@ -1440,7 +1560,9 @@ describe('closing a document', () => {
 
   it('closes a clean document without asking anything', async () => {
     const confirmClose = vi.fn(() => Promise.resolve<CloseChoice>('cancel'))
-    installFakeBridge({ documents: { confirmClose, write: () => Promise.resolve() } })
+    installFakeBridge({
+      documents: { confirmClose, write: () => Promise.resolve<DocumentWrite>('written') },
+    })
 
     const created = await useDocuments.getState().create('3d')
     if (!created) throw new Error('expected a document')
@@ -1453,7 +1575,7 @@ describe('closing a document', () => {
 
   it('writes the document when the answer is save', async () => {
     const documentId = await openDirtyScene()
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({
       documents: { write, confirmClose: () => Promise.resolve<CloseChoice>('save') },
     })
@@ -1465,7 +1587,7 @@ describe('closing a document', () => {
 
   it('throws the work away when the answer is discard', async () => {
     const documentId = await openDirtyScene()
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({
       documents: { write, confirmClose: () => Promise.resolve<CloseChoice>('discard') },
     })
@@ -1576,7 +1698,7 @@ describe('closing a document', () => {
       documents: {
         read: () => Promise.reject(new Error('gone')),
         confirmClose: () => Promise.resolve<CloseChoice>('discard'),
-        write: () => Promise.resolve(),
+        write: () => Promise.resolve<DocumentWrite>('written'),
       },
     })
     useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
@@ -1584,7 +1706,7 @@ describe('closing a document', () => {
     await closeDocument('doc-1')
 
     // Reopened under the same id, now readable: the verdict must not have followed it.
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({ documents: { write, read: () => Promise.resolve(savedFile()) } })
     useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
     await restoreDocument('doc-1')
@@ -1654,7 +1776,7 @@ describe('deleting a document', () => {
 
   // The file is going: writing it on the way out would save and delete in the same breath.
   it('never offers to save the work of a document being deleted', async () => {
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     const confirmClose = vi.fn(() => Promise.resolve<CloseChoice>('save'))
     installFakeBridge({
       documents: { write, confirmClose, confirmDelete: () => Promise.resolve(true) },

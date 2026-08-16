@@ -57,6 +57,7 @@ type ChannelMethod = {
   [CHANNELS.documentRemove]: StudioBridge['documents']['remove']
   [CHANNELS.documentConfirmClose]: StudioBridge['documents']['confirmClose']
   [CHANNELS.documentConfirmDelete]: StudioBridge['documents']['confirmDelete']
+  [CHANNELS.documentConfirmOverwrite]: StudioBridge['documents']['confirmOverwrite']
 
   [CHANNELS.assetsSearch]: StudioBridge['assets']['search']
   [CHANNELS.assetsCounts]: StudioBridge['assets']['counts']

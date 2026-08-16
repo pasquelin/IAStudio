@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rename, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -322,6 +322,53 @@ describe('createDocumentFiles', () => {
     await documents.write('doc-1', 'scene', { title: 'Brique 1/2', content: '{}' })
 
     expect(await readdir(join(root, 'documents'))).toEqual(['Brique 1 2.scene'])
+  })
+
+  describe('a file changed outside the studio', () => {
+    const LATER = new Date('2026-08-07T11:00:00.000Z')
+
+    // Still the same document — same id, same kind — with other content. A file replaced by
+    // something unreadable is no longer this document at all, and `locate` says so first.
+    const OUTSIDE = `${JSON.stringify({
+      version: DOCUMENT_VERSION,
+      kind: 'scene',
+      title: 'Level',
+      updatedAt: NOW,
+      id: 'doc-1',
+    })}\n{"nodes":["theirs"]}`
+
+    // `utimes` rather than a second write and a wait: the modification time is what the studio
+    // compares, and setting it outright is both exact and instant.
+    const changeBehindTheStudio = async (file: string): Promise<void> => {
+      await writeFile(file, OUTSIDE, 'utf8')
+      await utimes(file, LATER, LATER)
+    }
+
+    it('is not written over, and the write says so rather than failing', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":[]}' })
+      const file = join(root, 'documents', 'Level.scene')
+      await changeBehindTheStudio(file)
+
+      expect(await documents.write('doc-1', 'scene', { title: 'Level', content: '{}' })).toBe(
+        'stale',
+      )
+      expect(await readFile(file, 'utf8')).toBe(OUTSIDE)
+    })
+
+    it('is written over once the caller says the user agreed', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":[]}' })
+      await changeBehindTheStudio(join(root, 'documents', 'Level.scene'))
+
+      const written = await documents.write(
+        'doc-1',
+        'scene',
+        { title: 'Level', content: '{"ours":true}' },
+        true,
+      )
+
+      expect(written).toBe('written')
+      expect((await documents.read('doc-1', 'scene'))?.content).toBe('{"ours":true}')
+    })
   })
 
   /**

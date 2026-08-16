@@ -66,6 +66,24 @@ export async function askConfirm(
   return chosen === 1
 }
 
+/**
+ * Whether to write over a file something else has changed.
+ *
+ * The one question in this file about work that is not the studio's: the bytes on disk came from
+ * another application, and overwriting them is the only gesture here that destroys something the
+ * user never saw. Cancel is the default and the dismissal for that reason.
+ */
+export async function askOverwriteDocument(ask: AskUser, title: string): Promise<boolean> {
+  const t = TRANSLATIONS[windowLanguage()].documents
+
+  return await askConfirm(ask, {
+    message: fillHoles(t.overwriteTitle, { title }),
+    detail: t.overwriteBody,
+    confirm: t.overwriteConfirm,
+    cancel: t.cancel,
+  })
+}
+
 /** Whether the file really goes. Irreversible, so Cancel is both the default and the dismissal. */
 export async function askDeleteDocument(ask: AskUser, title: string): Promise<boolean> {
   const t = TRANSLATIONS[windowLanguage()].documents

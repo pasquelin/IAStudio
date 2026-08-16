@@ -108,6 +108,10 @@
       "lastProject": "Rouvrir le dernier projet",
       "nothing": "Ne rien ouvrir"
     },
+    "autosave": {
+      "title": "Sauvegarde automatique",
+      "help": "Écrit les documents ouverts toutes les trente secondes, sans attendre votre ⌘S. Ce qui a été fait depuis le dernier enregistrement survit alors à une coupure de courant ou à un plantage. Les documents image en sont exclus quoi qu’il arrive, car leurs calques sont relus depuis la carte graphique et une écriture toutes les trente secondes ferait saccader le dessin."
+    },
     "home": {
       "title": "Afficher l’accueil",
       "help": "L’écran pleine largeur sur lequel le studio s’ouvre : vos projets, ce sur quoi vous travailliez, ce qui tourne, et ce que les modèles savent faire. Désactivez-le pour aller droit à l’espace que vous aviez quitté. Les sections affichées et leur ordre se règlent sur l’accueil lui-même."

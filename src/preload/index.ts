@@ -95,11 +95,13 @@ const bridge: StudioBridge = {
   documents: {
     list: () => ipcRenderer.invoke(CHANNELS.documentList),
     read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),
-    write: (id, kind, file) => ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file),
+    write: (id, kind, file, force) =>
+      ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file, force),
     rename: (id, kind, title) => ipcRenderer.invoke(CHANNELS.documentRename, id, kind, title),
     remove: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRemove, id, kind),
     confirmClose: title => ipcRenderer.invoke(CHANNELS.documentConfirmClose, title),
     confirmDelete: title => ipcRenderer.invoke(CHANNELS.documentConfirmDelete, title),
+    confirmOverwrite: title => ipcRenderer.invoke(CHANNELS.documentConfirmOverwrite, title),
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),

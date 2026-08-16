@@ -9,6 +9,7 @@ import { DocumentArea } from './DocumentArea'
 import { DocumentNameDialog } from './DocumentNameDialog'
 import { showWorkspace } from './dockview-api'
 import { guardUnsavedWork } from './unsaved-guard'
+import { useAutosave } from './useAutosave'
 import { AssistantEntry } from '@/assistant/AssistantEntry'
 import { AssistantOverlay } from '@/assistant/AssistantOverlay'
 import { AssistantStatus } from '@/assistant/AssistantStatus'
@@ -53,6 +54,7 @@ export function Shell() {
 
   // The window is the one that holds documents, so it is the one that must not go quietly.
   useEffect(() => guardUnsavedWork(window), [])
+  useAutosave()
 
   const homeEnabled = useSettings(state => state.settings.home.enabled)
   // The setting wins over the session: turning the home off must take it off the screen it is

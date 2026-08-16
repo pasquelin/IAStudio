@@ -256,6 +256,13 @@ export const SETTING_REGISTRY = [
       labelKey: `settings.startup.${behaviour}`,
     })),
   }),
+  setting({
+    path: 'general.autosave',
+    kind: 'boolean',
+    section: 'general',
+    titleKey: 'settings.autosave.title',
+    helpKey: 'settings.autosave.help',
+  }),
   // Beside `startup` rather than in a screen of its own: what shows when the studio opens is
   // one subject. Which sections the home draws, and in which order, is set on the home itself
   // — see `home.sections` in `settings-path.ts`.

@@ -56,6 +56,13 @@ export type Settings = {
   general: {
     language: LanguagePreference
     startup: StartupBehaviour
+    /**
+     * Whether an open document is written back on its own while it is being worked on.
+     *
+     * A kind whose capture is too costly to run on a timer opts out whatever this says, and says
+     * so itself — `autosaves` in the renderer's document registry.
+     */
+    autosave: boolean
   }
   /**
    * The home screen. `sections` carries the user's own order and what they chose to hide;
@@ -219,7 +226,7 @@ export type Settings = {
  * exactly this.
  */
 export const DEFAULT_SETTINGS: Settings = {
-  general: { language: 'system', startup: 'lastProject' },
+  general: { language: 'system', startup: 'lastProject', autosave: true },
   home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] },
   workspaces: { order: [...WORKSPACE_IDS] },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
