@@ -74,6 +74,23 @@ export function isSafeFileName(name: string): boolean {
 }
 
 /**
+ * A name with room kept for a ` 2` before anything is tried, for whoever suffixes until free.
+ *
+ * The bound is why this is shared rather than written at each of the two loops that need it:
+ * `safeFileName` cuts at `FILE_NAME_MAX_LENGTH`, so a base already that long comes back from
+ * `${base} 2` as `base` itself — every candidate then reads as taken, and the loop never ends.
+ * Synchronously, in the process that owns every window.
+ *
+ * Six code points is ` 99999`, past any number of files one folder holds.
+ */
+export function stemForSuffix(base: string): string {
+  return [...base]
+    .slice(0, FILE_NAME_MAX_LENGTH - 6)
+    .join('')
+    .trimEnd()
+}
+
+/**
  * Two names that would land on the same file, folded together.
  *
  * Case, because APFS and NTFS both ignore it; and NFC, because APFS stores decomposed while

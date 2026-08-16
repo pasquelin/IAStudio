@@ -32,15 +32,18 @@ export function openEntryMenu({ node, document, t, onRename }: EntryMenuProps): 
   const ownFolder = isStudioFolder(node.path)
 
   /**
-   * Everything under those folders, which is what the main process now refuses — a document is
-   * renamed through its own channel and an asset in the catalogue, so renaming either as a
-   * plain file leaves the studio pointing at a path that is gone.
+   * A FOLDER of the studio's, and not what sits under one.
    *
-   * A document is the exception, and the whole point: it has its own gesture, and this menu
-   * hands it over. Anything else in there is greyed rather than opening a field that closes on
-   * a refusal nothing reports.
+   * Everything under `assets/` and `documents/` used to be greyed here, on the grounds that the
+   * main process refuses to rename it as a plain file — which it still does. But that refusal
+   * was never about the gesture: it is about which channel carries it. A document goes through
+   * its own, an asset through the catalogue's, and both move the file with the name. The panel
+   * routes; nothing here needs to say no.
+   *
+   * What remains greyed is the folder itself — `assets/img` renamed is every row under it
+   * pointing at a path that is gone, and no channel repairs that.
    */
-  const ownedFile = isStudioOwned(node.path) && !document
+  const ownedFolder = isStudioOwned(node.path) && node.kind === 'folder' && !document
 
   void showContextMenu([
     {
@@ -57,7 +60,7 @@ export function openEntryMenu({ node, document, t, onRename }: EntryMenuProps): 
       // renaming an open one orphaned its tab and the next save wrote the old name back beside
       // the new file; the id now lives in the envelope and stays put, which is what the whole
       // of that change bought.
-      disabled: ownFolder || ownedFile,
+      disabled: ownFolder || ownedFolder,
       onSelect: onRename,
     },
     {

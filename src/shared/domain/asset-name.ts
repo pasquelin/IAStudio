@@ -1,21 +1,54 @@
 import { ASSET_NAME_MAX_LENGTH } from './asset'
+import { isSafeFileName, safeFileName } from './file-name'
 
 /**
- * Naming an asset. Read by both sides for the reason `checkDocumentName` is: the renderer asks
- * before crossing the boundary, and the main process refuses what it is handed regardless.
+ * Naming an asset, which since an asset is named by what it is called is also naming a file.
+ * Read by both sides for the reason `checkDocumentName` is: the renderer asks before crossing
+ * the boundary, and the main process refuses what it is handed regardless.
  *
- * Shorter than the document's list, and deliberately: an asset's name is not a file name — its
- * file is called after its id, and always has been — so nothing here is about separators, and
- * two assets may perfectly well share a name. Only emptiness and length can be wrong.
+ * The two used to be different things — a name in the catalogue, an id on disk — and the user
+ * was shown both without a word to say they were one asset: the shelf read « je veux un model
+ * avec son skeleton », the explorer `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png`, and
+ * nothing anywhere joined them. Renaming wrote the catalogue alone, so the two only ever drifted
+ * further apart.
+ *
+ * `duplicate` is the disk's answer and never the field's: two assets landing on one file is
+ * something only the folder knows, and it is checked where the write happens.
  */
-export type AssetNameFailure = 'empty' | 'too-long'
+export type AssetNameFailure = 'empty' | 'too-long' | 'invalid' | 'duplicate'
 
+/**
+ * Listed as well as typed, as `DOCUMENT_NAME_FAILURES` is: the failure crosses the IPC boundary
+ * as an error message, so one side has to be able to walk them.
+ */
+export const ASSET_NAME_FAILURES: readonly AssetNameFailure[] = [
+  'empty',
+  'too-long',
+  'invalid',
+  'duplicate',
+]
+
+/** The file an asset of this name lands on, extension included — `Ruelle bleue.png`. */
+export function assetFileName(name: string, extension: string): string {
+  return `${safeFileName(name, 'asset')}${extension}`
+}
+
+/**
+ * Whether a name can be given to an asset, and what is wrong with it otherwise.
+ *
+ * Everything a FIELD can see, which is everything but the duplicate: the renderer calls it to
+ * spare a round trip, the main process calls it again because a window is not what decides what
+ * gets written.
+ */
 export function checkAssetName(name: string): AssetNameFailure | null {
   const trimmed = name.trim()
 
   if (trimmed.length === 0) return 'empty'
   // By code point, as the bound is meant: a name of emoji is as long as it looks, not twice.
   if ([...trimmed].length > ASSET_NAME_MAX_LENGTH) return 'too-long'
+  // Refused rather than quietly cleaned: a name the studio would rewrite is a second name for
+  // the asset, and one name is the whole point.
+  if (!isSafeFileName(trimmed)) return 'invalid'
 
   return null
 }

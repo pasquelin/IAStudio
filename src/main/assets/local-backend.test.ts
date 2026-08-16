@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
@@ -104,7 +104,7 @@ describe('local backend', () => {
     expect(asset.probe?.duration).toBe(5_400_000)
     expect(asset.probe?.channels).toBe(2)
     // The file that was just written, never the URL it came from.
-    expect(probeFile).toHaveBeenCalledWith(join(root, 'assets/vid/asset_1.mp4'))
+    expect(probeFile).toHaveBeenCalledWith(join(root, 'assets/vid/Terrier.mp4'))
   })
 
   // A tool the user has not installed must cost nothing but the length nobody could read.
@@ -124,7 +124,7 @@ describe('local backend', () => {
       type: 'video',
     })
 
-    expect(asset.path).toBe('assets/vid/asset_1.mp4')
+    expect(asset.path).toBe('assets/vid/Terrier.mp4')
     expect(asset.probe).toBeUndefined()
   })
 
@@ -152,6 +152,73 @@ describe('local backend', () => {
     expect(rewritten.createdAt).toBe('2026-08-01T09:00:00.000Z')
     // The file did change, and that is what the local stamp is for.
     expect(rewritten.localChangedAt).toBe('2026-08-06T10:00:00.000Z')
+  })
+
+  /**
+   * Now that the file is named after the row, a second pull has somewhere else to land: the free
+   * name beside the one it wrote the first time. Two files for one asset, the row pointing at
+   * the newer and nothing ever coming back for the older.
+   */
+  it('lands a twin pulled twice on the file it landed on the first time', async () => {
+    const first = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/render.png',
+      name: 'Boulder',
+      type: 'image',
+    })
+
+    const second = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/render.png',
+      name: 'Boulder',
+      type: 'image',
+    })
+
+    expect(second.path).toBe(first.path)
+    expect(await readdir(join(root, 'assets/img'))).toEqual(['Boulder.png'])
+  })
+
+  /** A second pull must not put the API's wording back over a name the user has since chosen. */
+  it('keeps the name the row carries when the request brings another', async () => {
+    await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/render.png',
+      name: 'Boulder',
+      type: 'image',
+    })
+    const renamed = await catalog.find('asset_1')
+    if (renamed) await catalog.add({ ...renamed, name: 'Ruelle bleue' })
+
+    const rewritten = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/render.mp4',
+      name: 'Boulder',
+      type: 'image',
+    })
+
+    expect(rewritten.path).toBe('assets/img/Ruelle bleue.mp4')
+  })
+
+  /**
+   * A job of four outputs lands four times under one prompt, and there is nobody to ask. The
+   * suffix is the studio's own doing — a name a user typed is refused instead.
+   */
+  it('suffixes a second asset that would land on the same file', async () => {
+    const first = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/a.png',
+      name: 'Ruelle bleue',
+      type: 'image',
+    })
+    const second = await backend.importFromUrl({
+      id: 'asset_2',
+      url: 'https://cdn.example/b.png',
+      name: 'Ruelle bleue',
+      type: 'image',
+    })
+
+    expect(first.path).toBe('assets/img/Ruelle bleue.png')
+    expect(second.path).toBe('assets/img/Ruelle bleue 2.png')
   })
 
   it('keeps what the request says nothing about', async () => {
@@ -252,13 +319,15 @@ describe('local backend', () => {
     expect(asset).toMatchObject({
       id: 'asset_1',
       location: 'local',
-      path: 'assets/img/asset_1.png',
+      // The name, never the id: a folder of `asset_40f76c36-8ad4-….png` says nothing about
+      // what is in it, and the row that does say could not be joined to it by eye.
+      path: 'assets/img/Boulder.png',
       bytes: 4,
       jobId: 'job_1',
       remoteAssetId: 'asset_remote',
     })
 
-    expect(await readFile(join(root, 'assets/img/asset_1.png'))).toEqual(Buffer.from(BYTES))
+    expect(await readFile(join(root, 'assets/img/Boulder.png'))).toEqual(Buffer.from(BYTES))
     await expect(catalog.find('asset_1')).resolves.toEqual(asset)
   })
 
@@ -353,11 +422,13 @@ describe('local backend', () => {
     )
 
     expect(asset).toMatchObject({
-      path: 'assets/aud/asset_2.wav',
+      // Cleaned on the way to the disk, having nobody to refuse it to: the studio wrote this
+      // name itself, and a user's own is refused instead — see `checkAssetName`.
+      path: 'assets/aud/Pad (edited).wav',
       bytes: 3,
       derivedFrom: 'asset_1',
     })
-    expect(await readFile(join(root, 'assets/aud/asset_2.wav'))).toEqual(Buffer.from(edited))
+    expect(await readFile(join(root, 'assets/aud/Pad (edited).wav'))).toEqual(Buffer.from(edited))
     await expect(catalog.find('asset_2')).resolves.toEqual(asset)
   })
 
@@ -370,7 +441,7 @@ describe('local backend', () => {
     const replaced = await backend.replaceBytes('asset_2', new Uint8Array([4, 5]), '.wav')
 
     expect(replaced).toMatchObject({ id: 'asset_2', name: 'Pad', jobId: 'job_1', bytes: 2 })
-    expect(await readFile(join(root, 'assets/aud/asset_2.wav'))).toEqual(Buffer.from([4, 5]))
+    expect(await readFile(join(root, 'assets/aud/Pad.wav'))).toEqual(Buffer.from([4, 5]))
   })
 
   // An edited take goes back as a wav; leaving it under its old name would hand every reader
@@ -383,9 +454,9 @@ describe('local backend', () => {
 
     const replaced = await backend.replaceBytes('asset_3', new Uint8Array([4, 5]), '.wav')
 
-    expect(replaced.path).toBe('assets/aud/asset_3.wav')
-    expect(await readFile(join(root, 'assets/aud/asset_3.wav'))).toEqual(Buffer.from([4, 5]))
-    await expect(readFile(join(root, 'assets/aud/asset_3.mp3'))).rejects.toThrow()
+    expect(replaced.path).toBe('assets/aud/Import.wav')
+    expect(await readFile(join(root, 'assets/aud/Import.wav'))).toEqual(Buffer.from([4, 5]))
+    await expect(readFile(join(root, 'assets/aud/Import.mp3'))).rejects.toThrow()
   })
 
   it('refuses to replace an asset the catalogue does not hold', async () => {
@@ -414,9 +485,11 @@ describe('local backend', () => {
     expect(replaced).toMatchObject({
       id: 'asset_5',
       name: 'Capture',
-      path: 'assets/img/asset_5.png',
+      // Its own name, the row having no file of ours to keep the stem of — and free, which is
+      // asked of the folder rather than of the catalogue.
+      path: 'assets/img/Capture.png',
     })
-    expect(await readFile(join(root, 'assets/img/asset_5.png'))).toEqual(Buffer.from([4, 5]))
+    expect(await readFile(join(root, 'assets/img/Capture.png'))).toEqual(Buffer.from([4, 5]))
   })
 
   // The file the user only pointed at is not ours to delete: the studio owns the copy it wrote.
@@ -604,7 +677,7 @@ describe('the still brought down beside the bytes', () => {
       thumbnailUrl: 'https://cdn.example/thumb/gone.jpg',
     })
 
-    expect(asset.path).toBe('assets/3d/asset_3.glb')
+    expect(asset.path).toBe('assets/3d/Skeleton.glb')
     expect(asset.posterPath).toBeUndefined()
   })
 

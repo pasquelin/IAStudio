@@ -31,6 +31,7 @@ import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createUpdates, type Updates } from '@main/updater'
+import { moveAssetFile } from './assets/asset-file'
 import { createAssetCollector } from './assets/collector'
 import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/auto-caption'
 import {
@@ -162,6 +163,11 @@ export type Services = {
   ownerScope: OwnerScope
   /** Drops the file an asset owns, leaving a linked one where it lies. */
   removeAssetFile: (asset: Asset) => Promise<void>
+  /**
+   * Moves the file an asset owns so that it is called after `name` — `undefined` when there is
+   * no file of ours to move. A row's name IS its file's name, and this is the half that writes.
+   */
+  renameAssetFile: (asset: Asset, name: string) => Promise<string | undefined>
   project: ProjectStore
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
@@ -987,6 +993,15 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
 
+  /**
+   * Moves an asset's file to its new name. Nothing happens without a project open: the path is
+   * relative to one, and there is no folder to move anything inside of.
+   */
+  const renameAssetFile = async (asset: Asset, name: string): Promise<string | undefined> => {
+    const current = project.current()
+    return current ? moveAssetFile(current.path, asset, name) : undefined
+  }
+
   const accountOn = (scenario: Scenario): JobAccount => ({
     runner: runnerOf(scenario),
     collect: collectorOf(scenario),
@@ -1138,6 +1153,7 @@ export function createServices(settings: SettingsStore): Services {
     cloud: () => cloudAssets,
     ownerScope,
     removeAssetFile,
+    renameAssetFile,
     project,
     journal,
     flushJobs: () => jobStore.flush(),

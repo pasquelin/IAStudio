@@ -1,5 +1,6 @@
 import { CHANNELS } from '@shared/ipc'
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
+import { checkAssetName } from '@shared/domain/asset-name'
 import { defined } from '@shared/guards'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from '@shared/domain/cloud-asset'
 import type { SyncOutcome } from '@shared/domain/sync'
@@ -45,6 +46,13 @@ export type AssetHandlerDeps = {
   cloud: () => CloudBackend
   /** Removes the file an asset owns, when it owns one. A linked rush is only unlinked. */
   removeFile: (asset: Asset) => Promise<void>
+  /**
+   * Moves the file an asset owns so that it is called after `name`, and answers where it landed.
+   *
+   * Injected rather than reached for, as `removeFile` is: this module knows the catalogue and
+   * not the folder it describes, and the disk is what a test replaces here.
+   */
+  renameFile: (asset: Asset, name: string) => Promise<string | undefined>
   /** The project the active key opens onto, or null while nothing is authenticated. */
   activeOwnerId: () => string | null
   /** Where a failure goes now that it has somewhere to go. */
@@ -247,6 +255,7 @@ export function registerAssetHandlers({
   remote,
   cloud,
   removeFile,
+  renameFile,
   activeOwnerId,
   journal,
   captionArrivals,
@@ -258,10 +267,23 @@ export function registerAssetHandlers({
     const asset = await catalog().find(assetId)
     if (!asset) throw new Error('asset-not-found')
 
+    // Checked again on this side, and not left to the field that asked first: `safeFileName`
+    // would quietly turn `Vue 3/4` into `Vue 3 4` on the disk while the catalogue kept the
+    // slash — the two names apart again, one layer below where they were before.
+    const refused = parsed.name === undefined ? null : checkAssetName(parsed.name)
+    if (refused) throw new Error(refused)
+
+    // Before the catalogue, never after: a row renamed over a move that failed would point at
+    // the file it no longer names, which is the state this whole change exists to end. The
+    // throw travels — the renderer turns `duplicate` into a line in the journal.
+    const path =
+      parsed.name === undefined ? asset.path : await renameFile(asset, parsed.name.trim())
+
     const updated: Asset = {
       ...asset,
       ...(parsed.name === undefined ? {} : { name: parsed.name }),
       ...(parsed.tags === undefined ? {} : { tags: [...parsed.tags] }),
+      ...(path === undefined ? {} : { path }),
     }
     const saved = await catalog().add(updated)
 

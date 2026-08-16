@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { checkAssetName, generatedAssetName } from './asset-name'
+import { ASSET_NAME_MAX_LENGTH } from './asset'
+import { assetFileName, checkAssetName, generatedAssetName } from './asset-name'
 
 describe('whether an asset may be called this', () => {
   it('accepts an ordinary name and refuses one nobody typed', () => {
@@ -7,13 +8,41 @@ describe('whether an asset may be called this', () => {
     expect(checkAssetName('   ')).toBe('empty')
   })
 
-  it('refuses a name longer than the catalogue holds', () => {
-    expect(checkAssetName('a'.repeat(201))).toBe('too-long')
+  it('refuses a name longer than a file name may be', () => {
+    expect(checkAssetName('a'.repeat(ASSET_NAME_MAX_LENGTH))).toBeNull()
+    expect(checkAssetName('a'.repeat(ASSET_NAME_MAX_LENGTH + 1))).toBe('too-long')
   })
 
   /** Counted by code point, as the bound is meant: a name of emoji is as long as it looks. */
   it('measures a name in characters, not in the units a string is stored in', () => {
-    expect(checkAssetName('🎬'.repeat(200))).toBeNull()
+    expect(checkAssetName('🎬'.repeat(ASSET_NAME_MAX_LENGTH))).toBeNull()
+  })
+
+  /**
+   * The whole of this change: the name reached the file, so what a file system refuses, an
+   * asset refuses. Refused rather than quietly cleaned — a name the studio would rewrite is a
+   * second name for the asset, and one name is the point.
+   */
+  it('refuses what a file name cannot hold, rather than cleaning it behind the user', () => {
+    expect(checkAssetName('Vue 3/4')).toBe('invalid')
+    expect(checkAssetName('Ruelle.')).toBe('invalid')
+    expect(checkAssetName('  Ruelle bleue  ')).toBeNull()
+  })
+})
+
+describe('the file an asset lands on', () => {
+  it('is its name, and the extension its bytes came with', () => {
+    expect(assetFileName('Ruelle bleue', '.png')).toBe('Ruelle bleue.png')
+  })
+
+  /**
+   * Nothing here is typed by a user: a generated name is the PROMPT, and a prompt holding a
+   * slash is an ordinary prompt and a path traversal at the same time.
+   */
+  it('holds a generated name to the same rule, having nobody to refuse it to', () => {
+    expect(assetFileName('Vue 3/4 de la ruelle', '.png')).toBe('Vue 3 4 de la ruelle.png')
+    expect(assetFileName('../../.ssh/id_rsa', '.png')).toBe('ssh id_rsa.png')
+    expect(assetFileName('   ', '.png')).toBe('asset.png')
   })
 })
 

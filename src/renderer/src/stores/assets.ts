@@ -7,10 +7,13 @@ import {
   withoutSearch,
   type CollectionState,
 } from '@/helpers/collection-state'
-import { checkAssetName, type AssetNameFailure } from '@shared/domain/asset-name'
+import {
+  ASSET_NAME_FAILURES,
+  checkAssetName,
+  type AssetNameFailure,
+} from '@shared/domain/asset-name'
 import { isRecord } from '@shared/guards'
 import { getBridge } from '@/services/bridge'
-import { reportFailure } from '@/services/diagnostics'
 
 type AssetsState = {
   collection: CollectionState
@@ -217,15 +220,23 @@ export const useAssets = create<AssetsState>()(
           const refused = checkAssetName(name)
           if (refused) return refused
 
+          let refusal: AssetNameFailure | null = null
           const written = await getBridge()
             ?.assets.update(assetId, { name: name.trim() })
-            .catch(error => {
-              reportFailure('assets.rename', name, error)
+            .catch((error: unknown) => {
+              // Read off the message, as a document's refusal is: the name reached the file, so
+              // the folder can now refuse what no field could see — a name it already holds.
+              // Answering `too-long` for all of them, which is what this did while length was
+              // the only thing that could be wrong, would tell the user to shorten a name whose
+              // only fault is that it is taken.
+              //
+              // Journalled by the CALLER, on the code this hands back (`helpers/rename.ts`), and
+              // no longer here as well: the sole caller wrote a second line for the same failure.
+              const message = error instanceof Error ? error.message : ''
+              refusal = ASSET_NAME_FAILURES.find(failure => message.includes(failure)) ?? 'invalid'
               return null
             })
-          // `too-long` and not `empty`: the catalogue refusing, or a disk that has gone, is not
-          // a name nobody typed — and the journal line is what actually says what happened.
-          if (!written) return 'too-long'
+          if (!written) return refusal ?? 'invalid'
 
           // Written into the shelf rather than waited for: `assets:update` broadcasts nothing —
           // it is answered where it was ordered, which is the doctrine every other write follows.

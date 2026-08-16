@@ -1,5 +1,5 @@
 import { EXTENSION_BY_KIND, type DocumentKind } from './document'
-import { FILE_NAME_MAX_LENGTH, foldForFileName, isSafeFileName, safeFileName } from './file-name'
+import { foldForFileName, isSafeFileName, safeFileName, stemForSuffix } from './file-name'
 
 /**
  * Naming a document, which since documents are named by what they are called is also naming a
@@ -89,19 +89,7 @@ export function nextFreeDocumentName(
 
   if (free(base)) return base
 
-  /**
-   * Room kept for the suffix before anything is tried.
-   *
-   * `documentFileName` cuts at `FILE_NAME_MAX_LENGTH`, so a base already that long comes back
-   * from `${base} 2` as `base` itself — every candidate then reads as taken, and the loop below
-   * never ends. Synchronously, in the process that owns every window.
-   *
-   * Six code points is ` 99999`, past any number of documents one folder holds.
-   */
-  const stem = [...base]
-    .slice(0, FILE_NAME_MAX_LENGTH - 6)
-    .join('')
-    .trimEnd()
+  const stem = stemForSuffix(base)
 
   // No bound: the loop ends on the first free name, and there are only ever as many taken as
   // there are documents in the folder.

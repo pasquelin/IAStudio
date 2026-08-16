@@ -2,11 +2,11 @@ import { mdiFileOutline, mdiFolderOpenOutline, mdiFolderOutline } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
-import { canMoveInto, isStudioFolder } from '@shared/domain/folder'
+import { canMoveInto, isStudioFolder, isStudioOwned } from '@shared/domain/folder'
 import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
 import { openDocument } from '@/app/dockview-api'
-import { renameDocument } from '@/helpers/rename'
+import { renameAssetAt, renameDocument } from '@/helpers/rename'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
@@ -119,25 +119,35 @@ export function Explorer() {
     document !== null && open[document.id] !== undefined
 
   /**
-   * A document is renamed through its own channel, which moves the file AND rewrites its
-   * envelope; anything else is a plain file and is renamed as one. Told apart because the two
-   * cannot be the same gesture: renaming a document as a file would leave its envelope saying
-   * the old thing, and the main process refuses it outright — `isStudioOwned`.
+   * Three names for three things, and the row cannot tell them apart by looking.
    *
-   * Nothing is written on faith either way. A file's new name settles when the watch reads the
-   * folder again; a document's comes back from the rename itself, which is what puts it in the
-   * tab that may be showing it.
+   * A document is renamed through its own channel, which moves the file AND rewrites its
+   * envelope. An asset through the catalogue's, which moves the file AND rewrites its row —
+   * both refused as plain files by the main process, `isStudioOwned`, because renaming either
+   * behind the studio's back leaves it pointing at a path that is gone. Everything else the
+   * user put in the folder is a plain file and is renamed as one.
+   *
+   * The asset takes a stem: what this panel draws is a file name, extension included, and that
+   * suffix belongs to the bytes rather than to the name. Everything else keeps what was typed,
+   * suffix and all — a `.txt` the user renames to `.md` is their business.
+   *
+   * Nothing is written on faith. A file's new name settles when the watch reads the folder
+   * again; a document's comes back from the rename itself, which is what puts it in the tab
+   * that may be showing it.
    */
   const commitRename = (node: FolderNode, name: string): void => {
     setRenaming(null)
     const document = documentOf(node)
 
-    if (!document) {
-      if (name !== node.name) void getBridge()?.project.renameFile(node.path, name)
-      return
+    if (document) return renameDocument(document.id, document.title, name)
+    if (name === node.name) return
+
+    if (isStudioOwned(node.path)) {
+      const extension = extensionOf(name)
+      return renameAssetAt(node.path, extension ? name.slice(0, -extension.length) : name)
     }
 
-    renameDocument(document.id, document.title, name)
+    void getBridge()?.project.renameFile(node.path, name)
   }
 
   if (nodes.length === 0)
