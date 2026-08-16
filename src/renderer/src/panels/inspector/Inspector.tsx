@@ -20,6 +20,7 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
 import { AssetInspector } from './AssetInspector'
 import { ClipInspector } from './ClipInspector'
+import { FileInspector } from './FileInspector'
 import { LayerInspector } from './LayerInspector'
 import { SceneInspector } from './SceneInspector'
 import { TextureInspector } from './TextureInspector'
@@ -62,6 +63,11 @@ function Face() {
     // re-rendered the clip and track inspectors on every catalogue refresh too.
     case 'asset':
       return <AssetSelection ids={selection.ids} />
+
+    // Paths, not ids: what the explorer picks is a file of the project folder, and most of them
+    // have no row anywhere — which is the whole difference between this face and the one above.
+    case 'file':
+      return <FileInspector paths={selection.ids} />
 
     // Both guarded on the owner: the sequence in front is not necessarily the one this was
     // selected in, and every sequence has a track called `V1`.

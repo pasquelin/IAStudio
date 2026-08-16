@@ -747,6 +747,15 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         params.push(query.path)
       }
 
+      // The same question for a whole listing, in one round trip: a browser showing four hundred
+      // files would otherwise ask four hundred times to learn which of them are ours. Empty means
+      // nothing, exactly as `types` does — a caller with no path to ask about asks nothing.
+      if (query.paths) {
+        const placeholders = query.paths.map(() => '?').join(', ')
+        conditions.push(query.paths.length > 0 ? `path IN (${placeholders})` : '0')
+        params.push(...query.paths)
+      }
+
       if (query.syncStatus) {
         conditions.push('sync_state = ?')
         params.push(query.syncStatus)

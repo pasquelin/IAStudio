@@ -20,3 +20,23 @@ export async function assetAt(path: string): Promise<Asset | null> {
 
   return found?.[0] ?? null
 }
+
+/**
+ * The same question for a whole listing, in ONE round trip — keyed by path.
+ *
+ * A panel showing four hundred files asked four hundred times, and each answer is a query
+ * against the project's own database, in the process that owns every window. `limit` is the
+ * number of paths asked about: a path names at most one row, and leaving the catalogue's own
+ * default in place would have cut the answer where the question was already bounded.
+ *
+ * Answers an empty map rather than throwing, for the reason `assetAt` answers `null`.
+ */
+export async function assetsAt(paths: readonly string[]): Promise<Map<string, Asset>> {
+  if (paths.length === 0) return new Map()
+
+  const found = await getBridge()
+    ?.assets.search({ paths, limit: paths.length })
+    .catch(() => [])
+
+  return new Map((found ?? []).flatMap(asset => (asset.path ? [[asset.path, asset]] : [])))
+}

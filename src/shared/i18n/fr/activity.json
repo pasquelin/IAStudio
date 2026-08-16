@@ -97,6 +97,7 @@
       "assets.copy": "La copie n’a pas pu être terminée",
       "assets.extract": "Les images de ce modèle n’ont pas pu être extraites",
       "assets.rename": "Cet asset n’a pas pu être renommé",
+      "assets.retype": "Le rôle de ce fichier n’a pas pu être corrigé",
       "project.reveal": "Le dossier du projet n’a pas pu être affiché",
       "project.forget": "Le projet n’a pas pu être retiré de la liste",
       "project.rename": "Le projet n’a pas pu être renommé",

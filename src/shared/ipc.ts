@@ -478,6 +478,9 @@ export type LogScope =
   // The catalogue refusing a new name. The field has closed by then — it commits on blur as much
   // as on Enter — so the journal is the only place left to say the name did not take.
   | 'assets.rename'
+  // The catalogue refusing what a file IS. Corrected from a menu that closes on the pick, so
+  // there is nothing left on screen for a refusal to appear in.
+  | 'assets.retype'
   // The home's shelf: a folder moved since it was last opened is the ordinary case there, so
   // all three of its gestures need somewhere to say they did nothing.
   | 'project.reveal'
@@ -522,6 +525,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.copy',
   'assets.extract',
   'assets.rename',
+  'assets.retype',
   'document.rename',
   'project.reveal',
   'project.forget',

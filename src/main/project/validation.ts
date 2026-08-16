@@ -109,6 +109,9 @@ const assetQuery = z.object({
   text: z.string().max(200).optional(),
   // The same shape the explorer's own channel is held to: it is the surface that asks this.
   path: folderPath.optional(),
+  // A whole listing at once. Bounded well above what a folder of rushes holds and far below
+  // what SQLite would take: the paths travel in one IPC message, one placeholder each.
+  paths: z.array(folderPath).max(2000).optional(),
   location: z.enum(['local', 'cloud']).optional(),
   syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
   groupId: z.string().trim().min(1).optional(),

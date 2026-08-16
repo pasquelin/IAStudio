@@ -15,6 +15,7 @@ import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { renameAsset } from '@/helpers/rename'
 import { useFavorites } from '@/stores/favorites'
+import { RoleField } from './RoleField'
 import { useJobs } from '@/stores/jobs'
 import { useLayouts } from '@/stores/layouts'
 
@@ -72,7 +73,9 @@ export function AssetInspector({ asset }: { asset: Asset }) {
             </span>
           )}
         </PropertyRow>
-        <PropertyRow label={t('inspector.type')}>{t(`assetTypes.${asset.type}`)}</PropertyRow>
+        {/* The same field the explorer's face carries, and correctable here for the same
+            reason: an asset IS a file the catalogue holds a row for. */}
+        <RoleField assetId={asset.id} domain={asset.type} />
         {probe?.duration !== undefined && (
           <PropertyRow label={t('inspector.duration')}>
             {formatDuration(probe.duration)}

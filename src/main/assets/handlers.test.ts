@@ -495,6 +495,19 @@ describe('renaming and tagging', () => {
     expect(updated).toMatchObject({ name: 'Rock', tags: ['stone'] })
   })
 
+  /**
+   * The correction the extension cannot make: a normal map and an albedo are both PNGs. The row
+   * is what remembers it, and the FILE does not move — a row carries its own path, and what the
+   * studio calls a picture has never been decided by the folder it sits in.
+   */
+  it('writes what a file is, leaving the file where it is', async () => {
+    await harness.catalog.add(localAsset({ type: 'image', path: 'Repérages/ruelle.png' }))
+
+    const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { type: 'texture' })
+
+    expect(updated).toMatchObject({ type: 'texture', path: 'Repérages/ruelle.png' })
+  })
+
   it('tells the library which tags moved, not the whole set', async () => {
     await harness.catalog.add(localAsset({ tags: ['stone', 'draft'], remoteAssetId: 'remote_1' }))
     await invoke(CHANNELS.assetsUpdate, 'asset_1', { tags: ['stone', 'hero'] })

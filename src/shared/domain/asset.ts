@@ -428,6 +428,14 @@ export type AssetQuery = {
    * explorer spells its paths the way `relativePathFor` writes them — `/` on every platform.
    */
   path?: string
+  /**
+   * The same question for a whole listing — which of THESE files the catalogue holds a row for.
+   *
+   * One round trip rather than one per row: a browser showing four hundred files asked four
+   * hundred times, and each answer is a query against the project's own database. An empty list
+   * means nothing, as it does for `types`.
+   */
+  paths?: readonly string[]
   /** Narrows to one side of the library, or to what still has to move between them. */
   location?: AssetLocation
   syncStatus?: SyncStatus
@@ -472,6 +480,14 @@ export function emptyAssetCounts(): AssetCounts {
 export type AssetChanges = {
   name?: string
   tags?: readonly string[]
+  /**
+   * What the file IS, corrected by hand.
+   *
+   * The studio reads a file's domain from its extension alone, and an extension cannot always
+   * tell: a normal map and an albedo are both PNGs. The row is what remembers the answer, which
+   * is why only a file the catalogue holds can be corrected at all.
+   */
+  type?: AssetType
 }
 
 export const ASSET_SCHEME = 'scenario'
