@@ -271,3 +271,14 @@ export function subtreeOf(nodes: readonly SceneNode[], id: string): SceneNode[] 
 export function nodesOfType(nodes: readonly SceneNode[], type: SceneNodeType): SceneNode[] {
   return nodes.filter(node => node.type === type)
 }
+
+/**
+ * What a render looks through: the first camera the scene holds, in document order.
+ *
+ * `null` for a scene that has none, which is not a failure — a model dropped straight onto a
+ * montage is drawn by the free camera instead. The rule lives here rather than at its two call
+ * sites so that what the Render button writes and what a montage shows cannot disagree.
+ */
+export function firstCameraId(nodes: readonly SceneNode[]): string | null {
+  return nodesOfType(nodes, 'camera')[0]?.id ?? null
+}

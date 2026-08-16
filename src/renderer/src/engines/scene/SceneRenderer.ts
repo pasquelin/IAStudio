@@ -35,6 +35,7 @@ import {
   ViewportEngine,
   type ProjectionKind,
   type ViewportCamera,
+  type ViewportOutput,
 } from '../viewport/ViewportEngine'
 import {
   canReceiveShadow,
@@ -355,6 +356,8 @@ export class SceneRenderer {
   private readonly bvh: BvhBuilder
   private readonly fonts: FontLibrary
   private stopPaletteWatch: (() => void) | null = null
+  /** Set by `prepareOffscreen`: what stops the backdrop being painted over a montage. */
+  private transparent = false
 
   constructor(private readonly options: SceneRendererOptions) {
     // Injected rather than built here, so a test can drive the whole model path without a
@@ -898,6 +901,73 @@ export class SceneRenderer {
   }
 
   /**
+   * Readies this renderer to draw somewhere other than a screen, before it is mounted.
+   *
+   * Transparency is the point: a scene laid over a montage has to hand back the pixels it
+   * painted and nothing behind them, or every clip under it would be hidden by a backdrop.
+   */
+  prepareOffscreen(output: ViewportOutput): void {
+    this.transparent = output.alpha === true
+    this.viewport.configureOutput(output)
+  }
+
+  /**
+   * Points the free camera at everything the scene holds — what a model dropped straight onto a
+   * montage needs, having no camera of its own and no one to aim one.
+   *
+   * The camera is moved directly rather than through the orbit: a viewport drawing into a video
+   * frame has no one dragging it, and the orbit's target would only be read on the next drag.
+   */
+  frameContents(): void {
+    const objects = [...this.objects.values()]
+    if (objects.length === 0) return
+
+    const { target, position } = framingPlacement(objects, this.view.fieldOfView)
+    const camera = this.viewport.perspective
+    camera.position.copy(position)
+    camera.lookAt(target)
+    this.viewport.orbit?.target.copy(target)
+    this.viewport.requestRender()
+  }
+
+  /**
+   * Draws ONE frame, now, through a camera of the scene, and hands back the canvas it landed on.
+   *
+   * Straight onto the drawing buffer rather than through a render target: the caller wraps that
+   * canvas in a `VideoFrame` on the very next line, and a read back through the CPU would cost
+   * eight megabytes a frame for pixels the GPU already holds. It follows that the frame must be
+   * taken before this task yields — which is what `scene-sink` promises.
+   *
+   * `null` before the viewport is mounted, which is the whole of what can go wrong here.
+   */
+  drawFrom(cameraNodeId: string | null, time: Us): HTMLCanvasElement | null {
+    const gl = this.viewport.gl
+    const canvas = this.viewport.canvas
+    if (!gl || !canvas) return null
+
+    const aimed = cameraNodeId ? this.objects.get(cameraNodeId) : null
+    const camera = aimed instanceof PerspectiveCamera ? aimed : this.viewport.perspective
+
+    this.setPlayhead(time)
+
+    // A render is what the camera SEES, not a picture of the camera — same reason as `renderFilm`.
+    const helper = camera.children.find(child => child instanceof CameraHelper)
+    const wasVisible = helper?.visible ?? false
+    if (helper) helper.visible = false
+
+    camera.aspect = canvas.width / canvas.height
+    camera.updateProjectionMatrix()
+
+    try {
+      gl.setRenderTarget(null)
+      gl.render(this.viewport.scene, camera)
+    } finally {
+      if (helper) helper.visible = wasVisible
+    }
+    return canvas
+  }
+
+  /**
    * Draws the film one frame at a time, from a camera of the scene, and hands each one over
    * already encoded as a PNG.
    *
@@ -1108,6 +1178,12 @@ export class SceneRenderer {
 
   /** The backdrop, unless a sky is hanging behind the scene — in which case the sky is it. */
   private paintBackground(): void {
+    // A scene drawn for compositing keeps nothing behind it: a backdrop would hide every clip
+    // this one is laid over, and the sky — when there is one — is scenery the user asked for.
+    if (this.transparent && !this.sky.showsSky()) {
+      this.viewport.scene.background = null
+      return
+    }
     if (this.sky.showsSky()) return
     this.viewport.setBackgroundColor(this.viewport.paletteToken('--color-viewport'))
   }

@@ -124,6 +124,10 @@
       "title": "Lire / Pause",
       "help": "Lance la lecture du montage, ou l’arrête là où elle en est. Relancer repart d’où l’on s’était arrêté."
     },
+    "sequenceExport": {
+      "title": "Exporter la vidéo…",
+      "help": "Écrit le montage dans un fichier vidéo, image par image, scènes 3D comprises. Le son n’y est pas encore."
+    },
     "sequenceMirror": {
       "title": "Fenêtre de retour",
       "help": "Ouvre le montage dans une fenêtre à part, à poser sur un second écran. Elle suit le studio image par image, sans le son, et se ferme comme une fenêtre ordinaire."

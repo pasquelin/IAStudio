@@ -2,6 +2,7 @@ import type { DocumentDescriptor } from '@shared/domain/document'
 import { useTranslation } from 'react-i18next'
 import { Row } from '@/design/Row'
 import { cn } from '@/helpers/cn'
+import { startSceneDrag } from '@/helpers/scene-drag'
 import { workspaceById } from '@/helpers/workspaces'
 import { InlineRename } from '@/design/InlineRename'
 
@@ -40,7 +41,9 @@ export function DocumentRow({ document, open, onRename }: DocumentRowProps) {
       </span>
     )
 
-  return (
+  // Only a scene: it is the one kind of document a montage can draw, and a row that offered to
+  // be dragged everywhere would promise drops no target takes.
+  const row = (
     <Row
       icon={workspaceById(document.workspace).icon}
       title={document.title}
@@ -55,5 +58,17 @@ export function DocumentRow({ document, open, onRename }: DocumentRowProps) {
         />
       }
     />
+  )
+
+  if (document.kind !== 'scene') return row
+
+  return (
+    <span
+      className="block w-full"
+      draggable
+      onDragStart={event => startSceneDrag(event, document.id)}
+    >
+      {row}
+    </span>
   )
 }

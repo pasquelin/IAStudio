@@ -44,14 +44,18 @@ import { assetIdFromDrag, carriesAsset, draggedAssetType, droppedAsset } from '@
 import { cn } from '@/helpers/cn'
 import { showContextMenu } from '@/helpers/context-menu'
 import { cachedImage } from '@/helpers/image-cache'
+import { carriesScene, droppedSceneId } from '@/helpers/scene-drag'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import { assetsById, useAssets } from '@/stores/assets'
+import { useDocuments } from '@/stores/documents'
 import { usePeaks } from '@/stores/peaks'
+import { loadSceneSource, montageSceneOf } from '@/stores/scene-sources'
 import { useSelection } from '@/stores/selection'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { addSceneToSequence, sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
+import { exportSequence } from './sequence-export'
 import type { VideoToolId } from './video-tools'
 
 export type TimelineCanvasProps = {
@@ -78,6 +82,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
   const sequence = useSequences(state => sequenceOf(state, documentId))
   const viewport = useTimelineView(state => viewportOf(state, documentId))
   const byId = useAssets(assetsById)
+  const stored = useDocuments(state => state.stored)
 
   // Read by `paint`, which must stay stable: rebuilding the observer on every dragged pixel
   // would tear down and re-create it sixty times a second.
@@ -113,9 +118,14 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     })
   }, [paint])
 
+  // A scene clip has no catalogue row to be named after: it is the document's title that has to
+  // show on the strip, or the block reads as empty.
   const nameOf = useCallback(
-    (clip: Clip): string => byId.get(clip.assetId)?.name ?? clip.assetId,
-    [byId],
+    (clip: Clip): string =>
+      clip.sceneId
+        ? (stored.find(document => document.id === clip.sceneId)?.title ?? clip.sceneId)
+        : (byId.get(clip.assetId)?.name ?? clip.assetId),
+    [byId, stored],
   )
 
   const peaksOf = useCallback((clip: Clip): Float32Array | null => {
@@ -223,6 +233,12 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
         }
         case 'sequence.delete':
           if (state.selectedId) store.runCommand(documentId, removeClip(state.selectedId))
+          return
+        case 'sequence.export':
+          void exportSequence({
+            sequence: state,
+            title: useDocuments.getState().documents[documentId]?.title ?? documentId,
+          })
           return
         case 'sequence.unlink': {
           // Asked here rather than left to the command: every command run lands on the undo
@@ -421,6 +437,29 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
   const onDrop = (event: DragEvent<HTMLCanvasElement>): void => {
     event.preventDefault()
 
+    const sceneId = droppedSceneId(event)
+    if (sceneId) {
+      const dropped = pointAt(event)
+      const onto = hitTest(sequence, viewport, dropped)
+      // The ruler scrubs; it lays nothing down, exactly as it refuses an asset.
+      if (onto?.kind === 'ruler') return
+
+      event.stopPropagation()
+      addSceneToSequence(
+        documentId,
+        sceneId,
+        // The scene's own animation is how long the shot lasts — read from whichever copy the
+        // studio already holds, and left to the five-second default while its file is on its way.
+        montageSceneOf(sceneId)?.animation.duration ?? null,
+        xToTime(dropped.x, viewport),
+        onto?.trackId,
+      )
+      // Asked for now so the clip has something to draw: without a tab holding it, nothing else
+      // would ever read this document off disk.
+      loadSceneSource(sceneId)
+      return
+    }
+
     const assetId = assetIdFromDrag(event)
     if (!assetId) return
 
@@ -489,7 +528,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
       // that has nothing to do with tracks is shared — preventing a drag we do not carry is
       // what makes a surface swallow files dragged in from the desktop.
       onDragOver={event => {
-        if (carriesAsset(event)) event.preventDefault()
+        if (carriesAsset(event) || carriesScene(event)) event.preventDefault()
       }}
       onDrop={onDrop}
     />

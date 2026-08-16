@@ -37,6 +37,36 @@ export function clipForAsset(
   })
 }
 
+/**
+ * The clip a scene document becomes. It carries no asset at all: what it draws is rendered from
+ * the document as the head passes over it, so there is no catalogue row to point at.
+ *
+ * The length is the scene's own animation, which is what the person building it decided the shot
+ * lasts. A scene with no animation yet falls back to the same five seconds a still gets.
+ */
+export function clipForScene(
+  sceneId: string,
+  duration: Us | null,
+  start: Us,
+  settings: SequenceSettings,
+): Clip {
+  return makeClip({
+    id: newId(),
+    assetId: '',
+    sceneId,
+    start: snapToFrame(start, settings),
+    duration: wholeFrames(duration && duration > 0 ? duration : TIMELESS_DURATION, settings),
+  })
+}
+
+/**
+ * Where a scene clip lands: a picture row, and never a sound one — a scene has no soundtrack of
+ * its own. Null when the montage paints no picture at all, exactly as an asset drop answers.
+ */
+export function trackForScene(state: SequenceState): Track | null {
+  return landingTrack(state, 'video')
+}
+
 /** Which kind of track an asset belongs on. A sound is the only one that is not a picture. */
 function kindForAsset(asset: Asset | null): TrackKind {
   return kindForType(asset?.type ?? null)

@@ -10,6 +10,7 @@ import {
 } from './sound-schedule'
 import {
   clipEnd,
+  clipSource,
   EMPTY_SEQUENCE,
   playsThrough,
   sequenceDuration,
@@ -96,6 +97,17 @@ function place(target: Container, placement: Placement): void {
 /** The sequence canvas, behind every layer — see `--color-monitor`. */
 const CANVAS_TOKEN = '--color-monitor'
 const CANVAS_FALLBACK = 0x000000
+
+/**
+ * The bytes behind a `data:` URL. Pixi hands a picture back as one, and what crosses to the
+ * main process is bytes — encoding them again as text would cost a third of the size per frame.
+ */
+export function bytesOfDataUrl(url: string): Uint8Array {
+  const binary = atob(url.slice(url.indexOf(',') + 1))
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+  return bytes
+}
 
 /** What a renderer must offer to take a frame now rather than at its next pass. */
 export type TextureUploader = { initSource: (source: TextureSource) => void }
@@ -362,7 +374,7 @@ export class TimelineEngine {
       return {
         sprite,
         clip,
-        frame: clip ? this.pool.frameAt(clip.assetId, sourceTimeAt(clip, time)) : null,
+        frame: clip ? this.pool.frameAt(clipSource(clip), sourceTimeAt(clip, time)) : null,
       }
     })
 
@@ -376,7 +388,7 @@ export class TimelineEngine {
       const frame = decoded[index]
       if (!frame) {
         sprite.visible = false
-        if (clip && this.pool.undecodable(clip.assetId)) unreadable = true
+        if (clip && this.pool.undecodable(clipSource(clip))) unreadable = true
         return
       }
 
@@ -416,6 +428,23 @@ export class TimelineEngine {
   /** Pixi's own ticker is off — see `mount`. Every visible change ends here. */
   private draw(): void {
     this.application?.render()
+  }
+
+  /**
+   * The composited frame as it stands, as PNG bytes — one call per frame of an export.
+   *
+   * Extracted from the frame container rather than read off the canvas: a WebGL drawing buffer
+   * is only guaranteed to hold its pixels until the task ends, and an export awaits between
+   * every frame. Pixi renders the container into a texture of its own, which has no such rule.
+   *
+   * `null` before the application exists, which is the only thing that can go wrong here.
+   */
+  async snapshot(): Promise<Uint8Array | null> {
+    const application = this.application
+    if (!application) return null
+
+    const url = await application.renderer.extract.base64({ target: this.frame, format: 'png' })
+    return bytesOfDataUrl(url)
   }
 
   /** The sequence canvas, in its own pixels — what every layer is composited against. */

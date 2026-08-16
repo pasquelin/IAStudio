@@ -424,6 +424,7 @@ export type LogScope =
   | 'scene.texture'
   | 'scene.export'
   | 'scene.render'
+  | 'sequence.export'
   | 'texture.map'
   | 'texture.channel'
   | 'texture.seam'
@@ -482,6 +483,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'scene.texture',
   'scene.export',
   'scene.render',
+  'sequence.export',
   'texture.map',
   'texture.channel',
   'texture.seam',
