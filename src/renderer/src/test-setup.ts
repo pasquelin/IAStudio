@@ -126,17 +126,24 @@ function polyfillWorker(): void {
  * How long an awaited query may wait. Testing Library's own default is one second.
  *
  * That second is a budget for the RUNNER, not for the studio, and the runner shares this machine
- * with whatever else builds on it. Measured on `ModelNodeFields.test.tsx`, which waits on a
- * catalogue asked only once the model's schema has named its family — two round trips: the case
- * takes 136 to 181 ms alone on a quiet machine, and took 1035 ms then 1270 ms inside full runs
- * under six concurrent sessions. Seven to nine times its own cost, against a ceiling of seven.
- * Those readings are one machine's on one afternoon; a review re-measuring under its own load
- * read 186 to 525 ms, which points the same way without reproducing them.
+ * with whatever else builds on it. Measured on a suite waiting for a catalogue asked only once
+ * the model's schema had named its family — two round trips: the case took 136 to 181 ms alone
+ * on a quiet machine, and 1035 ms then 1270 ms inside full runs under six concurrent sessions.
+ * Seven to nine times its own cost, against a ceiling of seven. Those readings are one machine's
+ * on one afternoon; a review re-measuring under its own load read 186 to 525 ms, which points
+ * the same way without reproducing them.
+ *
+ * **The suite those readings came from is gone** — it was `ModelNodeFields.test.tsx`, and by
+ * 2026-08-16 no file of that name exists. The numbers stand as the reason this is 3000 and not
+ * 1000; what no longer stands is the ability to rerun them there. Whoever revisits this measures
+ * on a suite that still exists and says which.
  *
  * Three seconds is twice the worst reading. It buys tolerance, not speed: a satisfied wait
  * returns at once, so a green run should pay nothing — that mechanism is reasoned, not measured,
  * and no run at one second was ever timed against a run at three. What it costs is +2,00 s per
- * expiry, on 462 waiting sites across 63 files.
+ * expiry, on **510 waiting sites across 77 files** — `waitFor`, `findBy*` and `findAllBy*`
+ * counted over the renderer's suites on 2026-08-16. It read 462 across 63 four days earlier:
+ * the cost of this default grows with the suite, which is the half of the trade-off that moves.
  *
  * Raised here rather than per call: two suites of THIS project had already bought their own
  * patience by hand, which is how a default nobody set becomes a rule nobody can see. The `node`
