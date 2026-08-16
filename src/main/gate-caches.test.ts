@@ -58,6 +58,25 @@ describe('the gate not rereading what it has already judged', () => {
    * Held as a rule rather than left to habit: a glob narrowed back to `src` costs nothing to
    * write, reddens nothing, and puts eleven files back in the dark.
    */
+  /**
+   * `benchmark.include` is a setting of its own, with its own default — `**\/*.bench.*`, anchored
+   * nowhere. A project that states its `include` and forgets this one keeps that default and
+   * walks the whole disk from the repository root, which here means `.claude/worktrees/`: on
+   * 2026-08-16 `pnpm bench` ran the benchmarks of two OTHER sessions' branches and printed their
+   * numbers as this checkout's, 54 runs where 6 exist.
+   *
+   * One per project, because a project inherits nothing — the same reason `testTimeout` is
+   * repeated three times a few lines below.
+   */
+  it('anchors every project’s benchmark glob, which inherits nothing and defaults to the disk', () => {
+    const config = read('vitest.config.ts')
+    const projects = [...config.matchAll(/name: '[\w-]+'/g)].length
+    const anchored = [...config.matchAll(/benchmark: \{ include: \['src\//g)].length
+
+    expect(projects).toBeGreaterThan(0)
+    expect(anchored).toBe(projects)
+  })
+
   it('points both gates at the build scripts, not only at the sources', () => {
     expect(manifest.scripts.lint).toContain('scripts')
     // The pair, named rather than looped over: indexing the manifest by a string would need a
