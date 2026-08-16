@@ -93,7 +93,9 @@ import {
   showsEdges,
   directionOf,
   framingPlacement,
+  plainVector,
   viewPosition,
+  type CameraPlacement,
   type PaneView,
 } from './scene-view'
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
@@ -149,6 +151,14 @@ export type SceneRendererOptions = {
    * a model actually brought: the document holds an asset id, not the triangles behind it.
    */
   onStats?: (stats: SceneStats, selected: SceneStats) => void
+  /**
+   * Where the free camera came to rest, once a drag of it is over.
+   *
+   * It is what lets a montage look through the view the person is actually working in: a scene
+   * with no camera of its own has no other framing anybody chose. Published rather than read,
+   * because only the controls know when a gesture ended.
+   */
+  onView?: (placement: CameraPlacement) => void
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
@@ -269,6 +279,8 @@ export class SceneRenderer {
     onFrame: delta => this.advance(delta),
     onOverlay: renderer => this.viewHelper?.render(renderer),
     onPane: (index, camera) => this.dressPane(index, camera),
+    // Read back rather than computed here: only the controls know where an orbit ended up.
+    onCameraSettled: () => this.options.onView?.(this.viewPlacement()),
     // Only here: the texture and skybox viewports show what they show without any light told to
     // cast, so a depth pass per frame would buy them nothing.
     shadows: true,
@@ -945,6 +957,29 @@ export class SceneRenderer {
    * stop: re-aiming per frame makes the camera chase a walking character's own bounding box,
    * and the picture breathes with every step.
    */
+  /** Where the free camera stands and what it looks at, as plain numbers anything may hold. */
+  viewPlacement(): CameraPlacement {
+    const camera = this.viewport.perspective
+    // The orbit's target when there is one, and a point ahead of the camera otherwise: a
+    // viewport with no controls still has a direction, and `lookAt(0,0,0)` would be a lie.
+    const target =
+      this.viewport.orbit?.target ??
+      camera.position.clone().add(camera.getWorldDirection(new ThreeVector3()))
+
+    return { position: plainVector(camera.position), target: plainVector(target) }
+  }
+
+  /**
+   * Points the free camera exactly where another viewport left it — how a montage draws a scene
+   * that has no camera of its own: through the view its author is actually working in.
+   */
+  applyView({ position, target }: CameraPlacement): void {
+    const camera = this.viewport.perspective
+    camera.position.set(position.x, position.y, position.z)
+    camera.lookAt(target.x, target.y, target.z)
+    this.viewport.orbit?.target.set(target.x, target.y, target.z)
+  }
+
   frameContents(): boolean {
     const objects: Object3D[] = []
     for (const [id, object] of this.objects) {

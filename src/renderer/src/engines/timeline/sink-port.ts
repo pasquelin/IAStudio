@@ -2,6 +2,7 @@ import { ALL_FORMATS, BlobSource, Input, VideoSampleSink } from 'mediabunny'
 import type { Asset } from '@shared/domain/asset'
 import { fetchAsset } from '@/helpers/asset-fetch'
 import { createSceneStage, type SceneStage, type SceneStageOptions } from '../scene/scene-stage'
+import type { CameraPlacement } from '../scene/scene-view'
 import type { SceneState } from '../scene/scene-state'
 import type { SinkLike } from './decoder-pool'
 import { createModelScene, createSceneSink } from './scene-sink'
@@ -134,6 +135,11 @@ export type StudioSinkDeps = {
   sceneOf: (sceneId: string) => SceneState | null
   /** Asks for a scene the montage draws but no tab holds. Called once, when the source opens. */
   wantScene: (sceneId: string) => void
+  /**
+   * Where that document's own 3D tab has its camera, when it has published one. A scene with no
+   * camera of its own is drawn through it — the framing its author actually chose.
+   */
+  viewOf: (sceneId: string) => CameraPlacement | null
   /** The catalogue row behind an id — what tells a model apart from a rush. */
   assetOf: (assetId: string) => Asset | null
   /** What the 3D is drawn at: the sequence's own frame size, never the monitor's. */
@@ -155,7 +161,7 @@ export function createStudioSink(deps: StudioSinkDeps): (source: string) => Prom
       deps.wantScene(sceneId)
       return createSceneSink({
         read: () => deps.sceneOf(sceneId),
-        stage: openStage(deps.size()),
+        stage: openStage({ ...deps.size(), viewOf: () => deps.viewOf(sceneId) }),
       })
     }
 

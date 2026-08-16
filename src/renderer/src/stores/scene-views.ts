@@ -1,6 +1,10 @@
 import { create } from 'zustand'
 import type { Us } from '@shared/domain/time'
-import { DEFAULT_PANE_VIEWS, type PaneView } from '@/engines/scene/scene-view'
+import {
+  DEFAULT_PANE_VIEWS,
+  type CameraPlacement,
+  type PaneView,
+} from '@/engines/scene/scene-view'
 import { type DisplayMode } from '@shared/domain/scene'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
 
@@ -27,6 +31,18 @@ export type SceneView = {
   /** Where the animation head stands, in microseconds. Never in the document — see `AnimationTimeline`. */
   playhead: Us
   playing: boolean
+  /**
+   * Where the free camera of the 3D tab stands, published once a drag of it settles.
+   *
+   * It is here so a MONTAGE can look through it: a scene with no camera of its own is drawn
+   * from what the person building it is looking at, which is the one framing they have actually
+   * chosen. Null until that tab has been opened and moved — the montage then frames the
+   * contents by itself.
+   *
+   * Session state like the rest of this view, so orbiting never marks a document modified and
+   * ⌘Z never gives a camera move back. The price is that closing the 3D tab forgets it.
+   */
+  camera: CameraPlacement | null
 }
 
 const DEFAULT_SCENE_VIEW: SceneView = {
@@ -40,6 +56,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   panes: DEFAULT_PANE_VIEWS,
   playhead: 0,
   playing: false,
+  camera: null,
 }
 
 /**
@@ -62,6 +79,7 @@ export type SceneViewsState = {
   setPaneView: (documentId: string, pane: number, view: PaneView) => void
   setPlayhead: (documentId: string, playhead: Us) => void
   setPlaying: (documentId: string, playing: boolean) => void
+  setCamera: (documentId: string, camera: CameraPlacement) => void
 }
 
 export const useSceneViews = create<SceneViewsState>()(set => ({
@@ -125,7 +143,29 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
     set(state => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), playing } },
     })),
+
+  setCamera: (documentId, camera) =>
+    set(state => {
+      // Written only when it actually moved: this lands at the end of every orbit, and a store
+      // waking every reader of the scene for an identical placement would repaint the montage
+      // for nothing.
+      const view = sceneViewOf(state, documentId)
+      if (samePlacement(view.camera, camera)) return state
+      return { views: { ...state.views, [documentId]: { ...view, camera } } }
+    }),
 }))
+
+function samePlacement(left: CameraPlacement | null, right: CameraPlacement): boolean {
+  if (!left) return false
+  return (
+    left.position.x === right.position.x &&
+    left.position.y === right.position.y &&
+    left.position.z === right.position.z &&
+    left.target.x === right.target.x &&
+    left.target.y === right.target.y &&
+    left.target.z === right.target.z
+  )
+}
 
 /** How a given view draws. A pane nobody has set draws the way the studio opens: shaded. */
 export function displayOfPane(displays: readonly DisplayMode[], pane: number): DisplayMode {

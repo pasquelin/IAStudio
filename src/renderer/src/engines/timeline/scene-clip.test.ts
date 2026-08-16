@@ -86,6 +86,7 @@ describe('createStudioSink', () => {
     const open = createStudioSink({
       sceneOf: () => null,
       wantScene,
+      viewOf: () => null,
       assetOf: () => asset,
       size: () => ({ width: 1920, height: 1080 }),
       createStage,
@@ -100,7 +101,11 @@ describe('createStudioSink', () => {
     await open
 
     expect(wantScene).toHaveBeenCalledWith('doc-7')
-    expect(createStage).toHaveBeenCalledWith({ width: 1920, height: 1080 })
+    // At the sequence's own size, and wired to the 3D tab's camera: a scene with no camera of
+    // its own is drawn through the view its author is working in.
+    const options = createStage.mock.calls[0]?.[0]
+    expect(options).toMatchObject({ width: 1920, height: 1080 })
+    expect(options).toHaveProperty('viewOf')
   })
 
   it('opens a mesh asset as 3D too, so a model needs no scene built around it first', async () => {

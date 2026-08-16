@@ -13,6 +13,7 @@ import {
   VIEW_DIRECTIONS,
   isViewDirection,
   type DisplayMode,
+  type Vector3 as PlainVector3,
   type ViewDirection,
 } from '@shared/domain/scene'
 import { centreOf } from './pivot'
@@ -266,6 +267,17 @@ const FRAME_MARGIN = 1.2
 
 /** Where to stand, and what to look at, so a selection fills the view. */
 export type Framing = { target: Vector3; position: Vector3 }
+
+/**
+ * The same pair as plain numbers, for whoever has to store or hand it across — a store holds no
+ * three.js object, and a placement read back into a fresh engine must survive the trip.
+ */
+export type CameraPlacement = { position: PlainVector3; target: PlainVector3 }
+
+/** Three's vector as the studio spells one everywhere else. */
+export function plainVector({ x, y, z }: Vector3): PlainVector3 {
+  return { x, y, z }
+}
 
 /**
  * The whole of what framing decides. Its own function because `frameSelection` needs mounted orbit

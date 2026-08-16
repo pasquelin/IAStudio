@@ -2,6 +2,7 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { Us } from '@shared/domain/time'
 import { reportFailure } from '@/services/diagnostics'
 import { SceneRenderer } from './SceneRenderer'
+import type { CameraPlacement } from './scene-view'
 import { firstCameraId, sceneWithoutSelfPlay, type SceneState } from './scene-state'
 
 /**
@@ -36,6 +37,12 @@ export type SceneStageOptions = {
    * through this; a scene document already says what it plays.
    */
   onClips?: (nodeId: string, clips: readonly string[]) => void
+  /**
+   * Where the 3D tab's own camera stands, if that tab has published one. Read afresh on every
+   * frame: orbiting there moves the montage with it, which is the whole point of showing what
+   * its author is looking at.
+   */
+  viewOf?: () => CameraPlacement | null
   /** Absent builds a real one; a test hands a stub, since jsdom has no WebGL at all. */
   createRenderer?: () => SceneRenderer
 }
@@ -50,6 +57,7 @@ export function createSceneStage({
   width,
   height,
   onClips,
+  viewOf,
   createRenderer,
 }: SceneStageOptions): SceneStage {
   const host = document.createElement('div')
@@ -122,17 +130,22 @@ export function createSceneStage({
 
       const camera = shown ? firstCameraId(shown.nodes) : null
 
-      // Aimed ONCE, on the first frame where there is something to aim at — not when the
-      // document arrives, since a model's file lands long after it, and not on every frame
-      // either: a camera re-aimed per frame chases a walking character's own bounding box, and
-      // the picture breathes with every step.
-      //
-      // From the REST pose, whatever instant is being drawn: two monitors of the same clip sit
-      // at two different playheads, and a framing taken on the pose under each would have them
-      // disagree for good. The head goes back where it belongs on the very next line.
-      if (!camera && !framed) {
-        active.setPlayhead(0)
-        framed = active.frameContents()
+      if (!camera) {
+        // The view its author is working in wins over anything computed here: a scene with no
+        // camera of its own has no other framing that anybody actually chose. Re-read on every
+        // frame, so orbiting the 3D tab moves the montage with it — the same liveness that
+        // makes an edit to the scene show up here at once.
+        const working = viewOf?.() ?? null
+        if (working) active.applyView(working)
+        // Nothing published yet — the 3D tab has never been opened, or never moved. Aimed ONCE,
+        // on the first frame where there is something to aim at, and from the REST pose: two
+        // monitors sit at two different playheads, and framing under the pose of each would
+        // have them disagree for good. Re-aiming per frame instead made the camera chase a
+        // walking character's bounding box, and the picture breathed with every step.
+        else if (!framed) {
+          active.setPlayhead(0)
+          framed = active.frameContents()
+        }
       }
 
       return active.drawFrom(camera, time)

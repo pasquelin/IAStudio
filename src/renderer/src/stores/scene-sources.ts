@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import { sceneFromPayload } from '@/engines/scene/scene-document'
 import type { SceneState } from '@/engines/scene/scene-state'
+import type { CameraPlacement } from '@/engines/scene/scene-view'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { sceneOf, sceneStore, useScenes } from './scenes'
+import { sceneViewOf, useSceneViews } from './scene-views'
 
 type SceneSourcesState = {
   /** Keyed by document id, and holding only scenes NO tab has open — see `montageSceneOf`. */
@@ -51,6 +53,17 @@ export function montageSceneOf(sceneId: string): SceneState | null {
   if (sceneStore.hasState(documents, sceneId)) return sceneOf(documents, sceneId)
 
   return useSceneSources.getState().scenes[sceneId] ?? null
+}
+
+/**
+ * Where that scene's own 3D tab has its camera, or `null` when it has none to offer.
+ *
+ * The framing a montage uses for a scene that holds no camera: it is the one view somebody
+ * actually chose. Null while that tab has never been opened or never moved — and in a second
+ * window, whose stores are its own, so a video return falls back to framing the contents.
+ */
+export function montageViewOf(sceneId: string): CameraPlacement | null {
+  return sceneViewOf(useSceneViews.getState(), sceneId).camera
 }
 
 /**

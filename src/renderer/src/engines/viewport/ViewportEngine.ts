@@ -61,6 +61,12 @@ export type ViewportEngineOptions = {
    * nearly zero, which costs the rotation its precision.
    */
   controls?: 'orbit' | 'none'
+  /**
+   * The hand has let go of the camera. Fired once per gesture, never per frame of it: whoever
+   * listens publishes where the view now stands, and a store written sixty times a second
+   * would repaint everything reading it for a drag that is not over.
+   */
+  onCameraSettled?: () => void
   fieldOfView?: number
   near?: number
   far?: number
@@ -450,6 +456,12 @@ export class ViewportEngine {
       this.controls = new OrbitControls(this.camera, canvas)
       this.controls.enableDamping = true
       this.controls.addEventListener('change', this.requestRender)
+      // On `end` rather than on `change`: the latter fires per frame of an orbit, and whoever
+      // listens here publishes into a store. Once the hand lets go is when the framing is a
+      // decision rather than a gesture in progress.
+      if (this.options.onCameraSettled) {
+        this.controls.addEventListener('end', this.options.onCameraSettled)
+      }
     }
 
     canvas.addEventListener('pointerdown', this.armPaneUnderPointer)
