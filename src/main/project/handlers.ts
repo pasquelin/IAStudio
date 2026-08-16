@@ -201,15 +201,14 @@ export function registerProjectHandlers({
   })
 
   /**
-   * The file goes to the system's trash, and the row that named it goes with it.
+   * The file goes to the system's trash, and the rows that named it go with it.
    *
-   * Without that second half the catalogue kept a row pointing at nothing: the shelf went on
-   * offering the asset, opening it found no bytes, and only `assets:absent` noticed — after the
-   * fact, and only for what a window happened to be listing.
+   * Without that second half the catalogue kept rows pointing at nothing: the shelf went on
+   * offering assets whose bytes were gone, opening one found nothing, and only `assets:absent`
+   * noticed — after the fact, and only for what a window happened to be listing.
    *
-   * A FOLDER thrown away still leaves the rows beneath it behind. Repairing that needs the
-   * catalogue to update by path prefix, which it cannot do yet; the reconciliation pass is what
-   * will answer for it.
+   * `forgetUnder` rather than a lookup and a `remove`: what the explorer hands over may be a
+   * folder, and a folder holds no id to remove by.
    */
   handle(CHANNELS.projectTrashFile, async (_event, relative) => {
     const path = parseFolderPath(relative)
@@ -219,11 +218,9 @@ export function registerProjectHandlers({
       return done
     }
 
-    const [asset] = await project.catalog().search({ path, limit: 1 })
-    if (asset) {
-      await project.catalog().remove(asset.id)
-      broadcast(EVENTS.assetsChanged)
-    }
+    // Only when the catalogue actually lost something: a `.pdf` of notes has no row, and telling
+    // every window to reload its shelf over it is a folder walk for nothing.
+    if ((await project.catalog().forgetUnder(path)) > 0) broadcast(EVENTS.assetsChanged)
     return done
   })
 

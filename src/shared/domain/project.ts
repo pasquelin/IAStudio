@@ -20,6 +20,17 @@ export const LEGACY_MANIFEST_FILE = 'project.json'
 
 export const CATALOG_FILE = '.index/catalog.db'
 
+/**
+ * Where a move that is under way writes down what it has already done.
+ *
+ * Moving three hundred files is not one operation the filesystem can undo: it is three hundred,
+ * and a machine that stops in the middle leaves the project half moved. The journal is what lets
+ * the next opening finish the job — see `file-journal.ts`.
+ *
+ * Under `.index/` because it is machinery the studio can rebuild, not the user's work.
+ */
+export const PENDING_FILES_FILE = '.index/pending-files.ndjson'
+
 export type Manifest = {
   version: number
   name: string

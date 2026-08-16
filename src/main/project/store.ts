@@ -18,6 +18,7 @@ import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
 import { exists, isMissing, writeAtomic, writeQueue } from '@main/persistence'
 import type { AsyncCatalog } from './catalog-client'
+import { applyJournal } from './file-journal'
 import { parseManifest } from './validation'
 
 /** Thrown when a channel needing a project is reached before one is open. */
@@ -335,6 +336,22 @@ export function createProjectStore({
     await mkdir(dirname(file), { recursive: true })
 
     const opening = await openCatalog(file)
+
+    /**
+     * A move interrupted last session left rows naming where their files used to be. Finished
+     * here, on a catalogue nothing is reading yet and BEFORE the studio is told anything — the
+     * four lines below have to stay one gesture, and an `await` among them let a second opening
+     * publish itself in the middle and be overwritten by the first.
+     *
+     * Caught rather than awaited into the failure: opening a project must not fail over
+     * housekeeping. The rows stay where they are, and the reconciliation pass finds them.
+     */
+    try {
+      const caught = await applyJournal(opened.path, opening)
+      if (caught > 0) log.info('project', `finished ${caught} move(s) left by a previous session`)
+    } catch (error) {
+      log.warn('project', `replaying the move journal failed: ${String(error)}`)
+    }
 
     // Whatever is still queued belongs to the project that is closing, and its catalogue is
     // about to stop answering. The stamp goes with it: it is being written into the folder the
