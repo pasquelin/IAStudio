@@ -100,7 +100,9 @@ export function Monitor({
       openSink: createStudioSink({
         sceneOf: montageSceneOf,
         wantScene: loadSceneSource,
-        assetOf: assetId => assetsById(useAssets.getState())[assetId] ?? null,
+        // A Map, never an object: indexing it with brackets answers `undefined` for every asset
+        // there is, which sent every model down the media path to be written off as undecodable.
+        assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
         size: () => frameSize.current,
       }),
       sound,

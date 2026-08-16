@@ -74,7 +74,7 @@ export async function exportSequence({
     openSink: createStudioSink({
       sceneOf: montageSceneOf,
       wantScene: loadSceneSource,
-      assetOf: assetId => assetsById(useAssets.getState())[assetId] ?? null,
+      assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
       size: () => ({ width, height }),
     }),
     // Nothing is listened to here, and an export that woke the audio output would talk over
