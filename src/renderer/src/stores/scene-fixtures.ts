@@ -1,23 +1,22 @@
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { nodeById, type SceneNode, type SceneState } from '@/engines/scene/scene-state'
 import type { DocumentStoreState } from './document-store'
-import { installDocument } from './document-fixtures'
-import { sceneOf, useScenes } from './scenes'
+import { installIn } from './document-fixtures'
+import { sceneOf, sceneStore, useScenes } from './scenes'
 
-/** Clears the three per-document slices, so a suite never inherits the previous one's. */
+/** Puts the store back as it was built, so a suite never inherits the previous one's. */
 export function clearScenes(): void {
-  useScenes.setState({ states: {}, histories: {}, saved: {} })
+  sceneStore.resetForTests()
 }
 
 /**
- * Puts a scene document in front of a panel under test, history cleared.
+ * Puts a scene document in front of a panel under test, in a store put back as it was built.
  *
  * It lives beside the stores rather than beside the node fixtures because their shape is what
  * it knows — and `engines/` must not reach for a store.
  */
 export function installScene(documentId: string, state: SceneState = createDefaultScene()): void {
-  useScenes.setState({ states: { [documentId]: state }, histories: {}, saved: {} })
-  installDocument(documentId, '3d')
+  installIn(sceneStore, documentId, state, '3d')
 }
 
 /**

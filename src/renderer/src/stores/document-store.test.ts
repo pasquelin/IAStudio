@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createDocumentStore } from './document-store'
+import { createDocumentStore, resetDocumentStoresForTests } from './document-store'
 import type { Command } from '@/engines/core/history'
 
 /**
@@ -60,6 +60,62 @@ describe('a document the store was told to forget', () => {
     store.use.getState().runCommand('fresh', set('name', 'first'))
 
     expect(store.stateOf(store.use.getState(), 'fresh').value).toBe('first')
+  })
+})
+
+/**
+ * What a suite starts from. The three maps were cleared by hand with `setState`, which merges —
+ * so what the store keeps beside them survived the reset, and the case order decided the verdict.
+ */
+describe('a store put back as it was built', () => {
+  it('forgets the documents it held, down to where they were written', () => {
+    const store = storeOf()
+    store.use.getState().runCommand('doc', set('name', 'held'))
+    store.use.getState().markSaved('doc', store.markOf(store.use.getState(), 'doc'))
+
+    store.resetForTests()
+
+    expect(store.hasState(store.use.getState(), 'doc')).toBe(false)
+    expect(entries(store)).toBe(0)
+    // The save marks, which two of the five fixtures used to leave behind: a document reopened
+    // under the same id would have read as written to disk when nothing of it ever was.
+    expect(store.use.getState().saved).toEqual({})
+  })
+
+  it('takes commands again for a document closed before it', () => {
+    const store = storeOf()
+    store.use.getState().drop('doc')
+
+    store.resetForTests()
+    store.use.getState().runCommand('doc', set('name', 'after'))
+
+    expect(valueOf(store)).toBe('after')
+  })
+
+  /**
+   * What `test-setup.ts` calls between cases. The registry is the point: a list of stores written
+   * by hand would fall behind the seventh one, and the defect it guards is silent by nature.
+   */
+  it('reaches every store the factory built, without being handed one', () => {
+    const store = storeOf()
+    store.use.getState().drop('doc')
+
+    resetDocumentStoresForTests()
+    store.use.getState().runCommand('doc', set('name', 'after'))
+
+    expect(valueOf(store)).toBe('after')
+  })
+
+  it('leaves no gesture open behind it', () => {
+    const store = storeOf()
+    store.use.getState().beginGesture('doc')
+    store.use.getState().runCommand('doc', set('slider', 'a'))
+
+    store.resetForTests()
+    store.use.getState().runCommand('doc', set('slider', 'b'))
+    store.use.getState().runCommand('doc', set('slider', 'c'))
+
+    expect(entries(store)).toBe(2)
   })
 })
 
