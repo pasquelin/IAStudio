@@ -1,9 +1,11 @@
-import { memo } from 'react'
-import type { AssetBadge as BadgeName } from '@shared/domain/asset'
+import { memo, type ReactNode } from 'react'
+import { assetUrl, posterUrl, type AssetBadge as BadgeName } from '@shared/domain/asset'
+import { cloudPreviewUrl } from '@shared/domain/cloud-asset'
 import { AssetBadge } from '@/design/AssetBadge'
 import { InlineRename } from '@/design/InlineRename'
 import { Row } from '@/design/Row'
-import { ROW_QUIET } from '@/design/styles'
+import { ROW_QUIET, FIELD_THUMBNAIL } from '@/design/styles'
+import { Thumbnail } from '@/design/Thumbnail'
 import { cn } from '@/helpers/cn'
 import { DraggableAsset } from './DraggableAsset'
 import { LibraryAsset } from './LibraryAsset'
@@ -31,11 +33,23 @@ export const AssetRow = memo(function AssetRow({
   hints,
   rename,
 }: AssetRowProps) {
+  const thumbnailUrl =
+    row.from === 'local'
+      ? (posterUrl(row.asset) ?? assetUrl(row.asset.id))
+      : row.from === 'remote'
+        ? cloudPreviewUrl(row.asset, { width: 40 })
+        : undefined
+
+  const thumbnail: ReactNode = thumbnailUrl ? (
+    <Thumbnail url={thumbnailUrl} className={FIELD_THUMBNAIL} />
+  ) : null
+
   // The row becomes the field, as the explorer's and the document list's do.
   const line = rename?.open ? (
     <InlineRename value={nameOfRow(row)} label={rename.label} onCommit={rename.commit} />
   ) : (
     <Row
+      media={thumbnail}
       title={nameOfRow(row)}
       actions={
         <span className="flex shrink-0 items-center gap-2">
