@@ -151,19 +151,18 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
    * moment it does not span. A frame short of the end, since a clip spans up to but not
    * including it — landing exactly on the end shows nothing at all.
    */
-  useEffect(() => {
-    if (sourcePlaying || running || !selected) return
-
+  const computedSourceTime: Us = useMemo(() => {
+    if (sourcePlaying || running || !selected) return sourceTime
     const last = Math.max(0, selected.duration - frameDuration(sequence.settings))
-    setSourceTime(clamp(sequence.playhead - selected.start, 0, last))
-  }, [sourcePlaying, running, selected, sequence.playhead, sequence.settings])
+    return clamp(sequence.playhead - selected.start, 0, last)
+  }, [sourcePlaying, running, selected, sequence.playhead, sequence.settings, sourceTime])
 
   // The source monitor plays one clip, which is a sequence of one — same engine, same painter.
   const source: SequenceState = useMemo(
     () => ({
       ...EMPTY_SEQUENCE,
       settings: sequence.settings,
-      playhead: sourceTime,
+      playhead: computedSourceTime,
       tracks:
         holder && selected
           ? [
@@ -179,7 +178,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
             ]
           : [],
     }),
-    [holder, selected, sequence.settings, sourceTime],
+    [holder, selected, sequence.settings, computedSourceTime],
   )
 
   const setProgramTime = useCallback(
