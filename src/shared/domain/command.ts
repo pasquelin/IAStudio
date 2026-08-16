@@ -13,7 +13,21 @@ import type { WorkspaceId } from './workspace'
  * only ones a conflict check treats as competing with every scope.
  */
 export type CommandScope =
-  'global' | 'spaces' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'audio' | 'texture'
+  | 'global'
+  | 'spaces'
+  /**
+   * The project folder. Its own scope, and not `global`, for the reason the whole undo stack
+   * lives in the main process: a file gesture belongs to no document, so ⌘Z in the canvas must
+   * not reach it and ⌘Z here must not reach the canvas. `commandFor` filters by scope, and the
+   * panel arms this one only while the focus is inside it.
+   */
+  | 'explorer'
+  | 'scene'
+  | 'sequence'
+  | 'canvas'
+  | 'skybox'
+  | 'audio'
+  | 'texture'
 
 export type CommandId =
   | 'project.new'
@@ -27,6 +41,14 @@ export type CommandId =
   | 'window.fullScreen'
   | 'spaces.moveLeft'
   | 'spaces.moveRight'
+  | 'explorer.newFolder'
+  | 'explorer.duplicate'
+  | 'explorer.cut'
+  | 'explorer.copy'
+  | 'explorer.paste'
+  | 'explorer.trash'
+  | 'explorer.undo'
+  | 'explorer.redo'
   | 'scene.select'
   | 'scene.translate'
   | 'scene.rotate'
@@ -255,6 +277,71 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.spacesMoveRight.title',
     helpKey: 'commands.spacesMoveRight.help',
     defaultBinding: 'Alt+ArrowRight',
+  }),
+
+  /**
+   * The file browser's own eight. The keys are the ones every file browser on the platform
+   * answers to, and none of them clashes with a `global` one — which is the only clash that
+   * would matter, since the native menu fires those wherever the focus sits.
+   *
+   * ⌘⌫ rather than ⌫ alone: this is the one gesture here that cannot be undone, and a bare
+   * delete key is too close to what a hand does while reading a list.
+   */
+  command({
+    id: 'explorer.newFolder',
+    scope: 'explorer',
+    titleKey: 'commands.explorerNewFolder.title',
+    helpKey: 'commands.explorerNewFolder.help',
+    defaultBinding: 'Shift+Meta+KeyN',
+  }),
+  command({
+    id: 'explorer.duplicate',
+    scope: 'explorer',
+    titleKey: 'commands.explorerDuplicate.title',
+    helpKey: 'commands.explorerDuplicate.help',
+    defaultBinding: 'Meta+KeyD',
+  }),
+  command({
+    id: 'explorer.cut',
+    scope: 'explorer',
+    titleKey: 'commands.explorerCut.title',
+    helpKey: 'commands.explorerCut.help',
+    defaultBinding: 'Meta+KeyX',
+  }),
+  command({
+    id: 'explorer.copy',
+    scope: 'explorer',
+    titleKey: 'commands.explorerCopy.title',
+    helpKey: 'commands.explorerCopy.help',
+    defaultBinding: 'Meta+KeyC',
+  }),
+  command({
+    id: 'explorer.paste',
+    scope: 'explorer',
+    titleKey: 'commands.explorerPaste.title',
+    helpKey: 'commands.explorerPaste.help',
+    defaultBinding: 'Meta+KeyV',
+  }),
+  command({
+    id: 'explorer.trash',
+    scope: 'explorer',
+    titleKey: 'commands.explorerTrash.title',
+    helpKey: 'commands.explorerTrash.help',
+    defaultBinding: 'Meta+Backspace',
+  }),
+  command({
+    id: 'explorer.undo',
+    scope: 'explorer',
+    titleKey: 'commands.explorerUndo.title',
+    helpKey: 'commands.explorerUndo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'explorer.redo',
+    scope: 'explorer',
+    titleKey: 'commands.explorerRedo.title',
+    helpKey: 'commands.explorerRedo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
   }),
 
   // `KeyV` as in every editor that has a pointer tool. Not `KeyQ` or `KeyW`, which fly the
@@ -947,6 +1034,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
 export const COMMAND_SCOPES: readonly CommandScope[] = [
   'global',
   'spaces',
+  'explorer',
   'scene',
   'sequence',
   'canvas',

@@ -3,7 +3,7 @@ import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { menuIcon } from './menu-icon'
 
-export type ContextMenuRow = {
+export type ContextMenuAction = {
   /** Already translated: this side owns the bundle, and the system only draws what it is given. */
   label: string
   /** An `@mdi/js` path, the same one `UiIcon` would draw. */
@@ -17,8 +17,17 @@ export type ContextMenuRow = {
    * screen, so the compiler is the only thing left to ask for it.
    */
   tooltip: string
+  /** The key in force, as `acceleratorOf` spells it. Drawn only — see `ContextMenuItem`. */
+  accelerator?: string
   onSelect: () => void
 }
+
+/** A rule between two groups. Nothing to choose, so nothing to explain. */
+export type ContextMenuRule = { separator: true }
+
+export type ContextMenuRow = ContextMenuAction | ContextMenuRule
+
+const isRule = (row: ContextMenuRow): row is ContextMenuRule => 'separator' in row
 
 /**
  * Raises the rows as the system's own context menu, at the pointer, and runs the one chosen.
@@ -36,12 +45,17 @@ export type ContextMenuRow = {
  */
 export async function showContextMenu(rows: readonly ContextMenuRow[]): Promise<void> {
   const items: ContextMenuItem[] = rows.map((row, index) => {
+    // Indexed over the whole list, rules included: what comes back is a position in what was
+    // SENT, and numbering only the actions would answer the row above every rule.
+    if (isRule(row)) return { id: String(index), label: '', separator: true }
+
     const icon = row.icon ? menuIcon(row.icon) : undefined
     return {
       id: String(index),
       label: row.label,
       enabled: !row.disabled,
       ...(icon ? { icon } : {}),
+      ...(row.accelerator ? { accelerator: row.accelerator } : {}),
       tooltip: row.tooltip,
     }
   })
@@ -49,10 +63,11 @@ export async function showContextMenu(rows: readonly ContextMenuRow[]): Promise<
   // Caught rather than left to `void`: the main process validates what arrives and REFUSES what
   // it cannot draw, and a menu that never appears leaves no half-open surface behind to hint at
   // it — an unhandled rejection would be the only trace, and it is not one anybody reads.
+  const first = rows.find(row => !isRule(row))
   const chosen = await getBridge()
     ?.menu.popup(items)
     .catch(error => {
-      reportFailure('shell.menu', rows[0]?.label ?? '', error)
+      reportFailure('shell.menu', first && !isRule(first) ? first.label : '', error)
       return null
     })
 
@@ -60,5 +75,6 @@ export async function showContextMenu(rows: readonly ContextMenuRow[]): Promise<
   // skimming even though the string is not.
   if (chosen === null || chosen === undefined) return
 
-  rows[Number(chosen)]?.onSelect()
+  const row = rows[Number(chosen)]
+  if (row && !isRule(row)) row.onSelect()
 }

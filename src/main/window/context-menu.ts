@@ -121,17 +121,27 @@ export function registerContextMenu(): void {
     if (!window) return null
 
     let chosen: string | null = null
-    const template: MenuItemConstructorOptions[] = parseContextMenuItems(items).map(item => ({
-      label: item.label,
-      enabled: item.enabled ?? true,
-      ...(item.icon ? { icon: glyph(item.icon) } : {}),
-      // macOS shows it on hover; Windows and Linux drop it without a word. Sent regardless —
-      // what a row does is written once, wherever the platform can say it.
-      ...(item.tooltip ? { toolTip: item.tooltip } : {}),
-      click: () => {
-        chosen = item.id
-      },
-    }))
+    const template: MenuItemConstructorOptions[] = parseContextMenuItems(items).map(item =>
+      item.separator
+        ? { type: 'separator' }
+        : {
+            label: item.label,
+            enabled: item.enabled ?? true,
+            ...(item.icon ? { icon: glyph(item.icon) } : {}),
+            // Drawn, never reserved. `registerAccelerator` defaults to true, and a popup menu
+            // that registers its keys takes them from the window for good — on macOS AppKit then
+            // swallows the very ⌘Z the surface underneath is listening for.
+            ...(item.accelerator
+              ? { accelerator: item.accelerator, registerAccelerator: false }
+              : {}),
+            // macOS shows it on hover; Windows and Linux drop it without a word. Sent regardless
+            // — what a row does is written once, wherever the platform can say it.
+            ...(item.tooltip ? { toolTip: item.tooltip } : {}),
+            click: () => {
+              chosen = item.id
+            },
+          },
+    )
 
     return new Promise<string | null>(resolve => {
       Menu.buildFromTemplate(template).popup({

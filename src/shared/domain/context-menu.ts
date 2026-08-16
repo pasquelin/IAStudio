@@ -12,6 +12,24 @@ export type ContextMenuItem = {
   id: string
   label: string
   /**
+   * A rule instead of a row: no label, no glyph, nothing to choose.
+   *
+   * Needed the day one menu held twelve gestures. Greying rather than dropping is what keeps a
+   * menu learnable — see `enabled` — and twelve rows of equal weight are unreadable without the
+   * groups a rule draws.
+   */
+  separator?: true
+  /**
+   * The key the row answers to, drawn at its right edge — `CmdOrCtrl+X`, as `acceleratorOf`
+   * spells it from the binding actually in force.
+   *
+   * **Shown, never reserved.** The main process passes `registerAccelerator: false`: a popup
+   * menu that registers its keys takes them from the window for good, and on macOS AppKit would
+   * then swallow the very ⌘Z the explorer listens for. The window keeps the key; this only says
+   * which one it is.
+   */
+  accelerator?: string
+  /**
    * Greyed rather than dropped, the rule every menu of this studio already follows: a menu whose
    * length changes with the selection is one nobody can learn. Absent means enabled.
    */

@@ -13,6 +13,11 @@ export type EntryRowProps = {
   icon: string
   /** Whether a tab is showing this file right now. Only a document can be. */
   open: boolean
+  /**
+   * Whether this row has been CUT and is waiting for a paste. Dimmed, as every file browser
+   * draws it: the file is still there and still opens, and the gesture is not finished.
+   */
+  waiting?: boolean
   /** Fired with the new name, or with the old one when the edit was abandoned. */
   onRename?: (name: string) => void
 }
@@ -32,7 +37,7 @@ export type EntryRowProps = {
  * The glyph is the workspace's for a document and a plain sheet for everything else, read off
  * the same table the rail and the asset menu read.
  */
-export function EntryRow({ name, icon, open, onRename }: EntryRowProps) {
+export function EntryRow({ name, icon, open, waiting, onRename }: EntryRowProps) {
   const { t } = useTranslation()
 
   // The whole row becomes the field: a name edited beside its own icon is where the eye already
@@ -61,9 +66,14 @@ export function EntryRow({ name, icon, open, onRename }: EntryRowProps) {
     // Through `media` rather than `icon`, which is `Row`'s way of saying "I am drawing this one
     // myself". `accent-ink` and not `accent`: the fill misses 1.4.11 on a panel, the ink clears
     // it — see `index.css`, and `design/tokens.test.ts` refuses the fill outright.
+    // A row that has been cut wears quiet ink until it is pasted — `quiet`, never an opacity,
+    // which dims whatever the element inherits and leaves no guard able to say what the name
+    // ends up reading at. `muted` is the nearest state `Row` already had, and it strikes the
+    // name through: that says "not showing", where this says "on its way out".
     <Row
       media={<UiIcon path={icon} size={14} className={cn('shrink-0', open && 'text-accent-ink')} />}
       title={name}
+      quiet={waiting}
     />
   )
 }

@@ -1,11 +1,16 @@
 import { vi } from 'vitest'
 import type { CloseChoice, DocumentWrite } from '@shared/domain/document'
 import { emptyAssetCounts } from '@shared/domain/asset'
+import type { FileOutcome } from '@shared/domain/file-op'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
 import type { LogEntry, StudioBridge } from '@shared/ipc'
 
 const noSubscription = (): (() => void) => () => {}
+
+/** An empty batch: nothing moved and nothing refused, which is what a stub owes a caller. */
+const nothingMoved = (): Promise<FileOutcome> =>
+  Promise.resolve({ done: [], refused: [], batch: 'batch-fake' })
 
 /**
  * A complete `window.studio`, for renderer tests. Complete rather than partial on purpose:
@@ -68,9 +73,19 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       revealFile: () => Promise.resolve(),
       revealFolder: () => Promise.resolve(true),
       rename: () => Promise.reject(new Error('no project')),
-      renameFile: () => Promise.resolve(true),
-      moveFile: () => Promise.resolve(true),
-      trashFile: () => Promise.resolve(true),
+      // Every file gesture answers "nothing happened, nothing refused" unless a test says
+      // otherwise: an outcome nobody stubbed must not read as one that moved something, which
+      // would have a suite believe the disk had agreed.
+      renameFile: nothingMoved,
+      moveFiles: nothingMoved,
+      trashFiles: nothingMoved,
+      newFolder: nothingMoved,
+      duplicateFiles: nothingMoved,
+      pasteFiles: nothingMoved,
+      undoFile: nothingMoved,
+      redoFile: nothingMoved,
+      fileHistory: () => Promise.resolve({ undo: false, redo: false }),
+      onFilesChanged: noSubscription,
       ...overrides.project,
     },
     dialog: {

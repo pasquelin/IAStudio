@@ -93,8 +93,10 @@ export function LayerList({ documentId }: { documentId: string }) {
       // Only a group holds layers. Dropping onto one puts the layer at the top of it, which is
       // the first row the list draws inside it — where the eye was aiming.
       droppable={node => isGroup(node.layer)}
-      onDrop={(id, parentId) => move(id, parentId, 0)}
-      onInsert={move}
+      // One row at a time: `dragMultiple` is off here, so the batch is always the row itself —
+      // and the insertion index is arithmetic written for one layer leaving its level.
+      onDrop={(ids, parentId) => ids.forEach(id => move(id, parentId, 0))}
+      onInsert={(ids, parentId, index) => ids.forEach(id => move(id, parentId, index))}
       // Through the tree rather than from the row: it is what holds the `preventDefault` a
       // right-click needs — without it the system raises its clipboard menu over ours — and the
       // guard that leaves a right-click inside the rename field to that menu alone.

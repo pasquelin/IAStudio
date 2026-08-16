@@ -3,6 +3,7 @@ import type { AccountSummary } from '@shared/domain/account'
 import type { ActivityEntry } from '@shared/domain/activity'
 import type { CommandId } from '@shared/domain/command'
 import type { SttEvent } from '@shared/domain/dictation'
+import type { FileOutcome } from '@shared/domain/file-op'
 import type { Project } from '@shared/domain/project'
 import type { Job, JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
@@ -85,8 +86,16 @@ const bridge: StudioBridge = {
     revealFolder: path => ipcRenderer.invoke(CHANNELS.projectRevealFolder, path),
     rename: (path, name) => ipcRenderer.invoke(CHANNELS.projectRename, path, name),
     renameFile: (relative, name) => ipcRenderer.invoke(CHANNELS.projectRenameFile, relative, name),
-    moveFile: (relative, folder) => ipcRenderer.invoke(CHANNELS.projectMoveFile, relative, folder),
-    trashFile: relative => ipcRenderer.invoke(CHANNELS.projectTrashFile, relative),
+    moveFiles: (paths, folder) => ipcRenderer.invoke(CHANNELS.projectMoveFiles, paths, folder),
+    trashFiles: paths => ipcRenderer.invoke(CHANNELS.projectTrashFiles, paths),
+    newFolder: (folder, name) => ipcRenderer.invoke(CHANNELS.projectNewFolder, folder, name),
+    duplicateFiles: paths => ipcRenderer.invoke(CHANNELS.projectDuplicateFiles, paths),
+    pasteFiles: (paths, folder, cut) =>
+      ipcRenderer.invoke(CHANNELS.projectPasteFiles, paths, folder, cut),
+    undoFile: () => ipcRenderer.invoke(CHANNELS.projectUndoFile),
+    redoFile: () => ipcRenderer.invoke(CHANNELS.projectRedoFile),
+    fileHistory: () => ipcRenderer.invoke(CHANNELS.projectFileHistory),
+    onFilesChanged: callback => subscribe<FileOutcome>(EVENTS.filesChanged, callback),
   },
   dialog: {
     pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),

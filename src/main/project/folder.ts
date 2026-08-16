@@ -1,20 +1,22 @@
 import { watch, type FSWatcher } from 'node:fs'
-import { readdir, rename } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { cp, mkdir, readdir, rename } from 'node:fs/promises'
+import { join } from 'node:path'
 import { exists } from '@main/persistence'
-import {
-  canMoveInto,
-  entriesByName,
-  isHiddenEntry,
-  isStudioFolder,
-  isStudioOwned,
-  parentOf,
-  type FolderEntry,
-} from '@shared/domain/folder'
+import { entriesByName, isHiddenEntry, type FolderEntry } from '@shared/domain/folder'
 
 export type FolderReader = {
   /** One level of the project folder. `''` is the project root. */
   list: (relative: string) => Promise<FolderEntry[]>
+  /**
+   * Every name one level holds, hidden ones included and in no particular order — what a
+   * planner needs to know which names are taken.
+   *
+   * Told apart from `list`, which is what a READER sees: a name under a dot is not shown and
+   * still occupies its name, so planning against the shown list would hand `writeFile` a name
+   * something already answers to. Answers nothing for a path that is not a folder, which is how
+   * a destination that has gone is told apart from an empty one.
+   */
+  names: (relative: string) => Promise<readonly string[] | null>
 }
 
 /**
@@ -47,6 +49,8 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
         }))
         .sort(entriesByName(languageOf()))
     },
+
+    names: async relative => await readdir(join(rootOf(), relative)).catch(() => null),
   }
 }
 
@@ -123,45 +127,45 @@ export function watchProjectFolder(
   }
 }
 
-export type FolderEditor = {
-  /** Renames in place, inside the folder it already sits in. Answers whether it happened. */
-  rename: (relative: string, name: string) => Promise<boolean>
-  /** Into ANOTHER folder, keeping its name. Answers whether it happened. */
-  move: (relative: string, folder: string) => Promise<boolean>
+export type FolderWriter = {
+  /** From one path to another, both relative. Answers whether it happened. */
+  move: (from: string, to: string) => Promise<boolean>
+  /** The same, by copy — a folder with everything under it. Answers whether it happened. */
+  copy: (from: string, to: string) => Promise<boolean>
+  /** One folder, at a path nothing holds yet. Answers whether it happened. */
+  createFolder: (relative: string) => Promise<boolean>
   /** To the system's trash, never `unlink`. Answers whether the system took it. */
   trash: (relative: string) => Promise<boolean>
 }
 
 /**
- * The three gestures that write to the project folder from the explorer.
+ * The four gestures that write to the project folder. Primitives, and deliberately naive.
  *
- * All three answer `false` rather than throwing, and all three refuse the studio's own folders
- * — the catalogue stores every asset by a path under `assets/`, so moving one orphans rows
- * nobody can find again. The refusal lives here rather than in the panel: a window is not what
- * decides what may be written.
+ * **They refuse nothing on their own account**, which is the change this phase made: what may
+ * be written is decided once, in `file-plan.ts`, against a reading of the folders taken before
+ * anything moves. Two places deciding meant two answers free to disagree — and the panel would
+ * grey a row the main process would have allowed, or the reverse.
  *
- * **Rename and move are kept apart on purpose.** A menu row reading "Rename" must not be able
- * to displace a file, so `rename` builds its target in the folder the file already sits in and
- * cannot leave it. `move` keeps the name and changes the folder. One call taking both would be
- * one call two gestures could get wrong.
+ * What is left here is the ONE refusal a plan cannot make, because it is a race and not a rule:
+ * a name that appeared between the reading and the write. `rename` and `cp` overwrite without a
+ * word on POSIX, and the file they would take is the user's own.
+ *
+ * All four answer `false` rather than throwing: a batch is a partial result by design, and one
+ * member that will not move is a sentence to show rather than a reason to undo the rest.
  *
  * **Trash, never delete.** `shell.trashItem` puts the file where the user can get it back;
  * `unlink` is a gesture the studio does not take on someone else's folder at all.
  */
-export function createFolderEditor(
+export function createFolderWriter(
   rootOf: () => string,
   toTrash: (file: string) => Promise<void>,
-): FolderEditor {
-  const moveTo = async (relative: string, target: string): Promise<boolean> => {
-    if (target === relative) return true
-
-    const root = rootOf()
-    // Checked rather than caught: `rename` overwrites an existing file without a word on
-    // POSIX, and the file it would overwrite is the user's own.
-    if (await exists(join(root, target))) return false
+): FolderWriter {
+  const onto = async (to: string, write: (target: string) => Promise<void>): Promise<boolean> => {
+    const target = join(rootOf(), to)
+    if (await exists(target)) return false
 
     try {
-      await rename(join(root, relative), join(root, target))
+      await write(target)
       return true
     } catch {
       return false
@@ -169,28 +173,17 @@ export function createFolderEditor(
   }
 
   return {
-    rename: async (relative, name) => {
-      // Everything the studio owns, not just the folders themselves: a document is renamed
-      // through `document:rename`, which moves its file AND rewrites its envelope, and an asset
-      // is renamed in the catalogue. Renaming either as a plain file leaves the studio pointing
-      // at a path that is no longer there — a row nobody can find, a tab that opens nothing.
-      if (isStudioOwned(relative)) return false
+    move: async (from, to) =>
+      from === to || (await onto(to, target => rename(join(rootOf(), from), target))),
 
-      const parent = parentOf(relative)
-      return moveTo(relative, parent === null ? name : `${parent}/${name}`)
-    },
+    // `recursive` because what is duplicated may be a folder, and `force: false` so a race
+    // still refuses rather than overwriting — the check above is not the only guard.
+    copy: async (from, to) =>
+      await onto(to, target => cp(join(rootOf(), from), target, { recursive: true, force: false })),
 
-    move: async (relative, folder) => {
-      if (!canMoveInto(relative, folder)) return false
-
-      // A destination that is not a folder at all needs no check of its own: renaming into it
-      // fails with ENOTDIR, and the catch is already the answer.
-      return moveTo(relative, `${folder}/${basename(relative)}`)
-    },
+    createFolder: async relative => await onto(relative, target => mkdir(target)),
 
     trash: async relative => {
-      if (isStudioFolder(relative)) return false
-
       try {
         await toTrash(join(rootOf(), relative))
         return true

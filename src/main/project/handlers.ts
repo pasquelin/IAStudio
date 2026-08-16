@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { PICTURES, withoutSourcePath } from '@shared/domain/asset'
+import type { FileOutcome } from '@shared/domain/file-op'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
 import type { TextureExtraction } from '@main/assets/texture-extraction'
 import { parseAssetIds } from '@main/assets/validation'
@@ -11,7 +12,8 @@ import { peaksFromBytes } from '@main/media/peaks'
 import { isPngBytes, probePng } from '@main/media/png'
 import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/local-backend'
-import type { FolderEditor, FolderReader } from './folder'
+import type { FileOps } from './file-ops'
+import type { FolderReader } from './folder'
 import type { ActivityReport } from './activity-log'
 import {
   askCloseChoice,
@@ -20,7 +22,7 @@ import {
   type AskUser,
 } from './document-dialogs'
 import type { DocumentFiles } from './documents'
-import { askUseOccupiedFolder } from './project-dialogs'
+import { askTrashFiles, askUseOccupiedFolder } from './project-dialogs'
 import { openFailureKey, type ProjectStore } from './store'
 import {
   parseAssetId,
@@ -30,6 +32,7 @@ import {
   parseDocumentKind,
   parseDocumentTitle,
   parseFolderPath,
+  parseFolderPaths,
   parseForceWrite,
   parseProjectName,
   parseProjectPath,
@@ -66,8 +69,10 @@ export type ProjectHandlerDeps = {
    * lost would otherwise be a menu row that does nothing and explains nothing.
    */
   exists: (path: string) => boolean
-  /** The project folder: read one level at a time, and the two gestures that write to it. */
-  folder: FolderReader & FolderEditor
+  /** The project folder, read one level at a time. */
+  folder: FolderReader
+  /** Everything that WRITES to that folder, and the stack that takes a batch back. */
+  files: FileOps
   /**
    * `shell.openPath`, which answers an empty string on success and a sentence on failure — and
    * this is the only place the studio launches a third-party application, so it is injected
@@ -88,6 +93,7 @@ export function registerProjectHandlers({
   reveal,
   exists,
   folder,
+  files,
   openInSystem,
   askUser,
 }: ProjectHandlerDeps): void {
@@ -186,43 +192,78 @@ export function registerProjectHandlers({
     }
   })
 
-  // All three answer whether it happened, and all three say why in the journal when it did not:
-  // a gesture that does nothing and explains nothing is the worst of the three outcomes.
-  handle(CHANNELS.projectRenameFile, async (_event, relative, name) => {
-    const done = await folder.rename(parseFolderPath(relative), parseProjectName(name))
-    if (!done) record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotRenamed' })
-    return done
-  })
+  /**
+   * The seven gestures that write to the project folder, and the one that reads their history.
+   *
+   * All of them go through `files`, and none of them decides anything: what may be written is
+   * settled in `file-plan.ts` against a reading of the folders taken before the first write.
+   * The panel used to route a rename through three channels depending on what the row turned
+   * out to be — six more gestures would have been that branch written six more times.
+   *
+   * **What comes back is a partial result**, never a boolean: two hundred and ninety-eight
+   * rushes moved and two names already taken is what a file browser answers.
+   */
+  const settled = (outcome: FileOutcome): FileOutcome => {
+    // Only what actually moved is worth waking every window for. A batch that refused everything
+    // has already said so to the one that asked.
+    if (outcome.done.length > 0) broadcast(EVENTS.filesChanged, outcome)
+    if (outcome.refused.length > 0) {
+      record({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.filesRefused',
+        params: { count: outcome.refused.length },
+      })
+    }
+    return outcome
+  }
 
-  handle(CHANNELS.projectMoveFile, async (_event, relative, folderPath) => {
-    const done = await folder.move(parseFolderPath(relative), parseFolderPath(folderPath))
-    if (!done) record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotMoved' })
-    return done
-  })
+  handle(CHANNELS.projectRenameFile, async (_event, relative, name) =>
+    settled(await files.rename(parseFolderPath(relative), parseProjectName(name))),
+  )
+
+  handle(CHANNELS.projectMoveFiles, async (_event, paths, folderPath) =>
+    settled(await files.move(parseFolderPaths(paths), parseFolderPath(folderPath))),
+  )
 
   /**
-   * The file goes to the system's trash, and the rows that named it go with it.
+   * The files go to the system's trash, and the rows that named them go with them.
    *
-   * Without that second half the catalogue kept rows pointing at nothing: the shelf went on
-   * offering assets whose bytes were gone, opening one found nothing, and only `assets:absent`
-   * noticed — after the fact, and only for what a window happened to be listing.
-   *
-   * `forgetUnder` rather than a lookup and a `remove`: what the explorer hands over may be a
-   * folder, and a folder holds no id to remove by.
+   * Asked first past one file, because this is the one gesture `undoFile` cannot take back —
+   * see `askTrashFiles`. A refusal is an empty outcome rather than an error: a cancelled
+   * gesture is not a failure, and nothing was written to say otherwise.
    */
-  handle(CHANNELS.projectTrashFile, async (_event, relative) => {
-    const path = parseFolderPath(relative)
-    const done = await folder.trash(path)
-    if (!done) {
-      record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotTrashed' })
-      return done
+  handle(CHANNELS.projectTrashFiles, async (_event, paths) => {
+    const wanted = parseFolderPaths(paths)
+    if (wanted.length > 1 && !(await askTrashFiles(askUser, wanted.length))) {
+      return { done: [], refused: [], batch: '' }
     }
 
-    // Only when the catalogue actually lost something: a `.pdf` of notes has no row, and telling
-    // every window to reload its shelf over it is a folder walk for nothing.
-    if ((await project.catalog().forgetUnder(path)) > 0) broadcast(EVENTS.assetsChanged)
-    return done
+    return settled(await files.trash(wanted))
   })
+
+  handle(CHANNELS.projectNewFolder, async (_event, folderPath, name) =>
+    settled(await files.createFolder(parseFolderPath(folderPath), parseProjectName(name))),
+  )
+
+  handle(CHANNELS.projectDuplicateFiles, async (_event, paths) =>
+    settled(await files.duplicate(parseFolderPaths(paths))),
+  )
+
+  // Cut moves, copy lays a copy down under a free name — one channel because the clipboard is
+  // one gesture with two settings, and two channels would be two places to keep in step.
+  handle(CHANNELS.projectPasteFiles, async (_event, paths, folderPath, cut) => {
+    const wanted = parseFolderPaths(paths)
+    const into = parseFolderPath(folderPath)
+    return settled(
+      cut === true ? await files.move(wanted, into) : await files.duplicate(wanted, into),
+    )
+  })
+
+  handle(CHANNELS.projectUndoFile, async () => settled(await files.undo()))
+  handle(CHANNELS.projectRedoFile, async () => settled(await files.redo()))
+  // `async` for the same reason `projectListFolder` is: the other side awaits an invoke.
+  handle(CHANNELS.projectFileHistory, async () => files.can())
 
   // `async`, though it awaits nothing of its own: a refused path throws from `parseFolderPath`,
   // and a synchronous throw here would reach the caller as an exception rather than a rejected

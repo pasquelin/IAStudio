@@ -62,9 +62,24 @@ const contextMenuItems = z
   .array(
     z.object({
       id: z.string().min(1).max(120),
-      label: z.string().min(1).max(200),
+      // A rule carries no label, which is the one row where the empty string is the truth.
+      label: z.string().max(200),
+      separator: z.literal(true).optional(),
       enabled: z.boolean().optional(),
       icon: menuIcon.optional(),
+      /**
+       * Electron parses this itself and THROWS on a shape it does not know — the menu then never
+       * opens, and what the window hears is a rejected invoke rather than a menu.
+       *
+       * Bounded to what `acceleratorOf` actually produces: its four modifier names, spelled out
+       * rather than "any word" — `Foobar+A` used to pass a rule whose own comment claimed it
+       * could not — then `+`, then a key of letters, digits or the punctuation it names.
+       */
+      accelerator: z
+        .string()
+        .max(60)
+        .regex(/^(?:(?:CmdOrCtrl|Ctrl|Alt|Shift)\+)*[A-Za-z0-9,.=\-/\\]+$/)
+        .optional(),
       tooltip: z.string().min(1).max(300).optional(),
     }),
   )
