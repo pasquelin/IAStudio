@@ -16,7 +16,7 @@ import type { ActivityReport } from './activity-log'
 import { askCloseChoice, askDeleteDocument, type AskUser } from './document-dialogs'
 import type { DocumentFiles } from './documents'
 import { askUseOccupiedFolder } from './project-dialogs'
-import { openFailureKey, ProjectOpenError, type ProjectStore } from './store'
+import { openFailureKey, type ProjectStore } from './store'
 import {
   parseAssetId,
   parseAssetQuery,
@@ -89,18 +89,16 @@ export function registerProjectHandlers({
     // Parsed outside the try on purpose: an argument this channel refuses is not a sentence
     // about the folder, and `projectOpen` below draws the same line through `openFailureKey`.
     const root = parseProjectPath(path)
-    // The folder IS the project, so its own name is the project's. An empty basename — the root
-    // of a volume — is turned away here, by the same rule that refuses a nameless rename.
+    // The root of a volume has no basename, and is turned away here by the rule that refuses a
+    // nameless rename.
     const named = parseProjectTitle(basename(root))
 
     try {
       const verdict = await project.inspect(root)
 
-      // Already a project: opened, never written over. Creating again would stamp a fresh
-      // `createdAt` on a folder that has been worked in, and hand its catalogue a new identity.
+      // Creating again would stamp a fresh `createdAt` on a folder that has been worked in, and
+      // hand its catalogue a new identity.
       if (verdict === 'project') return await project.open(root)
-
-      if (verdict === 'nested') throw new ProjectOpenError('nested')
 
       // The one refusal that is the user's to give, so it is asked before anything is written.
       if (verdict === 'occupied' && !(await askUseOccupiedFolder(askUser, named))) return null

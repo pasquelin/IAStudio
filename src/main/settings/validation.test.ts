@@ -264,15 +264,3 @@ describe('the account each project works under', () => {
     ).toThrow()
   })
 })
-
-// Stripped by the same rule, and just as quietly: the folder dialog would go back to opening
-// wherever the system last left it — inside the project that was just made.
-describe('where the folder dialog should start', () => {
-  it('keeps the folder the last project was made in', () => {
-    const parsed = parsePartialSettings({
-      storage: { lastProjectsFolder: '/Users/someone/Mes Projets' },
-    })
-
-    expect(parsed.storage?.lastProjectsFolder).toBe('/Users/someone/Mes Projets')
-  })
-})

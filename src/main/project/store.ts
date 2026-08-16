@@ -1,10 +1,12 @@
 import { execFile as execFileCallback } from 'node:child_process'
-import { access, mkdir, readdir, readFile } from 'node:fs/promises'
+import type { Dir } from 'node:fs'
+import { mkdir, opendir, readFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 import { dirname, join } from 'node:path'
 import {
   CATALOG_FILE,
   MANIFEST_FILE,
+  MANIFEST_FILES,
   MANIFEST_VERSION,
   LEGACY_MANIFEST_FILE,
   PROJECT_FOLDERS,
@@ -15,7 +17,7 @@ import type { ActivityMessageKey } from '@shared/domain/activity'
 import { isHiddenEntry } from '@shared/domain/folder'
 import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
-import { isMissing, writeAtomic, writeQueue } from '@main/persistence'
+import { exists, isMissing, writeAtomic, writeQueue } from '@main/persistence'
 import type { AsyncCatalog } from './catalog-client'
 import { parseManifest } from './validation'
 
@@ -76,12 +78,8 @@ export type ProjectStoreDeps = {
   settle?: () => Promise<void>
 }
 
-/**
- * What a folder offers a creation that points at it. `blank` is the only one that gets written
- * to; the other three each ask the caller for a different gesture — open it, refuse it, or ask
- * the user first.
- */
-export type FolderVerdict = 'project' | 'nested' | 'occupied' | 'blank'
+/** What a folder offers a creation aimed at it: open the project there, ask first, or write. */
+export type FolderVerdict = 'project' | 'occupied' | 'blank'
 
 export type ProjectStore = {
   /**
@@ -90,9 +88,11 @@ export type ProjectStore = {
    */
   create: (path: string, name: string) => Promise<Project>
   /**
-   * What creating a project at `path` would mean, so nothing is written over. Throws
-   * `ProjectOpenError` for a manifest that exists but cannot be understood — `unreadable` or
-   * `too-new` — because those must stop the gesture rather than be replaced by a fresh one.
+   * What creating a project at `path` would mean, so nothing is written over.
+   *
+   * A folder that cannot serve at all raises instead of answering, as opening does: a manifest
+   * this build cannot understand — `unreadable`, `too-new` — must stop the gesture rather than
+   * be replaced by a fresh one, and so must a folder sitting under a project already.
    */
   inspect: (path: string) => Promise<FolderVerdict>
   open: (path: string) => Promise<Project>
@@ -158,14 +158,7 @@ function ancestorsOf(path: string): string[] {
 
 /** Whether a folder carries a manifest under either name — not whether it can be understood. */
 async function hasManifest(folder: string): Promise<boolean> {
-  const found = await Promise.all(
-    [MANIFEST_FILE, LEGACY_MANIFEST_FILE].map(file =>
-      access(join(folder, file)).then(
-        () => true,
-        () => false,
-      ),
-    ),
-  )
+  const found = await Promise.all(MANIFEST_FILES.map(file => exists(join(folder, file))))
 
   return found.includes(true)
 }
@@ -174,14 +167,30 @@ async function hasManifest(folder: string): Promise<boolean> {
  * Whether anything the user would recognise is already in the folder. Hidden entries do not
  * count: a `.DS_Store` the Finder left behind is not content, and treating it as such would put
  * a question in front of every folder made on a Mac.
+ *
+ * Read one entry at a time rather than listed: the answer is usually settled by the first, and
+ * a folder picked here can be a `~/Downloads` holding tens of thousands of files — no reason to
+ * allocate all their names to learn that it is not empty.
  */
 async function holdsVisibleEntries(folder: string): Promise<boolean> {
+  let dir: Dir
   try {
-    return (await readdir(folder)).some(entry => !isHiddenEntry(entry))
+    dir = await opendir(folder)
   } catch (error) {
     // A folder that is not there yet holds nothing — `create` is what makes it.
     if (isMissing(error)) return false
     throw error
+  }
+
+  try {
+    for await (const entry of dir) {
+      if (!isHiddenEntry(entry.name)) return true
+    }
+    return false
+  } finally {
+    // Closed by the iterator when it runs out, and NOT when it is left early: an early return
+    // would leak the handle, which on Windows also keeps the folder locked.
+    await dir.close().catch(() => undefined)
   }
 }
 
@@ -359,9 +368,11 @@ export function createProjectStore({
       }
 
       // A project inside a project would give the catalogue two owners for the same files, and
-      // the outer one indexes the inner one's assets as its own.
+      // the outer one indexes the inner one's assets as its own. Asked of every ancestor at
+      // once: the common answer is "none of them", which has to read them all anyway, and a
+      // walk that stopped early would queue round-trips on a network volume to save none here.
       const above = await Promise.all(ancestorsOf(path).map(hasManifest))
-      if (above.includes(true)) return 'nested'
+      if (above.includes(true)) throw new ProjectOpenError('nested')
 
       return (await holdsVisibleEntries(path)) ? 'occupied' : 'blank'
     },

@@ -8,18 +8,14 @@ import { useTools } from '@/stores/tools'
 /**
  * The commands that belong to the application rather than to a document, and how each is run.
  *
- * Apart from the native menu that fires most of them, because it is not the only caller: the
- * assistant reaches the same commands, and a second `switch` beside this one would be two ways
- * of saving a document that drift. `publishCommand` cannot serve them — it is memoryless and
- * filtered by scope on the subscriber's side, and nothing subscribes to these.
+ * Here rather than in the menu hook because the menu is not the only caller: the assistant runs
+ * the same commands, and a second `switch` beside this one would be two ways of saving a
+ * document that drift. `publishCommand` cannot serve them — it is memoryless and filtered by
+ * scope on the subscriber's side, and nothing subscribes to these.
  *
- * Answers whether it ran it. `false` covers three things a caller must tell apart from a failure:
- * a command belonging to a surface · the three `global` ones the main process performs on its own,
- * `app.settings`, `app.dictate` and `window.fullScreen`, which never reach the window at all ·
- * and `app.assistant`, which the menu keeps to itself. That last one is not an oversight: the
- * assistant store imports the executor to run a confirmed action, so reaching back into it from
- * here would close the import loop. Nothing is lost — the assistant dismisses itself through
- * `chat.close`, and asking it to toggle the panel it is speaking from has no meaning anyway.
+ * Answers whether it ran the command, `false` being anything this does not own: a command that
+ * belongs to a surface, the ones the main process performs itself, and `app.assistant` — see
+ * `useNativeMenu`, which keeps that one.
  */
 export function runGlobalCommand(command: CommandId): boolean {
   switch (command) {

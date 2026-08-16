@@ -1,5 +1,10 @@
 import { create } from 'zustand'
-import { renamedRecentProject, withoutRecentProject, type Project } from '@shared/domain/project'
+import {
+  projectPickerFolder,
+  renamedRecentProject,
+  withoutRecentProject,
+  type Project,
+} from '@shared/domain/project'
 import type { StudioBridge } from '@shared/ipc'
 import { refreshDocuments } from '@/app/document-io'
 import { closeOrphanTabs } from '@/app/orphan-tabs'
@@ -107,11 +112,11 @@ async function pickedProject(
   from: (bridge: StudioBridge, folder: string) => Promise<Project | null>,
 ): Promise<Project | null> {
   const bridge = getBridge()
-  const { projectsFolder, lastProjectsFolder } = useSettings.getState().settings.storage
-  // The setting first, since it is the one the user typed. Without it, the folder the last
-  // project was made in — the system would otherwise reopen wherever it was left, which after a
-  // creation is INSIDE the project just made, and that is where the next one would land.
-  const folder = await bridge?.dialog.pickPath('folder', projectsFolder ?? lastProjectsFolder)
+  const { projectsFolder, recentProjects } = useSettings.getState().settings.storage
+  const folder = await bridge?.dialog.pickPath(
+    'folder',
+    projectPickerFolder(projectsFolder, recentProjects),
+  )
   if (!bridge || !folder) return null
 
   try {

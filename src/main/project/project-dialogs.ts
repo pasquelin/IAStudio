@@ -1,6 +1,6 @@
 import { fillHoles, TRANSLATIONS } from '@shared/i18n'
 import { windowLanguage } from '@main/window/language'
-import type { AskUser } from './document-dialogs'
+import { askConfirm, type AskUser } from './document-dialogs'
 
 /**
  * Whether the studio may lay a project into a folder that already holds files of its own.
@@ -9,20 +9,14 @@ import type { AskUser } from './document-dialogs'
  * gesture, and the studio only ADDS folders — nothing of theirs is touched. What it must not do
  * is do it silently, since `assets` and `documents` appearing in someone's folder unannounced
  * reads as the application having made a mess.
- *
- * Cancel is the default AND what a dismissed dialog gives back: an Escape is never consent to
- * write in a folder the user may have picked by mistake.
  */
 export async function askUseOccupiedFolder(ask: AskUser, folder: string): Promise<boolean> {
   const t = TRANSLATIONS[windowLanguage()].project
 
-  const chosen = await ask({
+  return await askConfirm(ask, {
     message: fillHoles(t.occupiedTitle, { folder }),
     detail: t.occupiedBody,
-    buttons: [t.occupiedCancel, t.occupiedConfirm],
-    defaultId: 0,
-    cancelId: 0,
+    confirm: t.occupiedConfirm,
+    cancel: t.occupiedCancel,
   })
-
-  return chosen === 1
 }

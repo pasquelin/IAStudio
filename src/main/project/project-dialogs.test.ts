@@ -19,21 +19,12 @@ beforeEach(() => {
   setWindowLanguage('en')
 })
 
+// The button arrangement — cancel first, and on both the default and the dismissal — belongs to
+// `askConfirm` and is checked with it. What is this question's own is the wording.
 describe('asking before laying a project into an occupied folder', () => {
   it('goes ahead only on the confirming button', async () => {
     await expect(askUseOccupiedFolder(asking(1).ask, 'Reel')).resolves.toBe(true)
     await expect(askUseOccupiedFolder(asking(0).ask, 'Reel')).resolves.toBe(false)
-  })
-
-  // The folder may have been picked by mistake, and neither Return nor Escape may be read as
-  // permission to write in someone else's.
-  it('puts cancel on both the default and the dismissal', async () => {
-    const { ask, shown } = asking(0)
-    await askUseOccupiedFolder(ask, 'Reel')
-
-    expect(shown[0]?.defaultId).toBe(0)
-    expect(shown[0]?.cancelId).toBe(0)
-    expect(shown[0]?.buttons[0]).toBe('Cancel')
   })
 
   it('names the folder it is about to write in', async () => {

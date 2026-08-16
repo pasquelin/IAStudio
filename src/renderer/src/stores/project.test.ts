@@ -232,40 +232,22 @@ describe('picking a folder in the dialog', () => {
   /**
    * Where the dialog starts, and it is not cosmetic: the system reopens one wherever it was last
    * left, which after a creation is INSIDE the project just made — so the second project of a
-   * session was created within the first, and nothing said so.
+   * session was created within the first, and nothing said so. Which folder that should be is
+   * `projectPickerFolder`'s to decide and its own suite's to check; this is the wiring.
    */
-  describe('the folder the dialog starts in', () => {
-    const startingIn = () => {
-      const pickPath = vi.fn(() => Promise.resolve(null))
-      installFakeBridge({ dialog: { pickPath } })
-      return pickPath
-    }
+  it('starts the dialog where the settings say projects live', async () => {
+    const pickPath = vi.fn(() => Promise.resolve(null))
+    installFakeBridge({ dialog: { pickPath } })
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: { ...state.settings.storage, projectsFolder: '/Users/someone/Projets' },
+      },
+    }))
 
-    const storedAs = (storage: { projectsFolder?: string; lastProjectsFolder?: string }) => {
-      useSettings.setState(state => ({
-        settings: { ...state.settings, storage: { ...state.settings.storage, ...storage } },
-      }))
-    }
+    await useProject.getState().createPicked()
 
-    it('is the preference when the user set one', async () => {
-      storedAs({ projectsFolder: '/Users/someone/Projets', lastProjectsFolder: '/elsewhere' })
-      const pickPath = startingIn()
-
-      await useProject.getState().createPicked()
-
-      expect(pickPath).toHaveBeenCalledWith('folder', '/Users/someone/Projets')
-    })
-
-    // The preference is deliberately left empty by people who want the dialog to follow them;
-    // this is what "follow them" means, and it is remembered rather than left to the system.
-    it('falls back to where the last project was made', async () => {
-      storedAs({ projectsFolder: undefined, lastProjectsFolder: '/Users/someone/Mes Projets' })
-      const pickPath = startingIn()
-
-      await useProject.getState().createPicked()
-
-      expect(pickPath).toHaveBeenCalledWith('folder', '/Users/someone/Mes Projets')
-    })
+    expect(pickPath).toHaveBeenCalledWith('folder', '/Users/someone/Projets')
   })
 })
 

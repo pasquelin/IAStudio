@@ -173,10 +173,23 @@ describe('project handlers', () => {
   })
 
   describe('creating a project from the folder that was chosen', () => {
-    it('names the project after the folder, and lays it inside that folder', async () => {
+    /**
+     * Registered on the spot, with the verdict the chosen folder would give and the button the
+     * user would press. Both before registering: the handlers capture `askUser` by value, so a
+     * test that set it afterwards would silently keep the default.
+     */
+    const creating = (verdict: FolderVerdict = 'blank', answer = 0): ProjectHandlerDeps => {
       const injected = deps(catalog)
+      injected.project.inspect = vi.fn(async () => verdict)
       injected.project.create = vi.fn(async () => ({ path: PROJECT, manifest: MANIFEST }))
+      injected.project.open = vi.fn(async () => ({ path: PROJECT, manifest: MANIFEST }))
+      injected.askUser = vi.fn(async () => answer)
       registerProjectHandlers(injected)
+      return injected
+    }
+
+    it('names the project after the folder, and lays it inside that folder', async () => {
+      const injected = creating()
 
       await invoke(CHANNELS.projectCreate, '/Users/someone/Mes Projets/Bande-annonce')
 
@@ -188,8 +201,7 @@ describe('project handlers', () => {
 
     // The root of a volume has no name to give, and a nameless project is a row nobody can find.
     it('turns away a folder with no name of its own', async () => {
-      const injected = deps(catalog)
-      registerProjectHandlers(injected)
+      const injected = creating()
 
       await expect(invoke(CHANNELS.projectCreate, '/')).rejects.toThrow()
 
@@ -199,10 +211,7 @@ describe('project handlers', () => {
     // Creating again would stamp a fresh `createdAt` on a folder that has been worked in, and
     // hand its catalogue a new identity.
     it('opens a folder that is already a project instead of writing over it', async () => {
-      const injected = deps(catalog)
-      injected.project.inspect = vi.fn(async (): Promise<FolderVerdict> => 'project')
-      injected.project.open = vi.fn(async () => ({ path: PROJECT, manifest: MANIFEST }))
-      registerProjectHandlers(injected)
+      const injected = creating('project')
 
       await expect(invoke(CHANNELS.projectCreate, PROJECT)).resolves.toBeDefined()
 
@@ -211,10 +220,10 @@ describe('project handlers', () => {
       expect(injected.record).not.toHaveBeenCalled()
     })
 
-    it('refuses a folder sitting inside another project, and says which mistake it was', async () => {
-      const injected = deps(catalog)
-      injected.project.inspect = vi.fn(async (): Promise<FolderVerdict> => 'nested')
-      registerProjectHandlers(injected)
+    // Raised by `inspect` rather than answered, like every other folder that cannot serve.
+    it('says which mistake it was when the folder sits inside another project', async () => {
+      const injected = creating()
+      injected.project.inspect = vi.fn(() => Promise.reject(new ProjectOpenError('nested')))
 
       await expect(invoke(CHANNELS.projectCreate, PROJECT)).rejects.toThrow()
 
@@ -227,18 +236,9 @@ describe('project handlers', () => {
     })
 
     describe('when the folder already holds files of its own', () => {
-      const occupied = (): ProjectHandlerDeps => {
-        const injected = deps(catalog)
-        injected.project.inspect = vi.fn(async (): Promise<FolderVerdict> => 'occupied')
-        injected.project.create = vi.fn(async () => ({ path: PROJECT, manifest: MANIFEST }))
-        return injected
-      }
-
       it('asks first, and writes nothing when the answer is no', async () => {
-        const injected = occupied()
-        // The dialog's cancel button, which is also what a dismissed dialog answers.
-        injected.askUser = vi.fn(async () => 0)
-        registerProjectHandlers(injected)
+        // 0 is the dialog's cancel button, which is also what a dismissed dialog answers.
+        const injected = creating('occupied', 0)
 
         // `null`, not a rejection: a cancelled gesture is not a failure, and nothing is journalled.
         await expect(invoke(CHANNELS.projectCreate, PROJECT)).resolves.toBeNull()
@@ -249,9 +249,7 @@ describe('project handlers', () => {
       })
 
       it('goes ahead once the answer is yes', async () => {
-        const injected = occupied()
-        injected.askUser = vi.fn(async () => 1)
-        registerProjectHandlers(injected)
+        const injected = creating('occupied', 1)
 
         await expect(invoke(CHANNELS.projectCreate, PROJECT)).resolves.toBeDefined()
 

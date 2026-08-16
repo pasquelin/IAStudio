@@ -71,7 +71,6 @@ const storage = z.object({
   backend: z.enum(['local', 'cloud']).optional(),
   projectsFolder: z.string().min(1).optional(),
   lastProject: z.string().min(1).optional(),
-  lastProjectsFolder: z.string().min(1).optional(),
   // Bounded here as well as where it is written: the list is session state a hand-edited file
   // could grow without limit, and the home draws every entry it is given.
   recentProjects: z.array(recentProject).max(RECENT_PROJECTS_MAX).optional(),

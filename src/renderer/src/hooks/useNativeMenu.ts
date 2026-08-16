@@ -15,9 +15,11 @@ import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
 
 function runCommand(command: CommandId): void {
-  // Kept here rather than beside the other global ones, and the reason is written there: the
-  // assistant store imports the executor, so the shared module cannot import the store back.
-  // Toggled rather than opened — ⌘K is the key one presses to get out of it too.
+  // Kept out of `global-commands` to break an import loop: the assistant store imports the
+  // executor to run a confirmed action, so the module the executor calls cannot import the store
+  // back. Untangling that means separating the panel's open state from the conversation store —
+  // worth doing, not worth doing here. Nothing is lost meanwhile: the assistant dismisses itself
+  // through `chat.close`. Toggled rather than opened — ⌘K is what one presses to leave it too.
   if (command === 'app.assistant') {
     useAssistant.getState().toggle()
     return

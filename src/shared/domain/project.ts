@@ -18,6 +18,13 @@ export const MANIFEST_FILE = '.project.json'
 /** What projects made before the rename carry. Read, never written — see `openManifest`. */
 export const LEGACY_MANIFEST_FILE = 'project.json'
 
+/**
+ * Every name a manifest can carry, in the order they win. Enumerated once: whoever asks "is this
+ * folder a project" has to know about both, and a third name added to only one of the two lists
+ * would leave half the studio unable to see projects the other half opens.
+ */
+export const MANIFEST_FILES: readonly string[] = [MANIFEST_FILE, LEGACY_MANIFEST_FILE]
+
 export const CATALOG_FILE = '.index/catalog.db'
 
 export type Manifest = {
@@ -93,6 +100,39 @@ export function projectsByCreation(recent: readonly RecentProject[]): RecentProj
  * shortcut rather than a file manager.
  */
 export const RECENT_PROJECTS_MAX = 12
+
+/**
+ * The folder the system's picker should open on, or nothing to let it reopen wherever it was
+ * left.
+ *
+ * Letting it decide alone is what put the second project of a session INSIDE the first: the
+ * dialog reopens where it last was, and after a creation that is the project's own folder.
+ *
+ * Derived rather than stored, from the shelf rather than from `lastProject` — the shelf survives
+ * a folder being forgotten. The preference wins when it is set: it is the answer the user typed,
+ * and an empty one means "follow me", which is precisely what the fallback does.
+ */
+export function projectPickerFolder(
+  projectsFolder: string | undefined,
+  recent: readonly RecentProject[],
+): string | undefined {
+  if (projectsFolder) return projectsFolder
+
+  const [last] = projectsByCreation(recent)
+  return last && parentFolder(last.path)
+}
+
+/**
+ * The folder holding an absolute path, or nothing when it holds no separator at all.
+ *
+ * Both separators, unlike `parentOf` in `domain/folder.ts`, which walks the `/`-joined ids the
+ * explorer uses: this one reads paths the OS wrote, and a Windows project would otherwise answer
+ * its own whole path.
+ */
+function parentFolder(path: string): string | undefined {
+  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  return cut > 0 ? path.slice(0, cut) : undefined
+}
 
 /**
  * The list after a project has been opened: most recently opened first, one entry per path,

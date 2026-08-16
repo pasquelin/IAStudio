@@ -396,8 +396,12 @@ describe('project store', () => {
     it('refuses a folder sitting anywhere under a project', async () => {
       await store.create(root, 'Outer')
 
-      expect(await store.inspect(join(root, 'documents'))).toBe('nested')
-      expect(await store.inspect(join(root, 'assets', 'img', 'deep'))).toBe('nested')
+      await expect(store.inspect(join(root, 'documents'))).rejects.toMatchObject({
+        reason: 'nested',
+      })
+      await expect(store.inspect(join(root, 'assets', 'img', 'deep'))).rejects.toMatchObject({
+        reason: 'nested',
+      })
     })
 
     // The reason this exists at all: `create` writes a manifest unconditionally, so a caller
