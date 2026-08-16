@@ -93,6 +93,7 @@
     "missing": "This document is no longer open.",
     "close": "Close tab",
     "closeOthers": "Close other tabs",
+    "create": "Create",
     "rename": "Rename",
     "renameLabel": "Document name",
     "delete": "Delete document…",

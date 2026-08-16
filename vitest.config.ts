@@ -108,6 +108,9 @@ const TEST_POOL = 'threads'
  */
 const DOM_BOUND = [
   'src/renderer/src/app/document-io.test.ts',
+  // Not for a DOM: the name it proposes is « Sans titre N », composed by `i18next` — only the
+  // renderer setup initialises it, and an uninitialised `t` answers with no string at all.
+  'src/renderer/src/app/new-document.test.ts',
   // Imports the definition of all twenty-one panels, so it loads every panel component. It
   // PASSES under node — and covers less: the branches those modules run at import take the
   // other path without a browser, and `panels/**` went four branches over its budget.
