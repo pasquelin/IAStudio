@@ -119,6 +119,20 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const sourcePlaying = usePlayback(state => playbackOf(state, sourceOwner))
 
   /**
+   * Which of the two monitors the space bar drives — taken by clicking one, and the programme
+   * until somebody does.
+   *
+   * The programme by default because that is what a montage is FOR: a space bar pressed with
+   * nothing aimed at plays the edit, never the take. Only one of them is ever armed, so the key
+   * cannot start both — and neither can anything else, `playbackToken` revoking whoever held it.
+   *
+   * It shows without being drawn: a monitor advertises the key on its play button only while it
+   * is the one listening (`shortcut` in `Monitor`), so the armed one says so and the other does
+   * not claim a key that would go elsewhere.
+   */
+  const [focus, setFocus] = useState<'source' | 'program'>('program')
+
+  /**
    * The source follows the montage's own head, offset into the clip — which is what makes it a
    * way to SEE the clip you picked even when a track above covers it, rather than a picture of
    * its first frame and nothing else.
@@ -182,13 +196,14 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
     <div ref={pairRef} className="flex h-full min-h-0 p-(--sc-gutter)">
       {/* Fixed width once it has been dragged, an equal share until then: a document opens on two
           monitors of the same size, and only a gesture makes one of them the wide one. */}
-      <div className="flex min-w-0" style={leadStyle}>
+      <div className="flex min-w-0" style={leadStyle} onPointerDown={() => setFocus('source')}>
         <Monitor
           owner={sourceOwner}
           title={t('transport.source')}
           role={t('transport.sourceRole')}
           sequence={source}
           onTime={setSourceTime}
+          keyboard={active && focus === 'source'}
           placeholder={
             selected ? null : <EmptyState icon={mdiVideoOutline} message={t('transport.noClip')} />
           }
@@ -199,14 +214,14 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
           replaces a `Separator`, which drew the line and refused to be moved. */}
       <ResizeHandle axis="horizontal" size={leadSize} onSize={onLeadSize} />
 
-      <div className="flex min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1" onPointerDown={() => setFocus('program')}>
         <Monitor
           owner={programOwner(documentId)}
           title={t('transport.program')}
           role={t('transport.programRole')}
           sequence={sequence}
           onTime={setProgramTime}
-          keyboard={active}
+          keyboard={active && focus === 'program'}
           program
         />
       </div>

@@ -189,6 +189,24 @@ describe('SequenceDocument', () => {
     expect(sourcePlayhead()).toBe(1_000_000 - 1_000_000 / 25)
   })
 
+  /**
+   * Two pictures playing at once is two audible streams and two hardware decoders fighting over
+   * the GPU. The token already revokes whoever held it; this is the half that stops the key
+   * from being aimed at two players in the first place.
+   */
+  it('hands the space bar to whichever monitor was clicked, and to only one of them', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    // A press on the source, which is what taking the focus comes to. `pointerDown` rather than
+    // a click: aiming a monitor must not also start it.
+    const playButtons = (): (string | null)[] =>
+      screen.getAllByRole('button', { name: /Lire/ }).map(button => button.getAttribute('aria-label'))
+    fireEvent.pointerDown(screen.getAllByRole('button', { name: /Lire/ })[0] ?? document.body)
+
+    // The armed one advertises the key and the other stops claiming it — the pair is never both.
+    expect(playButtons()).toEqual(['Lire (Espace)', 'Lire'])
+  })
+
   it('starts the program monitor when its play button is pressed', () => {
     render(<SequenceDocument documentId="doc-1" />)
 
