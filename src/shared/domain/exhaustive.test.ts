@@ -164,6 +164,7 @@ describe('the lists that stand for a union', () => {
       'scene.texture': true,
       'scene.export': true,
       'scene.render': true,
+      'sequence.export': true,
       'texture.map': true,
       'texture.channel': true,
       'texture.seam': true,

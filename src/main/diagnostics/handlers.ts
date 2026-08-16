@@ -15,6 +15,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'scene.texture': 'document',
   'scene.export': 'document',
   'scene.render': 'document',
+  // With the document, as every other export is: it writes outside the project, and what its
+  // failure says something about is the sequence that was open.
+  'sequence.export': 'document',
   'texture.map': 'document',
   'texture.channel': 'document',
   'texture.seam': 'document',
