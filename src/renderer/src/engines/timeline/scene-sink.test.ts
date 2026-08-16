@@ -31,9 +31,11 @@ describe('createModelScene', () => {
   })
 
   it('holds no camera, leaving the stage to frame whatever the file turned out to be', () => {
-    expect(createModelScene('asset_1', 'Robot').read().nodes.some(n => n.type === 'camera')).toBe(
-      false,
-    )
+    expect(
+      createModelScene('asset_1', 'Robot')
+        .read()
+        .nodes.some(n => n.type === 'camera'),
+    ).toBe(false)
   })
 
   it('plays the first clip once the file says it has one', () => {

@@ -21,26 +21,39 @@ describe('the picture that stands for a cloud asset', () => {
   const SIGNED = 'https://cdn.cloud.scenario.com/assets/asset_1?Policy=p&Signature=s&Key-Pair-Id=k'
   const THUMB = 'https://cdn.cloud.scenario.com/thumbnails/asset_1'
 
-  it('prefers the thumbnail, which is public and does not expire', () => {
-    expect(cloudPreviewUrl(cloudAsset({ thumbnailUrl: THUMB, url: SIGNED }))).toBe(THUMB)
-  })
-
-  it('resizes the thumbnail, since the CDN transforms it on the way out', () => {
-    expect(cloudPreviewUrl(cloudAsset({ thumbnailUrl: THUMB }), { width: 256, quality: 80 })).toBe(
-      `${THUMB}?width=256&quality=80`,
+  /**
+   * The asset's own file for the kinds that ARE a picture, and it is not a preference of taste:
+   * the thumbnail is a small fixed rendition, so a tile wider than it draws it soft. The asset
+   * points at `/assets-transform/`, which resizes from the full picture.
+   */
+  it('draws a picture from the asset itself, which is the one that can be resized', () => {
+    expect(cloudPreviewUrl(cloudAsset({ thumbnailUrl: THUMB, url: SIGNED }), 256)).toBe(
+      `${SIGNED}&width=256`,
     )
   })
 
-  it('appends to a thumbnail that already carries a query', () => {
-    const withQuery = `${THUMB}?format=webp`
-    expect(cloudPreviewUrl(cloudAsset({ thumbnailUrl: withQuery }), { width: 128 })).toBe(
-      `${withQuery}&width=128`,
+  /**
+   * A take's own URL is the sound, a clip's is the film — an `<img>` pointed at either draws
+   * nothing at all. Those keep the thumbnail, which is a picture OF the asset rather than it.
+   */
+  it('keeps the thumbnail for what is not a picture in the first place', () => {
+    const clip = cloudAsset({ type: 'video', thumbnailUrl: THUMB, url: SIGNED })
+
+    expect(cloudPreviewUrl(clip, 256)).toBe(`${THUMB}?width=256`)
+  })
+
+  it('falls back to the thumbnail when the asset carries no URL of its own', () => {
+    expect(cloudPreviewUrl(cloudAsset({ thumbnailUrl: THUMB }), 256)).toBe(`${THUMB}?width=256`)
+  })
+
+  it('appends to a URL that already carries a query, as the signed one always does', () => {
+    expect(cloudPreviewUrl(cloudAsset({ thumbnailUrl: `${THUMB}?v=2` }), 128)).toBe(
+      `${THUMB}?v=2&width=128`,
     )
   })
 
-  it('never alters the signed URL, which a query string of ours would invalidate', () => {
-    // `Policy`, `Signature` and `Key-Pair-Id` sign the request: anything appended answers 403.
-    expect(cloudPreviewUrl(cloudAsset({ url: SIGNED }), { width: 256 })).toBe(SIGNED)
+  it('leaves the URL alone when no width is asked for', () => {
+    expect(cloudPreviewUrl(cloudAsset({ url: SIGNED }))).toBe(SIGNED)
   })
 
   it('answers nothing when there is no picture to show', () => {

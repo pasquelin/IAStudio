@@ -92,8 +92,8 @@ describe('the library panel', () => {
   })
 
   /**
-   * The thumbnail, not the asset: its URL is public and stable, while the asset's own carries a
-   * signature that appending anything to would invalidate — the CDN answers 403.
+   * The thumbnail here, the asset having none of its own to give, and resized to the width the
+   * tile draws — jsdom reports a density of 1, so that width is the tile's own.
    */
   it('captions each tile with the asset name, and draws the thumbnail it may resize', async () => {
     install([cloudAsset()])

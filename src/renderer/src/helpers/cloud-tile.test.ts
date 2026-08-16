@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { cloudTileFace } from './cloud-tile'
 
@@ -21,19 +21,59 @@ function cloudAsset(overrides: Partial<CloudAsset> = {}): CloudAsset {
   }
 }
 
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
 describe('what a cloud asset puts on a tile', () => {
   /**
-   * The signed URL takes no parameters: appending one invalidates the signature and the CDN
-   * answers 403. Three tiles had written that out, and the comment saying why with it.
+   * The width a caller passes is the one the tile OCCUPIES, and the density is applied here.
+   * Three tiles had written their own factor — a `* 2`, an `880` and nothing at all — and none
+   * of the three agreed with the others.
    */
-  it('resizes the public thumbnail rather than the signed asset', () => {
-    expect(cloudTileFace(cloudAsset(), 264).url).toBe('https://cdn.example/thumb.png?width=264')
+  it('asks for the tile width itself where the display has no density to add', () => {
+    expect(cloudTileFace(cloudAsset(), 264).url).toBe(
+      'https://cdn.example/signed.png?X-Amz-Signature=abc&width=264',
+    )
   })
 
-  it('falls back to the signed asset when there is no thumbnail at all', () => {
-    const face = cloudTileFace(cloudAsset({ thumbnailUrl: undefined }), 264)
+  it('asks for twice as many pixels on a display that draws twice as many', () => {
+    vi.stubGlobal('devicePixelRatio', 2)
 
-    expect(face.url).toBe('https://cdn.example/signed.png?X-Amz-Signature=abc')
+    expect(cloudTileFace(cloudAsset(), 264).url).toBe(
+      'https://cdn.example/signed.png?X-Amz-Signature=abc&width=528',
+    )
+  })
+
+  /**
+   * A density of 1.5, which Windows scaling reports, would otherwise ask for 396 — a width no
+   * other machine shares, and the CDN builds each one it has never seen on first demand.
+   */
+  it('rounds a fractional density up, so a tile asks for one of two or three widths ever', () => {
+    vi.stubGlobal('devicePixelRatio', 1.5)
+
+    expect(cloudTileFace(cloudAsset(), 264).url).toBe(
+      'https://cdn.example/signed.png?X-Amz-Signature=abc&width=528',
+    )
+  })
+
+  /**
+   * Measured against the account on 16 August 2026: asking for more than the asset holds does
+   * not refuse, it UPSAMPLES — a 1104 px picture answers `width=2208` with a soft 2208 px one,
+   * for a megabyte instead of 786 ko. Softness is what a tile shows when nobody sets a ceiling.
+   */
+  it('never asks for more pixels than the asset holds', () => {
+    vi.stubGlobal('devicePixelRatio', 3)
+
+    expect(cloudTileFace(cloudAsset({ width: 512 }), 264).url).toBe(
+      'https://cdn.example/signed.png?X-Amz-Signature=abc&width=512',
+    )
+  })
+
+  it('falls back to the thumbnail when the asset carries no URL of its own', () => {
+    const face = cloudTileFace(cloudAsset({ url: undefined }), 264)
+
+    expect(face.url).toBe('https://cdn.example/thumb.png?width=264')
   })
 
   /**

@@ -15,7 +15,7 @@ import { DraggableAsset } from './DraggableAsset'
 import { LibraryAsset } from './LibraryAsset'
 import { nameOfRow, typeOfRow, type AssetRenameHandle, type AssetRowModel } from './rows'
 
-/** What the CDN is asked to resize a library thumbnail to. A tile is never wider than this. */
+/** The width a tile occupies. What the CDN is asked for follows, once density is applied. */
 const PREVIEW_WIDTH = 220
 
 // Memoized, as the scene and layer rows are: asset identity survives a catalogue refresh that
@@ -96,13 +96,10 @@ export const AssetCard = memo(function AssetCard({
   // lines need said is the GESTURE — a picture that is not here yet does not look any different
   // from one that is, and nothing else on the tile says what a double-click will do.
   if (row.from === 'remote') {
-    const previewWidth = type === 'image' ? 880 : PREVIEW_WIDTH
-    const quality = type === 'image' ? 80 : undefined
-    const format = type === 'image' ? 'jpeg' : undefined
     return (
       <LibraryAsset asset={row.asset}>
         <div className="relative" {...hints.fetch}>
-          <MediaTile {...cloudTileFace(row.asset, previewWidth, quality, format)} badge={mark} />
+          <MediaTile {...cloudTileFace(row.asset, PREVIEW_WIDTH)} badge={mark} />
           {/* A veil and a spinner, and the badge alone is why they exist: `remote-only` and
               `fetching` are two blue download glyphs in a 12 px corner, and a 45 Ko picture is
               here in 200 ms — the mark changed faster than an eye can tell two similar ones

@@ -37,7 +37,7 @@ export const AssetRow = memo(function AssetRow({
     row.from === 'local'
       ? (posterUrl(row.asset) ?? assetUrl(row.asset.id))
       : row.from === 'remote'
-        ? cloudPreviewUrl(row.asset, { width: 40 })
+        ? cloudPreviewUrl(row.asset, 40)
         : undefined
 
   const thumbnail: ReactNode = thumbnailUrl ? (

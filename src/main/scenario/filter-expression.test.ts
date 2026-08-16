@@ -63,10 +63,20 @@ describe('the provenance values that stand for our kinds', () => {
     ])
   })
 
-  it('asks for no filter at all when pictures are wanted', () => {
+  it('asks for no filter at all when pictures alone are wanted', () => {
     // Pictures are the residue: enumerating them would drop every type the API later invents.
     expect(remoteTypesFor(['image'])).toBeUndefined()
-    expect(remoteTypesFor(['image', 'mesh'])).toBeUndefined()
+  })
+
+  it('drops the pictures from a mixed ask and filters on the rest', () => {
+    expect(remoteTypesFor(['image', 'mesh'])).toEqual([
+      'img23d',
+      'txt23d',
+      'video23d',
+      '3d23d',
+      'img2splat',
+      'uploaded-3d',
+    ])
   })
 
   it('asks for no filter when nothing was asked for', () => {

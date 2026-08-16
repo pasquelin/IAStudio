@@ -95,12 +95,9 @@ function Tile({ asset, fetched }: { asset: CloudAsset; fetched: Asset | undefine
         }
       : null
 
-  const quality = asset.type === 'image' ? 80 : undefined
-  const format = asset.type === 'image' ? 'jpeg' : undefined
-
   return (
     <ShelfTile
-      {...cloudTileFace(asset, PREVIEW_WIDTH, quality, format)}
+      {...cloudTileFace(asset, PREVIEW_WIDTH)}
       hint={asset.name}
       label={act?.label ?? asset.name}
       tip={TIP_LEFT}

@@ -11,11 +11,14 @@ import { QuietNote } from '@/design/QuietNote'
 import { useExplore } from '../use-explore'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
 
-/** What one column aims for. Wider than a shelf tile: this is the band people browse. */
+/**
+ * What one column aims for. Wider than a shelf tile: this is the band people browse.
+ *
+ * Also what a tile asks the CDN to resize to, once the display's density is applied — hence one
+ * constant here where there used to be two, the second holding a doubling `cloudTileFace` now
+ * works out from the screen it is actually drawn on.
+ */
 const COLUMN_WIDTH = 220
-
-/** The CDN resizes. Twice the column, so the tiles hold up on a dense display. */
-const PREVIEW_WIDTH = 440
 
 /**
  * What everyone published, by kind — the one band of the home that is not about this account.
@@ -64,7 +67,7 @@ export function Explore() {
             {t(exhausted ? 'home.explore.none' : 'home.explore.loading')}
           </QuietNote>
         }
-        renderCard={asset => <Tile asset={asset} assetType={type} />}
+        renderCard={asset => <Tile asset={asset} />}
       />
     </Section>
   )
@@ -105,9 +108,6 @@ function Tab({ type, current, onSelect }: TabProps) {
  * measured way to bring one in — `cloud.pull` is the library's errand, over assets this key
  * owns. Showing a fetch button that may refuse is worse than showing none.
  */
-function Tile({ asset, assetType }: { asset: CloudAsset; assetType: AssetType }) {
-  const previewWidth = assetType === 'image' ? PREVIEW_WIDTH * 2 : PREVIEW_WIDTH
-  const quality = assetType === 'image' ? 80 : undefined
-  const format = assetType === 'image' ? 'jpeg' : undefined
-  return <MediaTile fill {...cloudTileFace(asset, previewWidth, quality, format)} />
+function Tile({ asset }: { asset: CloudAsset }) {
+  return <MediaTile fill {...cloudTileFace(asset, COLUMN_WIDTH)} />
 }

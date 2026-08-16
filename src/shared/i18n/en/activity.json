@@ -109,6 +109,7 @@
       "shell.layout": "A workspace’s stored layout could not be read",
       "shell.menu": "A context menu could not be opened",
       "sequence.mirror": "The return window could not open",
+      "sequence.export": "Exporting the sequence failed",
       "scene": {
         "render": "Rendering the video failed"
       }
