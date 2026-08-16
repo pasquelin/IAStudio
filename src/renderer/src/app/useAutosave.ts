@@ -27,9 +27,14 @@ export function useAutosave(): void {
 
     const arm = (): void => {
       timer = setTimeout(() => {
-        void autosaveOpenDocuments().finally(() => {
-          if (!stopped) arm()
-        })
+        // Caught here as well as per document inside the pass: what fails here is the schedule
+        // itself, and a clock that stops on the first failure would go quiet exactly when the
+        // disk is full — which is when the net is worth having.
+        void autosaveOpenDocuments()
+          .catch(() => {})
+          .finally(() => {
+            if (!stopped) arm()
+          })
       }, AUTOSAVE_INTERVAL_MS)
     }
 

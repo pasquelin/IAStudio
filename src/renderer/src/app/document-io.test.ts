@@ -205,6 +205,27 @@ describe('saveDocument', () => {
       expect(write).not.toHaveBeenCalled()
     })
 
+    /**
+     * A native dialog blocks the user's input, not the renderer's timers. Writing while the
+     * "Save / Don't Save" question is on screen answers it for them: the tab then closes over
+     * work the user had just declined to save.
+     */
+    it('writes nothing while a close question is on screen', async () => {
+      const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
+      let answer: (choice: CloseChoice) => void = () => {}
+      installFakeBridge({
+        documents: { write, confirmClose: () => new Promise<CloseChoice>(r => (answer = r)) },
+      })
+      const documentId = await openScene()
+
+      const closing = closeDocument(documentId)
+      await autosaveOpenDocuments()
+      expect(write).not.toHaveBeenCalled()
+
+      answer('discard')
+      await closing
+    })
+
     // A dialog nobody summoned, in front of work someone is in the middle of, is worse than the
     // save it was trying to make.
     it('asks nothing when the file changed outside, and leaves it for ⌘S', async () => {

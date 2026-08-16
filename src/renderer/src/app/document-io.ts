@@ -751,6 +751,26 @@ function documentIsDirty(documentId: string): boolean {
  * cancelled dialog costs nothing.
  */
 /**
+ * How many gestures are deciding a document's fate right now.
+ *
+ * A native dialog blocks the user's input, NOT the renderer's timers. With "Save / Don't Save"
+ * on screen, a pass on a timer would write the very document the user is about to decline to
+ * save — and "Don't Save" would then close the tab over work already on disk. Held for the whole
+ * gesture rather than for the question alone: `settleUnsavedWork` collects every answer before
+ * acting on any of them, so the window between an answer and what it means is wide.
+ */
+let settling = 0
+
+async function whileSettling<T>(body: () => Promise<T>): Promise<T> {
+  settling += 1
+  try {
+    return await body()
+  } finally {
+    settling -= 1
+  }
+}
+
+/**
  * What the user wants done with a document's unsaved work. `cancel` when nothing answered —
  * the one default that loses nothing.
  */
@@ -760,17 +780,19 @@ async function askAboutUnsavedWork(documentId: string): Promise<CloseChoice> {
 }
 
 export async function closeDocument(documentId: string): Promise<boolean> {
-  if (documentIsDirty(documentId)) {
-    const choice = await askAboutUnsavedWork(documentId)
-    if (choice === 'cancel') return false
-    // Left open unless the work actually reached the disk — a write that throws, and one that is
-    // refused because the file would not read, both leave the tab exactly where it was. Closing
-    // anyway would lose the work the dialog had just promised to keep.
-    if (choice === 'save' && !(await saveDocument(documentId))) return false
-  }
+  return await whileSettling(async () => {
+    if (documentIsDirty(documentId)) {
+      const choice = await askAboutUnsavedWork(documentId)
+      if (choice === 'cancel') return false
+      // Left open unless the work actually reached the disk — a write that throws, and one that
+      // is refused because the file would not read, both leave the tab exactly where it was.
+      // Closing anyway would lose the work the dialog had just promised to keep.
+      if (choice === 'save' && !(await saveDocument(documentId))) return false
+    }
 
-  forgetDocument(documentId)
-  return true
+    forgetDocument(documentId)
+    return true
+  })
 }
 
 /** The documents whose work would go with the window. Empty when nothing is at stake. */
@@ -784,16 +806,27 @@ export function unsavedDocumentIds(): string[] {
  * One after another rather than all at once: each save reads an editor's state back, and six
  * documents captured together would hold the frame for as long as the slowest of them.
  *
- * A refusal is not reported. Autosave is a safety net, not a gesture: a document whose file
- * would not read, or which something else has written since, is left for ⌘S to settle — and the
- * tab keeps its bullet, which is what says the work is not on disk.
+ * Neither a refusal nor a failure is reported. Autosave is a net nobody asked for, not a
+ * gesture: a document whose file would not read, or which something else has written since, is
+ * left for ⌘S to settle — and the tab keeps its bullet, which says the work is not on disk.
  */
 export async function autosaveOpenDocuments(): Promise<void> {
+  // A question about closing is on screen: writing now would answer it for the user.
+  if (settling > 0) return
+
   let wrote = false
 
   for (const documentId of unsavedDocumentIds()) {
     if (ioOf(documentId)?.autosaves === false) continue
-    wrote = (await saveDocument(documentId, false)) || wrote
+
+    // Per document, so a full disk on the first tab does not cost the other five their pass.
+    // Silent by design: this is a net nobody asked for, and it must not put a message in front
+    // of someone every thirty seconds. ⌘S reports for itself.
+    try {
+      wrote = (await saveDocument(documentId, false)) || wrote
+    } catch {
+      // Nothing: the tab keeps its bullet, which is what says the work is not on disk.
+    }
   }
 
   // Once for the pass, not once per document: `relist` walks the folder reading a head per
@@ -814,24 +847,26 @@ export async function autosaveOpenDocuments(): Promise<void> {
  * `false` when the user cancelled, or when a save refused — either way the window stays.
  */
 export async function settleUnsavedWork(): Promise<boolean> {
-  const answers: Array<{ documentId: string; choice: CloseChoice }> = []
+  return await whileSettling(async () => {
+    const answers: Array<{ documentId: string; choice: CloseChoice }> = []
 
-  for (const documentId of unsavedDocumentIds()) {
-    const choice = await askAboutUnsavedWork(documentId)
-    // Nothing further is asked: the gesture is off, so the documents behind this one are not
-    // even questioned, let alone touched.
-    if (choice === 'cancel') return false
-    answers.push({ documentId, choice })
-  }
+    for (const documentId of unsavedDocumentIds()) {
+      const choice = await askAboutUnsavedWork(documentId)
+      // Nothing further is asked: the gesture is off, so the documents behind this one are not
+      // even questioned, let alone touched.
+      if (choice === 'cancel') return false
+      answers.push({ documentId, choice })
+    }
 
-  for (const { documentId, choice } of answers) {
-    // Same order as `closeDocument`: the file is written before anything is forgotten, so a save
-    // that fails leaves the work where it was rather than having already dropped it.
-    if (choice === 'save' && !(await saveDocument(documentId))) return false
-    forgetDocument(documentId)
-  }
+    for (const { documentId, choice } of answers) {
+      // Same order as `closeDocument`: the file is written before anything is forgotten, so a
+      // save that fails leaves the work where it was rather than having already dropped it.
+      if (choice === 'save' && !(await saveDocument(documentId))) return false
+      forgetDocument(documentId)
+    }
 
-  return true
+    return true
+  })
 }
 
 /**

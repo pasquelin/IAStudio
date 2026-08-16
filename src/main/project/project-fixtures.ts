@@ -66,6 +66,14 @@ export type DocumentSnapshot = {
   kind: string
   title: string
   content: string
+  /**
+   * The files beside the content — one PNG per layer of an image document.
+   *
+   * Without them this tool would miss the very loss it exists to catch: a migration that dropped
+   * every layer of an `.img` while keeping its manifest would leave `content` untouched and the
+   * snapshot identical.
+   */
+  parts: readonly { name: string; data: string }[]
 }
 
 /**
@@ -90,6 +98,11 @@ export async function snapshotDocuments(documents: DocumentFiles): Promise<Docum
       kind: descriptor.kind,
       title: descriptor.title,
       content: file?.content ?? '',
+      // Sorted for the reason the documents themselves are: a folder answers in its own order,
+      // and that order is not a promise either.
+      parts: [...(file?.parts ?? [])].sort((one, other) =>
+        one.name.localeCompare(other.name, 'en'),
+      ),
     })
   }
 

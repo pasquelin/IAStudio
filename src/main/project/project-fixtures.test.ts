@@ -1,8 +1,11 @@
-import { readdir } from 'node:fs/promises'
+import { readdir, rm } from 'node:fs/promises'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_KINDS } from '@shared/domain/document'
 import { createDocumentFiles } from './documents'
 import { snapshotDocuments, withTempProject } from './project-fixtures'
+
+const NOW = '2026-08-16T10:00:00.000Z'
 
 /**
  * The measuring tool has to be measured too: a snapshot that missed a document, or that differed
@@ -30,6 +33,28 @@ describe('the project fixture', () => {
     expect(taken.every(one => one.content === `{"of":"${one.kind}"}`)).toBe(true)
   })
 
+  // The loss this tool exists to catch, and the one a file count cannot see: the manifest is
+  // intact and every layer beside it is gone.
+  it('sees the layers of an image document, not just its manifest', async () => {
+    const { root, documents } = await withTempProject()
+    await documents.write('doc-1', 'image', {
+      title: 'Cover',
+      content: '{"layers":["layer-1"]}',
+      parts: [{ name: 'layer-1.png', data: 'iVBORw0KGgo=' }],
+    })
+
+    const whole = await snapshotDocuments(documents)
+    await rm(join(root, 'documents', 'Cover.img', 'layer-1.png'))
+
+    const stripped = await snapshotDocuments(
+      createDocumentFiles({ projectPath: () => root, now: () => NOW }),
+    )
+
+    expect(whole[0]?.parts).toEqual([{ name: 'layer-1.png', data: 'iVBORw0KGgo=' }])
+    expect(stripped[0]?.content).toBe(whole[0]?.content)
+    expect(stripped[0]?.parts).toEqual([])
+  })
+
   /**
    * The whole point of the tool. A folder read by a second reader — one holding none of the
    * first's caches — must describe the same project, or nothing built on this measures anything.
@@ -41,7 +66,7 @@ describe('the project fixture', () => {
 
     const first = await snapshotDocuments(documents)
     const second = await snapshotDocuments(
-      createDocumentFiles({ projectPath: () => root, now: () => '2026-08-16T10:00:00.000Z' }),
+      createDocumentFiles({ projectPath: () => root, now: () => NOW }),
     )
 
     expect(second).toEqual(first)
