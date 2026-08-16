@@ -12,6 +12,7 @@ import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/scene-views'
 import { sceneEngineOf } from '@/stores/scene-engines'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
+import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 
 function runCommand(command: CommandId): void {
@@ -131,8 +132,10 @@ export function useNativeMenu(): void {
     // The main process drops a rebuild that changes nothing, so publishing on every write of
     // these stores costs a comparison rather than a menu. `useDocuments` is among them because
     // which scene is in front decides what the ticks read.
-    const stopPublishing = [useLayouts, useModels, useSettings, useDocuments].map(store =>
-      store.subscribe(publishMenuContext),
+    // `useProject` is among them because the home offers the Explorer only while a project is
+    // open: without it the row would stay in the menu until something else happened to publish.
+    const stopPublishing = [useLayouts, useModels, useSettings, useDocuments, useProject].map(
+      store => store.subscribe(publishMenuContext),
     )
     // `useSceneViews` is subscribed apart, through the guard that prices a tick before a context.
     stopPublishing.push(useSceneViews.subscribe(publishIfChecksChanged))

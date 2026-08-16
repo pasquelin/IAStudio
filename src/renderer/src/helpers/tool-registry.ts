@@ -2,7 +2,6 @@ import {
   mdiCloudOutline,
   mdiCreationOutline,
   mdiCubeScan,
-  mdiFileDocumentMultipleOutline,
   mdiFileTreeOutline,
   mdiFolderMultipleOutline,
   mdiFolderOutline,
@@ -17,6 +16,7 @@ import {
 } from '@mdi/js'
 import { useMemo } from 'react'
 import {
+  HOME_SURFACE,
   placementIn,
   serves,
   TOOL_PLACEMENTS,
@@ -27,6 +27,7 @@ import {
 } from '@shared/domain/tool'
 import { modelForFamily, useModelForFamily } from '@/helpers/model-for-family'
 import { NODE_KINDS } from '@/engines/scene/node-kinds'
+import { useProject } from '@/stores/project'
 import { familyOfSurface } from './workspaces'
 
 export type Tool = {
@@ -57,7 +58,6 @@ const ICONS: Record<ToolId, string> = {
   // generator's: a rail where two glyphs mean two things is a rail one reads twice.
   projects: mdiFolderMultipleOutline,
   library: mdiCloudOutline,
-  documents: mdiFileDocumentMultipleOutline,
 }
 
 /**
@@ -106,34 +106,53 @@ export function toolIcon(id: ToolId): string {
 }
 
 /**
- * Whether this surface has a model to generate with — one chosen in the Models panel, or one
- * preferred in the settings, which is what that preference is for.
- *
- * This is the single placement rule the shared registry cannot answer: it depends on state, and
- * `shared/` holds no runtime dependency. Hence a layer here, above the registry rather than in
- * it.
+ * The two answers the shared registry cannot give — they depend on state, and `shared/` holds
+ * no runtime dependency. Hence a layer here, above the registry rather than in it.
  */
-export function hasModelFor(surface: ToolSurface): boolean {
+export function toolStateOf(surface: ToolSurface): ToolState {
   const family = familyOfSurface(surface)
-  return Boolean(family && modelForFamily(family))
+  return {
+    hasModel: Boolean(family && modelForFamily(family)),
+    hasProject: useProject.getState().project !== null,
+  }
 }
 
 /**
- * Whether a section can offer this panel at all. The generator is the only one whose presence
- * depends on state rather than on the registry: generating without a model is impossible, so
- * it is absent rather than disabled.
+ * What a surface can offer beyond what the registry declares — the two rules that depend on
+ * state, and so cannot live in `shared/`.
  */
-function canOffer(id: ToolId, hasModel: boolean): boolean {
-  return id !== 'generator' || hasModel
+export type ToolState = {
+  /** A model to generate with: one chosen in the Models panel, or one preferred in the settings. */
+  hasModel: boolean
+  /** A project folder open, which is what the Explorer reads. */
+  hasProject: boolean
 }
 
 /**
- * Same question, subscribed rather than read once: the rail has to redraw the moment a model is
- * picked, and `hasModelFor` alone would leave the generator's icon out until something else
- * happened to re-render.
+ * Whether a section can offer this panel at all.
+ *
+ * Two panels answer to more than the registry. Generating without a model is impossible, so the
+ * generator is absent rather than disabled. And the Explorer stands on the HOME only while a
+ * project is open — every space keeps it whatever happens, because a space is already a project
+ * being edited, but on the entry point it would say « no project open » beside the very shelf
+ * that opens one.
  */
-export function useHasModel(surface: ToolSurface): boolean {
-  return Boolean(useModelForFamily(familyOfSurface(surface)))
+function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
+  if (id === 'generator') return state.hasModel
+  if (id === 'explorer' && surface === HOME_SURFACE) return state.hasProject
+  return true
+}
+
+/**
+ * The same two answers, subscribed rather than read once: the rail has to redraw the moment a
+ * model is picked or a project opened, and a plain read would leave the icon out until
+ * something else happened to re-render.
+ */
+export function useToolState(surface: ToolSurface): ToolState {
+  const hasModel = Boolean(useModelForFamily(familyOfSurface(surface)))
+  const hasProject = useProject(state => state.project !== null)
+
+  return useMemo(() => ({ hasModel, hasProject }), [hasModel, hasProject])
 }
 
 /**
@@ -161,19 +180,21 @@ export function shownTool(
   zone: ToolZone,
   slot: ToolSlot,
   surface: ToolSurface,
-  hasModel: boolean,
+  state: ToolState,
 ): ToolId | null {
   if (tool === undefined) return null
-  if (tool === null) return firstToolIn(zone, slot, surface, hasModel)
+  if (tool === null) return firstToolIn(zone, slot, surface, state)
 
   // Zone AND half: a stored id that names neither is not this half's business, whether it
   // belongs to the other column, the other half, or to a band no placement ever cuts.
   const placement = placementIn(tool, surface)
   if (placement?.zone === zone && placement.slot === slot) {
-    return canOffer(tool, hasModel) ? tool : 'models'
+    // The half falls back to what the section does put there rather than to the Models panel,
+    // which the home does not have at all — it stood empty on a home with no project open.
+    return canOffer(tool, surface, state) ? tool : firstToolIn(zone, slot, surface, state)
   }
 
-  return firstToolIn(zone, slot, surface, hasModel)
+  return firstToolIn(zone, slot, surface, state)
 }
 
 /** The panel a section puts first in a half — what an unchosen half shows, and the fallback. */
@@ -181,10 +202,10 @@ function firstToolIn(
   zone: ToolZone,
   slot: ToolSlot,
   surface: ToolSurface,
-  hasModel: boolean,
+  state: ToolState,
 ): ToolId | null {
   const first = toolsInZone(zone, surface).find(
-    candidate => candidate.slot === slot && canOffer(candidate.id, hasModel),
+    candidate => candidate.slot === slot && canOffer(candidate.id, surface, state),
   )
   return first ? first.id : null
 }
@@ -194,8 +215,8 @@ function firstToolIn(
  * since it lives in the main process and cannot ask a store.
  */
 export function availableToolIds(surface: ToolSurface): ToolId[] {
-  const hasModel = hasModelFor(surface)
-  return TOOLS.filter(tool => serves(tool, surface) && canOffer(tool.id, hasModel)).map(
+  const state = toolStateOf(surface)
+  return TOOLS.filter(tool => serves(tool, surface) && canOffer(tool.id, surface, state)).map(
     tool => tool.id,
   )
 }
@@ -206,10 +227,10 @@ export function availableToolIds(surface: ToolSurface): ToolId[] {
  * what the section can do rather than what it cannot.
  */
 export function useAvailableTools(zone: ToolZone, surface: ToolSurface): Tool[] {
-  const hasModel = useHasModel(surface)
+  const state = useToolState(surface)
 
   return useMemo(
-    () => toolsInZone(zone, surface).filter(tool => canOffer(tool.id, hasModel)),
-    [zone, surface, hasModel],
+    () => toolsInZone(zone, surface).filter(tool => canOffer(tool.id, surface, state)),
+    [zone, surface, state],
   )
 }

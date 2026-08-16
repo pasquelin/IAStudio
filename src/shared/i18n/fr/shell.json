@@ -32,8 +32,7 @@
     "styles": "Styles",
     "view": "Vue",
     "projects": "Vos projets",
-    "library": "Votre bibliothèque",
-    "documents": "Vos documents"
+    "library": "Votre bibliothèque"
   },
   "view": {
     "empty": "Ouvrez une skybox pour régler la façon dont elle est affichée.",
@@ -228,9 +227,6 @@
     },
     "restoreHint": "Remet toutes les sections cachées sur l’accueil, d’un coup",
     "exploreTabHint": "Ne montre que cette catégorie dans la bande",
-    "documents": {
-      "none": "Ce projet ne contient encore aucun document. Choisissez un outil au centre pour en créer un."
-    },
     "closingActionHint": "Ouvre l’espace de création, celui où l’on génère",
     "spotlightResumeHint": "Rouvre le document tel qu’il était à la fermeture",
     "spotlightConnectHint": "Ouvre les réglages, à la section du compte",

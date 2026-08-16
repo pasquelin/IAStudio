@@ -9,6 +9,8 @@ import {
   serves,
   TOOL_PLACEMENTS,
   type ToolId,
+  type ToolSlot,
+  type ToolSurface,
   type ToolZone,
 } from './tool'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
@@ -134,32 +136,29 @@ describe('the home', () => {
 
     expect(served.map(placement => [placement.id, placement.zone, placement.slot])).toEqual([
       ['projects', 'left', 'primary'],
+      ['explorer', 'left', 'secondary'],
       ['library', 'right', 'primary'],
-      ['documents', 'right', 'primary'],
     ])
   })
 
   /**
    * The rule every space follows: the left is what one opens FROM, the right is what one opens.
    *
-   * The home now uses ONE half per column, and that is the assertion — no `secondary` anywhere on
-   * this surface. It is what a rail with no separator draws honestly, and it is what the panels
-   * that went were taking: a lower half is a rota, and a rota is where the projects stopped being
-   * the thing this screen opens on.
+   * The left column now holds both halves, as every space does — the projects above, and under
+   * them the one that is open, read as a folder. The right keeps one: a rota there is where the
+   * projects stopped being the thing this screen opens on.
    */
   it('reads its two columns the way every space reads its own', () => {
     const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
-    const inZone = (zone: ToolZone): number =>
-      served.filter(placement => placement.zone === zone).length
-
-    expect(inZone('left')).toBe(1)
-    expect(inZone('right')).toBe(2)
-    expect(served.every(placement => placement.slot === 'primary')).toBe(true)
-    expect(
+    const inHalf = (zone: ToolZone, slot: ToolSlot): string[] =>
       served
-        .filter(placement => placement.zone === 'left' && placement.slot === 'primary')
-        .map(placement => placement.id),
-    ).toEqual(['projects'])
+        .filter(placement => placement.zone === zone && placement.slot === slot)
+        .map(placement => placement.id)
+
+    expect(inHalf('left', 'primary')).toEqual(['projects'])
+    expect(inHalf('left', 'secondary')).toEqual(['explorer'])
+    expect(inHalf('right', 'primary')).toEqual(['library'])
+    expect(inHalf('right', 'secondary')).toEqual([])
     expect(served.filter(placement => placement.zone === 'bottom')).toEqual([])
   })
 
@@ -168,22 +167,25 @@ describe('the home', () => {
    * for: a panel of recent projects beside an editor is a panel about somewhere else.
    */
   it('keeps its panels to itself, and takes none of the workspaces', () => {
-    for (const id of ['projects', 'library', 'documents']) {
+    for (const id of ['projects', 'library']) {
       expect(placementsOf(id)).toHaveLength(1)
       for (const workspace of WORKSPACE_IDS) expect(placementIn(id, workspace)).toBeNull()
     }
   })
 
   /**
-   * The Explorer left this surface for the projects on 10 August. Its list did not: the home's
-   * right column draws it under `documents`, which is the name that screen gives it — one
-   * folder read once, rather than a shelf and a tree that had drifted apart.
+   * The Explorer left this surface for the projects on 10 August and came back on the 17th, as
+   * the project folder itself rather than as the flat list of documents that stood in for it.
+   *
+   * The same half in all seven, and that is not a preference: a tool is held to ONE slot across
+   * its placements — a panel that changed rows of the rail depending on where you came from is
+   * a panel this registry cannot express.
    */
-  it('leaves the Explorer to the spaces, where it keeps one placement for all seven', () => {
-    expect(placementIn('explorer', HOME_SURFACE)).toBeNull()
-    expect(placementsOf('explorer')).toHaveLength(1)
-    for (const workspace of WORKSPACE_IDS) {
-      expect(placementIn('explorer', workspace)).toMatchObject({ zone: 'left', slot: 'secondary' })
+  it('keeps the Explorer in one half, here as in every space', () => {
+    expect(placementsOf('explorer')).toHaveLength(2)
+    const everywhere: readonly ToolSurface[] = [...WORKSPACE_IDS, HOME_SURFACE]
+    for (const surface of everywhere) {
+      expect(placementIn('explorer', surface)).toMatchObject({ zone: 'left', slot: 'secondary' })
     }
   })
 

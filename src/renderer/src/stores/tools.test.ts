@@ -212,9 +212,10 @@ describe('the home and the workspaces arrange their zones apart', () => {
       primary: 'generator',
       secondary: null,
     })
-    // The home's left column has one half, so this is the whole of it.
+    // The home's left column has both halves too, the lower one holding the project as a folder.
     expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left).toEqual({
       primary: 'projects',
+      secondary: null,
     })
   })
 
@@ -386,6 +387,25 @@ describe('openFrom', () => {
     expect(open.left).toEqual({ secondary: 'explorer' })
     // Emptied, not dropped: a zone the stored layout named at all keeps its size and its handle.
     expect(open.right).toEqual({})
+  })
+
+  /**
+   * A panel the studio no longer has at all — `documents`, whose flat list the project folder
+   * replaced on 17 August. Dropped where it stood, and the rest of the arrangement restored
+   * whole: nothing here is bumped, nothing is migrated, and no other half pays for it.
+   *
+   * This is what says the version above may stay where it is when a panel goes: a bump would
+   * hand the whole installed base its factory layout back for one icon.
+   */
+  it('drops a panel no version knows any more, and keeps the rest', () => {
+    const open = openFrom({
+      left: { primary: 'models' },
+      right: { primary: 'documents', secondary: 'inspector' },
+    })
+
+    expect(open.left).toEqual({ primary: 'models' })
+    // The half is emptied rather than dropped: it keeps its size and its handle.
+    expect(open.right).toEqual({ secondary: 'inspector' })
   })
 
   // The shelf claims the upper right and the band both; the column was only left on its default.

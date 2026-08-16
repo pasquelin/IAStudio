@@ -34,7 +34,7 @@ import {
   type ToolSlot,
   type ToolZone,
 } from '@shared/domain/tool'
-import { shownTool, useHasModel } from '@/helpers/tool-registry'
+import { shownTool, useToolState } from '@/helpers/tool-registry'
 import { Panel } from '@/design/Panel'
 import { ToolWindow } from './ToolWindow'
 import 'dockview-react/dist/styles/dockview.css'
@@ -157,12 +157,12 @@ function Edge({ zone }: { zone: ToolZone }) {
   const slots = useTools(state => arrangementOf(state, surface).open[zone])
   const size = useTools(state => arrangementOf(state, surface).sizes[zone] ?? DEFAULT_SIZES[zone])
   const split = useTools(state => arrangementOf(state, surface).splits[zone] ?? DEFAULT_SPLIT)
-  const hasModel = useHasModel(surface)
+  const state = useToolState(surface)
 
   // The stored value straight through: `undefined` is a closed half and `null` an unchosen one,
   // and collapsing the two would close every half nobody has clicked.
   const shown = (slot: ToolSlot): ToolId | null =>
-    shownTool(slots?.[slot], zone, slot, surface, hasModel)
+    shownTool(slots?.[slot], zone, slot, surface, state)
 
   const primary = shown('primary')
   const secondary = shown('secondary')

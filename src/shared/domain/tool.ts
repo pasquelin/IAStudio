@@ -54,7 +54,6 @@ export type ToolId =
   | 'view'
   | 'projects'
   | 'library'
-  | 'documents'
 
 /**
  * The panels the upper half of a WORKSPACE's left column is reserved for: choosing a model, then
@@ -173,20 +172,31 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // panel that answered a question instead of offering a way in was a panel between the reader
   // and the projects.
   //
-  // What that leaves is one half per column, and the halves are the same ones every space uses:
-  // the left is what one opens FROM, the right is what one opens. No `secondary` on this surface
-  // at all, which is why `tool.test.ts` scopes the "both halves are used" checks to the
-  // workspaces — a rail with one row and no separator is the honest drawing of one half.
+  // The halves are the same ones every space uses: the left is what one opens FROM, the right is
+  // what one opens.
   //
   // The upper left, which the home alone leaves for something other than generation: it makes no
   // document, so the half goes to what one produces IN — the projects, the first thing anyone
-  // comes to this screen for, and now the only thing this column offers.
+  // comes to this screen for.
   { id: 'projects', zone: 'left', slot: 'primary', surfaces: [HOME_SURFACE] },
 
-  // The right column, in rail order: what the account holds outside this project, then the
-  // documents inside it. Two ways into something, which is what this screen is for.
+  // Under them, the project that is open, read as a folder. The same half it occupies in every
+  // space, which is not a preference: `tool.test.ts` holds a tool to ONE slot across all of its
+  // placements, so a panel that changed rows of the rail depending on where you came from is a
+  // panel this registry cannot express.
+  //
+  // It replaces the flat list of documents this screen carried until 17 August. That list showed
+  // the studio's own documents and nothing else; the folder holds them and everything the user
+  // put beside them, which is what an entry point should offer a way into.
+  //
+  // Offered only while a project IS open — `tool-registry.ts`, which is where a rule that
+  // depends on state lives: the panel would otherwise stand on the home saying that nothing is
+  // open, beside the shelf whose whole purpose is to open one.
+  { id: 'explorer', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
+
+  // The right column: what the account holds outside this project — a way into something, which
+  // is what this screen is for.
   { id: 'library', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
-  { id: 'documents', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
 ]
 
 /**

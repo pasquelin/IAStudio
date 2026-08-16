@@ -32,8 +32,7 @@
     "styles": "Styles",
     "view": "View",
     "projects": "Your projects",
-    "library": "Your library",
-    "documents": "Your documents"
+    "library": "Your library"
   },
   "view": {
     "empty": "Open a skybox to change how it is being displayed.",
@@ -228,9 +227,6 @@
     },
     "restoreHint": "Puts every hidden section back on the home, at once",
     "exploreTabHint": "Shows only this category in the shelf",
-    "documents": {
-      "none": "This project holds no document yet. Pick a tool in the centre to make one."
-    },
     "closingActionHint": "Opens the creation space, the one where generating happens",
     "spotlightResumeHint": "Reopens the document as it was when it was closed",
     "spotlightConnectHint": "Opens the settings, at the account section",

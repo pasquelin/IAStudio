@@ -109,7 +109,9 @@ export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
     bottom: { primary: null },
   },
   home: {
-    left: { primary: null },
+    // Both halves of the left column, as every space has: the projects above, and under them
+    // the one that is open, read as a folder. The right column keeps one.
+    left: { primary: null, secondary: null },
     right: { primary: null },
   },
 }
@@ -421,7 +423,11 @@ export const useTools = create<ToolsState>()(
       // below. Everyone who ever launched 12 carries its `left: { secondary: null }` — the upper
       // half unnamed, so closed, and the projects never drawn at all. Not the minority who had
       // clicked: the whole installed base, on the panel the surface exists to open on.
-      version: 13,
+      // 14 gives the home its lower left, where the Explorer now reads the project that is
+      // open. Same withholding as every bump above it if left alone: a stored arrangement
+      // naming only the upper half is a half nobody could have closed, and the panel the plan
+      // put there would be invisible to the whole installed base.
+      version: 14,
       migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.

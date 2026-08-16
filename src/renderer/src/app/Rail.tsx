@@ -14,7 +14,7 @@ import {
   shownTool,
   toolTitleKey,
   useAvailableTools,
-  useHasModel,
+  useToolState,
   type Tool,
 } from '@/helpers/tool-registry'
 
@@ -122,7 +122,7 @@ function RailGroup({ zone }: { zone: ToolZone }) {
   const focusedZone = useTools(state => state.focusedZone)
   const surface = useToolSurface()
   const open = useTools(state => arrangementOf(state, surface).open)
-  const hasModel = useHasModel(surface)
+  const state = useToolState(surface)
   const tools = useAvailableTools(zone, surface)
   // Actions are stable for the store's lifetime: subscribing to them would only add selectors
   // re-run on every write.
@@ -138,7 +138,7 @@ function RailGroup({ zone }: { zone: ToolZone }) {
       {halvesOf(tools).map(([slot, inSlot], index) => {
         // What the half draws, not what it stores: a panel standing in for one this section
         // puts elsewhere is up, and its icon has to read — and close — as up.
-        const up = shownTool(open[zone]?.[slot], zone, slot, surface, hasModel)
+        const up = shownTool(open[zone]?.[slot], zone, slot, surface, state)
 
         return (
           <Fragment key={`${zone}:${slot}`}>
