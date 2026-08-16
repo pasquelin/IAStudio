@@ -936,27 +936,6 @@ export class SceneRenderer {
     this.viewport.configureOutput(output)
   }
 
-  /**
-   * Points the free camera at what the scene SHOWS — what a model dropped straight onto a
-   * montage needs, having no camera of its own and no one to aim one.
-   *
-   * Only the nodes that draw something are counted. A lamp stands where it lights FROM, ten
-   * units up and to the side of what it lights: counted in the bounding box, a new scene's
-   * three default lights make the box ten times the subject, and the subject lands small and
-   * off in a corner. That is exactly what an automatic framing must not do.
-   *
-   * The camera is moved directly rather than through the orbit: a viewport drawing into a video
-   * frame has no one dragging it, and the orbit's target would only be read on the next drag.
-   *
-   * It asks for no render of its own, unlike `frameSelection`: its caller draws the very next
-   * line, and a frame loop woken per aim would run the viewport's own pass forever behind a
-   * canvas nobody is looking at.
-   *
-   * Answers whether it actually framed SOMETHING — false while every model is still a node with
-   * no file behind it, which encloses no box at all. That is what lets a caller aim once and
-   * stop: re-aiming per frame makes the camera chase a walking character's own bounding box,
-   * and the picture breathes with every step.
-   */
   /** Where the free camera stands and what it looks at, as plain numbers anything may hold. */
   viewPlacement(): CameraPlacement {
     const camera = this.viewport.perspective
@@ -970,17 +949,31 @@ export class SceneRenderer {
   }
 
   /**
-   * Points the free camera exactly where another viewport left it — how a montage draws a scene
-   * that has no camera of its own: through the view its author is actually working in.
+   * Points the free camera at what the scene SHOWS, from a direction of the caller's choosing.
+   *
+   * Only the nodes that draw something are counted. A lamp stands where it lights FROM, ten
+   * units up and to the side of what it lights: counted in the bounding box, a new scene's
+   * three default lights make the box ten times the subject, and the subject lands small and
+   * off in a corner. That is exactly what an automatic framing must not do.
+   *
+   * `from` is a direction, never a position — the studio's three-quarter view when nothing is
+   * asked for. It is what a montage hands the ANGLE of the 3D tab's own camera through: a
+   * working view sits well back, with room around the subject to see the grid, and taken whole
+   * it would hand the montage a character a few pixels tall. The angle is a decision somebody
+   * made; the distance is this function's, always.
+   *
+   * The camera is moved directly rather than through the orbit: a viewport drawing into a video
+   * frame has no one dragging it, and the orbit's target would only be read on the next drag.
+   * It asks for no render of its own, unlike `frameSelection`: its caller draws the very next
+   * line, and a frame loop woken per aim would run the viewport's pass forever behind a canvas
+   * nobody is looking at.
+   *
+   * Answers whether it actually framed SOMETHING — false while every model is still a node with
+   * no file behind it, which encloses no box at all. That is what lets a caller aim once and
+   * stop: re-aiming per frame makes the camera chase a walking character's own bounding box,
+   * and the picture breathes with every step.
    */
-  applyView({ position, target }: CameraPlacement): void {
-    const camera = this.viewport.perspective
-    camera.position.set(position.x, position.y, position.z)
-    camera.lookAt(target.x, target.y, target.z)
-    this.viewport.orbit?.target.set(target.x, target.y, target.z)
-  }
-
-  frameContents(): boolean {
+  frameContents(from?: CameraPlacement): boolean {
     const objects: Object3D[] = []
     for (const [id, object] of this.objects) {
       if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) objects.push(object)
@@ -993,7 +986,15 @@ export class SceneRenderer {
     // the placements of empty groups, which is a framing of nothing dressed up as one.
     if (bounds.isEmpty()) return false
 
-    const { target, position } = framingPlacement(objects, this.view.fieldOfView)
+    const direction = from
+      ? new ThreeVector3(
+          from.position.x - from.target.x,
+          from.position.y - from.target.y,
+          from.position.z - from.target.z,
+        )
+      : undefined
+
+    const { target, position } = framingPlacement(objects, this.view.fieldOfView, direction)
     const camera = this.viewport.perspective
     camera.position.copy(position)
     camera.lookAt(target)

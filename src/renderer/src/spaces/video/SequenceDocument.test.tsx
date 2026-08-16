@@ -173,6 +173,33 @@ describe('SequenceDocument', () => {
     expect(sourcePlayhead()).toBe(400_000)
   })
 
+  /**
+   * Following is for SCRUBBING. While the programme plays, the head moves sixty times a second,
+   * and following it would animate both pictures at once — two decodes, and for a scene clip
+   * two whole 3D renders per frame, to show twice what one monitor already shows.
+   */
+  it('stops following while the programme plays, so one picture moves at a time', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+    seekMontage(2_400_000)
+    act(() => usePlayback.getState().setRunning(programOwner('doc-1'), true))
+    seekMontage(2_800_000)
+
+    expect(sourcePlayhead()).toBe(400_000)
+  })
+
+  it('catches up with the head as soon as playback stops', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+    act(() => usePlayback.getState().setRunning(programOwner('doc-1'), true))
+    seekMontage(2_800_000)
+    act(() => usePlayback.getState().setRunning(programOwner('doc-1'), false))
+
+    expect(sourcePlayhead()).toBe(800_000)
+  })
+
   // The head spends most of its time outside any one clip, and a take has no frame to show for
   // a moment it does not span.
   it('holds at the clip ends while the head is outside it', () => {
