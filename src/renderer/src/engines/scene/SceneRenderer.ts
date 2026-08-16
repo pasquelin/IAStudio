@@ -42,6 +42,7 @@ import {
   type ModelNode,
   type NodeMove,
   type SceneNode,
+  type SceneNodeType,
   type SceneState,
   type SpriteNode,
   type TextNode,
@@ -222,6 +223,18 @@ function isBone(object: Object3D): boolean {
 
 /** Where a normalised view stands when the camera already sits on its target and has no distance. */
 const DEFAULT_VIEW_DISTANCE = 8
+
+/**
+ * The node types an automatic framing counts — see `frameContents`. Lights and cameras are
+ * placed away from what they light or watch, and a group is only ever as big as its children,
+ * which are counted on their own.
+ */
+const FRAMED_NODES: ReadonlySet<SceneNodeType> = new Set<SceneNodeType>([
+  'mesh',
+  'model',
+  'text',
+  'sprite',
+])
 
 /**
  * How far a side view stands off its target. Distance changes nothing an orthographic camera
@@ -912,8 +925,13 @@ export class SceneRenderer {
   }
 
   /**
-   * Points the free camera at everything the scene holds — what a model dropped straight onto a
+   * Points the free camera at what the scene SHOWS — what a model dropped straight onto a
    * montage needs, having no camera of its own and no one to aim one.
+   *
+   * Only the nodes that draw something are counted. A lamp stands where it lights FROM, ten
+   * units up and to the side of what it lights: counted in the bounding box, a new scene's
+   * three default lights make the box ten times the subject, and the subject lands small and
+   * off in a corner. That is exactly what an automatic framing must not do.
    *
    * The camera is moved directly rather than through the orbit: a viewport drawing into a video
    * frame has no one dragging it, and the orbit's target would only be read on the next drag.
@@ -923,7 +941,10 @@ export class SceneRenderer {
    * canvas nobody is looking at.
    */
   frameContents(): void {
-    const objects = [...this.objects.values()]
+    const objects: Object3D[] = []
+    for (const [id, object] of this.objects) {
+      if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) objects.push(object)
+    }
     if (objects.length === 0) return
 
     const { target, position } = framingPlacement(objects, this.view.fieldOfView)
