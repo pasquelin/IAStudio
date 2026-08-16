@@ -49,8 +49,14 @@ export type DocumentFiles = {
   rename: (id: string, kind: DocumentKind, title: string) => Promise<DocumentDescriptor>
 }
 
-/** What `rename` throws when the folder already holds the name — the renderer says it in words. */
-export const DUPLICATE_NAME = 'duplicate-name'
+/**
+ * What `rename` throws when the folder already holds the name.
+ *
+ * Not exported, and nobody imports it across the bridge: what the renderer actually reads is
+ * `message.includes('duplicate')` against `DOCUMENT_NAME_FAILURES` (`stores/documents.ts`), so
+ * the contract is that this message CONTAINS the shared code, not that it equals this value.
+ */
+const DUPLICATE_NAME = 'duplicate-name'
 
 const STAGING_SUFFIX = '.tmp'
 
