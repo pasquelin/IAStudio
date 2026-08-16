@@ -282,3 +282,30 @@ export function nodesOfType(nodes: readonly SceneNode[], type: SceneNodeType): S
 export function firstCameraId(nodes: readonly SceneNode[]): string | null {
   return nodesOfType(nodes, 'camera')[0]?.id ?? null
 }
+
+/**
+ * The same scene with no model playing by itself — what a montage draws.
+ *
+ * A montage owns time: what a given frame shows must follow the playhead and nothing else. A
+ * model left playing in its own 3D tab keeps a mixer running against the WALL CLOCK, so the
+ * pose depended on how long that monitor had been open — two monitors showed two different
+ * frames of the same instant, and an export matched neither. Stopped, `SceneAnimations.seek`
+ * places every clip from the playhead alone, which is what makes a scrub repeatable.
+ *
+ * The very same object back when nothing was playing: whoever draws it decides it has work to
+ * do by comparing references.
+ */
+export function sceneWithoutSelfPlay(state: SceneState): SceneState {
+  let changed = false
+  const nodes = state.nodes.map(node => {
+    if (node.type !== 'model' || !node.model.animation?.playing) return node
+
+    changed = true
+    return {
+      ...node,
+      model: { ...node.model, animation: { ...node.model.animation, playing: false } },
+    }
+  })
+
+  return changed ? { ...state, nodes } : state
+}

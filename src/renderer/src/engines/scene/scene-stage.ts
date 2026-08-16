@@ -2,7 +2,7 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { Us } from '@shared/domain/time'
 import { reportFailure } from '@/services/diagnostics'
 import { SceneRenderer } from './SceneRenderer'
-import { firstCameraId, type SceneState } from './scene-state'
+import { firstCameraId, sceneWithoutSelfPlay, type SceneState } from './scene-state'
 
 /**
  * How far off screen the host sits. Off the page rather than hidden: a host with
@@ -111,7 +111,7 @@ export function createSceneStage({
       if (!active) return
 
       shown = state
-      active.apply(state)
+      active.apply(sceneWithoutSelfPlay(state))
     },
 
     draw: time => {
