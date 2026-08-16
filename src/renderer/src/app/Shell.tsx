@@ -54,7 +54,6 @@ export function Shell() {
 
   // The window is the one that holds documents, so it is the one that must not go quietly.
   useEffect(() => guardUnsavedWork(window), [])
-  // And the one that holds them is the one that writes them back.
   useAutosave()
 
   const homeEnabled = useSettings(state => state.settings.home.enabled)

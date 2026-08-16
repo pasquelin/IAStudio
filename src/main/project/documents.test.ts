@@ -324,25 +324,11 @@ describe('createDocumentFiles', () => {
     expect(await readdir(join(root, 'documents'))).toEqual(['Brique 1 2.scene'])
   })
 
-  /**
-   * The gesture the whole change exists for. A document is renamed by being called something
-   * else, and its file follows — the id does not move, so the tab holding it does not either.
-   */
-  /**
-   * The defect these two exist for: a document edited in another application was written over by
-   * the next ⌘S without a word, and the outside work was gone with no way back.
-   *
-   * `utimes` rather than a second write and a wait: what the studio compares is the modification
-   * time, and setting it outright is both exact and instant.
-   */
   describe('a file changed outside the studio', () => {
     const LATER = new Date('2026-08-07T11:00:00.000Z')
 
-    /**
-     * Still the same document — same id, same kind — with other content. Anything else would be
-     * a different test: a file replaced by something the studio cannot read is no longer this
-     * document at all, and `locate` says so before a write is even considered.
-     */
+    // Still the same document — same id, same kind — with other content. A file replaced by
+    // something unreadable is no longer this document at all, and `locate` says so first.
     const OUTSIDE = `${JSON.stringify({
       version: DOCUMENT_VERSION,
       kind: 'scene',
@@ -351,6 +337,8 @@ describe('createDocumentFiles', () => {
       id: 'doc-1',
     })}\n{"nodes":["theirs"]}`
 
+    // `utimes` rather than a second write and a wait: the modification time is what the studio
+    // compares, and setting it outright is both exact and instant.
     const changeBehindTheStudio = async (file: string): Promise<void> => {
       await writeFile(file, OUTSIDE, 'utf8')
       await utimes(file, LATER, LATER)
@@ -383,6 +371,10 @@ describe('createDocumentFiles', () => {
     })
   })
 
+  /**
+   * The gesture the whole change exists for. A document is renamed by being called something
+   * else, and its file follows — the id does not move, so the tab holding it does not either.
+   */
   describe('rename', () => {
     it('moves the file and rewrites the title, keeping the id', async () => {
       await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{"nodes":[]}' })

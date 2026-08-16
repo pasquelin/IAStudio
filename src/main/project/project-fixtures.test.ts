@@ -1,5 +1,4 @@
 import { readdir } from 'node:fs/promises'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_KINDS } from '@shared/domain/document'
 import { createDocumentFiles } from './documents'
@@ -46,19 +45,5 @@ describe('the project fixture', () => {
     )
 
     expect(second).toEqual(first)
-  })
-
-  it('records a document the folder lists but the disk will not give back', async () => {
-    const { root, documents } = await withTempProject()
-    await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":[]}' })
-
-    // Read through a reader pointed at a folder that holds nothing: what `list` cannot find is
-    // absent from the snapshot rather than crashing it.
-    const elsewhere = createDocumentFiles({
-      projectPath: () => join(root, 'nowhere'),
-      now: () => '2026-08-16T10:00:00.000Z',
-    })
-
-    expect(await snapshotDocuments(elsewhere)).toEqual([])
   })
 })

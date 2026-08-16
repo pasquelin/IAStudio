@@ -59,9 +59,8 @@ export type Settings = {
     /**
      * Whether an open document is written back on its own while it is being worked on.
      *
-     * Image documents are left out of it whatever this says: their layers are read off the GPU,
-     * and a save that stutters the canvas every half-minute would cost more than it saves. That
-     * exclusion is not a setting — see `AUTOSAVE_EXCLUDED_KINDS`.
+     * A kind whose capture is too costly to run on a timer opts out whatever this says, and says
+     * so itself — `autosaves` in the renderer's document registry.
      */
     autosave: boolean
   }

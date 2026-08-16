@@ -2,13 +2,7 @@ import { useEffect } from 'react'
 import { useSettings } from '@/stores/settings'
 import { autosaveOpenDocuments } from './document-io'
 
-/**
- * How long between two passes.
- *
- * A round number the help text can name, and long enough that a save is never what the user is
- * waiting on: capturing a scene costs milliseconds, and thirty seconds of work is the most this
- * can cost anyone.
- */
+/** The gap between two passes — and the most work a crash can cost, which the help text names. */
 export const AUTOSAVE_INTERVAL_MS = 30_000
 
 /**
@@ -16,11 +10,11 @@ export const AUTOSAVE_INTERVAL_MS = 30_000
  *
  * On a timer rather than on each edit: what a document holds changes on every stroke of a
  * pointer, and a save armed by each of them would either fire constantly or need a notion of
- * "done editing" that no editor here has. A pass that finds nothing modified writes nothing, so
- * the idle cost is one predicate per open tab.
+ * "done editing" that no editor here has.
  *
- * Mounted by the window that holds documents, once. Turning the setting off clears the timer
- * rather than leaving one that does nothing — a timer nobody can see is a thing to be sure of.
+ * Rearmed AFTER each pass rather than on an interval, which is the whole reason this is not
+ * three lines: a pass slower than the gap — a large scene, a montage — would otherwise start
+ * again on top of itself, capturing the same editors twice at once.
  */
 export function useAutosave(): void {
   const enabled = useSettings(state => state.settings.general.autosave)
@@ -28,7 +22,21 @@ export function useAutosave(): void {
   useEffect(() => {
     if (!enabled) return
 
-    const timer = setInterval(() => void autosaveOpenDocuments(), AUTOSAVE_INTERVAL_MS)
-    return () => clearInterval(timer)
+    let timer: ReturnType<typeof setTimeout>
+    let stopped = false
+
+    const arm = (): void => {
+      timer = setTimeout(() => {
+        void autosaveOpenDocuments().finally(() => {
+          if (!stopped) arm()
+        })
+      }, AUTOSAVE_INTERVAL_MS)
+    }
+
+    arm()
+    return () => {
+      stopped = true
+      clearTimeout(timer)
+    }
   }, [enabled])
 }

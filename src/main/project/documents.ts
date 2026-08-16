@@ -38,10 +38,7 @@ export type DocumentFiles = {
   list: () => Promise<DocumentDescriptor[]>
   /** `null` when the document has never been saved — an open tab that holds nothing yet. */
   read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
-  /**
-   * Answers `stale` and writes NOTHING when the file changed since the studio last read or wrote
-   * it. `force` is the caller saying the user was asked and said yes.
-   */
+  /** `force` is the caller saying the user was asked about an outside change and said yes. */
   write: (
     id: string,
     kind: DocumentKind,
@@ -172,34 +169,37 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
   /**
    * The modification time each document's file carried when the studio last read or wrote it.
    *
-   * This is what makes an outside edit visible. A file whose time no longer matches was written
-   * by something else — another application, a sync service bringing a different copy back — and
-   * saving over it destroys that work silently, which is what the studio did until now.
-   *
    * Held here rather than stamped in the file, and it cannot be otherwise: the write that
-   * finishes a file is what sets its time, so no value written INSIDE it can match what the
+   * finishes a file is what sets its time, so no value written inside it can match what the
    * filesystem reports afterwards.
    *
-   * Empty at startup, and that is correct rather than a gap: a document has to be READ before it
-   * can be edited, and the read is what fills this in.
+   * Keyed by PROJECT as well as by document. This reader is built once for the life of the
+   * process and follows whichever project is open, and a document written before version 3 is
+   * called after its file — so two projects each holding an old `Level.scene` share the id
+   * `Level`, and one would answer for the other's clock.
    */
   const seen = new Map<string, number>()
 
   const keyOf = (id: string, kind: DocumentKind): string => `${kind}:${id}`
 
+  const stampKey = (id: string, kind: DocumentKind): string => `${projectPath()}|${keyOf(id, kind)}`
+
   const folderPath = (): string => join(projectPath(), DOCUMENTS_FOLDER)
 
   /**
-   * When the file was last written, or `null` when it is not there.
+   * The file that actually holds a document's bytes.
    *
    * A folder document answers for its MANIFEST rather than the folder: a directory's own time
    * moves when any entry inside it does, so `.img` would read as changed every time a layer was
    * rewritten by the studio itself.
    */
+  const bodyFileOf = (file: string, kind: DocumentKind): string =>
+    FOLDER_KINDS.has(kind) ? join(file, DOCUMENT_MANIFEST) : file
+
+  /** When the file was last written, or `null` when it is not there. */
   const timeOf = async (file: string, kind: DocumentKind): Promise<number | null> => {
     try {
-      const target = FOLDER_KINDS.has(kind) ? join(file, DOCUMENT_MANIFEST) : file
-      return (await stat(target)).mtimeMs
+      return (await stat(bodyFileOf(file, kind))).mtimeMs
     } catch (error) {
       if (isMissing(error)) return null
       throw error
@@ -208,7 +208,7 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
 
   const remember = async (id: string, kind: DocumentKind, file: string): Promise<void> => {
     const time = await timeOf(file, kind)
-    if (time !== null) seen.set(keyOf(id, kind), time)
+    if (time !== null) seen.set(stampKey(id, kind), time)
   }
 
   /** Where a document of this id WOULD sit had it never been named — and where a first write goes. */
@@ -527,18 +527,10 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
         const onDisk = await exists(located)
         const file = onDisk ? located : freshFile(kind, draft.title)
 
-        /**
-         * Whether someone else wrote this file since the studio last touched it.
-         *
-         * Three ways to be sure it is fine, and each is checked rather than assumed: the caller
-         * insisted, the file is not there at all (a first save), or the studio never read it —
-         * a document it has no memory of is one it cannot claim to have written.
-         */
-        if (onDisk && !force) {
-          const known = seen.get(keyOf(id, kind))
-          const current = await timeOf(file, kind)
-          if (known !== undefined && current !== null && current !== known) return 'stale'
-        }
+        // A document the studio has no clock for is one it cannot claim to have written, so it
+        // is not defended — and nothing is stat'd for it either.
+        const known = onDisk && !force ? seen.get(stampKey(id, kind)) : undefined
+        if (known !== undefined && (await timeOf(file, kind)) !== known) return 'stale'
 
         // Stamped here rather than taken from the draft: the renderer owns none of these, and
         // an id from its side would be its word against the folder's.
@@ -627,7 +619,7 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
         const file = await locate(id, kind)
         await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
         index.delete(keyOf(id, kind))
-        seen.delete(keyOf(id, kind))
+        seen.delete(stampKey(id, kind))
       })
     },
   }

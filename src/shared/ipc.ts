@@ -813,9 +813,8 @@ export type StudioBridge = {
     /**
      * The envelope — version, kind, timestamp — is stamped by the main process, not here.
      *
-     * Answers `stale` and writes NOTHING when the file changed since the studio last read or
-     * wrote it: something else owns those bytes, and replacing them is the one save that loses
-     * work the user never saw. Ask with `confirmOverwrite`, then write again with `force`.
+     * Answers `stale` and writes NOTHING when the file changed underneath — see `DocumentWrite`.
+     * Ask with `confirmOverwrite`, then write again with `force`.
      */
     write: (
       id: string,

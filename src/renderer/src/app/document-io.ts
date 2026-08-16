@@ -1,6 +1,5 @@
 import type { Asset } from '@shared/domain/asset'
 import {
-  AUTOSAVE_EXCLUDED_KINDS,
   isPartName,
   type CloseChoice,
   type DocumentDescriptor,
@@ -98,6 +97,13 @@ type DocumentIo = {
   rehydrate?: (documentId: string, parts: readonly DocumentPart[]) => void
   /** What an unsaved document holds until something is done to it. */
   createDefault: (documentId: string) => void
+  /**
+   * Whether a pass on a timer may write this kind. Absent means yes.
+   *
+   * A property of the kind rather than a list beside the table: what makes autosave unsafe is
+   * what `capture` costs, and that is known here and nowhere else.
+   */
+  autosaves?: false
   /**
    * Bakes the document into the asset it was opened from — ⌘S — or into a new one beside it —
    * ⌘⇧S. Which of the two is what `target` says.
@@ -302,6 +308,12 @@ function pixelsFromPart(name: string, data: string): LayerPixels | null {
  * holding the document — see `canvasHost`.
  */
 const IMAGE_IO: DocumentIo = {
+  /**
+   * Capturing means reading every layer's texture back off the graphics card, and that cost is
+   * unmeasured. Paying it on a timer while someone is drawing would trade a stutter every half
+   * minute for work ⌘S already keeps. The exclusion lifts the day it is measured, not before.
+   */
+  autosaves: false,
   capture: async documentId => {
     const canvases = useCanvases.getState()
     // Read before the first await, which is the whole reason `capture` may be asynchronous: an
@@ -474,7 +486,7 @@ function savableDocument(
  * able to tell that from a save that happened. It is what stops "Save" on a document whose file
  * would not read from closing the tab on work that never reached the disk.
  */
-export async function saveDocument(documentId: string, ask = true): Promise<boolean> {
+export async function saveDocument(documentId: string, byHand = true): Promise<boolean> {
   const savable = savableDocument(documentId)
   if (!savable) return false
   const { bridge, document, io } = savable
@@ -488,20 +500,26 @@ export async function saveDocument(documentId: string, ask = true): Promise<bool
     ...(document.sourceAssetId ? { sourceAssetId: document.sourceAssetId } : {}),
   }
 
-  /**
-   * The file may have been written by something else while the tab held it.
-   *
-   * Nothing is captured a second time on the way through: the draft above is the state the user
-   * pressed ⌘S on, and re-capturing after a dialog would save whatever an autosave or a stray
-   * keystroke left behind instead.
-   */
+  // Nothing is captured a second time on the way through: the draft above is the state the user
+  // pressed ⌘S on, and re-capturing after a dialog would save whatever was typed during it.
   if ((await bridge.documents.write(document.id, document.kind, payload)) === 'stale') {
-    // An autosave never asks. A dialog nobody summoned, in front of work someone is in the
-    // middle of, is worse than the save it was trying to make — ⌘S is still there to settle it.
-    if (!ask || !(await bridge.documents.confirmOverwrite(document.title))) return false
+    if (!byHand || !(await bridge.documents.confirmOverwrite(document.title))) return false
     await bridge.documents.write(document.id, document.kind, payload, true)
   }
   commit()
+
+  /**
+   * A pass on a timer writes the DOCUMENT and stops there.
+   *
+   * Baking the asset again reads an editor's pixels back off the GPU, and `relist` walks the
+   * whole folder reading a head per entry — both on the UI thread, both once per open document,
+   * every thirty seconds, for a picture only the shelf shows.
+   *
+   * Nothing is owed to `assetBehind` either, and that is worth saying because it looks like an
+   * omission: the one kind carrying a `writeAsset` is the image, and the image is the one kind
+   * that opts out of autosave. The day a second kind carries one, this is the line to revisit.
+   */
+  if (!byHand) return true
 
   await rewriteSourceAsset(document, io, wasEdited)
   // The folder now holds a file it did not: a document saved for the first time has to appear
@@ -771,13 +789,18 @@ export function unsavedDocumentIds(): string[] {
  * tab keeps its bullet, which is what says the work is not on disk.
  */
 export async function autosaveOpenDocuments(): Promise<void> {
-  const open = useDocuments.getState().documents
+  let wrote = false
 
   for (const documentId of unsavedDocumentIds()) {
-    const kind = open[documentId]?.kind
-    if (!kind || AUTOSAVE_EXCLUDED_KINDS.has(kind)) continue
-    await saveDocument(documentId, false)
+    if (ioOf(documentId)?.autosaves === false) continue
+    wrote = (await saveDocument(documentId, false)) || wrote
   }
+
+  // Once for the pass, not once per document: `relist` walks the folder reading a head per
+  // entry, and `'own-write'` deliberately opts out of sharing a listing already in flight. Only
+  // a document saved for the first time puts a file in the folder, but that is enough to owe
+  // the Explorer one listing.
+  if (wrote) void useDocuments.getState().relist('own-write')
 }
 
 /**

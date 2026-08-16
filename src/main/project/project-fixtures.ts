@@ -79,21 +79,19 @@ export type DocumentSnapshot = {
  * not a promise.
  */
 export async function snapshotDocuments(documents: DocumentFiles): Promise<DocumentSnapshot[]> {
-  const listed = await documents.list()
+  const read: DocumentSnapshot[] = []
 
-  const read = await Promise.all(
-    listed.map(async descriptor => {
-      const file = await documents.read(descriptor.id, descriptor.kind)
-      return {
-        fileName: descriptor.fileName,
-        kind: descriptor.kind,
-        title: descriptor.title,
-        // A document the folder lists but the disk will not give back is a difference worth
-        // seeing, so it is recorded rather than skipped.
-        content: file?.content ?? '',
-      }
-    }),
-  )
+  // In series, as `list` itself reads: a fixture project can hold thousands of documents, and
+  // opening them all at once is what exhausts the file descriptors.
+  for (const descriptor of await documents.list()) {
+    const file = await documents.read(descriptor.id, descriptor.kind)
+    read.push({
+      fileName: descriptor.fileName,
+      kind: descriptor.kind,
+      title: descriptor.title,
+      content: file?.content ?? '',
+    })
+  }
 
   return read.sort((one, other) => one.fileName.localeCompare(other.fileName, 'en'))
 }
