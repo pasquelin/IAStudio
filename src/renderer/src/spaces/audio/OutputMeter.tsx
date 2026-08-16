@@ -10,10 +10,10 @@ import {
 import { paintMeter, readMeterPalette } from '@/engines/audio/meter-painter'
 import { paintOn } from '@/engines/core/canvas-2d'
 import type { AudioTap } from '@/engines/timeline/sound-schedule'
+import { useFrameLoop } from '@/hooks/useFrameLoop'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 
 export type OutputMeterProps = {
-  /** Where to listen. Answers null until something has opened an output, which is most of the time. */
   tap: () => AudioTap | null
   playing: boolean
 }
@@ -21,12 +21,9 @@ export type OutputMeterProps = {
 /**
  * What is going out of the window, right now.
  *
- * A canvas of its own rather than a corner of the monitor's: this repaints on every frame while a
- * montage plays, and redrawing the hundreds of columns of a programme wave sixty times a second
- * to animate one bar is the frame budget spent on nothing.
- *
- * The loop runs while the montage plays and not a frame longer. A meter left animating over a
- * stopped montage is a wake-up sixty times a second to draw the same picture.
+ * A canvas of its own rather than a corner of the monitor's: what it draws changes on every frame
+ * where the wave beside it only moves its playhead, and one surface would tie the two together —
+ * a resize of the wave repainting the bar, a frame of the bar re-clipping the wave.
  */
 export function OutputMeter({ tap, playing }: OutputMeterProps) {
   const { t } = useTranslation()
@@ -42,29 +39,28 @@ export function OutputMeter({ tap, playing }: OutputMeterProps) {
   }, [])
 
   useEffect(() => {
-    if (!playing) {
-      // The bar falls with the sound; the lamp does not — `restedFrom` carries why.
-      meter.current = restedFrom(meter.current)
-      paint()
-      return
-    }
+    // Pressing play rearms the lamp. A witness that outlived the pass it belonged to would keep
+    // saying something about a montage nobody is listening to any more — and stopping drops the
+    // bar with the sound while the lamp stays, which is what `restedFrom` carries.
+    meter.current = playing ? RESTING_METER : restedFrom(meter.current)
+    paint()
+  }, [playing, paint])
 
-    // Pressing play rearms the lamp too. A witness that outlived the pass it belonged to would
-    // keep saying something about a montage nobody is listening to any more.
-    meter.current = RESTING_METER
-
-    let frame = requestAnimationFrame(function step(stamp: number) {
-      const listening = tap()
-      // Seconds, as every other clock in the sound half is: `meterFrom` falls in decibels per
-      // second, and handing it milliseconds would empty the bar a thousand times too fast.
-      const now = stamp / 1000
-      meter.current = meterFrom(listening ? peakOf(listening.levels()) : 0, meter.current, now)
-      paint()
-      frame = requestAnimationFrame(step)
-    })
-
-    return () => cancelAnimationFrame(frame)
-  }, [playing, tap, paint])
+  useFrameLoop(
+    playing,
+    useCallback(
+      (seconds: number) => {
+        const listening = tap()
+        meter.current = meterFrom(
+          listening ? peakOf(listening.levels()) : 0,
+          meter.current,
+          seconds,
+        )
+        paint()
+      },
+      [tap, paint],
+    ),
+  )
 
   useRepaintOnResize(canvasRef, paint)
 

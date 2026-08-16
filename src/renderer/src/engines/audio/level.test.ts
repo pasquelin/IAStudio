@@ -7,7 +7,6 @@ import {
   HOT_AMPLITUDE,
   HOT_DB,
   levelAtFraction,
-  levelOf,
   meterFraction,
   meterFrom,
   peakOf,
@@ -33,17 +32,9 @@ describe('the level scale', () => {
     expect(SCALE_DB.every(db => db < CLIP_DB)).toBe(true)
   })
 
-  it('reads a trough exactly as it reads a crest', () => {
-    expect(levelOf(-1)).toBe('clip')
-    expect(levelOf(-0.7)).toBe('hot')
-    expect(levelOf(-0.1)).toBe('safe')
-  })
-
   it('turns hot at its threshold, not a hair before', () => {
-    expect(levelOf(fromDb(HOT_DB))).toBe('hot')
-    expect(levelOf(fromDb(HOT_DB - 0.1))).toBe('safe')
-    // Past full scale: a sum of clips reaches beyond what a single sample ever holds.
-    expect(levelOf(1.4)).toBe('clip')
+    expect(levelAtFraction(meterFraction(fromDb(HOT_DB)))).toBe('hot')
+    expect(levelAtFraction(meterFraction(fromDb(HOT_DB - 0.1)))).toBe('safe')
   })
 })
 

@@ -534,11 +534,10 @@
      measures its prose the same way. Held out of the density block on purpose: a tooltip is
      read, not operated. */
   --sc-tooltip: 42ch;
-  /* The output meter standing beside the programme monitor, and the spectrum band under it. Two
-     gauges rather than two constants because both are painted on a canvas, which is given a
-     NUMBER: `useGauge` is the one door for that, and a constant would only be right at one
-     density. Narrow on purpose — the meter is read at a glance, and every pixel it takes is one
-     the waveform beside it loses. */
+  /* The output meter standing beside the programme monitor, and the spectrum band under it. Both
+     are canvases sized in CSS and measured back by `paintOn`, so neither needs `useGauge` — but
+     both need to follow density, which a constant in a component could not. Narrow on purpose:
+     they are read at a glance, and every pixel they take is one the montage loses. */
   --sc-meter: 14px;
   --sc-spectrum: 72px;
   --sc-shadow-furniture: 0 1px 2px rgb(0 0 0 / 0.25);

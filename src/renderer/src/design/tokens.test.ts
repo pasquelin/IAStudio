@@ -432,21 +432,26 @@ describe('the contrast of the inks', () => {
   })
 
   /**
-   * The calm end of the scale a meter paints a level on, held on the chassis its canvases stand
-   * on. The other two bands are `warning` and `danger`, already measured as inks above; this one
-   * has no sweep to fall under, being read by `engines/core/palette.ts` and named by no class.
+   * The calm end of the scale a meter paints a level on, held on BOTH grounds its canvases stand
+   * on: the chassis under the programme wave, and the toolbar's own fill under the spectrum. The
+   * other two bands are `warning` and `danger`, already measured as inks above; this one has no
+   * sweep to fall under, being read by `engines/core/palette.ts` and named by no class.
    *
    * At the 3 of WCAG 1.4.11 rather than 4.5: a waveform and a meter bar are shapes that inform,
    * never words. Held apart from `create` too — one green meaning both "this is quiet" and "this
    * creates" is a green that cannot be moved for either.
    */
-  it('carries a level a meter can be read at on the chassis, in both themes', () => {
+  it('carries a level a meter can be read at on both its grounds, in both themes', () => {
     for (const theme of THEMES) {
       const tokens = palette(theme.from)
       const green = tokens['level-safe'] ?? ''
 
       expect(green).toMatch(/^#[0-9a-f]{6}$/)
-      expect(contrastRatio(green, tokens.chassis ?? '')).toBeGreaterThanOrEqual(AA_NON_TEXT)
+      const failing = ['chassis', 'surface'].filter(
+        ground => contrastRatio(green, tokens[ground] ?? '') < AA_NON_TEXT,
+      )
+
+      expect(failing).toEqual([])
       expect(green).not.toBe(tokens.create)
     }
   })

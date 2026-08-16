@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { fromDb } from './audio-data'
 import { HOT_DB, meterFraction } from './level'
-import { paintSpectrum, type SpectrumInk, type SpectrumMarks } from './spectrum-painter'
+import {
+  paintSpectrum,
+  spectrumLabels,
+  type SpectrumInk,
+  type SpectrumMarks,
+} from './spectrum-painter'
 import type { SpectrumBand } from './spectrum'
 
 const ink: SpectrumInk = {
@@ -15,7 +20,7 @@ const ink: SpectrumInk = {
   font: '9px monospace',
 }
 
-const marks: SpectrumMarks = { hertz: 'Hz', kilohertz: 'kHz', language: 'en' }
+const marks: SpectrumMarks = spectrumLabels({ hertz: 'Hz', kilohertz: 'kHz' }, 'en')
 
 const surface = () => {
   const written: string[] = []

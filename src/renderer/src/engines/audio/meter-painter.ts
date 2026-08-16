@@ -23,7 +23,6 @@ export const readMeterPalette = memoPalette((): MeterPalette => ({
   clip: rootColour('--color-danger'),
 }))
 
-/** How tall the overload lamp is, how far the scale keeps off it, and the witness line's own. */
 const LAMP_HEIGHT = 4
 const LAMP_GAP = 1
 const PEAK_HEIGHT = 2

@@ -222,7 +222,10 @@ export function useWaveSurfer({
    * surface that lays time out sideways.
    *
    * Not `useTimelineWheel`: that one drives a `Viewport`, and what a take is drawn at is a
-   * pixels-per-second wavesurfer owns. The gesture is the same, the state behind it is not.
+   * pixels-per-second wavesurfer owns. The gesture is the same, the state behind it is not — and
+   * it is not the same to the pixel: `zoomAt` keeps the instant under the cursor where it was,
+   * which `zoom()` cannot be asked to do. Zooming a take walks toward its middle. Living with
+   * that is the price of not reaching into wavesurfer's scroll on every notch.
    *
    * Native and NON-PASSIVE for the reason written there too — React delivers `wheel` passively,
    * where `preventDefault` does nothing and the panel behind scrolls instead.

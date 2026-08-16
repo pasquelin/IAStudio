@@ -187,6 +187,18 @@ function paintFades(
 }
 
 /**
+ * Where a waveform's axis sits in a row, and how far an amplitude of 1 reaches from it.
+ *
+ * Exported because the programme monitor draws ON this geometry — the band it cuts at −6 dB, the
+ * groove of its envelope, its graduations — and each of those has to land on the very axis
+ * `paintWaveform` fills against. Spelt twice, moving the one-pixel inset here would shift the
+ * colour boundary away from the threshold it marks, and nothing would say so.
+ */
+export function waveAxis(top: number, height: number): { middle: number; reach: number } {
+  return { middle: top + height / 2, reach: height / 2 - 1 }
+}
+
+/**
  * The waveform, filling the row under the label. Drawn as one path rather than a rectangle per
  * column: five hundred `fillRect` calls per clip is what a long montage cannot afford.
  */
@@ -199,8 +211,7 @@ export function paintWaveform(
 ): void {
   if (columns.length === 0) return
 
-  const middle = top + height / 2
-  const reach = height / 2 - 1
+  const { middle, reach } = waveAxis(top, height)
 
   context.fillStyle = colour
   context.beginPath()

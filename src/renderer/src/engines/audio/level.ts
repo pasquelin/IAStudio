@@ -40,7 +40,7 @@ export function meterFraction(amplitude: number): number {
 }
 
 /** What a level is worth to a reader, and the three colours a meter paints it in. */
-export type Level = 'safe' | 'hot' | 'clip'
+type Level = 'safe' | 'hot' | 'clip'
 
 /**
  * The band a point already ON that scale falls in, for the readers handed a fraction rather than
@@ -56,11 +56,10 @@ export function levelAtFraction(fraction: number): Level {
 }
 
 /**
- * The band an amplitude falls in, sign ignored — a waveform is symmetric, and a trough at −1
- * clips exactly as a crest at 1 does.
+ * The band a reach falls in. A reach, not a sample: every caller hands over a distance from the
+ * axis — a peak, a threshold, a bin — so a trough is already the crest it mirrors.
  */
-export function levelOf(amplitude: number): Level {
-  const reach = Math.abs(amplitude)
+function levelOf(reach: number): Level {
   if (reach >= CLIP_AMPLITUDE) return 'clip'
   return reach >= HOT_AMPLITUDE ? 'hot' : 'safe'
 }
@@ -77,17 +76,19 @@ const FALL_DB_PER_SECOND = 20
 /** How long the peak witness stands at its mark before it starts falling too, in seconds. */
 const PEAK_HOLD = 1.5
 
-/** What a meter shows, and what it has to remember between two frames to show it. */
+/**
+ * What a meter shows, and what it has to remember between two frames to show it: the bar, the
+ * witness standing above it, and the instant each was last moved.
+ *
+ * The two instants are two clocks and not one — the bar falls from the frame before, the witness
+ * from the peak it is still holding, and reading either against the other empties the wrong one.
+ */
 export type MeterState = {
-  /** The bar itself: the loudest sample of the moment, held up by the fall above. */
   level: number
-  /** The witness above it, standing at the loudest moment of the last second and a half. */
   peak: number
-  /** When this was measured, which is what says how far the bar has fallen since. */
   at: number
-  /** When the witness was set — a different clock from the one above, and a slower one. */
   peakAt: number
-  /** Whether full scale was ever touched. Latched: an overload seen for one frame stays seen. */
+  /** Latched: an overload seen for one frame has to survive to be seen by an eye at all. */
   clipped: boolean
 }
 
@@ -104,7 +105,7 @@ export function restedFrom(meter: MeterState): MeterState {
   return { ...RESTING_METER, clipped: meter.clipped }
 }
 
-/** The loudest sample of a window, which is what a meter reads rather than an average. */
+/** The loudest sample of a window: what warns of an overload is the peak, never the average. */
 export function peakOf(samples: Float32Array): number {
   let loudest = 0
   for (const sample of samples) {

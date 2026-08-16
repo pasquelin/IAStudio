@@ -30,12 +30,19 @@ const FFT_SIZE = 2048
  * and a bus per tab would leave one summing node behind per tab ever opened. Sharing it is also
  * what the meter means — the OUTPUT's level, and the playback token already grants one player.
  */
-type SoundBus = { output: SoundOutput; input: AudioNode; tap: AudioTap }
+type SoundBus = { input: AudioNode; tap: AudioTap }
 
-let bus: SoundBus | null = null
+/**
+ * One bus per output, held weakly. A single slot would do for the studio as it stands — one
+ * context per window — but two outputs alternating would rebuild an analyser and a gain per cue
+ * and leave every previous one connected to `destination`, which is the very leak this bus was
+ * written to avoid.
+ */
+const buses = new WeakMap<SoundOutput, SoundBus>()
 
 function busFor(output: SoundOutput): SoundBus {
-  if (bus?.output === output) return bus
+  const known = buses.get(output)
+  if (known) return known
 
   const analyser = output.createAnalyser()
   analyser.fftSize = FFT_SIZE
@@ -53,8 +60,7 @@ function busFor(output: SoundOutput): SoundBus {
   const samples = new Float32Array(analyser.fftSize)
   const bins = new Uint8Array(analyser.frequencyBinCount)
 
-  bus = {
-    output,
+  const bus: SoundBus = {
     input,
     tap: {
       sampleRate: output.sampleRate,
@@ -68,6 +74,8 @@ function busFor(output: SoundOutput): SoundBus {
       },
     },
   }
+
+  buses.set(output, bus)
   return bus
 }
 

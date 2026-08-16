@@ -15,9 +15,7 @@ import { Timecode } from '@/design/Timecode'
 import { Toolbar } from '@/design/Toolbar'
 import { paintOn } from '@/engines/core/canvas-2d'
 import type { Size } from '@/engines/core/geometry'
-import { rootColour } from '@/engines/core/palette'
-import { paintProgram, programViewport } from '@/engines/timeline/program-wave'
-import { readRulerStyle } from '@/engines/timeline/ruler'
+import { paintProgram, programViewport, readProgramPalette } from '@/engines/timeline/program-wave'
 import { xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import { clampViewport, revealTime } from '@/engines/timeline/viewport'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
@@ -86,59 +84,44 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
     return peaks.byAsset[clip.assetId] ?? null
   }, [])
 
-  // Held in a ref so the wheel listener never has to be hung again: `useTimelineWheel` registers
-  // non-passively, and a re-registration between two notches drops one of them.
+  // Read on paint like the montage beside it, and for the same reason: what a wheel changes is
+  // the picture, never the markup.
   const view = useRef(zoom)
-  useEffect(() => {
-    view.current = zoom
-  }, [zoom])
 
   /**
    * The view at a given width, the width being the caller's to supply: the fit depends on it, and
-   * the three callers already hold one — the painter its box, a click its bounding rect, the
-   * wheel the surface it fired over. Reading it here instead would force a layout per frame.
+   * both callers already hold one — the painter its box, a click its bounding rect. Reading it
+   * here instead would force a layout per frame.
    */
   const viewportFor = useCallback(
     (width: number): Viewport => view.current ?? programViewport(latest.current, width),
     [],
   )
 
-  const wheelViewport = useCallback(
-    (): Viewport => viewportFor(canvasRef.current?.getBoundingClientRect().width ?? 0),
-    [viewportFor],
-  )
-
   const paint = useCallback((): void => {
     paintOn(canvasRef.current, (context, size) => {
       box.current = size
+      const palette = readProgramPalette()
       paintProgram(
         context,
         latest.current,
         peaksOf,
         size,
-        {
-          background: rootColour('--color-chassis'),
-          // Three bands rather than one grey, and each is a token the palette already holds: the
-          // amber and the red are the studio's own "watch this" and "this went wrong", which is
-          // exactly what −6 dB and full scale mean on a montage.
-          safe: rootColour('--color-level-safe'),
-          hot: rootColour('--color-warning'),
-          clip: rootColour('--color-danger'),
-          ...(curves ? { envelope: rootColour('--color-chassis') } : {}),
-          playhead: rootColour('--color-accent'),
-          // The strip's own ruler, not one of this monitor's making: the pair reads as one grid.
-          ruler: readRulerStyle(),
-          scale: rootColour('--color-border'),
-        },
+        // The one entry the theme does not decide: absent, the curves are not drawn.
+        curves ? { ...palette, envelope: palette.background } : palette,
         viewportFor(size.width),
       )
     })
   }, [peaksOf, curves, viewportFor])
 
+  // The view sits in this effect beside the montage, and that is load-bearing: it is read on
+  // paint rather than rendered, so nothing else would repaint after a wheel — and a montage that
+  // is not playing has no other reason to repaint at all.
   useEffect(() => {
     latest.current = sequence
+    view.current = zoom
     paint()
-  }, [sequence, paint])
+  }, [sequence, zoom, paint])
 
   // One waveform lands at a time, each after the frame that asked for it.
   useEffect(() => usePeaks.subscribe(paint), [paint])
@@ -154,12 +137,18 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
    * would have dropped the monitor out of its fit — and out of following the montage's length —
    * for a scroll of zero pixels.
    */
-  useTimelineWheel(canvasRef, wheelViewport, next => {
-    const current = wheelViewport()
-    const width = canvasRef.current?.getBoundingClientRect().width ?? 0
-    const clamped = clampViewport(next, latest.current, { width, height: 0 })
-    if (clamped.scale !== current.scale || clamped.offset !== current.offset) setZoom(clamped)
-  })
+  useTimelineWheel(
+    canvasRef,
+    useCallback(() => viewportFor(box.current.width), [viewportFor]),
+    useCallback(
+      (next: Viewport) => {
+        const current = viewportFor(box.current.width)
+        const clamped = clampViewport(next, latest.current, box.current)
+        if (clamped.scale !== current.scale || clamped.offset !== current.offset) setZoom(clamped)
+      },
+      [viewportFor],
+    ),
+  )
 
   /**
    * Playback drags the view along, but only once the head has left it — and only while zoomed in.
@@ -243,7 +232,10 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
         />
       }
     >
-      <div className="absolute inset-0 flex flex-col gap-(--sc-gutter)">
+      {/* No gutter between the wave and the spectrum under it: the spectrum wears the toolbar's
+          own fill, so the change of ground is what separates them — a gap as well would read as
+          two panels where there is one monitor. */}
+      <div className="absolute inset-0 flex flex-col">
         {/* The meter beside the wave rather than over it: the wave is clicked to seek, and a
             surface one drags on has no room for a strip that is only ever read. */}
         <div className="flex min-h-0 flex-1 gap-(--sc-gutter)">

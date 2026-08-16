@@ -17,14 +17,34 @@ export type SpectrumInk = {
 }
 
 /**
- * The words on the scale, handed over already translated — the two units and the tongue the
- * numbers read in. Apart from the inks because they change on a different event: the palette
- * follows the theme, these follow the language, and one memo cannot answer to both.
+ * The words on the scale, already written out — one per decade, in the order `SPECTRUM_MARKS`
+ * gives them.
+ *
+ * Composed by the host rather than here because they change on a different event from the inks:
+ * the palette follows the theme, these follow the language, and one memo cannot answer to both.
+ * Written out rather than formatted per paint — three `Intl` calls a frame is a hundred and
+ * eighty a second for three words that only move when the tongue does.
  */
-export type SpectrumMarks = {
-  hertz: string
-  kilohertz: string
-  language: string
+export type SpectrumMarks = readonly string[]
+
+/**
+ * The decades as a reader reads them: hertz below a thousand, kilohertz above, as every analyser
+ * is graduated — `10 000 Hz` is a number one counts the digits of.
+ *
+ * The units arrive translated, the way `formatBytes` takes its own: a painter reads tokens, never
+ * a bundle.
+ */
+export function spectrumLabels(
+  units: { hertz: string; kilohertz: string },
+  language: string,
+): SpectrumMarks {
+  return SPECTRUM_MARKS.map(mark => {
+    const kilo = mark >= 1_000
+    const value = kilo ? mark / 1_000 : mark
+    const unit = kilo ? units.kilohertz : units.hertz
+
+    return `${formatDecimal(value, language, { digits: 0 })}${NO_BREAK_SPACE}${unit}`
+  })
 }
 
 /** Monospace and the smallest step, as every graduation the studio paints. */
@@ -32,7 +52,10 @@ const MARK_FAMILY = 'ui-monospace, monospace'
 const MARK_SIZE = '9px'
 
 export const readSpectrumInk = memoPalette((): SpectrumInk => ({
-  background: rootColour('--color-chassis'),
+  // The toolbar's own fill, not the chassis the wave is drawn on: the spectrum is a piece of
+  // furniture standing in the monitor rather than another view of the montage, and it reads as
+  // one by wearing what the bar right below it wears.
+  background: rootColour('--color-surface'),
   safe: rootColour('--color-level-safe'),
   hot: rootColour('--color-warning'),
   clip: rootColour('--color-danger'),
@@ -88,25 +111,16 @@ function paintMarks(
   context.font = ink.font
   context.textBaseline = 'bottom'
 
-  for (const mark of SPECTRUM_MARKS) {
+  for (const [index, mark] of SPECTRUM_MARKS.entries()) {
     const x = Math.round(size.width * spectrumFraction(mark))
 
     context.fillStyle = ink.line
     context.fillRect(x, 0, 1, height)
 
+    const label = marks[index]
+    if (label === undefined) continue
+
     context.fillStyle = ink.text
-    context.fillText(labelFor(mark, marks), x + BAR_GAP * 2, size.height)
+    context.fillText(label, x + BAR_GAP * 2, size.height)
   }
-}
-
-/**
- * Kilohertz past a thousand, as a spectrum is always graduated: `10 000 Hz` is a number one has
- * to count the digits of, where `10 kHz` is the mark every analyser writes.
- */
-function labelFor(mark: number, marks: SpectrumMarks): string {
-  const kilo = mark >= 1_000
-  const value = kilo ? mark / 1_000 : mark
-  const unit = kilo ? marks.kilohertz : marks.hertz
-
-  return `${formatDecimal(value, marks.language, { digits: 0 })}${NO_BREAK_SPACE}${unit}`
 }

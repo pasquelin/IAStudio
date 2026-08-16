@@ -1,8 +1,10 @@
 import { fromDb } from '@/engines/audio/audio-data'
 import { CLIP_AMPLITUDE, HOT_AMPLITUDE, SCALE_DB } from '@/engines/audio/level'
 import type { Size } from '@/engines/core/geometry'
-import { paintWaveform } from './painter'
-import { paintRuler, type RulerStyle } from './ruler'
+import { memoPalette, rootColour } from '@/engines/core/palette'
+import { paintWaveform, waveAxis } from './painter'
+import { paintRuler, readRulerStyle, type RulerStyle } from './ruler'
+import { clampScale } from './viewport'
 import { RULER_HEIGHT, timeToX, type Viewport } from './timeline-geometry'
 import {
   playsThrough,
@@ -88,6 +90,27 @@ export type ProgramPalette = {
 }
 
 /**
+ * The monitor's own inks, read once per theme rather than once per paint — this repaints on every
+ * frame of playback, the playhead being written to the store from the output clock.
+ *
+ * `envelope` is not here: it is the one entry the host decides rather than the theme, being absent
+ * when the reader has put the curves away. It carries the chassis colour when it is drawn.
+ */
+export const readProgramPalette = memoPalette((): Omit<ProgramPalette, 'envelope'> => ({
+  background: rootColour('--color-chassis'),
+  // Three bands rather than one grey, and each is a token the palette already holds: the amber
+  // and the red are the studio's own "watch this" and "this went wrong", which is exactly what
+  // −6 dB and full scale mean on a montage.
+  safe: rootColour('--color-level-safe'),
+  hot: rootColour('--color-warning'),
+  clip: rootColour('--color-danger'),
+  playhead: rootColour('--color-accent'),
+  // The strip's own ruler, not one of this monitor's making: the pair reads as one grid.
+  ruler: readRulerStyle(),
+  scale: rootColour('--color-border'),
+}))
+
+/**
  * How many columns the envelope averages over. A visual smoothing rather than a time constant:
  * the monitor fits a whole montage to its width, so a span in columns keeps the same reading
  * whether the montage runs a minute or an hour.
@@ -104,18 +127,35 @@ const ENVELOPE_SPAN = 9
  */
 export function programEnvelope(columns: readonly WaveColumn[]): WaveColumn[] {
   const half = Math.floor(ENVELOPE_SPAN / 2)
+  const reachAt = (index: number): number => {
+    const column = columns[index]
+    return column ? (Math.abs(column.min) + Math.abs(column.max)) / 2 : 0
+  }
+
+  // A running sum rather than a window walked per column: this is painted on every frame of
+  // playback, and nine reads a column over a thousand of them is nine thousand a frame for an
+  // answer that only ever gains one end and loses the other.
+  let total = 0
+  let counted = 0
+  for (let at = 0; at <= half && at < columns.length; at++) {
+    total += reachAt(at)
+    counted++
+  }
 
   return columns.map((column, index) => {
-    let total = 0
-    let counted = 0
-    for (let at = index - half; at <= index + half; at++) {
-      const neighbour = columns[at]
-      if (!neighbour) continue
-      total += (Math.abs(neighbour.min) + Math.abs(neighbour.max)) / 2
+    const reach = counted === 0 ? 0 : total / counted
+
+    const leaving = index - half
+    const arriving = index + half + 1
+    if (leaving >= 0) {
+      total -= reachAt(leaving)
+      counted--
+    }
+    if (arriving < columns.length) {
+      total += reachAt(arriving)
       counted++
     }
 
-    const reach = counted === 0 ? 0 : total / counted
     return { x: column.x, min: -reach, max: reach }
   })
 }
@@ -147,7 +187,7 @@ export function paintProgram(
   const height = size.height - RULER_HEIGHT
   const columns = programColumns(state, peaksOf, viewport, 0, size.width)
 
-  paintScale(context, size, top, height, palette.scale)
+  paintScale(context, size.width, top, height, palette.scale)
   paintBandedWave(context, columns, size.width, top, height, palette)
   if (palette.envelope) {
     paintEnvelope(context, programEnvelope(columns), top, height, palette.envelope)
@@ -164,9 +204,13 @@ export function paintProgram(
   context.fillRect(Math.round(timeToX(state.playhead, viewport)), 0, 1, size.height)
 }
 
-/** Where an amplitude stands on the wave's half-height, measured from the middle out. */
-function reachOf(height: number): number {
-  return height / 2 - 1
+/** The loudest reach of a run of columns, which is what decides whether a band is worth a pass. */
+function loudestOf(columns: readonly WaveColumn[]): number {
+  let loudest = 0
+  for (const column of columns) {
+    loudest = Math.max(loudest, Math.abs(column.min), Math.abs(column.max))
+  }
+  return loudest
 }
 
 /**
@@ -176,6 +220,10 @@ function reachOf(height: number): number {
  * By height because that is what the eye is asked to judge — how far a peak reaches, not which
  * pixel it happened on. Colouring whole columns instead would paint a quiet stretch red for one
  * transient crossing it, and a single-column run draws a path of zero width, which is nothing.
+ *
+ * A band nothing reaches is not painted at all. Each pass walks every column twice and clips the
+ * whole canvas, and this runs on every frame of playback: a quiet montage would have paid for two
+ * of them to draw nothing.
  */
 function paintBandedWave(
   context: CanvasRenderingContext2D,
@@ -186,8 +234,14 @@ function paintBandedWave(
   palette: ProgramPalette,
 ): void {
   paintWaveform(context, columns, top, height, palette.safe)
+
+  const loudest = loudestOf(columns)
+  if (loudest < HOT_AMPLITUDE) return
+
   paintAbove(context, columns, width, top, height, HOT_AMPLITUDE, palette.hot)
-  paintAbove(context, columns, width, top, height, CLIP_AMPLITUDE, palette.clip)
+  if (loudest >= CLIP_AMPLITUDE) {
+    paintAbove(context, columns, width, top, height, CLIP_AMPLITUDE, palette.clip)
+  }
 }
 
 /** The same wave again, showing only what reaches past a threshold on either side of the axis. */
@@ -200,8 +254,8 @@ function paintAbove(
   threshold: number,
   colour: string,
 ): void {
-  const middle = top + height / 2
-  const offset = threshold * reachOf(height)
+  const { middle, reach } = waveAxis(top, height)
+  const offset = threshold * reach
   const crest = middle - offset
   const trough = middle + offset
 
@@ -232,8 +286,7 @@ function paintEnvelope(
 ): void {
   if (envelope.length === 0) return
 
-  const middle = top + height / 2
-  const reach = reachOf(height)
+  const { middle, reach } = waveAxis(top, height)
 
   context.strokeStyle = colour
   context.lineWidth = 1
@@ -244,31 +297,33 @@ function paintEnvelope(
   }
 }
 
-/** Where each graduation sits on the wave, as a distance either side of the axis. */
-function scaleOffsets(height: number): number[] {
-  return SCALE_DB.map(db => fromDb(db) * reachOf(height))
-}
-
 /** The graduations, behind the wave: a grid is read through what stands on it, never over it. */
 function paintScale(
   context: CanvasRenderingContext2D,
-  size: Size,
+  width: number,
   top: number,
   height: number,
   colour: string,
 ): void {
-  const middle = top + height / 2
+  const { middle, reach } = waveAxis(top, height)
 
   context.fillStyle = colour
-  for (const offset of scaleOffsets(height)) {
+  for (const db of SCALE_DB) {
+    const offset = fromDb(db) * reach
     // Half a pixel, so a one-pixel line lands on a pixel instead of across two.
-    context.fillRect(0, Math.round(middle - offset) + 0.5, size.width, 1)
-    context.fillRect(0, Math.round(middle + offset) + 0.5, size.width, 1)
+    context.fillRect(0, Math.round(middle - offset) + 0.5, width, 1)
+    context.fillRect(0, Math.round(middle + offset) + 0.5, width, 1)
   }
 }
 
-/** The viewport that fits a montage to a width, and the one the head is placed against. */
+/**
+ * The viewport that fits a montage to a width, and the one the head is placed against.
+ *
+ * Clamped to the scale the wheel is clamped to: a montage of a few tenths of a second across a
+ * wide panel fits at a scale past `MAX_SCALE`, and the first zoom IN would then have zoomed out —
+ * `zoomAt` cannot go past the ceiling, so it would have landed under where the fit already was.
+ */
 export function programViewport(state: SequenceState, width: number): Viewport {
   const span: Us = Math.max(1, sequenceDuration(state))
-  return { scale: width / span, offset: 0, scrollTop: 0 }
+  return { scale: clampScale(width / span), offset: 0, scrollTop: 0 }
 }

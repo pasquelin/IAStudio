@@ -90,12 +90,16 @@ describe('the programme monitor', () => {
     scale: 'grid',
   }
 
-  const paint = (state: SequenceState, over: Partial<typeof palette> = {}) => {
+  const paint = (
+    state: SequenceState,
+    { level = 1, ...over }: Partial<typeof palette> & { level?: number } = {},
+  ) => {
     const surface = painted()
+    const heard = flat(1, level)
     paintProgram(
       surface.context,
       state,
-      () => peaks,
+      () => heard,
       { width: 400, height: 120 },
       { ...palette, ...over },
       programViewport(state, 400),
@@ -123,6 +127,22 @@ describe('the programme monitor', () => {
     // Calm first: the louder bands are painted over it, showing only what reaches past them.
     expect(filled.indexOf('green')).toBeLessThan(filled.indexOf('amber'))
     expect(filled.indexOf('amber')).toBeLessThan(filled.indexOf('red'))
+  })
+
+  /**
+   * Each band walks every column twice and clips the whole canvas, and this runs on every frame
+   * of playback: a quiet montage must not pay for two passes that draw nothing.
+   */
+  it('leaves out the bands nothing in the montage reaches', () => {
+    const quiet = paint(montage([sounding('A1', 'a')]), { level: 0.1 }).filled
+    const loud = paint(montage([sounding('A1', 'a')]), { level: 0.8 }).filled
+
+    expect(quiet).toContain('green')
+    expect(quiet).not.toContain('amber')
+    expect(quiet).not.toContain('red')
+    // Amber is reached, full scale is not: the red pass alone is skipped.
+    expect(loud).toContain('amber')
+    expect(loud).not.toContain('red')
   })
 
   it('graduates the levels behind the wave, and writes nothing on them', () => {

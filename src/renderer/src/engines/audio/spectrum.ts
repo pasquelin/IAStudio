@@ -34,22 +34,45 @@ export type SpectrumBand = {
  * and the high ones span hundreds, and averaging would fade out exactly the bars that cover the
  * most ground.
  */
-export function spectrumBands(bins: Uint8Array, sampleRate: number, count: number): SpectrumBand[] {
-  if (bins.length === 0 || count <= 0 || sampleRate <= 0) return []
+/**
+ * Which bins each bar spans, and where it starts — everything about the fold that does not depend
+ * on what is being heard.
+ *
+ * Held apart because `spectrumBands` runs on every frame of playback while these three arguments
+ * hold still for a whole session: recomputing them there was sixty-four exponentials and thirty-two
+ * divisions a frame for an answer that never moved.
+ */
+type BandSpan = { from: number; first: number; last: number }
+
+const spans = new Map<string, readonly BandSpan[]>()
+
+function spansFor(binCount: number, sampleRate: number, count: number): readonly BandSpan[] {
+  const key = `${binCount}:${sampleRate}:${count}`
+  const known = spans.get(key)
+  if (known) return known
 
   // Nyquist over the bin count: the top bin sits at half the rate, whatever the FFT size was.
-  const perBin = sampleRate / 2 / bins.length
+  const perBin = sampleRate / 2 / binCount
   const ratio = HIGHEST_HZ / LOWEST_HZ
 
-  return Array.from({ length: count }, (_unused, index) => {
+  const built = Array.from({ length: count }, (_unused, index): BandSpan => {
     const from = LOWEST_HZ * ratio ** (index / count)
     const to = LOWEST_HZ * ratio ** ((index + 1) / count)
 
     // At least one bin wide: the lowest bars are narrower than a bin, and a bar spanning none
     // would read as silence in the register a montage is usually loudest in.
-    const first = clamp(Math.floor(from / perBin), 0, bins.length - 1)
-    const last = clamp(Math.ceil(to / perBin), first + 1, bins.length)
+    const first = clamp(Math.floor(from / perBin), 0, binCount - 1)
+    return { from, first, last: clamp(Math.ceil(to / perBin), first + 1, binCount) }
+  })
 
+  spans.set(key, built)
+  return built
+}
+
+export function spectrumBands(bins: Uint8Array, sampleRate: number, count: number): SpectrumBand[] {
+  if (bins.length === 0 || count <= 0 || sampleRate <= 0) return []
+
+  return spansFor(bins.length, sampleRate, count).map(({ from, first, last }) => {
     let loudest = 0
     for (let at = first; at < last; at++) loudest = Math.max(loudest, bins[at] ?? 0)
 
