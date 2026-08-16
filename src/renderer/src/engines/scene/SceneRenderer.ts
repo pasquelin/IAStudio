@@ -917,6 +917,10 @@ export class SceneRenderer {
    *
    * The camera is moved directly rather than through the orbit: a viewport drawing into a video
    * frame has no one dragging it, and the orbit's target would only be read on the next drag.
+   *
+   * It asks for no render of its own, unlike `frameSelection`: its caller draws the very next
+   * line, and a frame loop woken per aim would run the viewport's own pass forever behind a
+   * canvas nobody is looking at.
    */
   frameContents(): void {
     const objects = [...this.objects.values()]
@@ -927,7 +931,6 @@ export class SceneRenderer {
     camera.position.copy(position)
     camera.lookAt(target)
     this.viewport.orbit?.target.copy(target)
-    this.viewport.requestRender()
   }
 
   /**
@@ -950,11 +953,7 @@ export class SceneRenderer {
 
     this.setPlayhead(time)
 
-    // A render is what the camera SEES, not a picture of the camera — same reason as `renderFilm`.
-    const helper = camera.children.find(child => child instanceof CameraHelper)
-    const wasVisible = helper?.visible ?? false
-    if (helper) helper.visible = false
-
+    const restore = this.hideWorkshop()
     camera.aspect = canvas.width / canvas.height
     camera.updateProjectionMatrix()
 
@@ -962,9 +961,38 @@ export class SceneRenderer {
       gl.setRenderTarget(null)
       gl.render(this.viewport.scene, camera)
     } finally {
-      if (helper) helper.visible = wasVisible
+      restore()
     }
     return canvas
+  }
+
+  /**
+   * Hides everything the workshop draws for the person editing — light helpers, camera
+   * frustums, skeletons, the grid — and hands back the call that puts them all back.
+   *
+   * A render is the scene, not the tools it was built with. A directional light's helper is a
+   * line drawn clean across the picture, and it was in every frame of both the film and the
+   * montage. Only what was actually visible is restored: a helper already hidden by a setting
+   * must not be turned on by a render passing through.
+   */
+  private hideWorkshop(): () => void {
+    const hidden: Object3D[] = []
+    const hide = (object: Object3D | null | undefined): void => {
+      if (!object?.visible) return
+      object.visible = false
+      hidden.push(object)
+    }
+
+    for (const helper of this.helpers.values()) hide(helper)
+    for (const skeleton of this.skeletons.values()) hide(skeleton)
+    hide(this.grid)
+    for (const object of this.objects.values()) {
+      hide(object.children.find(child => child instanceof CameraHelper))
+    }
+
+    return () => {
+      for (const object of hidden) object.visible = true
+    }
   }
 
   /**
@@ -1000,9 +1028,7 @@ export class SceneRenderer {
     // a thousand-frame film would hand the collector sixteen gigabytes for nothing.
     const image = context.createImageData(width, height)
 
-    const helper = camera.children.find(child => child instanceof CameraHelper)
-    const wasVisible = helper?.visible ?? false
-    if (helper) helper.visible = false
+    const restore = this.hideWorkshop()
 
     camera.aspect = width / height
     camera.updateProjectionMatrix()
@@ -1027,7 +1053,7 @@ export class SceneRenderer {
     } finally {
       gl.setRenderTarget(null)
       target.dispose()
-      if (helper) helper.visible = wasVisible
+      restore()
       // Where the head was before the film was asked for: a render is not an edit.
       this.setPlayhead(head)
       this.viewport.requestRender()
