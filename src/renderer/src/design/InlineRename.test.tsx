@@ -31,6 +31,30 @@ function Owner({ onCommit }: { onCommit: (name: string) => void }) {
   )
 }
 
+/** The same wiring, in a row that can be picked up — the explorer, the shelf, the tab strip. */
+function DraggableOwner({ onCommit }: { onCommit: (name: string) => void }) {
+  const [editing, setEditing] = useState(true)
+
+  return (
+    <div role="list">
+      <div tabIndex={0} draggable data-testid="row">
+        {editing ? (
+          <InlineRename
+            value="Summer"
+            label="Rename"
+            onCommit={name => {
+              setEditing(false)
+              onCommit(name)
+            }}
+          />
+        ) : (
+          'Summer'
+        )}
+      </div>
+    </div>
+  )
+}
+
 /**
  * StrictMode is the subject of this suite, not a detail of its setup: the window runs under it
  * (`main.tsx`) and `render` does not, which is why every suite in the studio watched this field
@@ -91,5 +115,35 @@ describe('a name edited where it is read', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Rename' }), '{Escape}')
 
     expect(screen.getByText('Summer')).toHaveFocus()
+  })
+
+  /** A rename opens on a name about to be replaced: typing writes the new one outright. */
+  it('opens with the whole name selected', () => {
+    render(<Owner onCommit={vi.fn()} />, { wrapper: StrictMode })
+    const field = screen.getByRole<HTMLInputElement>('textbox', { name: 'Rename' })
+
+    expect([field.selectionStart, field.selectionEnd]).toEqual([0, 'Summer'.length])
+  })
+
+  /**
+   * Measured in the app on 16 August: selecting a word inside the field dragged the row instead.
+   *
+   * `draggable` on an ancestor swallows the pointer — Chromium begins a native drag as soon as it
+   * moves with a button down, and the field never sees the gesture. Correcting one letter of a
+   * name is exactly what a rename is FOR, so the row gives up its handle while it is being typed
+   * in, and takes it back when the field closes.
+   *
+   * Neither can be reached by a click in jsdom, which implements no drag at all: the attribute
+   * is what production reads, and the attribute is what this asserts.
+   */
+  it('takes the drag handle off the row it is opened in, and hands it back', async () => {
+    render(<DraggableOwner onCommit={vi.fn()} />, { wrapper: StrictMode })
+    const row = screen.getByTestId('row')
+
+    expect(row.draggable).toBe(false)
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Rename' }), '{Escape}')
+
+    expect(row.draggable).toBe(true)
   })
 })
