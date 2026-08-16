@@ -252,9 +252,7 @@ const licences = [
   ...fontLicences(),
   ...dictationLicences(),
   ...SHIPPED.map(collect),
-].sort((one, other) =>
-  one.name.localeCompare(other.name),
-)
+].sort((one, other) => one.name.localeCompare(other.name))
 
 /** Refuses to leave a notice that would be wrong, rather than writing it and hoping. */
 function refuse(offenders, why) {

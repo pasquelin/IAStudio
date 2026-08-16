@@ -49,6 +49,25 @@ describe('the gate not rereading what it has already judged', () => {
     }
   })
 
+  /**
+   * The two gates read `scripts/` as well as `src/`, and that is not a detail of taste: eleven
+   * build scripts live there, and the build, the legal notices and the short loop itself run on
+   * them. They were outside both gates until 2026-08-16 — `eslint src` and a `src/**` glob — so
+   * a syntax slip in `collect-licences.mjs` only ever surfaced when the build broke.
+   *
+   * Held as a rule rather than left to habit: a glob narrowed back to `src` costs nothing to
+   * write, reddens nothing, and puts eleven files back in the dark.
+   */
+  it('points both gates at the build scripts, not only at the sources', () => {
+    expect(manifest.scripts.lint).toContain('scripts')
+    // The pair, named rather than looped over: indexing the manifest by a string would need a
+    // cast, and the two gates are two, not a list.
+    for (const glob of [manifest.scripts.format, manifest.scripts['format:check']]) {
+      expect(glob).toContain('{src,scripts}')
+      expect(glob).toContain('mjs')
+    }
+  })
+
   it('lets tsc reuse its previous pass', () => {
     expect(read('tsconfig.base.json')).toContain('"incremental": true')
   })
