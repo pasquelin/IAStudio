@@ -59,7 +59,7 @@ export function Explorer() {
   const { nodes, expandedIds, toggle, reload } = useFolderTree()
   const selectedIds = useSelection(selectedFilePaths)
   const clipboard = useFileClipboard(state => state.paths)
-  const waiting = useFileClipboard(fileClipboardCut)
+  const cut = useFileClipboard(fileClipboardCut)
   /** The name a folder is born with, before the field opens on it. */
   const folderName = t('explorer.newFolderName')
   /** Armed only while the focus is inside the panel: ⌘Z in the canvas must not reach the disk. */
@@ -108,6 +108,10 @@ export function Explorer() {
   )
 
   const nodeById = useMemo(() => new Map(nodes.map(node => [node.id, node])), [nodes])
+
+  // A set rather than the array: this is asked once per VISIBLE ROW, on every render the tree
+  // does — and a drag re-renders it on each hover tick.
+  const waiting = useMemo(() => new Set(cut), [cut])
 
   /**
    * Where a new folder or a paste lands: the picked row when it is a folder, its own folder when
@@ -203,6 +207,11 @@ export function Explorer() {
           if (created) setRenaming({ nodeId: created, asset: null })
         })
       }
+      // The stack takes neither a selection nor a clipboard: it acts on what the main process
+      // remembers, which is also what lets a batch made in another window be taken back here.
+      if (command === 'explorer.undo') return answer(bridge.undoFile())
+      if (command === 'explorer.redo') return answer(bridge.redoFile())
+
       if (paths.length === 0) return
 
       if (command === 'explorer.duplicate') return answer(bridge.duplicateFiles(paths))
@@ -211,27 +220,7 @@ export function Explorer() {
     [settled, target, folderName],
   )
 
-  // Undo and redo take no selection and no clipboard, so they are kept out of the closure above:
-  // they would otherwise be re-made on every pick, and the shortcut layer re-subscribed with them.
-  const runHistory = useCallback(
-    (command: CommandId): void => {
-      const bridge = getBridge()?.project
-      if (!bridge) return
-      if (command === 'explorer.undo') void bridge.undoFile().then(settled)
-      if (command === 'explorer.redo') void bridge.redoFile().then(settled)
-    },
-    [settled],
-  )
-
-  const onCommand = useCallback(
-    (command: CommandId): void => {
-      if (command === 'explorer.undo' || command === 'explorer.redo') return runHistory(command)
-      run(command)
-    },
-    [run, runHistory],
-  )
-
-  useShortcuts({ scope: 'explorer', enabled: focused, onCommand })
+  useShortcuts({ scope: 'explorer', enabled: focused, onCommand: run })
 
   const activate = async (node: FolderNode): Promise<void> => {
     // Asked before the folder question, not after: an image document is a directory, and folding
@@ -331,14 +320,10 @@ export function Explorer() {
         }
         // Nothing is written here on faith: the answer says what actually moved, and the tree
         // reads the folders again from that.
-        onDrop={(paths, folder) =>
-          void getBridge()?.project.moveFiles(paths, folder).then(settled)
-        }
+        onDrop={(paths, folder) => void getBridge()?.project.moveFiles(paths, folder).then(settled)}
         // The blank below the rows is the project folder itself — how a file comes back out of a
         // folder, there being no row standing for the root to aim at.
-        onDropRoot={paths =>
-          void getBridge()?.project.moveFiles(paths, FOLDER_ROOT).then(settled)
-        }
+        onDropRoot={paths => void getBridge()?.project.moveFiles(paths, FOLDER_ROOT).then(settled)}
         onActivate={node => void activate(node)}
         // Asked BEFORE the menu is drawn, and that round trip is the point: only the catalogue
         // knows whether a file under `assets/` is an asset, and the answer decides whether
@@ -359,7 +344,7 @@ export function Explorer() {
               t,
               onOpen: () => void activate(node),
               onRename: () => setRenaming({ nodeId: node.id, asset }),
-              run: onCommand,
+              run,
             }),
           )
         }
@@ -388,7 +373,7 @@ export function Explorer() {
               open={isOpen(document)}
               // What a cut looks like before it is pasted: the rows are still there, still
               // openable, and on their way out.
-              waiting={waiting.includes(row.node.path)}
+              waiting={waiting.has(row.node.path)}
               {...(renaming?.nodeId === row.node.id
                 ? { onRename: (name: string) => commitRename(row.node, renaming.asset, name) }
                 : {})}

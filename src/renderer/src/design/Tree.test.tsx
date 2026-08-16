@@ -149,6 +149,21 @@ describe('Tree', () => {
     expect(onSelect).toHaveBeenCalledWith(['a'], 'replace')
   })
 
+  /**
+   * What a gesture applies to is the selection, and where it LANDS is read off the picked row.
+   * With no way to pick nothing, a file browser whose every row is a folder the studio owns
+   * cannot aim at the project folder at all.
+   */
+  it('clears the selection on a press in the blank below the rows', () => {
+    const onSelect = vi.fn()
+    renderTree(onSelect)
+
+    const blank = screen.getByRole('tree').parentElement
+    fireEvent.pointerDown(blank!)
+
+    expect(onSelect).toHaveBeenCalledWith([], 'replace')
+  })
+
   it('toggles the clicked node when the command key is held', async () => {
     const onSelect = vi.fn()
     // One session for the whole gesture: the direct API opens a new one per call, and the held

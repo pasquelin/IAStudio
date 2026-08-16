@@ -67,13 +67,18 @@ const contextMenuItems = z
       separator: z.literal(true).optional(),
       enabled: z.boolean().optional(),
       icon: menuIcon.optional(),
-      // Electron parses this itself and THROWS on a shape it does not know, which would take the
-      // menu down with it. Bounded to what `acceleratorOf` produces: modifier names, `+`, and a
-      // key of letters, digits or one of the punctuation marks it spells out.
+      /**
+       * Electron parses this itself and THROWS on a shape it does not know — the menu then never
+       * opens, and what the window hears is a rejected invoke rather than a menu.
+       *
+       * Bounded to what `acceleratorOf` actually produces: its four modifier names, spelled out
+       * rather than "any word" — `Foobar+A` used to pass a rule whose own comment claimed it
+       * could not — then `+`, then a key of letters, digits or the punctuation it names.
+       */
       accelerator: z
         .string()
         .max(60)
-        .regex(/^(?:[A-Za-z]+\+)*[A-Za-z0-9,.=\-/\\]+$/)
+        .regex(/^(?:(?:CmdOrCtrl|Ctrl|Alt|Shift)\+)*[A-Za-z0-9,.=\-/\\]+$/)
         .optional(),
       tooltip: z.string().min(1).max(300).optional(),
     }),

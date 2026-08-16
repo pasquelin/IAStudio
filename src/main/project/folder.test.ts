@@ -325,28 +325,31 @@ describe('writing to the project folder', () => {
 
     expect(await writer.createFolder('Characters')).toBe(true)
 
-    expect((await createFolderReader(() => root, inFrench).list('')).map(one => one.name)).toContain(
-      'Characters',
-    )
+    expect(
+      (await createFolderReader(() => root, inFrench).list('')).map(one => one.name),
+    ).toContain('Characters')
   })
 
   // The race a plan cannot see: `rename` and `cp` overwrite without a word on POSIX, and what
   // they would take is the user's own file.
-  it.each(['move', 'copy', 'createFolder'])('refuses %s onto a name already there', async gesture => {
-    const root = await withFolder()
-    await writeFile(join(root, 'brief.txt'), 'keep me')
-    const writer = createFolderWriter(() => root, vi.fn())
+  it.each(['move', 'copy', 'createFolder'])(
+    'refuses %s onto a name already there',
+    async gesture => {
+      const root = await withFolder()
+      await writeFile(join(root, 'brief.txt'), 'keep me')
+      const writer = createFolderWriter(() => root, vi.fn())
 
-    const written =
-      gesture === 'move'
-        ? await writer.move('notes.txt', 'brief.txt')
-        : gesture === 'copy'
-          ? await writer.copy('notes.txt', 'brief.txt')
-          : await writer.createFolder('brief.txt')
+      const written =
+        gesture === 'move'
+          ? await writer.move('notes.txt', 'brief.txt')
+          : gesture === 'copy'
+            ? await writer.copy('notes.txt', 'brief.txt')
+            : await writer.createFolder('brief.txt')
 
-    expect(written).toBe(false)
-    expect(await readFile(join(root, 'brief.txt'), 'utf8')).toBe('keep me')
-  })
+      expect(written).toBe(false)
+      expect(await readFile(join(root, 'brief.txt'), 'utf8')).toBe('keep me')
+    },
+  )
 
   it('says yes and does nothing when a move lands where it already is', async () => {
     const root = await project()

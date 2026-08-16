@@ -18,6 +18,13 @@ import type { FolderReader, FolderWriter } from './folder'
  * How many batches one project may take back. Bounded because the stack outlives every window
  * and holds only strings: thirty-two is far past what a hand undoes in one sitting, and the
  * whole of it costs less than one thumbnail.
+ *
+ * **A second derivation of a shape this repo already generalised**, and worth saying so:
+ * `renderer/engines/core/history.ts` holds the same bounded past/future of reversible batches,
+ * and five stores build on it. It cannot be reused here — its `Command.apply/revert` are
+ * SYNCHRONOUS over an in-memory state, where these batches are asynchronous and write to a
+ * disk, and it lives on the far side of the bridge from the only process that may touch one.
+ * The bound and the two arrays are all that is duplicated; a fix to either has to be made twice.
  */
 const UNDO_DEPTH = 32
 
@@ -84,8 +91,15 @@ export function createFileOps({
   let stack: PathChange[][] = []
   let stackedFor: string | null = null
 
-  /** A stack belongs to ONE project: paths mean nothing outside the folder they were read in. */
-  const keepStackFor = (root: string): void => {
+  /**
+   * A stack belongs to ONE project: paths mean nothing outside the folder they were read in.
+   *
+   * Asked on every entry point rather than on the writes alone — including `can()`, which greys
+   * the two menu rows. Opening another project and pressing ⌘Z straight away would otherwise
+   * replay the previous project's batch against the new folder: most of it finds nothing and
+   * does nothing, and the one path both projects happen to share moves for no reason.
+   */
+  const keepStackFor = (root: string | null): void => {
     if (stackedFor === root) return
     stackedFor = root
     stack = []
@@ -104,26 +118,38 @@ export function createFileOps({
     return known
   }
 
+  /** One act on the disk. Answers whether it happened; the writer refuses rather than throwing. */
+  const write = async (act: FileAct): Promise<boolean> => {
+    switch (act.act) {
+      case 'move':
+        return await folder.move(act.from, act.to)
+      case 'copy':
+        return await folder.copy(act.from, act.to)
+      case 'createFolder':
+        return await folder.createFolder(act.to)
+      case 'trash':
+        return await folder.trash(act.from)
+    }
+  }
+
   /**
    * Carries the acts out one after another, and answers what actually happened.
    *
-   * Sequential on purpose. Two moves into the same folder settle a name between them, and a
-   * `Promise.all` would let both see it free; the batch is bounded by what a hand selected, and
-   * a folder walk costs more than the whole of this loop.
+   * **Sequential, and the reason is `revert` rather than the forward pass.** A plan settles its
+   * own names before it is handed here — `planFiles` counts what a member of the same batch has
+   * claimed — so the acts of one PLAN never collide. The inverses of a batch do: undoing "x.txt
+   * moved out, then another x.txt moved in" is two acts fighting over one name, and only the
+   * order they run in decides it. One loop rather than one loop and a parallel twin, so the
+   * gesture and its undo cannot behave differently.
+   *
+   * A batch can also hold a folder and something inside it, which nothing refuses: run at once,
+   * the two renames would race over a path one of them is moving.
    */
   const apply = async (root: string, acts: readonly FileAct[]): Promise<PathChange[]> => {
     const done: PathChange[] = []
 
     for (const act of acts) {
-      const written =
-        act.act === 'move'
-          ? await folder.move(act.from, act.to)
-          : act.act === 'copy'
-            ? await folder.copy(act.from, act.to)
-            : act.act === 'createFolder'
-              ? await folder.createFolder(act.to)
-              : await folder.trash(act.from)
-
+      const written = await write(act)
       if (!written) continue
 
       const change = changeOf(act)
@@ -195,6 +221,47 @@ export function createFileOps({
     return done
   }
 
+  /**
+   * One step of the stack, in either direction — they are the same move with the two piles
+   * swapped, and writing it twice was two places for a later bound or shape to drift.
+   *
+   * What was PUT BACK is what the other direction has to undo again, so the round trip stays
+   * exact even where one member of the batch refused to come back.
+   */
+  const shift = async (way: 'undo' | 'redo'): Promise<FileOutcome> => {
+    keepStackFor(rootOf())
+
+    const from = way === 'undo' ? stack : undone
+    const batch = from.at(-1)
+    const id = newBatchId()
+    if (!batch) return { done: [], refused: [], batch: id }
+
+    const kept = from.slice(0, -1)
+    const done = await replay(batch)
+
+    /**
+     * Taken off the pile it came from whatever happened — a batch that could not be replayed
+     * cannot be replayed on the next press either, and keeping it would be a row that stays lit
+     * for ever.
+     *
+     * Pushed onto the OTHER pile only where something actually moved, exactly as a fresh gesture
+     * is. Undoing a rename whose file somebody deleted outside the studio moves nothing, and an
+     * empty batch pushed across would light « Rétablir » for an action that does not exist —
+     * then light « Annuler » again when it is pressed, for ever.
+     */
+    const back = done.length > 0 ? [done] : []
+
+    if (way === 'undo') {
+      stack = kept
+      undone = [...undone, ...back].slice(-UNDO_DEPTH)
+    } else {
+      undone = kept
+      stack = [...stack, ...back].slice(-UNDO_DEPTH)
+    }
+
+    return { done, refused: [], batch: id }
+  }
+
   return {
     rename: (path, name) => run({ op: 'rename', path, name }),
     move: (paths, folder: string) => run({ op: 'move', paths, folder }),
@@ -202,31 +269,13 @@ export function createFileOps({
     createFolder: (folder: string, name) => run({ op: 'createFolder', folder, name }),
     trash: paths => run({ op: 'trash', paths }),
 
-    undo: async () => {
-      const batch = stack.at(-1)
-      const id = newBatchId()
-      if (!batch) return { done: [], refused: [], batch: id }
+    undo: () => shift('undo'),
+    redo: () => shift('redo'),
 
-      stack = stack.slice(0, -1)
-      const done = await replay(batch)
-      // What was PUT BACK is what a redo has to undo again, so the round trip stays exact even
-      // where one member of the batch refused to come back.
-      undone = [...undone, done].slice(-UNDO_DEPTH)
-      return { done, refused: [], batch: id }
+    can: () => {
+      keepStackFor(rootOf())
+      return { undo: stack.length > 0, redo: undone.length > 0 }
     },
-
-    redo: async () => {
-      const batch = undone.at(-1)
-      const id = newBatchId()
-      if (!batch) return { done: [], refused: [], batch: id }
-
-      undone = undone.slice(0, -1)
-      const done = await replay(batch)
-      stack = [...stack, done].slice(-UNDO_DEPTH)
-      return { done, refused: [], batch: id }
-    },
-
-    can: () => ({ undo: stack.length > 0, redo: undone.length > 0 }),
 
     /**
      * An asset's file follows its row's name. Nothing happens without a project open: the path

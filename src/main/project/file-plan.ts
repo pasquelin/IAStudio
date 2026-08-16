@@ -1,6 +1,6 @@
 import type { PathChange, Refusal } from '@shared/domain/file-op'
 import { extensionOf, foldForFileName, stemForSuffix, stemOf } from '@shared/domain/file-name'
-import { isStudioFolder, isStudioOwned, isUnder, nameOf, parentOf } from '@shared/domain/folder'
+import { isStudioFolder, isStudioOwned, moveRefusal, nameOf, parentOf } from '@shared/domain/folder'
 
 /**
  * One thing the disk is asked to do. The planner speaks these; `file-ops` carries them out.
@@ -181,10 +181,6 @@ export function planFiles(request: FileRequest, folders: FolderSnapshot): FilePl
   }
 
   for (const path of request.paths) {
-    if (isStudioOwned(path)) {
-      refused.push({ path, reason: 'private' })
-      continue
-    }
     if (!present(folders, path)) {
       refused.push({ path, reason: 'missing' })
       continue
@@ -192,10 +188,12 @@ export function planFiles(request: FileRequest, folders: FolderSnapshot): FilePl
 
     const folder = into ?? parentOf(path) ?? ''
 
-    // A folder dropped into itself takes its destination with it, and the rename that carries it
-    // out leaves the whole subtree unreachable. Duplicating asks the same of the copy.
-    if (folder === path || isUnder(folder, path)) {
-      refused.push({ path, reason: 'into-itself' })
+    // The one spelling of the rule, shared with the panel that greys the gesture out: what the
+    // studio holds for itself, and a folder dropped into itself. What this file adds on top is
+    // everything only a reading of the folders can say — missing, and taken.
+    const refusal = moveRefusal(path, folder)
+    if (refusal) {
+      refused.push({ path, reason: refusal })
       continue
     }
 

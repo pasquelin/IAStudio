@@ -549,6 +549,18 @@ export function Tree<T extends TreeNode>({
     <div
       ref={scroller}
       className="h-full overflow-auto p-2"
+      /**
+       * A press on the blank below the rows clears the selection, as every file browser does.
+       *
+       * Not cosmetic: what a gesture applies to is the selection, and where it LANDS is read
+       * off the picked row. With no way to pick nothing, a panel whose rows are all folders the
+       * studio owns could not aim at the project folder at all — measured on screen, in a
+       * project holding only `assets/` and `documents/`, where « Nouveau dossier » was refused
+       * wherever one clicked.
+       */
+      onPointerDown={event => {
+        if (event.target === event.currentTarget) onSelect([], 'replace')
+      }}
       // Only the blank BELOW the rows: the list is as tall as its rows, so anything over one of
       // them has the row as its target and is that row's business. Without this test the whole
       // panel would answer for every hover, outline included.
@@ -649,9 +661,7 @@ export function Tree<T extends TreeNode>({
                   // The rows the hand is holding, while the ghost shows where they would land. A
                   // dimming rather than a hidden row: taking one out would remount the element
                   // the pointer is dragging, and the gesture would stop firing there and then.
-                  ghost !== null &&
-                    dragged?.some(one => one.id === row.node.id) &&
-                    'opacity-40',
+                  ghost !== null && dragged?.some(one => one.id === row.node.id) && 'opacity-40',
                 )}
                 // The handle is the row itself — a `draggable` makes every control inside it
                 // draggable too, so the eye would reparent instead of toggling.

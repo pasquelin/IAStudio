@@ -43,10 +43,13 @@ async function harness(): Promise<Harness> {
 
   const folder = {
     ...createFolderReader(() => root, inFrench),
-    ...createFolderWriter(() => root, async file => {
-      trashed.push(file)
-      await rm(file, { recursive: true, force: true })
-    }),
+    ...createFolderWriter(
+      () => root,
+      async file => {
+        trashed.push(file)
+        await rm(file, { recursive: true, force: true })
+      },
+    ),
   }
 
   const files = createFileOps({
@@ -182,6 +185,21 @@ describe('taking a batch back', () => {
     expect(await namesIn(root, 'Rushes')).toEqual([])
   })
 
+  /**
+   * A batch that could not be replayed leaves both piles as it found them, minus itself: it
+   * cannot be replayed on the next press either, and an empty batch pushed across would light
+   * « Rétablir » for an action that does not exist — then « Annuler » again when pressed.
+   */
+  it('lights nothing when the file it would put back has gone from outside', async () => {
+    const { files, root } = harnessed
+    await files.move(['brief.pdf'], 'Rushes')
+    await rm(join(root, 'Rushes', 'brief.pdf'))
+
+    expect((await files.undo()).done).toEqual([])
+
+    expect(files.can()).toEqual({ undo: false, redo: false })
+  })
+
   it('takes a created folder away again', async () => {
     const { files, root, trashed } = harnessed
     await files.createFolder('', 'Characters')
@@ -196,6 +214,37 @@ describe('taking a batch back', () => {
 
     expect((await files.undo()).done).toEqual([])
     expect(files.can()).toEqual({ undo: false, redo: false })
+  })
+
+  /**
+   * A stack belongs to one project: its paths mean nothing in another folder. Most of a replayed
+   * batch would find nothing there — and the one path both projects happen to share would move
+   * for no reason anybody could explain.
+   */
+  it.each(['another', 'none'])('drops what it held when the project becomes %s', async how => {
+    const { root, catalog, trashed } = harnessed
+    let current: string | null = root
+    const files = createFileOps({
+      rootOf: () => current,
+      folder: {
+        ...createFolderReader(() => current ?? '', inFrench),
+        ...createFolderWriter(
+          () => current ?? '',
+          async file => void trashed.push(file),
+        ),
+      },
+      catalog: () => catalog,
+      newBatchId: () => 'batch-1',
+      assetsChanged: vi.fn(),
+    })
+
+    await files.move(['brief.pdf'], 'Rushes')
+    expect(files.can().undo).toBe(true)
+
+    current = how === 'none' ? null : (await withTempProject('Other')).root
+
+    expect(files.can().undo).toBe(false)
+    expect((await files.undo()).done).toEqual([])
   })
 
   // A batch that moved `a` out of the way and then `b` into its place has to come back in the

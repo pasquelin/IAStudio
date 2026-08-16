@@ -47,13 +47,13 @@ export type DragListChannel = {
  * read what is coming. Whoever needs to know before then keeps it in state, as `Tree` does.
  */
 export function dragListChannel(type: string): DragListChannel {
+  // Built ON the single channel rather than beside it: what differs is how the payload is
+  // written, and nothing about how a `DataTransfer` is armed or read.
+  const one = dragChannel(type)
+
   return {
-    start: (event, ids) => {
-      if (!event.dataTransfer) return
-      event.dataTransfer.setData(type, ids.join('\n'))
-      event.dataTransfer.effectAllowed = 'move'
-    },
-    carries: event => event.dataTransfer?.types.includes(type) ?? false,
-    idsFrom: event => (event.dataTransfer?.getData(type) || '').split('\n').filter(Boolean),
+    start: (event, ids) => one.start(event, ids.join('\n')),
+    carries: one.carries,
+    idsFrom: event => (one.idFrom(event) ?? '').split('\n').filter(Boolean),
   }
 }

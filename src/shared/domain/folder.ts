@@ -111,12 +111,13 @@ export function isStudioOwned(path: string): boolean {
 }
 
 /**
- * Whether `path` may be dragged into `folder`.
+ * Why `path` may not go into `folder`, or `null` when it may.
  *
- * Both sides ask it, and that is the point of it living here: the panel refuses the gesture on
- * screen so nothing is dropped that will not move, and the main process refuses it again
- * because a window is not what decides what may be written. Two spellings of one rule would be
- * two rules the day one of them is edited.
+ * **The one spelling of the rule**, and it answers with a REASON rather than a boolean because
+ * its two readers need different halves of the same answer: the panel greys the gesture out and
+ * only needs to know THAT it is refused, while the main process reports what was refused and
+ * why — 297 moved, 3 turned away, each with its sentence. Written twice, the two would be two
+ * rules the day one of them is edited.
  *
  * The studio's own folders refuse on BOTH sides, and so does everything UNDER them: `assets/`
  * is still where a file's role is read from, so a picture dragged out of `assets/img` would
@@ -127,13 +128,21 @@ export function isStudioOwned(path: string): boolean {
  * browser missing one of its two ordinary gestures. No row of the catalogue stands for the root
  * either way — nothing under it is one of the studio's own paths.
  *
- * What it cannot answer is whether `folder` IS a folder — it only has paths. The panel reads
- * the node's kind, the main process asks the disk.
+ * What it cannot answer is what only the disk knows: whether `folder` IS a folder, whether
+ * either of them is still there, and whether the name is taken where it lands. The panel reads
+ * the node's kind; `file-plan.ts` reads the folders and adds those refusals to this one.
  */
-export function canMoveInto(path: string, folder: string): boolean {
-  if (isStudioOwned(path) || isStudioOwned(folder)) return false
+export function moveRefusal(path: string, folder: string): 'private' | 'into-itself' | null {
+  if (isStudioOwned(path) || isStudioOwned(folder)) return 'private'
 
   // A folder dropped inside itself would take its own destination with it, and the rename that
   // carries it out would leave the whole subtree unreachable.
-  return folder !== path && !isUnder(folder, path)
+  if (folder === path || isUnder(folder, path)) return 'into-itself'
+
+  return null
+}
+
+/** The same rule as the panel reads it: may this be dropped there, yes or no. */
+export function canMoveInto(path: string, folder: string): boolean {
+  return moveRefusal(path, folder) === null
 }

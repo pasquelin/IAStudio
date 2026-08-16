@@ -50,8 +50,7 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
         .sort(entriesByName(languageOf()))
     },
 
-    names: async relative =>
-      await readdir(join(rootOf(), relative)).catch(() => null),
+    names: async relative => await readdir(join(rootOf(), relative)).catch(() => null),
   }
 }
 
@@ -161,10 +160,7 @@ export function createFolderWriter(
   rootOf: () => string,
   toTrash: (file: string) => Promise<void>,
 ): FolderWriter {
-  const onto = async (
-    to: string,
-    write: (target: string) => Promise<void>,
-  ): Promise<boolean> => {
+  const onto = async (to: string, write: (target: string) => Promise<void>): Promise<boolean> => {
     const target = join(rootOf(), to)
     if (await exists(target)) return false
 

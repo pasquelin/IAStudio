@@ -310,4 +310,30 @@ describe('the menu a window raises over its own surfaces', () => {
     expect(() => popup([{ id: 'reveal', label: 'Révéler', icon: 'file:///etc/passwd' }])).toThrow()
     expect(electron.popped).toEqual([])
   })
+
+  /**
+   * The key a row answers to, DRAWN and never reserved: registering it would take it from the
+   * window for good, and on macOS AppKit would then swallow the very ⌘Z the surface underneath
+   * is listening for.
+   */
+  it('shows the key of a row without taking it from the window', () => {
+    const shown = raise([{ id: 'cut', label: 'Couper', accelerator: 'CmdOrCtrl+X' }]).rows[0]
+
+    expect(shown?.accelerator).toBe('CmdOrCtrl+X')
+    expect(shown?.registerAccelerator).toBe(false)
+  })
+
+  // Electron parses an accelerator itself and throws on a shape it does not know, which would
+  // leave the click with no menu at all. Only the four names `acceleratorOf` writes get through.
+  it('refuses a modifier the studio never writes', () => {
+    expect(() => popup([{ id: 'cut', label: 'Couper', accelerator: 'Foobar+X' }])).toThrow()
+    expect(electron.popped).toEqual([])
+  })
+
+  // A rule is a row with nothing to choose, and twelve gestures in one menu need the groups.
+  it('draws a separator as a rule rather than as a row', () => {
+    const drawn = raise([{ id: '0', label: '', separator: true }, ...rows]).rows
+
+    expect(drawn[0]).toEqual({ type: 'separator' })
+  })
 })

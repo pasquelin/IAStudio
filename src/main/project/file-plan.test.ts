@@ -53,8 +53,9 @@ describe('planning a batch of file gestures', () => {
   // Not a refusal, and not a write either: dropping a row on the folder it already sits in is
   // the commonest slip of the whole gesture, and it has nothing to say about itself.
   it('does nothing at all when a file is sent where it already is', () => {
-    expect(plan({ op: 'move', paths: ['notes/a.png'], folder: 'notes' }, { notes: ['a.png'] }))
-      .toEqual({ acts: [], refused: [] })
+    expect(
+      plan({ op: 'move', paths: ['notes/a.png'], folder: 'notes' }, { notes: ['a.png'] }),
+    ).toEqual({ acts: [], refused: [] })
   })
 
   /**
@@ -112,7 +113,10 @@ describe('planning a batch of file gestures', () => {
   })
 
   it('refuses a source nothing stands at', () => {
-    const { refused } = plan({ op: 'move', paths: ['gone.png'], folder: 'refs' }, { '': [], refs: [] })
+    const { refused } = plan(
+      { op: 'move', paths: ['gone.png'], folder: 'refs' },
+      { '': [], refs: [] },
+    )
 
     expect(refused).toEqual([{ path: 'gone.png', reason: 'missing' }])
   })
@@ -127,9 +131,7 @@ describe('duplicating', () => {
       { '': ['Ruelle bleue.png', 'Ruelle bleue 2.png'] },
     )
 
-    expect(acts).toEqual([
-      { act: 'copy', from: 'Ruelle bleue.png', to: 'Ruelle bleue 3.png' },
-    ])
+    expect(acts).toEqual([{ act: 'copy', from: 'Ruelle bleue.png', to: 'Ruelle bleue 3.png' }])
   })
 
   // Which is what a paste of something COPIED is: the same act, into a folder that was named.
@@ -145,8 +147,9 @@ describe('duplicating', () => {
 
 describe('creating a folder', () => {
   it('refuses a name the folder already holds', () => {
-    expect(plan({ op: 'createFolder', folder: '', name: 'Characters' }, { '': ['Characters'] }))
-      .toEqual({ acts: [], refused: [{ path: 'Characters', reason: 'exists' }] })
+    expect(
+      plan({ op: 'createFolder', folder: '', name: 'Characters' }, { '': ['Characters'] }),
+    ).toEqual({ acts: [], refused: [{ path: 'Characters', reason: 'exists' }] })
   })
 
   it('makes one at the root, which is where a project is organised from', () => {

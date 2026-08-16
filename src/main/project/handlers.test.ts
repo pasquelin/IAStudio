@@ -364,16 +364,14 @@ describe('project handlers', () => {
     // tree re-reading its folders would find exactly what it already holds.
     it('says how many were refused in the journal, and wakes nobody', async () => {
       const injected = deps(catalog)
-      injected.files.move = vi.fn(
-        async (): Promise<FileOutcome> => ({
-          done: [],
-          refused: [
-            { path: 'a.png', reason: 'exists' },
-            { path: 'b.png', reason: 'missing' },
-          ],
-          batch: 'batch-1',
-        }),
-      )
+      injected.files.move = vi.fn(async (): Promise<FileOutcome> => ({
+        done: [],
+        refused: [
+          { path: 'a.png', reason: 'exists' },
+          { path: 'b.png', reason: 'missing' },
+        ],
+        batch: 'batch-1',
+      }))
       const window = openWindow()
       registerProjectHandlers(injected)
 
