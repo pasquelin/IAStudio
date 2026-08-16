@@ -200,9 +200,30 @@ export function registerProjectHandlers({
     return done
   })
 
+  /**
+   * The file goes to the system's trash, and the row that named it goes with it.
+   *
+   * Without that second half the catalogue kept a row pointing at nothing: the shelf went on
+   * offering the asset, opening it found no bytes, and only `assets:absent` noticed — after the
+   * fact, and only for what a window happened to be listing.
+   *
+   * A FOLDER thrown away still leaves the rows beneath it behind. Repairing that needs the
+   * catalogue to update by path prefix, which it cannot do yet; the reconciliation pass is what
+   * will answer for it.
+   */
   handle(CHANNELS.projectTrashFile, async (_event, relative) => {
-    const done = await folder.trash(parseFolderPath(relative))
-    if (!done) record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotTrashed' })
+    const path = parseFolderPath(relative)
+    const done = await folder.trash(path)
+    if (!done) {
+      record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotTrashed' })
+      return done
+    }
+
+    const [asset] = await project.catalog().search({ path, limit: 1 })
+    if (asset) {
+      await project.catalog().remove(asset.id)
+      broadcast(EVENTS.assetsChanged)
+    }
     return done
   })
 
