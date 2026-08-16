@@ -93,6 +93,7 @@
     "missing": "Ce document n’est plus ouvert.",
     "close": "Fermer l’onglet",
     "closeOthers": "Fermer les autres onglets",
+    "create": "Créer",
     "rename": "Renommer",
     "renameLabel": "Nom du document",
     "delete": "Supprimer le document…",

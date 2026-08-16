@@ -8,6 +8,7 @@ import {
   documentFileName,
   DOCUMENT_NAME_FAILURES,
   type DocumentNameFailure,
+  type NamedDocument,
 } from '@shared/domain/document-name'
 import { foldForFileName, nameFailureOf } from '@shared/domain/file-name'
 import type { WorkspaceId } from '@shared/domain/workspace'
@@ -67,13 +68,15 @@ type DocumentsState = {
   /**
    * `null` when the workspace has no editable document kind yet.
    *
-   * `of` is what opening an asset passes: the two fields travel together because a tab named
-   * after an asset it is not linked to would be a title that lies. Without it the document is
-   * numbered, which is what the rail's plus button and the home want.
+   * `of` carries the name the document is to be given, and where it came from. `sourceAssetId`
+   * travels with it when opening an asset — a tab named after an asset it is not linked to would
+   * be a title that lies — and stays out when the name was TYPED, which is what the dialog the
+   * plus button raises hands over. Without `of` the document is numbered, for a caller with
+   * nobody to ask.
    */
   create: (
     workspace: WorkspaceId,
-    of?: { title: string; sourceAssetId: string },
+    of?: { title: string; sourceAssetId?: string },
   ) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
   /**
@@ -310,7 +313,9 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     // store neither has written to yet, and two tabs open called « Sans titre 1 ».
     const stored = of ? [] : ((await listed()) ?? [])
 
-    const title = of ? of.title : untitled(stored, get(), kind)
+    const title =
+      of?.title ??
+      untitledDocumentName(takenDocumentNames({ documents: get().documents, stored }), kind)
 
     const document: DocumentDescriptor = {
       id: newId(),
@@ -322,7 +327,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       // may land on a suffixed name if the folder meanwhile took this one, and `relist` reads
       // back what the folder actually holds.
       fileName: documentFileName(title, kind),
-      ...(of ? { sourceAssetId: of.sourceAssetId } : {}),
+      ...(of?.sourceAssetId ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 
     // Nothing is written yet, and nothing should be: a document appears in the folder when it
@@ -393,40 +398,40 @@ const generations = { relist: 0, refresh: 0 }
 let listing: Promise<DocumentDescriptor[] | null> | null = null
 
 /**
- * The next free name for a blank document — « Sans titre 3 ».
+ * Every name already spoken for — the folder's and the open tabs' alike.
  *
- * Numbered against the folder as much as against the open tabs: a document saved and then closed
- * still holds its name, and counting only what is open hands that name out twice.
+ * The FILE names, and every document's rather than the blank ones of one workspace: what makes a
+ * name unusable is that the folder already holds it, whoever holds it. The open tabs count as
+ * much as the folder, and one of them is why: a tab opened and not yet typed in writes no file,
+ * so a listing alone would hand its name straight out a second time.
  *
- * Only the BLANK ones count. A document opened for an asset carries the asset's name and skips
- * this entirely — counting it would make the first untitled document of a space « Sans titre 4 »
- * because three pictures had been opened before it.
- *
- * Synchronous, and the listing is handed in rather than read here: its caller has to write to the
- * store in the same run it reads it, and an await inside would put a gap between the two.
+ * The listing is handed in rather than read off the store: `create` has to read the store and
+ * write to it in one synchronous run, and it holds a fresher listing than the one `stored` has.
  */
-function untitled(
-  stored: readonly DocumentDescriptor[],
-  state: Pick<DocumentsState, 'documents'>,
-  kind: DocumentKind,
-): string {
-  // The FILE names, and every document's rather than the blank ones of one workspace: what makes
-  // a name unusable is that the folder already holds it, whoever holds it. Counting documents
-  // instead — which is what this did, on a set of ids — answered with the count plus one, so
-  // three created and one deleted handed out a name still sitting in the folder.
-  //
-  // Nothing needs skipping for it any more either: a document opened for an asset is called
-  // after the asset, and never collides with `Sans titre N`.
-  const taken = new Set(
-    [...stored, ...Object.values(state.documents)].map(document =>
-      foldForFileName(document.fileName),
-    ),
-  )
+export function takenDocumentNames(state: {
+  documents: Record<string, DocumentDescriptor>
+  stored: readonly DocumentDescriptor[]
+}): NamedDocument[] {
+  return [...state.stored, ...Object.values(state.documents)].map(({ id, fileName }) => ({
+    id,
+    fileName,
+  }))
+}
+
+/**
+ * The next free name for a blank document — « Sans titre 3 ». What the studio proposes when it
+ * makes one, and what the naming dialog opens on.
+ *
+ * Only the BLANK ones are numbered. A document opened for an asset carries the asset's name and
+ * never collides with « Sans titre N », so nothing needs skipping for it.
+ */
+export function untitledDocumentName(taken: readonly NamedDocument[], kind: DocumentKind): string {
+  const names = new Set(taken.map(document => foldForFileName(document.fileName)))
 
   // Ends on the first free one, and there are only ever as many taken as the folder holds.
   for (let n = 1; ; n += 1) {
     const title = i18next.t('documents.untitled', { n })
-    if (!taken.has(foldForFileName(documentFileName(title, kind)))) return title
+    if (!names.has(foldForFileName(documentFileName(title, kind)))) return title
   }
 }
 

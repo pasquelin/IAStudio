@@ -15,6 +15,7 @@ import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStac
 import { ADD_ENTRIES } from '@/engines/scene/node-kinds'
 import { ASSET_INTENTS } from '@/helpers/asset-intents'
 import { TRACK_FLAGS } from '@/panels/timeline/track-flags'
+import { DOCUMENT_NAME_REFUSALS } from '@/app/document-name'
 
 function resolve(code: Language, key: string): unknown {
   // Widened, not cast: the bundle's inferred type has no index signature, and every key here is
@@ -59,6 +60,9 @@ const COMPOSED_KEYS: readonly string[] = [
   // The rail label, built by `workspaceLabelKey` — the most visible string in the window, and
   // the one thing the workspace table does NOT make the compiler demand of a new space.
   ...WORKSPACE_IDS.map(workspace => `workspaces.${workspace}`),
+  // Why a typed name was refused, read off the failure the shared check answers with. The
+  // compiler holds the other half — the record has one entry per failure or it does not build.
+  ...Object.values(DOCUMENT_NAME_REFUSALS),
 ]
 
 describe('the keys the renderer composes', () => {
