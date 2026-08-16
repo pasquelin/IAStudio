@@ -438,6 +438,26 @@ export type Catalog = {
    */
   remove: (assetId: string) => void
   /**
+   * Follows a file that moved: the row filed at `from` is refiled at `to`, and so is everything
+   * beneath it when `from` is a folder. The ids do not change, which is the whole point — a
+   * scene referring to a texture keeps referring to it however the user rearranges the project.
+   *
+   * Idempotent, and that is what makes a replayed journal safe: run twice, the second pass finds
+   * nothing at `from` and writes nothing.
+   *
+   * The caller moves the file FIRST and calls this second. The other order leaves a row pointing
+   * at a path nothing is at.
+   */
+  repath: (from: string, to: string) => void
+  /**
+   * Drops the row filed at `path` and every row beneath it — a folder sent to the trash.
+   *
+   * A folder is not an asset, so no id can say what went; the path is the only handle. Rows
+   * beneath it lose their prompt and their lineage with them, which is what makes this the
+   * deliberate gesture rather than what a missing file triggers.
+   */
+  forgetUnder: (path: string) => void
+  /**
    * Writes lines to the journal, in one transaction, and trims it back to its bound.
    *
    * A batch rather than one line at a time: a push of two hundred assets writes two hundred
@@ -473,6 +493,40 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   // path and nothing else, so a collation here could not follow the reader's language anyway.
   const selectTags = driver.prepare('SELECT tag FROM asset_tags WHERE asset_id = ?')
   const selectAsset = driver.prepare('SELECT * FROM assets WHERE id = ?')
+
+  /**
+   * The path itself, and everything under it.
+   *
+   * `substr` rather than `LIKE`: `%` and `_` are wildcards to `LIKE` and ordinary characters in a
+   * file name, so a folder called `100%_final` would have matched paths having nothing to do
+   * with it.
+   *
+   * The lengths are measured by SQLite rather than passed in. `length()` counts CHARACTERS in
+   * text where JavaScript's `.length` counts UTF-16 units: a folder named with an emoji would
+   * have been cut one unit too far, and every path under it rewritten wrong.
+   *
+   * Parameters, in order: the new prefix, then the old one four times.
+   */
+  const movePaths = driver.prepare(`
+    UPDATE assets
+       SET path = ? || substr(path, length(?) + 1)
+     WHERE path = ? OR substr(path, 1, length(?) + 1) = ? || '/'
+  `)
+
+  const deleteUnder = driver.prepare(`
+    DELETE FROM assets
+     WHERE path = ? OR substr(path, 1, length(?) + 1) = ? || '/'
+  `)
+
+  // What `orphanChildren` does for one row, for a whole folder — and children left OUTSIDE the
+  // folder are exactly the ones that would otherwise read as derived from nothing.
+  const orphanChildrenUnder = driver.prepare(`
+    UPDATE assets SET derived_from = NULL
+     WHERE derived_from IN (
+       SELECT id FROM assets
+        WHERE path = ? OR substr(path, 1, length(?) + 1) = ? || '/'
+     )
+  `)
   // Oldest first: re-importing the same API asset must not move where its children point.
   const selectByRemoteId = driver.prepare(
     'SELECT * FROM assets WHERE remote_asset_id = ? ORDER BY created_at, id LIMIT 1',
@@ -603,6 +657,21 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       transaction(driver, () => {
         orphanChildren.run(assetId)
         deleteAsset.run(assetId)
+      })
+    },
+
+    repath: (from, to) => {
+      // Refusing rather than moving everything: an empty `from` matches the whole catalogue
+      // through `substr(path, 1, 1) = ''`, which is every row of the project at once.
+      if (!from || !to || from === to) return
+      movePaths.run(to, from, from, from, from)
+    },
+
+    forgetUnder: path => {
+      if (!path) return
+      transaction(driver, () => {
+        orphanChildrenUnder.run(path, path, path)
+        deleteUnder.run(path, path, path)
       })
     },
 

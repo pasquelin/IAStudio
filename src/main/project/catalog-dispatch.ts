@@ -33,6 +33,10 @@ function valueOf(catalog: Catalog, request: CatalogRequest): CatalogResults[Cata
       return catalog.countByType()
     case 'remove':
       return catalog.remove(request.assetId)
+    case 'repath':
+      return catalog.repath(request.from, request.to)
+    case 'forgetUnder':
+      return catalog.forgetUnder(request.path)
     case 'appendActivity':
       return catalog.appendActivity(request.entries)
     case 'readActivity':

@@ -374,15 +374,17 @@ describe('project handlers', () => {
       expect(injected.record).not.toHaveBeenCalled()
     })
 
-    // The row used to stay behind, and the shelf went on offering an asset whose bytes were in
-    // the trash — noticed only after the fact, and only by whatever window was listing it.
-    it('takes the catalogue row with the file', async () => {
-      await catalog.add(asset({ path: 'assets/vid/A001.mov' }))
+    // The rows used to stay behind, and the shelf went on offering assets whose bytes were in
+    // the trash — noticed only after the fact, and only by whatever window was listing them.
+    it('takes the catalogue rows with the file, and with a whole folder', async () => {
+      await catalog.add(asset({ path: 'Rushes/A001.mov' }))
+      await catalog.add(asset({ id: 'asset-2', path: 'Rushes/day two/A002.mov' }))
       registerProjectHandlers(deps(catalog))
 
-      await invoke(CHANNELS.projectTrashFile, 'assets/vid/A001.mov')
+      await invoke(CHANNELS.projectTrashFile, 'Rushes')
 
       expect(await catalog.find('asset-1')).toBeNull()
+      expect(await catalog.find('asset-2')).toBeNull()
     })
 
     it('says so in the journal when the system would not take it', async () => {

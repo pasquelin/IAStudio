@@ -333,6 +333,68 @@ describe('catalog', () => {
     expect(catalog.search({ path: 'assets/img/stray.png' })).toEqual([])
   })
 
+  describe('following a file that moved', () => {
+    const pathOf = (id: string): string | undefined => catalog.find(id)?.path
+
+    it('refiles a folder and everything under it, keeping every id', () => {
+      catalog.add(asset({ id: 'asset_1', path: 'Rushes/A001.mov' }))
+      catalog.add(asset({ id: 'asset_2', path: 'Rushes/day two/A002.mov' }))
+      catalog.add(asset({ id: 'asset_3', path: 'Stills/A003.png' }))
+
+      catalog.repath('Rushes', 'Footage/Raw')
+
+      expect(pathOf('asset_1')).toBe('Footage/Raw/A001.mov')
+      expect(pathOf('asset_2')).toBe('Footage/Raw/day two/A002.mov')
+      expect(pathOf('asset_3')).toBe('Stills/A003.png')
+    })
+
+    // What makes a replayed move journal safe: the second pass finds nothing where the first
+    // one already moved everything.
+    it('writes nothing the second time, and nothing for a path no row is at', () => {
+      catalog.add(asset({ id: 'asset_1', path: 'Rushes/A001.mov' }))
+
+      catalog.repath('Rushes', 'Footage')
+      catalog.repath('Rushes', 'Elsewhere')
+      catalog.repath('Nowhere', 'Somewhere')
+
+      expect(pathOf('asset_1')).toBe('Footage/A001.mov')
+    })
+
+    // `LIKE` would have read these as wildcards and swept in paths having nothing to do with
+    // the folder that moved.
+    it('is not fooled by a folder whose name holds a wildcard character', () => {
+      catalog.add(asset({ id: 'asset_1', path: '100%_final/A001.mov' }))
+      catalog.add(asset({ id: 'asset_2', path: '100Xdone/A002.mov' }))
+
+      catalog.repath('100%_final', 'Done')
+
+      expect(pathOf('asset_1')).toBe('Done/A001.mov')
+      expect(pathOf('asset_2')).toBe('100Xdone/A002.mov')
+    })
+
+    // SQLite counts characters where JavaScript counts UTF-16 units: a length measured on the
+    // wrong side cuts one unit too far and rewrites every path under it wrong.
+    it('cuts a folder named with an emoji at the right place', () => {
+      catalog.add(asset({ id: 'asset_1', path: '🎬 Rushes/A001.mov' }))
+
+      catalog.repath('🎬 Rushes', 'Footage')
+
+      expect(pathOf('asset_1')).toBe('Footage/A001.mov')
+    })
+
+    it('drops a trashed folder and every row beneath it', () => {
+      catalog.add(asset({ id: 'asset_1', path: 'Rushes/A001.mov' }))
+      catalog.add(asset({ id: 'asset_2', path: 'Rushes/day two/A002.mov' }))
+      catalog.add(asset({ id: 'asset_3', path: 'Rushesque/A003.mov' }))
+
+      catalog.forgetUnder('Rushes')
+
+      expect(catalog.find('asset_1')).toBeNull()
+      expect(catalog.find('asset_2')).toBeNull()
+      expect(pathOf('asset_3')).toBe('Rushesque/A003.mov')
+    })
+  })
+
   it('returns the most recent first, and paginates', () => {
     catalog.add(asset({ id: 'asset_old', createdAt: '2026-08-01T10:00:00.000Z' }))
     catalog.add(asset({ id: 'asset_new', createdAt: '2026-08-06T10:00:00.000Z' }))

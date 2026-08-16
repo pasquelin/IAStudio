@@ -17,6 +17,8 @@ export type CatalogRequest =
   | { id: number; op: 'search'; query: AssetQuery }
   | { id: number; op: 'countByType' }
   | { id: number; op: 'remove'; assetId: string }
+  | { id: number; op: 'repath'; from: string; to: string }
+  | { id: number; op: 'forgetUnder'; path: string }
   | { id: number; op: 'appendActivity'; entries: readonly ActivityDraft[] }
   | { id: number; op: 'readActivity'; query: ActivityQuery }
 
@@ -29,6 +31,8 @@ export type CatalogResults = {
   search: Asset[]
   countByType: AssetCounts
   remove: void
+  repath: void
+  forgetUnder: void
   appendActivity: ActivityEntry[]
   readActivity: ActivityEntry[]
 }
