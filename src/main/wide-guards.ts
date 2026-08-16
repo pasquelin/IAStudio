@@ -70,12 +70,17 @@ function readsAnchoredFile(code: string): boolean {
  * which is the exact failure the ways below exist to prevent. **Extracting shared reading is a
  * good move that MUST come with a line here**, and the count is the only proof: the three window
  * guards that gave up their own glob were counted before and after, 41 both times.
+ *
+ * `design/test-harness` joined on 2026-08-16, and it had been missing since the day it was
+ * written: 49 guards before, 53 after — its four consumers had all been outside the net, the
+ * oldest of them for days. Found by an adversarial review of the fourth, not by the floor, which
+ * a silent drop of four never reaches.
  */
 function borrowsTheSweep(code: string): boolean {
   // Any depth of `../`, not just the sibling: a guard one folder down imports `'../source-files'`
   // and would have dropped out of the net exactly like the one this function was added for. The
   // review caught the two literal spellings before anyone wrote that guard.
-  return /from '\.[./]*\/(source-files|window-sources)'|from '@main\/source-files'|from '@\/window-sources'|from '\.[./]*\/scripts\/[\w-]+\.ts'/.test(
+  return /from '\.[./]*\/(source-files|window-sources|design\/test-harness)'|from '@main\/source-files'|from '@\/(window-sources|design\/test-harness)'|from '\.[./]*\/scripts\/[\w-]+\.ts'/.test(
     code,
   )
 }

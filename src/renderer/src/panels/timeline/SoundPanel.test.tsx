@@ -22,7 +22,6 @@ function openTake(): void {
 describe('the sound montage of a take', () => {
   beforeEach(() => {
     useDocuments.setState({ documents: {}, activeId: null })
-    useSequences.setState({ states: {}, histories: {} })
     useTimelineView.setState({ viewports: {} })
   })
 

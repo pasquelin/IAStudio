@@ -15,7 +15,6 @@ const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
 
 describe('TimelineActions', () => {
   beforeEach(() => {
-    useSequences.setState({ states: {}, histories: {} })
     useVideoTool.setState({ tool: DEFAULT_VIDEO_TOOL })
     useDocuments.setState({ documents: {}, activeId: null })
   })

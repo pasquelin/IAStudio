@@ -47,7 +47,6 @@ const sourceTrack = () =>
 describe('SequenceDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useSequences.setState({ states: {}, histories: {} })
     useDocuments.setState({ activeId: 'doc-1' })
   })
 

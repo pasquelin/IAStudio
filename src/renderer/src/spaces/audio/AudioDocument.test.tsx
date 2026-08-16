@@ -107,7 +107,6 @@ describe('AudioDocument', () => {
   beforeEach(() => {
     saveAudio.mockClear()
     useAssets.setState({ items: [asset] })
-    useAudioEdits.setState({ states: {}, histories: {} })
     useSequences.setState({ states: { 'doc-1': EMPTY_SOUND_SEQUENCE }, histories: {} })
   })
 
@@ -581,7 +580,6 @@ describe('dropping a take on the editor', () => {
   // The montage too, and not only the chain: a block left selected by the suite above is a
   // block the editor would show, and this one is about the editor with nothing in it.
   beforeEach(() => {
-    useAudioEdits.setState({ states: {}, histories: {} })
     useSequences.setState({ states: { 'doc-1': EMPTY_SOUND_SEQUENCE }, histories: {} })
   })
 

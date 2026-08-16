@@ -21,7 +21,6 @@ const channelsOf = () => textureOf(useTextures.getState(), 'doc-1').channels
 
 describe('putting a picture into a channel of a material', () => {
   beforeEach(() => {
-    useTextures.setState({ states: {}, histories: {} })
     forgetReportedFailures()
   })
 

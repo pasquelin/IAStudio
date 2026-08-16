@@ -30,7 +30,6 @@ const picture: Asset = {
 }
 
 beforeEach(() => {
-  useCanvases.setState({ states: {}, histories: {} })
   vi.mocked(reportFailure).mockClear()
 })
 

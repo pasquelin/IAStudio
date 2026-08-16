@@ -91,7 +91,6 @@ let menu = fakeMenu()
 
 describe('TimelineCanvas', () => {
   beforeEach(() => {
-    useSequences.setState({ states: {}, histories: {} })
     useTimelineView.setState({ viewports: {} })
     useAssets.setState({ items: [asset()] })
     menu = fakeMenu()

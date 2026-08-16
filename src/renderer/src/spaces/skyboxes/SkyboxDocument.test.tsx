@@ -65,7 +65,6 @@ function viewport(): Element {
 describe('SkyboxDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useSkyboxes.setState({ states: {}, histories: {} })
     useSkyboxViews.setState({ views: {} })
     useAssets.setState({ items: [panorama] })
     installDocument('doc-1', 'skyboxes')
@@ -219,7 +218,6 @@ describe('the export menu row', () => {
 describe('the keyboard of a sky', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useSkyboxes.setState({ states: {}, histories: {} })
     useSkyboxViews.setState({ views: {} })
     useAssets.setState({ items: [panorama] })
     installDocument('doc-1', 'skyboxes')

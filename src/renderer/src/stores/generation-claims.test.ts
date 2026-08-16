@@ -27,8 +27,6 @@ const done: Job = job({ id: 'job-1', label: 'Scenario Flux.1', status: 'succeede
 
 beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
-  useCanvases.setState({ states: {}, histories: {} })
-  useSkyboxes.setState({ states: {}, histories: {} })
   useJobs.setState({ jobs: [] })
   useAssets.setState({
     items: [],

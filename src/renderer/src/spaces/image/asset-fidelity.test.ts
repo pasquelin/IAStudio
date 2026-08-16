@@ -17,7 +17,6 @@ const measuring = (size: { width: number; height: number } | Error) =>
   lendPictureMeasure(() => (size instanceof Error ? Promise.reject(size) : Promise.resolve(size)))
 
 beforeEach(() => {
-  useCanvases.setState({ states: {}, histories: {} })
   vi.mocked(reportFailure).mockClear()
 })
 

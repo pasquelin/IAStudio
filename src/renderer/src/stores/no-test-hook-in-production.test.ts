@@ -17,7 +17,7 @@ const HOOKS = ['resetForTests', 'resetDocumentStoresForTests']
  * here is what a suite reaches THROUGH: the fixtures, the setup file that calls it between cases,
  * and the module that declares it.
  */
-const ALLOWED = ['/stores/document-store.ts', '/test-setup.ts', '-fixtures.ts']
+const ALLOWED = ['/stores/document-store.ts', '/test-setup-stores.ts', '-fixtures.ts']
 
 const isAllowed = (path: string): boolean => ALLOWED.some(allowed => path.endsWith(allowed))
 
@@ -41,6 +41,6 @@ describe('the reset hook of a document store', () => {
     ).map(([path]) => path)
 
     expect(named).toContain('../stores/document-store.ts')
-    expect(named).toContain('../test-setup.ts')
+    expect(named).toContain('../test-setup-stores.ts')
   })
 })

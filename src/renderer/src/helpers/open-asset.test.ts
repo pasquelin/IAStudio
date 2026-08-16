@@ -63,11 +63,6 @@ const openedCount = (): number => Object.keys(useDocuments.getState().documents)
 describe('opening an asset', () => {
   beforeEach(() => {
     useDocuments.setState({ documents: {}, stored: [], activeId: null })
-    useAudioEdits.setState({ states: {}, histories: {} })
-    useSequences.setState({ states: {}, histories: {} })
-    useSkyboxes.setState({ states: {}, histories: {} })
-    useScenes.setState({ states: {}, histories: {} })
-    useCanvases.setState({ states: {}, histories: {} })
     // Not the target of any case below: a test watching the workspace change must not start on it.
     useLayouts.setState({ layout: null, activeWorkspace: 'video', home: false })
     useProject.setState({ project: PROJECT, known: true })

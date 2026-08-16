@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { canUndo, canRedo } from '@/engines/core/history'
 import { renameLayer } from '@/engines/canvas/commands'
 import type { PatchSide } from '@/engines/canvas/PixelPatches'
@@ -22,10 +22,6 @@ function engine(present = true) {
 }
 
 describe('pixelPort', () => {
-  beforeEach(() => {
-    useCanvases.setState({ states: {}, histories: {} })
-  })
-
   it('turns a finished stroke into one history entry', () => {
     const port = pixelPort(DOCUMENT, () => engine())
     port.record('patch-1')

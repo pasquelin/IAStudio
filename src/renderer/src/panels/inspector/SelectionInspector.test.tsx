@@ -47,7 +47,6 @@ describe('Inspector, on what a panel selected', () => {
     useAssets.setState({ items: [asset()] })
     useJobs.setState({ jobs: [], bodies: {} })
     useDocuments.setState({ documents: {}, activeId: null })
-    useSequences.setState({ states: {}, histories: {} })
   })
 
   it('asks for a selection when there is none', () => {

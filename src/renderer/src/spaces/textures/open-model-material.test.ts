@@ -51,7 +51,6 @@ const openedCount = (): number => Object.keys(useDocuments.getState().documents)
 describe('opening the material of a model', () => {
   beforeEach(() => {
     useDocuments.setState({ documents: {}, stored: [], activeId: null })
-    useTextures.setState({ states: {}, histories: {} })
     useLayouts.setState({ layout: null, activeWorkspace: 'video', home: false })
     useProject.setState({ project: PROJECT, known: true })
     installFakeBridge()
