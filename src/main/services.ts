@@ -582,6 +582,10 @@ export function createServices(settings: SettingsStore): Services {
     settings.write({
       storage: {
         lastProject: current.path,
+        // Where the picker should start next time, unless the user set a folder of their own.
+        // Recorded here rather than at the picker, so opening a project from anywhere — the
+        // shelf, the menu, the last-project reopen — moves it too.
+        lastProjectsFolder: dirname(current.path),
         // Written on the same beat as `lastProject`, and replicated with it: the home reads the
         // shelf from the settings every window already holds.
         recentProjects: withRecentProject(stored.storage.recentProjects, current, timestamp()),

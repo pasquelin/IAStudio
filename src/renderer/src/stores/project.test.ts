@@ -189,14 +189,28 @@ describe('picking a folder in the dialog', () => {
     expect(useProject.getState().project).toBeNull()
   })
 
-  it('creates a project in the folder that was picked', async () => {
-    const create = vi.fn(() => Promise.resolve({ path: '/p/new', manifest: MANIFEST }))
+  // The folder chosen IS the project: nothing but its path crosses, and the name comes from it
+  // on the other side. Sending a name made a subfolder inside the folder the user had picked.
+  it('makes the folder that was picked into the project', async () => {
+    const create = vi.fn(() => Promise.resolve({ path: '/p', manifest: MANIFEST }))
     installFakeBridge({ ...picking('/p'), project: { create } })
 
     await useProject.getState().createPicked()
 
-    expect(create).toHaveBeenCalled()
-    expect(useProject.getState().project?.path).toBe('/p/new')
+    expect(create).toHaveBeenCalledWith('/p')
+    expect(useProject.getState().project?.path).toBe('/p')
+  })
+
+  // The main process asks before writing into a folder that holds files, and a "no" comes back
+  // as `null`. Read as a project, it would blank the one that is open.
+  it('leaves the open project alone when the creation is declined', async () => {
+    const create = vi.fn(() => Promise.resolve(null))
+    installFakeBridge({ ...picking('/p'), project: { create } })
+    useProject.setState({ project: { path: '/open', manifest: MANIFEST }, known: true })
+
+    await useProject.getState().createPicked()
+
+    expect(useProject.getState().project?.path).toBe('/open')
   })
 
   it('survives a folder that cannot be written', async () => {
@@ -213,6 +227,45 @@ describe('picking a folder in the dialog', () => {
     await useProject.getState().openPicked()
 
     expect(open).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Where the dialog starts, and it is not cosmetic: the system reopens one wherever it was last
+   * left, which after a creation is INSIDE the project just made — so the second project of a
+   * session was created within the first, and nothing said so.
+   */
+  describe('the folder the dialog starts in', () => {
+    const startingIn = () => {
+      const pickPath = vi.fn(() => Promise.resolve(null))
+      installFakeBridge({ dialog: { pickPath } })
+      return pickPath
+    }
+
+    const storedAs = (storage: { projectsFolder?: string; lastProjectsFolder?: string }) => {
+      useSettings.setState(state => ({
+        settings: { ...state.settings, storage: { ...state.settings.storage, ...storage } },
+      }))
+    }
+
+    it('is the preference when the user set one', async () => {
+      storedAs({ projectsFolder: '/Users/someone/Projets', lastProjectsFolder: '/elsewhere' })
+      const pickPath = startingIn()
+
+      await useProject.getState().createPicked()
+
+      expect(pickPath).toHaveBeenCalledWith('folder', '/Users/someone/Projets')
+    })
+
+    // The preference is deliberately left empty by people who want the dialog to follow them;
+    // this is what "follow them" means, and it is remembered rather than left to the system.
+    it('falls back to where the last project was made', async () => {
+      storedAs({ projectsFolder: undefined, lastProjectsFolder: '/Users/someone/Mes Projets' })
+      const pickPath = startingIn()
+
+      await useProject.getState().createPicked()
+
+      expect(pickPath).toHaveBeenCalledWith('folder', '/Users/someone/Mes Projets')
+    })
   })
 })
 

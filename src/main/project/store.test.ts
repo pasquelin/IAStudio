@@ -55,9 +55,9 @@ describe('project store', () => {
   it('creates the whole tree and its manifest', async () => {
     const project = await store.create(root, 'My project')
 
-    // The folder is named, not suffixed: an extension nothing is registered against decorates
-    // a folder the system opens as a folder anyway.
-    expect(project.path).toBe(join(root, 'My project'))
+    // The folder handed in IS the project. Nothing is made from the name — a name that fabricated
+    // a subfolder put a project inside the folder the user had just made for it.
+    expect(project.path).toBe(root)
     for (const folder of PROJECT_FOLDERS) {
       expect(await exists(join(project.path, folder))).toBe(true)
     }
@@ -371,6 +371,60 @@ describe('project store', () => {
     expect(store.current()).toEqual(project)
   })
 
+  describe('inspecting a folder before creating in it', () => {
+    it('calls an empty folder blank, and one with files of its own occupied', async () => {
+      expect(await store.inspect(root)).toBe('blank')
+
+      await writeFile(join(root, 'rush.mp4'), 'x', 'utf8')
+      expect(await store.inspect(root)).toBe('occupied')
+    })
+
+    // Every folder made on a Mac gets one, and asking the user about it would put a dialog in
+    // front of a folder they would rightly call empty.
+    it('does not count a hidden entry as content', async () => {
+      await writeFile(join(root, '.DS_Store'), 'x', 'utf8')
+      expect(await store.inspect(root)).toBe('blank')
+    })
+
+    it('recognises a folder that is already a project', async () => {
+      const created = await store.create(root, 'My project')
+      expect(await store.inspect(created.path)).toBe('project')
+    })
+
+    // The catalogue would have two owners for the same files, and the outer project indexes the
+    // inner one's assets as its own.
+    it('refuses a folder sitting anywhere under a project', async () => {
+      await store.create(root, 'Outer')
+
+      expect(await store.inspect(join(root, 'documents'))).toBe('nested')
+      expect(await store.inspect(join(root, 'assets', 'img', 'deep'))).toBe('nested')
+    })
+
+    // The reason this exists at all: `create` writes a manifest unconditionally, so a caller
+    // that took "cannot read it" for "there is none" would replace an identity the user still
+    // has documents under.
+    it('raises rather than answering, for a manifest that exists but will not parse', async () => {
+      await writeFile(join(root, MANIFEST_FILE), 'not json at all', 'utf8')
+
+      await expect(store.inspect(root)).rejects.toThrow(ProjectOpenError)
+    })
+
+    it('raises for a project made by a newer build', async () => {
+      await writeFile(
+        join(root, MANIFEST_FILE),
+        JSON.stringify({
+          version: MANIFEST_VERSION + 1,
+          name: 'Future',
+          createdAt: '',
+          updatedAt: '',
+        }),
+        'utf8',
+      )
+
+      await expect(store.inspect(root)).rejects.toMatchObject({ reason: 'too-new' })
+    })
+  })
+
   it('reopens a project it created', async () => {
     const created = await store.create(root, 'My project')
     store.close()
@@ -421,8 +475,8 @@ describe('project store', () => {
       onChange,
     })
 
-    const first = await fragile.create(root, 'First')
-    const second = await fragile.create(root, 'Second')
+    const first = await fragile.create(join(root, 'first'), 'First')
+    const second = await fragile.create(join(root, 'second'), 'Second')
     await fragile.open(first.path)
 
     failNext = true
@@ -535,8 +589,8 @@ describe('renaming a project', () => {
 
   // The home's shelf lists projects that are not open, and renaming one must not open it.
   it('renames a project that is not open, without opening it', async () => {
-    const other = await store.create(root, 'Other')
-    const open = await store.create(root, 'Open')
+    const other = await store.create(join(root, 'other'), 'Other')
+    const open = await store.create(join(root, 'open'), 'Open')
 
     const renamed = await store.rename(other.path, 'Renamed')
 

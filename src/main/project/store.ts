@@ -1,5 +1,5 @@
 import { execFile as execFileCallback } from 'node:child_process'
-import { mkdir, readFile } from 'node:fs/promises'
+import { access, mkdir, readdir, readFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 import { dirname, join } from 'node:path'
 import {
@@ -12,6 +12,7 @@ import {
   type Project,
 } from '@shared/domain/project'
 import type { ActivityMessageKey } from '@shared/domain/activity'
+import { isHiddenEntry } from '@shared/domain/folder'
 import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
 import { isMissing, writeAtomic, writeQueue } from '@main/persistence'
@@ -27,10 +28,11 @@ export class NoProjectError extends Error {
 }
 
 /**
- * Why a folder would not open as a project. The three cases the user can act on, and they ask
- * for three different sentences: pick another folder, repair this one, or update the studio.
+ * Why a folder would not serve as a project. Each case asks the user for a different thing: pick
+ * another folder, repair this one, update the studio, or — for a folder sitting inside a project
+ * already — pick one that is not there.
  */
-export type ProjectOpenFailure = 'not-a-project' | 'unreadable' | 'too-new'
+export type ProjectOpenFailure = 'not-a-project' | 'unreadable' | 'too-new' | 'nested'
 
 /**
  * One error carrying a reason rather than three classes: what every caller does with it is
@@ -51,6 +53,7 @@ const OPEN_FAILURE_KEYS: Record<ProjectOpenFailure, ActivityMessageKey> = {
   'not-a-project': 'activity.projectNotAProject',
   unreadable: 'activity.projectUnreadable',
   'too-new': 'activity.projectTooNew',
+  nested: 'activity.projectNested',
 }
 
 /**
@@ -73,8 +76,25 @@ export type ProjectStoreDeps = {
   settle?: () => Promise<void>
 }
 
+/**
+ * What a folder offers a creation that points at it. `blank` is the only one that gets written
+ * to; the other three each ask the caller for a different gesture — open it, refuse it, or ask
+ * the user first.
+ */
+export type FolderVerdict = 'project' | 'nested' | 'occupied' | 'blank'
+
 export type ProjectStore = {
-  create: (parentFolder: string, name: string) => Promise<Project>
+  /**
+   * Installs a project INTO `path`, which becomes its root — no folder is made from the name.
+   * Call `inspect` first: this writes a manifest over whatever is there.
+   */
+  create: (path: string, name: string) => Promise<Project>
+  /**
+   * What creating a project at `path` would mean, so nothing is written over. Throws
+   * `ProjectOpenError` for a manifest that exists but cannot be understood — `unreadable` or
+   * `too-new` — because those must stop the gesture rather than be replaced by a fresh one.
+   */
+  inspect: (path: string) => Promise<FolderVerdict>
   open: (path: string) => Promise<Project>
   /**
    * Writes a new name into a project's manifest — the FOLDER is never touched, see the channel's
@@ -119,6 +139,50 @@ async function writeManifest({ path, manifest }: Project): Promise<void> {
 async function ensureFolders(root: string): Promise<void> {
   await Promise.all(PROJECT_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
   await hideFromExplorer(join(root, '.index'))
+}
+
+/**
+ * The folders above `path`, nearest first, up to the volume root — which is where it stops:
+ * `dirname` answers a root with the root itself, and getting that wrong spins forever.
+ */
+function ancestorsOf(path: string): string[] {
+  const found: string[] = []
+
+  for (let child = path, parent = dirname(child); parent !== child; parent = dirname(child)) {
+    found.push(parent)
+    child = parent
+  }
+
+  return found
+}
+
+/** Whether a folder carries a manifest under either name — not whether it can be understood. */
+async function hasManifest(folder: string): Promise<boolean> {
+  const found = await Promise.all(
+    [MANIFEST_FILE, LEGACY_MANIFEST_FILE].map(file =>
+      access(join(folder, file)).then(
+        () => true,
+        () => false,
+      ),
+    ),
+  )
+
+  return found.includes(true)
+}
+
+/**
+ * Whether anything the user would recognise is already in the folder. Hidden entries do not
+ * count: a `.DS_Store` the Finder left behind is not content, and treating it as such would put
+ * a question in front of every folder made on a Mac.
+ */
+async function holdsVisibleEntries(folder: string): Promise<boolean> {
+  try {
+    return (await readdir(folder)).some(entry => !isHiddenEntry(entry))
+  } catch (error) {
+    // A folder that is not there yet holds nothing — `create` is what makes it.
+    if (isMissing(error)) return false
+    throw error
+  }
 }
 
 /**
@@ -263,13 +327,12 @@ export function createProjectStore({
   }
 
   return {
-    create: async (parentFolder, name) => {
-      const root = join(parentFolder, name)
-      await ensureFolders(root)
+    create: async (path, name) => {
+      await ensureFolders(path)
 
       const timestamp = now()
       const made: Project = {
-        path: root,
+        path,
         manifest: {
           version: MANIFEST_VERSION,
           name,
@@ -278,9 +341,29 @@ export function createProjectStore({
         },
       }
       await writeManifest(made)
-      await hideFromExplorer(join(root, MANIFEST_FILE))
+      await hideFromExplorer(join(path, MANIFEST_FILE))
 
       return await activate(made)
+    },
+
+    inspect: async path => {
+      try {
+        await loadManifest(path)
+        return 'project'
+      } catch (error) {
+        // Only "no manifest at all" leaves room for a new project. Anything else — a torn file,
+        // a version this build cannot read — is a project that exists, and creating over it
+        // would replace an identity the user still has documents under.
+        const missing = error instanceof ProjectOpenError && error.reason === 'not-a-project'
+        if (!missing) throw error
+      }
+
+      // A project inside a project would give the catalogue two owners for the same files, and
+      // the outer one indexes the inner one's assets as its own.
+      const above = await Promise.all(ancestorsOf(path).map(hasManifest))
+      if (above.includes(true)) return 'nested'
+
+      return (await holdsVisibleEntries(path)) ? 'occupied' : 'blank'
     },
 
     open: async path => {

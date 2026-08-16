@@ -713,7 +713,17 @@ export type StudioBridge = {
     usageEvents: (period: UsagePeriod, cursors: UsageCursors) => Promise<UsageEventPage>
   }
   project: {
-    create: (path: string, name: string) => Promise<Project>
+    /**
+     * Turns the CHOSEN folder into a project — it becomes the root, and the studio's folders are
+     * laid inside it. No folder is made from a name: the one the user picked in the dialog is
+     * the one they meant, and the project takes ITS name.
+     *
+     * Three answers rather than one, because a folder can already mean something. A folder that
+     * is already a project is OPENED, never written over. One sitting inside another project is
+     * refused. One holding files of its own asks the user first, and `null` is their "no" — a
+     * cancelled gesture, not a failure, so nothing is journalled and nothing changes.
+     */
+    create: (path: string) => Promise<Project | null>
     open: (path: string) => Promise<Project>
     current: () => Promise<Project | null>
     onChange: (callback: (project: Project | null) => void) => Unsubscribe

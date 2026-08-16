@@ -7,6 +7,7 @@ import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { job as jobOf } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
+import { useProject } from '@/stores/project'
 import { registerGenerator, type GeneratorBridge } from './generator-bridge'
 import { commitmentOfCall } from '@shared/domain/assistant'
 import { registerConfirmer } from './confirm'
@@ -46,10 +47,14 @@ const aGenerator = (overrides: Partial<GeneratorBridge> = {}): GeneratorBridge =
   ...overrides,
 })
 
+/** The real gesture opens a native folder dialog, which a test has none of. */
+const createPicked = vi.fn()
+
 beforeEach(() => {
   vi.clearAllMocks()
   installFakeBridge()
   onImageDocument()
+  useProject.setState({ createPicked })
 })
 
 describe('opening a workspace', () => {
@@ -108,8 +113,19 @@ describe('running a command', () => {
     expect(outcome).toEqual({ ok: false, refusal: 'unknownCommand' })
   })
 
-  it('refuses the menu’s own commands, which Electron fires itself', async () => {
-    const outcome = await runAction('command.run', { command: 'document.save' })
+  // The catalogue offers these to the model, so refusing them all was the assistant announcing
+  // "creating a new project" and then doing nothing at all.
+  it('runs the application’s own commands, through the path the native menu takes', async () => {
+    const outcome = await runAction('command.run', { command: 'project.new' })
+
+    expect(outcome).toEqual({ ok: true })
+    expect(createPicked).toHaveBeenCalled()
+  })
+
+  // The three the main process performs itself never reach the window, so there is nothing here
+  // to run — and saying so is better than reporting a fullscreen that never happened.
+  it('still refuses the commands the main process fires on its own', async () => {
+    const outcome = await runAction('command.run', { command: 'window.fullScreen' })
 
     expect(outcome).toEqual({ ok: false, refusal: 'globalCommand' })
   })

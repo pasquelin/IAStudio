@@ -99,6 +99,15 @@ export type Settings = {
     backend: AssetBackend
     projectsFolder?: string
     lastProject?: string
+    /**
+     * Where the last project opened sits — its PARENT folder, not itself.
+     *
+     * Session state, and deliberately not `projectsFolder`, which is a preference the user types
+     * and may have left empty on purpose. It exists because the system reopens a folder dialog
+     * wherever it was last left: after a project is made, that is inside the project, and the
+     * next one would be created within the first.
+     */
+    lastProjectsFolder?: string
     /** Session state like `lastProject`, and replicated with it — see `domain/project.ts`. */
     recentProjects: RecentProject[]
     /**

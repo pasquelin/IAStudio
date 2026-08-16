@@ -622,6 +622,10 @@ function paths<P extends SettingPath[]>(...list: P): P {
 export const UNLISTED_PATHS = paths(
   // Written by the main process every time a project opens: session state, not a preference.
   'storage.lastProject',
+  // Its parent folder, written on the same beat and just as much session state. Deliberately
+  // NOT merged with `storage.projectsFolder` below it in the screen: that one is the user's
+  // answer, and filling it in for them would rewrite a choice they never made.
+  'storage.lastProjectsFolder',
   // Picked from the microphones actually plugged in, which no table can list ahead of time —
   // `DictationDevices` renders it and `devicechange` keeps it honest.
   'dictation.inputDeviceId',

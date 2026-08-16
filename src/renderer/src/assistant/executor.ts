@@ -15,6 +15,7 @@ import { openGeneratorOn } from '@/helpers/generation'
 import { revealTool } from '@/helpers/reveal-panel'
 import { getBridge } from '@/services/bridge'
 import { publishCommand } from '@/services/command-bus'
+import { runGlobalCommand } from '@/services/global-commands'
 import { useJobs } from '@/stores/jobs'
 import { toolSurface } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -65,9 +66,12 @@ function runCommand(input: Record<string, unknown>): ActionOutcome {
   const descriptor = id === null ? null : commandDescriptor(id)
   if (!descriptor) return refused('unknownCommand')
 
-  // `global` commands are the native menu's own, and Electron fires them itself — the bus never
-  // carries them, so publishing one here would do nothing at all.
-  if (descriptor.scope === 'global') return refused('globalCommand')
+  // `global` commands never travel the bus: they are run here, through the same module the
+  // native menu goes through. The three the main process performs on its own answer `false`,
+  // and those are the only ones this still turns away.
+  if (descriptor.scope === 'global') {
+    return runGlobalCommand(descriptor.id) ? { ok: true } : refused('globalCommand')
+  }
 
   if (scopeOfWorkspace(toolSurface()) !== descriptor.scope) return refused('wrongSurface')
 

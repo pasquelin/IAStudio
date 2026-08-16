@@ -74,7 +74,7 @@ const bridge: StudioBridge = {
       ipcRenderer.invoke(CHANNELS.scenarioUsageEvents, period, cursors),
   },
   project: {
-    create: (path, name) => ipcRenderer.invoke(CHANNELS.projectCreate, path, name),
+    create: path => ipcRenderer.invoke(CHANNELS.projectCreate, path),
     open: path => ipcRenderer.invoke(CHANNELS.projectOpen, path),
     current: () => ipcRenderer.invoke(CHANNELS.projectCurrent),
     onChange: callback => subscribe<Project | null>(EVENTS.projectChanged, callback),

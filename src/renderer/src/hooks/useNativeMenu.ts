@@ -1,11 +1,10 @@
 import { useEffect } from 'react'
 import type { CommandId, MenuCheck } from '@shared/domain/command'
-import { saveDocument, saveDocumentAs } from '@/app/document-io'
 import { revealTool } from '@/helpers/reveal-panel'
 import { availableToolIds } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
 import { publishCommand } from '@/services/command-bus'
-import { reportFailure } from '@/services/diagnostics'
+import { runGlobalCommand } from '@/services/global-commands'
 import { addNodeTo } from '@/hooks/useAddNode'
 import { useAssistant } from '@/stores/assistant'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
@@ -13,51 +12,23 @@ import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/scene-views'
 import { sceneEngineOf } from '@/stores/scene-engines'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
-import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
-import { useTools } from '@/stores/tools'
 
-/** The global commands, which are the ones the native menu fires. The rest belong to a surface. */
 function runCommand(command: CommandId): void {
-  switch (command) {
-    case 'layout.reset':
-      useTools.getState().reset()
-      return
-    case 'app.assistant':
-      // Toggled rather than opened: ⌘K is the key one presses to get out of it too.
-      useAssistant.getState().toggle()
-      return
-    case 'project.new':
-      void useProject.getState().createPicked()
-      return
-    case 'project.open':
-      void useProject.getState().openPicked()
-      return
-    case 'document.save': {
-      // The menu is application-wide and has no idea which tab is in front; the store does.
-      const documentId = useDocuments.getState().activeId
-      // The tab keeps its marker either way; the log is what says why it kept it.
-      if (documentId) {
-        void saveDocument(documentId).catch(error =>
-          reportFailure('document.save', documentId, error),
-        )
-      }
-      return
-    }
-    case 'document.saveAs': {
-      const documentId = useDocuments.getState().activeId
-      // No `catch` here, unlike Save: `saveDocumentAs` journals its own failures under
-      // `assets.copy` and answers false — the shelf the copy would have landed in is where a
-      // reader looks for it, and a second scope on the same failure would say it twice.
-      if (documentId) void saveDocumentAs(documentId)
-      return
-    }
-    default:
-      // Everything else belongs to a surface — the canvas, the scene, the timeline — and only
-      // the document in front knows how to run it. Without this the whole Image menu fired into
-      // nothing: eleven rows that looked live and did strictly nothing when clicked.
-      publishCommand(command)
+  // Kept here rather than beside the other global ones, and the reason is written there: the
+  // assistant store imports the executor, so the shared module cannot import the store back.
+  // Toggled rather than opened — ⌘K is the key one presses to get out of it too.
+  if (command === 'app.assistant') {
+    useAssistant.getState().toggle()
+    return
   }
+
+  if (runGlobalCommand(command)) return
+
+  // Everything else belongs to a surface — the canvas, the scene, the timeline — and only the
+  // document in front knows how to run it. Without this the whole Image menu fired into nothing:
+  // eleven rows that looked live and did strictly nothing when clicked.
+  publishCommand(command)
 }
 
 /**

@@ -212,13 +212,15 @@ export function parseDocumentTitle(value: unknown): string {
 }
 
 /**
- * A project's DISPLAY name, on its way into a manifest — deliberately not `parseProjectName`, which
- * is a path segment because creating a project names its folder. A rename never touches the folder,
- * so forbidding a slash there would refuse `Été 2026 / v2` for a constraint that no longer applies;
- * the manifest already allows the name and the folder to differ, which is why `RecentProject` stores
- * the name instead of deriving it.
+ * A project's DISPLAY name, on its way into a manifest — the only validator it has, at creation
+ * as at rename. Deliberately NOT a path segment: no folder is ever made from this name. Creating
+ * lays the project into the folder the user chose and takes that folder's name as a starting
+ * point; renaming writes the manifest and leaves the folder alone. Forbidding a slash would
+ * refuse `Été 2026 / v2` for a constraint that does not exist — the manifest lets the name and
+ * the folder differ, which is why `RecentProject` stores the name instead of deriving it.
  *
- * Trimmed and non-empty: a nameless project is a row nobody can find. Capped like every other string
+ * Trimmed and non-empty: a nameless project is a row nobody can find, and it is also how the root
+ * of a volume is turned away — its basename is the empty string. Capped like every other string
  * crossing this boundary — the renderer is the sandboxed side, and this one is written to disk.
  */
 const projectTitle = z.string().trim().min(1).max(200)

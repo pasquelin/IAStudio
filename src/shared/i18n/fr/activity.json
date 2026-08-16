@@ -34,6 +34,7 @@
     "projectUnreadable": "Le manifeste de ce projet est illisible : il a été tronqué ou modifié à la main",
     "projectTooNew": "Ce projet a été créé par une version plus récente du studio ; mettez le studio à jour pour l’ouvrir",
     "projectNotCreated": "Le projet n’a pas pu être créé dans ce dossier",
+    "projectNested": "Ce dossier est déjà à l’intérieur d’un projet : choisissez-en un en dehors",
     "projectNotRenamed": "Le projet n’a pas pu être renommé : son dossier est introuvable ou illisible",
     "projectNotRevealed": "Le dossier du projet est introuvable",
     "projectAccountRestored": "Projet rouvert sur le compte « {{name}} »",
