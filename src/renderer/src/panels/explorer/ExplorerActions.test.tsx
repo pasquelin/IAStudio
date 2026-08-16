@@ -5,7 +5,7 @@ import { LIST_ONLY } from '@/helpers/collection-state'
 import { useExplorerView } from '@/stores/explorer-view'
 import { ExplorerActions } from './ExplorerActions'
 
-beforeEach(() => useExplorerView.setState({ collection: LIST_ONLY, hidden: false }))
+beforeEach(() => useExplorerView.setState({ collection: LIST_ONLY, hidden: false, mode: 'folder' }))
 
 describe('the explorer title row', () => {
   /**
@@ -28,6 +28,17 @@ describe('the explorer title row', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Éléments cachés' }))
     expect(useExplorerView.getState().hidden).toBe(false)
+  })
+
+  // Two readings of one folder, drawn as a pair: which one is on is what says the other exists.
+  it('switches between the two readings of the folder', async () => {
+    render(<ExplorerActions />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Par domaine' }))
+    expect(useExplorerView.getState().mode).toBe('domain')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Par dossier' }))
+    expect(useExplorerView.getState().mode).toBe('folder')
   })
 
   /**

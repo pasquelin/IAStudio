@@ -278,6 +278,10 @@ export function registerProjectHandlers({
     folder.search(parseSearchTerm(term), parseHiddenShown(hidden)),
   )
 
+  handle(CHANNELS.projectWalkFolder, async (_event, hidden) =>
+    folder.walk(parseHiddenShown(hidden)),
+  )
+
   handle(CHANNELS.projectOpenFile, async (_event, relative) => {
     const failure = await openInSystem(join(project.path(), parseFolderPath(relative)))
     // `shell.openPath` answers with a sentence rather than throwing, and that sentence is the

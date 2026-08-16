@@ -167,6 +167,37 @@ describe('searching the project folder', () => {
   })
 })
 
+describe('walking the project folder for what it holds', () => {
+  const walked = async (root: string, hidden?: boolean): Promise<string[]> =>
+    (await createFolderReader(() => root, inFrench).walk(hidden)).map(entry => entry.path)
+
+  /**
+   * The domain view asks what a file IS, and a folder is not a domain — except one written as a
+   * document, which is an item and answers as one.
+   */
+  it('answers the files at every depth, and no folder of its own', async () => {
+    const root = await project()
+    await mkdir(join(root, 'Repérages', 'Ruelles'), { recursive: true })
+    await writeFile(join(root, 'Repérages', 'Ruelles', 'ruelle.png'), '')
+    await mkdir(join(root, 'planche.img'))
+    await writeFile(join(root, 'planche.img', 'document.json'), '{}')
+
+    expect((await walked(root)).sort()).toEqual([
+      'Repérages/Ruelles/ruelle.png',
+      'notes.txt',
+      'planche.img',
+    ])
+  })
+
+  it('leaves out what the studio keeps for itself, unless it was asked for', async () => {
+    const root = await project()
+    await writeFile(join(root, '.index', 'catalog.db'), '')
+
+    expect(await walked(root)).not.toContain('.index/catalog.db')
+    expect(await walked(root, true)).toContain('.index/catalog.db')
+  })
+})
+
 describe('following the project folder', () => {
   // `as`: a watcher these tests never listen to, and only `close` is ever called on it. Naming
   // the cast once keeps the two fake openers from each carrying their own.

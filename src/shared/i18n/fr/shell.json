@@ -85,6 +85,11 @@
     "trashConfirm": "Mettre à la corbeille",
     "trashCancel": "Annuler",
     "noMatch": "Aucun fichier de ce projet ne porte ce nom.",
+    "noFiles": "Ce projet ne contient encore aucun fichier.",
+    "byFolder": "Par dossier",
+    "byFolderHint": "Montre le projet tel qu’il est rangé sur le disque",
+    "byDomain": "Par domaine",
+    "byDomainHint": "Regroupe tous les fichiers du projet selon ce qu’ils sont, où qu’ils soient rangés",
     "hidden": "Éléments cachés",
     "hiddenHint": "Montre ce que le studio range sous un point, en lecture seule",
     "sort": {

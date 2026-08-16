@@ -34,6 +34,14 @@ export type FolderReader = {
    */
   search: (term: string, hidden?: boolean) => Promise<FolderEntry[]>
   /**
+   * Every FILE the project folder holds, at any depth — what the domain view reads.
+   *
+   * Folders are left out; a document written as a folder is not one for this purpose and is
+   * answered as the item it is. Same depth bound and same refusal to walk into a document as
+   * the search: the two are one walk.
+   */
+  walk: (hidden?: boolean) => Promise<FolderEntry[]>
+  /**
    * Every name one level holds, hidden ones included and in no particular order — what a
    * planner needs to know which names are taken.
    *
@@ -75,34 +83,55 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
       .sort(entriesByName(languageOf()))
   }
 
+  /**
+   * Every entry the whole folder holds, `keep` deciding which of them are answered.
+   *
+   * One walk behind the two readers below: they differ in what they keep, never in how they
+   * read. A folder that will not answer contributes nothing rather than failing the pass — it
+   * may have gone between the listing that named it and this call.
+   */
+  const walkAll = async (
+    hidden: boolean,
+    keep: (entry: FolderEntry) => boolean,
+  ): Promise<FolderEntry[]> => {
+    const found: FolderEntry[] = []
+
+    const walk = async (relative: string, depth: number): Promise<void> => {
+      const entries = await level(relative, hidden).catch((): FolderEntry[] => [])
+
+      for (const entry of entries) {
+        if (keep(entry)) found.push(entry)
+        if (entry.kind !== 'folder' || depth >= MAX_SEARCH_DEPTH) continue
+        // An image document IS a folder, and what it holds is the studio's own writing — a walk
+        // that went into it would offer the parts instead of the document.
+        if (kindForExtension(extensionOf(entry.name))) continue
+        await walk(entry.path, depth + 1)
+      }
+    }
+
+    await walk('', 0)
+    return found
+  }
+
   return {
     list: level,
 
-    search: async (term, hidden) => {
+    search: async (term, hidden = false) => {
       // Trimmed here as well as in the panel: a term of spaces alone would otherwise match every
       // name holding one, which is most of them.
       const wanted = foldForSearch(term.trim())
       if (wanted === '') return []
 
-      const found: FolderEntry[] = []
-      const walk = async (relative: string, depth: number): Promise<void> => {
-        // A folder that will not answer contributes nothing rather than failing the search: it
-        // may have gone between the listing that named it and this call.
-        const entries = await level(relative, hidden).catch((): FolderEntry[] => [])
-
-        for (const entry of entries) {
-          if (foldForSearch(entry.name).includes(wanted)) found.push(entry)
-          if (entry.kind !== 'folder' || depth >= MAX_SEARCH_DEPTH) continue
-          // An image document IS a folder, and what it holds is the studio's own writing — a
-          // search that walked into it would offer the parts instead of the document.
-          if (kindForExtension(extensionOf(entry.name))) continue
-          await walk(entry.path, depth + 1)
-        }
-      }
-
-      await walk('', 0)
-      return found
+      return await walkAll(hidden, entry => foldForSearch(entry.name).includes(wanted))
     },
+
+    walk: async (hidden = false) =>
+      // Folders are left out, documents written as one excepted: the domain view answers what a
+      // file IS, and a folder is not a domain.
+      await walkAll(
+        hidden,
+        entry => entry.kind === 'file' || kindForExtension(extensionOf(entry.name)) !== null,
+      ),
 
     names: async relative => await readdir(join(rootOf(), relative)).catch(() => null),
   }

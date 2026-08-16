@@ -93,6 +93,7 @@ export type Channels = {
   projectCurrent: 'project:current'
   projectListFolder: 'project:list-folder'
   projectSearchFolder: 'project:search-folder'
+  projectWalkFolder: 'project:walk-folder'
   projectOpenFile: 'project:open-file'
   projectRevealFile: 'project:reveal-file'
   projectRevealFolder: 'project:reveal-folder'
@@ -231,6 +232,7 @@ export const CHANNELS: Channels = {
   projectCurrent: 'project:current',
   projectListFolder: 'project:list-folder',
   projectSearchFolder: 'project:search-folder',
+  projectWalkFolder: 'project:walk-folder',
   projectOpenFile: 'project:open-file',
   projectRevealFile: 'project:reveal-file',
   projectRevealFolder: 'project:reveal-folder',
@@ -769,6 +771,15 @@ export type StudioBridge = {
      * match and sorts what it draws. An empty term answers nothing rather than the whole folder.
      */
     searchFolder: (term: string, hidden: boolean) => Promise<FolderEntry[]>
+    /**
+     * Every FILE the project folder holds, at any depth — what the explorer reads to show the
+     * project by what its files ARE rather than by where they sit.
+     *
+     * Folders do not come back: a folder is not a domain. A document written as a folder does,
+     * as the item it is. The listing is flat and unordered; the panel groups and sorts it, and
+     * asks the catalogue about the whole of it in one go (`AssetQuery.paths`).
+     */
+    walkFolder: (hidden: boolean) => Promise<FolderEntry[]>
     /**
      * Hands a file the studio cannot open to the system — a `.pdf` to its viewer. Answers
      * whether it was taken; a refusal is already in the journal, since a folder someone chose

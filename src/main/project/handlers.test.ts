@@ -125,6 +125,7 @@ function base(catalog: AsyncCatalog) {
     folder: {
       list: vi.fn(async () => []),
       search: vi.fn(async () => []),
+      walk: vi.fn(async () => []),
       names: vi.fn(async () => []),
     },
     // Answers an empty batch by default: what a channel DOES with an outcome is what these

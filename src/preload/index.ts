@@ -82,6 +82,7 @@ const bridge: StudioBridge = {
     listFolder: (relative, hidden) =>
       ipcRenderer.invoke(CHANNELS.projectListFolder, relative, hidden),
     searchFolder: (term, hidden) => ipcRenderer.invoke(CHANNELS.projectSearchFolder, term, hidden),
+    walkFolder: hidden => ipcRenderer.invoke(CHANNELS.projectWalkFolder, hidden),
     openFile: relative => ipcRenderer.invoke(CHANNELS.projectOpenFile, relative),
     onFolderChanged: callback => subscribe<void>(EVENTS.projectFolderChanged, callback),
     revealFile: relative => ipcRenderer.invoke(CHANNELS.projectRevealFile, relative),

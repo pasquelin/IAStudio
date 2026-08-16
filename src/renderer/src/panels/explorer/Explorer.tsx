@@ -1,4 +1,10 @@
-import { mdiFileOutline, mdiFolderOpenOutline, mdiFolderOutline, mdiMagnify } from '@mdi/js'
+import {
+  mdiFileOutline,
+  mdiFolderOpenOutline,
+  mdiFolderOutline,
+  mdiMagnify,
+  mdiShapeOutline,
+} from '@mdi/js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
@@ -24,9 +30,12 @@ import { explorerSearch, useExplorerView } from '@/stores/explorer-view'
 import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { NoProject } from '@/panels/shared/NoProject'
+import { isDomainHeading, type ExplorerNode } from './domain-nodes'
 import { entriesSorted } from './folder-sort'
 import { openEntryMenu } from './EntryMenu'
+import { DomainRow } from './DomainRow'
 import { EntryRow } from './EntryRow'
+import { useDomainTree } from './use-domain-tree'
 import { useFolderSearch } from './use-folder-search'
 import { useFolderTree, type FolderNode } from './use-folder-tree'
 
@@ -63,16 +72,26 @@ export function Explorer() {
   const collection = useExplorerView(state => state.collection)
   const hidden = useExplorerView(state => state.hidden)
   const term = useExplorerView(explorerSearch)
+  // `reading` rather than `mode`: the tree's own `onSelect` carries a `mode` of its own — which
+  // of shift and ⌘ the click held — and two `mode`s in one component is one too many.
+  const reading = useExplorerView(state => state.mode)
   const tree = useFolderTree(hidden)
   const search = useFolderSearch(term, hidden)
-  /** Which of the two sources is drawing: the folders unfolded, or the word being searched. */
+  /**
+   * Which of the three sources is drawing: the folders unfolded, the word being searched, or the
+   * whole project read by what its files ARE. A search speaks over either reading — a word is a
+   * question about the project, not about the way it is being shown.
+   */
   const searching = term !== ''
-  const source = searching ? search : tree
+  const inDomain = !searching && reading === 'domain'
+  const domains = useDomainTree(hidden, inDomain, collection.sort, language)
+  const source = searching ? search : inDomain ? domains : tree
   const { expandedIds, toggle, reload } = source
-  const nodes = useMemo(
-    () => entriesSorted(source.nodes, collection.sort, language),
-    [source.nodes, collection.sort, language],
+  const fileNodes = useMemo(
+    () => entriesSorted(searching ? search.nodes : tree.nodes, collection.sort, language),
+    [searching, search.nodes, tree.nodes, collection.sort, language],
   )
+  const nodes: readonly ExplorerNode[] = inDomain ? domains.nodes : fileNodes
   const selectedIds = useSelection(selectedFilePaths)
   const clipboard = useFileClipboard(state => state.paths)
   const cut = useFileClipboard(fileClipboardCut)
@@ -150,7 +169,8 @@ export function Explorer() {
   const target = useMemo((): string => {
     const anchor = selectedIds.at(-1)
     const node = anchor === undefined ? undefined : nodeById.get(anchor)
-    if (!node) return FOLDER_ROOT
+    // A heading is not a place: a domain names files, and nothing can be written into a name.
+    if (!node || isDomainHeading(node)) return FOLDER_ROOT
     return node.kind === 'folder' ? node.path : (parentOf(node.path) ?? FOLDER_ROOT)
   }, [selectedIds, nodeById])
 
@@ -303,16 +323,25 @@ export function Explorer() {
     void getBridge()?.project.renameFile(node.path, name).then(settled)
   }
 
-  // Three different silences, and telling them apart is the whole of it: a folder that would not
-  // be read, a walk still running, and a word nothing in the project answers to.
+  // Four different silences, and telling them apart is the whole of it: a folder that would not
+  // be read, a walk still running, a project holding no file at all, and a word nothing answers
+  // to. One message for all four is a panel that says « empty » where it means « wait ».
   if (nodes.length === 0) {
-    if (!searching) return <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.empty')} />
-    return (
-      <EmptyState
-        icon={mdiMagnify}
-        message={search.answered ? t('explorer.noMatch') : t('collection.loading')}
-      />
-    )
+    if (searching)
+      return (
+        <EmptyState
+          icon={mdiMagnify}
+          message={search.answered ? t('explorer.noMatch') : t('collection.loading')}
+        />
+      )
+    if (inDomain)
+      return (
+        <EmptyState
+          icon={mdiShapeOutline}
+          message={domains.loaded ? t('explorer.noFiles') : t('collection.loading')}
+        />
+      )
+    return <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.empty')} />
   }
 
   return (
@@ -333,28 +362,36 @@ export function Explorer() {
         // and composing it with what is already held is the caller's half of the gesture.
         onSelect={(ids, mode) => pick(applySelection(selectedIds, ids, mode))}
         onToggle={toggle}
+        // A heading names files rather than holding them: it is not a thing to pick, and a
+        // selection that gathered one would hand the disk a domain where it expects a path.
+        selectable={node => !isDomainHeading(node)}
         // A folder is expandable before anything under it has been read: what the tree can see is
         // only what is loaded, and a folder nobody has opened has nothing loaded by definition.
         // Except a document that happens to be one — it opens, and what it holds is the studio's
-        // own business rather than something to browse.
+        // own business rather than something to browse. A heading always holds something: an
+        // empty domain is left out rather than drawn.
         expandable={node =>
-          node.kind === 'folder' && !documentOf(node) && (!searching || withChildren.has(node.id))
+          isDomainHeading(node) ||
+          (node.kind === 'folder' && !documentOf(node) && (!searching || withChildren.has(node.id)))
         }
         // Read from `shared/` so the main process refuses the same things — and read on BOTH
-        // sides of the gesture, what moves and what receives.
-        draggable={node => !isStudioOwned(node.path)}
+        // sides of the gesture, what moves and what receives. A domain view offers no drag at
+        // all: there is no folder on screen to carry a file INTO, and a heading is not a place.
+        draggable={node => !isDomainHeading(node) && !isStudioOwned(node.path)}
         dragMultiple
         // A scene row is dragged for two different reasons, and both are legitimate: into another
         // folder, or onto a montage. The tree's own channel carries the first, this one the
         // second, and each target reads only the type it knows.
         onDragStart={(node, event) => {
-          const document = documentOf(node)
+          const document = isDomainHeading(node) ? null : documentOf(node)
           if (document?.kind === 'scene') startSceneDrag(event, document.id)
         }}
         // Asked of the WHOLE batch while the pointer is over the row: three files carried into a
         // folder that one of them holds must refuse the outline, not the drop.
         droppable={(node, dragged) =>
-          node.kind === 'folder' && dragged.every(one => canMoveInto(one.path, node.path))
+          !isDomainHeading(node) &&
+          node.kind === 'folder' &&
+          dragged.every(one => !isDomainHeading(one) && canMoveInto(one.path, node.path))
         }
         // Nothing is written here on faith: the answer says what actually moved, and the tree
         // reads the folders again from that.
@@ -362,11 +399,14 @@ export function Explorer() {
         // The blank below the rows is the project folder itself — how a file comes back out of a
         // folder, there being no row standing for the root to aim at.
         onDropRoot={paths => void getBridge()?.project.moveFiles(paths, FOLDER_ROOT).then(settled)}
-        onActivate={node => void activate(node)}
+        onActivate={node => void (isDomainHeading(node) ? toggle(node.id) : activate(node))}
         // Asked BEFORE the menu is drawn, and that round trip is the point: only the catalogue
         // knows whether a file under `assets/` is an asset, and the answer decides whether
-        // « Renommer » is offered or greyed.
-        onContextMenu={node =>
+        // « Renommer » is offered or greyed. A heading raises none: every gesture it carries is
+        // about a file, and it is not one.
+        onContextMenu={node => {
+          if (isDomainHeading(node)) return
+
           void assetAt(node.path).then(asset =>
             openEntryMenu({
               node,
@@ -385,9 +425,17 @@ export function Explorer() {
               run,
             }),
           )
-        }
+        }}
         renderRow={row => {
-          const document = documentOf(row.node)
+          // The domain itself, and what it holds. Not an `EntryRow`: it opens nothing, it is
+          // renamed by nobody, and the count is the one thing a reader comes to this view for.
+          if (isDomainHeading(row.node))
+            return <DomainRow domain={row.node.domain} count={row.node.count} />
+
+          // Bound rather than read through `row` below: the narrowing above does not survive
+          // into the rename closure, and this is what carries it there.
+          const node = row.node
+          const document = documentOf(node)
           // The descriptor carries its own workspace, so the glyph comes off the same table the
           // rail and the asset menu read — never derived from the kind a second time, which would
           // be a second answer free to disagree with the first. Asked before the folder question
@@ -395,7 +443,7 @@ export function Explorer() {
           // said so where every other document showed its space.
           const icon = document
             ? workspaceById(document.workspace).icon
-            : row.node.kind === 'folder'
+            : node.kind === 'folder'
               ? row.expanded
                 ? mdiFolderOpenOutline
                 : mdiFolderOutline
@@ -406,14 +454,14 @@ export function Explorer() {
               // The document's name where there is one — which is its file name for anything
               // written since documents came to be named, and its title for the older ones whose
               // file still wears a uuid.
-              name={document?.title ?? row.node.name}
+              name={document?.title ?? node.name}
               icon={icon}
               open={isOpen(document)}
               // What a cut looks like before it is pasted: the rows are still there, still
               // openable, and on their way out.
-              waiting={waiting.has(row.node.path)}
-              {...(renaming?.nodeId === row.node.id
-                ? { onRename: (name: string) => commitRename(row.node, renaming.asset, name) }
+              waiting={waiting.has(node.path)}
+              {...(renaming?.nodeId === node.id
+                ? { onRename: (name: string) => commitRename(node, renaming.asset, name) }
                 : {})}
             />
           )

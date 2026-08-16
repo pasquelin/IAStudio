@@ -7,13 +7,24 @@ import {
   type CollectionState,
 } from '@/helpers/collection-state'
 
+/**
+ * How the project is read: by where its files SIT, or by what they ARE.
+ *
+ * Two readings of one folder rather than two panels: the gestures, the menu and the selection
+ * are the same in both, and the second is the only way to find every picture of a project whose
+ * folders the user arranged their own way.
+ */
+export type ExplorerMode = 'folder' | 'domain'
+
 export type ExplorerViewState = {
   /** What the bar in the panel's title row holds: the term being searched, and the sort. */
   collection: CollectionState
   /** Whether the studio's own bookkeeping is drawn — `.index/`, `.project.json`. */
   hidden: boolean
+  mode: ExplorerMode
   setExplorerCollection: (collection: CollectionState) => void
   toggleExplorerHidden: () => void
+  setExplorerMode: (mode: ExplorerMode) => void
 }
 
 /**
@@ -32,15 +43,21 @@ export const useExplorerView = create<ExplorerViewState>()(
     set => ({
       collection: LIST_ONLY,
       hidden: false,
+      mode: 'folder',
 
       setExplorerCollection: collection => set({ collection }),
       toggleExplorerHidden: () => set(state => ({ hidden: !state.hidden })),
+      setExplorerMode: mode => set({ mode }),
     }),
     {
       name: 'scenario-studio:explorer-view',
       // `search` is dropped by the policy every collection follows: a studio reopening on a tree
       // narrowed by a word nobody typed reads as a project gone missing.
-      partialize: ({ collection, hidden }) => ({ collection: withoutSearch(collection), hidden }),
+      partialize: ({ collection, hidden, mode }) => ({
+        collection: withoutSearch(collection),
+        hidden,
+        mode,
+      }),
       version: COLLECTION_PERSIST_VERSION,
     },
   ),
