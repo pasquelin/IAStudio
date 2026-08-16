@@ -939,19 +939,31 @@ export class SceneRenderer {
    * It asks for no render of its own, unlike `frameSelection`: its caller draws the very next
    * line, and a frame loop woken per aim would run the viewport's own pass forever behind a
    * canvas nobody is looking at.
+   *
+   * Answers whether it actually framed SOMETHING — false while every model is still a node with
+   * no file behind it, which encloses no box at all. That is what lets a caller aim once and
+   * stop: re-aiming per frame makes the camera chase a walking character's own bounding box,
+   * and the picture breathes with every step.
    */
-  frameContents(): void {
+  frameContents(): boolean {
     const objects: Object3D[] = []
     for (const [id, object] of this.objects) {
       if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) objects.push(object)
     }
-    if (objects.length === 0) return
+    if (objects.length === 0) return false
+
+    const bounds = new Box3()
+    for (const object of objects) bounds.expandByObject(object)
+    // Empty means the files have not landed: `framingPlacement` would fall back to averaging
+    // the placements of empty groups, which is a framing of nothing dressed up as one.
+    if (bounds.isEmpty()) return false
 
     const { target, position } = framingPlacement(objects, this.view.fieldOfView)
     const camera = this.viewport.perspective
     camera.position.copy(position)
     camera.lookAt(target)
     this.viewport.orbit?.target.copy(target)
+    return true
   }
 
   /**
