@@ -135,7 +135,12 @@ Right-click lists every destination, always in the same order:
 | **Place as a layer** | the open image, Image workspace | pictures |
 | **Add to the edit** | the open sequence, Video workspace | all |
 | **Use as base colour** | the open material, Textures workspace | pictures |
+| **Rename** | opens the name on the thumbnail itself | all |
 | **Show in folder** | opens the file manager on the file | all |
+
+**Renaming changes the name in this project only** — the one on the Scenario account stays as it
+is. One asset is pulled into several projects and named for what each one does with it. The name
+can also be changed in the Inspector, by double-clicking the **Name** row.
 
 Each row carries its workspace's icon, the same one as in the title bar. The menu only shows
 destinations able to take **that type**: right-clicking a sound does not offer to lay it out as a

@@ -101,7 +101,14 @@ export const EXTENSION_BY_KIND: Record<DocumentKind, string> = {
   texture: '.tex',
 }
 
-/** Where a document lives inside its project. Relative: a project folder can be moved. */
+/**
+ * Where a document of this id WOULD live had it never been named — which is where one written
+ * before version 3 still lives, its file having been called after its id. Relative: a project
+ * folder can be moved.
+ *
+ * NOT where a document lives in general: it is named after itself now, so what says where one
+ * sits is its descriptor's `fileName`, read off the folder.
+ */
 export function documentPath(id: string, kind: DocumentKind): string {
   return `${DOCUMENTS_FOLDER}/${id}${EXTENSION_BY_KIND[kind]}`
 }

@@ -219,16 +219,17 @@ déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et l
 > d’un onglet, retire le fichier du dossier sans passer par la corbeille. Son dialogue annonce
 > « Cette action est irréversible », et c’est exact.
 
-**Deux refus, et ils sont grisés plutôt que cachés.** Les dossiers que le studio crée lui-même —
-`assets/`, ses six sous-dossiers par type, `documents/`, `.index/` et les siens — ne se renomment
-ni ne se jettent : l’index range chaque asset par son chemin sous
-`assets/`, et déplacer ce dossier laisserait des lignes que plus rien ne retrouve. **Le même
-refus vaut des deux côtés du glisser** : ces dossiers ne se prennent pas, et rien ne s’y dépose
-non plus — un fichier qui y atterrirait serait un fichier dont aucune ligne d’index ne parle. Et
-**un
-document qu’un onglet tient ouvert ne se renomme pas** : le nom de son fichier est son
-identifiant, l’onglet perdrait le lien, et le prochain `⌘S` réécrirait l’ancien nom à côté du
-nouveau. Fermez l’onglet d’abord.
+**Un refus, et il est grisé plutôt que caché.** Ce que le studio range lui-même — `assets/`, ses
+six sous-dossiers par type, `documents/`, `.index/` — ne se renomme ni ne se jette, **son contenu
+compris** : l’index range chaque asset par son chemin sous `assets/`, et renommer un fichier
+là-dedans laisserait une ligne que plus rien ne retrouve. **Le même refus vaut des deux côtés du
+glisser** : ces dossiers ne se prennent pas, et rien ne s’y dépose non plus — un fichier qui y
+atterrirait serait un fichier dont aucune ligne d’index ne parle.
+
+**Un document fait exception, parce qu’il a son propre geste.** Renommer un document dans
+l’Explorateur change son nom et celui de son fichier d’un seul mouvement — même si un onglet le
+tient ouvert : l’onglet suit. Un asset, lui, se renomme dans l’Inspecteur ou depuis sa vignette,
+pas comme un fichier.
 
 - les documents déjà à l’écran sont marqués **Ouvert** ;
 - l’icône d’un document dit de quel espace il relève, la même que dans le rail ;

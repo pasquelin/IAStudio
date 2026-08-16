@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
 import { InlineRename } from '@/design/InlineRename'
+import { renameDocument } from '@/helpers/rename'
 import { workspaceById, workspaceLabelKey } from '@/helpers/workspaces'
 import { useDocuments } from '@/stores/documents'
 import { closeTab } from './close-tab'
@@ -43,9 +44,7 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
 
   const commitRename = (name: string): void => {
     setRenaming(false)
-    // `InlineRename` gives back the original name when the edit was abandoned, so this is what
-    // tells a rename from an escape — the idiom every other host of that field follows.
-    if (title && name !== title) void useDocuments.getState().rename(props.api.id, name)
+    if (title) renameDocument(props.api.id, title, name)
   }
 
   /**

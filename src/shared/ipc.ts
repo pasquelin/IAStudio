@@ -443,6 +443,9 @@ export type LogScope =
   | 'document.save'
   | 'document.close'
   | 'document.delete'
+  // A name the folder refused. The field has closed by then — it commits on blur as much as on
+  // Enter — so the journal is the only place left to say the name did not take.
+  | 'document.rename'
   | 'assets.reveal'
   | 'assets.open'
   // ⌘S reaches the asset behind a document as well as the document itself, and the two halves
@@ -499,6 +502,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.copy',
   'assets.extract',
   'assets.rename',
+  'document.rename',
   'project.reveal',
   'project.forget',
   'project.rename',

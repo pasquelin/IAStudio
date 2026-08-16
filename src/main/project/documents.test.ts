@@ -379,6 +379,46 @@ describe('createDocumentFiles', () => {
       expect(await readdir(join(root, 'documents', 'Décor.scene'))).toEqual(['in the way'])
     })
 
+    /**
+     * `Niveau` → `niveau` is the plainest rename there is, and on APFS and NTFS the file it
+     * would land on is the one it is leaving: the disk answered « taken » and the user was told
+     * their own document was in the way.
+     */
+    it('lets a name change only its case', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{}' })
+
+      await expect(documents.rename('doc-1', 'scene', 'niveau')).resolves.toMatchObject({
+        fileName: 'niveau.scene',
+      })
+      expect(await readdir(join(root, 'documents'))).toEqual(['niveau.scene'])
+    })
+
+    /**
+     * The parts are the folder's own entries, and naming them twice would let the two disagree.
+     * Left in the envelope, the manifest's first line carried the base64 of every layer — past
+     * `ENVELOPE_LIMIT`, so `headOf` found no newline and read the whole thing back per listing.
+     */
+    it('keeps the pixels out of the manifest it rewrites', async () => {
+      const pixels = Buffer.from([137, 80, 78, 71]).toString('base64')
+      await documents.write('doc-1', 'image', {
+        title: 'Poster',
+        content: '{}',
+        parts: [{ name: 'layer-1.png', data: pixels }],
+      })
+
+      await documents.rename('doc-1', 'image', 'Affiche')
+
+      const manifest = await readFile(
+        join(root, 'documents', 'Affiche.img', 'document.json'),
+        'utf8',
+      )
+      expect(manifest.split('\n')[0]).not.toContain(pixels)
+      expect(await readdir(join(root, 'documents', 'Affiche.img'))).toEqual([
+        'document.json',
+        'layer-1.png',
+      ])
+    })
+
     // A rename and a save in flight aim at two different paths, so nothing queues them but the id.
     it('does not let a write in flight land under the name just left behind', async () => {
       await documents.write('doc-1', 'scene', { title: 'Niveau', content: 'first' })

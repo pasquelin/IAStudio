@@ -13,7 +13,7 @@ import { generationOf, openGeneratorOn } from '@/helpers/generation'
 import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
-import { useAssets } from '@/stores/assets'
+import { renameAsset } from '@/helpers/rename'
 import { useFavorites } from '@/stores/favorites'
 import { useJobs } from '@/stores/jobs'
 import { useLayouts } from '@/stores/layouts'
@@ -31,8 +31,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
 
   const commitRename = (name: string): void => {
     setRenaming(false)
-    // `InlineRename` gives back the original when the edit was abandoned; only a change is one.
-    if (name !== asset.name) void useAssets.getState().rename(asset.id, name)
+    renameAsset(asset.id, asset.name, name)
   }
 
   // Answers false when the file has moved since it was linked, and rejects when the project

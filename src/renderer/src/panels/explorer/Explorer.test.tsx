@@ -716,7 +716,7 @@ describe('the explorer menu', () => {
 
     render(<Explorer />)
     await open('Niveau')
-    const field = await screen.findByRole('textbox', { name: 'Renommer' })
+    const field = await screen.findByRole('textbox', { name: 'Nom du document' })
     await userEvent.clear(field)
     await userEvent.type(field, 'Décor{Enter}')
 
@@ -731,7 +731,7 @@ describe('the explorer menu', () => {
 
     render(<Explorer />)
     await open('brief.pdf')
-    const field = await screen.findByRole('textbox', { name: 'Renommer' })
+    const field = await screen.findByRole('textbox', { name: 'Nom du document' })
     await userEvent.clear(field)
     await userEvent.type(field, 'note.pdf{Enter}')
 
@@ -747,7 +747,7 @@ describe('the explorer menu', () => {
 
     render(<Explorer />)
     await open('brief.pdf')
-    await screen.findByRole('textbox', { name: 'Renommer' })
+    await screen.findByRole('textbox', { name: 'Nom du document' })
     await userEvent.keyboard('{Escape}')
 
     expect(renameFile).not.toHaveBeenCalled()
@@ -765,7 +765,7 @@ describe('the explorer menu', () => {
 
     render(<Explorer />)
     await open('Niveau')
-    const field = await screen.findByRole('textbox', { name: 'Renommer' })
+    const field = await screen.findByRole('textbox', { name: 'Nom du document' })
     await userEvent.dblClick(field)
 
     expect(openDocument).not.toHaveBeenCalled()

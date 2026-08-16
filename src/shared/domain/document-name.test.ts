@@ -70,6 +70,18 @@ describe('the name the studio gives when there is nobody to ask', () => {
    * Counted on the names taken, not on how many there are: three documents created and one
    * deleted used to answer with the name of a file still sitting in the folder.
    */
+  /**
+   * A long name has no room left for a suffix: cut back to the bound, `Nom 2` IS `Nom`, so no
+   * candidate is ever free and the search for one never ends — synchronously, in the process
+   * that owns every window.
+   */
+  it('ends on a name too long to take a suffix, rather than looking for ever', () => {
+    const long = 'a'.repeat(80)
+    const folder = [named(`${long}.scene`)]
+
+    expect(nextFreeDocumentName(long, 'scene', folder)).not.toBe(long)
+  })
+
   it('fills a gap left by a document that was removed', () => {
     const folder = [named('Sans titre.scene'), named('Sans titre 3.scene')]
 

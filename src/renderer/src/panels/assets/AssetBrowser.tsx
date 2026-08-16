@@ -15,6 +15,7 @@ import { HINT_LEFT } from '@/helpers/tooltip'
 import { assetTypesOf } from '@/helpers/workspaces'
 import { useShelf } from '@/hooks/use-shelf'
 import { getBridge } from '@/services/bridge'
+import { renameAsset } from '@/helpers/rename'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { useJobs } from '@/stores/jobs'
@@ -151,8 +152,7 @@ export function AssetBrowser() {
             label: renameLabel,
             commit: (name: string) => {
               setRenaming(null)
-              // `InlineRename` gives back the original on escape; only a change is a rename.
-              if (name !== row.asset.name) void useAssets.getState().rename(row.asset.id, name)
+              renameAsset(row.asset.id, row.asset.name, name)
             },
           },
         }

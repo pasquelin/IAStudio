@@ -36,6 +36,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'document.save': 'document',
   'document.close': 'document',
   'document.delete': 'document',
+  'document.rename': 'document',
   'assets.reveal': 'library',
   'assets.rename': 'library',
   // An asset with nowhere to go is read with the shelf it was double-clicked in, not with the

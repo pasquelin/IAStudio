@@ -6,6 +6,7 @@ import { canMoveInto, isStudioFolder } from '@shared/domain/folder'
 import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
 import { openDocument } from '@/app/dockview-api'
+import { renameDocument } from '@/helpers/rename'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
@@ -70,8 +71,7 @@ export function Explorer() {
    * A folder is not disqualified by being one: an image document IS a directory — `<id>.img/`
    * holding its manifest and its parts (`FOLDER_KINDS`) — and the reader that walks the project
    * folder can only see that it is a directory. Refusing every folder here left image documents
-   * with no workspace glyph, no "open" mark, unfoldable instead of openable, and renameable
-   * while a tab held them, which is the one case `openInTab` exists to forbid.
+   * with no workspace glyph, no "open" mark, and unfoldable instead of openable.
    */
   const documentOf = useCallback(
     (node: FolderNode): DocumentDescriptor | null => {
@@ -137,7 +137,7 @@ export function Explorer() {
       return
     }
 
-    if (name !== document.title) void useDocuments.getState().rename(document.id, name)
+    renameDocument(document.id, document.title, name)
   }
 
   if (nodes.length === 0)
@@ -165,7 +165,14 @@ export function Explorer() {
       // it again, so what appears in the new folder is what the disk actually holds.
       onDrop={(path, folder) => void getBridge()?.project.moveFile(path, folder)}
       onActivate={node => void activate(node)}
-      onContextMenu={node => openEntryMenu({ node, t, onRename: () => setRenaming(node.id) })}
+      onContextMenu={node =>
+        openEntryMenu({
+          node,
+          document: documentOf(node),
+          t,
+          onRename: () => setRenaming(node.id),
+        })
+      }
       renderRow={row => {
         const document = documentOf(row.node)
         // The descriptor carries its own workspace, so the glyph comes off the same table the

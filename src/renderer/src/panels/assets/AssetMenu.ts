@@ -103,8 +103,8 @@ export function openAssetMenu({ asset, t, onRename }: AssetMenuProps): void {
 
   // Handed back to the host rather than commanded here, exactly as the layer menu does: the
   // field belongs to the tile the name is read on, and this menu is gone by the time it opens.
-  // Offered for a library asset too — the name is the project's, and pulling one in is what
-  // gives the project a row to name.
+  // Absent for a library asset and for a job: the name renamed is the one in THIS project's
+  // catalogue, and neither has a row there yet.
   if (onRename) {
     rows.push({
       label: t('assets.rename'),

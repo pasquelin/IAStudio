@@ -5,6 +5,7 @@ import type { DocumentDescriptor } from '@shared/domain/document'
 import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
 import { openDocument } from '@/app/dockview-api'
+import { renameDocument } from '@/helpers/rename'
 import { NoProject } from '@/panels/shared/NoProject'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -62,9 +63,7 @@ export function Documents() {
             ? {
                 onRename: (name: string) => {
                   setRenaming(null)
-                  // `InlineRename` gives back the original on escape; only a change is a rename.
-                  if (name !== document.title)
-                    void useDocuments.getState().rename(document.id, name)
+                  renameDocument(document.id, document.title, name)
                 },
               }
             : {})}

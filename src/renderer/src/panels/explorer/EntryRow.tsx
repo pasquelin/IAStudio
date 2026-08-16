@@ -43,7 +43,10 @@ export function EntryRow({ name, icon, open, onRename }: EntryRowProps) {
   // Nothing wraps it to stop the presses around it: `Tree` leaves a row being typed in alone,
   // on the double-click as on the right-click.
   if (onRename)
-    return <InlineRename value={name} label={t('explorer.rename')} onCommit={onRename} />
+    // Named for what it HOLDS, as every other rename field of the studio is: `Renommer` is the
+    // menu row that opened it, and a field announcing an action names itself after the wrong
+    // thing to a reader.
+    return <InlineRename value={name} label={t('documents.renameLabel')} onCommit={onRename} />
 
   return (
     // The mark of "open" is the GLYPH, in accent ink: a row can be selected in this tree without

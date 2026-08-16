@@ -140,7 +140,12 @@ Le clic droit liste toutes les destinations, toujours dans le même ordre :
 | **Placer comme calque** | l’image ouverte, espace Image | images |
 | **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
 | **Utiliser comme couleur de base** | la matière ouverte, espace Textures | images |
+| **Renommer** | ouvre le nom sur la vignette elle-même | tous |
 | **Afficher dans le dossier** | ouvre le gestionnaire de fichiers sur le fichier | tous |
+
+**Renommer ne change le nom que dans ce projet** — celui du compte Scenario ne bouge pas. Un même
+asset est tiré dans plusieurs projets et nommé pour ce que chacun en fait. Le nom est aussi
+modifiable dans l’Inspecteur, d’un double-clic sur la ligne **Nom**.
 
 Chaque ligne porte l’icône de son espace, la même que dans la barre de titre. Le menu ne montre
 que les destinations capables de recevoir **ce type-là** : le clic droit sur un son n’offre pas

@@ -412,13 +412,17 @@ Si l’écriture échoue, l’onglet reste ouvert et la raison part dans le jour
 
 ### Le menu d’un onglet
 
-Un **clic droit** ouvre trois gestes :
+Un **clic droit** ouvre quatre gestes :
 
 | Ligne | Ce qu’elle fait |
 |---|---|
+| **Renommer** | ouvre le nom dans l’onglet ; un double-clic fait la même chose |
 | **Fermer l’onglet** | comme la croix, question comprise |
 | **Fermer les autres onglets** | ferme un par un ; un *Annuler* arrête la série |
 | **Supprimer le document…** | **retire le fichier du dossier du projet** |
+
+Renommer change le nom **partout à la fois** — l’onglet, l’Explorateur, la liste des documents,
+la barre de statut — et le fichier sur le disque avec, puisque c’est le même nom.
 
 **Supprimer est irréversible**, et c’est le seul geste du studio qui efface un fichier que vous
 avez fait. Le studio demande confirmation, et cette fois *Annuler* est le bouton par défaut.

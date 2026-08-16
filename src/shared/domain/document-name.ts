@@ -1,13 +1,15 @@
 import { EXTENSION_BY_KIND, type DocumentKind } from './document'
-import { foldForFileName, isSafeFileName, safeFileName } from './file-name'
+import { FILE_NAME_MAX_LENGTH, foldForFileName, isSafeFileName, safeFileName } from './file-name'
 
 /**
  * Naming a document, which since documents are named by what they are called is also naming a
  * file. The two used to be different things — a title in the envelope, a uuid on disk — and the
  * user was shown both without a word to say they were one document.
  *
- * Read by both sides for the reason `checkAccountName` is: the field says no while the name is
- * being typed, and the main process refuses what it is handed regardless.
+ * Read by both sides: the renderer asks before crossing the boundary, which spares a round trip
+ * for what it can already see, and the main process refuses what it is handed regardless — a
+ * window is not what decides what gets written. A refusal reaches the user through the activity
+ * journal (`helpers/rename.ts`), the field having closed by the time the disk answers.
  */
 
 /** Long enough for a sentence of a title, short enough for every file system to hold it. */
@@ -87,10 +89,24 @@ export function nextFreeDocumentName(
 
   if (free(base)) return base
 
+  /**
+   * Room kept for the suffix before anything is tried.
+   *
+   * `documentFileName` cuts at `FILE_NAME_MAX_LENGTH`, so a base already that long comes back
+   * from `${base} 2` as `base` itself — every candidate then reads as taken, and the loop below
+   * never ends. Synchronously, in the process that owns every window.
+   *
+   * Six code points is ` 99999`, past any number of documents one folder holds.
+   */
+  const stem = [...base]
+    .slice(0, FILE_NAME_MAX_LENGTH - 6)
+    .join('')
+    .trimEnd()
+
   // No bound: the loop ends on the first free name, and there are only ever as many taken as
   // there are documents in the folder.
   for (let n = 2; ; n += 1) {
-    const candidate = `${base} ${n}`
+    const candidate = `${stem} ${n}`
     if (free(candidate)) return candidate
   }
 }

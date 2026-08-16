@@ -45,7 +45,8 @@ type AssetsState = {
    * several projects and named for what each one does with it, and a rename that travelled would
    * have a project rename someone else's library.
    *
-   * Answers with the refusal, or `null` when it went through — the field stays open on a refusal.
+   * Answers with the refusal, or `null` when it went through. The field has closed by then, so
+   * the answer is for the caller to journal rather than to draw — see `helpers/rename.ts`.
    */
   rename: (assetId: string, name: string) => Promise<AssetNameFailure | null>
   /**
@@ -222,7 +223,9 @@ export const useAssets = create<AssetsState>()(
               reportFailure('assets.rename', name, error)
               return null
             })
-          if (!written) return 'empty'
+          // `too-long` and not `empty`: the catalogue refusing, or a disk that has gone, is not
+          // a name nobody typed — and the journal line is what actually says what happened.
+          if (!written) return 'too-long'
 
           // Written into the shelf rather than waited for: `assets:update` broadcasts nothing —
           // it is answered where it was ordered, which is the doctrine every other write follows.

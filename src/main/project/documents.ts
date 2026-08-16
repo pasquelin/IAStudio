@@ -23,6 +23,7 @@ import {
   documentFileName,
   nextFreeDocumentName,
 } from '@shared/domain/document-name'
+import { foldForFileName } from '@shared/domain/file-name'
 import { isRecord } from '@shared/guards'
 import { isMissing, writeAtomic } from '@main/persistence'
 import { parseDocumentEnvelope } from './validation'
@@ -494,10 +495,17 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
         if (!descriptor) throw new Error(`Document ${id} is not there to rename`)
         if (to === from) return { ...descriptor, title, fileName: entry }
 
-        // Asked before renaming, because `fs.rename` overwrites without a word on POSIX — and
-        // replaces an empty directory without one either, which is what an untouched `.img` is.
-        // The index only knows what it has read; the disk is what decides.
-        if (await exists(to)) throw new Error(DUPLICATE_NAME)
+        /**
+         * Asked before renaming, because `fs.rename` overwrites without a word on POSIX — and
+         * replaces an empty directory without one either, which is what an untouched `.img` is.
+         * The index only knows what it has read; the disk is what decides.
+         *
+         * Except when it is THIS document answering: `Niveau` → `niveau` is the plainest rename
+         * there is, and on APFS and NTFS the file it would land on is the one it is leaving —
+         * so the disk says "taken" and the user is told their own document is in the way.
+         */
+        const sameFile = foldForFileName(entry) === foldForFileName(basename(from))
+        if (!sameFile && (await exists(to))) throw new Error(DUPLICATE_NAME)
 
         // The envelope FIRST, the move second. A crash between the two leaves the right title in
         // a file under the old name, and the name is derived from the title — so the next open
@@ -506,9 +514,26 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
         // the two names this whole change exists to collapse into one.
         const held = await readOne(id, kind)
         if (!held) throw new Error(`Document ${id} is not there to rename`)
+
+        // Spelt out rather than spread, so that `parts` cannot come along: they are the folder's
+        // own entries and `storeFolder` drops them for the same reason. Carried in, the
+        // manifest's first line held the base64 of every layer — past `ENVELOPE_LIMIT`, so
+        // `headOf` found no newline and every listing read the whole document back.
+        const renamed: DocumentFile = {
+          version: held.version,
+          kind: held.kind,
+          updatedAt: held.updatedAt,
+          content: held.content,
+          title,
+          id,
+          ...(held.sourceAssetId ? { sourceAssetId: held.sourceAssetId } : {}),
+        }
+
         await (FOLDER_KINDS.has(kind)
-          ? writeFile(join(from, DOCUMENT_MANIFEST), bodyOf({ ...held, title, id }), 'utf8')
-          : store(from, { ...held, title, id }))
+          ? writeAtomic(join(from, DOCUMENT_MANIFEST), bodyOf(renamed), {
+              staging: join(from, `${DOCUMENT_MANIFEST}.${randomUUID()}${STAGING_SUFFIX}`),
+            })
+          : store(from, renamed))
 
         await rename(from, to)
         index.set(keyOf(id, kind), entry)

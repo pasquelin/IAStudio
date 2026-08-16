@@ -86,9 +86,12 @@ type DocumentsState = {
    * Calls a document something else — on disk and on screen at once, which is the whole point:
    * the file is named after the document, so there is only ever one name to change.
    *
-   * The id does not move, so an OPEN document renames without its tab noticing. Answers with the
-   * failure the main process reported, or `null` when it went through — the field stays open on
-   * a refusal, and a name nobody can use is not a name to close the field on.
+   * The id does not move, so an OPEN document renames without its tab noticing.
+   *
+   * Answers with the refusal, or `null` when it went through. The field has closed by the time
+   * this resolves — `InlineRename` commits on blur as much as on Enter — so the answer is for
+   * the caller to JOURNAL, not to draw: `reportFailure('document.rename', …)`, which is what
+   * puts a refused name in the activity list instead of nowhere.
    */
   rename: (id: string, title: string) => Promise<DocumentNameFailure | null>
   close: (id: string) => void
@@ -340,8 +343,8 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     const document = get().documents[id] ?? get().stored.find(entry => entry.id === id)
     if (!document) return 'invalid'
 
-    // Asked here as well as in the main process, and neither is the redundant one: this is what
-    // puts a sentence under the field while the name is being typed, and that is what makes the
+    // Asked here as well as in the main process, and neither is the redundant one: this spares a
+    // round trip for what the window can already see, and the main process is what makes the
     // refusal true whatever the window believed.
     const taken = get().stored.map(entry => ({ id: entry.id, fileName: entry.fileName }))
     const refused = checkDocumentName(title, document.kind, taken, id)
