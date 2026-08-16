@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { canvasOf, canvasHistoryOf, useCanvases } from '@/stores/canvases'
 import { guidePort } from './guide-port'
 
@@ -8,10 +8,6 @@ const guides = () => canvasOf(useCanvases.getState(), DOCUMENT).guides
 const entries = () => canvasHistoryOf(useCanvases.getState(), DOCUMENT).past.length
 
 describe('guidePort', () => {
-  beforeEach(() => {
-    useCanvases.setState({ states: {}, histories: {} })
-  })
-
   it('lays a guide down where the drag started', () => {
     const port = guidePort(DOCUMENT)
     port.beginDrag()

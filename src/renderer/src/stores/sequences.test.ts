@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { TakeShape } from '@/engines/audio/edits'
 import { canRedo, canUndo } from '@/engines/core/history'
@@ -36,10 +36,6 @@ const clipsOf = (documentId: string): Clip[] =>
   sequenceOf(useSequences.getState(), documentId).tracks[0]?.clips ?? []
 
 describe('sequences store', () => {
-  beforeEach(() => {
-    useSequences.setState({ states: {}, histories: {} })
-  })
-
   it('gives an empty sequence for a document never opened', () => {
     expect(sequenceOf(useSequences.getState(), 'unknown')).toEqual(EMPTY_SEQUENCE)
   })
@@ -123,10 +119,6 @@ describe('the montage clip of an edited take', () => {
     useSequences.getState().runCommand('doc-1', addClip('A1', clip))
     return clipsOf('doc-1')[0] as Clip
   }
-
-  beforeEach(() => {
-    useSequences.setState({ states: {}, histories: {} })
-  })
 
   it('carries the bounds, the ramps and the level of the chain above it', () => {
     laid()

@@ -15,7 +15,6 @@ describe('ProgramTransport', () => {
   let unregister = (): void => undefined
 
   beforeEach(() => {
-    useSequences.setState({ states: {}, histories: {} })
     usePlayback.setState({ running: {} })
     installSequence('doc-1')
     play.mockReset()

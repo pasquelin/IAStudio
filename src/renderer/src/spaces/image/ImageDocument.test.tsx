@@ -59,7 +59,6 @@ describe('ImageDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useLayouts.setState({ activeWorkspace: 'image', home: false })
-    useCanvases.setState({ states: {}, histories: {} })
   })
 
   /**
@@ -501,7 +500,6 @@ describe('merging the layer below', () => {
 describe('exporting the canvas', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useCanvases.setState({ states: {}, histories: {} })
     useDocuments.setState({
       documents: {
         'doc-1': {

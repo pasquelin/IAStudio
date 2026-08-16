@@ -17,3 +17,10 @@ const SOURCES: Record<string, string> = import.meta.glob('../**/*.{ts,tsx}', {
 export const WRITTEN_SOURCES = Object.entries(SOURCES).filter(
   ([path]) => !/\.(test|bench)\.tsx?$/.test(path),
 )
+
+/**
+ * The other half: the suites themselves, for the few rules that are ABOUT how tests are written.
+ * Kept rare on purpose — a rule over test text is a rule nobody reads before writing a test, so
+ * it earns its place only where the cost of getting it wrong is a defect that stays silent.
+ */
+export const SUITE_SOURCES = Object.entries(SOURCES).filter(([path]) => /\.test\.tsx?$/.test(path))

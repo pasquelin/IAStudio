@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
-import { afterEach, beforeAll, beforeEach } from 'vitest'
+import { afterEach, beforeAll } from 'vitest'
 import {
   handleRequest,
   type AudioWorkerRequest,
@@ -8,7 +8,9 @@ import {
 } from '@/engines/audio/audio-render'
 import { initI18n } from '@/i18n'
 import { forgetRememberedAssets, useAssets } from '@/stores/assets'
-import { resetDocumentStoresForTests } from '@/stores/document-store'
+// The rule that needs no browser, shared with the `renderer-node` project — it says why there.
+// Its `beforeEach` registers on import, so it runs before the hooks written below.
+import './test-setup-stores'
 
 /**
  * jsdom renders `<dialog>` but implements none of its modal API. Chromium does, and it is
@@ -306,23 +308,3 @@ afterEach(() => useAssets.getState().cancelInvalidate())
  * case puts in the catalogue would answer a lookup in the next.
  */
 afterEach(forgetRememberedAssets)
-
-/**
- * Nor may a case inherit a document a previous one closed. Each document store keeps the ids it
- * was told to forget outside its zustand state, where a suite's own `setState` merges past them
- * — so a case that closed a document silenced the commands of every case after it, as a write
- * that did nothing.
- *
- * Here rather than in the five `install<X>` fixtures alone: the reset is written out by hand in
- * dozens of suites that never call one, and `audio-edits` has no fixture at all.
- *
- * BEFORE the case, not after it like the two above: `afterEach` hooks run last-registered first,
- * so emptying the stores there would happen while the previous case's tree is still mounted, and
- * a panel re-rendering on a document that just vanished throws.
- *
- * `useDocuments` is NOT reset with them: the tabs and descriptors of the previous case stay. The
- * five `install<X>` put their descriptor back on every call, so nothing is out of step through
- * them — a suite that writes `useDocuments` by hand can leave a tab in front of a document whose
- * state this just took away, and it reads as a panel rendering an empty document.
- */
-beforeEach(resetDocumentStoresForTests)

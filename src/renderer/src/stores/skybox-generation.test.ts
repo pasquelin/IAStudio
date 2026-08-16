@@ -61,7 +61,6 @@ describe('landing a generation in the sky that asked for it', () => {
   let disconnect: () => void = () => {}
 
   beforeEach(() => {
-    useSkyboxes.setState({ states: {}, histories: {} })
     useAssets.setState({ items: [] })
     useJobs.setState({ jobs: [], bodies: {} })
     catalogueHolds([panorama])

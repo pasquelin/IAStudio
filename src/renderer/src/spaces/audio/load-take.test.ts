@@ -8,7 +8,7 @@ import {
   type SequenceState,
 } from '@/engines/timeline/timeline-state'
 import { useSelection } from '@/stores/selection'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { loadTake } from './load-take'
 
 const take = (overrides: Partial<Asset> = {}): Asset => ({
@@ -31,7 +31,6 @@ const clipsOf = (): Clip[] => montageOf().tracks.flatMap(track => track.clips)
  */
 describe('putting a take onto the montage', () => {
   beforeEach(() => {
-    useSequences.setState({ states: {}, histories: {} })
     useSequences.getState().replace('doc-1', EMPTY_SOUND_SEQUENCE)
     useSelection.getState().clear()
   })
@@ -111,7 +110,9 @@ describe('putting a take onto the montage', () => {
   // The window between a tab appearing and its file being read: the montage store answers with
   // the SEQUENCE default there, which carries a picture track this workspace cannot play.
   it('builds no montage at all for a document whose file is still on its way', () => {
-    useSequences.setState({ states: {}, histories: {} })
+    // Not `drop`: that would leave the closed-document mark, and `loadTake` would then write
+    // nothing because the store refused it rather than because it decided to.
+    sequenceStore.resetForTests()
 
     loadTake('doc-1', take())
 

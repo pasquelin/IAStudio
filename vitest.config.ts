@@ -220,6 +220,9 @@ export default defineConfig({
           testTimeout: TEST_TIMEOUT,
           include: ['src/renderer/**/*.test.ts'],
           exclude: DOM_BOUND,
+          // The half of the renderer setup that needs no browser. Without it these suites kept
+          // the defect the DOM ones were cured of, and each had to write its own reset.
+          setupFiles: ['src/renderer/src/test-setup-stores.ts'],
           // Three files read a stylesheet back through `?raw` and fail without this, which is how
           // it was found: they are not DOM-bound, they were parser-bound.
           css: { include: [/\.css\?raw$/] },
