@@ -188,6 +188,12 @@ export default defineConfig({
           pool: 'forks',
           testTimeout: TEST_TIMEOUT,
           include: ['src/{main,preload,shared}/**/*.test.ts'],
+          // Anchored like the line above, and for a reason `include` alone does not cover: the
+          // benchmark glob is a SEPARATE setting with its own default, `**/*.bench.*`, which is
+          // not anchored at all. Left to it, `pnpm bench` walked into `.claude/worktrees/` and
+          // measured the branches of other sessions — 72 lines of another checkout's numbers,
+          // presented as this one's.
+          benchmark: { include: ['src/{main,preload,shared}/**/*.bench.ts'] },
           setupFiles: ['src/main/test-setup.ts'],
         },
       },
@@ -200,6 +206,11 @@ export default defineConfig({
           testTimeout: TEST_TIMEOUT,
           // Every component test, plus the `.test.ts` that were measured to need a browser.
           include: ['src/renderer/**/*.test.tsx', ...DOM_BOUND],
+          // The same split as the tests, and it has to be stated: a project with no benchmark
+          // glob of its own keeps the unanchored default and runs EVERY bench of the tree —
+          // this one was measuring the main process's, under jsdom, on top of the `node` project
+          // already doing it. No `.bench.tsx` exists today; the day one does, it lands here.
+          benchmark: { include: ['src/renderer/**/*.bench.tsx'] },
           // Stylesheets are stubbed to an empty string by default, `?raw` included — which
           // silently empties the checks that read a rule back. Only the raw reads are spared;
           // nothing that a component imports for its styles is processed.
@@ -219,6 +230,8 @@ export default defineConfig({
           pool: TEST_POOL,
           testTimeout: TEST_TIMEOUT,
           include: ['src/renderer/**/*.test.ts'],
+          // The three renderer benchmarks, anchored for the reason the `node` project gives.
+          benchmark: { include: ['src/renderer/**/*.bench.ts'] },
           exclude: DOM_BOUND,
           // The half of the renderer setup that needs no browser. Without it these suites kept
           // the defect the DOM ones were cured of, and each had to write its own reset.
