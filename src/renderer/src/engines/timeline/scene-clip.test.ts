@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import type { SceneStage } from '../scene/scene-stage'
+import type { SceneStage, SceneStageOptions } from '../scene/scene-stage'
 import { clipForScene, trackForScene } from './insert'
 import { createStudioSink } from './sink-port'
 import {
@@ -80,7 +80,9 @@ describe('createStudioSink', () => {
 
   function sinkFor(source: string, asset: Asset | null = null) {
     const wantScene = vi.fn()
-    const createStage = vi.fn(() => stage)
+    // The parameter is spelled out so the recorded calls keep their type: an argless mock
+    // records an empty tuple, and reading its first argument would not compile.
+    const createStage = vi.fn((_options: SceneStageOptions) => stage)
     const open = createStudioSink({
       sceneOf: () => null,
       wantScene,
