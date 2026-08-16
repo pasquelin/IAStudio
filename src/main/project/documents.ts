@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, open, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import {
   DOCUMENT_MANIFEST,
@@ -17,6 +17,7 @@ import {
   type DocumentFile,
   type DocumentKind,
   type DocumentPart,
+  type DocumentWrite,
 } from '@shared/domain/document'
 import {
   checkDocumentName,
@@ -37,7 +38,16 @@ export type DocumentFiles = {
   list: () => Promise<DocumentDescriptor[]>
   /** `null` when the document has never been saved — an open tab that holds nothing yet. */
   read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
-  write: (id: string, kind: DocumentKind, draft: DocumentDraft) => Promise<void>
+  /**
+   * Answers `stale` and writes NOTHING when the file changed since the studio last read or wrote
+   * it. `force` is the caller saying the user was asked and said yes.
+   */
+  write: (
+    id: string,
+    kind: DocumentKind,
+    draft: DocumentDraft,
+    force?: boolean,
+  ) => Promise<DocumentWrite>
   remove: (id: string, kind: DocumentKind) => Promise<void>
   /**
    * Gives a document another name, which is also giving its file another name.
@@ -159,9 +169,47 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
    */
   const index = new Map<string, string>()
 
+  /**
+   * The modification time each document's file carried when the studio last read or wrote it.
+   *
+   * This is what makes an outside edit visible. A file whose time no longer matches was written
+   * by something else — another application, a sync service bringing a different copy back — and
+   * saving over it destroys that work silently, which is what the studio did until now.
+   *
+   * Held here rather than stamped in the file, and it cannot be otherwise: the write that
+   * finishes a file is what sets its time, so no value written INSIDE it can match what the
+   * filesystem reports afterwards.
+   *
+   * Empty at startup, and that is correct rather than a gap: a document has to be READ before it
+   * can be edited, and the read is what fills this in.
+   */
+  const seen = new Map<string, number>()
+
   const keyOf = (id: string, kind: DocumentKind): string => `${kind}:${id}`
 
   const folderPath = (): string => join(projectPath(), DOCUMENTS_FOLDER)
+
+  /**
+   * When the file was last written, or `null` when it is not there.
+   *
+   * A folder document answers for its MANIFEST rather than the folder: a directory's own time
+   * moves when any entry inside it does, so `.img` would read as changed every time a layer was
+   * rewritten by the studio itself.
+   */
+  const timeOf = async (file: string, kind: DocumentKind): Promise<number | null> => {
+    try {
+      const target = FOLDER_KINDS.has(kind) ? join(file, DOCUMENT_MANIFEST) : file
+      return (await stat(target)).mtimeMs
+    } catch (error) {
+      if (isMissing(error)) return null
+      throw error
+    }
+  }
+
+  const remember = async (id: string, kind: DocumentKind, file: string): Promise<void> => {
+    const time = await timeOf(file, kind)
+    if (time !== null) seen.set(keyOf(id, kind), time)
+  }
 
   /** Where a document of this id WOULD sit had it never been named — and where a first write goes. */
   const fileOf = (id: string, kind: DocumentKind): string =>
@@ -441,6 +489,12 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
   async function readOne(id: string, kind: DocumentKind): Promise<DocumentFile | null> {
     const file = await locate(id, kind)
 
+    // BEFORE the read, never after. A file rewritten while it is being read would otherwise be
+    // remembered by the time of a write whose bytes never reached this state — and the next ⌘S
+    // would find the times agreeing and overwrite it. Taken first, the error leans the safe way:
+    // the studio believes the file older than it is, and asks.
+    await remember(id, kind, file)
+
     let document: DocumentFile
     try {
       document = FOLDER_KINDS.has(kind)
@@ -464,13 +518,27 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
 
     read: (id, kind) => queued(id, () => readOne(id, kind)),
 
-    write: (id, kind, draft) =>
+    write: (id, kind, draft, force = false) =>
       queued(id, async () => {
         // A document already on disk keeps the file it is in — including one written before
         // version 3, still under the uuid it was named after. Renaming those is the user's
         // gesture, not something a save does behind them.
         const located = await locate(id, kind)
-        const file = (await exists(located)) ? located : freshFile(kind, draft.title)
+        const onDisk = await exists(located)
+        const file = onDisk ? located : freshFile(kind, draft.title)
+
+        /**
+         * Whether someone else wrote this file since the studio last touched it.
+         *
+         * Three ways to be sure it is fine, and each is checked rather than assumed: the caller
+         * insisted, the file is not there at all (a first save), or the studio never read it —
+         * a document it has no memory of is one it cannot claim to have written.
+         */
+        if (onDisk && !force) {
+          const known = seen.get(keyOf(id, kind))
+          const current = await timeOf(file, kind)
+          if (known !== undefined && current !== null && current !== known) return 'stale'
+        }
 
         // Stamped here rather than taken from the draft: the renderer owns none of these, and
         // an id from its side would be its word against the folder's.
@@ -478,6 +546,8 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
 
         await (FOLDER_KINDS.has(kind) ? storeFolder(file, document) : store(file, document))
         index.set(keyOf(id, kind), basename(file))
+        await remember(id, kind, file)
+        return 'written'
       }),
 
     rename: (id, kind, title) =>
@@ -543,6 +613,10 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
 
         await rename(from, to)
         index.set(keyOf(id, kind), entry)
+        // The envelope was just rewritten and the file just moved, both by the studio. Without
+        // this, the next ⌘S would read a time it does not recognise and accuse the user of
+        // having edited their own document elsewhere.
+        await remember(id, kind, to)
 
         return { ...descriptor, title, fileName: entry }
       }),
@@ -553,6 +627,7 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
         const file = await locate(id, kind)
         await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
         index.delete(keyOf(id, kind))
+        seen.delete(keyOf(id, kind))
       })
     },
   }

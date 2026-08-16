@@ -479,13 +479,25 @@ export async function saveDocument(documentId: string): Promise<boolean> {
   const { bridge, document, io } = savable
 
   const { draft, commit, wasEdited } = await io.capture(documentId)
-  await bridge.documents.write(document.id, document.kind, {
+  const payload = {
     ...draft,
     title: document.title,
     // Written from the descriptor for the same reason the title is: the tab owns both, and the
     // captured draft is the editor's state alone.
     ...(document.sourceAssetId ? { sourceAssetId: document.sourceAssetId } : {}),
-  })
+  }
+
+  /**
+   * The file may have been written by something else while the tab held it.
+   *
+   * Nothing is captured a second time on the way through: the draft above is the state the user
+   * pressed ⌘S on, and re-capturing after a dialog would save whatever an autosave or a stray
+   * keystroke left behind instead.
+   */
+  if ((await bridge.documents.write(document.id, document.kind, payload)) === 'stale') {
+    if (!(await bridge.documents.confirmOverwrite(document.title))) return false
+    await bridge.documents.write(document.id, document.kind, payload, true)
+  }
   commit()
 
   await rewriteSourceAsset(document, io, wasEdited)

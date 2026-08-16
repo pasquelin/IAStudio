@@ -13,7 +13,12 @@ import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/local-backend'
 import type { FolderEditor, FolderReader } from './folder'
 import type { ActivityReport } from './activity-log'
-import { askCloseChoice, askDeleteDocument, type AskUser } from './document-dialogs'
+import {
+  askCloseChoice,
+  askDeleteDocument,
+  askOverwriteDocument,
+  type AskUser,
+} from './document-dialogs'
 import type { DocumentFiles } from './documents'
 import { askUseOccupiedFolder } from './project-dialogs'
 import { openFailureKey, type ProjectStore } from './store'
@@ -25,6 +30,7 @@ import {
   parseDocumentKind,
   parseDocumentTitle,
   parseFolderPath,
+  parseForceWrite,
   parseProjectName,
   parseProjectPath,
   parseProjectTitle,
@@ -405,11 +411,17 @@ export function registerProjectHandlers({
     documents.read(parseDocumentId(id), parseDocumentKind(kind)),
   )
 
-  handle(CHANNELS.documentWrite, async (_event, id, kind, draft) => {
-    await documents.write(parseDocumentId(id), parseDocumentKind(kind), parseDocumentDraft(draft))
+  handle(CHANNELS.documentWrite, async (_event, id, kind, draft, force) => {
+    const written = await documents.write(
+      parseDocumentId(id),
+      parseDocumentKind(kind),
+      parseDocumentDraft(draft),
+      parseForceWrite(force),
+    )
     // After the save, never before: a manifest stamped for a document the disk refused would
-    // say the project worked when nothing was written.
-    project.touch()
+    // say the project worked when nothing was written. A refused overwrite is that same case.
+    if (written === 'written') project.touch()
+    return written
   })
 
   handle(CHANNELS.documentRename, async (_event, id, kind, title) => {
@@ -434,5 +446,9 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.documentConfirmDelete, (_event, title) =>
     askDeleteDocument(askUser, parseDocumentTitle(title)),
+  )
+
+  handle(CHANNELS.documentConfirmOverwrite, (_event, title) =>
+    askOverwriteDocument(askUser, parseDocumentTitle(title)),
   )
 }

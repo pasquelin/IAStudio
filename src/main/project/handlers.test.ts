@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import type { DocumentDescriptor, DocumentKind } from '@shared/domain/document'
+import type { DocumentDescriptor, DocumentKind, DocumentWrite } from '@shared/domain/document'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { glbFile, glbWearing } from '@main/assets/glb-fixtures'
 import { ownFileOf } from '@main/assets/protocol'
@@ -88,7 +88,7 @@ function base(catalog: AsyncCatalog) {
     documents: {
       list: vi.fn(async () => []),
       read: vi.fn(async () => null),
-      write: vi.fn(async () => undefined),
+      write: vi.fn((): Promise<DocumentWrite> => Promise.resolve('written')),
       remove: vi.fn(async () => undefined),
       rename: vi.fn(
         async (id: string, kind: DocumentKind, title: string): Promise<DocumentDescriptor> => ({

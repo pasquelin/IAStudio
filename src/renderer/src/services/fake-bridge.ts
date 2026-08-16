@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import type { CloseChoice } from '@shared/domain/document'
+import type { CloseChoice, DocumentWrite } from '@shared/domain/document'
 import { emptyAssetCounts } from '@shared/domain/asset'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
@@ -81,7 +81,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     documents: {
       list: () => Promise.resolve([]),
       read: () => Promise.resolve(null),
-      write: () => Promise.resolve(),
+      write: () => Promise.resolve<DocumentWrite>('written'),
       // Refuses by default, as the two dialogs below do: a rename nobody stubbed must not read
       // as one that worked, which would have a test believe the disk had agreed.
       rename: () => Promise.reject(new Error('no rename stubbed')),
@@ -89,6 +89,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       // Cancel and refuse: a test that does not stub these cannot lose a document by omission.
       confirmClose: () => Promise.resolve<CloseChoice>('cancel'),
       confirmDelete: () => Promise.resolve(false),
+      confirmOverwrite: () => Promise.resolve(false),
       ...overrides.documents,
     },
     assets: {

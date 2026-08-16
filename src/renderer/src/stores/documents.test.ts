@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DocumentDescriptor } from '@shared/domain/document'
+import type { DocumentDescriptor, DocumentWrite } from '@shared/domain/document'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { documentForAsset, documentsIn, panelIds, useDocuments } from './documents'
 import { showPanels } from './layout-fixtures'
@@ -40,7 +40,7 @@ describe('documents store', () => {
       documents: {
         write: id => {
           written.push(id)
-          return Promise.resolve()
+          return Promise.resolve<DocumentWrite>('written')
         },
       },
     })

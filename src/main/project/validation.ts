@@ -167,6 +167,18 @@ export function parseDocumentKind(value: unknown): DocumentKind {
   return documentKind.parse(value)
 }
 
+/**
+ * The window saying the user was shown the outside-changes question and answered yes.
+ *
+ * Absent means no, deliberately: a payload that lost this field must never read as consent to
+ * overwrite someone else's work.
+ */
+const forceWrite = z.boolean().optional()
+
+export function parseForceWrite(value: unknown): boolean {
+  return forceWrite.parse(value) ?? false
+}
+
 const title = z.string().max(200)
 
 /*

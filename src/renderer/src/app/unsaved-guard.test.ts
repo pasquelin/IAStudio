@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { CloseChoice } from '@shared/domain/document'
+import type { CloseChoice, DocumentWrite } from '@shared/domain/document'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
@@ -134,7 +134,7 @@ describe('guardUnsavedWork', () => {
   })
 
   it('writes the work when the answer is to save it', async () => {
-    const write = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({ documents: { confirmClose: () => Promise.resolve('save'), write } })
     arm(window)
     await openDirtyScene()
