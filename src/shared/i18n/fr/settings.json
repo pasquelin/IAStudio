@@ -134,6 +134,7 @@
     "scope": {
       "global": "Partout dans l’application",
       "spaces": "Dans la barre des espaces",
+      "explorer": "Dans l’Explorateur",
       "scene": "Dans la vue 3D",
       "sequence": "Dans le montage",
       "canvas": "Dans l’image",

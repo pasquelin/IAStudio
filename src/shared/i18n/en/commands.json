@@ -44,6 +44,38 @@
       "title": "Move the space right",
       "help": "Shifts the focused space one place to the right in the top bar. The order you settle on is kept from one session to the next."
     },
+    "explorerNewFolder": {
+      "title": "New folder",
+      "help": "Creates an empty folder inside the one the explorer is showing, and opens its name for typing. The folder is yours, as is everything you put in it."
+    },
+    "explorerDuplicate": {
+      "title": "Duplicate",
+      "help": "Lays a copy of each chosen item beside the original, under the first free name. A folder is copied with everything inside it."
+    },
+    "explorerCut": {
+      "title": "Cut",
+      "help": "Holds the selection, to be moved on the next paste. Nothing moves until you paste, and the rows being held are drawn dimmed."
+    },
+    "explorerCopy": {
+      "title": "Copy",
+      "help": "Holds the selection, to be copied on the next paste. The original stays where it is."
+    },
+    "explorerPaste": {
+      "title": "Paste",
+      "help": "Drops what the clipboard holds into the folder on screen. A name already taken refuses that one item, and the rest go through."
+    },
+    "explorerTrash": {
+      "title": "Move to trash",
+      "help": "Sends the selection to the system trash, where you can get it back. It is the one explorer gesture the studio cannot undo."
+    },
+    "explorerUndo": {
+      "title": "Undo the last file gesture",
+      "help": "Puts the last batch moved, renamed, duplicated or created back where it was. The stack belongs to the project rather than to a window, and the trash never enters it."
+    },
+    "explorerRedo": {
+      "title": "Redo the file gesture",
+      "help": "Does the batch of files that was just undone again, exactly as it was."
+    },
     "sceneSelect": {
       "title": "Select",
       "help": "The plain tool: click an object in the scene to choose it, without doing anything to it. It is the one you come back to between manipulations."

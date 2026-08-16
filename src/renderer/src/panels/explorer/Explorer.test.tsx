@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
+import type { FileOutcome } from '@shared/domain/file-op'
 import type { FolderEntry } from '@shared/domain/folder'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
@@ -68,6 +69,10 @@ const withProject = (): void => {
 /** Reset per case in `beforeEach`, and read by `install` — every case here raises a menu. */
 let menu = fakeMenu()
 
+/** An empty batch, which is what a gesture nobody stubbed owes: nothing moved, nothing refused. */
+const nothingMoved = (): Promise<FileOutcome> =>
+  Promise.resolve({ done: [], refused: [], batch: 'batch-1' })
+
 function install(
   byFolder: Record<string, FolderEntry[]>,
   documents: DocumentDescriptor[] = [],
@@ -76,9 +81,14 @@ function install(
   const listFolder = vi.fn((relative: string) => Promise.resolve(byFolder[relative] ?? []))
   const openFile = vi.fn(() => Promise.resolve(true))
   const revealFile = vi.fn(() => Promise.resolve())
-  const renameFile = vi.fn(() => Promise.resolve(true))
-  const moveFile = vi.fn(() => Promise.resolve(true))
-  const trashFile = vi.fn(() => Promise.resolve(true))
+  const renameFile = vi.fn(nothingMoved)
+  const moveFiles = vi.fn(nothingMoved)
+  const trashFiles = vi.fn(nothingMoved)
+  const duplicateFiles = vi.fn(nothingMoved)
+  const pasteFiles = vi.fn(nothingMoved)
+  const newFolder = vi.fn(nothingMoved)
+  const undoFile = vi.fn(nothingMoved)
+  const redoFile = vi.fn(nothingMoved)
   // What renaming an asset goes through: its file moves with its name, so the catalogue's
   // channel carries both — never `project.renameFile`, which refuses everything under `assets/`.
   const update = vi.fn((assetId: string) => {
@@ -86,7 +96,19 @@ function install(
     return held ? Promise.resolve(held) : Promise.reject(new Error('asset-not-found'))
   })
   installFakeBridge({
-    project: { listFolder, openFile, revealFile, renameFile, moveFile, trashFile },
+    project: {
+      listFolder,
+      openFile,
+      revealFile,
+      renameFile,
+      moveFiles,
+      trashFiles,
+      duplicateFiles,
+      pasteFiles,
+      newFolder,
+      undoFile,
+      redoFile,
+    },
     documents: { list: () => Promise.resolve(documents) },
     menu: menu.bridge,
     assets: {
@@ -95,7 +117,20 @@ function install(
       update,
     },
   })
-  return { listFolder, openFile, revealFile, renameFile, moveFile, trashFile, update }
+  return {
+    listFolder,
+    openFile,
+    revealFile,
+    renameFile,
+    moveFiles,
+    trashFiles,
+    duplicateFiles,
+    pasteFiles,
+    newFolder,
+    undoFile,
+    redoFile,
+    update,
+  }
 }
 
 /** A gauge the stylesheet would apply, which jsdom does not. Dropped after every case. */
@@ -574,17 +609,17 @@ describe('dragging a row of the explorer', () => {
 
   it('moves the dragged file into the folder it was dropped on', async () => {
     withProject()
-    const { moveFile } = install({ '': [folder('notes'), file('brief.pdf')] })
+    const { moveFiles } = install({ '': [folder('notes'), file('brief.pdf')] })
 
     render(<Explorer />)
     await drag('brief.pdf', 'notes')
 
-    expect(moveFile).toHaveBeenCalledWith('brief.pdf', 'notes')
+    expect(moveFiles).toHaveBeenCalledWith(['brief.pdf'], 'notes')
   })
 
   it('moves it by its whole path, not by the name the row shows', async () => {
     withProject()
-    const { moveFile } = install({
+    const { moveFiles } = install({
       '': [folder('notes'), folder('refs')],
       notes: [file('brief.pdf', 'notes')],
     })
@@ -594,7 +629,7 @@ describe('dragging a row of the explorer', () => {
     await userEvent.keyboard('{ArrowRight}')
     await drag('brief.pdf', 'refs')
 
-    expect(moveFile).toHaveBeenCalledWith('notes/brief.pdf', 'refs')
+    expect(moveFiles).toHaveBeenCalledWith(['notes/brief.pdf'], 'refs')
   })
 
   // The catalogue stores every asset by a path under `assets/`, and the studio's own folders
@@ -611,28 +646,28 @@ describe('dragging a row of the explorer', () => {
 
   it('drops nothing into a studio folder', async () => {
     withProject()
-    const { moveFile } = install({ '': [folder('assets'), file('brief.pdf')] })
+    const { moveFiles } = install({ '': [folder('assets'), file('brief.pdf')] })
 
     render(<Explorer />)
     await drag('brief.pdf', 'assets')
 
-    expect(moveFile).not.toHaveBeenCalled()
+    expect(moveFiles).not.toHaveBeenCalled()
   })
 
   // A file is not a place. Dropping onto one used to be worth an outline it could not honour.
   it('drops nothing onto a file', async () => {
     withProject()
-    const { moveFile } = install({ '': [file('brief.pdf'), file('notes.txt')] })
+    const { moveFiles } = install({ '': [file('brief.pdf'), file('notes.txt')] })
 
     render(<Explorer />)
     await drag('brief.pdf', 'notes.txt')
 
-    expect(moveFile).not.toHaveBeenCalled()
+    expect(moveFiles).not.toHaveBeenCalled()
   })
 
   it('drops nothing onto a folder inside the one being dragged', async () => {
     withProject()
-    const { moveFile } = install({
+    const { moveFiles } = install({
       '': [folder('notes')],
       notes: [folder('drafts', 'notes')],
     })
@@ -642,7 +677,214 @@ describe('dragging a row of the explorer', () => {
     await userEvent.keyboard('{ArrowRight}')
     await drag('notes', 'drafts')
 
-    expect(moveFile).not.toHaveBeenCalled()
+    expect(moveFiles).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * Picking more than one row, and doing something to all of them.
+ *
+ * The panel used to drop the `mode` the tree resolved — `onSelect={setSelectedIds}` — so every
+ * ⌘-click REPLACED the selection instead of adding to it, in a panel whose whole point is to
+ * move several files at once.
+ */
+describe('picking several rows of the explorer', () => {
+  const rowFor = async (name: string): Promise<HTMLElement> => {
+    const label = await screen.findByText(name)
+    const row = label.closest('[role="treeitem"]')
+    if (!(row instanceof HTMLElement)) throw new Error(`no row for ${name}`)
+    return row
+  }
+
+  const picked = (): string[] =>
+    screen
+      .getAllByRole('treeitem')
+      .filter(row => row.getAttribute('aria-selected') === 'true')
+      .map(row => row.textContent ?? '')
+
+  /**
+   * One session for the whole gesture, in every case here: the direct API opens a new one per
+   * call, and the held modifier is released before the click that is supposed to read it.
+   */
+  it('adds to what is already picked on a command-click', async () => {
+    withProject()
+    install({ '': [file('a.png'), file('b.png'), file('c.png')] })
+    const user = userEvent.setup()
+
+    render(<Explorer />)
+    await user.click(await screen.findByText('a.png'))
+    await user.keyboard('{Meta>}')
+    await user.click(await screen.findByText('c.png'))
+    await user.keyboard('{/Meta}')
+
+    expect(picked()).toEqual(['a.png', 'c.png'])
+  })
+
+  it('takes the whole range on a shift-click', async () => {
+    withProject()
+    install({ '': [file('a.png'), file('b.png'), file('c.png')] })
+    const user = userEvent.setup()
+
+    render(<Explorer />)
+    await user.click(await screen.findByText('a.png'))
+    await user.keyboard('{Shift>}')
+    await user.click(await screen.findByText('c.png'))
+    await user.keyboard('{/Shift}')
+
+    expect(picked()).toEqual(['a.png', 'b.png', 'c.png'])
+  })
+
+  // The batch is settled when the drag STARTS and read on every hover: the platform answers
+  // nothing about a payload until the drop, so a target could not otherwise know what is coming.
+  it('carries the whole selection when one of its rows is dragged', async () => {
+    withProject()
+    const { moveFiles } = install({ '': [folder('notes'), file('a.png'), file('b.png')] })
+    const user = userEvent.setup()
+
+    render(<Explorer />)
+    await user.click(await screen.findByText('a.png'))
+    await user.keyboard('{Meta>}')
+    await user.click(await screen.findByText('b.png'))
+    await user.keyboard('{/Meta}')
+
+    const data = dragTransfer()
+    fireEvent.dragStart(await rowFor('a.png'), { dataTransfer: data })
+    fireEvent.drop(await rowFor('notes'), { dataTransfer: data })
+
+    expect(moveFiles).toHaveBeenCalledWith(['a.png', 'b.png'], 'notes')
+  })
+
+  // What every file browser does, and what keeps a slip of the hand from moving thirty files.
+  it('drags a row outside the selection alone, leaving the selection whole', async () => {
+    withProject()
+    const { moveFiles } = install({ '': [folder('notes'), file('a.png'), file('b.png')] })
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('a.png'))
+
+    const data = dragTransfer()
+    fireEvent.dragStart(await rowFor('b.png'), { dataTransfer: data })
+    fireEvent.drop(await rowFor('notes'), { dataTransfer: data })
+
+    expect(moveFiles).toHaveBeenCalledWith(['b.png'], 'notes')
+  })
+
+  /**
+   * How a file comes back OUT of a folder: no row stands for the project folder, so the blank
+   * below the tree is what names it.
+   */
+  it('sends a file to the project folder when it is dropped on the blank below the rows', async () => {
+    withProject()
+    const { moveFiles } = install({
+      '': [folder('notes')],
+      notes: [file('a.png', 'notes')],
+    })
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.keyboard('{ArrowRight}')
+
+    const data = dragTransfer()
+    fireEvent.dragStart(await rowFor('a.png'), { dataTransfer: data })
+    const blank = screen.getByRole('tree').parentElement
+    fireEvent.drop(blank!, { dataTransfer: data })
+
+    expect(moveFiles).toHaveBeenCalledWith(['notes/a.png'], '')
+  })
+})
+
+/**
+ * The eight commands, which act on the SELECTION rather than on a row — the whole point of the
+ * scope. Heard only while the focus is inside the panel: a ⌘Z in the canvas must not reach the
+ * disk, and `commandFor` filters by scope for exactly that.
+ */
+describe('the explorer commands', () => {
+  it('holds a cut selection back until a folder is named to paste it into', async () => {
+    withProject()
+    const { pasteFiles, moveFiles } = install({ '': [folder('notes'), file('a.png')] })
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('a.png'))
+    await userEvent.keyboard('{Meta>}x{/Meta}')
+
+    // Nothing has moved yet, and nothing will until the paste says where.
+    expect(moveFiles).not.toHaveBeenCalled()
+
+    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.keyboard('{Meta>}v{/Meta}')
+
+    expect(pasteFiles).toHaveBeenCalledWith(['a.png'], 'notes', true)
+  })
+
+  // A copy stays on the clipboard, so pasting into three folders in a row is three copies rather
+  // than one and two silences.
+  it('pastes a copy into the folder on screen, and keeps it for the next one', async () => {
+    withProject()
+    const { pasteFiles } = install({ '': [folder('notes'), folder('refs'), file('a.png')] })
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('a.png'))
+    await userEvent.keyboard('{Meta>}c{/Meta}')
+    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.keyboard('{Meta>}v{/Meta}')
+    await userEvent.click(await screen.findByText('refs'))
+    await userEvent.keyboard('{Meta>}v{/Meta}')
+
+    expect(pasteFiles).toHaveBeenNthCalledWith(1, ['a.png'], 'notes', false)
+    expect(pasteFiles).toHaveBeenNthCalledWith(2, ['a.png'], 'refs', false)
+  })
+
+  it('duplicates and trashes the whole selection at once', async () => {
+    withProject()
+    const { duplicateFiles, trashFiles } = install({ '': [file('a.png'), file('b.png')] })
+    const user = userEvent.setup()
+
+    render(<Explorer />)
+    await user.click(await screen.findByText('a.png'))
+    await user.keyboard('{Meta>}')
+    await user.click(await screen.findByText('b.png'))
+    await user.keyboard('{/Meta}')
+
+    await user.keyboard('{Meta>}d{/Meta}')
+    expect(duplicateFiles).toHaveBeenCalledWith(['a.png', 'b.png'])
+
+    await user.keyboard('{Meta>}{Backspace}{/Meta}')
+    expect(trashFiles).toHaveBeenCalledWith(['a.png', 'b.png'])
+  })
+
+  // The folder on screen is the picked row when it is one, and the project folder when nothing
+  // is picked — which is what makes ⇧⌘N work before anything has been clicked.
+  it('makes a folder inside the picked one, and at the root when nothing is picked', async () => {
+    withProject()
+    const { newFolder } = install({ '': [folder('notes')] })
+
+    render(<Explorer />)
+    await screen.findByText('notes')
+    // Focused without being clicked, which is the state the first case is about: the panel arms
+    // its scope on the focus, and nothing is picked yet. Inside `act`, or the effect that
+    // subscribes to the keyboard has not run by the time the key below is pressed.
+    await act(async () => screen.getAllByRole('treeitem')[0]?.focus())
+    fireEvent.keyDown(window, { key: 'N', code: 'KeyN', metaKey: true, shiftKey: true })
+
+    await waitFor(() => expect(newFolder).toHaveBeenCalledWith('', 'dossier'))
+
+    await userEvent.click(await screen.findByText('notes'))
+    fireEvent.keyDown(window, { key: 'N', code: 'KeyN', metaKey: true, shiftKey: true })
+
+    await waitFor(() => expect(newFolder).toHaveBeenCalledWith('notes', 'dossier'))
+  })
+
+  // Heard by the panel and nowhere else: the stack lives in the main process, and the scope is
+  // what keeps a ⌘Z aimed at a canvas from reaching the disk.
+  it('asks the main process to take the last batch back', async () => {
+    withProject()
+    const { undoFile } = install({ '': [file('a.png')] })
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('a.png'))
+    await userEvent.keyboard('{Meta>}z{/Meta}')
+
+    expect(undoFile).toHaveBeenCalled()
   })
 })
 
@@ -668,13 +910,13 @@ describe('the explorer menu', () => {
 
   it('moves a file to the trash rather than deleting it', async () => {
     withProject()
-    const { trashFile } = install({ '': [file('brief.pdf')] })
+    const { trashFiles } = install({ '': [file('brief.pdf')] })
     menu.picks('Mettre à la corbeille')
 
     render(<Explorer />)
     await open('brief.pdf')
 
-    await waitFor(() => expect(trashFile).toHaveBeenCalledWith('brief.pdf'))
+    await waitFor(() => expect(trashFiles).toHaveBeenCalledWith(['brief.pdf']))
   })
 
   /**

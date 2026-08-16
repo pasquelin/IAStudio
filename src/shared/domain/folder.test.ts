@@ -103,10 +103,24 @@ describe('what may be dragged where', () => {
     expect(canMoveInto('brief.pdf', 'documents')).toBe(false)
   })
 
-  // No row stands for the root, so no drop can name it — the day one does, this expectation is
-  // the decision to revisit rather than a rule to keep.
-  it('refuses the project root, which no row names today', () => {
-    expect(canMoveInto('notes/brief.pdf', '')).toBe(false)
+  /**
+   * The root RECEIVES, which it did not: dropping on the blank below the tree means "to the
+   * project folder", and a file that could enter a folder the user made but never leave it was
+   * a browser missing one of its two ordinary gestures.
+   *
+   * Nothing about the root is one of the studio's own paths, so this needs no exception of its
+   * own — it falls out of `isStudioOwned` answering false for it.
+   */
+  it('takes the project root as a destination, which is how a file comes back out', () => {
+    expect(canMoveInto('notes/brief.pdf', '')).toBe(true)
+  })
+
+  // The other half of the same change: what the studio holds is refused by CONTENTS, not just
+  // as the folders themselves — `assets/` is still where a file's role is read from.
+  it('refuses what one of its own folders holds, on either side of the gesture', () => {
+    expect(canMoveInto('assets/img/dusk.png', 'notes')).toBe(false)
+    expect(canMoveInto('documents/a3f1.scene', 'notes')).toBe(false)
+    expect(canMoveInto('brief.pdf', 'assets/img')).toBe(false)
   })
 
   it('refuses a folder dropped on itself', () => {

@@ -51,7 +51,7 @@ export function registerIpc(services: Services): void {
     remote: services.remote,
     cloud: services.cloud,
     removeFile: services.removeAssetFile,
-    renameFile: services.renameAssetFile,
+    renameFile: services.files.renameAsset,
     activeOwnerId: services.ownerScope.current,
     journal: () => services.journal,
     captionArrivals: services.captionArrivals,

@@ -2,6 +2,7 @@ import type { AccountSummary, AccountsResult } from './domain/account'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
+import type { FileHistory, FileOutcome } from './domain/file-op'
 import type { FolderEntry } from './domain/folder'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloud-asset'
@@ -96,8 +97,14 @@ export type Channels = {
   projectRevealFolder: 'project:reveal-folder'
   projectRename: 'project:rename'
   projectRenameFile: 'project:rename-file'
-  projectMoveFile: 'project:move-file'
-  projectTrashFile: 'project:trash-file'
+  projectMoveFiles: 'project:move-files'
+  projectTrashFiles: 'project:trash-files'
+  projectNewFolder: 'project:new-folder'
+  projectDuplicateFiles: 'project:duplicate-files'
+  projectPasteFiles: 'project:paste-files'
+  projectUndoFile: 'project:undo-file'
+  projectRedoFile: 'project:redo-file'
+  projectFileHistory: 'project:file-history'
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
@@ -227,8 +234,14 @@ export const CHANNELS: Channels = {
   projectRevealFolder: 'project:reveal-folder',
   projectRename: 'project:rename',
   projectRenameFile: 'project:rename-file',
-  projectMoveFile: 'project:move-file',
-  projectTrashFile: 'project:trash-file',
+  projectMoveFiles: 'project:move-files',
+  projectTrashFiles: 'project:trash-files',
+  projectNewFolder: 'project:new-folder',
+  projectDuplicateFiles: 'project:duplicate-files',
+  projectPasteFiles: 'project:paste-files',
+  projectUndoFile: 'project:undo-file',
+  projectRedoFile: 'project:redo-file',
+  projectFileHistory: 'project:file-history',
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
@@ -553,6 +566,7 @@ export const EVENTS = {
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
   projectFolderChanged: 'evt:project-folder-changed',
+  filesChanged: 'evt:files-changed',
   assetsChanged: 'evt:assets-changed',
   settingsChanged: 'evt:settings-changed',
   accountsChanged: 'evt:accounts-changed',
@@ -775,22 +789,40 @@ export type StudioBridge = {
      */
     rename: (path: string, name: string) => Promise<Project>
     /**
-     * Renames in place — the name only, never the folder it sits in. Answers whether it
-     * happened: a name already taken is refused rather than overwritten, and the studio's own
-     * folders refuse to move at all.
+     * Renames in place — the name only, never the folder it sits in.
+     *
+     * The seven gestures below answer the same shape, and it is not a boolean: a batch is a
+     * partial result by design, so what comes back is what MOVED and what was refused, with the
+     * reason for each. A single rename simply has one member.
      */
-    renameFile: (relative: string, name: string) => Promise<boolean>
+    renameFile: (relative: string, name: string) => Promise<FileOutcome>
+    /** Into another folder, keeping their names — the drag in the tree, and Couper puis Coller. */
+    moveFiles: (paths: readonly string[], folder: string) => Promise<FileOutcome>
     /**
-     * Into another folder, keeping its name — the drag in the tree. Answers whether it
-     * happened: a name already taken there is refused rather than overwritten, and the studio's
-     * own folders refuse on both sides, as neither what moves nor what receives.
+     * To the system's trash, never deleted. The studio does not erase anything in a folder that
+     * belongs to someone else — and this is the one gesture `undoFile` cannot take back.
      */
-    moveFile: (relative: string, folder: string) => Promise<boolean>
+    trashFiles: (paths: readonly string[]) => Promise<FileOutcome>
+    /** One folder, inside `folder` — `''` for the project root itself. */
+    newFolder: (folder: string, name: string) => Promise<FileOutcome>
+    /** A copy of each beside itself, under the first free name — `Ruelle bleue 2.png`. */
+    duplicateFiles: (paths: readonly string[]) => Promise<FileOutcome>
+    /** What the clipboard holds, into `folder`: moved when it was cut, copied when it was not. */
+    pasteFiles: (paths: readonly string[], folder: string, cut: boolean) => Promise<FileOutcome>
     /**
-     * To the system's trash, never deleted. Answers whether the system took it. The studio does
-     * not erase anything in a folder that belongs to someone else.
+     * Takes the last batch back, and puts it back again. The stack lives in the main process,
+     * per project: a file gesture belongs to no document, and two windows on one project would
+     * otherwise keep two stacks that disagree.
      */
-    trashFile: (relative: string) => Promise<boolean>
+    undoFile: () => Promise<FileOutcome>
+    redoFile: () => Promise<FileOutcome>
+    /** Whether either gesture would do anything — what greys a menu row before it is clicked. */
+    fileHistory: () => Promise<FileHistory>
+    /**
+     * A batch settled, in this window or another one. Carries what it did, so a tree can point
+     * the selection at what has just appeared rather than guessing at it after a re-read.
+     */
+    onFilesChanged: (callback: (outcome: FileOutcome) => void) => Unsubscribe
   }
   dialog: {
     /**

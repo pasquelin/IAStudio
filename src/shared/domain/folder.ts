@@ -71,6 +71,17 @@ export function parentOf(path: string): string | null {
 }
 
 /**
+ * What an entry is CALLED — the last segment of its path.
+ *
+ * Beside `parentOf` rather than taken from `node:path`: `basename` reads a backslash as a
+ * separator on Windows and not elsewhere, where these paths use `/` on every platform and are
+ * refused if they hold anything else. Both sides ask it, and the renderer has no `node:path`.
+ */
+export function nameOf(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1)
+}
+
+/**
  * Whether the studio owns this folder rather than the user.
  *
  * `assets/`, `documents/` and what they contain are the project's own layout: the catalogue
@@ -107,18 +118,20 @@ export function isStudioOwned(path: string): boolean {
  * because a window is not what decides what may be written. Two spellings of one rule would be
  * two rules the day one of them is edited.
  *
- * The studio's own folders refuse on BOTH sides — `assets/` cannot be moved, and nothing can be
- * moved into it, since the catalogue stores every asset by a path under it and a file that
- * lands there is a file no row knows about. The root refuses with them, and that is the shape
- * of `isStudioFolder` rather than a decision: no row stands for the root today, so no drop can
- * name it. **The day dropping on the blank below the tree means "to the root", this is the line
- * to revisit.**
+ * The studio's own folders refuse on BOTH sides, and so does everything UNDER them: `assets/`
+ * is still where a file's role is read from, so a picture dragged out of `assets/img` would
+ * stop being a picture — the reconciliation pass is what lifts that, and it is not written yet.
+ *
+ * **The root receives**, which it did not: dropping on the blank below the tree means "to the
+ * project folder", and a file that could enter a folder the user made but never leave it was a
+ * browser missing one of its two ordinary gestures. No row of the catalogue stands for the root
+ * either way — nothing under it is one of the studio's own paths.
  *
  * What it cannot answer is whether `folder` IS a folder — it only has paths. The panel reads
  * the node's kind, the main process asks the disk.
  */
 export function canMoveInto(path: string, folder: string): boolean {
-  if (isStudioFolder(path) || isStudioFolder(folder)) return false
+  if (isStudioOwned(path) || isStudioOwned(folder)) return false
 
   // A folder dropped inside itself would take its own destination with it, and the rename that
   // carries it out would leave the whole subtree unreachable.

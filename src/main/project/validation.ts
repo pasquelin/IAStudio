@@ -68,6 +68,20 @@ export function parseFolderPath(value: unknown): string {
   return folderPath.parse(value)
 }
 
+/**
+ * A batch of paths, each held to exactly the rule above.
+ *
+ * Bounded, like every list this side takes from a window: what a hand selects in a tree is
+ * hundreds at the outside, and the writes run one after another in the process that owns every
+ * window. `min(1)` because a batch of nothing is a caller that has lost track of its selection,
+ * not a gesture that does nothing.
+ */
+const folderPaths = z.array(folderPath).min(1).max(2000)
+
+export function parseFolderPaths(value: unknown): string[] {
+  return folderPaths.parse(value)
+}
+
 // `z.custom` rather than `z.enum`: the values live in `shared/domain/asset.ts`, and zod's enum
 // wants a literal tuple, which the project's ban on `as const` rules out.
 const assetQuery = z.object({

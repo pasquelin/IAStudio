@@ -18,6 +18,16 @@ export type RowProps = {
   /** Struck through, and dimmed AT REST only: a hidden layer, an invisible mesh. */
   muted?: boolean
   /**
+   * The name in quiet ink, and nothing else: a row that has been CUT and is waiting for a paste.
+   *
+   * Told apart from `muted`, which strikes the name through — that says "this is not showing",
+   * where this says "this is on its way out". An `opacity` would have said it too and is refused
+   * outright by `design/tokens.test.ts`: it dims whatever the element inherits, so no guard can
+   * follow what a word ends up reading at. `ROW_QUIET` is measured, and lifts to full ink the
+   * moment the row is picked.
+   */
+  quiet?: boolean
+  /**
    * What the row has to say that the screen does not already show — why it is refused, the full
    * path behind a truncated one, the real name of an asset listed under its id.
    *
@@ -46,6 +56,7 @@ export function Row({
   leading,
   actions,
   muted,
+  quiet,
   hint,
   tip = TIP_RIGHT,
 }: RowProps) {
@@ -85,7 +96,7 @@ export function Row({
             // control does not cover either. Lifted on the same state as the subtitle below —
             // `muted` reads 3.25:1 on `accent-soft` — and the strike-through, with the crossed-out
             // eye beside it, is what goes on saying the row is hidden.
-            muted ? cn(ROW_QUIET, 'line-through') : ROW_INK,
+            muted ? cn(ROW_QUIET, 'line-through') : quiet ? ROW_QUIET : ROW_INK,
           )}
         >
           {title}

@@ -51,10 +51,8 @@ export type ActivityMessage =
   | 'extractFailed'
   | 'extractedNothing'
   | 'extractedTextures'
-  | 'fileNotMoved'
   | 'fileNotOpened'
-  | 'fileNotRenamed'
-  | 'fileNotTrashed'
+  | 'filesRefused'
   | 'generated'
   | 'generatedInto'
   | 'importFailed'
@@ -87,10 +85,8 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'extractFailed',
   'extractedNothing',
   'extractedTextures',
-  'fileNotMoved',
   'fileNotOpened',
-  'fileNotRenamed',
-  'fileNotTrashed',
+  'filesRefused',
   'generated',
   'generatedInto',
   'importFailed',

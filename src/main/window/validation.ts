@@ -62,9 +62,19 @@ const contextMenuItems = z
   .array(
     z.object({
       id: z.string().min(1).max(120),
-      label: z.string().min(1).max(200),
+      // A rule carries no label, which is the one row where the empty string is the truth.
+      label: z.string().max(200),
+      separator: z.literal(true).optional(),
       enabled: z.boolean().optional(),
       icon: menuIcon.optional(),
+      // Electron parses this itself and THROWS on a shape it does not know, which would take the
+      // menu down with it. Bounded to what `acceleratorOf` produces: modifier names, `+`, and a
+      // key of letters, digits or one of the punctuation marks it spells out.
+      accelerator: z
+        .string()
+        .max(60)
+        .regex(/^(?:[A-Za-z]+\+)*[A-Za-z0-9,.=\-/\\]+$/)
+        .optional(),
       tooltip: z.string().min(1).max(300).optional(),
     }),
   )

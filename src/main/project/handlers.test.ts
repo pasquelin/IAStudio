@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor, DocumentKind, DocumentWrite } from '@shared/domain/document'
+import type { FileOutcome } from '@shared/domain/file-op'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { glbFile, glbWearing } from '@main/assets/glb-fixtures'
 import { ownFileOf } from '@main/assets/protocol'
@@ -45,6 +46,24 @@ function projectAt(root: string, catalog?: AsyncCatalog): ProjectHandlerDeps['pr
     settled: vi.fn(async () => undefined),
     close: vi.fn(),
   } as unknown as ProjectHandlerDeps['project']
+}
+
+/** Every gesture answering "nothing happened", which each suite overrides as it needs. */
+function emptyFileOps(): ProjectHandlerDeps['files'] {
+  const nothing = async (): Promise<FileOutcome> => ({ done: [], refused: [], batch: 'batch-1' })
+
+  return {
+    rename: vi.fn(nothing),
+    move: vi.fn(nothing),
+    duplicate: vi.fn(nothing),
+    createFolder: vi.fn(nothing),
+    trash: vi.fn(nothing),
+    undo: vi.fn(nothing),
+    redo: vi.fn(nothing),
+    can: vi.fn(() => ({ undo: false, redo: false })),
+    renameAsset: vi.fn(async () => undefined),
+    renameAssetToCaption: vi.fn(async () => undefined),
+  }
 }
 
 function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDeps> = {}) {
@@ -105,10 +124,11 @@ function base(catalog: AsyncCatalog) {
     exists: vi.fn(() => true),
     folder: {
       list: vi.fn(async () => []),
-      rename: vi.fn(async () => true),
-      move: vi.fn(async () => true),
-      trash: vi.fn(async () => true),
+      names: vi.fn(async () => []),
     },
+    // Answers an empty batch by default: what a channel DOES with an outcome is what these
+    // suites are about, and `file-ops.test.ts` is where the outcome itself is settled.
+    files: emptyFileOps(),
     // An empty string is what `shell.openPath` answers when the system took the file.
     openInSystem: vi.fn(async () => ''),
     // Cancel: the safe answer, so a test that does not care about the dialog cannot destroy
@@ -290,34 +310,6 @@ describe('project handlers', () => {
       expect(injected.reveal).toHaveBeenCalledWith(join(PROJECT, 'assets/img/one.png'))
     })
 
-    it('renames, and says nothing in the journal when it worked', async () => {
-      const injected = deps(catalog)
-      registerProjectHandlers(injected)
-
-      await expect(invoke(CHANNELS.projectRenameFile, 'notes.txt', 'brief.txt')).resolves.toBe(true)
-
-      expect(injected.folder.rename).toHaveBeenCalledWith('notes.txt', 'brief.txt')
-      expect(injected.record).not.toHaveBeenCalled()
-    })
-
-    // A row of a context menu that does nothing and explains nothing is the worst outcome of
-    // the three.
-    it('says so in the journal when a rename is refused', async () => {
-      const injected = deps(catalog)
-      injected.folder.rename = vi.fn(async () => false)
-      registerProjectHandlers(injected)
-
-      await expect(invoke(CHANNELS.projectRenameFile, 'notes.txt', 'brief.txt')).resolves.toBe(
-        false,
-      )
-
-      expect(injected.record).toHaveBeenCalledWith({
-        level: 'error',
-        topic: 'project',
-        messageKey: 'activity.fileNotRenamed',
-      })
-    })
-
     // A name with a separator in it would move the file rather than rename it, which is not what
     // the row says it does.
     it.each(['../escape', 'sub/one.txt', ''])('refuses %s as a new name', async name => {
@@ -326,82 +318,21 @@ describe('project handlers', () => {
 
       await expect(invoke(CHANNELS.projectRenameFile, 'notes.txt', name)).rejects.toThrow()
 
-      expect(injected.folder.rename).not.toHaveBeenCalled()
+      expect(injected.files.rename).not.toHaveBeenCalled()
     })
 
-    it('moves, and says nothing in the journal when it happened', async () => {
-      const injected = deps(catalog)
-      registerProjectHandlers(injected)
-
-      await expect(invoke(CHANNELS.projectMoveFile, 'notes.txt', 'refs')).resolves.toBe(true)
-
-      expect(injected.folder.move).toHaveBeenCalledWith('notes.txt', 'refs')
-      expect(injected.record).not.toHaveBeenCalled()
-    })
-
-    it('says so in the journal when a move is refused', async () => {
-      const injected = deps(catalog)
-      injected.folder.move = vi.fn(async () => false)
-      registerProjectHandlers(injected)
-
-      await expect(invoke(CHANNELS.projectMoveFile, 'notes.txt', 'assets')).resolves.toBe(false)
-
-      expect(injected.record).toHaveBeenCalledWith({
-        level: 'error',
-        topic: 'project',
-        messageKey: 'activity.fileNotMoved',
-      })
-    })
-
-    // The destination is the second path this channel takes from a window, and it escapes the
+    // The destination is the second path these channels take from a window, and it escapes the
     // project exactly as easily as the first.
     it.each(['../escape', '/etc', 'sub\\..\\out'])('refuses %s as a destination', async folder => {
       const injected = deps(catalog)
       registerProjectHandlers(injected)
 
-      await expect(invoke(CHANNELS.projectMoveFile, 'notes.txt', folder)).rejects.toThrow()
+      await expect(invoke(CHANNELS.projectMoveFiles, ['notes.txt'], folder)).rejects.toThrow()
 
-      expect(injected.folder.move).not.toHaveBeenCalled()
+      expect(injected.files.move).not.toHaveBeenCalled()
     })
 
-    it('trashes, and says nothing in the journal when the system took it', async () => {
-      const injected = deps(catalog)
-      registerProjectHandlers(injected)
-
-      await expect(invoke(CHANNELS.projectTrashFile, 'notes.txt')).resolves.toBe(true)
-
-      expect(injected.folder.trash).toHaveBeenCalledWith('notes.txt')
-      expect(injected.record).not.toHaveBeenCalled()
-    })
-
-    // The rows used to stay behind, and the shelf went on offering assets whose bytes were in
-    // the trash — noticed only after the fact, and only by whatever window was listing them.
-    it('takes the catalogue rows with the file, and with a whole folder', async () => {
-      await catalog.add(asset({ path: 'Rushes/A001.mov' }))
-      await catalog.add(asset({ id: 'asset-2', path: 'Rushes/day two/A002.mov' }))
-      registerProjectHandlers(deps(catalog))
-
-      await invoke(CHANNELS.projectTrashFile, 'Rushes')
-
-      expect(await catalog.find('asset-1')).toBeNull()
-      expect(await catalog.find('asset-2')).toBeNull()
-    })
-
-    it('says so in the journal when the system would not take it', async () => {
-      const injected = deps(catalog)
-      injected.folder.trash = vi.fn(async () => false)
-      registerProjectHandlers(injected)
-
-      await expect(invoke(CHANNELS.projectTrashFile, 'notes.txt')).resolves.toBe(false)
-
-      expect(injected.record).toHaveBeenCalledWith({
-        level: 'error',
-        topic: 'project',
-        messageKey: 'activity.fileNotTrashed',
-      })
-    })
-
-    it.each([CHANNELS.projectRevealFile, CHANNELS.projectTrashFile])(
+    it.each([CHANNELS.projectRevealFile, CHANNELS.projectOpenFile])(
       'refuses a path that would climb out of the project on %s',
       async channel => {
         const injected = deps(catalog)
@@ -410,9 +341,87 @@ describe('project handlers', () => {
         await expect(invoke(channel, '../../etc/passwd')).rejects.toThrow()
 
         expect(injected.reveal).not.toHaveBeenCalled()
-        expect(injected.folder.trash).not.toHaveBeenCalled()
       },
     )
+
+    it('tells every window what a batch did, so a tree that did not ask still follows', async () => {
+      const injected = deps(catalog)
+      const outcome: FileOutcome = {
+        done: [{ from: 'notes.txt', to: 'refs/notes.txt' }],
+        refused: [],
+        batch: 'batch-1',
+      }
+      injected.files.move = vi.fn(async () => outcome)
+      const window = openWindow()
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.projectMoveFiles, ['notes.txt'], 'refs')
+
+      expect(window.sent).toContainEqual({ channel: EVENTS.filesChanged, payload: outcome })
+    })
+
+    // A batch that refused everything says nothing to the other windows: nothing moved, and a
+    // tree re-reading its folders would find exactly what it already holds.
+    it('says how many were refused in the journal, and wakes nobody', async () => {
+      const injected = deps(catalog)
+      injected.files.move = vi.fn(
+        async (): Promise<FileOutcome> => ({
+          done: [],
+          refused: [
+            { path: 'a.png', reason: 'exists' },
+            { path: 'b.png', reason: 'missing' },
+          ],
+          batch: 'batch-1',
+        }),
+      )
+      const window = openWindow()
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.projectMoveFiles, ['a.png', 'b.png'], 'refs')
+
+      expect(injected.record).toHaveBeenCalledWith({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.filesRefused',
+        params: { count: 2 },
+      })
+      expect(window.sent.map(one => one.channel)).not.toContain(EVENTS.filesChanged)
+    })
+
+    // The one gesture undo cannot take back, so it is the one gesture that asks.
+    it('asks before trashing a batch, and writes nothing when the answer is no', async () => {
+      const injected = deps(catalog)
+      injected.askUser = vi.fn(async () => 0)
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.projectTrashFiles, ['a.png', 'b.png'])
+
+      expect(injected.askUser).toHaveBeenCalled()
+      expect(injected.files.trash).not.toHaveBeenCalled()
+    })
+
+    it('trashes one file without asking, which is where the row was clicked', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.projectTrashFiles, ['a.png'])
+
+      expect(injected.askUser).not.toHaveBeenCalled()
+      expect(injected.files.trash).toHaveBeenCalledWith(['a.png'])
+    })
+
+    // One channel, two settings: what the clipboard held is moved when it was cut and copied
+    // when it was not, and a second channel would be a second place to keep in step.
+    it('pastes by moving when the clipboard was cut, and by copying when it was not', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.projectPasteFiles, ['a.png'], 'refs', true)
+      expect(injected.files.move).toHaveBeenCalledWith(['a.png'], 'refs')
+
+      await invoke(CHANNELS.projectPasteFiles, ['a.png'], 'refs', false)
+      expect(injected.files.duplicate).toHaveBeenCalledWith(['a.png'], 'refs')
+    })
   })
 
   /**

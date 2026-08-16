@@ -15,6 +15,15 @@ import { create } from 'zustand'
 export type Selection =
   | { kind: 'none' }
   | { kind: 'asset'; ownerId: null; ids: readonly string[] }
+  /**
+   * Rows of the project folder, named by their PATH — which is what a folder walk has and the
+   * only thing that is unique in one. Owned by no document, as an asset is: a file belongs to
+   * the project, and the gestures over it are the explorer's own scope.
+   *
+   * Held here rather than in the panel, and that is what the file commands need: ⌘D and ⌘⌫ are
+   * heard by the window, and a selection living inside a component would be out of their reach.
+   */
+  | { kind: 'file'; ownerId: null; ids: readonly string[] }
   | { kind: 'clip'; ownerId: string; ids: readonly string[] }
   | { kind: 'track'; ownerId: string; ids: readonly string[] }
   | { kind: 'layer'; ownerId: string; ids: readonly string[] }
@@ -29,6 +38,7 @@ export type Selection =
 type SelectionState = {
   selection: Selection
   selectAssets: (ids: readonly string[]) => void
+  selectFiles: (paths: readonly string[]) => void
   selectClip: (documentId: string, clipId: string) => void
   selectTrack: (documentId: string, trackId: string) => void
   selectLayer: (documentId: string, layerId: string) => void
@@ -48,6 +58,14 @@ const NO_IDS: readonly string[] = []
  */
 export function selectedAssetIds(state: Pick<SelectionState, 'selection'>): readonly string[] {
   return state.selection.kind === 'asset' ? state.selection.ids : NO_IDS
+}
+
+/**
+ * The picked rows of the project folder, by path. Read the same way, and for the same reason:
+ * the file commands watch this alone, and a picked clip must not wake them.
+ */
+export function selectedFilePaths(state: Pick<SelectionState, 'selection'>): readonly string[] {
+  return state.selection.kind === 'file' ? state.selection.ids : NO_IDS
 }
 
 /**
@@ -98,6 +116,7 @@ export const useSelection = create<SelectionState>()((set, get) => {
     selection: NONE,
 
     selectAssets: ids => point(ids.length > 0 ? { kind: 'asset', ownerId: null, ids } : NONE),
+    selectFiles: ids => point(ids.length > 0 ? { kind: 'file', ownerId: null, ids } : NONE),
     selectClip: (documentId, clipId) => point({ kind: 'clip', ownerId: documentId, ids: [clipId] }),
     selectTrack: (documentId, trackId) =>
       point({ kind: 'track', ownerId: documentId, ids: [trackId] }),

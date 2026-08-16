@@ -134,6 +134,7 @@
     "scope": {
       "global": "Anywhere in the application",
       "spaces": "In the bar of spaces",
+      "explorer": "In the explorer",
       "scene": "In the 3D view",
       "sequence": "In the edit",
       "canvas": "In the image",

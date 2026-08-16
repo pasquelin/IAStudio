@@ -31,7 +31,6 @@ import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createUpdates, type Updates } from '@main/updater'
-import { moveAssetFile, moveAssetFileToFree } from './assets/asset-file'
 import { createAssetCollector } from './assets/collector'
 import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/auto-caption'
 import {
@@ -84,11 +83,11 @@ import {
 import { runnerOf } from './scenario/runner'
 import type { AskUser } from './project/document-dialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
+import { createFileOps, type FileOps } from './project/file-ops'
 import {
-  createFolderEditor,
   createFolderReader,
+  createFolderWriter,
   watchProjectFolder,
-  type FolderEditor,
   type FolderReader,
   type FolderWatch,
 } from './project/folder'
@@ -163,11 +162,6 @@ export type Services = {
   ownerScope: OwnerScope
   /** Drops the file an asset owns, leaving a linked one where it lies. */
   removeAssetFile: (asset: Asset) => Promise<void>
-  /**
-   * Moves the file an asset owns so that it is called after `name` — `undefined` when there is
-   * no file of ours to move. A row's name IS its file's name, and this is the half that writes.
-   */
-  renameAssetFile: (asset: Asset, name: string) => Promise<string | undefined>
   project: ProjectStore
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
@@ -216,8 +210,16 @@ export type Services = {
   reveal: (file: string) => void
   /** Whether a path is still there — `reveal` above answers nothing for one that has gone. */
   exists: (path: string) => boolean
-  /** The project folder: read one level at a time, and the two gestures that write to it. */
-  folder: FolderReader & FolderEditor
+  /** The project folder, read one level at a time. */
+  folder: FolderReader
+  /**
+   * Everything that WRITES to the project folder, and the stack that takes a batch back.
+   *
+   * One orchestrator for all of them: disk, then journal, then catalogue, in that order and no
+   * other. A rename reaching the disk through a second door is a rename the journal never hears
+   * about — which is why the two asset renames live in there rather than here.
+   */
+  files: FileOps
   /** Hands a file to the system. The one place the studio launches a third-party application. */
   openInSystem: (file: string) => Promise<string>
   /** Asks the user a question the OS puts in front of the window — see `document-dialogs`. */
@@ -745,6 +747,26 @@ export function createServices(settings: SettingsStore): Services {
     now: timestamp,
   })
 
+  // Reader and writer together: the handlers take the reading half, the orchestrator below takes
+  // the writing one, and neither of them knows the catalogue is involved.
+  const folder = {
+    ...createFolderReader(() => project.path(), language),
+    ...createFolderWriter(
+      () => project.path(),
+      file => shell.trashItem(file),
+    ),
+  }
+
+  const files = createFileOps({
+    // `null` rather than `''`: with no project open there is no folder to write in, and every
+    // gesture answers an empty outcome instead of resolving a path against nothing.
+    rootOf: () => project.current()?.path ?? null,
+    folder,
+    catalog: () => project.catalog(),
+    newBatchId: () => randomUUID(),
+    assetsChanged: () => broadcast(EVENTS.assetsChanged),
+  })
+
   const ffmpeg = createFfmpegResolver(() => ({
     bundled: bundledFfmpeg(resourcesRoot(), process.platform),
     configured: settings.read().media.ffmpegPath,
@@ -993,37 +1015,6 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
 
-  /**
-   * Moves an asset's file to its new name. Nothing happens without a project open: the path is
-   * relative to one, and there is no folder to move anything inside of.
-   */
-  const renameAssetFile = async (asset: Asset, name: string): Promise<string | undefined> => {
-    const current = project.current()
-    return current ? moveAssetFile(current.path, asset, name) : undefined
-  }
-
-  /**
-   * Renames an asset the STUDIO named itself — the captioner, and nothing else so far.
-   *
-   * Both halves, because they are one act: a row renamed on its own leaves the shelf reading
-   * « une ruelle bleue » over a file still called `IMG_1234.png`, which is the two-name problem
-   * this whole layout exists to end — and this path never crosses the rename channel that would
-   * have caught it.
-   *
-   * The name written is the one the FOLDER settled on, suffix and cleaning included. A caption
-   * is a sentence a model wrote: there is nobody to hand a refusal back to, so it is made to fit
-   * rather than rejected — and what the row says is then what the disk says, by construction.
-   */
-  const renameAssetToCaption = async (asset: Asset, name: string): Promise<void> => {
-    const current = project.current()
-    if (!current) return
-
-    const moved = await moveAssetFileToFree(current.path, asset, name)
-    // No file of ours to move — a linked rush, a row that lives in the library alone. Its name
-    // is the catalogue's business only, so it takes the caption as it was written.
-    await project.catalog().add(moved ? { ...asset, ...moved } : { ...asset, name })
-  }
-
   const accountOn = (scenario: Scenario): JobAccount => ({
     runner: runnerOf(scenario),
     collect: collectorOf(scenario),
@@ -1115,7 +1106,7 @@ export function createServices(settings: SettingsStore): Services {
   const captioner = createCaptioner({
     queue: assistQueue.run,
     caption: images => prompts.caption(images),
-    rename: renameAssetToCaption,
+    rename: files.renameAssetToCaption,
     record: report => journal.record(report),
     enabled: () => settings.read().generation.captionArrivals,
   })
@@ -1175,7 +1166,6 @@ export function createServices(settings: SettingsStore): Services {
     cloud: () => cloudAssets,
     ownerScope,
     removeAssetFile,
-    renameAssetFile,
     project,
     journal,
     flushJobs: () => jobStore.flush(),
@@ -1215,13 +1205,8 @@ export function createServices(settings: SettingsStore): Services {
     pickFolder: () => pickPath('folder'),
     reveal: file => shell.showItemInFolder(file),
     exists: existsSync,
-    folder: {
-      ...createFolderReader(() => project.path(), language),
-      ...createFolderEditor(
-        () => project.path(),
-        file => shell.trashItem(file),
-      ),
-    },
+    folder,
+    files,
     openInSystem: file => shell.openPath(file),
     askUser,
     pickMedia: () => pickMedia(language()),

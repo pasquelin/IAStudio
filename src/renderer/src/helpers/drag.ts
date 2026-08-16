@@ -27,3 +27,33 @@ export function dragChannel(type: string): DragChannel {
     idFrom: event => event.dataTransfer?.getData(type) || null,
   }
 }
+
+export type DragListChannel = {
+  start: (event: DragLike, ids: readonly string[]) => void
+  carries: (event: DragLike) => boolean
+  /** What is being dragged, at the drop. Empty before then, by design of the platform. */
+  idsFrom: (event: DragLike) => readonly string[]
+}
+
+/**
+ * The same, for a HANDFUL of things dragged as one — three files carried into a folder together.
+ *
+ * A separate channel rather than a comma inside the single one: a payload that is sometimes one
+ * id and sometimes a list is a payload every target has to sniff, and an id holding a comma
+ * would decide the question the wrong way in silence. Newline-separated, which no path of this
+ * studio holds — `parseFolderPath` refuses a name with one.
+ *
+ * The platform still answers nothing until the drop itself, so a target asked at HOVER cannot
+ * read what is coming. Whoever needs to know before then keeps it in state, as `Tree` does.
+ */
+export function dragListChannel(type: string): DragListChannel {
+  return {
+    start: (event, ids) => {
+      if (!event.dataTransfer) return
+      event.dataTransfer.setData(type, ids.join('\n'))
+      event.dataTransfer.effectAllowed = 'move'
+    },
+    carries: event => event.dataTransfer?.types.includes(type) ?? false,
+    idsFrom: event => (event.dataTransfer?.getData(type) || '').split('\n').filter(Boolean),
+  }
+}

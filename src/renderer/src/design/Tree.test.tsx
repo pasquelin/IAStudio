@@ -379,7 +379,7 @@ describe('Tree', () => {
     fireEvent.dragStart(rows[1]!, { dataTransfer: data })
     fireEvent.drop(rows[2]!, { dataTransfer: data })
 
-    expect(onDrop).toHaveBeenCalledWith('a', 'b')
+    expect(onDrop).toHaveBeenCalledWith(['a'], 'b')
   })
 
   // Dropping a row onto itself is the gesture of someone who changed their mind.
@@ -491,7 +491,7 @@ describe('Tree', () => {
     }
 
     function renderInsertable(
-      onInsert: (id: string, parentId: string | null, index: number) => void,
+      onInsert: (ids: readonly string[], parentId: string | null, index: number) => void,
       onDrop = () => {},
     ) {
       render(
@@ -519,7 +519,7 @@ describe('Tree', () => {
       fireEvent.dragStart(b!, { dataTransfer: data })
       dropAt(a!, 0.1, data)
 
-      expect(onInsert).toHaveBeenCalledWith('b', 'scene', 0)
+      expect(onInsert).toHaveBeenCalledWith(['b'], 'scene', 0)
     })
 
     /**
@@ -534,7 +534,7 @@ describe('Tree', () => {
       fireEvent.dragStart(a!, { dataTransfer: data })
       dropAt(b!, 0.9, data)
 
-      expect(onInsert).toHaveBeenCalledWith('a', 'scene', 1)
+      expect(onInsert).toHaveBeenCalledWith(['a'], 'scene', 1)
     })
 
     it('takes a row out of the group holding it', () => {
@@ -545,7 +545,7 @@ describe('Tree', () => {
       fireEvent.dragStart(a1!, { dataTransfer: data })
       dropAt(b!, 0.9, data)
 
-      expect(onInsert).toHaveBeenCalledWith('a1', 'scene', 2)
+      expect(onInsert).toHaveBeenCalledWith(['a1'], 'scene', 2)
     })
 
     it('says nothing when the row would land exactly where it already sits', () => {
@@ -581,7 +581,7 @@ describe('Tree', () => {
       fireEvent.dragStart(b!, { dataTransfer: data })
       dropAt(a!, 0.5, data)
 
-      expect(onDrop).toHaveBeenCalledWith('b', 'a')
+      expect(onDrop).toHaveBeenCalledWith(['b'], 'a')
       expect(onInsert).not.toHaveBeenCalled()
     })
 
@@ -683,10 +683,10 @@ describe('Tree', () => {
     fireEvent.dragStart(rows[1]!, { dataTransfer: data })
     fireEvent.drop(rows[2]!, { dataTransfer: data })
 
-    expect(droppable).toHaveBeenCalledWith(
-      { id: 'b', parentId: 'scene' },
+    // The batch, always — one row long unless `dragMultiple` says otherwise.
+    expect(droppable).toHaveBeenCalledWith({ id: 'b', parentId: 'scene' }, [
       { id: 'a', parentId: 'scene' },
-    )
+    ])
   })
 
   // The drag channel is shared by every tree of the studio, so `carries` alone would let a

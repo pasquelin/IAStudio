@@ -1,12 +1,10 @@
 import { appendFile, mkdir, readFile, rm } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import type { PathChange } from '@shared/domain/file-op'
 import { PENDING_FILES_FILE } from '@shared/domain/project'
 import { isRecord } from '@shared/guards'
 import { isMissing } from '@main/persistence'
 import type { AsyncCatalog } from './catalog-client'
-
-/** One file that moved: where it was, where it now is. Both relative to the project folder. */
-export type PathChange = { from: string; to: string }
 
 /**
  * What a move that stopped halfway left behind, read back.

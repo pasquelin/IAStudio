@@ -62,7 +62,11 @@ export function SceneTree({ documentId }: { documentId: string }) {
       selectable={item => item.node !== null}
       // The root stands for the scene, so dropping onto it is how a node comes back out of a
       // group.
-      onDrop={(id, parentId) => {
+      // One row at a time: `dragMultiple` is off here, so the batch is always the row itself.
+      onDrop={(ids, parentId) => {
+        const id = ids[0]
+        if (id === undefined) return
+
         const wanted = parentId === SCENE_ROOT ? null : parentId
         const node = nodes.find(candidate => candidate.id === id)
         // Refused here rather than by the command: a move that changes nothing — dropping a row

@@ -44,6 +44,38 @@
       "title": "Déplacer l’espace vers la droite",
       "help": "Décale d’un cran vers la droite l’espace sur lequel se trouve le focus, dans la barre du haut. L’ordre choisi est retenu d’une session à l’autre."
     },
+    "explorerNewFolder": {
+      "title": "Nouveau dossier",
+      "help": "Crée un dossier vide dans celui que l’Explorateur affiche, et ouvre son nom à la saisie. Le dossier vous appartient, comme tout ce que vous rangez dedans."
+    },
+    "explorerDuplicate": {
+      "title": "Dupliquer",
+      "help": "Pose une copie de chaque élément choisi à côté de l’original, sous le premier nom libre. Un dossier est copié avec tout ce qu’il contient."
+    },
+    "explorerCut": {
+      "title": "Couper",
+      "help": "Retient la sélection pour la déplacer au prochain collage. Rien ne bouge tant que vous n’avez pas collé, et les lignes retenues s’affichent atténuées."
+    },
+    "explorerCopy": {
+      "title": "Copier",
+      "help": "Retient la sélection pour en poser une copie au prochain collage. L’original reste où il est."
+    },
+    "explorerPaste": {
+      "title": "Coller",
+      "help": "Dépose dans le dossier affiché ce que le presse-papiers retient. Un nom déjà pris fait refuser l’élément concerné, et les autres passent."
+    },
+    "explorerTrash": {
+      "title": "Mettre à la corbeille",
+      "help": "Envoie la sélection à la corbeille du système, d’où vous pouvez la récupérer. C’est le seul geste de l’Explorateur que le studio ne sait pas annuler."
+    },
+    "explorerUndo": {
+      "title": "Annuler le dernier geste sur les fichiers",
+      "help": "Remet à sa place le dernier lot déplacé, renommé, dupliqué ou créé. La pile appartient au projet, pas à une fenêtre, et la mise à la corbeille n’y entre jamais."
+    },
+    "explorerRedo": {
+      "title": "Rétablir le geste sur les fichiers",
+      "help": "Refait le lot de fichiers qui vient d’être annulé, à l’identique."
+    },
     "sceneSelect": {
       "title": "Sélectionner",
       "help": "L’outil de base : cliquer sur un objet de la scène pour le choisir, sans rien lui faire. C’est celui sur lequel on revient entre deux manipulations."

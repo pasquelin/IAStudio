@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { FileOutcome } from '@shared/domain/file-op'
 import { installFakeBridge, type BridgeOverrides } from '@/services/fake-bridge'
 import { useProject } from '@/stores/project'
 import { ProjectMenu } from './ProjectMenu'
@@ -8,6 +9,9 @@ import { ProjectMenu } from './ProjectMenu'
 const PATH = '/projects/summer'
 
 const report = vi.fn(() => Promise.resolve())
+
+const nothingMoved = (): Promise<FileOutcome> =>
+  Promise.resolve({ done: [], refused: [], batch: 'batch-1' })
 
 /** Always with the journal wired: a failure this menu drops is the defect being guarded. */
 const install = (overrides: BridgeOverrides = {}): void => {
@@ -155,17 +159,17 @@ describe('the menu of a recent project', () => {
 
   // What the row promises in words, held in code: the studio does not erase a folder someone made.
   it('offers nothing that reaches the folder itself', async () => {
-    const trashFile = vi.fn(() => Promise.resolve(true))
+    const trashFiles = vi.fn(nothingMoved)
     const rename = vi.fn(() => Promise.resolve(true))
     useProject.setState({ forget: () => Promise.resolve(), rename })
-    install({ project: { trashFile } })
+    install({ project: { trashFiles } })
     // Every row enabled, so the sweep below actually presses all three rather than bouncing off
     // a disabled one and reporting that nothing reached the disk.
     open(vi.fn(), vi.fn())
 
     for (const row of screen.getAllByRole('menuitem')) await userEvent.click(row)
 
-    expect(trashFile).not.toHaveBeenCalled()
+    expect(trashFiles).not.toHaveBeenCalled()
     // The rename reaches the manifest and never the folder: it opens a field here, and even the
     // store's own call renames in place.
     expect(rename).not.toHaveBeenCalled()
