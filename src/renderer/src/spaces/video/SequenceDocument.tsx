@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { ResizeHandle } from '@/design/ResizeHandle'
-import { programOwner } from '@/engines/timeline/playback'
+import { programOwner, sourceOwner } from '@/engines/timeline/playback'
 import {
   EMPTY_SEQUENCE,
   frameDuration,
@@ -32,7 +32,6 @@ export type SequenceDocumentProps = { documentId: string }
 export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const { t } = useTranslation()
   const sequence = useSequences(state => sequenceOf(state, documentId))
-  const [userSourceTime, setUserSourceTime] = useState<Us>(0)
   // Dockview keeps hidden tabs mounted: without this every open sequence would answer the
   // space bar at once, and the playback token would arbitrate a fight nobody started.
   const active = useDocuments(state => state.activeId === documentId)
@@ -115,8 +114,8 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const holder = sequence.selectedId ? trackOfClip(sequence, sequence.selectedId) : null
   const selected = holder?.clips.find(clip => clip.id === sequence.selectedId) ?? null
 
-  const sourceOwner = `${documentId}:source`
-  const sourcePlaying = usePlayback(state => playbackOf(state, sourceOwner))
+  const owner = sourceOwner(documentId)
+  const sourcePlaying = usePlayback(state => playbackOf(state, owner))
 
   /**
    * Which of the two monitors the space bar drives — taken by clicking one, and the programme
@@ -133,6 +132,36 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const [focus, setFocus] = useState<'source' | 'program'>('program')
 
   /**
+   * Where the montage's head falls INSIDE the selected clip, which is what following it comes to.
+   *
+   * Clamped to the clip: the head is often outside it, and the take has no frame to show for a
+   * moment it does not span. A frame short of the end, since a clip spans up to but not
+   * including it — landing exactly on the end shows nothing at all.
+   */
+  const followedTime: Us = useMemo(() => {
+    if (!selected) return 0
+    const last = Math.max(0, selected.duration - frameDuration(sequence.settings))
+    return clamp(sequence.playhead - selected.start, 0, last)
+  }, [selected, sequence.playhead, sequence.settings])
+
+  /**
+   * Where the source monitor stands. One state, written by the two things that move it: its own
+   * transport, through `onTime` below, and the montage's head through the adjustment underneath.
+   */
+  const [sourceTime, setSourceTime] = useState<Us>(followedTime)
+  /**
+   * The head and the take this has ALREADY been moved for, which is what keeps the two writers
+   * from fighting: following applies once per montage move rather than on every render, so a
+   * position the monitor itself reported — rewinding to zero — holds until the head moves again.
+   * Recomputing it unconditionally instead put the take straight back onto the montage, and the
+   * source monitor's rewind button did nothing whatever.
+   */
+  const [followed, setFollowed] = useState({
+    head: sequence.playhead,
+    clipId: selected?.id ?? null,
+  })
+
+  /**
    * The source follows the montage's own head, offset into the clip — which is what makes it a
    * way to SEE the clip you picked even when a track above covers it, rather than a picture of
    * its first frame and nothing else.
@@ -145,24 +174,24 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
    * animate both pictures at once — two decodes, and for a scene clip two whole 3D renders per
    * frame, to show twice what one monitor is already showing. Following is for scrubbing.
    *
-   * It catches up the moment playback stops, since that is when this runs again.
+   * It catches up the moment playback stops, the head having moved meanwhile.
    *
-   * Clamped to the clip: the head is often outside it, and the take has no frame to show for a
-   * moment it does not span. A frame short of the end, since a clip spans up to but not
-   * including it — landing exactly on the end shows nothing at all.
+   * Adjusted during the render rather than from an effect, which React runs only after painting
+   * the frame the take had not moved to yet.
    */
-  const computedSourceTime: Us = useMemo(() => {
-    if (sourcePlaying || running || !selected) return userSourceTime
-    const last = Math.max(0, selected.duration - frameDuration(sequence.settings))
-    return clamp(sequence.playhead - selected.start, 0, last)
-  }, [sourcePlaying, running, selected, sequence.playhead, sequence.settings, userSourceTime])
+  const clipId = selected?.id ?? null
+  const playing = sourcePlaying || running
+  if (!playing && (followed.head !== sequence.playhead || followed.clipId !== clipId)) {
+    setFollowed({ head: sequence.playhead, clipId })
+    setSourceTime(followedTime)
+  }
 
   // The source monitor plays one clip, which is a sequence of one — same engine, same painter.
   const source: SequenceState = useMemo(
     () => ({
       ...EMPTY_SEQUENCE,
       settings: sequence.settings,
-      playhead: computedSourceTime,
+      playhead: sourceTime,
       tracks:
         holder && selected
           ? [
@@ -178,7 +207,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
             ]
           : [],
     }),
-    [holder, selected, sequence.settings, computedSourceTime],
+    [holder, selected, sequence.settings, sourceTime],
   )
 
   const setProgramTime = useCallback(
@@ -204,11 +233,11 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
           monitors of the same size, and only a gesture makes one of them the wide one. */}
       <div className="flex min-w-0" style={leadStyle} onPointerDown={() => setFocus('source')}>
         <Monitor
-          owner={sourceOwner}
+          owner={owner}
           title={t('transport.source')}
           role={t('transport.sourceRole')}
           sequence={source}
-          onTime={setUserSourceTime}
+          onTime={setSourceTime}
           keyboard={active && focus === 'source'}
           placeholder={
             selected ? null : <EmptyState icon={mdiVideoOutline} message={t('transport.noClip')} />
