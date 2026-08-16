@@ -6,11 +6,13 @@ import { ResizeHandle } from '@/design/ResizeHandle'
 import { programOwner } from '@/engines/timeline/playback'
 import {
   EMPTY_SEQUENCE,
+  frameDuration,
   makeTrack,
   trackOfClip,
   type SequenceState,
   type Us,
 } from '@/engines/timeline/timeline-state'
+import { clamp } from '@shared/numeric'
 import { useDocuments } from '@/stores/documents'
 import { playbackOf, usePlayback } from '@/stores/playback'
 import { mirrorMessageOf, openMirrorChannel } from './mirror-channel'
@@ -113,6 +115,28 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const holder = sequence.selectedId ? trackOfClip(sequence, sequence.selectedId) : null
   const selected = holder?.clips.find(clip => clip.id === sequence.selectedId) ?? null
 
+  const sourceOwner = `${documentId}:source`
+  const sourcePlaying = usePlayback(state => playbackOf(state, sourceOwner))
+
+  /**
+   * The source follows the montage's own head, offset into the clip — which is what makes it a
+   * way to SEE the clip you picked even when a track above covers it, rather than a picture of
+   * its first frame and nothing else.
+   *
+   * Only while it is not playing: pressing play there runs the whole take from where it stands,
+   * and recentring it on the montage every frame would fight its own transport.
+   *
+   * Clamped to the clip: the head is often outside it, and the take has no frame to show for a
+   * moment it does not span. A frame short of the end, since a clip spans up to but not
+   * including it — landing exactly on the end shows nothing at all.
+   */
+  useEffect(() => {
+    if (sourcePlaying || !selected) return
+
+    const last = Math.max(0, selected.duration - frameDuration(sequence.settings))
+    setSourceTime(clamp(sequence.playhead - selected.start, 0, last))
+  }, [sourcePlaying, selected, sequence.playhead, sequence.settings])
+
   // The source monitor plays one clip, which is a sequence of one — same engine, same painter.
   const source: SequenceState = useMemo(
     () => ({
@@ -160,7 +184,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
           monitors of the same size, and only a gesture makes one of them the wide one. */}
       <div className="flex min-w-0" style={leadStyle}>
         <Monitor
-          owner={`${documentId}:source`}
+          owner={sourceOwner}
           title={t('transport.source')}
           role={t('transport.sourceRole')}
           sequence={source}
