@@ -308,18 +308,29 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
     folder: string,
     entry: string,
   ): Promise<DocumentDescriptor | null> => {
-    const kind = kindForExtension(extname(entry))
-    const workspace = kind && workspaceForKind(kind)
-    if (!kind || !workspace) return null
+    const extension = extname(entry)
+    const claimed = kindForExtension(extension)
+    // An entry with no extension at all claims nothing, so there is nothing for the envelope to
+    // contradict — and one that lost its extension is a document the studio would otherwise stop
+    // seeing altogether: present in the folder, absent from every list, unopenable and, since
+    // the explorer only renames what it recognises, unrepairable from inside the studio.
+    if (!claimed && extension !== '') return null
 
     try {
       const path = join(folder, entry)
-      const envelope = await headOf(FOLDER_KINDS.has(kind) ? join(path, DOCUMENT_MANIFEST) : path)
+      const envelope = await headOf(
+        claimed && FOLDER_KINDS.has(claimed) ? join(path, DOCUMENT_MANIFEST) : path,
+      )
       // The folder's word beats the file's, exactly as `read` has it: an extension changed by
-      // hand must not send a document to an editor that cannot open it.
-      if (envelope.kind !== kind) return null
+      // hand must not send a document to an editor that cannot open it. With no extension there
+      // is no word to beat, so the envelope's own kind is taken.
+      if (claimed && envelope.kind !== claimed) return null
 
-      const stem = basename(entry, extname(entry))
+      const kind = claimed ?? envelope.kind
+      const workspace = workspaceForKind(kind)
+      if (!workspace) return null
+
+      const stem = basename(entry, extension)
 
       return {
         // Before version 3 the file name WAS the id, so that is what such a document is still
