@@ -8,6 +8,8 @@ import type { SceneExportRequest } from '@shared/ipc'
  */
 const MAX_EXPORT_BYTES = 2 * 1024 * 1024 * 1024
 
+// `z.enum` takes a NON-EMPTY tuple, which a `readonly ExportFormat[]` cannot prove it is. The
+// list is the shared one either way: writing the values out here is what would let it drift.
 const format = z.enum(EXPORT_FORMATS as [ExportFormat, ...ExportFormat[]])
 
 const sceneExport = z.object({

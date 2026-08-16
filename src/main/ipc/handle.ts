@@ -148,6 +148,9 @@ export function handle<C extends keyof ChannelMethod>(
     ...args: Parameters<ChannelMethod[C]>
   ) => Resolved<ReturnType<ChannelMethod[C]>> | Promise<Resolved<ReturnType<ChannelMethod[C]>>>,
 ): void {
+  // `ipcMain.handle` types what crosses as `any[]`, and the channel is what says the real shape.
+  // The assertion is the boundary itself: what arrives is whatever the other side sent, and the
+  // handler validates it — this only stops the compiler asking twice.
   ipcMain.handle(channel, (event, ...args) =>
     handler(event, ...(args as Parameters<ChannelMethod[C]>)),
   )

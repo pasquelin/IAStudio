@@ -24,12 +24,11 @@ export function sameValues(left: unknown, right: unknown): boolean {
 
   if (Array.isArray(left) !== Array.isArray(right)) return false
 
-  const names = Object.keys(left)
-  if (names.length !== Object.keys(right).length) return false
+  // Read as entries rather than indexed by name: `object` carries no index signature, so the
+  // two lookups needed a cast each, and the pair says the same thing without one.
+  const theirs = new Map(Object.entries(right))
+  const ours = Object.entries(left)
+  if (ours.length !== theirs.size) return false
 
-  return names.every(
-    name =>
-      name in right &&
-      sameValues((left as Record<string, unknown>)[name], (right as Record<string, unknown>)[name]),
-  )
+  return ours.every(([name, value]) => theirs.has(name) && sameValues(value, theirs.get(name)))
 }
