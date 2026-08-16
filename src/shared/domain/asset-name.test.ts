@@ -43,7 +43,12 @@ describe('what the studio calls a generation', () => {
 
   // A prompt is typed over several lines as often as not.
   it('reads a prompt written over several lines as one line', () => {
-    const name = generatedAssetName({ prompt: 'Footsteps,\n  then  rain', label, index: 0, total: 1 })
+    const name = generatedAssetName({
+      prompt: 'Footsteps,\n  then  rain',
+      label,
+      index: 0,
+      total: 1,
+    })
 
     expect(name).toBe('Footsteps, then rain')
   })

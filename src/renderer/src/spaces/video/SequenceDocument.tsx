@@ -35,7 +35,10 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   // space bar at once, and the playback token would arbitrate a fight nobody started.
   const active = useDocuments(state => state.activeId === documentId)
 
-  useDocumentTitle(documentId, useSequences(state => isSequenceDirty(state, documentId)))
+  useDocumentTitle(
+    documentId,
+    useSequences(state => isSequenceDirty(state, documentId)),
+  )
 
   useRestoredDocument(documentId)
 

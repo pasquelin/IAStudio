@@ -78,7 +78,10 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   const inspected = useTextureViews(state => inspectedChannel(state, documentId))
   const active = useDocuments(state => state.activeId === documentId)
 
-  useDocumentTitle(documentId, useTextures(state => isTextureDirty(state, documentId)))
+  useDocumentTitle(
+    documentId,
+    useTextures(state => isTextureDirty(state, documentId)),
+  )
 
   useRestoredDocument(documentId)
 

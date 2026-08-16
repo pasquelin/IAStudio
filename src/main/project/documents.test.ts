@@ -144,11 +144,7 @@ describe('createDocumentFiles', () => {
   it('refuses a file written by a later build instead of flattening it', async () => {
     await mkdir(join(root, 'documents'), { recursive: true })
     const later = { version: 99, kind: 'scene', title: 'Ahead', updatedAt: NOW }
-    await writeFile(
-      join(root, 'documents', 'doc-1.scene'),
-      `${JSON.stringify(later)}\n{}`,
-      'utf8',
-    )
+    await writeFile(join(root, 'documents', 'doc-1.scene'), `${JSON.stringify(later)}\n{}`, 'utf8')
 
     await expect(documents.read('doc-1', 'scene')).rejects.toThrow()
   })

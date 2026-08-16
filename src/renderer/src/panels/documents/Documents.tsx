@@ -63,7 +63,8 @@ export function Documents() {
                 onRename: (name: string) => {
                   setRenaming(null)
                   // `InlineRename` gives back the original on escape; only a change is a rename.
-                  if (name !== document.title) void useDocuments.getState().rename(document.id, name)
+                  if (name !== document.title)
+                    void useDocuments.getState().rename(document.id, name)
                 },
               }
             : {})}

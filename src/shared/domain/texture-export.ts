@@ -389,4 +389,3 @@ export function assetsOf(picture: ResolvedPicture): string[] {
   }
   return seen
 }
-

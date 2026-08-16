@@ -165,9 +165,7 @@ export function Explorer() {
       // it again, so what appears in the new folder is what the disk actually holds.
       onDrop={(path, folder) => void getBridge()?.project.moveFile(path, folder)}
       onActivate={node => void activate(node)}
-      onContextMenu={node =>
-        openEntryMenu({ node, t, onRename: () => setRenaming(node.id) })
-      }
+      onContextMenu={node => openEntryMenu({ node, t, onRename: () => setRenaming(node.id) })}
       renderRow={row => {
         const document = documentOf(row.node)
         // The descriptor carries its own workspace, so the glyph comes off the same table the

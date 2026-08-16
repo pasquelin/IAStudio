@@ -157,7 +157,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
   // After the engine is registered, never before: the pixels are handed to it, and it has to be
   // reachable.
-  useDocumentTitle(documentId, useCanvases(state => isCanvasDirty(state, documentId)))
+  useDocumentTitle(
+    documentId,
+    useCanvases(state => isCanvasDirty(state, documentId)),
+  )
 
   useRestoredDocument(documentId)
 

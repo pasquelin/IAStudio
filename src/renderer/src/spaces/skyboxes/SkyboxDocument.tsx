@@ -74,7 +74,10 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   // is saved with the document, and ⌘Z never touches it.
   const { fieldOfView, probes, view } = useSkyboxViews(state => skyboxViewOf(state, documentId))
 
-  useDocumentTitle(documentId, useSkyboxes(state => isSkyboxDirty(state, documentId)))
+  useDocumentTitle(
+    documentId,
+    useSkyboxes(state => isSkyboxDirty(state, documentId)),
+  )
 
   useRestoredDocument(documentId)
 
