@@ -18,7 +18,7 @@ import type { AssistantActionRequest, AssistantActionResult } from '@shared/ipc'
  * network timeout. Shorter would cancel a considered no; longer would leave a client believing
  * something is still happening long after the user walked away.
  */
-export const ANSWER_TIMEOUT_MS = 120_000
+const ANSWER_TIMEOUT_MS = 120_000
 
 export type RemoteActionDeps = {
   /** Sends to the window in front, answering `false` when there is none — see `sendToFront`. */
