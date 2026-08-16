@@ -2,7 +2,12 @@ import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/pr
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MANIFEST_FILE, MANIFEST_VERSION, PROJECT_FOLDERS } from '@shared/domain/project'
+import {
+  LEGACY_MANIFEST_FILE,
+  MANIFEST_FILE,
+  MANIFEST_VERSION,
+  PROJECT_FOLDERS,
+} from '@shared/domain/project'
 import { isRecord } from '@shared/guards'
 import { createProjectStore, NoProjectError, ProjectOpenError, type ProjectStore } from './store'
 import { memoryCatalog } from './catalog-fixtures'
@@ -402,6 +407,29 @@ describe('project store', () => {
       await expect(store.inspect(join(root, 'assets', 'img', 'deep'))).rejects.toMatchObject({
         reason: 'nested',
       })
+    })
+
+    /**
+     * The other direction, and the one the picker makes easy: it opens on the folder the last
+     * project was made in, so choosing without descending would wrap every project already
+     * there — and every later creation under it would then be refused as nested, curable only
+     * by deleting a hidden file by hand.
+     */
+    it('refuses a folder that already holds projects', async () => {
+      await store.create(join(root, 'Reel'), 'Reel')
+      store.close()
+
+      await expect(store.inspect(root)).rejects.toMatchObject({ reason: 'holds-projects' })
+    })
+
+    // `project.json` is one of the commonest filenames there is, and taking a stray one for a
+    // project would refuse every folder under a checkout that holds one, with no way past it.
+    it('does not take a stray project.json above the folder for a project', async () => {
+      await writeFile(join(root, LEGACY_MANIFEST_FILE), JSON.stringify({ name: 'some tool' }))
+      const below = join(root, 'Reel')
+      await mkdir(below)
+
+      expect(await store.inspect(below)).toBe('blank')
     })
 
     // The reason this exists at all: `create` writes a manifest unconditionally, so a caller

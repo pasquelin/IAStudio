@@ -89,11 +89,14 @@ export function registerProjectHandlers({
     // Parsed outside the try on purpose: an argument this channel refuses is not a sentence
     // about the folder, and `projectOpen` below draws the same line through `openFailureKey`.
     const root = parseProjectPath(path)
-    // The root of a volume has no basename, and is turned away here by the rule that refuses a
-    // nameless rename.
-    const named = parseProjectTitle(basename(root))
 
     try {
+      // Inside, unlike the path above: this name comes from the FOLDER the user picked, not from
+      // an argument, so a refusal is a sentence about their choice and owes them one. The root of
+      // a volume has no basename, and is turned away here by the rule that refuses a nameless
+      // rename — left outside, it failed in complete silence.
+      const named = parseProjectTitle(basename(root))
+
       const verdict = await project.inspect(root)
 
       // Creating again would stamp a fresh `createdAt` on a folder that has been worked in, and

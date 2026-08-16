@@ -65,6 +65,7 @@ export type ActivityMessage =
   | 'projectAccountMissing'
   | 'projectAccountRestored'
   | 'projectAccountSwitched'
+  | 'projectHoldsProjects'
   | 'projectNested'
   | 'projectNotAProject'
   | 'projectNotCreated'
@@ -100,6 +101,7 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'projectAccountMissing',
   'projectAccountRestored',
   'projectAccountSwitched',
+  'projectHoldsProjects',
   'projectNested',
   'projectNotAProject',
   'projectNotCreated',

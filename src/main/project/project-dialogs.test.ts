@@ -35,13 +35,18 @@ describe('asking before laying a project into an occupied folder', () => {
     expect(shown[0]?.message).not.toContain('{{folder}}')
   })
 
-  // Nothing already in the folder is touched, and the dialog has to say so — the question is
-  // otherwise read as "may I replace what is here".
-  it('says what will happen to what is already there', async () => {
+  /**
+   * Two promises, and the second is the one that bites: the folder BECOMES the project root, so
+   * saying yes on `~/Documents` makes every folder under it un-creatable afterwards. A wording
+   * that only reassured about the files read as "may I add something here", which is not the
+   * question being asked.
+   */
+  it('says both what happens to the folder and what happens to its files', async () => {
     const { ask, shown } = asking(0)
     await askUseOccupiedFolder(ask, 'Reel')
 
-    expect(shown[0]?.detail).toContain('nothing already there is changed or moved')
+    expect(shown[0]?.detail).toContain('BECOME the project')
+    expect(shown[0]?.detail).toContain('Nothing already there is changed or moved')
   })
 
   it('speaks the language the windows speak', async () => {

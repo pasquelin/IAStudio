@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Project, RecentProject } from '@shared/domain/project'
 import { installFakeBridge } from '@/services/fake-bridge'
 import type { ActivityEntry } from '@shared/domain/activity'
@@ -238,10 +238,16 @@ describe('picking a folder in the dialog', () => {
   it('starts the dialog where the settings say projects live', async () => {
     const pickPath = vi.fn(() => Promise.resolve(null))
     installFakeBridge({ dialog: { pickPath } })
+    const { storage } = useSettings.getState().settings
+    // Put back on the way out: this store is module state, and a preference left behind would
+    // reach every case below it — including ones written later that never set one.
+    onTestFinished(() => {
+      useSettings.setState(state => ({ settings: { ...state.settings, storage } }))
+    })
     useSettings.setState(state => ({
       settings: {
         ...state.settings,
-        storage: { ...state.settings.storage, projectsFolder: '/Users/someone/Projets' },
+        storage: { ...storage, projectsFolder: '/Users/someone/Projets' },
       },
     }))
 

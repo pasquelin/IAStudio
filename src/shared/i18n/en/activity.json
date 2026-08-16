@@ -35,6 +35,7 @@
     "projectTooNew": "This project was made by a newer build of the studio; update the studio to open it",
     "projectNotCreated": "The project could not be created in this folder",
     "projectNested": "This folder is already inside a project: pick one outside it",
+    "projectHoldsProjects": "This folder already holds projects: open the one you want, or pick a fresh folder",
     "projectNotRenamed": "The project could not be renamed: its folder is missing or unreadable",
     "projectNotRevealed": "The project folder cannot be found",
     "projectAccountRestored": "Project reopened on the “{{name}}” account",

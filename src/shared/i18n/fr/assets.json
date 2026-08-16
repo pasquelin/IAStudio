@@ -143,7 +143,7 @@
     "create": "Créer un projet",
     "open": "Ouvrir un projet",
     "occupiedTitle": "Installer le projet « {{folder}} » dans ce dossier ?",
-    "occupiedBody": "Ce dossier contient déjà des fichiers. Le studio y ajoutera ses dossiers « assets » et « documents » ; rien de ce qui s’y trouve ne sera modifié ni déplacé.",
+    "occupiedBody": "Ce dossier contient déjà des fichiers, et il DEVIENDRA le projet : le studio y ajoute ses dossiers « assets » et « documents » ; rien de ce qui s’y trouve ne sera modifié ni déplacé.",
     "occupiedConfirm": "Installer ici",
     "occupiedCancel": "Annuler",
     "openHint": "Ouvre un dossier de projet déjà créé, avec ce qu’il contient",

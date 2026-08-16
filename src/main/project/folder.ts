@@ -1,6 +1,7 @@
 import { watch, type FSWatcher } from 'node:fs'
-import { access, readdir, rename } from 'node:fs/promises'
+import { readdir, rename } from 'node:fs/promises'
 import { basename, join } from 'node:path'
+import { exists } from '@main/persistence'
 import {
   canMoveInto,
   entriesByName,
@@ -197,14 +198,5 @@ export function createFolderEditor(
         return false
       }
     },
-  }
-}
-
-async function exists(file: string): Promise<boolean> {
-  try {
-    await access(file)
-    return true
-  } catch {
-    return false
   }
 }

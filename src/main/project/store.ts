@@ -6,7 +6,6 @@ import { dirname, join } from 'node:path'
 import {
   CATALOG_FILE,
   MANIFEST_FILE,
-  MANIFEST_FILES,
   MANIFEST_VERSION,
   LEGACY_MANIFEST_FILE,
   PROJECT_FOLDERS,
@@ -34,7 +33,8 @@ export class NoProjectError extends Error {
  * another folder, repair this one, update the studio, or — for a folder sitting inside a project
  * already — pick one that is not there.
  */
-export type ProjectOpenFailure = 'not-a-project' | 'unreadable' | 'too-new' | 'nested'
+export type ProjectOpenFailure =
+  'not-a-project' | 'unreadable' | 'too-new' | 'nested' | 'holds-projects'
 
 /**
  * One error carrying a reason rather than three classes: what every caller does with it is
@@ -56,6 +56,7 @@ const OPEN_FAILURE_KEYS: Record<ProjectOpenFailure, ActivityMessageKey> = {
   unreadable: 'activity.projectUnreadable',
   'too-new': 'activity.projectTooNew',
   nested: 'activity.projectNested',
+  'holds-projects': 'activity.projectHoldsProjects',
 }
 
 /**
@@ -156,42 +157,54 @@ function ancestorsOf(path: string): string[] {
   return found
 }
 
-/** Whether a folder carries a manifest under either name — not whether it can be understood. */
-async function hasManifest(folder: string): Promise<boolean> {
-  const found = await Promise.all(MANIFEST_FILES.map(file => exists(join(folder, file))))
+/**
+ * Whether a folder is a project root, by the presence of the manifest the studio WRITES.
+ *
+ * The legacy name is deliberately not accepted here, though `readManifest` still reads it: this
+ * asks about folders nobody chose, and `project.json` is one of the most common filenames there
+ * is. Taking one for a project would refuse every folder under a checkout that happens to hold
+ * one, with a sentence about a project that does not exist and no way past it.
+ */
+const hasManifest = (folder: string): Promise<boolean> => exists(join(folder, MANIFEST_FILE))
 
-  return found.includes(true)
-}
+/** What is already in a folder: whether the user would call it empty, and its subfolders. */
+type FolderSurvey = { visible: boolean; children: string[] }
 
 /**
- * Whether anything the user would recognise is already in the folder. Hidden entries do not
- * count: a `.DS_Store` the Finder left behind is not content, and treating it as such would put
- * a question in front of every folder made on a Mac.
+ * One pass over the folder, answering both questions a creation has about it.
  *
- * Read one entry at a time rather than listed: the answer is usually settled by the first, and
- * a folder picked here can be a `~/Downloads` holding tens of thousands of files — no reason to
- * allocate all their names to learn that it is not empty.
+ * Hidden entries count for neither: a `.DS_Store` the Finder left behind is not content, and
+ * treating it as such would put a question in front of every folder made on a Mac.
+ *
+ * Read through `opendir` rather than listed: only the subfolder names are kept, so a `~/Downloads`
+ * holding tens of thousands of files is walked without allocating a name for each. It IS walked
+ * to the end — a project three entries from the last one still has to be found.
  */
-async function holdsVisibleEntries(folder: string): Promise<boolean> {
+async function surveyFolder(folder: string): Promise<FolderSurvey> {
   let dir: Dir
   try {
     dir = await opendir(folder)
   } catch (error) {
     // A folder that is not there yet holds nothing — `create` is what makes it.
-    if (isMissing(error)) return false
+    if (isMissing(error)) return { visible: false, children: [] }
     throw error
   }
 
+  const survey: FolderSurvey = { visible: false, children: [] }
   try {
     for await (const entry of dir) {
-      if (!isHiddenEntry(entry.name)) return true
+      if (isHiddenEntry(entry.name)) continue
+
+      survey.visible = true
+      if (entry.isDirectory()) survey.children.push(join(folder, entry.name))
     }
-    return false
   } finally {
-    // Closed by the iterator when it runs out, and NOT when it is left early: an early return
+    // Closed by the iterator when it runs out, and NOT when it is left early: a throw partway
     // would leak the handle, which on Windows also keeps the folder locked.
     await dir.close().catch(() => undefined)
   }
+
+  return survey
 }
 
 /**
@@ -367,14 +380,26 @@ export function createProjectStore({
         if (!missing) throw error
       }
 
-      // A project inside a project would give the catalogue two owners for the same files, and
-      // the outer one indexes the inner one's assets as its own. Asked of every ancestor at
-      // once: the common answer is "none of them", which has to read them all anyway, and a
-      // walk that stopped early would queue round-trips on a network volume to save none here.
+      // Two projects sharing files give the catalogue two owners for them, and the outer one
+      // indexes the inner one's assets as its own. Both directions are refused, and the second
+      // is the one the picker makes easy: it opens on the folder the last project was made in,
+      // so choosing without descending would wrap every project already there.
+      //
+      // Asked of every ancestor at once: the common answer is "none of them", which has to read
+      // them all anyway, and a walk that stopped early would queue round-trips on a network
+      // volume to save none here.
       const above = await Promise.all(ancestorsOf(path).map(hasManifest))
       if (above.includes(true)) throw new ProjectOpenError('nested')
 
-      return (await holdsVisibleEntries(path)) ? 'occupied' : 'blank'
+      const { visible, children } = await surveyFolder(path)
+
+      // Direct children only. A project buried deeper is not what a folder chosen to hold
+      // projects looks like, and walking a whole subtree to find one would price this gesture
+      // on the size of the disk.
+      const inside = await Promise.all(children.map(hasManifest))
+      if (inside.includes(true)) throw new ProjectOpenError('holds-projects')
+
+      return visible ? 'occupied' : 'blank'
     },
 
     open: async path => {

@@ -28,23 +28,28 @@ export function runGlobalCommand(command: CommandId): boolean {
     case 'project.open':
       void useProject.getState().openPicked()
       return true
+    // These two answer `false` with no document in front, where the others answer `true`: the
+    // menu greys its row out and cannot get here, but the assistant can — and reporting a save
+    // that had nothing to save is the very thing this module exists to stop.
     case 'document.save': {
       // The menu is application-wide and has no idea which tab is in front; the store does.
       const documentId = useDocuments.getState().activeId
+      if (!documentId) return false
+
       // The tab keeps its marker either way; the log is what says why it kept it.
-      if (documentId) {
-        void saveDocument(documentId).catch(error =>
-          reportFailure('document.save', documentId, error),
-        )
-      }
+      void saveDocument(documentId).catch(error =>
+        reportFailure('document.save', documentId, error),
+      )
       return true
     }
     case 'document.saveAs': {
       const documentId = useDocuments.getState().activeId
+      if (!documentId) return false
+
       // No `catch` here, unlike Save: `saveDocumentAs` journals its own failures under
       // `assets.copy` and answers false — the shelf the copy would have landed in is where a
       // reader looks for it, and a second scope on the same failure would say it twice.
-      if (documentId) void saveDocumentAs(documentId)
+      void saveDocumentAs(documentId)
       return true
     }
     default:

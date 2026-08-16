@@ -18,13 +18,6 @@ export const MANIFEST_FILE = '.project.json'
 /** What projects made before the rename carry. Read, never written — see `openManifest`. */
 export const LEGACY_MANIFEST_FILE = 'project.json'
 
-/**
- * Every name a manifest can carry, in the order they win. Enumerated once: whoever asks "is this
- * folder a project" has to know about both, and a third name added to only one of the two lists
- * would leave half the studio unable to see projects the other half opens.
- */
-export const MANIFEST_FILES: readonly string[] = [MANIFEST_FILE, LEGACY_MANIFEST_FILE]
-
 export const CATALOG_FILE = '.index/catalog.db'
 
 export type Manifest = {
@@ -123,15 +116,21 @@ export function projectPickerFolder(
 }
 
 /**
- * The folder holding an absolute path, or nothing when it holds no separator at all.
+ * The folder holding an absolute path, or nothing when there is no folder above it to name.
  *
  * Both separators, unlike `parentOf` in `domain/folder.ts`, which walks the `/`-joined ids the
  * explorer uses: this one reads paths the OS wrote, and a Windows project would otherwise answer
  * its own whole path.
+ *
+ * A project at a drive root answers nothing rather than `C:` — that is not a folder but a
+ * drive-relative prefix, which the system resolves against a working directory nobody chose.
  */
 function parentFolder(path: string): string | undefined {
   const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
-  return cut > 0 ? path.slice(0, cut) : undefined
+  if (cut <= 0) return undefined
+
+  const parent = path.slice(0, cut)
+  return parent.endsWith(':') ? undefined : parent
 }
 
 /**

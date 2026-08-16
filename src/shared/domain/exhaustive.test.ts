@@ -137,6 +137,7 @@ describe('the lists that stand for a union', () => {
       projectAccountMissing: true,
       projectAccountRestored: true,
       projectAccountSwitched: true,
+      projectHoldsProjects: true,
       projectNested: true,
       projectNotAProject: true,
       projectNotCreated: true,
