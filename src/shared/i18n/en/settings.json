@@ -108,6 +108,10 @@
       "lastProject": "Reopen the last project",
       "nothing": "Open nothing"
     },
+    "autosave": {
+      "title": "Save automatically",
+      "help": "Writes open documents every thirty seconds, without waiting for your ⌘S. Whatever you have done since the last save then survives a power cut or a crash. Image documents are left out of it whatever this says: their layers are read back off the graphics card, and writing every thirty seconds would make drawing stutter."
+    },
     "home": {
       "title": "Show the home screen",
       "help": "The full-width screen the studio opens on: your projects, what you were working on, what is running, and what the models can do. Turn it off to go straight to the workspace you left. Which sections it shows, and in which order, is set on the home itself."

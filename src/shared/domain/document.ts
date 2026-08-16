@@ -175,6 +175,16 @@ export type DocumentPart = {
  */
 export const FOLDER_KINDS: ReadonlySet<DocumentKind> = new Set<DocumentKind>(['image'])
 
+/**
+ * Which kinds are never written back on their own, whatever the setting says.
+ *
+ * An image document holds its layers on the GPU, and capturing them means reading every one of
+ * them back off the card. That cost is not known, and paying it on a timer while someone is
+ * drawing would trade a stutter every half-minute for work that ⌘S already keeps. The exclusion
+ * lifts the day it is measured, not before.
+ */
+export const AUTOSAVE_EXCLUDED_KINDS: ReadonlySet<DocumentKind> = new Set<DocumentKind>(['image'])
+
 /** The manifest inside a folder document, holding exactly what a file document's body holds. */
 export const DOCUMENT_MANIFEST = 'document.json'
 

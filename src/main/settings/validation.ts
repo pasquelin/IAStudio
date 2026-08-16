@@ -87,6 +87,7 @@ const media = z.object({ ffmpegPath: z.string().min(1).optional() })
 const general = z.object({
   language: z.enum(LANGUAGE_PREFERENCES).optional(),
   startup: z.enum(STARTUP_BEHAVIOURS).optional(),
+  autosave: z.boolean().optional(),
 })
 
 const homeSection = z.object({

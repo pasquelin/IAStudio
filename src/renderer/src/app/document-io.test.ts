@@ -40,6 +40,7 @@ import { useSkyboxes } from '@/stores/skyboxes'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import {
+  autosaveOpenDocuments,
   closeDocument,
   deleteDocument,
   refreshDocuments,
@@ -175,6 +176,49 @@ describe('saveDocument', () => {
 
     // The second call is the whole point: the first asked, the second insisted.
     expect(forced).toEqual([undefined, true])
+  })
+
+  describe('autosave', () => {
+    it('writes an open document that has work in it', async () => {
+      const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
+      installFakeBridge({ documents: { write } })
+      const documentId = await openScene()
+
+      await autosaveOpenDocuments()
+
+      expect(write).toHaveBeenCalled()
+      expect(isSceneDirty(useScenes.getState(), documentId)).toBe(false)
+    })
+
+    // The layers are read back off the GPU, and that cost is unmeasured: a save on a timer would
+    // stutter the canvas every half-minute. ⌘S still writes it.
+    it('never writes an image document', async () => {
+      const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
+      installFakeBridge({ documents: { write } })
+      const created = await useDocuments.getState().create('image')
+      if (!created) throw new Error('expected a document')
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+      useCanvases.getState().runCommand(created.id, addLayer(pixelLayer('layer-1', 'Layer')))
+
+      await autosaveOpenDocuments()
+
+      expect(write).not.toHaveBeenCalled()
+    })
+
+    // A dialog nobody summoned, in front of work someone is in the middle of, is worse than the
+    // save it was trying to make.
+    it('asks nothing when the file changed outside, and leaves it for ⌘S', async () => {
+      const confirmOverwrite = vi.fn(() => Promise.resolve(true))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('stale'), confirmOverwrite },
+      })
+      const documentId = await openScene()
+
+      await autosaveOpenDocuments()
+
+      expect(confirmOverwrite).not.toHaveBeenCalled()
+      expect(isSceneDirty(useScenes.getState(), documentId)).toBe(true)
+    })
   })
 
   // The marker is the only place the studio can say a document is not on disk; a failed write

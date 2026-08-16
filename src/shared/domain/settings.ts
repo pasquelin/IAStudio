@@ -56,6 +56,14 @@ export type Settings = {
   general: {
     language: LanguagePreference
     startup: StartupBehaviour
+    /**
+     * Whether an open document is written back on its own while it is being worked on.
+     *
+     * Image documents are left out of it whatever this says: their layers are read off the GPU,
+     * and a save that stutters the canvas every half-minute would cost more than it saves. That
+     * exclusion is not a setting — see `AUTOSAVE_EXCLUDED_KINDS`.
+     */
+    autosave: boolean
   }
   /**
    * The home screen. `sections` carries the user's own order and what they chose to hide;
@@ -219,7 +227,7 @@ export type Settings = {
  * exactly this.
  */
 export const DEFAULT_SETTINGS: Settings = {
-  general: { language: 'system', startup: 'lastProject' },
+  general: { language: 'system', startup: 'lastProject', autosave: true },
   home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] },
   workspaces: { order: [...WORKSPACE_IDS] },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },

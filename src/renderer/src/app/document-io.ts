@@ -1,5 +1,6 @@
 import type { Asset } from '@shared/domain/asset'
 import {
+  AUTOSAVE_EXCLUDED_KINDS,
   isPartName,
   type CloseChoice,
   type DocumentDescriptor,
@@ -473,7 +474,7 @@ function savableDocument(
  * able to tell that from a save that happened. It is what stops "Save" on a document whose file
  * would not read from closing the tab on work that never reached the disk.
  */
-export async function saveDocument(documentId: string): Promise<boolean> {
+export async function saveDocument(documentId: string, ask = true): Promise<boolean> {
   const savable = savableDocument(documentId)
   if (!savable) return false
   const { bridge, document, io } = savable
@@ -495,7 +496,9 @@ export async function saveDocument(documentId: string): Promise<boolean> {
    * keystroke left behind instead.
    */
   if ((await bridge.documents.write(document.id, document.kind, payload)) === 'stale') {
-    if (!(await bridge.documents.confirmOverwrite(document.title))) return false
+    // An autosave never asks. A dialog nobody summoned, in front of work someone is in the
+    // middle of, is worse than the save it was trying to make — ⌘S is still there to settle it.
+    if (!ask || !(await bridge.documents.confirmOverwrite(document.title))) return false
     await bridge.documents.write(document.id, document.kind, payload, true)
   }
   commit()
@@ -755,6 +758,26 @@ export async function closeDocument(documentId: string): Promise<boolean> {
 /** The documents whose work would go with the window. Empty when nothing is at stake. */
 export function unsavedDocumentIds(): string[] {
   return Object.keys(useDocuments.getState().documents).filter(documentIsDirty)
+}
+
+/**
+ * Writes every open document that has work in it, without asking anything of anyone.
+ *
+ * One after another rather than all at once: each save reads an editor's state back, and six
+ * documents captured together would hold the frame for as long as the slowest of them.
+ *
+ * A refusal is not reported. Autosave is a safety net, not a gesture: a document whose file
+ * would not read, or which something else has written since, is left for ⌘S to settle — and the
+ * tab keeps its bullet, which is what says the work is not on disk.
+ */
+export async function autosaveOpenDocuments(): Promise<void> {
+  const open = useDocuments.getState().documents
+
+  for (const documentId of unsavedDocumentIds()) {
+    const kind = open[documentId]?.kind
+    if (!kind || AUTOSAVE_EXCLUDED_KINDS.has(kind)) continue
+    await saveDocument(documentId, false)
+  }
 }
 
 /**
