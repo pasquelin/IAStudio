@@ -77,6 +77,32 @@ export type DocumentStore<S> = {
   markOf: (state: Readable<S>, documentId: string) => Command<S> | null
   isDirty: (state: Readable<S>, documentId: string) => boolean
   hasUnsavedWork: (state: Readable<S>, documentId: string) => boolean
+  /**
+   * Puts the store back as it was built — the three maps AND the two the closure keeps beside
+   * them, which a suite's `setState` merges past rather than clears.
+   *
+   * Named for the only callers it may have: it empties the set `step` guards closed documents
+   * with, so in production it would reopen every closed document at once.
+   */
+  resetForTests: () => void
+}
+
+/**
+ * Every store this factory has built, so a suite can put them all back without naming them.
+ *
+ * A list written by hand would fall behind the seventh store, and nothing would say so — the
+ * defect it guards against is silent by nature.
+ *
+ * Nothing takes a store back out. In the app that is six entries, one per module singleton, and
+ * it stays empty in a suite that imports none — but a suite building a store PER CASE grows it
+ * for the length of its module, and the hook walks the lot each time. Thirty entries at the
+ * worst site today; a suite that built thousands would feel it.
+ */
+const BUILT: { resetForTests: () => void }[] = []
+
+/** Puts every document store a suite has loaded back as it was built — see `resetForTests`. */
+export function resetDocumentStoresForTests(): void {
+  for (const store of BUILT) store.resetForTests()
 }
 
 /**
@@ -98,7 +124,9 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
 
   /**
    * Documents this store has been told to forget, held until one is opened again. Outside the
-   * store for the same reason as `gestures`, and read by `step`, which says what it protects.
+   * store because no component renders it either — not for the write rate that keeps `gestures`
+   * out, this one only moves as a document opens or closes. Read by `step`, which says what it
+   * protects.
    */
   const dropped = new Set<string>()
 
@@ -196,8 +224,8 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
 
       // Both are how a document ARRIVES — read from disk, or opened blank — so both take the id
       // back out of `dropped`. This changes NO verdict, and no test holds it: the guard already
-      // lets a reopened document through on the second half of its condition. It bounds the set,
-      // which is otherwise the only structure here that never shrinks.
+      // lets a reopened document through on the second half of its condition. It is what bounds
+      // the set one id at a time — nothing else does.
       replace: (documentId, next) => {
         dropped.delete(documentId)
         set(state => ({ states: { ...state.states, [documentId]: next } }))
@@ -255,5 +283,22 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
     }
   })
 
-  return { use, stateOf, hasState, historyOf, markOf, isDirty, hasUnsavedWork }
+  const resetForTests = (): void => {
+    gestures.clear()
+    dropped.clear()
+    use.setState({ states: {}, histories: {}, saved: {} })
+  }
+
+  const store = {
+    use,
+    stateOf,
+    hasState,
+    historyOf,
+    markOf,
+    isDirty,
+    hasUnsavedWork,
+    resetForTests,
+  }
+  BUILT.push(store)
+  return store
 }
