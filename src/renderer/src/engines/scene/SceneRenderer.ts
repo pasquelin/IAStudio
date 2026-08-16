@@ -525,17 +525,10 @@ export class SceneRenderer {
       if (!object) continue
 
       const key = `${track.target.nodeId}/${bone}`
-      const rest = this.boneRests.get(key) ?? {
-        position: { x: object.position.x, y: object.position.y, z: object.position.z },
-        rotation: { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z },
-        scale: { x: object.scale.x, y: object.scale.y, z: object.scale.z },
-      }
+      const rest = this.boneRests.get(key) ?? transformOf(object)
       this.boneRests.set(key, rest)
 
-      const pose = poseAt(rest, timeline, track.target.nodeId, this.playhead, bone)
-      object.position.set(pose.position.x, pose.position.y, pose.position.z)
-      object.rotation.set(pose.rotation.x, pose.rotation.y, pose.rotation.z)
-      object.scale.set(pose.scale.x, pose.scale.y, pose.scale.z)
+      applyTransform(object, poseAt(rest, timeline, track.target.nodeId, this.playhead, bone))
     }
   }
 
