@@ -18,6 +18,7 @@ import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
 import { exists, isMissing, writeAtomic, writeQueue } from '@main/persistence'
 import type { AsyncCatalog } from './catalog-client'
+import { applyJournal } from './file-journal'
 import { parseManifest } from './validation'
 
 /** Thrown when a channel needing a project is reached before one is open. */
@@ -344,6 +345,19 @@ export function createProjectStore({
     close()
     catalog = opening
     project = opened
+
+    // Before anything reads the catalogue. A move interrupted last session left rows naming
+    // where their files used to be, and every window would show them as missing.
+    //
+    // Caught rather than awaited into the failure: opening a project must not fail over
+    // housekeeping. The rows stay where they are and the reconciliation pass finds them.
+    try {
+      const caught = await applyJournal(opened.path, opening)
+      if (caught > 0) log.info('project', `finished ${caught} move(s) left by a previous session`)
+    } catch (error) {
+      log.warn('project', `replaying the move journal failed: ${String(error)}`)
+    }
+
     onChange(opened)
     return opened
   }
