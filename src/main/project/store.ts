@@ -1,5 +1,6 @@
 import { execFile as execFileCallback } from 'node:child_process'
-import { mkdir, readFile } from 'node:fs/promises'
+import type { Dir } from 'node:fs'
+import { mkdir, opendir, readFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 import { dirname, join } from 'node:path'
 import {
@@ -12,9 +13,10 @@ import {
   type Project,
 } from '@shared/domain/project'
 import type { ActivityMessageKey } from '@shared/domain/activity'
+import { isHiddenEntry } from '@shared/domain/folder'
 import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
-import { isMissing, writeAtomic, writeQueue } from '@main/persistence'
+import { exists, isMissing, writeAtomic, writeQueue } from '@main/persistence'
 import type { AsyncCatalog } from './catalog-client'
 import { parseManifest } from './validation'
 
@@ -27,10 +29,12 @@ export class NoProjectError extends Error {
 }
 
 /**
- * Why a folder would not open as a project. The three cases the user can act on, and they ask
- * for three different sentences: pick another folder, repair this one, or update the studio.
+ * Why a folder would not serve as a project. Each case asks the user for a different thing: pick
+ * another folder, repair this one, update the studio, or — for a folder sitting inside a project
+ * already — pick one that is not there.
  */
-export type ProjectOpenFailure = 'not-a-project' | 'unreadable' | 'too-new'
+export type ProjectOpenFailure =
+  'not-a-project' | 'unreadable' | 'too-new' | 'nested' | 'holds-projects'
 
 /**
  * One error carrying a reason rather than three classes: what every caller does with it is
@@ -51,6 +55,8 @@ const OPEN_FAILURE_KEYS: Record<ProjectOpenFailure, ActivityMessageKey> = {
   'not-a-project': 'activity.projectNotAProject',
   unreadable: 'activity.projectUnreadable',
   'too-new': 'activity.projectTooNew',
+  nested: 'activity.projectNested',
+  'holds-projects': 'activity.projectHoldsProjects',
 }
 
 /**
@@ -73,8 +79,23 @@ export type ProjectStoreDeps = {
   settle?: () => Promise<void>
 }
 
+/** What a folder offers a creation aimed at it: open the project there, ask first, or write. */
+export type FolderVerdict = 'project' | 'occupied' | 'blank'
+
 export type ProjectStore = {
-  create: (parentFolder: string, name: string) => Promise<Project>
+  /**
+   * Installs a project INTO `path`, which becomes its root — no folder is made from the name.
+   * Call `inspect` first: this writes a manifest over whatever is there.
+   */
+  create: (path: string, name: string) => Promise<Project>
+  /**
+   * What creating a project at `path` would mean, so nothing is written over.
+   *
+   * A folder that cannot serve at all raises instead of answering, as opening does: a manifest
+   * this build cannot understand — `unreadable`, `too-new` — must stop the gesture rather than
+   * be replaced by a fresh one, and so must a folder sitting under a project already.
+   */
+  inspect: (path: string) => Promise<FolderVerdict>
   open: (path: string) => Promise<Project>
   /**
    * Writes a new name into a project's manifest — the FOLDER is never touched, see the channel's
@@ -119,6 +140,71 @@ async function writeManifest({ path, manifest }: Project): Promise<void> {
 async function ensureFolders(root: string): Promise<void> {
   await Promise.all(PROJECT_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
   await hideFromExplorer(join(root, '.index'))
+}
+
+/**
+ * The folders above `path`, nearest first, up to the volume root — which is where it stops:
+ * `dirname` answers a root with the root itself, and getting that wrong spins forever.
+ */
+function ancestorsOf(path: string): string[] {
+  const found: string[] = []
+
+  for (let child = path, parent = dirname(child); parent !== child; parent = dirname(child)) {
+    found.push(parent)
+    child = parent
+  }
+
+  return found
+}
+
+/**
+ * Whether a folder is a project root, by the presence of the manifest the studio WRITES.
+ *
+ * The legacy name is deliberately not accepted here, though `readManifest` still reads it: this
+ * asks about folders nobody chose, and `project.json` is one of the most common filenames there
+ * is. Taking one for a project would refuse every folder under a checkout that happens to hold
+ * one, with a sentence about a project that does not exist and no way past it.
+ */
+const hasManifest = (folder: string): Promise<boolean> => exists(join(folder, MANIFEST_FILE))
+
+/** What is already in a folder: whether the user would call it empty, and its subfolders. */
+type FolderSurvey = { visible: boolean; children: string[] }
+
+/**
+ * One pass over the folder, answering both questions a creation has about it.
+ *
+ * Hidden entries count for neither: a `.DS_Store` the Finder left behind is not content, and
+ * treating it as such would put a question in front of every folder made on a Mac.
+ *
+ * Read through `opendir` rather than listed: only the subfolder names are kept, so a `~/Downloads`
+ * holding tens of thousands of files is walked without allocating a name for each. It IS walked
+ * to the end — a project three entries from the last one still has to be found.
+ */
+async function surveyFolder(folder: string): Promise<FolderSurvey> {
+  let dir: Dir
+  try {
+    dir = await opendir(folder)
+  } catch (error) {
+    // A folder that is not there yet holds nothing — `create` is what makes it.
+    if (isMissing(error)) return { visible: false, children: [] }
+    throw error
+  }
+
+  const survey: FolderSurvey = { visible: false, children: [] }
+  try {
+    for await (const entry of dir) {
+      if (isHiddenEntry(entry.name)) continue
+
+      survey.visible = true
+      if (entry.isDirectory()) survey.children.push(join(folder, entry.name))
+    }
+  } finally {
+    // Closed by the iterator when it runs out, and NOT when it is left early: a throw partway
+    // would leak the handle, which on Windows also keeps the folder locked.
+    await dir.close().catch(() => undefined)
+  }
+
+  return survey
 }
 
 /**
@@ -263,13 +349,12 @@ export function createProjectStore({
   }
 
   return {
-    create: async (parentFolder, name) => {
-      const root = join(parentFolder, name)
-      await ensureFolders(root)
+    create: async (path, name) => {
+      await ensureFolders(path)
 
       const timestamp = now()
       const made: Project = {
-        path: root,
+        path,
         manifest: {
           version: MANIFEST_VERSION,
           name,
@@ -278,9 +363,43 @@ export function createProjectStore({
         },
       }
       await writeManifest(made)
-      await hideFromExplorer(join(root, MANIFEST_FILE))
+      await hideFromExplorer(join(path, MANIFEST_FILE))
 
       return await activate(made)
+    },
+
+    inspect: async path => {
+      try {
+        await loadManifest(path)
+        return 'project'
+      } catch (error) {
+        // Only "no manifest at all" leaves room for a new project. Anything else — a torn file,
+        // a version this build cannot read — is a project that exists, and creating over it
+        // would replace an identity the user still has documents under.
+        const missing = error instanceof ProjectOpenError && error.reason === 'not-a-project'
+        if (!missing) throw error
+      }
+
+      // Two projects sharing files give the catalogue two owners for them, and the outer one
+      // indexes the inner one's assets as its own. Both directions are refused, and the second
+      // is the one the picker makes easy: it opens on the folder the last project was made in,
+      // so choosing without descending would wrap every project already there.
+      //
+      // Asked of every ancestor at once: the common answer is "none of them", which has to read
+      // them all anyway, and a walk that stopped early would queue round-trips on a network
+      // volume to save none here.
+      const above = await Promise.all(ancestorsOf(path).map(hasManifest))
+      if (above.includes(true)) throw new ProjectOpenError('nested')
+
+      const { visible, children } = await surveyFolder(path)
+
+      // Direct children only. A project buried deeper is not what a folder chosen to hold
+      // projects looks like, and walking a whole subtree to find one would price this gesture
+      // on the size of the disk.
+      const inside = await Promise.all(children.map(hasManifest))
+      if (inside.includes(true)) throw new ProjectOpenError('holds-projects')
+
+      return visible ? 'occupied' : 'blank'
     },
 
     open: async path => {

@@ -12,7 +12,7 @@ import { invoke, openWindow, resetHandlers } from '@main/ipc/test-harness'
 import { pngBytes } from '@main/media/png-fixtures'
 import { memoryCatalog } from './catalog-fixtures'
 import { registerProjectHandlers, type ProjectHandlerDeps } from './handlers'
-import { ProjectOpenError, type ProjectOpenFailure } from './store'
+import { ProjectOpenError, type FolderVerdict, type ProjectOpenFailure } from './store'
 import type { AsyncCatalog } from './catalog-client'
 
 vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
@@ -70,6 +70,9 @@ function base(catalog: AsyncCatalog) {
   return {
     project: {
       create: vi.fn(),
+      // Blank by default: the folder a test says nothing about is one nothing stands in the way
+      // of, so a test that cares about a verdict is the one that sets it.
+      inspect: vi.fn(async () => 'blank'),
       open: vi.fn(),
       current: () => null,
       path: () => PROJECT,
@@ -137,7 +140,7 @@ describe('project handlers', () => {
       const injected = refusing()
       registerProjectHandlers(injected)
 
-      await expect(invoke(CHANNELS.projectCreate, PROJECT, 'Reel')).rejects.toThrow()
+      await expect(invoke(CHANNELS.projectCreate, PROJECT)).rejects.toThrow()
 
       expect(injected.record).toHaveBeenCalledWith({
         level: 'error',
@@ -152,7 +155,7 @@ describe('project handlers', () => {
       const injected = deps(catalog)
       registerProjectHandlers(injected)
 
-      await expect(invoke(CHANNELS.projectCreate, '', 'Reel')).rejects.toThrow()
+      await expect(invoke(CHANNELS.projectCreate, '')).rejects.toThrow()
 
       expect(injected.project.create).not.toHaveBeenCalled()
       expect(injected.record).not.toHaveBeenCalled()
@@ -163,9 +166,95 @@ describe('project handlers', () => {
       injected.project.create = vi.fn(() => Promise.resolve({ path: PROJECT, manifest: MANIFEST }))
       registerProjectHandlers(injected)
 
-      await expect(invoke(CHANNELS.projectCreate, PROJECT, 'Reel')).resolves.toBeDefined()
+      await expect(invoke(CHANNELS.projectCreate, PROJECT)).resolves.toBeDefined()
 
       expect(injected.record).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('creating a project from the folder that was chosen', () => {
+    /**
+     * Registered on the spot, with the verdict the chosen folder would give and the button the
+     * user would press. Both before registering: the handlers capture `askUser` by value, so a
+     * test that set it afterwards would silently keep the default.
+     */
+    const creating = (verdict: FolderVerdict = 'blank', answer = 0): ProjectHandlerDeps => {
+      const injected = deps(catalog)
+      injected.project.inspect = vi.fn(async () => verdict)
+      injected.project.create = vi.fn(async () => ({ path: PROJECT, manifest: MANIFEST }))
+      injected.project.open = vi.fn(async () => ({ path: PROJECT, manifest: MANIFEST }))
+      injected.askUser = vi.fn(async () => answer)
+      registerProjectHandlers(injected)
+      return injected
+    }
+
+    it('names the project after the folder, and lays it inside that folder', async () => {
+      const injected = creating()
+
+      await invoke(CHANNELS.projectCreate, '/Users/someone/Mes Projets/Bande-annonce')
+
+      expect(injected.project.create).toHaveBeenCalledWith(
+        '/Users/someone/Mes Projets/Bande-annonce',
+        'Bande-annonce',
+      )
+    })
+
+    // The root of a volume has no name to give, and a nameless project is a row nobody can find.
+    it('turns away a folder with no name of its own', async () => {
+      const injected = creating()
+
+      await expect(invoke(CHANNELS.projectCreate, '/')).rejects.toThrow()
+
+      expect(injected.project.create).not.toHaveBeenCalled()
+    })
+
+    // Creating again would stamp a fresh `createdAt` on a folder that has been worked in, and
+    // hand its catalogue a new identity.
+    it('opens a folder that is already a project instead of writing over it', async () => {
+      const injected = creating('project')
+
+      await expect(invoke(CHANNELS.projectCreate, PROJECT)).resolves.toBeDefined()
+
+      expect(injected.project.open).toHaveBeenCalledWith(PROJECT)
+      expect(injected.project.create).not.toHaveBeenCalled()
+      expect(injected.record).not.toHaveBeenCalled()
+    })
+
+    // Raised by `inspect` rather than answered, like every other folder that cannot serve.
+    it('says which mistake it was when the folder sits inside another project', async () => {
+      const injected = creating()
+      injected.project.inspect = vi.fn(() => Promise.reject(new ProjectOpenError('nested')))
+
+      await expect(invoke(CHANNELS.projectCreate, PROJECT)).rejects.toThrow()
+
+      expect(injected.project.create).not.toHaveBeenCalled()
+      expect(injected.record).toHaveBeenCalledWith({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.projectNested',
+      })
+    })
+
+    describe('when the folder already holds files of its own', () => {
+      it('asks first, and writes nothing when the answer is no', async () => {
+        // 0 is the dialog's cancel button, which is also what a dismissed dialog answers.
+        const injected = creating('occupied', 0)
+
+        // `null`, not a rejection: a cancelled gesture is not a failure, and nothing is journalled.
+        await expect(invoke(CHANNELS.projectCreate, PROJECT)).resolves.toBeNull()
+
+        expect(injected.askUser).toHaveBeenCalled()
+        expect(injected.project.create).not.toHaveBeenCalled()
+        expect(injected.record).not.toHaveBeenCalled()
+      })
+
+      it('goes ahead once the answer is yes', async () => {
+        const injected = creating('occupied', 1)
+
+        await expect(invoke(CHANNELS.projectCreate, PROJECT)).resolves.toBeDefined()
+
+        expect(injected.project.create).toHaveBeenCalled()
+      })
     })
   })
 

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, open, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import {
   DOCUMENT_MANIFEST,
@@ -25,7 +25,7 @@ import {
 } from '@shared/domain/document-name'
 import { foldForFileName } from '@shared/domain/file-name'
 import { isRecord } from '@shared/guards'
-import { isMissing, writeAtomic } from '@main/persistence'
+import { exists, isMissing, writeAtomic } from '@main/persistence'
 import { parseDocumentEnvelope } from './validation'
 
 export type DocumentFiles = {
@@ -107,20 +107,6 @@ export function splitDocument(body: string): DocumentFile {
   }
 
   return { ...envelope, content: cut === -1 ? '' : body.slice(cut + 1) }
-}
-
-/**
- * Whether anything at all sits at a path — a folder, or the stray file a hand-repaired project
- * may have left where a folder belongs. Told apart from `readdir`, which reports a regular file
- * as absent and would then have the swap fail on every save, for good.
- */
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path)
-    return true
-  } catch {
-    return false
-  }
 }
 
 /**
@@ -252,6 +238,9 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
         await writeFile(join(staged, part.name), Buffer.from(part.data, 'base64'))
       }
 
+      // Anything at all, not just a folder: a hand-repaired project may have left a stray file
+      // where the folder belongs, and `readdir` reports one as absent — the swap would then fail
+      // on every save, for good.
       const held = await exists(folder)
       if (held) await rename(folder, stepped)
       try {

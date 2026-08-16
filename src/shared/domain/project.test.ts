@@ -3,6 +3,7 @@ import type { AccountSummary } from './account'
 import {
   listedAt,
   planProjectAccount,
+  projectPickerFolder,
   projectsByCreation,
   renamedRecentProject,
   RECENT_PROJECTS_MAX,
@@ -215,5 +216,42 @@ describe('planning the account a project opens on', () => {
    */
   it('reports a link naming an account that is no longer held', () => {
     expect(planProjectAccount('account_gone', accounts('account_one'))).toEqual({ kind: 'missing' })
+  })
+})
+
+/**
+ * Left to the system, the dialog reopens wherever it last was — which after a creation is inside
+ * the project just made, so the second project of a session landed within the first.
+ */
+describe('where the folder dialog should open', () => {
+  const madeIn = (path: string): RecentProject => ({
+    path,
+    name: 'A project',
+    openedAt: '2026-08-16T10:00:00Z',
+    createdAt: '2026-08-16T10:00:00Z',
+  })
+
+  it('answers the preference when the user set one', () => {
+    expect(projectPickerFolder('/Users/someone/Projets', [madeIn('/elsewhere/Reel')])).toBe(
+      '/Users/someone/Projets',
+    )
+  })
+
+  // An empty preference means "follow me", which is what the newest project's folder does.
+  it('falls back to the folder holding the newest project', () => {
+    expect(projectPickerFolder(undefined, [madeIn('/Users/someone/Mes Projets/Reel')])).toBe(
+      '/Users/someone/Mes Projets',
+    )
+  })
+
+  it('reads a Windows path as its own folder rather than as one long name', () => {
+    expect(projectPickerFolder(undefined, [madeIn('C:\\Users\\someone\\Projets\\Reel')])).toBe(
+      'C:\\Users\\someone\\Projets',
+    )
+  })
+
+  // A first launch has neither, and the system opening where it likes is the right answer then.
+  it('answers nothing when there is no preference and no project yet', () => {
+    expect(projectPickerFolder(undefined, [])).toBeUndefined()
   })
 })

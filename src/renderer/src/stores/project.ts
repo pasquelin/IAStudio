@@ -1,6 +1,10 @@
-import i18next from 'i18next'
 import { create } from 'zustand'
-import { renamedRecentProject, withoutRecentProject, type Project } from '@shared/domain/project'
+import {
+  projectPickerFolder,
+  renamedRecentProject,
+  withoutRecentProject,
+  type Project,
+} from '@shared/domain/project'
 import type { StudioBridge } from '@shared/ipc'
 import { refreshDocuments } from '@/app/document-io'
 import { closeOrphanTabs } from '@/app/orphan-tabs'
@@ -105,12 +109,13 @@ async function followProject(project: Project | null): Promise<void> {
  * either — the project that was open is still the one that is open.
  */
 async function pickedProject(
-  from: (bridge: StudioBridge, folder: string) => Promise<Project>,
+  from: (bridge: StudioBridge, folder: string) => Promise<Project | null>,
 ): Promise<Project | null> {
   const bridge = getBridge()
+  const { projectsFolder, recentProjects } = useSettings.getState().settings.storage
   const folder = await bridge?.dialog.pickPath(
     'folder',
-    useSettings.getState().settings.storage.projectsFolder,
+    projectPickerFolder(projectsFolder, recentProjects),
   )
   if (!bridge || !folder) return null
 
@@ -248,11 +253,9 @@ export const useProject = create<ProjectState>()((set, get) => ({
   },
 
   createPicked: async () => {
-    const picked = await pickedProject((bridge, folder) =>
-      // The dialog picks where, not what to call it; renaming a project folder is the file
-      // manager's job until the studio has a proper new-project sheet.
-      bridge.project.create(folder, i18next.t('project.defaultName')),
-    )
+    // The folder chosen IS the project, and it names itself. What the main process makes of it —
+    // a fresh project, the one already there, or a refusal — is its call, not the window's.
+    const picked = await pickedProject((bridge, folder) => bridge.project.create(folder))
     if (picked) set({ project: picked, known: true })
   },
 }))

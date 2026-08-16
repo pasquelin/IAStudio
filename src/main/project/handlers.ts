@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { PICTURES, withoutSourcePath } from '@shared/domain/asset'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
@@ -15,6 +15,7 @@ import type { FolderEditor, FolderReader } from './folder'
 import type { ActivityReport } from './activity-log'
 import { askCloseChoice, askDeleteDocument, type AskUser } from './document-dialogs'
 import type { DocumentFiles } from './documents'
+import { askUseOccupiedFolder } from './project-dialogs'
 import { openFailureKey, type ProjectStore } from './store'
 import {
   parseAssetId,
@@ -84,19 +85,37 @@ export function registerProjectHandlers({
   openInSystem,
   askUser,
 }: ProjectHandlerDeps): void {
-  handle(CHANNELS.projectCreate, async (_event, path, name) => {
+  handle(CHANNELS.projectCreate, async (_event, path) => {
     // Parsed outside the try on purpose: an argument this channel refuses is not a sentence
     // about the folder, and `projectOpen` below draws the same line through `openFailureKey`.
-    const parent = parseProjectPath(path)
-    const named = parseProjectName(name)
+    const root = parseProjectPath(path)
 
     try {
-      return await project.create(parent, named)
+      // Inside, unlike the path above: this name comes from the FOLDER the user picked, not from
+      // an argument, so a refusal is a sentence about their choice and owes them one. The root of
+      // a volume has no basename, and is turned away here by the rule that refuses a nameless
+      // rename — left outside, it failed in complete silence.
+      const named = parseProjectTitle(basename(root))
+
+      const verdict = await project.inspect(root)
+
+      // Creating again would stamp a fresh `createdAt` on a folder that has been worked in, and
+      // hand its catalogue a new identity.
+      if (verdict === 'project') return await project.open(root)
+
+      // The one refusal that is the user's to give, so it is asked before anything is written.
+      if (verdict === 'occupied' && !(await askUseOccupiedFolder(askUser, named))) return null
+
+      return await project.create(root, named)
     } catch (error) {
       // Same silence as opening: `createPicked` watches nothing either, so a folder that could
       // not be written said nothing at all. The path is left out — the user picked it from a
       // dialog, and whatever `mkdir` says about it is not something they can act on.
-      record({ level: 'error', topic: 'project', messageKey: 'activity.projectNotCreated' })
+      record({
+        level: 'error',
+        topic: 'project',
+        messageKey: openFailureKey(error) ?? 'activity.projectNotCreated',
+      })
       throw error
     }
   })

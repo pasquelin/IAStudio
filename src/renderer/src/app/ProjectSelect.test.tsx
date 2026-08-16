@@ -126,7 +126,7 @@ describe('ProjectSelect', () => {
     await openMenu('Aucun projet ouvert')
     await userEvent.click(screen.getByRole('menuitem', { name: 'Créer un projet' }))
 
-    await waitFor(() => expect(create).toHaveBeenCalledWith('/projects/autumn', 'Nouveau projet'))
+    await waitFor(() => expect(create).toHaveBeenCalledWith('/projects/autumn'))
   })
 
   it('opens the folder the dialog picked', async () => {
