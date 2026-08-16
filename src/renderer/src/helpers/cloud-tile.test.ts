@@ -36,11 +36,13 @@ describe('what a cloud asset puts on a tile', () => {
     expect(face.url).toBe('https://cdn.example/signed.png?X-Amz-Signature=abc')
   })
 
-  it('says the model that made it, not the file it was saved under', () => {
-    expect(cloudTileFace(cloudAsset(), 264).caption).toBe('FLUX.2')
-  })
-
-  it('falls back to the name when nothing generated it', () => {
+  /**
+   * The asset's own name, whether something generated it or not — where this used to answer
+   * with the model. A tile of models is a tile where everything of one model reads the same,
+   * and the name now derives from the prompt, which says the thing rather than the machine.
+   */
+  it('says what the asset is called, generated or not', () => {
+    expect(cloudTileFace(cloudAsset(), 264).caption).toBe('boulder.png')
     expect(cloudTileFace(cloudAsset({ generation: undefined }), 264).caption).toBe('boulder.png')
   })
 

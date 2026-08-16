@@ -12,6 +12,7 @@ export const skyboxStore = store
 export const useSkyboxes = store.use
 export const skyboxOf = store.stateOf
 export const skyboxHistoryOf = store.historyOf
+export const isSkyboxDirty = store.isDirty
 
 /**
  * Hangs a picture of the project in a given sky. The target is passed rather than read off the

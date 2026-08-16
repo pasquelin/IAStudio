@@ -1,5 +1,6 @@
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import { assetTypeOfRemote, workspaceOfType } from '@shared/domain/asset-kind'
+import { generatedAssetName } from '@shared/domain/asset-name'
 import { channelFromScenarioType } from '@shared/domain/texture'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import type { AssetCollector } from '@main/scenario/job-manager'
@@ -74,7 +75,15 @@ export function createAssetCollector({
       const asset = await backend.importFromUrl({
         id: newId(),
         url: remote.url,
-        name: remoteAssetIds.length > 1 ? `${job.label} ${index + 1}` : job.label,
+        // What was ASKED for, not which model answered: a shelf named after models is a shelf
+        // where everything of one model reads the same. The label is the fallback, and an
+        // honest one — an upscale takes a picture and no words.
+        name: generatedAssetName({
+          ...(remote.generation?.prompt ? { prompt: remote.generation.prompt } : {}),
+          label: job.label,
+          index,
+          total: remoteAssetIds.length,
+        }),
         type,
         jobId: job.id,
         remoteAssetId,

@@ -61,7 +61,7 @@
     "empty": "This project folder could not be read.",
     "open": "Open",
     "revealHint": "Opens the file manager on the selected file",
-    "renameHint": "Changes the file’s name on disk, not only on screen",
+    "renameHint": "Changes the name, on screen and on disk — they are the same one",
     "trashHint": "Sends the file to the system trash; nothing is erased right away"
   },
   "menu": {

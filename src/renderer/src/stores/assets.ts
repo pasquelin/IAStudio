@@ -7,8 +7,10 @@ import {
   withoutSearch,
   type CollectionState,
 } from '@/helpers/collection-state'
+import { checkAssetName, type AssetNameFailure } from '@shared/domain/asset-name'
 import { isRecord } from '@shared/guards'
 import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 
 type AssetsState = {
   collection: CollectionState
@@ -36,6 +38,17 @@ type AssetsState = {
    * otherwise freeze every window forty times over.
    */
   invalidate: () => void
+  /**
+   * Calls an asset something else, in this project's catalogue.
+   *
+   * Local on purpose: the name on the Scenario account is not touched. One asset is pulled into
+   * several projects and named for what each one does with it, and a rename that travelled would
+   * have a project rename someone else's library.
+   *
+   * Answers with the refusal, or `null` when it went through. The field has closed by then, so
+   * the answer is for the caller to journal rather than to draw — see `helpers/rename.ts`.
+   */
+  rename: (assetId: string, name: string) => Promise<AssetNameFailure | null>
   /**
    * Drops the coalesced read still waiting, if there is one.
    *
@@ -198,6 +211,30 @@ export const useAssets = create<AssetsState>()(
             pending = null
             void get().refresh()
           }, COALESCE_MS)
+        },
+
+        rename: async (assetId, name) => {
+          const refused = checkAssetName(name)
+          if (refused) return refused
+
+          const written = await getBridge()
+            ?.assets.update(assetId, { name: name.trim() })
+            .catch(error => {
+              reportFailure('assets.rename', name, error)
+              return null
+            })
+          // `too-long` and not `empty`: the catalogue refusing, or a disk that has gone, is not
+          // a name nobody typed — and the journal line is what actually says what happened.
+          if (!written) return 'too-long'
+
+          // Written into the shelf rather than waited for: `assets:update` broadcasts nothing —
+          // it is answered where it was ordered, which is the doctrine every other write follows.
+          // Straight into `items` and not through `invalidate`, so the tile shows the new name on
+          // the next paint instead of a third of a second later.
+          set(state => ({
+            items: state.items.map(item => (item.id === assetId ? written : item)),
+          }))
+          return null
         },
 
         cancelInvalidate: () => {

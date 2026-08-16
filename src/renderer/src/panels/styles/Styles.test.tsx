@@ -172,7 +172,13 @@ describe('the styles panel', () => {
     useDocuments.setState({
       activeId: 'tex-1',
       documents: {
-        'tex-1': { id: 'tex-1', kind: 'texture', title: 'Roche', workspace: 'textures' },
+        'tex-1': {
+          id: 'tex-1',
+          kind: 'texture',
+          title: 'Roche',
+          workspace: 'textures',
+          fileName: 'Roche.tex',
+        },
       },
     })
     render(<Styles />)

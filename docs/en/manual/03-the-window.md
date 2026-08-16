@@ -400,13 +400,17 @@ If writing fails, the tab stays open and the reason goes to the activity journal
 
 ### A tab's menu
 
-**Right-clicking** a tab opens three gestures:
+**Right-clicking** a tab opens four gestures:
 
 | Row | What it does |
 |---|---|
+| **Rename** | opens the name in the tab; a double-click does the same |
 | **Close tab** | like the cross, question included |
 | **Close other tabs** | closes them one by one; a *Cancel* stops the run |
 | **Delete document…** | **removes the file from the project folder** |
+
+Renaming changes the name **everywhere at once** — the tab, the Explorer, the document list, the
+status bar — and the file on disk with it, since it is the same name.
 
 **Deleting cannot be undone**, and it is the only gesture in the studio that erases a file you
 made. The studio asks for confirmation, and this time *Cancel* is the default button.

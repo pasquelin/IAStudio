@@ -389,33 +389,3 @@ export function assetsOf(picture: ResolvedPicture): string[] {
   }
   return seen
 }
-
-/**
- * Everything a file name cannot hold, gone. A document is titled by hand — "Brique 1/2" is an
- * ordinary title and a path traversal at the same time — and the export names a folder after it.
- *
- * Falls back rather than throwing: a title made entirely of separators is a title, and refusing
- * to export it would be a dialog with nothing to say.
- */
-export function safeFileName(name: string, fallback = 'texture'): string {
-  const printable = [...name]
-    // Control characters pass on Linux and are refused on Windows, so a name holding one would
-    // export on the machine it was written on and nowhere else. Mapped by code point rather than
-    // by a regex, which cannot hold this range without the linter being told to look away.
-    .map(character => ((character.codePointAt(0) ?? 0) < 0x20 ? ' ' : character))
-    .join('')
-
-  const cleaned = printable
-    .replace(/[/\\:*?"<>|]/g, ' ')
-    .replace(/\s+/g, ' ')
-    // Dots and spaces together, because the separators just became spaces: `..\..\etc` would
-    // otherwise keep the second `..` and open on a folder named for a traversal that failed.
-    .replace(/^[.\s]+/, '')
-    .trim()
-
-  // Cut by code point, as it was mapped: `slice` counts UTF-16 units, so a name of emoji came
-  // out ending on half a surrogate pair — which `writeFile` then replaced with U+FFFD, letting
-  // two different titles land on the same folder.
-  const cut = [...cleaned].slice(0, 80).join('').trim()
-  return cut.length > 0 ? cut : fallback
-}

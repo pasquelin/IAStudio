@@ -1,11 +1,12 @@
 import { mdiFileOutline, mdiFolderOpenOutline, mdiFolderOutline } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
+import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
 import { canMoveInto, isStudioFolder } from '@shared/domain/folder'
 import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
 import { openDocument } from '@/app/dockview-api'
+import { renameDocument } from '@/helpers/rename'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
@@ -53,29 +54,42 @@ export function Explorer() {
     void useDocuments.getState().relist()
   }, [projectPath])
 
-  // Keyed by the file name the folder shows, which is what a directory entry carries — the
-  // descriptor knows its id and kind, and `documentPath` builds the same name from them.
+  // Keyed by the file name the folder shows, which is what a directory entry carries — and it
+  // is the descriptor's own `fileName`, read off the disk. It used to be the id, which worked
+  // only for as long as the id WAS the file name: the day the two parted, this answered null
+  // for every document at once — no space glyph, no "open" mark, and a double-click handing the
+  // document to whatever application the system opens a `.scene` with.
   const documentsByFile = useMemo(() => {
     const found = new Map<string, DocumentDescriptor>()
-    for (const document of stored) found.set(document.id, document)
+    for (const document of stored) found.set(document.fileName, document)
     return found
   }, [stored])
 
+  /**
+   * The descriptor behind a folder entry, or nothing.
+   *
+   * A folder is not disqualified by being one: an image document IS a directory — `<id>.img/`
+   * holding its manifest and its parts (`FOLDER_KINDS`) — and the reader that walks the project
+   * folder can only see that it is a directory. Refusing every folder here left image documents
+   * with no workspace glyph, no "open" mark, and unfoldable instead of openable.
+   */
   const documentOf = useCallback(
     (node: FolderNode): DocumentDescriptor | null => {
-      if (node.kind === 'folder') return null
-      const extension = extensionOf(node.name)
-      if (!kindForExtension(extension)) return null
-      return documentsByFile.get(node.name.slice(0, -extension.length)) ?? null
+      const kind = kindForExtension(extensionOf(node.name))
+      if (!kind) return null
+      if (node.kind === 'folder' && !FOLDER_KINDS.has(kind)) return null
+      return documentsByFile.get(node.name) ?? null
     },
     [documentsByFile],
   )
 
   const activate = async (node: FolderNode): Promise<void> => {
-    if (node.kind === 'folder') return toggle(node.id)
-
+    // Asked before the folder question, not after: an image document is a directory, and folding
+    // it open showed the user the parts the studio writes for itself instead of opening it.
     const document = documentOf(node)
     if (document) return openDocument(document)
+
+    if (node.kind === 'folder') return toggle(node.id)
 
     // A file the catalogue knows is an asset, and it opens like one from the shelf — the folder
     // shows `asset_2604…png` where the shelf shows the name, so only the catalogue can tell.
@@ -104,11 +118,26 @@ export function Explorer() {
   const isOpen = (document: DocumentDescriptor | null): boolean =>
     document !== null && open[document.id] !== undefined
 
-  // The name the disk shows is what is renamed, so the answer settles when the folder is read
-  // again — the watch does that on its own, and this only closes the field.
+  /**
+   * A document is renamed through its own channel, which moves the file AND rewrites its
+   * envelope; anything else is a plain file and is renamed as one. Told apart because the two
+   * cannot be the same gesture: renaming a document as a file would leave its envelope saying
+   * the old thing, and the main process refuses it outright — `isStudioOwned`.
+   *
+   * Nothing is written on faith either way. A file's new name settles when the watch reads the
+   * folder again; a document's comes back from the rename itself, which is what puts it in the
+   * tab that may be showing it.
+   */
   const commitRename = (node: FolderNode, name: string): void => {
     setRenaming(null)
-    if (name !== node.name) void getBridge()?.project.renameFile(node.path, name)
+    const document = documentOf(node)
+
+    if (!document) {
+      if (name !== node.name) void getBridge()?.project.renameFile(node.path, name)
+      return
+    }
+
+    renameDocument(document.id, document.title, name)
   }
 
   if (nodes.length === 0)
@@ -124,7 +153,9 @@ export function Explorer() {
       onToggle={toggle}
       // A folder is expandable before anything under it has been read: what the tree can see is
       // only what is loaded, and a folder nobody has opened has nothing loaded by definition.
-      expandable={node => node.kind === 'folder'}
+      // Except a document that happens to be one — it opens, and what it holds is the studio's
+      // own business rather than something to browse.
+      expandable={node => node.kind === 'folder' && !documentOf(node)}
       // Dragging moves; the menu's "Rename" stays in the folder it is already in, deliberately.
       // Both refusals are the same one, read from `shared/` so the main process refuses the
       // same things — and read on BOTH sides of the gesture, what moves and what receives.
@@ -137,28 +168,32 @@ export function Explorer() {
       onContextMenu={node =>
         openEntryMenu({
           node,
-          openInTab: isOpen(documentOf(node)),
+          document: documentOf(node),
           t,
           onRename: () => setRenaming(node.id),
         })
       }
       renderRow={row => {
         const document = documentOf(row.node)
-        const icon =
-          row.node.kind === 'folder'
+        // The descriptor carries its own workspace, so the glyph comes off the same table the
+        // rail and the asset menu read — never derived from the kind a second time, which would
+        // be a second answer free to disagree with the first. Asked before the folder question
+        // for the reason `activate` is: an image document is a directory, and the folder glyph
+        // said so where every other document showed its space.
+        const icon = document
+          ? workspaceById(document.workspace).icon
+          : row.node.kind === 'folder'
             ? row.expanded
               ? mdiFolderOpenOutline
               : mdiFolderOutline
-            : // The descriptor carries its own workspace, so the glyph comes off the same table
-              // the rail and the asset menu read — never derived from the kind a second time,
-              // which would be a second answer free to disagree with the first.
-              document
-              ? workspaceById(document.workspace).icon
-              : mdiFileOutline
+            : mdiFileOutline
 
         return (
           <EntryRow
-            name={row.node.name}
+            // The document's name where there is one — which is its file name for anything
+            // written since documents came to be named, and its title for the older ones whose
+            // file still wears a uuid.
+            name={document?.title ?? row.node.name}
             icon={icon}
             open={isOpen(document)}
             {...(renaming === row.node.id

@@ -82,6 +82,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       list: () => Promise.resolve([]),
       read: () => Promise.resolve(null),
       write: () => Promise.resolve(),
+      // Refuses by default, as the two dialogs below do: a rename nobody stubbed must not read
+      // as one that worked, which would have a test believe the disk had agreed.
+      rename: () => Promise.reject(new Error('no rename stubbed')),
       remove: () => Promise.resolve(),
       // Cancel and refuse: a test that does not stub these cannot lose a document by omission.
       confirmClose: () => Promise.resolve<CloseChoice>('cancel'),

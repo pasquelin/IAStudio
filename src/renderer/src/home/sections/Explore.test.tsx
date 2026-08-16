@@ -68,11 +68,15 @@ describe('the explore band', () => {
     )
   })
 
-  it('captions each tile with the model that made it', async () => {
+  /**
+   * The asset's own name, where this used to draw the model that made it: a band of model names
+   * is a band where everything of one model reads the same, and a name says the thing.
+   */
+  it('captions each tile with what the asset is called', async () => {
     install()
     render(<Explore />)
 
-    expect(await screen.findByText('FLUX.2')).toBeInTheDocument()
+    expect(await screen.findByText('boulder.png')).toBeInTheDocument()
   })
 
   it('draws the thumbnail, which is the only URL a width may be appended to', async () => {

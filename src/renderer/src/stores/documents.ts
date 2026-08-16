@@ -3,6 +3,13 @@ import {
   type DocumentDescriptor,
   type DocumentKind,
 } from '@shared/domain/document'
+import {
+  checkDocumentName,
+  documentFileName,
+  DOCUMENT_NAME_FAILURES,
+  type DocumentNameFailure,
+} from '@shared/domain/document-name'
+import { foldForFileName } from '@shared/domain/file-name'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
 import i18next from 'i18next'
@@ -75,6 +82,18 @@ type DocumentsState = {
    * the one the tab has been renaming, and the listing it came from is a snapshot.
    */
   adopt: (document: DocumentDescriptor) => void
+  /**
+   * Calls a document something else — on disk and on screen at once, which is the whole point:
+   * the file is named after the document, so there is only ever one name to change.
+   *
+   * The id does not move, so an OPEN document renames without its tab noticing.
+   *
+   * Answers with the refusal, or `null` when it went through. The field has closed by the time
+   * this resolves — `InlineRename` commits on blur as much as on Enter — so the answer is for
+   * the caller to JOURNAL, not to draw: `reportFailure('document.rename', …)`, which is what
+   * puts a refused name in the activity list instead of nowhere.
+   */
+  rename: (id: string, title: string) => Promise<DocumentNameFailure | null>
   close: (id: string) => void
 }
 
@@ -291,11 +310,18 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     // store neither has written to yet, and two tabs open called « Sans titre 1 ».
     const stored = of ? [] : ((await listed()) ?? [])
 
+    const title = of ? of.title : untitled(stored, get(), kind)
+
     const document: DocumentDescriptor = {
       id: newId(),
       kind,
       workspace,
-      title: of ? of.title : untitled(stored, get(), workspace),
+      title,
+      // Where it WOULD go, nothing having been written yet. Not a second answer disagreeing with
+      // the disk — there is no file to disagree with — and the first save answers for good: it
+      // may land on a suffixed name if the folder meanwhile took this one, and `relist` reads
+      // back what the folder actually holds.
+      fileName: documentFileName(title, kind),
       ...(of ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 
@@ -313,6 +339,33 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
         : { documents: { ...state.documents, [document.id]: document } },
     ),
 
+  rename: async (id, title) => {
+    const document = get().documents[id] ?? get().stored.find(entry => entry.id === id)
+    if (!document) return 'invalid'
+
+    // Asked here as well as in the main process, and neither is the redundant one: this spares a
+    // round trip for what the window can already see, and the main process is what makes the
+    // refusal true whatever the window believed.
+    const taken = get().stored.map(entry => ({ id: entry.id, fileName: entry.fileName }))
+    const refused = checkDocumentName(title, document.kind, taken, id)
+    if (refused) return refused
+
+    const renamed = await getBridge()
+      ?.documents.rename(id, document.kind, title)
+      .catch(error => asNameFailure(error))
+    if (renamed === undefined) return 'invalid'
+    if (typeof renamed === 'string') return renamed
+
+    // Both halves, and that is the point of doing it here: `documents` is what the tab reads and
+    // `stored` is what the Explorer and the document list read, so writing one leaves the other
+    // showing the name the document has just stopped having.
+    set(state => ({
+      documents: state.documents[id] ? { ...state.documents, [id]: renamed } : state.documents,
+      stored: state.stored.map(entry => (entry.id === id ? renamed : entry)),
+    }))
+    return null
+  },
+
   close: id =>
     set(state => {
       const remaining = { ...state.documents }
@@ -320,6 +373,12 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       return { documents: remaining, activeId: state.activeId === id ? null : state.activeId }
     }),
 }))
+
+/** The four refusals travel as the error's message; anything else is not one of them. */
+function asNameFailure(error: unknown): DocumentNameFailure {
+  const message = error instanceof Error ? error.message : ''
+  return DOCUMENT_NAME_FAILURES.find(failure => message.includes(failure)) ?? 'invalid'
+}
 
 /**
  * Bumped per listing, so one that comes back late cannot install itself — and one PER QUESTION.
@@ -350,19 +409,26 @@ let listing: Promise<DocumentDescriptor[] | null> | null = null
 function untitled(
   stored: readonly DocumentDescriptor[],
   state: Pick<DocumentsState, 'documents'>,
-  workspace: WorkspaceId,
+  kind: DocumentKind,
 ): string {
-  const blank = (document: DocumentDescriptor): boolean =>
-    document.workspace === workspace && document.sourceAssetId === undefined
+  // The FILE names, and every document's rather than the blank ones of one workspace: what makes
+  // a name unusable is that the folder already holds it, whoever holds it. Counting documents
+  // instead — which is what this did, on a set of ids — answered with the count plus one, so
+  // three created and one deleted handed out a name still sitting in the folder.
+  //
+  // Nothing needs skipping for it any more either: a document opened for an asset is called
+  // after the asset, and never collides with `Sans titre N`.
+  const taken = new Set(
+    [...stored, ...Object.values(state.documents)].map(document =>
+      foldForFileName(document.fileName),
+    ),
+  )
 
-  const taken = new Set([
-    ...stored.filter(blank).map(document => document.id),
-    ...documentsIn(state, workspace)
-      .filter(blank)
-      .map(document => document.id),
-  ])
-
-  return i18next.t('documents.untitled', { n: taken.size + 1 })
+  // Ends on the first free one, and there are only ever as many taken as the folder holds.
+  for (let n = 1; ; n += 1) {
+    const title = i18next.t('documents.untitled', { n })
+    if (!taken.has(foldForFileName(documentFileName(title, kind)))) return title
+  }
 }
 
 /**

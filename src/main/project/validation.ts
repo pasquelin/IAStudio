@@ -196,7 +196,9 @@ const documentPart = z.object({
 })
 
 const documentDraft = z.object({
-  title,
+  // Trimmed and non-empty, where the envelope's twin is not: a title is now the NAME OF THE
+  // FILE, and a document nobody named is a document nothing can be written to.
+  title: z.string().trim().min(1).max(200),
   content,
   parts: z.array(documentPart).max(1024).optional(),
   // The asset this document edits. Same reason as `parts`: a field the schema does not name is
@@ -234,11 +236,19 @@ const documentEnvelope = z.object({
   // read as if it were this one and silently flattened by the next save.
   version: z.number().int().min(1).max(DOCUMENT_VERSION),
   kind: documentKind,
+  // Left permissive where a draft's is not, and the asymmetry is deliberate: this is the READ
+  // side. Refusing an empty title here would drop the document from the listing altogether —
+  // present on disk, absent from every list — where `descriptorOf` instead falls back on the
+  // file name. What may be WRITTEN is where the rule belongs.
   title,
   updatedAt: z.string().min(1),
   // Absent on every document written before assets could be opened, and on every document that
   // edits none — so an absent field means "not linked" rather than a file to migrate.
   sourceAssetId: z.string().min(1).optional(),
+  // Absent before version 3, where the file name was the id. Declared here or zod STRIPS it and
+  // the field is written by the main process and never seen again — the very defect the comment
+  // on `parts` records, which cost a save its pixels.
+  id: z.string().min(1).optional(),
 })
 
 /** A document file is user territory, like the manifest: hand-edited, truncated, or older. */

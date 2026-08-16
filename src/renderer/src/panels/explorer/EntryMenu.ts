@@ -1,14 +1,15 @@
 import { mdiFolderOpenOutline, mdiRenameOutline, mdiTrashCanOutline } from '@mdi/js'
 import type { TFunction } from 'i18next'
-import { isStudioFolder } from '@shared/domain/folder'
+import type { DocumentDescriptor } from '@shared/domain/document'
+import { isStudioFolder, isStudioOwned } from '@shared/domain/folder'
 import { showContextMenu } from '@/helpers/context-menu'
 import { getBridge } from '@/services/bridge'
 import type { FolderNode } from './use-folder-tree'
 
 export type EntryMenuProps = {
   node: FolderNode
-  /** True while a tab is showing this file, which is what forbids renaming it. */
-  openInTab: boolean
+  /** The document this row is, when it is one — which is what may be renamed under `documents/`. */
+  document: DocumentDescriptor | null
   /** The window's translator, as every menu of this studio takes it — see `openAssetMenu`. */
   t: TFunction
   onRename: () => void
@@ -24,11 +25,22 @@ export type EntryMenuProps = {
  * **Nothing is deleted** — `trashItem` puts the file where the user can get it back. It is their
  * folder, and erasing something in it is a gesture the studio does not take.
  */
-export function openEntryMenu({ node, openInTab, t, onRename }: EntryMenuProps): void {
+export function openEntryMenu({ node, document, t, onRename }: EntryMenuProps): void {
   // The catalogue stores every asset by a path under `assets/`, so moving one of the studio's
   // own folders orphans rows nobody can find again. The main process refuses it too — this is
   // what says so before the click rather than after it.
   const ownFolder = isStudioFolder(node.path)
+
+  /**
+   * Everything under those folders, which is what the main process now refuses — a document is
+   * renamed through its own channel and an asset in the catalogue, so renaming either as a
+   * plain file leaves the studio pointing at a path that is gone.
+   *
+   * A document is the exception, and the whole point: it has its own gesture, and this menu
+   * hands it over. Anything else in there is greyed rather than opening a field that closes on
+   * a refusal nothing reports.
+   */
+  const ownedFile = isStudioOwned(node.path) && !document
 
   void showContextMenu([
     {
@@ -41,10 +53,11 @@ export function openEntryMenu({ node, openInTab, t, onRename }: EntryMenuProps):
       label: t('explorer.rename'),
       icon: mdiRenameOutline,
       tooltip: t('explorer.renameHint'),
-      // A document's file name IS its identifier. Renaming a closed one gives it a new id and
-      // costs nothing; renaming one a tab is holding orphans that tab, and the next save would
-      // write the old name back beside the new file.
-      disabled: ownFolder || openInTab,
+      // No longer refused while a tab holds it. A document's file name WAS its identifier, so
+      // renaming an open one orphaned its tab and the next save wrote the old name back beside
+      // the new file; the id now lives in the envelope and stays put, which is what the whole
+      // of that change bought.
+      disabled: ownFolder || ownedFile,
       onSelect: onRename,
     },
     {

@@ -6,9 +6,10 @@ import type { Us } from '@/engines/timeline/timeline-state'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useSplitPair } from '@/hooks/useSplitPair'
-import { audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
+import { useDocumentTitle } from '@/app/useDocumentTitle'
+import { audioHistoryOf, isAudioEditDirty, useAudioEdits } from '@/stores/audio-edits'
 import { useDocuments } from '@/stores/documents'
-import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
+import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { ProgramMonitor } from './ProgramMonitor'
 import { TakeEditor } from './TakeEditor'
 import { useSoundTransport } from './useSoundTransport'
@@ -28,6 +29,12 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   // Dockview keeps hidden tabs mounted: without this every open take would answer the space bar
   // at once, and the playback token would arbitrate a fight nobody started.
   const active = useDocuments(state => state.activeId === documentId)
+
+  // Both halves, as closing this document already asks of both: a take's file holds the chain of
+  // edits over its sample AND the montage under it, and either alone leaves work unaccounted for.
+  const editsDirty = useAudioEdits(state => isAudioEditDirty(state, documentId))
+  const montageDirty = useSequences(state => isSequenceDirty(state, documentId))
+  useDocumentTitle(documentId, editsDirty || montageDirty)
 
   useRestoredDocument(documentId)
 

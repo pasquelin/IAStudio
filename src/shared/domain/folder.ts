@@ -85,6 +85,21 @@ export function isStudioFolder(path: string): boolean {
 }
 
 /**
+ * Whether the studio owns what sits at `path` — the folders above, and everything under them.
+ *
+ * What `isStudioFolder` says of the folders themselves, said of their contents, which is what
+ * its own comment has always claimed and only this makes true: the catalogue stores every asset
+ * by its path, so renaming `assets/img/asset_2604….png` behind its back leaves a row pointing
+ * at nothing, and a document renamed as a file lands where its own channel is meant to take it.
+ *
+ * Read on both sides, as `canMoveInto` is: the panel greys the gesture out and the main process
+ * refuses it regardless, a window not being what decides what gets written.
+ */
+export function isStudioOwned(path: string): boolean {
+  return PROJECT_FOLDERS.some(folder => path === folder || path.startsWith(`${folder}/`))
+}
+
+/**
  * Whether `path` may be dragged into `folder`.
  *
  * Both sides ask it, and that is the point of it living here: the panel refuses the gesture on

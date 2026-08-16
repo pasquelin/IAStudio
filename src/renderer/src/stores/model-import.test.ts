@@ -26,7 +26,9 @@ function nodesOf(documentId: string) {
 beforeEach(() => {
   clearScenes()
   useDocuments.setState({
-    documents: { 'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Set' } },
+    documents: {
+      'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Set', fileName: 'Set.scene' },
+    },
     activeId: 'doc-1',
   })
 })

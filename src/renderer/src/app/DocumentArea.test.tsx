@@ -116,7 +116,15 @@ describe('DocumentArea', () => {
    */
   it('puts the section of the tab in front up', () => {
     useDocuments.setState({
-      documents: { 'doc-7': { id: 'doc-7', kind: 'image', title: 'Affiche', workspace: 'image' } },
+      documents: {
+        'doc-7': {
+          id: 'doc-7',
+          kind: 'image',
+          title: 'Affiche',
+          workspace: 'image',
+          fileName: 'Affiche.img',
+        },
+      },
     })
     render(<DocumentArea />)
 
@@ -142,7 +150,15 @@ describe('DocumentArea', () => {
    */
   it('says nothing about the section once the home has taken the centre', () => {
     useDocuments.setState({
-      documents: { 'doc-7': { id: 'doc-7', kind: 'image', title: 'Affiche', workspace: 'image' } },
+      documents: {
+        'doc-7': {
+          id: 'doc-7',
+          kind: 'image',
+          title: 'Affiche',
+          workspace: 'image',
+          fileName: 'Affiche.img',
+        },
+      },
     })
     render(<DocumentArea />)
     useLayouts.setState({ home: true })

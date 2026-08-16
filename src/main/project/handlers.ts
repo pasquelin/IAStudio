@@ -393,6 +393,18 @@ export function registerProjectHandlers({
     project.touch()
   })
 
+  handle(CHANNELS.documentRename, async (_event, id, kind, title) => {
+    const renamed = await documents.rename(
+      parseDocumentId(id),
+      parseDocumentKind(kind),
+      parseDocumentTitle(title),
+    )
+    // As the write does, and for the same reason: the manifest says the project was worked on,
+    // and only once the disk has agreed.
+    project.touch()
+    return renamed
+  })
+
   handle(CHANNELS.documentRemove, (_event, id, kind) =>
     documents.remove(parseDocumentId(id), parseDocumentKind(kind)),
   )

@@ -214,6 +214,7 @@ describe('opening an asset', () => {
       kind: 'image',
       workspace: 'image',
       title: 'dusk.png',
+      fileName: 'dusk.png.img',
       sourceAssetId: 'asset-sky',
     }
     useDocuments.setState({ documents: {}, stored: [saved], activeId: null })

@@ -1,4 +1,3 @@
-import { assetCaption } from '@shared/domain/asset'
 import { cloudPreviewUrl, type CloudAsset } from '@shared/domain/cloud-asset'
 import { assetIcon } from '@/helpers/workspaces'
 
@@ -17,7 +16,7 @@ export function cloudTileFace(
 ): { url: string | undefined; caption: string; fallbackIcon: string } {
   return {
     url: cloudPreviewUrl(asset, { width }) ?? undefined,
-    caption: assetCaption(asset),
+    caption: asset.name,
     fallbackIcon: assetIcon(asset.type),
   }
 }

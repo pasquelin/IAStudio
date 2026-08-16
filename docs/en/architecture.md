@@ -715,8 +715,12 @@ files remain, and nothing says what they are any more.
 Assets are either `local` (a file in the project) or `cloud` (still only on Scenario). A local
 image is served to the renderer as `scenario://<id>`.
 
-**Documents** are JSON files under `documents/`, one per document, named after its id —
-`<id>.scene`, `<id>.seq`. The folder has the last word: a file whose header claims a kind its
+**Documents** are JSON files under `documents/`, one per document, **named after the document** —
+`Niveau.scene`, `Bande annonce.seq`. Its id lives in the envelope (format version 3) rather than
+in the file name: that is what lets a document be renamed, open or not, without becoming a
+different document — the layout, the recent list and every tab are keyed by that id. A file
+written before that version wears its id as its name (`<id>.scene`) and is read exactly as
+before; nothing is rewritten on opening, the stamp comes with the next save. The folder has the last word: a file whose header claims a kind its
 extension denies is refused rather than opened in the wrong editor. Writing goes through a
 staging file and a `rename`, which is atomic within one folder, so a crash mid-write can never
 leave a truncated document where the work was.

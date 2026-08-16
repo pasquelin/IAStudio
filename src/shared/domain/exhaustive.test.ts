@@ -181,6 +181,8 @@ describe('the lists that stand for a union', () => {
       'assets.save': true,
       'assets.copy': true,
       'assets.extract': true,
+      'assets.rename': true,
+      'document.rename': true,
       'project.reveal': true,
       'project.forget': true,
       'project.rename': true,

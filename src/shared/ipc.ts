@@ -104,6 +104,7 @@ export type Channels = {
   documentList: 'document:list'
   documentRead: 'document:read'
   documentWrite: 'document:write'
+  documentRename: 'document:rename'
   documentRemove: 'document:remove'
   documentConfirmClose: 'document:confirm-close'
   documentConfirmDelete: 'document:confirm-delete'
@@ -233,6 +234,7 @@ export const CHANNELS: Channels = {
   documentList: 'document:list',
   documentRead: 'document:read',
   documentWrite: 'document:write',
+  documentRename: 'document:rename',
   documentRemove: 'document:remove',
   documentConfirmClose: 'document:confirm-close',
   documentConfirmDelete: 'document:confirm-delete',
@@ -441,6 +443,9 @@ export type LogScope =
   | 'document.save'
   | 'document.close'
   | 'document.delete'
+  // A name the folder refused. The field has closed by then — it commits on blur as much as on
+  // Enter — so the journal is the only place left to say the name did not take.
+  | 'document.rename'
   | 'assets.reveal'
   | 'assets.open'
   // ⌘S reaches the asset behind a document as well as the document itself, and the two halves
@@ -451,6 +456,9 @@ export type LogScope =
   // journal denied a write that had just succeeded.
   | 'assets.copy'
   | 'assets.extract'
+  // The catalogue refusing a new name. The field has closed by then — it commits on blur as much
+  // as on Enter — so the journal is the only place left to say the name did not take.
+  | 'assets.rename'
   // The home's shelf: a folder moved since it was last opened is the ordinary case there, so
   // all three of its gestures need somewhere to say they did nothing.
   | 'project.reveal'
@@ -493,6 +501,8 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.save',
   'assets.copy',
   'assets.extract',
+  'assets.rename',
+  'document.rename',
   'project.reveal',
   'project.forget',
   'project.rename',
@@ -787,6 +797,17 @@ export type StudioBridge = {
     read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
     /** The envelope — version, kind, timestamp — is stamped by the main process, not here. */
     write: (id: string, kind: DocumentKind, draft: DocumentDraft) => Promise<void>
+    /**
+     * Gives a document another name — which, the file being named after the document, moves it.
+     *
+     * The id does not change, and that is the point: the layout, the recent list and the open
+     * tab all hold it, so a document may be renamed while it is open.
+     *
+     * Answers with the descriptor as it now stands, `fileName` included, so no window has to
+     * work out where the document went. Rejects when the folder already holds that name —
+     * `checkDocumentName` says the same thing before the gesture, this is what makes it true.
+     */
+    rename: (id: string, kind: DocumentKind, title: string) => Promise<DocumentDescriptor>
     remove: (id: string, kind: DocumentKind) => Promise<void>
     /**
      * What to do with a modified document being closed. Native rather than drawn in the window:

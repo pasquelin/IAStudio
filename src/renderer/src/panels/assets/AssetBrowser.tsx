@@ -15,6 +15,7 @@ import { HINT_LEFT } from '@/helpers/tooltip'
 import { assetTypesOf } from '@/helpers/workspaces'
 import { useShelf } from '@/hooks/use-shelf'
 import { getBridge } from '@/services/bridge'
+import { renameAsset } from '@/helpers/rename'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { useJobs } from '@/stores/jobs'
@@ -28,7 +29,15 @@ import { ImportProgress } from './ImportProgress'
 import { useAssetFacets } from './facets'
 import { LOCATION_FACET, useBadgeLabels } from './location-facet'
 import { TYPE_FACET, useTypeLabels } from './type-facet'
-import { markOf, mergeRows, nameOfRow, twinsById, typeOfRow, type AssetRowModel } from './rows'
+import {
+  markOf,
+  mergeRows,
+  nameOfRow,
+  twinsById,
+  typeOfRow,
+  type AssetRenameHandle,
+  type AssetRowModel,
+} from './rows'
 
 /** How much of the account's library one panel reads. It pages no further today. */
 const LIBRARY_PAGE = 60
@@ -123,6 +132,31 @@ export function AssetBrowser() {
    * asks again, which is when a stale answer would actually mislead.
    */
   const [absent, setAbsent] = useState<ReadonlySet<string>>(EMPTY_IDS)
+  const [renaming, setRenaming] = useState<string | null>(null)
+  // Resolved once here rather than per tile, for the reason `badgeLabels` and `hints` are: a
+  // `useTranslation` inside a cell subscribes every one of two hundred of them.
+  const renameLabel = t('assets.renameLabel')
+
+  /**
+   * What a row needs to be renamed, or nothing at all.
+   *
+   * Only a row the catalogue holds: a library asset has no row of this project's to name yet,
+   * and a job still generating has no asset behind its tile.
+   */
+  const renameOf = (row: AssetRowModel): { rename: AssetRenameHandle } | null =>
+    row.from === 'local'
+      ? {
+          rename: {
+            open: renaming === row.asset.id,
+            start: () => setRenaming(row.asset.id),
+            label: renameLabel,
+            commit: (name: string) => {
+              setRenaming(null)
+              renameAsset(row.asset.id, row.asset.name, name)
+            },
+          },
+        }
+      : null
   const asked = useRef<Set<string>>(new Set())
 
   const checkPresence = useCallback((visible: readonly AssetRowModel[]) => {
@@ -314,6 +348,7 @@ export function AssetBrowser() {
             badgeLabels={badgeLabels}
             typeLabels={typeLabels}
             hints={hints}
+            {...(renameOf(row) ?? {})}
           />
         )}
         renderRow={row => (
@@ -323,6 +358,7 @@ export function AssetBrowser() {
             badge={row.badge}
             badgeLabels={badgeLabels}
             hints={hints}
+            {...(renameOf(row) ?? {})}
           />
         )}
         empty={<EmptyState icon={mdiImageMultipleOutline} message={emptyMessage} />}

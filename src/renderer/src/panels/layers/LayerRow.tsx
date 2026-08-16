@@ -9,7 +9,7 @@ import type { CanvasState, Layer } from '@/engines/canvas/canvas-state'
 import { removeLayer, renameLayer, setLayerLocks } from '@/engines/canvas/commands'
 import type { Command } from '@/engines/core/history'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
-import { InlineRename } from '@/panels/shared/InlineRename'
+import { InlineRename } from '@/design/InlineRename'
 import { LAYER_LOCKS } from './layer-locks'
 import { useCanvases } from '@/stores/canvases'
 

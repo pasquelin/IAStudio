@@ -2,10 +2,13 @@ import { useTranslation } from 'react-i18next'
 import { Row } from '@/design/Row'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
-import { InlineRename } from '@/panels/shared/InlineRename'
+import { InlineRename } from '@/design/InlineRename'
 
 export type EntryRowProps = {
-  /** The name on disk, which is what a file browser shows — never the document's own title. */
+  /**
+   * What the row is called. A document's own name — which IS its file name, minus the extension
+   * the glyph already says — and the file name for everything else.
+   */
   name: string
   icon: string
   /** Whether a tab is showing this file right now. Only a document can be. */
@@ -17,9 +20,14 @@ export type EntryRowProps = {
 /**
  * One entry of the project folder.
  *
- * The name is the file's, not the document's title: this panel answers "what is in my project
- * folder", and a row that said `Niveau` where the disk says `a3f1.scene` would be a third name
- * for the same thing — the folder is meant to be read by eye and repaired by hand.
+ * The name shown for a document is the document's, and this row used to argue the opposite: a
+ * panel answering "what is in my project folder" showed `6d517ff3-1ff7-4c04….aud` where the tab
+ * above it said `ElevenLabs Sound Effects 2`, and nothing on screen said they were one thing.
+ * The argument held only while the two could differ. They no longer can — the file is named
+ * after the document — and what is left is one name in both places.
+ *
+ * A document written before that carries the uuid as its file name still, and shows its title
+ * here: a name nobody chose is not one to read a folder by, and renaming it settles both.
  *
  * The glyph is the workspace's for a document and a plain sheet for everything else, read off
  * the same table the rail and the asset menu read.
@@ -31,8 +39,14 @@ export function EntryRow({ name, icon, open, onRename }: EntryRowProps) {
   // is, and `InlineRename` owns the part that is subtle — when the edit ends. It stands a
   // control tall inside a row sized for two lines, so the tint shows above and below it while
   // renaming: deliberate, and not a defect to rediscover.
+  //
+  // Nothing wraps it to stop the presses around it: `Tree` leaves a row being typed in alone,
+  // on the double-click as on the right-click.
   if (onRename)
-    return <InlineRename value={name} label={t('explorer.rename')} onCommit={onRename} />
+    // Named for what it HOLDS, as every other rename field of the studio is: `Renommer` is the
+    // menu row that opened it, and a field announcing an action names itself after the wrong
+    // thing to a reader.
+    return <InlineRename value={name} label={t('documents.renameLabel')} onCommit={onRename} />
 
   return (
     // The mark of "open" is the GLYPH, in accent ink: a row can be selected in this tree without

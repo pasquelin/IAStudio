@@ -39,7 +39,12 @@
     "extractTextures": "Extraire ses textures",
     "extractTexturesHint": "Sort les images contenues dans ce modèle vers le projet, où elles peuvent être ouvertes et peintes",
     "editPixels": "Modifier l’image",
-    "editPixelsHint": "Ouvre cette image dans l’espace Image, où ⌘S la réécrit sur place"
+    "editPixelsHint": "Ouvre cette image dans l’espace Image, où ⌘S la réécrit sur place",
+    "rename": "Renommer",
+    "renameLabel": "Nom de l’asset",
+    "renameHint": "Change le nom dans ce projet ; celui du compte Scenario ne bouge pas",
+    "nameEmpty": "Un asset a besoin d’un nom.",
+    "nameTooLong": "Ce nom est trop long."
   },
   "ingest": {
     "queued": "En attente…",
@@ -87,6 +92,8 @@
     "missing": "Ce document n’est plus ouvert.",
     "close": "Fermer l’onglet",
     "closeOthers": "Fermer les autres onglets",
+    "rename": "Renommer",
+    "renameLabel": "Nom du document",
     "delete": "Supprimer le document…",
     "saveTitle": "Enregistrer les modifications de « {{title}} » ?",
     "saveBody": "Si vous ne les enregistrez pas, elles seront perdues.",
@@ -98,7 +105,12 @@
     "deleteConfirm": "Supprimer",
     "closeHint": "Retire l’onglet de la barre ; le document reste dans le projet",
     "closeOthersHint": "Ferme tous les autres onglets, un par un",
-    "deleteHint": "Retire le document du projet, son fichier compris"
+    "renameHint": "Change le nom du document, partout où il est écrit — son fichier compris",
+    "deleteHint": "Retire le document du projet, son fichier compris",
+    "nameEmpty": "Un document a besoin d’un nom.",
+    "nameTooLong": "Ce nom est trop long pour un fichier.",
+    "nameInvalid": "Ce nom contient un caractère qu’un nom de fichier ne peut pas porter.",
+    "nameTaken": "Le projet contient déjà un document de ce nom."
   },
   "audio": {
     "takeRole": "La prise que vous éditez, avant montage",

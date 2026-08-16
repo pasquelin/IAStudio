@@ -15,7 +15,13 @@ function openImage(): void {
   useDocuments.setState({
     activeId: DOCUMENT,
     documents: {
-      [DOCUMENT]: { id: DOCUMENT, kind: 'image', workspace: 'image', title: 'Sans titre' },
+      [DOCUMENT]: {
+        id: DOCUMENT,
+        kind: 'image',
+        workspace: 'image',
+        title: 'Sans titre',
+        fileName: 'Sans titre.img',
+      },
     },
   })
   useCanvases.setState({

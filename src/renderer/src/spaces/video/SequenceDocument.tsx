@@ -14,7 +14,8 @@ import {
 import { useDocuments } from '@/stores/documents'
 import { playbackOf, usePlayback } from '@/stores/playback'
 import { mirrorMessageOf, openMirrorChannel } from './mirror-channel'
-import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
+import { useDocumentTitle } from '@/app/useDocumentTitle'
+import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useSplitPair } from '@/hooks/useSplitPair'
@@ -33,6 +34,11 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   // Dockview keeps hidden tabs mounted: without this every open sequence would answer the
   // space bar at once, and the playback token would arbitrate a fight nobody started.
   const active = useDocuments(state => state.activeId === documentId)
+
+  useDocumentTitle(
+    documentId,
+    useSequences(state => isSequenceDirty(state, documentId)),
+  )
 
   useRestoredDocument(documentId)
 

@@ -1,4 +1,4 @@
-import { mdiFolderOpenOutline, mdiImageMultipleOutline } from '@mdi/js'
+import { mdiFolderOpenOutline, mdiImageMultipleOutline, mdiRenameOutline } from '@mdi/js'
 import type { TFunction } from 'i18next'
 import type { Asset } from '@shared/domain/asset'
 import { intentsFor, pixelEditorIntent } from '@/helpers/asset-intents'
@@ -17,6 +17,11 @@ export type AssetMenuProps = {
    * them itself would be a second copy of the table.
    */
   t: TFunction
+  /**
+   * Opens the name for editing where it is read. Absent for a host that draws no name — a job
+   * still generating has a tile and no row of its own to rename.
+   */
+  onRename?: () => void
 }
 
 /**
@@ -33,7 +38,7 @@ export type AssetMenuProps = {
  * A destination whose space has no document open is greyed rather than dropped: a menu that
  * changes length depending on what is open is a menu one cannot learn.
  */
-export function openAssetMenu({ asset, t }: AssetMenuProps): void {
+export function openAssetMenu({ asset, t, onRename }: AssetMenuProps): void {
   const pixels = pixelEditorIntent(asset)
 
   // The inspector turns a false into a "file missing" row; this menu is gone by the time the
@@ -93,6 +98,19 @@ export function openAssetMenu({ asset, t }: AssetMenuProps): void {
       tooltip: t('assets.extractTexturesHint'),
       disabled: asset.location !== 'local',
       onSelect: extract,
+    })
+  }
+
+  // Handed back to the host rather than commanded here, exactly as the layer menu does: the
+  // field belongs to the tile the name is read on, and this menu is gone by the time it opens.
+  // Absent for a library asset and for a job: the name renamed is the one in THIS project's
+  // catalogue, and neither has a row there yet.
+  if (onRename) {
+    rows.push({
+      label: t('assets.rename'),
+      icon: mdiRenameOutline,
+      tooltip: t('assets.renameHint'),
+      onSelect: onRename,
     })
   }
 

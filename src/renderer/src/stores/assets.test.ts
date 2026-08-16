@@ -218,3 +218,46 @@ describe('the coalesced read, and cancelling it', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 })
+
+/**
+ * Local on purpose: the name on the Scenario account is not touched. One asset is pulled into
+ * several projects and named for what each one does with it.
+ */
+describe('renaming an asset', () => {
+  beforeEach(() => {
+    forgetRememberedAssets()
+    useAssets.setState({ items: [asset('a', 'ElevenLabs Sound Effects 2')] })
+  })
+
+  /**
+   * Straight into `items` rather than through `invalidate`: `assets:update` broadcasts nothing,
+   * so the shelf is written where the write was ordered — and the tile shows the new name on the
+   * next paint instead of a third of a second later.
+   */
+  it('writes the new name into the shelf, without waiting for a re-read', async () => {
+    const update = vi.fn(() => Promise.resolve(asset('a', 'Pas courus')))
+    installFakeBridge({ assets: { update } })
+
+    expect(await useAssets.getState().rename('a', 'Pas courus')).toBeNull()
+
+    expect(update).toHaveBeenCalledWith('a', { name: 'Pas courus' })
+    expect(assetsById(useAssets.getState()).get('a')?.name).toBe('Pas courus')
+  })
+
+  it('refuses a name nobody typed, without troubling the catalogue', async () => {
+    const update = vi.fn()
+    installFakeBridge({ assets: { update } })
+
+    expect(await useAssets.getState().rename('a', '   ')).toBe('empty')
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  // The catalogue is what decides; a window that believed otherwise keeps the name it had.
+  it('keeps the old name when the catalogue refused', async () => {
+    installFakeBridge({ assets: { update: () => Promise.reject(new Error('no')) } })
+
+    await useAssets.getState().rename('a', 'Pas courus')
+
+    expect(assetsById(useAssets.getState()).get('a')?.name).toBe('ElevenLabs Sound Effects 2')
+  })
+})

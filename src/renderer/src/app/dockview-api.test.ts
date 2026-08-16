@@ -12,12 +12,19 @@ import {
   showWorkspace,
 } from './dockview-api'
 
-const scene: DocumentDescriptor = { id: 'doc-1', kind: 'scene', title: 'Niveau', workspace: '3d' }
+const scene: DocumentDescriptor = {
+  id: 'doc-1',
+  kind: 'scene',
+  title: 'Niveau',
+  workspace: '3d',
+  fileName: 'Niveau.scene',
+}
 const sequence: DocumentDescriptor = {
   id: 'doc-2',
   kind: 'sequence',
   title: 'Bande annonce',
   workspace: 'video',
+  fileName: 'Bande annonce.seq',
 }
 
 type Panel = {
