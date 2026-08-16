@@ -32,7 +32,7 @@ export type SequenceDocumentProps = { documentId: string }
 export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const { t } = useTranslation()
   const sequence = useSequences(state => sequenceOf(state, documentId))
-  const [sourceTime, setSourceTime] = useState<Us>(0)
+  const [userSourceTime, setUserSourceTime] = useState<Us>(0)
   // Dockview keeps hidden tabs mounted: without this every open sequence would answer the
   // space bar at once, and the playback token would arbitrate a fight nobody started.
   const active = useDocuments(state => state.activeId === documentId)
@@ -152,10 +152,10 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
    * including it — landing exactly on the end shows nothing at all.
    */
   const computedSourceTime: Us = useMemo(() => {
-    if (sourcePlaying || running || !selected) return sourceTime
+    if (sourcePlaying || running || !selected) return userSourceTime
     const last = Math.max(0, selected.duration - frameDuration(sequence.settings))
     return clamp(sequence.playhead - selected.start, 0, last)
-  }, [sourcePlaying, running, selected, sequence.playhead, sequence.settings, sourceTime])
+  }, [sourcePlaying, running, selected, sequence.playhead, sequence.settings, userSourceTime])
 
   // The source monitor plays one clip, which is a sequence of one — same engine, same painter.
   const source: SequenceState = useMemo(
@@ -208,7 +208,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
           title={t('transport.source')}
           role={t('transport.sourceRole')}
           sequence={source}
-          onTime={setSourceTime}
+          onTime={setUserSourceTime}
           keyboard={active && focus === 'source'}
           placeholder={
             selected ? null : <EmptyState icon={mdiVideoOutline} message={t('transport.noClip')} />
