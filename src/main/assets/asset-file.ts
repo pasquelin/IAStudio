@@ -1,8 +1,18 @@
-import { rename } from 'node:fs/promises'
-import { dirname, extname, join } from 'node:path'
+import { readdir, rename } from 'node:fs/promises'
+import { join } from 'node:path'
 import type { Asset } from '@shared/domain/asset'
-import { assetFileName } from '@shared/domain/asset-name'
-import { foldForFileName, stemForSuffix } from '@shared/domain/file-name'
+import {
+  assetFileName,
+  FALLBACK_ASSET_NAME,
+  type AssetNameFailure,
+} from '@shared/domain/asset-name'
+import {
+  extensionOf,
+  foldForFileName,
+  isSameFileName,
+  safeFileName,
+  stemForSuffix,
+} from '@shared/domain/file-name'
 import { parentOf } from '@shared/domain/folder'
 import { exists } from '@main/persistence'
 import { assetFilePath } from './protocol'
@@ -18,27 +28,37 @@ import { assetFilePath } from './protocol'
  */
 
 /** What a refused rename says. Recognised on the other side, where the field has closed. */
-export const DUPLICATE_NAME = 'duplicate'
+export const DUPLICATE_NAME: AssetNameFailure = 'duplicate'
 
 /**
- * The first path in `folder` nobody has taken — `Ruelle bleue.png`, then `Ruelle bleue 2.png`.
+ * The first name in `folder` nobody has taken — `Ruelle bleue`, then `Ruelle bleue 2`.
  *
  * For the names the studio engenders itself, where there is nobody to ask: a generation lands
  * under its prompt, and a job of four outputs lands four times under that one prompt. A name the
  * user TYPED is refused instead — suffixing it would hand them an asset called something they
  * did not write.
+ *
+ * **One `stat`, then one `readdir`.** The nominal case is a name nobody holds, and it costs a
+ * single check. Only a collision opens the folder, and then the candidates are tried in memory:
+ * running the same prompt K times used to cost K sequential `stat`s on the K-th run — the folder
+ * is flat (`ASSET_FOLDERS` files every picture under `assets/img`) and an unnumbered prompt is
+ * the ordinary case, so that grew without a bound anybody would notice.
  */
-export async function freeAssetPath(
+async function freeAssetName(
   root: string,
   folder: string,
   name: string,
   extension: string,
 ): Promise<string> {
-  const path = (candidate: string): string => `${folder}/${assetFileName(candidate, extension)}`
-  const free = async (candidate: string): Promise<boolean> =>
-    !(await exists(join(root, path(candidate))))
+  if (!(await exists(join(root, folder, assetFileName(name, extension))))) return name
 
-  if (await free(name)) return path(name)
+  // Folded, because `exists` above answered for a case-insensitive volume: APFS and NTFS hold
+  // one file for `Ruelle.png` and `ruelle.png`, and a raw Set would call the second one free.
+  const taken = new Set(
+    (await readdir(join(root, folder)).catch(() => [])).map(entry => foldForFileName(entry)),
+  )
+  const free = (candidate: string): boolean =>
+    !taken.has(foldForFileName(assetFileName(candidate, extension)))
 
   const stem = stemForSuffix(name)
 
@@ -46,8 +66,19 @@ export async function freeAssetPath(
   // there are files in the folder.
   for (let n = 2; ; n += 1) {
     const candidate = `${stem} ${n}`
-    if (await free(candidate)) return path(candidate)
+    if (free(candidate)) return candidate
   }
+}
+
+/** The same answer as a path, which is what an import needs to write. */
+export async function freeAssetPath(
+  root: string,
+  folder: string,
+  name: string,
+  extension: string,
+): Promise<string> {
+  const free = await freeAssetName(root, folder, name, extension)
+  return `${folder}/${assetFileName(free, extension)}`
 }
 
 /**
@@ -72,27 +103,51 @@ export async function moveAssetFile(
 
   // A stored path is user-editable territory — the same containment the scheme applies before
   // serving one. A row pointing outside the project is not a row whose file we move.
-  const source = assetFilePath(root, asset.path)
-  if (!source) return asset.path
+  if (!assetFilePath(root, asset.path)) return asset.path
 
   const folder = parentOf(asset.path)
-  const wanted = assetFileName(name, extname(asset.path))
+  const wanted = assetFileName(name, extensionOf(asset.path))
   const target = folder === null ? wanted : `${folder}/${wanted}`
 
   if (target === asset.path) return asset.path
 
   // A row whose file somebody deleted by hand still takes its new name: there is nothing to
   // move, and refusing would leave a name uncorrectable on the one row that most needs it.
-  if (!(await exists(source))) return asset.path
+  if (!(await exists(join(root, asset.path)))) return asset.path
 
-  const destination = join(dirname(source), wanted)
-
-  // Case alone is not a duplicate. APFS and NTFS hold ONE file for `Ruelle.png` and `ruelle.png`,
-  // and that file is this asset's own — asking the disk would refuse the rename against itself.
-  const collides =
-    foldForFileName(target) !== foldForFileName(asset.path) && (await exists(destination))
+  // Case alone is not a duplicate — one file, this asset's own, changing how it is spelled.
+  const collides = !isSameFileName(target, asset.path) && (await exists(join(root, target)))
   if (collides) throw new Error(DUPLICATE_NAME)
 
-  await rename(source, destination)
+  await rename(join(root, asset.path), join(root, target))
   return target
+}
+
+/**
+ * The same move, for a name the STUDIO wrote rather than one a user typed — a caption.
+ *
+ * Suffixed until free instead of refused, and cleaned instead of rejected, for the reason
+ * `freeAssetPath` is: a sentence a model produced has nobody to hand back a refusal to. What
+ * comes back is the name it SETTLED on, so the row can carry exactly what the folder does —
+ * writing the wanted name beside a file called something else is the state all of this ends.
+ *
+ * `undefined` when there is no file of ours to move, as above.
+ */
+export async function moveAssetFileToFree(
+  root: string,
+  asset: Asset,
+  name: string,
+): Promise<{ name: string; path: string } | undefined> {
+  if (!asset.path || !assetFilePath(root, asset.path)) return undefined
+
+  const folder = parentOf(asset.path)
+  if (folder === null) return undefined
+
+  const free = await freeAssetName(root, folder, name, extensionOf(asset.path))
+  const moved = await moveAssetFile(root, asset, free)
+
+  // Cleaned rather than `free` itself: `safeFileName` drops what a file system will not hold,
+  // and the row must say what the disk says rather than what was asked for. NOT `stemOf(moved)`
+  // — a name may legitimately hold a dot, and `Ruelle v1.2.png` would come back as `Ruelle v1`.
+  return moved ? { name: safeFileName(free, FALLBACK_ASSET_NAME), path: moved } : undefined
 }

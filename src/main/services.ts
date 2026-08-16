@@ -31,7 +31,7 @@ import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createUpdates, type Updates } from '@main/updater'
-import { moveAssetFile } from './assets/asset-file'
+import { moveAssetFile, moveAssetFileToFree } from './assets/asset-file'
 import { createAssetCollector } from './assets/collector'
 import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/auto-caption'
 import {
@@ -1002,6 +1002,28 @@ export function createServices(settings: SettingsStore): Services {
     return current ? moveAssetFile(current.path, asset, name) : undefined
   }
 
+  /**
+   * Renames an asset the STUDIO named itself — the captioner, and nothing else so far.
+   *
+   * Both halves, because they are one act: a row renamed on its own leaves the shelf reading
+   * « une ruelle bleue » over a file still called `IMG_1234.png`, which is the two-name problem
+   * this whole layout exists to end — and this path never crosses the rename channel that would
+   * have caught it.
+   *
+   * The name written is the one the FOLDER settled on, suffix and cleaning included. A caption
+   * is a sentence a model wrote: there is nobody to hand a refusal back to, so it is made to fit
+   * rather than rejected — and what the row says is then what the disk says, by construction.
+   */
+  const renameAssetToCaption = async (asset: Asset, name: string): Promise<void> => {
+    const current = project.current()
+    if (!current) return
+
+    const moved = await moveAssetFileToFree(current.path, asset, name)
+    // No file of ours to move — a linked rush, a row that lives in the library alone. Its name
+    // is the catalogue's business only, so it takes the caption as it was written.
+    await project.catalog().add(moved ? { ...asset, ...moved } : { ...asset, name })
+  }
+
   const accountOn = (scenario: Scenario): JobAccount => ({
     runner: runnerOf(scenario),
     collect: collectorOf(scenario),
@@ -1093,7 +1115,7 @@ export function createServices(settings: SettingsStore): Services {
   const captioner = createCaptioner({
     queue: assistQueue.run,
     caption: images => prompts.caption(images),
-    save: asset => project.catalog().add(asset),
+    rename: renameAssetToCaption,
     record: report => journal.record(report),
     enabled: () => settings.read().generation.captionArrivals,
   })

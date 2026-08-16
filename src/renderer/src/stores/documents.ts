@@ -9,7 +9,7 @@ import {
   DOCUMENT_NAME_FAILURES,
   type DocumentNameFailure,
 } from '@shared/domain/document-name'
-import { foldForFileName } from '@shared/domain/file-name'
+import { foldForFileName, nameFailureOf } from '@shared/domain/file-name'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
 import i18next from 'i18next'
@@ -376,8 +376,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
 
 /** The four refusals travel as the error's message; anything else is not one of them. */
 function asNameFailure(error: unknown): DocumentNameFailure {
-  const message = error instanceof Error ? error.message : ''
-  return DOCUMENT_NAME_FAILURES.find(failure => message.includes(failure)) ?? 'invalid'
+  return nameFailureOf(error, DOCUMENT_NAME_FAILURES, 'invalid')
 }
 
 /**

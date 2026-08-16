@@ -28,9 +28,16 @@ export const ASSET_NAME_FAILURES: readonly AssetNameFailure[] = [
   'duplicate',
 ]
 
+/**
+ * What an asset is called when its name holds nothing a file system would keep — a prompt made
+ * entirely of separators. Exported because whoever needs the name a file SETTLED on has to clean
+ * it the same way this does, and two spellings of the fallback would be two names again.
+ */
+export const FALLBACK_ASSET_NAME = 'asset'
+
 /** The file an asset of this name lands on, extension included — `Ruelle bleue.png`. */
 export function assetFileName(name: string, extension: string): string {
-  return `${safeFileName(name, 'asset')}${extension}`
+  return `${safeFileName(name, FALLBACK_ASSET_NAME)}${extension}`
 }
 
 /**

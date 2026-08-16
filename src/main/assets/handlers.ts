@@ -267,21 +267,25 @@ export function registerAssetHandlers({
     const asset = await catalog().find(assetId)
     if (!asset) throw new Error('asset-not-found')
 
+    // Trimmed ONCE, and here rather than at each use: the row was written untrimmed while the
+    // file took the trimmed form, so `«  Ruelle  »` in the catalogue sat over `Ruelle.png` on
+    // the disk — the two names apart again, by two spaces nobody can see.
+    const name = parsed.name?.trim()
+
     // Checked again on this side, and not left to the field that asked first: `safeFileName`
     // would quietly turn `Vue 3/4` into `Vue 3 4` on the disk while the catalogue kept the
-    // slash — the two names apart again, one layer below where they were before.
-    const refused = parsed.name === undefined ? null : checkAssetName(parsed.name)
+    // slash — the same split, one layer below where it was before.
+    const refused = name === undefined ? null : checkAssetName(name)
     if (refused) throw new Error(refused)
 
     // Before the catalogue, never after: a row renamed over a move that failed would point at
     // the file it no longer names, which is the state this whole change exists to end. The
     // throw travels — the renderer turns `duplicate` into a line in the journal.
-    const path =
-      parsed.name === undefined ? asset.path : await renameFile(asset, parsed.name.trim())
+    const path = name === undefined ? asset.path : await renameFile(asset, name)
 
     const updated: Asset = {
       ...asset,
-      ...(parsed.name === undefined ? {} : { name: parsed.name }),
+      ...(name === undefined ? {} : { name }),
       ...(parsed.tags === undefined ? {} : { tags: [...parsed.tags] }),
       ...(path === undefined ? {} : { path }),
     }

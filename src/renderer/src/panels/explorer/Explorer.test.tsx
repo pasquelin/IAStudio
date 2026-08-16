@@ -772,13 +772,46 @@ describe('the explorer menu', () => {
   /** Greyed for years, on a refusal that was about the channel rather than about the gesture. */
   it('offers the gesture on a file the catalogue holds', async () => {
     withProject()
-    install({ '': [folder('assets')], assets: [file('Boulder.png', 'assets')] })
+    install(
+      { '': [folder('assets')], assets: [file('Boulder.png', 'assets')] },
+      [],
+      [
+        {
+          id: 'asset_1',
+          name: 'Boulder',
+          type: 'image',
+          location: 'local',
+          path: 'assets/Boulder.png',
+          tags: [],
+          createdAt: '2026-08-16T10:00:00.000Z',
+        },
+      ],
+    )
 
     render(<Explorer />)
     await userEvent.dblClick(await screen.findByText('assets'))
     await open('Boulder.png')
 
     await waitFor(() => expect(menu.offers('Renommer')).toBe(true))
+  })
+
+  /**
+   * A picture the user dropped into `assets/` themselves is no row of ours: `renameFile` refuses
+   * everything under there, and no other channel claims it. Offering the gesture opened a field
+   * that closed on a failure only the journal mentioned — worse than the grey it replaced, which
+   * is why the catalogue is asked BEFORE the menu is drawn.
+   */
+  it('greys it out for a file under assets the catalogue never heard of', async () => {
+    withProject()
+    install({ '': [folder('assets')], assets: [file('dropped.png', 'assets')] })
+
+    render(<Explorer />)
+    await userEvent.dblClick(await screen.findByText('assets'))
+    await open('dropped.png')
+
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
+    // Not a refusal of the row itself: showing it in the folder is what still works.
+    expect(menu.offers('Afficher dans le dossier')).toBe(true)
   })
 
   it('renames where the name is read', async () => {

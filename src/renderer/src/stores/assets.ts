@@ -12,6 +12,7 @@ import {
   checkAssetName,
   type AssetNameFailure,
 } from '@shared/domain/asset-name'
+import { nameFailureOf } from '@shared/domain/file-name'
 import { isRecord } from '@shared/guards'
 import { getBridge } from '@/services/bridge'
 
@@ -232,8 +233,7 @@ export const useAssets = create<AssetsState>()(
               //
               // Journalled by the CALLER, on the code this hands back (`helpers/rename.ts`), and
               // no longer here as well: the sole caller wrote a second line for the same failure.
-              const message = error instanceof Error ? error.message : ''
-              refusal = ASSET_NAME_FAILURES.find(failure => message.includes(failure)) ?? 'invalid'
+              refusal = nameFailureOf(error, ASSET_NAME_FAILURES, 'invalid')
               return null
             })
           if (!written) return refusal ?? 'invalid'

@@ -58,7 +58,15 @@ export type AutoCaptionDeps = {
   /** Bounded on purpose: an arrival of three hundred must not become three hundred calls. */
   queue: <T>(task: () => Promise<T>) => Promise<T>
   caption: (images: readonly string[]) => Promise<string[]>
-  save: (asset: Asset) => Promise<unknown>
+  /**
+   * Gives an asset the name that was written for it — and MOVES its file with it.
+   *
+   * A rename rather than a save, and that word is the whole of the difference: writing the row
+   * on its own left the shelf reading « une ruelle bleue » over a file still called `IMG_1234`,
+   * which is precisely the state a row's name being its file's name exists to end. Nothing here
+   * knows about folders, so the caller carries out both halves.
+   */
+  rename: (asset: Asset, name: string) => Promise<unknown>
   record: (report: ActivityReport) => void
   /** `false` leaves every arrival alone — the preference the user can turn off. */
   enabled: () => boolean
@@ -83,7 +91,7 @@ export type Captioner = {
 export function createCaptioner({
   queue,
   caption,
-  save,
+  rename,
   record,
   enabled,
 }: AutoCaptionDeps): Captioner {
@@ -100,7 +108,7 @@ export function createCaptioner({
 
           // Held to the same length the rename channel enforces: a caption is a sentence, and
           // this path writes straight into the catalogue without passing that boundary.
-          await save({ ...asset, name: written.slice(0, ASSET_NAME_MAX_LENGTH).trimEnd() })
+          await rename(asset, written.slice(0, ASSET_NAME_MAX_LENGTH).trimEnd())
           named++
         }
       } catch {

@@ -9,7 +9,6 @@ import {
   type MediaProbe,
 } from '@shared/domain/asset'
 import { POSTERS_FOLDER } from '@shared/domain/project'
-import { assetFileName } from '@shared/domain/asset-name'
 import type { PbrChannel } from '@shared/domain/texture'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 import { freeAssetPath } from './asset-file'
@@ -111,8 +110,15 @@ function safeExtension(extension: string, type: AssetType): string {
   return /^\.[a-z0-9]{1,8}$/i.test(extension) ? extension.toLowerCase() : FALLBACK_EXTENSION[type]
 }
 
-/** The same file, re-suffixed. A take re-encoded on the way out keeps the name it is known by. */
+/**
+ * The same file, re-suffixed — a take re-encoded on the way out keeps the name it is known by.
+ *
+ * Which is also what makes it the only path an asset's own file ever needs: it cannot collide,
+ * being the file that is already there. `freeAssetPath` is for a file that does not exist yet.
+ */
 function withExtension(relativePath: string, extension: string): string {
+  // `extname` and not `stemOf`, which is for a NAME: this takes a path, and only `node:path`
+  // knows that the last dot of `assets/v1.2/take` belongs to a folder rather than to the file.
   const suffix = extname(relativePath)
   return `${suffix ? relativePath.slice(0, -suffix.length) : relativePath}${extension}`
 }
@@ -121,24 +127,12 @@ function withExtension(relativePath: string, extension: string): string {
  * A URL carries a name, and a name carries whatever the API put in it. Only the extension is
  * kept, and only if it looks like one — the file name itself comes from the asset's own name.
  */
-export function extensionOf(url: string, type: AssetType): string {
+export function extensionFromUrl(url: string, type: AssetType): string {
   try {
     return safeExtension(extname(new URL(url).pathname), type)
   } catch {
     return FALLBACK_EXTENSION[type]
   }
-}
-
-/**
- * Where an asset of this name lands. The NAME, which used to be the id: a project folder read
- * as a wall of `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png` said nothing about what was in
- * it, and the row that did say could not be joined to it by eye.
- *
- * Says nothing about whether that path is free — `freeAssetPath` is what asks the folder. Used
- * where the answer cannot collide: one asset's own file, keeping the stem it already has.
- */
-export function relativePathFor(name: string, extension: string, type: AssetType): string {
-  return `${ASSET_FOLDERS[type]}/${assetFileName(name, safeExtension(extension, type))}`
 }
 
 /**
@@ -207,7 +201,7 @@ export function createLocalBackend({
 
     try {
       const poster = await download(request.thumbnailUrl)
-      const relative = `${POSTERS_FOLDER}/${request.id}${extensionOf(request.thumbnailUrl, 'image')}`
+      const relative = `${POSTERS_FOLDER}/${request.id}${extensionFromUrl(request.thumbnailUrl, 'image')}`
       await writeFile(join(projectPath(), relative), poster)
       return relative
     } catch {
@@ -224,27 +218,30 @@ export function createLocalBackend({
     // request alone dropped the tags the user had put on it and moved its creation date to now,
     // which also sent it back to the top of a shelf sorted newest first, for a file that had
     // not changed.
+    // Started before the catalogue is asked anything, and awaited at the end: it is a second
+    // download over the network and it reads nothing of the row — leaving it behind the read
+    // below would put its whole latency in series for no reason. It resolves `undefined` rather
+    // than rejecting, so nothing can be left unhandled while it floats.
+    const poster = savePoster(request)
+
     const existing = await catalog().find(request.id)
     const extension = safeExtension(request.extension, request.type)
 
-    const relativePath =
-      existing?.path && extname(existing.path) === extension
-        ? existing.path
-        : await freeAssetPath(
-            projectPath(),
-            ASSET_FOLDERS[request.type],
-            // The name the ROW carries wins over the request's: a second pull of an asset the
-            // user has since renamed must not put the API's wording back on their disk.
-            existing?.name ?? request.name,
-            extension,
-          )
+    // The name the ROW carries wins over the request's: a second pull of an asset the user has
+    // since renamed must not put the API's wording back — neither on their disk NOR in their
+    // catalogue, and writing `request.name` here while the file took the other one is the two
+    // names apart again, in the opposite direction.
+    const name = existing?.name ?? request.name
 
-    // All at once. The still is a second download over the network and the probe spawns ffprobe
-    // — run in a file, each one's latency lands on every import that carries the other.
+    const relativePath = existing?.path
+      ? withExtension(existing.path, extension)
+      : await freeAssetPath(projectPath(), ASSET_FOLDERS[request.type], name, extension)
+
+    // The probe spawns ffprobe, so it runs beside the still rather than after it.
     const written = writeFile(join(projectPath(), relativePath), bytes)
     const [, posterPath, probe] = await Promise.all([
       written,
-      savePoster(request),
+      poster,
       // After the write, and only after it: this one reads the file that was just laid down.
       written.then(() => probeWritten(request, relativePath)),
     ])
@@ -261,7 +258,7 @@ export function createLocalBackend({
     const asset: Asset = {
       ...existing,
       id: request.id,
-      name: request.name,
+      name,
       type: request.type,
       location: 'local',
       path: relativePath,
@@ -310,7 +307,7 @@ export function createLocalBackend({
   return {
     importFromUrl: async request =>
       write(
-        { ...request, extension: extensionOf(request.url, request.type) },
+        { ...request, extension: extensionFromUrl(request.url, request.type) },
         await download(request.url),
       ),
 

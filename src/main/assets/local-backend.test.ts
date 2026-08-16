@@ -7,8 +7,7 @@ import type { AsyncCatalog } from '@main/project/catalog-client'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import {
   createLocalBackend,
-  extensionOf,
-  relativePathFor,
+  extensionFromUrl,
   type Download,
   type LocalBackend,
 } from './local-backend'
@@ -17,30 +16,20 @@ const BYTES = new Uint8Array([1, 2, 3, 4])
 
 describe('file naming', () => {
   it('keeps the extension the URL carries', () => {
-    expect(extensionOf('https://cdn.example/x/render.WEBP?token=abc', 'image')).toBe('.webp')
+    expect(extensionFromUrl('https://cdn.example/x/render.WEBP?token=abc', 'image')).toBe('.webp')
   })
 
   it('falls back per type when the URL carries none, or carries nonsense', () => {
-    expect(extensionOf('https://cdn.example/render', 'image')).toBe('.png')
-    expect(extensionOf('https://cdn.example/render.a-very-long-thing', 'mesh')).toBe('.glb')
-    expect(extensionOf('not a url', 'video')).toBe('.mp4')
+    expect(extensionFromUrl('https://cdn.example/render', 'image')).toBe('.png')
+    expect(extensionFromUrl('https://cdn.example/render.a-very-long-thing', 'mesh')).toBe('.glb')
+    expect(extensionFromUrl('not a url', 'video')).toBe('.mp4')
   })
 
-  // The API controls the URL; the file name must come from an identifier we minted.
-  it('names the file after our own identifier, never after the URL', () => {
-    const extension = extensionOf('https://cdn.example/../../evil.png', 'image')
-    expect(relativePathFor('asset_1', extension, 'image')).toBe('assets/img/asset_1.png')
-  })
-
+  // The API controls the URL, and a name is now taken from it — only its extension, and only
+  // when it looks like one. `../../.ssh/id_rsa` would otherwise be written outside the project.
   it('refuses an extension that would climb out of the project', () => {
-    expect(relativePathFor('a', '/../../.ssh/id_rsa', 'audio')).toBe('assets/aud/a.mp3')
-    expect(relativePathFor('a', '.wav/../..', 'audio')).toBe('assets/aud/a.mp3')
-  })
-
-  it('files each type under its own folder', () => {
-    expect(relativePathFor('a', '.glb', 'mesh')).toBe('assets/3d/a.glb')
-    expect(relativePathFor('a', '.wav', 'audio')).toBe('assets/aud/a.wav')
-    expect(relativePathFor('a', '.hdr', 'skybox')).toBe('assets/sky/a.hdr')
+    expect(extensionFromUrl('https://cdn.example/take/../../.ssh/id_rsa', 'audio')).toBe('.mp3')
+    expect(extensionFromUrl('https://cdn.example/take.wav/../..', 'audio')).toBe('.mp3')
   })
 })
 
@@ -56,6 +45,7 @@ describe('local backend', () => {
     await mkdir(join(root, 'assets/tex'), { recursive: true })
     await mkdir(join(root, 'assets/3d'), { recursive: true })
     await mkdir(join(root, 'assets/vid'), { recursive: true })
+    await mkdir(join(root, 'assets/sky'), { recursive: true })
     await mkdir(join(root, '.index/posters'), { recursive: true })
 
     catalog = memoryCatalog()
@@ -178,7 +168,11 @@ describe('local backend', () => {
     expect(await readdir(join(root, 'assets/img'))).toEqual(['Boulder.png'])
   })
 
-  /** A second pull must not put the API's wording back over a name the user has since chosen. */
+  /**
+   * A second pull must not put the API's wording back over a name the user has since chosen —
+   * and not on ONE of the two either: writing the request's name into the row while the file
+   * kept the user's is the two-name problem again, in the opposite direction.
+   */
   it('keeps the name the row carries when the request brings another', async () => {
     await backend.importFromUrl({
       id: 'asset_1',
@@ -186,17 +180,53 @@ describe('local backend', () => {
       name: 'Boulder',
       type: 'image',
     })
-    const renamed = await catalog.find('asset_1')
-    if (renamed) await catalog.add({ ...renamed, name: 'Ruelle bleue' })
+
+    // As a rename leaves it: the row and the file say the same thing, which is the whole point.
+    const held = await catalog.find('asset_1')
+    if (held)
+      await catalog.add({ ...held, name: 'Ruelle bleue', path: 'assets/img/Ruelle bleue.png' })
 
     const rewritten = await backend.importFromUrl({
       id: 'asset_1',
-      url: 'https://cdn.example/render.mp4',
+      url: 'https://cdn.example/render.png',
       name: 'Boulder',
       type: 'image',
     })
 
-    expect(rewritten.path).toBe('assets/img/Ruelle bleue.mp4')
+    expect(rewritten.name).toBe('Ruelle bleue')
+    expect(rewritten.path).toBe('assets/img/Ruelle bleue.png')
+  })
+
+  /** The suffix follows the bytes: a take that comes back re-encoded stops claiming to be a wav. */
+  it('re-suffixes the file it already has rather than laying a second one beside it', async () => {
+    await backend.importFromBytes(
+      { id: 'asset_2', name: 'Prise', type: 'audio', extension: '.mp3' },
+      new Uint8Array([1]),
+    )
+
+    const rewritten = await backend.importFromUrl({
+      id: 'asset_2',
+      url: 'https://cdn.example/take.wav',
+      name: 'Prise',
+      type: 'audio',
+    })
+
+    expect(rewritten.path).toBe('assets/aud/Prise.wav')
+  })
+
+  // One folder per kind, and the catalogue reads a texture's channel off the folder it sits in.
+  it('files each kind under its own folder', async () => {
+    const landed = async (type: AssetType): Promise<string | undefined> => {
+      const asset = await backend.importFromBytes(
+        { id: `asset_${type}`, name: 'Prise', type, extension: '.bin' },
+        BYTES,
+      )
+      return asset.path
+    }
+
+    expect(await landed('mesh')).toBe('assets/3d/Prise.bin')
+    expect(await landed('audio')).toBe('assets/aud/Prise.bin')
+    expect(await landed('skybox')).toBe('assets/sky/Prise.bin')
   })
 
   /**

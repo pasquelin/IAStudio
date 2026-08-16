@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { DUPLICATE_NAME, freeAssetPath, moveAssetFile } from './asset-file'
+import { DUPLICATE_NAME, freeAssetPath, moveAssetFile, moveAssetFileToFree } from './asset-file'
 
 let root = ''
 
@@ -145,5 +145,57 @@ describe('moving an asset file to its new name', () => {
     expect(await moveAssetFile(root, asset({ path: 'assets/img/Ruelle.png' }), 'Ruelle')).toBe(
       'assets/img/Ruelle.png',
     )
+  })
+})
+
+/**
+ * A caption is a sentence a model wrote: there is nobody to hand a refusal back to, so the name
+ * is made to fit rather than rejected — and what comes back is what the folder SETTLED on, which
+ * is what lets the row say exactly what the disk says.
+ */
+describe('moving a file to a name the studio wrote itself', () => {
+  it('answers the name it settled on, so the row can carry that one', async () => {
+    await put('assets/img/IMG_1234.png')
+
+    const settled = await moveAssetFileToFree(
+      root,
+      asset({ path: 'assets/img/IMG_1234.png' }),
+      'une ruelle bleue',
+    )
+
+    expect(settled).toEqual({ name: 'une ruelle bleue', path: 'assets/img/une ruelle bleue.png' })
+    expect(await readdir(join(root, 'assets/img'))).toEqual(['une ruelle bleue.png'])
+  })
+
+  it('suffixes rather than refusing, and says which name it took', async () => {
+    await put('assets/img/IMG_1234.png')
+    await put('assets/img/une ruelle.png')
+
+    const settled = await moveAssetFileToFree(
+      root,
+      asset({ path: 'assets/img/IMG_1234.png' }),
+      'une ruelle',
+    )
+
+    expect(settled).toEqual({ name: 'une ruelle 2', path: 'assets/img/une ruelle 2.png' })
+  })
+
+  /** A caption holding a slash is an ordinary caption and a path traversal at the same time. */
+  it('cleans what a file system will not hold, and the row takes the cleaned form', async () => {
+    await put('assets/img/IMG_1234.png')
+
+    const settled = await moveAssetFileToFree(
+      root,
+      asset({ path: 'assets/img/IMG_1234.png' }),
+      'vue 3/4 de la ruelle',
+    )
+
+    expect(settled?.name).toBe('vue 3 4 de la ruelle')
+    expect(settled?.path).toBe('assets/img/vue 3 4 de la ruelle.png')
+  })
+
+  it('leaves an asset with no file of ours alone', async () => {
+    const linked = asset({ sourcePath: '/Users/x/rush.mov' })
+    expect(await moveAssetFileToFree(root, linked, 'une ruelle')).toBe(undefined)
   })
 })
