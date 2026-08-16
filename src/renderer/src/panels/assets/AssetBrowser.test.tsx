@@ -446,6 +446,26 @@ describe('the three provenances, as the panel draws them', () => {
     expect(screen.getByText('Asset asset_1')).toBeInTheDocument()
   })
 
+  /**
+   * The count belongs to the title row, which is another component and sees neither the library
+   * page nor the filters — so the shelf publishes what it drew. It read the catalogue alone
+   * before, and said "1 asset" over a list of two.
+   */
+  it('publishes how many lines it drew, and takes the number back on the way out', async () => {
+    installFakeBridge({
+      cloud: { browse: () => Promise.resolve({ assets: [cloudAsset], cursor: null }) },
+    })
+    useAssets.setState({ items: [asset('asset_1')] })
+
+    const { unmount } = render(<AssetBrowser />)
+    await screen.findByText('A library picture')
+
+    expect(useAssets.getState().shownCount).toBe(2)
+
+    unmount()
+    expect(useAssets.getState().shownCount).toBeNull()
+  })
+
   // The whole point of the merged list: the thing being made is on it before it exists.
   it('draws a generation that is still running', () => {
     installFakeBridge({})

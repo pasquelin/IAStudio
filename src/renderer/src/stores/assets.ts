@@ -26,6 +26,21 @@ type AssetsState = {
    */
   scope: readonly AssetType[] | null
   setScope: (scope: readonly AssetType[] | null) => void
+  /**
+   * How many lines the browser is actually drawing, or nothing while none is mounted.
+   *
+   * The header's count used to read `items.length`, which is the project catalogue ALONE — the
+   * shelf also draws the account's library and the generations in flight, then narrows all three
+   * by the search and the facets. A project holding one picture beside seven library rows read
+   * "1 asset" over a list of eight, and nothing on screen said which of the two numbers was
+   * being answered.
+   *
+   * Published by the panel rather than derived here: the library page and the running jobs live
+   * in other stores, and merging them a second time for the header would ask the same question
+   * twice — with the filters, that is the whole of `AssetBrowser`.
+   */
+  shownCount: number | null
+  setShownCount: (count: number | null) => void
   refresh: () => Promise<void>
   /**
    * Hears the writes the MAIN process makes on its own — the pictures a model sheds on import.
@@ -158,6 +173,11 @@ export const useAssets = create<AssetsState>()(
 
         items: [],
         scope: null,
+
+        shownCount: null,
+        setShownCount: shownCount => {
+          if (get().shownCount !== shownCount) set({ shownCount })
+        },
 
         // A change of space changes what the catalogue is asked for, so the rows follow at once
         // rather than on the next invalidation.

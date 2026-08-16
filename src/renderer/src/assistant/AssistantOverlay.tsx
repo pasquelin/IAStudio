@@ -193,7 +193,7 @@ export function AssistantOverlay() {
         <div
           ref={surface}
           className={cn(
-            'mx-auto flex min-h-0 max-w-3xl flex-1 flex-col gap-4 p-4',
+            'mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-4 p-4 ',
             turns.length === 0 && 'justify-center',
           )}
         >

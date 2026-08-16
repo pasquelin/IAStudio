@@ -72,6 +72,7 @@ export function AssetBrowser() {
   const facets = useAssetFacets(typeLabels)
   const lying = useToolLying()
   const setScope = useAssets(state => state.setScope)
+  const setShownCount = useAssets(state => state.setShownCount)
   const selectedIds = useSelection(selectedAssetIds)
   const jobs = useJobs(state => state.jobs)
   const busy = useCloud(state => state.busy)
@@ -287,6 +288,19 @@ export function AssetBrowser() {
       }),
     [marked, collection],
   )
+
+  /**
+   * The count in the title row says what this list holds, not what the catalogue does — the
+   * header is a separate component and cannot see the library page or the filters from there.
+   *
+   * Cleared on the way out so a shelf that has closed stops answering for the next one.
+   */
+  const shownLength = shown.length
+  useEffect(() => {
+    setShownCount(shownLength)
+  }, [setShownCount, shownLength])
+  // Its own effect, so the number is not dropped and re-published on every change of the list.
+  useEffect(() => () => setShownCount(null), [setShownCount])
 
   /**
    * Four situations, and the user can act on three of them.

@@ -7,6 +7,7 @@
     "count_one": "{{count, number}} asset",
     "count_many": "{{count, number}} assets",
     "count_other": "{{count, number}} assets",
+    "countHint": "Everything this list shows — the project, your library and the generations under way, filters included",
     "openProject": "Open a project to see its assets.",
     "import": "Import media",
     "importHint": "Link a video, audio or image file — it stays where it is",
