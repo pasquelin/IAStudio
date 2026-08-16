@@ -100,6 +100,8 @@ export function createSceneStage({
   }
 
   let shown: SceneState | null = null
+  /** Whether the free camera has been aimed at the contents — done once, see `draw`. */
+  let framed = false
 
   return {
     show: state => {
@@ -119,11 +121,19 @@ export function createSceneStage({
       if (!active) return null
 
       const camera = shown ? firstCameraId(shown.nodes) : null
-      // Re-aimed on every frame while the scene has no camera of its own, rather than once when
-      // the document arrives: a model's FILE lands long after the document naming it does, so a
-      // framing taken at `show` frames a scene that is still empty. That is why two monitors
-      // showing the same clip disagreed — each had framed at a different moment of the load.
-      if (!camera) active.frameContents()
+
+      // Aimed ONCE, on the first frame where there is something to aim at — not when the
+      // document arrives, since a model's file lands long after it, and not on every frame
+      // either: a camera re-aimed per frame chases a walking character's own bounding box, and
+      // the picture breathes with every step.
+      //
+      // From the REST pose, whatever instant is being drawn: two monitors of the same clip sit
+      // at two different playheads, and a framing taken on the pose under each would have them
+      // disagree for good. The head goes back where it belongs on the very next line.
+      if (!camera && !framed) {
+        active.setPlayhead(0)
+        framed = active.frameContents()
+      }
 
       return active.drawFrom(camera, time)
     },
