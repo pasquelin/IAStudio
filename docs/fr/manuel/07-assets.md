@@ -145,7 +145,17 @@ Le clic droit liste toutes les destinations, toujours dans le même ordre :
 
 **Renommer ne change le nom que dans ce projet** — celui du compte Scenario ne bouge pas. Un même
 asset est tiré dans plusieurs projets et nommé pour ce que chacun en fait. Le nom est aussi
-modifiable dans l’Inspecteur, d’un double-clic sur la ligne **Nom**.
+modifiable dans l’Inspecteur, d’un double-clic sur la ligne **Nom**, et dans l’Explorateur.
+
+**Le fichier suit, et c’est le même nom partout.** Un asset généré se pose sur le disque sous son
+prompt — `Ruelle bleue au crépuscule.png` — et le renommer déplace vraiment le fichier. Ce que
+lisent l’étagère, l’Inspecteur, l’onglet qui l’édite et votre Finder est donc une seule et même
+chose. Un nom que le système de fichiers refuserait est refusé ici aussi, plutôt que corrigé en
+silence ; un nom que le dossier tient déjà l’est également, plutôt que d’écraser une autre image.
+
+> Les fichiers arrivés **avant** cette règle gardent le nom technique qu’ils portaient
+> — `asset_40f76c36-8ad4-4def-a1b3-9125cba4da98.png`. Ils prennent leur vrai nom le jour où vous
+> les renommez, et pas avant : le studio ne remue pas votre dossier tout seul.
 
 Chaque ligne porte l’icône de son espace, la même que dans la barre de titre. Le menu ne montre
 que les destinations capables de recevoir **ce type-là** : le clic droit sur un son n’offre pas
