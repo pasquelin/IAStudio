@@ -67,10 +67,10 @@ describe('the move journal on disk', () => {
   })
 
   /**
-   * The property the whole design rests on: every opening replays without asking whether it
-   * should, so replaying what is already done has to cost nothing but the queries.
+   * Every opening replays without asking whether it should, so a journal describing work already
+   * done has to leave the project alone — and take itself away rather than be read again.
    */
-  it('changes nothing when the move it describes already happened', async () => {
+  it('leaves the project alone and clears a journal that is already spent', async () => {
     const catalog = memoryCatalog()
     onTestFinished(catalog.close)
     await catalog.add(asset({ path: 'Footage/A001.mov' }))
@@ -80,6 +80,7 @@ describe('the move journal on disk', () => {
     await applyJournal(root, catalog)
 
     expect((await catalog.find('asset_1'))?.path).toBe('Footage/A001.mov')
+    await expect(readFile(join(root, PENDING_FILES_FILE), 'utf8')).rejects.toThrow()
   })
 
   it('says nothing happened when there is no journal at all', async () => {

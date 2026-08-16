@@ -1,8 +1,7 @@
 import { ASSET_TYPES, type AssetType } from './asset'
-import { workspaceOfType } from './asset-kind'
+import { typeOfWorkspace } from './asset-kind'
 import { kindForExtension, workspaceForKind } from './document'
 import { extensionOf } from './file-name'
-import type { WorkspaceId } from './workspace'
 
 /**
  * Which of the studio's six domains a file belongs to, plus the answer for one it does not.
@@ -26,11 +25,12 @@ export type FileNature = { domain: FileDomain; role: FileRole }
  * picture, so a project could not be arranged any other way without the studio losing track of
  * what it held. With the tree open, nothing about a path can say what a file is any more.
  *
- * **`texture` and `skybox` are never reached from an extension, and that is deliberate.** There
- * is no such thing as a texture file: there are PNGs, and a `.tex` document that gives some of
- * them a part to play. Guessing from a suffix or a folder name would be right often and wrong
- * silently — a normal map and an albedo are both PNGs. A file takes those domains by being
- * referenced, or by the user saying so; the guess never gets a vote.
+ * **No SOURCE extension reaches `texture` or `skybox`, and that is deliberate.** There is no such
+ * thing as a texture file: there are PNGs, and a `.tex` document that gives some of them a part
+ * to play — that document is an edit, and it is what carries those two domains. Guessing from a
+ * suffix or a folder name would be right often and wrong silently: a normal map and an albedo
+ * are both PNGs. A source takes those domains by being referenced, or by the user saying so; the
+ * guess never gets a vote.
  */
 const DOMAIN_BY_EXTENSION: Record<string, AssetType> = {
   '.png': 'image',
@@ -70,34 +70,28 @@ const DOMAIN_BY_EXTENSION: Record<string, AssetType> = {
 }
 
 /**
- * The domain a workspace stands for — `workspaceOfType` read the other way.
- *
- * Searched rather than tabulated, exactly as `workspaceForKind` is and for its reason: a second
- * table is a second thing to keep in step, and six entries do not earn one.
- */
-function typeOfWorkspace(workspace: WorkspaceId): AssetType | null {
-  return ASSET_TYPES.find(type => workspaceOfType(type) === workspace) ?? null
-}
-
-/**
  * What a file is, from its name and nothing else.
  *
  * A document — `.scene`, `.img`, `.seq` — is an EDIT, and its domain is the one its editor works
  * in: a `.scene` belongs beside the meshes, a `.img` beside the pictures. That link is not
  * spelled again here; it is read from the two tables that already carry it, so a kind that
  * changes space changes it in one place.
+ *
+ * **The case rule is asymmetric, and it is not an oversight.** `kindForExtension` is
+ * case-sensitive on purpose — a `.SCENE` is not a document to the listing that walks the folder,
+ * and answering otherwise here would show the user an editable document nothing can open. Source
+ * extensions carry no such contract, so they are folded.
  */
 export function natureOf(fileName: string): FileNature {
-  const extension = extensionOf(fileName).toLowerCase()
+  const extension = extensionOf(fileName)
 
   const kind = kindForExtension(extension)
   if (kind) {
     const workspace = workspaceForKind(kind)
-    const domain = workspace === null ? null : typeOfWorkspace(workspace)
-    return { domain: domain ?? 'other', role: 'edit' }
+    return { domain: (workspace && typeOfWorkspace(workspace)) ?? 'other', role: 'edit' }
   }
 
-  return { domain: DOMAIN_BY_EXTENSION[extension] ?? 'other', role: 'source' }
+  return { domain: DOMAIN_BY_EXTENSION[extension.toLowerCase()] ?? 'other', role: 'source' }
 }
 
 /**

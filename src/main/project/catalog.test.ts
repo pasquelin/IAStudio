@@ -360,6 +360,40 @@ describe('catalog', () => {
       expect(pathOf('asset_1')).toBe('Footage/A001.mov')
     })
 
+    /**
+     * Rewriting `Rushes` to `Rushes/2024` leaves rows that still begin with `Rushes/`, so a
+     * second pass would file them at `Rushes/2024/2024/…` — and a journal replayed at every
+     * opening sinks them one level deeper each time.
+     */
+    it('refuses to move a folder into itself, which would never settle', () => {
+      catalog.add(asset({ id: 'asset_1', path: 'Rushes/A001.mov' }))
+
+      catalog.repath('Rushes', 'Rushes/2024')
+
+      expect(pathOf('asset_1')).toBe('Rushes/A001.mov')
+    })
+
+    // One folder to the filesystem, two strings to SQLite. Left as typed, this moved nothing at
+    // all — silently, and after the files had already gone.
+    it('reads a trailing slash as the same folder', () => {
+      catalog.add(asset({ id: 'asset_1', path: 'Rushes/A001.mov' }))
+
+      catalog.repath('Rushes/', 'Footage')
+
+      expect(pathOf('asset_1')).toBe('Footage/A001.mov')
+    })
+
+    // `LIKE` is case-insensitive over ASCII in SQLite, and would have carried this one along.
+    it('leaves a folder whose name differs only in case', () => {
+      catalog.add(asset({ id: 'asset_1', path: 'Rushes/A001.mov' }))
+      catalog.add(asset({ id: 'asset_2', path: 'RUSHES/A002.mov' }))
+
+      catalog.repath('Rushes', 'Footage')
+
+      expect(pathOf('asset_1')).toBe('Footage/A001.mov')
+      expect(pathOf('asset_2')).toBe('RUSHES/A002.mov')
+    })
+
     // `LIKE` would have read these as wildcards and swept in paths having nothing to do with
     // the folder that moved.
     it('is not fooled by a folder whose name holds a wildcard character', () => {
@@ -382,16 +416,21 @@ describe('catalog', () => {
       expect(pathOf('asset_1')).toBe('Footage/A001.mov')
     })
 
-    it('drops a trashed folder and every row beneath it', () => {
+    it('drops a trashed folder and every row beneath it, and says how many went', () => {
       catalog.add(asset({ id: 'asset_1', path: 'Rushes/A001.mov' }))
       catalog.add(asset({ id: 'asset_2', path: 'Rushes/day two/A002.mov' }))
       catalog.add(asset({ id: 'asset_3', path: 'Rushesque/A003.mov' }))
 
-      catalog.forgetUnder('Rushes')
+      expect(catalog.forgetUnder('Rushes/')).toBe(2)
 
       expect(catalog.find('asset_1')).toBeNull()
       expect(catalog.find('asset_2')).toBeNull()
       expect(pathOf('asset_3')).toBe('Rushesque/A003.mov')
+    })
+
+    // What tells the handler whether any window has a reason to reload.
+    it('says nothing went for a path the catalogue never knew', () => {
+      expect(catalog.forgetUnder('Notes')).toBe(0)
     })
   })
 

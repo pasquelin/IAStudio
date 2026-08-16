@@ -44,8 +44,11 @@ export type AsyncCatalog = {
   remove: (assetId: string) => Promise<void>
   /** Refiles the row at `from`, and everything beneath it, under `to`. Ids do not change. */
   repath: (from: string, to: string) => Promise<void>
-  /** Drops the row at `path` and every row beneath it — a folder the user sent to the trash. */
-  forgetUnder: (path: string) => Promise<void>
+  /**
+   * Drops the row at `path` and every row beneath it — a folder the user sent to the trash.
+   * Answers how many rows went, so a caller knows whether anything is worth telling a window.
+   */
+  forgetUnder: (path: string) => Promise<number>
   /** Writes a batch of journal lines and answers them with the ids the database gave them. */
   appendActivity: (entries: readonly ActivityDraft[]) => Promise<ActivityEntry[]>
   readActivity: (query: ActivityQuery) => Promise<ActivityEntry[]>

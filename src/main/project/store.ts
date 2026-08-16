@@ -337,6 +337,22 @@ export function createProjectStore({
 
     const opening = await openCatalog(file)
 
+    /**
+     * A move interrupted last session left rows naming where their files used to be. Finished
+     * here, on a catalogue nothing is reading yet and BEFORE the studio is told anything — the
+     * four lines below have to stay one gesture, and an `await` among them let a second opening
+     * publish itself in the middle and be overwritten by the first.
+     *
+     * Caught rather than awaited into the failure: opening a project must not fail over
+     * housekeeping. The rows stay where they are, and the reconciliation pass finds them.
+     */
+    try {
+      const caught = await applyJournal(opened.path, opening)
+      if (caught > 0) log.info('project', `finished ${caught} move(s) left by a previous session`)
+    } catch (error) {
+      log.warn('project', `replaying the move journal failed: ${String(error)}`)
+    }
+
     // Whatever is still queued belongs to the project that is closing, and its catalogue is
     // about to stop answering. The stamp goes with it: it is being written into the folder the
     // studio is about to leave.
@@ -345,19 +361,6 @@ export function createProjectStore({
     close()
     catalog = opening
     project = opened
-
-    // Before anything reads the catalogue. A move interrupted last session left rows naming
-    // where their files used to be, and every window would show them as missing.
-    //
-    // Caught rather than awaited into the failure: opening a project must not fail over
-    // housekeeping. The rows stay where they are and the reconciliation pass finds them.
-    try {
-      const caught = await applyJournal(opened.path, opening)
-      if (caught > 0) log.info('project', `finished ${caught} move(s) left by a previous session`)
-    } catch (error) {
-      log.warn('project', `replaying the move journal failed: ${String(error)}`)
-    }
-
     onChange(opened)
     return opened
   }

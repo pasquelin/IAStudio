@@ -325,6 +325,19 @@ function parseProbe(raw: string | undefined): MediaProbe | undefined {
   }
 }
 
+/**
+ * `assets/img/` and `assets/img` are one folder to the filesystem and two strings to SQLite.
+ * Every path that reaches a comparison here goes through this first.
+ */
+function withoutTrailingSlash(path: string): string {
+  return path.replace(/\/+$/, '')
+}
+
+/** Whether `path` sits strictly inside `folder` — the shape `shared/domain/folder.ts` uses. */
+function isUnder(path: string, folder: string): boolean {
+  return path.startsWith(`${folder}/`)
+}
+
 /** `%` and `_` are wildcards: typed by a user they must match themselves, not everything. */
 function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, character => `\\${character}`)
@@ -456,7 +469,7 @@ export type Catalog = {
    * beneath it lose their prompt and their lineage with them, which is what makes this the
    * deliberate gesture rather than what a missing file triggers.
    */
-  forgetUnder: (path: string) => void
+  forgetUnder: (path: string) => number
   /**
    * Writes lines to the journal, in one transaction, and trims it back to its bound.
    *
@@ -495,37 +508,46 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   const selectAsset = driver.prepare('SELECT * FROM assets WHERE id = ?')
 
   /**
-   * The path itself, and everything under it.
+   * A path and everything filed under it, written so the index on `path` can answer it.
    *
-   * `substr` rather than `LIKE`: `%` and `_` are wildcards to `LIKE` and ordinary characters in a
-   * file name, so a folder called `100%_final` would have matched paths having nothing to do
-   * with it.
+   * **Not `LIKE`.** SQLite's `LIKE` is case-INSENSITIVE over ASCII unless a pragma says
+   * otherwise — and that pragma is global, so turning it on would change what the text search
+   * below matches. Left as it is, moving `Rushes` would have carried `RUSHES/A001.mov` with it.
    *
-   * The lengths are measured by SQLite rather than passed in. `length()` counts CHARACTERS in
-   * text where JavaScript's `.length` counts UTF-16 units: a folder named with an emoji would
-   * have been cut one unit too far, and every path under it rewritten wrong.
+   * **Not `substr` either.** Exact, but it hides the column from `assets_path_idx` and turns
+   * every move into a full scan of the table.
    *
-   * Parameters, in order: the new prefix, then the old one four times.
+   * A range does both. `'0'` is the code point right after `/`, so `>= 'p/'` and `< 'p0'` holds
+   * exactly the paths beginning with `p/` — no wildcard to escape, no case folding, and a
+   * comparison the index answers directly.
+   */
+  const UNDER_PATH = 'path = ? OR (path >= ? AND path < ?)'
+
+  /** The three parameters `UNDER_PATH` wants, in order. */
+  const underPath = (path: string): [string, string, string] => [path, `${path}/`, `${path}0`]
+
+  /**
+   * The length is measured by SQLite rather than passed in: `length()` counts CHARACTERS in text
+   * where JavaScript's `.length` counts UTF-16 units, so a folder named with an emoji would have
+   * been cut one unit too far and every path under it rewritten wrong.
    */
   const movePaths = driver.prepare(`
     UPDATE assets
        SET path = ? || substr(path, length(?) + 1)
-     WHERE path = ? OR substr(path, 1, length(?) + 1) = ? || '/'
+     WHERE ${UNDER_PATH}
   `)
 
-  const deleteUnder = driver.prepare(`
-    DELETE FROM assets
-     WHERE path = ? OR substr(path, 1, length(?) + 1) = ? || '/'
-  `)
+  const deleteUnder = driver.prepare(`DELETE FROM assets WHERE ${UNDER_PATH}`)
+
+  // The port's `run` answers nothing, so what the DELETE touched is asked for separately. Inside
+  // the same transaction, where no other statement can have run in between.
+  const rowsChanged = driver.prepare('SELECT changes() AS touched')
 
   // What `orphanChildren` does for one row, for a whole folder — and children left OUTSIDE the
   // folder are exactly the ones that would otherwise read as derived from nothing.
   const orphanChildrenUnder = driver.prepare(`
     UPDATE assets SET derived_from = NULL
-     WHERE derived_from IN (
-       SELECT id FROM assets
-        WHERE path = ? OR substr(path, 1, length(?) + 1) = ? || '/'
-     )
+     WHERE derived_from IN (SELECT id FROM assets WHERE ${UNDER_PATH})
   `)
   // Oldest first: re-importing the same API asset must not move where its children point.
   const selectByRemoteId = driver.prepare(
@@ -661,17 +683,37 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     },
 
     repath: (from, to) => {
-      // Refusing rather than moving everything: an empty `from` matches the whole catalogue
-      // through `substr(path, 1, 1) = ''`, which is every row of the project at once.
-      if (!from || !to || from === to) return
-      movePaths.run(to, from, from, from, from)
+      const source = withoutTrailingSlash(from)
+      const target = withoutTrailingSlash(to)
+
+      // An empty path names the project root, which is not something a row can be filed at.
+      if (!source || !target || source === target) return
+
+      /**
+       * A folder cannot be moved INTO itself, and the refusal belongs here rather than only in
+       * the caller that already forbids the gesture.
+       *
+       * Without it this operation stops being idempotent, which is the property a replayed
+       * journal rests on: rewriting `Rushes` to `Rushes/2024` leaves rows that still begin with
+       * `Rushes/`, so a second pass files them at `Rushes/2024/2024/…`, and every replay sinks
+       * them one level deeper.
+       */
+      if (isUnder(target, source)) return
+
+      movePaths.run(target, source, ...underPath(source))
     },
 
     forgetUnder: path => {
-      if (!path) return
-      transaction(driver, () => {
-        orphanChildrenUnder.run(path, path, path)
-        deleteUnder.run(path, path, path)
+      // `assets/img/` and `assets/img` name one folder to the filesystem and two strings to
+      // SQLite. Left as typed, the trailing slash made this delete nothing at all — silently,
+      // and after the files had already gone to the trash.
+      const root = withoutTrailingSlash(path)
+      if (!root) return 0
+
+      return transaction(driver, () => {
+        orphanChildrenUnder.run(...underPath(root))
+        deleteUnder.run(...underPath(root))
+        return optionalNumber(rowsChanged.get() ?? {}, 'touched') ?? 0
       })
     },
 

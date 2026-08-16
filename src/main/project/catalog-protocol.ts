@@ -32,7 +32,7 @@ export type CatalogResults = {
   countByType: AssetCounts
   remove: void
   repath: void
-  forgetUnder: void
+  forgetUnder: number
   appendActivity: ActivityEntry[]
   readActivity: ActivityEntry[]
 }

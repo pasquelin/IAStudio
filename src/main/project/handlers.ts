@@ -218,8 +218,9 @@ export function registerProjectHandlers({
       return done
     }
 
-    await project.catalog().forgetUnder(path)
-    broadcast(EVENTS.assetsChanged)
+    // Only when the catalogue actually lost something: a `.pdf` of notes has no row, and telling
+    // every window to reload its shelf over it is a folder walk for nothing.
+    if ((await project.catalog().forgetUnder(path)) > 0) broadcast(EVENTS.assetsChanged)
     return done
   })
 
