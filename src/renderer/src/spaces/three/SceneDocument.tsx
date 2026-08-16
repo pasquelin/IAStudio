@@ -155,6 +155,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onContextMenu: nodeId => openNodeMenu(documentId, nodeId),
       onStats: (scene, selected) => setStats({ scene, selected }),
+      // Published so a montage can look through this very view: a scene with no camera of its
+      // own has no other framing anybody chose. Once per orbit, never per frame of one.
+      onView: placement => useSceneViews.getState().setCamera(documentId, placement),
       assetVersion: assetVersionOf,
     })
 

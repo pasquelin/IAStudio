@@ -25,8 +25,9 @@ import { reportFailure } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useBinding } from '@/stores/bindings'
 import { playbackOf, usePlayback } from '@/stores/playback'
-import { loadSceneSource, montageSceneOf } from '@/stores/scene-sources'
+import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/scene-sources'
 import { useScenes } from '@/stores/scenes'
+import { useSceneViews } from '@/stores/scene-views'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2
@@ -100,6 +101,7 @@ export function Monitor({
       openSink: createStudioSink({
         sceneOf: montageSceneOf,
         wantScene: loadSceneSource,
+        viewOf: montageViewOf,
         // A Map, never an object: indexing it with brackets answers `undefined` for every asset
         // there is, which sent every model down the media path to be written off as undecodable.
         assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
@@ -137,13 +139,17 @@ export function Monitor({
   // What makes a 3D clip LIVE: a scene edited in its own tab changes no sequence at all, so
   // nothing above would repaint. Redrawn at the head it already stands on — a scene sink reads
   // the document afresh on every frame, so one seek is the whole of the refresh.
-  useEffect(
-    () =>
-      useScenes.subscribe(() => {
-        void engine.current?.seek(playhead.current)
-      }),
-    [],
-  )
+  useEffect(() => {
+    const redraw = (): void => {
+      void engine.current?.seek(playhead.current)
+    }
+    // Two stores, one reason: a scene edited in its own tab, and a camera moved in it, both
+    // change what this monitor should show while changing no sequence at all.
+    const stops = [useScenes.subscribe(redraw), useSceneViews.subscribe(redraw)]
+    return () => {
+      for (const stop of stops) stop()
+    }
+  }, [])
 
   // Published by name so the timeline strip can drive it: the space bar is pressed on a tool
   // window, and neither tree contains the other.

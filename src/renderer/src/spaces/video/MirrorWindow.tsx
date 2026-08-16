@@ -6,7 +6,7 @@ import { createStudioSink } from '@/engines/timeline/sink-port'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timeline-state'
 import { assetsById, useAssets } from '@/stores/assets'
-import { loadSceneSource, montageSceneOf } from '@/stores/scene-sources'
+import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/scene-sources'
 import { mirrorMessageOf, openMirrorChannel } from './mirror-channel'
 import { silentSound } from './silent-sound'
 
@@ -44,6 +44,9 @@ export function MirrorWindow() {
       openSink: createStudioSink({
         sceneOf: montageSceneOf,
         wantScene: loadSceneSource,
+        // Answers null in this window: the stores are its own, and the 3D tab lives in the
+        // studio. A return therefore frames the contents itself — see `montageViewOf`.
+        viewOf: montageViewOf,
         assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
         size: () => frameSize.current,
       }),

@@ -5,7 +5,7 @@ import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
-import { loadSceneSource, montageSceneOf } from '@/stores/scene-sources'
+import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/scene-sources'
 import { silentSound } from './silent-sound'
 
 /**
@@ -74,6 +74,7 @@ export async function exportSequence({
     openSink: createStudioSink({
       sceneOf: montageSceneOf,
       wantScene: loadSceneSource,
+      viewOf: montageViewOf,
       assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
       size: () => ({ width, height }),
     }),
