@@ -307,7 +307,9 @@ function childrenText(children: React.ReactNode): string {
   if (children && typeof children === 'object' && 'props' in children) {
     const props: unknown = children.props
     if (props && typeof props === 'object' && 'children' in props) {
-      return childrenText((props as { children: React.ReactNode }).children)
+      // `in` narrows the key to `unknown`, and every branch above takes one — so the recursion
+      // decides what it is rather than this line asserting it.
+      return childrenText(props.children as React.ReactNode)
     }
   }
   return ''
