@@ -136,6 +136,8 @@ const DOM_BOUND = [
   'src/renderer/src/engines/texture/TextureRenderer.test.ts',
   'src/renderer/src/engines/timeline/TimelineEngine.mount.test.ts',
   'src/renderer/src/engines/timeline/painter.test.ts',
+  // The stage it stands in for hands back a canvas, and a canvas is what the sink wraps.
+  'src/renderer/src/engines/timeline/scene-sink.test.ts',
   'src/renderer/src/engines/viewport/ViewportEngine.test.ts',
   'src/renderer/src/helpers/menu-icon.test.ts',
   // Not for a DOM of their own: they read the labels a menu is raised with, and `i18next` is only
