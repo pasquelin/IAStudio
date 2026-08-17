@@ -271,8 +271,11 @@ déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et l
 | | **Mettre à la corbeille** | envoie à la corbeille de votre système |
 | revenir | **Annuler** · **Rétablir** | défont et refont le dernier lot de fichiers |
 
-**Chaque ligne porte le raccourci auquel elle répond**, et c’est celui qui est *en vigueur* :
-si vous l’avez remappé dans les réglages, c’est le vôtre qui s’affiche ici.
+**Huit de ces onze lignes portent le raccourci auquel elles répondent**, et c’est celui qui est
+*en vigueur* : si vous l’avez remappé dans les réglages, c’est le vôtre qui s’affiche ici. Les
+trois autres — **Ouvrir**, **Afficher dans le dossier**, **Renommer** — n’en portent aucun, et
+c’est exact : elles ne sont pas des commandes du registre. `Entrée` ouvre bien la ligne, mais
+c’est l’arbre qui écoute cette touche, et elle ne se change pas.
 
 **Aucun geste ne disparaît du menu ; ceux qui ne s’appliquent pas sont grisés.** Un menu dont la
 longueur change selon la ligne cliquée est un menu qu’on ne peut pas apprendre.
