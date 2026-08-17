@@ -15,12 +15,9 @@ export type TreeNode = { id: string; parentId: string | null }
 const NO_MODIFIERS: Modifiers = { shiftKey: false, metaKey: false, ctrlKey: false }
 
 /**
- * How long a folder must be hovered, mid-drag, before it opens by itself.
- *
- * The figure is the whole of the feature. Under ~400 ms a folder merely CROSSED on the way
- * somewhere else opens by accident, and the list reflows under a pointer that is still moving;
- * past ~800 ms the hand has already given up and dropped short of where it was going. 600 ms is
- * about where a deliberate hover parts from a transit.
+ * How long a folder is hovered, mid-drag, before it opens by itself. Under ~400 ms one merely
+ * CROSSED opens by accident and reflows the list under a moving pointer; past ~800 ms the hand has
+ * already dropped short. This is about where a deliberate hover parts from a transit.
  */
 const HOVER_EXPAND_MS = 600
 
@@ -262,31 +259,20 @@ export function Tree<T extends TreeNode>({
   )
 
   /**
-   * Which folder the pointer is resting IN, mid-drag — the only shape of hover that opens one.
-   *
-   * A primitive and not `over` itself: `onDragOver` fires on every tick of the hover and sets a
-   * fresh object each time, so an effect depending on the object would clear and rearm its timer
-   * for ever and never fire once. The zone is read here too, so drifting to a row's edge — where
-   * the drop would insert BESIDE it rather than into it — disarms as leaving the row does.
+   * Which folder the pointer rests IN, mid-drag. A primitive and not `over` itself: `onDragOver`
+   * sets a fresh object on every tick, so an effect keyed on the object would rearm for ever and
+   * never fire once.
    */
   const restingIn = over?.zone === 'into' ? over.id : null
 
   /**
-   * A folder hovered long enough opens by itself, so something can be carried two levels down
-   * without letting go of it.
-   *
-   * The cleanup IS the three cancellations this needs, and that is why it is an effect: the
-   * pointer reaching another row, the drop, and the end of the drag all change or clear `over`,
-   * and each of them runs the cleanup before anything else happens.
-   *
-   * Nothing ever folds back up. A tree that closed what it had opened would move under a hand
-   * still holding something, and the user would be aiming at rows that are no longer there.
+   * A folder hovered long enough opens itself, so something can be carried two levels down without
+   * letting go. The cleanup IS the three cancellations — another row, the drop, the end of the
+   * drag. Nothing ever folds back up: a tree that did would move under a hand still holding.
    */
   useEffect(() => {
     if (restingIn === null) return
-    // `hasChildren` is what the caller's `expandable` says, so a folder nobody has opened counts:
-    // opening it is what READS it, and refusing one because it holds nothing yet would refuse
-    // every folder in a tree that loads lazily.
+    // A folder nobody has opened counts: opening it is what READS it, in a tree that loads lazily.
     const row = rows.find(one => one.node.id === restingIn)
     if (!row?.hasChildren || row.expanded) return
 

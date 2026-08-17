@@ -18,12 +18,9 @@ export type ExplorerMode = 'folder' | 'domain'
 
 export type ExplorerViewState = {
   /**
-   * What the bar holds: the term searched, the sort, and which of the two renderings draws —
-   * `list` is the tree, `grid` the thumbnails, with `thumbnailSize` sizing them.
-   *
-   * `view` is a second axis and not a third value of `mode`: the two multiply, so a domain has a
-   * grid too. Whoever adds a rendering adds it here, and NOWHERE else — two places answering
-   * "which view" is the one shape this panel must not grow.
+   * What the bar holds — and `view` says which rendering draws: `list` IS the tree, `grid` the
+   * tiles. A second axis and not a third value of `mode`, so the two multiply and a domain has its
+   * grid. Whoever adds a rendering adds it HERE: two places answering "which view" is the defect.
    */
   collection: CollectionState
   /** Whether the studio's own bookkeeping is drawn — `.index/`, `.project.json`. */
@@ -37,13 +34,8 @@ export type ExplorerViewState = {
 /**
  * What the Explorer is showing, as opposed to what the project folder holds.
  *
- * A store rather than state inside the panel, and for one reason: `ExplorerActions` draws the
- * title row — how the folder is read, and how much of it is shown — and it is a different
- * component from the tree those two answers narrow. The shelf carries its own for the same reason.
- *
- * Written out rather than taken from `LIST_ONLY`, which means "this panel has no grid at all" and
- * is never persisted: this one starts on the tree because that is what `list` DRAWS here, and both
- * halves of a `CollectionState` are live.
+ * A store because `ExplorerActions` draws the title row, a different component from the tree its
+ * answers narrow. The ground state is written out and not `LIST_ONLY`, which means "no grid at all".
  */
 export const useExplorerView = create<ExplorerViewState>()(
   persist(

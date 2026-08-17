@@ -102,18 +102,15 @@ export type CollectionProps<T extends { id: string }> = {
    */
   selectionTone?: RowTone
   /**
-   * What a batch released on the blank BELOW the cards means — the folder being browsed itself,
-   * there being no card standing for it to aim at. The same gesture `Tree` offers on its own
-   * blank, and it carries the same payload, so a file dragged in either rendering lands alike.
+   * A batch released on the blank BESIDE the cards — the place the collection is showing, there
+   * being no card standing for it to aim at. `Tree` offers the same three on its own blank.
    */
   onDropRoot?: (ids: readonly string[]) => void
-  /** What a right-click on that same blank offers. Raised after `onPressRoot`, never instead. */
+  /** A right-click on that blank. Raised after `onPressRoot`, never instead of it. */
   onContextMenuRoot?: () => void
   /**
-   * A press on that blank, which every file browser reads as picking nothing.
-   *
-   * A prop of its own where `Tree` clears the selection itself, and the difference is forced:
-   * this collection's `onSelect` is told which ITEM was picked, so it has no way to say "none".
+   * A press on that blank, read as picking nothing. A prop of its own where `Tree` clears the
+   * selection itself: `onSelect` here is told which ITEM was picked, so it cannot say "none".
    */
   onPressRoot?: () => void
 }
@@ -302,12 +299,9 @@ export function Collection<T extends { id: string }>({
     <div
       ref={scroller}
       className="h-full overflow-auto p-2"
-      // Only the blank BESIDE and BELOW the cards: anything over one of them has that card as its
-      // target and is the card's own business. Without the test the whole panel would answer for
-      // every hover. `Tree` carries the same three handlers, spelled the same way — the two
-      // renderings of one folder must not take a drop differently.
-      // The secondary button is left to `onContextMenu` below, as the tree's rows leave it: on
-      // macOS it arrives as Ctrl+click, and reading it here would clear the selection twice.
+      // Only the blank: anything over a card has that card as its target, and without the test the
+      // whole panel would answer for every hover. `Tree` spells these three the same way.
+      // The secondary button belongs to `onContextMenu`: on macOS it arrives as Ctrl+click.
       onPointerDown={event => {
         if (event.button !== 2 && event.target === event.currentTarget) onPressRoot?.()
       }}

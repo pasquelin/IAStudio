@@ -43,13 +43,9 @@ export type CollectionBarProps = {
    */
   display?: boolean
   /**
-   * What the collection is currently bounded to, drawn just under the search — a breadcrumb for a
-   * panel that browses INTO its items rather than listing them all at once.
-   *
-   * A slot and not a `folder` prop: the bar knows nothing about paths, and the one panel that
-   * needs this owns both the trail and what a crumb does when clicked. It sits beside the search
-   * rather than beside the view buttons because it narrows the collection — same half of the bar
-   * as a facet, and the eye reads the two together.
+   * What the collection is bounded to, drawn under the search — a breadcrumb, for a panel that
+   * browses INTO its items. Beside the search and not the view buttons because it NARROWS the
+   * collection, which is the half of the bar a facet belongs to. A slot: the bar knows no paths.
    */
   scope?: ReactNode
   className?: string

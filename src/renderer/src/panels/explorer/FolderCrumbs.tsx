@@ -13,15 +13,9 @@ export type FolderCrumbsProps = {
 }
 
 /**
- * The way back up, for the grid.
- *
- * The tree needs none — nesting is drawn there, and a folder is left by folding it. A grid is flat
- * by nature, so the one thing it cannot show is where in the project it currently is: without this
- * row, going down a level is a door that shuts behind you.
- *
- * `HINT_BOTTOM` and not a `TooltipFactory`: a crumb shows its own name, and a tooltip factory
- * would set an `aria-label` over the visible one (WCAG 2.5.3). The hint says what clicking DOES,
- * which is the one thing the name does not.
+ * The way back up, for the grid: it is flat, so going down a level would shut a door behind you.
+ * `HINT_BOTTOM` and not a factory — a crumb shows its own name, over which one would set an
+ * `aria-label` (WCAG 2.5.3).
  */
 export function FolderCrumbs({ folder, onPick }: FolderCrumbsProps) {
   const { t } = useTranslation()
@@ -33,8 +27,8 @@ export function FolderCrumbs({ folder, onPick }: FolderCrumbsProps) {
         <Fragment key={crumb}>
           {index > 0 && <UiIcon path={mdiChevronRight} size={12} className="text-muted shrink-0" />}
 
-          {/* The folder shown is not somewhere to go: it is a label, and a button that did nothing
-              would still take a tab stop and announce itself as a way out of where you already are. */}
+          {/* The folder shown is a label, not somewhere to go: a button that did nothing would
+              still take a tab stop and announce a way out of where you already are. */}
           {index === trail.length - 1 ? (
             <span className="text-text text-mini truncate">
               {crumb === FOLDER_ROOT ? t('explorer.projectFolder') : nameOf(crumb)}

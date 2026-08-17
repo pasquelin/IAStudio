@@ -22,30 +22,20 @@ export type EntryCardProps = {
   dragIds: readonly string[]
   /** Whether it may be picked up at all. What the studio keeps for itself is shown, not moved. */
   pickable: boolean
-  /**
-   * Whether the batch currently in the hand may land IN this card. Answered by the panel and not
-   * here: what is being dragged cannot be read off the event before the drop, by design of the
-   * platform, so only whoever kept it at `dragStart` can say.
-   */
+  /** Whether what is in the hand may land IN this card — only the panel can say, see `onPickUp`. */
   accepts: boolean
   onDropInto: (ids: readonly string[]) => void
-  /**
-   * What this card has just picked up, told to the panel so it can answer `accepts` for the other
-   * cards. The panel is the only place that can hold it: a card knows what IT carries and nothing
-   * about what is passing over its neighbours.
-   */
+  /** What this card just picked up, so the panel can answer `accepts` for its neighbours. */
   onPickUp: (ids: readonly string[]) => void
   /** The gesture is over, however it ended — dropped here, dropped elsewhere, or abandoned. */
   onRelease: () => void
 }
 
 /**
- * One entry of the project folder, as a tile.
+ * One entry of the project folder, as a tile — the grid's counterpart to `EntryRow`.
  *
- * The grid's counterpart to `EntryRow`, and it carries the drag itself where the row has `Tree`
- * do it: `Collection` owns selection, activation and the menu for every panel that lists items,
- * and none of them but this one drags. The channel is shared, so a file picked up here would drop
- * into the tree just as well.
+ * It carries the drag itself where the row leaves it to `Tree`: `Collection` owns selection,
+ * activation and the menu for every panel that lists items, and none of the others drags.
  */
 export function EntryCard({
   name,
@@ -65,9 +55,8 @@ export function EntryCard({
 
   return (
     <div
-      // The tile itself is the handle. `draggable` on a container makes everything inside it
-      // draggable too, so the guard below is what keeps a name being typed from starting a drag
-      // instead of selecting a word — `Tree`'s rows carry the same one, for the same reason.
+      // `draggable` on a container makes everything inside it draggable too, so the guard below is
+      // what keeps a name being typed from starting a drag instead of selecting a word.
       draggable={pickable && onRename === undefined}
       onDragStart={event => {
         if (event.target !== event.currentTarget) return event.preventDefault()
@@ -96,13 +85,10 @@ export function EntryCard({
       }}
       className={cn(
         'size-full',
-        // The same outline the tree draws on the row a drop would land in, so one gesture reads
-        // alike in both renderings.
+        // The outline the tree draws on the row a drop lands in, so one gesture reads alike in both.
         over && 'outline-accent rounded-(--radius-sc-md) outline -outline-offset-1',
-        // A cut tile is dimmed, which is what every file browser does with one: the file is still
-        // there and still opens, and the gesture is not finished. `opacity` rather than a quiet
-        // ink because what is being dimmed is a PICTURE — there is no ink to quieten on a tile,
-        // and tinting the caption alone would leave the tile itself looking untouched.
+        // Cut, and on its way out. An opacity rather than a quiet ink: what dims is a PICTURE, and
+        // there is no ink to quieten on one — exempted by name in `tokens.test.ts`.
         waiting && 'opacity-50',
       )}
     >

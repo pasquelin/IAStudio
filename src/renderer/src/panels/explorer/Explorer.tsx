@@ -122,24 +122,17 @@ export function Explorer() {
    */
   const [renaming, setRenaming] = useState<{ nodeId: string; asset: Asset | null } | null>(null)
   /**
-   * Which folder the GRID is showing. The tree needs none — nesting is drawn there, and the panel
-   * shows the whole project at once.
-   *
-   * Panel state and not the store's: a path means nothing outside the project it belongs to, and
-   * the store is persisted whole and shared by every window. It follows `search`, which is dropped
-   * for the same reason — reopening a studio deep inside a folder nobody navigated to reads as a
-   * project gone missing.
+   * Which folder the GRID shows, and the project it belongs to. Panel state and not the store's,
+   * which is persisted and shared by every window: a path means nothing outside its own project,
+   * and reopening a studio deep inside a folder nobody navigated to reads as one gone missing.
    */
   const [browsing, setBrowsing] = useState<{ project: string | null; folder: string }>({
     project: projectPath,
     folder: FOLDER_ROOT,
   })
   /**
-   * The batch a card has picked up, while it is in the hand.
-   *
-   * Kept here because `getData` answers nothing until the drop itself, by design of the platform:
-   * a card asked whether it accepts what is passing over it has no other way to know what that is.
-   * `Tree` holds the same thing for the same reason, one component further in.
+   * The batch in the hand. Held because `getData` answers nothing until the drop, by design of the
+   * platform, so a card asked what is passing over it has no other way to know. `Tree` does the same.
    */
   const [carried, setCarried] = useState<readonly string[] | null>(null)
 
@@ -210,37 +203,30 @@ export function Explorer() {
   }, [selectedIds, nodeById])
 
   /**
-   * The grid, and whether it may be gone down into.
-   *
-   * Only a folder reading has somewhere to go: a search and a domain are both flat answers about
-   * the whole project, and a crumb trail over either would claim a place the rows do not come from.
+   * Only a folder reading has somewhere to go down into: a search and a domain are flat answers
+   * about the whole project, and a trail over either would name a place the rows do not come from.
    */
   const grid = collection.view === 'grid'
   const browsable = grid && !searching && !inDomain
   /**
-   * Where the grid actually is, which is where it was told to be until that folder stops existing —
-   * another window can trash or rename the one being browsed, and a trail pointing at a folder that
-   * is gone shows an empty grid with no hint of why.
-   *
-   * `nodes.length === 0` holds it in place: the tree is empty for the beat a reload takes, and
-   * falling back then would throw the user to the root every time a file moved.
-   */
-  /**
-   * The folder asked for, forgotten the moment another project is opened: a path of the folder just
-   * closed names nothing in the new one. Read here rather than reset by an effect, which is a
-   * cascading render the linter refuses — and rightly, the answer is a derivation.
+   * The folder asked for, forgotten the moment another project is opened. Derived rather than reset
+   * by an effect, which is the cascading render the linter refuses.
    */
   const asked = browsing.project === projectPath ? browsing.folder : FOLDER_ROOT
   const browse = (folder: string): void => setBrowsing({ project: projectPath, folder })
+  /**
+   * Where the grid actually is: another window can trash the folder being browsed, and a trail
+   * pointing at one that is gone shows an empty grid with no hint of why. `nodes.length === 0` holds
+   * it in place through the beat a reload takes — falling back then would bounce on every move.
+   */
   const browsed =
     !browsable || asked === FOLDER_ROOT || nodes.length === 0 || nodeById.has(asked)
       ? asked
       : FOLDER_ROOT
 
   /**
-   * What the grid lists: the children of the folder being browsed, or — where there is nothing to
-   * browse — the flat answer itself, headings dropped. A heading holds files without being a place,
-   * and a grid has no way to draw the difference.
+   * The children of the folder browsed, or — with nothing to browse — the flat answer, headings
+   * dropped: a heading holds files without being a place, and a grid cannot draw the difference.
    */
   const entries = useMemo((): readonly FolderNode[] => {
     const files: FolderNode[] = []
@@ -415,18 +401,8 @@ export function Explorer() {
   // search that matches nothing would otherwise take the field it was typed in off the screen,
   // and leave no way back to the folder.
   /**
-   * What a double-click on a CARD means.
-   *
-   * A folder is gone into rather than folded open: a grid draws no nesting, so the only way it can
-   * show what a folder holds is to become that folder. Everything else opens as it does in the tree.
-   *
-   * It is expanded in the tree as well, and that is not bookkeeping: a folder's children are read
-   * only once it has been opened, so descending without expanding would land the grid in a folder
-   * whose entries have never been fetched and show it as empty.
-   */
-  /**
-   * The glyph an entry wears. Asked of the descriptor first: an image document IS a directory, and
-   * the folder question answered first showed the folder glyph over every other space's own.
+   * The glyph an entry wears. The descriptor is asked FIRST: an image document is a directory, and
+   * answering the folder question first showed a folder over every other space's own glyph.
    */
   const iconFor = (node: FolderNode, expanded: boolean): string => {
     const document = documentOf(node)
@@ -436,6 +412,11 @@ export function Explorer() {
     return expanded ? mdiFolderOpenOutline : mdiFolderOutline
   }
 
+  /**
+   * A double-click on a CARD. A folder is gone INTO rather than folded open, a grid having no
+   * nesting to draw. Expanding it is not bookkeeping: children are read only once a folder has been
+   * opened, so descending without it would land in a folder never fetched and show it empty.
+   */
   const enter = (node: FolderNode): void => {
     if (documentOf(node) || node.kind !== 'folder') return void activate(node)
     if (!expandedIds.has(node.id)) toggle(node.id)
@@ -443,12 +424,9 @@ export function Explorer() {
   }
 
   /**
-   * The menu a right-click on an entry offers, wherever that entry was drawn.
-   *
-   * Asked BEFORE the menu appears, and that round trip is the point: only the catalogue knows
-   * whether a file under `assets/` is an asset, and the answer decides whether renaming is offered
-   * or greyed. One reader for both renderings — two copies of this would be two menus free to
-   * offer different rows over the same file.
+   * The menu an entry offers, wherever it was drawn. The catalogue is asked BEFORE the menu appears
+   * and that round trip is the point: only it knows whether a file under `assets/` is an asset, and
+   * the answer decides whether renaming is offered or greyed. One reader for both renderings.
    */
   const raiseEntryMenu = (node: FolderNode): void => {
     void assetAt(node.path).then(asset =>
@@ -473,9 +451,8 @@ export function Explorer() {
 
   /**
    * The menu the blank offers, aimed at `into`: the project folder for the tree, which shows all of
-   * it at once, and the folder being browsed for the grid, which shows one of them.
-   *
-   * No round trip to the catalogue — the gestures it offers are about a place, not about a file.
+   * it, and the folder browsed for the grid, which shows one. No round trip to the catalogue — what
+   * it offers is about a place, not about a file.
    */
   const raiseRootMenu = (into: string): void => {
     openRootMenu({
@@ -509,13 +486,9 @@ export function Explorer() {
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
     >
-      {/* Under the title row and not on it: this panel stands in a column, where the row already
-          carries the name, the two readings, the hidden items and the way out — the field measured
-          76 px there. The two READINGS stay up in that row and do not come down here: they are
-          answers about the project, where everything this bar holds is about the list on screen.
-
-          `display` is on now that the grid exists. The thumbnail buttons grey themselves out on a
-          list, which the tree is — `CollectionBar` owns that, so nothing here has to say it. */}
+      {/* Under the title row and not on it — the field measured 76 px up there. The two readings
+          STAY up in it: they answer about the project, where this bar is about the list on screen.
+          `display` is on now the grid exists; the zoom greys itself out on a list. */}
       <CollectionBar
         state={collection}
         onChange={setCollection}
@@ -542,15 +515,14 @@ export function Explorer() {
             onSelect={(_, ids, mode) => pick(applySelection(selectedIds, ids, mode))}
             onActivate={enter}
             onContextMenu={raiseEntryMenu}
-            // The three the blank owns. `browsed` and not `FOLDER_ROOT`: the grid shows ONE folder,
-            // so its blank means the folder on screen — a new folder made here belongs where the
-            // user is looking, not at the top of the project.
+            // `browsed` and not `FOLDER_ROOT`: the grid shows ONE folder, so its blank means the one
+            // on screen — a folder made here belongs where the user is looking.
             onPressRoot={() => pick([])}
             onDropRoot={paths => void getBridge()?.project.moveFiles(paths, browsed).then(settled)}
             onContextMenuRoot={() => raiseRootMenu(browsed)}
-            // Inert to the pointer, so the blank underneath keeps taking the right-click that makes
-            // a folder. Without it, going into an empty folder would be a dead end: no card to aim
-            // at, and a message swallowing the one gesture that gets you out of it.
+            // Inert to the pointer, so the blank under it keeps taking the right-click that makes a
+            // folder: an empty folder would otherwise be a dead end, its message swallowing the one
+            // gesture that gets you out of it.
             empty={<div className="pointer-events-none size-full">{emptyState}</div>}
             renderCard={node => (
               <EntryCard
@@ -560,15 +532,12 @@ export function Explorer() {
                 icon={iconFor(node, false)}
                 open={isOpen(documentOf(node))}
                 waiting={waiting.has(node.path)}
-                // The whole selection where this card is part of one, so three cards carried
-                // together arrive together — `Tree` composes the same batch for its rows.
+                // The whole selection where this card is in one, so three carried together arrive
+                // together — `Tree` composes the same batch for its rows.
                 dragIds={selectedIds.includes(node.id) ? selectedIds : [node.id]}
-                // What the machine keeps for itself is not picked up here either, as the tree
-                // refuses it: it is shown, read-only, and dragging it is not one of the gestures.
                 pickable={!isPrivatePath(node.path)}
                 // The SAME predicate the tree's `droppable` carries, and no more: `canMoveInto`
-                // already refuses a private folder and a document written as one, so a second
-                // reading here would be a second answer free to disagree with the first.
+                // already refuses a private folder and a document written as one.
                 accepts={
                   node.kind === 'folder' &&
                   carried !== null &&
