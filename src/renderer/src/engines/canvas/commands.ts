@@ -3,6 +3,7 @@ import { clamp } from '@shared/numeric'
 import type { Command } from '../core/history'
 import {
   allLayers,
+  canMoveLayer,
   canRemoveLayer,
   clampOpacity,
   DEFAULT_CANVAS,
@@ -87,14 +88,7 @@ export function moveLayer(
 ): Command<CanvasState> {
   return restructure(`layer:move:${id}`, state => {
     const layer = layerById(state, id)
-    if (!layer) return state
-
-    const parent = parentId === null ? null : layerById(state, parentId)
-    if (parentId !== null && (parent === null || !isGroup(parent))) return state
-    if (parentId === id) return state
-    if (isGroup(layer) && allLayers(layer.children).some(child => child.id === parentId)) {
-      return state
-    }
+    if (!layer || !canMoveLayer(state, id, parentId)) return state
 
     const without = mapLayers(state.layers, current => (current.id === id ? null : current))
     if (parentId === null) return { ...state, layers: insertedAt(without, layer, index) }

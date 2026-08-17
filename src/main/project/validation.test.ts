@@ -213,6 +213,18 @@ describe('parseAssetQuery', () => {
     expect(() => parseAssetQuery({ groupId: '   ' })).toThrow()
   })
 
+  /**
+   * The one field a missing schema line does not REFUSE but silently drops, `z.object` stripping
+   * what it does not declare: `asset.get` then asked an unfiltered catalogue and answered its
+   * first rows as though they were the generation's own output.
+   */
+  it('keeps the ids a caller reads a generation back by', () => {
+    expect(parseAssetQuery({ ids: ['asset_1', 'asset_2'] })).toEqual({
+      ids: ['asset_1', 'asset_2'],
+    })
+    expect(() => parseAssetQuery({ ids: ['  '] })).toThrow()
+  })
+
   it('asks for everything when asked for nothing', () => {
     expect(parseAssetQuery({})).toEqual({})
   })

@@ -1,5 +1,7 @@
 import type { LanguagePreference } from '../i18n/languages'
-import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistant'
+// From the model module rather than from the registry: `shellActions.ts` reads this file, and the
+// registry reads it back — `import-cycles.test.ts` holds that count at zero.
+import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistantModel'
 import type { BindingOverrides } from './command'
 import type { DictationMode } from './dictation'
 import type { ApiFailure } from './failure'
@@ -210,6 +212,32 @@ export type Settings = {
    */
   mcp: {
     enabled: boolean
+    /**
+     * What an outside client may do WITHOUT the question on screen.
+     *
+     * Everything off and zero by default, which is the studio as it was before this existed: a
+     * client that finds nothing armed is asked about, exactly as it always has been. Nothing else
+     * in the studio may write this branch — see `settingsHandlers`, which refuses it: a delegation
+     * a client could grant itself would be no delegation at all.
+     *
+     * By LEVEL rather than by action name, and deliberately: the level is the axis the question
+     * already speaks in, and a hundred and forty-six checkboxes is not an interface.
+     */
+    /** Moving, renaming, binning, and whatever rewrites the working copy. */
+    delegateFiles: boolean
+    /** Uploading a picture, which then stays in the library. */
+    delegateAsset: boolean
+    /** Publishing off this machine. Nothing here takes that back. */
+    delegateRemote: boolean
+    /**
+     * Creative units this window may spend unasked before it starts asking again. Zero asks about
+     * every spend, which is the default.
+     *
+     * A number rather than a switch, because money is bounded by an amount and not by a yes: a
+     * spend the API declines to price is never delegated, whatever this holds — an unknown cost
+     * is an unbounded one.
+     */
+    delegateBudget: number
   }
   /** Speaking a prompt instead of typing it. Everything runs on this machine — see `domain/dictation.ts`. */
   dictation: {
@@ -266,7 +294,13 @@ export const DEFAULT_SETTINGS: Settings = {
   media: {},
   git: {},
   assistant: { model: DEFAULT_ASSISTANT_MODEL },
-  mcp: { enabled: false },
+  mcp: {
+    enabled: false,
+    delegateFiles: false,
+    delegateAsset: false,
+    delegateRemote: false,
+    delegateBudget: 0,
+  },
   dictation: {
     enabled: true,
     mode: 'pushToTalk',

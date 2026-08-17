@@ -36,6 +36,7 @@ import { openSceneNodeMenu } from './sceneNodeMenu'
 import { runSceneCommand, toggleNodeVisible } from './sceneCommands'
 import { ScenePaneGrid } from './ScenePaneGrid/ScenePaneGrid'
 import { SCENE_TOOLS } from './sceneTools'
+import { sceneExportFiles } from './sceneExportFiles'
 
 /**
  * Encoded here, written by the main process: the renderer has no `fs`, and where the file lands
@@ -47,17 +48,18 @@ import { SCENE_TOOLS } from './sceneTools'
  */
 async function exportScene(
   documentId: string,
-  engine: SceneRenderer | null,
   format: ExportFormat,
   scope: 'scene' | 'selection',
 ): Promise<void> {
   const bridge = getBridge()
-  if (!engine || !bridge) return
+  if (!bridge) return
 
   try {
-    const data = await engine.exportTo(format, scope)
-    const name = useDocuments.getState().documents[documentId]?.title ?? 'scene'
-    await bridge.scene.export({ name, format, data })
+    // The encoding is `sceneExportFiles`, which the outside door shares. It reads the engine off
+    // `sceneEngineOf` rather than taking one, which is what lets a client with only an id ask.
+    const { folder, files } = await sceneExportFiles(documentId, format, scope)
+    const encoded = files[0]
+    if (encoded) await bridge.scene.export({ name: folder, format, data: encoded.bytes })
   } catch (error) {
     reportFailure('scene.export', format, error)
   }
@@ -249,7 +251,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     if (!bridge || !active) return
 
     return bridge.menu.onSceneExport(({ format, scope }) => {
-      void exportScene(documentId, engine.current, format, scope)
+      void exportScene(documentId, format, scope)
     })
   }, [documentId, active])
 

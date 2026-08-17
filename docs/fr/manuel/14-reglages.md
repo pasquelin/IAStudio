@@ -693,12 +693,13 @@ MCP comme Claude Code — peut lancer les mêmes actions que l’assistant.
 **Décochée, rien n’écoute.** C’est l’état d’une installation neuve, et celui de tout lancement tant
 que la case n’est pas cochée.
 
-**Tout ce qui coûte ou téléverse demande votre accord à l’écran**, exactement comme si vous l’aviez
-demandé vous-même dans l’assistant. Un programme extérieur ne peut pas se le donner à votre place.
+**Tout ce qui coûte, téléverse ou touche à vos fichiers demande votre accord à l’écran**, exactement
+comme si vous l’aviez demandé vous-même dans l’assistant. Un programme extérieur ne peut pas se le
+donner à votre place.
 
 > **Le [chapitre 20](20-piloter-de-l-exterieur.md) est celui de ce réglage** : ce qui garde ce
-> point d’entrée, comment y brancher Claude Code, les onze actions accessibles et ce que chacune
-> engage.
+> point d’entrée, comment y brancher Claude Code, les familles d’actions accessibles et ce que
+> chacune engage.
 
 ### Commande de connexion
 

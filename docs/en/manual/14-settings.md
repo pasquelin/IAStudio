@@ -673,11 +673,11 @@ Claude Code — can run the same actions the assistant runs.
 **Unchecked, nothing is listening.** That is the state of a fresh install, and of every launch for
 as long as the box stays unticked.
 
-**Anything that spends or uploads asks for a yes on screen**, exactly as if you had asked for it
-yourself in the assistant. A program outside cannot give it on your behalf.
+**Anything that spends, uploads or touches your files asks for a yes on screen**, exactly as if you
+had asked for it yourself in the assistant. A program outside cannot give it on your behalf.
 
 > **[Chapter 20](20-driving-from-outside.md) is this setting's own**: what guards that way in, how
-> to connect Claude Code to it, the eleven actions it reaches and what each one commits.
+> to connect Claude Code to it, the families of actions it reaches and what each one commits.
 
 ### Connection command
 

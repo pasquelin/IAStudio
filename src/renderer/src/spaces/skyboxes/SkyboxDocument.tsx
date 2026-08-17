@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SphericalAngles } from '@shared/domain/angles'
 import { PICTURES, type Asset } from '@shared/domain/asset'
-import { safeFileName } from '@shared/domain/fileName'
 import { EmptyState } from '@/design/EmptyState'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -20,6 +19,7 @@ import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { assetVersionOf } from '@/stores/assets'
 import type { CommandId } from '@shared/domain/command'
+import { skyboxExportFiles } from './skyboxExportFiles'
 
 /**
  * A sky handed to an engine as six faces, from the row of the native menu that was picked.
@@ -33,28 +33,10 @@ async function exportSkybox(documentId: string, size: number): Promise<void> {
   if (!bridge) return
 
   try {
-    // Read once, before any `await`. Read twice — the picture here and the grading after the
-    // `import()` — and a slider moved while the chunk downloads would export one sky's pixels
-    // under another sky's settings, with nothing in the six files to say so.
-    const sky = skyboxOf(useSkyboxes.getState(), documentId)
-
-    // Guarded before the dialog: a sky with no picture would open a folder chooser to write six
-    // files of nothing, and the message belongs where the gesture was made.
-    if (!sky.source) throw new Error('this sky has no source to export')
-
-    // Cleaned before it is either a folder or a file name: a document is titled by hand.
-    const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'skybox')
-
-    const { createSkyboxExportPort } = await import('@/engines/skybox/exportPort')
-
-    const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })({
-      assetId: sky.source.assetId,
-      adjustments: sky.adjustments,
-      name,
-      size,
-    })
-
-    await bridge.skybox.export({ folder: name, files })
+    // The rendering is `skyboxExportFiles`, which the outside door shares. A sky with no picture
+    // throws THERE, before any dialog: a folder chooser opened to write six files of nothing is
+    // a question nobody can answer.
+    await bridge.skybox.export(await skyboxExportFiles(documentId, size))
   } catch (error) {
     reportFailure('skybox.export', String(size), error)
   }

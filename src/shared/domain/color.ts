@@ -26,6 +26,16 @@ export function readColor(source: Record<string, unknown>, key: string, fallback
   return HEX_COLOR.test(value) ? value : fallback
 }
 
+/**
+ * `#rrggbb` as the `0xrrggbb` the drawing engines take, or `null` for anything else.
+ *
+ * `null` rather than a fallback colour: a caller handing this a value it cannot read is a caller
+ * that must refuse, not one that should silently paint black.
+ */
+export function packedColour(colour: string): number | null {
+  return HEX_COLOR.test(colour) ? Number.parseInt(colour.slice(1), 16) : null
+}
+
 const CHANNEL_WEIGHTS = [0.2126, 0.7152, 0.0722]
 
 /** A tuple rather than an array: `#rrggbb` has exactly three, and a caller that reads them by

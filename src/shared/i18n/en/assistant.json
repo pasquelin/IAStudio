@@ -44,6 +44,546 @@
       "promptDescribeStyle": {
         "title": "Describe the style of the references",
         "description": "Reads the reference images sitting on the Generator’s form and returns a description usable as a prompt. Spends nothing."
+      },
+      "studioState": {
+        "title": "Read the studio’s state",
+        "description": "Returns the open project, the active workspace and surface, every open document with the one in front marked, the model armed per family, and whether the studio is signed in. Ask this before firing a command: a command only reaches the surface that is active."
+      },
+      "documentsList": {
+        "title": "List the project’s documents",
+        "description": "Returns every document the project folder holds, open in a tab or not, with its path, kind and workspace. Changes nothing on screen."
+      },
+      "documentOpen": {
+        "title": "Open a document",
+        "description": "Opens a document of the project folder by its path and brings it to the front, switching workspace as needed. The path is the one a listing gave."
+      },
+      "documentActivate": {
+        "title": "Bring a document to the front",
+        "description": "Makes an already open document the active tab, so that commands aimed at its surface reach it. This is the answer to a command refused for being on the wrong surface."
+      },
+      "documentClose": {
+        "title": "Close a document",
+        "description": "Closes an open document’s tab. Work that never reached the disk is lost with it, which is why this asks first."
+      },
+      "documentRename": {
+        "title": "Rename a document",
+        "description": "Calls a document something else, on disk and on screen at once. The document keeps its identity, so an open tab renames without closing."
+      },
+      "activityRecent": {
+        "title": "Read the recent activity",
+        "description": "Returns what the studio has recorded lately — generations, file operations, failures — newest first. This is how to find out what an action actually did."
+      },
+      "projectOpen": {
+        "title": "Open a project folder",
+        "description": "Opens a project from an absolute path on this machine, without raising the system dialogue a person would use. Answers whether the folder was a project."
+      },
+      "projectCreate": {
+        "title": "Create a project folder",
+        "description": "Makes a new project at an absolute path on this machine and opens it, without raising the system dialogue a person would use."
+      },
+      "filesList": {
+        "title": "List a folder",
+        "description": "Returns the entries of one folder of the open project, files and folders alike, with the path each is known by. Give no folder to list the project root."
+      },
+      "filesSearch": {
+        "title": "Search the project’s files",
+        "description": "Searches the whole open project by name and returns the matching entries with their paths. Changes nothing on screen."
+      },
+      "filesMove": {
+        "title": "Move files",
+        "description": "Moves files and folders of the project into another folder of it. The disk changes, so this asks first — the Explorer can still undo it afterwards."
+      },
+      "filesCopy": {
+        "title": "Copy files",
+        "description": "Copies files and folders of the project into another folder of it, leaving the originals where they are."
+      },
+      "filesDuplicate": {
+        "title": "Duplicate files",
+        "description": "Makes a copy of each named file or folder beside it, under a name the studio picks so nothing is overwritten."
+      },
+      "filesTrash": {
+        "title": "Move files to the bin",
+        "description": "Sends files and folders of the project to the system bin. This asks first, and what it took is listed in the recent activity."
+      },
+      "fileRename": {
+        "title": "Rename a file",
+        "description": "Gives one file or folder of the project another name, in the folder it already sits in. This asks first: another program may already know it by the old one."
+      },
+      "fileFacts": {
+        "title": "Read a file’s facts",
+        "description": "Returns what the filesystem records about one entry — its kind, its size in bytes, when it was created and last changed. Changes nothing on screen."
+      },
+      "folderNew": {
+        "title": "Create a folder",
+        "description": "Makes a new folder inside a folder of the open project. Answers with the path it was given, which may differ if the name was taken."
+      },
+      "modelSchema": {
+        "title": "Read a model’s own inputs",
+        "description": "Returns the fields one generation model accepts, with their kinds and bounds, as the studio builds its form from. This is what to fill the parameters of a prepared generation with."
+      },
+      "costEstimate": {
+        "title": "Estimate what a generation would cost",
+        "description": "Prices a model and a set of parameters without running anything. Answers nothing at all where the API declines to price that model, rather than inventing a figure."
+      },
+      "jobGet": {
+        "title": "Read one job",
+        "description": "Returns one generation whole — its status, how far along it is, what it produced, what it cost, and why it failed if it did."
+      },
+      "jobWait": {
+        "title": "Wait for a job to finish",
+        "description": "Waits until a generation succeeds, fails or is cancelled, then returns it with the assets it produced. Returns the job as it stands if the wait runs out, which is an answer rather than a failure."
+      },
+      "jobCancel": {
+        "title": "Cancel a job",
+        "description": "Stops a generation that is still queued or running. What has already been spent is not given back."
+      },
+      "usageReport": {
+        "title": "Read the usage report",
+        "description": "Returns what the account has spent over a window of seven, thirty-one or a hundred and twenty days, as the usage window shows it."
+      },
+      "assetsSearch": {
+        "title": "Search the library",
+        "description": "Searches the project’s assets by text, kind and tags, and can narrow to what was generated. Answers with the rows the catalogue holds."
+      },
+      "assetsCounts": {
+        "title": "Count the library",
+        "description": "Returns how many assets of each kind the project holds, counted in the catalogue rather than by listing them."
+      },
+      "assetGet": {
+        "title": "Read assets",
+        "description": "Returns everything the catalogue holds about the named assets — where they are, what they came from, and how they are tagged. This is what to call on the ids a finished generation handed back."
+      },
+      "assetUpdate": {
+        "title": "Correct an asset",
+        "description": "Changes an asset’s name, its tags, or the kind the studio read from its extension. Tags are replaced whole, so an empty list genuinely clears them."
+      },
+      "assetsRemove": {
+        "title": "Remove assets",
+        "description": "Takes assets out of the project’s library, and out of the remote one when asked to. This asks first, and what it removed is listed in the recent activity."
+      },
+      "canvasState": {
+        "title": "Read the image being edited",
+        "description": "Returns the frame of the image in front — its size and resolution — and its whole layer stack flattened, each layer with its id, kind, opacity, blend mode and transform."
+      },
+      "canvasResize": {
+        "title": "Resize the image",
+        "description": "Changes the frame of the image in front. Rescales the layers with it when asked to, and otherwise leaves them where they are, which is the difference between image size and canvas size."
+      },
+      "canvasCrop": {
+        "title": "Crop the image",
+        "description": "Closes the frame onto a rectangle given in document coordinates. The layers keep their place, so what falls outside is what is cut away."
+      },
+      "canvasOrient": {
+        "title": "Flip or turn the image",
+        "description": "Mirrors the image across an axis, or turns it a quarter turn either way. A turn swaps the frame’s width and height, so a portrait becomes a landscape."
+      },
+      "layerAdd": {
+        "title": "Add a layer",
+        "description": "Puts a new pixel, text or adjustment layer on top of the stack of the image in front, and answers with the id it was given. An adjustment layer must name the dial it carries."
+      },
+      "layerRemove": {
+        "title": "Remove a layer",
+        "description": "Takes one layer out of the stack of the image in front. Undoes like any other edit of that document."
+      },
+      "layerSelect": {
+        "title": "Arm a layer",
+        "description": "Makes one layer the armed one, which is what the tools of the image workspace act on. This is a way of looking at the stack rather than an edit, so it adds nothing to the history."
+      },
+      "layerRename": {
+        "title": "Rename a layer",
+        "description": "Calls one layer of the image in front something else. The id does not change, so nothing that referred to it is lost."
+      },
+      "layerStyle": {
+        "title": "Set how a layer is composited",
+        "description": "Changes a layer’s opacity, fill opacity, blend mode, visibility or clipping. Every field is optional, and what is not given is left exactly as it was."
+      },
+      "layerTransform": {
+        "title": "Place a layer",
+        "description": "Moves, scales or turns one layer inside the frame. The rotation is given in degrees, and every field left out keeps the value the layer already had."
+      },
+      "layerText": {
+        "title": "Set a text layer’s words",
+        "description": "Changes what a text layer says, the size it says it at, or its colour. Refuses a layer that holds pixels rather than words, which the command would otherwise leave untouched."
+      },
+      "layerMove": {
+        "title": "Reorder a layer",
+        "description": "Moves a layer to another place in the stack, and into or out of a group. Index zero is the bottom of the stack, which is what the eye sees last."
+      },
+      "layerDuplicate": {
+        "title": "Duplicate a layer",
+        "description": "Copies one layer just above itself, children included, every copy given a fresh id. Answers with the id of the copy."
+      },
+      "layerGroup": {
+        "title": "Group layers",
+        "description": "Gathers top-level layers into one group, which then moves as a whole. Answers with the group’s own id."
+      },
+      "layerUngroup": {
+        "title": "Dissolve a group",
+        "description": "Takes a group apart, leaving its children where the group stood in the stack."
+      },
+      "layerMergeDown": {
+        "title": "Merge a layer down",
+        "description": "Folds one layer into the layer below it, within its own level of the stack. The result keeps the lower layer’s identity."
+      },
+      "sequenceState": {
+        "title": "Read the montage being edited",
+        "description": "Answers the montage in front — its settings, its length, the playhead and what is selected — then every track with its clips, their bounds, their entry into the source, their speed, their fades and their level."
+      },
+      "sequenceSeek": {
+        "title": "Place the playhead",
+        "description": "Moves the playhead of the montage in front to the given instant, in microseconds. Not an edit: nothing enters the history, and undo does not bring it back."
+      },
+      "clipAdd": {
+        "title": "Lay a clip on the montage",
+        "description": "Lays an asset from the library on a track of the montage in front, at the given instant or under the playhead. Opens the tracks it needs, and links a take’s image to its sound when it carries one."
+      },
+      "clipRemove": {
+        "title": "Take a clip off the montage",
+        "description": "Removes a clip from its track, and the half linked to it with it. The room it took stays empty rather than closing over its neighbours."
+      },
+      "clipMove": {
+        "title": "Move a clip",
+        "description": "Carries a clip to a given track and instant, overwriting whatever sits there. A locked track, or one of another kind, takes nothing."
+      },
+      "clipTrim": {
+        "title": "Trim one edge of a clip",
+        "description": "Pulls a clip’s in or out point to the given instant, never past the source behind it. A still has no source to run past and stretches freely."
+      },
+      "clipSplit": {
+        "title": "Cut a clip in two",
+        "description": "Cuts a clip at the given instant and leaves both halves end to end. An instant outside the clip has nothing to cut, and is refused rather than reported as done."
+      },
+      "clipFade": {
+        "title": "Set a clip’s fade",
+        "description": "Gives a clip’s fade in or fade out the length asked for. Two ramps longer than the clip itself are brought back to what it can carry."
+      },
+      "clipGain": {
+        "title": "Set a clip’s level",
+        "description": "Changes a clip’s level in decibels, zero leaving the take as it was recorded. The value is bounded to what playback can hold."
+      },
+      "clipSpeed": {
+        "title": "Set a clip’s speed",
+        "description": "Changes how fast a clip plays, one being its original speed. Its length on the montage follows, the source it reads staying the same."
+      },
+      "clipUnlink": {
+        "title": "Part an image from its sound",
+        "description": "Separates the two halves of a take, so that moving, trimming or cutting one no longer reaches the other. Nothing ties them back together afterwards."
+      },
+      "clipSelect": {
+        "title": "Point at a clip",
+        "description": "Names the clip the inspector and the aimless gestures will act on. Not an edit, and undo does not take it back."
+      },
+      "trackAdd": {
+        "title": "Add a track",
+        "description": "Opens an image or sound track below the others. An image track can carry nothing of a sound, and the reverse holds too."
+      },
+      "trackRemove": {
+        "title": "Remove a track",
+        "description": "Takes a track off the montage, and every clip it carried with it. A locked track is not removed."
+      },
+      "trackMove": {
+        "title": "Reorder the tracks",
+        "description": "Raises or lowers a track by the given number of rows, which changes what covers what. A negative number lowers it, a positive one raises it."
+      },
+      "trackRename": {
+        "title": "Rename a track",
+        "description": "Gives a track the name the header column shows. Its identifier never changes."
+      },
+      "trackState": {
+        "title": "Set how a track is worked",
+        "description": "Changes a track’s mute, solo, lock or height. Those four say how one works rather than what one made, and so never enter the history."
+      },
+      "skyboxState": {
+        "title": "Read the sky being edited",
+        "description": "Answers the sky in front — its equirectangular source, its image settings, where its sun sits and what colour it is, and what its environment lights — plus what produced it when it came from a generation."
+      },
+      "skyboxAdjust": {
+        "title": "Adjust a sky’s image",
+        "description": "Changes exposure, contrast, saturation, temperature, tint, horizon rotation or blur. Every field is optional, and what is not given is left as it was."
+      },
+      "skyboxResetAdjustments": {
+        "title": "Bring the image settings back to neutral",
+        "description": "Returns every image setting of the sky to its neutral value at once, in a single history entry. The source and the sun are left alone."
+      },
+      "skyboxSun": {
+        "title": "Place and set the sun",
+        "description": "Changes the elevation, azimuth, intensity or colour of the sun in the sky in front. Both angles are in radians, as everywhere else in the scene."
+      },
+      "skyboxEnvironment": {
+        "title": "Set what the sky lights",
+        "description": "Changes how strongly the sky lights the test objects, and decides whether the image is drawn behind them or merely lights them."
+      },
+      "skyboxSource": {
+        "title": "Choose a sky’s image",
+        "description": "Hangs an equirectangular image from the library in the sky in front. The asset must have a file on this machine, one still in the cloud having nothing to decode."
+      },
+      "textureState": {
+        "title": "Read the material being edited",
+        "description": "Answers the material in front — the eight channels and what fills them, every render setting such as colour, roughness and tiling, and how the preview is presented."
+      },
+      "textureMaterial": {
+        "title": "Set a material",
+        "description": "Changes the tint, roughness, metalness, relief, occlusion, emission, tiling, offset or rotation of the material in front. Every field is optional."
+      },
+      "texturePreview": {
+        "title": "Set a material’s preview",
+        "description": "Changes the strength and rotation of the environment lighting the preview, whether the background is drawn, the automatic spin and the seam highlight."
+      },
+      "textureChannel": {
+        "title": "Fill or empty a channel",
+        "description": "Puts an image from the library into one of the eight channels of the material in front. With no asset named, the channel is emptied rather than filled."
+      },
+      "documentExport": {
+        "title": "Export the document in front into the project",
+        "description": "Writes the image, scene, sky or material in front into a folder of the project, named after its title when none is given. The destination cannot leave the project."
+      },
+      "gitStashDrop": {
+        "title": "Throw a shelved change away",
+        "description": "Removes a shelved change from the stack without applying it back. What it held was never recorded, so nothing gives it back."
+      },
+      "gitResolve": {
+        "title": "Settle a merge conflict",
+        "description": "Keeps one of the two sides of a conflict for the files named. What the other side held goes from the working copy."
+      },
+      "gitAbortMerge": {
+        "title": "Abandon the merge in progress",
+        "description": "Brings the repository back to where it stood before the merge, undoing what it had already written into the working copy."
+      },
+      "gitRemotes": {
+        "title": "List the remote repositories",
+        "description": "Answers the remotes declared, with their name and their address. It is where a push would go."
+      },
+      "gitAddRemote": {
+        "title": "Declare a remote repository",
+        "description": "Adds a remote under the name given. Nothing is sent or fetched by this alone, which writes to the local configuration."
+      },
+      "gitFetch": {
+        "title": "Fetch the remote references",
+        "description": "Reads where the remote repository stands, changing nothing in your working copy and publishing nothing. It is the harmless half of a pull."
+      },
+      "gitPull": {
+        "title": "Fetch and merge",
+        "description": "Fetches the remote and merges into the current branch, which rewrites the working copy. A conflict stops there and is settled afterwards."
+      },
+      "gitPush": {
+        "title": "Publish to the remote repository",
+        "description": "Sends the current branch to the remote repository. It is the only gesture of the studio that leaves this machine, and nothing here takes it back."
+      },
+      "cloudBrowse": {
+        "title": "Browse the remote library",
+        "description": "Answers one page of the account’s library, narrowed by text, tags or kind. Paging is by cursor, and there is no total — the API gives none."
+      },
+      "cloudExplore": {
+        "title": "Browse what everyone published",
+        "description": "Answers one page of the public feed of a given kind, newest first. These assets are not yours, and looking at them fetches none of them."
+      },
+      "cloudSimilar": {
+        "title": "Find what resembles an asset",
+        "description": "Answers published assets that resemble the one named, that one taken out of its own results. The reference is the caller’s to choose."
+      },
+      "cloudPlan": {
+        "title": "See what a synchronisation would do",
+        "description": "Says what a push or a pull would do to each asset named, before it costs a single request. Nothing is sent and nothing is fetched."
+      },
+      "cloudPull": {
+        "title": "Fetch remote assets",
+        "description": "Brings assets into the project, bytes and all, and says what each one did. A download that stops halfway keeps what it had already written."
+      },
+      "cloudPush": {
+        "title": "Send assets to the account",
+        "description": "Sends local assets up to the account’s library, where they stay. It is the only gesture of this family that leaves something behind."
+      },
+      "stylesList": {
+        "title": "List the material styles",
+        "description": "Answers the saved material styles, with their identifier, their name and the values they keep. They live outside every project and follow the machine."
+      },
+      "styleSave": {
+        "title": "Save the material as a style",
+        "description": "Puts the material of the document in front aside under the given name. The name is a base, the studio making it unique when it is already taken."
+      },
+      "styleRename": {
+        "title": "Rename a material style",
+        "description": "Gives a saved style its name. Nothing else about the style moves, and its identifier stays the same."
+      },
+      "styleRemove": {
+        "title": "Delete a material style",
+        "description": "Removes a saved style. It lives outside every project, so nothing gives it back — neither undo nor the Explorer."
+      },
+      "authState": {
+        "title": "Tell whether the studio is signed in",
+        "description": "Says whether an API key is in place and which account the studio works on. Never answers the key itself, which does not leave the main process."
+      },
+      "windowState": {
+        "title": "Read the state of the window",
+        "description": "Answers the size of the window, whether it is maximised or full screen, and the language it draws in — the one the main process actually settled on."
+      },
+      "windowFullScreen": {
+        "title": "Toggle full screen",
+        "description": "Takes the window into full screen, or out of it. It is a toggle, and there is no way to ask for one of the two states."
+      },
+      "settingsOpen": {
+        "title": "Open the settings on a section",
+        "description": "Opens the settings window on the section asked for, or brings it there when it is already up. Reading and writing a setting does not need it opened."
+      },
+      "updatesState": {
+        "title": "Read where the update stands",
+        "description": "Says where the application update stands — nothing in sight, downloading, or ready to install on the next quit."
+      },
+      "mediaCapabilities": {
+        "title": "Tell what the studio can decode",
+        "description": "Says what this machine is capable of on the media side, which depends on ffmpeg being there. Without it importing still works and the interface says what it cannot do."
+      },
+      "mediaAdopt": {
+        "title": "Give a file a catalogue row",
+        "description": "Brings a file the project folder already holds into the catalogue, without copying it. It is the half of importing that raises no system dialogue."
+      },
+      "fontsList": {
+        "title": "List the installed fonts",
+        "description": "Answers the font families this machine has, one cut each. It is what a text layer can be written in."
+      },
+      "favoritesList": {
+        "title": "List the pinned recipes",
+        "description": "Answers the recipes put aside, with the model that produced them and the workspace that knows how to make them again. A recipe keeps enough to start a generation over."
+      },
+      "favoritePin": {
+        "title": "Pin what produced an asset",
+        "description": "Puts aside what produced an asset of the open project, so it can be made again. An asset nobody generated has no recipe to keep."
+      },
+      "favoriteUnpin": {
+        "title": "Remove a pinned recipe",
+        "description": "Takes a recipe off the pinned list. The asset it had produced is left alone."
+      },
+      "fileInfoOpen": {
+        "title": "Open a file’s information",
+        "description": "Opens the window describing a file of the project — its size, its kind, its history and what the catalogue knows of it."
+      },
+      "mirrorOpen": {
+        "title": "Open the video return",
+        "description": "Opens the return window, or brings it to the front when it is already there. It shows what the montage plays, and carries none of the edit."
+      },
+      "sceneState": {
+        "title": "Read the scene being edited",
+        "description": "Returns every node of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected and what lights the scene."
+      },
+      "nodeAdd": {
+        "title": "Add an object to the scene",
+        "description": "Puts a primitive, a light, a camera, a sprite or a text into the 3D document in front, at the position given. Answers with the id the node was born with."
+      },
+      "nodeAddModel": {
+        "title": "Place a model from the library",
+        "description": "Puts a 3D model of the project’s library into the scene in front, named by its asset. This is how a generated mesh gets into a scene."
+      },
+      "nodeRemove": {
+        "title": "Remove an object",
+        "description": "Takes one node out of the scene in front, with whatever hangs from it. Undoes like any other edit of that document."
+      },
+      "nodeRename": {
+        "title": "Rename an object",
+        "description": "Calls one node of the scene in front something else. The id does not change, so nothing that pointed at it is lost."
+      },
+      "nodeTransform": {
+        "title": "Place an object",
+        "description": "Moves, turns or scales one node. Rotations are Euler angles in radians, and every axis left out keeps the value the node already had."
+      },
+      "nodeVisible": {
+        "title": "Show or hide an object",
+        "description": "Takes one node out of what is drawn, or puts it back. It stays in the scene either way, which is what tells hiding from removing."
+      },
+      "nodeMaterial": {
+        "title": "Set an object’s material",
+        "description": "Changes the colour, roughness or metalness of a mesh. Refuses a node that carries no mesh material, which the command would otherwise leave untouched."
+      },
+      "nodeLight": {
+        "title": "Set a light",
+        "description": "Changes the colour or the intensity of a light. Only these two, because the rest of a light’s fields differ from one kind to another."
+      },
+      "nodeReparent": {
+        "title": "Reparent an object",
+        "description": "Hangs one node under another, or under the scene itself when no parent is given. The node keeps its own transform, which is then read relative to its new parent."
+      },
+      "nodeSelect": {
+        "title": "Select objects",
+        "description": "Makes these nodes the selection the inspector reads and the gizmo moves. Selection is not an edit, so it adds nothing to the history."
+      },
+      "gitStatus": {
+        "title": "Read the repository",
+        "description": "Returns the branch, what it tracks, how far ahead or behind it is, and every changed file with the half of git it sits in. Also says when the project has no repository at all."
+      },
+      "gitLog": {
+        "title": "Read the history",
+        "description": "Returns a page of recorded versions, newest first, across every branch, with the names that point at each one."
+      },
+      "gitCommitFiles": {
+        "title": "Read what a version changed",
+        "description": "Returns the files one recorded version touched, and how each was touched — added, changed, removed or renamed."
+      },
+      "gitDiff": {
+        "title": "Read what changed in a file",
+        "description": "Returns the change inside one file, within a recorded version, or against the last one when no version is named."
+      },
+      "gitBranches": {
+        "title": "List the branches",
+        "description": "Returns every branch of the project’s repository, saying which one is checked out."
+      },
+      "gitStashes": {
+        "title": "List the shelved changes",
+        "description": "Returns what has been set aside, newest first, so a client can put one back by its place in the list."
+      },
+      "gitInit": {
+        "title": "Start recording versions",
+        "description": "Runs git init on the open project and writes its ignore file, then answers the state it left. Does nothing to a project already recording."
+      },
+      "gitStage": {
+        "title": "Stage files",
+        "description": "Moves changes into what the next recorded version will hold. Answers with the state it left, so nothing needs reading back."
+      },
+      "gitUnstage": {
+        "title": "Unstage files",
+        "description": "Takes changes back out of what the next recorded version will hold, leaving the files themselves untouched."
+      },
+      "gitRestore": {
+        "title": "Discard changes to files",
+        "description": "Puts files back the way the last recorded version has them. This asks first: what was never recorded is gone, and no undo in the studio reaches it."
+      },
+      "gitCommit": {
+        "title": "Record a version",
+        "description": "Records what is staged, under a message. Can amend the last version instead of adding one, which rewrites it rather than following it."
+      },
+      "gitCreateBranch": {
+        "title": "Create a branch",
+        "description": "Starts a branch at the current version and moves onto it. The working tree is left exactly as it stands."
+      },
+      "gitCheckout": {
+        "title": "Switch branch",
+        "description": "Moves onto another branch, rewriting the working tree to match it. This asks first: a document open in a tab is then a document whose file changed under it."
+      },
+      "gitStash": {
+        "title": "Shelve the current changes",
+        "description": "Sets the working tree’s changes aside and returns it to the last recorded version. This asks first, since it takes the changes off the disk."
+      },
+      "gitStashPop": {
+        "title": "Bring shelved changes back",
+        "description": "Puts one set of shelved changes back into the working tree and drops it from the shelf. This asks first, since it rewrites files."
+      },
+      "gitTag": {
+        "title": "Tag a version",
+        "description": "Puts a name on one recorded version, so it can be found again without its hash."
+      },
+      "settingsRead": {
+        "title": "Read the settings",
+        "description": "Returns every setting the studio holds, section by section, exactly as the settings window shows them."
+      },
+      "settingsWrite": {
+        "title": "Change the settings",
+        "description": "Writes one or more settings, section by section. What is not named is left alone, and a change that names nothing the studio knows is refused rather than written through unread."
+      },
+      "accountsList": {
+        "title": "List the accounts",
+        "description": "Returns the Scenario accounts this studio holds, saying which one is active and which may be renamed or removed. No key or secret is ever answered."
+      },
+      "accountsActivate": {
+        "title": "Switch account",
+        "description": "Makes one of the held accounts the one the studio generates through. Everything sent from then on goes out with its credentials."
       }
     },
     "refusals": {
@@ -55,6 +595,7 @@
       "notSubmitted": "The generation did not go out.",
       "badInput": "The parameters given do not suit this action.",
       "noBridge": "The studio is not answering.",
+      "noProject": "No project is open, and these paths are relative to one.",
       "noConfirmer": "That action needs a yes, and no window was there to give one.",
       "declined": "You turned that action down.",
       "noWindow": "No studio window was in front to run that action.",
@@ -77,7 +618,123 @@
       "modelId": "Model identifier",
       "parameters": "Model parameters",
       "draft": "Sentence to rework",
-      "text": "Text to translate"
+      "text": "Text to translate",
+      "documentId": "Document identifier",
+      "title": "Title",
+      "name": "Name",
+      "limit": "How many entries at most",
+      "filePath": "Path inside the project, with / between segments",
+      "filePaths": "Paths inside the project, with / between segments",
+      "folderPath": "Folder path",
+      "hidden": "Include hidden entries",
+      "jobId": "Job identifier",
+      "timeoutMs": "How long to wait at most, in milliseconds",
+      "days": "Window in days",
+      "assetId": "Asset identifier",
+      "assetIds": "Asset identifiers",
+      "assetType": "Asset kind",
+      "tags": "Tags",
+      "generated": "Only what was generated",
+      "offset": "How many entries to skip",
+      "alsoRemote": "Remove from the remote library too",
+      "layerId": "Layer identifier",
+      "layerIds": "Layer identifiers",
+      "exportFolder": "Folder of the project to write into, the title by default",
+      "exportFormat": "Format of the 3D file",
+      "exportScope": "The whole scene, or the selection",
+      "exportTarget": "Which engine the material export is for",
+      "faceSize": "Side of one face, in pixels",
+      "conflictSide": "Which side of the conflict to keep",
+      "remoteName": "Name of the remote",
+      "remoteUrl": "Address of the remote",
+      "setUpstream": "Attach the branch to the remote",
+      "cursor": "Page cursor, straight from the previous page",
+      "syncPolicy": "Which way the synchronisation goes",
+      "styleId": "Style identifier",
+      "favoriteId": "Recipe identifier",
+      "settingsSection": "Section of the settings",
+      "exposure": "Exposure, in stops",
+      "contrast": "Contrast, 1 being neutral",
+      "saturation": "Saturation, 1 being neutral",
+      "temperature": "Temperature, from -1 cold to +1 warm",
+      "tint": "Tint, from -1 green to +1 magenta",
+      "rotationY": "Rotation about the vertical, in radians",
+      "blur": "Softening, from 0 sharp to 1 blurred",
+      "elevation": "Elevation, in radians",
+      "azimuth": "Azimuth, in radians",
+      "showBackground": "Draw the image behind the subject",
+      "autoSpin": "Let the preview turn on its own",
+      "showSeam": "Bring the seams into the middle of the preview",
+      "pbrChannel": "Channel of the material",
+      "normalScale": "Strength of the relief",
+      "heightScale": "Strength of the displacement",
+      "aoIntensity": "Strength of the occlusion",
+      "edgeIntensity": "How much the edges are darkened",
+      "emissive": "Emitted colour",
+      "emissiveIntensity": "Strength of the emission",
+      "tilingX": "Repeats across",
+      "tilingY": "Repeats down",
+      "offsetX": "Offset across",
+      "offsetY": "Offset down",
+      "invertNormalGreen": "Invert the green channel of the relief",
+      "clipId": "Clip identifier",
+      "trackId": "Track identifier",
+      "trackKind": "What the track carries",
+      "clipEdge": "Which edge of the clip, in or out",
+      "time": "Instant on the montage, in microseconds",
+      "start": "Start on the montage, in microseconds",
+      "at": "The instant aimed at, in microseconds",
+      "fadeLength": "Fade length, in microseconds",
+      "gain": "Level, in decibels",
+      "speed": "Playback speed, 1 being the original",
+      "by": "Number of rows, negative to lower",
+      "muted": "Track silenced",
+      "solo": "The only track heard",
+      "locked": "Track locked",
+      "layerKind": "Layer kind",
+      "adjustment": "Which dial the adjustment carries",
+      "parentId": "Group to move it into",
+      "index": "Place in the stack, counted from the bottom",
+      "opacity": "Opacity, from 0 to 1",
+      "fillOpacity": "Fill opacity, from 0 to 1",
+      "blend": "Blend mode",
+      "visible": "Visible",
+      "clipped": "Clipped by the layer below",
+      "x": "X, in document coordinates",
+      "y": "Y, in document coordinates",
+      "scaleX": "Scale across",
+      "scaleY": "Scale down",
+      "rotation": "Rotation, in degrees",
+      "fontSize": "Type size",
+      "colour": "Colour, as #rrggbb",
+      "width": "Width",
+      "height": "Height",
+      "scalePixels": "Rescale the layers with the frame",
+      "turn": "Which way to flip or turn",
+      "nodeId": "Object identifier",
+      "nodeIds": "Object identifiers",
+      "nodeKind": "What to add",
+      "positionX": "Position across",
+      "positionY": "Position up",
+      "positionZ": "Position towards the viewer",
+      "rotationX": "Rotation about X, in radians",
+      "rotationY": "Rotation about Y, in radians",
+      "rotationZ": "Rotation about Z, in radians",
+      "scaleZ": "Scale in depth",
+      "roughness": "Roughness, from 0 to 1",
+      "metalness": "Metalness, from 0 to 1",
+      "intensity": "Intensity",
+      "gitPath": "Path inside the repository",
+      "gitPaths": "Paths inside the repository",
+      "commitHash": "Version identifier",
+      "skip": "How many entries to skip",
+      "message": "Message",
+      "amend": "Amend the last version instead of adding one",
+      "branchName": "Branch name",
+      "tagName": "Tag name",
+      "stashIndex": "Place in the shelf, newest first",
+      "settings": "Settings to change, by section",
+      "accountId": "Account identifier"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",
@@ -99,7 +756,9 @@
     "confirm": {
       "credits": "This action will spend {{cost}}.",
       "unknownCost": "This action will spend creative units. The studio could not estimate how many, and does not invent a figure.",
+      "files": "This action will change what your project holds — files, or the assets in its library. It costs no creative units.",
       "asset": "This action will upload an image, which then stays in your library. It costs no creative units.",
+    "remote": "This action will publish to a server, off this machine. It costs no creative units, and nothing here takes it back.",
       "yes": "Allow",
       "yesHint": "Runs the action above, and commits what it commits",
       "no": "Don’t allow",

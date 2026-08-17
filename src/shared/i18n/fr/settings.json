@@ -224,6 +224,22 @@
       "title": "Piloter le studio depuis l’extérieur",
       "help": "Ouvre un point d’entrée sur cette machine seule, par lequel un client comme Claude Code peut lancer les mêmes actions que l’assistant. Tout ce qui coûte ou téléverse demande votre accord à l’écran, exactement comme ici. Désactivé, rien n’écoute."
     },
+    "mcpDelegateFiles": {
+      "title": "Laisser toucher aux fichiers sans demander",
+      "help": "Déplacer, renommer, mettre à la corbeille, revenir en arrière sur un fichier suivi par git. L’Explorateur reprend une partie de ces gestes, jamais tous. Sans ce réglage, chacun vous est demandé."
+    },
+    "mcpDelegateAsset": {
+      "title": "Laisser téléverser sans demander",
+      "help": "Envoyer une image vers votre bibliothèque, où elle restera. Cela ne coûte aucune unité créative. Sans ce réglage, chaque téléversement vous est demandé."
+    },
+    "mcpDelegateRemote": {
+      "title": "Laisser publier vers un serveur sans demander",
+      "help": "Envoyer une branche vers un dépôt git distant. C’est le seul geste qui sorte de cette machine, et rien ici ne le rattrape. À n’armer qu’en connaissance de cause."
+    },
+    "mcpDelegateBudget": {
+      "title": "Unités créatives dépensables sans demander",
+      "help": "Ce qu’un client peut dépenser dans cette fenêtre avant que le studio se remette à demander. À zéro, chaque dépense vous est demandée. Une génération que l’API refuse de chiffrer n’est jamais lancée sans vous, quel que soit ce montant."
+    },
     "copyMcpCommand": {
       "title": "Commande de connexion",
       "help": "Copie la ligne à coller dans un terminal pour brancher un client. Le jeton et le port changent à chaque démarrage du studio, la ligne est donc à recopier après chaque lancement.",

@@ -16,7 +16,10 @@ import { createMcpControl, type McpControl } from './control'
 let folder = ''
 let control: McpControl | null = null
 
-const settings = (enabled: boolean): Settings => ({ ...DEFAULT_SETTINGS, mcp: { enabled } })
+const settings = (enabled: boolean): Settings => ({
+  ...DEFAULT_SETTINGS,
+  mcp: { ...DEFAULT_SETTINGS.mcp, enabled },
+})
 
 const configPath = (): string => join(folder, 'mcp.json')
 

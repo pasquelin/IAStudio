@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Job } from '@shared/domain/job'
 import type { ModelSummary } from '@shared/domain/model'
+import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { useSettings } from '@/stores/settings'
 import { subscribeToCommands } from '@/services/commandBus'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -9,9 +11,14 @@ import { job as jobOf } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { registerGenerator, type GeneratorBridge } from './generatorBridge'
-import { commitmentOfCall } from '@shared/domain/assistant'
+import { ACTION_REGISTRY, commitmentOfCall } from '@shared/domain/assistant'
 import { registerConfirmer } from './confirm'
-import { runAction, runConfirmedAction } from './executor'
+import {
+  handledActions,
+  resetDelegatedSpendForTests,
+  runAction,
+  runConfirmedAction,
+} from './executor'
 
 const showWorkspace = vi.hoisted(() => vi.fn())
 const createDocumentIn = vi.hoisted(() => vi.fn())
@@ -107,10 +114,16 @@ describe('running a command', () => {
     stop()
   })
 
-  it('refuses a command nothing declares', async () => {
+  /**
+   * `badInput` and not `unknownCommand`, because the field closes over every declared id: the
+   * schema promised the client an enum, so a value outside it never reaches the handler. The
+   * handler keeps its own `unknownCommand` all the same — it is what would answer the day the
+   * registry and the field parted company.
+   */
+  it('refuses a command nothing declares, at the schema rather than at the surface', async () => {
     const outcome = await runAction('command.run', { command: 'canvas.summonADragon' })
 
-    expect(outcome).toEqual({ ok: false, refusal: 'unknownCommand' })
+    expect(outcome).toEqual({ ok: false, refusal: 'badInput' })
   })
 
   // The catalogue offers these to the model, so refusing them all was the assistant announcing
@@ -273,13 +286,15 @@ describe('the prompt assistance, now asked for', () => {
 })
 
 describe('listing the jobs', () => {
-  it('answers what the studio is tracking', async () => {
-    useJobs.setState({ jobs: [aJob('job_1')] })
+  /**
+   * Whole jobs. Four fields were picked out here — id, label, status, progress — which left a
+   * client able to start a generation and unable to learn what it produced.
+   */
+  it('answers what the studio is tracking, whole', async () => {
+    const job = aJob('job_1')
+    useJobs.setState({ jobs: [job] })
 
-    expect(await runAction('jobs.list', {})).toEqual({
-      ok: true,
-      data: [{ id: 'job_1', label: 'Knight', status: 'running', progress: 0.5 }],
-    })
+    expect(await runAction('jobs.list', {})).toEqual({ ok: true, data: [job] })
   })
 })
 
@@ -415,6 +430,121 @@ describe('asking before acting', () => {
   })
 })
 
+/**
+ * Delegation is what lets a client run while nobody is at the machine, and it is the one feature
+ * of this file that can spend somebody's money unwatched. Every case here is about a refusal.
+ */
+describe('what an armed studio lets through without asking', () => {
+  const arm = (partial: Partial<Settings['mcp']>): void => {
+    useSettings.setState({
+      settings: { ...DEFAULT_SETTINGS, mcp: { ...DEFAULT_SETTINGS.mcp, ...partial } },
+    })
+  }
+
+  beforeEach(() => {
+    resetDelegatedSpendForTests()
+    useSettings.setState({ settings: DEFAULT_SETTINGS })
+  })
+
+  it('asks about everything while nothing is armed', async () => {
+    const ask = vi.fn(() => Promise.resolve(false))
+    const stop = registerConfirmer(ask)
+
+    await runConfirmedAction('command.run', { command: 'canvas.cutout' })
+
+    expect(ask).toHaveBeenCalled()
+    stop()
+  })
+
+  it('runs an armed level with nobody to ask at all', async () => {
+    arm({ delegateAsset: true })
+
+    // No confirmer registered: without the delegation this is `noConfirmer`, which is the whole
+    // of what "a client working while nobody is at the machine" used to run into.
+    expect(await runConfirmedAction('command.run', { command: 'canvas.cutout' })).not.toEqual({
+      ok: false,
+      refusal: 'noConfirmer',
+    })
+  })
+
+  it('spends up to the budget, then asks again', async () => {
+    arm({ delegateBudget: 5 })
+    installFakeBridge({ scenario: { estimateCost: () => Promise.resolve({ creativeUnits: 3 }) } })
+    const stopGenerator = registerGenerator(
+      aGenerator({ submit: () => Promise.resolve(jobOf({ id: 'job_1' })) }),
+    )
+
+    // Three of five: through. Three more is six, which is past five — so the second one asks, and
+    // with nobody registered to ask it refuses.
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({ ok: true })
+    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+      ok: false,
+      refusal: 'noConfirmer',
+    })
+    stopGenerator()
+  })
+
+  /** A ceiling cannot bound a cost nobody knows, so an unpriced spend is asked about regardless. */
+  it('asks about a spend the API declined to price, whatever the budget', async () => {
+    arm({ delegateBudget: 10_000 })
+    installFakeBridge({ scenario: { estimateCost: () => Promise.reject(new Error('no price')) } })
+    const stopGenerator = registerGenerator(aGenerator())
+
+    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+      ok: false,
+      refusal: 'noConfirmer',
+    })
+    stopGenerator()
+  })
+})
+
+describe('the table of handlers', () => {
+  /**
+   * Both directions, because both misses are silent. An action published with nothing behind it
+   * answers `badInput` to every client that read `tools/list` and believed the tool existed; a
+   * handler nothing publishes is code no door can reach. Neither the compiler nor the schema
+   * sees either — the table is `Partial` by construction, one family per module.
+   */
+  it('answers every action the registry publishes, and no name it does not', () => {
+    expect([...handledActions()].sort()).toEqual(ACTION_REGISTRY.map(entry => entry.name).sort())
+  })
+})
+
+describe('an input the registry would not accept', () => {
+  /**
+   * The gate is `runConfirmedAction` and nowhere else, which is what lets each handler read its
+   * input plainly. Checked through the confirmed door rather than on `validatesInput` directly:
+   * what this holds is the wiring, and the wiring is what was missing.
+   */
+  it('is refused before the action runs at all', async () => {
+    onImageDocument()
+
+    expect(await runConfirmedAction('workspace.open', { workspace: 'nowhere' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(await runConfirmedAction('workspace.open', { worksapce: '3d' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(showWorkspace).not.toHaveBeenCalled()
+  })
+
+  // A costly action with a bad input must not raise the question first: the person would be
+  // asked to approve a spend that was never going to happen.
+  it('is refused without anybody being asked', async () => {
+    const ask = vi.fn(async () => true)
+    const stop = registerConfirmer(ask)
+
+    expect(await runConfirmedAction('generator.submit', { unexpected: 1 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(ask).not.toHaveBeenCalled()
+    stop()
+  })
+})
+
 describe('what a call engages', () => {
   it('spends credits only by submitting', () => {
     expect(commitmentOfCall('generator.submit', {})).toBe('credits')
@@ -425,5 +555,12 @@ describe('what a call engages', () => {
   it('reads the commitment of the command a run names, not of the action', () => {
     expect(commitmentOfCall('command.run', { command: 'canvas.cutout' })).toBe('asset')
     expect(commitmentOfCall('command.run', { command: 'canvas.zoomIn' })).toBe('none')
+  })
+
+  // Recording a version adds one; amending REPLACES the one already there, message and parent
+  // with it — the same loss `git.restore` is asked about, and it went through unasked.
+  it('asks before an amend rewrites the version already recorded', () => {
+    expect(commitmentOfCall('git.commit', { message: 'Un lot' })).toBe('none')
+    expect(commitmentOfCall('git.commit', { message: 'Un lot', amend: true })).toBe('files')
   })
 })

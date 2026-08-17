@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, realpath, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -23,7 +23,10 @@ describe('the two doors onto one writer', () => {
   beforeEach(async () => {
     resetHandlers()
     chosen = await mkdtemp(join(tmpdir(), 'scenario-export-'))
-    registerExportHandlers({ pickFolder: () => Promise.resolve<string | null>(chosen) })
+    registerExportHandlers({
+      pickFolder: () => Promise.resolve<string | null>(chosen),
+      projectPath: () => null,
+    })
   })
 
   it('writes a sky through its own channel, into a folder of its own', async () => {
@@ -56,7 +59,7 @@ describe('the texture export handler', () => {
     resetHandlers()
     chosen = await mkdtemp(join(tmpdir(), 'scenario-texture-'))
     pickFolder = vi.fn(() => Promise.resolve<string | null>(chosen))
-    registerExportHandlers({ pickFolder })
+    registerExportHandlers({ pickFolder, projectPath: () => null })
   })
 
   it('writes every file into a folder named after the texture', async () => {
@@ -98,7 +101,7 @@ describe('the texture export handler', () => {
   it('writes nothing when the dialog was dismissed', async () => {
     pickFolder = () => Promise.resolve(null)
     resetHandlers()
-    registerExportHandlers({ pickFolder })
+    registerExportHandlers({ pickFolder, projectPath: () => null })
 
     await expect(
       invoke(CHANNELS.textureExport, { folder: 'Brique', files: [file('Brique_BaseColor')] }),
@@ -201,5 +204,59 @@ describe('the texture export handler', () => {
     ).rejects.toThrow()
 
     expect(pickFolder).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * The third door, and the only one an outside client can use: the destination is NAMED rather
+ * than pointed at, so it is held inside the open project instead of being trusted.
+ */
+describe('the door that names its destination', () => {
+  let project: string
+
+  beforeEach(async () => {
+    resetHandlers()
+    project = await realpath(await mkdtemp(join(tmpdir(), 'scenario-project-')))
+    registerExportHandlers({
+      pickFolder: () => Promise.resolve<string | null>(null),
+      projectPath: () => project,
+    })
+  })
+
+  it('writes into the open project, and answers the folder name', async () => {
+    await expect(
+      invoke(CHANNELS.projectExport, { folder: 'Rendus', files: [file('vue')] }),
+    ).resolves.toBe('Rendus')
+
+    await expect(readdir(join(project, 'Rendus'))).resolves.toEqual(['vue.png'])
+  })
+
+  // No dialog is raised on this door at all: nobody is there to fill one.
+  it('refuses when no project is open rather than asking where to put it', async () => {
+    const pickFolder = vi.fn(() => Promise.resolve<string | null>(null))
+    resetHandlers()
+    registerExportHandlers({ pickFolder, projectPath: () => null })
+
+    await expect(
+      invoke(CHANNELS.projectExport, { folder: 'Rendus', files: [file('vue')] }),
+    ).resolves.toBeNull()
+    expect(pickFolder).not.toHaveBeenCalled()
+  })
+
+  it('refuses a destination that resolves out of the project', async () => {
+    const elsewhere = await mkdtemp(join(tmpdir(), 'scenario-elsewhere-'))
+    await symlink(elsewhere, join(project, 'Rendus'))
+
+    await expect(
+      invoke(CHANNELS.projectExport, { folder: 'Rendus', files: [file('vue')] }),
+    ).resolves.toBeNull()
+    await expect(readdir(elsewhere)).resolves.toEqual([])
+  })
+
+  // The same parser as the other two doors, so a climbing name never reaches the write at all.
+  it('refuses a name that is not one segment', async () => {
+    await expect(
+      invoke(CHANNELS.projectExport, { folder: '../escape', files: [file('vue')] }),
+    ).rejects.toThrow()
   })
 })

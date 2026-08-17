@@ -47,8 +47,14 @@ export function jsonIn(text: string): unknown {
 function callIn(value: unknown): AssistantCall | null {
   if (!isRecord(value)) return null
 
+  /**
+   * Held to the share the model was SHOWN, not to the registry — `instruction.ts` lists it the
+   * `both` actions and nothing else, so an action it names from the other seventy-six is an
+   * action it invented. Checking against the whole registry let a hallucinated `git.checkout`
+   * through on the strength of the name alone.
+   */
   const action = assistantAction(typeof value.action === 'string' ? value.action : '')
-  if (!action) return null
+  if (!action || action.reach !== 'both') return null
 
   // An action with no fields may legitimately arrive without an input at all.
   const input = value.input

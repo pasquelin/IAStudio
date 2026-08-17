@@ -115,6 +115,9 @@ const assetQuery = z.object({
   // shared with the caller, which cuts its question into batches of it — read on one side only,
   // a project past it lost every answer rather than one batch.
   paths: z.array(folderPath).max(ASSET_PATHS_MAX).optional(),
+  // Absent here, `z.object` STRIPS it and the query reaching SQL is unfiltered: reading back a
+  // generation's output answered with the first rows of the whole catalogue.
+  ids: z.array(z.string().trim().min(1)).max(ASSET_PATHS_MAX).optional(),
   location: z.enum(['local', 'cloud']).optional(),
   syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
   groupId: z.string().trim().min(1).optional(),

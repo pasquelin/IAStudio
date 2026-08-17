@@ -44,6 +44,546 @@
       "promptDescribeStyle": {
         "title": "Décrire le style des références",
         "description": "Lit les images de référence posées sur le formulaire du Générateur et en rend une description utilisable comme prompt. Ne consomme rien."
+      },
+      "studioState": {
+        "title": "Lire l’état du studio",
+        "description": "Rend le projet ouvert, l’espace et la surface actifs, tous les documents ouverts avec celui qui est devant, le modèle armé par famille, et si le studio est connecté. À demander avant de lancer une commande, car une commande n’atteint que la surface active."
+      },
+      "documentsList": {
+        "title": "Lister les documents du projet",
+        "description": "Rend tous les documents que porte le dossier du projet, ouverts dans un onglet ou non, avec leur chemin, leur nature et leur espace. Ne change rien à l’écran."
+      },
+      "documentOpen": {
+        "title": "Ouvrir un document",
+        "description": "Ouvre un document du dossier du projet par son chemin et le met devant, en basculant d’espace si besoin. Le chemin est celui qu’un listage a rendu."
+      },
+      "documentActivate": {
+        "title": "Mettre un document devant",
+        "description": "Fait d’un document déjà ouvert l’onglet actif, pour que les commandes de sa surface l’atteignent. C’est la réponse à une commande refusée parce qu’elle s’adressait à une autre surface."
+      },
+      "documentClose": {
+        "title": "Fermer un document",
+        "description": "Ferme l’onglet d’un document ouvert. Ce qui n’a jamais atteint le disque est perdu avec lui, et c’est pour cela que cette action demande d’abord."
+      },
+      "documentRename": {
+        "title": "Renommer un document",
+        "description": "Appelle un document autrement, sur le disque et à l’écran d’un même geste. Le document garde son identité, et un onglet ouvert se renomme sans se fermer."
+      },
+      "activityRecent": {
+        "title": "Lire l’activité récente",
+        "description": "Rend ce que le studio a consigné dernièrement — générations, opérations sur les fichiers, échecs — du plus récent au plus ancien. C’est ainsi qu’on apprend ce qu’une action a réellement fait."
+      },
+      "projectOpen": {
+        "title": "Ouvrir un dossier de projet",
+        "description": "Ouvre un projet depuis un chemin absolu de cette machine, sans lever le dialogue système qu’une personne utiliserait. Répond si le dossier était bien un projet."
+      },
+      "projectCreate": {
+        "title": "Créer un dossier de projet",
+        "description": "Crée un projet à un chemin absolu de cette machine et l’ouvre, sans lever le dialogue système qu’une personne utiliserait."
+      },
+      "filesList": {
+        "title": "Lister un dossier",
+        "description": "Rend les entrées d’un dossier du projet ouvert, fichiers comme dossiers, avec le chemin sous lequel chacune est connue. Sans dossier donné, liste la racine du projet."
+      },
+      "filesSearch": {
+        "title": "Chercher dans les fichiers du projet",
+        "description": "Cherche dans tout le projet ouvert par le nom et rend les entrées trouvées avec leur chemin. Ne change rien à l’écran."
+      },
+      "filesMove": {
+        "title": "Déplacer des fichiers",
+        "description": "Déplace des fichiers et des dossiers du projet vers un autre de ses dossiers. Le disque change, donc cette action demande d’abord — l’Explorateur peut encore l’annuler ensuite."
+      },
+      "filesCopy": {
+        "title": "Copier des fichiers",
+        "description": "Copie des fichiers et des dossiers du projet vers un autre de ses dossiers, en laissant les originaux où ils sont."
+      },
+      "filesDuplicate": {
+        "title": "Dupliquer des fichiers",
+        "description": "Crée une copie de chaque fichier ou dossier nommé, à côté de lui, sous un nom que le studio choisit pour n’écraser personne."
+      },
+      "filesTrash": {
+        "title": "Mettre des fichiers à la corbeille",
+        "description": "Envoie des fichiers et des dossiers du projet à la corbeille du système. Cette action demande d’abord, et ce qu’elle a emporté figure dans l’activité récente."
+      },
+      "fileRename": {
+        "title": "Renommer un fichier",
+        "description": "Donne un autre nom à un fichier ou un dossier du projet, dans le dossier où il se trouve déjà. Cette action demande d’abord, car un autre programme le connaît peut-être sous l’ancien."
+      },
+      "fileFacts": {
+        "title": "Lire les faits d’un fichier",
+        "description": "Rend ce que le disque consigne d’une entrée — sa nature, sa taille en octets, sa création et sa dernière modification. Ne change rien à l’écran."
+      },
+      "folderNew": {
+        "title": "Créer un dossier",
+        "description": "Crée un dossier dans un dossier du projet ouvert. Répond avec le chemin qui lui a été donné, qui peut différer si le nom était pris."
+      },
+      "modelSchema": {
+        "title": "Lire les entrées d’un modèle",
+        "description": "Rend les champs qu’un modèle de génération accepte, avec leur nature et leurs bornes, tels que le studio en construit son formulaire. C’est de quoi remplir les paramètres d’une génération préparée."
+      },
+      "costEstimate": {
+        "title": "Estimer ce que coûterait une génération",
+        "description": "Chiffre un modèle et un jeu de paramètres sans rien lancer. Ne répond aucun montant là où l’API refuse de chiffrer ce modèle, plutôt que d’inventer un nombre."
+      },
+      "jobGet": {
+        "title": "Lire une tâche",
+        "description": "Rend une génération entière — son état, son avancement, ce qu’elle a produit, ce qu’elle a coûté, et pourquoi elle a échoué le cas échéant."
+      },
+      "jobWait": {
+        "title": "Attendre la fin d’une tâche",
+        "description": "Attend qu’une génération réussisse, échoue ou soit annulée, puis la rend avec les assets produits. Rend la tâche telle quelle si l’attente expire, ce qui est une réponse et non un échec."
+      },
+      "jobCancel": {
+        "title": "Annuler une tâche",
+        "description": "Arrête une génération encore en file ou en cours. Ce qui a déjà été dépensé n’est pas rendu."
+      },
+      "usageReport": {
+        "title": "Lire le rapport de consommation",
+        "description": "Rend ce que le compte a dépensé sur une fenêtre de sept, trente-et-un ou cent vingt jours, telle que la fenêtre de consommation l’affiche."
+      },
+      "assetsSearch": {
+        "title": "Chercher dans la bibliothèque",
+        "description": "Cherche les assets du projet par texte, par nature et par tags, et peut se restreindre à ce qui a été généré. Répond avec les lignes que porte le catalogue."
+      },
+      "assetsCounts": {
+        "title": "Compter la bibliothèque",
+        "description": "Rend le nombre d’assets de chaque nature que porte le projet, compté dans le catalogue plutôt qu’en les listant."
+      },
+      "assetGet": {
+        "title": "Lire des assets",
+        "description": "Rend tout ce que le catalogue sait des assets nommés — où ils sont, d’où ils viennent, comment ils sont étiquetés. C’est ce qu’il faut appeler sur les identifiants qu’une génération finie a rendus."
+      },
+      "assetUpdate": {
+        "title": "Corriger un asset",
+        "description": "Change le nom d’un asset, ses tags, ou la nature que le studio a lue dans son extension. Les tags sont remplacés en entier, donc une liste vide les efface vraiment."
+      },
+      "assetsRemove": {
+        "title": "Retirer des assets",
+        "description": "Sort des assets de la bibliothèque du projet, et de la bibliothèque distante quand on le demande. Cette action demande d’abord, et ce qu’elle a retiré figure dans l’activité récente."
+      },
+      "canvasState": {
+        "title": "Lire l’image en cours d’édition",
+        "description": "Rend le cadre de l’image devant — sa taille et sa résolution — et toute sa pile de calques mise à plat, chacun avec son identifiant, sa nature, son opacité, son mode de fusion et sa transformation."
+      },
+      "canvasResize": {
+        "title": "Redimensionner l’image",
+        "description": "Change le cadre de l’image devant. Redimensionne les calques avec lui quand on le demande, et les laisse en place sinon, ce qui est toute la différence entre taille de l’image et taille du canevas."
+      },
+      "canvasCrop": {
+        "title": "Recadrer l’image",
+        "description": "Referme le cadre sur un rectangle donné en coordonnées du document. Les calques gardent leur place, donc ce qui tombe dehors est ce qui est coupé."
+      },
+      "canvasOrient": {
+        "title": "Retourner ou pivoter l’image",
+        "description": "Reflète l’image selon un axe, ou la fait pivoter d’un quart de tour dans un sens ou dans l’autre. Un quart de tour échange la largeur et la hauteur du cadre, donc un portrait devient un paysage."
+      },
+      "layerAdd": {
+        "title": "Ajouter un calque",
+        "description": "Pose un calque de pixels, de texte ou de réglage au sommet de la pile de l’image devant, et répond avec l’identifiant qui lui a été donné. Un calque de réglage doit nommer le réglage qu’il porte."
+      },
+      "layerRemove": {
+        "title": "Retirer un calque",
+        "description": "Sort un calque de la pile de l’image devant. S’annule comme n’importe quelle autre édition de ce document."
+      },
+      "layerSelect": {
+        "title": "Armer un calque",
+        "description": "Fait d’un calque celui qui est armé, c’est-à-dire celui sur lequel agissent les outils de l’espace Image. C’est une façon de regarder la pile plutôt qu’une édition, donc rien ne s’ajoute à l’historique."
+      },
+      "layerRename": {
+        "title": "Renommer un calque",
+        "description": "Appelle autrement un calque de l’image devant. L’identifiant ne change pas, donc rien de ce qui le désignait n’est perdu."
+      },
+      "layerStyle": {
+        "title": "Régler la composition d’un calque",
+        "description": "Change l’opacité d’un calque, son opacité de fond, son mode de fusion, sa visibilité ou son masquage. Chaque champ est facultatif, et ce qui n’est pas donné reste exactement tel quel."
+      },
+      "layerTransform": {
+        "title": "Placer un calque",
+        "description": "Déplace, redimensionne ou fait tourner un calque dans le cadre. La rotation se donne en degrés, et tout champ omis garde la valeur que le calque avait déjà."
+      },
+      "layerText": {
+        "title": "Régler les mots d’un calque de texte",
+        "description": "Change ce que dit un calque de texte, la taille à laquelle il le dit, ou sa couleur. Refuse un calque qui porte des pixels plutôt que des mots, que la commande laisserait sinon intact."
+      },
+      "layerMove": {
+        "title": "Réordonner un calque",
+        "description": "Déplace un calque ailleurs dans la pile, et dans un groupe ou hors d’un groupe. L’indice zéro est le bas de la pile, c’est-à-dire ce que l’œil voit en dernier."
+      },
+      "layerDuplicate": {
+        "title": "Dupliquer un calque",
+        "description": "Copie un calque juste au-dessus de lui-même, enfants compris, chaque copie recevant un identifiant neuf. Répond avec l’identifiant de la copie."
+      },
+      "layerGroup": {
+        "title": "Grouper des calques",
+        "description": "Rassemble des calques de premier niveau en un groupe, qui se déplace ensuite d’un bloc. Répond avec l’identifiant du groupe."
+      },
+      "layerUngroup": {
+        "title": "Dissoudre un groupe",
+        "description": "Défait un groupe en laissant ses enfants là où le groupe se tenait dans la pile."
+      },
+      "layerMergeDown": {
+        "title": "Fusionner un calque vers le bas",
+        "description": "Replie un calque dans celui qui est sous lui, à l’intérieur de son propre niveau de pile. Le résultat garde l’identité du calque du dessous."
+      },
+      "sequenceState": {
+        "title": "Lire le montage en cours d’édition",
+        "description": "Rend le montage devant — ses réglages, sa durée, la tête de lecture et ce qui est sélectionné — puis chaque piste avec ses blocs, leurs bornes, leur entrée dans la source, leur vitesse, leurs fondus et leur niveau."
+      },
+      "sequenceSeek": {
+        "title": "Placer la tête de lecture",
+        "description": "Déplace la tête de lecture du montage devant à l’instant donné, en microsecondes. Ce n’est pas une modification, donc rien n’entre dans l’historique et l’annulation ne la ramène pas."
+      },
+      "clipAdd": {
+        "title": "Poser un bloc sur le montage",
+        "description": "Pose un asset de la bibliothèque sur une piste du montage devant, à l’instant donné ou sous la tête de lecture. Ouvre les pistes qui manquent, et lie l’image à son son quand la prise en porte un."
+      },
+      "clipRemove": {
+        "title": "Retirer un bloc du montage",
+        "description": "Enlève un bloc de sa piste, et avec lui la moitié qui lui est liée. La place qu’il occupait reste vide plutôt que de se refermer sur ses voisins."
+      },
+      "clipMove": {
+        "title": "Déplacer un bloc",
+        "description": "Porte un bloc sur une piste et à un instant donnés, en recouvrant ce qui se trouve là. Une piste verrouillée ou d’une autre nature n’accepte rien."
+      },
+      "clipTrim": {
+        "title": "Rogner un bord de bloc",
+        "description": "Tire l’entrée ou la sortie d’un bloc jusqu’à l’instant donné, sans jamais dépasser la source qui est derrière. Une image fixe n’a pas de source à dépasser et s’étire librement."
+      },
+      "clipSplit": {
+        "title": "Couper un bloc en deux",
+        "description": "Coupe un bloc à l’instant donné et laisse les deux moitiés bout à bout. Un instant hors du bloc n’a rien à couper, et se voit refusé plutôt que rapporté comme fait."
+      },
+      "clipFade": {
+        "title": "Régler un fondu de bloc",
+        "description": "Donne au fondu d’entrée ou de sortie d’un bloc la longueur demandée. Deux rampes plus longues que le bloc lui-même sont ramenées à ce qu’il peut porter."
+      },
+      "clipGain": {
+        "title": "Régler le niveau d’un bloc",
+        "description": "Change le niveau d’un bloc en décibels, zéro laissant la prise telle qu’elle a été enregistrée. La valeur est bornée à ce que la lecture sait tenir."
+      },
+      "clipSpeed": {
+        "title": "Régler la vitesse d’un bloc",
+        "description": "Change la vitesse de lecture d’un bloc, un pour la vitesse d’origine. La durée sur le montage suit, la source lue restant la même."
+      },
+      "clipUnlink": {
+        "title": "Détacher l’image de son son",
+        "description": "Sépare les deux moitiés d’une prise, de sorte que déplacer, rogner ou couper l’une n’atteigne plus l’autre. Rien ne les relie de nouveau ensuite."
+      },
+      "clipSelect": {
+        "title": "Désigner un bloc",
+        "description": "Désigne le bloc sur lequel l’inspecteur et les gestes sans cible vont porter. Ce n’est pas une modification, et l’annulation ne la reprend pas."
+      },
+      "trackAdd": {
+        "title": "Ajouter une piste",
+        "description": "Ouvre une piste image ou son sous les autres. Une piste image ne peut rien porter d’un son, et l’inverse est vrai aussi."
+      },
+      "trackRemove": {
+        "title": "Retirer une piste",
+        "description": "Enlève une piste du montage, et tous les blocs qu’elle portait avec elle. Une piste verrouillée n’est pas retirée."
+      },
+      "trackMove": {
+        "title": "Changer l’ordre des pistes",
+        "description": "Monte ou descend une piste du nombre de rangs donné, ce qui change ce qui recouvre quoi. Un rang négatif descend, un rang positif monte."
+      },
+      "trackRename": {
+        "title": "Renommer une piste",
+        "description": "Donne son nom à une piste, celui que porte la colonne des en-têtes. L’identifiant, lui, ne change jamais."
+      },
+      "trackState": {
+        "title": "Régler comment une piste se travaille",
+        "description": "Change le silence, le solo, le verrou ou la hauteur d’une piste. Ces quatre-là disent comment on travaille et non ce qu’on a fait, et n’entrent donc jamais dans l’historique."
+      },
+      "skyboxState": {
+        "title": "Lire le ciel en cours d’édition",
+        "description": "Rend le ciel devant — sa source équirectangulaire, ses réglages d’image, la position et la couleur de son soleil, et ce que son environnement éclaire — plus ce qui l’a produit s’il vient d’une génération."
+      },
+      "skyboxAdjust": {
+        "title": "Régler l’image d’un ciel",
+        "description": "Change l’exposition, le contraste, la saturation, la température, la teinte, la rotation d’horizon ou le flou. Chaque champ est facultatif, et ce qui n’est pas donné reste tel quel."
+      },
+      "skyboxResetAdjustments": {
+        "title": "Remettre les réglages d’image à neutre",
+        "description": "Ramène d’un coup tous les réglages d’image du ciel à leur valeur neutre, en une seule entrée d’historique. La source et le soleil ne bougent pas."
+      },
+      "skyboxSun": {
+        "title": "Placer et régler le soleil",
+        "description": "Change l’élévation, l’azimut, l’intensité ou la couleur du soleil du ciel devant. Les deux angles sont en radians, comme partout dans la scène."
+      },
+      "skyboxEnvironment": {
+        "title": "Régler ce que le ciel éclaire",
+        "description": "Change l’intensité de l’éclairage que le ciel donne aux objets d’essai, et décide si l’image est dessinée derrière eux ou se contente de les éclairer."
+      },
+      "skyboxSource": {
+        "title": "Choisir l’image d’un ciel",
+        "description": "Accroche une image équirectangulaire de la bibliothèque dans le ciel devant. L’asset doit avoir un fichier sur la machine, une image restée dans le nuage n’ayant rien à décoder."
+      },
+      "textureState": {
+        "title": "Lire la matière en cours d’édition",
+        "description": "Rend la matière devant — les huit canaux et ce qui les remplit, tous les réglages de rendu comme la couleur, la rugosité et le pavage, et la façon dont l’aperçu est présenté."
+      },
+      "textureMaterial": {
+        "title": "Régler une matière",
+        "description": "Change la teinte, la rugosité, le métal, le relief, l’occlusion, l’émission, le pavage, le décalage ou la rotation de la matière devant. Chaque champ est facultatif."
+      },
+      "texturePreview": {
+        "title": "Régler l’aperçu d’une matière",
+        "description": "Change l’intensité et la rotation de l’environnement qui éclaire l’aperçu, l’affichage du fond, la rotation automatique et la mise en évidence des coutures."
+      },
+      "textureChannel": {
+        "title": "Remplir ou vider un canal",
+        "description": "Met une image de la bibliothèque dans un des huit canaux de la matière devant. Sans asset nommé, le canal est vidé plutôt que rempli."
+      },
+      "documentExport": {
+        "title": "Exporter le document devant dans le projet",
+        "description": "Écrit l’image, la scène, le ciel ou la matière devant dans un dossier du projet, portant son titre à défaut d’un nom donné. La destination ne peut pas sortir du projet."
+      },
+      "gitStashDrop": {
+        "title": "Jeter une remise",
+        "description": "Supprime une remise de la pile sans la réappliquer. Ce qu’elle portait n’a jamais été enregistré, donc rien ne le rend."
+      },
+      "gitResolve": {
+        "title": "Trancher un conflit de fusion",
+        "description": "Retient un des deux côtés d’un conflit pour les fichiers nommés. Ce que l’autre côté portait disparaît de la copie de travail."
+      },
+      "gitAbortMerge": {
+        "title": "Abandonner la fusion en cours",
+        "description": "Ramène le dépôt là où il était avant la fusion, en défaisant ce qu’elle avait déjà écrit dans la copie de travail."
+      },
+      "gitRemotes": {
+        "title": "Lister les dépôts distants",
+        "description": "Rend les dépôts distants déclarés, avec leur nom et leur adresse. C’est ce vers quoi un envoi partirait."
+      },
+      "gitAddRemote": {
+        "title": "Déclarer un dépôt distant",
+        "description": "Ajoute un dépôt distant sous le nom donné. Rien n’est envoyé ni rapatrié par ce seul geste, qui écrit dans la configuration locale."
+      },
+      "gitFetch": {
+        "title": "Rapatrier les références distantes",
+        "description": "Va lire où en est le dépôt distant, sans rien changer à votre copie de travail et sans rien publier. C’est la moitié inoffensive d’un rapatriement."
+      },
+      "gitPull": {
+        "title": "Rapatrier et fusionner",
+        "description": "Rapatrie le dépôt distant et fusionne dans la branche courante, ce qui réécrit la copie de travail. Un conflit s’arrête et se tranche ensuite."
+      },
+      "gitPush": {
+        "title": "Publier vers le dépôt distant",
+        "description": "Envoie la branche courante vers le dépôt distant. C’est le seul geste du studio qui sorte de cette machine, et rien ici ne le rattrape."
+      },
+      "cloudBrowse": {
+        "title": "Parcourir la bibliothèque distante",
+        "description": "Rend une page de la bibliothèque du compte, filtrée par texte, tags ou nature. La pagination se fait par curseur, et il n’y a pas de total — l’API n’en donne aucun."
+      },
+      "cloudExplore": {
+        "title": "Parcourir ce que tout le monde a publié",
+        "description": "Rend une page du flux public d’une nature donnée, du plus récent au plus ancien. Ces assets ne sont pas les vôtres, et les regarder n’en rapatrie aucun."
+      },
+      "cloudSimilar": {
+        "title": "Chercher ce qui ressemble à un asset",
+        "description": "Rend les assets publiés qui ressemblent à celui nommé, celui-ci étant retiré de ses propres résultats. La référence est au choix de l’appelant."
+      },
+      "cloudPlan": {
+        "title": "Prévoir ce qu’une synchronisation ferait",
+        "description": "Dit ce qu’un envoi ou un rapatriement ferait de chaque asset nommé, avant que cela ne coûte la moindre requête. Rien n’est envoyé ni rapatrié."
+      },
+      "cloudPull": {
+        "title": "Rapatrier des assets distants",
+        "description": "Fait entrer des assets dans le projet, octets compris, et dit ce que chacun a donné. Un téléchargement interrompu garde ce qu’il avait déjà écrit."
+      },
+      "cloudPush": {
+        "title": "Envoyer des assets vers le compte",
+        "description": "Envoie des assets locaux vers la bibliothèque du compte, où ils restent. C’est le seul geste de cette famille qui laisse quelque chose derrière lui."
+      },
+      "stylesList": {
+        "title": "Lister les styles de matière",
+        "description": "Rend les styles de matière enregistrés, avec leur identifiant, leur nom et les valeurs qu’ils gardent. Ils vivent hors de tout projet et suivent la machine."
+      },
+      "styleSave": {
+        "title": "Enregistrer la matière comme style",
+        "description": "Met de côté la matière du document devant sous le nom donné. Le nom sert de base, le studio le rendant unique s’il est déjà pris."
+      },
+      "styleRename": {
+        "title": "Renommer un style de matière",
+        "description": "Donne son nom à un style enregistré. Rien d’autre du style ne bouge, et son identifiant reste le même."
+      },
+      "styleRemove": {
+        "title": "Supprimer un style de matière",
+        "description": "Retire un style enregistré. Il vit hors de tout projet, donc rien ne le rend — ni l’annulation, ni l’Explorateur."
+      },
+      "authState": {
+        "title": "Savoir si le studio est connecté",
+        "description": "Dit si une clé API est en place et sur quel compte le studio travaille. Ne rend jamais la clé elle-même, qui ne quitte pas le processus principal."
+      },
+      "windowState": {
+        "title": "Lire l’état de la fenêtre",
+        "description": "Rend la taille de la fenêtre, si elle est agrandie ou en plein écran, et la langue dans laquelle elle dessine — celle que le processus principal a réellement retenue."
+      },
+      "windowFullScreen": {
+        "title": "Basculer le plein écran",
+        "description": "Fait entrer la fenêtre en plein écran, ou l’en fait sortir. C’est un basculement, il n’y a pas de façon de demander l’un des deux états."
+      },
+      "settingsOpen": {
+        "title": "Ouvrir les réglages sur une section",
+        "description": "Ouvre la fenêtre des réglages sur la section demandée, ou l’y amène si elle est déjà ouverte. Lire et écrire un réglage ne demande pas de l’ouvrir."
+      },
+      "updatesState": {
+        "title": "Lire l’état des mises à jour",
+        "description": "Dit où en est la mise à jour de l’application — rien en vue, en cours de téléchargement, ou prête à s’installer à la prochaine fermeture."
+      },
+      "mediaCapabilities": {
+        "title": "Savoir ce que le studio sait décoder",
+        "description": "Dit de quoi la machine est capable côté média, ce qui dépend de la présence de ffmpeg. Sans lui, l’import fonctionne mais l’interface annonce ce qu’elle ne peut pas faire."
+      },
+      "mediaAdopt": {
+        "title": "Donner une ligne de catalogue à un fichier",
+        "description": "Fait entrer dans le catalogue un fichier que le dossier du projet contient déjà, sans le copier. C’est la moitié de l’import qui n’ouvre pas de dialogue système."
+      },
+      "fontsList": {
+        "title": "Lister les polices installées",
+        "description": "Rend les familles de police que la machine a, une graisse par famille. C’est ce dans quoi un calque de texte peut être écrit."
+      },
+      "favoritesList": {
+        "title": "Lister les recettes épinglées",
+        "description": "Rend les recettes mises de côté, avec le modèle qui les a produites et l’espace qui sait les refaire. Une recette garde de quoi relancer une génération."
+      },
+      "favoritePin": {
+        "title": "Épingler la recette d’un asset",
+        "description": "Met de côté ce qui a produit un asset du projet ouvert, pour pouvoir le refaire. Un asset que personne n’a généré n’a pas de recette à garder."
+      },
+      "favoriteUnpin": {
+        "title": "Retirer une recette épinglée",
+        "description": "Enlève une recette de la liste des épinglées. L’asset qu’elle avait produit, lui, ne bouge pas."
+      },
+      "fileInfoOpen": {
+        "title": "Ouvrir les informations d’un fichier",
+        "description": "Ouvre la fenêtre qui décrit un fichier du projet — sa taille, sa nature, son historique et ce que le catalogue en sait."
+      },
+      "mirrorOpen": {
+        "title": "Ouvrir le retour vidéo",
+        "description": "Ouvre la fenêtre de retour, ou la ramène devant si elle est déjà là. Elle montre ce que le montage joue, sans rien porter du travail."
+      },
+      "sceneState": {
+        "title": "Lire la scène en cours d’édition",
+        "description": "Rend tous les objets du document 3D devant — identifiant, nom, type, parent, visibilité et transformation, avec la géométrie, la matière ou la lumière qu’ils portent — plus ce qui est sélectionné et ce qui éclaire la scène."
+      },
+      "nodeAdd": {
+        "title": "Ajouter un objet à la scène",
+        "description": "Pose une primitive, une lumière, une caméra, un sprite ou un texte dans le document 3D devant, à la position donnée. Répond avec l’identifiant reçu par l’objet à sa naissance."
+      },
+      "nodeAddModel": {
+        "title": "Placer un modèle de la bibliothèque",
+        "description": "Pose un modèle 3D de la bibliothèque du projet dans la scène devant, nommé d’après son asset. C’est ainsi qu’une maille générée entre dans une scène."
+      },
+      "nodeRemove": {
+        "title": "Retirer un objet",
+        "description": "Sort un objet de la scène devant, avec ce qui pend sous lui. S’annule comme n’importe quelle autre édition de ce document."
+      },
+      "nodeRename": {
+        "title": "Renommer un objet",
+        "description": "Appelle autrement un objet de la scène devant. L’identifiant ne change pas, donc rien de ce qui le désignait n’est perdu."
+      },
+      "nodeTransform": {
+        "title": "Placer un objet",
+        "description": "Déplace, oriente ou redimensionne un objet. Les rotations sont des angles d’Euler en radians, et tout axe omis garde la valeur que l’objet avait déjà."
+      },
+      "nodeVisible": {
+        "title": "Montrer ou cacher un objet",
+        "description": "Sort un objet de ce qui est dessiné, ou l’y remet. Il reste dans la scène dans les deux cas, et c’est ce qui distingue cacher de retirer."
+      },
+      "nodeMaterial": {
+        "title": "Régler la matière d’un objet",
+        "description": "Change la couleur, la rugosité ou l’aspect métallique d’une maille. Refuse un objet qui ne porte pas de matière de maille, que la commande laisserait sinon intact."
+      },
+      "nodeLight": {
+        "title": "Régler une lumière",
+        "description": "Change la couleur ou l’intensité d’une lumière. Ces deux-là seulement, parce que le reste des champs d’une lumière diffère d’une sorte à l’autre."
+      },
+      "nodeReparent": {
+        "title": "Rattacher un objet",
+        "description": "Accroche un objet sous un autre, ou sous la scène elle-même quand aucun parent n’est donné. L’objet garde sa transformation, qui se lit alors relativement à son nouveau parent."
+      },
+      "nodeSelect": {
+        "title": "Sélectionner des objets",
+        "description": "Fait de ces objets la sélection que lit l’inspecteur et que déplace le manipulateur. Une sélection n’est pas une édition, donc rien ne s’ajoute à l’historique."
+      },
+      "gitStatus": {
+        "title": "Lire le dépôt",
+        "description": "Rend la branche, ce qu’elle suit, son avance ou son retard, et chaque fichier modifié avec la moitié de git où il se trouve. Dit aussi quand le projet n’a aucun dépôt."
+      },
+      "gitLog": {
+        "title": "Lire l’historique",
+        "description": "Rend une page de versions enregistrées, de la plus récente à la plus ancienne, toutes branches confondues, avec les noms qui pointent sur chacune."
+      },
+      "gitCommitFiles": {
+        "title": "Lire ce qu’une version a changé",
+        "description": "Rend les fichiers qu’une version enregistrée a touchés, et comment chacun l’a été — ajouté, modifié, supprimé ou renommé."
+      },
+      "gitDiff": {
+        "title": "Lire ce qui a changé dans un fichier",
+        "description": "Rend la modification à l’intérieur d’un fichier, dans une version enregistrée, ou contre la dernière quand aucune version n’est nommée."
+      },
+      "gitBranches": {
+        "title": "Lister les branches",
+        "description": "Rend toutes les branches du dépôt du projet, en disant laquelle est active."
+      },
+      "gitStashes": {
+        "title": "Lister les remises",
+        "description": "Rend ce qui a été mis de côté, de la plus récente à la plus ancienne, pour qu’un client puisse en reprendre une par sa place dans la liste."
+      },
+      "gitInit": {
+        "title": "Commencer à enregistrer les versions",
+        "description": "Lance git init sur le projet ouvert et écrit son fichier d’exclusions, puis répond l’état qu’il a laissé. Ne fait rien à un projet qui enregistre déjà."
+      },
+      "gitStage": {
+        "title": "Indexer des fichiers",
+        "description": "Fait passer des modifications dans ce que portera la prochaine version enregistrée. Répond avec l’état laissé, donc rien n’est à relire."
+      },
+      "gitUnstage": {
+        "title": "Désindexer des fichiers",
+        "description": "Ressort des modifications de ce que portera la prochaine version enregistrée, sans toucher aux fichiers eux-mêmes."
+      },
+      "gitRestore": {
+        "title": "Abandonner les modifications de fichiers",
+        "description": "Remet des fichiers tels que la dernière version enregistrée les porte. Cette action demande d’abord, car ce qui n’a jamais été enregistré est perdu et aucune annulation du studio ne l’atteint."
+      },
+      "gitCommit": {
+        "title": "Enregistrer une version",
+        "description": "Enregistre ce qui est indexé, sous un message. Peut corriger la dernière version au lieu d’en ajouter une, ce qui la réécrit plutôt que de la suivre."
+      },
+      "gitCreateBranch": {
+        "title": "Créer une branche",
+        "description": "Démarre une branche à la version courante et bascule dessus. La copie de travail est laissée exactement telle quelle."
+      },
+      "gitCheckout": {
+        "title": "Changer de branche",
+        "description": "Bascule sur une autre branche en réécrivant la copie de travail. Cette action demande d’abord, car un document ouvert dans un onglet devient alors un document dont le fichier a changé sous lui."
+      },
+      "gitStash": {
+        "title": "Remiser les modifications en cours",
+        "description": "Met de côté les modifications de la copie de travail et la ramène à la dernière version enregistrée. Cette action demande d’abord, car elle retire les modifications du disque."
+      },
+      "gitStashPop": {
+        "title": "Reprendre une remise",
+        "description": "Remet un jeu de modifications remisées dans la copie de travail et le retire de la pile. Cette action demande d’abord, car elle réécrit des fichiers."
+      },
+      "gitTag": {
+        "title": "Étiqueter une version",
+        "description": "Pose un nom sur une version enregistrée, pour la retrouver sans son empreinte."
+      },
+      "settingsRead": {
+        "title": "Lire les réglages",
+        "description": "Rend tous les réglages que porte le studio, section par section, exactement tels que la fenêtre des réglages les montre."
+      },
+      "settingsWrite": {
+        "title": "Changer les réglages",
+        "description": "Écrit un ou plusieurs réglages, section par section. Ce qui n’est pas nommé reste tel quel, et un changement qui ne nomme rien que le studio connaisse est refusé plutôt qu’écrit sans être lu."
+      },
+      "accountsList": {
+        "title": "Lister les comptes",
+        "description": "Rend les comptes Scenario que porte ce studio, en disant lequel est actif et lesquels peuvent être renommés ou retirés. Aucune clé ni aucun secret n’est jamais rendu."
+      },
+      "accountsActivate": {
+        "title": "Changer de compte",
+        "description": "Fait de l’un des comptes détenus celui par lequel le studio génère. Tout ce qui part ensuite le fait avec ses identifiants."
       }
     },
     "refusals": {
@@ -55,6 +595,7 @@
       "notSubmitted": "La génération n’est pas partie.",
       "badInput": "Les paramètres fournis ne conviennent pas à cette action.",
       "noBridge": "Le studio ne répond pas.",
+      "noProject": "Aucun projet n’est ouvert, et ces chemins sont relatifs à un projet.",
       "noConfirmer": "Cette action demande un accord, et aucune fenêtre n’était là pour le donner.",
       "declined": "Vous avez refusé cette action.",
       "noWindow": "Aucune fenêtre du studio n’était au premier plan pour exécuter cette action.",
@@ -77,7 +618,123 @@
       "modelId": "Identifiant du modèle",
       "parameters": "Paramètres du modèle",
       "draft": "Phrase à retravailler",
-      "text": "Texte à traduire"
+      "text": "Texte à traduire",
+      "documentId": "Identifiant du document",
+      "title": "Titre",
+      "name": "Nom",
+      "limit": "Nombre d’entrées au maximum",
+      "filePath": "Chemin dans le projet, avec / entre les segments",
+      "filePaths": "Chemins dans le projet, avec / entre les segments",
+      "folderPath": "Chemin du dossier",
+      "hidden": "Inclure les entrées masquées",
+      "jobId": "Identifiant de la tâche",
+      "timeoutMs": "Attente maximale, en millisecondes",
+      "days": "Fenêtre en jours",
+      "assetId": "Identifiant de l’asset",
+      "assetIds": "Identifiants des assets",
+      "assetType": "Nature de l’asset",
+      "tags": "Tags",
+      "generated": "Seulement ce qui a été généré",
+      "offset": "Nombre d’entrées à sauter",
+      "alsoRemote": "Retirer aussi de la bibliothèque distante",
+      "layerId": "Identifiant du calque",
+      "layerIds": "Identifiants des calques",
+      "exportFolder": "Dossier du projet où écrire, à défaut le titre",
+      "exportFormat": "Format du fichier 3D",
+      "exportScope": "Toute la scène ou la sélection",
+      "exportTarget": "Moteur visé par l’export de matière",
+      "faceSize": "Côté d’une face, en pixels",
+      "conflictSide": "Côté du conflit à retenir",
+      "remoteName": "Nom du dépôt distant",
+      "remoteUrl": "Adresse du dépôt distant",
+      "setUpstream": "Rattacher la branche au distant",
+      "cursor": "Curseur de page, rendu par la page précédente",
+      "syncPolicy": "Sens de la synchronisation",
+      "styleId": "Identifiant du style",
+      "favoriteId": "Identifiant de la recette",
+      "settingsSection": "Section des réglages",
+      "exposure": "Exposition, en diaphragmes",
+      "contrast": "Contraste, 1 étant neutre",
+      "saturation": "Saturation, 1 étant neutre",
+      "temperature": "Température, de -1 froid à +1 chaud",
+      "tint": "Teinte, de -1 vert à +1 magenta",
+      "rotationY": "Rotation autour de la verticale, en radians",
+      "blur": "Adoucissement, de 0 net à 1 flou",
+      "elevation": "Élévation, en radians",
+      "azimuth": "Azimut, en radians",
+      "showBackground": "Dessiner l’image derrière le sujet",
+      "autoSpin": "Faire tourner l’aperçu tout seul",
+      "showSeam": "Amener les coutures au centre de l’aperçu",
+      "pbrChannel": "Canal de la matière",
+      "normalScale": "Force du relief",
+      "heightScale": "Force du déplacement",
+      "aoIntensity": "Force de l’occlusion",
+      "edgeIntensity": "Force de l’assombrissement des arêtes",
+      "emissive": "Couleur émise",
+      "emissiveIntensity": "Force de l’émission",
+      "tilingX": "Répétitions en largeur",
+      "tilingY": "Répétitions en hauteur",
+      "offsetX": "Décalage en largeur",
+      "offsetY": "Décalage en hauteur",
+      "invertNormalGreen": "Inverser le canal vert du relief",
+      "clipId": "Identifiant du bloc",
+      "trackId": "Identifiant de la piste",
+      "trackKind": "Nature de la piste",
+      "clipEdge": "Bord du bloc, entrée ou sortie",
+      "time": "Instant sur le montage, en microsecondes",
+      "start": "Début sur le montage, en microsecondes",
+      "at": "Instant visé, en microsecondes",
+      "fadeLength": "Longueur du fondu, en microsecondes",
+      "gain": "Niveau, en décibels",
+      "speed": "Vitesse de lecture, 1 étant la vitesse d’origine",
+      "by": "Nombre de rangs, négatif pour descendre",
+      "muted": "Piste rendue silencieuse",
+      "solo": "Piste seule à s’entendre",
+      "locked": "Piste verrouillée",
+      "layerKind": "Nature du calque",
+      "adjustment": "Réglage que porte le calque",
+      "parentId": "Groupe dans lequel le déplacer",
+      "index": "Place dans la pile, comptée depuis le bas",
+      "opacity": "Opacité, de 0 à 1",
+      "fillOpacity": "Opacité du fond, de 0 à 1",
+      "blend": "Mode de fusion",
+      "visible": "Visible",
+      "clipped": "Masqué par le calque du dessous",
+      "x": "X, en coordonnées du document",
+      "y": "Y, en coordonnées du document",
+      "scaleX": "Échelle en largeur",
+      "scaleY": "Échelle en hauteur",
+      "rotation": "Rotation, en degrés",
+      "fontSize": "Corps du texte",
+      "colour": "Couleur, en #rrggbb",
+      "width": "Largeur",
+      "height": "Hauteur",
+      "scalePixels": "Redimensionner les calques avec le cadre",
+      "turn": "Sens du retournement ou du quart de tour",
+      "nodeId": "Identifiant de l’objet",
+      "nodeIds": "Identifiants des objets",
+      "nodeKind": "Ce qu’il faut ajouter",
+      "positionX": "Position en largeur",
+      "positionY": "Position en hauteur",
+      "positionZ": "Position vers l’observateur",
+      "rotationX": "Rotation autour de X, en radians",
+      "rotationY": "Rotation autour de Y, en radians",
+      "rotationZ": "Rotation autour de Z, en radians",
+      "scaleZ": "Échelle en profondeur",
+      "roughness": "Rugosité, de 0 à 1",
+      "metalness": "Aspect métallique, de 0 à 1",
+      "intensity": "Intensité",
+      "gitPath": "Chemin dans le dépôt",
+      "gitPaths": "Chemins dans le dépôt",
+      "commitHash": "Identifiant de la version",
+      "skip": "Nombre d’entrées à sauter",
+      "message": "Message",
+      "amend": "Corriger la dernière version au lieu d’en ajouter une",
+      "branchName": "Nom de la branche",
+      "tagName": "Nom de l’étiquette",
+      "stashIndex": "Place dans la pile, la plus récente d’abord",
+      "settings": "Réglages à changer, par section",
+      "accountId": "Identifiant du compte"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",
@@ -99,7 +756,9 @@
     "confirm": {
       "credits": "Cette action va dépenser {{cost}}.",
       "unknownCost": "Cette action va dépenser des unités créatives. Le studio n’a pas pu en estimer le montant, et n’en invente pas.",
+      "files": "Cette action va modifier ce que porte votre projet — des fichiers, ou les assets de sa bibliothèque. Elle ne coûte aucune unité créative.",
       "asset": "Cette action va téléverser une image, qui restera dans votre bibliothèque. Elle ne coûte aucune unité créative.",
+    "remote": "Cette action va publier vers un serveur, hors de cette machine. Elle ne coûte aucune unité créative, et rien ici ne la rattrape.",
       "yes": "Autoriser",
       "yesHint": "Lance l’action décrite au-dessus, et engage ce qu’elle engage",
       "no": "Refuser",

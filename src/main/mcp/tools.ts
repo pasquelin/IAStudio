@@ -1,5 +1,5 @@
 import {
-  ACTION_REGISTRY,
+  actionsReaching,
   type ActionCommitment,
   type ActionField,
   type ActionName,
@@ -25,13 +25,15 @@ export type JsonSchema = {
   additionalProperties: false
 }
 
-type FieldSchema = {
+type ScalarSchema = {
   type?: 'string' | 'number' | 'integer' | 'boolean'
   description: string
   enum?: string[]
   minimum?: number
   maximum?: number
 }
+
+type FieldSchema = ScalarSchema | { type: 'array'; description: string; items: ScalarSchema }
 
 /**
  * What each of our kinds is in JSON Schema.
@@ -40,7 +42,7 @@ type FieldSchema = {
  * parameters, whose shape is only known once `GET /models/{id}` has answered. Announcing it as
  * an object would be a promise the registry cannot keep — it may legitimately be a string.
  */
-const JSON_TYPE: Record<FieldKind, FieldSchema['type']> = {
+const JSON_TYPE: Record<FieldKind, ScalarSchema['type']> = {
   text: 'string',
   longText: 'string',
   choice: 'string',
@@ -53,7 +55,7 @@ const JSON_TYPE: Record<FieldKind, FieldSchema['type']> = {
   raw: undefined,
 }
 
-function fieldSchema(field: ActionField): FieldSchema {
+function scalarSchema(field: ActionField): ScalarSchema {
   const type = JSON_TYPE[field.kind]
 
   return {
@@ -63,6 +65,13 @@ function fieldSchema(field: ActionField): FieldSchema {
     ...(field.min === undefined ? {} : { minimum: field.min }),
     ...(field.max === undefined ? {} : { maximum: field.max }),
   }
+}
+
+function fieldSchema(field: ActionField): FieldSchema {
+  const scalar = scalarSchema(field)
+  if (!field.repeated) return scalar
+
+  return { type: 'array', description: scalar.description, items: scalar }
 }
 
 export function schemaOfFields(fields: readonly ActionField[]): JsonSchema {
@@ -85,7 +94,10 @@ export function schemaOfFields(fields: readonly ActionField[]): JsonSchema {
  */
 const COMMITMENT_NOTE: Record<ActionCommitment, string> = {
   none: 'Runs straight away.',
+  files: 'Asks the person on screen first: it changes files in their project folder.',
   asset: 'Asks the person on screen first: it uploads an image that stays in their library.',
+  remote:
+    'Asks the person on screen first: it publishes to a server, and nothing here undoes that.',
   credits: 'Asks the person on screen first, with an estimate: it spends creative units.',
 }
 
@@ -126,7 +138,7 @@ function toolOf(action: AssistantAction): McpTool {
  * The registry is a module constant and so is the English bundle it reads, so every `tools/list`
  * was rebuilding the same objects — a split-and-reduce over the bundle per action and per field.
  */
-const TOOLS: readonly McpTool[] = ACTION_REGISTRY.map(toolOf)
+const TOOLS: readonly McpTool[] = actionsReaching('mcp').map(toolOf)
 
 export function mcpTools(): readonly McpTool[] {
   return TOOLS
