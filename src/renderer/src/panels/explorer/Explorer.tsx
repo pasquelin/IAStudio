@@ -223,14 +223,25 @@ export function Explorer() {
     setBrowsing({ project: projectPath, folder })
   }
   /**
-   * Where the grid actually is: another window can trash the folder being browsed, and a trail
-   * pointing at one that is gone shows an empty grid with no hint of why. `nodes.length === 0` holds
-   * it in place through the beat a reload takes — falling back then would bounce on every move.
+   * Whether the folder asked for is still one this panel can show: still on the disk, and still
+   * OPEN in the tree — the grid reads the same nodes, and a reload keeps only the root and what is
+   * unfolded, so a folder closed in the list view leaves the grid on a folder that is about to
+   * empty itself. `nodes.length === 0` holds it through the beat a reload takes.
    */
-  const browsed =
-    !browsable || asked === FOLDER_ROOT || nodes.length === 0 || nodeById.has(asked)
-      ? asked
-      : FOLDER_ROOT
+  const standing =
+    asked === FOLDER_ROOT || nodes.length === 0 || (nodeById.has(asked) && expandedIds.has(asked))
+  /**
+   * Where the grid actually is, and the PROJECT FOLDER wherever it is not browsing one. A search
+   * and a domain draw no trail, so a blank that still meant the last folder walked into would
+   * aim every drop and every new folder at a place nothing on screen names.
+   */
+  const browsed = browsable && standing ? asked : FOLDER_ROOT
+  /**
+   * Where a keyboard paste or a new folder lands. The grid shows ONE folder, so that is the answer
+   * there — ⌘V inside a folder wrote at the root, the selection having just been cleared by the
+   * very navigation that got the user there.
+   */
+  const landing = browsable ? browsed : target
 
   /**
    * The children of the folder browsed, or — with nothing to browse — the flat answer, headings
@@ -295,12 +306,12 @@ export function Explorer() {
    */
   const run = useCallback(
     /**
-     * `into` names where a paste or a new folder lands. It defaults to the anchor the selection
-     * gives, which is what the keyboard and the row menu want — and is passed outright by the
-     * menu raised on the blank: that click clears the selection, and a callback built before the
-     * clearing would still be aiming at the row the user had picked a moment ago.
+     * `into` names where a paste or a new folder lands, and `landing` is what it means when
+     * nobody says: the folder the grid is SHOWING, or the selection's anchor where the tree shows
+     * the whole project. Passed outright by the menu raised on the blank, whose click clears the
+     * selection — a callback built before that clearing would aim at the row picked a moment ago.
      */
-    (command: CommandId, into: string = target): void => {
+    (command: CommandId, into: string = landing): void => {
       const bridge = getBridge()?.project
       if (!bridge) return
 
@@ -343,7 +354,7 @@ export function Explorer() {
       if (command === 'explorer.duplicate') return answer(bridge.duplicateFiles(paths))
       if (command === 'explorer.trash') return answer(bridge.trashFiles(paths))
     },
-    [settled, target, folderName],
+    [settled, landing, folderName],
   )
 
   useShortcuts({ scope: 'explorer', enabled: focused, onCommand: run })
