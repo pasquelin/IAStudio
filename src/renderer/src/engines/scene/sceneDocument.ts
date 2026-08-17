@@ -28,6 +28,7 @@ import {
   TRACK_PROPERTIES,
   type AnimationTimeline,
   type AnimationTrack,
+  type CameraShot,
   type Keyframe,
 } from '@shared/domain/animation'
 import { readFontRef } from '@shared/domain/font'
@@ -279,6 +280,7 @@ function readTimeline(value: unknown): AnimationTimeline {
   if (!isRecord(value)) return EMPTY_TIMELINE
 
   const tracks = Array.isArray(value.tracks) ? value.tracks.filter(isTrack) : []
+  const shots = Array.isArray(value.shots) ? value.shots.filter(isShot) : []
   // `readNumber` gives the fallback for anything that is not a finite number; zero and below are
   // finite and still meaningless here, so the positive test stays.
   const duration = readNumber(value, 'duration', DEFAULT_DURATION)
@@ -288,7 +290,21 @@ function readTimeline(value: unknown): AnimationTimeline {
     duration: duration > 0 ? duration : DEFAULT_DURATION,
     fps: fps > 0 ? fps : DEFAULT_FPS,
     tracks,
+    shots,
   }
+}
+
+/**
+ * Whether a shot is one. Its shape only: whether the camera it names still exists is a question
+ * about the scene at an instant, and `activeShotAt` is the one place that asks it.
+ */
+function isShot(value: unknown): value is CameraShot {
+  if (!isRecord(value)) return false
+  if (typeof value.id !== 'string' || value.id === '') return false
+  if (typeof value.cameraId !== 'string' || value.cameraId === '') return false
+  if (!Number.isFinite(value.layer) || !Number.isFinite(value.start)) return false
+  // A shot of no length covers no instant at all, so it could only ever be a hole in the band.
+  return typeof value.duration === 'number' && value.duration > 0
 }
 
 function isTrack(value: unknown): value is AnimationTrack {

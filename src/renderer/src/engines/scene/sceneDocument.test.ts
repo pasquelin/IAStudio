@@ -600,6 +600,28 @@ describe('the timeline a file holds', () => {
     expect(timeline.tracks[0]?.target).toMatchObject({ bone: 'spine' })
   })
 
+  it('reads the shots back whole, and gives none to a file written before they existed', () => {
+    const shot = { id: 'shot-1', cameraId: 'cam-a', layer: 2, start: 0, duration: 5 }
+
+    expect(read({ tracks: [], shots: [shot] }).shots).toEqual([shot])
+    expect(read({ tracks: [trackPayload] }).shots).toEqual([])
+  })
+
+  // A shot of no length covers no instant, so it can only ever be a hole in the band.
+  it('drops a shot of no length, and one naming no camera, rather than the band around it', () => {
+    const shot = { id: 'shot-1', cameraId: 'cam-a', layer: 0, start: 0, duration: 5 }
+    const timeline = read({
+      tracks: [],
+      shots: [
+        { ...shot, id: 'empty', duration: 0 },
+        { ...shot, id: 'nameless', cameraId: '' },
+        shot,
+      ],
+    })
+
+    expect(timeline.shots.map(kept => kept.id)).toEqual(['shot-1'])
+  })
+
   it('refuses a bone that is not a name', () => {
     const timeline = read({
       tracks: [{ ...trackPayload, target: { nodeId: 'perso', bone: 7, property: 'rotation' } }],

@@ -51,6 +51,22 @@ export type AnimationTrack = {
 }
 
 /**
+ * One camera, on air from `start` for `duration`.
+ *
+ * A list of its own rather than a track, and the difference is the whole reason: tracks ADD up
+ * (see `AnimationTrack.index`), where at most one camera can be on air at an instant. The rule
+ * that settles an overlap is a montage's — the highest layer wins — and it lives in
+ * `activeShotAt`.
+ */
+export type CameraShot = {
+  id: string
+  cameraId: string
+  layer: number
+  start: Us
+  duration: Us
+}
+
+/**
  * What a document holds of its animation. The playhead is NOT here: where the head stands is
  * how a scene is being looked at, like the projection and the display mode — and a head written
  * into the document would put one undo entry per frame of playback.
@@ -60,6 +76,8 @@ export type AnimationTimeline = {
   duration: Us
   fps: number
   tracks: readonly AnimationTrack[]
+  /** Empty on every document written before shots existed, which is what makes them optional. */
+  shots: readonly CameraShot[]
 }
 
 export const ZERO: Vector3 = Object.freeze({ x: 0, y: 0, z: 0 })
@@ -72,6 +90,7 @@ export const EMPTY_TIMELINE: AnimationTimeline = Object.freeze({
   duration: DEFAULT_DURATION,
   fps: DEFAULT_FPS,
   tracks: [],
+  shots: [],
 })
 
 /** What a track adds where it holds no key: nothing for a move or a turn, one for a scale. */

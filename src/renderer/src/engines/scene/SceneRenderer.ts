@@ -1115,8 +1115,7 @@ export class SceneRenderer {
     const canvas = this.viewport.canvas
     if (!gl || !canvas) return null
 
-    const aimed = cameraNodeId ? this.objects.get(cameraNodeId) : null
-    const camera = aimed instanceof PerspectiveCamera ? aimed : this.viewport.perspective
+    const camera = this.cameraObject(cameraNodeId) ?? this.viewport.perspective
 
     this.setPlayhead(time)
 
@@ -1131,6 +1130,12 @@ export class SceneRenderer {
       restore()
     }
     return canvas
+  }
+
+  /** The camera a node id stands for, or `null` when nothing in the scene answers to it. */
+  private cameraObject(cameraNodeId: string | null): PerspectiveCamera | null {
+    const aimed = cameraNodeId ? this.objects.get(cameraNodeId) : null
+    return aimed instanceof PerspectiveCamera ? aimed : null
   }
 
   /**
@@ -1163,8 +1168,8 @@ export class SceneRenderer {
   }
 
   /**
-   * Draws the film one frame at a time, from a camera of the scene, and hands each one over
-   * already encoded as a PNG.
+   * Draws the film one frame at a time, through whichever camera `cameraAt` names for that
+   * instant, and hands each one over already encoded as a PNG.
    *
    * Off screen and at the film's own size, never the viewport's: what is being written has a
    * resolution of its own, and resizing the viewport to match would be visible on screen. The
@@ -1175,14 +1180,14 @@ export class SceneRenderer {
    * process, and running ahead of it would hold a whole film in memory.
    */
   async renderFilm(
-    cameraNodeId: string,
+    cameraAt: (time: Us) => string | null,
     request: FilmRequest,
     onFrame: (index: number, png: Uint8Array) => Promise<void>,
     signal?: AbortSignal,
   ): Promise<void> {
     const gl = this.viewport.gl
-    const camera = this.objects.get(cameraNodeId)
-    if (!gl || !(camera instanceof PerspectiveCamera)) throw new Error('no camera to render from')
+    let camera = this.cameraObject(cameraAt(0))
+    if (!gl || !camera) throw new Error('no camera to render from')
 
     const { width, height } = evenSize(request)
     const target = new WebGLRenderTarget(width, height)
@@ -1197,14 +1202,18 @@ export class SceneRenderer {
 
     const restore = this.hideWorkshop()
 
-    camera.aspect = width / height
-    camera.updateProjectionMatrix()
     const head = this.playhead
 
     try {
       let index = 0
       for (const time of frameTimes(request.duration, request.fps)) {
         if (signal?.aborted) return
+
+        // Resolved per frame: a shot hands the film to another camera mid-way, and the frame
+        // after a camera is deleted keeps the last one rather than throwing at the encoder.
+        camera = this.cameraObject(cameraAt(time)) ?? camera
+        camera.aspect = width / height
+        camera.updateProjectionMatrix()
 
         this.setPlayhead(time)
         gl.setRenderTarget(target)
