@@ -12,6 +12,7 @@ import { breakableSpots } from './typography'
 import { isRecord } from '../guards'
 import { foldForSearch } from '../text'
 import { NAMED_KEYS } from '../domain/shortcut'
+import { COMMAND_SCOPES } from '../domain/command'
 import {
   CAPABILITIES_BY_FAMILY,
   MODEL_FAMILIES,
@@ -736,6 +737,9 @@ const DYNAMIC_KEYS: readonly string[] = [
   // Shown inside a tooltip and in the shortcuts screen, where a missing one reads as the
   // English key name rather than as an obviously broken key.
   ...NAMED_KEYS.map(key => `keys.${key}`),
+  // The heading over each group of the shortcuts screen. A ninth surface added to the union
+  // would title its group with the key itself, and nothing else looks at this family.
+  ...COMMAND_SCOPES.map(scope => `settings.scope.${scope}`),
   // The two pipelines the user watches run: a stage or a status added without its line
   // turns the progress row into a raw code at the exact moment something is happening.
   ...JOB_STATUSES.map(status => `jobs.status.${status}`),
