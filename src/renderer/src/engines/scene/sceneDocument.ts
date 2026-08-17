@@ -12,6 +12,7 @@
 import {
   clipFromAnimation,
   DEFAULT_CAMERA,
+  DEFAULT_PATH,
   isTransform,
   isVector3,
   readEnvironment,
@@ -114,6 +115,9 @@ function revived(node: SceneNode): SceneNode {
   if (filled.type === 'model') {
     return { ...filled, model: withClips(filled.model) }
   }
+  if (filled.type === 'path') {
+    return { ...filled, path: { ...DEFAULT_PATH, ...filled.path } }
+  }
   if (filled.type !== 'text') return filled
 
   return {
@@ -189,12 +193,23 @@ function isSceneNode(value: unknown): value is SceneNode {
   // Three numbers, and a file that holds none of them keeps its node: the defaults are what a
   // camera is without them, and `revived` lays them under whatever the file did say.
   if (value.type === 'camera') return value.camera === undefined || isRecord(value.camera)
+  // A rail is its points, and a curve through fewer than two is a point with a name — refused
+  // like a model with no asset, so the rest of the scene still opens.
+  if (value.type === 'path') return isPath(value.path)
 
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
 }
 
 function isOptionalFlag(value: unknown): boolean {
   return value == null || typeof value === 'boolean'
+}
+
+/** Its points and its shape. `closed` and `tension` absent mean the defaults `revived` lays in. */
+function isPath(value: unknown): boolean {
+  if (!isRecord(value) || !Array.isArray(value.points)) return false
+  if (value.points.length < 2 || !value.points.every(isVector3)) return false
+
+  return isOptionalFlag(value.closed) && (value.tension == null || Number.isFinite(value.tension))
 }
 
 /**

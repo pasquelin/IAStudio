@@ -18,6 +18,8 @@ export type SceneView = {
   poseMode: boolean
   /** The bone the pose mode picked, which the gizmo holds. Never a node — see `TrackTarget`. */
   pickedBone: { nodeId: string; bone: string } | null
+  /** The control point of a rail the gizmo holds. Never a node either — see `PathDescriptor`. */
+  pickedPathPoint: { nodeId: string; index: number } | null
   /** Four views instead of one — top, front, left, and the one being flown. */
   quad: boolean
   /** Whether the wireframe drops its triangulation diagonals. Never real quads — see the engine. */
@@ -56,6 +58,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   skeletons: false,
   poseMode: false,
   pickedBone: null,
+  pickedPathPoint: null,
   quad: false,
   quadEdges: false,
   previewSize: 'inset',
@@ -80,6 +83,7 @@ export type SceneViewsState = {
   setSkeletons: (documentId: string, skeletons: boolean) => void
   setPoseMode: (documentId: string, poseMode: boolean) => void
   setPickedBone: (documentId: string, pickedBone: SceneView['pickedBone']) => void
+  setPickedPathPoint: (documentId: string, pickedPathPoint: SceneView['pickedPathPoint']) => void
   setQuad: (documentId: string, quad: boolean) => void
   setQuadEdges: (documentId: string, quadEdges: boolean) => void
   setPreviewSize: (documentId: string, previewSize: SceneView['previewSize']) => void
@@ -122,6 +126,14 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setPickedBone: (documentId, pickedBone) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), pickedBone } },
+    })),
+
+  setPickedPathPoint: (documentId, pickedPathPoint) =>
+    set(state => ({
+      views: {
+        ...state.views,
+        [documentId]: { ...sceneViewOf(state, documentId), pickedPathPoint },
+      },
     })),
 
   setQuad: (documentId, quad) =>

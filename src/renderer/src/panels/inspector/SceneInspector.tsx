@@ -4,6 +4,7 @@ import {
   setCameraOn,
   setEnvironment,
   setGeometryOn,
+  setPath,
   setLightOn,
   setMaterialOn,
   setModelTextures,
@@ -22,6 +23,7 @@ import { EnvironmentSection } from './EnvironmentSection'
 import { MaterialSection } from './MaterialSection'
 import { ModelOverridesSection } from './ModelOverridesSection'
 import { ModelTexturesSection } from './ModelTexturesSection/ModelTexturesSection'
+import { PathSection } from './PathSection'
 import { ShadowSection } from './ShadowSection'
 import { SpriteSection } from './SpriteSection'
 import { TextSection } from './TextSection'
@@ -61,6 +63,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const text = node?.type === 'text' ? node : null
   const model = node?.type === 'model' ? node : null
   const camera = node?.type === 'camera' ? node : null
+  const path = node?.type === 'path' ? node : null
   // The descriptors keep their identity across every edit that does not touch them, so the
   // fields of a material survive a whole drag of the position.
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
@@ -144,6 +147,14 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
           sprite={sprite.sprite}
           fallbackColor={meshColor}
           onChange={next => edit.run(setSpriteOn(selection, changedFields(sprite.sprite, next)))}
+          gesture={edit.gesture}
+        />
+      )}
+
+      {path && (
+        <PathSection
+          path={path.path}
+          onChange={next => edit.run(setPath(path.id, next))}
           gesture={edit.gesture}
         />
       )}

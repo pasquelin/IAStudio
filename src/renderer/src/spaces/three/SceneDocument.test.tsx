@@ -41,6 +41,7 @@ const activePane = vi.fn(() => 0)
 const setSkeletons = vi.fn()
 const setPoseMode = vi.fn()
 const setPickedBone = vi.fn()
+const setPickedPathPoint = vi.fn()
 const setQuadView = vi.fn()
 const setPaneViews = vi.fn()
 const setPlayhead = vi.fn()
@@ -75,6 +76,8 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setSkeletons = setSkeletons
     setPoseMode = setPoseMode
     setPickedBone = setPickedBone
+    setPickedPathPoint = setPickedPathPoint
+    setCameraPreview = vi.fn()
     setQuadView = setQuadView
     setPaneViews = setPaneViews
     setPlayhead = setPlayhead

@@ -1,7 +1,9 @@
 import type { AssetType } from '@shared/domain/asset'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
-import type { ExportFormat } from '@shared/domain/scene'
+import type { ExportFormat, Vector3 } from '@shared/domain/scene'
+import { withMovedPoint } from '@/engines/scene/cameraPath'
+import { setPath } from '@/engines/scene/commands'
 import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PANE_TOOLBAR } from '@/design/styles'
@@ -85,6 +87,20 @@ function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
 }
 
 /**
+ * One control point of a rail, dropped where the gizmo left it.
+ *
+ * Once per drag, like every other gizmo move: the engine reports on release, so the whole
+ * gesture costs one entry in the history without a gesture having to be opened around it.
+ */
+function movePathPoint(documentId: string, nodeId: string, index: number, point: Vector3): void {
+  const store = useScenes.getState()
+  const node = sceneOf(store, documentId).nodes.find(candidate => candidate.id === nodeId)
+  if (node?.type !== 'path') return
+
+  store.runCommand(documentId, setPath(nodeId, withMovedPoint(node.path, index, point)))
+}
+
+/**
  * A node right-clicked in the viewport, selected and then offered what can be done to it.
  *
  * Selecting first is this side's job rather than the menu's, as it is for the asset shelf: an
@@ -159,6 +175,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onRigProgress: (nodeId, progress) =>
         useModelClips.getState().reportRigProgress(documentId, nodeId, progress),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
+      onSelectPathPoint: picked => useSceneViews.getState().setPickedPathPoint(documentId, picked),
+      onPathPoint: (nodeId, index, point) => movePathPoint(documentId, nodeId, index, point),
       onContextMenu: nodeId => openNodeMenu(documentId, nodeId),
       onStats: (scene, selected) => setStats({ scene, selected }),
       // Published so a montage can look through this very view: a scene with no camera of its
@@ -219,6 +237,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.setPickedBone(view.pickedBone)
   }, [view.pickedBone])
+
+  useEffect(() => {
+    engine.current?.setPickedPathPoint(view.pickedPathPoint)
+  }, [view.pickedPathPoint])
 
   // Session state, pushed like the rest: the engine is rebuilt from it after a remount, which is
   // what keeps an orthographic view orthographic when a panel is detached.

@@ -75,9 +75,11 @@
     "sprite": "Sprite",
     "text": "Texte",
     "camera": "Caméra",
+    "path": "Chemin",
     "spriteHint": "Une image plane qui fait toujours face à la caméra",
     "textHint": "Du texte posé dans la scène, en volume",
-    "cameraHint": "Un point de vue enregistré, en plus de celui qu’on manœuvre"
+    "cameraHint": "Un point de vue enregistré, en plus de celui qu’on manœuvre",
+    "pathHint": "Un rail le long duquel une caméra peut courir pendant un plan"
   },
   "transport": {
     "play": "Lire",

@@ -49,11 +49,22 @@ import {
   type SpriteNode,
   type TextNode,
 } from './sceneState'
-import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './threeFactory'
+import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
 import {
+  buildPath,
+  geometryFor,
+  helperFor,
+  knobIndexOf,
+  knobName,
+  tuneViewHelper,
+  type LightHelper,
+} from './threeFactory'
+import {
+  applyCamera,
   applyGeometry,
   applyLight,
   applyMaterial,
+  applyPath,
   applySprite,
   lightFor,
   standardMaterialOf,
@@ -150,6 +161,13 @@ export type SceneRendererOptions = {
    * addressed by the pair its channels are addressed by — see `TrackTarget`.
    */
   onSelectBone?: (picked: { nodeId: string; bone: string } | null) => void
+  /**
+   * A control point of a rail was picked, or let go of. Apart from `onSelect` for the same
+   * reason a bone is: a point has no id in the document, and no row in the tree.
+   */
+  onSelectPathPoint?: (picked: { nodeId: string; index: number } | null) => void
+  /** Where a picked control point was dragged to, in the frame of the rail that holds it. */
+  onPathPoint?: (nodeId: string, index: number, point: PlainVector3) => void
   /**
    * A node right-clicked in the viewport, for whoever raises the menu — this side draws none.
    *
@@ -342,6 +360,8 @@ export class SceneRenderer {
   private poseMode = false
   /** The bone the gizmo is aimed at while the pose mode is on, and what a release reports. */
   private pickedBone: { nodeId: string; bone: string } | null = null
+  /** The control point of a rail the gizmo holds. Never a node — see `setPickedPathPoint`. */
+  private pickedPathPoint: { nodeId: string; index: number } | null = null
   /** The tracks of the document, and where the head stands over them. */
   private timeline: AnimationTimeline = EMPTY_TIMELINE
   private playhead = 0
@@ -1549,6 +1569,20 @@ export class SceneRenderer {
       return
     }
 
+    if (node.type === 'camera' && object instanceof PerspectiveCamera) {
+      const before = previous?.type === 'camera' ? previous : null
+      // The lens, and the frustum drawn from it: a helper left alone would keep outlining the
+      // field of view the camera had before the inspector changed it.
+      if (before?.camera !== node.camera) applyCamera(object, node.camera)
+      return
+    }
+
+    if (node.type === 'path') {
+      const before = previous?.type === 'path' ? previous : null
+      if (before?.path !== node.path) applyPath(object, node.path, this.meshColor)
+      return
+    }
+
     if (node.type === 'text' && object instanceof Mesh) {
       const before = previous?.type === 'text' ? previous : null
       // Cut again only when the words or their shape moved: a colour change must not re-extrude
@@ -1569,6 +1603,7 @@ export class SceneRenderer {
     if (node.type === 'sprite') return this.buildSprite(node)
     if (node.type === 'text') return this.buildText(node)
     if (node.type === 'camera') return this.buildCamera(node)
+    if (node.type === 'path') return buildPath(node.path, this.meshColor)
     // A group is its transform and nothing else: an empty object others hang from.
     return new Object3D()
   }
@@ -1892,6 +1927,15 @@ export class SceneRenderer {
       return
     }
 
+    const knob = this.pickedKnob()
+    if (knob) {
+      // Translate only: a control point is a position, and rotating or scaling one would ask
+      // the gizmo to write something the descriptor has no room for.
+      if (this.mode === 'translate') gizmo.attach(knob)
+      else gizmo.detach()
+      return
+    }
+
     const target = gizmoTargetFor(this.mode, this.space, this.selectedObjects(), object =>
       this.applied.get(object.name),
     )
@@ -1942,6 +1986,18 @@ export class SceneRenderer {
       return
     }
 
+    const point = this.pickedPathPoint
+    const knob = this.pickedKnob()
+    if (point && knob) {
+      // The knob's own position IS the control point: both live in the rail's frame.
+      this.options.onPathPoint?.(point.nodeId, point.index, {
+        x: knob.position.x,
+        y: knob.position.y,
+        z: knob.position.z,
+      })
+      return
+    }
+
     const picked = this.pickedBone
     const boneObject = this.pickedBoneObject()
     if (picked && boneObject) {
@@ -1982,6 +2038,26 @@ export class SceneRenderer {
     this.pickedBone = picked
     this.attachGizmo()
     this.viewport.requestRender()
+  }
+
+  /**
+   * Aims the gizmo at one control point of a rail, or lets go of it.
+   *
+   * A point is not a node, exactly as a bone is not: it has no id in the document, cannot be
+   * renamed, hidden or deleted on its own. `LightDescriptor` says why that matters — a node
+   * nobody can rename is a property that leaked into the tree.
+   */
+  setPickedPathPoint(picked: { nodeId: string; index: number } | null): void {
+    this.pickedPathPoint = picked
+    this.attachGizmo()
+    this.viewport.requestRender()
+  }
+
+  /** The knob of the point picked, while one is picked and its rail is still on stage. */
+  private pickedKnob(): Object3D | null {
+    const picked = this.pickedPathPoint
+    if (!picked) return null
+    return this.objects.get(picked.nodeId)?.getObjectByName(knobName(picked.index)) ?? null
   }
 
   /** Redraws nodes from what was last applied, undoing what a gesture moved without meaning to. */
@@ -2060,10 +2136,42 @@ export class SceneRenderer {
       return
     }
 
+    // A knob of a rail already selected names a POINT, not the rail again: that is the one way
+    // to reach a sub-element the tree has no row for.
+    const knob = this.pathPointAt(event)
+    if (knob) {
+      this.options.onSelectPathPoint?.(knob)
+      return
+    }
+
     // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
     const extending = event.shiftKey || event.metaKey || event.ctrlKey
     const id = this.nodeAt(event)
     this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
+    // Whatever was picked before belongs to a rail that may no longer be the selection.
+    if (this.pickedPathPoint) this.options.onSelectPathPoint?.(null)
+  }
+
+  /**
+   * The control point the pointer is over, on a rail that is already SELECTED.
+   *
+   * Selected first, because the knobs of every rail in the scene would otherwise take clicks
+   * meant for whatever stands behind them — a rail is a working aid, not a wall.
+   */
+  private pathPointAt(event: PointerEvent): { nodeId: string; index: number } | null {
+    const ndc = this.viewport.pointerNdcOf(event)
+    if (!ndc) return null
+
+    this.pointer.set(ndc.x, ndc.y)
+    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
+
+    const rails = this.selectedIds.flatMap(id =>
+      this.applied.get(id)?.type === 'path' ? (this.objects.get(id) ?? []) : [],
+    )
+    const hit = this.raycaster.intersectObjects(rails, true)[0]
+    const index = hit ? knobIndexOf(hit.object.name) : null
+
+    return index === null ? null : { nodeId: hit?.object.parent?.name ?? '', index }
   }
 
   /** The node the pointer is over, or nothing for a ray that met only the void. */

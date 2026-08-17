@@ -1,6 +1,7 @@
 import {
   AmbientLight,
   BoxGeometry,
+  BufferGeometry,
   CapsuleGeometry,
   CatmullRomCurve3,
   CircleGeometry,
@@ -12,6 +13,11 @@ import {
   HemisphereLightHelper,
   IcosahedronGeometry,
   LatheGeometry,
+  Line,
+  LineBasicMaterial,
+  Mesh,
+  MeshBasicMaterial,
+  Object3D,
   OctahedronGeometry,
   PlaneGeometry,
   PointLight,
@@ -26,11 +32,11 @@ import {
   TorusKnotGeometry,
   TubeGeometry,
   Vector3,
-  type BufferGeometry,
   type Light,
 } from 'three'
 import type { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
-import type { GeometryDescriptor, LightKind } from '@shared/domain/scene'
+import type { GeometryDescriptor, LightKind, PathDescriptor } from '@shared/domain/scene'
+import { pathPoints } from './cameraPath'
 
 /*
  * The three.js objects a descriptor maps to. Kept out of `SceneRenderer` on purpose: none of it
@@ -145,6 +151,60 @@ export function helperFor(light: Light): LightHelper | null {
   if (light instanceof PointLight) return new PointLightHelper(light, HELPER_SIZE)
   if (light instanceof SpotLight) return new SpotLightHelper(light)
   return null
+}
+
+/** How big a control point is drawn, in scene units — a knob a pointer can actually land on. */
+export const PATH_KNOB_RADIUS = 0.08
+
+/** What the line of a rail is called among its node's children, so a sync can find it again. */
+export const PATH_CURVE_NAME = 'path-curve'
+
+/** What a control point is called. The index follows, which is what a pick reads back. */
+export const PATH_KNOB_PREFIX = 'path-knob-'
+
+export function knobName(index: number): string {
+  return `${PATH_KNOB_PREFIX}${index}`
+}
+
+/** Which control point a knob stands for, or `null` for an object that is not one. */
+export function knobIndexOf(name: string): number | null {
+  if (!name.startsWith(PATH_KNOB_PREFIX)) return null
+
+  const index = Number(name.slice(PATH_KNOB_PREFIX.length))
+  return Number.isInteger(index) && index >= 0 ? index : null
+}
+
+/**
+ * A rail: the sampled curve, and one knob per control point.
+ *
+ * Knobs are meshes rather than a `Points` cloud because the gizmo attaches to an `Object3D` —
+ * a point of a cloud is an index in a buffer, and nothing a transform control can hold.
+ */
+export function buildPath(descriptor: PathDescriptor, colour: string): Object3D {
+  const object = new Object3D()
+
+  const line = new Line(new BufferGeometry(), new LineBasicMaterial({ color: colour }))
+  line.name = PATH_CURVE_NAME
+  line.geometry.setFromPoints(pathPoints(descriptor))
+  object.add(line)
+
+  for (const [index, point] of descriptor.points.entries()) {
+    const knob = pathKnob(index, colour)
+    knob.position.set(point.x, point.y, point.z)
+    object.add(knob)
+  }
+
+  return object
+}
+
+/** One knob, ready to be hung under a rail. Its index is what a pick reads out of its name. */
+export function pathKnob(index: number, colour: string): Mesh {
+  const knob = new Mesh(
+    new SphereGeometry(PATH_KNOB_RADIUS, 8, 6),
+    new MeshBasicMaterial({ color: colour }),
+  )
+  knob.name = knobName(index)
+  return knob
 }
 
 const AXIS_KNOB_SCALE = 0.6

@@ -75,9 +75,11 @@
     "sprite": "Sprite",
     "text": "Text",
     "camera": "Camera",
+    "path": "Path",
     "spriteHint": "A flat image that always faces the camera",
     "textHint": "Text set into the scene, with depth",
-    "cameraHint": "A stored point of view, beside the one being flown"
+    "cameraHint": "A stored point of view, beside the one being flown",
+    "pathHint": "A rail a camera can run along during a shot"
   },
   "transport": {
     "play": "Play",

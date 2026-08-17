@@ -7,6 +7,7 @@ import {
   lightNodeFixture as light,
   meshNode as mesh,
   modelNodeFixture,
+  pathNodeFixture,
   spriteNodeFixture,
   textNodeFixture,
 } from './scene-fixtures'
@@ -328,6 +329,25 @@ describe('sceneFromPayload', () => {
       type: 'text',
       text: { value: 'Bonjour', size: 2, depth: 0.5, font: { source: 'embedded', family: 'Lato' } },
     })
+  })
+
+  // Every new kind of node is tested by a round trip through what a file holds — the trap this
+  // loader has fallen into twice, for groups and then for sprites.
+  it('carries a rail, its points and its shape through a round trip', () => {
+    const rail = pathNodeFixture('rail')
+
+    expect(reread({ ...EMPTY_SCENE, nodes: [rail] }).nodes).toEqual([rail])
+  })
+
+  it('drops a rail of fewer than two points, and keeps the scene around it', () => {
+    const rail = pathNodeFixture('rail')
+    const nodes: unknown[] = [
+      mesh('a'),
+      { ...rail, path: { ...rail.path, points: [{ x: 0, y: 0, z: 0 }] } },
+      { ...rail, id: 'nowhere', path: { ...rail.path, points: 'somewhere' } },
+    ]
+
+    expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
   })
 
   // A family this machine has not got is kept as written: the document said what it meant, and

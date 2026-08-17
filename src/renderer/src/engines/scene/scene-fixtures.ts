@@ -1,8 +1,10 @@
 import { Texture, type ColorSpace } from 'three'
 import {
   DEFAULT_CAMERA,
+  DEFAULT_PATH,
   type CameraDescriptor,
   type LightDescriptor,
+  type PathDescriptor,
   type TextDescriptor,
 } from '@shared/domain/scene'
 import type { Bounds } from './rigFit'
@@ -18,6 +20,7 @@ import {
   type LightNode,
   type MeshNode,
   type ModelNode,
+  type PathNode,
   type SpriteNode,
   type TextNode,
 } from './sceneState'
@@ -104,6 +107,19 @@ export function cameraNodeFixture(id: string, camera: Partial<CameraDescriptor> 
     ...shadowDefaults({ type: 'camera' }),
     type: 'camera',
     camera: { ...DEFAULT_CAMERA, ...camera },
+  }
+}
+
+export function pathNodeFixture(id: string, path: Partial<PathDescriptor> = {}): PathNode {
+  return {
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'path' }),
+    type: 'path',
+    path: { ...DEFAULT_PATH, ...path },
   }
 }
 

@@ -1,21 +1,26 @@
 import {
   AmbientLight,
+  CameraHelper,
   DirectionalLight,
   HemisphereLight,
   Mesh,
   MeshStandardMaterial,
+  PerspectiveCamera,
   PointLight,
   SpotLight,
   SpriteMaterial,
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
+import { DEFAULT_PATH, type PathDescriptor } from '@shared/domain/scene'
 import { LIGHT_TYPES } from './lightTypes'
-import { geometryFor } from './threeFactory'
+import { buildPath, geometryFor, PATH_CURVE_NAME } from './threeFactory'
 import { DEFAULT_MATERIAL } from './sceneState'
 import {
+  applyCamera,
   applyGeometry,
   applyLight,
   applyMaterial,
+  applyPath,
   applySprite,
   giveSecondUvSet,
   standardMaterialOf,
@@ -251,6 +256,70 @@ describe('a light descriptor handed to a light of another class', () => {
       expect(light.intensity).toBe(descriptor.intensity)
     })
   }
+})
+
+describe('applyCamera', () => {
+  const cameraWithHelper = (): PerspectiveCamera => {
+    const camera = new PerspectiveCamera(50, 1, 0.1, 1000)
+    camera.add(new CameraHelper(camera))
+    return camera
+  }
+
+  it('writes the lens and rebuilds the projection', () => {
+    const camera = cameraWithHelper()
+
+    applyCamera(camera, { fov: 90, near: 1, far: 10 })
+
+    expect([camera.fov, camera.near, camera.far]).toEqual([90, 1, 10])
+  })
+
+  // The helper reads the projection matrix once: left alone it keeps outlining the old frustum.
+  it('updates the frustum drawn from it', () => {
+    const camera = cameraWithHelper()
+    const helper = camera.children[0]
+    if (!(helper instanceof CameraHelper)) throw new Error('the camera wears its helper')
+    const update = vi.spyOn(helper, 'update')
+
+    applyCamera(camera, { fov: 90, near: 1, far: 10 })
+
+    expect(update).toHaveBeenCalled()
+  })
+})
+
+describe('applyPath', () => {
+  const pathOf = (points: PathDescriptor['points']): PathDescriptor => ({
+    ...DEFAULT_PATH,
+    points,
+  })
+  const at = (x: number) => ({ x, y: 0, z: 0 })
+
+  it('draws the line and one knob per control point', () => {
+    const object = buildPath(pathOf([at(0), at(10)]), '#ffffff')
+
+    expect(object.children.filter(child => child instanceof Mesh)).toHaveLength(2)
+    expect(object.getObjectByName(PATH_CURVE_NAME)).toBeDefined()
+  })
+
+  it('follows a point that moved without building a knob for it', () => {
+    const object = buildPath(pathOf([at(0), at(10)]), '#ffffff')
+    // Child 0 is the line, so the knob of the point that moves is the second one after it.
+    const knob = object.children[2]
+
+    applyPath(object, pathOf([at(0), at(4)]), '#ffffff')
+
+    expect(object.children[2]).toBe(knob)
+    expect(knob?.position.x).toBe(4)
+  })
+
+  it('grows a knob for a point added, and drops the one a point taken away had', () => {
+    const object = buildPath(pathOf([at(0), at(10)]), '#ffffff')
+
+    applyPath(object, pathOf([at(0), at(5), at(10)]), '#ffffff')
+    expect(object.children.filter(child => child instanceof Mesh)).toHaveLength(3)
+
+    applyPath(object, pathOf([at(0), at(10)]), '#ffffff')
+    expect(object.children.filter(child => child instanceof Mesh)).toHaveLength(2)
+  })
 })
 
 // An occlusion map reads the second UV set; without this, nudging a radius would stop it dead.

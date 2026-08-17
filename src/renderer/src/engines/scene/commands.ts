@@ -9,6 +9,7 @@ import {
   type LightDescriptor,
   type MaterialDescriptor,
   type ModelRef,
+  type PathDescriptor,
   type SpriteDescriptor,
   type TextDescriptor,
   type Transform,
@@ -334,6 +335,25 @@ export function setMaterialOn(
     if (node.type === 'text') return setTextMaterial(node.id, { ...node.material, ...changes })
     return null
   })
+}
+
+/**
+ * A rail rewritten. The three gestures a rail offers — move a point, add one, drop one — all
+ * land here, because each of them is the same node holding another list of points.
+ */
+export function setPath(id: string, path: PathDescriptor): Command<SceneState> {
+  let previous: PathDescriptor | null = null
+
+  return {
+    id: `path:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'path') return state
+      previous = node.path
+      return patchPart(state, id, 'path', { path })
+    },
+    revert: state => (previous ? patchPart(state, id, 'path', { path: previous }) : state),
+  }
 }
 
 /** What a camera sees through: its lens, edited like any other descriptor. */
