@@ -1,30 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { isMissing, writeAtomic, writeQueue } from '@main/persistence'
+import type { PersistedJob } from './persisted-job'
 import { parseStoredJobs } from './validation'
-
-/**
- * What is kept of a job so that closing the studio does not lose it.
- *
- * Only what nothing else can tell us again: the remote id to poll, the account to poll it on,
- * the project its outputs belong in, and the two labels the jobs bar draws. The status and the
- * progress are deliberately absent — they are whatever the API says on the next poll, and a
- * stale copy of them would be a second truth.
- */
-export type PersistedJob = {
-  id: string
-  remoteId: string
-  targetId: string
-  label: string
-  /**
-   * The account the job was submitted on, as `accountFingerprint` names it. A job id asked
-   * about under another key answers 404, and no retry repairs a 404.
-   */
-  accountId: string
-  /** Where its outputs go. The collector writes into whichever project is open, not this one. */
-  projectPath: string
-  createdAt: string
-}
 
 export type JobStore = {
   /** What this project left running, minus anything too old to still be worth polling. */

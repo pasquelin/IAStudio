@@ -15,7 +15,8 @@ import { getBridge } from '@/services/bridge'
 import { registerFace } from '@/engines/canvas/canvas-fonts'
 import { layerBelow, textLayer } from '@/engines/canvas/canvas-state'
 import { mdiTune } from '@mdi/js'
-import { CanvasEngine, type CanvasTool } from '@/engines/canvas/CanvasEngine'
+import { CanvasEngine } from '@/engines/canvas/CanvasEngine'
+import type { CanvasTool } from '@/engines/canvas/canvas-tool'
 import {
   BRUSH_SETTINGS_BY_TOOL,
   BRUSH_SIZE,

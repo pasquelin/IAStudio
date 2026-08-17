@@ -13,7 +13,7 @@ import {
 } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activity-log'
 import { failureOf } from './client'
-import type { PersistedJob } from './job-store'
+import type { PersistedJob } from './persisted-job'
 import { ORDINARY_REQUESTS_PER_WINDOW } from './rate-limiter'
 import { createRetry, DEFAULT_BACKOFF_BASE_MS } from './retry'
 
