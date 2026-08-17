@@ -6,6 +6,9 @@ import { WRITTEN_SOURCES } from './test-harness'
 /** As `WRITTEN_SOURCES` keys it: the glob resolves against `test-harness.ts`, its own neighbour. */
 const CANONICAL = './WindowNav.tsx'
 
+/** An opening `li`, then the skin, with no closing `li` in between. */
+const ITEM_WEARING_SKIN = /<li[^>]*>(?:(?!<\/li>)[\s\S])*?windowControl\(/
+
 const entry = (props: Partial<Parameters<typeof WindowNavItem>[0]> = {}) => (
   <WindowNav>
     <WindowNavItem active={false} hint="Opens the account settings" onSelect={() => {}} {...props}>
@@ -73,22 +76,30 @@ describe('WindowNav', () => {
   })
 
   /**
-   * The two halves together, which is what the three copies each wrote: an item of a list, wearing
-   * the window skin. Either alone is legitimate and stays untouched — `ManualWindow` lists its
-   * search results in `li`s that wear no skin, and `UsageWindow` gives its refresh button the skin
-   * outside any list.
+   * The shape the three copies each wrote: the window skin reached INSIDE a list item. Read as
+   * an opening `li` with no closing one before the skin, rather than as the two words being in
+   * the same file — a file is free to hold a list on one side and the skin on the other, which
+   * `ManualWindow` does with its search results and `UsageWindow` with its refresh button.
    *
-   * **What it cannot see**: a window splitting the two across a file of its own, or reaching the
-   * skin through a variable. Both are ways of writing it again on purpose; this catches the shape
-   * the habit produces, which is the one that happened three times.
+   * **What it cannot see**: a window reaching the skin through a variable, or one that hands the
+   * `li` to a component of its own. Both are ways of writing it again on purpose; this catches
+   * the shape the habit produces, which is the one that happened three times.
    */
   it('is the only place where a list item wears the window skin', () => {
     const offenders = WRITTEN_SOURCES.filter(
-      ([path, source]) =>
-        path !== CANONICAL && source.includes('windowControl(') && source.includes('<li'),
+      ([path, source]) => path !== CANONICAL && ITEM_WEARING_SKIN.test(source),
     ).map(([path]) => path)
 
     expect(offenders).toEqual([])
+  })
+
+  it('reads the shape it means, and not a file that merely holds both words', () => {
+    expect(ITEM_WEARING_SKIN.test('<li>\n<button className={windowControl(on)} />\n</li>')).toBe(
+      true,
+    )
+    expect(ITEM_WEARING_SKIN.test('<li>{title}</li>\n<b className={windowControl(false)} />')).toBe(
+      false,
+    )
   })
 
   // The partner of the rule above: a rule nobody's code reaches is green on an empty studio.
