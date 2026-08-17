@@ -75,11 +75,19 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
 
     return entries
       .filter(entry => hidden || !isHiddenEntry(entry.name))
-      .map((entry): FolderEntry => ({
-        path: relative === '' ? entry.name : `${relative}/${entry.name}`,
-        name: entry.name,
-        kind: entry.isDirectory() ? 'folder' : 'file',
-      }))
+      .map((entry): FolderEntry => {
+        // NFC, and this is one of the two places the studio settles that question — the other is
+        // `safeFileName`, where a name is made. A volume that stores decomposed hands back `Été`
+        // as `E` plus an accent where the catalogue holds it composed, and every comparison of
+        // the two answers no: the row the explorer would have joined to this file, the path a
+        // rescan would have recognised, the asset an inspector would have found.
+        const name = entry.name.normalize('NFC')
+        return {
+          path: relative === '' ? name : `${relative}/${name}`,
+          name,
+          kind: entry.isDirectory() ? 'folder' : 'file',
+        }
+      })
       .sort(entriesByName(languageOf()))
   }
 

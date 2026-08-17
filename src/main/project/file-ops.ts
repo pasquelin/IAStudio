@@ -86,7 +86,22 @@ export function createFileOps({
   newBatchId,
   assetsChanged,
 }: FileOpsDeps): FileOps {
-  /** The batches this project can take back, oldest first, and the ones taken back. */
+  /**
+   * The batches this project can take back, oldest first, and the ones taken back.
+   *
+   * **Not `engines/core/history.ts`, and the two do not merge.** Compared line by line, what they
+   * share is `[...a, x].slice(-N)` and `a.slice(0, -1)`; what they do not share is everything
+   * that makes either of them work. A `Command` transforms an in-memory STATE and hands the new
+   * one back (`[S, History<S>]`) — here the state is the disk, and no value stands for it. A
+   * command is reverted by replaying its declared inverse; a batch is reverted by replaying what
+   * it ACTUALLY did, asynchronously, and what goes on the other pile is what actually came back
+   * — possibly nothing, a case that cannot arise where reverting is a pure function. And its
+   * coalescing, its `forget` and its `dropped` all serve a document's clean mark, which files
+   * have no equivalent of.
+   *
+   * Extracting the intersection would publish an alias for two array expressions, in a module
+   * `shared/` would have to hold for a renderer and a worker to both reach it.
+   */
   let undone: PathChange[][] = []
   let stack: PathChange[][] = []
   let stackedFor: string | null = null
@@ -168,6 +183,10 @@ export function createFileOps({
    * `repath` for what moved, `forgetUnder` for what went — and nothing at all for what arrived,
    * because a copy is bytes nobody has catalogued yet. That is the reconciliation pass's to find,
    * and inventing a row here would be inventing an identity for it.
+   *
+   * What went is DATED rather than dropped, which is the trash being reversible taken seriously:
+   * a file the user takes back out is found where the catalogue still says it is, and the next
+   * pass clears the date. The row never stopped holding the prompt in between.
    */
   const follow = async (root: string, done: readonly PathChange[]): Promise<void> => {
     let forgotten = 0

@@ -437,16 +437,33 @@ describe('catalog', () => {
       expect(pathOf('asset_1')).toBe('Footage/A001.mov')
     })
 
-    it('drops a trashed folder and every row beneath it, and says how many went', () => {
+    /**
+     * The trash is reversible, so the row is DATED and not dropped: a file the user takes back
+     * out is found where the catalogue still says it is, and the next pass clears the date. A
+     * row deleted the moment the file went to the trash would leave a restored file with no
+     * prompt, no seed and no lineage — the one copy of all three.
+     */
+    it('dates a trashed folder and every row beneath it, and says how many it touched', () => {
       catalog.add(asset({ id: 'asset_1', path: 'Rushes/A001.mov' }))
       catalog.add(asset({ id: 'asset_2', path: 'Rushes/day two/A002.mov' }))
       catalog.add(asset({ id: 'asset_3', path: 'Rushesque/A003.mov' }))
 
       expect(catalog.forgetUnder('Rushes/')).toBe(2)
 
-      expect(catalog.find('asset_1')).toBeNull()
-      expect(catalog.find('asset_2')).toBeNull()
+      // Gone from every listing, and still there.
+      expect(catalog.search({})).toEqual([expect.objectContaining({ id: 'asset_3' })])
+      expect(catalog.find('asset_1')).not.toBeNull()
+      expect(catalog.filed().find(row => row.path === 'Rushes/A001.mov')?.missingAt).not.toBeNull()
       expect(pathOf('asset_3')).toBe('Rushesque/A003.mov')
+    })
+
+    // Run twice over the same state, the second pass has nothing to say — which is what lets the
+    // handler use the count to decide whether a window has any reason to reload.
+    it('says nothing the second time about a folder already dated', () => {
+      catalog.add(asset({ id: 'asset_1', path: 'Rushes/A001.mov' }))
+
+      expect(catalog.forgetUnder('Rushes')).toBe(1)
+      expect(catalog.forgetUnder('Rushes')).toBe(0)
     })
 
     // What tells the handler whether any window has a reason to reload.

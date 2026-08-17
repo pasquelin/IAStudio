@@ -511,11 +511,16 @@ export type Catalog = {
    */
   repath: (from: string, to: string) => void
   /**
-   * Drops the row filed at `path` and every row beneath it — a folder sent to the trash.
+   * Dates the row filed at `path`, and every row beneath it, as gone — a folder sent to the
+   * trash. Answers how many rows it touched.
    *
-   * A folder is not an asset, so no id can say what went; the path is the only handle. Rows
-   * beneath it lose their prompt and their lineage with them, which is what makes this the
-   * deliberate gesture rather than what a missing file triggers.
+   * DATED and not dropped, which is what makes it agree with the rescan rather than fight it:
+   * the system trash is reversible, and a row deleted the moment a file went there would leave
+   * a restored file with no prompt, no seed and no lineage — the one copy of all three. Dated,
+   * the next pass sees the file back where the catalogue says and clears the date, and the
+   * whole gesture undoes itself without the studio having to have watched the trash.
+   *
+   * A folder is not an asset, so no id can say what went; the path is the only handle.
    */
   forgetUnder: (path: string) => number
   /**
@@ -608,7 +613,11 @@ export function createCatalog(driver: SqliteDriver): Catalog {
      WHERE ${UNDER_PATH}
   `)
 
-  const deleteUnder = driver.prepare(`DELETE FROM assets WHERE ${UNDER_PATH}`)
+  // Only what is not already dated: a folder thrown away twice would otherwise report the same
+  // rows again, and a pass over the same state has to say nothing the second time.
+  const missUnder = driver.prepare(
+    `UPDATE assets SET missing_at = ? WHERE missing_at IS NULL AND (${UNDER_PATH})`,
+  )
 
   // Every filed row, and only what the rescan reads of one. `SELECT *` would carry the prompt and
   // the generation parameters of a hundred thousand assets across a thread for nothing.
@@ -629,12 +638,6 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   // the same transaction, where no other statement can have run in between.
   const rowsChanged = driver.prepare('SELECT changes() AS touched')
 
-  // What `orphanChildren` does for one row, for a whole folder — and children left OUTSIDE the
-  // folder are exactly the ones that would otherwise read as derived from nothing.
-  const orphanChildrenUnder = driver.prepare(`
-    UPDATE assets SET derived_from = NULL
-     WHERE derived_from IN (SELECT id FROM assets WHERE ${UNDER_PATH})
-  `)
   // Oldest first: re-importing the same API asset must not move where its children point.
   const selectByRemoteId = driver.prepare(
     'SELECT * FROM assets WHERE remote_asset_id = ? ORDER BY created_at, id LIMIT 1',
@@ -660,7 +663,12 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     'SELECT id FROM (SELECT id FROM activity ORDER BY id DESC LIMIT ?) ORDER BY id',
   )
   // Answered by `assets_type_idx` alone, without reading a single row.
-  const countTypes = driver.prepare('SELECT type, COUNT(*) AS total FROM assets GROUP BY type')
+  // `missing_at IS NULL` for the reason `search` carries it: the home draws these six numbers
+  // beside a grid that shows what is there, and counting what it does not show would put a
+  // number under a shelf nothing fills.
+  const countTypes = driver.prepare(
+    'SELECT type, COUNT(*) AS total FROM assets WHERE missing_at IS NULL GROUP BY type',
+  )
   const deleteAsset = driver.prepare('DELETE FROM assets WHERE id = ?')
   // A child pointing at a parent that is gone reads back as a derivation from nothing, and
   // every inspector that follows the link would have to guard against a row that cannot exist.
@@ -830,20 +838,26 @@ export function createCatalog(driver: SqliteDriver): Catalog {
 
     forgetUnder: path => {
       // `assets/img/` and `assets/img` name one folder to the filesystem and two strings to
-      // SQLite. Left as typed, the trailing slash made this delete nothing at all — silently,
+      // SQLite. Left as typed, the trailing slash made this touch nothing at all — silently,
       // and after the files had already gone to the trash.
       const root = withoutTrailingSlash(path)
       if (!root) return 0
 
+      // Nothing is orphaned and nothing is dropped: the rows are all still there, and a child
+      // still points at the parent it was derived from. Only the date changes.
       return transaction(driver, () => {
-        orphanChildrenUnder.run(...underPath(root))
-        deleteUnder.run(...underPath(root))
+        missUnder.run(new Date().toISOString(), ...underPath(root))
         return optionalNumber(rowsChanged.get() ?? {}, 'touched') ?? 0
       })
     },
 
     search: query => {
-      const conditions: string[] = []
+      // What is not there is not shown. A row dated gone keeps everything only it holds — the
+      // prompt, the seed, the lineage — and a browser that drew it would draw a card whose
+      // picture cannot load and whose file cannot open. The moment the file is back, the rescan
+      // clears the date and the row comes back with it: a folder thrown away and taken out of
+      // the trash reappears whole, which is what dating instead of deleting buys.
+      const conditions: string[] = ['missing_at IS NULL']
       const params: SqlValue[] = []
 
       if (query.type) {
