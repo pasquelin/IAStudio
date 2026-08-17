@@ -6,6 +6,8 @@
  * over the very source file it was opened from.
  */
 
+import { extensionOf } from './fileName'
+
 /**
  * A property of an edited document that a format either carries or loses.
  *
@@ -124,8 +126,7 @@ const FORMAT_BY_EXTENSION: Record<string, WritableFormat> = {
  * `.tif` the studio cannot write is not a container that holds everything.
  */
 export function formatOfFile(fileName: string): WritableFormat | null {
-  const dot = fileName.lastIndexOf('.')
-  return dot === -1 ? null : (FORMAT_BY_EXTENSION[fileName.slice(dot).toLowerCase()] ?? null)
+  return FORMAT_BY_EXTENSION[extensionOf(fileName).toLowerCase()] ?? null
 }
 
 /**

@@ -26,6 +26,7 @@ import {
   type WritableFormat,
 } from '@shared/domain/formatCapability'
 import { traitsOfCanvas } from '@/engines/canvas/canvasTraits'
+import { layerPixelName, layerPixelsNamed } from '@/engines/canvas/layerPixelName'
 import { oraDocumentOf } from '@/engines/canvas/oraDocument'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
@@ -310,22 +311,14 @@ const AUDIO_IO: DocumentIo = {
 }
 
 /**
- * What a surface's pixels are called inside `<id>.img/`. The role goes in FRONT of the id, never
- * behind it: a suffix would not be injective — a layer literally called `x-mask` and the mask of
- * a layer called `x` would claim the same file, and one would silently overwrite the other.
+ * The name `layerPixelName` gives, once it is known to be a file name a document folder accepts.
  *
- * `null` for an id that could not be a file name. Ids are UUIDs today, but `reviveLayer` takes
- * whatever a file holds, and one odd id must cost that layer's pixels — never the whole save.
+ * `null` for an id that could not be one. Ids are UUIDs today, but `reviveLayer` takes whatever a
+ * file holds, and one odd id must cost that layer's pixels — never the whole save.
  */
 function partName(pixels: LayerPixels): string | null {
-  const name = `${pixels.mask ? 'm' : 'p'}_${pixels.layerId}.png`
+  const name = layerPixelName(pixels)
   return isPartName(name) ? name : null
-}
-
-/** The other way round, for the read: anything else in the folder is not ours. */
-function pixelsFromPart(name: string, data: string): LayerPixels | null {
-  const match = /^([pm])_(.+)\.png$/.exec(name)
-  return match?.[2] ? { layerId: match[2], mask: match[1] === 'm', data } : null
 }
 
 /**
@@ -382,11 +375,16 @@ const IMAGE_IO: DocumentIo = {
     const host = canvasHost(documentId)
     if (!host) return
     for (const part of parts) {
-      const pixels = pixelsFromPart(part.name, part.data)
+      const pixels = layerPixelsNamed(part.name, part.data)
       // Nothing is rethrown into a mount effect that has nowhere to show it — see `restoreDocument`.
       if (pixels) void host.restoreSnapshot(pixels).catch(() => undefined)
     }
   },
+  /**
+   * The container is read a SECOND time here — `becomeAsset` read it to build the stack, and no
+   * engine existed then to hand the pixels to. Kept rather than cached: it is one gesture, not a
+   * hot path, and a cache of the last container read would outlive the tab that wanted it.
+   */
   rehydrateFromAsset: async (documentId, assetId) => {
     const host = canvasHost(documentId)
     const layered = host ? await getBridge()?.assets.readLayered(assetId) : null

@@ -5,6 +5,7 @@ import {
   type OraLayer,
 } from '@shared/domain/openRaster'
 import type { LayerPixels } from './CanvasEngine'
+import { layerPixelName, layerPixelsNamed } from './layerPixelName'
 import {
   IDENTITY,
   BLEND_MODES,
@@ -21,8 +22,9 @@ import {
 
 const PLAIN = 'svg:src-over'
 
-/** `data/p_<id>.png` and `data/m_<id>.png`, the names `packOpenRaster` files the bytes under. */
-const pathOf = (layerId: string, mask: boolean): string => `data/${mask ? 'm' : 'p'}_${layerId}.png`
+/** Where a surface's bytes sit inside the container: the studio's own name, under `data/`. */
+const pathOf = (layerId: string, mask: boolean): string =>
+  `data/${layerPixelName({ layerId, mask, data: '' })}`
 
 const compositeOf = (blend: BlendMode): string => (blend === 'normal' ? PLAIN : `svg:${blend}`)
 
@@ -100,10 +102,8 @@ export function oraDocumentOf(
   }
 }
 
-const pixelsFromPath = (path: string, data: string): LayerPixels | null => {
-  const match = /^data\/([pm])_(.+)\.png$/.exec(path)
-  return match?.[2] ? { layerId: match[2], mask: match[1] === 'm', data } : null
-}
+const pixelsFromPath = (path: string, data: string): LayerPixels | null =>
+  path.startsWith('data/') ? layerPixelsNamed(path.slice('data/'.length), data) : null
 
 function pixelsOf(document: OraDocument): LayerPixels[] {
   const flat = (nodes: readonly OraNode[]): OraLayer[] =>
@@ -118,10 +118,18 @@ function pixelsOf(document: OraDocument): LayerPixels[] {
 }
 
 /**
- * A stack the studio never wrote, turned into layers it can edit. Bottom first again, and each
- * layer given the id its file already names so its pixels find it.
+ * A stack the studio never wrote, turned into layers it can edit — with each layer's pixels
+ * collected in the SAME pass.
+ *
+ * One walk rather than two: the ids are invented here, so a second walk pairing nodes with layers
+ * by position would be a second place holding the same order — and the day one of them changes,
+ * every layer silently gets its neighbour's pixels.
  */
-function layersFromNodes(nodes: readonly OraNode[], at = { next: 0 }): Layer[] {
+function layersFromNodes(
+  nodes: readonly OraNode[],
+  found: LayerPixels[],
+  at = { next: 0 },
+): Layer[] {
   return [...nodes].reverse().map((node): Layer => {
     at.next += 1
     const shared = {
@@ -132,38 +140,21 @@ function layersFromNodes(nodes: readonly OraNode[], at = { next: 0 }): Layer[] {
       transform: { ...IDENTITY, x: node.x, y: node.y },
     }
 
-    if (!isOraGroup(node)) {
-      const pixel: PixelLayer = { ...shared, kind: 'pixel' }
-      return pixel
+    if (isOraGroup(node)) {
+      const group: GroupLayer = {
+        ...shared,
+        kind: 'group',
+        children: layersFromNodes(node.children, found, at),
+        collapsed: false,
+        isolation: node.isolation === 'isolate' ? 'isolate' : 'pass-through',
+      }
+      return group
     }
 
-    const group: GroupLayer = {
-      ...shared,
-      kind: 'group',
-      children: layersFromNodes(node.children, at),
-      collapsed: false,
-      isolation: node.isolation === 'isolate' ? 'isolate' : 'pass-through',
-    }
-    return group
+    if (node.png) found.push({ layerId: shared.id, mask: false, data: node.png })
+    const pixel: PixelLayer = { ...shared, kind: 'pixel' }
+    return pixel
   })
-}
-
-/** The pixels of a foreign file, keyed to the ids `layersFromNodes` has just invented. */
-function foreignPixels(nodes: readonly OraNode[], layers: readonly Layer[]): LayerPixels[] {
-  const pairs: LayerPixels[] = []
-  const walk = (theirs: readonly OraNode[], ours: readonly Layer[]): void => {
-    const reversed = [...theirs].reverse()
-    reversed.forEach((node, index) => {
-      const layer = ours[index]
-      if (!layer) return
-      if (isOraGroup(node) && isGroup(layer)) return walk(node.children, layer.children)
-      if (!isOraGroup(node) && node.png)
-        pairs.push({ layerId: layer.id, mask: false, data: node.png })
-    })
-  }
-
-  walk(nodes, layers)
-  return pairs
 }
 
 /**
@@ -182,7 +173,8 @@ export function canvasFromOra(document: OraDocument): {
     return { state: deserializeCanvas(document.studio), pixels: pixelsOf(document) }
   }
 
-  const layers = layersFromNodes(document.nodes)
+  const pixels: LayerPixels[] = []
+  const layers = layersFromNodes(document.nodes, pixels)
 
   return {
     state: {
@@ -192,6 +184,6 @@ export function canvasFromOra(document: OraDocument): {
       layers,
       activeLayerId: layers[layers.length - 1]?.id ?? null,
     },
-    pixels: foreignPixels(document.nodes, layers),
+    pixels,
   }
 }
