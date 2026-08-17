@@ -82,7 +82,7 @@ export type AssetTarget = {
  * kind absent from the table cannot be saved yet, and Save does nothing for it rather than
  * writing a document with an empty body.
  */
-type DocumentIo = {
+type DocumentIo = AssetWriting & {
   /**
    * What to write, how to record that it was written, and whether there was anything to write.
    *
@@ -124,28 +124,6 @@ type DocumentIo = {
    * what `capture` costs, and that is known here and nowhere else.
    */
   autosaves?: false
-  /**
-   * Bakes the document into the asset it was opened from — ⌘S — or into a new one beside it —
-   * ⌘⇧S. Which of the two is what `target` says.
-   *
-   * The kind writes it itself rather than handing bytes back: what a picture sends and what a
-   * take would send do not have the same shape, and a shared return type would be a union every
-   * caller had to take apart again.
-   *
-   * Answers `null` when there was nothing to bake yet — an engine whose GPU context is still
-   * coming up, which is exactly when a save right after switching workspace lands.
-   *
-   * **Absent means "no copy to make", and every kind but the image leaves it out today** — each
-   * says why at its own line of `IO_BY_KIND` rather than here, because the reasons differ.
-   */
-  writeAsset?: (documentId: string, target: AssetTarget) => Promise<Asset | null>
-  /**
-   * What this document holds that a format has to carry, measured on its state.
-   *
-   * Absent means « nothing this kind writes back could be lost », which is the case for the five
-   * kinds without a `writeAsset`: they never overwrite the file they were opened from.
-   */
-  traitsOf?: (documentId: string) => CapabilityTrait[]
   /** Whether the document is already filled — a remount must not read over what is open. */
   holds: (documentId: string) => boolean
   /** Whether closing the document would throw work away — never true for an untouched tab. */
@@ -153,6 +131,34 @@ type DocumentIo = {
   /** Drops the state and the history a closed document was holding. */
   forget: (documentId: string) => void
 }
+
+/**
+ * Whether a kind writes back over the file it was opened from — and if it does, what it holds.
+ *
+ * **The two travel together, and the compiler is what keeps them together.** Declaring
+ * `writeAsset` without `traitsOf` would make `writePlanFor` answer « nothing to lose » for
+ * everything that kind can hold, and the next space to bake into its source would silently
+ * reopen the defect this whole feature closed — in another workspace, with every gate green.
+ * Five kinds take the first branch today, each saying why at its own line of `IO_BY_KIND`.
+ */
+type AssetWriting =
+  | { writeAsset?: undefined; traitsOf?: undefined }
+  | {
+      /**
+       * Bakes the document into the asset it was opened from — ⌘S — or into a new one beside
+       * it — ⌘⇧S. Which of the two is what `target` says.
+       *
+       * The kind writes it itself rather than handing bytes back: what a picture sends and what
+       * a take would send do not have the same shape, and a shared return type would be a union
+       * every caller had to take apart again.
+       *
+       * Answers `null` when there was nothing to bake yet — an engine whose GPU context is
+       * still coming up, which is exactly when a save right after switching workspace lands.
+       */
+      writeAsset: (documentId: string, target: AssetTarget) => Promise<Asset | null>
+      /** What this document holds that the target format has to carry, measured on its state. */
+      traitsOf: (documentId: string) => CapabilityTrait[]
+    }
 
 /**
  * The kinds a string can hold, which differ only in what their state becomes on the way out and
