@@ -1539,6 +1539,39 @@ describe('the project explorer, as a grid', () => {
     expect(moveFiles).toHaveBeenCalledWith(['Images/a.png'], 'Images')
   })
 
+  /**
+   * The fifth silence, which only the grid can reach: `explorer.empty` answers for a project that
+   * would not be READ, which is what an empty tree means. Gone down into a folder that merely holds
+   * nothing, it reported the disk as unreadable.
+   */
+  it('says an empty folder is empty, not that the project could not be read', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('Vide')], Vide: [] })
+
+    render(<Explorer />)
+    await enter('Vide')
+
+    expect(await screen.findByText(/ne contient rien/)).toBeInTheDocument()
+    expect(screen.queryByText(/n’a pas pu être lu/)).toBeNull()
+  })
+
+  /** An empty folder with no card to aim at would otherwise be a dead end with no way to fill it. */
+  it('still makes a folder from the blank of an empty one', async () => {
+    withProject()
+    showGrid()
+    const { newFolder } = install({ '': [folder('Vide')], Vide: [] })
+
+    render(<Explorer />)
+    await enter('Vide')
+    await screen.findByText(/ne contient rien/)
+
+    menu.picks('Nouveau dossier')
+    fireEvent.contextMenu(screen.getByText(/ne contient rien/))
+
+    await waitFor(() => expect(newFolder).toHaveBeenCalledWith('Vide', 'dossier'))
+  })
+
   /** Same question of the menu, which is how a folder is made where the user is looking. */
   it('makes a new folder in the folder being shown, from the blank', async () => {
     withProject()

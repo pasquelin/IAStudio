@@ -520,10 +520,19 @@ export function Explorer() {
             onPressRoot={() => pick([])}
             onDropRoot={paths => void getBridge()?.project.moveFiles(paths, browsed).then(settled)}
             onContextMenuRoot={() => raiseRootMenu(browsed)}
-            // Inert to the pointer, so the blank under it keeps taking the right-click that makes a
-            // folder: an empty folder would otherwise be a dead end, its message swallowing the one
-            // gesture that gets you out of it.
-            empty={<div className="pointer-events-none size-full">{emptyState}</div>}
+            // A message is not a card, so `onBlank` counts it as blank and an empty folder still
+            // offers the one gesture that gets you out of it.
+            //
+            // A FIFTH silence, and only the grid can reach it: `emptyState` answers for a project
+            // that would not be read, which is what an empty tree means — gone down into a folder
+            // that merely holds nothing, it would report the disk as unreadable.
+            empty={
+              browsable && browsed !== FOLDER_ROOT ? (
+                <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.emptyFolder')} />
+              ) : (
+                emptyState
+              )
+            }
             renderCard={node => (
               <EntryCard
                 name={documentOf(node)?.title ?? node.name}
