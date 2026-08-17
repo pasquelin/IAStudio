@@ -6,31 +6,13 @@ import {
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { canRestore, type GitFile } from '@shared/domain/git'
-import { nameOf, parentOf } from '@shared/domain/folder'
-import { Row } from '@/design/Row'
+import { CHECKBOX } from '@/design/styles'
 import { ToolButton } from '@/design/ToolButton'
-import { TONE_TEXT, type StatusTone } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { revealTool } from '@/helpers/revealPanel'
 import { TIP_LEFT } from '@/helpers/tooltip'
+import { ChangedFileRow } from '@/panels/shared/ChangedFileRow'
 import { useGit } from '@/stores/git'
-
-/**
- * How each change reads, in ink.
- *
- * `danger` is spent on the two that LOSE something — a file git will drop, and a file two sides
- * disagree about. A modification is not a warning, and painting it as one would leave nothing to
- * paint the two that are.
- */
-const TONES: Record<GitFile['change'], StatusTone> = {
-  added: 'success',
-  modified: 'accent',
-  deleted: 'danger',
-  renamed: 'accent',
-  copied: 'accent',
-  untracked: 'muted',
-  conflicted: 'danger',
-}
 
 /**
  * One changed file.
@@ -38,42 +20,30 @@ const TONES: Record<GitFile['change'], StatusTone> = {
  * The tick IS the index, which is the gesture every version tool has settled on: ticking a file
  * adds it to what the next commit will record, unticking takes it back out. No separate pair of
  * buttons, and no selection of its own to keep in step with what git thinks.
+ *
+ * Only `busy` is subscribed to. The five actions are read off the store when one is taken: their
+ * identity never changes, so subscribing to them signs every row of a long list up for a wake-up
+ * that can never tell it anything.
  */
 export function GitFileRow({ file }: { file: GitFile }) {
   const { t } = useTranslation()
   const busy = useGit(state => state.busy)
-  const stage = useGit(state => state.stage)
-  const unstage = useGit(state => state.unstage)
-  const restore = useGit(state => state.restore)
-  const compare = useGit(state => state.compare)
-  const resolve = useGit(state => state.resolve)
 
   return (
-    <Row
-      title={nameOf(file.path)}
-      subtitle={parentOf(file.path) ?? undefined}
-      hint={
-        file.from === undefined
-          ? `${file.path} · ${t(`git.change.${file.change}`)}`
-          : `${file.from} → ${file.path}`
-      }
+    <ChangedFileRow
+      file={file}
       leading={
-        <span className="flex shrink-0 items-center gap-2">
-          <input
-            type="checkbox"
-            className="size-3"
-            checked={file.stage === 'staged'}
-            disabled={busy}
-            aria-label={file.path}
-            onChange={event => void (event.target.checked ? stage : unstage)([file.path])}
-          />
-          <span
-            aria-hidden
-            className={cn('w-3 text-center font-mono text-xs', TONE_TEXT[TONES[file.change]])}
-          >
-            {t(`git.changeBadge.${file.change}`)}
-          </span>
-        </span>
+        <input
+          type="checkbox"
+          className={cn(CHECKBOX, 'size-3')}
+          checked={file.stage === 'staged'}
+          disabled={busy}
+          aria-label={file.path}
+          onChange={event => {
+            const { stage, unstage } = useGit.getState()
+            void (event.target.checked ? stage : unstage)([file.path])
+          }}
+        />
       }
       actions={
         <>
@@ -89,7 +59,7 @@ export function GitFileRow({ file }: { file: GitFile }) {
                 tooltip={TIP_LEFT}
                 variant="row"
                 disabled={busy}
-                onClick={() => void resolve([file.path], 'ours')}
+                onClick={() => void useGit.getState().resolve([file.path], 'ours')}
               />
               <ToolButton
                 icon={mdiArrowRightBoldOutline}
@@ -98,7 +68,7 @@ export function GitFileRow({ file }: { file: GitFile }) {
                 tooltip={TIP_LEFT}
                 variant="row"
                 disabled={busy}
-                onClick={() => void resolve([file.path], 'theirs')}
+                onClick={() => void useGit.getState().resolve([file.path], 'theirs')}
               />
             </>
           ) : null}
@@ -115,7 +85,7 @@ export function GitFileRow({ file }: { file: GitFile }) {
               variant="row"
               disabled={busy}
               onClick={() => {
-                void compare(file.path, null)
+                void useGit.getState().compare(file.path, null)
                 revealTool('history')
               }}
             />
@@ -132,7 +102,7 @@ export function GitFileRow({ file }: { file: GitFile }) {
               tooltip={TIP_LEFT}
               variant="row"
               disabled={busy}
-              onClick={() => void restore([file.path])}
+              onClick={() => void useGit.getState().restore([file.path])}
             />
           )}
         </>

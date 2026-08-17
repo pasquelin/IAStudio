@@ -1,10 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import type { GitCommitFile } from '@shared/domain/git'
-import { nameOf, parentOf } from '@shared/domain/folder'
 import { QuietNote } from '@/design/QuietNote'
-import { Row } from '@/design/Row'
 import { PANEL_SCROLL, rowSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { ChangedFileRow } from '@/panels/shared/ChangedFileRow'
 import { useGit } from '@/stores/git'
 import { TagField } from './TagField'
 
@@ -50,23 +49,7 @@ export function CommitFiles({ files, commit }: CommitFilesProps) {
               onClick={() => void compare(file.path, commit)}
               className={cn(rowSkin(showing), 'w-full border-none bg-transparent p-0 text-left')}
             >
-              <Row
-                title={nameOf(file.path)}
-                subtitle={parentOf(file.path) ?? undefined}
-                hint={
-                  file.from === undefined
-                    ? `${file.path} · ${t(`git.change.${file.change}`)}`
-                    : `${file.from} → ${file.path}`
-                }
-                leading={
-                  <span
-                    aria-hidden
-                    className="text-muted w-3 shrink-0 text-center font-mono text-xs"
-                  >
-                    {t(`git.changeBadge.${file.change}`)}
-                  </span>
-                }
-              />
+              <ChangedFileRow file={file} />
             </button>
           )
         })

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { canCommit, type GitStatus } from '@shared/domain/git'
 import { Button } from '@/design/Button'
-import { FIELD } from '@/design/styles'
+import { CHECKBOX, FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
@@ -41,7 +41,7 @@ export function CommitBox({ status }: { status: GitStatus }) {
           <label className="text-muted flex items-center gap-2 text-xs">
             <input
               type="checkbox"
-              className="size-3"
+              className={cn(CHECKBOX, 'size-3')}
               checked={amend}
               disabled={busy}
               onChange={event => setAmend(event.target.checked)}

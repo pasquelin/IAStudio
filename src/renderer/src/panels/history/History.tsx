@@ -1,6 +1,6 @@
-import { mdiSourceBranch } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
+import { toolIcon } from '@/helpers/toolRegistry'
 import { useGitHistory } from '@/hooks/useGitHistory'
 import { useGit } from '@/stores/git'
 import { CommitFiles } from './CommitFiles'
@@ -21,11 +21,11 @@ export function History() {
   const pickedFiles = useGit(state => state.pickedFiles)
 
   if (repository.kind !== 'ready') {
-    return <EmptyState icon={mdiSourceBranch} message={t('git.historyUnavailable')} />
+    return <EmptyState icon={toolIcon('history')} message={t('git.historyUnavailable')} />
   }
 
   if (commits.length === 0) {
-    return <EmptyState icon={mdiSourceBranch} message={t('git.historyEmpty')} />
+    return <EmptyState icon={toolIcon('history')} message={t('git.historyEmpty')} />
   }
 
   return (

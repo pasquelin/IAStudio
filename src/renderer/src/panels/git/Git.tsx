@@ -1,9 +1,10 @@
-import { mdiSourceBranch } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { GIT_FAILURE_KEYS, remoteHost } from '@shared/domain/git'
 import { EmptyState } from '@/design/EmptyState'
-import { QuietNote } from '@/design/QuietNote'
+import { toolIcon } from '@/helpers/toolRegistry'
 import { useGitStatus } from '@/hooks/useGitStatus'
+import { NoProject } from '@/panels/shared/NoProject'
+import { RefusedPanel } from '@/panels/shared/RefusedPanel'
 import { useGit } from '@/stores/git'
 import { CredentialField } from './CredentialField'
 import { GitReady } from './GitReady'
@@ -21,20 +22,21 @@ export function Git() {
   const repository = useGitStatus()
   const busy = useGit(state => state.busy)
   const initRepository = useGit(state => state.initRepository)
+  const refresh = useGit(state => state.refresh)
   const remote = useGit(state => state.remote)
   const host = remote ? remoteHost(remote.url) : null
 
   switch (repository.kind) {
     case 'no-project':
-      return <EmptyState icon={mdiSourceBranch} message={t('git.noProject')} />
+      return <NoProject icon={toolIcon('git')} message={t('git.noProject')} />
 
     case 'no-binary':
-      return <EmptyState icon={mdiSourceBranch} message={t('git.noBinary')} />
+      return <EmptyState icon={toolIcon('git')} message={t('git.noBinary')} />
 
     case 'uninitialised':
       return (
         <EmptyState
-          icon={mdiSourceBranch}
+          icon={toolIcon('git')}
           message={t('git.uninitialised')}
           // Withdrawn while the command runs rather than disabled: `git init` answers in well
           // under a second, and a button that greys out and comes back reads as a flicker.
@@ -58,18 +60,16 @@ export function Git() {
         return <CredentialField host={host} />
       }
 
+      // The detail is git's own line, credentials already stripped in the main process. A failure
+      // with no way to try again is a panel one has to leave and come back to, and `git status`
+      // is what half of these refusals need to be told they are over.
       return (
-        <div className="flex flex-col gap-2 p-3">
-          <QuietNote>{t(GIT_FAILURE_KEYS[repository.reason])}</QuietNote>
-          {/* Git's own line, credentials already stripped in the main process. Kept because a
-              named reason still does not say WHICH file or which remote, and for `unknown` it is
-              the only thing there is to show at all. */}
-          {repository.detail !== '' && (
-            <pre className="text-muted text-tiny m-0 break-words whitespace-pre-wrap">
-              {repository.detail}
-            </pre>
-          )}
-        </div>
+        <RefusedPanel
+          tool="git"
+          message={t(GIT_FAILURE_KEYS[repository.reason])}
+          detail={repository.detail}
+          onRetry={() => void refresh()}
+        />
       )
 
     default:

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GitRepository, GitStatus } from '@shared/domain/git'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useGit } from '@/stores/git'
+import { useProject } from '@/stores/project'
 import { Git } from './Git'
 
 const CLEAN: GitStatus = {
@@ -17,9 +18,12 @@ const CLEAN: GitStatus = {
 
 const CLEAN_READY: GitRepository = { kind: 'ready', status: CLEAN }
 
-beforeEach(() =>
-  useGit.setState({ repository: { kind: 'no-project' }, busy: false, message: '', amend: false }),
-)
+beforeEach(() => {
+  useGit.setState({ repository: { kind: 'no-project' }, busy: false, message: '', amend: false })
+  // `NoProject` says "loading" until the main process has answered, so a panel drawn on the
+  // initial state would never reach the sentence these cases are about.
+  useProject.setState({ known: true })
+})
 
 function panelOn(repository: GitRepository, init = vi.fn(() => Promise.resolve(repository))) {
   installFakeBridge({ git: { read: () => Promise.resolve(repository), init } })
@@ -423,6 +427,28 @@ describe('a server that refused', () => {
 
     expect(await screen.findByText(/Le serveur distant a refusé vos identifiants/)).toBeTruthy()
     expect(screen.queryByLabelText('Jeton')).toBeNull()
+  })
+
+  /**
+   * Half of these refusals are over by the time they are read — a lock file left by a command
+   * that has since finished, a folder that was busy. Without a way to ask again, the panel has to
+   * be left and come back to, and the line git wrote is what says which file was in the way.
+   */
+  it('leaves a way to ask again, and shows what git said', async () => {
+    const read = vi.fn(() =>
+      Promise.resolve<GitRepository>({
+        kind: 'failed',
+        reason: 'locked',
+        detail: 'fatal: Unable to create .git/index.lock: File exists',
+      }),
+    )
+    installFakeBridge({ git: { read } })
+    render(<Git />)
+
+    expect(await screen.findByText(/index\.lock/)).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: 'Réessayer' }))
+
+    expect(read.mock.calls.length).toBeGreaterThan(1)
   })
 })
 

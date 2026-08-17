@@ -39,14 +39,23 @@ export const GIT_CHANGES: readonly GitChange[] = [
   'conflicted',
 ]
 
-export type GitFile = {
+/**
+ * A file as a recorded version holds it. No stage: everything in a commit is already recorded.
+ *
+ * Declared before the working-tree file rather than beside the commit, because the working-tree
+ * one IS this plus a stage — the panels draw both from one row, and two shapes free to drift is
+ * how the same file ends up described twice.
+ */
+export type GitCommitFile = {
   /** Slash-joined and relative to the repository root, as git writes it on every platform. */
   path: string
-  stage: GitStage
   change: GitChange
   /** Where a rename came FROM. Absent for every other change. */
   from?: string
 }
+
+/** A file as the working tree holds it: what a commit holds, plus which half of git it is in. */
+export type GitFile = GitCommitFile & { stage: GitStage }
 
 /**
  * The repository as the panel draws it once a project is open and git answered.
@@ -196,9 +205,6 @@ export const GIT_REF_KINDS: readonly GitRefKind[] = ['branch', 'remote', 'tag']
 
 /** One set-aside pile of changes. `index` is its place in the stack, newest first. */
 export type GitStashEntry = { index: number; message: string }
-
-/** A file as a recorded version holds it. No stage: everything in a commit is already recorded. */
-export type GitCommitFile = { path: string; change: GitChange; from?: string }
 
 /** The short form of a hash, for a column that has to stay narrow. */
 export function shortHash(hash: string): string {

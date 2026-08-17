@@ -1,4 +1,5 @@
-import { FIELD_LABEL_WIDE, FIELD_ROW } from './styles'
+import { CHECKBOX, FIELD_LABEL_WIDE, FIELD_ROW } from './styles'
+import { cn } from '@/helpers/cn'
 
 export type ToggleFieldProps = {
   label: string
@@ -24,7 +25,7 @@ export function ToggleField({ label, value, onChange }: ToggleFieldProps) {
         type="checkbox"
         checked={value}
         onChange={event => onChange(event.target.checked)}
-        className="accent-accent size-4 cursor-pointer"
+        className={cn(CHECKBOX, 'size-4')}
       />
     </label>
   )
