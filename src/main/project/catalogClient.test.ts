@@ -1,5 +1,5 @@
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import { createCatalogClient, type CatalogPort } from './catalogClient'
+import { CATALOGUE_CLOSED, createCatalogClient, type CatalogPort } from './catalogClient'
 import { dispatchCatalogRequest } from './catalogDispatch'
 import { createCatalog } from './catalog'
 import { openMemoryDatabase } from './sqliteMemory'
@@ -304,6 +304,25 @@ describe('createCatalogClient', () => {
     await catalog.close()
 
     expect(terminate).toHaveBeenCalledOnce()
+  })
+
+  /**
+   * Terminating the thread makes it exit non-zero, which IS the failure listener: the two
+   * refusals differ only by the order of two lines in `close`. Only one of them is the sentinel
+   * a caller absorbs, so the wrong order turns every leaving project into a journalled defect.
+   */
+  it('names a close a close, though terminating the thread fails it', async () => {
+    const port = manualPort()
+    vi.spyOn(port, 'terminate').mockImplementation(() => {
+      port.fail(new Error('catalogue thread exited with code 1'))
+      return Promise.resolve()
+    })
+    const catalog = createCatalogClient(port)
+    const search = catalog.search({ text: 'sky' })
+
+    await catalog.close()
+
+    await expect(search).rejects.toThrow(CATALOGUE_CLOSED)
   })
 
   // A thread that dies answers nothing: without this the interface waits on that promise for

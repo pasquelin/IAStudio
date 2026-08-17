@@ -1,10 +1,17 @@
 import { join, resolve } from 'node:path'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 
 // The module reaches for `protocol` and `net` at call time only, but importing it still pulls
 // Electron in — and there is no Electron under Vitest.
 vi.mock('electron', () => ({ net: {}, protocol: {} }))
+
+const log = vi.hoisted(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }))
+vi.mock('@main/log', () => ({ log }))
+
+// The journal is mocked at module scope: a case that asserts on it must not be reading what the
+// case before it left behind.
+beforeEach(() => vi.clearAllMocks())
 
 const { assetFilePath, posterFileOf, servedFileOf, servedPath } = await import('./protocol')
 const { ASSET_HOST, POSTER_HOST } = await import('@shared/domain/asset')
@@ -145,22 +152,34 @@ describe('routing a URL of the scheme', () => {
   })
 
   /**
-   * The catalogue REJECTS on the ordinary path — a project closing while a grid is still asking
-   * for its stills is enough. Left to travel, that reaches the scheme as a network error rather
-   * than as a 404, and the tile that meets one keeps the icon: a picture is asked for again, a
-   * failed request is not.
+   * A `protocol.handle` cannot let anything fly: left to travel, a rejection reaches the window
+   * as a network error rather than as a 404, and the tile that meets one keeps the icon.
    */
   it('serves nothing when a resolver refuses, however it refuses', async () => {
-    const rejecting = { [ASSET_HOST]: () => Promise.reject(new Error('catalogue closed')) }
-    // `project.catalog()` throws synchronously, before any promise exists — `NoProjectError`.
+    const rejecting = { [ASSET_HOST]: () => Promise.reject(new Error('broke')) }
+    // A resolver that throws before any promise exists — `project.catalog()` does exactly this.
     const throwing = {
       [ASSET_HOST]: () => {
-        throw new Error('no-project')
+        throw new Error('broke')
       },
     }
 
     await expect(servedPath('scenario://asset/asset_1', rejecting)).resolves.toBeNull()
     await expect(servedPath('scenario://asset/asset_1', throwing)).resolves.toBeNull()
+  })
+
+  /**
+   * The ordinary refusal — a project left while a grid still asks for its stills — is the
+   * RESOLVER's to absorb, since only it can tell it from a defect. What reaches here is therefore
+   * a resolver that broke, and a 404 is the only trace it will ever leave outside the journal.
+   */
+  it('journals a resolver that refuses as a defect, not as a missing file', async () => {
+    await servedPath('scenario://asset/asset_1', {
+      [ASSET_HOST]: () => Promise.reject(new TypeError('find is not a function')),
+    })
+
+    expect(log.error).toHaveBeenCalledWith('assets', expect.stringContaining('asset/asset_1'))
+    expect(log.warn).not.toHaveBeenCalled()
   })
 
   it('serves nothing for a host neither resolver knows', async () => {

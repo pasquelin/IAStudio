@@ -78,7 +78,10 @@ export function registerAssetScheme(): void {
   ])
 }
 
-/** Asynchronous since the catalogue moved to its own thread — see `catalogThread.ts`. */
+/**
+ * `null` is « no file », the project having gone included — a resolver absorbs that refusal
+ * itself. A REJECTION therefore means a defect, which `servedPath` journals as one.
+ */
 type AssetResolver = (key: string) => Promise<string | null>
 
 /**
@@ -116,12 +119,10 @@ export async function servedPath(url: string, resolvers: AssetResolvers): Promis
   try {
     return await resolveHost(parsed.id)
   } catch (error: unknown) {
-    // A refusal is answered as « no file », never as a network error: the catalogue rejects on
-    // the ordinary path — a project closing while a grid still asks for its stills.
-    //
-    // It catches a genuine defect in a resolver just the same, and hands it over as a 404: the
-    // journal is then the only place it shows, and nothing here can tell the two apart.
-    log.warn('assets', `serving ${parsed.host}/${parsed.id} failed: ${String(error)}`)
+    // Still answered as « no file », because a `protocol.handle` cannot let anything fly — but
+    // said as a DEFECT: the ordinary refusal is the resolver's to absorb, so whatever reaches
+    // here is a resolver that broke, and the journal is the only place it will ever show.
+    log.error('assets', `serving ${parsed.host}/${parsed.id} failed: ${String(error)}`)
     return null
   }
 }
