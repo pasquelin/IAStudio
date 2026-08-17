@@ -83,6 +83,7 @@ import {
 } from './shape-geometry'
 import type { Point, Size } from '../core/geometry'
 import { blurRadius, DEFAULT_BRUSH, readsBrushSetting, type BrushSettings } from './brush'
+import type { CanvasTool } from './canvas-tool'
 import { brushRect, grownBy } from './tiles'
 import {
   containIn,
@@ -94,24 +95,6 @@ import {
   type CanvasView,
   type Viewport,
 } from './viewport'
-
-export type CanvasTool =
-  | 'select'
-  | 'move'
-  | 'crop'
-  | 'shape'
-  | 'brush'
-  /**
-   * The same gesture as the brush, with the edge the bundle promises it: a pencil is hard, and
-   * nothing on screen sets that — which is why it is a tool rather than a mode of the brush.
-   */
-  | 'pencil'
-  | 'text'
-  | 'comment'
-  | 'eraser'
-  | 'fill'
-  | 'picker'
-  | 'hand'
 
 /**
  * What the engine may do to the guides. It builds no id and runs no command: those belong to the

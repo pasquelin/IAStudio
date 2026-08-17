@@ -15,9 +15,10 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 /**
  * The import cycles this repository still carries, each written as its two files sorted.
  *
- * A ratchet, not a target: this list is meant to shrink and never to grow. Nothing else in
- * `pnpm validate` sees a cycle — not the compiler, not eslint, not the tests — so a cycle removed
- * today can come back tomorrow with every gate green, which is what happened to the fifth one.
+ * **Empty, and that is the point of keeping it.** A ratchet, not a target: the list is meant to
+ * shrink and never to grow. Nothing else in `pnpm validate` sees a cycle — not the compiler, not
+ * eslint, not the tests — so a cycle removed today can come back tomorrow with every gate green,
+ * which is what happened to the fifth one. An empty list makes the next one fail on sight.
  *
  * **Nothing here enforces the direction.** A line can be added as easily as removed, and no test
  * can tell a surrender from a fix. Review is what holds it, and that is worth knowing rather than
@@ -27,10 +28,7 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
  * this tree, not a property of this detector: the two disagree the moment one sees an edge the
  * other does not.
  */
-const KNOWN: readonly string[] = [
-  'main/scenario/job-store.ts -> main/scenario/validation.ts',
-  'renderer/src/engines/canvas/CanvasEngine.ts -> renderer/src/engines/canvas/brush.ts',
-]
+const KNOWN: readonly string[] = []
 
 const ALIASES: readonly [string, string][] = [
   ['@/', 'renderer/src/'],
@@ -190,7 +188,7 @@ describe('what a shipped file may reach', () => {
 })
 
 describe('the import graph', () => {
-  it('carries no cycle beyond the ones already listed', () => {
+  it('carries no import cycle at all', () => {
     const files = sources(SRC)
     const graph = new Map<string, string[]>(
       files.map(file => {
@@ -205,9 +203,29 @@ describe('the import graph', () => {
     const found = cyclesIn(graph)
     const known = [...KNOWN].sort()
 
+    // An empty result proves nothing unless the files were opened — the same floor the fixture
+    // walk keeps, and for the same reason: a walk that stopped walking prints this green too.
+    expect(files.length).toBeGreaterThan(600)
+
     // Two assertions rather than one equality: a cycle that appeared is a regression to undo, a
     // cycle that vanished is a line to delete here. A single diff would report them alike.
     expect(found.filter(cycle => !known.includes(cycle))).toEqual([])
     expect(known.filter(cycle => !found.includes(cycle))).toEqual([])
+  })
+
+  /**
+   * And it can fail. While `KNOWN` held entries, the second assertion above was the liveness
+   * probe: a detector gone blind answered nothing and the missing lines reddened. Emptying the
+   * list retired that probe — `[].filter(…)` is empty however broken the walk is — so the proof
+   * that this file can still SEE a cycle has to be made on a graph of its own.
+   */
+  it('would see a cycle if the tree had one', () => {
+    const [a, b] = [join(SRC, 'a.ts'), join(SRC, 'b.ts')]
+    const ring = new Map([
+      [a, [b]],
+      [b, [a]],
+    ])
+
+    expect(cyclesIn(ring)).toEqual(['a.ts -> b.ts'])
   })
 })

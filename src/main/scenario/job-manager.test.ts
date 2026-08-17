@@ -15,7 +15,7 @@ import {
   type JobRunner,
   type RemoteJob,
 } from './job-manager'
-import type { PersistedJob } from './job-store'
+import type { PersistedJob } from './persisted-job'
 
 const settled = (): Promise<void> => new Promise(resolve => setImmediate(resolve))
 

@@ -1,8 +1,5 @@
 import { clamp } from '@shared/numeric'
-// Type-only, so nothing of the engine — Pixi included — is pulled in at runtime. The cycle it
-// makes with `CanvasEngine` is erased at build, and it is what lets the table below be the one
-// place that says which tool reads what.
-import type { CanvasTool } from './CanvasEngine'
+import type { CanvasTool } from './canvas-tool'
 
 /**
  * What the brush, the eraser and the shape stroke are set to. Session state, not document
