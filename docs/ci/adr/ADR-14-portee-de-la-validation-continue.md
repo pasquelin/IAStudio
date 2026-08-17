@@ -14,12 +14,19 @@
 > baisser la dette — ne compensait pas le temps qu'elle prenait sur les fonctionnalités. Décision
 > du propriétaire du dépôt, pas un arbitrage technique.
 >
-> **Au 2026-08-17, l'écart est ROUVERT.** `pnpm validate` a reçu un cinquième maillon,
-> `pnpm unused:main` (knip), tandis que `.github/workflows/ci.yml` continue d'énumérer les quatre
-> premiers un par un sans jamais appeler `validate`. **Un export mort dans `src/main` laisse donc
-> une pull request VERTE**, et seul un `validate` lancé à la main la rougit. Le refermer — faire
-> appeler `validate` par la CI — est décidé et fait l'objet du lot suivant ; ce paragraphe se
-> corrige avec lui.
+> **Au 2026-08-17, l'écart a été rouvert puis refermé le même jour.** `pnpm validate` a reçu un
+> cinquième maillon, `pnpm unused:main` (knip), que `.github/workflows/ci.yml` n'a pas reçu : il
+> énumérait les quatre premiers un par un, et une pull request passait donc VERTE avec du code
+> mort. **Le job appelle désormais `pnpm validate` lui-même**, en un step au lieu de quatre : la
+> CI et le poste exécutent de nouveau la même chose, et tout maillon ajouté à la porte l'est des
+> deux côtés sans qu'on ait à y penser.
+>
+> Ce qui est perdu, et c'est le prix accepté : la liste des steps ne nomme plus le maillon qui
+> échoue — le log le nomme, la liste ne le montre plus d'un coup d'œil. Ce qui ne l'est pas : le
+> budget de minutes, nul ici puisque le dépôt est public ([ADR-09](ADR-09-budget-minutes-ci.md)),
+> et l'ordre d'échec, `validate` s'arrêtant à son premier maillon rouge comme les quatre steps le
+> faisaient. `main/ci-runs-the-gate.test.ts` tient les deux moitiés : le job appelle la porte, et
+> il ne rejoue aucun maillon à la main.
 
 ## Contexte
 
