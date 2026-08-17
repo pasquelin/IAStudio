@@ -21,7 +21,7 @@ import { connectModelGeneration } from '@/stores/model-generation'
 import { connectPreparation } from '@/stores/preparation'
 import { connectSceneSelection } from '@/stores/scene-selection'
 import { connectSkyboxGeneration } from '@/stores/skybox-generation'
-import { Shell } from './Shell'
+import { Shell } from './Shell/Shell'
 
 export function Application() {
   useMainLogs()

@@ -147,7 +147,7 @@ describe('the opening chunk', () => {
     expect(files).toContain('../../shared/domain/tool.ts')
     // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
     // point and past the shell, or every negative assertion below passes on an empty graph.
-    expect(files).toContain('./app/Shell.tsx')
+    expect(files).toContain('./app/Shell/Shell.tsx')
     expect(files).toContain('./home/HomeView.tsx')
   })
 

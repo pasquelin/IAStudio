@@ -1,10 +1,8 @@
-import { mdiFileOutline } from '@mdi/js'
 import type { IDockviewPanelProps } from 'dockview-react'
-import { lazy, Suspense, type FC, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
-import { EmptyState } from '@/design/EmptyState'
+import { lazy, type FC } from 'react'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
-import { useDocuments } from '@/stores/documents'
+import { DocumentsGuard } from './DocumentsGuard'
+import { DocumentsHome } from './DocumentsHome'
 
 export type DocumentPanelParams = { documentId: string }
 
@@ -40,9 +38,9 @@ function panelFor(Space: FC<{ documentId: string }>): FC<IDockviewPanelProps<Doc
     // Above the `Suspense` below: a rejected `lazy()` import is an error, not a fallback. Retry
     // cannot fix that one — React caches the rejection — but the tab stays closable.
     <ErrorBoundary>
-      <WithDocument id={props.params.documentId}>
+      <DocumentsGuard id={props.params.documentId}>
         {() => <Space documentId={props.params.documentId} />}
-      </WithDocument>
+      </DocumentsGuard>
     </ErrorBoundary>
   )
 }
@@ -52,34 +50,11 @@ function panelFor(Space: FC<{ documentId: string }>): FC<IDockviewPanelProps<Doc
  * center shows.
  */
 export const DOCUMENT_COMPONENTS: Record<string, FC<IDockviewPanelProps<DocumentPanelParams>>> = {
-  home: () => <Home />,
+  home: () => <DocumentsHome />,
   image: panelFor(ImageDocument),
   scene: panelFor(SceneDocument),
   sequence: panelFor(SequenceDocument),
   audio: panelFor(AudioDocument),
   skybox: panelFor(SkyboxDocument),
   texture: panelFor(TextureDocument),
-}
-
-function Home() {
-  const { t } = useTranslation()
-  return <EmptyState icon={mdiFileOutline} message={t('documents.none')} />
-}
-
-function Loading() {
-  const { t } = useTranslation()
-  return <EmptyState icon={mdiFileOutline} message={t('collection.loading')} />
-}
-
-/**
- * The layout is persisted, the documents are not: a tab restored on startup outlives its
- * document. Says so plainly rather than throwing — the boundary above would call an ordinary
- * restore a failure.
- */
-function WithDocument({ id, children }: { id: string; children: () => ReactNode }) {
-  const { t } = useTranslation()
-  const document = useDocuments(state => state.documents[id])
-
-  if (!document) return <EmptyState icon={mdiFileOutline} message={t('documents.missing')} />
-  return <Suspense fallback={<Loading />}>{children()}</Suspense>
 }
