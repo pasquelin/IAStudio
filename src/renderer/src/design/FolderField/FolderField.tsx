@@ -1,5 +1,5 @@
 import { mdiChevronDown, mdiFolderOutline } from '@mdi/js'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { FOLDER_ROOT, folderTrail, nameOf } from '@shared/domain/folder'
 import { cn } from '@/helpers/cn'
 import { activation } from '@/helpers/activation'
@@ -70,12 +70,23 @@ export function FolderField({ value, onChange, id, rootName, labels }: FolderFie
 
   // Folders only: this picks a place to put something, and a file is not one. The root is the
   // studio's own row — the tree reads the project folder's CONTENTS and never itself.
-  const nodes: readonly FolderNode[] = [
-    { id: TREE_ROOT, parentId: null, path: FOLDER_ROOT, name: rootName, kind: 'folder' },
-    ...tree.nodes
-      .filter(node => node.kind === 'folder')
-      .map(node => ({ ...node, parentId: node.parentId ?? TREE_ROOT })),
-  ]
+  //
+  // Memoised, both of them: `Tree` flattens its nodes and measures its rows off these two, so a
+  // fresh array and a fresh Set on every keystroke of the dialog above would redo that work for
+  // a field nobody touched.
+  const nodes: readonly FolderNode[] = useMemo(
+    () => [
+      { id: TREE_ROOT, parentId: null, path: FOLDER_ROOT, name: rootName, kind: 'folder' },
+      ...tree.nodes
+        .filter(node => node.kind === 'folder')
+        .map(node => ({ ...node, parentId: node.parentId ?? TREE_ROOT })),
+    ],
+    [tree.nodes, rootName],
+  )
+
+  // The project's own row stays open: it is the head of the tree, and folding it would leave a
+  // field whose only row is the one already written on the line.
+  const expandedIds = useMemo(() => new Set([TREE_ROOT, ...tree.expandedIds]), [tree.expandedIds])
 
   return (
     <div {...flyout.wrapProps}>
@@ -104,27 +115,25 @@ export function FolderField({ value, onChange, id, rootName, labels }: FolderFie
           placement="below"
           {...flyout.flyoutProps}
         >
-          <div className="max-h-64 overflow-y-auto">
-            <Tree
-              nodes={nodes}
-              label={labels.tree}
-              selectedIds={[idOf(value)]}
-              // The project's own row stays open: it is the head of the tree, and folding it
-              // would leave a field whose only row is the one already written on the line.
-              expandedIds={new Set([TREE_ROOT, ...tree.expandedIds])}
-              // A folder nobody has opened cannot say whether it holds any, and a row with no
-              // chevron is a row nobody can ask to be read.
-              expandable={() => true}
-              onToggle={id => {
-                if (id !== TREE_ROOT) tree.toggle(id)
-              }}
-              onSelect={ids => {
-                const picked = ids.at(-1)
-                if (picked !== undefined) onChange(folderOf(picked))
-              }}
-              renderRow={row => <span className="truncate">{row.node.name}</span>}
-            />
-          </div>
+          {/* No scroller of its own: `Flyout` already bounds its height and scrolls, and a second
+              one inside it puts two bars on one list. */}
+          <Tree
+            nodes={nodes}
+            label={labels.tree}
+            selectedIds={[idOf(value)]}
+            expandedIds={expandedIds}
+            // A folder nobody has opened cannot say whether it holds any, and a row with no
+            // chevron is a row nobody can ask to be read.
+            expandable={() => true}
+            onToggle={row => {
+              if (row !== TREE_ROOT) tree.toggle(row)
+            }}
+            onSelect={ids => {
+              const picked = ids.at(-1)
+              if (picked !== undefined) onChange(folderOf(picked))
+            }}
+            renderRow={row => <span className="truncate">{row.node.name}</span>}
+          />
 
           <FolderFieldCreate
             folder={value}

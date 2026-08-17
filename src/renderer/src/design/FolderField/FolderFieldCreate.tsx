@@ -1,6 +1,5 @@
 import { mdiFolderPlusOutline } from '@mdi/js'
 import { useState, type KeyboardEvent } from 'react'
-import { pathIn } from '@shared/domain/folder'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { isComposing } from '@/helpers/composition'
 import { cn } from '@/helpers/cn'
@@ -41,7 +40,11 @@ export function FolderFieldCreate({ folder, labels, onCreated, onReread }: Folde
       ?.project.newFolder(folder, name)
       .catch(() => null)
 
-    if (!outcome || outcome.done.length === 0) {
+    // What the disk says it made, not what was asked for: the name travels through a parser and
+    // a filesystem that both normalise, and a path composed here would name a folder that is
+    // almost the one on disk. `from` is empty for something that CAME — see `PathChange`.
+    const made = outcome?.done[0]?.to
+    if (made === undefined) {
       setRefusal(
         outcome?.refused[0]?.reason === 'exists' ? labels.folderTaken : labels.folderFailed,
       )
@@ -51,7 +54,7 @@ export function FolderFieldCreate({ folder, labels, onCreated, onReread }: Folde
     onReread()
     setDraft(null)
     setRefusal(null)
-    onCreated(pathIn(folder, name))
+    onCreated(made)
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {

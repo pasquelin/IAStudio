@@ -8,6 +8,7 @@ import {
   parseDocumentId,
   parseDocumentKind,
   parseFolderPath,
+  parseLandingFolder,
   parseManifest,
 } from './validation'
 
@@ -247,5 +248,31 @@ describe('parseFolderPath', () => {
 
   it('refuses what is not a string at all', () => {
     expect(() => parseFolderPath(null)).toThrow()
+  })
+})
+
+describe('parseLandingFolder', () => {
+  it('takes the folder a document was filed in', () => {
+    expect(parseLandingFolder('Images/Croquis')).toBe('Images/Croquis')
+  })
+
+  // A caller with no folder to offer leaves the writer its own default, which is not the same
+  // thing as naming the project root.
+  it('takes nothing at all, and the root, apart', () => {
+    expect(parseLandingFolder(undefined)).toBeUndefined()
+    expect(parseLandingFolder('')).toBe('')
+  })
+
+  it('refuses a walk out of the project, as every path channel does', () => {
+    expect(() => parseLandingFolder('../secrets')).toThrow()
+  })
+
+  /**
+   * On top of the shape, and this one is the field's own rule made true: nothing a user can
+   * click reaches here, since the tree lists no hidden folder — and a document written into
+   * `.index/` would be swept by the next rescan.
+   */
+  it.each(['.index', '.index/thumbs', 'Images/.hidden'])('refuses the studio’s own %s', path => {
+    expect(() => parseLandingFolder(path)).toThrow()
   })
 })
