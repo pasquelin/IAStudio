@@ -124,10 +124,10 @@ l’étagère :
 
 | Geste | Résultat |
 |---|---|
-| **Double-clic** sur un maillage dans l’étagère | il entre dans la scène ouverte |
+| **Double-clic** sur une maille dans l’étagère | elle entre dans la scène ouverte |
 | **Glisser-déposer** sur la vue 3D | idem — n’importe où sur la vue, la barre d’outils comprise |
 
-**Seuls les maillages entrent.** Une image, un son ou une vidéo lâchés sur la vue 3D ne font
+**Seules les mailles entrent.** Une image, un son ou une vidéo lâchés sur la vue 3D ne font
 rien : la scène ne saurait qu’en faire.
 
 Comme le reste, le modèle se pose **à l’origine**. Il arrive parfois minuscule ou gigantesque —
