@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
+import { stemOf } from '@shared/domain/fileName'
 import type { FileOutcome } from '@shared/domain/fileOp'
+import { natureOf, opensInStudio } from '@shared/domain/fileRole'
 import type { FolderEntry } from '@shared/domain/folder'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
@@ -95,6 +97,32 @@ function install(
   )
   const walkFolder = vi.fn((_hidden?: boolean) => Promise.resolve(walked))
   const openFile = vi.fn(() => Promise.resolve(true))
+  /**
+   * What the main process answers, minus the disk: the row it already holds, else one minted for
+   * a file the studio can show, else nothing at all. `opensInStudio` is the very table the main
+   * reads, so a case here cannot describe an opening the studio would refuse.
+   */
+  const adopt = vi.fn((relative: string): Promise<Asset | null> => {
+    const known = catalogued.find(asset => asset.path === relative)
+    if (known) return Promise.resolve(known)
+
+    // A document is never adopted — it is opened, or it is nothing: a `.scene` the project has
+    // no envelope for is a file like any other. `adoptFile` refuses it for the same reason.
+    const { domain, role } = natureOf(relative)
+    if (role === 'edit' || domain === 'other' || !opensInStudio(relative)) {
+      return Promise.resolve(null)
+    }
+
+    return Promise.resolve({
+      id: `asset_${relative}`,
+      name: stemOf(relative),
+      type: domain,
+      location: 'local',
+      path: relative,
+      tags: [],
+      createdAt: '2026-08-17T10:00:00.000Z',
+    })
+  })
   const revealFile = vi.fn(() => Promise.resolve())
   const renameFile = vi.fn(nothingMoved)
   const moveFiles = vi.fn(nothingMoved)
@@ -127,6 +155,7 @@ function install(
       redoFile,
     },
     documents: { list: () => Promise.resolve(documents) },
+    media: { adopt },
     menu: menu.bridge,
     assets: {
       // Both shapes of the same question: one path, or the whole listing at once.
@@ -144,6 +173,7 @@ function install(
     searchFolder,
     walkFolder,
     openFile,
+    adopt,
     revealFile,
     renameFile,
     moveFiles,
@@ -499,20 +529,75 @@ describe('the project explorer', () => {
       expect(openFile).not.toHaveBeenCalled()
     })
 
-    // A file under a project folder the catalogue has never recorded — dropped in by hand — is
-    // not an asset, and the system is still where it goes.
-    it('still hands a file the catalogue does not know to the system', async () => {
+    /**
+     * The complaint, in one case: a picture copied into the project by hand launched macOS
+     * Preview. The catalogue has never heard of it — and the catalogue is not what decides. The
+     * studio adopts the file where it lies, then opens it in its own space.
+     */
+    it('adopts a picture the catalogue has never heard of, and opens it here', async () => {
       withProject()
-      const { openFile } = install({
-        '': [folder('assets')],
-        assets: [file('stray.png', 'assets')],
+      const { openFile, adopt } = install({
+        '': [folder('Images')],
+        Images: [file('facade.jpg', 'Images')],
       })
 
       render(<Explorer />)
-      await userEvent.dblClick(await screen.findByText('assets'))
-      await userEvent.dblClick(await screen.findByText('stray.png'))
+      await userEvent.dblClick(await screen.findByText('Images'))
+      await userEvent.dblClick(await screen.findByText('facade.jpg'))
 
-      await waitFor(() => expect(openFile).toHaveBeenCalledWith('assets/stray.png'))
+      await waitFor(() => expect(openAsset).toHaveBeenCalledTimes(1))
+      expect(adopt).toHaveBeenCalledWith('Images/facade.jpg')
+      expect(vi.mocked(openAsset).mock.calls[0]?.[0]).toMatchObject({ path: 'Images/facade.jpg' })
+      expect(openFile).not.toHaveBeenCalled()
+    })
+
+    /**
+     * At icon size, in the tree as in the grid — what every file browser does. A tree that shows
+     * a sheet of paper where the grid beside it shows the picture is two answers to one question.
+     */
+    it('draws a preview in the tree too, and leaves a folder its glyph', async () => {
+      withProject()
+      install({ '': [folder('Images'), file('facade.jpg')] })
+
+      render(<Explorer />)
+      const rowFor = async (name: string): Promise<HTMLElement> => {
+        const row = (await screen.findByText(name)).closest('[role="treeitem"]')
+        if (!(row instanceof HTMLElement)) throw new Error(`no row for ${name}`)
+        return row
+      }
+
+      expect((await rowFor('facade.jpg')).querySelector('img')).toHaveAttribute(
+        'src',
+        'scenario://thumb/facade.jpg',
+      )
+      expect((await rowFor('Images')).querySelector('img')).toBeNull()
+    })
+
+    // The other half of the same rule, and it is deliberate: the studio has no editor for prose,
+    // and pretending otherwise would be worse than opening it outside.
+    it('still hands a file it has no editor for to the system', async () => {
+      withProject()
+      const { openFile } = install({ '': [folder('Notes')], Notes: [file('brief.txt', 'Notes')] })
+
+      render(<Explorer />)
+      await userEvent.dblClick(await screen.findByText('Notes'))
+      await userEvent.dblClick(await screen.findByText('brief.txt'))
+
+      await waitFor(() => expect(openFile).toHaveBeenCalledWith('Notes/brief.txt'))
+      expect(openAsset).not.toHaveBeenCalled()
+    })
+
+    // A window that asked while the project was closing hears a rejection, and a rejection is
+    // not an answer: the file is still there, and the system still opens it.
+    it('falls back to the system when the adoption could not be answered', async () => {
+      withProject()
+      const { openFile, adopt } = install({ '': [file('facade.jpg')] })
+      adopt.mockRejectedValueOnce(new Error('no project'))
+
+      render(<Explorer />)
+      await userEvent.dblClick(await screen.findByText('facade.jpg'))
+
+      await waitFor(() => expect(openFile).toHaveBeenCalledWith('facade.jpg'))
       expect(openAsset).not.toHaveBeenCalled()
     })
 
@@ -1501,6 +1586,81 @@ describe('the project explorer, as a grid', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Projet' }))
 
     expect(await screen.findByText('brief.pdf')).toBeInTheDocument()
+  })
+
+  /**
+   * The complaint the grid answered with nothing: a folder was a dark square with a little sign
+   * in it and a `.jpg` was the same square with another sign, so neither question a grid exists
+   * to answer — folder or file, and what is this file about — could be read without the names.
+   */
+  it('draws a folder as a shape, and a file as a preview of itself', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('Images'), file('facade.jpg')] })
+
+    render(<Explorer />)
+
+    expect((await tileFor('Images')).querySelector('img')).toBeNull()
+    // The shape FILLS the tile: a glyph sized in pixels inside a box that is 64 px at one
+    // density and 208 at another is the little sign this replaces.
+    expect((await tileFor('Images')).querySelector('svg')).toHaveStyle({ width: '100%' })
+    // And it wears NO frame: the plate and the border bound a picture, and a box around a
+    // silhouette reads as one more file — which is the distinction the grid exists to draw.
+    expect((await tileFor('Images')).querySelector('figure')).not.toHaveClass('bg-surface')
+    expect((await tileFor('facade.jpg')).querySelector('figure')).toHaveClass('bg-surface')
+
+    expect((await tileFor('facade.jpg')).querySelector('img')).toHaveAttribute(
+      'src',
+      'scenario://thumb/facade.jpg',
+    )
+  })
+
+  // A document is a directory the studio writes, and its glyph names the space that edits it —
+  // asking the disk for a preview of one would answer with nothing, slowly.
+  it('leaves a document its own glyph rather than asking for a preview', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('a3f1.img')] }, [picture])
+
+    render(<Explorer />)
+
+    expect((await tileFor('Planche')).querySelector('img')).toBeNull()
+  })
+
+  /**
+   * The trap this closes, and it was signalled as latent the day before the previews existed:
+   * `EntryCard` refused any drag whose target was not the card itself, and an `<img>` is natively
+   * draggable — so every previewed file became a file that could no longer be moved.
+   */
+  it('moves a tile picked up BY ITS PICTURE, which is what the browser drags from', async () => {
+    withProject()
+    showGrid()
+    const { moveFiles } = install({ '': [folder('Images'), file('facade.jpg')] })
+
+    render(<Explorer />)
+    const picture = (await tileFor('facade.jpg')).querySelector('img')
+    const data = dragTransfer()
+    fireEvent.dragStart(picture!, { dataTransfer: data })
+    fireEvent.drop(await tileFor('Images'), { dataTransfer: data })
+
+    expect(moveFiles).toHaveBeenCalledWith(['facade.jpg'], 'Images')
+  })
+
+  /**
+   * At the FOOT of the panel, under the rows: the trail says where the listing came from, and a
+   * reader looks at it after the listing. It used to ride in the collection bar, above.
+   */
+  it('draws the trail below the rows rather than above them', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('Images')] })
+
+    render(<Explorer />)
+    const trail = await screen.findByRole('navigation', { name: 'Dossier affiché' })
+
+    expect((await tileFor('Images')).compareDocumentPosition(trail)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
   })
 
   it('moves a tile dropped on a folder into it', async () => {

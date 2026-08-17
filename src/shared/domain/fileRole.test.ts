@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EXTENSION_BY_KIND } from './document'
-import { FILE_DOMAINS, natureOf } from './fileRole'
+import { FILE_DOMAINS, natureOf, opensInStudio } from './fileRole'
 
 describe('natureOf', () => {
   /**
@@ -54,5 +54,45 @@ describe('natureOf', () => {
   it('offers every domain a file can be filed under', () => {
     expect(FILE_DOMAINS).toContain('other')
     expect(FILE_DOMAINS).toContain('texture')
+  })
+})
+
+describe('opensInStudio', () => {
+  it('opens a picture, a take, a sound and a model here', () => {
+    expect(opensInStudio('facade.jpg')).toBe(true)
+    expect(opensInStudio('rush.mp4')).toBe(true)
+    expect(opensInStudio('theme.wav')).toBe(true)
+    expect(opensInStudio('chair.glb')).toBe(true)
+  })
+
+  it('always opens a document of the studio', () => {
+    expect(opensInStudio('Planche.img')).toBe(true)
+    expect(opensInStudio('Level.scene')).toBe(true)
+  })
+
+  it('leaves a file it has no editor for to the system', () => {
+    expect(opensInStudio('brief.txt')).toBe(false)
+    expect(opensInStudio('storyboard.pdf')).toBe(false)
+  })
+
+  /**
+   * The one case the two tables disagree on, and the reason this function exists beside
+   * `natureOf`: these carry a domain, and nothing in this repository draws them.
+   */
+  it('leaves a picture nothing here decodes to the system, domain or not', () => {
+    for (const name of ['photo.heic', 'scan.tif', 'plate.exr', 'dome.hdr']) {
+      expect(natureOf(name).domain).toBe('image')
+      expect(opensInStudio(name)).toBe(false)
+    }
+  })
+
+  it('takes the one mesh a loader here reads, and no other', () => {
+    expect(opensInStudio('chair.obj')).toBe(false)
+    expect(opensInStudio('chair.gltf')).toBe(false)
+    expect(natureOf('chair.obj').domain).toBe('mesh')
+  })
+
+  it('folds the case, as the source table it reads does', () => {
+    expect(opensInStudio('FACADE.JPG')).toBe(true)
   })
 })

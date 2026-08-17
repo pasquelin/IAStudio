@@ -7,7 +7,7 @@ import {
 } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Asset } from '@shared/domain/asset'
+import { thumbnailUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
 import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
 import { extensionOf, stemOf } from '@shared/domain/fileName'
@@ -367,16 +367,20 @@ export function Explorer() {
 
     if (node.kind === 'folder') return toggle(node.id)
 
-    // A file the catalogue knows is an asset, and it opens like one from the shelf — a folder
-    // holds paths, and only the catalogue can say whether one of them is an asset.
-    const asset = await assetAt(node.path)
+    // The catalogue still answers first for what it holds; what changed is the FALLBACK. A file
+    // it has never heard of used to go to the system — a picture copied in by hand, the one thing
+    // this panel must not do — and is now judged on its extension, and adopted where it can be.
+    const asset = await getBridge()
+      ?.media.adopt(node.path)
+      .catch(() => null)
+
     if (asset) {
       const { openAsset } = await import('@/helpers/openAsset')
       return openAsset(asset)
     }
 
-    // Handed to the system, and the journal is what says so when it refuses: a folder the user
-    // owns can hold anything, and the studio has no business throwing about a `.pdf`.
+    // Handed to the system, and the journal is what says so when it refuses: a `.txt` and a `.pdf`
+    // have no editor here, and pretending otherwise would be worse than opening them outside.
     void getBridge()?.project.openFile(node.path)
   }
 
@@ -430,6 +434,16 @@ export function Explorer() {
 
     return expanded ? mdiFolderOpenOutline : mdiFolderOutline
   }
+
+  /**
+   * The picture an entry shows in place of its glyph. Beside `iconFor` for the same reason: two
+   * places answering one question is what this panel has already paid for twice. A folder has a
+   * shape of its own and a document the glyph of its space; neither is a file to preview.
+   */
+  const previewFor = (node: FolderNode): string | undefined =>
+    node.kind === 'file' && !documentOf(node) && !isPrivatePath(node.path)
+      ? thumbnailUrl(node.path)
+      : undefined
 
   /**
    * A double-click on a CARD. A folder is gone INTO rather than folded open, a grid having no
@@ -508,14 +522,7 @@ export function Explorer() {
       {/* Under the title row and not on it — the field measured 76 px up there. The two readings
           STAY up in it: they answer about the project, where this bar is about the list on screen.
           `display` is on now the grid exists; the zoom greys itself out on a list. */}
-      <CollectionBar
-        state={collection}
-        onChange={setCollection}
-        sorts={sorts}
-        // Only where there is somewhere to go. A search and a domain are flat answers about the
-        // whole project, and a trail over either would name a folder the rows do not come from.
-        {...(browsable ? { scope: <FolderCrumbs folder={browsed} onPick={browse} /> } : {})}
-      />
+      <CollectionBar state={collection} onChange={setCollection} sorts={sorts} />
 
       {/* Nothing at all unless a pass is running, which on a project where nothing moved is
           every time: the row appears when the studio is reading files and can be told to stop. */}
@@ -563,6 +570,8 @@ export function Explorer() {
                 // Never the open glyph: a grid draws no children under a folder, so an open one
                 // would promise a nesting that is not on screen.
                 icon={iconFor(node, false)}
+                folder={node.kind === 'folder' && !documentOf(node)}
+                preview={previewFor(node)}
                 open={isOpen(documentOf(node))}
                 waiting={waiting.has(node.path)}
                 // The whole selection where this card is in one, so three carried together arrive
@@ -671,6 +680,7 @@ export function Explorer() {
                   // file still wears a uuid.
                   name={documentOf(node)?.title ?? node.name}
                   icon={iconFor(node, row.expanded)}
+                  preview={previewFor(node)}
                   open={isOpen(documentOf(node))}
                   // What a cut looks like before it is pasted: the rows are still there, still
                   // openable, and on their way out.
@@ -684,6 +694,11 @@ export function Explorer() {
           />
         )}
       </div>
+
+      {/* Under the rows rather than over them: the trail says where the listing came FROM, and a
+          reader looks at it after the listing, not before. Only where there is somewhere to go —
+          a search and a domain are flat answers about the whole project. */}
+      {browsable && <FolderCrumbs folder={browsed} onPick={browse} />}
     </div>
   )
 }

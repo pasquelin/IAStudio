@@ -217,10 +217,12 @@ const ALPHA_FILL_ALLOWED: Record<string, string> = {
 const DECORATIVE_GLYPHS = ['/Thumbnail.tsx', '/EmptyState.tsx']
 
 /**
- * A glyph that INFORMS, held at the 3:1 of WCAG 1.4.11 rather than the 4.5 of a word. One site:
- * the type icon a media tile falls back to while its poster is being made.
+ * A glyph that INFORMS, held at the 3:1 of WCAG 1.4.11 rather than the 4.5 of a word. Two sites:
+ * the type icon a media tile falls back to while its poster is being made, and the folder shape
+ * an explorer tile is drawn as — which IS the message, the name under it saying nothing about
+ * whether the tile is a folder or a file.
  */
-const INFORMATIVE_GLYPHS = ['/MediaTile.tsx']
+const INFORMATIVE_GLYPHS = ['/MediaTile.tsx', '/EntryCard.tsx']
 
 /**
  * `opacity-70`, `hover:opacity-90`, and Tailwind's arbitrary `opacity-[0.7]` — a dimming written
@@ -250,8 +252,13 @@ function dimmingPercent(fraction = '', unit = '', step = ''): number {
  */
 const DIMMING_ALLOWED: Record<string, string> = {
   '/ShelfTile.tsx': 'a caption at ~17:1 on its own gradient, a tenth off it changes nothing',
+  // MEASURED on 2026-08-17, and it is NOT the ShelfTile case it used to claim: a folder tile is
+  // `bare`, so its caption is `text-text` on the panel rather than white on a gradient — 13.3:1
+  // dark and 16.1:1 light at full ink, but 4.28 and 3.20 once cut. A file tile keeps the gradient
+  // and its ~17:1. The bar is missed in the light theme for a folder on its way out, and the
+  // remedy is a decision about how a cut tile is drawn, not a token.
   '/EntryCard.tsx':
-    'a tile that has been CUT and is waiting for a paste, dimmed as every file browser dims one — the same MediaTile caption on the same gradient as /ShelfTile.tsx above, so half off it stays well clear of the bar, and there is no ink to quieten on a picture',
+    'a tile that has been CUT and is waiting for a paste, dimmed as every file browser dims one — a picture has no ink to quieten, and a folder caption reads 3.20 while it waits',
   '/Tree.tsx':
     'the row a drag is holding, for the length of the gesture, while the ghost reads at full ink',
   '/TimelineRow.tsx':

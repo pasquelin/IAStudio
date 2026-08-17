@@ -78,12 +78,13 @@ export function registerAssetScheme(): void {
 }
 
 /** Asynchronous since the catalogue moved to its own thread — see `catalogThread.ts`. */
-type AssetResolver = (assetId: string) => Promise<string | null>
+type AssetResolver = (key: string) => Promise<string | null>
 
 /**
- * One resolver per host of the scheme. `asset` is a row of the open project's catalogue;
- * `favorite` is a still kept outside every project, which is why it cannot be resolved the same
- * way — there is no catalogue to look it up in. A third kind is a third entry, nothing else.
+ * One resolver per host of the scheme, each reading the key ITS host is named by: an asset id for
+ * `asset` and `poster`, a favourite id for `favorite` — kept outside every project, which is why
+ * no catalogue can answer for it — and a project-relative PATH for `thumb`, whose subject is a
+ * file the catalogue has most often never heard of. A further kind is a further entry.
  */
 export type AssetResolvers = Readonly<Record<string, AssetResolver>>
 

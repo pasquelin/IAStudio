@@ -115,6 +115,7 @@ type ChannelMethod = {
   [CHANNELS.diagnosticsReport]: StudioBridge['diagnostics']['report']
   [CHANNELS.diagnosticsTrace]: StudioBridge['diagnostics']['trace']
 
+  [CHANNELS.mediaAdopt]: StudioBridge['media']['adopt']
   [CHANNELS.mediaIngest]: StudioBridge['media']['ingest']
   [CHANNELS.mediaCancel]: StudioBridge['media']['cancel']
   [CHANNELS.mediaAvailable]: StudioBridge['media']['capabilities']

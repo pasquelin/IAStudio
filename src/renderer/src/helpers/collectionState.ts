@@ -5,6 +5,7 @@
  */
 import { foldForSearch } from '@shared/text'
 import { clamp } from '@shared/numeric'
+import { THUMBNAIL_SIZE } from '@shared/domain/project'
 
 export type CollectionView = 'grid' | 'list'
 
@@ -33,7 +34,8 @@ export type CollectionState = {
 }
 
 export const MIN_THUMBNAIL = 64
-export const MAX_THUMBNAIL = 208
+/** The size previews are RENDERED at — zooming past it would draw every tile blurred. */
+export const MAX_THUMBNAIL = THUMBNAIL_SIZE
 export const THUMBNAIL_STEP = 24
 
 /**

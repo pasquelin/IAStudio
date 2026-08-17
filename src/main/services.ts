@@ -11,6 +11,7 @@ import {
   ASSET_ID_PREFIX,
   DEFAULT_ASSET_FOLDERS,
   POSTER_HOST,
+  THUMB_HOST,
   type Asset,
   type AssetType,
   type MediaProbe,
@@ -19,6 +20,7 @@ import type { MediaCapabilities } from '@shared/domain/media'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import {
   LEGACY_ASSETS_FOLDER,
+  THUMBNAIL_SIZE,
   landedInDefaultFolder,
   planProjectAccount,
   withRecentProject,
@@ -57,7 +59,10 @@ import { fetchModel, modelIsComplete } from './dictation/modelDownload'
 import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/modelStore'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
 import { openSttProcess } from './dictation/sttProcess'
+import { adoptFile } from './media/adoptFile'
 import { linkedAsset, mediaFilters } from './media/link'
+import { renderThumbnail } from './media/renderThumbnail'
+import { createThumbnailCache } from './project/thumbnailCache'
 import {
   binaryRuns,
   companionPath,
@@ -204,6 +209,8 @@ export type Services = {
   openMicrophoneSettings: () => void
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
   link: (source: string, type: AssetType) => Promise<Asset>
+  /** The same for a file the project already holds, `null` when nothing here opens it. */
+  adopt: (relative: string) => Promise<Asset | null>
   capabilities: () => Promise<MediaCapabilities>
   /** The language in force. Injected where it is needed, so no module reads the source itself. */
   language: () => Language
@@ -238,6 +245,9 @@ export type Services = {
   broadcastAccounts: (accounts: AccountSummary[]) => void
   updates: Updates
 }
+
+/** Two cores left to the interface and to whatever else the machine is doing — CLAUDE.md § 6. */
+const spareCores = (): number => Math.max(1, availableParallelism() - 2)
 
 const timestamp = (): string => new Date().toISOString()
 const newAssetId = (): string => `${ASSET_ID_PREFIX}${randomUUID()}`
@@ -804,6 +814,54 @@ export function createServices(settings: SettingsStore): Services {
     })
   }
 
+  /**
+   * What every asset that lands in the project goes through — a download, a generation collected,
+   * a file the explorer adopted. Named rather than inlined because the adoption needs the very
+   * same derivation: two callers, one deriver, and no way for the two to drift apart.
+   */
+  const onAssetLanded = (asset: Asset): void => {
+    noteLegacyLayout(asset)
+
+    // A take that came down from the API never met the picker, so nothing ever derived what
+    // a montage reads: no waveform under its sound clip, and no proxy for a codec the window
+    // cannot decode. Both are what `ingest` writes for a file picked off a disk.
+    //
+    // Only with a probe: `deriveFiles` needs the length, and a `null` one means ffprobe is
+    // missing — in which case there is no ffmpeg to derive anything with either.
+    if ((asset.type === 'video' || asset.type === 'audio') && asset.probe && asset.path) {
+      void media
+        .derive({
+          assetId: asset.id,
+          path: join(project.path() ?? '', asset.path),
+          kind: asset.type,
+          probe: asset.probe,
+          // The library's own still is a picture of the take; ours would be a frame of it.
+          poster: !asset.posterPath,
+          // The user is waiting on this take: what is being prepared belongs on screen.
+          announce: true,
+        })
+        .then(() => broadcast(EVENTS.assetsChanged))
+        .catch((error: unknown) =>
+          log.warn('media', `could not derive the files of ${asset.name}: ${String(error)}`),
+        )
+      return
+    }
+
+    if (asset.type !== 'mesh') return
+    void extractTextures(asset)
+      .then(textures => {
+        // The one write no window ordered, so the one nothing else would say out loud: the
+        // import that started this is long answered, and its shelf refreshed, by the time a
+        // GLB has been read and its pictures written.
+        if (textures.length > 0) broadcast(EVENTS.assetsChanged)
+      })
+      .catch((error: unknown) =>
+        // The journal already carries the line `extractTextures` writes; this is the rejection
+        // itself, which nothing else would ever hear.
+        log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
+      )
+  }
+
   const assets = createLocalBackend({
     download,
     projectPath: () => project.path(),
@@ -821,48 +879,7 @@ export function createServices(settings: SettingsStore): Services {
     // something to show beside a model without anyone having gone looking for a menu row. Not
     // awaited by the import: a model of half a dozen 2048² pictures would otherwise hold up the
     // download that produced it, and a failure here must not cost the model itself.
-    onImported: asset => {
-      noteLegacyLayout(asset)
-
-      // A take that came down from the API never met the picker, so nothing ever derived what
-      // a montage reads: no waveform under its sound clip, and no proxy for a codec the window
-      // cannot decode. Both are what `ingest` writes for a file picked off a disk.
-      //
-      // Only with a probe: `deriveFiles` needs the length, and a `null` one means ffprobe is
-      // missing — in which case there is no ffmpeg to derive anything with either.
-      if ((asset.type === 'video' || asset.type === 'audio') && asset.probe && asset.path) {
-        void media
-          .derive({
-            assetId: asset.id,
-            path: join(project.path() ?? '', asset.path),
-            kind: asset.type,
-            probe: asset.probe,
-            // The library's own still is a picture of the take; ours would be a frame of it.
-            poster: !asset.posterPath,
-            // The user is waiting on this take: what is being prepared belongs on screen.
-            announce: true,
-          })
-          .then(() => broadcast(EVENTS.assetsChanged))
-          .catch((error: unknown) =>
-            log.warn('media', `could not derive the files of ${asset.name}: ${String(error)}`),
-          )
-        return
-      }
-
-      if (asset.type !== 'mesh') return
-      void extractTextures(asset)
-        .then(textures => {
-          // The one write no window ordered, so the one nothing else would say out loud: the
-          // import that started this is long answered, and its shelf refreshed, by the time a
-          // GLB has been read and its pictures written.
-          if (textures.length > 0) broadcast(EVENTS.assetsChanged)
-        })
-        .catch((error: unknown) =>
-          // The journal already carries the line `extractTextures` writes; this is the rejection
-          // itself, which nothing else would ever hear.
-          log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
-        )
-    },
+    onImported: onAssetLanded,
   })
 
   const extractTextures = createTextureExtraction({
@@ -941,8 +958,7 @@ export function createServices(settings: SettingsStore): Services {
     onProgress: progress => broadcast(EVENTS.mediaProgress, progress),
     record: report => journal.record(report),
     projectPath: () => project.current()?.path ?? null,
-    // Two cores left to the interface and to whatever else the machine is doing.
-    concurrency: () => Math.max(1, availableParallelism() - 2),
+    concurrency: spareCores,
   })
 
   /** Whether a catch-up is already walking the project — see `catchUpProject`. */
@@ -1256,6 +1272,26 @@ export function createServices(settings: SettingsStore): Services {
     enabled: () => settings.read().generation.captionArrivals,
   })
 
+  const thumbnails = createThumbnailCache({
+    projectPath: () => project.current()?.path ?? null,
+    render: async (file, relative) => {
+      const drawn = await renderThumbnail(file, THUMBNAIL_SIZE)
+      if (drawn) return drawn
+
+      // A `.glb` is a picture no previewer draws, and the library's own still came down beside
+      // it. Asked ONLY where the machine failed, so the ordinary tile costs no catalogue query.
+      const current = project.current()
+      if (!current) return null
+
+      const [asset] = await project.catalog().search({ path: relative, limit: 1 })
+      const poster = asset ? posterFileOf(current.path, asset) : null
+      return poster ? await readFile(poster) : null
+    },
+    // The same bound the ingest pool takes: previewing is the system's work, but a folder
+    // scrolled fast asks for hundreds at once and each one leaves this process.
+    concurrency: spareCores,
+  })
+
   const favorites = createFavorites(join(app.getPath('userData'), 'favorites'))
   const styles = createStyles(() => app.getPath('userData'))
 
@@ -1275,6 +1311,10 @@ export function createServices(settings: SettingsStore): Services {
       return asset ? posterFileOf(current.path, asset) : null
     },
     [FAVORITE_HOST]: favoriteId => Promise.resolve(favorites.thumbnailPath(favoriteId)),
+    // Named by a PATH rather than by an id, alone among the four: the explorer draws files, and
+    // most of what it draws the catalogue has never heard of. `assetFilePath` refuses whatever
+    // walks out of the project, exactly as it does for a row.
+    [THUMB_HOST]: relative => thumbnails.of(relative),
   })
 
   const stored = settings.read()
@@ -1328,6 +1368,17 @@ export function createServices(settings: SettingsStore): Services {
       await project
         .catalog()
         .add(linkedAsset(source, { id: newAssetId(), type, now: timestamp() })),
+    adopt: relative =>
+      adoptFile(relative, {
+        projectPath: () => project.path(),
+        catalog: () => project.catalog(),
+        newAssetId,
+        now: timestamp,
+        hash: hashOrNull,
+        probeFile: probeLocalFile,
+        onAdopted: onAssetLanded,
+        record: report => journal.record(report),
+      }),
     // Asked, not cached: this is what the settings pane consults after the user installed the
     // binary it just said was missing. Run rather than looked for — a half-written download and
     // a binary built for the other architecture both exist on disk and encode nothing.

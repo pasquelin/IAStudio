@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Row } from '@/design/Row'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
+import { useLoadable } from '@/hooks/useLoadable'
 import { InlineRename } from '@/design/InlineRename'
 
 export type EntryRowProps = {
@@ -11,6 +12,8 @@ export type EntryRowProps = {
    */
   name: string
   icon: string
+  /** A preview of the file, drawn at glyph size — the tree shows one too, as a file browser does. */
+  preview?: string
   /** Whether a tab is showing this file right now. Only a document can be. */
   open: boolean
   /**
@@ -37,8 +40,9 @@ export type EntryRowProps = {
  * The glyph is the workspace's for a document and a plain sheet for everything else, read off
  * the same table the rail and the asset menu read.
  */
-export function EntryRow({ name, icon, open, waiting, onRename }: EntryRowProps) {
+export function EntryRow({ name, icon, preview, open, waiting, onRename }: EntryRowProps) {
   const { t } = useTranslation()
+  const { src, onError } = useLoadable(preview)
 
   // The whole row becomes the field: a name edited beside its own icon is where the eye already
   // is, and `InlineRename` owns the part that is subtle — when the edit ends. It stands a
@@ -71,7 +75,22 @@ export function EntryRow({ name, icon, open, waiting, onRename }: EntryRowProps)
     // ends up reading at. `muted` is the nearest state `Row` already had, and it strikes the
     // name through: that says "not showing", where this says "on its way out".
     <Row
-      media={<UiIcon path={icon} size={14} className={cn('shrink-0', open && 'text-accent-ink')} />}
+      media={
+        src ? (
+          // Not draggable: `Tree` carries the row's own drag, and a picture that starts one of
+          // its own would take the gesture off the row it belongs to.
+          <img
+            src={src}
+            alt=""
+            loading="lazy"
+            draggable={false}
+            onError={onError}
+            className="size-3.5 shrink-0 rounded-(--radius-sc-sm) object-cover"
+          />
+        ) : (
+          <UiIcon path={icon} size={14} className={cn('shrink-0', open && 'text-accent-ink')} />
+        )
+      }
       title={name}
       quiet={waiting}
     />

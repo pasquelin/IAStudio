@@ -95,6 +95,49 @@ export function natureOf(fileName: string): FileNature {
 }
 
 /**
+ * Which of those the studio can actually SHOW, rather than merely name.
+ *
+ * Narrower than the domains above on purpose: `.heic`, `.tif`, `.exr` and `.hdr` are pictures
+ * nothing here decodes, and `.glb` is the only mesh a loader here reads. Opening one of the
+ * others would post an empty tab where handing it to the system still shows the file.
+ */
+const OPENABLE_EXTENSIONS: readonly string[] = [
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp',
+  '.avif',
+  '.gif',
+  '.svg',
+  '.mp4',
+  '.webm',
+  '.mov',
+  '.mkv',
+  '.avi',
+  '.m4v',
+  '.wav',
+  '.mp3',
+  '.flac',
+  '.ogg',
+  '.m4a',
+  '.aac',
+  '.aiff',
+  '.glb',
+]
+
+/**
+ * Whether a double-click on this file belongs in the studio or with the system.
+ *
+ * A document always does — it is the studio's own. A source does when something here can draw
+ * it; everything else, `.txt` and `.pdf` included, is the system's to open.
+ */
+export function opensInStudio(fileName: string): boolean {
+  if (natureOf(fileName).role === 'edit') return true
+
+  return OPENABLE_EXTENSIONS.includes(extensionOf(fileName).toLowerCase())
+}
+
+/**
  * Every domain a file can be filed under, for a facet list or a picker.
  *
  * Built from `ASSET_TYPES` rather than written out: a seventh domain would otherwise be a domain

@@ -177,6 +177,7 @@ const bridge: StudioBridge = {
     read: family => ipcRenderer.invoke(CHANNELS.fontsRead, family),
   },
   media: {
+    adopt: relative => ipcRenderer.invoke(CHANNELS.mediaAdopt, relative),
     ingest: () => ipcRenderer.invoke(CHANNELS.mediaIngest),
     cancel: assetId => ipcRenderer.invoke(CHANNELS.mediaCancel, assetId),
     capabilities: () => ipcRenderer.invoke(CHANNELS.mediaAvailable),

@@ -1,4 +1,4 @@
-import { mdiCircleMedium } from '@mdi/js'
+import { mdiCircleMedium, mdiFolder } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { InlineRename } from '@/design/InlineRename'
@@ -10,8 +10,15 @@ import { cn } from '@/helpers/cn'
 export type EntryCardProps = {
   /** What the card is called — the document's own name where there is one, the file name else. */
   name: string
-  /** The glyph standing in for a picture. No thumbnail is fetched here: that is the catalogue's. */
+  /** The glyph drawn until the preview arrives, and instead of it where there is none. */
   icon: string
+  /** A preview of the file, asked of the main process and rendered there. */
+  preview?: string
+  /**
+   * Drawn as a SHAPE filling the tile, with no frame around it. What the grid was missing: a
+   * folder and a file were the same dark square wearing a different little sign.
+   */
+  folder?: boolean
   /** Whether a tab is showing this file right now. Only a document can be. */
   open: boolean
   /** Whether this entry has been CUT and is waiting for a paste. */
@@ -40,6 +47,8 @@ export type EntryCardProps = {
 export function EntryCard({
   name,
   icon,
+  preview,
+  folder,
   open,
   waiting,
   onRename,
@@ -59,7 +68,10 @@ export function EntryCard({
       // what keeps a name being typed from starting a drag instead of selecting a word.
       draggable={pickable && onRename === undefined}
       onDragStart={event => {
-        if (event.target !== event.currentTarget) return event.preventDefault()
+        // Both conditions are read HERE and not left to `draggable`: a picture is natively
+        // draggable, so its `dragstart` bubbles up even from a card the attribute refuses — what
+        // the studio keeps for itself would otherwise be dragged by its preview.
+        if (onRename || !pickable) return event.preventDefault()
         rowDrag.start(event, dragIds)
         onPickUp(dragIds)
       }}
@@ -95,6 +107,16 @@ export function EntryCard({
       <MediaTile
         caption={name}
         fallbackIcon={icon}
+        url={preview}
+        {...(folder
+          ? {
+              // The frame belongs to FILES: it bounds a picture that may be pale or transparent.
+              bare: true,
+              // The alpha `MediaTile` draws its own fallback at — below it, `tokens.test.ts`
+              // refuses the ratio a glyph that INFORMS owes (WCAG 1.4.11).
+              face: <UiIcon path={mdiFolder} size="fill" className="text-muted/80" />,
+            }
+          : {})}
         {...(onRename
           ? {
               captionField: (
