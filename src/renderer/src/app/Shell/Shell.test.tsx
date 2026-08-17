@@ -30,6 +30,14 @@ function handles(): HTMLElement[] {
   return screen.queryAllByRole('separator')
 }
 
+/** The smallest box holding both — what says which of them the frame groups together. */
+function boxOf(one: HTMLElement, other: HTMLElement): HTMLElement | null {
+  for (let node = one.parentElement; node; node = node.parentElement) {
+    if (node.contains(other)) return node
+  }
+  return null
+}
+
 beforeEach(() => {
   installFakeBridge()
   // Every test below is about the docks, which the home covers entirely — see the last block,
@@ -44,9 +52,27 @@ beforeEach(() => {
 })
 
 describe('a horizontal band', () => {
+  /**
+   * The band is the RIGHT half's alone today, and a strip running the whole width under both
+   * columns is what it replaces: the left column now reaches the foot of the frame, and the
+   * band starts where it ends.
+   */
+  it('runs the left column past the band, and the right one down to it', () => {
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
+    renderShell()
+
+    const band = screen.getByLabelText('Assets')
+    // Image reads its models on the left and its layers on the right.
+    const left = screen.getByLabelText('Modèles')
+    const right = screen.getByLabelText('Calques')
+
+    // The right column shares the box the band hangs under; the left one is outside it.
+    expect(boxOf(band, right)?.contains(left)).toBe(false)
+  })
+
   it('is one surface: the shelf and the zone handle, nothing else', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
     })
     renderShell()
 
@@ -58,7 +84,7 @@ describe('a horizontal band', () => {
   // can still hold one. It must not draw a panel there.
   it('shows nothing in a second half a stored layout still asks for', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { bottom: { secondary: 'assets' } } }),
+      arrangements: arrangedFor('image', { open: { bottomRight: { secondary: 'assets' } } }),
     })
     renderShell()
 
@@ -70,7 +96,7 @@ describe('a horizontal band', () => {
   it('draws no divider inside itself, whatever the stored layout holds', () => {
     useTools.setState({
       arrangements: arrangedFor('image', {
-        open: { bottom: { primary: 'assets', secondary: 'assets' } },
+        open: { bottomRight: { primary: 'assets', secondary: 'assets' } },
       }),
     })
     renderShell()

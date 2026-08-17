@@ -130,8 +130,8 @@ describe('a half open on no panel in particular', () => {
   })
 
   it('reads the band as the shelf or the montage, per section', () => {
-    expect(shownTool(null, 'bottom', 'primary', 'image', WITH_MODEL)).toBe('assets')
-    expect(shownTool(null, 'bottom', 'primary', 'audio', WITH_MODEL)).toBe('timeline')
+    expect(shownTool(null, 'bottomRight', 'primary', 'image', WITH_MODEL)).toBe('assets')
+    expect(shownTool(null, 'bottomRight', 'primary', 'audio', WITH_MODEL)).toBe('timeline')
   })
 
   it('never opens on a generator the section cannot offer', () => {
@@ -146,7 +146,7 @@ describe('a half open on no panel in particular', () => {
   })
 
   it('shows nothing where the section fills no such half', () => {
-    expect(shownTool(null, 'bottom', 'secondary', 'image', WITH_MODEL)).toBeNull()
+    expect(shownTool(null, 'bottomRight', 'secondary', 'image', WITH_MODEL)).toBeNull()
   })
 
   // The lower half of the left column, which the Explorer took over.
@@ -163,13 +163,13 @@ describe('what a half of a zone shows', () => {
   // What the user opened is a zone, and it stays that zone across sections: the band holds the
   // montage in Video and the shelf everywhere else, neither reopened by hand on every switch.
   it('shows what this section puts there when the tool it holds sits elsewhere', () => {
-    expect(shownTool('assets', 'bottom', 'primary', 'video', WITH_MODEL)).toBe('timeline')
-    expect(shownTool('timeline', 'bottom', 'primary', 'image', WITH_MODEL)).toBe('assets')
+    expect(shownTool('assets', 'bottomRight', 'primary', 'video', WITH_MODEL)).toBe('timeline')
+    expect(shownTool('timeline', 'bottomRight', 'primary', 'image', WITH_MODEL)).toBe('assets')
   })
 
   it('leaves a tool alone in the zone this section gives it', () => {
     expect(shownTool('assets', 'right', 'primary', 'video', WITH_MODEL)).toBe('assets')
-    expect(shownTool('assets', 'bottom', 'primary', 'image', WITH_MODEL)).toBe('assets')
+    expect(shownTool('assets', 'bottomRight', 'primary', 'image', WITH_MODEL)).toBe('assets')
   })
 
   it('substitutes within the half, never across the separator', () => {
@@ -179,7 +179,7 @@ describe('what a half of a zone shows', () => {
 
   it('answers null for a half this section does not fill', () => {
     // A band is read across its width, so it has no second half for anything to substitute into.
-    expect(shownTool('assets', 'bottom', 'secondary', 'image', WITH_MODEL)).toBeNull()
+    expect(shownTool('assets', 'bottomRight', 'secondary', 'image', WITH_MODEL)).toBeNull()
   })
 
   it('never substitutes a generator a section cannot offer', () => {

@@ -60,10 +60,29 @@ describe('tools store', () => {
 
   it('clamps the stored size on resize', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
     })
-    useTools.getState().resize('image', 'bottom', 900, 800)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.bottom).toBe(800 - MIN_CENTER)
+    useTools.getState().resize('image', 'bottomRight', 900, 800)
+    expect(arrangementOf(useTools.getState(), 'image').sizes.bottomRight).toBe(800 - MIN_CENTER)
+  })
+
+  /** One strip, one height: dragged by either half, the other rises with it or steps. */
+  it('gives both halves of the band the same height', () => {
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
+    })
+    useTools.getState().resize('image', 'bottomLeft', 300, 800)
+
+    expect(arrangementOf(useTools.getState(), 'image').sizes.bottomRight).toBe(300)
+    expect(arrangementOf(useTools.getState(), 'image').sizes.bottomLeft).toBeUndefined()
+  })
+
+  it('parts the band where the handle is dragged, and never past a usable half', () => {
+    useTools.getState().resplitBand('image', 620, 900)
+    expect(arrangementOf(useTools.getState(), 'image').bandSplit).toBe(620)
+
+    useTools.getState().resplitBand('image', 890, 900)
+    expect(arrangementOf(useTools.getState(), 'image').bandSplit).toBe(900 - MIN_SPLIT)
   })
 
   it('keeps the center alive when both sides are dragged wide', () => {
@@ -117,10 +136,10 @@ describe('tools store', () => {
 
   it('empties the half it is asked to close', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
     })
-    useTools.getState().close('image', 'bottom', 'primary')
-    expect(arrangementOf(useTools.getState(), 'image').open.bottom?.primary).toBeUndefined()
+    useTools.getState().close('image', 'bottomRight', 'primary')
+    expect(arrangementOf(useTools.getState(), 'image').open.bottomRight?.primary).toBeUndefined()
   })
 
   it('drops focus only once both halves are empty', () => {
@@ -289,6 +308,24 @@ describe('migrating to the split arrangement', () => {
     // The home is the one this bump changes: it starts on both halves of both columns.
     expect(migrated?.arrangements.home).toEqual(DEFAULT_ARRANGEMENTS.home)
   })
+
+  /**
+   * The band was ONE zone up to version 14. Dropped as an unknown key, the panel it held would
+   * come back closed and the height it was dragged to would go back to the factory's.
+   */
+  it('lands a version 14 band on the right half, height and all', () => {
+    const migrated = migrateTools(
+      {
+        arrangements: {
+          workspaces: { open: { bottom: { primary: 'assets' } }, sizes: { bottom: 400 } },
+        },
+      },
+      14,
+    )
+
+    expect(migrated?.arrangements.workspaces.open.bottomRight).toEqual({ primary: 'assets' })
+    expect(migrated?.arrangements.workspaces.sizes.bottomRight).toBe(400)
+  })
 })
 
 describe('fitSplit', () => {
@@ -328,7 +365,7 @@ describe('the default layout', () => {
 
     expect(unchosen(stored)).toEqual({
       right: { primary: null, secondary: null },
-      bottom: { primary: null },
+      bottomRight: { primary: null },
     })
   })
 
@@ -348,7 +385,7 @@ describe('openFrom', () => {
     // reads it elsewhere shows nothing where it belongs.
     expect(openFrom({ right: { primary: 'assets' } })).toEqual({
       right: { primary: 'assets' },
-      bottom: { primary: 'assets' },
+      bottomRight: { primary: 'assets' },
     })
   })
 
@@ -374,7 +411,8 @@ describe('openFrom', () => {
     // The shelf takes the upper right the Explorer used to win: it declares that half in Video
     // and Audio, and nothing is left there to outrank it.
     expect(open.right).toEqual({ primary: 'assets', secondary: 'inspector' })
-    expect(open.bottom).toEqual({ primary: 'assets' })
+    // The band it was stored in is the band's RIGHT half today, which is where it lands.
+    expect(open.bottomRight).toEqual({ primary: 'assets' })
   })
 
   /**
@@ -413,7 +451,7 @@ describe('openFrom', () => {
   it('lets a named panel win a half left on its default', () => {
     expect(openFrom({ right: { primary: null }, bottom: { primary: 'assets' } })).toEqual({
       right: { primary: 'assets' },
-      bottom: { primary: 'assets' },
+      bottomRight: { primary: 'assets' },
     })
   })
 
@@ -424,14 +462,14 @@ describe('openFrom', () => {
   })
 
   it('drops the jobs panel, which is no longer a tool window', () => {
-    expect(openFrom({ bottom: { primary: 'assets', secondary: 'jobs' } }).bottom).toEqual({
+    expect(openFrom({ bottom: { primary: 'assets', secondary: 'jobs' } }).bottomRight).toEqual({
       primary: 'assets',
     })
   })
 
   it('never leaves a second half in a horizontal band — a band is never cut', () => {
     const stored = { bottom: { primary: 'timeline', secondary: 'explorer' } }
-    expect(openFrom(stored).bottom?.secondary).toBeUndefined()
+    expect(openFrom(stored).bottomRight?.secondary).toBeUndefined()
     // The explorer is not lost with the half it was stored in: it goes back to the column.
     expect(openFrom(stored).left?.secondary).toBe('explorer')
   })

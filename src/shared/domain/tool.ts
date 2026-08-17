@@ -35,7 +35,11 @@ export function familyOf(surface: ToolSurface): SurfaceFamily {
   return surface === HOME_SURFACE ? 'home' : 'workspaces'
 }
 
-export type ToolZone = 'left' | 'right' | 'top' | 'bottom'
+/**
+ * Where a tool hangs. The bottom band is TWO zones sharing one height: whichever of them is alone
+ * runs under the opposite column, and together they split the width between them.
+ */
+export type ToolZone = 'left' | 'right' | 'top' | 'bottomLeft' | 'bottomRight'
 
 export type ToolId =
   | 'layers'
@@ -169,13 +173,13 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // the width, and the column is where the things that act on the document live.
   {
     id: 'assets',
-    zone: 'bottom',
+    zone: 'bottomRight',
     slot: 'primary',
     surfaces: ['image', 'textures', 'skyboxes'],
   },
   // The band is the timeline's, across the whole width — that is how time is read, in Audio and
   // Video as in 3D, where an animation runs along the same line a montage does.
-  { id: 'timeline', zone: 'bottom', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
+  { id: 'timeline', zone: 'bottomRight', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
 
   // The home's own, and they serve it ALONE — a column beside an editor is for what acts on what
   // is in front of you, and each of these reads the studio rather than a document.
@@ -255,7 +259,7 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // came before it is reading half a sentence.
   {
     id: 'history',
-    zone: 'bottom',
+    zone: 'bottomRight',
     slot: 'primary',
     surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
     requires: 'project',
@@ -305,11 +309,19 @@ export function serves(placement: ToolPlacement, surface: ToolSurface): boolean 
   return placement.surfaces.includes(surface)
 }
 
-export const TOOL_ZONES: readonly ToolZone[] = ['left', 'right', 'top', 'bottom']
+export const TOOL_ZONES: readonly ToolZone[] = ['left', 'right', 'top', 'bottomLeft', 'bottomRight']
+
+/** The band's two halves, in the order they are drawn. */
+export const BOTTOM_ZONES: readonly ToolZone[] = ['bottomLeft', 'bottomRight']
+
+/** Whether the zone is one of the band's halves, which share a height and a resize handle. */
+export function isBottom(zone: ToolZone): boolean {
+  return zone === 'bottomLeft' || zone === 'bottomRight'
+}
 
 /** Horizontal zones: their size is set as a height, not a width. */
 export function isHorizontal(zone: ToolZone): boolean {
-  return zone === 'top' || zone === 'bottom'
+  return zone === 'top' || isBottom(zone)
 }
 
 /**

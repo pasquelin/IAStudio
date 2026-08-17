@@ -26,6 +26,8 @@ import { AccountSelect } from '../AccountSelect'
 import { ProjectSelect } from '../ProjectSelect'
 import { TitleBar } from '../TitleBar/TitleBar'
 import { Panel } from '@/design/Panel'
+import { isZoneShown, useShownTools } from '@/hooks/useShownTools'
+import { ShellBand } from './ShellBand'
 import { ShellEdge } from './ShellEdge'
 import 'dockview-react/dist/styles/dockview.css'
 import '../dockview-theme.css'
@@ -41,6 +43,8 @@ export function Shell() {
   const activeWorkspace = useLayouts(state => state.activeWorkspace)
   const setHome = useLayouts(state => state.setHome)
   const focus = useTools(state => state.focus)
+  const bottomLeft = isZoneShown(useShownTools('bottomLeft'))
+  const bottomRight = isZoneShown(useShownTools('bottomRight'))
 
   // The window is the one that holds documents, so it is the one that must not go quietly.
   useEffect(() => guardUnsavedWork(window), [])
@@ -85,14 +89,28 @@ export function Shell() {
             area, rather than decorative emptiness doubled by a handle. */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--sc-gutter)">
           <ShellEdge zone="top" />
+
+          {/* A column runs to the FOOT of the frame unless the band's half on its side is
+              drawing: the strip then starts where that column ends, and the opposite one keeps
+              its full height. The centre stays at the same place in the tree through all four
+              arrangements — moved, it would tear down Dockview and every engine under it. */}
           <div className="flex min-h-0 flex-1">
-            <ShellEdge zone="left" />
-            <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
-              {home ? <HomeView /> : <DocumentArea />}
-            </Panel>
-            <ShellEdge zone="right" />
+            {!bottomLeft && <ShellEdge zone="left" />}
+
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div className="flex min-h-0 flex-1">
+                {bottomLeft && <ShellEdge zone="left" />}
+                <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
+                  {home ? <HomeView /> : <DocumentArea />}
+                </Panel>
+                {bottomRight && <ShellEdge zone="right" />}
+              </div>
+
+              <ShellBand left={bottomLeft} right={bottomRight} />
+            </div>
+
+            {!bottomRight && <ShellEdge zone="right" />}
           </div>
-          <ShellEdge zone="bottom" />
         </div>
 
         <Rail side="right" />

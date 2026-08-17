@@ -18,7 +18,7 @@ describe('revealing the shelf', () => {
   it('opens it in the half this workspace puts it in', () => {
     revealAssets()
 
-    expect(arrangementOf(useTools.getState(), 'image').open.bottom?.primary).toBe('assets')
+    expect(arrangementOf(useTools.getState(), 'image').open.bottomRight?.primary).toBe('assets')
     expect(arrangementOf(useTools.getState(), 'image').open.right).toBeUndefined()
   })
 
@@ -32,12 +32,12 @@ describe('revealing the shelf', () => {
 
   it('focuses the band rather than reopening it when it is already there', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
     })
 
     revealAssets()
 
-    expect(useTools.getState().focusedZone).toBe('bottom')
+    expect(useTools.getState().focusedZone).toBe('bottomRight')
   })
 
   it('leaves a default layout exactly as it found it', () => {
@@ -46,6 +46,6 @@ describe('revealing the shelf', () => {
     revealAssets()
 
     expect(arrangementOf(useTools.getState(), 'image').open).toEqual(DEFAULT_OPEN.workspaces)
-    expect(useTools.getState().focusedZone).toBe('bottom')
+    expect(useTools.getState().focusedZone).toBe('bottomRight')
   })
 })

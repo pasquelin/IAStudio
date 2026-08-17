@@ -46,7 +46,8 @@ describe('the placements of one tool', () => {
 describe('resolving where a tool sits', () => {
   it('puts the asset shelf in the bottom strip everywhere the band is free', () => {
     const strips: readonly WorkspaceId[] = ['image', 'textures', 'skyboxes']
-    for (const workspace of strips) expect(placementIn('assets', workspace)?.zone).toBe('bottom')
+    for (const workspace of strips)
+      expect(placementIn('assets', workspace)?.zone).toBe('bottomRight')
   })
 
   it('sends it to the column wherever a timeline owns the band', () => {
@@ -142,7 +143,7 @@ describe('the home', () => {
       // Declared LAST on purpose, and the order is what says so: the folder is what an unchosen
       // half opens on, and the versions of that folder are what one goes to look at next.
       ['git', 'left', 'secondary'],
-      ['history', 'bottom', 'primary'],
+      ['history', 'bottomRight', 'primary'],
     ])
   })
 
@@ -170,7 +171,9 @@ describe('the home', () => {
     expect(inHalf('left', 'secondary')).toEqual(['explorer', 'git'])
     expect(inHalf('right', 'primary')).toEqual(['library'])
     expect(inHalf('right', 'secondary')).toEqual([])
-    expect(inHalf('bottom', 'primary')).toEqual(['history'])
+    expect(inHalf('bottomRight', 'primary')).toEqual(['history'])
+    // The band's left half is where a panel is DRAGGED, never where one is declared.
+    expect(inHalf('bottomLeft', 'primary')).toEqual([])
   })
 
   /**
@@ -292,7 +295,7 @@ describe('the montage band', () => {
     const timed: readonly WorkspaceId[] = ['video', 'audio', '3d']
     for (const workspace of WORKSPACE_IDS) {
       const band = timed.includes(workspace) ? 'timeline' : 'assets'
-      expect(placementIn(band, workspace)?.zone).toBe('bottom')
+      expect(placementIn(band, workspace)?.zone).toBe('bottomRight')
     }
   })
 })
