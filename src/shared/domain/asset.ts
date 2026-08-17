@@ -411,6 +411,16 @@ export function hasSound(asset: Asset | null): boolean {
   return (asset?.probe?.channels ?? 0) > 0
 }
 
+/**
+ * How many paths one `AssetQuery` may ask about.
+ *
+ * Read on BOTH sides, which is the whole point: the main process refuses a longer list — one
+ * placeholder each in a statement it builds — and the caller cuts its question into that many
+ * before asking. Written on one side only, a project of three thousand rushes lost every
+ * catalogue answer at once and fell back to guessing from extensions, silently.
+ */
+export const ASSET_PATHS_MAX = 2000
+
 export type AssetQuery = {
   type?: AssetType
   /**
@@ -428,6 +438,17 @@ export type AssetQuery = {
    * explorer spells its paths the way `relativePathFor` writes them — `/` on every platform.
    */
   path?: string
+  /**
+   * The same question for a whole listing — which of THESE files the catalogue holds a row for.
+   *
+   * One round trip rather than one per row: a browser showing four hundred files asked four
+   * hundred times, and each answer is a query against the project's own database. An empty list
+   * means nothing, as it does for `types`.
+   *
+   * Bounded by `ASSET_PATHS_MAX`, which the caller is the one to respect: a longer list is
+   * REFUSED rather than cut, and a folder of rushes goes past it easily.
+   */
+  paths?: readonly string[]
   /** Narrows to one side of the library, or to what still has to move between them. */
   location?: AssetLocation
   syncStatus?: SyncStatus
@@ -472,6 +493,14 @@ export function emptyAssetCounts(): AssetCounts {
 export type AssetChanges = {
   name?: string
   tags?: readonly string[]
+  /**
+   * What the file IS, corrected by hand.
+   *
+   * The studio reads a file's domain from its extension alone, and an extension cannot always
+   * tell: a normal map and an albedo are both PNGs. The row is what remembers the answer, which
+   * is why only a file the catalogue holds can be corrected at all.
+   */
+  type?: AssetType
 }
 
 export const ASSET_SCHEME = 'scenario'

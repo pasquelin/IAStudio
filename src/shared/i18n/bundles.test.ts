@@ -4,7 +4,8 @@ import { TRACK_PROPERTIES } from '../domain/animation'
 import { HOME_SECTION_IDS } from '../domain/home'
 import { DISPLAY_MODES, VIEW_DIRECTIONS } from '../domain/scene'
 import { TOOL_PLACEMENTS } from '../domain/tool'
-import { ASSET_BADGES, ASSET_TYPES } from '../domain/asset'
+import { ASSET_BADGES } from '../domain/asset'
+import { FILE_DOMAINS } from '../domain/file-role'
 import { ASSISTANT_MODELS } from '../domain/assistant'
 import { STT_ERROR_CODES } from '../domain/dictation'
 import { breakableSpots } from './typography'
@@ -695,7 +696,10 @@ describe('what the guards would catch', () => {
  * amount of typechecking sees it: the key exists only once the template has run.
  */
 const DYNAMIC_KEYS: readonly string[] = [
-  ...ASSET_TYPES.map(type => `assetTypes.${type}`),
+  // `FILE_DOMAINS` and not `ASSET_TYPES`: the same six, plus the one a file has when the studio
+  // has no domain to file it under — an explorer shows those too, and « other » is an answer
+  // rather than a failure to classify.
+  ...FILE_DOMAINS.map(domain => `assetTypes.${domain}`),
   ...ASSET_BADGES.map(badge => `assets.badge.${badge}`),
   ...MODEL_FAMILIES.map(family => `families.${family}`),
   ...MODEL_FAMILIES.flatMap(family =>

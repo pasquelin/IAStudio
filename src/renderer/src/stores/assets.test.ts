@@ -261,3 +261,34 @@ describe('renaming an asset', () => {
     expect(assetsById(useAssets.getState()).get('a')?.name).toBe('ElevenLabs Sound Effects 2')
   })
 })
+
+/**
+ * Told apart from a rename by what a type DECIDES: the shelf reads a scope, and a picture that
+ * has just become a texture is no longer a row the Image space asked for.
+ */
+describe('correcting what an asset is', () => {
+  const retyped = (): Asset => ({ ...asset('a', 'Ruelle'), type: 'texture' })
+
+  beforeEach(() => {
+    forgetRememberedAssets()
+    useAssets.setState({ items: [asset('a', 'Ruelle'), asset('b', 'Toit')] })
+  })
+
+  it('takes the row off a shelf that no longer asks for it', async () => {
+    useAssets.setState({ scope: ['image'] })
+    installFakeBridge({ assets: { update: () => Promise.resolve(retyped()) } })
+
+    await useAssets.getState().retype('a', 'texture')
+
+    expect(useAssets.getState().items.map(item => item.id)).toEqual(['b'])
+  })
+
+  it('keeps it where the shelf asks for every kind', async () => {
+    useAssets.setState({ scope: null })
+    installFakeBridge({ assets: { update: () => Promise.resolve(retyped()) } })
+
+    await useAssets.getState().retype('a', 'texture')
+
+    expect(assetsById(useAssets.getState()).get('a')?.type).toBe('texture')
+  })
+})

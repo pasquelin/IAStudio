@@ -41,6 +41,9 @@ const assetChanges = z.object({
   name: z.string().trim().min(1).max(ASSET_NAME_MAX_LENGTH).optional(),
   // Replaced wholesale, so an empty list is a real answer — "this asset has no tags".
   tags: z.array(z.string().trim().min(1).max(80)).max(64).optional(),
+  // One of the six the studio knows, and nothing else: `other` is what a file with no row is,
+  // never what a row says of itself.
+  type: z.enum(ASSET_TYPES).optional(),
 })
 
 export function parseAssetChanges(value: unknown): AssetChanges {

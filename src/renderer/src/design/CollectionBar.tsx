@@ -91,6 +91,12 @@ export type CollectionBarProps = {
   /** Sort orders offered; the first one is what an unset `state.sort` means. */
   sorts?: readonly FacetOption[]
   layout?: CollectionLayout
+  /**
+   * Whether the half that changes how the collection LOOKS — grid or list, thumbnail size — is
+   * drawn. A tree has neither, and four buttons that would do nothing take the width a search
+   * field needs in a side column.
+   */
+  display?: boolean
   className?: string
 }
 
@@ -101,6 +107,7 @@ export function CollectionBar({
   facets,
   sorts,
   layout = 'stacked',
+  display = true,
   className,
 }: CollectionBarProps) {
   const { t } = useTranslation()
@@ -220,8 +227,8 @@ export function CollectionBar({
         {menus}
         <div className="ml-auto flex items-center gap-2">
           {sortMenu}
-          {views}
-          {zoom}
+          {display && views}
+          {display && zoom}
         </div>
       </div>
     )
@@ -258,10 +265,10 @@ export function CollectionBar({
       )}
 
       <div className="flex items-center justify-between">
-        {views}
+        {display && views}
         <div className="flex items-center gap-2">
           {sortMenu}
-          {zoom}
+          {display && zoom}
         </div>
       </div>
     </div>

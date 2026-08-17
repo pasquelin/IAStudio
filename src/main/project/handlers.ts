@@ -34,12 +34,14 @@ import {
   parseFolderPath,
   parseFolderPaths,
   parseForceWrite,
+  parseHiddenShown,
   parseProjectName,
   parseProjectPath,
   parseProjectTitle,
   parseSaveAudio,
   parseSavePicture,
   parseSaveTexture,
+  parseSearchTerm,
 } from './validation'
 
 /** What `saveAudio` writes — the renderer encodes uncompressed PCM, never a codec. */
@@ -268,8 +270,16 @@ export function registerProjectHandlers({
   // `async`, though it awaits nothing of its own: a refused path throws from `parseFolderPath`,
   // and a synchronous throw here would reach the caller as an exception rather than a rejected
   // invoke — which is not what the other side is written to catch.
-  handle(CHANNELS.projectListFolder, async (_event, relative) =>
-    folder.list(parseFolderPath(relative)),
+  handle(CHANNELS.projectListFolder, async (_event, relative, hidden) =>
+    folder.list(parseFolderPath(relative), parseHiddenShown(hidden)),
+  )
+
+  handle(CHANNELS.projectSearchFolder, async (_event, term, hidden) =>
+    folder.search(parseSearchTerm(term), parseHiddenShown(hidden)),
+  )
+
+  handle(CHANNELS.projectWalkFolder, async (_event, hidden) =>
+    folder.walk(parseHiddenShown(hidden)),
   )
 
   handle(CHANNELS.projectOpenFile, async (_event, relative) => {

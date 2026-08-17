@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { HOME_SURFACE } from '@shared/domain/tool'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
@@ -86,15 +85,21 @@ describe('Rail', () => {
     })
 
     /**
-     * ONE separator, and it is the one that fences the create button off from the panels — not a
-     * cut between two halves, since the home has no lower half left. The projects stand alone in
-     * the column, which is the whole point of what came down on 13 August: nothing here can take
-     * them off the screen.
+     * Two separators: the one that fences the create button off from the panels, and the cut
+     * between the two halves — the projects above, the open one read as a folder below. The
+     * projects keep their own half, which is the whole point of what came down on 13 August:
+     * nothing here can take them off the screen.
      */
-    it('cuts the left rail below the create button, and nowhere else', () => {
+    it('cuts the left rail below the create button, and between its two halves', () => {
       const { container } = render(<Rail side="left" />)
 
-      expect(marksOf(container)).toEqual(['Nouveau projet', 'separator', 'Vos projets'])
+      expect(marksOf(container)).toEqual([
+        'Nouveau projet',
+        'separator',
+        'Vos projets',
+        'separator',
+        'Explorateur',
+      ])
 
       // `marksOf` reads buttons and separators, so it cannot see the hole an empty zone leaves:
       // a childless flex item still eats one of the rail's gaps.
@@ -110,37 +115,35 @@ describe('Rail', () => {
     it('draws the right rail as one half, with no cut', () => {
       const { container } = render(<Rail side="right" />)
 
-      expect(marksOf(container)).toEqual(['Votre bibliothèque', 'Vos documents'])
+      expect(marksOf(container)).toEqual(['Votre bibliothèque'])
     })
 
     // No half names a panel on the default layout, so what reads as up is the first one the
     // registry declares there — never the one taking its turn behind it.
     it('marks the first panel of each half as up on the default layout', () => {
       useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
-      render(<Rail side="right" />)
+      render(<Rail side="left" />)
 
-      expect(screen.getByRole('button', { name: 'Votre bibliothèque' })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: 'Vos projets' })).toHaveAttribute(
         'aria-pressed',
         'true',
       )
-      expect(screen.getByRole('button', { name: 'Vos documents' })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: 'Explorateur' })).toHaveAttribute(
         'aria-pressed',
-        'false',
+        'true',
       )
     })
 
-    // A click swaps the half rather than opening a second window: one panel per half, always.
-    // No `secondary` key in the result, and that is the home's shape rather than an omission —
-    // naming a half this surface does not have keeps the column reserving its width for nothing.
-    it('swaps what the half shows rather than stacking a second panel', async () => {
-      useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
-      render(<Rail side="right" />)
+    /**
+     * The one panel this surface offers conditionally: it reads a project folder, and the home
+     * is where one is opened. Standing there with none, it would say « no project open » beside
+     * the very shelf that opens one.
+     */
+    it('drops the Explorer while no project is open', () => {
+      useProject.setState({ project: null })
+      const { container } = render(<Rail side="left" />)
 
-      await userEvent.click(screen.getByRole('button', { name: 'Vos documents' }))
-
-      expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.right).toEqual({
-        primary: 'documents',
-      })
+      expect(marksOf(container)).toEqual(['Nouveau projet', 'separator', 'Vos projets'])
     })
   })
 

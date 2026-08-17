@@ -68,7 +68,8 @@
     "audio": "Audio",
     "mesh": "Mesh",
     "texture": "Texture",
-    "skybox": "Skybox"
+    "skybox": "Skybox",
+    "other": "Other"
   },
   "collection": {
     "search": "Search…",

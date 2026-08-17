@@ -34,6 +34,21 @@ export function isHiddenEntry(name: string): boolean {
 }
 
 /**
+ * Whether anything on the way to `path` is hidden — which makes it READ-ONLY, not invisible.
+ *
+ * The two are told apart on purpose: the explorer offers to show these rows, and a row that can
+ * be seen is a row a menu can be raised on. `.index/` is a catalogue the studio rebuilds and
+ * `.project.json` is what says the folder is a project at all — renaming either from the tree
+ * breaks the project for the sake of a name nobody reads.
+ *
+ * Every segment, not just the last: `.index/catalog.db` is the studio's own as surely as the
+ * folder holding it.
+ */
+export function isHiddenPath(path: string): boolean {
+  return path.split('/').some(isHiddenEntry)
+}
+
+/**
  * Folders first, then by name — the order every file browser uses, and the one that makes a
  * long folder readable without scrolling it twice.
  *
@@ -45,10 +60,15 @@ export function isHiddenEntry(name: string): boolean {
  * a language the studio may not even speak: measured, a Swedish desktop files `Ärger` past `Zoo`
  * and a Turkish one splits the two `i`s, neither of which French or English asks for.
  */
-export function entriesByName(language: string): (one: FolderEntry, other: FolderEntry) => number {
+export function entriesByName(
+  language: string,
+  /** Names the other way round. Folders stay first: reversing that is a different browser. */
+  descending = false,
+): (one: FolderEntry, other: FolderEntry) => number {
   return (one, other) => {
     if (one.kind !== other.kind) return one.kind === 'folder' ? -1 : 1
-    return one.name.localeCompare(other.name, language)
+    const order = one.name.localeCompare(other.name, language)
+    return descending ? -order : order
   }
 }
 
@@ -111,6 +131,23 @@ export function isStudioOwned(path: string): boolean {
 }
 
 /**
+ * Whether the studio holds `path` for itself — the ONE spelling of that question.
+ *
+ * Two things make a path private, and they are not the same thing: the folders the catalogue
+ * files assets under (`isStudioOwned`), and what a leading dot hides (`isHiddenPath`). Written
+ * apart at each site, a third answer arriving tomorrow would have to be added to five of them,
+ * and one could be forgotten without a test saying so.
+ *
+ * `contents` is the difference the trash draws: what a studio folder HOLDS may be thrown away —
+ * the catalogue lets go of the rows underneath — where the folder itself is the layout the
+ * project is read by. Nothing under a dot may go either way.
+ */
+export function isPrivatePath(path: string, contents: 'own' | 'shown' = 'own'): boolean {
+  const studio = contents === 'own' ? isStudioOwned(path) : isStudioFolder(path)
+  return studio || isHiddenPath(path)
+}
+
+/**
  * Why `path` may not go into `folder`, or `null` when it may.
  *
  * **The one spelling of the rule**, and it answers with a REASON rather than a boolean because
@@ -133,7 +170,7 @@ export function isStudioOwned(path: string): boolean {
  * the node's kind; `file-plan.ts` reads the folders and adds those refusals to this one.
  */
 export function moveRefusal(path: string, folder: string): 'private' | 'into-itself' | null {
-  if (isStudioOwned(path) || isStudioOwned(folder)) return 'private'
+  if (isPrivatePath(path) || isPrivatePath(folder)) return 'private'
 
   // A folder dropped inside itself would take its own destination with it, and the rename that
   // carries it out would leave the whole subtree unreachable.

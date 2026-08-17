@@ -287,6 +287,9 @@ export function registerAssetHandlers({
       ...asset,
       ...(name === undefined ? {} : { name }),
       ...(parsed.tags === undefined ? {} : { tags: [...parsed.tags] }),
+      // The file does not move with it: a row carries its own path, and what the studio calls
+      // a picture has never been decided by the folder it sits in.
+      ...(parsed.type === undefined ? {} : { type: parsed.type }),
       ...(path === undefined ? {} : { path }),
     }
     const saved = await catalog().add(updated)

@@ -1,6 +1,7 @@
 import { isAbsolute } from 'node:path'
 import { z } from 'zod'
 import {
+  ASSET_PATHS_MAX,
   ASSET_TYPES,
   isAssetType,
   isSyncStatus,
@@ -82,6 +83,22 @@ export function parseFolderPaths(value: unknown): string[] {
   return folderPaths.parse(value)
 }
 
+/**
+ * What a search box holds. Bounded like every string this side takes from a window — a term
+ * longer than a file name can be matches nothing, and walking the whole folder to prove it is
+ * work the process that owns every window would pay for.
+ */
+const searchTerm = z.string().max(200)
+
+export function parseSearchTerm(value: unknown): string {
+  return searchTerm.parse(value)
+}
+
+/** Whether a reader asked to see the studio's own bookkeeping. Read, never written to. */
+export function parseHiddenShown(value: unknown): boolean {
+  return z.boolean().parse(value)
+}
+
 // `z.custom` rather than `z.enum`: the values live in `shared/domain/asset.ts`, and zod's enum
 // wants a literal tuple, which the project's ban on `as const` rules out.
 const assetQuery = z.object({
@@ -93,6 +110,10 @@ const assetQuery = z.object({
   text: z.string().max(200).optional(),
   // The same shape the explorer's own channel is held to: it is the surface that asks this.
   path: folderPath.optional(),
+  // A whole listing at once, one placeholder each in the statement built from it. The bound is
+  // shared with the caller, which cuts its question into batches of it — read on one side only,
+  // a project past it lost every answer rather than one batch.
+  paths: z.array(folderPath).max(ASSET_PATHS_MAX).optional(),
   location: z.enum(['local', 'cloud']).optional(),
   syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
   groupId: z.string().trim().min(1).optional(),

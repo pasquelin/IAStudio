@@ -2,7 +2,7 @@ import type { AssetType } from '@shared/domain/asset'
 import { placementIn, type ToolId } from '@shared/domain/tool'
 import { showWorkspace } from '@/app/dockview-api'
 import { setFacetValue } from '@/helpers/collection-state'
-import { hasModelFor, shownTool } from '@/helpers/tool-registry'
+import { shownTool, toolStateOf } from '@/helpers/tool-registry'
 import { workspaceOfType } from '@/helpers/workspaces'
 import { TYPE_FACET } from '@/panels/assets/type-facet'
 import { useAssets } from '@/stores/assets'
@@ -30,7 +30,7 @@ export function revealTool(tool: ToolId): void {
   const { zone, slot } = placement
   const tools = useTools.getState()
   const { open } = arrangementOf(tools, surface)
-  const up = shownTool(open[zone]?.[slot], zone, slot, surface, hasModelFor(surface))
+  const up = shownTool(open[zone]?.[slot], zone, slot, surface, toolStateOf(surface))
 
   if (up === tool) tools.focus(zone)
   else tools.show(surface, zone, tool)

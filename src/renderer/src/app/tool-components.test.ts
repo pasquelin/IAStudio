@@ -3,7 +3,6 @@ import type { ToolId } from '@shared/domain/tool'
 import type { ToolDefinition } from '@/panels/definition'
 import { definition as assets } from '@/panels/assets'
 import { definition as channels } from '@/panels/channels'
-import { definition as documents } from '@/panels/documents'
 import { definition as explorer } from '@/panels/explorer'
 import { definition as library } from '@/panels/library'
 import { definition as generator } from '@/panels/generator'
@@ -45,7 +44,6 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   view,
   projects,
   library,
-  documents,
 }
 
 const IDS = Object.keys(PANELS).filter(isKnownTool)

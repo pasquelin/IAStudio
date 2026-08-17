@@ -206,6 +206,37 @@ describe('trashing', () => {
   })
 })
 
+/**
+ * The explorer offers to SHOW them, which is what makes this reachable: a row on screen is a row
+ * a menu can be raised on. `.index/` is a catalogue rebuilt from the folder and `.project.json`
+ * is what makes the folder a project — renaming either from the tree breaks the project for the
+ * sake of a name nobody reads.
+ */
+describe('what the studio keeps under a dot', () => {
+  const held = { '': ['.project.json', '.index', 'refs'], '.index': ['catalog.db'], refs: [] }
+
+  it('refuses every gesture that would write to it', () => {
+    expect(plan({ op: 'rename', path: '.project.json', name: 'p.json' }, held).refused).toEqual([
+      { path: '.project.json', reason: 'private' },
+    ])
+    expect(plan({ op: 'trash', paths: ['.index/catalog.db'] }, held).refused).toEqual([
+      { path: '.index/catalog.db', reason: 'private' },
+    ])
+    expect(plan({ op: 'move', paths: ['.project.json'], folder: 'refs' }, held).refused).toEqual([
+      { path: '.project.json', reason: 'private' },
+    ])
+  })
+
+  it('refuses it as a destination as well', () => {
+    expect(plan({ op: 'move', paths: ['refs'], folder: '.index' }, held).refused).toEqual([
+      { path: 'refs', reason: 'private' },
+    ])
+    expect(plan({ op: 'createFolder', folder: '.index', name: 'x' }, held).refused).toEqual([
+      { path: '.index', reason: 'private' },
+    ])
+  })
+})
+
 describe('reading a batch back', () => {
   /**
    * The shape undo is built on, and the reason the trash cannot be taken back: a change with

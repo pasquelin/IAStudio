@@ -16,7 +16,7 @@ import type { Asset } from '@shared/domain/asset'
 import { bindingOf, type BindingOverrides, type CommandId } from '@shared/domain/command'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { FileHistory } from '@shared/domain/file-op'
-import { isStudioFolder, isStudioOwned } from '@shared/domain/folder'
+import { isPrivatePath } from '@shared/domain/folder'
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { showContextMenu, type ContextMenuRow } from '@/helpers/context-menu'
 import { getBridge } from '@/services/bridge'
@@ -84,12 +84,19 @@ export function openEntryMenu({
    * A document has its own channel, an asset has the catalogue's, and both move the file with
    * the name. What has neither is greyed, and this is why the catalogue is asked before the menu
    * is drawn: a picture the user dropped into `assets/img` themselves is no row of ours, and
-   * `renameFile` refuses it under `isStudioOwned` while no other channel claims it.
+   * `renameFile` refuses it as private while no other channel claims it.
    */
-  const renamable = document !== null || asset !== null || !isStudioOwned(node.path)
+  const renamable = document !== null || asset !== null || !isPrivatePath(node.path)
 
-  /** What the studio still holds for itself, until the reconciliation pass lets it go. */
-  const owned = selection.some(isStudioOwned)
+  /**
+   * What the studio still holds for itself, until the reconciliation pass lets it go.
+   *
+   * `isPrivatePath` and not `isStudioOwned` alone, which is what the dot toggle made visible:
+   * `.project.json` is not under any of the studio's folders, so the menu offered every gesture
+   * on it — each one refused by the main process afterwards. The panel greys out exactly what
+   * the disk will refuse, or it is promising something it cannot do.
+   */
+  const owned = selection.some(path => isPrivatePath(path))
 
   /**
    * A row that runs a command, showing the key that command answers to.
@@ -142,14 +149,14 @@ export function openEntryMenu({
       label: t('explorer.paste'),
       tooltip: t('explorer.pasteHint'),
       icon: mdiContentPaste,
-      disabled: clipboard === 0 || isStudioOwned(folder),
+      disabled: clipboard === 0 || isPrivatePath(folder),
     }),
     { separator: true },
     row('explorer.newFolder', {
       label: t('explorer.newFolder'),
       tooltip: t('explorer.newFolderHint'),
       icon: mdiFolderPlusOutline,
-      disabled: isStudioOwned(folder),
+      disabled: isPrivatePath(folder),
     }),
     row('explorer.duplicate', {
       label: t('explorer.duplicate'),
@@ -172,8 +179,9 @@ export function openEntryMenu({
       tooltip: t('explorer.trashHint'),
       icon: mdiTrashCanOutline,
       // A folder of the studio's own layout stays; what it HOLDS may go, and the catalogue lets
-      // go of the rows underneath with it — which is what tells this apart from `owned` above.
-      disabled: selection.some(isStudioFolder),
+      // go of the rows underneath with it — which is what `shown` says, and what tells this
+      // apart from `owned` above. Nothing under a dot goes either way.
+      disabled: selection.some(path => isPrivatePath(path, 'shown')),
     }),
     { separator: true },
     row('explorer.undo', {

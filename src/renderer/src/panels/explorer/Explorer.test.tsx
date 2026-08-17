@@ -8,8 +8,11 @@ import type { FolderEntry } from '@shared/domain/folder'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { fakeMenu } from '@/helpers/menu-fixtures'
+import { LIST_ONLY } from '@/helpers/collection-state'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
+import { useExplorerView } from '@/stores/explorer-view'
+import { useSelection } from '@/stores/selection'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { Explorer } from './Explorer'
@@ -77,8 +80,20 @@ function install(
   byFolder: Record<string, FolderEntry[]>,
   documents: DocumentDescriptor[] = [],
   catalogued: readonly Asset[] = [],
+  /** What the whole folder answers per term — the panel's other source of nodes. */
+  found: Record<string, FolderEntry[]> = {},
+  /** Every file of the project, which is what the domain view reads. */
+  walked: FolderEntry[] = [],
 ) {
-  const listFolder = vi.fn((relative: string) => Promise.resolve(byFolder[relative] ?? []))
+  // The second argument is what the reader asked to SEE — the filtering is the main process's,
+  // and is held there (`folder.test.ts`). What a case reads here is that the panel asked.
+  const listFolder = vi.fn((relative: string, _hidden?: boolean) =>
+    Promise.resolve(byFolder[relative] ?? []),
+  )
+  const searchFolder = vi.fn((term: string, _hidden?: boolean) =>
+    Promise.resolve(found[term] ?? []),
+  )
+  const walkFolder = vi.fn((_hidden?: boolean) => Promise.resolve(walked))
   const openFile = vi.fn(() => Promise.resolve(true))
   const revealFile = vi.fn(() => Promise.resolve())
   const renameFile = vi.fn(nothingMoved)
@@ -98,6 +113,8 @@ function install(
   installFakeBridge({
     project: {
       listFolder,
+      searchFolder,
+      walkFolder,
       openFile,
       revealFile,
       renameFile,
@@ -112,13 +129,20 @@ function install(
     documents: { list: () => Promise.resolve(documents) },
     menu: menu.bridge,
     assets: {
+      // Both shapes of the same question: one path, or the whole listing at once.
       search: (query: AssetQuery) =>
-        Promise.resolve(catalogued.filter(asset => asset.path === query.path)),
+        Promise.resolve(
+          catalogued.filter(asset =>
+            query.paths ? query.paths.includes(asset.path ?? '') : asset.path === query.path,
+          ),
+        ),
       update,
     },
   })
   return {
     listFolder,
+    searchFolder,
+    walkFolder,
     openFile,
     revealFile,
     renameFile,
@@ -150,6 +174,8 @@ beforeEach(() => {
   // every case below is about what it says once it has.
   useProject.setState({ project: null, known: true })
   useLayouts.setState({ layout: null })
+  // Persisted, so a term one case typed would narrow the tree of the next one.
+  useExplorerView.setState({ collection: LIST_ONLY, hidden: false, mode: 'folder' })
   menu = fakeMenu()
   installFakeBridge({})
 })
@@ -249,7 +275,7 @@ describe('the project explorer', () => {
       await screen.findByText('assets')
 
       expect(listFolder).toHaveBeenCalledTimes(1)
-      expect(listFolder).toHaveBeenCalledWith('')
+      expect(listFolder).toHaveBeenCalledWith('', false)
     })
 
     it('reads it when it is opened, and shows what it holds', async () => {
@@ -937,6 +963,25 @@ describe('the explorer menu', () => {
   })
 
   /**
+   * What the dot toggle made reachable: `.project.json` sits under no folder of the studio, so
+   * every gesture was offered on it and every one refused afterwards by the main process. The
+   * panel greys out exactly what the disk will refuse, or it promises something it cannot do.
+   */
+  it('greys every gesture out on what the studio keeps under a dot', async () => {
+    withProject()
+    useExplorerView.setState({ hidden: true })
+    install({ '': [file('.project.json')] })
+
+    render(<Explorer />)
+    await open('.project.json')
+
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
+    expect(menu.offers('Mettre à la corbeille')).toBe(false)
+    expect(menu.offers('Dupliquer')).toBe(false)
+    expect(menu.offers('Couper')).toBe(false)
+  })
+
+  /**
    * The one gesture the old identity forbade: a document's file name WAS its id, so renaming an
    * open one orphaned its tab and the next save wrote the old name back beside the new file. The
    * id lives in the envelope now and stays put, so a tab can hold a document being renamed.
@@ -1101,5 +1146,179 @@ describe('the explorer menu', () => {
     await userEvent.dblClick(field)
 
     expect(openDocument).not.toHaveBeenCalled()
+  })
+})
+
+describe('searching the explorer', () => {
+  const searching = (term: string): void => {
+    useExplorerView.setState({ collection: { ...LIST_ONLY, search: term } })
+  }
+
+  /**
+   * What the whole second source exists for. The tree reads one folder at a time, so a file
+   * three folds down is a file it has never seen — and the chain of folders above the match has
+   * to be rebuilt here, `flattenTree` dropping a node whose parent it does not hold.
+   */
+  it('draws a match nobody had unfolded, and the folders leading to it', async () => {
+    withProject()
+    searching('ruelle')
+    install({ '': [folder('Repérages')] }, [], [], {
+      ruelle: [file('ruelle-bleue.png', 'Repérages/Ruelles')],
+    })
+
+    render(<Explorer />)
+
+    expect(await screen.findByText('ruelle-bleue.png')).toBeInTheDocument()
+    expect(screen.getByText('Repérages')).toBeInTheDocument()
+    expect(screen.getByText('Ruelles')).toBeInTheDocument()
+  })
+
+  /**
+   * The field is drawn INSIDE the panel, under its title row: a word that matches nothing would
+   * otherwise take the field it was typed in off the screen, leaving no way back to the folder.
+   * It is also why the bar is not in the title row at all — measured on the home's left column,
+   * the field was 76 px wide there.
+   */
+  it('says so when nothing answers to the word, and keeps the field on screen', async () => {
+    withProject()
+    searching('licorne')
+    install({ '': [folder('Repérages')] })
+
+    render(<Explorer />)
+
+    expect(await screen.findByText(/Aucun fichier de ce projet/)).toBeInTheDocument()
+    expect(screen.getByRole('searchbox')).toHaveValue('licorne')
+  })
+
+  // The bar and the tree are one panel: what is typed reaches the second through the store.
+  it('narrows the tree from the field under its title', async () => {
+    withProject()
+    install({ '': [folder('Repérages')] })
+
+    render(<Explorer />)
+    await userEvent.type(await screen.findByRole('searchbox'), 'ruelle')
+
+    expect(useExplorerView.getState().collection.search).toBe('ruelle')
+  })
+
+  /** The lazy source comes back untouched — it is the one the panel never stopped holding. */
+  it('puts the folders back when the search is left', async () => {
+    withProject()
+    searching('ruelle')
+    install({ '': [folder('Repérages')] }, [], [], {
+      ruelle: [file('ruelle-bleue.png', 'Repérages/Ruelles')],
+    })
+
+    render(<Explorer />)
+    await screen.findByText('ruelle-bleue.png')
+    act(() => searching(''))
+
+    expect(await screen.findByText('Repérages')).toBeInTheDocument()
+    expect(screen.queryByText('ruelle-bleue.png')).not.toBeInTheDocument()
+  })
+
+  /**
+   * Shown, and only shown: what a dot hides is refused by every gesture on both sides
+   * (`file-plan.test.ts`). Which entries come back is the main process's answer, so what is read
+   * here is that the panel asked for them.
+   */
+  it('asks the folder for what a dot hides once the reader wants it', async () => {
+    withProject()
+    useExplorerView.setState({ hidden: true })
+    const { listFolder } = install({ '': [file('.project.json')] })
+
+    render(<Explorer />)
+
+    await waitFor(() => expect(listFolder).toHaveBeenCalledWith('', true))
+  })
+})
+
+describe('the explorer read by domain', () => {
+  const byDomain = (): void => {
+    useExplorerView.setState({ mode: 'domain' })
+  }
+
+  const project = [
+    file('ruelle.png', 'Repérages'),
+    file('toit.png', 'Repérages'),
+    file('notes.pdf'),
+  ]
+
+  /**
+   * The second reading of one folder: where the tree answers « where does this sit », this
+   * answers « what does this project hold ». The count is what a reader comes here for.
+   */
+  it('groups every file of the project by what it is', async () => {
+    withProject()
+    byDomain()
+    install({ '': [folder('Repérages')] }, [], [], {}, project)
+
+    render(<Explorer />)
+
+    expect(await screen.findByText('Image')).toBeInTheDocument()
+    expect(screen.getByText('Autre')).toBeInTheDocument()
+    expect(screen.getByText('ruelle.png')).toBeInTheDocument()
+    expect(screen.getByText('notes.pdf')).toBeInTheDocument()
+    // Two pictures under one heading, one file under the other.
+    expect(screen.getByText('2')).toBeInTheDocument()
+  })
+
+  /**
+   * The whole reason the catalogue is asked at all: an extension cannot tell an albedo from a
+   * normal map, and a row that has been corrected files the picture where it belongs.
+   */
+  it('files a picture where the catalogue says, not where its extension does', async () => {
+    withProject()
+    byDomain()
+    install(
+      { '': [folder('Repérages')] },
+      [],
+      [
+        {
+          id: 'asset_1',
+          name: 'Ruelle',
+          type: 'texture',
+          location: 'local',
+          path: 'Repérages/ruelle.png',
+          tags: [],
+          createdAt: '2026-08-17T10:00:00.000Z',
+        },
+      ],
+      {},
+      project,
+    )
+
+    render(<Explorer />)
+
+    expect(await screen.findByText('Texture')).toBeInTheDocument()
+  })
+
+  /** A domain names files rather than holding a place: nothing can be selected or written there. */
+  it('folds a domain shut rather than picking it', async () => {
+    withProject()
+    byDomain()
+    install({ '': [folder('Repérages')] }, [], [], {}, project)
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('Autre'))
+
+    expect(useSelection.getState().selection.kind).toBe('none')
+    await userEvent.dblClick(screen.getByText('Autre'))
+    await waitFor(() => expect(screen.queryByText('notes.pdf')).not.toBeInTheDocument())
+  })
+
+  // Leaving a reading must not cost the other one: the tree is the source the panel never
+  // stopped holding, and it comes back with its folders as they were.
+  it('gives the folders back when the reading changes', async () => {
+    withProject()
+    byDomain()
+    install({ '': [folder('Repérages')] }, [], [], {}, project)
+
+    render(<Explorer />)
+    await screen.findByText('notes.pdf')
+    act(() => useExplorerView.setState({ mode: 'folder' }))
+
+    expect(await screen.findByText('Repérages')).toBeInTheDocument()
+    expect(screen.queryByText('Image')).not.toBeInTheDocument()
   })
 })

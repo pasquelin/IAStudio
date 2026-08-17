@@ -324,6 +324,27 @@ describe('catalog', () => {
     expect(found.map(one => one.id)).toEqual(['asset_2'])
   })
 
+  /**
+   * The same question for a whole listing, in one round trip: a browser showing four hundred
+   * files asked four hundred times, and each answer is a query against this database.
+   */
+  it('answers for a whole listing of paths at once', () => {
+    catalog.add(asset({ id: 'asset_1', path: 'Repérages/ruelle.png' }))
+    catalog.add(asset({ id: 'asset_2', path: 'Repérages/toit.png' }))
+    catalog.add(asset({ id: 'asset_3', path: 'ailleurs/rien.png' }))
+
+    const found = catalog.search({ paths: ['Repérages/ruelle.png', 'Repérages/toit.png'] })
+    expect(found.map(one => one.id).sort()).toEqual(['asset_1', 'asset_2'])
+  })
+
+  // As `types` does, and for the same reason: a caller with nothing to ask about asks nothing,
+  // where an empty list read as « no filter » would answer with the whole catalogue.
+  it('answers nothing at all for an empty listing', () => {
+    catalog.add(asset({ id: 'asset_1', path: 'Repérages/ruelle.png' }))
+
+    expect(catalog.search({ paths: [] })).toEqual([])
+  })
+
   // Exact, never a prefix: the question is « is THIS file an asset », and a folder that shares
   // the opening of a file name is not the file.
   it('answers nothing for a path no asset was filed at', () => {

@@ -68,6 +68,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       current: () => Promise.resolve(null),
       onChange: noSubscription,
       listFolder: () => Promise.resolve([]),
+      searchFolder: () => Promise.resolve([]),
+      walkFolder: () => Promise.resolve([]),
       openFile: () => Promise.resolve(true),
       onFolderChanged: noSubscription,
       revealFile: () => Promise.resolve(),

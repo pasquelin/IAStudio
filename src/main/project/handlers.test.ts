@@ -124,6 +124,8 @@ function base(catalog: AsyncCatalog) {
     exists: vi.fn(() => true),
     folder: {
       list: vi.fn(async () => []),
+      search: vi.fn(async () => []),
+      walk: vi.fn(async () => []),
       names: vi.fn(async () => []),
     },
     // Answers an empty batch by default: what a channel DOES with an outcome is what these
@@ -283,9 +285,31 @@ describe('project handlers', () => {
       const injected = deps(catalog)
       registerProjectHandlers(injected)
 
-      await invoke(CHANNELS.projectListFolder, 'assets/img')
+      await invoke(CHANNELS.projectListFolder, 'assets/img', false)
 
-      expect(injected.folder.list).toHaveBeenCalledWith('assets/img')
+      expect(injected.folder.list).toHaveBeenCalledWith('assets/img', false)
+    })
+
+    /**
+     * The reader asks; the main process decides. `.index/` and `.project.json` are shown on this
+     * flag and stay refused by every gesture — `file-plan.test.ts` holds that half.
+     */
+    it('shows what a dot hides only when the window asked for it', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.projectListFolder, '', true)
+
+      expect(injected.folder.list).toHaveBeenCalledWith('', true)
+    })
+
+    it('searches the whole folder, which is the source the tree cannot be', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.projectSearchFolder, 'ruelle', false)
+
+      expect(injected.folder.search).toHaveBeenCalledWith('ruelle', false)
     })
 
     // The one channel where a window names a path of its own, and `join` walks out of the
@@ -294,7 +318,7 @@ describe('project handlers', () => {
       const injected = deps(catalog)
       registerProjectHandlers(injected)
 
-      await expect(invoke(CHANNELS.projectListFolder, '../..')).rejects.toThrow()
+      await expect(invoke(CHANNELS.projectListFolder, '../..', false)).rejects.toThrow()
 
       expect(injected.folder.list).not.toHaveBeenCalled()
     })

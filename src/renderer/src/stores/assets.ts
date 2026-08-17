@@ -15,6 +15,7 @@ import {
 import { nameFailureOf } from '@shared/domain/file-name'
 import { isRecord } from '@shared/guards'
 import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 
 type AssetsState = {
   collection: CollectionState
@@ -68,6 +69,17 @@ type AssetsState = {
    * the answer is for the caller to journal rather than to draw — see `helpers/rename.ts`.
    */
   rename: (assetId: string, name: string) => Promise<AssetNameFailure | null>
+  /**
+   * What the file IS, corrected by hand.
+   *
+   * The studio reads a domain off the extension, and an extension cannot always tell — a normal
+   * map and an albedo are both PNGs. The row is what remembers the correction, which is why a
+   * file the catalogue does not hold cannot be corrected at all.
+   *
+   * Nothing moves on disk: a row carries its own path, and what the studio calls a picture has
+   * never been decided by the folder it sits in.
+   */
+  retype: (assetId: string, type: AssetType) => Promise<void>
   /**
    * Drops the coalesced read still waiting, if there is one.
    *
@@ -266,6 +278,28 @@ export const useAssets = create<AssetsState>()(
             items: state.items.map(item => (item.id === assetId ? written : item)),
           }))
           return null
+        },
+
+        retype: async (assetId, type) => {
+          const written = await getBridge()
+            ?.assets.update(assetId, { type })
+            .catch((error: unknown) => {
+              reportFailure('assets.retype', assetId, error)
+              return null
+            })
+          if (!written) return
+
+          // Into the shelf on the spot, as a rename is — `assets:update` broadcasts nothing, so
+          // nothing else would tell it. Told apart from a rename by what a TYPE decides: the
+          // shelf reads a scope, and a picture that has just become a texture is no longer a row
+          // this one asked for. Written in place it stayed on screen, under its old shelf, with
+          // its new name for what it is — until something unrelated happened to re-read.
+          set(state => ({
+            items: state.items.flatMap(item => {
+              if (item.id !== assetId) return [item]
+              return state.scope && !state.scope.includes(written.type) ? [] : [written]
+            }),
+          }))
         },
 
         cancelInvalidate: () => {

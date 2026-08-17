@@ -30,7 +30,7 @@ export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   meshes: { load: () => import('@/panels/meshes'), role: 'actions' },
   lights: { load: () => import('@/panels/lights'), role: 'actions' },
   timeline: { load: () => import('@/panels/timeline'), role: 'fill-actions' },
-  explorer: { load: () => import('@/panels/explorer'), role: null },
+  explorer: { load: () => import('@/panels/explorer'), role: 'actions' },
   scene: { load: () => import('@/panels/scene'), role: null },
   models: { load: () => import('@/panels/models'), role: null },
   generator: { load: () => import('@/panels/generator'), role: null },
@@ -42,7 +42,6 @@ export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   view: { load: () => import('@/panels/view'), role: null },
   projects: { load: () => import('@/panels/projects'), role: null },
   library: { load: () => import('@/panels/library'), role: null },
-  documents: { load: () => import('@/panels/documents'), role: null },
 }
 
 /** A panel that publishes no actions still needs something for `lazy` to resolve to. */

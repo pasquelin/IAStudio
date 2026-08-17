@@ -14,6 +14,7 @@ import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
 import { ADD_ENTRIES } from '@/engines/scene/node-kinds'
 import { ASSET_INTENTS } from '@/helpers/asset-intents'
+import { FOLDER_SORTS } from '@/panels/explorer/folder-sort'
 import { TRACK_FLAGS } from '@/panels/timeline/track-flags'
 import { DOCUMENT_NAME_REFUSALS } from '@/app/document-name'
 
@@ -56,6 +57,8 @@ const COMPOSED_KEYS: readonly string[] = [
   // Everything a scene can gain: the panels' add menus draw the mesh and light families, and
   // the 3D bar's own add menu draws all three — `objects` included, which is why it is here.
   ...ADD_ENTRIES.flatMap(({ labelKey }) => [labelKey, `${labelKey}Hint`]),
+  // The orders the explorer's bar offers, composed from the union rather than written beside it.
+  ...FOLDER_SORTS.map(sort => `explorer.sort.${sort}`),
   ...WORKSPACE_IDS.map(workspace => `home.tools.${workspace}`),
   // The rail label, built by `workspaceLabelKey` — the most visible string in the window, and
   // the one thing the workspace table does NOT make the compiler demand of a new space.
