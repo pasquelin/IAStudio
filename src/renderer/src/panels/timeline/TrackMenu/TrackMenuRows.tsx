@@ -1,12 +1,11 @@
 import { mdiArrowDown, mdiArrowUp, mdiDeleteOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
 import { moveTrack, removeTrack } from '@/engines/timeline/commands'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useSequences } from '@/stores/sequences'
 
-export type TrackMenuProps = {
+export type TrackMenuRowsProps = {
   documentId: string
   trackId: string
   /** Whether the row has anywhere to go: the first cannot rise, the last cannot fall. */
@@ -15,6 +14,9 @@ export type TrackMenuProps = {
   onClose: () => void
 }
 
+/** Three, and the row's button needs to know before it draws. */
+export const TRACK_MENU_ROWS = 3
+
 /**
  * What can be done to a track, as rows — the three edits an add button cannot carry.
  *
@@ -22,7 +24,13 @@ export type TrackMenuProps = {
  * button. A right-click is not a keyboard gesture, so the button is what makes these reachable
  * without a mouse.
  */
-export function TrackMenuRows({ documentId, trackId, canRise, canFall, onClose }: TrackMenuProps) {
+export function TrackMenuRows({
+  documentId,
+  trackId,
+  canRise,
+  canFall,
+  onClose,
+}: TrackMenuRowsProps) {
   const { t } = useTranslation()
 
   const run = (by: number) => (): void => {
@@ -58,15 +66,3 @@ export function TrackMenuRows({ documentId, trackId, canRise, canFall, onClose }
     </>
   )
 }
-
-/** The same rows, at the pointer. */
-export function TrackMenu({ at, ...rows }: TrackMenuProps & { at: { x: number; y: number } }) {
-  return (
-    <ContextMenu at={at} onClose={rows.onClose}>
-      <TrackMenuRows {...rows} />
-    </ContextMenu>
-  )
-}
-
-/** Three, and the row's button needs to know before it draws. */
-export const TRACK_MENU_ROWS = 3
