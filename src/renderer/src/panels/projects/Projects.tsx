@@ -13,29 +13,9 @@ import { ProjectRow } from './ProjectRow'
 type Card = RecentProject & { id: string }
 
 /**
- * The projects this studio has opened, newest-made first — the home's left column, and since
- * 13 August the only panel in it.
- *
- * Read straight from the settings: the list travels with `lastProject` and every window already
- * holds it, so the panel that makes the home an entry point costs no request and works with no
- * key.
- *
- * **The order is the creation date and not the stored one, and that is the fix rather than a
- * preference**: the settings keep the list by most-recently-opened, so the click that opened a
- * project moved it to the top and the whole list shuffled under the pointer that had just aimed
- * at it. `projectsByCreation` gives a key no click can move.
- *
- * A single click opens, which is what `onOpen` announces: a project is not a thing to select. What
- * `selectedIds` paints here is therefore not a selection but WHERE ONE IS — the folder the studio
- * has open — which is why the tone is `strong` and why the row keeps its `listitem` role.
- *
- * **Which path a rename is open on is held here, not in the row**, and the double-click is why: it
- * is caught on the row's own wrapper, and only one row may hold a field at a time — two rows each
- * holding their own boolean cannot agree on that.
- *
- * The double-click is deliberately NOT `Collection`'s `onActivate`. That slot is also what Enter
- * fires, and taking it would make Enter rename a row while Space opened it — backwards from every
- * other list in the studio, where Enter opens what is under the keyboard.
+ * Ordered by CREATION, never by the stored most-recently-opened: that order moved the row out from
+ * under the pointer that had just aimed at it. The double-click is deliberately not `Collection`'s
+ * `onActivate` — Enter fires that slot, and would rename a row where every other list opens it.
  */
 export function Projects() {
   const { t } = useTranslation()
