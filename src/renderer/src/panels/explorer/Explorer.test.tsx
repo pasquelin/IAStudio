@@ -1435,3 +1435,213 @@ describe('the explorer read by domain', () => {
     expect(screen.queryByText('Image')).not.toBeInTheDocument()
   })
 })
+
+/**
+ * The grid is the same folder drawn a second way, so every gesture the tree answers has to answer
+ * here too — and not one of them is anything the type checker can say.
+ */
+describe('the project explorer, as a grid', () => {
+  const showGrid = (): void =>
+    void useExplorerView.setState({ collection: { ...LIST_ONLY, view: 'grid' } })
+
+  /** The tile, which is what carries the drag: the cell around it belongs to `Collection`. */
+  const tileFor = async (name: string): Promise<HTMLElement> => {
+    const caption = await screen.findByText(name)
+    const tile = caption.closest('[draggable]')
+    if (!(tile instanceof HTMLElement)) throw new Error(`no tile for ${name}`)
+    return tile
+  }
+
+  /** The blank beside and below the cards — the scroller itself, as the tree's blank is. */
+  const blank = (): HTMLElement => {
+    const host = screen.getByRole('listbox').parentElement
+    if (!(host instanceof HTMLElement)) throw new Error('no blank to aim at')
+    return host
+  }
+
+  const enter = async (name: string): Promise<void> => {
+    await userEvent.dblClick(await screen.findByText(name))
+  }
+
+  it('lists what the folder it is showing holds, and nothing deeper', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('Images'), file('brief.pdf')], Images: [file('a.png', 'Images')] })
+
+    render(<Explorer />)
+
+    expect(await screen.findByText('Images')).toBeInTheDocument()
+    expect(screen.getByText('brief.pdf')).toBeInTheDocument()
+    // The tree would draw it under its folder; a grid has no nesting to draw it in.
+    expect(screen.queryByText('a.png')).toBeNull()
+  })
+
+  it('goes into a folder on a double-click, and shows what it holds', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('Images'), file('brief.pdf')], Images: [file('a.png', 'Images')] })
+
+    render(<Explorer />)
+    await enter('Images')
+
+    expect(await screen.findByText('a.png')).toBeInTheDocument()
+    expect(screen.queryByText('brief.pdf')).toBeNull()
+  })
+
+  /** A door that shut behind you would make the grid a worse tree, not a second reading of one. */
+  it('comes back up by its trail', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('Images'), file('brief.pdf')], Images: [file('a.png', 'Images')] })
+
+    render(<Explorer />)
+    await enter('Images')
+    await screen.findByText('a.png')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Projet' }))
+
+    expect(await screen.findByText('brief.pdf')).toBeInTheDocument()
+  })
+
+  it('moves a tile dropped on a folder into it', async () => {
+    withProject()
+    showGrid()
+    const { moveFiles } = install({ '': [folder('notes'), file('brief.pdf')] })
+
+    render(<Explorer />)
+    const data = dragTransfer()
+    fireEvent.dragStart(await tileFor('brief.pdf'), { dataTransfer: data })
+    fireEvent.drop(await tileFor('notes'), { dataTransfer: data })
+
+    expect(moveFiles).toHaveBeenCalledWith(['brief.pdf'], 'notes')
+  })
+
+  /**
+   * The blank means the folder ON SCREEN, not the top of the project. Asserted from inside a
+   * folder for that reason alone: at the root the two answers are the same string, and a wiring
+   * that aimed at the root would pass a test written there.
+   */
+  it('aims a drop on the blank at the folder being shown', async () => {
+    withProject()
+    showGrid()
+    const { moveFiles } = install({
+      '': [folder('Images')],
+      Images: [folder('Rendus', 'Images'), file('a.png', 'Images')],
+    })
+
+    render(<Explorer />)
+    await enter('Images')
+
+    const data = dragTransfer()
+    fireEvent.dragStart(await tileFor('a.png'), { dataTransfer: data })
+    fireEvent.drop(blank(), { dataTransfer: data })
+
+    expect(moveFiles).toHaveBeenCalledWith(['Images/a.png'], 'Images')
+  })
+
+  /** Same question of the menu, which is how a folder is made where the user is looking. */
+  it('makes a new folder in the folder being shown, from the blank', async () => {
+    withProject()
+    showGrid()
+    const { newFolder } = install({ '': [folder('Images')], Images: [file('a.png', 'Images')] })
+
+    render(<Explorer />)
+    await enter('Images')
+    await screen.findByText('a.png')
+
+    menu.picks('Nouveau dossier')
+    fireEvent.contextMenu(blank())
+
+    await waitFor(() => expect(newFolder).toHaveBeenCalledWith('Images', 'dossier'))
+  })
+
+  it('raises a tile’s own menu on a right-click, asking the catalogue first', async () => {
+    withProject()
+    showGrid()
+    install({ '': [file('brief.pdf')] })
+
+    render(<Explorer />)
+    fireEvent.contextMenu(await tileFor('brief.pdf'))
+
+    await waitFor(() => expect(menu.labels()).toContain('Renommer'))
+  })
+
+  /** Three tiles carried together have to arrive together, as three rows do. */
+  it('carries the whole selection when one of its tiles is dragged', async () => {
+    withProject()
+    showGrid()
+    const { moveFiles } = install({ '': [folder('notes'), file('a.png'), file('b.png')] })
+
+    // One session for the whole gesture: the modifier is held across two clicks, and the direct
+    // API opens a fresh one per call — which drops the key between them.
+    const user = userEvent.setup()
+
+    render(<Explorer />)
+    await user.click(await screen.findByText('a.png'))
+    await user.keyboard('{Meta>}')
+    await user.click(screen.getByText('b.png'))
+    await user.keyboard('{/Meta}')
+
+    const data = dragTransfer()
+    fireEvent.dragStart(await tileFor('b.png'), { dataTransfer: data })
+    fireEvent.drop(await tileFor('notes'), { dataTransfer: data })
+
+    expect(moveFiles).toHaveBeenCalledWith(['a.png', 'b.png'], 'notes')
+  })
+
+  /** Both sides of the gesture, as the tree refuses both: what the machine keeps is shown, not moved. */
+  it('will not pick up what the studio keeps for itself', async () => {
+    withProject()
+    showGrid()
+    useExplorerView.setState({ hidden: true })
+    install({ '': [file('.project.json'), file('brief.pdf')] })
+
+    render(<Explorer />)
+
+    expect(await tileFor('.project.json')).toHaveAttribute('draggable', 'false')
+    expect(await tileFor('brief.pdf')).toHaveAttribute('draggable', 'true')
+  })
+
+  it('refuses a folder the studio keeps for itself as a drop target', async () => {
+    withProject()
+    showGrid()
+    useExplorerView.setState({ hidden: true })
+    const { moveFiles } = install({ '': [folder('.index'), file('brief.pdf')] })
+
+    render(<Explorer />)
+    const data = dragTransfer()
+    fireEvent.dragStart(await tileFor('brief.pdf'), { dataTransfer: data })
+    fireEvent.drop(await tileFor('.index'), { dataTransfer: data })
+
+    expect(moveFiles).not.toHaveBeenCalled()
+  })
+
+  /** Cut, and on its way out — the file is still there and still opens until a paste spends it. */
+  it('dims a tile that has been cut', async () => {
+    withProject()
+    showGrid()
+    install({ '': [file('a.png')] })
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('a.png'))
+    fireEvent.keyDown(window, { key: 'x', code: 'KeyX', metaKey: true })
+
+    await waitFor(async () => expect(await tileFor('a.png')).toHaveClass('opacity-50'))
+  })
+
+  it('renames a tile in place', async () => {
+    withProject()
+    showGrid()
+    const { renameFile } = install({ '': [file('brief.pdf')] })
+
+    render(<Explorer />)
+    menu.picks('Renommer')
+    fireEvent.contextMenu(await tileFor('brief.pdf'))
+
+    const field = await screen.findByRole('textbox')
+    await userEvent.clear(field)
+    await userEvent.type(field, 'resume.pdf{Enter}')
+
+    expect(renameFile).toHaveBeenCalledWith('brief.pdf', 'resume.pdf')
+  })
+})

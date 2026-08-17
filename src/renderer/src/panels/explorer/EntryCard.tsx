@@ -20,6 +20,8 @@ export type EntryCardProps = {
   onRename?: (name: string) => void
   /** What picking this card up carries — the whole selection where it is part of one. */
   dragIds: readonly string[]
+  /** Whether it may be picked up at all. What the studio keeps for itself is shown, not moved. */
+  pickable: boolean
   /**
    * Whether the batch currently in the hand may land IN this card. Answered by the panel and not
    * here: what is being dragged cannot be read off the event before the drop, by design of the
@@ -52,6 +54,7 @@ export function EntryCard({
   waiting,
   onRename,
   dragIds,
+  pickable,
   accepts,
   onDropInto,
   onPickUp,
@@ -65,7 +68,7 @@ export function EntryCard({
       // The tile itself is the handle. `draggable` on a container makes everything inside it
       // draggable too, so the guard below is what keeps a name being typed from starting a drag
       // instead of selecting a word — `Tree`'s rows carry the same one, for the same reason.
-      draggable={onRename === undefined}
+      draggable={pickable && onRename === undefined}
       onDragStart={event => {
         if (event.target !== event.currentTarget) return event.preventDefault()
         rowDrag.start(event, dragIds)

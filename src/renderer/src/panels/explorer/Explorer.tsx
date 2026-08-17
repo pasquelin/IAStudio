@@ -563,13 +563,14 @@ export function Explorer() {
                 // The whole selection where this card is part of one, so three cards carried
                 // together arrive together — `Tree` composes the same batch for its rows.
                 dragIds={selectedIds.includes(node.id) ? selectedIds : [node.id]}
-                // Read on BOTH sides of the gesture, as the tree reads it: the main process
-                // refuses the same things, and an outline offered over a folder that will refuse
-                // the drop is a promise the studio does not keep.
+                // What the machine keeps for itself is not picked up here either, as the tree
+                // refuses it: it is shown, read-only, and dragging it is not one of the gestures.
+                pickable={!isPrivatePath(node.path)}
+                // The SAME predicate the tree's `droppable` carries, and no more: `canMoveInto`
+                // already refuses a private folder and a document written as one, so a second
+                // reading here would be a second answer free to disagree with the first.
                 accepts={
                   node.kind === 'folder' &&
-                  !documentOf(node) &&
-                  !isPrivatePath(node.path) &&
                   carried !== null &&
                   carried.every(one => canMoveInto(one, node.path))
                 }
