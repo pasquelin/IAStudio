@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, onTestFinished } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
-import type { AsyncCatalog } from '@main/project/catalog-client'
+import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import { createCloudBackend, type CloudBackendDeps } from './cloud-backend'

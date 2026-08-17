@@ -1,15 +1,15 @@
 import { describe, expect, it, onTestFinished } from 'vitest'
-import { createCatalogQueue, serveCatalog, type CatalogServerPort } from './catalog-queue'
-import type { RescanDisk } from './catalog-rescan'
+import { createCatalogQueue, serveCatalog, type CatalogServerPort } from './catalogQueue'
+import type { RescanDisk } from './catalogRescan'
 import { createCatalog } from './catalog'
-import { openMemoryDatabase } from './sqlite-memory'
+import { openMemoryDatabase } from './sqliteMemory'
 import {
   ABANDONED,
   type CatalogMessage,
   type CatalogRequest,
   type CatalogRescanProgress,
   type CatalogResponse,
-} from './catalog-protocol'
+} from './catalogProtocol'
 
 const search = (id: number, text: string): CatalogRequest => ({
   id,

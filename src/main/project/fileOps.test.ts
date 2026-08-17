@@ -3,10 +3,10 @@ import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { PENDING_FILES_FILE } from '@shared/domain/project'
-import { createFileOps, type FileOps } from './file-ops'
+import { createFileOps, type FileOps } from './fileOps'
 import { createFolderReader, createFolderWriter } from './folder'
 import { withTempProject } from './project-fixtures'
-import type { AsyncCatalog } from './catalog-client'
+import type { AsyncCatalog } from './catalogClient'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',

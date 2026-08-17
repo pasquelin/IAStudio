@@ -7,7 +7,7 @@ import type { FavoriteRecipe } from '@shared/domain/favorite'
 import { CHANNELS } from '@shared/ipc'
 import { invoke as invokeChannel, resetHandlers } from '@main/ipc/test-harness'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
-import type { AsyncCatalog } from '@main/project/catalog-client'
+import type { AsyncCatalog } from '@main/project/catalogClient'
 import { registerFavoriteHandlers, type FavoriteHandlerDeps } from './handlers'
 import { createFavorites } from './store'
 

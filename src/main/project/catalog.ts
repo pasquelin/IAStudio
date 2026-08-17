@@ -177,7 +177,7 @@ const MIGRATIONS: readonly string[] = [
   -- « Is the file the explorer is showing one of ours? », asked on every double-click over a
   -- folder that can hold thousands. Without it the equality is a full scan of \`assets\`, and the
   -- gesture waits on it: the thread it blocks is the catalogue's own worker, not the main
-  -- process — \`catalog-client\` is what keeps that true, and it is why no window freezes here.
+  -- process — \`catalogClient\` is what keeps that true, and it is why no window freezes here.
   CREATE INDEX assets_path_idx ON assets(path);
   `,
   `

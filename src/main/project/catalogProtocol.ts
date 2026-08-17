@@ -1,6 +1,6 @@
 import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain/activity'
 import type { Asset, AssetCounts, AssetQuery } from '@shared/domain/asset'
-import type { RescanReport } from './catalog-rescan'
+import type { RescanReport } from './catalogRescan'
 
 /**
  * What the main process and the catalogue worker say to each other.

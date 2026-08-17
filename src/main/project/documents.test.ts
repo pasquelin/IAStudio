@@ -376,7 +376,7 @@ describe('createDocumentFiles', () => {
    * The folder is the user's, and the studio's memory of it is filled by a listing. A file that
    * landed since — copied in by hand, or left by a window that never listed — was invisible to a
    * check taken from that memory, and the first save of a fresh document wrote straight over it.
-   * `file-plan` asks the folder for the same question, and now so does this.
+   * `filePlan` asks the folder for the same question, and now so does this.
    */
   it('suffixes around a file it was never told about', async () => {
     await mkdir(join(root, 'documents'), { recursive: true })

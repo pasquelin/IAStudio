@@ -11,7 +11,7 @@ import {
   type JobTarget,
   settlementOf,
 } from '@shared/domain/job'
-import type { ActivityReport } from '@main/project/activity-log'
+import type { ActivityReport } from '@main/project/activityLog'
 import { failureOf } from './client'
 import type { PersistedJob } from './persistedJob'
 import { ORDINARY_REQUESTS_PER_WINDOW } from './rateLimiter'

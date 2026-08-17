@@ -51,7 +51,7 @@ mort. Ni le processus principal ni le renderer n'exécutent d'inférence.
   dans `electron.vite.config.ts`. Rien de neuf n'a été inventé pour cette feature.
 
 - **La poignée de main est obligatoire.** Lire 640 Mo peut échouer, et ça doit échouer à
-  l'ouverture plutôt qu'à la première phrase — c'est le `ready` que `catalog-thread` attend déjà.
+  l'ouverture plutôt qu'à la première phrase — c'est le `ready` que `catalogThread` attend déjà.
 
 - **Le processus se redémarre au plus trois fois.** Un moteur qui meurt sur le premier chunk
   serait sinon reforké par le suivant, tant que quelqu'un parle.

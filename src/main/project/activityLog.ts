@@ -1,6 +1,6 @@
 import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain/activity'
 import { log } from '../log'
-import type { AsyncCatalog } from './catalog-client'
+import type { AsyncCatalog } from './catalogClient'
 
 /**
  * How long lines are gathered before they are written and the windows hear about them.

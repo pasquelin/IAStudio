@@ -6,7 +6,7 @@ import type { PeaksResponse } from './peaks-protocol'
 /** Forks the waveform worker. Who keeps it, and for how long, is `services.ts`'s business. */
 export function openPeaksProcess(onExit: () => void = () => {}): PeaksClient {
   // Resolved beside the bundled main, where `peaks-worker` is its own entry point — see
-  // `electron.vite.config.ts`. Through `import.meta.url`, as `catalog-thread` does: the main
+  // `electron.vite.config.ts`. Through `import.meta.url`, as `catalogThread` does: the main
   // bundle is ESM, and the `__dirname` that appears in it is a shim Vite injects for an inlined
   // dependency — a reference that would vanish the day that dependency does.
   const child = utilityProcess.fork(fileURLToPath(new URL('./peaks-worker.js', import.meta.url)))

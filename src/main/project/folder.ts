@@ -255,7 +255,7 @@ export type FolderWriter = {
  * The four gestures that write to the project folder. Primitives, and deliberately naive.
  *
  * **They refuse nothing on their own account**, which is the change this phase made: what may
- * be written is decided once, in `file-plan.ts`, against a reading of the folders taken before
+ * be written is decided once, in `filePlan.ts`, against a reading of the folders taken before
  * anything moves. Two places deciding meant two answers free to disagree — and the panel would
  * grey a row the main process would have allowed, or the reverse.
  *

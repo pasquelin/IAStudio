@@ -9,7 +9,7 @@
  *
  * It is NOT what keeps the main process responsive: swapping the driver could never do that,
  * since every method here is synchronous. The whole catalogue runs on its own thread instead —
- * see `catalog-thread.ts`.
+ * see `catalogThread.ts`.
  */
 /** What the catalogue binds. Deliberately narrower than what SQLite accepts. */
 export type SqlValue = string | number | null

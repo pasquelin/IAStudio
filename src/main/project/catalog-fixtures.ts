@@ -1,12 +1,12 @@
 import { createCatalog } from './catalog'
-import { rescanProject, type RescanDisk } from './catalog-rescan'
-import { openMemoryDatabase } from './sqlite-memory'
-import type { AsyncCatalog } from './catalog-client'
+import { rescanProject, type RescanDisk } from './catalogRescan'
+import { openMemoryDatabase } from './sqliteMemory'
+import type { AsyncCatalog } from './catalogClient'
 
 /**
  * A catalogue with the production shape but no thread: real SQLite, answered as promises.
  *
- * The thread is what `catalog-client` and `catalog-dispatch` cover. Everything upstream only
+ * The thread is what `catalogClient` and `catalogDispatch` cover. Everything upstream only
  * cares that the catalogue answers later, so paying for a worker per test would buy nothing.
  */
 export function memoryCatalog(file = ':memory:', disk: RescanDisk | null = null): AsyncCatalog {

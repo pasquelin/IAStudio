@@ -118,7 +118,7 @@ Every long task is **cancellable**, **reports progress**, and runs in a pool bou
 `better-sqlite3` is synchronous: a heavy query on the main process blocks every window, so
 non-trivial catalogue queries go through `worker_threads`.
 
-Three threads exist for exactly that reason. `main/project/catalog-worker.ts` owns the database
+Three threads exist for exactly that reason. `main/project/catalogWorker.ts` owns the database
 and answers a message loop, so a search across thousands of assets never freezes a window.
 `renderer/src/engines/audio/audio.worker.ts` runs the sound chain off the window's thread, with
 sample buffers **transferred** rather than copied. And `renderer/src/engines/scene/bvh.worker.ts`
@@ -216,12 +216,12 @@ src/main/
 ├── project/
 │   ├── store.ts             create and open a project folder, read/write the manifest
 │   ├── catalog.ts           the SQLite asset index
-│   ├── catalog-thread.ts    the worker carrying it, and its protocol
-│   ├── activity-log.ts      what the studio did and failed to do
+│   ├── catalogThread.ts     the worker carrying it, and its protocol
+│   ├── activityLog.ts       what the studio did and failed to do
 │   ├── documents.ts         the atomic write of a document
 │   ├── sqlite.ts            the SqliteDriver port
-│   ├── sqlite-native.ts     better-sqlite3 — production
-│   └── sqlite-memory.ts     node:sqlite — tests
+│   ├── sqliteNative.ts      better-sqlite3 — production
+│   └── sqliteMemory.ts      node:sqlite — tests
 ├── assets/
 │   ├── local-backend.ts     the project's assets, on disk
 │   ├── cloud-backend.ts     the same ones, on the library's side
@@ -291,7 +291,7 @@ mean rewriting every row on every key change — and showing a stale answer in b
 
 ### The activity journal
 
-`project/activity-log.ts` keeps account of what the studio did and failed to do. Three decisions
+`project/activityLog.ts` keeps account of what the studio did and failed to do. Three decisions
 are frozen into it, each answering a precise defect:
 
 - **`record` returns immediately.** It is called from failure paths: a journal that made its
@@ -714,7 +714,7 @@ nothing says what they are any more. `.scenario/items.json` is what is left to r
 backup keyed by content fingerprint, written after every reconciliation pass that changed
 something, which the studio never reads of its own accord.
 
-**A pass puts it back in agreement with the disk**, which is not rebuilding it. `catalog-rescan.ts`
+**A pass puts it back in agreement with the disk**, which is not rebuilding it. `catalogRescan.ts`
 runs in the catalogue's thread when a project opens and when a window comes back to the front
 (5 s floor, one pass at a time): it finds a file moved outside the studio by its content
 fingerprint and refiles its row (`repath`), and it DATES an absence — `missing_at` — without ever

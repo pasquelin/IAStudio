@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { changeOf, foldersFor, freeName, inverseOf, planFiles, type FileRequest } from './file-plan'
+import { changeOf, foldersFor, freeName, inverseOf, planFiles, type FileRequest } from './filePlan'
 
 /** What the folders concerned hold, written as a test says it — no disk, no project. */
 const folders = (held: Record<string, readonly string[]>): Map<string, readonly string[]> =>

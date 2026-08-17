@@ -245,7 +245,7 @@ export function createDocumentFiles({
    * What ONE folder already holds, as a name check needs to see it.
    *
    * Read from the DISK rather than from `index`, and there is one answer to "is this name taken"
-   * in the studio rather than two: `file-plan` asks the folder, so this asks the folder. The
+   * in the studio rather than two: `filePlan` asks the folder, so this asks the folder. The
    * index is a cache `walk` fills — `rename` already says below that it decides nothing — and
    * this question decides where a file is WRITTEN, where both `writeFile` and `fs.rename`
    * overwrite without a word. One listing out of date is a document lost.

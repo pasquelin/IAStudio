@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setWindowLanguage } from '@main/window/language'
-import type { AskUser } from './document-dialogs'
-import { askUseOccupiedFolder } from './project-dialogs'
+import type { AskUser } from './documentDialogs'
+import { askUseOccupiedFolder } from './projectDialogs'
 
 type Shown = Parameters<AskUser>[0]
 

@@ -15,7 +15,7 @@ import { pngBytes } from '@main/media/png-fixtures'
 import { memoryCatalog } from './catalog-fixtures'
 import { registerProjectHandlers, type ProjectHandlerDeps } from './handlers'
 import { ProjectOpenError, type FolderVerdict, type ProjectOpenFailure } from './store'
-import type { AsyncCatalog } from './catalog-client'
+import type { AsyncCatalog } from './catalogClient'
 
 vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
 
@@ -130,7 +130,7 @@ function base(catalog: AsyncCatalog) {
       names: vi.fn(async () => []),
     },
     // Answers an empty batch by default: what a channel DOES with an outcome is what these
-    // suites are about, and `file-ops.test.ts` is where the outcome itself is settled.
+    // suites are about, and `fileOps.test.ts` is where the outcome itself is settled.
     files: emptyFileOps(),
     // Idle: a window may watch a pass and call one off, and no channel here starts one.
     reconciler: { request: vi.fn(() => false), stop: vi.fn(), state: () => IDLE_RESCAN },
@@ -295,7 +295,7 @@ describe('project handlers', () => {
 
     /**
      * The reader asks; the main process decides. `.index/` and `.project.json` are shown on this
-     * flag and stay refused by every gesture — `file-plan.test.ts` holds that half.
+     * flag and stay refused by every gesture — `filePlan.test.ts` holds that half.
      */
     it('shows what a dot hides only when the window asked for it', async () => {
       const injected = deps(catalog)

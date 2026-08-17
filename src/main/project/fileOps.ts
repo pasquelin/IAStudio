@@ -1,8 +1,8 @@
 import type { Asset } from '@shared/domain/asset'
 import type { FileOutcome, PathChange } from '@shared/domain/file-op'
 import { moveAssetFile, moveAssetFileToFree } from '@main/assets/asset-file'
-import type { AsyncCatalog } from './catalog-client'
-import { appendMove, clearJournal } from './file-journal'
+import type { AsyncCatalog } from './catalogClient'
+import { appendMove, clearJournal } from './fileJournal'
 import {
   changeOf,
   foldersFor,
@@ -11,7 +11,7 @@ import {
   type FileAct,
   type FileRequest,
   type FolderSnapshot,
-} from './file-plan'
+} from './filePlan'
 import type { FolderReader, FolderWriter } from './folder'
 
 /**

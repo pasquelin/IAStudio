@@ -1,6 +1,6 @@
 import { ASSET_NAME_MAX_LENGTH, type Asset } from '@shared/domain/asset'
 import { foldForSearch } from '@shared/text'
-import type { ActivityReport } from '@main/project/activity-log'
+import type { ActivityReport } from '@main/project/activityLog'
 import { chunk } from '@main/scenario/limits'
 
 /**

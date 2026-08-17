@@ -10,7 +10,7 @@ import {
 } from '@shared/domain/asset'
 import { POSTERS_FOLDER } from '@shared/domain/project'
 import type { PbrChannel } from '@shared/domain/texture'
-import type { AsyncCatalog } from '@main/project/catalog-client'
+import type { AsyncCatalog } from '@main/project/catalogClient'
 import { freeAssetPath } from './asset-file'
 
 const FALLBACK_EXTENSION: Record<AssetType, string> = {

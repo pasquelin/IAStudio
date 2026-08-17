@@ -1,8 +1,8 @@
 import { parentPort, workerData } from 'node:worker_threads'
 import { createCatalog } from './catalog'
-import { serveCatalog } from './catalog-queue'
-import { openProjectDisk } from './project-disk'
-import { openNativeDatabase } from './sqlite-native'
+import { serveCatalog } from './catalogQueue'
+import { openProjectDisk } from './projectDisk'
+import { openNativeDatabase } from './sqliteNative'
 
 /**
  * The catalogue's thread. Everything here is plumbing — the catalogue, the dispatch and the

@@ -1307,7 +1307,7 @@ describe('searching the explorer', () => {
 
   /**
    * Shown, and only shown: what a dot hides is refused by every gesture on both sides
-   * (`file-plan.test.ts`). Which entries come back is the main process's answer, so what is read
+   * (`filePlan.test.ts`). Which entries come back is the main process's answer, so what is read
    * here is that the panel asked for them.
    */
   it('asks the folder for what a dot hides once the reader wants it', async () => {

@@ -1,6 +1,6 @@
 import { messageOf } from '@shared/guards'
 import type { Catalog } from './catalog'
-import { dispatchCatalogRequest } from './catalog-dispatch'
+import { dispatchCatalogRequest } from './catalogDispatch'
 import {
   ABANDONED,
   isAbandon,
@@ -13,9 +13,9 @@ import {
   type CatalogRescan,
   type CatalogRescanProgress,
   type CatalogResponse,
-} from './catalog-protocol'
-import { rescanProject, type RescanDisk, type RescanReport } from './catalog-rescan'
-import { itemsBackupOf, worthBackingUp, writeItemsBackup } from './items-backup'
+} from './catalogProtocol'
+import { rescanProject, type RescanDisk, type RescanReport } from './catalogRescan'
+import { itemsBackupOf, worthBackingUp, writeItemsBackup } from './itemsBackup'
 
 export type CatalogQueue = {
   /** Takes one message. A request is queued; an abandon marks one that has not run yet. */
@@ -92,7 +92,7 @@ type CatalogDiskOpener = (root: string) => RescanDisk
 
 /**
  * A catalogue answering on a port. Here rather than in the worker entry point for the reason
- * `catalog-dispatch` gives: what a thread does is worth testing, and starting a thread to test
+ * `catalogDispatch` gives: what a thread does is worth testing, and starting a thread to test
  * it is not. The entry point is then nothing but opening the database.
  *
  * A rescan runs BESIDE the queue rather than in it: it is asynchronous and long where every

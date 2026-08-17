@@ -1,8 +1,8 @@
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import { createCatalogClient, type CatalogPort } from './catalog-client'
-import { dispatchCatalogRequest } from './catalog-dispatch'
+import { createCatalogClient, type CatalogPort } from './catalogClient'
+import { dispatchCatalogRequest } from './catalogDispatch'
 import { createCatalog } from './catalog'
-import { openMemoryDatabase } from './sqlite-memory'
+import { openMemoryDatabase } from './sqliteMemory'
 import {
   ABANDONED,
   isAbandon,
@@ -10,8 +10,8 @@ import {
   type CatalogMessage,
   type CatalogRescanProgress,
   type CatalogResponse,
-} from './catalog-protocol'
-import type { RescanProgress, RescanReport } from './catalog-rescan'
+} from './catalogProtocol'
+import type { RescanProgress, RescanReport } from './catalogRescan'
 import type { Asset } from '@shared/domain/asset'
 
 /** The DOM lib is not on this target: the signal's own signature is where the type lives. */

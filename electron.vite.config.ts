@@ -73,7 +73,7 @@ export default defineConfig(({ command }) => ({
         // a file of its own.
         input: {
           index: resolve('src/main/index.ts'),
-          'catalog-worker': resolve('src/main/project/catalog-worker.ts'),
+          catalogWorker: resolve('src/main/project/catalogWorker.ts'),
           'peaks-worker': resolve('src/main/media/peaks-worker.ts'),
           'stt-worker': resolve('src/main/dictation/stt-worker.ts'),
         },

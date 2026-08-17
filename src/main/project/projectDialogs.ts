@@ -1,6 +1,6 @@
 import { fillHoles, TRANSLATIONS } from '@shared/i18n'
 import { windowLanguage } from '@main/window/language'
-import { askConfirm, type AskUser } from './document-dialogs'
+import { askConfirm, type AskUser } from './documentDialogs'
 
 /**
  * Whether the studio may lay a project into a folder that already holds files of its own.

@@ -11,7 +11,7 @@ import { PEAKS_FOLDER, POSTERS_FOLDER, PROXIES_FOLDER } from '@shared/domain/pro
 import { peaksArgs, posterArgs, posterOffset, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
 import type { PeaksRun } from './peaks-client'
 import type { ProbeOutcome } from './probe'
-import type { ActivityReport } from '@main/project/activity-log'
+import type { ActivityReport } from '@main/project/activityLog'
 
 /**
  * What WebCodecs decodes without help. Anything else is montaged on a proxy. Both spellings of
