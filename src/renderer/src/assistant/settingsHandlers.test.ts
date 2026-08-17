@@ -41,6 +41,23 @@ describe('the settings', () => {
     expect(write).not.toHaveBeenCalled()
   })
 
+  /**
+   * `in` answers true for what `Object.prototype` carries, and `JSON.parse` hands `__proto__`
+   * over as an OWN key — so these reached the merge, vanished in it, and were answered `ok`.
+   */
+  it('refuses a section that only the prototype answers to', async () => {
+    const write = vi.fn(async () => DEFAULT_SETTINGS)
+    installFakeBridge({ settings: { write } })
+
+    for (const section of ['__proto__', 'toString', 'constructor', 'valueOf']) {
+      expect(await runAction('settings.write', { settings: { [section]: { a: 1 } } })).toEqual({
+        ok: false,
+        refusal: 'badInput',
+      })
+    }
+    expect(write).not.toHaveBeenCalled()
+  })
+
   // Writing a value that is already set is a legitimate call — a client settling a state it did
   // not read first — and refusing it would make idempotence a failure.
   it('lets a value be written to what it already is', async () => {

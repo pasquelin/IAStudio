@@ -20,11 +20,16 @@ const PATHS: ActionField = {
   repeated: true,
 }
 
+/**
+ * Optional so that the project ROOT can be named at all: it is spelled `''` (`FOLDER_ROOT`), and
+ * a required text may not be blank — see `fits`. Absent therefore means the root, exactly as
+ * `files.list` already reads it.
+ */
 const FOLDER: ActionField = {
   key: 'folder',
   kind: 'text',
   labelKey: 'assistant.fields.folderPath',
-  required: true,
+  required: false,
 }
 
 export const FILE_ACTIONS: readonly AssistantAction[] = [

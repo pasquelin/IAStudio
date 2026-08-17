@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FileFacts } from '@shared/domain/fileInfo'
 import type { FileOutcome } from '@shared/domain/fileOp'
-import type { FolderEntry } from '@shared/domain/folder'
+import { FOLDER_ROOT, type FolderEntry } from '@shared/domain/folder'
 import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -97,6 +97,22 @@ describe('changing the project folder', () => {
     })
     expect(moveFiles).toHaveBeenCalledWith(['a.png'], 'Plans')
     expect(relist).toHaveBeenCalledWith('own-write')
+  })
+
+  /**
+   * The project ROOT is spelled `''`, and a required text may not be blank — so while `folder`
+   * was required there was no spelling of "up to the root" a client could get through at all.
+   */
+  it('moves to the project root when no folder is named', async () => {
+    const moveFiles = vi.fn(async () => BATCH)
+    const newFolder = vi.fn(async () => BATCH)
+    withProject({ project: { moveFiles, newFolder } })
+
+    await runAction('files.move', { paths: ['Plans/a.png'] })
+    await runAction('folder.new', { name: 'Nuit' })
+
+    expect(moveFiles).toHaveBeenCalledWith(['Plans/a.png'], FOLDER_ROOT)
+    expect(newFolder).toHaveBeenCalledWith(FOLDER_ROOT, 'Nuit')
   })
 
   it('copies through the Explorer’s paste, which is the same channel with the cut flag down', async () => {

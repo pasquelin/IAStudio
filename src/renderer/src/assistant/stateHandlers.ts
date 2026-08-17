@@ -84,7 +84,9 @@ async function openByPath(input: Record<string, unknown>): Promise<ActionOutcome
 
   // Re-read first: the listing a client holds may predate a file that has since arrived, and
   // answering "no such document" for one sitting on the disk is the least useful refusal there is.
-  if (!documentAt(path)) await useDocuments.getState().relist()
+  // `'own-write'` rather than a bare call, which joins a listing already in flight — one that may
+  // have STARTED before the file appeared, and would answer without it.
+  if (!documentAt(path)) await useDocuments.getState().relist('own-write')
 
   const document = documentAt(path)
   if (!document) return refused('badInput')

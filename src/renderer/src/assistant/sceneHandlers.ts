@@ -14,7 +14,7 @@ import {
 } from '@/engines/scene/commands'
 import type { Command } from '@/engines/core/history'
 import { createNodeOf, modelNode } from '@/engines/scene/nodeFactory'
-import { nodeById, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
+import { canReparent, nodeById, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { type ActionHandlers } from './actionHandler'
@@ -142,7 +142,11 @@ function reparent(input: Record<string, unknown>): ActionOutcome {
   const parentId = textOf(input, 'parentId')
   if (parentId !== null && !nodeById(open.state, parentId)) return refused('badInput')
 
-  return editNode(input, node => reparentNode(node.id, parentId))
+  // A move that would close the tree on itself is refused by handing the state back untouched,
+  // which without this reads as done.
+  return editNode(input, node =>
+    canReparent(open.state.nodes, node.id, parentId) ? reparentNode(node.id, parentId) : null,
+  )
 }
 
 export const SCENE_HANDLERS: ActionHandlers = {

@@ -355,6 +355,25 @@ export function canRemoveLayer(layers: readonly Layer[], layer: Layer): boolean 
 }
 
 /**
+ * Whether a layer may hang at that level: under a GROUP, never under itself, and never under one
+ * of its own descendants — the last would cut the branch out of the tree.
+ *
+ * Read from both sides like `canRemoveLayer`: `moveLayer` refuses the command by handing the state
+ * back untouched, and a caller that cannot tell that apart from a move reports every miss as done.
+ */
+export function canMoveLayer(state: CanvasState, id: string, parentId: string | null): boolean {
+  const layer = layerById(state, id)
+  if (!layer) return false
+  if (parentId === null) return true
+  if (parentId === id) return false
+
+  const parent = layerById(state, parentId)
+  if (!parent || !isGroup(parent)) return false
+
+  return !(isGroup(layer) && allLayers(layer.children).some(child => child.id === parentId))
+}
+
+/**
  * The layer directly under `id` at its own level — what `mergeDown` merges into. Within the level,
  * never through the wall of the group it sits in, exactly as the command reads it.
  *

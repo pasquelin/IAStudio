@@ -37,6 +37,19 @@ describe('an input, checked against the fields that declare it', () => {
     expect(validatesInput([field({ key: 'n', kind: 'number' })], { n: Number.NaN })).toBe(false)
   })
 
+  /**
+   * Every reader of a colour falls back SILENTLY on one it cannot parse — `readColor` on the
+   * value already there, `packedColour` on nothing — so an unchecked colour was answered `ok`
+   * with the paint never applied.
+   */
+  it('holds a colour to a hex the studio can actually read', () => {
+    const fields = [field({ key: 'color', kind: 'color' })]
+
+    expect(validatesInput(fields, { color: '#1a2b3c' })).toBe(true)
+    expect(validatesInput(fields, { color: 'reddish' })).toBe(false)
+    expect(validatesInput(fields, { color: '#1a2' })).toBe(false)
+  })
+
   it('holds a closed field to the values it closes over', () => {
     const fields = [field({ key: 'axis', kind: 'choice', options: ['x', 'y'] })]
 

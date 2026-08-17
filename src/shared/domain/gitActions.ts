@@ -123,6 +123,9 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitCommit.title',
     descriptionKey: 'assistant.actions.gitCommit.description',
     commitment: 'none',
+    // Recording a version adds one; amending REPLACES the one already recorded, and its message
+    // and its parent are gone with it. That is the same loss `git.restore` is asked about.
+    raises: input => (input.amend === true ? 'files' : 'none'),
     reach: 'mcp',
     fields: [
       { key: 'message', kind: 'longText', labelKey: 'assistant.fields.message', required: true },

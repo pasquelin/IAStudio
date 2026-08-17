@@ -188,6 +188,28 @@ describe('hierarchy and selection', () => {
     })
   })
 
+  /**
+   * `reparentNode` refuses a move that would close the tree on itself by handing the state back
+   * untouched — which reads as done to anyone who only checked that the parent exists.
+   */
+  it('refuses to hang a node under itself or under its own child', async () => {
+    const parent = await runAction('node.add', { kind: 'box', name: 'Parent' })
+    const parentId = parent.ok ? (parent.data as { nodeId: string }).nodeId : ''
+    const child = await runAction('node.add', { kind: 'sphere', name: 'Enfant' })
+    const childId = child.ok ? (child.data as { nodeId: string }).nodeId : ''
+    await runAction('node.reparent', { nodeId: childId, parentId })
+
+    expect(await runAction('node.reparent', { nodeId: parentId, parentId })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(await runAction('node.reparent', { nodeId: parentId, parentId: childId })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(nodeNamed('Parent')?.parentId).toBeNull()
+  })
+
   it('selects nodes, and refuses a list holding one the scene lost', async () => {
     const added = await runAction('node.add', { kind: 'box', name: 'Caisse' })
     const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''

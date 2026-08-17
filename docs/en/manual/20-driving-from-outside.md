@@ -247,13 +247,17 @@ says so rather than inventing one:
 
 **When an action is about to touch your files:**
 
-> *This action will change files in your project folder. It costs no creative units, and the
-> Explorer can undo it.*
+> *This action will change what your project holds — files, or the assets in its library. It
+> costs no creative units.*
 
 This one is deliberately **narrow**: moving, renaming, binning, closing a tab that holds unsaved
-work, putting a git-tracked file back. Making a folder or duplicating a file takes nothing away
-from anyone and asks you nothing — a studio that asked about those would teach you to click
-**Allow** without reading.
+work, putting a git-tracked file back, rewriting the version last recorded. Making a folder or
+duplicating a file takes nothing away from anyone and asks you nothing — a studio that asked
+about those would teach you to click **Allow** without reading.
+
+**Narrow does not mean recoverable.** The Explorer takes back a move, a rename or a binning. It
+takes back nothing a git-tracked file had never recorded, nothing of a rewritten version, and
+nothing of an asset removed from the remote library as well.
 
 In all three cases, two buttons: **Allow** and **Don’t allow**. Declining runs nothing, and the
 assistant takes it into account for what follows.

@@ -1,3 +1,4 @@
+import { HEX_COLOR } from './color'
 import type { FieldKind } from './model'
 
 /**
@@ -275,13 +276,16 @@ function fits(field: ActionField, value: unknown): boolean {
     case 'text':
     case 'longText':
     case 'choice':
-    case 'color':
     case 'image':
       return (
         typeof value === 'string' &&
         (!field.required || value.trim() !== '') &&
         (!field.options || field.options.includes(value))
       )
+    // Apart from the strings, because every reader of a colour falls back SILENTLY on a value it
+    // cannot parse — the paint never took, and the caller was told it did.
+    case 'color':
+      return typeof value === 'string' && HEX_COLOR.test(value)
     case 'number':
     case 'integer':
     case 'seed':

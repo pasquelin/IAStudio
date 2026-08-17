@@ -253,13 +253,19 @@ dit plutôt que d’inventer un chiffre :
 
 **Quand une action va toucher à vos fichiers :**
 
-> *Cette action va modifier des fichiers de votre dossier de projet. Elle ne coûte aucune unité
-> créative, et l’Explorateur peut l’annuler.*
+> *Cette action va modifier ce que porte votre projet — des fichiers, ou les assets de sa
+> bibliothèque. Elle ne coûte aucune unité créative.*
 
 Celle-ci est délibérément **étroite** : déplacer, renommer, mettre à la corbeille, fermer un
-onglet qui porte du travail non enregistré, revenir en arrière sur un fichier suivi par git. Créer
-un dossier ou dupliquer un fichier n’enlève rien à personne et ne vous demande rien — un studio
-qui demanderait pour ceux-là vous apprendrait à cliquer **Autoriser** sans lire.
+onglet qui porte du travail non enregistré, revenir en arrière sur un fichier suivi par git,
+réécrire la dernière version enregistrée. Créer un dossier ou dupliquer un fichier n’enlève rien
+à personne et ne vous demande rien — un studio qui demanderait pour ceux-là vous apprendrait à
+cliquer **Autoriser** sans lire.
+
+**Étroite ne veut pas dire rattrapable.** L’Explorateur reprend un déplacement, un renommage ou
+une mise à la corbeille. Il ne reprend rien de ce qu’un fichier suivi par git n’avait jamais
+enregistré, rien d’une version réécrite, et rien d’un asset retiré aussi de la bibliothèque
+distante.
 
 Dans les trois cas, deux boutons : **Autoriser** et **Refuser**. Refuser n’exécute rien, et
 l’assistant en tient compte pour la suite de sa demande.

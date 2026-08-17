@@ -134,6 +134,34 @@ describe('building a stack', () => {
     await runAction('layer.ungroup', { layerId: groupId })
     expect(canvas().layers.some(one => one.id === groupId)).toBe(false)
   })
+
+  /**
+   * `groupLayers` gathers TOP-LEVEL layers only and hands the state back when it finds none, so
+   * an id that names nothing — or one already inside a group — was answered with the id of a
+   * group no layer carries.
+   */
+  it('refuses to group an id that is not a layer of the top level', async () => {
+    expect(await runAction('layer.group', { layerIds: ['layer-z'], name: 'Décor' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(canvas().layers.map(one => one.kind)).toEqual(['pixel', 'pixel'])
+  })
+
+  /** `moveLayer` refuses a parent that is no group by handing the state back — done, said twice. */
+  it('refuses a move under something that is not a group', async () => {
+    expect(
+      await runAction('layer.move', { layerId: 'layer-a', parentId: 'layer-b', index: 0 }),
+    ).toEqual({ ok: false, refusal: 'badInput' })
+    expect(layerIds()).toEqual(['layer-a', 'layer-b'])
+  })
+
+  /** `textLayer` names a layer after its own text; the name asked for is what a client looks up. */
+  it('keeps the name a text layer was asked for, not its text', async () => {
+    await runAction('layer.add', { kind: 'text', name: 'Titre', text: 'Générique' })
+
+    expect(canvas().layers.at(-1)?.name).toBe('Titre')
+  })
 })
 
 describe('styling and placing a layer', () => {

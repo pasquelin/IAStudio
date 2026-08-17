@@ -46,10 +46,9 @@ function moving(
   input: Record<string, unknown>,
   run: (bridge: StudioBridge, paths: string[], folder: string) => Promise<unknown>,
 ): Promise<ActionOutcome> {
-  const folder = textOf(input, 'folder')
-  return folder === null
-    ? Promise.resolve(refused('badInput'))
-    : changing(bridge => run(bridge, textsOf(input, 'paths'), folder))
+  return changing(bridge =>
+    run(bridge, textsOf(input, 'paths'), textOf(input, 'folder') ?? FOLDER_ROOT),
+  )
 }
 
 async function facts(input: Record<string, unknown>): Promise<ActionOutcome> {

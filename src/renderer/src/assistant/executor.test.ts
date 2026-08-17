@@ -481,4 +481,11 @@ describe('what a call engages', () => {
     expect(commitmentOfCall('command.run', { command: 'canvas.cutout' })).toBe('asset')
     expect(commitmentOfCall('command.run', { command: 'canvas.zoomIn' })).toBe('none')
   })
+
+  // Recording a version adds one; amending REPLACES the one already there, message and parent
+  // with it — the same loss `git.restore` is asked about, and it went through unasked.
+  it('asks before an amend rewrites the version already recorded', () => {
+    expect(commitmentOfCall('git.commit', { message: 'Un lot' })).toBe('none')
+    expect(commitmentOfCall('git.commit', { message: 'Un lot', amend: true })).toBe('files')
+  })
 })

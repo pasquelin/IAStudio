@@ -6,6 +6,7 @@ import {
   BLEND_MODES,
   adjustmentLayer,
   allLayers,
+  canMoveLayer,
   layerById,
   pixelLayer,
   textLayer,
@@ -130,10 +131,15 @@ function born(input: Record<string, unknown>, id: string, name: string): Layer |
     case 'pixel':
       return pixelLayer(id, name)
     case 'text':
-      return textLayer(id, textOf(input, 'text') ?? name, {
-        x: numberOf(input, 'x') ?? 0,
-        y: numberOf(input, 'y') ?? 0,
-      })
+      // `textLayer` names the layer after its own text; `name` is required here and is what a
+      // client will look the layer up by, so it wins.
+      return {
+        ...textLayer(id, textOf(input, 'text') ?? name, {
+          x: numberOf(input, 'x') ?? 0,
+          y: numberOf(input, 'y') ?? 0,
+        }),
+        name,
+      }
     case 'adjustment': {
       const adjustment = oneOf(input, 'adjustment', ADJUSTMENT_KINDS)
       // An adjustment layer with no dial named would be a row in the panel that changes nothing.
@@ -215,12 +221,20 @@ function duplicate(input: Record<string, unknown>): ActionOutcome {
 }
 
 function group(input: Record<string, unknown>): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
+
   const layerIds = textsOf(input, 'layerIds')
   const name = textOf(input, 'name')
   if (layerIds.length === 0 || name === null) return refused('badInput')
 
+  // Top level only, which is all `groupLayers` gathers: an id that names nothing, or one that sits
+  // INSIDE a group, would otherwise be dropped in silence and the group answered for regardless.
+  const top = new Set(open.state.layers.map(layer => layer.id))
+  if (layerIds.some(id => !top.has(id))) return refused('badInput')
+
   const groupId = newId()
-  const outcome = edit(() => [groupLayers(layerIds, groupId, name)])
+  const outcome = run(open.documentId, [groupLayers(layerIds, groupId, name)])
   return outcome.ok ? { ok: true, data: { layerId: groupId } } : outcome
 }
 
@@ -287,9 +301,14 @@ export const CANVAS_HANDLERS: ActionHandlers = {
   'layer.text': text,
   'layer.move': input => {
     const index = numberOf(input, 'index')
-    return index === null
-      ? refused('badInput')
-      : editLayer(input, layer => [moveLayer(layer.id, textOf(input, 'parentId'), index)])
+    if (index === null) return refused('badInput')
+
+    const parentId = textOf(input, 'parentId')
+    // `moveLayer` refuses a parent that is not a group, the layer itself, or one of its own
+    // descendants by handing the state back untouched — all three would read as done.
+    return editLayer(input, (layer, state) =>
+      canMoveLayer(state, layer.id, parentId) ? [moveLayer(layer.id, parentId, index)] : [],
+    )
   },
   'layer.duplicate': duplicate,
   'layer.group': group,
