@@ -24,6 +24,7 @@ import type {
   DocumentWrite,
 } from './domain/document'
 import type { GitBranch, GitCommit, GitCommitFile, GitRepository } from './domain/git'
+import type { GitDiff } from './domain/gitDiff'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -122,6 +123,8 @@ export type Channels = {
   gitCheckout: 'git:checkout'
   gitLog: 'git:log'
   gitCommitFiles: 'git:commit-files'
+  gitDiff: 'git:diff'
+  gitBytes: 'git:bytes'
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
@@ -277,6 +280,8 @@ export const CHANNELS: Channels = {
   gitCheckout: 'git:checkout',
   gitLog: 'git:log',
   gitCommitFiles: 'git:commit-files',
+  gitDiff: 'git:diff',
+  gitBytes: 'git:bytes',
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
@@ -956,6 +961,20 @@ export type StudioBridge = {
     log: (limit: number, skip: number) => Promise<GitCommit[]>
     /** What one recorded version changed. Read when a row is picked, never with the page. */
     commitFiles: (hash: string) => Promise<GitCommitFile[]>
+    /**
+     * What changed inside one file — within `commit`, or against the last recorded version when
+     * it is `null`. `binary` is the ordinary answer for most of a studio project, and what sends
+     * the panel to `bytes` below.
+     */
+    diff: (path: string, commit: string | null) => Promise<GitDiff>
+    /**
+     * The bytes of a file at one version, or as it stands on disk when `ref` is `null` — which
+     * is how two versions of a picture are put side by side.
+     *
+     * `null` for a path that version does not hold, and for anything past the ceiling the main
+     * process keeps: these cross the boundary and are held in a window, and a project holds video.
+     */
+    bytes: (path: string, ref: string | null) => Promise<Uint8Array | null>
   }
   dialog: {
     /**

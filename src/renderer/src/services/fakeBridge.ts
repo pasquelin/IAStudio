@@ -108,6 +108,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       checkout: () => Promise.resolve({ kind: 'no-project' }),
       log: () => Promise.resolve([]),
       commitFiles: () => Promise.resolve([]),
+      diff: () => Promise.resolve({ kind: 'empty' }),
+      bytes: () => Promise.resolve(null),
       ...overrides.git,
     },
     dialog: {

@@ -115,6 +115,8 @@ const bridge: StudioBridge = {
     checkout: name => ipcRenderer.invoke(CHANNELS.gitCheckout, name),
     log: (limit, skip) => ipcRenderer.invoke(CHANNELS.gitLog, limit, skip),
     commitFiles: hash => ipcRenderer.invoke(CHANNELS.gitCommitFiles, hash),
+    diff: (path, commit) => ipcRenderer.invoke(CHANNELS.gitDiff, path, commit),
+    bytes: (path, ref) => ipcRenderer.invoke(CHANNELS.gitBytes, path, ref),
   },
   dialog: {
     pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { GitBranch, GitCommit, GitCommitFile, GitRepository } from '@shared/domain/git'
+import type { GitDiff } from '@shared/domain/gitDiff'
 import { getBridge } from '@/services/bridge'
 
 /**
@@ -37,6 +38,17 @@ type GitState = {
   picked: string | null
   pickedFiles: readonly GitCommitFile[]
 
+  /**
+   * The file being compared, and against which version — `null` meaning the last recorded one.
+   *
+   * Held in the store rather than in the panel that draws it, because the two panels BOTH set it:
+   * the Git panel compares a file one is about to record, the History panel a file inside a
+   * version. Only the band is wide enough to draw the answer, so the narrow one asks and the wide
+   * one shows.
+   */
+  compared: { path: string; commit: string | null } | null
+  diff: GitDiff | null
+
   refresh: () => Promise<void>
   initRepository: () => Promise<void>
   stage: (paths: readonly string[]) => Promise<void>
@@ -51,6 +63,8 @@ type GitState = {
   /** Reads the first page afresh, or the next one under it. */
   readHistory: (more: boolean) => Promise<void>
   pick: (hash: string | null) => Promise<void>
+  compare: (path: string, commit: string | null) => Promise<void>
+  stopComparing: () => void
 }
 
 /**
@@ -95,6 +109,8 @@ export const useGit = create<GitState>()((set, get) => {
     historyEnded: false,
     picked: null,
     pickedFiles: [],
+    compared: null,
+    diff: null,
 
     refresh: () => run(getBridge()?.git.read()),
     initRepository: () => run(getBridge()?.git.init()),
@@ -143,5 +159,18 @@ export const useGit = create<GitState>()((set, get) => {
       // would otherwise land last and fill the row that is no longer picked.
       if (get().picked === hash) set({ pickedFiles: files })
     },
+
+    compare: async (path, commit) => {
+      set({ compared: { path, commit }, diff: null })
+
+      const diff = (await getBridge()?.git.diff(path, commit)) ?? { kind: 'empty' }
+
+      // The same race as `pick`, and it bites harder here: a diff is the slowest thing git is
+      // asked for, so a second file clicked while the first is still out is the ordinary case.
+      const still = get().compared
+      if (still?.path === path && still.commit === commit) set({ diff })
+    },
+
+    stopComparing: () => set({ compared: null, diff: null }),
   }
 })

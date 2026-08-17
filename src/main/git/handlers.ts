@@ -9,8 +9,10 @@ import {
   parseBranchName,
   parseCommitHash,
   parseCommitMessage,
+  parseGitPath,
   parseGitPaths,
   parseLogPage,
+  parseOptionalHash,
 } from './validation'
 
 export type GitHandlerDeps = {
@@ -57,6 +59,12 @@ export function registerGitHandlers({ project, binaryPath, identity }: GitHandle
     return service.log(page.limit, page.skip)
   })
   handle(CHANNELS.gitCommitFiles, (_event, hash) => service.commitFiles(parseCommitHash(hash)))
+  handle(CHANNELS.gitDiff, (_event, path, commit) =>
+    service.diff(parseGitPath(path), parseOptionalHash(commit)),
+  )
+  handle(CHANNELS.gitBytes, (_event, path, ref) =>
+    service.bytes(parseGitPath(path), parseOptionalHash(ref)),
+  )
 
   return service
 }

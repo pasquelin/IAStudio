@@ -4,6 +4,7 @@ import { EmptyState } from '@/design/EmptyState'
 import { useGitHistory } from '@/hooks/useGitHistory'
 import { useGit } from '@/stores/git'
 import { CommitFiles } from './CommitFiles'
+import { DiffPane } from './DiffPane'
 import { HistoryList } from './HistoryList'
 
 /**
@@ -33,9 +34,13 @@ export function History() {
 
       {picked !== null && (
         <div className="border-border w-64 shrink-0 border-l">
-          <CommitFiles files={pickedFiles} />
+          <CommitFiles files={pickedFiles} commit={picked} />
         </div>
       )}
+
+      {/* Draws nothing until a file is being compared — and the file may have been picked in the
+          Git panel, which is why this is here rather than beside the column above. */}
+      <DiffPane />
     </div>
   )
 }

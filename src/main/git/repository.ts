@@ -8,7 +8,10 @@ import {
   type GitIdentity,
   type GitStatus,
 } from '@shared/domain/git'
+import type { GitDiff } from '@shared/domain/gitDiff'
+import { parseUnifiedDiff } from '@shared/domain/gitDiff'
 import { exists, writeAtomic } from '@main/persistence'
+import { blobAt, workingBlob } from './blob'
 import { filesOf, LOG_FORMAT, parseLog, parseNameStatus } from './parse'
 
 export const GITIGNORE_FILE = '.gitignore'
@@ -37,6 +40,10 @@ export type Repository = {
   log: (limit: number, skip: number) => Promise<GitCommit[]>
   /** What one recorded version changed. */
   commitFiles: (hash: string) => Promise<GitCommitFile[]>
+  /** What changed in one file — inside a commit, or against the last version when `null`. */
+  diff: (path: string, commit: string | null) => Promise<GitDiff>
+  /** The bytes of a file at one version, or as it stands on disk when `ref` is `null`. */
+  bytes: (path: string, ref: string | null) => Promise<Uint8Array | null>
 }
 
 /**
@@ -110,6 +117,21 @@ export function openRepository(root: string, binary?: string): Repository {
       parseNameStatus(
         await git.raw(['show', '--name-status', '--format=', '-m', '--first-parent', hash]),
       ),
+
+    /**
+     * `HEAD` rather than nothing for a working file, so ONE view answers "what have I changed
+     * since the last version" whether the change has been ticked or not. A bare `git diff` shows
+     * only the unticked half, which reads as the change disappearing the moment it is ticked.
+     */
+    diff: async (path, commit) =>
+      parseUnifiedDiff(
+        commit === null
+          ? await git.raw(['diff', 'HEAD', '--', path])
+          : await git.raw(['show', '--format=', '-m', '--first-parent', commit, '--', path]),
+      ),
+
+    bytes: (path, ref) =>
+      ref === null ? workingBlob(root, path) : blobAt(root, ref, path, binary ?? 'git'),
   }
 }
 

@@ -1,10 +1,12 @@
-import { mdiUndoVariant } from '@mdi/js'
+import { mdiFileCompare, mdiUndoVariant } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { canRestore, type GitFile } from '@shared/domain/git'
+import { nameOf, parentOf } from '@shared/domain/folder'
 import { Row } from '@/design/Row'
 import { ToolButton } from '@/design/ToolButton'
 import { TONE_TEXT, type StatusTone } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { revealTool } from '@/helpers/reveal-panel'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
 
@@ -38,11 +40,12 @@ export function GitFileRow({ file }: { file: GitFile }) {
   const stage = useGit(state => state.stage)
   const unstage = useGit(state => state.unstage)
   const restore = useGit(state => state.restore)
+  const compare = useGit(state => state.compare)
 
   return (
     <Row
       title={nameOf(file.path)}
-      subtitle={folderOf(file.path)}
+      subtitle={parentOf(file.path) ?? undefined}
       hint={
         file.from === undefined
           ? `${file.path} · ${t(`git.change.${file.change}`)}`
@@ -67,32 +70,38 @@ export function GitFileRow({ file }: { file: GitFile }) {
         </span>
       }
       actions={
-        canRestore(file) ? (
+        <>
+          {/* Asked here and answered in the band. This column is a side panel and a diff is read
+              ACROSS — so the click sets what to compare and brings the wide panel forward. */}
           <ToolButton
-            icon={mdiUndoVariant}
-            // Named for its FILE, not for the gesture. A panel with six changed files carried
-            // six buttons a reader heard as « Rétablir » six times over, with nothing to tell
-            // them apart — and no way to know which one was about to be undone.
-            label={t('git.restoreFile', { name: file.path })}
-            description={t('git.restoreHint')}
+            icon={mdiFileCompare}
+            label={t('git.compareFile', { name: file.path })}
+            description={t('git.compareHint')}
             tooltip={TIP_LEFT}
             variant="row"
             disabled={busy}
-            onClick={() => void restore([file.path])}
+            onClick={() => {
+              void compare(file.path, null)
+              revealTool('history')
+            }}
           />
-        ) : undefined
+
+          {canRestore(file) && (
+            <ToolButton
+              icon={mdiUndoVariant}
+              // Named for its FILE, not for the gesture. A panel with six changed files carried
+              // six buttons a reader heard as « Restaurer » six times over, with nothing to tell
+              // them apart — and no way to know which one was about to be undone.
+              label={t('git.restoreFile', { name: file.path })}
+              description={t('git.restoreHint')}
+              tooltip={TIP_LEFT}
+              variant="row"
+              disabled={busy}
+              onClick={() => void restore([file.path])}
+            />
+          )}
+        </>
       }
     />
   )
-}
-
-/** The file, which is what one reads. Git writes slashes on every platform, Windows included. */
-function nameOf(path: string): string {
-  return path.slice(path.lastIndexOf('/') + 1)
-}
-
-/** Where it sits, or nothing at the root — a subtitle repeating the name would be noise. */
-function folderOf(path: string): string | undefined {
-  const cut = path.lastIndexOf('/')
-  return cut === -1 ? undefined : path.slice(0, cut)
 }

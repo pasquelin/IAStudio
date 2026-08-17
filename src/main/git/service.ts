@@ -6,6 +6,7 @@ import type {
   GitIdentity,
   GitRepository,
 } from '@shared/domain/git'
+import type { GitDiff } from '@shared/domain/gitDiff'
 import { detectGit, type VersionProbe } from './binary'
 import { failureOf, safeMessage } from './parse'
 import type { Repository } from './repository'
@@ -37,6 +38,9 @@ export type GitService = {
   /** A page of the history, newest first. Empty where there is none, and where git refused. */
   log: (limit: number, skip: number) => Promise<GitCommit[]>
   commitFiles: (hash: string) => Promise<GitCommitFile[]>
+  /** What changed in one file. `empty` covers both "nothing" and "git could not say". */
+  diff: (path: string, commit: string | null) => Promise<GitDiff>
+  bytes: (path: string, ref: string | null) => Promise<Uint8Array | null>
   /** Drops what was detected and held, so a changed preference is read afresh. */
   forget: () => void
 }
@@ -164,6 +168,24 @@ export function createGitService({
     branches: () => data(repository => repository.branches()),
     log: (limit, skip) => data(repository => repository.log(limit, skip)),
     commitFiles: hash => data(repository => repository.commitFiles(hash)),
+
+    diff: async (path, commit) => {
+      const found = await reach()
+      if (!found.reached) return { kind: 'empty' }
+
+      try {
+        return await found.repository.diff(path, commit)
+      } catch {
+        // A file the version does not hold, a path git will not read: nothing to compare, which
+        // is what `empty` says. The Git panel carries the screen that explains a broken folder.
+        return { kind: 'empty' }
+      }
+    },
+
+    bytes: async (path, ref) => {
+      const found = await reach()
+      return found.reached ? await found.repository.bytes(path, ref) : null
+    },
 
     forget: () => {
       detected = null

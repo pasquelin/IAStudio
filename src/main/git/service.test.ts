@@ -27,6 +27,8 @@ function repository(overrides: Partial<Repository> = {}): Repository {
     checkout: () => Promise.resolve(),
     log: () => Promise.resolve([]),
     commitFiles: () => Promise.resolve([]),
+    diff: () => Promise.resolve({ kind: 'empty' }),
+    bytes: () => Promise.resolve(null),
     ...overrides,
   }
 }

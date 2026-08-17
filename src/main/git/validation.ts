@@ -36,6 +36,10 @@ export function parseGitPaths(value: unknown): string[] {
   return paths.parse(value)
 }
 
+export function parseGitPath(value: unknown): string {
+  return gitPath.parse(value)
+}
+
 /**
  * What a commit is recorded under. Bounded rather than trusted — it reaches git as an argument,
  * and the panel's own field is four lines.
@@ -68,6 +72,15 @@ const commitHash = z
 
 export function parseCommitHash(value: unknown): string {
   return commitHash.parse(value)
+}
+
+/**
+ * The same, where nothing is a legitimate answer: a comparison against the working copy names no
+ * version. `null` is the only thing accepted beside a hash — `undefined` would let a caller that
+ * forgot the argument be read as one that meant the working copy.
+ */
+export function parseOptionalHash(value: unknown): string | null {
+  return value === null ? null : commitHash.parse(value)
 }
 
 /**
