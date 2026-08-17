@@ -2,6 +2,7 @@ import { isAbsolute } from 'node:path'
 import { z } from 'zod'
 import {
   ASSET_PATHS_MAX,
+  ASSET_SEARCH_LIMIT_MAX,
   ASSET_TYPES,
   isAssetType,
   isSyncStatus,
@@ -126,7 +127,7 @@ const assetQuery = z.object({
   generated: z.literal(true).optional(),
   // Bounded here rather than in SQL: the renderer chooses the page size, and an unbounded
   // one would pull an entire well-stocked project across the IPC boundary in one message.
-  limit: z.number().int().min(1).max(500).optional(),
+  limit: z.number().int().min(1).max(ASSET_SEARCH_LIMIT_MAX).optional(),
   offset: z.number().int().min(0).optional(),
 })
 

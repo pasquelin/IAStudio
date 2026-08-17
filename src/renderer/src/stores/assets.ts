@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Asset, AssetQuery, AssetType } from '@shared/domain/asset'
+import {
+  ASSET_SEARCH_LIMIT_MAX,
+  type Asset,
+  type AssetQuery,
+  type AssetType,
+} from '@shared/domain/asset'
 import {
   COLLECTION_PERSIST_VERSION,
   DEFAULT_COLLECTION_STATE,
@@ -112,14 +117,14 @@ type AssetsState = {
 const COALESCE_MS = 200
 
 /**
- * How many rows one read brings back — the ceiling `catalog.search` already applies when asked
- * for nothing. Said out loud so a page AFTER the first can be asked for, and left at 200 so no
- * reader of `items` sees less than before this store learned to page.
+ * How many rows one SCROLL brings back — the ceiling `catalog.search` already applies when asked
+ * for nothing. Left at 200 so no reader of `items` sees less than before this store learned to
+ * page; a refresh reads whole multiples of it, up to `ASSET_SEARCH_LIMIT_MAX` at a time.
  */
 const LOCAL_PAGE = 200
 
-function pageOf(scope: readonly AssetType[] | null, offset: number): AssetQuery {
-  return { ...(scope ? { types: [...scope] } : {}), limit: LOCAL_PAGE, offset }
+function pageOf(scope: readonly AssetType[] | null, offset: number, limit: number): AssetQuery {
+  return { ...(scope ? { types: [...scope] } : {}), limit, offset }
 }
 
 function withoutHeld(held: readonly Asset[], page: readonly Asset[]): Asset[] {
@@ -257,7 +262,7 @@ export const useAssets = create<AssetsState>()(
             if (!bridge) return
 
             try {
-              const page = await bridge.assets.search(pageOf(scope, offset))
+              const page = await bridge.assets.search(pageOf(scope, offset, LOCAL_PAGE))
               // The space may have changed while this was in flight, and its rows are another
               // list's: appended they would be two scopes shown as one.
               if (!sameScope(get().scope, scope)) return
@@ -299,22 +304,26 @@ export const useAssets = create<AssetsState>()(
 
             try {
               const found: Asset[] = []
-              let pages = 0
               let more = false
 
-              // In sequence, and not as one wide query: `limit` refuses past 500, and each call is
-              // a synchronous SQLite query on the process every window shares.
-              // Read afresh each turn, not captured: a `loadMore` landing mid-refresh grows the
-              // shelf, and a bound taken before it would hand back less than what is on screen.
-              for (let page = 0; page < pagesRead; page += 1) {
-                const rows = await bridge.assets.search(pageOf(scope, page * LOCAL_PAGE))
+              // As wide as the query is allowed to be, not one call per page shown: each is a
+              // synchronous SQLite query on the process every window shares. The bound is re-read
+              // each turn, so a `loadMore` landing mid-refresh is not handed back a shorter list.
+              while (found.length < pagesRead * LOCAL_PAGE) {
+                const limit = Math.min(
+                  ASSET_SEARCH_LIMIT_MAX,
+                  pagesRead * LOCAL_PAGE - found.length,
+                )
+                const rows = await bridge.assets.search(pageOf(scope, found.length, limit))
                 found.push(...rows)
-                pages += 1
-                more = rows.length === LOCAL_PAGE
+                // Against what was ASKED for, not `LOCAL_PAGE`: a refresh reads wider than a page.
+                more = rows.length === limit
                 if (!more) break
               }
 
-              pagesRead = pages
+              // Rounded up so a part-filled page is asked for whole next time, and never zero:
+              // an empty catalogue must still leave a page to read.
+              pagesRead = Math.max(1, Math.ceil(found.length / LOCAL_PAGE))
               set({ items: found, hasMore: more })
             } catch {
               // No project open: the catalogue throws, and an empty list is the honest answer.
