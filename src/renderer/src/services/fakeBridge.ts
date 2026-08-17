@@ -99,6 +99,13 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       // test that never mentions version control should be looking at.
       read: () => Promise.resolve({ kind: 'no-project' }),
       init: () => Promise.resolve({ kind: 'no-project' }),
+      stage: () => Promise.resolve({ kind: 'no-project' }),
+      unstage: () => Promise.resolve({ kind: 'no-project' }),
+      restore: () => Promise.resolve({ kind: 'no-project' }),
+      commit: () => Promise.resolve({ kind: 'no-project' }),
+      branches: () => Promise.resolve([]),
+      createBranch: () => Promise.resolve({ kind: 'no-project' }),
+      checkout: () => Promise.resolve({ kind: 'no-project' }),
       ...overrides.git,
     },
     dialog: {

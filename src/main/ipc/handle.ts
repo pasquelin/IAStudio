@@ -60,6 +60,13 @@ type ChannelMethod = {
 
   [CHANNELS.gitRead]: StudioBridge['git']['read']
   [CHANNELS.gitInit]: StudioBridge['git']['init']
+  [CHANNELS.gitStage]: StudioBridge['git']['stage']
+  [CHANNELS.gitUnstage]: StudioBridge['git']['unstage']
+  [CHANNELS.gitRestore]: StudioBridge['git']['restore']
+  [CHANNELS.gitCommit]: StudioBridge['git']['commit']
+  [CHANNELS.gitBranches]: StudioBridge['git']['branches']
+  [CHANNELS.gitCreateBranch]: StudioBridge['git']['createBranch']
+  [CHANNELS.gitCheckout]: StudioBridge['git']['checkout']
 
   [CHANNELS.dialogPickPath]: StudioBridge['dialog']['pickPath']
   [CHANNELS.dialogExportPicture]: StudioBridge['dialog']['exportPicture']

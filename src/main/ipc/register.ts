@@ -50,6 +50,12 @@ export function registerIpc(services: Services): void {
   registerGitHandlers({
     project: services.project,
     binaryPath: () => services.settings.read().git.binary || undefined,
+    // Both halves or neither: git wants a name AND an address, and handing it one would make
+    // every commit fail on the other. Left out, git reads the machine's own configuration.
+    identity: () => {
+      const { userName, userEmail } = services.settings.read().git
+      return userName && userEmail ? { name: userName, email: userEmail } : undefined
+    },
   })
   registerAssetHandlers({
     catalog: () => services.project.catalog(),

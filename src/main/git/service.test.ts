@@ -18,6 +18,13 @@ function repository(overrides: Partial<Repository> = {}): Repository {
     isRepository: () => Promise.resolve(true),
     init: () => Promise.resolve(),
     status: () => Promise.resolve(CLEAN),
+    stage: () => Promise.resolve(),
+    unstage: () => Promise.resolve(),
+    restore: () => Promise.resolve(),
+    commit: () => Promise.resolve(),
+    branches: () => Promise.resolve([{ name: 'main', current: true }]),
+    createBranch: () => Promise.resolve(),
+    checkout: () => Promise.resolve(),
     ...overrides,
   }
 }
@@ -26,6 +33,7 @@ function service(overrides: Partial<GitServiceDeps> = {}) {
   return createGitService({
     projectPath: () => '/projects/Mon projet',
     binaryPath: () => undefined,
+    identity: () => undefined,
     probe: () => async () => ({ installed: true, major: 2, minor: 45, patch: 1 }),
     open: () => repository(),
     ...overrides,

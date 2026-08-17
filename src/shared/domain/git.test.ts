@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  canCommit,
+  canRestore,
   defaultIgnore,
   filesInStage,
   hasChanges,
   hasStagedFiles,
+  isBranchName,
   pathsOf,
   type GitFile,
 } from './git'
@@ -78,6 +81,66 @@ describe('a repository with nothing waiting', () => {
 
     expect(hasChanges({ ...status, files: [] })).toBe(false)
     expect(hasChanges({ ...status, files: [file('a.png', 'untracked', 'untracked')] })).toBe(true)
+  })
+})
+
+describe('whether a version can be recorded', () => {
+  it('wants both something ticked and something said', () => {
+    const staged = [file('a.png', 'staged', 'added')]
+
+    expect(canCommit(staged, '', false)).toBe(false)
+    expect(canCommit([], 'un plan large', false)).toBe(false)
+    expect(canCommit(staged, 'un plan large', false)).toBe(true)
+  })
+
+  /** A blank line is not a message, and git would take it — leaving a version nobody can read. */
+  it('refuses a message made of nothing but space', () => {
+    expect(canCommit([file('a.png', 'staged', 'added')], '   \n ', false)).toBe(false)
+  })
+
+  /**
+   * Rewording the last message is the commonest reason to reach for an amend, and it stages
+   * nothing. Refusing it would leave a typo permanent.
+   */
+  it('lets an amend through with nothing ticked', () => {
+    expect(canCommit([], 'un plan large', true)).toBe(true)
+  })
+})
+
+describe('whether a file can be put back', () => {
+  it('offers it for the two changes that have an earlier version to go back to', () => {
+    expect(canRestore(file('a.png', 'unstaged', 'modified'))).toBe(true)
+    expect(canRestore(file('a.png', 'unstaged', 'deleted'))).toBe(true)
+  })
+
+  /**
+   * A file git has never seen, and one being added for the first time, have no earlier version
+   * anywhere: the only other reading of the gesture is a deletion, and that belongs to the
+   * Explorer, where it goes through the system's wastebasket rather than vanishing.
+   */
+  it('withholds it where there is nothing earlier to restore', () => {
+    expect(canRestore(file('a.png', 'untracked', 'untracked'))).toBe(false)
+    expect(canRestore(file('a.png', 'staged', 'added'))).toBe(false)
+  })
+})
+
+describe('a name git would take as a branch', () => {
+  it('accepts the shapes people actually type', () => {
+    expect(isBranchName('essai-lumiere')).toBe(true)
+    expect(isBranchName('feat/panneau_git')).toBe(true)
+  })
+
+  it.each([
+    ['', 'nothing at all'],
+    ['  ', 'space alone'],
+    ['essai lumiere', 'a space inside'],
+    ['essai..lumiere', 'two dots'],
+    ['~essai', 'a character git reserves'],
+    ['/essai', 'a leading slash'],
+    ['essai/', 'a trailing slash'],
+    ['essai.lock', 'the suffix git keeps for itself'],
+  ])('refuses %s — %s', name => {
+    expect(isBranchName(name)).toBe(false)
   })
 })
 

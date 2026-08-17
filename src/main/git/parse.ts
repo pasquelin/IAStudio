@@ -81,6 +81,11 @@ export function failureOf(error: unknown): GitFailure {
   }
   if (/index\.lock|unable to create .*\.lock|another git process/i.test(message)) return 'locked'
   if (/enoent|command not found|spawn git|git: not found/i.test(message)) return 'binary-missing'
+  // The first commit on a machine where git has never been configured. Common enough to earn a
+  // sentence of its own — git's own runs to eight lines and ends in a shell command.
+  if (/please tell me who you are|unable to auto-detect email|empty ident name/i.test(message)) {
+    return 'no-identity'
+  }
   if (
     /authentication failed|could not read username|could not read password|permission denied \(publickey\)|invalid username or password|access denied/i.test(
       message,

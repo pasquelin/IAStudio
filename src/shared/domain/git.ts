@@ -76,6 +76,7 @@ export type GitFailure =
   | 'binary-missing'
   | 'not-a-repository'
   | 'locked'
+  | 'no-identity'
   | 'authentication'
   | 'network'
   | 'conflict'
@@ -92,6 +93,7 @@ export const GIT_FAILURE_KEYS: Record<GitFailure, string> = {
   'binary-missing': 'git.failure.binaryMissing',
   'not-a-repository': 'git.failure.notARepository',
   locked: 'git.failure.locked',
+  'no-identity': 'git.failure.noIdentity',
   authentication: 'git.failure.authentication',
   network: 'git.failure.network',
   conflict: 'git.failure.conflict',
@@ -117,6 +119,58 @@ export type GitRepository =
 
 /** Whether git itself was found on this machine, and which version answered. */
 export type GitBinary = { found: false } | { found: true; version: string }
+
+/** A local branch. What it tracks belongs to the remote, and arrives with it. */
+export type GitBranch = { name: string; current: boolean }
+
+/** Who a commit is recorded under, when the studio has been told rather than left to git. */
+export type GitIdentity = { name: string; email: string }
+
+/**
+ * Whether a commit would be accepted.
+ *
+ * An amend needs no staged file — rewording the last message is the commonest reason to reach
+ * for it, and refusing that would leave a typo permanent. Everything else needs both.
+ */
+export function canCommit(files: readonly GitFile[], message: string, amend: boolean): boolean {
+  return message.trim() !== '' && (amend || hasStagedFiles(files))
+}
+
+/**
+ * Whether a file can be put back the way the last recorded version has it.
+ *
+ * Two changes and no more, and what rules the others out is that there is nothing to put back:
+ * a file git has never seen, and a file being ADDED for the first time, have no earlier version
+ * anywhere. Deleting them would be the only other reading of the gesture, and that belongs to
+ * the Explorer one icon along — where it goes through the system's own wastebasket rather than
+ * vanishing out of a version panel.
+ *
+ * A rename is left out for the same reason read the other way round: putting one back means
+ * restoring two paths, and a gesture that silently touches a file the user did not click is a
+ * gesture nobody can predict.
+ */
+export function canRestore(file: GitFile): boolean {
+  return file.change === 'modified' || file.change === 'deleted'
+}
+
+/**
+ * Whether git would accept the name as a branch.
+ *
+ * Asked BEFORE the command rather than after, because git's own refusal is a `check-ref-format`
+ * message written for someone reading a manual page. This is not the whole of git's rule — it
+ * cannot be, the rule mentions the reflog — and it does not need to be: git still refuses what
+ * gets past, and what gets past is no longer the ordinary mistakes.
+ */
+export function isBranchName(name: string): boolean {
+  if (name.trim() !== name || name === '') return false
+  if (/[\s~^:?*[\\]/.test(name)) return false
+  if (name.includes('..') || name.includes('@{')) return false
+  if (name.startsWith('/') || name.endsWith('/') || name.endsWith('.') || name.endsWith('.lock')) {
+    return false
+  }
+
+  return true
+}
 
 /**
  * The files of one stage, in a stable order.

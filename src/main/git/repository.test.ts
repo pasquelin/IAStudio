@@ -2,8 +2,9 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
+import type { GitStatus } from '@shared/domain/git'
 import { detectGit, gitVersionProbe } from './binary'
-import { GITIGNORE_FILE, openRepository } from './repository'
+import { GITIGNORE_FILE, openRepository, type Repository } from './repository'
 
 /**
  * The one suite here that runs the real binary, and it is where that is worth paying for: what
@@ -100,3 +101,122 @@ describe('a project folder under version control', () => {
     expect(await openRepository(inner).isRepository()).toBe(false)
   })
 })
+
+/** Somebody, so `git commit` does not stop on a machine where git was never configured. */
+const AUTHOR = { name: 'Suite', email: 'suite@example.com' }
+
+async function repositoryWithACommit(): Promise<Repository> {
+  const repository = openRepository(await project())
+  await repository.init()
+  await repository.stage(['notes.txt', '.project.json'])
+  await repository.commit('premiere version', false, AUTHOR)
+  return repository
+}
+
+describe('what the tick does', () => {
+  it('moves a file into what the next version will record', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = openRepository(await project())
+    await repository.init()
+    await repository.stage(['notes.txt'])
+
+    expect(stageOf(await repository.status(), 'notes.txt')).toBe('staged')
+  })
+
+  /**
+   * The case a single command gets wrong. `git reset` resolves HEAD, so on a repository that has
+   * no first commit — exactly what `git init` leaves, and exactly where somebody first ticks
+   * something by mistake — it fails on an ambiguous argument instead of unticking.
+   */
+  it('takes one back out on a repository that has no first commit yet', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = openRepository(await project())
+    await repository.init()
+    await repository.stage(['notes.txt'])
+    await repository.unstage(['notes.txt'])
+
+    expect(stageOf(await repository.status(), 'notes.txt')).toBe('untracked')
+  })
+
+  /** And on one that has: here `git rm --cached` would stage a DELETION rather than untick. */
+  it('takes one back out on a repository with a history, without deleting it', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    await writeFile(join(repository.root, 'notes.txt'), 'edited')
+    await repository.stage(['notes.txt'])
+    await repository.unstage(['notes.txt'])
+
+    const status = await repository.status()
+    expect(stageOf(status, 'notes.txt')).toBe('unstaged')
+    expect(status.files.find(file => file.path === 'notes.txt')?.change).toBe('modified')
+  })
+})
+
+describe('recording a version', () => {
+  it('leaves a head, a branch and nothing waiting', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const status = await (await repositoryWithACommit()).status()
+
+    expect(status.head).not.toBeNull()
+    expect(status.branch).not.toBeNull()
+    expect(status.files.map(file => file.path)).toEqual(['.gitignore'])
+  })
+
+  it('puts a modified file back the way the last version has it', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    await writeFile(join(repository.root, 'notes.txt'), 'edited')
+
+    await repository.restore(['notes.txt'])
+
+    expect(await readFile(join(repository.root, 'notes.txt'), 'utf8')).toBe('hello')
+  })
+
+  /** A file staged AND edited again would otherwise need the button twice to come back. */
+  it('puts one back from both halves at once', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    await writeFile(join(repository.root, 'notes.txt'), 'staged edit')
+    await repository.stage(['notes.txt'])
+    await writeFile(join(repository.root, 'notes.txt'), 'second edit')
+
+    await repository.restore(['notes.txt'])
+
+    const status = await repository.status()
+    expect(status.files.map(file => file.path)).toEqual(['.gitignore'])
+  })
+})
+
+describe('branches', () => {
+  it('names the one that is out among those there are', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    await repository.createBranch('essai-lumiere')
+
+    expect(await repository.branches()).toContainEqual({ name: 'essai-lumiere', current: true })
+  })
+
+  it('swings the folder over to another, and back', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    const first = (await repository.status()).branch ?? ''
+    await repository.createBranch('essai-lumiere')
+
+    await repository.checkout(first)
+
+    expect((await repository.status()).branch).toBe(first)
+  })
+})
+
+/** Which half of git a path sits in, or nothing where it is not waiting at all. */
+function stageOf(status: GitStatus, path: string): string | undefined {
+  return status.files.find(file => file.path === path)?.stage
+}

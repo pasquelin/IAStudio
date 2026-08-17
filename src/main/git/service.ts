@@ -1,4 +1,4 @@
-import type { GitBinary, GitRepository } from '@shared/domain/git'
+import type { GitBinary, GitBranch, GitIdentity, GitRepository } from '@shared/domain/git'
 import { detectGit, type VersionProbe } from './binary'
 import { failureOf, safeMessage } from './parse'
 import type { Repository } from './repository'
@@ -8,6 +8,8 @@ export type GitServiceDeps = {
   projectPath: () => string | null
   /** A binary the user named in the preferences, or nothing to take whatever is on the PATH. */
   binaryPath: () => string | undefined
+  /** Who to record a commit under, or nothing to leave git reading its own configuration. */
+  identity: () => GitIdentity | undefined
   probe: (binary?: string) => VersionProbe
   /** Throws for a binary simple-git will not accept — see `openRepository`. */
   open: (root: string, binary?: string) => Repository
@@ -16,8 +18,15 @@ export type GitServiceDeps = {
 export type GitService = {
   /** Everything the panel needs in one answer, including the four states before `ready`. */
   read: () => Promise<GitRepository>
-  /** `git init` on the open project, then the state it left. */
   init: () => Promise<GitRepository>
+  stage: (paths: readonly string[]) => Promise<GitRepository>
+  unstage: (paths: readonly string[]) => Promise<GitRepository>
+  restore: (paths: readonly string[]) => Promise<GitRepository>
+  commit: (message: string, amend: boolean) => Promise<GitRepository>
+  /** Empty where git could not answer: a menu with no rows says the same thing as a failure. */
+  branches: () => Promise<GitBranch[]>
+  createBranch: (name: string) => Promise<GitRepository>
+  checkout: (name: string) => Promise<GitRepository>
   /** Drops what was detected and held, so a changed preference is read afresh. */
   forget: () => void
 }
@@ -30,10 +39,15 @@ export type GitService = {
  * project, whose simple-git instance carries the queue that keeps commands from colliding.
  * Building a fresh one per call would hand out a fresh queue with it, which is the same as
  * having none.
+ *
+ * Every gesture answers with the state it LEFT rather than with nothing. One round trip instead
+ * of two, and — the part that matters — no window between the command and the refresh in which
+ * two panels could draw a repository that is already out of date.
  */
 export function createGitService({
   projectPath,
   binaryPath,
+  identity,
   probe,
   open,
 }: GitServiceDeps): GitService {
@@ -89,20 +103,45 @@ export function createGitService({
     }
   }
 
+  /** Runs one gesture and answers with the state it left, or with why it did not happen. */
+  const perform = async (
+    run: (repository: Repository) => Promise<void>,
+  ): Promise<GitRepository> => {
+    const found = await reach()
+    if (!found.reached) return found.state
+
+    try {
+      await run(found.repository)
+    } catch (error) {
+      return { kind: 'failed', reason: failureOf(error), detail: safeMessage(error) }
+    }
+
+    return await read()
+  }
+
   return {
     read,
 
-    init: async () => {
+    init: () => perform(repository => repository.init()),
+    stage: paths => perform(repository => repository.stage(paths)),
+    unstage: paths => perform(repository => repository.unstage(paths)),
+    restore: paths => perform(repository => repository.restore(paths)),
+    commit: (message, amend) =>
+      perform(repository => repository.commit(message, amend, identity())),
+    createBranch: name => perform(repository => repository.createBranch(name)),
+    checkout: name => perform(repository => repository.checkout(name)),
+
+    branches: async () => {
       const found = await reach()
-      if (!found.reached) return found.state
+      if (!found.reached) return []
 
       try {
-        await found.repository.init()
-      } catch (error) {
-        return { kind: 'failed', reason: failureOf(error), detail: safeMessage(error) }
+        return await found.repository.branches()
+      } catch {
+        // A menu with no rows says what a failure would, and there is no screen to say it on:
+        // the branch button is a menu, not a panel.
+        return []
       }
-
-      return await read()
     },
 
     forget: () => {

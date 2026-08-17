@@ -106,6 +106,13 @@ const bridge: StudioBridge = {
   git: {
     read: () => ipcRenderer.invoke(CHANNELS.gitRead),
     init: () => ipcRenderer.invoke(CHANNELS.gitInit),
+    stage: paths => ipcRenderer.invoke(CHANNELS.gitStage, paths),
+    unstage: paths => ipcRenderer.invoke(CHANNELS.gitUnstage, paths),
+    restore: paths => ipcRenderer.invoke(CHANNELS.gitRestore, paths),
+    commit: (message, amend) => ipcRenderer.invoke(CHANNELS.gitCommit, message, amend),
+    branches: () => ipcRenderer.invoke(CHANNELS.gitBranches),
+    createBranch: name => ipcRenderer.invoke(CHANNELS.gitCreateBranch, name),
+    checkout: name => ipcRenderer.invoke(CHANNELS.gitCheckout, name),
   },
   dialog: {
     pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),

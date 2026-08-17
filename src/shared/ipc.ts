@@ -23,7 +23,7 @@ import type {
   DocumentKind,
   DocumentWrite,
 } from './domain/document'
-import type { GitRepository } from './domain/git'
+import type { GitBranch, GitRepository } from './domain/git'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -113,6 +113,13 @@ export type Channels = {
 
   gitRead: 'git:read'
   gitInit: 'git:init'
+  gitStage: 'git:stage'
+  gitUnstage: 'git:unstage'
+  gitRestore: 'git:restore'
+  gitCommit: 'git:commit'
+  gitBranches: 'git:branches'
+  gitCreateBranch: 'git:create-branch'
+  gitCheckout: 'git:checkout'
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
@@ -259,6 +266,13 @@ export const CHANNELS: Channels = {
 
   gitRead: 'git:read',
   gitInit: 'git:init',
+  gitStage: 'git:stage',
+  gitUnstage: 'git:unstage',
+  gitRestore: 'git:restore',
+  gitCommit: 'git:commit',
+  gitBranches: 'git:branches',
+  gitCreateBranch: 'git:create-branch',
+  gitCheckout: 'git:checkout',
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
@@ -918,6 +932,19 @@ export type StudioBridge = {
     read: () => Promise<GitRepository>
     /** `git init` on the open project, plus the ignore file, then the state it left. */
     init: () => Promise<GitRepository>
+    /**
+     * Every gesture answers with the state it LEFT rather than with nothing. One round trip
+     * instead of two, and no window in which two panels could draw a folder already out of date.
+     */
+    stage: (paths: readonly string[]) => Promise<GitRepository>
+    unstage: (paths: readonly string[]) => Promise<GitRepository>
+    /** Puts files back the way the last recorded version has them — see `canRestore`. */
+    restore: (paths: readonly string[]) => Promise<GitRepository>
+    commit: (message: string, amend: boolean) => Promise<GitRepository>
+    /** Read when the menu opens rather than with every status: it costs a command of its own. */
+    branches: () => Promise<GitBranch[]>
+    createBranch: (name: string) => Promise<GitRepository>
+    checkout: (name: string) => Promise<GitRepository>
   }
   dialog: {
     /**

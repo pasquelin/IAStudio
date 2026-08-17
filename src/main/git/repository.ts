@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { CheckRepoActions, simpleGit, type SimpleGit } from 'simple-git'
-import { defaultIgnore, type GitStatus } from '@shared/domain/git'
+import { defaultIgnore, type GitBranch, type GitIdentity, type GitStatus } from '@shared/domain/git'
 import { exists, writeAtomic } from '@main/persistence'
 import { filesOf } from './parse'
 
@@ -18,6 +18,14 @@ export type Repository = {
   isRepository: () => Promise<boolean>
   init: () => Promise<void>
   status: () => Promise<GitStatus>
+  stage: (paths: readonly string[]) => Promise<void>
+  unstage: (paths: readonly string[]) => Promise<void>
+  /** Puts files back the way HEAD has them, index and worktree alike. */
+  restore: (paths: readonly string[]) => Promise<void>
+  commit: (message: string, amend: boolean, identity?: GitIdentity) => Promise<void>
+  branches: () => Promise<GitBranch[]>
+  createBranch: (name: string) => Promise<void>
+  checkout: (name: string) => Promise<void>
 }
 
 /**
@@ -43,7 +51,64 @@ export function openRepository(root: string, binary?: string): Repository {
     isRepository: () => isRepositoryRoot(git),
     init: () => initialise(git, root),
     status: () => statusOf(git),
+    stage: async paths => {
+      await git.add([...paths])
+    },
+    unstage: paths => unstage(git, paths),
+    restore: async paths => {
+      // `--source=HEAD` on both sides, so one gesture puts a file back whichever half it was
+      // changed in — a file staged AND edited again would otherwise need the button twice.
+      await git.raw(['restore', '--source=HEAD', '--staged', '--worktree', '--', ...paths])
+    },
+    commit: (message, amend, identity) => commit(git, message, amend, identity),
+    branches: async () => {
+      const summary = await git.branchLocal()
+      return summary.all.map(name => ({ name, current: name === summary.current }))
+    },
+    createBranch: async name => {
+      await git.checkoutLocalBranch(name)
+    },
+    checkout: async name => {
+      await git.checkout(name)
+    },
   }
+}
+
+/**
+ * Takes files back out of the index.
+ *
+ * Two commands for one gesture, and which one applies is decided by whether there is a first
+ * commit yet. `git reset` resolves HEAD, so on a repository that has none — exactly the state
+ * `git init` leaves, and exactly where a user first ticks something by mistake — it fails with a
+ * message about an ambiguous argument. `git rm --cached` is the answer there, and only there: on
+ * a repository with a history it would stage a DELETION of a file the user only wanted to untick.
+ */
+async function unstage(git: SimpleGit, paths: readonly string[]): Promise<void> {
+  if ((await headOf(git)) === null) await git.raw(['rm', '--cached', '--', ...paths])
+  else await git.reset(['--', ...paths])
+}
+
+/**
+ * Records a version.
+ *
+ * The identity is passed per command rather than configured on the instance, because it is a
+ * preference the user can change between two commits — and because leaving it out is the normal
+ * case: git then reads the `user.name` this machine already has, which is the right answer for
+ * anyone who already uses git and the wrong one to overwrite.
+ */
+async function commit(
+  git: SimpleGit,
+  message: string,
+  amend: boolean,
+  identity?: GitIdentity,
+): Promise<void> {
+  await git.raw([
+    ...(identity ? ['-c', `user.name=${identity.name}`, '-c', `user.email=${identity.email}`] : []),
+    'commit',
+    '-m',
+    message,
+    ...(amend ? ['--amend'] : []),
+  ])
 }
 
 /**
