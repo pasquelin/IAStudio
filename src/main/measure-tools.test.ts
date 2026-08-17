@@ -5,9 +5,9 @@ import manifest from '../../package.json'
 
 /**
  * The two detectors that answer a question no other gate asks: what is dead, and what is written
- * twice. Neither runs in `pnpm validate` — they report, they do not judge — so **nothing else in
- * the suite goes red the day one of them is quietly turned off**, which is why these cases exist.
- * The same reasoning as `gate-caches.test.ts`, one file over.
+ * twice. knip judges — fifth link of `pnpm validate` since 2026-08-18 — while jscpd only reports;
+ * either way **nothing else in the suite goes red the day one of them is quietly turned off**,
+ * which is why these cases exist. The same reasoning as `gate-caches.test.ts`, one file over.
  *
  * A detector reads its own config file, and every way of blinding one ends in the same place: it
  * reports zero and looks like good news. A raised token floor, a path that no longer names `src`,
@@ -121,10 +121,19 @@ describe('the dead-code detector still looking at the tree', () => {
   /**
    * The name carries the scope, so renaming it to a bare `unused` in the belief that the reach
    * widened is what this case refuses. Nothing here can measure the reach itself: one knip run
-   * costs about thirty seconds, which no suite case may spend.
+   * costs 3.39 s, median of five on 2026-08-18, which no suite case may spend.
    */
   it('is named for the third of the tree it actually reaches', () => {
     expect(manifest.scripts['unused:main']).toContain('knip')
     expect(manifest.scripts).not.toHaveProperty('unused')
+  })
+
+  /**
+   * A detector nobody's gate calls is read the day somebody remembers it: this one was red for a
+   * whole day on 2026-08-17, and again on 2026-08-18 with two dead exports nothing had reported.
+   * Last link rather than first — it judges what the four before it have already compiled.
+   */
+  it('is a link of the gate, not a report waiting for someone to run it', () => {
+    expect(manifest.scripts.validate).toContain('pnpm unused:main')
   })
 })

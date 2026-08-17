@@ -32,7 +32,7 @@ export type RemoteAsset = {
  * output it is. `type` too, so a second pass over outputs already collected still names their
  * shelves. `onDisk` because a row is not a file — see the two readings below.
  */
-export type HeldAsset = Pick<Asset, 'id' | 'jobId' | 'type'> & { onDisk: boolean }
+type HeldAsset = Pick<Asset, 'id' | 'jobId' | 'type'> & { onDisk: boolean }
 
 export type CollectorDeps = {
   retrieve: (remoteAssetId: string) => Promise<RemoteAsset>
