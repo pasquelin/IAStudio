@@ -1,6 +1,6 @@
 import { createPeakReducer } from './peaks'
 import { runProcess } from './runner'
-import { isCancel, type PeaksMessage, type PeaksResponse } from './peaks-protocol'
+import { isCancel, type PeaksMessage, type PeaksResponse } from './peaksProtocol'
 
 /**
  * The waveform's own process. Everything here is plumbing — the reducer and the runner are

@@ -7,8 +7,8 @@ import type {
   SttState,
 } from '@shared/domain/dictation'
 import { sttModelPaths } from '@shared/domain/dictation'
-import { ChecksumMismatch } from './model-download'
-import type { SttClient } from './stt-client'
+import { ChecksumMismatch } from './modelDownload'
+import type { SttClient } from './sttClient'
 
 /**
  * What a dictation session needs from the world. Every one of these is injected: the engine
@@ -33,7 +33,7 @@ export type SessionHost = {
   /** Asks the operating system, before the renderer ever opens a capture. */
   requestMicrophone: () => Promise<'granted' | 'denied' | 'unknown'>
   /**
-   * Forks the worker. One door for a process that goes away, not two: `stt-process` fires
+   * Forks the worker. One door for a process that goes away, not two: `sttProcess` fires
    * `onFailure` from the same `exit` it would have fired a second callback from.
    */
   openEngine: (listeners: EngineListeners) => SttClient

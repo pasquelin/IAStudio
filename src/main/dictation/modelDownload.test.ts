@@ -8,7 +8,7 @@ import {
   fetchModelFile,
   modelIsComplete,
   type DownloadHost,
-} from './model-download'
+} from './modelDownload'
 
 const bytesOf = (text: string): Uint8Array => new TextEncoder().encode(text)
 const digestOf = (text: string): string => createHash('sha256').update(text).digest('hex')

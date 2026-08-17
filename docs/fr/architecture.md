@@ -138,9 +138,9 @@ que rien ne mesure**, et c’est le même remède que `framingPlacement`, sorti 
 pour la même raison.
 
 **Et deux processus, pour ce qui ne doit pas partager un heap.**
-`main/media/peaks-worker.ts` réduit une forme d’onde dans un `utilityProcess` : une heure de PCM
+`main/media/peaksWorker.ts` réduit une forme d’onde dans un `utilityProcess` : une heure de PCM
 mesurée à 129 ms sur le thread principal, et toutes les fenêtres du studio attendaient.
-`main/dictation/stt-worker.ts` tient Parakeet
+`main/dictation/sttWorker.ts` tient Parakeet
 — six cents millions de paramètres, 640 Mo de poids — dans un `utilityProcess` à lui. Un thread
 n'aurait pas suffi : il partage le heap et le cycle de vie de son processus, donc les 700 Mo
 resteraient dans l'empreinte du principal et un plantage de l'addon natif emporterait le studio.

@@ -134,9 +134,9 @@ refused send was an assurance no test could reach — emptied, the gate stayed g
 nothing can read is a register nothing measures**, which is the remedy `framingPlacement` already
 got when it left `frameSelection`.
 
-**And two processes, for what must not share a heap.** `main/media/peaks-worker.ts` reduces a
+**And two processes, for what must not share a heap.** `main/media/peaksWorker.ts` reduces a
 waveform in a `utilityProcess`: an hour of PCM measured 129 ms on the main thread, and every
-window of the studio waited it out. `main/dictation/stt-worker.ts` holds Parakeet — six
+window of the studio waited it out. `main/dictation/sttWorker.ts` holds Parakeet — six
 hundred million parameters, 640 MB of weights — in a `utilityProcess` of its own. A thread would
 not have done: it shares its process's heap and lifetime, so the 700 MB would stay in the main
 process's footprint and a crash in the native addon would take the studio with it. Everything

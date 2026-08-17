@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createPeaksClient, type PeaksPort } from './peaks-client'
-import { isCancel, type PeaksMessage, type PeaksResponse } from './peaks-protocol'
+import { createPeaksClient, type PeaksPort } from './peaksClient'
+import { isCancel, type PeaksMessage, type PeaksResponse } from './peaksProtocol'
 
 /** The worker, reduced to a table of what it was sent and a way to answer it. */
 function fakePort() {

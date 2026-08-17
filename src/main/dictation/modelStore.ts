@@ -2,7 +2,7 @@ import { net } from 'electron'
 import { createReadStream } from 'node:fs'
 import { mkdir, open as openFile, rename, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { DownloadHost, DownloadResponse } from './model-download'
+import type { DownloadHost, DownloadResponse } from './modelDownload'
 
 /** Where the model lands when the user has not pointed somewhere else. */
 export function defaultModelFolder(userData: string): string {
@@ -30,7 +30,7 @@ async function* chunksOf(body: ReadableStream<Uint8Array> | null): AsyncIterable
 }
 
 /**
- * The real world, for `model-download`.
+ * The real world, for `modelDownload`.
  *
  * `net.fetch` rather than the global one, for the same reason the asset download uses it: it
  * goes through Electron's own network stack, so a proxy the operating system knows about is

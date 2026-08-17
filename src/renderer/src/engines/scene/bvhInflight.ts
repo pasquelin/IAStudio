@@ -8,8 +8,8 @@ import type { BvhRequest, BvhResponse, SerializedBvh } from './bvhMessage'
  * builder's `finally` that swept it after a failed send was an assurance no test could reach —
  * `size` is what makes the same rule a measurement.
  *
- * The studio holds three registers of this shape — `catalogClient.ts`, `peaks-client.ts`,
- * `stt-client.ts` — and none of them is shared with this one: they live in the main process,
+ * The studio holds three registers of this shape — `catalogClient.ts`, `peaksClient.ts`,
+ * `sttClient.ts` — and none of them is shared with this one: they live in the main process,
  * which the renderer cannot import, and `shared/` carries no runtime code.
  */
 export type InflightBuilds = {
