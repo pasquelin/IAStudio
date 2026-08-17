@@ -12,11 +12,8 @@ export function arrangedFor(
   surface: ToolSurface,
   arrangement: Partial<Arrangement>,
 ): Record<SurfaceFamily, Arrangement> {
-  const empty: Arrangement = { open: {}, sizes: {}, splits: {} }
-  const family = familyOf(surface)
-
   return {
     ...DEFAULT_ARRANGEMENTS,
-    [family]: { ...empty, ...arrangement },
+    [familyOf(surface)]: { open: {}, ...arrangement },
   }
 }

@@ -12,6 +12,7 @@ import {
 import {
   arrangementOf,
   DEFAULT_ARRANGEMENTS,
+  DEFAULT_LENGTHS,
   DEFAULT_OPEN,
   DEFAULT_SIZES,
   migrateTools,
@@ -53,7 +54,8 @@ describe('fitZoneSize', () => {
 describe('tools store', () => {
   beforeEach(() => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: {}, sizes: {}, splits: {} }),
+      arrangements: arrangedFor('image', { open: {} }),
+      lengths: DEFAULT_LENGTHS,
       focusedZone: null,
     })
   })
@@ -62,8 +64,8 @@ describe('tools store', () => {
     useTools.setState({
       arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
     })
-    useTools.getState().resize('image', 'bottomRight', 900, 800)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.bottomRight).toBe(800 - MIN_CENTER)
+    useTools.getState().resize('bottomRight', 900, 800)
+    expect(useTools.getState().lengths.sizes.bottomRight).toBe(800 - MIN_CENTER)
   })
 
   /** One strip, one height: dragged by either half, the other rises with it or steps. */
@@ -71,18 +73,18 @@ describe('tools store', () => {
     useTools.setState({
       arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
     })
-    useTools.getState().resize('image', 'bottomLeft', 300, 800)
+    useTools.getState().resize('bottomLeft', 300, 800)
 
-    expect(arrangementOf(useTools.getState(), 'image').sizes.bottomRight).toBe(300)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.bottomLeft).toBeUndefined()
+    expect(useTools.getState().lengths.sizes.bottomRight).toBe(300)
+    expect(useTools.getState().lengths.sizes.bottomLeft).toBeUndefined()
   })
 
   it('parts the band where the handle is dragged, and never past a usable half', () => {
-    useTools.getState().resplitBand('image', 620, 900)
-    expect(arrangementOf(useTools.getState(), 'image').bandSplit).toBe(620)
+    useTools.getState().resplitBand(620, 900)
+    expect(useTools.getState().lengths.bandSplit).toBe(620)
 
-    useTools.getState().resplitBand('image', 890, 900)
-    expect(arrangementOf(useTools.getState(), 'image').bandSplit).toBe(900 - MIN_SPLIT)
+    useTools.getState().resplitBand(890, 900)
+    expect(useTools.getState().lengths.bandSplit).toBe(900 - MIN_SPLIT)
   })
 
   it('keeps the center alive when both sides are dragged wide', () => {
@@ -92,22 +94,39 @@ describe('tools store', () => {
       }),
     })
     const { resize } = useTools.getState()
-    resize('image', 'left', 900, 1000)
-    resize('image', 'right', 900, 1000)
+    resize('left', 900, 1000)
+    resize('right', 900, 1000)
 
-    const { sizes } = arrangementOf(useTools.getState(), 'image')
+    const { sizes } = useTools.getState().lengths
     expect((sizes.left ?? 0) + (sizes.right ?? 0)).toBeLessThanOrEqual(1000 - MIN_CENTER)
   })
 
+  /** The home keeps a right column of its own, and one width serves both: it counts here. */
   it('re-clamps every zone when the window shrinks', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', {
-        open: { left: { primary: 'models' } },
-        sizes: { left: 600 },
-      }),
+      arrangements: arrangedFor('image', { open: { left: { primary: 'models' } } }),
+      lengths: { sizes: { left: 600 }, splits: {} },
     })
     useTools.getState().fit(800, 600)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBe(800 - MIN_CENTER)
+    expect(useTools.getState().lengths.sizes.left).toBe(800 - DEFAULT_SIZES.right - MIN_CENTER)
+  })
+
+  /**
+   * A length is clamped against the TIGHTEST of the two families now that one serves both: a
+   * width the home could afford — its right column being the only one open there — would
+   * overflow a space that keeps the opposite column open.
+   */
+  it('clamps a width against a column the other family keeps open', () => {
+    useTools.setState({
+      arrangements: {
+        workspaces: { open: { left: { primary: 'models' } } },
+        home: { open: { right: { primary: 'library' } } },
+      },
+      lengths: { sizes: { left: 400 }, splits: {} },
+    })
+    useTools.getState().resize('right', 900, 1000)
+
+    expect(useTools.getState().lengths.sizes.right).toBe(1000 - 400 - MIN_CENTER)
   })
 
   it('opens a tool in the half its placement declares', () => {
@@ -164,8 +183,8 @@ describe('tools store', () => {
         open: { right: { primary: 'layers', secondary: 'inspector' } },
       }),
     })
-    useTools.getState().resplit('image', 'right', 900, 400)
-    expect(arrangementOf(useTools.getState(), 'image').splits.right).toBe(400 - MIN_SPLIT)
+    useTools.getState().resplit('right', 900, 400)
+    expect(useTools.getState().lengths.splits.right).toBe(400 - MIN_SPLIT)
   })
 })
 
@@ -238,37 +257,34 @@ describe('the home and the workspaces arrange their zones apart', () => {
     })
   })
 
-  // The generator renders a model's own form; 320 is its width for that reason. A file tree
-  // narrowed on the home has no business taking it with it.
-  it('keeps the width of one column out of the other', () => {
-    useTools.getState().resize(HOME_SURFACE, 'left', 170, 1000)
+  /**
+   * A column dragged on the home is the SAME column in a space, and the reverse was the defect:
+   * the width sat beside what each half holds, so crossing to the home changed it for no reason
+   * anyone had chosen. What stays per family is which panels are up, which is what the split of
+   * version 8 was ever about.
+   */
+  it('carries one width across the home and the spaces', () => {
+    useTools.getState().resize('left', 170, 1000)
 
-    expect(arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left).toBe(170)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBeUndefined()
+    expect(useTools.getState().lengths.sizes.left).toBe(170)
   })
 
   /**
-   * The home draws a right column now, so its left one is bounded exactly as a space's is: both
-   * have to leave the opposite column and the centre room. It was the one surface where a drag
-   * could take the whole window, and that stopped being true when it gained its second column.
+   * Both columns are bounded against each other, on either surface: the home draws a right
+   * column too, and a drag there could once take the whole window.
    */
-  it('bounds each column against the other, on the home as in a space', () => {
-    useTools.getState().resize(HOME_SURFACE, 'left', 700, 1000)
-    useTools.getState().resize('image', 'left', 700, 1000)
+  it('bounds each column against the other', () => {
+    useTools.getState().resize('left', 700, 1000)
 
-    const bounded = 1000 - DEFAULT_SIZES.right - MIN_CENTER
-    expect(arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left).toBe(bounded)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBe(bounded)
+    expect(useTools.getState().lengths.sizes.left).toBe(1000 - DEFAULT_SIZES.right - MIN_CENTER)
   })
 
-  it('re-clamps both families when the window shrinks', () => {
-    useTools.getState().resize(HOME_SURFACE, 'left', 700, 1000)
-    useTools.getState().resize('image', 'left', 600, 1400)
+  it('re-clamps the studio when the window shrinks', () => {
+    useTools.getState().resize('left', 700, 1000)
 
     useTools.getState().fit(600, 600)
 
-    expect(arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left).toBe(MIN_SIZE)
-    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBe(MIN_SIZE)
+    expect(useTools.getState().lengths.sizes.left).toBe(MIN_SIZE)
   })
 })
 
@@ -282,7 +298,7 @@ describe('migrating to the split arrangement', () => {
     )
 
     expect(migrated?.arrangements.workspaces.open.right).toEqual({ primary: 'layers' })
-    expect(migrated?.arrangements.workspaces.sizes).toEqual({ left: 400 })
+    expect(migrated?.lengths.sizes).toEqual({ left: 400 })
     expect(migrated?.arrangements.home).toEqual(DEFAULT_ARRANGEMENTS.home)
   })
 
@@ -304,7 +320,7 @@ describe('migrating to the split arrangement', () => {
     )
 
     expect(migrated?.arrangements.workspaces.open.right).toEqual({ primary: 'layers' })
-    expect(migrated?.arrangements.workspaces.sizes).toEqual({ left: 400 })
+    expect(migrated?.lengths.sizes).toEqual({ left: 400 })
     // The home is the one this bump changes: it starts on both halves of both columns.
     expect(migrated?.arrangements.home).toEqual(DEFAULT_ARRANGEMENTS.home)
   })
@@ -324,7 +340,7 @@ describe('migrating to the split arrangement', () => {
     )
 
     expect(migrated?.arrangements.workspaces.open.bottomRight).toEqual({ primary: 'assets' })
-    expect(migrated?.arrangements.workspaces.sizes.bottomRight).toBe(400)
+    expect(migrated?.lengths.sizes.bottomRight).toBe(400)
   })
 })
 

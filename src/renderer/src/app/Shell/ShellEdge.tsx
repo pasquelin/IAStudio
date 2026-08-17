@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { cn } from '@/helpers/cn'
 import { useToolSurface } from '@/stores/layouts'
-import { arrangementOf, DEFAULT_SIZES, DEFAULT_SPLIT, sizeKeyOf, useTools } from '@/stores/tools'
+import { DEFAULT_SIZES, DEFAULT_SPLIT, sizeKeyOf, useTools } from '@/stores/tools'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { isHorizontal, isLeading, type ToolZone } from '@shared/domain/tool'
 import { useShownTools } from '@/hooks/useShownTools'
@@ -25,10 +25,8 @@ export function ShellEdge({ zone }: { zone: ToolZone }) {
     [surface, zone],
   )
 
-  const size = useTools(
-    state => arrangementOf(state, surface).sizes[sizeKeyOf(zone)] ?? DEFAULT_SIZES[zone],
-  )
-  const split = useTools(state => arrangementOf(state, surface).splits[zone] ?? DEFAULT_SPLIT)
+  const size = useTools(state => state.lengths.sizes[sizeKeyOf(zone)] ?? DEFAULT_SIZES[zone])
+  const split = useTools(state => state.lengths.splits[zone] ?? DEFAULT_SPLIT)
 
   const { primary, secondary } = useShownTools(zone)
   if (!primary && !secondary) return null
@@ -55,7 +53,7 @@ export function ShellEdge({ zone }: { zone: ToolZone }) {
           axis={lying ? 'horizontal' : 'vertical'}
           invert
           size={split}
-          onSize={(value, available) => resplit(surface, zone, value, available)}
+          onSize={(value, available) => resplit(zone, value, available)}
         />
       )}
 
@@ -77,7 +75,7 @@ export function ShellEdge({ zone }: { zone: ToolZone }) {
       axis={lying ? 'vertical' : 'horizontal'}
       invert={!isLeading(zone)}
       size={size}
-      onSize={(value, available) => resize(surface, zone, value, available)}
+      onSize={(value, available) => resize(zone, value, available)}
     />
   )
 

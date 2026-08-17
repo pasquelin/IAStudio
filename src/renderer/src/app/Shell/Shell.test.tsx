@@ -5,13 +5,12 @@ import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import {
-  arrangementOf,
   DEFAULT_ARRANGEMENTS,
+  DEFAULT_LENGTHS,
   DEFAULT_OPEN,
   useTools,
   type OpenByZone,
 } from '@/stores/tools'
-import { HOME_SURFACE } from '@shared/domain/tool'
 import { withQueries } from '../query-fixtures'
 import { Shell } from './Shell'
 
@@ -43,7 +42,10 @@ beforeEach(() => {
   // Every test below is about the docks, which the home covers entirely — see the last block,
   // which is the one that exercises it.
   useLayouts.setState({ activeWorkspace: 'image', layout: null, home: false })
-  useTools.setState({ arrangements: arrangedFor('image', { open: {}, sizes: {}, splits: {} }) })
+  useTools.setState({
+    arrangements: arrangedFor('image', { open: {} }),
+    lengths: DEFAULT_LENGTHS,
+  })
   // The store is shared across files: one test turns the home off, and every later one would
   // inherit a studio whose entry point does not exist.
   useSettings.setState(state => ({
@@ -297,9 +299,9 @@ describe('the home', () => {
    * measured container reads zero: what is under test is which store each handle writes to, not
    * the arithmetic, which `fitZoneSize` and `fitSplit` own and are tested on directly.
    */
-  it('resizes its own zones and writes them to the home', () => {
+  it('resizes its own zones, and the width it writes belongs to the studio', () => {
     useLayouts.setState({ home: true })
-    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS, lengths: DEFAULT_LENGTHS })
     Element.prototype.setPointerCapture = vi.fn()
     renderShell()
 
@@ -308,14 +310,12 @@ describe('the home', () => {
       fireEvent.pointerMove(handle, { pointerId: 1, clientX: 340, clientY: 260 })
     }
 
-    const home = arrangementOf(useTools.getState(), HOME_SURFACE)
-    expect(home.sizes.left).toBeDefined()
-    expect(home.sizes.right).toBeDefined()
+    const { sizes, splits } = useTools.getState().lengths
+    expect(sizes.left).toBeDefined()
+    expect(sizes.right).toBeDefined()
     // No split to drag any more, and that is the assertion rather than an omission: the home has
     // one half per column since 13 August, so nothing here writes `splits`.
-    expect(home.splits).toEqual({})
-    // The spaces' own arrangement is untouched: the two families never share a drag.
-    expect(arrangementOf(useTools.getState(), 'image').sizes).toEqual({})
+    expect(splits).toEqual({})
   })
 
   it('keeps the status line under it', () => {
