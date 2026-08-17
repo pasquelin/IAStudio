@@ -1596,6 +1596,81 @@ describe('the project explorer, as a grid', () => {
     await waitFor(() => expect(newFolder).toHaveBeenCalledWith('Vide', 'dossier'))
   })
 
+  /**
+   * A search draws no trail, so nothing on screen names the folder walked into before it. A blank
+   * that still meant that folder moved a result into a place the user could not see.
+   */
+  it('aims the blank at the project folder once a search has flattened the grid', async () => {
+    withProject()
+    showGrid()
+    const { moveFiles } = install(
+      { '': [folder('Images')], Images: [file('a.png', 'Images')] },
+      [],
+      [],
+      { png: [file('a.png', 'Images')] },
+    )
+
+    render(<Explorer />)
+    await enter('Images')
+    await screen.findByText('a.png')
+
+    act(() =>
+      useExplorerView.setState({ collection: { ...LIST_ONLY, view: 'grid', search: 'png' } }),
+    )
+    await screen.findByText('a.png')
+
+    const data = dragTransfer()
+    fireEvent.dragStart(await tileFor('a.png'), { dataTransfer: data })
+    fireEvent.drop(blank(), { dataTransfer: data })
+
+    expect(moveFiles).toHaveBeenCalledWith(['Images/a.png'], '')
+  })
+
+  /**
+   * The grid reads the tree's nodes, and a reload keeps only the root and what is UNFOLDED. A
+   * folder closed in the list view leaves the grid on one that is about to empty itself, trail
+   * still naming it — a full folder shown as empty, without a word.
+   */
+  it('falls back to the project folder when the one it shows is folded away', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('Images'), file('brief.pdf')], Images: [file('a.png', 'Images')] })
+
+    render(<Explorer />)
+    await enter('Images')
+    await screen.findByText('a.png')
+
+    act(() => useExplorerView.setState({ collection: { ...LIST_ONLY, view: 'list' } }))
+    await userEvent.click(await screen.findByText('Images'))
+    await userEvent.keyboard('{ArrowLeft}')
+    act(() => useExplorerView.setState({ collection: { ...LIST_ONLY, view: 'grid' } }))
+
+    expect(await screen.findByText('brief.pdf')).toBeInTheDocument()
+  })
+
+  /**
+   * Every command acts on the selection, and navigating clears it — so the anchor says « the
+   * project folder » while the user is looking at something else. ⌘V wrote at the root.
+   */
+  it('pastes into the folder it is showing, not where the anchor points', async () => {
+    withProject()
+    showGrid()
+    const { pasteFiles } = install({
+      '': [folder('Images'), file('brief.pdf')],
+      Images: [file('a.png', 'Images')],
+    })
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('brief.pdf'))
+    fireEvent.keyDown(window, { key: 'c', code: 'KeyC', metaKey: true })
+    await enter('Images')
+    await screen.findByText('a.png')
+
+    fireEvent.keyDown(window, { key: 'v', code: 'KeyV', metaKey: true })
+
+    await waitFor(() => expect(pasteFiles).toHaveBeenCalledWith(['brief.pdf'], 'Images', false))
+  })
+
   /** Same question of the menu, which is how a folder is made where the user is looking. */
   it('makes a new folder in the folder being shown, from the blank', async () => {
     withProject()
