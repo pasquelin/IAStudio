@@ -7,7 +7,7 @@ import { resetDocumentStoresForTests } from '@/stores/documentStore'
  * so a case that closed a document silenced the commands of every case after it, as a write that
  * did nothing.
  *
- * Its own file rather than a line of `test-setup.ts`, and this is measured rather than tidy: the
+ * Its own file rather than a line of `testSetup.ts`, and this is measured rather than tidy: the
  * renderer tests that never touch a browser run under a project with NO setup at all, because
  * jsdom and the full setup cost them more than they run (`vitest.config.ts`, `renderer-node`).
  * Left in the DOM setup, this rule held for `*.test.tsx` and quietly skipped every `*.test.ts` of

@@ -61,7 +61,7 @@ vi.mock('three', async importOriginal => ({
   },
 }))
 
-/** What `test-setup` pins `clientWidth`/`clientHeight` to, since jsdom runs no layout. */
+/** What `testSetup` pins `clientWidth`/`clientHeight` to, since jsdom runs no layout. */
 const HOST_WIDTH = 640
 const HOST_HEIGHT = 800
 

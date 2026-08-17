@@ -5,7 +5,7 @@ import config from '../../../vitest.config.ts?raw'
 /**
  * Neither bound is ours, and that is the whole design of this file.
  *
- * Importing `./test-setup` for its constant would run the `configure()` at its module scope, so
+ * Importing `./testSetup` for its constant would run the `configure()` at its module scope, so
  * the case would trigger what it claims to observe — and comparing the live value to the constant
  * that just wrote it compares a number to itself. Both mutations this guard exists for survived
  * that version: unhooking `setupFiles`, and putting the patience back to the library's default.

@@ -93,7 +93,7 @@ describe('a store put back as it was built', () => {
   })
 
   /**
-   * What `test-setup.ts` calls between cases. The registry is the point: a list of stores written
+   * What `testSetup.ts` calls between cases. The registry is the point: a list of stores written
    * by hand would fall behind the seventh one, and the defect it guards is silent by nature.
    */
   it('reaches every store the factory built, without being handed one', () => {

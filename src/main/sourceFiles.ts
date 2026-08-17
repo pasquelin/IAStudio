@@ -4,7 +4,7 @@
  * The AST guards that sweep the whole repository from this side need the same three things: the
  * walk, the four trees, and a timeout wide enough for them. Held here so a guard added later
  * inherits the same reading, and so the exclusion below is decided once. The window's guards have
- * no filesystem and borrow `renderer/src/window-sources.ts` instead — same idea, other mechanism.
+ * no filesystem and borrow `renderer/src/windowSources.ts` instead — same idea, other mechanism.
  *
  * `wideGuards.ts` is the other half of this and NOT the same job: it detects which suites read
  * the tree, so the short loop replays them. It never hands one the files. A guard importing this

@@ -55,7 +55,7 @@ function readsAnchoredFile(code: string): boolean {
  * A suite that borrows a sweep instead of writing one.
  *
  * TWO modules hold one, one per side of the wall. `sourceFiles.ts` walks the disk for the guards
- * of the main process; `renderer/src/window-sources.ts` holds the `import.meta.glob` for those of
+ * of the main process; `renderer/src/windowSources.ts` holds the `import.meta.glob` for those of
  * the window, which have no filesystem to walk. Either way the borrower is left with no
  * `readdirSync`, no `import.meta.url` and no glob of its own to recognise.
  *
@@ -90,7 +90,7 @@ function borrowsTheSweep(code: string): boolean {
   // `testHarness.ts` write `'./testHarness'`, which the folder-qualified form does not match.
   // The line added for it on 2026-08-16 caught its five distant consumers and none of its
   // neighbours — a fix measured by a count that went up, which is exactly how a half-fix looks.
-  return /from '\.[./]*\/(sourceFiles|window-sources|(design\/)?testHarness)'|from '@main\/sourceFiles'|from '@\/(window-sources|design\/testHarness)'|from '\.[./]*\/scripts\/[\w-]+\.ts'/.test(
+  return /from '\.[./]*\/(sourceFiles|windowSources|(design\/)?testHarness)'|from '@main\/sourceFiles'|from '@\/(windowSources|design\/testHarness)'|from '\.[./]*\/scripts\/[\w-]+\.ts'/.test(
     code,
   )
 }

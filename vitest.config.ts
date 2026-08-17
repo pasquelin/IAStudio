@@ -167,7 +167,7 @@ const DOM_BOUND = [
   'src/renderer/src/stores/documents.test.ts',
   'src/renderer/src/stores/layouts.test.ts',
   'src/renderer/src/stores/models.test.ts',
-  'src/renderer/src/test-setup.test.ts',
+  'src/renderer/src/testSetup.test.ts',
 ]
 
 export default defineConfig({
@@ -221,7 +221,7 @@ export default defineConfig({
           // silently empties the checks that read a rule back. Only the raw reads are spared;
           // nothing that a component imports for its styles is processed.
           css: { include: [/\.css\?raw$/] },
-          setupFiles: ['src/renderer/src/test-setup.ts'],
+          setupFiles: ['src/renderer/src/testSetup.ts'],
         },
       },
       {
@@ -241,7 +241,7 @@ export default defineConfig({
           exclude: DOM_BOUND,
           // The half of the renderer setup that needs no browser. Without it these suites kept
           // the defect the DOM ones were cured of, and each had to write its own reset.
-          setupFiles: ['src/renderer/src/test-setup-stores.ts'],
+          setupFiles: ['src/renderer/src/testSetupStores.ts'],
           // Three files read a stylesheet back through `?raw` and fail without this, which is how
           // it was found: they are not DOM-bound, they were parser-bound.
           css: { include: [/\.css\?raw$/] },

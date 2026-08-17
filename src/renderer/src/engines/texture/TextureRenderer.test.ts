@@ -22,7 +22,7 @@ const everyChannel = (): TextureState => {
 }
 
 /**
- * `mount` builds a real `WebGLRenderer`, which jsdom cannot give (`test-setup` hands back no canvas
+ * `mount` builds a real `WebGLRenderer`, which jsdom cannot give (`testSetup` hands back no canvas
  * context). Stubbing the viewport's mount and its `gl` accessor is enough — nothing here
  * dereferences the renderer, so what the engine decides is reachable and what it draws is not.
  */

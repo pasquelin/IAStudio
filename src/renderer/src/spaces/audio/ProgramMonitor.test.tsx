@@ -222,7 +222,7 @@ describe('ProgramMonitor', () => {
    * The curves are drawn inside the wave, so they cost no room — but they cross the very crests
    * one may be reading instead, and a reader who has no use for them can put them away.
    *
-   * The palette is what is asserted, not only the button: `test-setup.ts` gives every canvas a
+   * The palette is what is asserted, not only the button: `testSetup.ts` gives every canvas a
    * null context, so nothing under test ever reaches a painter — the one decision this component
    * makes about what is drawn would otherwise be held by nobody, in either direction.
    */

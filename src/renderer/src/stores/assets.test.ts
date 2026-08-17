@@ -9,7 +9,7 @@ function asset(id: string, name: string): Asset {
 
 describe('assetsById', () => {
   beforeEach(() => {
-    // This project runs without `test-setup`, which is where the renderer's cases get it.
+    // This project runs without `testSetup`, which is where the renderer's cases get it.
     forgetRememberedAssets()
     useAssets.setState({ items: [] })
   })

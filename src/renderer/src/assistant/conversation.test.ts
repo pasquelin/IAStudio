@@ -33,7 +33,7 @@ describe('the conversation the model reads', () => {
   })
 
   /**
-   * The suite runs in French — `test-setup` says so — which is what makes this worth asserting:
+   * The suite runs in French — `testSetup` says so — which is what makes this worth asserting:
    * a studio running in French must not have the model decide differently from one running in
    * English.
    */
