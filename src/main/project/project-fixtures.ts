@@ -6,9 +6,29 @@ import type { Project } from '@shared/domain/project'
 import type { AsyncCatalog } from './catalog-client'
 import { memoryCatalog } from './catalog-fixtures'
 import { createDocumentFiles, type DocumentFiles } from './documents'
+import { createFolderReader } from './folder'
 import { createProjectStore, type ProjectStore } from './store'
 
 /** A real project on a real folder, and the pieces a test needs to reach into it. */
+/**
+ * The document reader over a folder a test names, composed as `services.ts` composes it.
+ *
+ * The real folder reader and not a stub: a listing IS a walk now, and a test reading documents
+ * through anything else would be measuring a second implementation. `'en'` because the language
+ * only settles how names are ordered, and this reader's own order is taken by code unit.
+ */
+export function documentFilesAt(root: string, now: string): DocumentFiles {
+  return createDocumentFiles({
+    projectPath: () => root,
+    now: () => now,
+    walkFiles: () =>
+      createFolderReader(
+        () => root,
+        () => 'en',
+      ).walk(),
+  })
+}
+
 export type TempProject = {
   /** The project folder. Absolute, and gone when the test finishes. */
   root: string
@@ -50,7 +70,7 @@ export async function withTempProject(
   })
 
   const project = await store.create(root, name)
-  const documents = createDocumentFiles({ projectPath: () => root, now: () => now })
+  const documents = documentFilesAt(root, now)
 
   return { root, project, store, catalog, documents }
 }
@@ -62,7 +82,7 @@ export async function withTempProject(
  * project differ by it and by nothing else — a difference that would drown every real one.
  */
 export type DocumentSnapshot = {
-  fileName: string
+  path: string
   kind: string
   title: string
   content: string
@@ -83,8 +103,8 @@ export type DocumentSnapshot = {
  * BEHAVIOUR rather than counting files. A migration that keeps every file and loses what one of
  * them held passes a file count and fails this.
  *
- * Sorted by file name, because `list` answers in the order the folder gave and that order is
- * not a promise.
+ * Sorted by path, because `list` answers in the order the walk gave and that order is not a
+ * promise.
  */
 export async function snapshotDocuments(documents: DocumentFiles): Promise<DocumentSnapshot[]> {
   const read: DocumentSnapshot[] = []
@@ -94,7 +114,7 @@ export async function snapshotDocuments(documents: DocumentFiles): Promise<Docum
   for (const descriptor of await documents.list()) {
     const file = await documents.read(descriptor.id, descriptor.kind)
     read.push({
-      fileName: descriptor.fileName,
+      path: descriptor.path,
       kind: descriptor.kind,
       title: descriptor.title,
       content: file?.content ?? '',
@@ -106,5 +126,5 @@ export async function snapshotDocuments(documents: DocumentFiles): Promise<Docum
     })
   }
 
-  return read.sort((one, other) => one.fileName.localeCompare(other.fileName, 'en'))
+  return read.sort((one, other) => one.path.localeCompare(other.path, 'en'))
 }

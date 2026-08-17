@@ -507,7 +507,7 @@ describe('exporting the canvas', () => {
           kind: 'image',
           workspace: 'image',
           title: 'Poster',
-          fileName: 'Poster.img',
+          path: 'documents/Poster.img',
         },
       },
       activeId: 'doc-1',

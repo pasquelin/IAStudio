@@ -125,7 +125,7 @@ beforeEach(() => {
         kind: 'scene',
         workspace: '3d',
         title: 'Set dressing',
-        fileName: 'Set dressing.scene',
+        path: 'documents/Set dressing.scene',
       },
     },
     activeId: 'doc-1',
@@ -204,7 +204,7 @@ describe('SceneDocument', () => {
           kind: 'scene',
           workspace: '3d',
           title: 'Fresh',
-          fileName: 'Fresh.scene',
+          path: 'documents/Fresh.scene',
         },
       },
     })
@@ -338,7 +338,7 @@ describe('the viewport settings', () => {
             kind: 'scene',
             workspace: '3d',
             title: 'Renamed',
-            fileName: 'Renamed.scene',
+            path: 'documents/Renamed.scene',
           },
         },
       })

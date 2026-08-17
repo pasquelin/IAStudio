@@ -51,7 +51,7 @@ function openBoth(): void {
         kind: 'skybox',
         title: 'Other',
         workspace: 'skyboxes',
-        fileName: 'Other.sky',
+        path: 'documents/Other.sky',
       },
     },
   }))

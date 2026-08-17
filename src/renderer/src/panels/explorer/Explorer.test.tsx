@@ -30,7 +30,7 @@ const scene: DocumentDescriptor = {
   kind: 'scene',
   title: 'Niveau',
   workspace: '3d',
-  fileName: 'a3f1.scene',
+  path: 'a3f1.scene',
 }
 
 /** Written as a folder — `FOLDER_KINDS` — which is what the folder reader sees of it. */
@@ -39,7 +39,7 @@ const picture: DocumentDescriptor = {
   kind: 'image',
   title: 'Planche',
   workspace: 'image',
-  fileName: 'a3f1.img',
+  path: 'a3f1.img',
 }
 
 const folder = (name: string, at = ''): FolderEntry => ({
@@ -402,13 +402,39 @@ describe('the project explorer', () => {
   describe('opening what a row names', () => {
     it('opens a document of the project, tab or no tab', async () => {
       withProject()
-      install({ '': [folder('documents')], documents: [file('a3f1.scene', 'documents')] }, [scene])
+      const filed = { ...scene, path: 'documents/a3f1.scene' }
+      install({ '': [folder('documents')], documents: [file('a3f1.scene', 'documents')] }, [filed])
 
       render(<Explorer />)
       await userEvent.dblClick(await screen.findByText('documents'))
       await userEvent.dblClick(await screen.findByText('Niveau'))
 
-      expect(openDocument).toHaveBeenCalledWith(scene)
+      expect(openDocument).toHaveBeenCalledWith(filed)
+    })
+
+    /**
+     * Rows are joined to descriptors by PATH, not by name. Two folders may each hold a
+     * `Niveau.scene`, and joined on the name one document's descriptor was handed to the other
+     * one's row — the wrong title on screen, and a double-click opening the wrong document.
+     */
+    it('tells two documents of the same name in two folders apart', async () => {
+      withProject()
+      const here = { ...scene, id: 'here', title: 'Ici', path: 'Acte 1/a3f1.scene' }
+      const there = { ...scene, id: 'there', title: 'Là', path: 'Acte 2/a3f1.scene' }
+      install(
+        {
+          '': [folder('Acte 1'), folder('Acte 2')],
+          'Acte 1': [file('a3f1.scene', 'Acte 1')],
+          'Acte 2': [file('a3f1.scene', 'Acte 2')],
+        },
+        [here, there],
+      )
+
+      render(<Explorer />)
+      await userEvent.dblClick(await screen.findByText('Acte 2'))
+      await userEvent.dblClick(await screen.findByText('Là'))
+
+      expect(openDocument).toHaveBeenCalledWith(there)
     })
 
     /**

@@ -124,14 +124,13 @@ export function Explorer() {
     void useDocuments.getState().relist()
   }, [projectPath])
 
-  // Keyed by the file name the folder shows, which is what a directory entry carries — and it
-  // is the descriptor's own `fileName`, read off the disk. It used to be the id, which worked
-  // only for as long as the id WAS the file name: the day the two parted, this answered null
-  // for every document at once — no space glyph, no "open" mark, and a double-click handing the
-  // document to whatever application the system opens a `.scene` with.
+  // Keyed by the PATH the descriptor was read from, which is the tree's own id for a row. It
+  // used to be the id, which worked only for as long as the id WAS the file name; then the file
+  // name, which worked only for as long as every document sat in one folder — two `Niveau.scene`
+  // in two folders handed one document's descriptor to the other one's row.
   const documentsByFile = useMemo(() => {
     const found = new Map<string, DocumentDescriptor>()
-    for (const document of stored) found.set(document.fileName, document)
+    for (const document of stored) found.set(document.path, document)
     return found
   }, [stored])
 
@@ -148,7 +147,7 @@ export function Explorer() {
       const kind = kindForExtension(extensionOf(node.name))
       if (!kind) return null
       if (node.kind === 'folder' && !FOLDER_KINDS.has(kind)) return null
-      return documentsByFile.get(node.name) ?? null
+      return documentsByFile.get(node.path) ?? null
     },
     [documentsByFile],
   )

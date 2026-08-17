@@ -10,7 +10,7 @@ const POSTER: DocumentDescriptor = {
   kind: 'image',
   title: 'Poster',
   workspace: 'image',
-  fileName: 'Poster.img',
+  path: 'documents/Poster.img',
 }
 
 const showing = (...ids: readonly string[]): void => showPanels(...ids)
@@ -61,7 +61,7 @@ describe('documents store', () => {
               kind: 'scene',
               title: 'Untitled 1',
               workspace: '3d',
-              fileName: 'Untitled 1.scene',
+              path: 'documents/Untitled 1.scene',
             },
           ]),
       },
@@ -280,7 +280,7 @@ describe('documentForAsset', () => {
       kind: 'image',
       title: 'Poster',
       workspace: 'image',
-      fileName: 'Poster.img',
+      path: 'documents/Poster.img',
       sourceAssetId: 'asset_42',
     }
     useDocuments.setState({ documents: {}, stored: [saved] })
@@ -300,7 +300,7 @@ describe('documentForAsset', () => {
           kind: 'image',
           title: 'Old',
           workspace: 'image',
-          fileName: 'Old.img',
+          path: 'documents/Old.img',
           sourceAssetId: 'asset_42',
         },
       ],
@@ -347,7 +347,7 @@ describe('relist', () => {
       kind: 'scene',
       title: 'Untitled 1',
       workspace: '3d',
-      fileName: 'Untitled 1.scene',
+      path: 'documents/Untitled 1.scene',
     }
     useDocuments.setState({ documents: { unwritten } })
     installFakeBridge({ documents: { list: () => Promise.resolve([POSTER]) } })
@@ -363,14 +363,14 @@ describe('relist', () => {
       kind: 'scene',
       title: 'Zulu',
       workspace: '3d',
-      fileName: 'Zulu.scene',
+      path: 'documents/Zulu.scene',
     }
     const alpha: DocumentDescriptor = {
       id: 'a',
       kind: 'scene',
       title: 'Alpha',
       workspace: '3d',
-      fileName: 'Alpha.scene',
+      path: 'documents/Alpha.scene',
     }
     installFakeBridge({ documents: { list: () => Promise.resolve([zulu, alpha]) } })
 
@@ -439,7 +439,11 @@ describe('adopt', () => {
 })
 
 describe('rename', () => {
-  const renamed: DocumentDescriptor = { ...POSTER, title: 'Affiche', fileName: 'Affiche.img' }
+  const renamed: DocumentDescriptor = {
+    ...POSTER,
+    title: 'Affiche',
+    path: 'documents/Affiche.img',
+  }
 
   beforeEach(() => {
     useDocuments.setState({ documents: {}, stored: [], activeId: null })
@@ -472,7 +476,7 @@ describe('rename', () => {
 
   // Asked here as well as in the main process: this is what puts a sentence under the field.
   it('refuses a name the folder already holds without asking the disk', async () => {
-    const other: DocumentDescriptor = { ...POSTER, id: 'other', fileName: 'Affiche.img' }
+    const other: DocumentDescriptor = { ...POSTER, id: 'other', path: 'documents/Affiche.img' }
     useDocuments.setState({ documents: { [POSTER.id]: POSTER }, stored: [POSTER, other] })
     const rename = vi.fn()
     installFakeBridge({ documents: { rename } })

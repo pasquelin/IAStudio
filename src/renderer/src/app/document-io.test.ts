@@ -81,7 +81,13 @@ const savedFile = (): DocumentFile => ({
 })
 
 function scene(id: string): DocumentDescriptor {
-  return { id, kind: 'scene', title: 'Set dressing', workspace: '3d', fileName: `${id}.scene` }
+  return {
+    id,
+    kind: 'scene',
+    title: 'Set dressing',
+    workspace: '3d',
+    path: `documents/${id}.scene`,
+  }
 }
 
 beforeEach(() => {
@@ -597,7 +603,7 @@ describe('saveDocument', () => {
             kind: 'image',
             title: 'x',
             workspace: 'image',
-            fileName: 'x.img',
+            path: 'documents/x.img',
           },
         },
       })
@@ -1027,7 +1033,7 @@ describe('restoreDocument', () => {
       if (!workspace) throw new Error(`no workspace opens ${kind}`)
       const id = `doc-${kind}`
       useDocuments.setState({
-        documents: { [id]: { id, kind, title: kind, workspace, fileName: `${kind}${id}` } },
+        documents: { [id]: { id, kind, title: kind, workspace, path: `documents/${kind}${id}` } },
       })
       await restoreDocument(id)
     }
@@ -1225,7 +1231,7 @@ describe('an image document', () => {
           kind: 'image',
           workspace: 'image',
           title: 'Poster',
-          fileName: 'Poster.img',
+          path: 'documents/Poster.img',
         },
       },
       activeId: documentId,
@@ -1270,7 +1276,7 @@ describe('an image document', () => {
           kind: 'image',
           workspace: 'image',
           title: 'Poster',
-          fileName: 'Poster.img',
+          path: 'documents/Poster.img',
         },
       },
       activeId: documentId,

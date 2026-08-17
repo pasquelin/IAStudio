@@ -72,7 +72,7 @@ describe('a document tab', () => {
           kind: 'scene',
           title: 'Niveau',
           workspace: '3d',
-          fileName: 'Niveau.scene',
+          path: 'documents/Niveau.scene',
         },
       },
     })
@@ -144,7 +144,7 @@ describe('a document tab', () => {
       kind: 'scene',
       title: 'Niveau',
       workspace: '3d',
-      fileName: 'Niveau.scene',
+      path: 'documents/Niveau.scene',
     }
     useDocuments.setState({ documents: { 'doc-1': document }, stored: [document] })
 

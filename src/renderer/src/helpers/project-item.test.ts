@@ -19,7 +19,7 @@ const scene: DocumentDescriptor = {
   kind: 'scene',
   title: 'Niveau',
   workspace: '3d',
-  fileName: 'a3f1.scene',
+  path: 'a3f1.scene',
 }
 
 describe('what the project holds, as one shape', () => {

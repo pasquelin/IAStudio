@@ -14,7 +14,7 @@ const stored = (title: string, fileName: string): DocumentDescriptor => ({
   kind: 'scene',
   workspace: '3d',
   title,
-  fileName,
+  path: `documents/${fileName}`,
 })
 
 let release: (() => void) | null = null
@@ -52,7 +52,7 @@ describe('createDocumentIn', () => {
     await vi.waitFor(() => expect(created()).toHaveLength(1))
     expect(created()[0]?.title).toBe('Niveau')
     // The name is the file name: there is only ever one name to change afterwards.
-    expect(created()[0]?.fileName).toBe('Niveau.scene')
+    expect(created()[0]?.path).toBe('documents/Niveau.scene')
     expect(openDocument).toHaveBeenCalledWith(created()[0])
   })
 

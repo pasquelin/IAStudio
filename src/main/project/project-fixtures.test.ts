@@ -2,8 +2,7 @@ import { readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_KINDS } from '@shared/domain/document'
-import { createDocumentFiles } from './documents'
-import { snapshotDocuments, withTempProject } from './project-fixtures'
+import { documentFilesAt, snapshotDocuments, withTempProject } from './project-fixtures'
 
 const NOW = '2026-08-16T10:00:00.000Z'
 
@@ -46,9 +45,7 @@ describe('the project fixture', () => {
     const whole = await snapshotDocuments(documents)
     await rm(join(root, 'documents', 'Cover.img', 'layer-1.png'))
 
-    const stripped = await snapshotDocuments(
-      createDocumentFiles({ projectPath: () => root, now: () => NOW }),
-    )
+    const stripped = await snapshotDocuments(documentFilesAt(root, NOW))
 
     expect(whole[0]?.parts).toEqual([{ name: 'layer-1.png', data: 'iVBORw0KGgo=' }])
     expect(stripped[0]?.content).toBe(whole[0]?.content)
@@ -65,9 +62,7 @@ describe('the project fixture', () => {
     await documents.write('doc-2', 'audio', { title: 'Take', content: '{"chain":[]}' })
 
     const first = await snapshotDocuments(documents)
-    const second = await snapshotDocuments(
-      createDocumentFiles({ projectPath: () => root, now: () => NOW }),
-    )
+    const second = await snapshotDocuments(documentFilesAt(root, NOW))
 
     expect(second).toEqual(first)
   })

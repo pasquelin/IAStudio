@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { nameOf } from '@shared/domain/folder'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { assetsAt } from '@/helpers/asset-at'
@@ -39,10 +38,10 @@ export function FileInspector({ paths }: { paths: readonly string[] }) {
     }
   }, [paths])
 
-  // Keyed by the file name the folder shows, which is what a descriptor carries — the same
-  // reading the explorer's rows are drawn from.
+  // Keyed by the path the descriptor was read from — the same reading the explorer's rows are
+  // drawn from, and the same spelling the selection carries.
   const documentOf = (path: string): DocumentDescriptor | null =>
-    stored.find(document => document.fileName === nameOf(path)) ?? null
+    stored.find(document => document.path === path) ?? null
 
   const items: ProjectItem[] = paths.map(path =>
     itemOfPath(path, { asset: assets.get(path), document: documentOf(path) }),

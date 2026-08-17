@@ -50,7 +50,7 @@ function openSecondScene(): void {
         kind: 'scene',
         workspace: '3d',
         title: 'Other',
-        fileName: 'Other.scene',
+        path: 'documents/Other.scene',
       },
     },
     activeId: 'doc-2',
@@ -63,7 +63,13 @@ beforeEach(() => {
   useSceneClipboard.setState({ nodes: [] })
   useDocuments.setState({
     documents: {
-      'doc-1': { id: 'doc-1', kind: 'scene', workspace: '3d', title: 'Set', fileName: 'Set.scene' },
+      'doc-1': {
+        id: 'doc-1',
+        kind: 'scene',
+        workspace: '3d',
+        title: 'Set',
+        path: 'documents/Set.scene',
+      },
     },
     activeId: 'doc-1',
   })

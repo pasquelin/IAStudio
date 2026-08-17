@@ -31,13 +31,19 @@ export type DocumentDescriptor = {
   title: string
   workspace: WorkspaceId
   /**
-   * The directory entry this document was read from, extension included — `Niveau.scene`.
+   * Where this document was read from, relative to the project folder, extension included —
+   * `Repérages/Niveau.scene`. The same spelling every other path on this boundary uses, `/` on
+   * every platform.
    *
-   * Carried because the id no longer spells it: whoever joins a folder listing to a document
-   * has only the entry to go on, and rebuilding it from the title would be a second answer free
-   * to disagree with the disk.
+   * The whole path and not the entry alone, since a document may sit anywhere in the project:
+   * two folders may each hold a `Niveau.scene`, and a listing joined on the name would hand the
+   * explorer one document's descriptor for the other one's row.
+   *
+   * Carried because the id no longer spells it: whoever joins a folder listing to a document has
+   * only the path to go on, and rebuilding it from the title would be a second answer free to
+   * disagree with the disk.
    */
-  fileName: string
+  path: string
   /**
    * The asset this document was opened to edit, when it was opened for one.
    *

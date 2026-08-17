@@ -115,7 +115,7 @@ describe('useNativeMenu', () => {
           kind: 'image',
           workspace: 'image',
           title: 'Sans titre',
-          fileName: 'Sans titre.img',
+          path: 'documents/Sans titre.img',
         },
       },
       activeId: 'doc-1',

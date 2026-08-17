@@ -742,11 +742,6 @@ export function createServices(settings: SettingsStore): Services {
     record: report => journal.record(report),
   })
 
-  const documents = createDocumentFiles({
-    projectPath: () => project.path(),
-    now: timestamp,
-  })
-
   // Reader and writer together: the handlers take the reading half, the orchestrator below takes
   // the writing one, and neither of them knows the catalogue is involved.
   const folder = {
@@ -756,6 +751,14 @@ export function createServices(settings: SettingsStore): Services {
       file => shell.trashItem(file),
     ),
   }
+
+  const documents = createDocumentFiles({
+    projectPath: () => project.path(),
+    now: timestamp,
+    // The listing walks the project through the same reader the explorer does — one walk with
+    // one depth bound, rather than a second one free to disagree about how deep a project goes.
+    walkFiles: () => folder.walk(),
+  })
 
   const files = createFileOps({
     // `null` rather than `''`: with no project open there is no folder to write in, and every

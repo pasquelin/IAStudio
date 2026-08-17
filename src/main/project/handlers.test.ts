@@ -115,7 +115,7 @@ function base(catalog: AsyncCatalog) {
           kind,
           title,
           workspace: '3d',
-          fileName: `${title}.scene`,
+          path: `documents/${title}.scene`,
         }),
       ),
     },

@@ -70,7 +70,7 @@ export function useProjectItems(hidden: boolean, active: boolean): ProjectItems 
 
   const documentsByFile = useMemo(() => {
     const found = new Map<string, DocumentDescriptor>()
-    for (const document of stored) found.set(document.fileName, document)
+    for (const document of stored) found.set(document.path, document)
     return found
   }, [stored])
 
@@ -79,7 +79,7 @@ export function useProjectItems(hidden: boolean, active: boolean): ProjectItems 
       walked.entries.map(entry =>
         itemOfPath(entry.path, {
           asset: assets.get(entry.path),
-          document: documentsByFile.get(entry.name),
+          document: documentsByFile.get(entry.path),
         }),
       ),
     [walked.entries, assets, documentsByFile],

@@ -17,14 +17,14 @@ const scene: DocumentDescriptor = {
   kind: 'scene',
   title: 'Niveau',
   workspace: '3d',
-  fileName: 'Niveau.scene',
+  path: 'documents/Niveau.scene',
 }
 const sequence: DocumentDescriptor = {
   id: 'doc-2',
   kind: 'sequence',
   title: 'Bande annonce',
   workspace: 'video',
-  fileName: 'Bande annonce.seq',
+  path: 'documents/Bande annonce.seq',
 }
 
 type Panel = {
