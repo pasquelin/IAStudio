@@ -3,6 +3,7 @@ import { use, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 import { isGoneForGood } from '@/helpers/teardown'
+import { useLatest } from '@/hooks/useLatest'
 import { BandScrollContext } from '../bandScroll'
 import type { RowReorder } from './rowReorder'
 
@@ -53,10 +54,7 @@ export function TimelineRowGrip({ height, reorder, onHeld }: TimelineRowGripProp
 
   // Read by the window listeners below, which are bound once for the whole gesture: `reorder` is
   // a fresh object on every draw of its row, and rebinding on each would drop events mid-drag.
-  const latest = useRef({ height, reorder, onHeld, band })
-  useEffect(() => {
-    latest.current = { height, reorder, onHeld, band }
-  })
+  const latest = useLatest({ height, reorder, onHeld, band })
 
   /**
    * The gesture lives on the WINDOW, not on the grip, and pointer capture is deliberately not
@@ -153,7 +151,7 @@ export function TimelineRowGrip({ height, reorder, onHeld }: TimelineRowGripProp
       // IS the row one is holding, and releasing on that replay ended every downward drag.
       if (grabbed.current && isGoneForGood(grabbed.current.node)) release()
     }
-  }, [dragging])
+  }, [dragging, latest])
 
   const onPointerDown = (event: PointerEvent<HTMLButtonElement>): void => {
     // The row under the grip must not also take the press as a selection.

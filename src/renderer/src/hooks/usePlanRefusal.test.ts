@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { usePlanRefusal } from './planAccess'
+import { usePlanRefusal } from './usePlanRefusal'
 
 const BASIC = { name: 'cu-basic', level: 25 }
 

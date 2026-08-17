@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { connectRemoteActions } from '@/assistant/remoteActions'
 import { useAccountChange } from '@/hooks/useAccountChange'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
-import { useHeldCommand } from '@/hooks/useShortcuts'
+import { useDictationShortcut } from '@/hooks/useDictationShortcut'
 import { useWindowFit } from '@/hooks/useWindowFit'
 import { useAccounts } from '@/stores/accounts'
 import { useAssets } from '@/stores/assets'
@@ -105,23 +105,5 @@ export function Application() {
     <QueryClientProvider client={client}>
       <Shell />
     </QueryClientProvider>
-  )
-}
-
-/**
- * The push-to-talk key, heard once for the whole window.
- *
- * Here rather than in a panel: dictation writes wherever the caret is, so it belongs to the
- * shell and not to whichever surface happens to be open. What holding and releasing mean is
- * the store's business — see `setHeld`.
- */
-function useDictationShortcut(): void {
-  const enabled = useSettings(state => state.settings.dictation.enabled)
-  const setHeld = useDictationStore(state => state.setHeld)
-
-  useHeldCommand(
-    'app.dictate',
-    enabled,
-    useCallback(held => void setHeld(held), [setHeld]),
   )
 }

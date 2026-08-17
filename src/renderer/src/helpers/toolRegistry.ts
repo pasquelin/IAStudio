@@ -16,7 +16,6 @@ import {
   mdiWeatherPartlyCloudy,
   mdiEyeOutline,
 } from '@mdi/js'
-import { useMemo } from 'react'
 import {
   placementIn,
   serves,
@@ -26,9 +25,9 @@ import {
   type ToolSurface,
   type ToolZone,
 } from '@shared/domain/tool'
-import { modelForFamily, useModelForFamily } from '@/helpers/modelForFamily'
 import { NODE_KINDS } from '@/engines/scene/nodeKinds'
 import { useProject } from '@/stores/project'
+import { modelForFamily } from './modelForFamily'
 import { familyOfSurface } from './workspaces'
 
 export type Tool = {
@@ -150,18 +149,6 @@ function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
 }
 
 /**
- * The same two answers, subscribed rather than read once: the rail has to redraw the moment a
- * model is picked or a project opened, and a plain read would leave the icon out until
- * something else happened to re-render.
- */
-export function useToolState(surface: ToolSurface): ToolState {
-  const hasModel = Boolean(useModelForFamily(familyOfSurface(surface)))
-  const hasProject = useProject(state => state.project !== null)
-
-  return useMemo(() => ({ hasModel, hasProject }), [hasModel, hasProject])
-}
-
-/**
  * `undefined` for a closed half, `null` for one open on no panel in particular, an id for one the
  * user chose. Three substitutions — an unchosen half falls to the section's first panel, a half
  * holding a tool the section puts elsewhere shows what it does put there, a generator with no
@@ -214,15 +201,13 @@ export function availableToolIds(surface: ToolSurface): ToolId[] {
 }
 
 /**
- * The tools of a zone this section can actually offer. Generating without a model is
- * impossible, so the generator is not merely disabled there — it is absent, and the rail shows
- * what the section can do rather than what it cannot.
+ * The tools of a zone this section can actually offer. Generating without a model is impossible,
+ * so the generator is not merely disabled there — it is absent, and the rail shows what the
+ * section can do rather than what it cannot.
+ *
+ * The state is passed in rather than read: `useAvailableTools` subscribes to it, and `canOffer`
+ * stays module-private, which is what it was before the hook moved out.
  */
-export function useAvailableTools(zone: ToolZone, surface: ToolSurface): Tool[] {
-  const state = useToolState(surface)
-
-  return useMemo(
-    () => toolsInZone(zone, surface).filter(tool => canOffer(tool.id, surface, state)),
-    [zone, surface, state],
-  )
+export function toolsAvailableIn(zone: ToolZone, surface: ToolSurface, state: ToolState): Tool[] {
+  return toolsInZone(zone, surface).filter(tool => canOffer(tool.id, surface, state))
 }

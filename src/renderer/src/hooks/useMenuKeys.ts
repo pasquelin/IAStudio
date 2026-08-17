@@ -1,4 +1,5 @@
-import { useEffect, useRef, type RefObject } from 'react'
+import { useEffect, type RefObject } from 'react'
+import { useLatest } from './useLatest'
 
 /** The three roles a menu row can carry. The keyboard walks all of them alike. */
 const ROWS = '[role="menuitem"],[role="menuitemradio"],[role="menuitemcheckbox"]'
@@ -29,11 +30,7 @@ export function useMenuKeys(
   // Read at event time, never a dependency: every caller passes an inline arrow, so depending on
   // it would tear the effect down on each render of the parent — and put focus back on the first
   // row every time, mid-walk. Only its PRESENCE is a dependency, since that is the opt-in.
-  const close = useRef(onClose)
-  useEffect(() => {
-    close.current = onClose
-  })
-
+  const close = useLatest(onClose)
   const wanted = Boolean(onClose)
 
   useEffect(() => {
@@ -90,5 +87,5 @@ export function useMenuKeys(
       const focused = document.activeElement
       if (focused === document.body || menu.contains(focused)) opener?.focus()
     }
-  }, [surface, wanted])
+  }, [surface, wanted, close])
 }

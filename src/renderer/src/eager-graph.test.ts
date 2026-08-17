@@ -231,13 +231,15 @@ describe('the opening chunk', () => {
    * opens (`app/JobsStatus.tsx:10`), which is the first screen, so the chunk holds them either
    * way. That is why `Jobs.tsx` may not read `helpers/toolRegistry`: it would drag the scene's
    * node kinds in behind it. The facet key is read by `helpers/revealPanel.ts`, which narrows a
-   * browser before bringing it up; it is a lone constant in a file of its own for that reason.
+   * browser before bringing it up; `panels/assets/facets.ts` holds nothing but constants for that
+   * reason — the hooks that read them moved to `hooks/` on 17 August, and with them the
+   * `react-i18next` import this chunk used to pull in behind a single string.
    */
   it('reaches no panel of the tool table, except the list the status bar itself opens', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.startsWith('./panels/')).sort()).toEqual([
-      './panels/assets/typeFacet.ts',
+      './panels/assets/facets.ts',
       './panels/jobs/JobRow/JobRow.tsx',
       './panels/jobs/JobRow/JobRowDetail.tsx',
       './panels/jobs/Jobs.tsx',

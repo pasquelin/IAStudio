@@ -89,13 +89,13 @@ export function useFolderTree(hidden: boolean): FolderTree {
   // Every open folder rather than the root alone once `hidden` moves: what a dot hides sits at
   // every level, and re-reading the root would reveal `.project.json` while leaving `.index/`
   // out of a folder already unfolded.
-  useEffect(() => {
-    if (projectPath) void listing([FOLDER_ROOT, ...open.current], hidden).then(absorb)
-  }, [projectPath, hidden, absorb])
-
   const reload = useCallback(() => {
     if (projectPath) void listing([FOLDER_ROOT, ...open.current], hidden).then(absorb)
   }, [projectPath, hidden, absorb])
+
+  // The read at mount IS a reload, as `useCatalogueAssets` already spells it: the two had the
+  // same body and the same dependencies, so a fix to one would have missed the other.
+  useEffect(reload, [reload])
 
   // The disk, and the window coming back to the front. The second is not a duplicate of the
   // first: a recursive watch is not offered everywhere, and a project on a network volume can

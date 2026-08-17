@@ -5,28 +5,14 @@ import {
   COMMAND_SCOPES,
   commandsIn,
   conflicts,
-  type BindingOverrides,
   type CommandDescriptor,
   type CommandId,
 } from '@shared/domain/command'
 import type { Signature } from '@shared/domain/shortcut'
-import { useSettings } from '@/stores/settings'
-import { useSettingsDraft } from '@/stores/settingsDraft'
+import { useOverrides } from '@/hooks/useOverrides'
 import { WINDOW_CAPTION } from '@/design/windowStyles'
 import { ShortcutsSettingsScope } from './ShortcutsSettingsScope'
 import { ShortcutsSettingsSearchByChord } from './ShortcutsSettingsSearchByChord'
-
-/**
- * The bindings as they stand, buffer included. Staged like every other setting: a remap is not
- * written until Apply, which is what makes Cancel able to take it back.
- */
-function useOverrides(): [BindingOverrides, (next: BindingOverrides) => void] {
-  const stored = useSettings(state => state.settings.shortcuts.overrides)
-  const staged = useSettingsDraft(state => state.pending.shortcuts?.overrides)
-  const stageBranch = useSettingsDraft(state => state.stageBranch)
-
-  return [staged ?? stored, next => stageBranch({ shortcuts: { overrides: next } })]
-}
 
 /**
  * The shortcuts screen. What no descriptor can express: a binding is captured by pressing it,

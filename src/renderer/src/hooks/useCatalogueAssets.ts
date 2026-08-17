@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Asset } from '@shared/domain/asset'
 import { useShelfRefresh } from './useShelfRefresh'
 
-const NOTHING: readonly Asset[] = []
+/**
+ * What an ask answers when there is nothing to ask — no bridge, no project. One frozen array for
+ * the three hooks that need it: a fresh `[]` per read is a fresh identity, which re-renders every
+ * list through a whole import.
+ */
+export const NO_ASSETS: readonly Asset[] = []
 
 /**
  * One question put to the catalogue. **Must be stable** — a `useCallback` at the call site, whose
@@ -41,12 +46,12 @@ const sameRows = (held: readonly Asset[], found: readonly Asset[]): boolean =>
 export function useCatalogueAssets(ask: CatalogueAsk): readonly Asset[] {
   const [held, setHeld] = useState<{ ask: CatalogueAsk; assets: readonly Asset[] }>({
     ask,
-    assets: NOTHING,
+    assets: NO_ASSETS,
   })
 
   // Emptied during the render rather than after it, as `useShelf` does: left on screen, the rows
   // of the previous question stay clickable, and they act on ITS assets.
-  if (held.ask !== ask) setHeld({ ask, assets: NOTHING })
+  if (held.ask !== ask) setHeld({ ask, assets: NO_ASSETS })
 
   const read = useCallback((): void => {
     void ask()

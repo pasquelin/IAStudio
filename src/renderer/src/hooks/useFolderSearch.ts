@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { entriesByName, nameOf, parentOf, type FolderEntry } from '@shared/domain/folder'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
 import { useDebounced } from './useDebounced'
 import { useFolded } from './useFolded'
+import { useReloadKey } from './useReloadKey'
 import type { FolderNode, FolderTree } from './useFolderTree'
 
 /** How long a hand keeps typing. Every keystroke otherwise walks the whole project folder. */
@@ -67,7 +68,9 @@ export function useFolderSearch(term: string, hidden: boolean): FolderSearch {
   /** The chains are drawn open — a match hidden under a fold is a match nobody was answered. */
   const folded = useFolded()
   const [asked, setAsked] = useState({ term, projectPath })
-  const [again, setAgain] = useState(0)
+  // What a batch of file gestures asks for: the matches were read before it, and a file that
+  // moved is at a path this list still spells the old way.
+  const [again, reload] = useReloadKey()
 
   // Emptied during the render that leaves the search or changes project, not after it: every
   // path in the list names the folder just left, and rows kept a frame longer are clickable.
@@ -102,10 +105,6 @@ export function useFolderSearch(term: string, hidden: boolean): FolderSearch {
     }
     return open
   }, [found.nodes, folded.ids])
-
-  // What a batch of file gestures asks for: the matches were read before it, and a file that
-  // moved is at a path this list still spells the old way.
-  const reload = useCallback(() => setAgain(count => count + 1), [])
 
   return { ...found, expandedIds, toggle: folded.toggle, reload }
 }

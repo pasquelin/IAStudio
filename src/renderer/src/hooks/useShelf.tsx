@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useReloadKey } from './useReloadKey'
 
 /**
  * Where a shelf's read has got to.
@@ -36,7 +37,7 @@ export function useShelf<T>(
 ): Shelf<T> {
   // Part of what the read runs under, so pressing "try again" is a new read rather than a second
   // copy of the one this hook already owns — which is what a band doing it itself had to build.
-  const [attempt, setAttempt] = useState(0)
+  const [attempt, retry] = useReloadKey()
   const key = `${source}/${attempt}`
 
   const [readKey, setReadKey] = useState(key)
@@ -76,8 +77,6 @@ export function useShelf<T>(
     // would run the read on every one of them. `initial` is the caller's constant.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   }, [key])
-
-  const retry = useCallback(() => setAttempt(count => count + 1), [])
 
   return { ...held, retry }
 }

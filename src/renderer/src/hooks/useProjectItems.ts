@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { FolderEntry } from '@shared/domain/folder'
@@ -7,6 +7,7 @@ import { itemOfPath, type ProjectItem } from '@/helpers/projectItem'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
+import { useReloadKey } from './useReloadKey'
 
 export type ProjectItems = {
   items: readonly ProjectItem[]
@@ -34,7 +35,7 @@ export function useProjectItems(hidden: boolean, active: boolean): ProjectItems 
     loaded: false,
   })
   const [assets, setAssets] = useState<Map<string, Asset>>(new Map())
-  const [again, setAgain] = useState(0)
+  const [again, reload] = useReloadKey()
 
   // Emptied during the render that changes project, not after it: every path names the folder
   // just left, and a list kept a frame longer is a list whose rows open nothing.
@@ -84,8 +85,6 @@ export function useProjectItems(hidden: boolean, active: boolean): ProjectItems 
       ),
     [walked.entries, assets, documentsByFile],
   )
-
-  const reload = useCallback(() => setAgain(count => count + 1), [])
 
   return { items, loaded: walked.loaded, reload }
 }

@@ -3,6 +3,7 @@ import { clamp } from '@shared/numeric'
 import { maxScrollTopFor } from '@/engines/timeline/band'
 import { edgeScroll } from '@/engines/timeline/edgeScroll'
 import { RULER_HEIGHT, type Viewport } from '@/engines/timeline/timelineGeometry'
+import { useLatest } from '@/hooks/useLatest'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import { BandScrollContext, type BandScroll } from './bandScroll'
 
@@ -88,10 +89,7 @@ export function TimelineHeaderColumn({
   useTimelineWheel(column, viewportNow, bounded)
 
   // Read by the frame loop below, bound once for the whole gesture.
-  const latest = useRef({ scrollTop, viewportNow, bounded })
-  useEffect(() => {
-    latest.current = { scrollTop, viewportNow, bounded }
-  })
+  const latest = useLatest({ scrollTop, viewportNow, bounded })
 
   // Stable for the column's whole life: a fresh object every draw would re-run the effect that
   // every grip inside binds to it, mid-gesture. State rather than a ref, which no component may
@@ -167,7 +165,7 @@ export function TimelineHeaderColumn({
       window.removeEventListener('pointerout', onOut)
       cancelAnimationFrame(frame)
     }
-  }, [held])
+  }, [held, latest])
 
   return (
     <BandScrollContext value={band}>
