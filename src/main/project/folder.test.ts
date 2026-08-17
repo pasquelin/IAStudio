@@ -393,7 +393,7 @@ describe('reading the names a folder holds', () => {
  * The four gestures that write to someone else's folder.
  *
  * **They refuse nothing on their own account**, and that is the change this phase made: what may
- * be written is decided once, in `file-plan.ts`. What is left here is the one refusal a plan
+ * be written is decided once, in `filePlan.ts`. What is left here is the one refusal a plan
  * cannot make because it is a race and not a rule — a name that appeared between the reading and
  * the write, which `rename` and `cp` would take without a word on POSIX.
  */

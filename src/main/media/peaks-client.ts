@@ -29,7 +29,7 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
   const pending = new Map<number, Pending>()
   let nextId = 1
   // A dead process swallows `postMessage` without a word, so a run posted into one would hold
-  // its slot in the ingest pool for good. Same guard `catalog-client` carries, same reason.
+  // its slot in the ingest pool for good. Same guard `catalogClient` carries, same reason.
   let closed = false
 
   port.onMessage(response => {
@@ -66,7 +66,7 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
 
         const id = nextId++
 
-        // Sent first, the order `catalog-client` settled on: a throw here leaves nothing behind
+        // Sent first, the order `catalogClient` settled on: a throw here leaves nothing behind
         // and rejects this promise on its own. Safe because an answer is always a turn later.
         port.postMessage({ id, ...job })
 

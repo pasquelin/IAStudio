@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setWindowLanguage } from '@main/window/language'
-import { askCloseChoice, askDeleteDocument, type AskUser } from './document-dialogs'
+import { askCloseChoice, askDeleteDocument, type AskUser } from './documentDialogs'
 
 type Shown = Parameters<AskUser>[0]
 

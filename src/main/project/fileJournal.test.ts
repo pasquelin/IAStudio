@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished } from 'vit
 import type { Asset } from '@shared/domain/asset'
 import { PENDING_FILES_FILE } from '@shared/domain/project'
 import { memoryCatalog } from './catalog-fixtures'
-import { appendMove, applyJournal, replayMoves } from './file-journal'
+import { appendMove, applyJournal, replayMoves } from './fileJournal'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset_1',

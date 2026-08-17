@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { hashOrNull } from '@main/media/runner'
 import { isMissing } from '@main/persistence'
 import { createFolderReader } from './folder'
-import type { RescanDisk } from './catalog-rescan'
+import type { RescanDisk } from './catalogRescan'
 
 /**
  * The project folder, as reconciling with it needs it — inside the catalogue's own thread.

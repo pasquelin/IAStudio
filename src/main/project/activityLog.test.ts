@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { ActivityEntry } from '@shared/domain/activity'
-import { ACTIVITY_FLUSH_MS, createActivityLog, type ActivityLog } from './activity-log'
+import { ACTIVITY_FLUSH_MS, createActivityLog, type ActivityLog } from './activityLog'
 import { memoryCatalog } from './catalog-fixtures'
-import type { AsyncCatalog } from './catalog-client'
+import type { AsyncCatalog } from './catalogClient'
 
 type Broadcast = (entries: readonly ActivityEntry[]) => void
 

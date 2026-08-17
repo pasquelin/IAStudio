@@ -86,9 +86,9 @@ import {
   type JobManager,
 } from './scenario/jobManager'
 import { runnerOf } from './scenario/runner'
-import type { AskUser } from './project/document-dialogs'
+import type { AskUser } from './project/documentDialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
-import { createFileOps, type FileOps } from './project/file-ops'
+import { createFileOps, type FileOps } from './project/fileOps'
 import {
   createFolderReader,
   createFolderWriter,
@@ -98,8 +98,8 @@ import {
 } from './project/folder'
 import { createProjectStore, openFailureKey, type ProjectStore } from './project/store'
 import { createReconciler, type Reconciler } from './project/reconcile'
-import { createActivityLog, type ActivityLog } from './project/activity-log'
-import { openCatalogThread } from './project/catalog-thread'
+import { createActivityLog, type ActivityLog } from './project/activityLog'
+import { openCatalogThread } from './project/catalogThread'
 import { catalogOf } from './scenario/modelCatalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './scenario/uploader'
 import { createAssetInputResolver } from './scenario/assetInputs'
@@ -230,7 +230,7 @@ export type Services = {
   files: FileOps
   /** Hands a file to the system. The one place the studio launches a third-party application. */
   openInSystem: (file: string) => Promise<string>
-  /** Asks the user a question the OS puts in front of the window — see `document-dialogs`. */
+  /** Asks the user a question the OS puts in front of the window — see `documentDialogs`. */
   askUser: AskUser
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
@@ -809,7 +809,7 @@ export function createServices(settings: SettingsStore): Services {
     projectPath: () => project.path(),
     catalog: () => project.catalog(),
     now: timestamp,
-    // The same function the rescan hashes with (`project-disk` passes the very same one), which
+    // The same function the rescan hashes with (`projectDisk` passes the very same one), which
     // is what makes the two comparable: a fingerprint recorded here is what lets a generated file
     // be followed after the user files it away themselves.
     hash: hashOrNull,

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { IDLE_RESCAN, type RescanState } from '@shared/domain/project'
-import type { AsyncCatalog } from './catalog-client'
-import type { RescanReport } from './catalog-rescan'
+import type { AsyncCatalog } from './catalogClient'
+import type { RescanReport } from './catalogRescan'
 import { createReconciler, type Reconciler } from './reconcile'
 
 const DONE: RescanReport = { moved: 0, missing: 0, returned: 0, complete: true }

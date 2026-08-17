@@ -49,7 +49,7 @@ export function isAudio(message: SttMessage): message is SttAudio {
 /**
  * The engine is up, or it is not. Answered before anything else is accepted: reading 640 MB of
  * weights can fail, and it has to fail at the opening rather than at the first sentence — the
- * same handshake `catalog-thread` waits on.
+ * same handshake `catalogThread` waits on.
  */
 export type SttReady = { ready: true } | { ready: false; error: string }
 

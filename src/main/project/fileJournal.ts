@@ -4,7 +4,7 @@ import type { PathChange } from '@shared/domain/file-op'
 import { PENDING_FILES_FILE } from '@shared/domain/project'
 import { isRecord } from '@shared/guards'
 import { isMissing } from '@main/persistence'
-import type { AsyncCatalog } from './catalog-client'
+import type { AsyncCatalog } from './catalogClient'
 
 /**
  * What a move that stopped halfway left behind, read back.

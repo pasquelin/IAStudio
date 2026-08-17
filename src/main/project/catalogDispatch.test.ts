@@ -1,7 +1,7 @@
 import { describe, expect, it, onTestFinished } from 'vitest'
 import { createCatalog, type Catalog } from './catalog'
-import { openMemoryDatabase } from './sqlite-memory'
-import { dispatchCatalogRequest } from './catalog-dispatch'
+import { openMemoryDatabase } from './sqliteMemory'
+import { dispatchCatalogRequest } from './catalogDispatch'
 import { emptyAssetCounts, type Asset } from '@shared/domain/asset'
 import type {
   ActivityDraft,

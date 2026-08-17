@@ -1,8 +1,8 @@
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { createCatalog, type Catalog } from './catalog'
-import { rescanProject, type RescanDisk, type RescanOptions } from './catalog-rescan'
-import { openMemoryDatabase } from './sqlite-memory'
+import { rescanProject, type RescanDisk, type RescanOptions } from './catalogRescan'
+import { openMemoryDatabase } from './sqliteMemory'
 
 const NOW = '2026-08-17T10:00:00.000Z'
 

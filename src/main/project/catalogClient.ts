@@ -9,8 +9,8 @@ import {
   type CatalogRescanProgress,
   type CatalogResponse,
   type CatalogResults,
-} from './catalog-protocol'
-import type { RescanProgress, RescanReport } from './catalog-rescan'
+} from './catalogProtocol'
+import type { RescanProgress, RescanReport } from './catalogRescan'
 
 /**
  * The thread, reduced to what the client needs. Injected rather than imported so the protocol

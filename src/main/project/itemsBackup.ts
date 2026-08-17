@@ -2,7 +2,7 @@ import { mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { writeAtomic } from '@main/persistence'
 import type { BackedUpItem } from './catalog'
-import type { RescanReport } from './catalog-rescan'
+import type { RescanReport } from './catalogRescan'
 
 /**
  * Where the backup sits. Under a dot, so it is the studio's own by the one rule that says so —

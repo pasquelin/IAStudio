@@ -1,6 +1,6 @@
 import { Worker } from 'node:worker_threads'
-import { createCatalogClient, type AsyncCatalog, type CatalogPort } from './catalog-client'
-import { isCatalogReady, type CatalogResponse } from './catalog-protocol'
+import { createCatalogClient, type AsyncCatalog, type CatalogPort } from './catalogClient'
+import { isCatalogReady, type CatalogResponse } from './catalogProtocol'
 
 /**
  * A catalogue running on its own thread.
@@ -10,9 +10,9 @@ import { isCatalogReady, type CatalogResponse } from './catalog-protocol'
  * the thread buys is that the main process stops waiting for them at all.
  */
 export async function openCatalogThread(file: string): Promise<AsyncCatalog> {
-  // Resolved against the bundled main, where `catalog-worker` is a second entry point — see
-  // `electron.vite.config.ts`.
-  const worker = new Worker(new URL('./catalog-worker.js', import.meta.url), { workerData: file })
+  // Resolved against the bundled main, where `catalogWorker` is a second entry point — see
+  // `electron.vite.config.ts`. This name is not an import: nothing but a build proves it resolves.
+  const worker = new Worker(new URL('./catalogWorker.js', import.meta.url), { workerData: file })
 
   await ready(worker)
 

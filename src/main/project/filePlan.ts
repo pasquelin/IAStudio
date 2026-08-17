@@ -3,7 +3,7 @@ import { extensionOf, foldForFileName, stemForSuffix, stemOf } from '@shared/dom
 import { isPrivatePath, moveRefusal, nameOf, parentOf } from '@shared/domain/folder'
 
 /**
- * One thing the disk is asked to do. The planner speaks these; `file-ops` carries them out.
+ * One thing the disk is asked to do. The planner speaks these; `fileOps` carries them out.
  *
  * Told apart from `PathChange`, which is the EFFECT the journal, the catalogue and the undo
  * stack read: a copy and a move both leave a file at `to`, and only one of them left one at
@@ -103,7 +103,7 @@ function foldedNames(folders: FolderSnapshot, folder: string): Set<string> {
  *
  * Pure, and that is where the effort of this phase goes: every case worth arguing about — a
  * folder dropped into itself, a name already taken, a source that has gone, one of the studio's
- * own paths — is a table of strings in and a table of strings out. What is left for `file-ops`
+ * own paths — is a table of strings in and a table of strings out. What is left for `fileOps`
  * is the ORDER of the writes, which is the one thing a test of this file cannot claim.
  *
  * Names taken WITHIN the batch count as taken: moving `a/x.png` and `b/x.png` into the same

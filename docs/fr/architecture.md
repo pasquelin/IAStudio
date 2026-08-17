@@ -119,7 +119,7 @@ Toute tâche longue est **annulable**, **rapporte sa progression**, et tourne da
 `better-sqlite3` est synchrone : une requête lourde dans le processus principal bloque toutes les
 fenêtres, donc les requêtes de catalogue non triviales passent par `worker_threads`.
 
-Trois fils existent précisément pour cela. `main/project/catalog-worker.ts` détient la base et
+Trois fils existent précisément pour cela. `main/project/catalogWorker.ts` détient la base et
 répond à une boucle de messages : une recherche parmi des milliers d’assets ne gèle plus aucune
 fenêtre. `renderer/src/engines/audio/audio.worker.ts` sort la chaîne sonore du thread de la
 fenêtre, les buffers d’échantillons étant **transférés** plutôt que copiés. Et
@@ -220,12 +220,12 @@ src/main/
 ├── project/
 │   ├── store.ts             créer et ouvrir un dossier de projet, lire/écrire le manifeste
 │   ├── catalog.ts           l'index SQLite des assets
-│   ├── catalog-thread.ts    le worker qui le porte, et son protocole
-│   ├── activity-log.ts      ce que le studio a fait et raté
+│   ├── catalogThread.ts     le worker qui le porte, et son protocole
+│   ├── activityLog.ts       ce que le studio a fait et raté
 │   ├── documents.ts         l'écriture atomique d'un document
 │   ├── sqlite.ts            le port SqliteDriver
-│   ├── sqlite-native.ts     better-sqlite3 — production
-│   └── sqlite-memory.ts     node:sqlite — tests
+│   ├── sqliteNative.ts      better-sqlite3 — production
+│   └── sqliteMemory.ts      node:sqlite — tests
 ├── assets/
 │   ├── local-backend.ts     les assets du projet, sur le disque
 │   ├── cloud-backend.ts     les mêmes, du côté de la bibliothèque
@@ -300,7 +300,7 @@ deux.
 
 ### Le journal d’activité
 
-`project/activity-log.ts` tient le compte de ce que le studio a fait et raté. Trois décisions y
+`project/activityLog.ts` tient le compte de ce que le studio a fait et raté. Trois décisions y
 sont figées, et chacune répond à un défaut précis :
 
 - **`record` rend la main immédiatement.** Il est appelé depuis des chemins d’échec : un journal
@@ -741,7 +741,7 @@ les fichiers restent, plus rien ne dit ce qu’ils sont. `.scenario/items.json` 
 lire ce jour-là : une sauvegarde indexée par empreinte de contenu, écrite après chaque passe de
 réconciliation qui a changé quelque chose, que le studio ne relit jamais de lui-même.
 
-**Une passe le remet d’accord avec le disque**, ce qui n’est pas le reconstruire. `catalog-rescan.ts`
+**Une passe le remet d’accord avec le disque**, ce qui n’est pas le reconstruire. `catalogRescan.ts`
 tourne dans le thread du catalogue à l’ouverture d’un projet et au retour de la fenêtre au premier
 plan (plancher de 5 s, un passage à la fois) : elle retrouve par empreinte de contenu un fichier
 déplacé hors du studio et refile sa ligne (`repath`), et elle DATE une absence — `missing_at` —

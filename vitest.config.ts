@@ -60,7 +60,7 @@ process.env.TZ = TEST_TZ
  * `forks` is what a native module that is not thread-safe demands, and ONE such module is reached
  * by the suites: `node:sqlite`. It is a native binding like any other, experimental at that — the
  * first `pnpm validate` with threads on all three projects ended in SIGSEGV. `better-sqlite3` is
- * NOT the one: only `sqlite-native.ts` imports it, which only `catalog-worker` loads. The
+ * NOT the one: only `sqliteNative.ts` imports it, which only `catalogWorker` loads. The
  * dictation addon sits behind a `utilityProcess` no test starts.
  *
  * Hence `forks` on the `node` project alone. Its effect is what a review measured, and it is the

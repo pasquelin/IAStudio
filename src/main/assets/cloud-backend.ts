@@ -3,7 +3,7 @@ import type { Asset } from '@shared/domain/asset'
 import { UPLOAD_KIND_BY_TYPE, uploadMimeTypeOf, type UploadKind } from '@shared/domain/asset-mime'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { defined } from '@shared/guards'
-import type { AsyncCatalog } from '@main/project/catalog-client'
+import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { DownloadFormat, RemoteAssetCatalog } from '@main/scenario/assetCatalog'
 import { twinOf, type LocalBackend } from './local-backend'
 

@@ -2,7 +2,7 @@ import { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
 import type { Job, JobProgress, JobStatus } from '@shared/domain/job'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import type { ActivityReport } from '@main/project/activity-log'
+import type { ActivityReport } from '@main/project/activityLog'
 import {
   createJobManager,
   jobProgressOf,

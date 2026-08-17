@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
-import type { ActivityReport } from '@main/project/activity-log'
+import type { ActivityReport } from '@main/project/activityLog'
 import { fillHoles, TRANSLATIONS } from '@shared/i18n'
 import { windowLanguage } from '@main/window/language'
 import { embeddedTextures, type EmbeddedTexture } from './glb-textures'

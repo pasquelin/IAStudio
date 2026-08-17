@@ -1,5 +1,5 @@
 import type { Catalog } from './catalog'
-import type { CatalogOp, CatalogRequest, CatalogResponse, CatalogResults } from './catalog-protocol'
+import type { CatalogOp, CatalogRequest, CatalogResponse, CatalogResults } from './catalogProtocol'
 import { messageOf } from '@shared/guards'
 
 /**

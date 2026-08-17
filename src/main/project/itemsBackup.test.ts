@@ -4,8 +4,8 @@ import { join } from 'node:path'
 import { describe, expect, it, onTestFinished } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { createCatalog } from './catalog'
-import { ITEMS_BACKUP, itemsBackupOf, writeItemsBackup } from './items-backup'
-import { openMemoryDatabase } from './sqlite-memory'
+import { ITEMS_BACKUP, itemsBackupOf, writeItemsBackup } from './itemsBackup'
+import { openMemoryDatabase } from './sqliteMemory'
 
 const WRITTEN_AT = '2026-08-17T10:00:00.000Z'
 

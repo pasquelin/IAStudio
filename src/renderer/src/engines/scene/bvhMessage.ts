@@ -28,7 +28,7 @@ export type SerializedBvh = {
 /**
  * `ok` rather than a bare tree: a build that throws has to say so, or the promise it answers stays
  * open for the life of the window and the geometry never leaves the builder's `building` map. Same
- * shape as `catalog-protocol.ts`, the studio's other worker boundary.
+ * shape as `catalogProtocol.ts`, the studio's other worker boundary.
  */
 export type BvhResponse =
   { id: number; ok: true; bvh: SerializedBvh } | { id: number; ok: false; error: string }
