@@ -1,3 +1,4 @@
+import type { Asset } from '@shared/domain/asset'
 import { refused, type ActionName, type ActionOutcome } from '@shared/domain/assistant'
 import type { StudioBridge } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
@@ -33,4 +34,21 @@ export async function withBridge(
   if (!bridge) return refused('noBridge')
 
   return { ok: true, data: await run(bridge) }
+}
+
+/**
+ * Runs against one catalogue row, or refuses for an id the library does not hold.
+ *
+ * Every family that takes an `assetId` and does something WITH the asset — rather than merely
+ * naming it — needs the row itself: its length, its size, whether it has a local file at all.
+ */
+export async function withAsset(
+  assetId: string,
+  run: (asset: Asset) => ActionOutcome,
+): Promise<ActionOutcome> {
+  const found = await withBridge(bridge => bridge.assets.search({ ids: [assetId], limit: 1 }))
+  if (!found.ok) return found
+
+  const asset = Array.isArray(found.data) ? found.data[0] : undefined
+  return asset ? run(asset) : refused('badInput')
 }

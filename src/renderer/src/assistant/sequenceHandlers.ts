@@ -32,7 +32,7 @@ import {
 } from '@/engines/timeline/timelineState'
 import { activeMontageId, useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
-import { withBridge, type ActionHandlers } from './actionHandler'
+import { withAsset, withBridge, type ActionHandlers } from './actionHandler'
 import { boolOf, numberOf, oneOf, textOf } from './actionInputs'
 
 /**
@@ -142,38 +142,34 @@ function readState(): ActionOutcome {
  * refusal from a placement: a rush over a sound montage opens no row and adds no clip, and
  * `addClipsOnNewTracks` says so by handing the state back untouched.
  */
-async function addClip(input: Record<string, unknown>): Promise<ActionOutcome> {
+function addClip(input: Record<string, unknown>): Promise<ActionOutcome> {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return Promise.resolve(refused('wrongSurface'))
 
   const assetId = textOf(input, 'assetId') ?? ''
-  const found = await withBridge(bridge => bridge.assets.search({ ids: [assetId], limit: 1 }))
-  if (!found.ok) return found
+  return withAsset(assetId, asset => {
+    const start = numberOf(input, 'start') ?? open.state.playhead
+    const placements = placementsForAsset(
+      open.state,
+      asset,
+      assetId,
+      start,
+      textOf(input, 'trackId') ?? undefined,
+    )
 
-  const asset = Array.isArray(found.data) ? (found.data[0] ?? null) : null
-  if (!asset) return refused('badInput')
+    if (placements.length === 0 && newTracksForAsset(open.state, asset).length === 0) {
+      return refused('badInput')
+    }
 
-  const start = numberOf(input, 'start') ?? open.state.playhead
-  const placements = placementsForAsset(
-    open.state,
-    asset,
-    assetId,
-    start,
-    textOf(input, 'trackId') ?? undefined,
-  )
+    const before = new Set(clipIdsOf(open.state))
+    run(
+      open.documentId,
+      placements.length > 0 ? addClips(placements) : addClipsOnNewTracks(asset, assetId, start),
+    )
 
-  if (placements.length === 0 && newTracksForAsset(open.state, asset).length === 0) {
-    return refused('badInput')
-  }
-
-  const before = new Set(clipIdsOf(open.state))
-  run(
-    open.documentId,
-    placements.length > 0 ? addClips(placements) : addClipsOnNewTracks(asset, assetId, start),
-  )
-
-  const laid = clipIdsOf(stateOf(open.documentId)).filter(id => !before.has(id))
-  return laid.length === 0 ? refused('badInput') : { ok: true, data: { clipIds: laid } }
+    const laid = clipIdsOf(stateOf(open.documentId)).filter(id => !before.has(id))
+    return laid.length === 0 ? refused('badInput') : { ok: true, data: { clipIds: laid } }
+  })
 }
 
 /** A trim stops where the media does, and only the catalogue knows how far that is. */

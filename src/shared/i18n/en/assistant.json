@@ -293,6 +293,46 @@
         "title": "Set how a track is worked",
         "description": "Changes a track’s mute, solo, lock or height. Those four say how one works rather than what one made, and so never enter the history."
       },
+      "skyboxState": {
+        "title": "Read the sky being edited",
+        "description": "Answers the sky in front — its equirectangular source, its image settings, where its sun sits and what colour it is, and what its environment lights — plus what produced it when it came from a generation."
+      },
+      "skyboxAdjust": {
+        "title": "Adjust a sky’s image",
+        "description": "Changes exposure, contrast, saturation, temperature, tint, horizon rotation or blur. Every field is optional, and what is not given is left as it was."
+      },
+      "skyboxResetAdjustments": {
+        "title": "Bring the image settings back to neutral",
+        "description": "Returns every image setting of the sky to its neutral value at once, in a single history entry. The source and the sun are left alone."
+      },
+      "skyboxSun": {
+        "title": "Place and set the sun",
+        "description": "Changes the elevation, azimuth, intensity or colour of the sun in the sky in front. Both angles are in radians, as everywhere else in the scene."
+      },
+      "skyboxEnvironment": {
+        "title": "Set what the sky lights",
+        "description": "Changes how strongly the sky lights the test objects, and decides whether the image is drawn behind them or merely lights them."
+      },
+      "skyboxSource": {
+        "title": "Choose a sky’s image",
+        "description": "Hangs an equirectangular image from the library in the sky in front. The asset must have a file on this machine, one still in the cloud having nothing to decode."
+      },
+      "textureState": {
+        "title": "Read the material being edited",
+        "description": "Answers the material in front — the eight channels and what fills them, every render setting such as colour, roughness and tiling, and how the preview is presented."
+      },
+      "textureMaterial": {
+        "title": "Set a material",
+        "description": "Changes the tint, roughness, metalness, relief, occlusion, emission, tiling, offset or rotation of the material in front. Every field is optional."
+      },
+      "texturePreview": {
+        "title": "Set a material’s preview",
+        "description": "Changes the strength and rotation of the environment lighting the preview, whether the background is drawn, the automatic spin and the seam highlight."
+      },
+      "textureChannel": {
+        "title": "Fill or empty a channel",
+        "description": "Puts an image from the library into one of the eight channels of the material in front. With no asset named, the channel is emptied rather than filled."
+      },
       "sceneState": {
         "title": "Read the scene being edited",
         "description": "Returns every node of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected and what lights the scene."
@@ -471,6 +511,30 @@
       "alsoRemote": "Remove from the remote library too",
       "layerId": "Layer identifier",
       "layerIds": "Layer identifiers",
+      "exposure": "Exposure, in stops",
+      "contrast": "Contrast, 1 being neutral",
+      "saturation": "Saturation, 1 being neutral",
+      "temperature": "Temperature, from -1 cold to +1 warm",
+      "tint": "Tint, from -1 green to +1 magenta",
+      "rotationY": "Rotation about the vertical, in radians",
+      "blur": "Softening, from 0 sharp to 1 blurred",
+      "elevation": "Elevation, in radians",
+      "azimuth": "Azimuth, in radians",
+      "showBackground": "Draw the image behind the subject",
+      "autoSpin": "Let the preview turn on its own",
+      "showSeam": "Bring the seams into the middle of the preview",
+      "pbrChannel": "Channel of the material",
+      "normalScale": "Strength of the relief",
+      "heightScale": "Strength of the displacement",
+      "aoIntensity": "Strength of the occlusion",
+      "edgeIntensity": "How much the edges are darkened",
+      "emissive": "Emitted colour",
+      "emissiveIntensity": "Strength of the emission",
+      "tilingX": "Repeats across",
+      "tilingY": "Repeats down",
+      "offsetX": "Offset across",
+      "offsetY": "Offset down",
+      "invertNormalGreen": "Invert the green channel of the relief",
       "clipId": "Clip identifier",
       "trackId": "Track identifier",
       "trackKind": "What the track carries",

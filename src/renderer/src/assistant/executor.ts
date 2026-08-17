@@ -17,6 +17,7 @@ import { FILE_HANDLERS } from './fileHandlers'
 import { mountedGenerator } from './generatorBridge'
 import { GIT_HANDLERS } from './gitHandlers'
 import { JOB_HANDLERS } from './jobHandlers'
+import { MATERIAL_HANDLERS } from './materialHandlers'
 import { SCENE_HANDLERS } from './sceneHandlers'
 import { SEQUENCE_HANDLERS } from './sequenceHandlers'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
@@ -38,6 +39,7 @@ const HANDLERS: ActionHandlers = {
   ...ASSET_HANDLERS,
   ...CANVAS_HANDLERS,
   ...SEQUENCE_HANDLERS,
+  ...MATERIAL_HANDLERS,
   ...SCENE_HANDLERS,
   ...GIT_HANDLERS,
   ...SETTINGS_HANDLERS,

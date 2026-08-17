@@ -293,6 +293,46 @@
         "title": "Régler comment une piste se travaille",
         "description": "Change le silence, le solo, le verrou ou la hauteur d’une piste. Ces quatre-là disent comment on travaille et non ce qu’on a fait, et n’entrent donc jamais dans l’historique."
       },
+      "skyboxState": {
+        "title": "Lire le ciel en cours d’édition",
+        "description": "Rend le ciel devant — sa source équirectangulaire, ses réglages d’image, la position et la couleur de son soleil, et ce que son environnement éclaire — plus ce qui l’a produit s’il vient d’une génération."
+      },
+      "skyboxAdjust": {
+        "title": "Régler l’image d’un ciel",
+        "description": "Change l’exposition, le contraste, la saturation, la température, la teinte, la rotation d’horizon ou le flou. Chaque champ est facultatif, et ce qui n’est pas donné reste tel quel."
+      },
+      "skyboxResetAdjustments": {
+        "title": "Remettre les réglages d’image à neutre",
+        "description": "Ramène d’un coup tous les réglages d’image du ciel à leur valeur neutre, en une seule entrée d’historique. La source et le soleil ne bougent pas."
+      },
+      "skyboxSun": {
+        "title": "Placer et régler le soleil",
+        "description": "Change l’élévation, l’azimut, l’intensité ou la couleur du soleil du ciel devant. Les deux angles sont en radians, comme partout dans la scène."
+      },
+      "skyboxEnvironment": {
+        "title": "Régler ce que le ciel éclaire",
+        "description": "Change l’intensité de l’éclairage que le ciel donne aux objets d’essai, et décide si l’image est dessinée derrière eux ou se contente de les éclairer."
+      },
+      "skyboxSource": {
+        "title": "Choisir l’image d’un ciel",
+        "description": "Accroche une image équirectangulaire de la bibliothèque dans le ciel devant. L’asset doit avoir un fichier sur la machine, une image restée dans le nuage n’ayant rien à décoder."
+      },
+      "textureState": {
+        "title": "Lire la matière en cours d’édition",
+        "description": "Rend la matière devant — les huit canaux et ce qui les remplit, tous les réglages de rendu comme la couleur, la rugosité et le pavage, et la façon dont l’aperçu est présenté."
+      },
+      "textureMaterial": {
+        "title": "Régler une matière",
+        "description": "Change la teinte, la rugosité, le métal, le relief, l’occlusion, l’émission, le pavage, le décalage ou la rotation de la matière devant. Chaque champ est facultatif."
+      },
+      "texturePreview": {
+        "title": "Régler l’aperçu d’une matière",
+        "description": "Change l’intensité et la rotation de l’environnement qui éclaire l’aperçu, l’affichage du fond, la rotation automatique et la mise en évidence des coutures."
+      },
+      "textureChannel": {
+        "title": "Remplir ou vider un canal",
+        "description": "Met une image de la bibliothèque dans un des huit canaux de la matière devant. Sans asset nommé, le canal est vidé plutôt que rempli."
+      },
       "sceneState": {
         "title": "Lire la scène en cours d’édition",
         "description": "Rend tous les objets du document 3D devant — identifiant, nom, type, parent, visibilité et transformation, avec la géométrie, la matière ou la lumière qu’ils portent — plus ce qui est sélectionné et ce qui éclaire la scène."
@@ -471,6 +511,30 @@
       "alsoRemote": "Retirer aussi de la bibliothèque distante",
       "layerId": "Identifiant du calque",
       "layerIds": "Identifiants des calques",
+      "exposure": "Exposition, en diaphragmes",
+      "contrast": "Contraste, 1 étant neutre",
+      "saturation": "Saturation, 1 étant neutre",
+      "temperature": "Température, de -1 froid à +1 chaud",
+      "tint": "Teinte, de -1 vert à +1 magenta",
+      "rotationY": "Rotation autour de la verticale, en radians",
+      "blur": "Adoucissement, de 0 net à 1 flou",
+      "elevation": "Élévation, en radians",
+      "azimuth": "Azimut, en radians",
+      "showBackground": "Dessiner l’image derrière le sujet",
+      "autoSpin": "Faire tourner l’aperçu tout seul",
+      "showSeam": "Amener les coutures au centre de l’aperçu",
+      "pbrChannel": "Canal de la matière",
+      "normalScale": "Force du relief",
+      "heightScale": "Force du déplacement",
+      "aoIntensity": "Force de l’occlusion",
+      "edgeIntensity": "Force de l’assombrissement des arêtes",
+      "emissive": "Couleur émise",
+      "emissiveIntensity": "Force de l’émission",
+      "tilingX": "Répétitions en largeur",
+      "tilingY": "Répétitions en hauteur",
+      "offsetX": "Décalage en largeur",
+      "offsetY": "Décalage en hauteur",
+      "invertNormalGreen": "Inverser le canal vert du relief",
       "clipId": "Identifiant du bloc",
       "trackId": "Identifiant de la piste",
       "trackKind": "Nature de la piste",
