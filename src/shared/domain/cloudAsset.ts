@@ -49,13 +49,6 @@ export type CloudAsset = {
 }
 
 /**
- * What the browser asks the library for.
- *
- * `text` and `tags` are what force the search endpoint rather than the plain listing: filtering
- * one's own assets by tag is documented as impossible on `GET /assets`, which honours `tags`
- * for public assets only.
- */
-/**
  * How a listing comes back ordered.
  *
  * `relevance` is the index's OWN ranking, obtained by asking for no order at all: the API refuses
@@ -67,6 +60,13 @@ export type CloudOrder = 'newest' | 'relevance'
 /** The values, beside the type: a validator and an action's choices both enumerate them. */
 export const CLOUD_ORDERS: readonly CloudOrder[] = ['newest', 'relevance']
 
+/**
+ * What the browser asks the library for.
+ *
+ * `text` and `tags` are what force the search endpoint rather than the plain listing: filtering
+ * one's own assets by tag is documented as impossible on `GET /assets`, which honours `tags`
+ * for public assets only.
+ */
 export type CloudQuery = {
   text?: string
   tags?: readonly string[]

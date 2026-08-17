@@ -118,11 +118,8 @@ function marked(prefix: string, token: string | null): string | null {
   return token === null ? null : `${prefix}${token}`
 }
 
-/**
- * The order a search is asked for, or nothing — which is how relevance is asked for, the index
- * ranking what it is not overruled on. Newest first everywhere else, and with no text at all:
- * relevance over an unqueried index is not a ranking, it is whatever order the shard answers in.
- */
+// Nothing at all is how relevance is asked for — see `CloudOrder`. With no text to rank by it
+// would not be a ranking, so the stamp stands.
 function ordering(query: CloudQuery): { sortBy?: readonly string[] } {
   return query.order === 'relevance' && query.text ? {} : { sortBy: NEWEST_FIRST }
 }
