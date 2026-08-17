@@ -220,4 +220,30 @@ describe('createDocumentIn', () => {
       expect(await createDocumentIn('3d')).toBeNull()
     })
   })
+
+  // Naming it is what lets a caller finish the gesture alone: the field only a person can fill
+  // never opens, so nothing is left waiting on a window nobody is looking at.
+  describe('named by its caller', () => {
+    it('makes it without raising the field', async () => {
+      const asked = vi.fn<DocumentNamer>(() => Promise.resolve(null))
+      namedBy(asked)
+
+      const made = await createDocumentIn('3d', { title: 'Niveau', folder: 'Repérages' })
+
+      expect(asked).not.toHaveBeenCalled()
+      expect(made).toMatchObject({ title: 'Niveau', path: 'Repérages/Niveau.scene' })
+    })
+
+    it('files it in the documents folder when no folder is named', async () => {
+      const made = await createDocumentIn('3d', { title: 'Niveau' })
+
+      expect(made?.path).toBe('documents/Niveau.scene')
+    })
+
+    it('still refuses with no project open', async () => {
+      useProject.setState({ project: null })
+
+      expect(await createDocumentIn('3d', { title: 'Niveau' })).toBeNull()
+    })
+  })
 })

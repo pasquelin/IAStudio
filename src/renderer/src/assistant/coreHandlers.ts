@@ -86,7 +86,12 @@ async function openWorkspace(input: Record<string, unknown>): Promise<ActionOutc
   // person's own refusal — and "you turned that down" for a studio with no project open is a lie.
   if (!useProject.getState().project) return refused('noProject')
 
-  const created = await createDocumentIn(workspace)
+  const title = textOf(input, 'title')
+  const folder = textOf(input, 'folder')
+  const created = await createDocumentIn(
+    workspace,
+    title === null ? undefined : { title, ...(folder === null ? {} : { folder }) },
+  )
   return created ? { ok: true, data: { documentId: created.id } } : refused('declined')
 }
 

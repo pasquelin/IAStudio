@@ -94,7 +94,8 @@ describe('opening a workspace', () => {
   it('makes a document there when asked to', async () => {
     await runAction('workspace.open', { workspace: '3d', createDocument: true })
 
-    expect(createDocumentIn).toHaveBeenCalledWith('3d')
+    // Nothing named: the field opens, which is what a person at the window expects.
+    expect(createDocumentIn).toHaveBeenCalledWith('3d', undefined)
     expect(showWorkspace).not.toHaveBeenCalled()
   })
 
@@ -108,6 +109,24 @@ describe('opening a workspace', () => {
       ok: true,
       data: { documentId: 'doc-9' },
     })
+  })
+
+  // Named by the caller, the creation raises no field — see `createDocumentIn`.
+  it('passes on the name and the folder the caller gave', async () => {
+    await runAction('workspace.open', {
+      workspace: '3d',
+      createDocument: true,
+      title: 'Niveau',
+      folder: 'Repérages',
+    })
+
+    expect(createDocumentIn).toHaveBeenCalledWith('3d', { title: 'Niveau', folder: 'Repérages' })
+  })
+
+  it('leaves the folder out when only a name was given', async () => {
+    await runAction('workspace.open', { workspace: '3d', createDocument: true, title: 'Niveau' })
+
+    expect(createDocumentIn).toHaveBeenCalledWith('3d', { title: 'Niveau' })
   })
 
   it('refuses when the name field is called off', async () => {
