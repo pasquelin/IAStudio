@@ -1,16 +1,10 @@
-import type { SerializedDockview } from 'dockview-react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_WORKSPACE, type WorkspaceId } from '@shared/domain/workspace'
 import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
 import { withoutPanels } from './layout-prune'
+import type { SerializedLayout } from './serialized-layout'
 import { useSettings } from './settings'
-
-/**
- * Serialized Dockview layout. Its shape belongs to Dockview, and only two things read it back:
- * `panelIds`, which asks which documents are open, and `prune`, which takes one out.
- */
-export type SerializedLayout = SerializedDockview
 
 type LayoutsState = {
   activeWorkspace: WorkspaceId
