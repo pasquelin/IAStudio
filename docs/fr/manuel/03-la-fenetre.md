@@ -108,7 +108,9 @@ ouvert » juste à côté du panneau dont le métier est d’en ouvrir un.
 
 Le panneau **Git** lit le même dossier que l’Explorateur, sous un autre angle : non pas ce qu’il
 contient, mais ce qui y a changé depuis la dernière fois que vous avez enregistré un état. Les
-deux se relaient dans la même moitié — leurs icônes sont côte à côte dans le rail.
+deux se relaient dans la même moitié — leurs icônes sont côte à côte dans le rail. Son mode
+d’emploi est au chapitre
+[Les projets](04-projets.md#enregistrer-des-versions--le-panneau-git).
 
 ### La colonne de droite
 
