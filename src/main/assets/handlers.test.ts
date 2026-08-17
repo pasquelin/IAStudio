@@ -213,6 +213,28 @@ describe('browsing the library', () => {
     expect(harness.searched[0]).not.toHaveProperty('sortBy')
   })
 
+  it('marks a ranked page apart from a stamped one', async () => {
+    setup({ remote: { search: () => Promise.resolve({ assets: [], token: '40' }) } })
+
+    const stamped = await invoke<{ cursor: string | null }>(CHANNELS.cloudBrowse, { text: 'a' })
+    const ranked = await invoke<{ cursor: string | null }>(CHANNELS.cloudBrowse, {
+      text: 'a',
+      order: 'relevance',
+    })
+
+    expect(stamped.cursor).toBe('o:40')
+    expect(ranked.cursor).toBe('r:40')
+  })
+
+  it('reads a ranked cursor in the order it was made, not in the one the query asks for', async () => {
+    // A client that forgets to repeat `order` would otherwise take offset 40 of one ranking for
+    // the next page of another: rows repeated, rows never seen, and nothing to notice it by.
+    await invoke(CHANNELS.cloudBrowse, { text: 'boulder', cursor: 'r:40' })
+
+    expect(harness.searched[0]).not.toHaveProperty('sortBy')
+    expect(harness.searched[0]).toMatchObject({ offset: 40 })
+  })
+
   it('keeps newest-first for a relevance asked with no words to rank by', async () => {
     // Over an unqueried index, relevance is not a ranking — it is whatever order the shard
     // answers in, which is worse than the stamp for every reader.

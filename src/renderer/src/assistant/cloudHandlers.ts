@@ -37,7 +37,16 @@ function browseQuery(input: Record<string, unknown>): CloudQuery {
 }
 
 export const CLOUD_HANDLERS: ActionHandlers = {
-  'cloud.browse': input => withBridge(bridge => bridge.cloud.browse(browseQuery(input))),
+  'cloud.browse': input => {
+    const query = browseQuery(input)
+    // Refused rather than answered in another order, as a kind the studio does not have is: with
+    // no words to rank by, relevance is whatever order the shard replies in.
+    if (query.order === 'relevance' && query.text === undefined) {
+      return Promise.resolve(refused('badInput'))
+    }
+
+    return withBridge(bridge => bridge.cloud.browse(query))
+  },
 
   'cloud.explore': input => {
     const type = oneOf(input, 'type', ASSET_TYPES)

@@ -649,7 +649,7 @@
       "remoteUrl": "Adresse du dépôt distant",
       "setUpstream": "Rattacher la branche au distant",
       "cursor": "Curseur de page, rendu par la page précédente",
-      "order": "Ordre des résultats — les plus récents, ou les plus pertinents pour la recherche",
+      "order": "Ordre des résultats — les plus récents, ou les plus pertinents, ce qui exige des mots à chercher",
       "syncPolicy": "Sens de la synchronisation",
       "styleId": "Identifiant du style",
       "favoriteId": "Identifiant de la recette",

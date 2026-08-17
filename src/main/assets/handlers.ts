@@ -94,6 +94,15 @@ function needsSearch(query: CloudQuery): boolean {
  */
 const TOKEN_CURSOR = 't:'
 const OFFSET_CURSOR = 'o:'
+/**
+ * The index again, ranked by relevance rather than by stamp. Marked apart for the same reason the
+ * two above are: a client that forgot to repeat `order` would read offset 40 of one ranking as the
+ * next page of another — rows repeated, rows never seen, and nothing on the answer to notice it by.
+ */
+const RANKED_CURSOR = 'r:'
+
+/** Both marks reach the API as an offset; only the order they were produced under differs. */
+const OFFSET_MARKS: readonly string[] = [OFFSET_CURSOR, RANKED_CURSOR]
 
 /**
  * A number the index will take, from whatever was handed in. Both cursors reach the API as an
@@ -107,7 +116,10 @@ function boundedOffset(value: string | undefined): number {
 }
 
 function offsetFrom(cursor: string | undefined): number {
-  return cursor?.startsWith(OFFSET_CURSOR) ? boundedOffset(cursor.slice(OFFSET_CURSOR.length)) : 0
+  if (cursor === undefined) return 0
+
+  const mark = OFFSET_MARKS.find(prefix => cursor.startsWith(prefix))
+  return mark ? boundedOffset(cursor.slice(mark.length)) : 0
 }
 
 function tokenFrom(cursor: string | undefined): string | undefined {
@@ -118,25 +130,36 @@ function marked(prefix: string, token: string | null): string | null {
   return token === null ? null : `${prefix}${token}`
 }
 
-// Nothing at all is how relevance is asked for — see `CloudOrder`. With no text to rank by it
-// would not be a ranking, so the stamp stands.
-function ordering(query: CloudQuery): { sortBy?: readonly string[] } {
-  return query.order === 'relevance' && query.text ? {} : { sortBy: NEWEST_FIRST }
+/**
+ * Whether this page is ranked by the index rather than by stamp — asked for by asking for no
+ * order at all, see `CloudOrder`. After the first page the CURSOR answers, not the query: what a
+ * client repeats is where it left off, and the order it left off in belongs to that.
+ */
+function ranked(query: CloudQuery): boolean {
+  if (query.cursor !== undefined) return query.cursor.startsWith(RANKED_CURSOR)
+
+  // With no text there is nothing to rank by, and relevance over an unqueried index is whatever
+  // order the shard answers in.
+  return query.order === 'relevance' && Boolean(query.text)
 }
 
 async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<CloudPage> {
   const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, PAGE_SIZE_MAX)
+  const byRank = ranked(query)
 
   const page = needsSearch(query)
     ? await remote
         .search({
           ...(query.text ? { query: query.text } : {}),
           ...defined({ filter: filterExpression(query) }),
-          ...ordering(query),
+          ...(byRank ? {} : { sortBy: NEWEST_FIRST }),
           limit: pageSize,
           offset: offsetFrom(query.cursor),
         })
-        .then(found => ({ ...found, cursor: marked(OFFSET_CURSOR, found.token) }))
+        .then(found => ({
+          ...found,
+          cursor: marked(byRank ? RANKED_CURSOR : OFFSET_CURSOR, found.token),
+        }))
     : await remote
         .list({
           pageSize,

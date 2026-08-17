@@ -39,6 +39,19 @@ describe('the remote library', () => {
     expect(browse).toHaveBeenCalledTimes(1)
   })
 
+  it('refuses the fitting order when there is nothing to fit', async () => {
+    // Relevance over an index nobody queried is not a ranking. Answered newest-first, the client
+    // would present « what fits best » and be showing what is merely most recent.
+    const browse = vi.fn(async () => ({ assets: [], cursor: null }))
+    installFakeBridge({ cloud: { browse } })
+
+    expect(await runAction('cloud.browse', { tags: ['stone'], order: 'relevance' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(browse).not.toHaveBeenCalled()
+  })
+
   /**
    * The whole call, not the one bad item: `types` closes over the six kinds, and the registry
    * refuses a list holding anything else. Dropping it silently would have the client believe it
