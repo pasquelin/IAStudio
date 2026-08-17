@@ -608,8 +608,8 @@ nothing about what the software does — only about what it says.
 
 **Do not confuse this log with the one on the status line.** This one is the studio's internal log,
 written to the terminal that launched it: **in the build you installed there is no terminal, so
-there is nothing to read**. The **Recent activity** panel does not depend on this setting — it gets
-its lines either way.
+there is nothing to read**. The status line's journal does not depend on this setting — it gets its
+lines either way.
 
 ### Settings file
 

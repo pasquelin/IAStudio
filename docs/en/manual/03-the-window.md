@@ -9,9 +9,12 @@ piece by piece.
 
 ## The home screen, before anything else
 
-The studio opens on a full-width screen — the home — saying where you were, what you have made,
-and what you can do next. It closes as soon as you step into a workspace. It has no rail, no
-panel and no tab; the status line stays at the bottom.
+The studio opens on the home — a screen saying where you were, what the studio knows how to
+start, and what everyone else has published. It closes as soon as you step into a workspace.
+
+**It has the same frame as a workspace**: both rails, both columns of panels, the status line at
+the bottom. What differs is the centre — a page you scroll, instead of tabs. **It has no tabs**,
+because it opens no document of its own: it leads to the other workspaces'.
 
 ### The banner, at the top
 
@@ -27,21 +30,24 @@ It shows one thing at a time:
 While the studio reads your projects, it stays silent rather than announcing "Ready when you are"
 and then correcting itself.
 
-### The two bands
+### The three bands
 
-The centre stacks two bands:
+The centre stacks three bands, in this order:
 
 | Band | What it shows | It needs |
 |---|---|---|
 | **Where you left off** | the banner: resume, connect, or create | nothing |
+| **Tools** | what the studio knows how to start, and the way to create or open a project | nothing |
 | **Explore** | what everyone has published, by kind | an API key |
 
 **A band that lacks what it needs is not greyed out: it is not there.** With no API key,
 **Explore** does not exist on this screen.
 
-Everything else on the home is a panel, held in its two columns — except the **Tools** section,
-in the centre and across the width: it lists what the studio knows how to start, in the same
-order as the workspace bar, and lets you create a project from there.
+**Tools** lists the workspaces in the same order as the workspace bar, with **New project**,
+**Open project** and **Settings** beside them. It is the band that still says something on a
+machine with no key, no project and no history.
+
+Everything else on the home is a panel, held in its two columns.
 
 ### Explore, the endless feed
 
@@ -69,68 +75,47 @@ asking. With no project open, or while a transfer is running, the tile does not 
 
 That is where you fetch, and nowhere else; the shelf can send — see [Assets](07-assets.md).
 
-**A counter leads to its assets.** Clicking the images one opens the Image workspace with the
-filter set. A kind at zero does not respond. The panel stays on screen even with no project,
-showing its six kinds at zero.
-
 ### Tidying the page
 
 **Hide this section**, when a band's heading is hovered. Hidden sections are counted at the foot
 of the page — "1 section hidden" — with a **Show them again** button.
 
-Only **Explore** carries that button; the banner is pinned.
+Only **Explore** carries that button: **Where you left off** and **Tools** are pinned, and that is
+what keeps this screen from ever being empty.
 
 ### The left column
 
-Cut in two: above, what one produces with; below, what one browses. **On the home screen, only
-the lower half exists.**
+Cut in two, as in the workspaces: above, what one produces with; below, what one browses. **The
+home makes no document of its own** — it leads to the other workspaces' — so its upper half goes
+to what one produces IN: the projects.
 
 | Panel | Half | What it shows | It needs |
 |---|---|---|---|
 | **Your projects** | 1st | the ones you opened recently, with their folder, reopened with a click — [its per-row menu](04-projects.md#the-home-screens-project-list) | nothing |
-| **Your recipes** | 2nd | the settings you have pinned | nothing |
-| **An idea to start from** | 2nd | prompt starting points written for your image model | an API key |
-| **In the same vein** | 2nd | public creations that look like your latest asset | an API key |
+| **Explorer** | 2nd | the open project, read as a folder | an open project |
 
-**Your recipes** follows you from one project to the next: a recipe is kept outside every project.
+**It is the same Explorer as in the workspaces**, in the same place — see
+[Projects](04-projects.md#walking-the-project--the-explorer-panel). It shows the whole folder:
+your documents, your assets, and everything you put there yourself.
 
-**An idea to start from** calls nothing until you click **Suggest an idea**. **It is free** — no
-creative unit is spent. Taking an idea opens the generator on the prompt **and** on the settings
-that go with it. With no image model chosen, the panel says what it is waiting for.
-
-**In the same vein** starts from your **latest asset**, named at the top of the panel, and looks
-for public creations that resemble it. If the library does not answer, the panel offers
-**Try again**.
+**With no project open, it is not there at all** — the only panel on the home that behaves this
+way. Elsewhere a panel stays and says what it lacks; here it would say "no project open" right
+beside the panel whose whole job is to open one.
 
 ### The right column
 
 | Panel | Half | What it shows | It needs |
 |---|---|---|---|
-| **What you have made** | 1st | this project's generations, the most recent first | an open project |
-| **By kind** | 1st | one number per asset kind; a kind that is not at zero leads to its part of the shelf | nothing |
-| **What you have spent** | 1st | your units spent, in total and per model | an API key |
 | **Your library** | 1st | what your account holds online | an API key |
-| **Your documents** | 1st | the project's documents, open or not | an open project |
-| **Recent activity** | 2nd | the studio's journal, with filters | nothing |
-| **Running now** | 2nd | the studio's generations, under way and finished | nothing |
-
-**What you have spent** uses the same period as the usage window. It is a summary: the detail is
-in **Help ▸ Usage…**.
-
-**Running now** is the list the status bar's indicator already opens. It keeps finished
-generations for the session, so you can read what a run cost.
 
 **"It needs" does not mean here what it means for the bands.** A band missing what it needs
-disappears; **a panel stays and says what it lacks**. With no project, *Your documents* offers to
-open one; with no key, *Your library* says it got no answer and offers to try again — the same
-message as a refusal from the server. "The library is empty" only appears once the question has
-actually been asked.
+disappears; **a panel stays and says what it lacks**. With no key, *Your library* says it is empty
+**or** that no key has been entered, without settling which — and if the server refuses, it offers
+to **try again**.
 
-**Your documents is not the Explorer.** The Explorer walks the project folder as a tree; this
-panel lists the documents themselves. **It is what makes a closed document reachable again.**
-
-**Recent activity is the whole journal**, with its filters by level and by subject — not an
-extract of the last few lines.
+**Nothing there is kept.** The library is read afresh on every visit, and the tiles are signed
+addresses that expire; holding on to them would make a panel of broken pictures a fortnight later,
+with nothing to explain it. Changing key reads it again too: another key is another library.
 
 > **The home can be skipped.** **Settings ▸ General ▸ Show the home screen**: unticked, the studio
 > goes straight to the workspace you left. What you hide is set on the home itself.
@@ -235,20 +220,23 @@ zone's cut: the icons above it open in the first half, those below in the second
 
 | Element | What it does |
 |---|---|
-| **+** (blue button) | creates a **new document** in the active workspace |
+| **+** (blue button) | creates a **new document** in the active workspace — on the home, a **new project** |
 | *separator* | |
 | **Upper half** icons | Models, then Generate; the home puts **Your projects** there |
 | *separator* | |
-| **Lower half** icons | the Explorer; the home puts its three shelves there |
+| **Lower half** icons | the Explorer, on the home as in the workspaces |
 | At the bottom | Assets or Timeline, depending on the workspace |
 
-> The **+** button is greyed out when no project is open: a document is a file in a project
-> folder.
+> **The + button makes what the screen makes.** In a workspace it is greyed out while no project
+> is open: a document is a file in a project folder. **On the home it is never greyed out** — it
+> makes the project, and making a project needs none.
 
 ### The right rail
 
 The right column's icons — Skybox, View, Layers, Channels, Styles, Scene, Lights, Meshes, Assets,
 whichever the workspace declares, in that order — then, below the separator, Inspector.
+
+On the home it carries one: **Your library**, and nothing below the separator.
 
 ### The rail only shows what the workspace can do
 
@@ -319,7 +307,8 @@ close button never goes**, and the panel's name keeps its size.
 | **Timeline** | bottom | 1st | Video, Audio, 3D | the sequence being edited, or the animation |
 
 > **"Everywhere" means the workspaces, not the home screen.** The home has panels of its own —
-> eleven, in its two columns — that this table does not list.
+> three, in its two columns — that this table does not list. **The Explorer belongs to both**: it
+> is the same panel, in the same place, on the home as in a workspace.
 
 **The left column belongs to what produces.** Above, **Models** and **Generate**, which take
 turns. Below, the **Explorer**.
