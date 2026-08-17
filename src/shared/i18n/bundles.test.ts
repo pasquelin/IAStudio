@@ -327,6 +327,9 @@ describe('the translation bundles', () => {
    * `sound`, which is what the trade calls those two tracks; `TWO_THINGS.image` already names
    * that reading. An entry with no `except` covers its whole bundle.
    *
+   * `champ de vision` against `angle de vue` is the fourth, and French-only — the English says
+   * `Field of view` on both surfaces. The manual glossary settles it, head-word `Angle de vue`.
+   *
    * What this does NOT catch: a form split across two lines, a THIRD synonym nobody has written
    * yet (`explorateur de fichiers`, `file explorer`), and text in NFD. And what it catches TOO
    * much, the day a bundle says it: `préférence` in the sense of a taste — "ce n'est pas une
@@ -354,6 +357,7 @@ describe('the translation bundles', () => {
     fr: [
       { dropped: /système de fichiers/i, kept: 'gestionnaire de fichiers' },
       { dropped: /préférences?/i, kept: 'réglages' },
+      { dropped: /champ de vision/i, kept: 'angle de vue' },
     ],
     en: [
       { dropped: /file browser/i, kept: 'file manager' },

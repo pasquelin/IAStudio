@@ -35,7 +35,7 @@
     "viewCross": "Croix",
     "viewFaces": "6 faces",
     "testObjects": "Objets de test",
-    "fieldOfView": "Champ de vision"
+    "fieldOfView": "Angle de vue"
   },
   "texture": {
     "shapeSphere": "Sphère",

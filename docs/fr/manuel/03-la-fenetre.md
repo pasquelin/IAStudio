@@ -302,7 +302,7 @@ garde sa taille.
 | **Modèles** | gauche | 1re | partout | le catalogue Scenario, filtré sur l’espace actif |
 | **Génération** | gauche | 1re | partout *(si un modèle est choisi)* | le formulaire du modèle choisi |
 | **Skybox** | droite | 1re | Skyboxes | les réglages du ciel ouvert |
-| **Vue** | droite | 1re | Skyboxes | la projection, le champ de vision et les objets de test |
+| **Vue** | droite | 1re | Skyboxes | la projection, l’angle de vue et les objets de test |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
 | **Canaux** | droite | 1re | Textures | les huit canaux de la matière ouverte |
 | **Styles** | droite | 1re | Textures | les réglages de matière enregistrés, à rejouer sur n’importe quelle matière |
