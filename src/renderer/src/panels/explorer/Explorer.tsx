@@ -536,23 +536,30 @@ export function Explorer() {
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
     >
-      {/* Only where there is a walk to read: a search and a domain answer about the whole
-          project, and three greyed buttons over either say the panel has lost its way. */}
-      {browsable && (
-        <FolderNav
-          canBack={canWalkBy(walk, -1)}
-          canForward={canWalkBy(walk, 1)}
-          canUp={browsed !== FOLDER_ROOT}
-          onBack={() => goTo(walkedBy(walk, -1))}
-          onForward={() => goTo(walkedBy(walk, 1))}
-          onUp={() => browse(parentOf(browsed) ?? FOLDER_ROOT)}
-        />
-      )}
-
       {/* Under the title row and not on it — the field measured 76 px up there. The two readings
           STAY up in it: they answer about the project, where this bar is about the list on screen.
-          `display` is on now the grid exists; the zoom greys itself out on a list. */}
-      <CollectionBar state={collection} onChange={setCollection} sorts={sorts} />
+          `display` is on now the grid exists; the zoom greys itself out on a list.
+
+          The walk rides on the search line, and only where there IS a walk: a search and a domain
+          answer about the whole project, and three greyed buttons over either say the panel has
+          lost its way. */}
+      <CollectionBar
+        state={collection}
+        onChange={setCollection}
+        sorts={sorts}
+        leading={
+          browsable ? (
+            <FolderNav
+              canBack={canWalkBy(walk, -1)}
+              canForward={canWalkBy(walk, 1)}
+              canUp={browsed !== FOLDER_ROOT}
+              onBack={() => goTo(walkedBy(walk, -1))}
+              onForward={() => goTo(walkedBy(walk, 1))}
+              onUp={() => browse(parentOf(browsed) ?? FOLDER_ROOT)}
+            />
+          ) : undefined
+        }
+      />
 
       {/* Nothing at all unless a pass is running, which on a project where nothing moved is
           every time: the row appears when the studio is reading files and can be told to stop. */}

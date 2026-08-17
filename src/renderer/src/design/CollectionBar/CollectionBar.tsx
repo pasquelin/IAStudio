@@ -42,6 +42,11 @@ export type CollectionBarProps = {
    * field needs in a side column.
    */
   display?: boolean
+  /**
+   * Drawn on the search field's own line, before it — for what a panel navigates its collection
+   * WITH, and which would otherwise cost a row of its own in a side dock.
+   */
+  leading?: ReactNode
   className?: string
 }
 
@@ -53,6 +58,7 @@ export function CollectionBar({
   sorts,
   layout = 'stacked',
   display = true,
+  leading,
   className,
 }: CollectionBarProps) {
   const { t } = useTranslation()
@@ -168,6 +174,7 @@ export function CollectionBar({
           className,
         )}
       >
+        {leading}
         {search}
         {menus}
         <div className="ml-auto flex items-center gap-2">
@@ -185,7 +192,14 @@ export function CollectionBar({
 
   return (
     <div className={cn('border-border flex flex-col gap-2 border-b p-2', className)}>
-      {search}
+      {leading ? (
+        <div className="flex items-center gap-2">
+          {leading}
+          {search}
+        </div>
+      ) : (
+        search
+      )}
 
       {/* Two to a row: a tool window is too narrow for a single line of dropdowns, and
           wrapping them freely reflows the whole bar as soon as a label changes length. */}
