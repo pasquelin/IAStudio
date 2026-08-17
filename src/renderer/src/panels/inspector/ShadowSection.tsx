@@ -3,7 +3,7 @@ import { PropertySection } from '@/design/PropertySection'
 import { ToggleField } from '@/design/ToggleField'
 import { setShadowOn } from '@/engines/scene/commands'
 import { canCastShadow, canReceiveShadow, type SceneNode } from '@/engines/scene/scene-state'
-import type { SceneEdit } from './useSceneEdit'
+import type { SceneEdit } from '@/hooks/useSceneEdit'
 
 export type ShadowSectionProps = {
   node: SceneNode

@@ -7,7 +7,7 @@ import { VectorField } from '@/design/VectorField'
 import { batch, renameNode, setTransform } from '@/engines/scene/commands'
 import { hasChildren, rotationShows, type SceneNode } from '@/engines/scene/scene-state'
 import { changedFields } from '@/helpers/objects'
-import type { SceneEdit } from './useSceneEdit'
+import type { SceneEdit } from '@/hooks/useSceneEdit'
 
 /** A field reports a whole vector; this is the axes of it that actually moved. */
 type AxisPatch = { [K in keyof Transform]?: Partial<Vector3> }

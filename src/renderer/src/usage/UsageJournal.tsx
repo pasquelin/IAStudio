@@ -4,7 +4,7 @@ import { HINT_RIGHT } from '@/helpers/tooltip'
 import { HeadCell, Row, UsageTable } from './UsageTable'
 import { formatMoment } from '@/helpers/format'
 import { formatUnits } from './format'
-import { useUsageEvents } from './useUsageReport'
+import { useUsageEvents } from '@/hooks/useUsageReport'
 import { WINDOW_CAPTION } from '@/design/window-styles'
 
 /**

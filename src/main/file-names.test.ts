@@ -27,17 +27,15 @@ const RULE = 'a capital is earned by exporting a component or a class of that na
  * The debt, counted rather than listed — and this is the weaker of the two ratchets this
  * repository uses, on purpose.
  *
- * Listing the 344 paths would tie the guard to names about to change: the migration that empties
- * these three counts is already decided and starts the day after this lands. A count cannot see a
- * swap — one file renamed while another is added off-convention leaves it green — and that hole
- * is real for as long as the numbers are not zero.
+ * Listing the paths would tie the guard to names about to change: the migration that empties these
+ * counts is under way. A count cannot see a swap — one file renamed while another is added
+ * off-convention leaves it green — and that hole is real for as long as the numbers are not zero.
  *
  * **When a count reaches zero it is deleted, not kept at zero**: the assertion then reads as the
- * rule itself, and the next offending file fails on sight. That is the state this is heading for,
- * not a budget to live with.
+ * rule itself, and the next offending file fails on sight. The hooks did exactly that, one lot
+ * after this guard landed — twelve, then none, and the constant went with them.
  */
 const KNOWN_OFF_CONVENTION = 286
-const KNOWN_HOOKS_OUTSIDE = 12
 const KNOWN_CROWDED = 46
 
 /** `.d.ts` names the module it declares, not a module of ours: `sherpa-onnx-node` is a package. */
@@ -104,8 +102,9 @@ describe(`file names — ${RULE}`, () => {
 
   /**
    * A hook is found by its name, wherever it was written. `hooks/` is the one place a reader
-   * looks for one, and twelve of them were somewhere else the day this was written — five under
-   * `panels/inspector`, three under `spaces/audio`.
+   * looks for one, and twelve of them were somewhere else the day this guard was written — five
+   * under `panels/inspector`, three under `spaces/audio`. They moved the lot after, so this reads
+   * as the rule rather than as a budget, and the next stray one fails on sight.
    */
   it(
     'keeps every hook under a hooks folder',
@@ -114,7 +113,7 @@ describe(`file names — ${RULE}`, () => {
         path => /^use[A-Z]/.test(stem(path)) && !path.includes(`${sep}hooks${sep}`),
       )
 
-      expect(strayed.map(reported).sort()).toHaveLength(KNOWN_HOOKS_OUTSIDE)
+      expect(strayed.map(reported).sort()).toEqual([])
     },
     WHOLE_PROJECT,
   )

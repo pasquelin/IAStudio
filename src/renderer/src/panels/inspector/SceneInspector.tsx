@@ -24,7 +24,7 @@ import { ShadowSection } from './ShadowSection'
 import { SpriteSection } from './SpriteSection'
 import { TextSection } from './TextSection'
 import { TransformSection } from './TransformSection'
-import { useSceneEdit } from './useSceneEdit'
+import { useSceneEdit } from '@/hooks/useSceneEdit'
 
 export type SceneInspectorProps = { documentId: string }
 

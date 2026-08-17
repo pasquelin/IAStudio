@@ -7,7 +7,7 @@ import { useModelClips } from '@/stores/model-clips'
 import { installScene, sceneNodeIn, sceneNodeNow } from '@/stores/scene-fixtures'
 import { useScenes } from '@/stores/scenes'
 import { AnimationSection } from './AnimationSection'
-import { useSceneEdit } from './useSceneEdit'
+import { useSceneEdit } from '@/hooks/useSceneEdit'
 
 const DOCUMENT = 'doc-1'
 

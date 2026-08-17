@@ -12,7 +12,7 @@ import type { ModelNode } from '@/engines/scene/scene-state'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { clipsOfNode, useModelClips } from '@/stores/model-clips'
-import type { SceneEdit } from './useSceneEdit'
+import type { SceneEdit } from '@/hooks/useSceneEdit'
 
 export type AnimationSectionProps = {
   documentId: string

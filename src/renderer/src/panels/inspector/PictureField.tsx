@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { PICTURES } from '@shared/domain/asset'
 import { TextureField } from '@/design/TextureField'
 import { openAssetById } from '@/helpers/open-asset'
-import { useProjectPictures } from './useProjectPictures'
+import { useProjectPictures } from '@/hooks/useProjectPictures'
 
 export type PictureFieldProps = {
   label: string

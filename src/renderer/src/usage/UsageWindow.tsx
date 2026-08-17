@@ -19,7 +19,7 @@ import { UsageJournal } from './UsageJournal'
 import { UsageModels } from './UsageModels'
 import { UsageNotes } from './UsageNotes'
 import { UsageOverview } from './UsageOverview'
-import { useUsageReport } from './useUsageReport'
+import { useUsageReport } from '@/hooks/useUsageReport'
 import { windowControl, WINDOW_CAPTION } from '@/design/window-styles'
 import { WindowNav, WindowNavItem } from '@/design/WindowNav'
 

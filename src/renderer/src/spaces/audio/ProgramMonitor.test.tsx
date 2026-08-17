@@ -5,7 +5,7 @@ import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/time
 import { paintProgram } from '@/engines/timeline/program-wave'
 import type * as ProgramWave from '@/engines/timeline/program-wave'
 import { ProgramMonitor } from './ProgramMonitor'
-import type { SoundTransport } from './useSoundTransport'
+import type { SoundTransport } from '@/hooks/useSoundTransport'
 
 // The painter alone: `programViewport` and the palette stay real, being what the monitor's own
 // geometry is measured against elsewhere in this file.
