@@ -1,10 +1,5 @@
-import { mdiTuneVariant } from '@mdi/js'
-import { useTranslation } from 'react-i18next'
-import { EmptyState } from '@/design/EmptyState'
-import { PANEL_SCROLL } from '@/design/styles'
 import { clipById, trackById } from '@/engines/timeline/timeline-state'
-import { assetsById, useAssets } from '@/stores/assets'
-import { layerById, type Layer } from '@/engines/canvas/canvas-state'
+import { layerById } from '@/engines/canvas/canvas-state'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import {
   activeImageId,
@@ -15,34 +10,17 @@ import {
 } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
-import { AssetInspector } from './AssetInspector'
-import { ClipInspector } from './ClipInspector'
-import { FileInspector } from './FileInspector'
-import { LayerInspector } from './LayerInspector'
-import { SceneInspector } from './SceneInspector'
-import { SelectionSummary } from './SelectionSummary'
-import { TextureInspector } from './TextureInspector'
-import { TrackInspector } from './TrackInspector'
-import { inspectedTextureId } from './inspected'
+import { ClipInspector } from '../ClipInspector'
+import { FileInspector } from '../FileInspector'
+import { LayerInspector } from '../LayerInspector'
+import { SceneInspector } from '../SceneInspector'
+import { TextureInspector } from '../TextureInspector/TextureInspector'
+import { TrackInspector } from '../TrackInspector'
+import { inspectedTextureId } from '../inspected'
+import { InspectorAssetSelection } from './InspectorAssetSelection'
+import { InspectorEmpty } from './InspectorEmpty'
 
-/**
- * What the selection is, read out.
- *
- * It owns no state: every face reads the store that holds the thing it describes, so two
- * panels showing the same clip cannot disagree about it. One panel for the whole studio — a
- * scene node, an asset, a clip, a track, a layer — because "what is selected" is one question,
- * and an inspector per space would be six panels to learn to find.
- */
-export function Inspector() {
-  // The scroller belongs here rather than to each face: one of them used to forget it.
-  return (
-    <div className={PANEL_SCROLL}>
-      <Face />
-    </div>
-  )
-}
-
-function Face() {
+export function InspectorFace() {
   const selection = useSelection(state => state.selection)
   const sceneId = useDocuments(activeSceneId)
   // The MONTAGE in front, not the sequence: the Audio workspace shows one too, and reading only
@@ -53,14 +31,11 @@ function Face() {
   const imageId = useDocuments(activeImageId)
   const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
 
-  const layerOf = (documentId: string, picked: { ids: readonly string[] }): Layer | null =>
-    canvas && documentId === imageId ? layerById(canvas, picked.ids[0] ?? null) : null
-
   switch (selection.kind) {
-    // The catalogue is read by the face that needs it, not here: subscribing to it from `Face`
+    // The catalogue is read by the face that needs it, not here: subscribing to it from this one
     // re-rendered the clip and track inspectors on every catalogue refresh too.
     case 'asset':
-      return <AssetSelection ids={selection.ids} />
+      return <InspectorAssetSelection ids={selection.ids} />
 
     // Paths, not ids: what the explorer picks is a file of the project folder, and most of them
     // have no row anywhere — which is the whole difference between this face and the one above.
@@ -78,15 +53,21 @@ function Face() {
       return sequenceId && sequence && clip ? (
         <ClipInspector documentId={sequenceId} sequence={sequence} clip={clip} />
       ) : (
-        <Empty />
+        <InspectorEmpty />
       )
     }
 
     case 'layer': {
       // Guarded on the owner, as the clip and track faces are: the image in front is not
-      // necessarily the one this layer was picked in.
-      const layer = selection.ownerId === imageId && imageId ? layerOf(imageId, selection) : null
-      return imageId && layer ? <LayerInspector documentId={imageId} layer={layer} /> : <Empty />
+      // necessarily the one this layer was picked in. `canvas` is null without an image, which
+      // is what makes the owner check enough on its own.
+      const layer =
+        canvas && selection.ownerId === imageId ? layerById(canvas, selection.ids[0] ?? null) : null
+      return imageId && layer ? (
+        <LayerInspector documentId={imageId} layer={layer} />
+      ) : (
+        <InspectorEmpty />
+      )
     }
 
     case 'track': {
@@ -97,7 +78,7 @@ function Face() {
       return sequenceId && track ? (
         <TrackInspector documentId={sequenceId} track={track} />
       ) : (
-        <Empty />
+        <InspectorEmpty />
       )
     }
   }
@@ -113,29 +94,5 @@ function Face() {
   // Through the same answer the title row reads, so the button it carries and the face below it
   // can never describe two different things.
   const material = inspectedTextureId(selection, sceneId, textureId)
-  return material ? <TextureInspector documentId={material} /> : <Empty />
-}
-
-function Empty() {
-  const { t } = useTranslation()
-  return <EmptyState icon={mdiTuneVariant} message={t('inspector.empty')} />
-}
-
-/**
- * Several assets at once are summarised rather than detailed: showing the first one's prompt
- * for a selection of twelve is how someone regenerates the wrong thing.
- */
-function AssetSelection({ ids }: { ids: readonly string[] }) {
-  const byId = useAssets(assetsById)
-
-  // Keyed rather than filtered: a selection of a handful against a catalogue of thousands was
-  // scanning the whole of it, per render.
-  const assets = ids.flatMap(id => byId.get(id) ?? [])
-
-  const [only] = assets
-  if (assets.length === 0) return <Empty />
-  if (assets.length === 1 && only) return <AssetInspector asset={only} />
-
-  const total = assets.reduce((bytes, asset) => bytes + (asset.bytes ?? 0), 0)
-  return <SelectionSummary count={assets.length} bytes={total} />
+  return material ? <TextureInspector documentId={material} /> : <InspectorEmpty />
 }

@@ -13,7 +13,7 @@ describe('which texture the inspector is showing', () => {
     expect(inspectedTextureId(NONE, null, null)).toBeNull()
   })
 
-  /** The reading order `Face` has always had: a scene in front wins over a texture. */
+  /** The reading order `InspectorFace` has always had: a scene in front wins over a texture. */
   it('is none when a scene is in front as well', () => {
     expect(inspectedTextureId(NONE, 'scene-1', 'tex-1')).toBeNull()
   })
