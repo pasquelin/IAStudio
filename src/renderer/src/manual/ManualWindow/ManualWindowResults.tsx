@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { ManualChapter } from '@shared/domain/manual'
-import { WINDOW_CAPTION, WINDOW_ROW_BUTTON } from '@/design/window-styles'
+import { WINDOW_CAPTION, WINDOW_ROW_BUTTON } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 

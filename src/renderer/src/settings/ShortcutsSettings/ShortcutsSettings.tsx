@@ -12,7 +12,7 @@ import {
 import type { Signature } from '@shared/domain/shortcut'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settingsDraft'
-import { WINDOW_CAPTION } from '@/design/window-styles'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
 import { ShortcutsSettingsScope } from './ShortcutsSettingsScope'
 import { ShortcutsSettingsSearchByChord } from './ShortcutsSettingsSearchByChord'
 

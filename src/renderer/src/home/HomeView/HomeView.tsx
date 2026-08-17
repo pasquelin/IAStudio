@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
-import { ScrollHostProvider } from '@/design/ScrollHost'
+import { ScrollHostProvider } from '@/design/scrollHost'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
-import { HOME_COMPONENTS } from '../home-registry'
-import { useHomeSections } from '../use-home-sections'
+import { HOME_COMPONENTS } from '../homeRegistry'
+import { useHomeSections } from '@/hooks/useHomeSections'
 import { HomeViewClosing } from './HomeViewClosing'
 
 /**

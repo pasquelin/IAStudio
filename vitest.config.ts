@@ -116,7 +116,7 @@ const DOM_BOUND = [
   // other path without a browser, and `panels/**` went four branches over its budget.
   'src/renderer/src/app/toolComponents.test.ts',
   'src/renderer/src/app/unsavedGuard.test.ts',
-  'src/renderer/src/dictation/insert-at-caret.test.ts',
+  'src/renderer/src/dictation/insertAtCaret.test.ts',
   'src/renderer/src/engines/audio/audioRender.test.ts',
   'src/renderer/src/engines/canvas/CanvasEngine.test.ts',
   'src/renderer/src/engines/canvas/CanvasOverlay.test.ts',
@@ -154,8 +154,8 @@ const DOM_BOUND = [
   'src/renderer/src/helpers/scrollParent.test.ts',
   'src/renderer/src/helpers/toolRegistry.test.ts',
   'src/renderer/src/helpers/typing.test.ts',
-  'src/renderer/src/home/use-explore.test.ts',
   'src/renderer/src/hooks/useCostEstimate.test.ts',
+  'src/renderer/src/hooks/useExplore.test.ts',
   'src/renderer/src/hooks/useLoadable.test.ts',
   'src/renderer/src/hooks/useShortcutLabel.test.ts',
   'src/renderer/src/i18n/index.test.ts',

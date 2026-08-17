@@ -4,7 +4,7 @@ import type { SearchHit } from '@shared/domain/settingsSearch'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'
-import { WINDOW_HELP, WINDOW_ROW_BUTTON } from '@/design/window-styles'
+import { WINDOW_HELP, WINDOW_ROW_BUTTON } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 
 /** A hit that is not a setting: a button, or a command with the key it answers to. */

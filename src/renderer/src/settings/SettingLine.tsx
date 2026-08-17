@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { WINDOW_ROW } from '@/design/window-styles'
+import { WINDOW_ROW } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 
 export type SettingLineProps = {

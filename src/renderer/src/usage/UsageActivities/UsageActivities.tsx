@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { UsageReport } from '@shared/domain/usage'
-import { WINDOW_CAPTION } from '@/design/window-styles'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
 import { UsageActivitiesTallies } from './UsageActivitiesTallies'
 
 /** What was done, rather than which model did it: the same spend read from the other side. */

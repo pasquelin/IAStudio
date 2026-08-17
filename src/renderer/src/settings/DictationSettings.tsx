@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft, useSettingValue } from '@/stores/settingsDraft'
-import { WINDOW_CAPTION } from '@/design/window-styles'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
 
 /**
  * The microphone to record from — the one setting no registry descriptor can express, because

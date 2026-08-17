@@ -7,7 +7,7 @@ import { UsageTableRow } from './UsageTable/UsageTableRow'
 import { formatMoment } from '@/helpers/format'
 import { formatUnits } from './format'
 import { useUsageEvents } from '@/hooks/useUsageReport'
-import { WINDOW_CAPTION } from '@/design/window-styles'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
 
 /**
  * The raw billable log, event by event.

@@ -31,7 +31,7 @@ export type WindowShellProps = {
  *
  * DaisyUI here, deliberately: these are the surfaces where the studio becomes an ordinary
  * application. The docks speak the other vocabulary, and the two must not end up in one bag —
- * see `window-styles.ts`, which draws the same boundary for the class strings.
+ * see `windowStyles.ts`, which draws the same boundary for the class strings.
  *
  * `TooltipHost` is mounted here rather than by each window. It is per-window and easy to forget:
  * without it, tooltip attributes write a sentence nobody ever sees.

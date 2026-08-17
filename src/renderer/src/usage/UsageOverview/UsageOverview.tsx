@@ -3,7 +3,7 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import type { UsageReport } from '@shared/domain/usage'
 import { formatDay, formatMoney, formatUnits } from '../format'
 import { UsageOverviewFigure } from './UsageOverviewFigure'
-import { WINDOW_CAPTION } from '@/design/window-styles'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
 
 export function UsageOverview({ report }: { report: UsageReport }) {
   const { t, i18n } = useTranslation()

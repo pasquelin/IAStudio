@@ -629,7 +629,7 @@ describe('the contrast of the inks', () => {
   })
 
   /**
-   * The sweep run against a source that is KNOWN bad — the exact state `window-styles.ts` was in
+   * The sweep run against a source that is KNOWN bad — the exact state `windowStyles.ts` was in
    * before this batch. Without it, five one-line edits leave the rule green while it measures
    * nothing: `alpha = 1`, an emptied `SURFACES_OF`, the threshold lowered to the glyph bar, a path
    * added to the exemptions. A rule that cannot be shown to refuse anything refuses nothing.

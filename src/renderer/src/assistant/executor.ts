@@ -20,7 +20,7 @@ import { useJobs } from '@/stores/jobs'
 import { toolSurface } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { mountedConfirmer } from './confirm'
-import { mountedGenerator } from './generator-bridge'
+import { mountedGenerator } from './generatorBridge'
 
 const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })
 

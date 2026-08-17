@@ -5,7 +5,7 @@ import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { Masonry } from '@/design/Masonry'
 import { Section } from '../../Section'
 import { QuietNote } from '@/design/QuietNote'
-import { useExplore } from '../../use-explore'
+import { useExplore } from '@/hooks/useExplore'
 import { ExploreTab } from './ExploreTab'
 import { COLUMN_WIDTH, ExploreTile } from './ExploreTile'
 

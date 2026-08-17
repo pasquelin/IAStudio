@@ -130,7 +130,7 @@ describe('Generator', () => {
    * 8 August, 223 000 in its own chunk on 10 August. Nothing but a deferred import keeps them
    * out, and nothing but this says so.
    *
-   * The `lazy` itself moved to `design/dynamic-form-lazy`, which three panels had each written
+   * The `lazy` itself moved to `design/dynamicFormLazy`, which three panels had each written
    * for themselves; that module's only export is the `lazy`, so importing IT statically pulls
    * nothing. What must never appear here is the form's own module, under any form of import —
    * which is wider than the `^import { DynamicForm }` this line used to match.
@@ -139,7 +139,7 @@ describe('Generator', () => {
     expect(panelSource).not.toMatch(/from '@\/design\/DynamicForm'/)
     // Both halves: an import removed without the deferred one put back would leave the panel
     // with no form at all, and the line above would still pass.
-    expect(panelSource).toMatch(/from '@\/design\/dynamic-form-lazy'/)
+    expect(panelSource).toMatch(/from '@\/design\/dynamicFormLazy'/)
   })
 
   /**

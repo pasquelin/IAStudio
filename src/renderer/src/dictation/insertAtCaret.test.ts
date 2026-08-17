@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { editableOf, insertAtCaret, insertInto } from './insert-at-caret'
+import { editableOf, insertAtCaret, insertInto } from './insertAtCaret'
 
 function field(value = '', type = 'text'): HTMLInputElement {
   const input = document.createElement('input')

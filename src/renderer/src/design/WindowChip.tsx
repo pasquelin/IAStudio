@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '@/helpers/cn'
 import { HINT_BOTTOM, type HintFactory } from '@/helpers/tooltip'
-import { windowControl } from './window-styles'
+import { windowControl } from './windowStyles'
 
 export type WindowChipProps = Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,

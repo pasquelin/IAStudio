@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { windowControl } from '../window-styles'
+import { windowControl } from '../windowStyles'
 
 export type WindowNavItemProps = {
   /** The one the pane is showing. Said as `aria-current`, which is what a column answers to. */

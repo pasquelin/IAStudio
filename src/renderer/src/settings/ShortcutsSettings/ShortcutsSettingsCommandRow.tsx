@@ -8,7 +8,7 @@ import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from '../SettingLine'
-import { WINDOW_HELP } from '@/design/window-styles'
+import { WINDOW_HELP } from '@/design/windowStyles'
 
 export function ShortcutsSettingsCommandRow({
   descriptor,

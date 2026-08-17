@@ -12,7 +12,7 @@ import { lazy } from 'react'
  * than a second copy to write — and so the guard below has one declaration to hold.
  *
  * Importing THIS module statically pulls nothing: its only export is the `lazy` below.
- * `dynamic-form-lazy.test.ts` holds both halves — that there is exactly one declaration, and that
+ * `dynamicFormLazy.test.ts` holds both halves — that there is exactly one declaration, and that
  * this file never reaches the form any other way.
  */
 export const DynamicForm = lazy(async () => ({
