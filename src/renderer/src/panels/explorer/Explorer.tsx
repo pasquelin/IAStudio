@@ -367,10 +367,9 @@ export function Explorer() {
 
     if (node.kind === 'folder') return toggle(node.id)
 
-    // The catalogue is not what decides here, and that is the whole change: it hands back the row
-    // it already holds, and MINTS one for a file it does not — a picture copied into the project
-    // by hand used to fall through to the system, which is the one thing this panel must not do.
-    // Answered from the EXTENSION, never from what is catalogued.
+    // The catalogue still answers first for what it holds; what changed is the FALLBACK. A file
+    // it has never heard of used to go to the system — a picture copied in by hand, the one thing
+    // this panel must not do — and is now judged on its extension, and adopted where it can be.
     const asset = await getBridge()
       ?.media.adopt(node.path)
       .catch(() => null)
@@ -442,7 +441,9 @@ export function Explorer() {
    * shape of its own and a document the glyph of its space; neither is a file to preview.
    */
   const previewFor = (node: FolderNode): string | undefined =>
-    node.kind === 'file' && !documentOf(node) ? thumbnailUrl(node.path) : undefined
+    node.kind === 'file' && !documentOf(node) && !isPrivatePath(node.path)
+      ? thumbnailUrl(node.path)
+      : undefined
 
   /**
    * A double-click on a CARD. A folder is gone INTO rather than folded open, a grid having no

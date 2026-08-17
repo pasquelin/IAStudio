@@ -252,8 +252,13 @@ function dimmingPercent(fraction = '', unit = '', step = ''): number {
  */
 const DIMMING_ALLOWED: Record<string, string> = {
   '/ShelfTile.tsx': 'a caption at ~17:1 on its own gradient, a tenth off it changes nothing',
+  // MEASURED on 2026-08-17, and it is NOT the ShelfTile case it used to claim: a folder tile is
+  // `bare`, so its caption is `text-text` on the panel rather than white on a gradient — 13.3:1
+  // dark and 16.1:1 light at full ink, but 4.28 and 3.20 once cut. A file tile keeps the gradient
+  // and its ~17:1. The bar is missed in the light theme for a folder on its way out, and the
+  // remedy is a decision about how a cut tile is drawn, not a token.
   '/EntryCard.tsx':
-    'a tile that has been CUT and is waiting for a paste, dimmed as every file browser dims one — the same MediaTile caption on the same gradient as /ShelfTile.tsx above, so half off it stays well clear of the bar, and there is no ink to quieten on a picture',
+    'a tile that has been CUT and is waiting for a paste, dimmed as every file browser dims one — a picture has no ink to quieten, and a folder caption reads 3.20 while it waits',
   '/Tree.tsx':
     'the row a drag is holding, for the length of the gesture, while the ghost reads at full ink',
   '/TimelineRow.tsx':

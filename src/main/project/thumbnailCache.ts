@@ -31,10 +31,11 @@ export type ThumbnailCache = {
 
 /**
  * Keyed by what the file IS rather than by its name alone: a picture overwritten in place keeps
- * its path, and a preview keyed on the path only would answer with the picture that is gone.
+ * its path, and a preview keyed on the path only would answer with the picture that is gone. The
+ * project root is in it too — two projects hold `Images/facade.jpg` and they are not one file.
  */
-function keyOf(relative: string, size: number, modified: number): string {
-  return createHash('sha1').update(`${relative}:${size}:${modified}`).digest('hex')
+function keyOf(root: string, relative: string, size: number, modified: number): string {
+  return createHash('sha1').update(`${root}:${relative}:${size}:${modified}`).digest('hex')
 }
 
 /** Total bytes held, oldest read first — what an eviction walks. */
@@ -64,6 +65,8 @@ export function createThumbnailCache(deps: ThumbnailCacheDeps): ThumbnailCache {
   const now = deps.now ?? ((): Date => new Date())
   /** Keys nothing could draw. Bounded by the project's files, and dropped with the process. */
   const undrawable = new Set<string>()
+  /** Names each staging copy apart — see the write below. */
+  let writes = 0
 
   /** Best effort: a read-only volume costs an entry its place in the queue, never the entry. */
   const touch = async (file: string): Promise<void> => {
@@ -101,7 +104,7 @@ export function createThumbnailCache(deps: ThumbnailCacheDeps): ThumbnailCache {
       if (!source?.isFile()) return null
 
       const folder = join(root, THUMBNAILS_FOLDER)
-      const key = keyOf(relative, source.size, source.mtimeMs)
+      const key = keyOf(root, relative, source.size, source.mtimeMs)
       const cached = join(folder, `${key}.png`)
 
       if (await exists(cached)) {
@@ -119,14 +122,23 @@ export function createThumbnailCache(deps: ThumbnailCacheDeps): ThumbnailCache {
         return null
       }
 
-      await mkdir(folder, { recursive: true })
-      // Written aside then renamed: two windows asking for the same preview at once would
-      // otherwise both write into the file the other is being served.
-      await writeAtomic(cached, rendered, { staging: `${cached}.${process.pid}.tmp` })
-      // Stamped like a read, so freshness is one notion: written IS read, for what was asked for.
-      await touch(cached)
+      // Kept, never thrown: a project on a read-only share or a full disk would otherwise reject
+      // once per tile, and `useLoadable` remembers a failed URL as broken for the life of the
+      // window — four hundred glyphs where four hundred previews belong, until it reloads.
+      try {
+        await mkdir(folder, { recursive: true })
+        // A staging name per CALL, never per process: every window is served by this one process,
+        // so a pid would be the same string for all of them — two of them would write into the
+        // file the other is having renamed, and publish a preview of nothing.
+        writes += 1
+        await writeAtomic(cached, rendered, { staging: `${cached}.${writes}.tmp` })
+        // Stamped like a read, so freshness is one notion: written IS read, for what was asked.
+        await touch(cached)
+      } catch {
+        return null
+      }
 
-      await evict(folder, rendered.byteLength)
+      await evict(folder, rendered.byteLength).catch(() => {})
       return cached
     },
   }

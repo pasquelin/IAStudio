@@ -28,18 +28,29 @@ export function boundedPool(limit: () => number): BoundedPool {
     run: <T>(task: () => Promise<T>): Promise<T> =>
       new Promise<T>((resolve, reject) => {
         waiting.push(() => {
-          void task().then(
-            value => {
-              running -= 1
-              pump()
-              resolve(value)
-            },
-            (error: unknown) => {
-              running -= 1
-              pump()
-              reject(error)
-            },
-          )
+          const done = (): void => {
+            running -= 1
+            pump()
+          }
+
+          // `task()` itself is inside the try: a thunk that throws SYNCHRONOUSLY would otherwise
+          // take its slot to the grave — the pool wedges after `limit` of them, and the promise
+          // of whoever asked settles neither way.
+          try {
+            void task().then(
+              value => {
+                done()
+                resolve(value)
+              },
+              (error: unknown) => {
+                done()
+                reject(error)
+              },
+            )
+          } catch (error) {
+            done()
+            reject(error)
+          }
         })
 
         pump()

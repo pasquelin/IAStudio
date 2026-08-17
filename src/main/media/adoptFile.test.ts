@@ -115,6 +115,47 @@ describe('adoptFile', () => {
     expect(probeFile).toHaveBeenCalledTimes(1)
   })
 
+  /**
+   * `.index/` holds the previews and the proxies the studio rewrites at will, and the explorer
+   * SHOWS them when the reader asks. A row pointing in there dies at the next eviction, and a
+   * proxy adopted as a take would be given a proxy of its own.
+   */
+  it('refuses what the studio keeps for itself, however the reader reached it', async () => {
+    await put('.index/thumbnails/3f9a.png')
+    await put('.index/posters/asset_1.png')
+
+    expect(await adoptFile('.index/thumbnails/3f9a.png', deps())).toBeNull()
+    expect(await adoptFile('.index/posters/asset_1.png', deps())).toBeNull()
+    expect(await catalog.search({})).toHaveLength(0)
+    expect(lines).toEqual([])
+  })
+
+  /**
+   * The row only exists once the fingerprint and the probe have answered — seconds, for a rush —
+   * and nothing in the catalogue holds `path` unique. Two double-clicks in that window used to
+   * mint two rows over one file, and derive it twice.
+   */
+  it('mints one row for two adoptions of the same file at once', async () => {
+    await put('Video/rush.mp4')
+    let ids = 0
+    const shared = deps({
+      newAssetId: () => `asset-${(ids += 1)}`,
+      probeFile: async () => {
+        await new Promise(resolve => setTimeout(resolve, 10))
+        return { duration: 4_000_000, codec: 'h264' }
+      },
+    })
+
+    const [first, second] = await Promise.all([
+      adoptFile('Video/rush.mp4', shared),
+      adoptFile('Video/rush.mp4', shared),
+    ])
+
+    expect(second?.id).toBe(first?.id)
+    expect(await catalog.search({ path: 'Video/rush.mp4' })).toHaveLength(1)
+    expect(landed).toHaveLength(1)
+  })
+
   it('refuses a path that leaves the project, and a folder', async () => {
     await mkdir(join(root, 'Textures'), { recursive: true })
 

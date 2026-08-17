@@ -4,6 +4,7 @@ import type { Asset, MediaProbe } from '@shared/domain/asset'
 import { domainFromSignature, SIGNATURE_BYTES } from '@shared/domain/domainFromSignature'
 import { stemOf } from '@shared/domain/file-name'
 import { natureOf, opensInStudio } from '@shared/domain/file-role'
+import { isPrivatePath } from '@shared/domain/folder'
 import { assetFilePath } from '@main/assets/protocol'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 import type { ActivityReport } from '@main/project/activity-log'
@@ -54,10 +55,28 @@ async function domainOf(fileName: string, absolute: string): Promise<Asset['type
  * Writes `path` where `ingest` writes `sourcePath` — that is what lets the rescan follow the
  * file — and answers `null` for what the studio would not show, which the caller sends outside.
  */
-export async function adoptFile(relative: string, deps: AdoptFileDeps): Promise<Asset | null> {
-  const catalog = deps.catalog()
+/**
+ * Adoptions in flight, by path. The catalogue holds no unique index on `path`, and the row only
+ * exists once the fingerprint and the probe have answered — seconds, for a rush. Two double-clicks
+ * in that window would otherwise mint two rows over one file, and derive it twice.
+ */
+const running = new Map<string, Promise<Asset | null>>()
 
-  // Asked first, and it is what makes a second double-click harmless: the row exists by then.
+export async function adoptFile(relative: string, deps: AdoptFileDeps): Promise<Asset | null> {
+  const already = running.get(relative)
+  if (already) return already
+
+  const adopting = adopt(relative, deps).finally(() => running.delete(relative))
+  running.set(relative, adopting)
+  return adopting
+}
+
+async function adopt(relative: string, deps: AdoptFileDeps): Promise<Asset | null> {
+  // What the studio keeps for itself is shown, never taken: `.index/` holds the previews and the
+  // proxies it rewrites at will, and a row pointing into it would die at the next eviction.
+  if (isPrivatePath(relative)) return null
+
+  const catalog = deps.catalog()
   const known = await catalog.search({ path: relative, limit: 1 })
   if (known[0]) return known[0]
 

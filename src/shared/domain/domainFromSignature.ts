@@ -26,7 +26,6 @@ const SIGNATURES: readonly Signature[] = [
   { at: 0, magic: [0xff, 0xd8, 0xff], domain: 'image' },
   { at: 0, magic: ascii('GIF8'), domain: 'image' },
   { at: 0, magic: ascii('<svg'), domain: 'image' },
-  { at: 0, magic: ascii('<?xml'), domain: 'image' },
   { at: 0, magic: ascii('glTF'), domain: 'mesh' },
   { at: 0, magic: ascii('fLaC'), domain: 'audio' },
   { at: 0, magic: ascii('OggS'), domain: 'audio' },
