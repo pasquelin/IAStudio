@@ -23,7 +23,14 @@ import type {
   DocumentKind,
   DocumentWrite,
 } from './domain/document'
-import type { GitBranch, GitCommit, GitCommitFile, GitRemote, GitRepository } from './domain/git'
+import type {
+  GitBranch,
+  GitCommit,
+  GitCommitFile,
+  GitRemote,
+  GitRepository,
+  GitStashEntry,
+} from './domain/git'
 import type { GitDiff } from './domain/gitDiff'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
@@ -131,6 +138,15 @@ export type Channels = {
   gitFetch: 'git:fetch'
   gitPull: 'git:pull'
   gitPush: 'git:push'
+  gitResolve: 'git:resolve'
+  gitAbortMerge: 'git:abort-merge'
+  gitStash: 'git:stash'
+  gitStashes: 'git:stashes'
+  gitStashPop: 'git:stash-pop'
+  gitStashDrop: 'git:stash-drop'
+  gitTags: 'git:tags'
+  gitTag: 'git:tag'
+  gitDeleteTag: 'git:delete-tag'
   gitHasCredentials: 'git:has-credentials'
   gitSetCredentials: 'git:set-credentials'
   gitClearCredentials: 'git:clear-credentials'
@@ -297,6 +313,15 @@ export const CHANNELS: Channels = {
   gitFetch: 'git:fetch',
   gitPull: 'git:pull',
   gitPush: 'git:push',
+  gitResolve: 'git:resolve',
+  gitAbortMerge: 'git:abort-merge',
+  gitStash: 'git:stash',
+  gitStashes: 'git:stashes',
+  gitStashPop: 'git:stash-pop',
+  gitStashDrop: 'git:stash-drop',
+  gitTags: 'git:tags',
+  gitTag: 'git:tag',
+  gitDeleteTag: 'git:delete-tag',
   gitHasCredentials: 'git:has-credentials',
   gitSetCredentials: 'git:set-credentials',
   gitClearCredentials: 'git:clear-credentials',
@@ -1009,6 +1034,24 @@ export type StudioBridge = {
      * goes down to the main process once and only ever comes back out inside the environment of
      * a git command.
      */
+    /**
+     * Settles a conflict by keeping one whole side, and marks it settled in the same breath.
+     *
+     * During a MERGE, `ours` is the branch that is out and `theirs` is what is being brought in.
+     * The two swap during a rebase — one reason the studio pulls with `--ff-only` and offers no
+     * rebase: a gesture whose meaning depends on which operation is running is a gesture nobody
+     * can be sure of.
+     */
+    resolve: (paths: readonly string[], side: 'ours' | 'theirs') => Promise<GitRepository>
+    abortMerge: () => Promise<GitRepository>
+    /** Sets the whole working tree aside, untracked files included, and comes back clean. */
+    stash: (message: string) => Promise<GitRepository>
+    stashes: () => Promise<GitStashEntry[]>
+    stashPop: (index: number) => Promise<GitRepository>
+    stashDrop: (index: number) => Promise<GitRepository>
+    tags: () => Promise<string[]>
+    tag: (name: string, commit: string) => Promise<GitRepository>
+    deleteTag: (name: string) => Promise<GitRepository>
     hasCredentials: (host: string) => Promise<boolean>
     setCredentials: (host: string, user: string, token: string) => Promise<void>
     clearCredentials: (host: string) => Promise<void>

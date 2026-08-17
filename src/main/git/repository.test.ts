@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { simpleGit } from 'simple-git'
 import { beforeAll, describe, expect, it } from 'vitest'
 import type { GitStatus } from '@shared/domain/git'
 import { detectGit, gitVersionProbe } from './binary'
@@ -281,6 +282,157 @@ describe('the history', () => {
       '.project.json',
       'notes.txt',
     ])
+  })
+})
+
+/**
+ * Two branches that changed the same line, brought together. The one setup worth building on a
+ * real repository: what a conflict IS cannot be faked, and everything the panel offers there
+ * depends on git having actually refused.
+ */
+async function repositoryInConflict(): Promise<Repository> {
+  const repository = await repositoryWithACommit()
+  const trunk = (await repository.status()).branch ?? ''
+
+  await repository.createBranch('essai-lumiere')
+  await writeFile(join(repository.root, 'notes.txt'), THEIRS)
+  await repository.stage(['notes.txt'])
+  await repository.commit('sur la branche', false, AUTHOR)
+
+  await repository.checkout(trunk)
+  await writeFile(join(repository.root, 'notes.txt'), OURS)
+  await repository.stage(['notes.txt'])
+  await repository.commit('sur le tronc', false, AUTHOR)
+
+  // `merge` is not on the port — the studio pulls, and a pull is what produces one of these —
+  // so it is run straight at git here. It REFUSES, and that refusal is the whole setup: the
+  // rejection is swallowed so the cases below can look at what it left behind.
+  await simpleGit({ baseDir: repository.root, maxConcurrentProcesses: 1 })
+    .raw(['merge', 'essai-lumiere'])
+    .catch(() => {})
+
+  return repository
+}
+
+/**
+ * Which side is which, named once. Standing on the trunk with the branch being merged IN, `ours`
+ * is the trunk and `theirs` is the branch — and the two swap during a rebase, which is one reason
+ * the studio pulls with `--ff-only` and offers no rebase at all.
+ */
+const OURS = 'la version principale'
+const THEIRS = 'la version de la branche'
+
+describe('two sides that disagree', () => {
+  it('reads the file as conflicted rather than as modified', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const status = await (await repositoryInConflict()).status()
+
+    expect(stageOf(status, 'notes.txt')).toBe('conflicted')
+  })
+
+  /**
+   * The two halves of one decision. A file checked out from one side and left unstaged still
+   * reads as conflicted, and the panel would go on offering buttons for a settled conflict —
+   * which is the whole reason `resolve` stages in the same breath.
+   *
+   * Keeping OUR side leaves the file exactly as HEAD has it, so git stops listing it at all.
+   * That is the right answer and not an omission: nothing is waiting on that file any more.
+   */
+  it('keeps our whole side, and stops calling it conflicted', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryInConflict()
+    await repository.resolve(['notes.txt'], 'ours')
+
+    expect(stageOf(await repository.status(), 'notes.txt')).not.toBe('conflicted')
+    expect(await readFile(join(repository.root, 'notes.txt'), 'utf8')).toBe(OURS)
+  })
+
+  /** Theirs differs from HEAD, so it is what the merge commit will actually record. */
+  it('takes their whole side, staged and ready to record', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryInConflict()
+    await repository.resolve(['notes.txt'], 'theirs')
+
+    expect(stageOf(await repository.status(), 'notes.txt')).toBe('staged')
+    expect(await readFile(join(repository.root, 'notes.txt'), 'utf8')).toBe(THEIRS)
+  })
+
+  it('puts the folder back the way it was before the merge started', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryInConflict()
+    await repository.abortMerge()
+
+    const status = await repository.status()
+    expect(status.files.filter(file => file.stage === 'conflicted')).toEqual([])
+  })
+})
+
+describe('work set aside', () => {
+  it('leaves the folder clean and gives it back whole', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    await writeFile(join(repository.root, 'notes.txt'), 'en cours')
+
+    await repository.stash('essai de lumière')
+    expect(await readFile(join(repository.root, 'notes.txt'), 'utf8')).toBe('hello')
+
+    await repository.stashPop(0)
+    expect(await readFile(join(repository.root, 'notes.txt'), 'utf8')).toBe('en cours')
+  })
+
+  /** Without `--include-untracked`, a new file stays behind and the tree promised is not given. */
+  it('takes a file git has never seen with it', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    await writeFile(join(repository.root, 'idee.txt'), 'une idée')
+
+    await repository.stash('essai')
+
+    expect((await repository.status()).files.map(file => file.path)).not.toContain('idee.txt')
+  })
+
+  it('names each pile on the stack', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    await writeFile(join(repository.root, 'notes.txt'), 'en cours')
+    await repository.stash('essai de lumière')
+
+    expect((await repository.stashes())[0]?.message).toContain('essai de lumière')
+  })
+})
+
+describe('a version given a name', () => {
+  it('is listed, and comes back on the commit it names', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    const [head] = await repository.log(1, 0)
+    await repository.tag('livraison-client', head?.hash ?? '')
+
+    expect(await repository.tags()).toContain('livraison-client')
+    expect((await repository.log(1, 0))[0]?.refs).toContainEqual({
+      kind: 'tag',
+      name: 'livraison-client',
+    })
+  })
+
+  it('goes away again', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    const [head] = await repository.log(1, 0)
+    await repository.tag('livraison-client', head?.hash ?? '')
+
+    await repository.deleteTag('livraison-client')
+
+    expect(await repository.tags()).not.toContain('livraison-client')
   })
 })
 

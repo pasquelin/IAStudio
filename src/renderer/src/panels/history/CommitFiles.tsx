@@ -6,6 +6,7 @@ import { Row } from '@/design/Row'
 import { PANEL_SCROLL, rowSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { useGit } from '@/stores/git'
+import { TagField } from './TagField'
 
 export type CommitFilesProps = {
   files: readonly GitCommitFile[]
@@ -27,9 +28,12 @@ export function CommitFiles({ files, commit }: CommitFilesProps) {
 
   return (
     <div className={PANEL_SCROLL}>
-      <h3 className="text-muted text-tiny px-2 py-1 font-medium tracking-wide uppercase">
-        {t('git.commitFiles')}
-      </h3>
+      <div className="flex items-center gap-2 px-2 py-1">
+        <h3 className="text-muted text-tiny min-w-0 flex-1 truncate font-medium tracking-wide uppercase">
+          {t('git.commitFiles')}
+        </h3>
+        <TagField commit={commit} />
+      </div>
 
       {files.length === 0 ? (
         <QuietNote>{t('git.commitEmpty')}</QuietNote>

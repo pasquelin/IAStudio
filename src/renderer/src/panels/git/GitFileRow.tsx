@@ -1,4 +1,9 @@
-import { mdiFileCompare, mdiUndoVariant } from '@mdi/js'
+import {
+  mdiArrowLeftBoldOutline,
+  mdiArrowRightBoldOutline,
+  mdiFileCompare,
+  mdiUndoVariant,
+} from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { canRestore, type GitFile } from '@shared/domain/git'
 import { nameOf, parentOf } from '@shared/domain/folder'
@@ -41,6 +46,7 @@ export function GitFileRow({ file }: { file: GitFile }) {
   const unstage = useGit(state => state.unstage)
   const restore = useGit(state => state.restore)
   const compare = useGit(state => state.compare)
+  const resolve = useGit(state => state.resolve)
 
   return (
     <Row
@@ -71,20 +77,49 @@ export function GitFileRow({ file }: { file: GitFile }) {
       }
       actions={
         <>
+          {/* A conflict is settled BEFORE anything else can happen with the file, so its two
+              buttons stand in front of the ordinary ones — and the ordinary ones are withheld:
+              comparing a file whose two versions are both in it says nothing. */}
+          {file.stage === 'conflicted' ? (
+            <>
+              <ToolButton
+                icon={mdiArrowLeftBoldOutline}
+                label={t('git.keepOurs', { name: file.path })}
+                description={t('git.keepOursHint')}
+                tooltip={TIP_LEFT}
+                variant="row"
+                disabled={busy}
+                onClick={() => void resolve([file.path], 'ours')}
+              />
+              <ToolButton
+                icon={mdiArrowRightBoldOutline}
+                label={t('git.keepTheirs', { name: file.path })}
+                description={t('git.keepTheirsHint')}
+                tooltip={TIP_LEFT}
+                variant="row"
+                disabled={busy}
+                onClick={() => void resolve([file.path], 'theirs')}
+              />
+            </>
+          ) : null}
+
           {/* Asked here and answered in the band. This column is a side panel and a diff is read
-              ACROSS — so the click sets what to compare and brings the wide panel forward. */}
-          <ToolButton
-            icon={mdiFileCompare}
-            label={t('git.compareFile', { name: file.path })}
-            description={t('git.compareHint')}
-            tooltip={TIP_LEFT}
-            variant="row"
-            disabled={busy}
-            onClick={() => {
-              void compare(file.path, null)
-              revealTool('history')
-            }}
-          />
+              ACROSS — so the click sets what to compare and brings the wide panel forward.
+              Withheld on a conflict: a file holding both versions at once compares to nothing. */}
+          {file.stage !== 'conflicted' && (
+            <ToolButton
+              icon={mdiFileCompare}
+              label={t('git.compareFile', { name: file.path })}
+              description={t('git.compareHint')}
+              tooltip={TIP_LEFT}
+              variant="row"
+              disabled={busy}
+              onClick={() => {
+                void compare(file.path, null)
+                revealTool('history')
+              }}
+            />
+          )}
 
           {canRestore(file) && (
             <ToolButton

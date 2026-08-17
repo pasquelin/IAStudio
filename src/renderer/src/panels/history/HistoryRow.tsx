@@ -5,6 +5,7 @@ import { rowSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { formatMoment } from '@/helpers/format'
 import { HistoryGraph } from './HistoryGraph'
+import { RefBadge } from './RefBadge'
 
 export type HistoryRowProps = {
   commit: GitCommit
@@ -38,6 +39,9 @@ export function HistoryRow({ commit, row, picked, onPick }: HistoryRowProps) {
     >
       <HistoryGraph row={row} />
       <span className="text-muted shrink-0 font-mono text-xs">{shortHash(commit.hash)}</span>
+      {commit.refs.map(reference => (
+        <RefBadge key={`${reference.kind}/${reference.name}`} reference={reference} />
+      ))}
       <span className="text-text min-w-0 flex-1 truncate text-xs">{commit.message}</span>
       <span className="text-muted w-32 shrink-0 truncate text-xs">{commit.author}</span>
       <span className="text-muted shrink-0 text-xs tabular-nums">

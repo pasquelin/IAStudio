@@ -6,7 +6,7 @@ import { DISPLAY_MODES, VIEW_DIRECTIONS } from '../domain/scene'
 import { TOOL_PLACEMENTS } from '../domain/tool'
 import { ASSET_BADGES } from '../domain/asset'
 import { FILE_DOMAINS } from '../domain/fileRole'
-import { GIT_CHANGES, GIT_FAILURE_KEYS, GIT_STAGES } from '../domain/git'
+import { GIT_CHANGES, GIT_FAILURE_KEYS, GIT_REF_KINDS, GIT_STAGES } from '../domain/git'
 import { ASSISTANT_MODELS } from '../domain/assistant'
 import { STT_ERROR_CODES } from '../domain/dictation'
 import { breakableSpots } from './typography'
@@ -808,6 +808,8 @@ const DYNAMIC_KEYS: readonly string[] = [
   // value without its line puts the raw word — `untracked` — where a heading belongs.
   ...GIT_STAGES.map(stage => `git.stage.${stage}`),
   ...GIT_CHANGES.flatMap(change => [`git.change.${change}`, `git.changeBadge.${change}`]),
+  // The three kinds of name a commit can carry, each drawn as its own badge.
+  ...GIT_REF_KINDS.map(kind => `git.ref.${kind}`),
   // Why git did not answer. The compiler holds the other half — see `GIT_FAILURE_KEYS`.
   ...Object.values(GIT_FAILURE_KEYS),
   /**

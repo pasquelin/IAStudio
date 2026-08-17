@@ -9,6 +9,7 @@ const commit = (hash: string, ...parents: string[]): GitCommit => ({
   message: hash,
   author: 'Suite',
   at: '2026-08-17T10:00:00Z',
+  refs: [],
 })
 
 /** Which lane each commit landed in, by hash — what every case below is really asking. */

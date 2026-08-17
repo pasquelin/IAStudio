@@ -36,6 +36,15 @@ function repository(overrides: Partial<Repository> = {}): Repository {
     fetch: () => Promise.resolve(),
     pull: () => Promise.resolve(),
     push: () => Promise.resolve(),
+    resolve: () => Promise.resolve(),
+    abortMerge: () => Promise.resolve(),
+    stash: () => Promise.resolve(),
+    stashes: () => Promise.resolve([]),
+    stashPop: () => Promise.resolve(),
+    stashDrop: () => Promise.resolve(),
+    tags: () => Promise.resolve([]),
+    tag: () => Promise.resolve(),
+    deleteTag: () => Promise.resolve(),
     ...overrides,
   }
 }

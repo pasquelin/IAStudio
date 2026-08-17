@@ -17,6 +17,7 @@ const commit = (hash: string, message: string, ...parents: string[]): GitCommit 
   message,
   author: 'Alban',
   at: '2026-08-17T10:42:00Z',
+  refs: [],
 })
 
 beforeEach(() =>
@@ -110,6 +111,55 @@ describe('the versions recorded', () => {
 
     await userEvent.click(row)
     expect(screen.queryByText('Fichiers de cette version')).toBeNull()
+  })
+})
+
+describe('the names a version carries', () => {
+  /**
+   * A tag is a DECISION somebody made — a delivery, a version shown to a client — and it is what
+   * a person scrolls a history looking for. Scrolling for `a3f9c1e` is what naming replaces.
+   */
+  it('draws them on the row, tag included', async () => {
+    installFakeBridge({
+      git: {
+        read: () => Promise.resolve(READY),
+        log: () =>
+          Promise.resolve([
+            {
+              ...commit('a3f9c1e', 'Ajout du plan large'),
+              refs: [
+                { kind: 'branch', name: 'main' },
+                { kind: 'tag', name: 'livraison-client' },
+              ],
+            },
+          ]),
+      },
+    })
+    render(<History />)
+
+    expect(await screen.findByText('livraison-client')).toBeTruthy()
+    expect(screen.getByText('main')).toBeTruthy()
+  })
+
+  it('names the version that is picked', async () => {
+    const tag = vi.fn(() => Promise.resolve(READY))
+    installFakeBridge({
+      git: {
+        read: () => Promise.resolve(READY),
+        log: () => Promise.resolve([commit('a3f9c1e', 'Ajout du plan large')]),
+        tag,
+      },
+    })
+    render(<History />)
+
+    await userEvent.click(await screen.findByRole('button', { name: /Ajout du plan large/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Nommer cette version' }))
+    await userEvent.type(
+      await screen.findByRole('textbox', { name: 'Nommer cette version' }),
+      'livraison-client{Enter}',
+    )
+
+    expect(tag).toHaveBeenCalledWith('livraison-client', 'a3f9c1e')
   })
 })
 

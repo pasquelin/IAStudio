@@ -165,3 +165,16 @@ const credential = z.object({
 export function parseCredential(user: unknown, token: unknown): { user: string; token: string } {
   return credential.parse({ user, token })
 }
+
+/**
+ * Which pile in the stash stack.
+ *
+ * A whole number, because it is written into `stash@{n}` — a value that is not one would make
+ * that a reference git resolves to something else entirely, or to nothing. The ceiling is far
+ * above any stack a person keeps by hand.
+ */
+const stashIndex = z.number().int().min(0).max(1000)
+
+export function parseStashIndex(value: unknown): number {
+  return stashIndex.parse(value)
+}

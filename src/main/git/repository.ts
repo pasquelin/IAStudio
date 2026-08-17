@@ -7,6 +7,7 @@ import {
   type GitCommitFile,
   type GitIdentity,
   type GitRemote,
+  type GitStashEntry,
   type GitStatus,
 } from '@shared/domain/git'
 import type { GitDiff } from '@shared/domain/gitDiff'
@@ -14,7 +15,7 @@ import { parseUnifiedDiff } from '@shared/domain/gitDiff'
 import { exists, writeAtomic, writeQueue } from '@main/persistence'
 import { blobAt, workingBlob } from './blob'
 import type { GitCredential } from './credentials'
-import { filesOf, LOG_FORMAT, parseLog, parseNameStatus } from './parse'
+import { filesOf, LOG_FORMAT, parseLog, parseNameStatus, parseStashList } from './parse'
 
 export const GITIGNORE_FILE = '.gitignore'
 
@@ -54,6 +55,18 @@ export type Repository = {
   pull: () => Promise<void>
   /** `setUpstream` on the first push of a branch, which is the one that has nothing to track. */
   push: (setUpstream: boolean) => Promise<void>
+  /** Settles a conflict by keeping one side whole, and marks it settled. */
+  resolve: (paths: readonly string[], side: 'ours' | 'theirs') => Promise<void>
+  /** Puts everything back the way it was before the merge started. */
+  abortMerge: () => Promise<void>
+  stash: (message: string) => Promise<void>
+  stashes: () => Promise<GitStashEntry[]>
+  /** Brings one back and takes it off the stack — the gesture nobody means to split in two. */
+  stashPop: (index: number) => Promise<void>
+  stashDrop: (index: number) => Promise<void>
+  tags: () => Promise<string[]>
+  tag: (name: string, commit: string) => Promise<void>
+  deleteTag: (name: string) => Promise<void>
 }
 
 /**
@@ -190,6 +203,53 @@ export function openRepository(root: string, binary?: string, deps?: RepositoryD
     pull: () => reachOut(['pull', '--ff-only']),
     push: setUpstream =>
       reachOut(['push', ...(setUpstream ? ['--set-upstream', 'origin', 'HEAD'] : [])]),
+
+    /**
+     * Keeping one whole side of a conflict, then marking it settled.
+     *
+     * `git add` in the same breath, because those two are one decision: a file checked out from
+     * one side and left unstaged still reads as conflicted, and the panel would go on offering
+     * the buttons for a conflict the user has just settled.
+     *
+     * Which side is which is worth stating, since the words swap with the operation: during a
+     * MERGE, `ours` is the branch that is out and `theirs` is what is being brought in. During a
+     * rebase they are the other way round — which is one reason the studio pulls with
+     * `--ff-only` and offers no rebase.
+     */
+    resolve: async (paths, side) => {
+      await git.raw(['checkout', `--${side}`, '--', ...paths])
+      await git.add([...paths])
+    },
+
+    abortMerge: async () => {
+      await git.raw(['merge', '--abort'])
+    },
+
+    stash: async message => {
+      // `--include-untracked`, so setting work aside actually sets it all aside. Without it a new
+      // file stays in the folder, and the tree the user was promised is not the tree they get.
+      await git.raw(['stash', 'push', '--include-untracked', '-m', message])
+    },
+
+    stashes: async () => parseStashList(await git.raw(['stash', 'list', '--format=%gs'])),
+
+    stashPop: async index => {
+      await git.raw(['stash', 'pop', `stash@{${index}}`])
+    },
+
+    stashDrop: async index => {
+      await git.raw(['stash', 'drop', `stash@{${index}}`])
+    },
+
+    tags: async () => (await git.tags()).all,
+
+    tag: async (name, commit) => {
+      await git.raw(['tag', '--', name, commit])
+    },
+
+    deleteTag: async name => {
+      await git.raw(['tag', '-d', '--', name])
+    },
   }
 
   /**

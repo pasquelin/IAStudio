@@ -5,6 +5,7 @@ import type {
   GitCommitFile,
   GitRemote,
   GitRepository,
+  GitStashEntry,
 } from '@shared/domain/git'
 import type { GitDiff } from '@shared/domain/gitDiff'
 import { getBridge } from '@/services/bridge'
@@ -84,6 +85,13 @@ type GitState = {
   fetch: () => Promise<void>
   pull: () => Promise<void>
   push: (setUpstream: boolean) => Promise<void>
+  resolve: (paths: readonly string[], side: 'ours' | 'theirs') => Promise<void>
+  abortMerge: () => Promise<void>
+  stash: (message: string) => Promise<void>
+  stashes: () => Promise<GitStashEntry[]>
+  stashPop: (index: number) => Promise<void>
+  stashDrop: (index: number) => Promise<void>
+  tag: (name: string, commit: string) => Promise<void>
   /** Whether a token is held for a host. The token itself never comes back this way. */
   hasCredentials: (host: string) => Promise<boolean>
   setCredentials: (host: string, user: string, token: string) => Promise<void>
@@ -208,6 +216,20 @@ export const useGit = create<GitState>()((set, get) => {
     fetch: () => run(getBridge()?.git.fetch()),
     pull: () => run(getBridge()?.git.pull()),
     push: setUpstream => run(getBridge()?.git.push(setUpstream)),
+
+    resolve: (paths, side) => run(getBridge()?.git.resolve(paths, side)),
+    abortMerge: () => run(getBridge()?.git.abortMerge()),
+    stash: message => run(getBridge()?.git.stash(message)),
+    stashes: async () => (await getBridge()?.git.stashes()) ?? [],
+    stashPop: index => run(getBridge()?.git.stashPop(index)),
+    stashDrop: index => run(getBridge()?.git.stashDrop(index)),
+
+    tag: async (name, commit) => {
+      await run(getBridge()?.git.tag(name, commit))
+      // The log carries the names pointing at each commit, so a tag that is not read back is a
+      // tag the user made and cannot see.
+      await get().readHistory(false)
+    },
 
     hasCredentials: async host => (await getBridge()?.git.hasCredentials(host)) ?? false,
     setCredentials: async (host, user, token) => {

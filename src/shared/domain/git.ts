@@ -171,7 +171,26 @@ export type GitCommit = {
   author: string
   /** ISO 8601, as git wrote it — formatted where it is drawn, never here. */
   at: string
+  /** The names pointing here — what turns a row of hashes into a history one can read. */
+  refs: readonly GitRef[]
 }
+
+/**
+ * A name pointing at a commit.
+ *
+ * The three are told apart because they mean different things to a reader: a branch is where
+ * work is happening, a remote branch is where the server had got to, and a TAG is a decision
+ * somebody made — a delivery, a version shown to a client. Only the last is worth a badge that
+ * catches the eye.
+ */
+export type GitRefKind = 'branch' | 'remote' | 'tag'
+
+export type GitRef = { kind: GitRefKind; name: string }
+
+export const GIT_REF_KINDS: readonly GitRefKind[] = ['branch', 'remote', 'tag']
+
+/** One set-aside pile of changes. `index` is its place in the stack, newest first. */
+export type GitStashEntry = { index: number; message: string }
 
 /** A file as a recorded version holds it. No stage: everything in a commit is already recorded. */
 export type GitCommitFile = { path: string; change: GitChange; from?: string }

@@ -1,4 +1,8 @@
-import { mdiMinusBoxMultipleOutline, mdiPlusBoxMultipleOutline } from '@mdi/js'
+import {
+  mdiCloseOctagonOutline,
+  mdiMinusBoxMultipleOutline,
+  mdiPlusBoxMultipleOutline,
+} from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { pathsOf, type GitFile, type GitStage } from '@shared/domain/git'
 import { ToolButton } from '@/design/ToolButton'
@@ -19,6 +23,7 @@ export function GitFileGroup({ stage, files }: { stage: GitStage; files: readonl
   const busy = useGit(state => state.busy)
   const stageAll = useGit(state => state.stage)
   const unstageAll = useGit(state => state.unstage)
+  const abortMerge = useGit(state => state.abortMerge)
 
   return (
     <section>
@@ -27,6 +32,22 @@ export function GitFileGroup({ stage, files }: { stage: GitStage; files: readonl
           {t(`git.stage.${stage}`)}
         </h3>
         <span className="text-muted text-tiny shrink-0 tabular-nums">{files.length}</span>
+        {/* The way OUT of a merge, and it belongs on the heading rather than on a row: what it
+            undoes is the whole operation, not one file. Only offered while there is one to
+            undo — a repository not mid-merge would refuse it, and a button that only ever fails
+            is worse than no button. */}
+        {stage === 'conflicted' && (
+          <ToolButton
+            icon={mdiCloseOctagonOutline}
+            label={t('git.abortMerge')}
+            description={t('git.abortMergeHint')}
+            tooltip={TIP_LEFT}
+            variant="row"
+            disabled={busy}
+            onClick={() => void abortMerge()}
+          />
+        )}
+
         <ToolButton
           icon={stage === 'staged' ? mdiMinusBoxMultipleOutline : mdiPlusBoxMultipleOutline}
           // Named for its GROUP: three headings carried three buttons a reader heard the same

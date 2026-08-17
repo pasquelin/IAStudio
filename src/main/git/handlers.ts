@@ -18,6 +18,7 @@ import {
   parseOptionalHash,
   parseRemoteName,
   parseRemoteUrl,
+  parseStashIndex,
 } from './validation'
 
 export type GitHandlerDeps = {
@@ -89,6 +90,19 @@ export function registerGitHandlers({
   handle(CHANNELS.gitFetch, () => service.fetch())
   handle(CHANNELS.gitPull, () => service.pull())
   handle(CHANNELS.gitPush, (_event, setUpstream) => service.push(setUpstream === true))
+  handle(CHANNELS.gitResolve, (_event, paths, side) =>
+    service.resolve(parseGitPaths(paths), side === 'theirs' ? 'theirs' : 'ours'),
+  )
+  handle(CHANNELS.gitAbortMerge, () => service.abortMerge())
+  handle(CHANNELS.gitStash, (_event, message) => service.stash(parseCommitMessage(message)))
+  handle(CHANNELS.gitStashes, () => service.stashes())
+  handle(CHANNELS.gitStashPop, (_event, index) => service.stashPop(parseStashIndex(index)))
+  handle(CHANNELS.gitStashDrop, (_event, index) => service.stashDrop(parseStashIndex(index)))
+  handle(CHANNELS.gitTags, () => service.tags())
+  handle(CHANNELS.gitTag, (_event, name, commit) =>
+    service.tag(parseBranchName(name), parseCommitHash(commit)),
+  )
+  handle(CHANNELS.gitDeleteTag, (_event, name) => service.deleteTag(parseBranchName(name)))
   handle(CHANNELS.gitHasCredentials, (_event, host) => service.hasCredentials(parseHost(host)))
   handle(CHANNELS.gitSetCredentials, (_event, host, user, token) => {
     const credential = parseCredential(user, token)

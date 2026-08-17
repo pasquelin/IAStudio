@@ -8,6 +8,7 @@ import { GitBranchButton } from './GitBranchButton'
 import { GitFiles } from './GitFiles'
 import { RemoteBar } from './RemoteBar'
 import { RemoteSetup } from './RemoteSetup'
+import { StashButton } from './StashButton'
 
 /** The folder as git sees it: which branch, what to record, and what has moved since the last. */
 export function GitReady({ status }: { status: GitStatus }) {
@@ -23,6 +24,7 @@ export function GitReady({ status }: { status: GitStatus }) {
         {status.head === null && (
           <span className="text-muted text-tiny shrink-0">{t('git.noCommitYet')}</span>
         )}
+        <StashButton status={status} />
         {remote && <RemoteBar status={status} />}
       </div>
 

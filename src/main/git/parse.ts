@@ -1,4 +1,12 @@
-import type { GitChange, GitCommit, GitCommitFile, GitFailure, GitFile } from '@shared/domain/git'
+import type {
+  GitChange,
+  GitCommit,
+  GitCommitFile,
+  GitFailure,
+  GitFile,
+  GitRef,
+  GitStashEntry,
+} from '@shared/domain/git'
 
 /**
  * One row of `git status --porcelain`, as simple-git hands it over.
@@ -77,8 +85,11 @@ function file(path: string, stage: GitFile['stage'], change: GitChange, from?: s
 const FIELD = String.fromCharCode(31)
 const RECORD = String.fromCharCode(30)
 
-/** `%s` is the SUBJECT alone, which keeps a message to one line whatever its body holds. */
-export const LOG_FORMAT = ['%H', '%P', '%an', '%aI', '%s'].join(FIELD) + RECORD
+/**
+ * `%s` is the SUBJECT alone, which keeps a message to one line whatever its body holds. `%D` is
+ * the names pointing at the commit, without the brackets `%d` wraps them in.
+ */
+export const LOG_FORMAT = ['%H', '%P', '%an', '%aI', '%D', '%s'].join(FIELD) + RECORD
 
 export function parseLog(output: string): GitCommit[] {
   return output
@@ -86,7 +97,7 @@ export function parseLog(output: string): GitCommit[] {
     .map(record => record.trim())
     .filter(record => record !== '')
     .flatMap(record => {
-      const [hash, parents, author, at, message] = record.split(FIELD)
+      const [hash, parents, author, at, refs, message] = record.split(FIELD)
       if (hash === undefined || message === undefined) return []
 
       return [
@@ -97,10 +108,46 @@ export function parseLog(output: string): GitCommit[] {
           parents: (parents ?? '').split(' ').filter(value => value !== ''),
           author: author ?? '',
           at: at ?? '',
+          refs: parseRefs(refs ?? ''),
           message,
         },
       ]
     })
+}
+
+/**
+ * The names git writes beside a commit: `HEAD -> main, tag: v1.0, origin/main`.
+ *
+ * `HEAD -> ` is stripped rather than kept as a name of its own — which branch is out is already
+ * said by the branch button, and a fourth badge saying it again on one row of the log would be
+ * the only row that had it.
+ */
+export function parseRefs(decoration: string): GitRef[] {
+  return decoration
+    .split(', ')
+    .map(entry => entry.trim())
+    .filter(entry => entry !== '')
+    .flatMap<GitRef>(entry => {
+      if (entry.startsWith('tag: ')) return [{ kind: 'tag', name: entry.slice(5) }]
+
+      const name = entry.replace(/^HEAD -> /, '')
+      // `HEAD` alone is a detached head and names nothing a reader can go to.
+      if (name === 'HEAD') return []
+
+      // A slash is what tells a remote branch from a local one — `origin/main` against `main`.
+      // A local branch may hold one too (`feat/git`), so the first segment is checked against
+      // nothing: what matters is that both read as places, and the badge is the same shape.
+      return [{ kind: name.includes('/') ? 'remote' : 'branch', name }]
+    })
+}
+
+/** `git stash list` under a format of its own: the place in the stack, then what it says. */
+export function parseStashList(output: string): GitStashEntry[] {
+  return output
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line !== '')
+    .map((message, index) => ({ index, message }))
 }
 
 /** What `--name-status` writes: a letter, a tab, a path — and for a rename, two paths. */

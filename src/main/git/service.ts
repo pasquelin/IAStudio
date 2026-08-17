@@ -6,7 +6,7 @@ import type {
   GitIdentity,
   GitRepository,
 } from '@shared/domain/git'
-import { remoteHost, type GitRemote } from '@shared/domain/git'
+import { remoteHost, type GitRemote, type GitStashEntry } from '@shared/domain/git'
 import type { GitDiff } from '@shared/domain/gitDiff'
 import { detectGit, type VersionProbe } from './binary'
 import type { CredentialVault } from './credentials'
@@ -51,6 +51,15 @@ export type GitService = {
   fetch: () => Promise<GitRepository>
   pull: () => Promise<GitRepository>
   push: (setUpstream: boolean) => Promise<GitRepository>
+  resolve: (paths: readonly string[], side: 'ours' | 'theirs') => Promise<GitRepository>
+  abortMerge: () => Promise<GitRepository>
+  stash: (message: string) => Promise<GitRepository>
+  stashes: () => Promise<GitStashEntry[]>
+  stashPop: (index: number) => Promise<GitRepository>
+  stashDrop: (index: number) => Promise<GitRepository>
+  tags: () => Promise<string[]>
+  tag: (name: string, commit: string) => Promise<GitRepository>
+  deleteTag: (name: string) => Promise<GitRepository>
   /** Whether a token is held for the host a URL lives on. Never the token. */
   hasCredentials: (host: string) => boolean
   setCredentials: (host: string, user: string, token: string) => void
@@ -187,6 +196,13 @@ export function createGitService({
     fetch: () => perform(repository => repository.fetch()),
     pull: () => perform(repository => repository.pull()),
     push: setUpstream => perform(repository => repository.push(setUpstream)),
+    resolve: (paths, side) => perform(repository => repository.resolve(paths, side)),
+    abortMerge: () => perform(repository => repository.abortMerge()),
+    stash: message => perform(repository => repository.stash(message)),
+    stashPop: index => perform(repository => repository.stashPop(index)),
+    stashDrop: index => perform(repository => repository.stashDrop(index)),
+    tag: (name, commit) => perform(repository => repository.tag(name, commit)),
+    deleteTag: name => perform(repository => repository.deleteTag(name)),
 
     hasCredentials: host => vault.has(host),
     setCredentials: (host, user, token) => vault.set(host, { user, token }),
@@ -202,6 +218,8 @@ export function createGitService({
      */
     branches: () => data(repository => repository.branches()),
     remotes: () => data(repository => repository.remotes()),
+    stashes: () => data(repository => repository.stashes()),
+    tags: () => data(repository => repository.tags()),
     log: (limit, skip) => data(repository => repository.log(limit, skip)),
     commitFiles: hash => data(repository => repository.commitFiles(hash)),
 

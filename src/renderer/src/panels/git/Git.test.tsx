@@ -426,6 +426,96 @@ describe('a server that refused', () => {
   })
 })
 
+describe('two sides that disagree', () => {
+  const CONFLICTED: GitRepository = {
+    kind: 'ready',
+    status: {
+      ...CLEAN,
+      files: [{ path: 'documents/board.scimg', stage: 'conflicted', change: 'conflicted' }],
+    },
+  }
+
+  it('offers one side or the other, and settles on the one clicked', async () => {
+    const resolve = vi.fn(() => Promise.resolve(CLEAN_READY))
+    installFakeBridge({ git: { read: () => Promise.resolve(CONFLICTED), resolve } })
+    render(<Git />)
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Garder ma version de documents/board.scimg' }),
+    )
+
+    expect(resolve).toHaveBeenCalledWith(['documents/board.scimg'], 'ours')
+  })
+
+  /** A file holding both versions at once compares to nothing. */
+  it('withholds the comparison on a conflicted file', async () => {
+    panelOn(CONFLICTED)
+    await screen.findByRole('button', { name: /Garder ma version/ })
+
+    expect(screen.queryByRole('button', { name: /^Comparer/ })).toBeNull()
+  })
+
+  /** What it undoes is the whole operation, not one file — so it sits on the heading. */
+  it('offers a way out of the merge itself', async () => {
+    const abortMerge = vi.fn(() => Promise.resolve(CLEAN_READY))
+    installFakeBridge({ git: { read: () => Promise.resolve(CONFLICTED), abortMerge } })
+    render(<Git />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Abandonner la fusion' }))
+
+    expect(abortMerge).toHaveBeenCalled()
+  })
+})
+
+describe('work set aside', () => {
+  const DIRTY: GitRepository = {
+    kind: 'ready',
+    status: {
+      ...CLEAN,
+      files: [{ path: 'Images/hero.png', stage: 'unstaged', change: 'modified' }],
+    },
+  }
+
+  /**
+   * With nothing on the stack the menu would hold the single row that fills it, so the click
+   * does that outright rather than opening a list of one.
+   */
+  it('sets the whole tree aside in one click when the stack is empty', async () => {
+    const stash = vi.fn(() => Promise.resolve(CLEAN_READY))
+    installFakeBridge({ git: { read: () => Promise.resolve(DIRTY), stash } })
+    render(<Git />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Mettre de côté' }))
+
+    expect(stash).toHaveBeenCalledWith('Travail en cours sur main')
+  })
+
+  it('refuses to set aside a folder where nothing has changed', async () => {
+    installFakeBridge({ git: { read: () => Promise.resolve(CLEAN_READY) } })
+    render(<Git />)
+
+    expect(await screen.findByRole('button', { name: 'Mettre de côté' })).toBeDisabled()
+  })
+
+  /** Bringing a pile back and leaving a copy on the stack is the one nobody remembers to drop. */
+  it('brings a pile back and takes it off the stack', async () => {
+    const stashPop = vi.fn(() => Promise.resolve(CLEAN_READY))
+    installFakeBridge({
+      git: {
+        read: () => Promise.resolve(DIRTY),
+        stashes: () => Promise.resolve([{ index: 0, message: 'essai de lumière' }]),
+        stashPop,
+      },
+    })
+    render(<Git />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Mettre de côté' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'essai de lumière' }))
+
+    expect(stashPop).toHaveBeenCalledWith(0)
+  })
+})
+
 describe('a command git refused', () => {
   it('says why in the studio own words, and shows git line under it', async () => {
     panelOn({

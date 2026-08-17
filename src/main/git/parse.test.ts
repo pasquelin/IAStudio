@@ -4,6 +4,8 @@ import {
   filesOf,
   parseLog,
   parseNameStatus,
+  parseRefs,
+  parseStashList,
   safeMessage,
   type PorcelainEntry,
 } from './parse'
@@ -72,12 +74,13 @@ const RECORD = String.fromCharCode(30)
 const logLine = (...fields: string[]): string => fields.join(FIELD) + RECORD
 
 describe('the log git wrote', () => {
-  it('reads a commit into its five fields', () => {
+  it('reads a commit into each of its fields', () => {
     const output = logLine(
       'a3f9',
       'b1c2',
       'Alban',
       '2026-08-17T10:42:00+02:00',
+      'HEAD -> main, tag: v1.0',
       'Ajout du plan large',
     )
 
@@ -87,20 +90,24 @@ describe('the log git wrote', () => {
         parents: ['b1c2'],
         author: 'Alban',
         at: '2026-08-17T10:42:00+02:00',
+        refs: [
+          { kind: 'branch', name: 'main' },
+          { kind: 'tag', name: 'v1.0' },
+        ],
         message: 'Ajout du plan large',
       },
     ])
   })
 
   it('reads the two parents of a merge', () => {
-    const output = logLine('m1', 'c1 b1', 'Alban', '2026-08-17T10:00:00Z', 'Fusion')
+    const output = logLine('m1', 'c1 b1', 'Alban', '2026-08-17T10:00:00Z', '', 'Fusion')
 
     expect(parseLog(output)[0]?.parents).toEqual(['c1', 'b1'])
   })
 
   /** The very first commit writes an empty field, which splits into one empty string. */
   it('gives the first commit no parent rather than an empty one', () => {
-    const output = logLine('a1', '', 'Alban', '2026-08-17T09:00:00Z', 'Version initiale')
+    const output = logLine('a1', '', 'Alban', '2026-08-17T09:00:00Z', '', 'Version initiale')
 
     expect(parseLog(output)[0]?.parents).toEqual([])
   })
@@ -110,13 +117,37 @@ describe('the log git wrote', () => {
    * pipe would break any format a person could type, and a message is written by a person.
    */
   it('survives a message holding whatever somebody pasted into it', () => {
-    const output = logLine('a1', '', 'Alban', '2026-08-17T09:00:00Z', 'Fix\ttab | pipe — dash')
+    const output = logLine('a1', '', 'Alban', '2026-08-17T09:00:00Z', '', 'Fix\ttab | pipe — dash')
 
     expect(parseLog(output)[0]?.message).toBe('Fix\ttab | pipe — dash')
   })
 
   it('reads nothing out of an empty log', () => {
     expect(parseLog('')).toEqual([])
+  })
+})
+
+describe('the names pointing at a commit', () => {
+  it('tells a tag from a branch from a branch on the server', () => {
+    expect(parseRefs('HEAD -> main, tag: v1.0, origin/main')).toEqual([
+      { kind: 'branch', name: 'main' },
+      { kind: 'tag', name: 'v1.0' },
+      { kind: 'remote', name: 'origin/main' },
+    ])
+  })
+
+  /** Which branch is out is already said by the branch button, and would be the only row with it. */
+  it('drops the arrow, keeping the branch it points at', () => {
+    expect(parseRefs('HEAD -> essai-lumiere')).toEqual([{ kind: 'branch', name: 'essai-lumiere' }])
+  })
+
+  /** A detached head names nothing a reader could go to. */
+  it('drops a bare HEAD', () => {
+    expect(parseRefs('HEAD')).toEqual([])
+  })
+
+  it('reads nothing off a commit nothing points at', () => {
+    expect(parseRefs('')).toEqual([])
   })
 })
 
@@ -140,6 +171,20 @@ describe('what one recorded version changed', () => {
 
   it('reads nothing out of a commit that touched no file', () => {
     expect(parseNameStatus('\n\n')).toEqual([])
+  })
+})
+
+describe('the piles set aside', () => {
+  /** The place in the stack is the LINE, not something git writes: `stash@{0}` is the newest. */
+  it('numbers each pile by its place, newest first', () => {
+    expect(parseStashList('Travail sur main\nEssai de lumière\n')).toEqual([
+      { index: 0, message: 'Travail sur main' },
+      { index: 1, message: 'Essai de lumière' },
+    ])
+  })
+
+  it('reads nothing off an empty stack', () => {
+    expect(parseStashList('')).toEqual([])
   })
 })
 
