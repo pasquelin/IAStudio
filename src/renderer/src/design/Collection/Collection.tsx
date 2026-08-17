@@ -19,6 +19,17 @@ import {
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
 const ROW_GAP = 4
 
+/**
+ * Whether a gesture landed on the blank rather than on a card — anything that is not IN one.
+ *
+ * `Tree` asks `target === currentTarget` instead, and may: its rows span the width, so there is no
+ * in-between. A grid has three — the gutters, the empty columns of a short last row, and the box
+ * the virtualizer sizes to its content — and each of them is a place a user right-clicks.
+ */
+function onBlank(event: { target: EventTarget | null }): boolean {
+  return event.target instanceof Element && event.target.closest('[data-cell]') === null
+}
+
 export type CollectionProps<T extends { id: string }> = {
   items: readonly T[]
   /** Absent for a panel with no collection bar: a plain virtualized list, never a grid. */
@@ -299,25 +310,23 @@ export function Collection<T extends { id: string }>({
     <div
       ref={scroller}
       className="h-full overflow-auto p-2"
-      // Only the blank: anything over a card has that card as its target, and without the test the
-      // whole panel would answer for every hover. `Tree` spells these three the same way.
       // The secondary button belongs to `onContextMenu`: on macOS it arrives as Ctrl+click.
       onPointerDown={event => {
-        if (event.button !== 2 && event.target === event.currentTarget) onPressRoot?.()
+        if (event.button !== 2 && onBlank(event)) onPressRoot?.()
       }}
       onContextMenu={event => {
-        if (!onContextMenuRoot || event.target !== event.currentTarget) return
+        if (!onContextMenuRoot || !onBlank(event)) return
         event.preventDefault()
         onPressRoot?.()
         onContextMenuRoot()
       }}
       onDragOver={event => {
-        if (!onDropRoot || event.target !== event.currentTarget || !rowDrag.carries(event)) return
+        if (!onDropRoot || !onBlank(event) || !rowDrag.carries(event)) return
         event.preventDefault()
         event.dataTransfer.dropEffect = 'move'
       }}
       onDrop={event => {
-        if (!onDropRoot || event.target !== event.currentTarget) return
+        if (!onDropRoot || !onBlank(event)) return
         event.preventDefault()
         const carried = rowDrag.idsFrom(event)
         if (carried.length > 0) onDropRoot(carried)
