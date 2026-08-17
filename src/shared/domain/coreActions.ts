@@ -75,6 +75,10 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
         labelKey: 'assistant.fields.createDocument',
         required: false,
       },
+      // Naming it here is what lets a caller outside the window finish the gesture: unnamed, the
+      // creation puts a field on screen that only a person can fill, and the call waits it out.
+      { key: 'title', kind: 'text', labelKey: 'assistant.fields.title', required: false },
+      { key: 'folder', kind: 'text', labelKey: 'assistant.fields.folderPath', required: false },
     ],
   }),
   action({

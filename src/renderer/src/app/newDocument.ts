@@ -48,16 +48,24 @@ async function startingFolder(): Promise<string> {
  * It ANSWERS all the same — `null` for a field called off, a folder that refused, a workspace
  * with no documents. A caller from outside the window is held on the other end of this.
  */
-export function createDocumentIn(workspace: WorkspaceId): Promise<DocumentDescriptor | null> {
-  return named(workspace).catch(() => null)
+export function createDocumentIn(
+  workspace: WorkspaceId,
+  called?: { title: string; folder?: string },
+): Promise<DocumentDescriptor | null> {
+  return named(workspace, called).catch(() => null)
 }
 
-async function named(workspace: WorkspaceId): Promise<DocumentDescriptor | null> {
+async function named(
+  workspace: WorkspaceId,
+  called?: { title: string; folder?: string },
+): Promise<DocumentDescriptor | null> {
   const kind = kindForWorkspace(workspace)
   if (kind === null || !useProject.getState().project) return null
 
-  const ask = mountedDocumentNamer()
-  let of: { title: string; folder: string } | undefined
+  // Already named: no field is raised at all. There is nothing left to ask, and asking would
+  // hold a caller outside the window on a question only the person in front of it can answer.
+  const ask = called ? null : mountedDocumentNamer()
+  let of: { title: string; folder?: string } | undefined = called
 
   if (ask) {
     // The folders first, and this is the only place they are read for a creation: what they hold
