@@ -71,6 +71,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // A monitor belongs to the sequence it shows, so this is read where that document's own
   // failures are — not with the shell's, which is where the window and its menus report.
   'sequence.mirror': 'document',
+  // With the PROJECT, not the library: what failed is a question about a file in the project
+  // folder, asked before any asset exists — and the folder is where the reader will look.
+  'explorer.open': 'project',
 }
 
 /**

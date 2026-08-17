@@ -17,6 +17,8 @@ import { ASSET_INTENTS } from '@/helpers/assetIntents'
 import { FOLDER_SORTS } from '@/helpers/folderSort'
 import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
 import { DOCUMENT_NAME_REFUSALS } from '@/app/documentName'
+import { FILE_KINDS } from '@shared/domain/folder'
+import { FILE_INFO_SECTIONS } from '@/fileInfo/sections'
 
 function resolve(code: Language, key: string): unknown {
   // Widened, not cast: the bundle's inferred type has no index signature, and every key here is
@@ -60,6 +62,10 @@ const COMPOSED_KEYS: readonly string[] = [
   // The orders the explorer's bar offers, composed from the union rather than written beside it.
   ...FOLDER_SORTS.map(sort => `explorer.sort.${sort}`),
   ...WORKSPACE_IDS.map(workspace => `home.tools.${workspace}`),
+  // The heading of each run of the file information window, composed from the section it draws.
+  ...FILE_INFO_SECTIONS.map(id => `fileInfo.sections.${id}`),
+  // What the disk answers an entry IS — composed from the fact, not written beside it.
+  ...FILE_KINDS.map(kind => `fileInfo.kind.${kind}`),
   // The rail label, built by `workspaceLabelKey` — the most visible string in the window, and
   // the one thing the workspace table does NOT make the compiler demand of a new space.
   ...WORKSPACE_IDS.map(workspace => `workspaces.${workspace}`),

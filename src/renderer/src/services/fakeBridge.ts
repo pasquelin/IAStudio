@@ -76,6 +76,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onRescan: noSubscription,
       rescanState: () => Promise.resolve(IDLE_RESCAN),
       stopRescan: () => Promise.resolve(),
+      // Nothing on disk unless a suite says otherwise, which is what the window under test then
+      // reads as « this entry is no longer there » rather than as a blank pane.
+      fileFacts: () => Promise.resolve(null),
       revealFile: () => Promise.resolve(),
       revealFolder: () => Promise.resolve(true),
       rename: () => Promise.reject(new Error('no project')),
@@ -247,6 +250,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     mirror: {
       open: () => Promise.resolve(),
       ...overrides.mirror,
+    },
+    fileInfo: {
+      open: () => Promise.resolve(),
+      ...overrides.fileInfo,
     },
     window: {
       toggleFullScreen: () => Promise.resolve(),

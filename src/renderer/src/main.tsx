@@ -1,5 +1,6 @@
 import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
+import { isFileInfoRoute } from '@shared/domain/fileInfo'
 import { isLicencesRoute } from '@shared/domain/licence'
 import { isManualRoute } from '@shared/domain/manual'
 import { isMirrorRoute } from '@shared/domain/mirror'
@@ -61,6 +62,11 @@ const ManualWindow = lazy(async () => ({
   default: (await import('@/manual/ManualWindow/ManualWindow')).ManualWindow,
 }))
 
+/** Split like its neighbours, though it is the smallest of them: it opens on a right-click. */
+const FileInfoWindow = lazy(async () => ({
+  default: (await import('@/fileInfo/FileInfoWindow/FileInfoWindow')).FileInfoWindow,
+}))
+
 /**
  * Every application window loads the same bundle and reads the route from the fragment: the
  * i18n bootstrap, the tokens and the bridge are shared, and navigation is locked, so the
@@ -100,6 +106,13 @@ function Route({ hash }: { hash: string }) {
     return (
       <Suspense fallback={null}>
         <ManualWindow />
+      </Suspense>
+    )
+  }
+  if (isFileInfoRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <FileInfoWindow />
       </Suspense>
     )
   }

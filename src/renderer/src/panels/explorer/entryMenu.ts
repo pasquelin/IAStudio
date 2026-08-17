@@ -5,6 +5,7 @@ import {
   mdiContentPaste,
   mdiFolderOpenOutline,
   mdiFolderPlusOutline,
+  mdiInformationOutline,
   mdiOpenInNew,
   mdiRedo,
   mdiRenameOutline,
@@ -195,6 +196,18 @@ export function openEntryMenu({
       icon: mdiFolderOpenOutline,
       tooltip: t('explorer.revealHint'),
       onSelect: () => void getBridge()?.project.revealFile(node.path),
+    },
+    {
+      label: t('explorer.fileInfo'),
+      icon: mdiInformationOutline,
+      tooltip: t('explorer.fileInfoHint'),
+      // Greyed on a folder rather than dropped, as every row of this menu is: what the window
+      // answers — type, dimensions, empreinte, the catalogue row — is a FILE's, and a folder
+      // would reach it with three quarters of the screens missing.
+      disabled: node.kind !== 'file',
+      // The CLICKED row, never the selection: the window is about one entry, and a right-click
+      // on a file inside a selection of twelve names that file.
+      onSelect: () => void getBridge()?.fileInfo.open(node.path),
     },
     { separator: true },
     row('explorer.cut', {

@@ -59,7 +59,7 @@ export function FileInspector({ paths }: { paths: readonly string[] }) {
     <PropertyGroup title={t('inspector.identity')}>
       <PropertyRow label={t('inspector.name')}>{only.name}</PropertyRow>
       {/* Stacked: a path is the one value here that has no chance of fitting a column. */}
-      <PropertyRow label={t('inspector.path')} stacked>
+      <PropertyRow label={t('inspector.path')} shape="stacked">
         {only.path}
       </PropertyRow>
       <RoleField assetId={only.assetId} domain={only.domain} />

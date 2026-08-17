@@ -19,6 +19,22 @@ describe('WindowShell', () => {
   })
 
   /**
+   * A window that reads as ONE block asks for no column, and an empty one is not the same thing:
+   * 224 px of nothing down the left edge is what the file information window looked like before
+   * the box was allowed to be absent.
+   */
+  it('leaves out the column entirely rather than framing an empty one', () => {
+    render(
+      <WindowShell title="Titre">
+        <p>Le contenu</p>
+      </WindowShell>,
+    )
+
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
+    expect(screen.getByRole('main')).toHaveTextContent('Le contenu')
+  })
+
+  /**
    * The one thing a window cannot be trusted to remember. `<Tooltip>` is mounted per window, and
    * a window without it writes tooltip attributes nobody ever sees — silently, since a closed
    * tooltip renders nothing either way.

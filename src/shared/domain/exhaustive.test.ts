@@ -197,6 +197,7 @@ describe('the lists that stand for a union', () => {
       'shell.layout': true,
       'shell.menu': true,
       'sequence.mirror': true,
+      'explorer.open': true,
     }
 
     expect(sorted(LOG_SCOPES)).toEqual(sorted(Object.keys(all)))
