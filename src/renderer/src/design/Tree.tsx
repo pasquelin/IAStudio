@@ -648,10 +648,14 @@ export function Tree<T extends TreeNode>({
       }}
       onDrop={event => {
         if (event.target !== event.currentTarget) return
+        if (foreign?.carries(event)) {
+          event.preventDefault()
+          setOver(null)
+          return foreign.onDrop(event, null)
+        }
+        if (!onDropRoot) return
         event.preventDefault()
         setOver(null)
-        if (foreign?.carries(event)) return foreign.onDrop(event, null)
-        if (!onDropRoot) return
         setDragged(null)
         const carried = rowDrag.idsFrom(event)
         if (carried.length > 0) onDropRoot(carried)
