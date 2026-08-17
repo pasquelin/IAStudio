@@ -43,11 +43,19 @@ export function FolderPicker({ value, onChange, rootName, labels }: FolderPicker
   const trail = folderTrail(value)
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-2">
+      {/* Where the document will be written, ABOVE the columns — the way the save panel puts its
+          own. The lit rows say it too, but only to whoever reads three columns at once. */}
+      <p className="text-text m-0 truncate text-xs">
+        {trail.map(folder => (folder === FOLDER_ROOT ? rootName : nameOf(folder))).join(' / ')}
+      </p>
+
       <div
         role="group"
         aria-label={labels.columns}
-        className="border-border h-64 overflow-x-auto rounded-(--radius-sc-sm) border"
+        // `panel`, darker than the dialog it sits on: the studio's surfaces are recessed, and a
+        // browser drawn in the dialog's own fill reads as a stretch of nothing with a border.
+        className="border-border bg-panel h-64 overflow-x-auto rounded-(--radius-sc-sm) border"
       >
         <div className="flex h-full min-w-min">
           {columns.map((column, index) => (
@@ -64,6 +72,11 @@ export function FolderPicker({ value, onChange, rootName, labels }: FolderPicker
               />
             </Fragment>
           ))}
+
+          {/* The room a column WOULD take, ruled off like the others. Without it the browser
+              stops mid-way and the rest of the frame reads as a panel that failed to draw. */}
+          <div className="bg-border w-px shrink-0" aria-hidden="true" />
+          <div className="min-w-(--sc-folder-column) flex-1" aria-hidden="true" />
         </div>
       </div>
 
@@ -73,12 +86,6 @@ export function FolderPicker({ value, onChange, rootName, labels }: FolderPicker
         onCreated={onChange}
         onReread={() => reread(value)}
       />
-
-      {/* Where the document will be written, spelt out under the columns: the lit rows say it
-          too, but only for whoever reads three columns at once. */}
-      <p className="text-muted m-0 truncate pt-2 text-xs">
-        {trail.map(folder => (folder === FOLDER_ROOT ? rootName : nameOf(folder))).join(' / ')}
-      </p>
     </div>
   )
 }
