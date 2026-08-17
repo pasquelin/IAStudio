@@ -76,6 +76,31 @@ describe('Flyout', () => {
     expect(menuLeft()).toBe('0px')
   })
 
+  /**
+   * A field's menu takes the field's own box, the way a `<select>` does. The stacked placements
+   * align RIGHT edges — right for a bar against the window edge, off-centre under a field, which
+   * is what the new-document dialog came out looking like.
+   */
+  it('takes the anchor’s left edge and width under a field', () => {
+    render(
+      <Flyout anchor={anchorAt(80, 400)} placement="under" role="menu">
+        <button type="button">Images</button>
+      </Flyout>,
+    )
+    expect(menuLeft()).toBe('80px')
+    expect(screen.getByRole('menu').style.width).toBe('320px')
+  })
+
+  it('keeps a field’s menu inside the window', () => {
+    render(
+      <Flyout anchor={anchorAt(900, 1220)} placement="under" role="menu">
+        <button type="button">Images</button>
+      </Flyout>,
+    )
+    // Clamped on the FIELD's width, not the menu's: the menu has just been given the field's.
+    expect(menuLeft()).toBe(`${1024 - 320}px`)
+  })
+
   // `role="menu"` promises rows a reader can step through. The surface also holds panels and
   // sliders, and announcing a menu over those sends a reader looking for rows that do not exist.
   it('carries no role of its own', () => {

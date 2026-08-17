@@ -20,6 +20,8 @@ const FOLDERS: Record<string, readonly FolderEntry[]> = {
   '': [
     { path: 'Images', name: 'Images', kind: 'folder' },
     { path: 'lisezmoi.txt', name: 'lisezmoi.txt', kind: 'file' },
+    // A layered image is written AS a folder, and the tree answers it as one.
+    { path: 'TOTO.img', name: 'TOTO.img', kind: 'folder' },
   ],
   Images: [{ path: 'Images/Croquis', name: 'Croquis', kind: 'folder' }],
 }
@@ -69,6 +71,19 @@ describe('FolderField', () => {
 
     expect(await screen.findByRole('treeitem', { name: /Images/ })).toBeInTheDocument()
     expect(screen.queryByRole('treeitem', { name: /lisezmoi/ })).not.toBeInTheDocument()
+  })
+
+  /**
+   * A document is not a place, even where it IS a folder on disk: an image writes itself as
+   * `TOTO.img/`, and filing a document inside another document is what this keeps from being
+   * offered at all.
+   */
+  it('offers no document, though one may be a folder', async () => {
+    show()
+    await openTree()
+
+    expect(await screen.findByRole('treeitem', { name: /Images/ })).toBeInTheDocument()
+    expect(screen.queryByRole('treeitem', { name: /TOTO/ })).not.toBeInTheDocument()
   })
 
   it('answers with the folder that was picked', async () => {
