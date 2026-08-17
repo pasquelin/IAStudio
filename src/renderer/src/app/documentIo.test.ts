@@ -373,12 +373,14 @@ describe('saveDocument', () => {
       useCanvases.getState().runCommand(documentId, renameLayer('layer-1', 'Backdrop'))
 
     /**
-     * The catalogue row ⌘S reads the source's FORMAT off. Without it the studio only knows there
-     * is a file, which is the same answer as « a format nothing here can write » — so a test that
-     * skipped this would be green on a branch it never entered.
+     * The catalogue row ⌘S reads the source's FORMAT off — its `path`, never its `name`.
+     *
+     * A row's name is the STEM: `adoptFile` stores `stemOf(…)`, so no asset a project holds has
+     * an extension there. A fixture that put one in `name` was green on a value production never
+     * produces, and hid a save refused for every layered document there is.
      */
-    const shelve = (name: string): void => {
-      useAssets.setState({ items: [{ ...picture(), name }] })
+    const shelve = (path: string): void => {
+      useAssets.setState({ items: [{ ...picture(), path }] })
     }
 
     /**
@@ -511,7 +513,7 @@ describe('saveDocument', () => {
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture },
       })
-      shelve('hero.png')
+      shelve('Images/hero.png')
       const { documentId, release } = await openImage('asset-1')
       useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
 
@@ -534,7 +536,7 @@ describe('saveDocument', () => {
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture, saveLayered },
       })
-      shelve('hero.ora')
+      shelve('Images/hero.ora')
       const { documentId, release } = await openImage('asset-1')
       useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
 
@@ -551,6 +553,29 @@ describe('saveDocument', () => {
       })
     })
 
+    /**
+     * A row named like a picture but filed under a container is the shape of the defect that
+     * nearly shipped: the format has to come off the PATH, so a name saying `.png` must not make
+     * ⌘S flatten a `.ora`. It also stands for every real row, whose name has no extension at all.
+     */
+    it('reads the format off the file, never off the name the shelf shows', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      const saveLayered = vi.fn((_request: SaveLayeredRequest) => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture, saveLayered },
+      })
+      useAssets.setState({ items: [{ ...picture(), name: 'hero.png', path: 'Images/hero.ora' }] })
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await saveDocument(documentId)
+      release()
+
+      expect(savePicture).not.toHaveBeenCalled()
+      expect(saveLayered).toHaveBeenCalledTimes(1)
+    })
+
     /** The stack really travels, rather than a container built around an empty one. */
     it('sends the whole stack down the layered channel', async () => {
       const saveLayered = vi.fn((_request: SaveLayeredRequest) => Promise.resolve(picture()))
@@ -558,11 +583,27 @@ describe('saveDocument', () => {
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { saveLayered },
       })
-      shelve('hero.ora')
-      const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+      shelve('Images/hero.ora')
+      const created = await useDocuments
+        .getState()
+        .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
+      if (!created) throw new Error('expected a document')
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+      // The engine hands its surfaces over, which is what a layer of the container is made of:
+      // one with no pixels is left out of the stack, so a fake that has none writes nothing.
+      const release = holdCanvas(created.id, () =>
+        fakeCanvas({
+          snapshot: () => Promise.resolve(PNG),
+          pixelSnapshots: () =>
+            Promise.resolve([
+              { layerId: 'layer-1', mask: false, data: PNG },
+              { layerId: 'layer-2', mask: false, data: PNG },
+            ]),
+        }),
+      )
+      useCanvases.getState().runCommand(created.id, addLayer(pixelLayer('layer-2', 'Layer')))
 
-      await saveDocument(documentId)
+      await saveDocument(created.id)
       release()
 
       expect(saveLayered.mock.calls[0]?.[0].document.nodes).toHaveLength(2)
@@ -580,7 +621,7 @@ describe('saveDocument', () => {
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture },
       })
-      shelve('scan.tif')
+      shelve('Images/scan.tif')
       const { documentId, release } = await openImage('asset-1')
       useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
 

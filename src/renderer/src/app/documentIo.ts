@@ -604,7 +604,10 @@ function writePlanFor(
   io: DocumentIo,
   sourceAssetId: string,
 ): { format: WritableFormat; losses: CapabilityTrait[] } {
-  const format = formatOfFile(assetsById(useAssets.getState()).get(sourceAssetId)?.name ?? '')
+  // `path`, NEVER `name`: a row's name is the STEM — `adoptFile` stores `stemOf(…)` — so reading
+  // the format off it answered `null` for every asset a project actually holds, and a document
+  // with two layers was then refused even by the `.ora` that could hold it.
+  const format = formatOfFile(assetsById(useAssets.getState()).get(sourceAssetId)?.path ?? '')
   if (!io.traitsOf) return { format: format ?? 'png', losses: [] }
 
   const traits = io.traitsOf(document.id)

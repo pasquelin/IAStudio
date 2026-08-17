@@ -75,6 +75,30 @@ describe('writing a document as OpenRaster', () => {
     expect(written.extras).toEqual({ 'data/m_a.png': PNG })
   })
 
+  /**
+   * `pixelSnapshots` skips a layer whose surface the engine has not built yet — one added
+   * seconds before ⌘S. Written as an empty payload, the boundary refuses it and the WHOLE save
+   * fails; left out, it costs only itself, and `studio` still carries the layer.
+   */
+  it('leaves out a layer the engine has no pixels for, rather than writing it empty', () => {
+    const state = withLayers(pixelLayer('a', 'A'), pixelLayer('fresh', 'Fresh'))
+
+    const written = oraDocumentOf(state, pixelsOf('a'), PNG)
+
+    expect(written.nodes.map(node => node.name)).toEqual(['A'])
+    expect(JSON.parse(written.studio).layers).toHaveLength(2)
+  })
+
+  /** Same rule for a mask: one entry the container's writer would refuse costs the whole save. */
+  it('leaves out pixels whose id could not be a file name', () => {
+    const state = withLayers(pixelLayer('a/b', 'Odd'))
+
+    const written = oraDocumentOf(state, [{ layerId: 'a/b', mask: false, data: PNG }], PNG)
+
+    expect(written.nodes).toEqual([])
+    expect(written.extras).toEqual({})
+  })
+
   it('carries its own state, which is what makes the file reopen whole', () => {
     const written = oraDocumentOf(withLayers(pixelLayer('a', 'A')), pixelsOf('a'), PNG)
 

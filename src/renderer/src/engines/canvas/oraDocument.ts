@@ -4,6 +4,7 @@ import {
   type OraNode,
   type OraLayer,
 } from '@shared/domain/openRaster'
+import { isPartName } from '@shared/domain/document'
 import type { LayerPixels } from './CanvasEngine'
 import { layerPixelName, layerPixelsNamed } from './layerPixelName'
 import {
@@ -56,12 +57,15 @@ function nodeOf(layer: Layer, pixels: Map<string, string>): OraNode | null {
   // for them: they ride in `studio` alone. The flatten already shows what they did.
   if (layer.kind !== 'pixel') return null
 
-  return {
-    ...shared,
-    kind: 'layer',
-    src: pathOf(layer.id, false),
-    png: pixels.get(pathOf(layer.id, false)) ?? '',
-  }
+  const src = pathOf(layer.id, false)
+  const png = pixels.get(src)
+  // A layer with no bytes is LEFT OUT rather than written empty, exactly as `capture` skips it:
+  // the container's writer refuses an empty payload, so one layer whose surface the engine has
+  // not built yet — a layer added seconds before ⌘S — would fail the whole save instead of
+  // costing itself. `studio` still carries it, so reopening finds it.
+  if (!png || !isPartName(src.slice('data/'.length))) return null
+
+  return { ...shared, kind: 'layer', src, png }
 }
 
 /** Top first, undoing the studio's bottom-first order — the format writes a stack the other way. */
@@ -82,6 +86,11 @@ const layerPaths = (nodes: readonly OraNode[]): string[] =>
  * reading it back is then one `deserializeCanvas`, and no rule has to be kept in step on two
  * sides. What the standard part is for is the OTHER reader — the one that will never know this
  * field exists.
+ *
+ * **Known blind spot:** this half round-trips against `canvasFromOra`, and `packOpenRaster`
+ * round-trips against `unpackOpenRaster`, but nothing tests the two halves COMPOSED — the file
+ * layer lives in the main process and this one in the window. What ties them is the `OraDocument`
+ * type alone, so a path convention drifting inside one of them compiles and passes.
  */
 export function oraDocumentOf(
   state: CanvasState,
@@ -98,7 +107,13 @@ export function oraDocumentOf(
     nodes,
     merged,
     studio: serializeCanvas(state),
-    extras: Object.fromEntries([...byPath].filter(([path]) => !named.has(path))),
+    // Held to the same two rules as a named layer, and for the same reason: one unwritable entry
+    // would be refused at the boundary, taking the whole save with it.
+    extras: Object.fromEntries(
+      [...byPath].filter(
+        ([path, png]) => !named.has(path) && png && isPartName(path.slice('data/'.length)),
+      ),
+    ),
   }
 }
 

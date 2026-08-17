@@ -1,4 +1,4 @@
-import { strFromU8, unzipSync } from 'fflate'
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 import { ORA_MIMETYPE, type OraDocument, type OraLayer } from '@shared/domain/openRaster'
 import { packOpenRaster, unpackOpenRaster } from './openRasterFile'
@@ -163,6 +163,52 @@ describe('reading an OpenRaster container back', () => {
     const written = document({ extras: { 'data/m_a.png': PNG } })
 
     expect(unpackOpenRaster(packOpenRaster(written)).extras).toEqual({ 'data/m_a.png': PNG })
+  })
+
+  /** A container another application wrote, assembled by hand: `packOpenRaster` is not on trial. */
+  const foreign = (stack: string): Uint8Array =>
+    zipSync({
+      mimetype: [strToU8(ORA_MIMETYPE), { level: 0 }],
+      'stack.xml': strToU8(stack),
+      'mergedimage.png': strToU8('x'),
+      'data/ink.png': strToU8('x'),
+    })
+
+  /**
+   * GIMP and MyPaint write attributes in alphabetical order, so `opacity` comes before `y`. An
+   * unanchored search for `y="…"` then found the tail of `opacity="…"` and every layer landed at
+   * the wrong height — invisible to a round trip through this studio, which emits `y` first.
+   */
+  it('reads an attribute whose name ends another one, whatever the order', () => {
+    const read = unpackOpenRaster(
+      foreign(
+        `<image version="0.0.3" w="64" h="32"><stack>` +
+          `<layer composite-op="svg:src-over" name="Ink" opacity="0.25" src="data/ink.png" ` +
+          `visibility="visible" x="7" y="9"/>` +
+          `</stack></image>`,
+      ),
+    )
+
+    expect(read.nodes[0]).toMatchObject({ name: 'Ink', x: 7, y: 9, opacity: 0.25 })
+  })
+
+  /**
+   * Krita — and the spec's own example — name the image's root stack `root`. Recognising it by
+   * « has no name » imported such a file as ONE group wrapping the whole document.
+   */
+  it('takes the root stack for the image itself, even when it is named', () => {
+    const read = unpackOpenRaster(
+      foreign(
+        `<image version="0.0.3" w="64" h="32">` +
+          `<stack name="root" opacity="1" visibility="visible" composite-op="svg:src-over">` +
+          `<layer name="Ink" src="data/ink.png" x="0" y="0" opacity="1" visibility="visible" ` +
+          `composite-op="svg:src-over"/>` +
+          `</stack></image>`,
+      ),
+    )
+
+    expect(read.nodes).toHaveLength(1)
+    expect(read.nodes[0]).toMatchObject({ kind: 'layer', name: 'Ink' })
   })
 
   it('refuses bytes that are not an OpenRaster container', () => {

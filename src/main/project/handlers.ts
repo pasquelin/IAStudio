@@ -456,10 +456,16 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.assetsSaveLayered, async (_event, value) => {
     const request = parseSaveLayered(value)
+    // Checked like `savePicture` checks its own, and it matters more here: `mergedimage.png` is
+    // what every other application draws of this file, so bytes that are not a picture make a
+    // container that opens as nothing — with the layers beside it, intact and unreachable.
+    const merged = Buffer.from(request.document.merged, 'base64')
+    if (!isPngBytes(merged)) throw new Error('expected a PNG payload')
+
     const bytes = packOpenRaster(request.document)
     // Read off the FLATTEN the container carries, not off the container: what the shelf and the
     // inspector show of a `.ora` is its `mergedimage.png`, and its dimensions are the picture's.
-    const probe = probePng(Buffer.from(request.document.merged, 'base64')) ?? undefined
+    const probe = probePng(merged) ?? undefined
 
     if (request.replaces) {
       // Checked against the catalogue for the reason `savePicture` gives at its own line: an id

@@ -5,7 +5,6 @@ import {
   capabilityOf,
   formatOfFile,
   lossesFor,
-  unseenBy,
   type CapabilityTrait,
 } from './formatCapability'
 
@@ -29,25 +28,6 @@ describe('what a format would drop for good', () => {
 
   it('keeps the order the traits were given, so two documents read the same way', () => {
     expect(lossesFor(['liveText', 'layers'], 'jpeg')).toEqual(['liveText', 'layers'])
-  })
-})
-
-describe('what another application would not see', () => {
-  it('hides from an outside reader what a format holds only as an extension', () => {
-    expect(unseenBy(STACKED, 'ora')).toEqual(['layerMask'])
-  })
-
-  it('shows an outside reader the stack an open format standardises', () => {
-    expect(unseenBy(['layers', 'groups', 'layerOpacity'], 'ora')).toEqual([])
-  })
-
-  it('hides everything a studio-only format holds, since nothing else reads it', () => {
-    expect(unseenBy(['layers'], 'img')).toEqual(['layers'])
-  })
-
-  it('answers the same as a definitive loss where there is no extension to ride on', () => {
-    // A flat picture has no second answer to give: what it drops, it drops for everyone.
-    expect(unseenBy(STACKED, 'png')).toEqual(lossesFor(STACKED, 'png'))
   })
 })
 

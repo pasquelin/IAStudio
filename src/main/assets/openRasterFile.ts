@@ -73,19 +73,35 @@ export function packOpenRaster(document: OraDocument): Uint8Array {
   const files: Zippable = {
     mimetype: [strToU8(ORA_MIMETYPE), { level: 0 }],
     [STACK_PATH]: strToU8(stackXml(document)),
-    [MERGED_PATH]: base64ToBytes(document.merged),
-    [THUMBNAIL_PATH]: base64ToBytes(document.merged),
+    [MERGED_PATH]: stored(document.merged),
+    [THUMBNAIL_PATH]: stored(document.merged),
   }
 
-  for (const layer of collectLayers(document.nodes)) files[layer.src] = base64ToBytes(layer.png)
-  for (const [path, png] of Object.entries(document.extras)) files[path] = base64ToBytes(png)
+  for (const layer of collectLayers(document.nodes)) files[layer.src] = stored(layer.png)
+  for (const [path, png] of Object.entries(document.extras)) files[path] = stored(png)
   if (document.studio) files[ORA_STUDIO_PATH] = strToU8(document.studio)
 
   return zipSync(files)
 }
 
+/**
+ * A PNG goes in UNCOMPRESSED, and that is a performance decision rather than a lazy one.
+ *
+ * `zipSync` deflates on the thread that owns every window, so a document of several 4K layers
+ * would freeze the whole studio for seconds on each ⌘S — invariant 6. A PNG is already deflated
+ * inside, so a second pass buys a percent or two for that entire cost. Only `stack.xml` and the
+ * studio's state are compressed, and both are text measured in kilobytes.
+ */
+const stored = (base64: string): [Uint8Array, { level: 0 }] => [base64ToBytes(base64), { level: 0 }]
+
+/**
+ * Anchored on whitespace, and that is not pedantry: unanchored, `y="…"` matches inside
+ * `opacity="…"`. Writers that emit attributes alphabetically — GIMP and MyPaint do — put
+ * `opacity` first, so every layer of a file from either landed at the wrong height. Ours emits
+ * `y` before `opacity`, which is exactly why a round trip through this studio never showed it.
+ */
 const attribute = (tag: string, name: string): string =>
-  new RegExp(`${name}="([^"]*)"`).exec(tag)?.[1] ?? ''
+  new RegExp(`(?:^|\\s)${name}="([^"]*)"`).exec(tag)?.[1] ?? ''
 
 const unescapeXml = (text: string): string =>
   text
@@ -120,6 +136,8 @@ function readNodes(xml: string, pngOf: (src: string) => string): OraNode[] {
     else roots.push(node)
   }
 
+  let rootSeen = false
+
   for (const [tag, kind, , selfClosing] of tags) {
     if (!kind) {
       open.pop()
@@ -130,8 +148,13 @@ function readNodes(xml: string, pngOf: (src: string) => string): OraNode[] {
       push({ ...baseFrom(tag), kind: 'layer', src, png: pngOf(src) })
       continue
     }
-    // The image's own `<stack>` carries no name and wraps everything: it is not a group.
-    if (!/\bname=/.test(tag)) continue
+    // The FIRST `<stack>` is the image's own and wraps everything: it is not a group. Recognised
+    // by position, never by having no name — Krita and the spec's own example write it as
+    // `name="root"`, and sniffing for a name imported those files as one group called « root ».
+    if (!rootSeen) {
+      rootSeen = true
+      continue
+    }
 
     const group: OraGroup = {
       ...baseFrom(tag),
@@ -144,6 +167,22 @@ function readNodes(xml: string, pngOf: (src: string) => string): OraNode[] {
   }
 
   return roots
+}
+
+/**
+ * The flatten alone, for a reader that wants a picture rather than a document — `null` for bytes
+ * that are not a container.
+ *
+ * `filter` so the layers are never inflated: this answers the asset scheme, which is asked once
+ * per tile of a grid, and a shelf of layered pictures would otherwise decompress every layer of
+ * every one of them to draw a thumbnail.
+ */
+export function mergedPictureOf(bytes: Uint8Array): Uint8Array | null {
+  try {
+    return unzipSync(bytes, { filter: entry => entry.name === MERGED_PATH })[MERGED_PATH] ?? null
+  } catch {
+    return null
+  }
 }
 
 /** Throws on anything that is not a container — a caller has to tell that from an empty one. */

@@ -144,14 +144,8 @@ export function lossesFor(
 }
 
 /**
- * What another application would not see — the destroyed AND the merely extended.
- *
- * A second question, never a stricter version of the first: a mask kept as studio data is not a
- * loss, but promising it to someone opening the file in Krita would be a lie.
+ * What another application would not see is `dropped` PLUS `extended`, and no function computes
+ * it yet: nothing shows that answer to anyone. The split is kept in the table rather than folded
+ * away because it is what stops « no loss » from being read as « a whole round trip through
+ * Krita » — the day a surface says so, the data is already classed.
  */
-export function unseenBy(
-  traits: readonly CapabilityTrait[],
-  format: WritableFormat,
-): CapabilityTrait[] {
-  return traits.filter(trait => !capabilityOf(format).interchange.includes(trait))
-}
