@@ -50,7 +50,7 @@ const MirrorWindow = lazy(async () => ({
 }))
 
 const UsageWindow = lazy(async () => ({
-  default: (await import('@/usage/UsageWindow')).UsageWindow,
+  default: (await import('@/usage/UsageWindow/UsageWindow')).UsageWindow,
 }))
 
 /**

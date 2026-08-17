@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import type { UsageReport } from '@shared/domain/usage'
-import { formatDay, formatMoney, formatUnits } from './format'
+import { formatDay, formatMoney, formatUnits } from '../format'
+import { UsageOverviewFigure } from './UsageOverviewFigure'
 import { WINDOW_CAPTION } from '@/design/window-styles'
 
 export function UsageOverview({ report }: { report: UsageReport }) {
@@ -14,17 +15,17 @@ export function UsageOverview({ report }: { report: UsageReport }) {
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-wrap gap-8">
-        <Figure
+        <UsageOverviewFigure
           label={t('usage.total')}
           value={t('units.creative', { units: formatUnits(report.units, locale) })}
         >
           {money && <span className={WINDOW_CAPTION}>≈ {money}</span>}
-        </Figure>
-        <Figure
+        </UsageOverviewFigure>
+        <UsageOverviewFigure
           label={t('usage.discount')}
           value={t('units.creative', { units: formatUnits(report.discount, locale) })}
         />
-        <Figure label={t('usage.jobs')} value={formatUnits(report.jobs, locale)} />
+        <UsageOverviewFigure label={t('usage.jobs')} value={formatUnits(report.jobs, locale)} />
       </section>
 
       {money && <p className={WINDOW_CAPTION}>{t('usage.indicative')}</p>}
@@ -81,24 +82,6 @@ export function UsageOverview({ report }: { report: UsageReport }) {
           </ul>
         </section>
       )}
-    </div>
-  )
-}
-
-function Figure({
-  label,
-  value,
-  children,
-}: {
-  label: string
-  value: string
-  children?: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-base-content/70 text-tiny uppercase">{label}</span>
-      <span className="text-lg font-semibold">{value}</span>
-      {children}
     </div>
   )
 }
