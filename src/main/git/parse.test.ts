@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { failureOf, filesOf, safeMessage, type PorcelainEntry } from './parse'
+import {
+  failureOf,
+  filesOf,
+  parseLog,
+  parseNameStatus,
+  safeMessage,
+  type PorcelainEntry,
+} from './parse'
 
 const row = (path: string, index: string, working_dir: string): PorcelainEntry => ({
   path,
@@ -55,6 +62,84 @@ describe('porcelain rows turned into files', () => {
         from: 'Images/hero.png',
       },
     ])
+  })
+})
+
+/** The same two separators the format string asks git for. Built, never typed: both are invisible. */
+const FIELD = String.fromCharCode(31)
+const RECORD = String.fromCharCode(30)
+
+const logLine = (...fields: string[]): string => fields.join(FIELD) + RECORD
+
+describe('the log git wrote', () => {
+  it('reads a commit into its five fields', () => {
+    const output = logLine(
+      'a3f9',
+      'b1c2',
+      'Alban',
+      '2026-08-17T10:42:00+02:00',
+      'Ajout du plan large',
+    )
+
+    expect(parseLog(output)).toEqual([
+      {
+        hash: 'a3f9',
+        parents: ['b1c2'],
+        author: 'Alban',
+        at: '2026-08-17T10:42:00+02:00',
+        message: 'Ajout du plan large',
+      },
+    ])
+  })
+
+  it('reads the two parents of a merge', () => {
+    const output = logLine('m1', 'c1 b1', 'Alban', '2026-08-17T10:00:00Z', 'Fusion')
+
+    expect(parseLog(output)[0]?.parents).toEqual(['c1', 'b1'])
+  })
+
+  /** The very first commit writes an empty field, which splits into one empty string. */
+  it('gives the first commit no parent rather than an empty one', () => {
+    const output = logLine('a1', '', 'Alban', '2026-08-17T09:00:00Z', 'Version initiale')
+
+    expect(parseLog(output)[0]?.parents).toEqual([])
+  })
+
+  /**
+   * The whole reason the separators are what they are. A message holding a tab, a newline or a
+   * pipe would break any format a person could type, and a message is written by a person.
+   */
+  it('survives a message holding whatever somebody pasted into it', () => {
+    const output = logLine('a1', '', 'Alban', '2026-08-17T09:00:00Z', 'Fix\ttab | pipe — dash')
+
+    expect(parseLog(output)[0]?.message).toBe('Fix\ttab | pipe — dash')
+  })
+
+  it('reads nothing out of an empty log', () => {
+    expect(parseLog('')).toEqual([])
+  })
+})
+
+describe('what one recorded version changed', () => {
+  it('reads a letter and a path per line', () => {
+    expect(parseNameStatus('M\tdocuments/board.scimg\nA\tImages/hero.png\n')).toEqual([
+      { path: 'documents/board.scimg', change: 'modified' },
+      { path: 'Images/hero.png', change: 'added' },
+    ])
+  })
+
+  /**
+   * A rename writes its similarity score into the letter's own field, and both paths after it.
+   * The row is named for where the file is NOW, which is the second one.
+   */
+  it('names a rename for where the file ended up, and remembers where it was', () => {
+    expect(parseNameStatus('R096\tImages/hero.png\tImages/hero-final.png')).toEqual([
+      { path: 'Images/hero-final.png', change: 'renamed', from: 'Images/hero.png' },
+    ])
+  })
+
+  it('reads nothing out of a commit that touched no file', () => {
+    expect(parseNameStatus('\n\n')).toEqual([])
   })
 })
 

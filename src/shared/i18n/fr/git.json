@@ -26,6 +26,13 @@
     "newBranch": "Nouvelle branche",
     "newBranchHint": "Ouvre une variante à partir de là où vous en êtes, sans rien perdre.",
     "newBranchPlaceholder": "essai-lumiere",
+    "historyUnavailable": "L’historique s’affichera ici une fois le suivi des versions en place. Le panneau Git dit où en est ce projet.",
+    "historyEmpty": "Aucune version enregistrée pour l’instant. La première apparaîtra ici.",
+    "historyRefreshHint": "Relit la liste depuis le début, pour voir ce qui a été fait en dehors du studio.",
+    "commitFiles": "Fichiers de cette version",
+    "commitEmpty": "Cette version ne touche aucun fichier.",
+    "more": "Voir plus",
+    "moreHint": "Charge la suite de l’historique, en dessous.",
     "stage": {
       "conflicted": "En conflit",
       "staged": "Retenus",

@@ -67,6 +67,8 @@ type ChannelMethod = {
   [CHANNELS.gitBranches]: StudioBridge['git']['branches']
   [CHANNELS.gitCreateBranch]: StudioBridge['git']['createBranch']
   [CHANNELS.gitCheckout]: StudioBridge['git']['checkout']
+  [CHANNELS.gitLog]: StudioBridge['git']['log']
+  [CHANNELS.gitCommitFiles]: StudioBridge['git']['commitFiles']
 
   [CHANNELS.dialogPickPath]: StudioBridge['dialog']['pickPath']
   [CHANNELS.dialogExportPicture]: StudioBridge['dialog']['exportPicture']

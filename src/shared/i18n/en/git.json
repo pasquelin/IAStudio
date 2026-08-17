@@ -26,6 +26,13 @@
     "newBranch": "New branch",
     "newBranchHint": "Opens a variant from where you stand, losing nothing.",
     "newBranchPlaceholder": "light-attempt",
+    "historyUnavailable": "The history will show here once version tracking is set up. The Git panel says where this project stands.",
+    "historyEmpty": "No version recorded so far. The first one will appear here.",
+    "historyRefreshHint": "Reads the list again from the top, to catch what was done outside the studio.",
+    "commitFiles": "Files of this version",
+    "commitEmpty": "This version touches no file.",
+    "more": "Show more",
+    "moreHint": "Loads the rest of the history, underneath.",
     "stage": {
       "conflicted": "In conflict",
       "staged": "Held",

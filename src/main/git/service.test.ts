@@ -25,6 +25,8 @@ function repository(overrides: Partial<Repository> = {}): Repository {
     branches: () => Promise.resolve([{ name: 'main', current: true }]),
     createBranch: () => Promise.resolve(),
     checkout: () => Promise.resolve(),
+    log: () => Promise.resolve([]),
+    commitFiles: () => Promise.resolve([]),
     ...overrides,
   }
 }

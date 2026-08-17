@@ -142,6 +142,19 @@ describe('a name git would take as a branch', () => {
   ])('refuses %s — %s', name => {
     expect(isBranchName(name)).toBe(false)
   })
+
+  /**
+   * Not a naming rule but the whole of an attack. The name reaches `git checkout <name>` as an
+   * argument, and git reads one beginning with `-` as an OPTION — `--upload-pack=…` runs a
+   * command of the caller's choosing. Git refuses such a branch itself, so refusing it one step
+   * earlier loses nothing legitimate.
+   */
+  it.each(['-f', '--upload-pack=touch /tmp/pwned', '-'])(
+    'refuses %s, which git would read as an option',
+    name => {
+      expect(isBranchName(name)).toBe(false)
+    },
+  )
 })
 
 describe('the ignore file written at init', () => {

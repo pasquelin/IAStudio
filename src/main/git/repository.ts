@@ -1,8 +1,15 @@
 import { join } from 'node:path'
 import { CheckRepoActions, simpleGit, type SimpleGit } from 'simple-git'
-import { defaultIgnore, type GitBranch, type GitIdentity, type GitStatus } from '@shared/domain/git'
+import {
+  defaultIgnore,
+  type GitBranch,
+  type GitCommit,
+  type GitCommitFile,
+  type GitIdentity,
+  type GitStatus,
+} from '@shared/domain/git'
 import { exists, writeAtomic } from '@main/persistence'
-import { filesOf } from './parse'
+import { filesOf, LOG_FORMAT, parseLog, parseNameStatus } from './parse'
 
 export const GITIGNORE_FILE = '.gitignore'
 
@@ -26,6 +33,10 @@ export type Repository = {
   branches: () => Promise<GitBranch[]>
   createBranch: (name: string) => Promise<void>
   checkout: (name: string) => Promise<void>
+  /** A page of the history, newest first. `skip` is how many the caller already holds. */
+  log: (limit: number, skip: number) => Promise<GitCommit[]>
+  /** What one recorded version changed. */
+  commitFiles: (hash: string) => Promise<GitCommitFile[]>
 }
 
 /**
@@ -71,6 +82,34 @@ export function openRepository(root: string, binary?: string): Repository {
     checkout: async name => {
       await git.checkout(name)
     },
+
+    /**
+     * `--all` rather than the branch that is out: a version panel that hid the branch one is
+     * about to switch to would be hiding the reason for switching. It is also what makes the
+     * graph a graph — a single branch has nothing to draw.
+     *
+     * `--topo-order` rather than by date, and the layout below depends on it: a child must be
+     * reached before its parents, and clocks on two machines do not guarantee that.
+     */
+    log: async (limit, skip) =>
+      parseLog(
+        await git.raw([
+          'log',
+          '--all',
+          '--topo-order',
+          `--max-count=${limit}`,
+          `--skip=${skip}`,
+          `--format=${LOG_FORMAT}`,
+        ]),
+      ),
+
+    // `--format=` empties the header, leaving only the file list. `-m --first-parent` makes a
+    // merge show what it actually brought in rather than nothing at all, which is what a plain
+    // `show` writes for one.
+    commitFiles: async hash =>
+      parseNameStatus(
+        await git.raw(['show', '--name-status', '--format=', '-m', '--first-parent', hash]),
+      ),
   }
 }
 

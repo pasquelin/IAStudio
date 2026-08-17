@@ -52,3 +52,36 @@ const branchName = z.string().max(255).refine(isBranchName)
 export function parseBranchName(value: unknown): string {
   return branchName.parse(value)
 }
+
+/**
+ * A commit, named the only way git names one.
+ *
+ * Hexadecimal and nothing else, which closes the same door `gitPath` closes: the value reaches
+ * `git show <hash>` as an argument, and git reads one beginning with `-` as an OPTION.
+ * `--upload-pack=…` would then run a command of the caller's choosing.
+ */
+const commitHash = z
+  .string()
+  .min(4)
+  .max(64)
+  .refine(value => /^[0-9a-f]+$/i.test(value))
+
+export function parseCommitHash(value: unknown): string {
+  return commitHash.parse(value)
+}
+
+/**
+ * How much of the history to ask for, and how far in.
+ *
+ * Whole numbers, and bounded on both: they are interpolated into `--max-count=` and `--skip=`,
+ * where anything else would be a second argument rather than a number. The ceiling is what one
+ * scroll of a band can hold several times over.
+ */
+const page = z.object({
+  limit: z.number().int().min(1).max(500),
+  skip: z.number().int().min(0).max(100000),
+})
+
+export function parseLogPage(limit: unknown, skip: unknown): { limit: number; skip: number } {
+  return page.parse({ limit, skip })
+}

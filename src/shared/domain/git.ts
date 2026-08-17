@@ -123,6 +123,31 @@ export type GitBinary = { found: false } | { found: true; version: string }
 /** A local branch. What it tracks belongs to the remote, and arrives with it. */
 export type GitBranch = { name: string; current: boolean }
 
+/**
+ * One recorded version.
+ *
+ * `parents` carries the FULL hashes git wrote, and it is what the graph is laid out from — a
+ * merge has two, the very first commit has none. `hash` is full for the same reason: the short
+ * form is an abbreviation git chooses per repository, and two of them can collide.
+ */
+export type GitCommit = {
+  hash: string
+  parents: readonly string[]
+  /** The subject line alone. A body is not what a list of versions is read for. */
+  message: string
+  author: string
+  /** ISO 8601, as git wrote it — formatted where it is drawn, never here. */
+  at: string
+}
+
+/** A file as a recorded version holds it. No stage: everything in a commit is already recorded. */
+export type GitCommitFile = { path: string; change: GitChange; from?: string }
+
+/** The short form of a hash, for a column that has to stay narrow. */
+export function shortHash(hash: string): string {
+  return hash.slice(0, 7)
+}
+
 /** Who a commit is recorded under, when the studio has been told rather than left to git. */
 export type GitIdentity = { name: string; email: string }
 
@@ -169,7 +194,11 @@ export function isBranchName(name: string): boolean {
     return false
   }
 
-  return true
+  // A LEADING DASH, and this one is not a naming rule — it is the whole of an attack. The name
+  // reaches `git checkout <name>` as an argument, and git reads an argument beginning with `-`
+  // as an OPTION: `--upload-pack=…` runs a command of the caller's choosing. Git refuses such a
+  // branch name itself, so nothing legitimate is lost by refusing it one step earlier.
+  return !name.startsWith('-')
 }
 
 /**

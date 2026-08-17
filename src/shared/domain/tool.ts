@@ -44,6 +44,7 @@ export type ToolId =
   | 'timeline'
   | 'explorer'
   | 'git'
+  | 'history'
   | 'scene'
   | 'models'
   | 'generator'
@@ -210,6 +211,21 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // Offered only while a project IS open — `tool-registry.ts`, for the reason the Explorer gives
   // there. In a space that is always true; on the home it is the whole point.
   { id: 'git', zone: 'left', slot: 'secondary', surfaces: [...WORKSPACE_IDS, HOME_SURFACE] },
+
+  // The versions themselves, in the band — where the timeline is, and for the same reason: both
+  // are read ACROSS, one commit or one frame at a time, and a branch graph in a 280 px column is
+  // a graph nobody can follow. The column beside it holds the files of whichever version is
+  // picked, which is why the band and not a second column.
+  //
+  // Declared after the shelf and the montage, so entering a space still opens on the panel that
+  // space is for. Someone who wants the history asks for it.
+  //
+  // The spaces and NOT the home, unlike the Git panel above it. The home lost eight panels on
+  // 13 August for one reason — every panel that answered a question about the studio instead of
+  // offering a way into it stood between the reader and their projects — and a band of past
+  // versions is exactly such a panel. It would also give that screen a bottom zone it has never
+  // had, for a reading one does while working rather than before starting.
+  { id: 'history', zone: 'bottom', slot: 'primary', surfaces: WORKSPACE_IDS },
 ]
 
 /**

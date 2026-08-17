@@ -1,6 +1,15 @@
 import { create } from 'zustand'
-import type { GitBranch, GitRepository } from '@shared/domain/git'
+import type { GitBranch, GitCommit, GitCommitFile, GitRepository } from '@shared/domain/git'
 import { getBridge } from '@/services/bridge'
+
+/**
+ * How much history one round trip brings back.
+ *
+ * A band shows a dozen rows and scrolls; this is several screens of them, so scrolling does not
+ * hit the bottom on the first flick. A project of two years is tens of thousands of commits, and
+ * reading them whole to draw twenty is what paging exists to avoid.
+ */
+export const HISTORY_PAGE = 60
 
 type GitState = {
   repository: GitRepository
@@ -16,6 +25,18 @@ type GitState = {
   message: string
   amend: boolean
 
+  /**
+   * The history, as far down as it has been read. Held beside the working tree rather than in a
+   * store of its own: the two are one repository, and a commit made in the Git panel has to
+   * appear in the History panel without either of them knowing the other exists.
+   */
+  commits: readonly GitCommit[]
+  /** Whether the last page came back short, which is the only way to know there is no more. */
+  historyEnded: boolean
+  /** The version being looked at, or nothing. Its files are read when it is picked. */
+  picked: string | null
+  pickedFiles: readonly GitCommitFile[]
+
   refresh: () => Promise<void>
   initRepository: () => Promise<void>
   stage: (paths: readonly string[]) => Promise<void>
@@ -27,6 +48,9 @@ type GitState = {
   checkout: (name: string) => Promise<void>
   writeMessage: (message: string) => void
   setAmend: (amend: boolean) => void
+  /** Reads the first page afresh, or the next one under it. */
+  readHistory: (more: boolean) => Promise<void>
+  pick: (hash: string | null) => Promise<void>
 }
 
 /**
@@ -67,6 +91,10 @@ export const useGit = create<GitState>()((set, get) => {
     busy: false,
     message: '',
     amend: false,
+    commits: [],
+    historyEnded: false,
+    picked: null,
+    pickedFiles: [],
 
     refresh: () => run(getBridge()?.git.read()),
     initRepository: () => run(getBridge()?.git.init()),
@@ -90,5 +118,30 @@ export const useGit = create<GitState>()((set, get) => {
 
     writeMessage: message => set({ message }),
     setAmend: amend => set({ amend }),
+
+    readHistory: async more => {
+      const held = more ? get().commits : []
+      const page = (await getBridge()?.git.log(HISTORY_PAGE, held.length)) ?? []
+
+      set({
+        commits: [...held, ...page],
+        // A page that came back short is the end. Asking again to find out would cost a command
+        // per scroll for the rest of the session, on a history that is not going to grow.
+        historyEnded: page.length < HISTORY_PAGE,
+      })
+    },
+
+    pick: async hash => {
+      // Cleared FIRST: the files of the version one has just left would otherwise stay on screen
+      // under the name of the one just picked, for as long as git takes to answer.
+      set({ picked: hash, pickedFiles: [] })
+      if (hash === null) return
+
+      const files = (await getBridge()?.git.commitFiles(hash)) ?? []
+
+      // Only if it is still the one being looked at. Two quick clicks race, and the slower answer
+      // would otherwise land last and fill the row that is no longer picked.
+      if (get().picked === hash) set({ pickedFiles: files })
+    },
   }
 })

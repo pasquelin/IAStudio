@@ -1,4 +1,4 @@
-import type { GitChange, GitFailure, GitFile } from '@shared/domain/git'
+import type { GitChange, GitCommit, GitCommitFile, GitFailure, GitFile } from '@shared/domain/git'
 
 /**
  * One row of `git status --porcelain`, as simple-git hands it over.
@@ -60,6 +60,67 @@ export function filesOf(entries: readonly PorcelainEntry[]): GitFile[] {
 
 function file(path: string, stage: GitFile['stage'], change: GitChange, from?: string): GitFile {
   return from === undefined ? { path, stage, change } : { path, stage, change, from }
+}
+
+/**
+ * The two separators the log is asked for with, and read back by.
+ *
+ * ASCII 31 between fields and 30 between commits — outside anything a person types. A newline or
+ * a tab would not do: a commit message is written by a human and may hold either, so a format a
+ * message can break is a format that breaks the day somebody pastes something in.
+ *
+ * Built from their code points rather than written as characters, and that is not decoration:
+ * both are invisible in an editor, so a literal one is a line nobody can search for, read, or
+ * edit without deleting it by accident — for a value the format string and the parser below have
+ * to agree on exactly.
+ */
+const FIELD = String.fromCharCode(31)
+const RECORD = String.fromCharCode(30)
+
+/** `%s` is the SUBJECT alone, which keeps a message to one line whatever its body holds. */
+export const LOG_FORMAT = ['%H', '%P', '%an', '%aI', '%s'].join(FIELD) + RECORD
+
+export function parseLog(output: string): GitCommit[] {
+  return output
+    .split(RECORD)
+    .map(record => record.trim())
+    .filter(record => record !== '')
+    .flatMap(record => {
+      const [hash, parents, author, at, message] = record.split(FIELD)
+      if (hash === undefined || message === undefined) return []
+
+      return [
+        {
+          hash,
+          // The first commit has no parent and writes an empty field, which splits into one
+          // empty string rather than into nothing.
+          parents: (parents ?? '').split(' ').filter(value => value !== ''),
+          author: author ?? '',
+          at: at ?? '',
+          message,
+        },
+      ]
+    })
+}
+
+/** What `--name-status` writes: a letter, a tab, a path — and for a rename, two paths. */
+export function parseNameStatus(output: string): GitCommitFile[] {
+  return output
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line !== '')
+    .flatMap(line => {
+      const [code, first, second] = line.split('\t')
+      // `R096` and `C075` carry their similarity score in the letter's own field.
+      const change = CHANGES[(code ?? '').charAt(0)]
+      if (change === undefined || first === undefined) return []
+
+      // A rename writes the OLD path first and the new one second, which is the way round a
+      // reader wants it: the row is named for where the file is now.
+      return second === undefined
+        ? [{ path: first, change }]
+        : [{ path: second, change, from: first }]
+    })
 }
 
 /**

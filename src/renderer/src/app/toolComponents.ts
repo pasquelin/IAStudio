@@ -32,6 +32,7 @@ export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   timeline: { load: () => import('@/panels/timeline'), role: 'fill-actions' },
   explorer: { load: () => import('@/panels/explorer'), role: 'actions' },
   git: { load: () => import('@/panels/git'), role: 'actions' },
+  history: { load: () => import('@/panels/history'), role: 'actions' },
   scene: { load: () => import('@/panels/scene'), role: null },
   models: { load: () => import('@/panels/models'), role: null },
   generator: { load: () => import('@/panels/generator'), role: null },

@@ -5,7 +5,13 @@ import type { ProjectStore } from '@main/project/store'
 import { gitVersionProbe } from './binary'
 import { openRepository } from './repository'
 import { createGitService, type GitService } from './service'
-import { parseBranchName, parseCommitMessage, parseGitPaths } from './validation'
+import {
+  parseBranchName,
+  parseCommitHash,
+  parseCommitMessage,
+  parseGitPaths,
+  parseLogPage,
+} from './validation'
 
 export type GitHandlerDeps = {
   /** Only what version control reads: which project is open, if any. */
@@ -46,6 +52,11 @@ export function registerGitHandlers({ project, binaryPath, identity }: GitHandle
   handle(CHANNELS.gitBranches, () => service.branches())
   handle(CHANNELS.gitCreateBranch, (_event, name) => service.createBranch(parseBranchName(name)))
   handle(CHANNELS.gitCheckout, (_event, name) => service.checkout(parseBranchName(name)))
+  handle(CHANNELS.gitLog, (_event, limit, skip) => {
+    const page = parseLogPage(limit, skip)
+    return service.log(page.limit, page.skip)
+  })
+  handle(CHANNELS.gitCommitFiles, (_event, hash) => service.commitFiles(parseCommitHash(hash)))
 
   return service
 }

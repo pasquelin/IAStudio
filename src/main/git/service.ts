@@ -1,4 +1,11 @@
-import type { GitBinary, GitBranch, GitIdentity, GitRepository } from '@shared/domain/git'
+import type {
+  GitBinary,
+  GitBranch,
+  GitCommit,
+  GitCommitFile,
+  GitIdentity,
+  GitRepository,
+} from '@shared/domain/git'
 import { detectGit, type VersionProbe } from './binary'
 import { failureOf, safeMessage } from './parse'
 import type { Repository } from './repository'
@@ -27,6 +34,9 @@ export type GitService = {
   branches: () => Promise<GitBranch[]>
   createBranch: (name: string) => Promise<GitRepository>
   checkout: (name: string) => Promise<GitRepository>
+  /** A page of the history, newest first. Empty where there is none, and where git refused. */
+  log: (limit: number, skip: number) => Promise<GitCommit[]>
+  commitFiles: (hash: string) => Promise<GitCommitFile[]>
   /** Drops what was detected and held, so a changed preference is read afresh. */
   forget: () => void
 }
@@ -119,6 +129,18 @@ export function createGitService({
     return await read()
   }
 
+  /** Runs one read and answers with nothing where git could not — see the three callers below. */
+  const data = async <T>(run: (repository: Repository) => Promise<T[]>): Promise<T[]> => {
+    const found = await reach()
+    if (!found.reached) return []
+
+    try {
+      return await run(found.repository)
+    } catch {
+      return []
+    }
+  }
+
   return {
     read,
 
@@ -131,18 +153,17 @@ export function createGitService({
     createBranch: name => perform(repository => repository.createBranch(name)),
     checkout: name => perform(repository => repository.checkout(name)),
 
-    branches: async () => {
-      const found = await reach()
-      if (!found.reached) return []
-
-      try {
-        return await found.repository.branches()
-      } catch {
-        // A menu with no rows says what a failure would, and there is no screen to say it on:
-        // the branch button is a menu, not a panel.
-        return []
-      }
-    },
+    /**
+     * The three reads that answer with DATA rather than with a state.
+     *
+     * Empty on failure, and it is the honest answer for all three: a repository with no first
+     * commit has no history, and one whose `git log` refused has none the panel can draw. The
+     * screen that says WHY is the Git panel's, which is looking at the same folder — saying it
+     * twice, in two panels, over one folder, would be saying it twice.
+     */
+    branches: () => data(repository => repository.branches()),
+    log: (limit, skip) => data(repository => repository.log(limit, skip)),
+    commitFiles: hash => data(repository => repository.commitFiles(hash)),
 
     forget: () => {
       detected = null

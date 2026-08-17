@@ -106,6 +106,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       branches: () => Promise.resolve([]),
       createBranch: () => Promise.resolve({ kind: 'no-project' }),
       checkout: () => Promise.resolve({ kind: 'no-project' }),
+      log: () => Promise.resolve([]),
+      commitFiles: () => Promise.resolve([]),
       ...overrides.git,
     },
     dialog: {

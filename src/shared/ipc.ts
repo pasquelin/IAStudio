@@ -23,7 +23,7 @@ import type {
   DocumentKind,
   DocumentWrite,
 } from './domain/document'
-import type { GitBranch, GitRepository } from './domain/git'
+import type { GitBranch, GitCommit, GitCommitFile, GitRepository } from './domain/git'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -120,6 +120,8 @@ export type Channels = {
   gitBranches: 'git:branches'
   gitCreateBranch: 'git:create-branch'
   gitCheckout: 'git:checkout'
+  gitLog: 'git:log'
+  gitCommitFiles: 'git:commit-files'
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
@@ -273,6 +275,8 @@ export const CHANNELS: Channels = {
   gitBranches: 'git:branches',
   gitCreateBranch: 'git:create-branch',
   gitCheckout: 'git:checkout',
+  gitLog: 'git:log',
+  gitCommitFiles: 'git:commit-files',
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
@@ -945,6 +949,13 @@ export type StudioBridge = {
     branches: () => Promise<GitBranch[]>
     createBranch: (name: string) => Promise<GitRepository>
     checkout: (name: string) => Promise<GitRepository>
+    /**
+     * A page of the history, newest first, across every branch. Paged rather than read whole: a
+     * project of two years is tens of thousands of commits, and the band shows twenty.
+     */
+    log: (limit: number, skip: number) => Promise<GitCommit[]>
+    /** What one recorded version changed. Read when a row is picked, never with the page. */
+    commitFiles: (hash: string) => Promise<GitCommitFile[]>
   }
   dialog: {
     /**

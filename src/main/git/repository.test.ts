@@ -216,6 +216,74 @@ describe('branches', () => {
   })
 })
 
+describe('the history', () => {
+  it('answers with the versions recorded, newest first', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    await writeFile(join(repository.root, 'notes.txt'), 'edited')
+    await repository.stage(['notes.txt'])
+    await repository.commit('deuxieme version', false, AUTHOR)
+
+    expect((await repository.log(10, 0)).map(entry => entry.message)).toEqual([
+      'deuxieme version',
+      'premiere version',
+    ])
+  })
+
+  /** The layout depends on it: a child has to be reached before the commits it came from. */
+  it('gives the first commit no parent, and the next one the first', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    await writeFile(join(repository.root, 'notes.txt'), 'edited')
+    await repository.stage(['notes.txt'])
+    await repository.commit('deuxieme version', false, AUTHOR)
+
+    const [second, first] = await repository.log(10, 0)
+    expect(first?.parents).toEqual([])
+    expect(second?.parents).toEqual([first?.hash])
+  })
+
+  it('skips what the caller already holds', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    await writeFile(join(repository.root, 'notes.txt'), 'edited')
+    await repository.stage(['notes.txt'])
+    await repository.commit('deuxieme version', false, AUTHOR)
+
+    expect((await repository.log(10, 1)).map(entry => entry.message)).toEqual(['premiere version'])
+  })
+
+  /** A branch nobody is standing on still belongs on the graph — `--all` is what puts it there. */
+  it('carries a branch that is not the one checked out', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    const first = (await repository.status()).branch ?? ''
+    await repository.createBranch('essai-lumiere')
+    await writeFile(join(repository.root, 'notes.txt'), 'on the branch')
+    await repository.stage(['notes.txt'])
+    await repository.commit('essai', false, AUTHOR)
+    await repository.checkout(first)
+
+    expect((await repository.log(10, 0)).map(entry => entry.message)).toContain('essai')
+  })
+
+  it('names the files one version changed', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const repository = await repositoryWithACommit()
+    const [head] = await repository.log(1, 0)
+
+    expect((await repository.commitFiles(head?.hash ?? '')).map(file => file.path).sort()).toEqual([
+      '.project.json',
+      'notes.txt',
+    ])
+  })
+})
+
 /** Which half of git a path sits in, or nothing where it is not waiting at all. */
 function stageOf(status: GitStatus, path: string): string | undefined {
   return status.files.find(file => file.path === path)?.stage

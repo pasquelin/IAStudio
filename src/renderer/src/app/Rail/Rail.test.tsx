@@ -188,6 +188,8 @@ describe('Rail', () => {
       'Explorateur',
       'Git',
       'Timeline',
+      // The band's own, at the foot of the rail: the versions of the folder the two above read.
+      'Historique',
     ])
   })
 
