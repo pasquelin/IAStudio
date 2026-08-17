@@ -350,6 +350,39 @@ project, and reading them to count them would cost a wait on every project openi
 nothing to click. It is read again when you come back to the window as well — a project on a
 network volume sometimes emits no event at all, and that second net catches it.
 
+#### What happens when you tidy the folder without the studio
+
+The tree only shows. **What actually follows your files is a pass** that puts the catalogue and
+the disk back in agreement, and it runs at two moments: **when a project opens** — catching what
+moved while the studio was closed — and **when the window comes back to the front** — catching
+what moved while it was open. The Finder is the other half of every project folder; neither
+moment is enough on its own.
+
+**It recognises a file by its contents, not by its path.** Move a picture from one folder to
+another, rename it, do both: the entry finds it again and follows. The ids do not change, so **a
+3D scene keeps pointing at its texture** after you have filed it elsewhere.
+
+**It never deletes an entry.** A file it cannot find is **dated as gone**, and its entry stays:
+the prompt, the seed and the lineage are written on no disk, and losing them because a file is on
+an unplugged USB stick would be losing more than the file. Plug the stick back in, and the next
+pass puts the entry back in service.
+
+**Most of the time you will not see it.** A bar shows at the head of the panel **while a pass is
+running** — but an ordinary pass reads the folder, finds everything where the catalogue says it
+is, and is over before it could be drawn. What makes it visible is a project where something
+moved: that is the case where the pass has to read files, so the only one where the wait lasts
+long enough to deserve an explanation.
+
+| What the bar shows | |
+|---|---|
+| **Looking for files moved outside the project** | and the progress, as soon as it knows how many files it will read |
+| **Stop** | calls off the search; **whatever was found already stays found** |
+
+**The journal only speaks if something changed**: *n files moved outside the studio were found
+again and followed*, and — as a warning — *n catalogued files are nowhere in the project, their
+entries are kept*. A pass over a project where nothing moved writes nothing at all, and that is
+what makes it bearable on every return to the window.
+
 > **It is still where a closed document is found again.** The layout remembers which tabs are open,
 > but a document closed while no layout held it is no longer reachable through tabs; it is in
 > the folder you filed it in, one fold down.
