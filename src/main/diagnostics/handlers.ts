@@ -37,6 +37,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // not measure its picture. The asset is the victim, the document is the subject — and reading
   // them by subject is how a user finds the tab to fix.
   'canvas.size': 'document',
+  // Same reading as its neighbour: the subject is the document that outgrew its source file,
+  // and the tab is what the user has to act on.
+  'canvas.flatten': 'document',
   'image.export': 'document',
   'document.load': 'document',
   'document.save': 'document',

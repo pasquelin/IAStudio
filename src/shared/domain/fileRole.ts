@@ -34,6 +34,9 @@ export type FileNature = { domain: FileDomain; role: FileRole }
  */
 const DOMAIN_BY_EXTENSION: Record<string, AssetType> = {
   '.png': 'image',
+  // A layered picture is still a picture: it sits on the image shelf, and what a tile shows of
+  // it is the flatten the container is required to carry.
+  '.ora': 'image',
   '.jpg': 'image',
   '.jpeg': 'image',
   '.webp': 'image',
@@ -103,6 +106,7 @@ export function natureOf(fileName: string): FileNature {
  */
 const OPENABLE_EXTENSIONS: readonly string[] = [
   '.png',
+  '.ora',
   '.jpg',
   '.jpeg',
   '.webp',

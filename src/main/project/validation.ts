@@ -20,7 +20,12 @@ import {
 import { isPrivatePath } from '@shared/domain/folder'
 import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
 import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
-import type { SaveAudioRequest, SavePictureRequest, SaveTextureRequest } from '@shared/ipc'
+import type {
+  SaveAudioRequest,
+  SaveLayeredRequest,
+  SavePictureRequest,
+  SaveTextureRequest,
+} from '@shared/ipc'
 import { isPngBytes } from '@main/media/png'
 import { pathSegment } from '@main/validation'
 import { base64Payload } from '@main/scenario/validation'
@@ -195,6 +200,65 @@ const savePicture = z.object({
 
 export function parseSavePicture(value: unknown): SavePictureRequest {
   return savePicture.parse(value)
+}
+
+const oraBase = {
+  name: z.string().max(200),
+  x: z.number().finite(),
+  y: z.number().finite(),
+  opacity: z.number().min(0).max(1),
+  visible: z.boolean(),
+  composite: z.string().max(64),
+}
+
+/** `data/…` and nothing else: a path out of the container is a path out of the project folder. */
+const oraPath = z
+  .string()
+  .max(300)
+  .regex(/^data\/[\w.-]+\.png$/)
+
+const oraLayer = z.object({
+  ...oraBase,
+  kind: z.literal('layer'),
+  src: oraPath,
+  png: z.string().max(MAX_PICTURE_BASE64).pipe(base64Payload),
+})
+
+/**
+ * Depth-bounded on purpose: `z.lazy` would accept a nesting deep enough to blow the stack when
+ * the writer walks it, and no picture has eight levels of groups.
+ */
+const oraNode = (depth: number): z.ZodType<unknown> =>
+  depth === 0
+    ? oraLayer
+    : z.union([
+        oraLayer,
+        z.object({
+          ...oraBase,
+          kind: z.literal('group'),
+          isolation: z.enum(['auto', 'isolate']),
+          children: z.array(oraNode(depth - 1)).max(500),
+        }),
+      ])
+
+const saveLayered = z.object({
+  replaces: assetId.optional(),
+  name: z.string().trim().min(1).max(200),
+  derivedFrom: assetId.optional(),
+  document: z.object({
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+    nodes: z.array(oraNode(8)).max(2000),
+    merged: z.string().max(MAX_PICTURE_BASE64).pipe(base64Payload),
+    studio: z.string().max(MAX_PICTURE_BASE64),
+    extras: z.record(oraPath, z.string().max(MAX_PICTURE_BASE64).pipe(base64Payload)),
+  }),
+})
+
+export function parseSaveLayered(value: unknown): SaveLayeredRequest {
+  // The shape is checked field by field above; the cast names what zod has just proved, the
+  // recursive `nodes` being typed as `unknown` by the depth-bounded builder.
+  return saveLayered.parse(value) as SaveLayeredRequest
 }
 
 export function parseDocumentId(value: unknown): string {

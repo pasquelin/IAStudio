@@ -21,6 +21,7 @@ export const SHIPPED: string[] = [
   'better-sqlite3',
   'electron-store',
   'electron-updater',
+  'fflate',
   'mediabunny',
   'opentype.js',
   'pixi.js',

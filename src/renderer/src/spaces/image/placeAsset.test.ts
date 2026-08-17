@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
+import type { OraDocument } from '@shared/domain/openRaster'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { reportFailure } from '@/services/diagnostics'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import { becomeAsset, placeAsset } from './placeAsset'
@@ -160,5 +162,73 @@ describe('making a document be the asset', () => {
 
     // Untouched, not merely unchanged in shape: nothing of the asset reached the document.
     expect(stack()).toEqual(DEFAULT_CANVAS)
+  })
+})
+
+describe('opening an asset that holds a whole stack', () => {
+  const measuring = (width: number, height: number) => () => Promise.resolve({ width, height })
+
+  const container: OraDocument = {
+    width: 800,
+    height: 600,
+    nodes: [
+      {
+        kind: 'layer',
+        name: 'Ink',
+        src: 'data/p_ink.png',
+        x: 0,
+        y: 0,
+        opacity: 1,
+        visible: true,
+        composite: 'svg:src-over',
+        png: 'iVBORw0KGgo=',
+      },
+      {
+        kind: 'layer',
+        name: 'Paper',
+        src: 'data/p_paper.png',
+        x: 0,
+        y: 0,
+        opacity: 1,
+        visible: true,
+        composite: 'svg:src-over',
+        png: 'iVBORw0KGgo=',
+      },
+    ],
+    merged: 'iVBORw0KGgo=',
+    studio: '',
+    extras: {},
+  }
+
+  /**
+   * The point of writing an open format at all: what came back out of the container is the stack,
+   * not the one flat layer every other picture opens as.
+   */
+  it('opens the layers the container holds, rather than one flattened layer', async () => {
+    installFakeBridge({ assets: { readLayered: () => Promise.resolve(container) } })
+
+    await becomeAsset(DOCUMENT, picture, measuring(800, 600))
+
+    expect(stack().layers.map(layer => layer.name)).toEqual(['Paper', 'Ink'])
+    expect(stack().width).toBe(800)
+  })
+
+  /** A tab that has just opened is not a tab with unsaved work: ⌘S must have nothing to write. */
+  it('opens clean, since nothing has been edited yet', async () => {
+    installFakeBridge({ assets: { readLayered: () => Promise.resolve(container) } })
+
+    await becomeAsset(DOCUMENT, picture, measuring(800, 600))
+
+    expect(canvasStore.hasUnsavedWork(useCanvases.getState(), DOCUMENT)).toBe(false)
+  })
+
+  /** Every flat picture answers `null` here, which is the ordinary path and not a failure. */
+  it('falls back to the one-layer document when the asset holds no stack', async () => {
+    installFakeBridge({ assets: { readLayered: () => Promise.resolve(null) } })
+
+    await becomeAsset(DOCUMENT, picture, measuring(800, 600))
+
+    expect(stack().layers).toHaveLength(1)
+    expect(said()).toEqual([])
   })
 })

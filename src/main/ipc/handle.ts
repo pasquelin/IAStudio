@@ -108,6 +108,8 @@ type ChannelMethod = {
   [CHANNELS.assetsAbsent]: StudioBridge['assets']['absent']
   [CHANNELS.assetsSaveAudio]: StudioBridge['assets']['saveAudio']
   [CHANNELS.assetsSavePicture]: StudioBridge['assets']['savePicture']
+  [CHANNELS.assetsSaveLayered]: StudioBridge['assets']['saveLayered']
+  [CHANNELS.assetsReadLayered]: StudioBridge['assets']['readLayered']
   [CHANNELS.assetsSaveTexture]: StudioBridge['assets']['saveTexture']
   [CHANNELS.assetsExtractTextures]: StudioBridge['assets']['extractTextures']
   [CHANNELS.assetsUpdate]: StudioBridge['assets']['update']

@@ -32,6 +32,9 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   // Same gesture, same rule — and here silence costs more: each reopening re-arms a ⌘S that
   // would write the document's size back over a bigger picture.
   'canvas.size',
+  // ⌘S again: pressed a second time precisely because the first left the source file alone, and
+  // a refusal said once reads as a save that worked.
+  'canvas.flatten',
   // ⌘S is a gesture, and the half that reaches the asset can fail while the document is written.
   'assets.save',
   // ⇧⌘S is the same kind of gesture: asked again precisely because the first said nothing.

@@ -97,8 +97,31 @@ export function serveAssets(resolvers: AssetResolvers): void {
     const file = await servedPath(request.url, resolvers)
 
     if (!file) return new Response(null, { status: 404 })
+
+    // A container is not a picture. Served as it is, its ZIP bytes reach an `<img>` and decode
+    // to nothing — every tile, every inspector and every layer sourced from it draws empty. The
+    // format requires a flatten inside precisely so that a reader wanting a picture has one.
+    const flat = await flattenedContainer(file)
+    if (flat) return new Response(flat, { headers: { 'content-type': 'image/png' } })
+
     return net.fetch(pathToFileURL(file).toString())
   })
+}
+
+/** `null` for anything that is not a container, which is every other file this scheme serves. */
+async function flattenedContainer(file: string): Promise<Uint8Array | null> {
+  if (!file.toLowerCase().endsWith('.ora')) return null
+
+  try {
+    const [{ mergedPictureOf }, { readFile }] = await Promise.all([
+      import('./openRasterFile'),
+      import('node:fs/promises'),
+    ])
+    return mergedPictureOf(await readFile(file))
+  } catch {
+    // A file that will not read is answered as the scheme answers everything it cannot serve.
+    return null
+  }
 }
 
 /**

@@ -2,6 +2,7 @@ import { isLocalPicture, type Asset } from '@shared/domain/asset'
 import { DEFAULT_CANVAS, pixelLayer, type CanvasState } from '@/engines/canvas/canvasState'
 import { addLayer } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
+import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import type { PictureMeasure } from './pictureSize'
@@ -22,6 +23,23 @@ export function placeAsset(documentId: string, asset: Asset): void {
 
   const layer = { ...pixelLayer(newId(), asset.name), source: asset.id }
   useCanvases.getState().runCommand(documentId, addLayer(layer))
+}
+
+/**
+ * Opens an asset that holds a whole stack, and answers whether it was one.
+ *
+ * `false` for every flat picture, which is the ordinary case and not a failure — the caller then
+ * opens the one-layer document any picture opens as.
+ */
+async function becomeContainer(documentId: string, asset: Asset): Promise<boolean> {
+  const layered = await getBridge()?.assets.readLayered(asset.id)
+  if (!layered) return false
+
+  const { canvasFromOra } = await import('@/engines/canvas/oraDocument')
+  const canvases = useCanvases.getState()
+  canvases.replace(documentId, canvasFromOra(layered).state)
+  canvases.markSaved(documentId, canvasStore.markOf(useCanvases.getState(), documentId))
+  return true
 }
 
 /**
@@ -48,6 +66,9 @@ export async function becomeAsset(
   measure?: PictureMeasure,
 ): Promise<void> {
   if (!isLocalPicture(asset)) return
+  // A container opens as the stack it holds. Its pixels arrive later, at `rehydrateDocument`:
+  // no engine is mounted yet — the tab is being made — so there is nothing to hand them to.
+  if (await becomeContainer(documentId, asset)) return
 
   // Reached through `import()`: this module is in the opening chunk — `eager-graph.test.ts`
   // holds that budget at two files — and measuring only ever happens on a double-click.

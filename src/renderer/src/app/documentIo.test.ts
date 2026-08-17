@@ -19,6 +19,8 @@ import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { getBridge } from '@/services/bridge'
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
+import type { SaveLayeredRequest } from '@shared/ipc'
+import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { showPanels } from '@/stores/layout-fixtures'
 import { useTextures } from '@/stores/textures'
@@ -26,8 +28,8 @@ import { newTexture } from '@/engines/texture/textureState'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { isSceneDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isPartName } from '@shared/domain/document'
-import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvasState'
-import { addLayer, resizeCanvas } from '@/engines/canvas/commands'
+import { DEFAULT_CANVAS, pixelLayer, textLayer } from '@/engines/canvas/canvasState'
+import { addLayer, removeLayer, renameLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas, type CanvasHost } from '@/spaces/image/canvasHosts'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import { EMPTY_AUDIO_EDIT, pushEdit } from '@/engines/audio/edits'
@@ -363,6 +365,25 @@ describe('saveDocument', () => {
     }
 
     /**
+     * An edit that leaves the document flat. `addLayer` cannot serve here any more: a second
+     * layer is precisely what stops ⌘S from writing a flatten over the source file, so a test
+     * about the write itself has to edit the one layer the document opened with.
+     */
+    const editImage = (documentId: string): void =>
+      useCanvases.getState().runCommand(documentId, renameLayer('layer-1', 'Backdrop'))
+
+    /**
+     * The catalogue row ⌘S reads the source's FORMAT off — its `path`, never its `name`.
+     *
+     * A row's name is the STEM: `adoptFile` stores `stemOf(…)`, so no asset a project holds has
+     * an extension there. A fixture that put one in `name` was green on a value production never
+     * produces, and hid a save refused for every layered document there is.
+     */
+    const shelve = (path: string): void => {
+      useAssets.setState({ items: [{ ...picture(), path }] })
+    }
+
+    /**
      * The order is the guarantee: the document holds the layers and the history, the asset only
      * a flat picture. Writing the asset first and failing on the document would leave a fresh
      * tile standing in front of work that never reached the disk.
@@ -383,17 +404,19 @@ describe('saveDocument', () => {
         assets: { savePicture },
       })
       const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(documentId)
 
       await expect(saveDocument(documentId)).resolves.toBe(true)
       release()
 
       // `name` rides along because the channel is shaped like `saveAudio`'s; an overwrite keeps
-      // the name the asset already has, so this is not ⌘S renaming anything.
+      // the name the asset already has, so this is not ⌘S renaming anything. `format` is the
+      // source file's own, so an overwrite never changes what the file IS.
       expect(savePicture).toHaveBeenCalledWith({
         replaces: 'asset-1',
         name: 'Gemini 3.1',
         png: PNG,
+        format: 'png',
       })
       expect(order).toEqual(['document', 'asset'])
     })
@@ -408,7 +431,7 @@ describe('saveDocument', () => {
         assets: { savePicture: () => Promise.resolve(picture()) },
       })
       const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(documentId)
 
       await saveDocument(documentId)
       release()
@@ -428,7 +451,7 @@ describe('saveDocument', () => {
         assets: { savePicture },
       })
       const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(documentId)
       useCanvases.getState().runCommand(documentId, resizeCanvas(320, 200, { x: 0, y: 0 }))
 
       await expect(saveDocument(documentId)).resolves.toBe(true)
@@ -438,6 +461,7 @@ describe('saveDocument', () => {
         replaces: 'asset-1',
         name: 'Gemini 3.1',
         png: PNG,
+        format: 'png',
       })
     })
 
@@ -473,6 +497,198 @@ describe('saveDocument', () => {
       release()
 
       expect(savePicture).not.toHaveBeenCalled()
+    })
+
+    /**
+     * The rule the whole feature turns on: a flat picture cannot hold a stack, so ⌘S writes the
+     * document and leaves the file it was opened from exactly as it was.
+     *
+     * What used to happen instead is what makes this worth a test: the stack was flattened over
+     * the source, and a remount then redrew the layers carrying `source` from that flatten —
+     * folding the whole picture into the one layer it came from, with nothing said.
+     */
+    it('leaves the source file alone once the document holds more than it can', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture },
+      })
+      shelve('Images/hero.png')
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await expect(saveDocument(documentId)).resolves.toBe(true)
+      release()
+
+      expect(savePicture).not.toHaveBeenCalled()
+      expect(entries()[0]).toMatchObject({ scope: 'canvas.flatten' })
+    })
+
+    /**
+     * The other half of the same rule, and the reason the open format is worth the trouble: a
+     * container that holds a stack takes the stack, so the very document a `.png` refuses writes
+     * straight back to its own file.
+     */
+    it('writes a stack straight back into a source that can hold one', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      const saveLayered = vi.fn((_request: SaveLayeredRequest) => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture, saveLayered },
+      })
+      shelve('Images/hero.ora')
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await expect(saveDocument(documentId)).resolves.toBe(true)
+      release()
+
+      // The container, never the flatten: sending these bytes down `savePicture` would write a
+      // PNG under the `.ora`'s own name and destroy the stack the format was chosen to hold.
+      expect(savePicture).not.toHaveBeenCalled()
+      expect(saveLayered).toHaveBeenCalledTimes(1)
+      expect(saveLayered.mock.calls[0]?.[0]).toMatchObject({
+        replaces: 'asset-1',
+        format: 'ora',
+      })
+    })
+
+    /**
+     * A row named like a picture but filed under a container is the shape of the defect that
+     * nearly shipped: the format has to come off the PATH, so a name saying `.png` must not make
+     * ⌘S flatten a `.ora`. It also stands for every real row, whose name has no extension at all.
+     */
+    it('reads the format off the file, never off the name the shelf shows', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      const saveLayered = vi.fn((_request: SaveLayeredRequest) => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture, saveLayered },
+      })
+      useAssets.setState({ items: [{ ...picture(), name: 'hero.png', path: 'Images/hero.ora' }] })
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await saveDocument(documentId)
+      release()
+
+      expect(savePicture).not.toHaveBeenCalled()
+      expect(saveLayered).toHaveBeenCalledTimes(1)
+    })
+
+    /** The stack really travels, rather than a container built around an empty one. */
+    it('sends the whole stack down the layered channel', async () => {
+      const saveLayered = vi.fn((_request: SaveLayeredRequest) => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { saveLayered },
+      })
+      shelve('Images/hero.ora')
+      const created = await useDocuments
+        .getState()
+        .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
+      if (!created) throw new Error('expected a document')
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+      // The engine hands its surfaces over, which is what a layer of the container is made of:
+      // one with no pixels is left out of the stack, so a fake that has none writes nothing.
+      const release = holdCanvas(created.id, () =>
+        fakeCanvas({
+          snapshot: () => Promise.resolve(PNG),
+          pixelSnapshots: () =>
+            Promise.resolve([
+              { layerId: 'layer-1', mask: false, data: PNG },
+              { layerId: 'layer-2', mask: false, data: PNG },
+            ]),
+        }),
+      )
+      useCanvases.getState().runCommand(created.id, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await saveDocument(created.id)
+      release()
+
+      expect(saveLayered.mock.calls[0]?.[0].document.nodes).toHaveLength(2)
+      expect(saveLayered.mock.calls[0]?.[0].document.merged).toBe(PNG)
+    })
+
+    /**
+     * A format this studio cannot write is not a format that holds everything. Answering « no
+     * loss » for a `.tif` would overwrite it with a PNG under its own name, which is the silent
+     * loss the whole path exists to stop.
+     */
+    it('refuses a format it has no answer for, rather than assuming it holds everything', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture },
+      })
+      shelve('Images/scan.tif')
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await saveDocument(documentId)
+      release()
+
+      expect(savePicture).not.toHaveBeenCalled()
+    })
+
+    /** Which traits stood in the way, so the journal names them rather than saying « something ». */
+    it('names what the source file could not have held', async () => {
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture: () => Promise.resolve(picture()) },
+      })
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases
+        .getState()
+        .runCommand(documentId, addLayer(textLayer('t', 'Hello', { x: 0, y: 0 })))
+
+      await saveDocument(documentId)
+      release()
+
+      expect(entries()[0]?.message).toContain('layers')
+      expect(entries()[0]?.message).toContain('liveText')
+    })
+
+    /**
+     * The refusal is not a debt. `assetBehind` exists so a save whose second half FAILED is tried
+     * again; retrying a refusal would write the very flatten that was refused, the next time
+     * anything else marked the asset late.
+     */
+    it('does not retry a refusal on the next ⌘S', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture },
+      })
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await saveDocument(documentId)
+      await saveDocument(documentId)
+      release()
+
+      expect(savePicture).not.toHaveBeenCalled()
+    })
+
+    /**
+     * And it lifts. Flattening the stack by hand leaves one layer again, which the source file
+     * can hold — so the picture behind the tab catches up rather than staying stale for ever.
+     */
+    it('writes the source again once the document is flat enough for it', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture },
+      })
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+      await saveDocument(documentId)
+
+      useCanvases.getState().runCommand(documentId, removeLayer('layer-2'))
+      await expect(saveDocument(documentId)).resolves.toBe(true)
+      release()
+
+      expect(savePicture).toHaveBeenCalledTimes(1)
     })
 
     /** The blank document of the `+` button edits no asset: ⌘S writes the file and stops there. */
@@ -637,7 +853,7 @@ describe('saveDocument', () => {
         assets: { savePicture },
       })
       const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(documentId)
 
       await saveDocument(documentId)
       // Nothing was edited in between, and the document is clean: only the debt makes it retry.
@@ -666,7 +882,7 @@ describe('saveDocument', () => {
       useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
 
       const booting = holdCanvas(created.id, () => fakeCanvas())
-      useCanvases.getState().runCommand(created.id, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(created.id)
       await saveDocument(created.id)
       booting()
 
@@ -694,7 +910,7 @@ describe('saveDocument', () => {
         assets: { savePicture: () => Promise.reject(new Error('disk full')) },
       })
       const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(documentId)
 
       await expect(saveDocument(documentId)).resolves.toBe(true)
       release()
@@ -778,6 +994,7 @@ describe('saveDocument', () => {
         derivedFrom: 'asset-1',
         name: 'Gemini 3.1 copie',
         png: PNG,
+        format: 'png',
       })
       // The original's picture is untouched, so the loader's copy of it is still the truth.
       expect(forgotten).toEqual([])
@@ -878,7 +1095,9 @@ describe('saveDocument', () => {
     it('leaves the original tab modified, since nothing was written for it', async () => {
       installFakeBridge({
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
-        assets: { savePicture: () => Promise.resolve(picture()) },
+        // A stack, so the copy is a container rather than a flatten — which is the one write
+        // ⇧⌘S must never be for a document holding layers.
+        assets: { saveLayered: () => Promise.resolve(picture()) },
       })
       const { documentId, release } = await openLinkedImage()
       useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))

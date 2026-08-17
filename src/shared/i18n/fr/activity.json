@@ -97,6 +97,7 @@
       "skybox.export": "L’export du ciel a échoué",
       "canvas.layer": "Un calque n’a pas pu être chargé",
       "canvas.size": "Cette image n’a pas pu garder sa taille",
+      "canvas.flatten": "L’image d’origine n’a pas pu être mise à jour, son format ne sachant pas porter ce travail. Elle est restée intacte — utilisez Enregistrer sous.",
       "image.export": "L’export de l’image a échoué",
       "document.save": "L’enregistrement du document a échoué",
       "assets.reveal": "Le fichier n’a pas pu être affiché",
