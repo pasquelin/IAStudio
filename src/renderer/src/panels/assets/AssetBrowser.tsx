@@ -28,7 +28,7 @@ import { activeOwnerId, useSettings } from '@/stores/settings'
 import { AssetCard } from './AssetCard'
 import { AssetRow } from './AssetRow'
 import { ImportProgress } from './ImportProgress'
-import { LOCATION_FACET, TYPE_FACET } from './facets'
+import { LOCATION_FACET, PUBLISHED_BADGE, TYPE_FACET } from './facets'
 import {
   markOf,
   mergeRows,
@@ -117,6 +117,21 @@ export function AssetBrowser() {
     NO_REMOTE,
     () => browseLibrary(scope),
     `${ownerId ?? ''}/${scope.join(',')}`,
+  )
+
+  /**
+   * What everyone else published, read only while the Location facet asks for it — see
+   * `PUBLISHED_BADGE`. It is the one value of that facet that changes what is READ.
+   *
+   * The kind is the scope's first, which is the Type facet's answer wherever one is chosen and
+   * the space's own kind otherwise: the feed pages by one kind, and this is the one on screen.
+   */
+  const wantsPublished = (collection.selections[LOCATION_FACET] ?? []).includes(PUBLISHED_BADGE)
+  const publishedType = wantsPublished ? (scope[0] ?? null) : null
+  const { value: published } = useShelf(
+    NO_REMOTE,
+    () => browsePublic(publishedType),
+    publishedType ?? '',
   )
 
   /**
@@ -234,8 +249,8 @@ export function AssetBrowser() {
 
   const twins = useMemo(() => twinsById(remote), [remote])
   const rows = useMemo(
-    () => mergeRows({ local: items, remote, jobs, scope, absent }),
-    [items, remote, jobs, scope, absent],
+    () => mergeRows({ local: items, remote, published, jobs, scope, absent }),
+    [items, remote, published, jobs, scope, absent],
   )
 
   /**
@@ -428,6 +443,24 @@ async function forgetOrphans(absentIds: readonly string[]): Promise<void> {
 function browseLibrary(scope: readonly AssetType[] | null): Promise<CloudAsset[]> | undefined {
   return getBridge()
     ?.cloud.browse({ pageSize: LIBRARY_PAGE, ...(scope ? { types: scope } : {}) })
+    .then(page => page.assets)
+}
+
+/**
+ * One page of what everyone published, of ONE kind.
+ *
+ * One kind and not the scope, because that is what the index can answer: the feed pages by kind
+ * alone, and a mixed one would be a grid of grey rectangles anyway — a sound file has no picture
+ * to sit beside an image. The kind is the one the Type facet holds, which the space in front
+ * fills in whenever it changes, so the reader is never asked to pick it twice.
+ *
+ * `undefined` while nobody has asked, which is what keeps the search — and its quota — unspent.
+ */
+function browsePublic(type: AssetType | null): Promise<CloudAsset[]> | undefined {
+  if (!type) return undefined
+
+  return getBridge()
+    ?.cloud.explore({ type, pageSize: LIBRARY_PAGE })
     .then(page => page.assets)
 }
 

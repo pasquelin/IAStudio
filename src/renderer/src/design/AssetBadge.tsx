@@ -7,6 +7,7 @@ import {
   mdiCloudSyncOutline,
   mdiCloudUploadOutline,
   mdiDownloadOutline,
+  mdiEarthPlus,
   mdiHarddisk,
   mdiProgressClock,
   mdiSourceBranch,
@@ -36,9 +37,13 @@ const MARKS: Record<Badge, { icon: string; tone: string; busy?: true }> = {
   error: { icon: mdiAlertCircleOutline, tone: 'text-danger' },
   // Its twin is in a project this key does not open onto: nothing to do, but not settled either.
   'other-account': { icon: mdiCloudOffOutline, tone: 'text-muted' },
-  // The two that stand for no local row. Both are actionable — one invites a download, the
-  // other says to wait — so neither is quiet, and both are drawn in a dense grid.
+  // The three that stand for no local row. All are actionable — two invite a download, the
+  // third says to wait — so none is quiet, and all are drawn in a dense grid.
   'remote-only': { icon: mdiDownloadOutline, tone: 'text-accent-ink' },
+  // Somebody else's, and the glyph says so rather than the tone: the gesture is the same
+  // download `remote-only` offers, so colouring it apart would claim a difference in what to do
+  // where there is only a difference in whose it is.
+  published: { icon: mdiEarthPlus, tone: 'text-accent-ink' },
   generating: { icon: mdiProgressClock, tone: 'text-accent-ink' },
   // The one that says something is happening RIGHT NOW, hence the only animated mark. It stays
   // readable when `data-reduce-motion` freezes it: the pulse ends at full opacity, so what is

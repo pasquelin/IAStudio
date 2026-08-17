@@ -56,7 +56,7 @@ ligne est large et presque vide, mais l’étagère n’y lit plus.
 |---|---|
 | **Rechercher…** | filtre sur le **nom** de l’asset, à la frappe |
 | **Type** | ne garde qu’**une seule** sorte d’assets — en choisir une remplace la précédente |
-| **Emplacement** | ne garde que les assets dans un certain état vis-à-vis de la bibliothèque |
+| **Emplacement** | ne garde que les assets dans un certain état vis-à-vis de la bibliothèque — et, sur **Publié par quelqu’un d’autre**, va chercher ce que les autres ont publié |
 | **Icônes** / **Liste** | grille de vignettes, ou liste dense |
 | **Réduire les vignettes** / **Agrandir les vignettes** | leur taille |
 
@@ -262,6 +262,8 @@ Une petite marque dit où en est un asset vis-à-vis de la bibliothèque :
 | **Modifié des deux côtés** | les deux versions ont divergé |
 | **Le dernier envoi a échoué** | la tentative précédente n’est pas passée |
 | **Appartient à un autre projet** | le jumeau en ligne relève d’une autre clé API que celle qui est active |
+| **Dans votre bibliothèque — pas sur ce disque** | l’asset existe en ligne sous votre clé, aucun fichier ici |
+| **Publié par quelqu’un d’autre — pas sur ce disque** | il ne vous appartient pas ; un double-clic ou un glisser-déposer le rapatrie |
 
 **Les deux premiers ne se dessinent qu’en vue liste.** Sur une vignette, « local seulement » et
 « synchronisé » restent muets : ce sont les deux états ordinaires, et les marquer couvrirait la
@@ -281,9 +283,11 @@ relisent — c’est le même fichier, c’est la bibliothèque d’en face qui 
 > avec une clé, basculez sur une autre dans la barre de titre, et il porte le badge. C’est le
 > paragraphe ci-dessus à l’œuvre, pas un cas de synchronisation.
 >
-> Le filtre **Emplacement** ne propose pourtant que quatre états — *local seulement*,
-> *synchronisé*, *à envoyer* et *échec*. « Autre projet » peut donc s’afficher sur une vignette
-> sans qu’on puisse s’en servir pour filtrer.
+> Le filtre **Emplacement** ne le propose pourtant pas. Trois badges restent hors de la liste, et
+> chacun pour sa raison : « autre projet » ne s’atteint pas tant que l’étagère ne lit qu’une clé,
+> « rapatriement en cours » dure moins d’une seconde, et « fichier introuvable » n’est pas un
+> endroit où un asset se trouve. Ils peuvent donc s’afficher sur une vignette sans qu’on puisse
+> s’en servir pour filtrer.
 
 ### Envoyer une sélection
 

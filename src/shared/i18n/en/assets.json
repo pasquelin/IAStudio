@@ -20,6 +20,7 @@
       "error": "The last upload failed",
       "other-account": "Belongs to another project",
       "remote-only": "In your library — not on this disk",
+      "published": "Published by somebody else — not on this disk",
       "generating": "Being generated",
       "fetching": "Fetching…",
       "missing": "File not found on disk"

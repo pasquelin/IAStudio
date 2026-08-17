@@ -714,6 +714,79 @@ describe('what each gesture on a line does', () => {
     await vi.waitFor(() => expect(asked).toEqual({ pageSize: 60, types: ['image'] }))
   })
 
+  /**
+   * The public feed costs a SEARCH, and it is unbounded: read by default it would spend quota on
+   * every mount and sit a thousand strangers' assets over a project's dozen. It is the one value
+   * of the Location facet that changes what is read rather than what is drawn.
+   */
+  describe('what everyone else published', () => {
+    it('is not read at all until the facet asks for it', async () => {
+      let explored = 0
+      installFakeBridge({
+        cloud: {
+          browse: () => Promise.resolve({ assets: [], cursor: null }),
+          explore: () => {
+            explored += 1
+            return Promise.resolve({ assets: [], cursor: null })
+          },
+        },
+      })
+
+      render(<AssetBrowser />)
+      await vi.waitFor(() => expect(screen.getByRole('searchbox')).toBeInTheDocument())
+
+      expect(explored).toBe(0)
+    })
+
+    // One kind, because that is what the index can answer — and it is the kind on screen, which
+    // the Type facet holds and which the space in front fills in.
+    it('asks for the kind the shelf is showing, once the facet names it', async () => {
+      let asked: unknown
+      installFakeBridge({
+        cloud: {
+          browse: () => Promise.resolve({ assets: [], cursor: null }),
+          explore: query => {
+            asked = query
+            return Promise.resolve({ assets: [], cursor: null })
+          },
+        },
+      })
+      useAssets.setState({
+        collection: {
+          ...DEFAULT_COLLECTION_STATE,
+          selections: { type: ['image'], location: ['published'] },
+        },
+      })
+
+      render(<AssetBrowser />)
+
+      await vi.waitFor(() => expect(asked).toEqual({ type: 'image', pageSize: 60 }))
+    })
+
+    it('draws what it brought back, marked as somebody else’s', async () => {
+      installFakeBridge({
+        cloud: {
+          browse: () => Promise.resolve({ assets: [], cursor: null }),
+          explore: () =>
+            Promise.resolve({
+              assets: [{ ...cloudAsset, id: 'asset_theirs', name: 'Somebody else’s' }],
+              cursor: null,
+            }),
+        },
+      })
+      useAssets.setState({
+        collection: {
+          ...DEFAULT_COLLECTION_STATE,
+          selections: { type: ['image'], location: ['published'] },
+        },
+      })
+
+      render(<AssetBrowser />)
+
+      expect(await screen.findByText('Somebody else’s')).toBeInTheDocument()
+    })
+  })
+
   // A refusal opens nothing rather than guessing: an editor opened on a row that was never
   // written says less than nothing, and the journal already carries the why.
   it('opens nothing when the fetch behind a double-click failed', async () => {

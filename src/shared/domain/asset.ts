@@ -265,6 +265,12 @@ export type AssetBadge =
   | 'other-account'
   /** In the account's library, with no copy on this disk. Nothing local answers for it. */
   | 'remote-only'
+  /**
+   * Published by somebody else — the public feed, which this account owns nothing of. It behaves
+   * exactly as `remote-only` does (no file here, fetched by a double-click or by a drop) and it
+   * is a mark of its own for the one thing that differs: whose it is.
+   */
+  | 'published'
   /** A job is still running. The row stands for an output that does not exist yet. */
   | 'generating'
   /** Its bytes are on their way down right now. Transient, and never read off a stored row. */
@@ -322,6 +328,7 @@ export const ASSET_BADGES: readonly AssetBadge[] = [
   'error',
   'other-account',
   'remote-only',
+  'published',
   'generating',
   'fetching',
   'missing',
