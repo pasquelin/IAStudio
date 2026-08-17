@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from 'react'
-import { domainNodes, isDomainHeading, type ExplorerNode } from './domain-nodes'
+import { useMemo } from 'react'
+import { useFolded } from '@/hooks/useFolded'
+import { domainNodes, type ExplorerNode } from './domain-nodes'
 import { entriesSorted } from './folder-sort'
 import { useProjectItems } from './use-project-items'
 import type { FolderTree } from './use-folder-tree'
@@ -25,31 +26,20 @@ export function useDomainTree(
 ): DomainTree {
   const { items, loaded, reload } = useProjectItems(hidden, active)
   /** The headings folded shut by hand. Every other one is open — see `domainNodes`. */
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
+  const folded = useFolded()
 
-  const built = useMemo(() => domainNodes(items, language), [items, language])
+  const built = useMemo(() => domainNodes(items), [items])
 
-  const nodes = useMemo(() => {
-    const headings = built.nodes.filter(isDomainHeading)
-    const files = built.nodes.flatMap(node => (isDomainHeading(node) ? [] : [node]))
-    // Only the files are ordered: the headings come in the order the studio names its domains
-    // everywhere else, which is not something a sort of file names has anything to say about.
-    return [...headings, ...entriesSorted(files, sort, language)]
-  }, [built.nodes, sort, language])
+  const nodes = useMemo(
+    () => [...built.headings, ...entriesSorted(built.files, sort, language)],
+    [built, sort, language],
+  )
 
   const expandedIds = useMemo(() => {
     const open = new Set(built.expandedIds)
-    for (const id of collapsed) open.delete(id)
+    for (const id of folded.ids) open.delete(id)
     return open
-  }, [built.expandedIds, collapsed])
+  }, [built.expandedIds, folded.ids])
 
-  const toggle = useCallback((id: string) => {
-    setCollapsed(current => {
-      const next = new Set(current)
-      if (!next.delete(id)) next.add(id)
-      return next
-    })
-  }, [])
-
-  return { nodes, expandedIds, toggle, reload, loaded }
+  return { nodes, expandedIds, toggle: folded.toggle, reload, loaded }
 }

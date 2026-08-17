@@ -8,18 +8,6 @@ import { ExplorerActions } from './ExplorerActions'
 beforeEach(() => useExplorerView.setState({ collection: LIST_ONLY, hidden: false, mode: 'folder' }))
 
 describe('the explorer title row', () => {
-  /**
-   * The bar and the tree are two components — the bar rides in the panel's title row — so what
-   * is typed here reaches the tree through the store and nowhere else.
-   */
-  it('hands what is typed to the panel', async () => {
-    render(<ExplorerActions />)
-
-    await userEvent.type(screen.getByRole('searchbox'), 'ruelle')
-
-    expect(useExplorerView.getState().collection.search).toBe('ruelle')
-  })
-
   it('turns the studio own files on and off', async () => {
     render(<ExplorerActions />)
 
@@ -42,13 +30,14 @@ describe('the explorer title row', () => {
   })
 
   /**
-   * A tree has neither a grid nor thumbnails, and four buttons that would do nothing take the
-   * width the search field needs in a side column.
+   * The row carries the panel's name, these three and the way out. The search bar rode here
+   * first and the screen settled it: the field measured 76 px on the home's left column, which
+   * is « Rechercher… » cut to « Rech… ». It is drawn under the title now.
    */
-  it('offers no way to change an appearance a tree does not have', () => {
+  it('leaves the row to the three readings, and carries no field', () => {
     render(<ExplorerActions />)
 
-    expect(screen.queryByRole('button', { name: 'Icônes' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Agrandir les vignettes' })).toBeNull()
+    expect(screen.queryByRole('searchbox')).toBeNull()
+    expect(screen.queryByRole('combobox')).toBeNull()
   })
 })

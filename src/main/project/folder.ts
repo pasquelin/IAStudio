@@ -98,6 +98,7 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
 
     const walk = async (relative: string, depth: number): Promise<void> => {
       const entries = await level(relative, hidden).catch((): FolderEntry[] => [])
+      const deeper: Promise<void>[] = []
 
       for (const entry of entries) {
         if (keep(entry)) found.push(entry)
@@ -105,8 +106,14 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
         // An image document IS a folder, and what it holds is the studio's own writing — a walk
         // that went into it would offer the parts instead of the document.
         if (kindForExtension(extensionOf(entry.name))) continue
-        await walk(entry.path, depth + 1)
+        deeper.push(walk(entry.path, depth + 1))
       }
+
+      // The folders of one level are read together, as `listing` reads the open ones: awaited
+      // one at a time, the walk costs the SUM of the reads rather than the longest of them, in
+      // the process that owns every window. A parent's own row is pushed before any of them, so
+      // what a reader gets is still a folder before what it holds.
+      await Promise.all(deeper)
     }
 
     await walk('', 0)

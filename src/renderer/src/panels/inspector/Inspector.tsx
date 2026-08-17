@@ -1,11 +1,8 @@
 import { mdiTuneVariant } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
-import { PropertyGroup } from '@/design/PropertyGroup'
-import { PropertyRow } from '@/design/PropertyRow'
 import { PANEL_SCROLL } from '@/design/styles'
 import { clipById, trackById } from '@/engines/timeline/timeline-state'
-import { formatBytes } from '@/helpers/format'
 import { assetsById, useAssets } from '@/stores/assets'
 import { layerById, type Layer } from '@/engines/canvas/canvas-state'
 import { canvasOf, useCanvases } from '@/stores/canvases'
@@ -23,6 +20,7 @@ import { ClipInspector } from './ClipInspector'
 import { FileInspector } from './FileInspector'
 import { LayerInspector } from './LayerInspector'
 import { SceneInspector } from './SceneInspector'
+import { SelectionSummary } from './SelectionSummary'
 import { TextureInspector } from './TextureInspector'
 import { TrackInspector } from './TrackInspector'
 import { inspectedTextureId } from './inspected'
@@ -128,7 +126,6 @@ function Empty() {
  * for a selection of twelve is how someone regenerates the wrong thing.
  */
 function AssetSelection({ ids }: { ids: readonly string[] }) {
-  const { t, i18n } = useTranslation()
   const byId = useAssets(assetsById)
 
   // Keyed rather than filtered: a selection of a handful against a catalogue of thousands was
@@ -140,14 +137,5 @@ function AssetSelection({ ids }: { ids: readonly string[] }) {
   if (assets.length === 1 && only) return <AssetInspector asset={only} />
 
   const total = assets.reduce((bytes, asset) => bytes + (asset.bytes ?? 0), 0)
-  return (
-    <PropertyGroup title={t('inspector.selection')}>
-      <PropertyRow label={t('inspector.count')}>{assets.length}</PropertyRow>
-      {total > 0 && (
-        <PropertyRow label={t('inspector.size')}>
-          {formatBytes(total, unit => t(`units.${unit}`), i18n.language)}
-        </PropertyRow>
-      )}
-    </PropertyGroup>
-  )
+  return <SelectionSummary count={assets.length} bytes={total} />
 }

@@ -1,42 +1,27 @@
 import { mdiEyeOffOutline, mdiEyeOutline, mdiFileTreeOutline, mdiShapeOutline } from '@mdi/js'
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CollectionBar } from '@/design/CollectionBar'
 import { ToolButton } from '@/design/ToolButton'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useExplorerView } from '@/stores/explorer-view'
-import { FOLDER_SORTS } from './folder-sort'
 
 /**
- * The Explorer's own title row: what narrows the tree, and what widens it.
+ * The Explorer's own title row: how the folder is READ, and how much of it is shown.
  *
- * In the title row rather than under it, which is what `layout="header"` means — a side column
- * is narrow and tall, and a second row of controls costs the tree three files' worth of height.
- * `display` is off: a tree has neither a grid nor thumbnails to size.
+ * Three buttons and no more. The search bar rode here first, in the title row, and the screen
+ * settled it: on the home's left column the field measured 76 px — « Rechercher… » cut to
+ * « Rech… » — because the row already carries the panel's name, these three, and the way out.
+ * It is the lesson the shelf carries in its own comment, a column further in: a bar belongs on
+ * a title row only where that row is a band's, and this panel never lies in one.
  */
 export function ExplorerActions() {
   const { t } = useTranslation()
-  const collection = useExplorerView(state => state.collection)
-  const setCollection = useExplorerView(state => state.setExplorerCollection)
   const hidden = useExplorerView(state => state.hidden)
   const toggleHidden = useExplorerView(state => state.toggleExplorerHidden)
   const mode = useExplorerView(state => state.mode)
   const setMode = useExplorerView(state => state.setExplorerMode)
 
-  const sorts = useMemo(
-    () => FOLDER_SORTS.map(value => ({ value, label: t(`explorer.sort.${value}`) })),
-    [t],
-  )
-
   return (
     <>
-      <CollectionBar
-        state={collection}
-        onChange={setCollection}
-        sorts={sorts}
-        layout="header"
-        display={false}
-      />
       {/* Two readings of one folder, and the pair is drawn as a pair: which one is on is what
           says the other exists at all. */}
       <ToolButton

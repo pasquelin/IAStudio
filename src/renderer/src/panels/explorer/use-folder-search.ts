@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { entriesByName, nameOf, parentOf, type FolderEntry } from '@shared/domain/folder'
 import { useDebounced } from '@/hooks/useDebounced'
+import { useFolded } from '@/hooks/useFolded'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
 import type { FolderNode, FolderTree } from './use-folder-tree'
@@ -64,7 +65,7 @@ export function useFolderSearch(term: string, hidden: boolean): FolderSearch {
   const settled = useDebounced(term, SETTLE_MS)
   const [found, setFound] = useState<Found>(NOTHING)
   /** The chains are drawn open — a match hidden under a fold is a match nobody was answered. */
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
+  const folded = useFolded()
   const [asked, setAsked] = useState({ term, projectPath })
   const [again, setAgain] = useState(0)
 
@@ -74,7 +75,7 @@ export function useFolderSearch(term: string, hidden: boolean): FolderSearch {
   // every keystroke is a panel that flickers instead of one that answers.
   if (asked.term !== term || asked.projectPath !== projectPath) {
     setAsked({ term, projectPath })
-    setCollapsed(new Set())
+    folded.reset()
     if (term === '' || asked.projectPath !== projectPath) setFound(NOTHING)
   }
 
@@ -97,22 +98,14 @@ export function useFolderSearch(term: string, hidden: boolean): FolderSearch {
   const expandedIds = useMemo(() => {
     const open = new Set<string>()
     for (const node of found.nodes) {
-      if (node.parentId !== null && !collapsed.has(node.parentId)) open.add(node.parentId)
+      if (node.parentId !== null && !folded.ids.has(node.parentId)) open.add(node.parentId)
     }
     return open
-  }, [found.nodes, collapsed])
-
-  const toggle = useCallback((path: string) => {
-    setCollapsed(current => {
-      const next = new Set(current)
-      if (!next.delete(path)) next.add(path)
-      return next
-    })
-  }, [])
+  }, [found.nodes, folded.ids])
 
   // What a batch of file gestures asks for: the matches were read before it, and a file that
   // moved is at a path this list still spells the old way.
   const reload = useCallback(() => setAgain(count => count + 1), [])
 
-  return { ...found, expandedIds, toggle, reload }
+  return { ...found, expandedIds, toggle: folded.toggle, reload }
 }

@@ -10,6 +10,7 @@ import { formatBytes } from '@/helpers/format'
 import { itemOfPath, type ProjectItem } from '@/helpers/project-item'
 import { useDocuments } from '@/stores/documents'
 import { RoleField } from './RoleField'
+import { SelectionSummary } from './SelectionSummary'
 
 /**
  * A file picked in the explorer, read out.
@@ -49,11 +50,10 @@ export function FileInspector({ paths }: { paths: readonly string[] }) {
 
   const [only] = items
   if (items.length > 1 || !only) {
-    return (
-      <PropertyGroup title={t('inspector.selection')}>
-        <PropertyRow label={t('inspector.count')}>{items.length}</PropertyRow>
-      </PropertyGroup>
-    )
+    // The same summary the shelf's own face gives, size included: the two answer one question,
+    // and the catalogue holds the bytes of whichever of these files it knows.
+    const total = items.reduce((bytes, item) => bytes + (item.bytes ?? 0), 0)
+    return <SelectionSummary count={items.length} bytes={total} />
   }
 
   return (

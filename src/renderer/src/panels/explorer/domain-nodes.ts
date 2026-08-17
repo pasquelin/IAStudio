@@ -25,36 +25,47 @@ export function isDomainHeading(node: ExplorerNode): node is DomainHeading {
  * The project read by what its files ARE — six domains and the one for everything else, each
  * holding the files filed under it.
  *
- * The domains come in the order `FILE_DOMAINS` declares, which is the order the shelf and the
- * rail already use; the files come by name, in the reader's own language. A domain nothing is
+ * The two halves come back APART: the headings keep the order `FILE_DOMAINS` declares, which is
+ * the order the shelf and the rail already use, while the files are the caller's to sort — a
+ * sort of file names has nothing to say about which domain comes first. A domain nothing is
  * filed under is left out rather than drawn empty: the view answers what the project holds, and
  * seven headings over an empty project say nothing at all.
  *
- * The nodes are `FolderNode`s, `name` included, and that is deliberate: the rows are drawn by
+ * The files are `FolderNode`s, `name` included, and that is deliberate: the rows are drawn by
  * the same reading the file tree uses — the document behind a file is found by its FILE name,
  * so an item named after its document's title would find nothing.
  */
-export function domainNodes(
-  items: readonly ProjectItem[],
-  language: string,
-): { nodes: ExplorerNode[]; expandedIds: Set<string> } {
-  const nodes: ExplorerNode[] = []
-  const children: FolderNode[] = []
+export function domainNodes(items: readonly ProjectItem[]): {
+  headings: DomainHeading[]
+  files: FolderNode[]
+  expandedIds: Set<string>
+} {
+  // One pass over the items rather than one per domain: seven scans of a project of four
+  // hundred files is seven times the work for an answer a single grouping gives.
+  const filed = new Map<FileDomain, ProjectItem[]>()
+  for (const item of items) {
+    const under = filed.get(item.domain)
+    if (under) under.push(item)
+    else filed.set(item.domain, [item])
+  }
+
+  const headings: DomainHeading[] = []
+  const files: FolderNode[] = []
   const expandedIds = new Set<string>()
 
+  // The domains in the order the studio names them everywhere else, never the order the disk
+  // happened to answer in.
   for (const domain of FILE_DOMAINS) {
-    const filed = items.filter(item => item.domain === domain)
-    if (filed.length === 0) continue
+    const under = filed.get(domain)
+    if (!under) continue
 
     const id = domainRowId(domain)
-    nodes.push({ id, parentId: null, domain, count: filed.length })
+    headings.push({ id, parentId: null, domain, count: under.length })
     // Open by default: a browser that answers with seven closed folds has answered nothing.
     expandedIds.add(id)
 
-    for (const item of [...filed].sort((one, other) =>
-      nameOf(one.path).localeCompare(nameOf(other.path), language),
-    )) {
-      children.push({
+    for (const item of under) {
+      files.push({
         id: item.path,
         path: item.path,
         name: nameOf(item.path),
@@ -64,5 +75,5 @@ export function domainNodes(
     }
   }
 
-  return { nodes: [...nodes, ...children], expandedIds }
+  return { headings, files, expandedIds }
 }

@@ -131,6 +131,23 @@ export function isStudioOwned(path: string): boolean {
 }
 
 /**
+ * Whether the studio holds `path` for itself — the ONE spelling of that question.
+ *
+ * Two things make a path private, and they are not the same thing: the folders the catalogue
+ * files assets under (`isStudioOwned`), and what a leading dot hides (`isHiddenPath`). Written
+ * apart at each site, a third answer arriving tomorrow would have to be added to five of them,
+ * and one could be forgotten without a test saying so.
+ *
+ * `contents` is the difference the trash draws: what a studio folder HOLDS may be thrown away —
+ * the catalogue lets go of the rows underneath — where the folder itself is the layout the
+ * project is read by. Nothing under a dot may go either way.
+ */
+export function isPrivatePath(path: string, contents: 'own' | 'shown' = 'own'): boolean {
+  const studio = contents === 'own' ? isStudioOwned(path) : isStudioFolder(path)
+  return studio || isHiddenPath(path)
+}
+
+/**
  * Why `path` may not go into `folder`, or `null` when it may.
  *
  * **The one spelling of the rule**, and it answers with a REASON rather than a boolean because
@@ -153,10 +170,7 @@ export function isStudioOwned(path: string): boolean {
  * the node's kind; `file-plan.ts` reads the folders and adds those refusals to this one.
  */
 export function moveRefusal(path: string, folder: string): 'private' | 'into-itself' | null {
-  if (isStudioOwned(path) || isStudioOwned(folder)) return 'private'
-  // Shown once the explorer is asked to reveal them, and refused all the same: what the studio
-  // keeps for its own bookkeeping is read, never moved.
-  if (isHiddenPath(path) || isHiddenPath(folder)) return 'private'
+  if (isPrivatePath(path) || isPrivatePath(folder)) return 'private'
 
   // A folder dropped inside itself would take its own destination with it, and the rename that
   // carries it out would leave the whole subtree unreachable.
