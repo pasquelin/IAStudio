@@ -10,6 +10,7 @@ import { type CommandId } from './command'
 import { CORE_ACTIONS } from './coreActions'
 import { FILE_ACTIONS } from './fileActions'
 import { JOB_ACTIONS } from './jobActions'
+import { SCENE_ACTIONS } from './sceneActions'
 import { STATE_ACTIONS } from './stateActions'
 
 /**
@@ -104,6 +105,7 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
   ...JOB_ACTIONS,
   ...ASSET_ACTIONS,
   ...CANVAS_ACTIONS,
+  ...SCENE_ACTIONS,
 ]
 
 /** The share of the registry one door offers. `mcp` is everything; `both` is the short list. */

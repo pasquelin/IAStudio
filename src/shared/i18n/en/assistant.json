@@ -224,6 +224,50 @@
       "layerMergeDown": {
         "title": "Merge a layer down",
         "description": "Folds one layer into the layer below it, within its own level of the stack. The result keeps the lower layer’s identity."
+      },
+      "sceneState": {
+        "title": "Read the scene being edited",
+        "description": "Returns every node of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected and what lights the scene."
+      },
+      "nodeAdd": {
+        "title": "Add an object to the scene",
+        "description": "Puts a primitive, a light, a camera, a sprite or a text into the 3D document in front, at the position given. Answers with the id the node was born with."
+      },
+      "nodeAddModel": {
+        "title": "Place a model from the library",
+        "description": "Puts a 3D model of the project’s library into the scene in front, named by its asset. This is how a generated mesh gets into a scene."
+      },
+      "nodeRemove": {
+        "title": "Remove an object",
+        "description": "Takes one node out of the scene in front, with whatever hangs from it. Undoes like any other edit of that document."
+      },
+      "nodeRename": {
+        "title": "Rename an object",
+        "description": "Calls one node of the scene in front something else. The id does not change, so nothing that pointed at it is lost."
+      },
+      "nodeTransform": {
+        "title": "Place an object",
+        "description": "Moves, turns or scales one node. Rotations are Euler angles in radians, and every axis left out keeps the value the node already had."
+      },
+      "nodeVisible": {
+        "title": "Show or hide an object",
+        "description": "Takes one node out of what is drawn, or puts it back. It stays in the scene either way, which is what tells hiding from removing."
+      },
+      "nodeMaterial": {
+        "title": "Set an object’s material",
+        "description": "Changes the colour, roughness or metalness of a mesh. Refuses a node that carries no mesh material, which the command would otherwise leave untouched."
+      },
+      "nodeLight": {
+        "title": "Set a light",
+        "description": "Changes the colour or the intensity of a light. Only these two, because the rest of a light’s fields differ from one kind to another."
+      },
+      "nodeReparent": {
+        "title": "Reparent an object",
+        "description": "Hangs one node under another, or under the scene itself when no parent is given. The node keeps its own transform, which is then read relative to its new parent."
+      },
+      "nodeSelect": {
+        "title": "Select objects",
+        "description": "Makes these nodes the selection the inspector reads and the gizmo moves. Selection is not an edit, so it adds nothing to the history."
       }
     },
     "refusals": {
@@ -297,7 +341,20 @@
       "width": "Width",
       "height": "Height",
       "scalePixels": "Rescale the layers with the frame",
-      "turn": "Which way to flip or turn"
+      "turn": "Which way to flip or turn",
+      "nodeId": "Object identifier",
+      "nodeIds": "Object identifiers",
+      "nodeKind": "What to add",
+      "positionX": "Position across",
+      "positionY": "Position up",
+      "positionZ": "Position towards the viewer",
+      "rotationX": "Rotation about X, in radians",
+      "rotationY": "Rotation about Y, in radians",
+      "rotationZ": "Rotation about Z, in radians",
+      "scaleZ": "Scale in depth",
+      "roughness": "Roughness, from 0 to 1",
+      "metalness": "Metalness, from 0 to 1",
+      "intensity": "Intensity"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

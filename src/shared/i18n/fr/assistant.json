@@ -224,6 +224,50 @@
       "layerMergeDown": {
         "title": "Fusionner un calque vers le bas",
         "description": "Replie un calque dans celui qui est sous lui, à l’intérieur de son propre niveau de pile. Le résultat garde l’identité du calque du dessous."
+      },
+      "sceneState": {
+        "title": "Lire la scène en cours d’édition",
+        "description": "Rend tous les objets du document 3D devant — identifiant, nom, type, parent, visibilité et transformation, avec la géométrie, la matière ou la lumière qu’ils portent — plus ce qui est sélectionné et ce qui éclaire la scène."
+      },
+      "nodeAdd": {
+        "title": "Ajouter un objet à la scène",
+        "description": "Pose une primitive, une lumière, une caméra, un sprite ou un texte dans le document 3D devant, à la position donnée. Répond avec l’identifiant reçu par l’objet à sa naissance."
+      },
+      "nodeAddModel": {
+        "title": "Placer un modèle de la bibliothèque",
+        "description": "Pose un modèle 3D de la bibliothèque du projet dans la scène devant, nommé d’après son asset. C’est ainsi qu’une maille générée entre dans une scène."
+      },
+      "nodeRemove": {
+        "title": "Retirer un objet",
+        "description": "Sort un objet de la scène devant, avec ce qui pend sous lui. S’annule comme n’importe quelle autre édition de ce document."
+      },
+      "nodeRename": {
+        "title": "Renommer un objet",
+        "description": "Appelle autrement un objet de la scène devant. L’identifiant ne change pas, donc rien de ce qui le désignait n’est perdu."
+      },
+      "nodeTransform": {
+        "title": "Placer un objet",
+        "description": "Déplace, oriente ou redimensionne un objet. Les rotations sont des angles d’Euler en radians, et tout axe omis garde la valeur que l’objet avait déjà."
+      },
+      "nodeVisible": {
+        "title": "Montrer ou cacher un objet",
+        "description": "Sort un objet de ce qui est dessiné, ou l’y remet. Il reste dans la scène dans les deux cas, et c’est ce qui distingue cacher de retirer."
+      },
+      "nodeMaterial": {
+        "title": "Régler la matière d’un objet",
+        "description": "Change la couleur, la rugosité ou l’aspect métallique d’une maille. Refuse un objet qui ne porte pas de matière de maille, que la commande laisserait sinon intact."
+      },
+      "nodeLight": {
+        "title": "Régler une lumière",
+        "description": "Change la couleur ou l’intensité d’une lumière. Ces deux-là seulement, parce que le reste des champs d’une lumière diffère d’une sorte à l’autre."
+      },
+      "nodeReparent": {
+        "title": "Rattacher un objet",
+        "description": "Accroche un objet sous un autre, ou sous la scène elle-même quand aucun parent n’est donné. L’objet garde sa transformation, qui se lit alors relativement à son nouveau parent."
+      },
+      "nodeSelect": {
+        "title": "Sélectionner des objets",
+        "description": "Fait de ces objets la sélection que lit l’inspecteur et que déplace le manipulateur. Une sélection n’est pas une édition, donc rien ne s’ajoute à l’historique."
       }
     },
     "refusals": {
@@ -297,7 +341,20 @@
       "width": "Largeur",
       "height": "Hauteur",
       "scalePixels": "Redimensionner les calques avec le cadre",
-      "turn": "Sens du retournement ou du quart de tour"
+      "turn": "Sens du retournement ou du quart de tour",
+      "nodeId": "Identifiant de l’objet",
+      "nodeIds": "Identifiants des objets",
+      "nodeKind": "Ce qu’il faut ajouter",
+      "positionX": "Position en largeur",
+      "positionY": "Position en hauteur",
+      "positionZ": "Position vers l’observateur",
+      "rotationX": "Rotation autour de X, en radians",
+      "rotationY": "Rotation autour de Y, en radians",
+      "rotationZ": "Rotation autour de Z, en radians",
+      "scaleZ": "Échelle en profondeur",
+      "roughness": "Rugosité, de 0 à 1",
+      "metalness": "Aspect métallique, de 0 à 1",
+      "intensity": "Intensité"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

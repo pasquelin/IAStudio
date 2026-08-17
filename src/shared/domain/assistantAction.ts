@@ -73,6 +73,17 @@ export type ActionName =
   | 'layer.group'
   | 'layer.ungroup'
   | 'layer.mergeDown'
+  | 'scene.state'
+  | 'node.add'
+  | 'node.addModel'
+  | 'node.remove'
+  | 'node.rename'
+  | 'node.transform'
+  | 'node.visible'
+  | 'node.material'
+  | 'node.light'
+  | 'node.reparent'
+  | 'node.select'
 
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.
