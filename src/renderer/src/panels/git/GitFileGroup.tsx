@@ -27,7 +27,9 @@ export function GitFileGroup({ stage, files }: { stage: GitStage; files: readonl
 
   return (
     <section>
-      <div className="flex items-center gap-2 px-2 py-1">
+      {/* `px-1`, which is what `ROW_LINE` gives the rows below: the heading's word and the rows'
+          names start on the same column, and their two buttons end on the same one. */}
+      <div className="flex items-center gap-2 px-1 py-1">
         <h3 className="text-muted text-tiny min-w-0 flex-1 truncate font-medium tracking-wide uppercase">
           {t(`git.stage.${stage}`)}
         </h3>

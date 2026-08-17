@@ -99,8 +99,10 @@ describe('the folder as git sees it', () => {
 
     expect(await screen.findByText('Retenus')).toBeTruthy()
     expect(screen.getByText('Nouveaux')).toBeTruthy()
-    expect(screen.getByText('board.scimg')).toBeTruthy()
-    expect(screen.getByText('hero.png')).toBeTruthy()
+    // The PATH is what a row is named by: which `hero.png` moved is the question this panel is
+    // read for, and the folder used to sit on a second line under the name.
+    expect(screen.getByText('documents/board.scimg')).toBeTruthy()
+    expect(screen.getByText('Images/hero.png')).toBeTruthy()
   })
 
   /**
@@ -119,7 +121,7 @@ describe('the folder as git sees it', () => {
       },
     })
 
-    expect(await screen.findAllByText('board.scimg')).toHaveLength(2)
+    expect(await screen.findAllByText('documents/board.scimg')).toHaveLength(2)
   })
 })
 

@@ -95,7 +95,7 @@ describe('the versions recorded', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Ajout du plan large/ }))
 
     expect(commitFiles).toHaveBeenCalledWith('a3f9c1e')
-    expect(await screen.findByText('board.scimg')).toBeTruthy()
+    expect(await screen.findByText('documents/board.scimg')).toBeTruthy()
   })
 
   /** A second click on the row one is looking at closes the column rather than reloading it. */

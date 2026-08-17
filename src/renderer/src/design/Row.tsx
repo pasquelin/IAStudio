@@ -10,6 +10,12 @@ export type RowProps = {
   /** `@mdi/js` path, for rows whose kind is what identifies them. */
   icon?: string
   title: string
+  /**
+   * Where the title is cut when it does not fit. `end` everywhere a name is a name; `start` where
+   * it is a PATH — `Images/Croquis/etude.jpg` clipped the ordinary way leaves the half nobody
+   * reads, the file's own name being at the far end.
+   */
+  clip?: 'end' | 'start'
   subtitle?: string
   /** Before the visual: the visibility eye of a layer or a node. */
   leading?: ReactNode
@@ -52,6 +58,7 @@ export function Row({
   media,
   icon,
   title,
+  clip,
   subtitle,
   leading,
   actions,
@@ -90,7 +97,8 @@ export function Row({
         <p
           {...(hint ? tip(title, false, hint) : {})}
           className={cn(
-            'truncate text-xs leading-tight',
+            clip === 'start' ? 'truncate-start' : 'truncate',
+            'text-xs leading-tight',
             // A hidden layer is DIMMED, not disabled: a layer is still selected and renamed, a
             // scene node still selected and dragged, so the exemption WCAG 1.4.3 grants a disabled
             // control does not cover either. Lifted on the same state as the subtitle below —

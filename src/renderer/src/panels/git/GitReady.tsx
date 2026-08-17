@@ -16,8 +16,13 @@ export function GitReady({ status }: { status: GitStatus }) {
   const remote = useGit(state => state.remote)
 
   return (
-    <div className={PANEL_SCROLL}>
-      <div className="border-border flex items-center gap-2 border-b px-1 py-1">
+    // The bar, the field and the box stay PUT; only the list of files scrolls. Two things came of
+    // putting the whole panel in one scroller: the box one types a message into left the screen
+    // under a long list, and every separator stopped short of the right edge — `PANEL_SCROLL`
+    // reserves that strip for the scrollbar, which is right for rows and wrong for a rule meant
+    // to cross the panel.
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="border-border flex shrink-0 items-center gap-2 border-b px-1 py-1">
         <GitBranchButton status={status} />
         {/* Said only before the first commit. A repository with a history says its branch and
             nothing else — the history itself is the other panel's business. */}
@@ -35,7 +40,9 @@ export function GitReady({ status }: { status: GitStatus }) {
       <CommitBox status={status} />
 
       {hasChanges(status) ? (
-        <GitFiles status={status} />
+        <div className={PANEL_SCROLL}>
+          <GitFiles status={status} />
+        </div>
       ) : (
         <QuietNote standalone>{t('git.clean')}</QuietNote>
       )}

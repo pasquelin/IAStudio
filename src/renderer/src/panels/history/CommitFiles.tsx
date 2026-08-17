@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { GitCommitFile } from '@shared/domain/git'
 import { QuietNote } from '@/design/QuietNote'
-import { PANEL_SCROLL, rowSkin } from '@/design/styles'
-import { cn } from '@/helpers/cn'
+import { PANEL_SCROLL } from '@/design/styles'
 import { ChangedFileRow } from '@/panels/shared/ChangedFileRow'
 import { useGit } from '@/stores/git'
 import { TagField } from './TagField'
@@ -41,15 +40,16 @@ export function CommitFiles({ files, commit }: CommitFilesProps) {
           const showing = compared?.path === file.path && compared.commit === commit
 
           return (
+            // The skin belongs to the ROW, as it does in a tree — the button is only what makes
+            // the line pressable. Worn here as well, the two stacked their radius and their fill.
             <button
               key={file.path}
               type="button"
               aria-pressed={showing}
-              data-selected={showing ? '' : undefined}
               onClick={() => void compare(file.path, commit)}
-              className={cn(rowSkin(showing), 'w-full border-none bg-transparent p-0 text-left')}
+              className="w-full cursor-pointer border-none bg-transparent p-0 text-left"
             >
-              <ChangedFileRow file={file} />
+              <ChangedFileRow file={file} selected={showing} />
             </button>
           )
         })
