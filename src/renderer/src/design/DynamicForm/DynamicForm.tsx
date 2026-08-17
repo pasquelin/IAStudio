@@ -17,10 +17,10 @@ import {
 } from '@/helpers/dynamic-form'
 import { buildSchema } from '@/helpers/dynamic-form-schema'
 import { useModelText } from '@/hooks/useModelText'
-import { Button } from './Button'
-import { AssetDropField } from './AssetDropField'
-import { FIELD, FIELD_FILL } from './styles'
-import { ToolButton } from './ToolButton'
+import { Button } from '../Button'
+import { AssetDropField } from '../AssetDropField'
+import { FIELD, FIELD_FILL } from '../styles'
+import { ToolButton } from '../ToolButton'
 import { HINT_TOP, TIP_LEFT } from '@/helpers/tooltip'
 
 export type DynamicFormProps = {

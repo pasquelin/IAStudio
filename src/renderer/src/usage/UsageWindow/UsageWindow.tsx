@@ -13,7 +13,8 @@ import { SECTIONS, type UsageSectionId } from '../sections'
 import { UsageWindowBody } from './UsageWindowBody'
 import { useUsageReport } from '@/hooks/useUsageReport'
 import { windowControl, WINDOW_CAPTION } from '@/design/window-styles'
-import { WindowNav, WindowNavItem } from '@/design/WindowNav'
+import { WindowNav } from '@/design/WindowNav/WindowNav'
+import { WindowNavItem } from '@/design/WindowNav/WindowNavItem'
 
 /**
  * What every stored key has spent, in its own window off the Help menu.

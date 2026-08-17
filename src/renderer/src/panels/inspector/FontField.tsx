@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { fontKey, type FontRef } from '@shared/domain/font'
-import { TextureField, type TextureOption } from '@/design/TextureField'
+import { TextureField, type TextureOption } from '@/design/TextureField/TextureField'
 import { studioFonts } from '@/services/fonts'
 
 export type FontFieldProps = {

@@ -1,10 +1,15 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { WindowNav, WindowNavItem } from './WindowNav'
-import { WRITTEN_SOURCES } from './test-harness'
+import { WindowNav } from './WindowNav'
+import { WindowNavItem } from './WindowNavItem'
+import { WRITTEN_SOURCES } from '../test-harness'
 
-/** As `WRITTEN_SOURCES` keys it: the glob resolves against `test-harness.ts`, its own neighbour. */
-const CANONICAL = './WindowNav.tsx'
+/**
+ * As `WRITTEN_SOURCES` keys it: the glob resolves against `test-harness.ts`, which sits one
+ * folder up now that the entry has a file of its own. It is the ITEM that wears the skin, not
+ * the list around it — splitting the two is what made the distinction visible.
+ */
+const CANONICAL = './WindowNav/WindowNavItem.tsx'
 
 /** An opening `li`, then the skin, with no closing `li` in between. */
 const ITEM_WEARING_SKIN = /<li[^>]*>(?:(?!<\/li>)[\s\S])*?windowControl\(/

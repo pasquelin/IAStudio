@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Separator } from '@/design/Separator'
-import { Toolbar } from '@/design/Toolbar'
+import { Toolbar } from '@/design/Toolbar/Toolbar'
 import { ToolButton } from '@/design/ToolButton'
 import { addTrack } from '@/engines/timeline/commands'
 import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timeline-state'

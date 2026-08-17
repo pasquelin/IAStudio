@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { isLocalPicture, posterUrl, type Asset, type AssetType } from '@shared/domain/asset'
-import type { TextureOption } from '@/design/TextureField'
+import type { TextureOption } from '@/design/TextureField/TextureField'
 import { useCatalogueAssets } from '@/hooks/useCatalogueAssets'
 import { getBridge } from '@/services/bridge'
 

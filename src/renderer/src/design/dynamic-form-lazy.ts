@@ -16,5 +16,5 @@ import { lazy } from 'react'
  * this file never reaches the form any other way.
  */
 export const DynamicForm = lazy(async () => ({
-  default: (await import('./DynamicForm')).DynamicForm,
+  default: (await import('./DynamicForm/DynamicForm')).DynamicForm,
 }))

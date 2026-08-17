@@ -13,7 +13,7 @@ import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared
 import { extensionOf, stemOf } from '@shared/domain/file-name'
 import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/file-op'
 import { canMoveInto, FOLDER_ROOT, isPrivatePath, parentOf } from '@shared/domain/folder'
-import { CollectionBar } from '@/design/CollectionBar'
+import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
 import { openDocument } from '@/app/dockview-api'

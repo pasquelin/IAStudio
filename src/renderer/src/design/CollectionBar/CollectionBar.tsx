@@ -19,9 +19,9 @@ import {
   type FacetOption,
 } from '@/helpers/collection-state'
 import { HINT_TOP, TIP_BOTTOM } from '@/helpers/tooltip'
-import { CONTROL } from './styles'
-import { ToolButton } from './ToolButton'
-import { UiIcon } from './UiIcon'
+import { CONTROL } from '../styles'
+import { ToolButton } from '../ToolButton'
+import { UiIcon } from '../UiIcon'
 
 type DropdownProps = {
   label: string
