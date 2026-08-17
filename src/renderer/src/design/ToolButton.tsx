@@ -84,12 +84,6 @@ export function ToolButton({
         'text-muted shrink-0 bg-transparent',
         HOSTS[variant].box,
         'hover:bg-elevated hover:text-text',
-        // Inside a row filled with the accent — the open project's menu button is the case — the
-        // rest ink reads 1.50:1 on that blue, and `elevated` under the pointer is grey on it. Both
-        // are read off `rowSkin`'s group, as `ROW_INK` and `ROW_QUIET` are, so no list passes state
-        // down; outside such a row the attribute never appears and neither variant fires.
-        'group-data-accented/row:text-accent-content',
-        'group-data-accented/row:hover:bg-accent-hover',
         active && 'bg-elevated text-text',
         accented && 'bg-accent hover:bg-accent text-accent-content',
         className,

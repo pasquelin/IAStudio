@@ -355,7 +355,7 @@ export const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
  */
 export const FALLBACK_COLORS: OverlayColors = {
   frame: '#34363a',
-  guide: '#2e436e',
+  guide: '#0a39a3',
   rulerBackground: '#3c3f44',
   rulerText: '#91959b',
   rulerTick: '#91959b',

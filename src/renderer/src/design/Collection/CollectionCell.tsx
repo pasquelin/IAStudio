@@ -2,14 +2,12 @@ import type { MouseEvent, ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import type { Modifiers } from '@/helpers/selection'
 import { isTyping } from '@/helpers/typing'
-import { rowSkin, type RowTone } from '../styles'
+import { rowSkin } from '../styles'
 
 export type CollectionCellProps = {
   /** Position in `items`, so the arrows can name the cell they want focused. */
   index: number
   selected: boolean
-  /** How loudly the fill answers, when this cell is the selected one. */
-  tone: RowTone
   /**
    * Listed, reachable, announced — and inert. The handlers are still passed and ignored here
    * rather than withheld by the caller: dropping them would take the cell out of its `listbox`
@@ -38,7 +36,6 @@ export type CollectionCellProps = {
 export function CollectionCell({
   index,
   selected,
-  tone,
   disabled,
   tabbable,
   role,
@@ -62,13 +59,7 @@ export function CollectionCell({
    * surfaces MUST agree on is exactly this, and a reader of either file finds the answer where
    * the skin is asked for.
    */
-  const skin = cn('min-w-0', rowSkin(selected, { surface: 'row', disabled, tone }), className)
-  /**
-   * Published beside `data-selected` rather than folded into it: `ROW_INK` and `ROW_QUIET` have to
-   * tell an accent FILL from a soft one, since only the first takes their ink to white. A single
-   * attribute would make every picked row in the studio claim the louder ink.
-   */
-  const accented = (selected && tone === 'strong') || undefined
+  const skin = cn('min-w-0', rowSkin(selected, { surface: 'row', disabled }), className)
 
   /**
    * The same reading `Tree` gives a right-click: one landing in a row's rename field belongs to
@@ -88,12 +79,7 @@ export function CollectionCell({
   // and pressed like one that only selects.
   if (!onSelect && !onActivate)
     return (
-      <div
-        className={skin}
-        data-selected={selected || undefined}
-        data-accented={accented}
-        onContextMenu={raiseMenu}
-      >
+      <div className={skin} data-selected={selected || undefined} onContextMenu={raiseMenu}>
         {children}
       </div>
     )
@@ -107,7 +93,6 @@ export function CollectionCell({
       // Read by `rowSkin`'s group where the ARIA below cannot be: a `listitem` has no selected
       // state to announce, and the explorer still paints what is open through this skin.
       data-selected={selected || undefined}
-      data-accented={accented}
       data-cell={index}
       tabIndex={tabbable ? 0 : -1}
       // An option has a selected state; a listitem has none. The explorer paints what is OPEN

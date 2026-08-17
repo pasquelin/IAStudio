@@ -30,7 +30,7 @@ describe('no focus ring', () => {
     // The rule refuses something, which a sweep that only ever returns nothing cannot show.
     expect(RING.test("'focus-visible:ring-accent'")).toBe(true)
     expect(RING.test("'focus:outline-2'")).toBe(true)
-    expect(RING.test("'group-data-accented/row:focus-visible:ring-accent-content'")).toBe(true)
+    expect(RING.test("'group-data-selected/row:focus-visible:ring-accent-content'")).toBe(true)
     // The drop target of the title bar draws a ring that no focus brings up.
     expect(RING.test("'ring-accent ring-2'")).toBe(false)
     expect(RING.test("'focus-visible:bg-accent'")).toBe(false)

@@ -85,26 +85,26 @@ describe('the projects panel', () => {
   })
 
   /**
-   * What `selectedIds` paints here is not a selection but WHERE ONE IS — the folder the studio has
-   * open. `data-accented` is what takes the fill to the full accent and both inks to white; the
-   * role stays `listitem`, since a row that only opens has no selected state to announce.
+   * Here choosing IS opening — there is no second state, which is why the row wears the studio's
+   * one selection fill and not a louder blue of its own. The role stays `listitem`: a row that
+   * only opens has no selected state to announce.
    */
-  it('paints the open project with the accent, and only that one', () => {
+  it('paints the open project, and only that one', () => {
     setRecent([SUMMER, { ...SUMMER, path: '/projects/winter', name: 'Winter' }])
     useProject.setState({ project: { path: '/projects/summer', manifest: MANIFEST } })
 
     render(<Projects />)
 
     const [summer, winter] = screen.getAllByRole('listitem')
-    expect(summer).toHaveAttribute('data-accented', 'true')
+    expect(summer).toHaveAttribute('data-selected', 'true')
     expect(summer).not.toHaveAttribute('aria-selected')
-    expect(winter).not.toHaveAttribute('data-accented')
+    expect(winter).not.toHaveAttribute('data-selected')
   })
 
   it('paints none of them while no project is open', () => {
     render(<Projects />)
 
-    expect(screen.getByRole('listitem')).not.toHaveAttribute('data-accented')
+    expect(screen.getByRole('listitem')).not.toHaveAttribute('data-selected')
   })
 
   // A single click, not a double: a project is a place to go, not a row to pick.

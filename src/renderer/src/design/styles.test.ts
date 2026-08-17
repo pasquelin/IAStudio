@@ -204,82 +204,57 @@ describe('the row skin and the state it publishes', () => {
 })
 
 /**
- * The loud fill, for the one list whose selection says WHERE ONE IS rather than what a gesture
- * gathered. Every assertion here is a measurement, not a taste: `--color-accent` is pinned at
- * 4.508:1 against pure white, so on that fill nothing but `accent-content` clears WCAG 1.4.3 —
- * `text` reads 3.44.
- *
- * `design/tokens.test.ts` owns the ratios themselves; what this file owns is that the skin and the
- * two inks actually ASK for them.
+ * ONE fill for a chosen row, whichever list holds it. There were two until 17 August: the projects
+ * panel asked for `bg-accent` — the full accent, which the studio spends on what one ACTIONS — and
+ * that made one list read as a different blue from every other. The type that let a caller ask is
+ * gone, so the COMPILER refuses a second tone; what is left to check here is the fill itself.
  */
-describe('the loud fill of a row that says where one is', () => {
-  it('fills with the accent itself, where the soft tone fills with its muted twin', () => {
-    expect(rowSkin(true, { tone: 'strong' })).toContain('bg-accent')
-    expect(rowSkin(true, { tone: 'strong' })).not.toContain('bg-accent-soft')
-    expect(rowSkin(true, { tone: 'soft' })).toContain('bg-accent-soft')
+describe('the fill of a chosen row', () => {
+  it('is the soft accent, and never the full one', () => {
+    expect(rowSkin(true).split(' ')).toContain('bg-accent-soft')
+    expect(rowSkin(true).split(' ')).not.toContain('bg-accent')
   })
 
-  // Soft is the default, so no existing caller can be repainted by this landing.
-  it('is not what a caller gets without asking', () => {
-    expect(rowSkin(true)).toBe(rowSkin(true, { tone: 'soft' }))
-  })
-
-  // Only a SELECTED row is filled, so an unselected one must keep the ordinary hover.
-  it('changes nothing about a row that is not the one open', () => {
-    expect(rowSkin(false, { tone: 'strong' })).toBe(rowSkin(false, { tone: 'soft' }))
+  it('leaves a row nobody chose without a fill at all', () => {
+    expect(rowSkin(false)).not.toContain('bg-accent')
   })
 
   /**
-   * Both inks, and it has to be both: the colour can no longer separate a name from its subtitle
-   * on that fill, so the size does — which is only true if neither is left behind at 3.44:1.
+   * The ink that went with the loud fill is gone with it. `accent-content` is pure white, needed
+   * only where `accent` is the background — a row now fills with `accent-soft`, on which `text`
+   * clears 4.5 on its own, and `tokens.test.ts` holds that ratio.
    */
-  it('takes both the name and its subtitle to the ink the accent needs', () => {
-    for (const ink of [ROW_INK, ROW_QUIET]) {
-      expect(ink).toContain('group-data-accented/row:text-accent-content')
-    }
-    // At rest they are still what they always were — the variant only fires under the attribute.
+  it('no longer takes either ink to the white the full accent demanded', () => {
+    for (const ink of [ROW_INK, ROW_QUIET]) expect(ink).not.toContain('accent-content')
     expect(ROW_INK).toContain('text-text')
     expect(ROW_QUIET).toContain('text-muted')
   })
 
   /**
-   * The subtitle needs a SECOND spelling, and this is the whole of why: it also carries a
-   * `data-selected` lift to `text`, the two variants compile to the same specificity, and Tailwind
-   * emits the accented one FIRST — so `text` won and the path under the open project's name
-   * rendered at 3.44:1. Being written last in the class string decides nothing; the cascade never
-   * reads attribute order. Stacking the variants takes the accented rule to (0,3,0).
+   * The rule the compiler cannot state: no surface may reach for the full accent as a FILL under a
+   * row. `bg-accent` belongs to a control — a button, a tool in use, a filled gauge.
    *
-   * What this can and cannot see: jsdom applies no stylesheet, so no suite here resolves a
-   * cascade. Asserted is the SHAPE that outranks the lift — the ratio itself was measured in
-   * Electron, and `ROW_INK` needs none of this since its base `text-text` is (0,1,0).
+   * **Two blind spots, both measured.** It reads the FILE, not the element, so a row and a real
+   * button in one file passes — and so does `RefBadge`, whose full-accent tag is drawn inside a
+   * row from another file. And `\b` alone would match `bg-accent-soft`, since `-` ends a word.
    */
-  it('outranks its own selected lift rather than trusting the order it is written in', () => {
-    expect(ROW_QUIET).toContain('group-data-selected/row:text-text')
-    expect(ROW_QUIET).toContain(
-      'group-data-accented/row:group-data-selected/row:text-accent-content',
-    )
+  const fillsWithTheFullAccent = (source: string) =>
+    /\browSkin\(/.test(source) && /\bbg-accent(?![-/])/.test(source)
+
+  it('is drawn by no list that also writes the full accent', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && fillsWithTheFullAccent(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
   })
 
-  /**
-   * The partner of the rule above, and the failure it guards is silent: the skin paints the accent
-   * while the words stay at 3.44:1, with nothing on screen saying so. `data-selected` alone cannot
-   * drive it — every picked row in the studio carries that one.
-   */
-  /**
-   * Whoever PAINTS the tone, not whoever asks for it: a panel writes `selectionTone="strong"` and
-   * leaves the attribute to the surface that draws the cell, which is the only place that can
-   * emit it. Filtering on the word alone caught the panel and let the painter through — and it
-   * caught nothing at all before that, since it looked for `'strong'` in single quotes while the
-   * one site that asks writes it as a JSX attribute.
-   */
-  it('is never painted without the attribute the two inks read', () => {
-    const painters = WRITTEN_SOURCES.filter(
-      ([path, source]) =>
-        path !== GUARDED && /\browSkin\(/.test(source) && /["']strong["']/.test(source),
-    )
-
-    expect(painters.map(([path]) => path)).not.toEqual([])
-    expect(painters.filter(([, source]) => !source.includes('data-accented'))).toEqual([])
+  // The partner of the rule above: a sweep that can only ever return `[]` proves nothing.
+  it('tells the full accent from the soft one it is written beside', () => {
+    expect(fillsWithTheFullAccent("rowSkin(true)\ncn('bg-accent text-accent-content')")).toBe(true)
+    expect(fillsWithTheFullAccent("rowSkin(true)\ncn('bg-accent-soft')")).toBe(false)
+    expect(fillsWithTheFullAccent("rowSkin(true)\ncn('hover:bg-accent-hover')")).toBe(false)
+    expect(fillsWithTheFullAccent("cn('bg-accent')")).toBe(false)
   })
 })
 

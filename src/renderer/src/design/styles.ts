@@ -132,17 +132,6 @@ export const TITLE_BAR_GHOST = cn(
 export const TITLE_BAR_TRIGGER = cn(TITLE_BAR_GHOST, 'text-tiny h-(--sc-control) gap-1.5 px-2')
 
 /**
- * How loudly a picked row is filled.
- *
- * `soft` is a row PICKED inside a list — one of several a gesture can move through, and the fill
- * has to stay quiet enough that the list is still read as a list. `strong` is a row that says
- * WHERE ONE IS: the project the studio has open, of which there is exactly one and which nothing
- * in the list can move. The difference is not emphasis for its own sake — a soft fill answered the
- * pointer so faintly that the open project was indistinguishable from a hovered one.
- */
-export type RowTone = 'soft' | 'strong'
-
-/**
  * The shape of ONE LINE: how it is laid out, and its inset from whatever paints the fill.
  *
  * **No gutter.** It carried one, and the gutter is what a line of CONTROLS wants — between a
@@ -159,13 +148,8 @@ export const ROW_LINE = 'flex h-full items-center px-1'
 
 /**
  * Hover and selection of one line in a list. The same line must not light up differently
- * depending on whether a `Tree` or a `Collection` is holding it.
- *
- * `strong` costs one thing beyond the fill, and it is measured rather than chosen: the ink.
- * Nothing but pure white clears WCAG 1.4.3 on `accent` — the token is pinned at 4.508:1 against
- * white, so `text` at 3.44 does not — hence `data-accented`, which `ROW_INK` and `ROW_QUIET` read
- * to swap BOTH the name and its subtitle to `accent-content`. The size is what keeps the two
- * apart on that fill, since the colour no longer can.
+ * depending on whether a `Tree` or a `Collection` is holding it — nor on which list it is, which
+ * is the whole of why there is one fill here and no second tone to ask for.
  *
  * Everything past `selected` is named rather than positional, and `surface` is why: it arrived as
  * a fourth boolean, and the one call that needed it had to spell out the two defaults in front of
@@ -186,7 +170,6 @@ export type RowSkin = {
    */
   surface?: 'row' | 'tile'
   disabled?: boolean
-  tone?: RowTone
 }
 
 export function rowSkin(
@@ -194,10 +177,8 @@ export function rowSkin(
   // `row` by default, which is what the function is called: a surface arriving here without a
   // word on the subject is a list until it says otherwise, and a list that quietly took a hover
   // back is the defect this batch went to remove.
-  { surface = 'row', disabled, tone }: RowSkin = {},
+  { surface = 'row', disabled }: RowSkin = {},
 ): string {
-  const accented = selected && tone === 'strong'
-
   // `elevated` is the studio's hover token — what a toolbar button lights up with.
   return cn(
     'rounded-(--radius-sc-sm)',
@@ -210,7 +191,7 @@ export function rowSkin(
     // and it is left alone knowingly: `opacity-40` is already on it, and WCAG 1.4.3 exempts a
     // disabled control. Lifting the ink there would say the row is available.
     !disabled && 'group/row',
-    selected && (accented ? 'bg-accent' : 'bg-accent-soft'),
+    selected && 'bg-accent-soft',
     // Three refusals in one condition rather than a fill written and then undone: a `hover:` that
     // exists only to cancel another `hover:` is one class the day either of them moves.
     surface === 'tile' && !selected && !disabled && 'hover:bg-elevated',
@@ -237,26 +218,7 @@ export function rowSkin(
  * Written once because five sites had reached the same classes, one of them twice. A site whose
  * row has no selection carries the variant harmlessly: the attribute never appears.
  */
-export const ROW_QUIET = cn(
-  'text-muted transition-colors',
-  'group-data-selected/row:text-text',
-  /**
-   * On an accent FILL the lift above is not enough: `text` reads 3.44:1 there, and the token is
-   * pinned so that only pure white clears 4.5.
-   *
-   * Written TWICE, and the second spelling is the one that works. Being last in the class string
-   * decides nothing — the cascade never reads attribute order — and Tailwind emits the accented
-   * rule BEFORE the selected one at equal specificity, so `text` won and this subtitle rendered at
-   * 3.44:1 on the open project. Measured in Electron on 13 August, and reproduced by compiling
-   * both candidates with the repo's own Tailwind. Stacking the two variants raises the accented
-   * rule to (0,3,0) against the lift's (0,2,0), which no emission order can undo.
-   *
-   * The bare spelling stays for a row accented without being selected, which no surface draws
-   * today: `CollectionCell` derives one from the other.
-   */
-  'group-data-accented/row:text-accent-content',
-  'group-data-accented/row:group-data-selected/row:text-accent-content',
-)
+export const ROW_QUIET = cn('text-muted transition-colors', 'group-data-selected/row:text-text')
 
 /**
  * The same quiet ink on a surface that still FILLS under the pointer — `rowSkin`'s `tile`, and
@@ -270,17 +232,8 @@ export const ROW_QUIET = cn(
  */
 export const TILE_QUIET = cn(ROW_QUIET, 'group-hover/row:text-text')
 
-/**
- * The ink of the NAME in a row — the counterpart of `ROW_QUIET`, and it exists for one reason: on
- * a strongly filled row the name has to leave `text` as well, or it sits at 3.44:1 on the accent.
- *
- * At rest it is simply `text`, which is what every row wore before. A site that renders no
- * strongly-filled row carries the variant harmlessly: the attribute never appears.
- */
-export const ROW_INK = cn(
-  'text-text transition-colors',
-  'group-data-accented/row:text-accent-content',
-)
+/** The ink of the NAME in a row — the counterpart of `ROW_QUIET`, which lifts under it. */
+export const ROW_INK = 'text-text transition-colors'
 
 /**
  * A labelled toggle: the shape buttons of a texture, the view modes of a sky, the shelves of the
@@ -319,9 +272,8 @@ export const LIST_ROW_HEIGHT = 28
 export const STACKED_ROW_HEIGHT = 36
 
 /**
- * `--sc-row-filled` at its tallest, as a number — the same two steps of text under a fill that
- * stands there rather than one a pointer has to summon, which needs the room that fill takes off
- * them. Goes with `selectionTone: 'strong'`, and only the home asks for either.
+ * `--sc-row-filled` at its tallest, as a number — two steps of text with the room a fill takes
+ * off them. Only the home's projects list asks for it.
  */
 export const FILLED_ROW_HEIGHT = 44
 

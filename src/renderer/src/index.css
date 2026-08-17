@@ -76,7 +76,14 @@
    * one colour, a touch darker than any of them.
    */
   --color-accent-hover: #2a58c2;
-  --color-accent-soft: #2e436e;
+  /*
+   * What a CHOSEN row is filled with — the accent at the same hue and the same saturation, four
+   * steps down in lightness. It read #2e436e until 17 August, at S 41% against the accent's 88%,
+   * and a screenshot showed why that is not a shade of one blue but a second blue: side by side
+   * in one column, the eye reads the drop in saturation, never the drop in lightness. The light
+   * theme was already right; only this one had drifted.
+   */
+  --color-accent-soft: #0a39a3;
   /*
    * The accent as a VEIL — a selected range laid OVER content that has to stay readable, which
    * is what `accent-soft` cannot be: the take editor tints the span its tools act on, and an
