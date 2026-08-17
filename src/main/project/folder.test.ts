@@ -332,6 +332,27 @@ describe('following the project folder', () => {
   })
 
   /**
+   * `.git/HEAD` is the exception, and a commit made in a terminal is why: it moves no file the
+   * studio can see, so with `.git/` skipped whole the panel went on offering to record what had
+   * just been recorded. HEAD changes on a commit, a checkout and a merge — and on nothing a
+   * `git status` does, which is what keeps this from reopening the loop.
+   */
+  it('announces the one file inside it that says what is checked out', () => {
+    vi.useFakeTimers()
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const announce = vi.fn()
+    const { open, emit } = driving()
+    watches.push(watchProjectFolder('/projects/demo', announce, open))
+
+    emit('.git/HEAD')
+    vi.advanceTimersByTime(5000)
+
+    expect(announce).toHaveBeenCalledTimes(1)
+  })
+
+  /**
    * Those two and NOT everything under a dot, which is how the explorer decides what to hide:
    * `.scenario/items.json` holds the prompt, model and seed of every asset, it is deliberately
    * versioned, and the studio rewrites it whenever one is generated. Skipped, the version panel

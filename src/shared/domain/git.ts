@@ -330,14 +330,26 @@ export function defaultIgnore(): string {
 export const GIT_FOLDER = '.git'
 
 /**
+ * The one file inside it worth hearing about: it names what is checked out, so it changes on a
+ * commit, a checkout and a merge — and on nothing a mere `git status` does, which is what keeps
+ * this from being the loop the filter exists to break.
+ */
+const GIT_HEAD = `${GIT_FOLDER}/HEAD`
+
+/**
  * Whether a path is one nothing needs to hear about — git's own bookkeeping, and the index the
- * studio rebuilds. Both are written constantly and neither is versioned: a git command alone
+ * studio rebuilds. Both are written constantly and neither is versioned: a single git command
  * writes half a dozen files under `.git/`, and announcing them makes the panel run git again.
  *
  * Exactly these two, and not "anything under a dot", which is the rule the explorer HIDES by:
  * `.scenario/items.json` sits under a dot and is deliberately versioned, so a folder watch that
  * skipped it would leave the panel unaware of the one file no rescan can rebuild.
+ *
+ * `HEAD` is the exception, and it was measured: a commit made in a terminal moves no file the
+ * studio can see, so with `.git/` skipped whole the panel went on offering to record seven files
+ * that had just been recorded, until something else woke it.
  */
 export function isUnwatchedByGit(path: string): boolean {
+  if (path === GIT_HEAD) return false
   return path.split('/').some(segment => segment === GIT_FOLDER || segment === INDEX_FOLDER)
 }
