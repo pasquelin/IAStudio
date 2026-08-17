@@ -605,7 +605,7 @@
       "notFound": "Nothing of that name is there to act on. The call itself was well formed.",
       "notAllowed": "The studio does not let a call from outside change that. Only its own window does.",
       "notRenderable": "The document in front has nothing this can render — an empty sky, a material with no channel, or an engine that is not mounted.",
-      "failed": "The studio tried and it did not go through. The reason is in its log, and it was not the parameters."
+      "failed": "The studio tried and it did not go through. The reason is in its activity journal, and it was not the parameters."
     },
     "models": {
       "claude-haiku-4-5": "Haiku 4.5 — the fastest and the cheapest",

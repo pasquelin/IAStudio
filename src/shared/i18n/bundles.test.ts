@@ -384,6 +384,25 @@ describe('the translation bundles', () => {
         kept: 'image',
         except: ['inspector.kind_video', 'commands.sequenceUnlink.title'],
       },
+      /**
+       * The manual settled this one and the bundle had not followed: `activity journal` ×32 for
+       * the status line, against `log` ×12 for the internal one, and `16-troubleshooting.md:642`
+       * warns the reader not to confuse them. The screen said `log` for both.
+       *
+       * The four exemptions are the readings the manual KEPT as `log`: the two settings that
+       * govern what the studio writes about itself, and the usage window, whose sections no
+       * chapter describes — untouched rather than renamed on a guess.
+       */
+      {
+        dropped: /\blogs?\b/i,
+        kept: 'activity journal',
+        except: [
+          'settings.logLevel.title',
+          'settings.openDevtools.help',
+          'usage.sections.journal',
+          'usage.loadMoreHint',
+        ],
+      },
     ],
   }
 

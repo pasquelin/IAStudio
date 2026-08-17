@@ -1,8 +1,8 @@
 {
   "activity": {
     "unknownMessage": "Entry written by an earlier version",
-    "open": "Show the log",
-    "openHint": "Opens the log — and marks everything in it as read",
+    "open": "Show the activity journal",
+    "openHint": "Opens the activity journal — and marks everything in it as read",
     "none": "Nothing to report.",
     "noMatch": "Nothing matches this filter.",
     "failures_one": "{{count, number}} failure",
@@ -126,7 +126,7 @@
         "render": "Rendering the video failed"
       }
     },
-    "allHint": "Clears this filter: the log shows everything again",
+    "allHint": "Clears this filter: the journal shows everything again",
     "filterHint": "Shows only the entries of this kind — several can be ticked at once"
   }
 }
