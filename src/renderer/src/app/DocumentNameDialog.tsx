@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { checkDocumentName } from '@shared/domain/documentName'
 import { FOLDER_ROOT, nameOf } from '@shared/domain/folder'
 import { Button } from '@/design/Button'
-import { FolderField } from '@/design/FolderField/FolderField'
+import { FolderPicker } from '@/design/FolderPicker/FolderPicker'
 import { FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
@@ -106,8 +106,11 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        // Wide enough for three columns of the browser, which is what a project two folders deep
+        // shows. Past that the columns scroll sideways rather than the dialog growing into a
+        // window: this is still the box that names a document.
         className={cn(
-          'border-border bg-surface flex w-full max-w-sm flex-col gap-3',
+          'border-border bg-surface flex w-full max-w-xl flex-col gap-3',
           'rounded-(--radius-sc-lg) border p-4 shadow-(--sc-shadow-floating)',
         )}
       >
@@ -146,22 +149,18 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={folderId} className="text-muted text-xs">
+            <span id={folderId} className="text-muted text-xs">
               {t('documents.folderField')}
-            </label>
-            <FolderField
-              id={folderId}
+            </span>
+            <FolderPicker
               value={folder}
               onChange={setFolder}
               rootName={projectName}
               labels={{
-                crumbs: t('documents.folderCrumbs'),
-                crumbHint: t('documents.folderCrumbHint'),
-                hint: t('documents.folderHint'),
-                enterHint: t('documents.folderEnterHint'),
+                columns: t('documents.folderField'),
                 empty: t('documents.folderEmpty'),
-                // Interpolated HERE, where the chosen folder lives: the field draws the sentence
-                // it is handed, and a component of `design/` never reaches for a bundle.
+                // Interpolated HERE, where the chosen folder lives: a component of `design/`
+                // draws the sentence it is handed and never reaches for a bundle.
                 newFolderIn: t('documents.newFolderIn', {
                   folder: folder === FOLDER_ROOT ? projectName : nameOf(folder),
                 }),

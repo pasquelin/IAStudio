@@ -189,14 +189,13 @@ with its tracks.
 The **+** button at the top of the left rail makes one, and asks two things: its **name** and its
 **location**.
 
-The Location field is walked **one folder at a time**, the way the system's own file dialogues are:
-the path is written across the top, every step in it goes back to that level, and the list below
-shows the sub-folders. Clicking one walks into it — and that is where the document will go. You
-never leave the project: nothing else is offered.
+The location is walked **in columns**, the way the system's own save window is: each column shows
+what one folder holds, and choosing a folder opens its contents in the next column. **The last
+folder chosen is where the document goes** — there are not two things to keep track of. The whole
+path is written under the columns. You never leave the project: nothing else is offered.
 
-The field opens on the folder the Explorer is showing, or on `documents/` when nothing is picked
-there. At the foot, **New folder in …** names the folder you are in and makes one without leaving
-the window.
+The columns open on the folder the Explorer is showing, or on `documents/` when nothing is picked
+there. Below them, **New folder in …** names that folder and makes one without leaving the window.
 
 It is saved with `⌘S` / `Ctrl+S` — into the folder you chose when you made it, and afterwards
 wherever you filed it — under an extension that says what it is:
