@@ -1,13 +1,12 @@
 import { mdiFolderOpenOutline, mdiPlaylistRemove, mdiRenameOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useProject } from '@/stores/project'
 
-export type ProjectMenuProps = {
+export type ProjectMenuRowsProps = {
   path: string
   onClose: () => void
   /**
@@ -16,6 +15,9 @@ export type ProjectMenuProps = {
    */
   onRename?: () => void
 }
+
+/** Three, and the row's button needs to know before it draws. */
+export const PROJECT_MENU_ROWS = 3
 
 /**
  * What can be done to a recent project without opening it, as rows.
@@ -33,7 +35,7 @@ export type ProjectMenuProps = {
  * is not a keyboard gesture: `contextmenu` from Shift+F10 targets the focused cell, not the div
  * inside it that listens.
  */
-export function ProjectMenuRows({ path, onClose, onRename }: ProjectMenuProps) {
+export function ProjectMenuRows({ path, onClose, onRename }: ProjectMenuRowsProps) {
   const { t } = useTranslation()
 
   // The menu is gone by the time an answer comes, so a failure travels to the journal rather than
@@ -84,20 +86,3 @@ export function ProjectMenuRows({ path, onClose, onRename }: ProjectMenuProps) {
     </>
   )
 }
-
-/** The same rows, at the pointer. */
-export function ProjectMenu({
-  path,
-  at,
-  onClose,
-  onRename,
-}: ProjectMenuProps & { at: { x: number; y: number } }) {
-  return (
-    <ContextMenu at={at} onClose={onClose}>
-      <ProjectMenuRows path={path} onClose={onClose} onRename={onRename} />
-    </ContextMenu>
-  )
-}
-
-/** Three, and the row's button needs to know before it draws. */
-export const PROJECT_MENU_ROWS = 3

@@ -8,7 +8,8 @@ import { Row } from '@/design/Row'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { timeAgo } from '@/helpers/relative-time'
 import { InlineRename } from '@/design/InlineRename'
-import { ProjectMenu, ProjectMenuRows, PROJECT_MENU_ROWS } from './ProjectMenu'
+import { ProjectMenu } from './ProjectMenu/ProjectMenu'
+import { ProjectMenuRows, PROJECT_MENU_ROWS } from './ProjectMenu/ProjectMenuRows'
 
 export type ProjectRowProps = {
   project: RecentProject

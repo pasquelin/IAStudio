@@ -8,7 +8,8 @@ import { Row } from '@/design/Row'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { InlineRename } from '@/design/InlineRename'
 import { useStyles } from '@/stores/styles'
-import { StyleMenu, StyleMenuRows, STYLE_MENU_ROWS } from './StyleMenu'
+import { StyleMenu } from './StyleMenu/StyleMenu'
+import { StyleMenuRows, STYLE_MENU_ROWS } from './StyleMenu/StyleMenuRows'
 
 export type StyleRowProps = { style: MaterialStyle }
 
