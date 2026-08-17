@@ -61,12 +61,9 @@ export const HUMANOID_FINGERS: readonly HumanoidFinger[] = [
 export const HUMANOID_FINGER_JOINTS: readonly HumanoidFingerJoint[] = [1, 2, 3]
 
 /**
- * The body, in the order a skeleton walks: root first, then up the spine, then the limbs.
- *
- * An automatic fit places exactly these and stops at the wrists. A rigger cannot deduce phalanges
- * from a bounding box, and thirty finger bones dropped at random on a mitten hand would capture
- * vertices at random — a rig that looks complete and deforms badly is worse than one visibly
- * incomplete.
+ * The body, in the order a skeleton walks. An automatic fit places exactly these and stops at the
+ * wrists: phalanges cannot be deduced from a bounding box, and a rig that looks complete and
+ * deforms badly is worse than one visibly incomplete.
  */
 export const HUMANOID_BODY_ROLES: readonly HumanoidBodyRole[] = [
   'Hips',

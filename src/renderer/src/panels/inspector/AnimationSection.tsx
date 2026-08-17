@@ -1,6 +1,6 @@
 import { mdiPause, mdiPlay } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { DEFAULT_CLIP, type ClipRef } from '@shared/domain/scene'
+import { embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { QuietNote } from '@/design/QuietNote'
@@ -11,6 +11,7 @@ import { ToolButton } from '@/design/ToolButton'
 import { setModelClips } from '@/engines/scene/commands'
 import type { ModelNode } from '@/engines/scene/sceneState'
 import { cn } from '@/helpers/cn'
+import { newId } from '@/helpers/ids'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { clipsOfNode, rigOfNode, useModelClips } from '@/stores/modelClips'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
@@ -28,10 +29,8 @@ const MAX_SPEED = 4
 /**
  * What an imported model can be made to play, and what stands in the way when it cannot.
  *
- * Both halves come from the engine and not the document: the clips and the bones live inside the
- * GLB, so a model still loading has neither. Where this section used to take itself off, it now
- * says which of the five states the model is in — a mesh with no skeleton is the one place the
- * studio has something to offer, and silence there read as a feature that did not exist.
+ * Both halves come from the engine, not the document: clips and bones live inside the GLB, so a
+ * model still loading has neither.
  */
 export function AnimationSection({ documentId, node, edit }: AnimationSectionProps) {
   const { t } = useTranslation()
@@ -49,16 +48,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   // a chosen clip that neither plays nor loops would read as a control that did not work.
   const choose = (name: string): void =>
     write(
-      name === ''
-        ? null
-        : {
-            ...DEFAULT_CLIP,
-            ...played,
-            id: played?.id ?? 'clip',
-            source: { kind: 'embedded', name },
-            label: name,
-            playing: true,
-          },
+      name === '' ? null : embeddedClip(played?.id ?? newId(), name, { ...played, playing: true }),
     )
 
   return (

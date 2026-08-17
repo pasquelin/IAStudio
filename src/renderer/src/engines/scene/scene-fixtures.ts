@@ -113,7 +113,6 @@ export function rigStateFixture(names: readonly string[]): RigState {
     status: names.length > 0 ? 'skinnedMesh' : 'staticMesh',
     bones,
     boneNames: [...names],
-    clipNames: [],
   }
 }
 

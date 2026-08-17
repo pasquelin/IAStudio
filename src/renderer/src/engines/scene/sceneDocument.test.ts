@@ -234,18 +234,16 @@ describe('sceneFromPayload', () => {
     })
 
     it('drops a model whose rig breaks an invariant of its own', () => {
-      const rest = {
-        position: { x: 0, y: 0, z: 0 },
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: { x: 1, y: 1, z: 1 },
-      }
       const nodes: unknown[] = [
         mesh('a'),
         {
           ...modelNodeFixture('m'),
           model: {
             assetId: 'x',
-            rig: { origin: 'local', bones: [{ name: 'Spine', parent: 'Hips', rest }] },
+            rig: {
+              origin: 'local',
+              bones: [{ name: 'Spine', parent: 'Hips', rest: IDENTITY_TRANSFORM }],
+            },
           },
         },
       ]
@@ -254,11 +252,7 @@ describe('sceneFromPayload', () => {
     })
 
     it('carries a rig through a round trip', () => {
-      const rest = {
-        position: { x: 0, y: 1, z: 0 },
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: { x: 1, y: 1, z: 1 },
-      }
+      const rest = { ...IDENTITY_TRANSFORM, position: { x: 0, y: 1, z: 0 } }
       const model = modelNodeFixture('m')
       model.model = {
         ...model.model,

@@ -1,8 +1,7 @@
 import { AnimationClip, Object3D, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_CLIP, type ClipRef } from '@shared/domain/scene'
-import { SECOND, type Us } from '@shared/domain/time'
-import { SceneAnimations, clipAt, clipNamesOf } from './animation'
+import { embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { SceneAnimations, clipNamesOf, playedClip } from './animation'
 
 /** A cube travelling one unit along X over one second, which is enough to read a mixer by. */
 function walkClip(name = 'walk', to = 1): AnimationClip {
@@ -19,14 +18,11 @@ function scene(): Object3D {
 }
 
 /** `name` picks which clip of the file the block plays, since that now lives inside its source. */
-const ref = ({ name = 'walk', ...extra }: Partial<ClipRef> & { name?: string } = {}): ClipRef => ({
-  ...DEFAULT_CLIP,
-  id: 'block-1',
-  source: { kind: 'embedded', name },
-  label: name,
-  playing: true,
-  ...extra,
-})
+const ref = ({
+  name = 'walk',
+  id = 'block-1',
+  ...extra
+}: Partial<ClipRef> & { name?: string } = {}) => embeddedClip(id, name, { playing: true, ...extra })
 
 describe('the clips a model brought', () => {
   it('reads the names off the loaded root', () => {
@@ -185,31 +181,9 @@ describe('SceneAnimations', () => {
   })
 })
 
-describe('which block the head stands in', () => {
-  const block = (id: string, start: Us, duration: Us): ClipRef =>
-    ref({ id, name: id, start, duration })
-
-  it('answers the one the head is inside', () => {
-    const blocks = [block('walk', 0, SECOND), block('dance', SECOND, SECOND)]
-
-    expect(clipAt(blocks, SECOND + 1)?.id).toBe('dance')
-  })
-
-  it('holds a block from its start and lets go at its end, so two neighbours never both answer', () => {
-    const blocks = [block('walk', 0, SECOND), block('dance', SECOND, SECOND)]
-
-    expect(clipAt(blocks, SECOND)?.id).toBe('dance')
-  })
-
-  // A model snapping to its rest pose while the head sits before every block would read as the
-  // animation having been lost rather than as not having started.
-  it('falls back on the first block while the head stands in none', () => {
-    const blocks = [block('walk', SECOND, SECOND)]
-
-    expect(clipAt(blocks, 0)?.id).toBe('walk')
-  })
-
-  it('answers nothing for a model that plays nothing', () => {
-    expect(clipAt([], 0)).toBeNull()
+describe('which block a model plays', () => {
+  it('answers the first, and nothing for a model that plays nothing', () => {
+    expect(playedClip([ref({ id: 'walk' }), ref({ id: 'dance' })])?.id).toBe('walk')
+    expect(playedClip([])).toBeNull()
   })
 })

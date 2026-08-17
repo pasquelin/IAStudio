@@ -132,7 +132,9 @@ describe('AnimationSection', () => {
     expect(screen.getByRole('button', { name: /Jouer le clip/ })).toBeDisabled()
   })
 
-  it('keeps speed and loop when the clip is swapped for another', async () => {
+  // The label follows the clip rather than lagging behind it: it is what the band draws, and a
+  // block reading `walk` while `run` plays would name the wrong thing on the timeline.
+  it('keeps speed and loop when the clip is swapped, and renames the block', async () => {
     show()
     await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
     await userEvent.click(screen.getByLabelText('En boucle'))
@@ -140,19 +142,10 @@ describe('AnimationSection', () => {
 
     expect(playedOf()).toMatchObject({
       source: { kind: 'embedded', name: 'run' },
+      label: 'run',
       loop: false,
       playing: true,
     })
-  })
-
-  // The label follows the clip and never lags behind it: it is what the band draws, and a block
-  // reading `walk` while `run` plays would name the wrong thing on the timeline.
-  it('renames the block when the clip is swapped', async () => {
-    show()
-    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
-    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'run')
-
-    expect(playedOf()?.label).toBe('run')
   })
 
   it('writes the speed the slider is dragged to', async () => {

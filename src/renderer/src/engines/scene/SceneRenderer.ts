@@ -70,7 +70,7 @@ import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './textGeometry'
 import { createGltfSource, type GltfSource } from './gltfSource'
-import { SceneAnimations, clipAt, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
+import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf, playedClip } from './animation'
 import { drivenNodes, poseAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
@@ -872,7 +872,16 @@ export class SceneRenderer {
     if (shown === this.showSkeletons) return
     this.showSkeletons = shown
 
-    for (const helper of this.skeletons.values()) helper.visible = shown
+    this.refreshSkeletons()
+  }
+
+  /** The one place the rule lives: written three times, one copy was already wrong. */
+  private skeletonsVisible(): boolean {
+    return this.showSkeletons || this.poseMode
+  }
+
+  private refreshSkeletons(): void {
+    for (const helper of this.skeletons.values()) helper.visible = this.skeletonsVisible()
     this.viewport.requestRender()
   }
 
@@ -884,8 +893,7 @@ export class SceneRenderer {
     if (on === this.poseMode) return
     this.poseMode = on
 
-    for (const helper of this.skeletons.values()) helper.visible = on || this.showSkeletons
-    this.viewport.requestRender()
+    this.refreshSkeletons()
   }
 
   /**
@@ -925,9 +933,7 @@ export class SceneRenderer {
     if (!hasBones) return
 
     const helper = new SkeletonHelper(root)
-    // The pose mode counts as much as the toggle: a model landing while it is on would otherwise
-    // be pickable and invisible, which is what that mode's own note forbids.
-    helper.visible = this.showSkeletons || this.poseMode
+    helper.visible = this.skeletonsVisible()
     // Off the raycaster: the bones of a rig cross every mesh it drives, and a click would land
     // on a line rather than on the model it belongs to.
     helper.raycast = NOOP
@@ -1371,7 +1377,7 @@ export class SceneRenderer {
     // The clips of a model that is already on stage. Skipped for one still loading: `buildModel`
     // binds what the file brought the moment it lands, and applies this reference there.
     if (node.type === 'model' && this.animations.has(node.id)) {
-      this.animations.apply(node.id, clipAt(node.model.clips ?? [], this.playhead))
+      this.animations.apply(node.id, playedClip(node.model.clips ?? []))
       this.viewport.requestRender()
     }
 
@@ -1563,7 +1569,7 @@ export class SceneRenderer {
       // instance built from it.
       this.animations.add(node.id, holder, clipsOf(source))
       if (applied.type === 'model') {
-        this.animations.apply(node.id, clipAt(applied.model.clips ?? [], this.playhead))
+        this.animations.apply(node.id, playedClip(applied.model.clips ?? []))
       }
       this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
       // Read once and used twice: whether this model has bones at all is the same question the

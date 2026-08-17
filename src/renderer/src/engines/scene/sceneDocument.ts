@@ -123,26 +123,16 @@ function revived(node: SceneNode): SceneNode {
 }
 
 /**
- * A model's clips, from whichever of the two forms the file spells.
- *
- * The singular `animation` is READ and never written again: a document saved by an earlier build
- * holds one clip and no list, and dropping it would lose the animation of every scene ever saved
- * without a word — a node that plays nothing looks exactly like one that never played.
- *
- * A file holding both is a file the plural was written into: the list wins and the leftover goes,
- * so the next save carries one form only.
+ * A model's clips, from whichever of the two forms the file spells. The singular is READ and
+ * never written again — dropping it would lose the animation of every scene saved so far, and a
+ * node that plays nothing looks exactly like one that never played.
  */
 function withClips(model: ModelRef): ModelRef {
-  if (model.clips) return withoutAnimation(model)
   if (!model.animation) return model
 
-  return withoutAnimation({ ...model, clips: [clipFromAnimation(model.animation)] })
-}
-
-function withoutAnimation(model: ModelRef): ModelRef {
-  const rest = { ...model }
-  delete rest.animation
-  return rest
+  const next = { ...model, clips: model.clips ?? [clipFromAnimation(model.animation)] }
+  delete next.animation
+  return next
 }
 
 /** The flags, filled in where the file holds none — `null` included. */

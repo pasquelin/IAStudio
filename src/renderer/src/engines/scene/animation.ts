@@ -26,18 +26,14 @@ type Player = {
 }
 
 /**
- * Which of a model's blocks the head stands in, or the first one when it stands in none.
+ * Which block a model plays. The first, until the head can choose between several.
  *
- * One block at a time, still: playing several at once and fading between them is what the
- * playback phase is for. Falling back on the first is what keeps a model posed rather than
- * snapped to its rest pose while the head sits before every block.
+ * Picking by playhead needs `duration`, which nothing writes yet — the length lives in the file
+ * and reaches the band through `onClips`. Selection arrives with the playback phase, where `seek`
+ * will be the one to ask.
  */
-export function clipAt(clips: readonly ClipRef[], playhead: Us): ClipRef | null {
-  return (
-    clips.find(clip => playhead >= clip.start && playhead < clip.start + clip.duration) ??
-    clips[0] ??
-    null
-  )
+export function playedClip(clips: readonly ClipRef[]): ClipRef | null {
+  return clips[0] ?? null
 }
 
 /**

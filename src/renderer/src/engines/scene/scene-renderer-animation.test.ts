@@ -1,8 +1,7 @@
 import { AnimationClip, Bone, Group, Mesh, SphereGeometry, VectorKeyframeTrack } from 'three'
 import type { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import type { ClipRef } from '@shared/domain/scene'
-import { DEFAULT_CLIP } from '@shared/domain/scene'
+import { embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SceneRenderer } from './SceneRenderer'
 import type { BvhBuilder } from './bvhBuilder'
 import type * as ModelCache from './modelCache'
@@ -57,13 +56,7 @@ const modelNode = (clip: ClipRef | null) => ({
 })
 
 /** A block on `walk`, since that is the clip every fixture of this file brings. */
-const walkBlock = (extra: Partial<ClipRef> = {}): ClipRef => ({
-  ...DEFAULT_CLIP,
-  id: 'block-1',
-  source: { kind: 'embedded', name: 'walk' },
-  label: 'walk',
-  ...extra,
-})
+const walkBlock = (extra: Partial<ClipRef> = {}): ClipRef => embeddedClip('block-1', 'walk', extra)
 
 describe('SceneRenderer and the clips a model brought', () => {
   it('poses the model where the document says, without waiting for a frame', async () => {

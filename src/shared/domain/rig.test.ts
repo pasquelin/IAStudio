@@ -30,14 +30,9 @@ describe('what makes a rig holdable', () => {
     expect(rigFaultOf([bone('Spine', 'Hips')])).toBe('unknown-parent')
   })
 
-  it('refuses a cycle rather than walking it forever', () => {
+  it('refuses a cycle rather than walking it forever, wherever in the rig it sits', () => {
     expect(rigFaultOf([bone('Hips', 'Spine'), bone('Spine', 'Hips')])).toBe('cycle')
-  })
-
-  it('refuses a cycle that no bone of the rig points into', () => {
-    const fault = rigFaultOf([bone('Hips', null), bone('A', 'B'), bone('B', 'A')])
-
-    expect(fault).toBe('cycle')
+    expect(rigFaultOf([bone('Hips', null), bone('A', 'B'), bone('B', 'A')])).toBe('cycle')
   })
 
   it('refuses the same humanoid role on two bones', () => {

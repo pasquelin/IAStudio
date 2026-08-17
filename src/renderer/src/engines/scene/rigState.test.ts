@@ -80,12 +80,6 @@ describe('what a loaded model is', () => {
 
     expect(rigStateOf(root).status).toBe('riggedCharacter')
   })
-
-  it('reports the clips the file brought, whatever they are called', () => {
-    const root = rootWith(skinnedOn(chain(['Hips'])))
-
-    expect(rigStateOf(root, [walk]).clipNames).toEqual(['NlaTrack'])
-  })
 })
 
 describe('the bones of a model', () => {

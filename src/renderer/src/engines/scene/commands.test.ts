@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_CLIP, type ClipRef } from '@shared/domain/scene'
+import { embeddedClip } from '@shared/domain/scene'
 import type { Rig } from '@shared/domain/rig'
 import { emptyHistory, run, undo, type Command } from '../core/history'
 import {
@@ -755,13 +755,7 @@ describe('setModelTextures', () => {
 
   // Both edits write the same reference: rebuilding it from `assetId` alone dropped the other.
   it('leaves the clips of the model alone, and is left alone by them', () => {
-    const clip: ClipRef = {
-      ...DEFAULT_CLIP,
-      id: 'c1',
-      source: { kind: 'embedded', name: 'run' },
-      label: 'Run',
-      playing: true,
-    }
+    const clip = embeddedClip('c1', 'run', { playing: true })
     const playing = setModelClips('m', [clip]).apply(withModel())
     const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(playing)
 
@@ -773,12 +767,7 @@ describe('setModelTextures', () => {
   })
 
   it('drops the field when the last block goes, so a rest pose says nothing at all', () => {
-    const clip: ClipRef = {
-      ...DEFAULT_CLIP,
-      id: 'c1',
-      source: { kind: 'embedded', name: 'run' },
-      label: 'Run',
-    }
+    const clip = embeddedClip('c1', 'run')
     const playing = setModelClips('m', [clip]).apply(withModel())
     const stopped = setModelClips('m', []).apply(playing)
 

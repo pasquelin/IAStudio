@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_CLIP, type ClipRef } from '@shared/domain/scene'
+import { embeddedClip, type ClipRef } from '@shared/domain/scene'
 import {
   lightNodeFixture as light,
   meshNode as mesh,
@@ -34,13 +34,7 @@ describe('firstCameraId', () => {
 })
 
 describe('sceneWithoutSelfPlay', () => {
-  const walkBlock = (playing: boolean): ClipRef => ({
-    ...DEFAULT_CLIP,
-    id: 'c1',
-    source: { kind: 'embedded', name: 'Walk' },
-    label: 'Walk',
-    playing,
-  })
+  const walkBlock = (playing: boolean): ClipRef => embeddedClip('c1', 'Walk', { playing })
 
   const playing = (state: boolean): SceneState => {
     const node = model('m')

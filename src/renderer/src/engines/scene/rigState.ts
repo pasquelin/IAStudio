@@ -48,13 +48,11 @@ export type RigState = {
    * selector, and an array built per call is a new snapshot every render.
    */
   boneNames: readonly string[]
-  /** The clips the file brought, by name. Named by the file, so never shown as they are. */
-  clipNames: readonly string[]
 }
 
-/** three marks bones and skinned meshes with flags; `instanceof` misses one from another three. */
-function isFlagged(object: Object3D, flag: string): boolean {
-  return Reflect.get(object, flag) === true
+/** three marks its bones with a flag; `instanceof` would miss one from another three instance. */
+function isBone(object: Object3D): boolean {
+  return Reflect.get(object, 'isBone') === true
 }
 
 /**
@@ -71,7 +69,7 @@ export function skeletonBonesOf(root: Object3D): SkeletonBone[] {
   root.traverse(object => {
     // Named, always: an unnamed bone cannot be addressed by a document, and a track pointing at
     // one would find nothing after a reload.
-    if (!isFlagged(object, 'isBone') || !object.name || seen.has(object.name)) return
+    if (!isBone(object) || !object.name || seen.has(object.name)) return
 
     seen.add(object.name)
     bones.push({ name: object.name, parent: nearestBoneAbove(object), ...roleOf(object.name) })
@@ -82,53 +80,36 @@ export function skeletonBonesOf(root: Object3D): SkeletonBone[] {
 
 export function rigStateOf(root: Object3D, clips: readonly AnimationClip[] = []): RigState {
   const bones = skeletonBonesOf(root)
-  const clipNames = clips.map(clip => clip.name)
 
   return {
-    status: statusOf(root, bones, clipNames),
+    status: statusOf(root, bones, clips.length > 0),
     bones,
     boneNames: bones.map(bone => bone.name),
-    clipNames,
   }
 }
 
-function statusOf(
-  root: Object3D,
-  bones: readonly SkeletonBone[],
-  clipNames: readonly string[],
-): RigStatus {
+function statusOf(root: Object3D, bones: readonly SkeletonBone[], animated: boolean): RigStatus {
   if (bones.length === 0) return 'staticMesh'
-  if (!hasSkinnedMesh(root)) return 'skeletonOnly'
+  if (!root.getObjectByProperty('isSkinnedMesh', true)) return 'skeletonOnly'
   if (!bones.some(bone => bone.role)) return 'skinnedMesh'
 
-  return clipNames.length > 0 ? 'animatedCharacter' : 'riggedCharacter'
-}
-
-function hasSkinnedMesh(root: Object3D): boolean {
-  let found = false
-  root.traverse(object => {
-    if (isFlagged(object, 'isSkinnedMesh')) found = true
-  })
-  return found
+  return animated ? 'animatedCharacter' : 'riggedCharacter'
 }
 
 function nearestBoneAbove(bone: Object3D): string | null {
   let above = bone.parent
   while (above) {
-    if (isFlagged(above, 'isBone') && above.name) return above.name
+    if (isBone(above) && above.name) return above.name
     above = above.parent
   }
   return null
 }
 
 /**
- * The role a bone name spells, if it spells one exactly.
- *
- * Only the studio's own spelling here, prefix stripped. Reading the provider conventions —
- * `mixamorig:`, Tripo's `L_Thigh`, and the fourteen `*Twist\d\d` that must stay unmapped — is
- * `boneRoles.ts`, and it is a phase of its own.
+ * The role a bone name spells, if it spells one exactly. Only the studio's own spelling, prefix
+ * stripped — reading the provider conventions is `boneRoles.ts`, a phase of its own.
  */
 function roleOf(name: string): { role?: HumanoidRole } {
-  const bare = name.includes(':') ? (name.split(':').at(-1) ?? name) : name
+  const bare = name.slice(name.lastIndexOf(':') + 1)
   return isHumanoidRole(bare) ? { role: bare } : {}
 }

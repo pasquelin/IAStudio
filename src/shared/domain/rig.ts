@@ -72,8 +72,8 @@ export function isRig(value: unknown): value is Rig {
 /**
  * Walks each bone up to its root, marking what is already known to reach one.
  *
- * Bounded by the bone count on purpose: a cycle has no root to stop at, so the walk is what would
- * hang rather than what would answer.
+ * The walk stops on a bone it has already stepped on, which is what a cycle is: without that it
+ * would hang rather than answer. Marking keeps the whole pass linear.
  */
 function hasCycle(bones: readonly RigBone[], byName: ReadonlyMap<string, RigBone>): boolean {
   const rooted = new Set<string>()

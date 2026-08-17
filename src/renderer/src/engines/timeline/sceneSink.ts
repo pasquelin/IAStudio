@@ -1,5 +1,6 @@
-import { DEFAULT_CLIP } from '@shared/domain/scene'
+import { embeddedClip } from '@shared/domain/scene'
 import { secondsToUs } from '@shared/domain/time'
+import { newId } from '@/helpers/ids'
 import { createDefaultScene } from '../scene/defaultScene'
 import { modelNode } from '../scene/nodeFactory'
 import type { SceneState } from '../scene/sceneState'
@@ -43,18 +44,7 @@ export function createModelScene(assetId: string, name: string): ModelScene {
           node.id === model.id && node.type === 'model'
             ? {
                 ...node,
-                model: {
-                  ...node.model,
-                  clips: [
-                    {
-                      ...DEFAULT_CLIP,
-                      id: 'dropped',
-                      source: { kind: 'embedded', name: clip },
-                      label: clip,
-                      playing: true,
-                    },
-                  ],
-                },
+                model: { ...node.model, clips: [embeddedClip(newId(), clip, { playing: true })] },
               }
             : node,
         ),
