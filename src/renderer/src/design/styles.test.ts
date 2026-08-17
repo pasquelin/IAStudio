@@ -7,6 +7,7 @@ import {
   FIELD_LABEL_WIDE,
   NATIVE_SELECT,
   OVERLAY_BUTTON,
+  PANEL_BAR,
   PANEL_GROUP_LABEL,
   PANEL_GROUP_LABEL_WIDE,
   PANEL_HEAD,
@@ -622,6 +623,41 @@ describe('the box a panel puts above what it acts on', () => {
     expect(wearing.sort()).toEqual([
       '../panels/git/CommitBox.tsx',
       './CollectionBar/CollectionBar.tsx',
+    ])
+  })
+})
+
+/**
+ * The whole set, which is what leaves the activity list's own bar alone: it rules off the same
+ * way with a tighter gap, and a rule reading four of these five words would move it by 2px.
+ */
+const spellsOutPanelBar = spellsOut(PANEL_BAR.split(' '))
+
+describe('the line a pane draws above what it shows', () => {
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutPanelBar(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone the bar of the activity list, which sets its buttons closer', () => {
+    expect(spellsOutPanelBar("'border-border flex items-center gap-1.5 border-b p-1'")).toBe(false)
+  })
+
+  // Named rather than counted. **Blind**: raw text, as above.
+  it('is worn by the five it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && /\bPANEL_BAR\b/.test(source),
+    ).map(([path]) => path)
+
+    expect(wearing.sort()).toEqual([
+      '../panels/git/GitReady.tsx',
+      '../panels/git/RemoteSetup.tsx',
+      '../panels/history/DiffPane.tsx',
+      './CollectionBar/CollectionBar.tsx',
+      './FormHeader.tsx',
     ])
   })
 })

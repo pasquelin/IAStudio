@@ -12,7 +12,7 @@ import {
   type FacetOption,
 } from '@/helpers/collectionState'
 import { HINT_TOP, TIP_BOTTOM } from '@/helpers/tooltip'
-import { CONTROL, PANEL_HEAD } from '../styles'
+import { CONTROL, PANEL_BAR, PANEL_HEAD } from '../styles'
 import { ToolButton } from '../ToolButton'
 import { UiIcon } from '../UiIcon'
 import { CollectionBarDropdown } from './CollectionBarDropdown'
@@ -169,8 +169,9 @@ export function CollectionBar({
     return (
       <div
         className={cn(
-          'flex items-center gap-2',
-          layout === 'header' ? 'min-w-0 flex-1' : 'border-border border-b px-2 py-1.5',
+          layout === 'header'
+            ? 'flex min-w-0 flex-1 items-center gap-2'
+            : cn(PANEL_BAR, 'px-2 py-1.5'),
           className,
         )}
       >

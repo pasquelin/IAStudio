@@ -299,6 +299,12 @@ export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
 export const PANEL_HEAD = 'border-border flex flex-col gap-2 border-b p-2'
 
 /**
+ * The same boundary as `PANEL_HEAD`, drawn across ONE line. The room around it stays with the
+ * caller: no two that wear it pad alike.
+ */
+export const PANEL_BAR = 'border-border flex items-center gap-2 border-b'
+
+/**
  * The body of a titled run of properties — `PropertyGroup`'s and `PropertySection`'s alike.
  *
  * One string because the inspector shows both, one under the other, and a reader takes them for

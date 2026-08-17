@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { hasChanges, type GitStatus } from '@shared/domain/git'
 import { QuietNote } from '@/design/QuietNote'
-import { PANEL_SCROLL } from '@/design/styles'
+import { PANEL_BAR, PANEL_SCROLL } from '@/design/styles'
+import { cn } from '@/helpers/cn'
 import { useGit } from '@/stores/git'
 import { CommitBox } from './CommitBox'
 import { GitBranchButton } from './GitBranchButton'
@@ -22,7 +23,7 @@ export function GitReady({ status }: { status: GitStatus }) {
     // reserves that strip for the scrollbar, which is right for rows and wrong for a rule meant
     // to cross the panel.
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="border-border flex shrink-0 items-center gap-2 border-b px-1 py-1">
+      <div className={cn(PANEL_BAR, 'shrink-0 px-1 py-1')}>
         <GitBranchButton status={status} />
         {/* Said only before the first commit. A repository with a history says its branch and
             nothing else — the history itself is the other panel's business. */}
