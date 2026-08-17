@@ -11,6 +11,7 @@ import {
 import { POSTERS_FOLDER } from '@shared/domain/project'
 import type { PbrChannel } from '@shared/domain/texture'
 import type { AsyncCatalog } from '@main/project/catalogClient'
+import { log } from '@main/log'
 import { freeAssetPath } from './assetFile'
 
 const FALLBACK_EXTENSION: Record<AssetType, string> = {
@@ -214,7 +215,11 @@ export function createLocalBackend({
       const relative = `${POSTERS_FOLDER}/${request.id}${extensionFromUrl(request.thumbnailUrl, 'image')}`
       await writeFile(join(projectPath(), relative), poster)
       return relative
-    } catch {
+    } catch (error: unknown) {
+      // Said out loud, though the import carries on: this is the one way an asset that WAS a
+      // picture in the browser lands as an icon, and it left no trace of any kind. A second pull
+      // repairs it — nothing else does, and nothing else asks.
+      log.warn('assets', `no still for ${request.id}: ${String(error)}`)
       return undefined
     }
   }

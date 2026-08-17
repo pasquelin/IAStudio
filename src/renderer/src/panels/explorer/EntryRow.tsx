@@ -42,7 +42,7 @@ export type EntryRowProps = {
  */
 export function EntryRow({ name, icon, preview, open, waiting, onRename }: EntryRowProps) {
   const { t } = useTranslation()
-  const { src, onError } = useLoadable(preview)
+  const { src, attempt, onError } = useLoadable(preview)
 
   // The whole row becomes the field: a name edited beside its own icon is where the eye already
   // is, and `InlineRename` owns the part that is subtle — when the edit ends. It stands a
@@ -80,6 +80,7 @@ export function EntryRow({ name, icon, preview, open, waiting, onRename }: Entry
           // Not draggable: `Tree` carries the row's own drag, and a picture that starts one of
           // its own would take the gesture off the row it belongs to.
           <img
+            key={attempt}
             src={src}
             alt=""
             loading="lazy"

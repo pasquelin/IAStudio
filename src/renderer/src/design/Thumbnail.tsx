@@ -11,7 +11,7 @@ export type ThumbnailProps = {
 }
 
 export function Thumbnail({ url, className }: ThumbnailProps) {
-  const { src, onError } = useLoadable(url)
+  const { src, attempt, onError } = useLoadable(url)
   const frame = cn(MEDIA_FRAME, 'shrink-0', className)
 
   return src ? (
@@ -19,6 +19,7 @@ export function Thumbnail({ url, className }: ThumbnailProps) {
     // slot onto another looked like the obvious gesture and did nothing at all, in silence,
     // because what flew was the browser's own picture drag and no channel of ours.
     <img
+      key={attempt}
       src={src}
       alt=""
       loading="lazy"

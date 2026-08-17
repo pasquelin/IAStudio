@@ -144,6 +144,25 @@ describe('routing a URL of the scheme', () => {
     await expect(servedPath('scenario://__proto__/x', resolvers)).resolves.toBeNull()
   })
 
+  /**
+   * The catalogue REJECTS on the ordinary path — a project closing while a grid is still asking
+   * for its stills is enough. Left to travel, that reaches the scheme as a network error rather
+   * than as a 404, and the tile that meets one keeps the icon: a picture is asked for again, a
+   * failed request is not.
+   */
+  it('serves nothing when a resolver refuses, however it refuses', async () => {
+    const rejecting = { [ASSET_HOST]: () => Promise.reject(new Error('catalogue closed')) }
+    // `project.catalog()` throws synchronously, before any promise exists — `NoProjectError`.
+    const throwing = {
+      [ASSET_HOST]: () => {
+        throw new Error('no-project')
+      },
+    }
+
+    await expect(servedPath('scenario://asset/asset_1', rejecting)).resolves.toBeNull()
+    await expect(servedPath('scenario://asset/asset_1', throwing)).resolves.toBeNull()
+  })
+
   it('serves nothing for a host neither resolver knows', async () => {
     await expect(servedPath('scenario://something-else/1', resolvers)).resolves.toBeNull()
     await expect(servedPath('https://example.com/1', resolvers)).resolves.toBeNull()
