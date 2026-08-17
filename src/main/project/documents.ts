@@ -695,8 +695,9 @@ export function createDocumentFiles({
         /**
          * Asked before renaming, because `fs.rename` overwrites without a word on POSIX — and
          * replaces an empty directory without one either, which is what an untouched `.img` is.
-         * Kept even though `checkDocumentName` above now reads the same folder: that listing was
-         * taken before the envelope was rewritten, and this is the last word before the move.
+         * `checkDocumentName` above asks the same folder the same thing, and this is kept anyway:
+         * it is the answer nearest the syscall that overwrites, and one `stat` is a cheap price
+         * for the window between a listing and a rename.
          *
          * Except when it is THIS document answering: `Niveau` → `niveau` is the plainest rename
          * there is, and on APFS and NTFS the file it would land on is the one it is leaving —

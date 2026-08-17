@@ -19,8 +19,8 @@ import type { MediaCapabilities } from '@shared/domain/media'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import {
   LEGACY_ASSETS_FOLDER,
+  landedInDefaultFolder,
   planProjectAccount,
-  revealsLegacyLayout,
   withRecentProject,
   type Project,
   type ProjectAccountPlan,
@@ -63,6 +63,7 @@ import {
   companionPath,
   findOnPath,
   forgetBinaries,
+  hashOrNull,
   hashSource,
   probeSource,
   runProcess,
@@ -76,6 +77,7 @@ import { createTextureExtraction, type TextureExtraction } from './assets/textur
 import { broadcast, sendTo } from './ipc/broadcast'
 import { studioWindow } from './window/windows'
 import { setLogVerbosity } from './log'
+import { exists } from './persistence'
 import type Scenario from '@scenario-labs/sdk'
 import {
   createJobManager,
@@ -748,31 +750,31 @@ export function createServices(settings: SettingsStore): Services {
     )
 
   /**
-   * The projects already told they wear two trees, by folder. Once per opening is enough: this
-   * describes the SHAPE of the project rather than the file that just landed, and a line repeated
-   * at every import would bury the journal it is written in.
+   * The project this was last said for. The price of hanging a once-per-project observation on a
+   * per-file event — which is where it belongs all the same: an old project only wears two trees
+   * from the moment an import lands beside the old folder, and saying it at the next opening
+   * instead would leave the folder appearing on its own, unexplained, until then.
    */
-  const toldOfLegacyLayout = new Set<string>()
+  let toldOfLegacyLayout: string | undefined
 
   /**
    * A project made before the tree became the user's keeps its files under `assets/`, and nothing
-   * migrates them out — leaving them alone is the decision, not an oversight. The next import
-   * then creates `Images/` beside it, and until this line nothing in the app said why one project
-   * suddenly wore two trees.
+   * migrates them out — leaving them alone is the decision, not an oversight. The import that
+   * follows creates `Images/` beside it, and until this line nothing in the app said why one
+   * project suddenly wore two trees.
    *
-   * Said when an asset actually LANDS in the new folder, which is the moment it becomes true, and
-   * from the one door every asset comes through.
+   * The free half of the question first: a modern project answers `false` without touching the
+   * disk, which is every import of every project made since.
    */
   const noteLegacyLayout = (asset: Asset): void => {
     const root = project.path()
     const folder = DEFAULT_ASSET_FOLDERS[asset.type]
 
-    if (!root || toldOfLegacyLayout.has(root)) return
+    if (!root || root === toldOfLegacyLayout) return
+    if (!landedInDefaultFolder(asset.path, folder)) return
+    if (!existsSync(join(root, LEGACY_ASSETS_FOLDER))) return
 
-    const holdsLegacy = existsSync(join(root, LEGACY_ASSETS_FOLDER))
-    if (!revealsLegacyLayout(asset.path, folder, holdsLegacy)) return
-
-    toldOfLegacyLayout.add(root)
+    toldOfLegacyLayout = root
     journal.record({
       level: 'info',
       topic: 'project',
@@ -786,10 +788,10 @@ export function createServices(settings: SettingsStore): Services {
     projectPath: () => project.path(),
     catalog: () => project.catalog(),
     now: timestamp,
-    // The same function the rescan hashes with (`project-disk`), which is what makes the two
-    // comparable: a fingerprint recorded here is what lets a generated file be followed after
-    // the user files it away themselves.
-    hash: path => hashSource(path).catch(() => null),
+    // The same function the rescan hashes with (`project-disk` passes the very same one), which
+    // is what makes the two comparable: a fingerprint recorded here is what lets a generated file
+    // be followed after the user files it away themselves.
+    hash: hashOrNull,
     // The API states no duration and no track list beside the bytes it hands over, so a
     // generated take reached the timeline as an untimed clip: five arbitrary seconds, and no
     // way to tell whether it carries a sound. ffprobe reads the file that just landed.
@@ -1021,13 +1023,14 @@ export function createServices(settings: SettingsStore): Services {
       newId: newAssetId,
       // The disk rather than `missing_at`, which the row does not carry out of the catalogue
       // anyway: the date says what the last reconciliation pass saw, and this is asked at the
-      // moment the answer is acted on.
+      // moment the answer is acted on. Through the async `exists` and never `existsSync` — this
+      // runs on the main process while a generation is being collected.
       heldFor: async remoteAssetId => {
         const held = await project.catalog().findByRemoteId(remoteAssetId)
         if (!held) return null
 
         const file = ownFileOf(project.path(), held)
-        return { ...held, onDisk: file !== null && existsSync(file) }
+        return { ...held, onDisk: file !== null && (await exists(file)) }
       },
     })
 

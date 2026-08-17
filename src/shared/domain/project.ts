@@ -286,21 +286,18 @@ export const STARTER_FOLDERS: readonly string[] = Object.values(DEFAULT_ASSET_FO
 export const LEGACY_ASSETS_FOLDER = 'assets'
 
 /**
- * Whether an asset that just landed at `path` is what makes a project wear two trees.
+ * Whether an asset that just landed at `path` was filed in the DEFAULT folder for its kind.
  *
- * True only when it was filed in the DEFAULT folder for its kind — a second pull of a row made
- * before the change keeps its old path and reveals nothing — and only when the old folder is
- * still there, which is the caller's to ask the disk.
+ * Half of what says a project wears two trees, and the free half: the other is whether the old
+ * folder is still there, which only the disk knows. Asked FIRST, so a project that never had one
+ * does not pay a `stat` per import to be told so.
  *
- * Pure and here rather than at the one call site, because what it decides is the whole of the
- * decision: `services` reads the disk and writes the line, and neither is testable.
+ * False for a second pull, which keeps the path the row already had — under `assets/img` for a
+ * project of that age — and false for a file the user has since filed deeper. Neither is the
+ * studio choosing a tree.
  */
-export function revealsLegacyLayout(
-  path: string | undefined,
-  folder: string,
-  holdsLegacyFolder: boolean,
-): boolean {
-  return holdsLegacyFolder && path !== undefined && parentOf(path) === folder
+export function landedInDefaultFolder(path: string | undefined, folder: string): boolean {
+  return path !== undefined && parentOf(path) === folder
 }
 
 /**

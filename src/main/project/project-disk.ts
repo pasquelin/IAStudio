@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { hashSource } from '@main/media/runner'
+import { hashOrNull } from '@main/media/runner'
 import { isMissing } from '@main/persistence'
 import { createFolderReader } from './folder'
 import type { RescanDisk } from './catalog-rescan'
@@ -40,6 +40,6 @@ export function openProjectDisk(root: string): RescanDisk {
 
     // `null` rather than a throw: a file that will not read — permissions, a volume that went
     // away mid-pass — must cost the row it might have matched, never the whole pass.
-    hash: async path => await hashSource(join(root, path)).catch(() => null),
+    hash: path => hashOrNull(join(root, path)),
   }
 }

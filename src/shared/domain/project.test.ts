@@ -4,9 +4,9 @@ import {
   listedAt,
   planProjectAccount,
   projectPickerFolder,
+  landedInDefaultFolder,
   projectsByCreation,
   renamedRecentProject,
-  revealsLegacyLayout,
   RECENT_PROJECTS_MAX,
   withRecentProject,
   type Project,
@@ -258,35 +258,30 @@ describe('where the folder dialog should open', () => {
 })
 
 /**
- * A project made before the tree became the user's keeps its files under `assets/`, and nothing
- * migrates them out. The next import creates `Images/` beside it, and the journal says so once —
- * without this, a folder appears on its own and nothing in the app explains it.
+ * What tells a project it wears two trees: an old project keeps its files under `assets/`, nothing
+ * migrates them out, and the import that follows creates `Images/` beside it. The journal says so
+ * once — without it, a folder appears on its own and nothing in the app explains it.
  */
-describe('a project wearing two trees', () => {
-  it('is revealed by the first asset filed in the default folder', () => {
-    expect(revealsLegacyLayout('Images/Boulder.png', 'Images', true)).toBe(true)
-  })
-
-  // The old folder is gone, or was never there: one tree, nothing to explain.
-  it('is not revealed when the old folder is not there', () => {
-    expect(revealsLegacyLayout('Images/Boulder.png', 'Images', false)).toBe(false)
+describe('an asset filed in the default folder of its kind', () => {
+  it('is what the studio just chose a tree for', () => {
+    expect(landedInDefaultFolder('Images/Boulder.png', 'Images')).toBe(true)
   })
 
   /**
    * A second pull writes over the row it finds, which keeps the path it already had — under
    * `assets/img` for a project of that age. Nothing new appeared, so nothing is said.
    */
-  it('is not revealed by an asset that landed where it already was', () => {
-    expect(revealsLegacyLayout('assets/img/Boulder.png', 'Images', true)).toBe(false)
+  it('is not an asset that landed where it already was', () => {
+    expect(landedInDefaultFolder('assets/img/Boulder.png', 'Images')).toBe(false)
   })
 
   // Filed by the user into a folder of their own, which says nothing about which tree was chosen.
-  it('is not revealed by an asset sitting under a folder of the default one', () => {
-    expect(revealsLegacyLayout('Images/Repérages/Boulder.png', 'Images', true)).toBe(false)
+  it('is not an asset sitting under a folder of the default one', () => {
+    expect(landedInDefaultFolder('Images/Repérages/Boulder.png', 'Images')).toBe(false)
   })
 
   // An asset linked where the user left it, or one that lives in the library alone.
-  it('is not revealed by an asset with no file in the project', () => {
-    expect(revealsLegacyLayout(undefined, 'Images', true)).toBe(false)
+  it('is not an asset with no file in the project', () => {
+    expect(landedInDefaultFolder(undefined, 'Images')).toBe(false)
   })
 })

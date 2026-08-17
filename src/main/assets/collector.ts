@@ -78,11 +78,8 @@ export function createAssetCollector({
 
       // What the channels of one texture hang from. Absent when the parent never entered the
       // project — an image uploaded straight to the API, or converted before it was imported.
-      //
-      // `onDisk` is NOT read here, and that is the difference between the two questions: this one
-      // only wants the id a lineage points at, and a row whose file is gone still holds the
-      // prompt, the seed and every child that hangs off it. Refusing it would cut the lineage of
-      // a texture because a picture was tidied away.
+      // `onDisk` is not read here: a lineage points at an id, and a row keeps its own whatever
+      // became of its file.
       const parent = remote.parentId ? await heldFor(remote.parentId) : null
 
       const asset = await backend.importFromUrl({

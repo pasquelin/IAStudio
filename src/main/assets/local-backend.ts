@@ -248,13 +248,13 @@ export function createLocalBackend({
       : await freeAssetPath(projectPath(), DEFAULT_ASSET_FOLDERS[request.type], name, extension)
 
     // The probe spawns ffprobe, so it runs beside the still rather than after it.
-    const written = writeFile(join(projectPath(), relativePath), bytes)
-    const [, posterPath, probe, fingerprint] = await Promise.all([
-      written,
+    const absolute = join(projectPath(), relativePath)
+    const written = writeFile(absolute, bytes)
+    const [posterPath, probe, fingerprint] = await Promise.all([
       poster,
       // After the write, and only after it: these two read the file that was just laid down.
       written.then(() => probeWritten(request, relativePath)),
-      written.then(() => hash(join(projectPath(), relativePath))),
+      written.then(() => hash(absolute)),
     ])
 
     const at = now()
@@ -352,8 +352,9 @@ export function createLocalBackend({
             safeExtension(extension, existing.type),
           )
 
-      await writeFile(join(projectPath(), relativePath), bytes)
-      const fingerprint = await hash(join(projectPath(), relativePath))
+      const absolute = join(projectPath(), relativePath)
+      await writeFile(absolute, bytes)
+      const fingerprint = await hash(absolute)
 
       // The extension follows the bytes: an edited take goes back as a `.wav`, and leaving it
       // under the `.mp3` it was imported as would hand every reader a file that lies. Only a

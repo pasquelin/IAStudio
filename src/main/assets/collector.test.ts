@@ -254,11 +254,8 @@ describe('asset collector', () => {
     expect(imported).toEqual([])
   })
 
-  /**
-   * The row is not the file. Skipping the download on the strength of a row alone put a dead id
-   * among the outputs of the job — nothing ever came back for the bytes, and the shelf offered a
-   * tile with nothing behind it.
-   */
+  // Skipping the download on the strength of a row alone put a dead id among the job's outputs,
+  // and nothing ever came back for the bytes.
   it('downloads its own output again when the file it recorded has gone', async () => {
     const { backend, imported } = backendSpy()
     const retrieve = vi.fn(() => Promise.resolve(remote('image')))

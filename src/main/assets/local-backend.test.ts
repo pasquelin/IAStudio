@@ -4,7 +4,9 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { AssetType } from '@shared/domain/asset'
 import type { AsyncCatalog } from '@main/project/catalog-client'
-import { hashSource } from '@main/media/runner'
+// `hashOrNull` where the backend is wired, `hashSource` where a test states the value it expects:
+// the first is what production injects, the second is the same answer without the `null` arm.
+import { hashOrNull, hashSource } from '@main/media/runner'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import {
   createLocalBackend,
@@ -52,7 +54,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
-      hash: hashSource,
+      hash: hashOrNull,
     })
   })
 
@@ -80,7 +82,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
-      hash: hashSource,
+      hash: hashOrNull,
       probeFile,
     })
 
@@ -104,7 +106,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
-      hash: hashSource,
+      hash: hashOrNull,
       probeFile: () => Promise.reject(new Error('no ffprobe')),
     })
 
@@ -399,7 +401,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
-      hash: hashSource,
+      hash: hashOrNull,
       onImported: imported => {
         asked.push(catalog.find(imported.id))
       },
@@ -426,7 +428,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
-      hash: hashSource,
+      hash: hashOrNull,
       onImported: () => {
         throw new Error('a listener that has its own troubles')
       },
@@ -448,7 +450,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
-      hash: hashSource,
+      hash: hashOrNull,
     })
 
     await expect(
@@ -614,7 +616,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
-      hash: hashSource,
+      hash: hashOrNull,
       onImported: asset => {
         landed.push(asset.id)
       },
@@ -674,7 +676,7 @@ describe('the still brought down beside the bytes', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
-      hash: hashSource,
+      hash: hashOrNull,
     })
   })
 
