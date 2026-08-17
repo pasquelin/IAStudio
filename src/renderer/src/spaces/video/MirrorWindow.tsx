@@ -2,12 +2,10 @@ import { mdiTelevisionPlay } from '@mdi/js'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
-import { createStudioSink } from '@/engines/timeline/sink-port'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timeline-state'
-import { assetsById, useAssets } from '@/stores/assets'
-import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/scene-sources'
 import { mirrorMessageOf, openMirrorChannel } from './mirror-channel'
+import { montageSink } from './montage-sink'
 import { silentSound } from './silent-sound'
 
 /**
@@ -40,16 +38,9 @@ export function MirrorWindow() {
     const created = new TimelineEngine({
       // The same router the studio's own monitors use, or the return would show black where
       // the edit shows a scene — and a return that disagrees with the programme is worse than
-      // no return. It renders 3D of its own: a WebGL context cannot cross a window.
-      openSink: createStudioSink({
-        sceneOf: montageSceneOf,
-        wantScene: loadSceneSource,
-        // Answers null in this window: the stores are its own, and the 3D tab lives in the
-        // studio. A return therefore frames the contents itself — see `montageViewOf`.
-        viewOf: montageViewOf,
-        assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
-        size: () => frameSize.current,
-      }),
+      // no return. It renders 3D of its own: a WebGL context cannot cross a window, and it
+      // frames the contents itself, `montageViewOf` answering null on this window's own stores.
+      openSink: montageSink(() => frameSize.current),
       sound,
       audioTime: sound.now,
       maxDecoders: 2,

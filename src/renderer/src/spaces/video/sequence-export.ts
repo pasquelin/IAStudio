@@ -1,11 +1,9 @@
 import { frameTimes } from '@/engines/scene/film'
-import { createStudioSink } from '@/engines/timeline/sink-port'
 import { sequenceDuration, type SequenceState } from '@/engines/timeline/timeline-state'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
-import { assetsById, useAssets } from '@/stores/assets'
-import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/scene-sources'
+import { montageSink } from './montage-sink'
 import { silentSound } from './silent-sound'
 
 /**
@@ -71,13 +69,7 @@ export async function exportSequence({
   document.body.appendChild(host)
 
   const engine = new TimelineEngine({
-    openSink: createStudioSink({
-      sceneOf: montageSceneOf,
-      wantScene: loadSceneSource,
-      viewOf: montageViewOf,
-      assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
-      size: () => ({ width, height }),
-    }),
+    openSink: montageSink(() => ({ width, height })),
     // Nothing is listened to here, and an export that woke the audio output would talk over
     // whatever the studio is playing.
     sound: silentSound(),

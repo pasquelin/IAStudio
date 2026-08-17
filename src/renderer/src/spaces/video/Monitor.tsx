@@ -14,7 +14,6 @@ import { MonitorFrame } from '@/design/MonitorFrame'
 import { TOOLBAR_LABEL } from '@/design/styles'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
-import { createStudioSink } from '@/engines/timeline/sink-port'
 import { createSoundPort } from '@/engines/timeline/sound-port'
 import { transports } from '@/engines/timeline/playback'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
@@ -22,12 +21,11 @@ import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
-import { assetsById, useAssets } from '@/stores/assets'
 import { useBinding } from '@/stores/bindings'
 import { playbackOf, usePlayback } from '@/stores/playback'
-import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/scene-sources'
 import { useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/scene-views'
+import { montageSink } from './montage-sink'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2
@@ -98,15 +96,7 @@ export function Monitor({
     const created = new TimelineEngine({
       // The 3D is rendered at the SEQUENCE's frame size, never the monitor's: what a montage
       // composites has to be the same picture whichever window is looking at it.
-      openSink: createStudioSink({
-        sceneOf: montageSceneOf,
-        wantScene: loadSceneSource,
-        viewOf: montageViewOf,
-        // A Map, never an object: indexing it with brackets answers `undefined` for every asset
-        // there is, which sent every model down the media path to be written off as undecodable.
-        assetOf: assetId => assetsById(useAssets.getState()).get(assetId) ?? null,
-        size: () => frameSize.current,
-      }),
+      openSink: montageSink(() => frameSize.current),
       sound,
       // The output is the master clock whenever it runs: driving sound from the frame loop
       // drifts against it audibly in under a minute, and both media then tell a different time.
