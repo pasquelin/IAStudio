@@ -1,16 +1,24 @@
+import { messageOf } from '@shared/guards'
 import type { Catalog } from './catalog'
 import { dispatchCatalogRequest } from './catalog-dispatch'
 import {
   ABANDONED,
   isAbandon,
+  isQueueMessage,
+  isRescan,
+  isRescanStop,
   type CatalogMessage,
+  type CatalogQueueMessage,
   type CatalogRequest,
+  type CatalogRescan,
+  type CatalogRescanProgress,
   type CatalogResponse,
 } from './catalog-protocol'
+import { rescanProject, type RescanDisk } from './catalog-rescan'
 
 export type CatalogQueue = {
   /** Takes one message. A request is queued; an abandon marks one that has not run yet. */
-  accept: (message: CatalogMessage) => void
+  accept: (message: CatalogQueueMessage) => void
 }
 
 export type CatalogQueueOptions = {
@@ -70,16 +78,32 @@ export function createCatalogQueue({ run, answer, yieldTo }: CatalogQueueOptions
 
 /** The thread's end of the port, reduced to what serving a catalogue needs. */
 export type CatalogServerPort = {
-  postMessage: (response: CatalogResponse) => void
+  postMessage: (response: CatalogResponse | CatalogRescanProgress) => void
   on: (event: 'message', listener: (message: CatalogMessage) => void) => void
 }
+
+/**
+ * How the thread reaches the project folder. Handed in rather than imported, for the reason
+ * everything else in this file is: what is worth testing is the routing, and a `node:fs` bound
+ * into it would make that need a folder.
+ */
+export type CatalogDiskOpener = (root: string) => RescanDisk
 
 /**
  * A catalogue answering on a port. Here rather than in the worker entry point for the reason
  * `catalog-dispatch` gives: what a thread does is worth testing, and starting a thread to test
  * it is not. The entry point is then nothing but opening the database.
+ *
+ * A rescan runs BESIDE the queue rather than in it: it is asynchronous and long where every
+ * request is synchronous and short, and putting it in the queue would hold every search behind
+ * a folder walk. Both give the loop back between steps, so they interleave — which is what lets
+ * a window keep searching while the project is being reconciled.
  */
-export function serveCatalog(catalog: Catalog, port: CatalogServerPort): void {
+export function serveCatalog(
+  catalog: Catalog,
+  port: CatalogServerPort,
+  openDisk: CatalogDiskOpener | null = null,
+): void {
   const queue = createCatalogQueue({
     run: request => dispatchCatalogRequest(catalog, request),
     answer: response => port.postMessage(response),
@@ -88,5 +112,33 @@ export function serveCatalog(catalog: Catalog, port: CatalogServerPort): void {
     yieldTo: setImmediate,
   })
 
-  port.on('message', message => queue.accept(message))
+  const stopping = new Set<number>()
+
+  const rescan = (message: CatalogRescan): void => {
+    if (!openDisk) {
+      port.postMessage({ id: message.id, ok: false, error: 'this catalogue cannot reach a disk' })
+      return
+    }
+
+    rescanProject(catalog, openDisk(message.root), {
+      now: () => new Date().toISOString(),
+      stopped: () => stopping.has(message.id),
+      // `setImmediate` for the reason the queue uses it: a microtask resolves before the port is
+      // ever polled, so a stop posted mid-pass would not be seen until the pass was over.
+      yieldTo: () => new Promise<void>(resume => setImmediate(resume)),
+      onProgress: ({ done, total }) => port.postMessage({ rescan: message.id, done, total }),
+    })
+      .then(
+        report => port.postMessage({ id: message.id, ok: true, rescan: report }),
+        (error: unknown) =>
+          port.postMessage({ id: message.id, ok: false, error: messageOf(error) }),
+      )
+      .finally(() => stopping.delete(message.id))
+  }
+
+  port.on('message', message => {
+    if (isRescan(message)) rescan(message)
+    else if (isRescanStop(message)) stopping.add(message.target)
+    else if (isQueueMessage(message)) queue.accept(message)
+  })
 }

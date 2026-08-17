@@ -124,6 +124,8 @@ describe('the lists that stand for a union', () => {
       extractedNothing: true,
       extractedTextures: true,
       fileNotOpened: true,
+      filesFound: true,
+      filesMissing: true,
       filesRefused: true,
       generated: true,
       generatedInto: true,

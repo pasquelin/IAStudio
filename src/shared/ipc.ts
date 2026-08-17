@@ -27,7 +27,7 @@ import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { PlanAccess } from './domain/plan'
-import type { Project } from './domain/project'
+import type { Project, RescanState } from './domain/project'
 import type {
   PromptStyle,
   PromptSuggestion,
@@ -107,6 +107,8 @@ export type Channels = {
   projectUndoFile: 'project:undo-file'
   projectRedoFile: 'project:redo-file'
   projectFileHistory: 'project:file-history'
+  projectStopRescan: 'project:stop-rescan'
+  projectRescanState: 'project:rescan-state'
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
@@ -246,6 +248,8 @@ export const CHANNELS: Channels = {
   projectUndoFile: 'project:undo-file',
   projectRedoFile: 'project:redo-file',
   projectFileHistory: 'project:file-history',
+  projectStopRescan: 'project:stop-rescan',
+  projectRescanState: 'project:rescan-state',
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
@@ -575,6 +579,7 @@ export const EVENTS = {
   projectChanged: 'evt:project-changed',
   projectFolderChanged: 'evt:project-folder-changed',
   filesChanged: 'evt:files-changed',
+  projectRescan: 'evt:project-rescan',
   assetsChanged: 'evt:assets-changed',
   settingsChanged: 'evt:settings-changed',
   accountsChanged: 'evt:accounts-changed',
@@ -791,6 +796,18 @@ export type StudioBridge = {
      * folders it has open, which is cheaper than carrying a path through and never wrong.
      */
     onFolderChanged: (callback: () => void) => Unsubscribe
+    /**
+     * How far the pass reconciling the catalogue with the folder has got.
+     *
+     * A window is never the one who ASKS for a pass — opening a project and coming back to the
+     * front are what do, and both are decided in the main process. What a window gets is the
+     * right to see it happening and to call it off.
+     */
+    onRescan: (callback: (state: RescanState) => void) => Unsubscribe
+    /** What a window opening mid-pass should be showing, since it missed the announcement. */
+    rescanState: () => Promise<RescanState>
+    /** Calls off the pass that is running. What it had already written stays written. */
+    stopRescan: () => Promise<void>
     /** Shows the file in the system's own file manager, so the path never leaves the process. */
     revealFile: (relative: string) => Promise<void>
     /**

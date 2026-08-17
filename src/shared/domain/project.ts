@@ -272,3 +272,18 @@ export const MACHINE_FOLDERS: readonly string[] = [
  * the first save, exactly as an import recreates `Images/`.
  */
 export const STARTER_FOLDERS: readonly string[] = Object.values(DEFAULT_ASSET_FOLDERS)
+
+/**
+ * How far the pass reconciling the catalogue with the project folder has got.
+ *
+ * `total` is 0 until the pass knows how much it will read — and stays 0 for the ordinary pass,
+ * where every row is where the catalogue says and nothing is read at all. A window shows the
+ * counts only once there is something to count.
+ */
+export type RescanState = {
+  running: boolean
+  done: number
+  total: number
+}
+
+export const IDLE_RESCAN: RescanState = { running: false, done: 0, total: 0 }

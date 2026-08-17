@@ -186,6 +186,19 @@ const MIGRATIONS: readonly string[] = [
   -- own thumbnail, brought down beside the bytes so a downloaded model stays a picture in a grid.
   ALTER TABLE assets ADD COLUMN poster_path TEXT;
   `,
+  `
+  -- When the rescan last found nothing at this row's path. A file that has gone is DATED, never
+  -- deleted: the row carries the prompt, the seed and the lineage, and none of that is on the
+  -- disk. Cleared the moment the file is found again, under this path or another.
+  --
+  -- It is also what makes the rescan idempotent where it is visible: a second pass over the same
+  -- state finds the absence already dated and says nothing to the journal, so running it on
+  -- every open and every focus does not write a line each time.
+  ALTER TABLE assets ADD COLUMN missing_at TEXT;
+
+  -- The rescan reads every filed row at once, and reads nothing else of them.
+  CREATE INDEX assets_missing_at_idx ON assets(missing_at);
+  `,
 ]
 
 const DEFAULT_LIMIT = 200
@@ -431,6 +444,20 @@ function activityOf(row: SqlRow): ActivityEntry {
   }
 }
 
+/**
+ * One filed row, as reconciling with the disk reads it — its path, what identifies its bytes,
+ * and when it was last found to be gone.
+ *
+ * Deliberately not an `Asset`: the rescan compares paths and fingerprints, and carrying the
+ * prompt and the generation parameters of every row across a thread for that would be the cost
+ * this shape exists to avoid.
+ */
+export type FiledAsset = {
+  path: string
+  hash: string | null
+  missingAt: string | null
+}
+
 export type Catalog = {
   add: (asset: Asset) => Asset
   find: (assetId: string) => Asset | null
@@ -470,6 +497,21 @@ export type Catalog = {
    * deliberate gesture rather than what a missing file triggers.
    */
   forgetUnder: (path: string) => number
+  /**
+   * Every row that names a file, and only what reconciling the catalogue with the disk reads of
+   * one. The whole table at once rather than a query per file: a project of a hundred thousand
+   * assets is one statement here and a hundred thousand round trips the other way.
+   */
+  filed: () => FiledAsset[]
+  /**
+   * Dates the row filed at `path` as gone, or clears the date when the file is back.
+   *
+   * The row itself is never dropped: it carries the prompt, the seed and the lineage, and none
+   * of that is on the disk. A file the user moved outside the studio comes back to its row by
+   * fingerprint; one they deleted stays dated, and a `forgetUnder` is what lets it go — the
+   * deliberate gesture, told apart from an absence nobody asked for.
+   */
+  markMissing: (path: string, at: string | null) => void
   /**
    * Writes lines to the journal, in one transaction, and trims it back to its bound.
    *
@@ -538,6 +580,14 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   `)
 
   const deleteUnder = driver.prepare(`DELETE FROM assets WHERE ${UNDER_PATH}`)
+
+  // Every filed row, and only what the rescan reads of one. `SELECT *` would carry the prompt and
+  // the generation parameters of a hundred thousand assets across a thread for nothing.
+  const selectFiled = driver.prepare(
+    "SELECT path, hash, missing_at FROM assets WHERE path IS NOT NULL AND path <> ''",
+  )
+
+  const setMissingAt = driver.prepare('UPDATE assets SET missing_at = ? WHERE path = ?')
 
   // The port's `run` answers nothing, so what the DELETE touched is asked for separately. Inside
   // the same transaction, where no other statement can have run in between.
@@ -701,6 +751,19 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       if (isUnder(target, source)) return
 
       movePaths.run(target, source, ...underPath(source))
+    },
+
+    filed: () =>
+      selectFiled.all().map(row => ({
+        path: text(row, 'path'),
+        hash: optionalText(row, 'hash') ?? null,
+        missingAt: optionalText(row, 'missing_at') ?? null,
+      })),
+
+    markMissing: (path, at) => {
+      const filed = withoutTrailingSlash(path)
+      if (!filed) return
+      setMissingAt.run(at, filed)
     },
 
     forgetUnder: path => {

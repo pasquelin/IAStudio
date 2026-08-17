@@ -6,6 +6,7 @@ import {
   ABANDONED,
   type CatalogMessage,
   type CatalogRequest,
+  type CatalogRescanProgress,
   type CatalogResponse,
 } from './catalog-protocol'
 
@@ -135,9 +136,9 @@ describe('the catalogue queue', () => {
 describe('a catalogue served on a port', () => {
   function fakePort(): CatalogServerPort & {
     send: (message: CatalogMessage) => void
-    answers: CatalogResponse[]
+    answers: (CatalogResponse | CatalogRescanProgress)[]
   } {
-    const answers: CatalogResponse[] = []
+    const answers: (CatalogResponse | CatalogRescanProgress)[] = []
     let listener: ((message: CatalogMessage) => void) | null = null
 
     return {

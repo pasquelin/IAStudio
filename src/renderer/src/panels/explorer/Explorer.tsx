@@ -36,6 +36,7 @@ import { entriesSorted, FOLDER_SORTS } from './folder-sort'
 import { openEntryMenu } from './EntryMenu'
 import { DomainRow } from './DomainRow'
 import { EntryRow } from './EntryRow'
+import { RescanBar } from './RescanBar'
 import { useDomainTree } from './use-domain-tree'
 import { useFolderSearch } from './use-folder-search'
 import { useFolderTree, type FolderNode } from './use-folder-tree'
@@ -365,6 +366,10 @@ export function Explorer() {
           carries the name, the three readings and the way out — the field measured 76 px there.
           `display` is off for the reason a tree has no grid and no thumbnail to size. */}
       <CollectionBar state={collection} onChange={setCollection} sorts={sorts} display={false} />
+
+      {/* Nothing at all unless a pass is running, which on a project where nothing moved is
+          every time: the row appears when the studio is reading files and can be told to stop. */}
+      <RescanBar />
 
       <div className="min-h-0 flex-1">
         {nodes.length === 0 ? (

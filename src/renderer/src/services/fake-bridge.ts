@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 import type { CloseChoice, DocumentWrite } from '@shared/domain/document'
 import { emptyAssetCounts } from '@shared/domain/asset'
 import type { FileOutcome } from '@shared/domain/file-op'
+import { IDLE_RESCAN } from '@shared/domain/project'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
 import type { LogEntry, StudioBridge } from '@shared/ipc'
@@ -72,6 +73,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       walkFolder: () => Promise.resolve([]),
       openFile: () => Promise.resolve(true),
       onFolderChanged: noSubscription,
+      onRescan: noSubscription,
+      rescanState: () => Promise.resolve(IDLE_RESCAN),
+      stopRescan: () => Promise.resolve(),
       revealFile: () => Promise.resolve(),
       revealFolder: () => Promise.resolve(true),
       rename: () => Promise.reject(new Error('no project')),

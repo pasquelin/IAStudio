@@ -2,11 +2,15 @@ import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain
 import type { Asset, AssetCounts, AssetQuery } from '@shared/domain/asset'
 import {
   ABANDONED,
+  isRescanProgress,
+  isRescanResponse,
   type CatalogMessage,
   type CatalogRequest,
+  type CatalogRescanProgress,
   type CatalogResponse,
   type CatalogResults,
 } from './catalog-protocol'
+import type { RescanProgress, RescanReport } from './catalog-rescan'
 
 /**
  * The thread, reduced to what the client needs. Injected rather than imported so the protocol
@@ -14,7 +18,8 @@ import {
  */
 export type CatalogPort = {
   postMessage: (message: CatalogMessage) => void
-  onMessage: (listener: (response: CatalogResponse) => void) => void
+  /** Progress lines travel the same way responses do: one port, two shapes. */
+  onMessage: (listener: (response: CatalogResponse | CatalogRescanProgress) => void) => void
   /** The thread died. Whatever it was asked will never be answered. */
   onFailure: (listener: (error: Error) => void) => void
   terminate: () => Promise<void>
@@ -49,10 +54,24 @@ export type AsyncCatalog = {
    * Answers how many rows went, so a caller knows whether anything is worth telling a window.
    */
   forgetUnder: (path: string) => Promise<number>
+  /**
+   * Reconciles the catalogue with the project folder, in the thread that holds it.
+   *
+   * The walk, the fingerprints and the writes all happen there: the main process is handed a
+   * report and a progress line, never a file. `signal` reaches the THREAD — unlike a search's,
+   * which is handled here — because a rescan is the one operation that can actually be stopped
+   * part-way, between two batches.
+   */
+  rescan: (root: string, options?: RescanCall) => Promise<RescanReport>
   /** Writes a batch of journal lines and answers them with the ids the database gave them. */
   appendActivity: (entries: readonly ActivityDraft[]) => Promise<ActivityEntry[]>
   readActivity: (query: ActivityQuery) => Promise<ActivityEntry[]>
   close: () => Promise<void>
+}
+
+export type RescanCall = {
+  signal?: AbortSignal
+  onProgress?: (progress: RescanProgress) => void
 }
 
 type Pending = {
@@ -62,8 +81,17 @@ type Pending = {
   release: () => void
 }
 
+/** A rescan waiting on the thread. Its own table: what it settles on is not a `CatalogResults`. */
+type PendingRescan = {
+  resolve: (report: RescanReport) => void
+  reject: (error: Error) => void
+  release: () => void
+  onProgress: ((progress: RescanProgress) => void) | undefined
+}
+
 export function createCatalogClient(port: CatalogPort): AsyncCatalog {
   const pending = new Map<number, Pending>()
+  const rescans = new Map<number, PendingRescan>()
   let nextId = 1
   let closed = false
 
@@ -72,23 +100,50 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
 
   /** Rejects everything still waiting. A dead thread answers nothing, ever. */
   const abandon = (reason: string): void => {
-    const waiting = [...pending.values()]
+    const waiting = [...pending.values(), ...rescans.values()]
     pending.clear()
+    rescans.clear()
     for (const slot of waiting) {
       slot.release()
       slot.reject(new Error(reason))
     }
   }
 
-  port.onMessage(response => {
+  port.onMessage(message => {
+    if (isRescanProgress(message)) {
+      rescans.get(message.rescan)?.onProgress?.({ done: message.done, total: message.total })
+      return
+    }
+
+    const response = message
+
+    if (isRescanResponse(response)) {
+      const slot = rescans.get(response.id)
+      if (!slot) return
+      rescans.delete(response.id)
+      slot.release()
+      slot.resolve(response.rescan)
+      return
+    }
+
+    // A rescan that FAILED comes back as an ordinary error response — the shape carries no `op`,
+    // so which table is waiting is what tells the two apart.
+    const stopped = rescans.get(response.id)
+    if (stopped) {
+      rescans.delete(response.id)
+      stopped.release()
+      stopped.reject(new Error(response.ok ? 'unexpected answer to a rescan' : response.error))
+      return
+    }
+
     const slot = pending.get(response.id)
     // An answer to a request already settled — by a close, or by a duplicate — is not an error.
     if (!slot) return
     pending.delete(response.id)
     slot.release()
 
-    if (response.ok) slot.resolve(response.value)
-    else slot.reject(new Error(response.error))
+    if (response.ok && !isRescanResponse(response)) slot.resolve(response.value)
+    else slot.reject(new Error(response.ok ? 'unexpected answer' : response.error))
   })
 
   port.onFailure(error => {
@@ -164,6 +219,44 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     remove: assetId => send<'remove'>(id => ({ id, op: 'remove', assetId })),
 
     repath: (from, to) => send<'repath'>(id => ({ id, op: 'repath', from, to })),
+
+    rescan: (root, { signal, onProgress } = {}) =>
+      new Promise<RescanReport>((resolve, reject) => {
+        if (closed) {
+          reject(new Error(CLOSED))
+          return
+        }
+        if (signal?.aborted) {
+          reject(new Error(ABANDONED))
+          return
+        }
+
+        const id = nextId++
+
+        // Posted first, the order the rest of this file settled on: a throw here rejects this
+        // promise on its own and leaves nothing behind.
+        port.postMessage({ id, op: 'rescan', root })
+
+        // The stop reaches the THREAD, where it is read between two batches. The promise still
+        // settles on the thread's answer — a stopped pass reports what it had already written,
+        // which is a result and not a failure.
+        const stop = (): void => {
+          try {
+            port.postMessage({ op: 'rescan-stop', target: id })
+          } catch {
+            closed = true
+          }
+        }
+        signal?.addEventListener('abort', stop, { once: true })
+
+        rescans.set(id, {
+          resolve,
+          reject,
+          release: () => signal?.removeEventListener('abort', stop),
+          onProgress,
+        })
+      }),
+
     forgetUnder: path => send<'forgetUnder'>(id => ({ id, op: 'forgetUnder', path })),
 
     appendActivity: entries =>

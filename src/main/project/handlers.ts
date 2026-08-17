@@ -14,6 +14,7 @@ import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/local-backend'
 import type { FileOps } from './file-ops'
 import type { FolderReader } from './folder'
+import type { Reconciler } from './reconcile'
 import type { ActivityReport } from './activity-log'
 import {
   askCloseChoice,
@@ -75,6 +76,8 @@ export type ProjectHandlerDeps = {
   folder: FolderReader
   /** Everything that WRITES to that folder, and the stack that takes a batch back. */
   files: FileOps
+  /** The pass that puts the catalogue and the folder back in agreement — watched, never asked for. */
+  reconciler: Reconciler
   /**
    * `shell.openPath`, which answers an empty string on success and a sentence on failure — and
    * this is the only place the studio launches a third-party application, so it is injected
@@ -96,6 +99,7 @@ export function registerProjectHandlers({
   exists,
   folder,
   files,
+  reconciler,
   openInSystem,
   askUser,
 }: ProjectHandlerDeps): void {
@@ -266,6 +270,11 @@ export function registerProjectHandlers({
   handle(CHANNELS.projectRedoFile, async () => settled(await files.redo()))
   // `async` for the same reason `projectListFolder` is: the other side awaits an invoke.
   handle(CHANNELS.projectFileHistory, async () => files.can())
+
+  // A window never asks FOR a pass — opening a project and coming back to the front are what do.
+  // What it may do is watch one and call it off.
+  handle(CHANNELS.projectRescanState, async () => reconciler.state())
+  handle(CHANNELS.projectStopRescan, async () => reconciler.stop())
 
   // `async`, though it awaits nothing of its own: a refused path throws from `parseFolderPath`,
   // and a synchronous throw here would reach the caller as an exception rather than a rejected

@@ -91,6 +91,10 @@
     "byDomainHint": "Groups every file of the project by what it is, wherever it sits",
     "hidden": "Hidden items",
     "hiddenHint": "Shows what the studio keeps under a dot; those files stay read-only",
+    "rescan": "Looking for files moved outside the project",
+    "rescanCount": "{{done, number}} of {{total, number}}",
+    "rescanStop": "Stop",
+    "rescanStopHint": "Calls off the search. Whatever was found already stays found",
     "sort": {
       "name": "Name: A to Z",
       "nameDesc": "Name: Z to A"

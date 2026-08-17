@@ -3,7 +3,13 @@ import { createCatalogClient, type CatalogPort } from './catalog-client'
 import { dispatchCatalogRequest } from './catalog-dispatch'
 import { createCatalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
-import { ABANDONED, isAbandon, type CatalogMessage, type CatalogResponse } from './catalog-protocol'
+import {
+  ABANDONED,
+  isAbandon,
+  isQueueMessage,
+  type CatalogMessage,
+  type CatalogResponse,
+} from './catalog-protocol'
 import type { Asset } from '@shared/domain/asset'
 
 /** The DOM lib is not on this target: the signal's own signature is where the type lives. */
@@ -31,7 +37,9 @@ function loopbackPort(): CatalogPort & { requests: CatalogMessage[] } {
     requests,
     postMessage: message => {
       requests.push(message)
-      if (isAbandon(message)) return
+      // Only what the queue would run comes back with an answer: a rescan runs beside it, and
+      // this loopback holds a catalogue with no disk to walk.
+      if (!isQueueMessage(message) || isAbandon(message)) return
       void Promise.resolve().then(() => listener?.(dispatchCatalogRequest(catalog, message)))
     },
     onMessage: next => {
@@ -126,7 +134,9 @@ describe('createCatalogClient', () => {
     controller.abort()
 
     await expect(search).rejects.toThrow(ABANDONED)
-    expect(port.requests.filter(isAbandon)).toEqual([{ op: 'abandon', target: 1 }])
+    expect(port.requests.filter(isQueueMessage).filter(isAbandon)).toEqual([
+      { op: 'abandon', target: 1 },
+    ])
   })
 
   /** An answer to a search already given up on settles nothing and is not an error either. */
@@ -246,7 +256,9 @@ describe('createCatalogClient', () => {
 
     await Promise.all([catalog.find('a'), catalog.find('b'), catalog.find('c')])
 
-    const ids = port.requests.flatMap(request => (isAbandon(request) ? [] : [request.id]))
+    const ids = port.requests.flatMap((request: CatalogMessage) =>
+      isQueueMessage(request) && !isAbandon(request) ? [request.id] : [],
+    )
     expect(new Set(ids).size).toBe(3)
   })
 
