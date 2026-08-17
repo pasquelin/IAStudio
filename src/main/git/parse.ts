@@ -150,9 +150,19 @@ function lines(output: string): string[] {
     .filter(line => line !== '')
 }
 
-/** `git stash list` under a format of its own: the place in the stack, then what it says. */
+/**
+ * `git stash list` under a format of its own: the place in the stack, then what it says.
+ *
+ * The index is the LINE's, counted before the empty ones are dropped — it is what `stash pop`
+ * and `stash drop` are given, so it has to be the number git itself would use. A pile made
+ * outside the studio can have an empty message, and numbering the surviving lines would then
+ * throw away the pile below the one that was asked for.
+ */
 export function parseStashList(output: string): GitStashEntry[] {
-  return lines(output).map((message, index) => ({ index, message }))
+  return output
+    .split('\n')
+    .map((line, index) => ({ index, message: line.trim() }))
+    .filter(entry => entry.message !== '')
 }
 
 /** What `--name-status` writes: a letter, a tab, a path — and for a rename, two paths. */

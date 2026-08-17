@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getBridge } from '@/services/bridge'
+import { gitBridge } from '@/services/bridge'
 
 /**
  * A URL for the bytes of one file at one version, or nothing where there are none to show.
@@ -20,8 +20,12 @@ export function useGitBlobUrl(path: string, ref: string | null): string | null {
     let live = true
     let made: string | null = null
 
-    void getBridge()
-      ?.git.bytes(path, ref)
+    void gitBridge()
+      ?.bytes(path, ref)
+      // A refusal reads as "no bytes to show", which is the screen this already has for a version
+      // that does not hold the path. Unhandled, it was an uncaught rejection in a console nobody
+      // has open — and that is how a boundary refusing `HEAD` outright went unnoticed.
+      .catch(() => null)
       .then(bytes => {
         // Unmounted, or asked for something else since: the bytes are dropped rather than turned
         // into a URL nobody will revoke.

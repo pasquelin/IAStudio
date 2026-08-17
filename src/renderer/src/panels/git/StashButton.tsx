@@ -27,18 +27,28 @@ export function StashButton({ status }: { status: GitStatus }) {
   const stashPop = useGit(state => state.stashPop)
   const stashDrop = useGit(state => state.stashDrop)
 
-  // What is on the stack changes with every push and pop, and both of those take files out of the
-  // working tree or put them back. Keyed on the PATHS rather than on the array: the IPC clone
-  // rebuilds it on every refresh, so the array itself is a new identity several times a minute
-  // and this ran `git stash list` on each of them. Staging a file leaves the paths alone too.
+  // A stack read afresh whenever the folder may have been touched from outside — keyed on the
+  // PATHS rather than on the array: the IPC clone rebuilds it on every refresh, so the array
+  // itself is a new identity several times a minute and this ran `git stash list` on each of
+  // them. Staging a file leaves the paths alone too.
   const paths = status.files.map(file => file.path).join('\n')
 
   useEffect(() => {
     void stashes().then(setPiles)
   }, [stashes, paths, status.head])
 
+  /**
+   * Read back after the gesture itself, and this is not belt and braces: DROPPING a pile changes
+   * neither the working tree nor the head, so nothing above would have re-read it — and the rows
+   * left on screen carry INDICES, which git renumbers on every drop. The second drop would then
+   * throw away the pile below the one that was clicked, and nothing brings a dropped pile back.
+   */
+  const afterwards = (done: Promise<void>): void => {
+    void done.then(stashes).then(setPiles)
+  }
+
   const setAside = (): void => {
-    void stash(t('git.stashOf', { branch: status.branch ?? t('git.detached') }))
+    afterwards(stash(t('git.stashOf', { branch: status.branch ?? t('git.detached') })))
   }
 
   return (
@@ -78,7 +88,7 @@ export function StashButton({ status }: { status: GitStatus }) {
               tip={HINT_LEFT(t('git.stashPopHint'))}
               onSelect={() => {
                 close()
-                void stashPop(pile.index)
+                afterwards(stashPop(pile.index))
               }}
             />
           ))}
@@ -91,7 +101,7 @@ export function StashButton({ status }: { status: GitStatus }) {
               tip={HINT_LEFT(t('git.stashDropHint'))}
               onSelect={() => {
                 close()
-                void stashDrop(pile.index)
+                afterwards(stashDrop(pile.index))
               }}
             />
           ))}

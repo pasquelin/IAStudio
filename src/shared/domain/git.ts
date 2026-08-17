@@ -325,3 +325,19 @@ export function pathsOf(files: readonly GitFile[]): string[] {
 export function defaultIgnore(): string {
   return `# Rebuilt by Scenario Studio from the project's own files — never versioned.\n${INDEX_FOLDER}/\n`
 }
+
+/** Git's own folder. Named because two sides ignore it, and neither should spell it itself. */
+export const GIT_FOLDER = '.git'
+
+/**
+ * Whether a path is one nothing needs to hear about — git's own bookkeeping, and the index the
+ * studio rebuilds. Both are written constantly and neither is versioned: a git command alone
+ * writes half a dozen files under `.git/`, and announcing them makes the panel run git again.
+ *
+ * Exactly these two, and not "anything under a dot", which is the rule the explorer HIDES by:
+ * `.scenario/items.json` sits under a dot and is deliberately versioned, so a folder watch that
+ * skipped it would leave the panel unaware of the one file no rescan can rebuild.
+ */
+export function isUnwatchedByGit(path: string): boolean {
+  return path.split('/').some(segment => segment === GIT_FOLDER || segment === INDEX_FOLDER)
+}

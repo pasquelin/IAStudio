@@ -41,7 +41,6 @@ export function TagField({ commit }: { commit: string }) {
       label={t('git.tagVersion')}
       placeholder={t('git.tagPlaceholder')}
       accepts={isRefName}
-      disabled={busy}
       onSubmit={name => {
         void tag(name, commit)
         setNaming(false)

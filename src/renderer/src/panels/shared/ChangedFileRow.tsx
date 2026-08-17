@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { GitCommitFile } from '@shared/domain/git'
+import { GIT_CHANGE_BADGES, type GitCommitFile } from '@shared/domain/git'
 import { nameOf, parentOf } from '@shared/domain/folder'
 import { Row } from '@/design/Row'
 import { TONE_TEXT, type StatusTone } from '@/design/styles'
@@ -50,11 +50,14 @@ export function ChangedFileRow({ file, leading, actions }: ChangedFileRowProps) 
       leading={
         <span className="flex shrink-0 items-center gap-2">
           {leading}
+          {/* Git's own letter, from `shared/` and not from a bundle: `M` is `M` in French, and
+              the seven of them in two locale files are seven values a translator is right to
+              leave alone and wrong to touch. The row's HINT is what says the change in words. */}
           <span
             aria-hidden
             className={cn('w-3 text-center font-mono text-xs', TONE_TEXT[TONES[file.change]])}
           >
-            {t(`git.changeBadge.${file.change}`)}
+            {GIT_CHANGE_BADGES[file.change]}
           </span>
         </span>
       }

@@ -10,7 +10,6 @@ export type NameFieldProps = {
   accepts: (name: string) => boolean
   onSubmit: (name: string) => void
   onCancel: () => void
-  disabled?: boolean
 }
 
 /**
@@ -28,15 +27,13 @@ export type NameFieldProps = {
  *
  * Leaving the field ABANDONS. Nothing here is a value being edited: a half-typed name that
  * became a branch because the pointer moved is a branch nobody asked for.
+ *
+ * **It takes no `disabled`, and that is a fix rather than an omission.** It used to be greyed
+ * while a git command ran, which the version panels raise for any command at all — including the
+ * refresh a folder watch fires while the studio writes an asset. A browser blurs what it
+ * disables, the blur abandons, and the name being typed went with it, mid-word.
  */
-export function NameField({
-  label,
-  placeholder,
-  accepts,
-  onSubmit,
-  onCancel,
-  disabled,
-}: NameFieldProps) {
+export function NameField({ label, placeholder, accepts, onSubmit, onCancel }: NameFieldProps) {
   const [name, setName] = useState('')
 
   return (
@@ -48,7 +45,6 @@ export function NameField({
       value={name}
       aria-label={label}
       placeholder={placeholder}
-      disabled={disabled}
       className={FIELD_FILL}
       onChange={event => setName(event.target.value)}
       onKeyDown={event => {

@@ -104,15 +104,6 @@
       "untracked": "Jamais enregistré",
       "conflicted": "En conflit"
     },
-    "changeBadge": {
-      "added": "A",
-      "modified": "M",
-      "deleted": "D",
-      "renamed": "R",
-      "copied": "C",
-      "untracked": "?",
-      "conflicted": "U"
-    },
     "failure": {
       "binaryMissing": "Git est introuvable sur cet ordinateur.",
       "notARepository": "Ce dossier ne suit pas ses versions.",

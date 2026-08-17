@@ -4,7 +4,8 @@ import { join } from 'node:path'
 import { exists } from '@main/persistence'
 import { isStagingName, kindForExtension } from '@shared/domain/document'
 import { extensionOf } from '@shared/domain/fileName'
-import { entriesByName, isHiddenEntry, isPrivatePath, type FolderEntry } from '@shared/domain/folder'
+import { entriesByName, isHiddenEntry, type FolderEntry } from '@shared/domain/folder'
+import { isUnwatchedByGit } from '@shared/domain/git'
 import { foldForSearch } from '@shared/text'
 
 /**
@@ -197,10 +198,9 @@ export type WatchOpener = (
  * keeps the common case working; what covers the rest is the panel re-reading when the window
  * comes back to the front, which costs nothing when nothing changed.
  *
- * **What sits under a dot is not announced** — `isPrivatePath`, the same rule that hides it from
- * the explorer. The studio rewrites `.index/` continuously and every git command writes half a
- * dozen files into `.git/`, so an unfiltered watch answers each of them with a read of the whole
- * folder, which then runs git again.
+ * **`.git/` and `.index/` are not announced** (`isUnwatchedByGit`): both are written constantly
+ * and neither is versioned, so an unfiltered watch answers each of those writes with a read of
+ * the whole folder — which then runs git, which writes into `.git/` again.
  */
 export function watchProjectFolder(
   root: string,
@@ -213,7 +213,7 @@ export function watchProjectFolder(
   const settle = (_event: string, filename: string | null): void => {
     // A platform that names nothing announces: not knowing what moved is not a reason to stop
     // following the folder. Windows spells the separator the other way round.
-    if (filename && isPrivatePath(filename.replaceAll('\\', '/'))) return
+    if (filename && isUnwatchedByGit(filename.replaceAll('\\', '/'))) return
 
     if (timer) clearTimeout(timer)
     timer = setTimeout(() => {

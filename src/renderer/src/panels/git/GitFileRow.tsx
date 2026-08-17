@@ -75,8 +75,12 @@ export function GitFileRow({ file }: { file: GitFile }) {
 
           {/* Asked here and answered in the band. This column is a side panel and a diff is read
               ACROSS — so the click sets what to compare and brings the wide panel forward.
-              Withheld on a conflict: a file holding both versions at once compares to nothing. */}
-          {file.stage !== 'conflicted' && (
+
+              Withheld on two: a file holding both versions at once compares to nothing, and a
+              file git has never seen has no earlier version to compare AGAINST — `git diff HEAD`
+              says nothing about an untracked path, so the button answered "nothing changed"
+              about a file that is entirely new. Which is the case of every generated asset. */}
+          {file.stage !== 'conflicted' && file.change !== 'untracked' && (
             <ToolButton
               icon={mdiFileCompare}
               label={t('git.compareFile', { name: file.path })}

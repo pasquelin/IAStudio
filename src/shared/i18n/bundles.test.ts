@@ -804,10 +804,11 @@ const DYNAMIC_KEYS: readonly string[] = [
   // turns the progress row into a raw code at the exact moment something is happening.
   ...JOB_STATUSES.map(status => `jobs.status.${status}`),
   ...INGEST_STAGES.map(stage => `ingest.${stage}`),
-  // The version panel groups by stage and badges by change, both composed from the union. A
-  // value without its line puts the raw word — `untracked` — where a heading belongs.
+  // The version panel groups by stage and names the change in each row's hint, both composed
+  // from the union. A value without its line puts the raw word — `untracked` — where a heading
+  // belongs. The BADGE is not here: its letter is git's own, and it lives in `GIT_CHANGE_BADGES`.
   ...GIT_STAGES.map(stage => `git.stage.${stage}`),
-  ...GIT_CHANGES.flatMap(change => [`git.change.${change}`, `git.changeBadge.${change}`]),
+  ...GIT_CHANGES.map(change => `git.change.${change}`),
   // The three kinds of name a commit can carry, each drawn as its own badge.
   ...GIT_REF_KINDS.map(kind => `git.ref.${kind}`),
   // Why git did not answer. The compiler holds the other half — see `GIT_FAILURE_KEYS`.

@@ -317,7 +317,13 @@ export function openRepository(root: string, binary?: string, deps?: RepositoryD
         await git.raw([...(credential ? CREDENTIAL_ARGS : []), ...args])
       } finally {
         // The token leaves the instance the moment the command is done, so nothing that runs
-        // afterwards — a status, a log — carries it into a process it has no business being in.
+        // AFTERWARDS — a status, a log — carries it.
+        //
+        // What this does not close, said plainly: the environment belongs to the instance, and a
+        // local command already queued behind this one spawns with the token in its environment.
+        // It is a git the studio started, on this machine, and it talks to no server; closing it
+        // would take a second instance, which would cost the single queue that keeps two
+        // commands from meeting over `.git/index.lock`.
         if (credential) git.env(baseEnv)
       }
     })

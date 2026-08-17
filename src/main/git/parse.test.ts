@@ -186,6 +186,18 @@ describe('the piles set aside', () => {
   it('reads nothing off an empty stack', () => {
     expect(parseStashList('')).toEqual([])
   })
+
+  /**
+   * A pile made outside the studio can carry no message at all, and the number is what `stash
+   * pop` and `stash drop` are given. Counted after the blank lines were dropped, every pile
+   * below such a one is off by one — and a drop then throws away a pile nobody asked about.
+   */
+  it('keeps the numbering git itself uses when a pile has nothing to say', () => {
+    expect(parseStashList('Travail sur main\n\nEssai de lumière\n')).toEqual([
+      { index: 0, message: 'Travail sur main' },
+      { index: 2, message: 'Essai de lumière' },
+    ])
+  })
 })
 
 describe('why a command did not answer', () => {

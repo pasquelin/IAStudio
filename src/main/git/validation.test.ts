@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  parseBlobRef,
   parseCredential,
   parseGitPaths,
   parseHost,
@@ -49,6 +50,30 @@ describe('the version a comparison names', () => {
   /** `undefined` would let a caller that simply forgot the argument mean "the working copy". */
   it('refuses undefined, which is not the same as naming no version', () => {
     expect(() => parseOptionalHash(undefined)).toThrow()
+  })
+})
+
+/**
+ * Where the BYTES come from, which is the wider question — and the one that was refused whole.
+ *
+ * The picture comparison asks for `HEAD` and for a commit's first parent, and the boundary was
+ * checking them against the hash rule: both were rejected, every time, so the earlier half of
+ * every picture comparison came back empty and the pane said the comparison was unavailable.
+ */
+describe('the version a picture is read at', () => {
+  it('takes the two spellings the comparison asks for, beside a hash', () => {
+    expect(parseBlobRef('HEAD')).toBe('HEAD')
+    expect(parseBlobRef('a3f9c1e^')).toBe('a3f9c1e^')
+    expect(parseBlobRef('a3f9c1e')).toBe('a3f9c1e')
+    expect(parseBlobRef(null)).toBeNull()
+  })
+
+  /** The same door `parseOptionalHash` closes: an argument beginning with `-` is an option. */
+  it('refuses every other revision spelling, and anything that could be an option', () => {
+    expect(() => parseBlobRef('--upload-pack=evil')).toThrow()
+    expect(() => parseBlobRef('HEAD~3')).toThrow()
+    expect(() => parseBlobRef('HEAD; rm -rf /')).toThrow()
+    expect(() => parseBlobRef('main')).toThrow()
   })
 })
 

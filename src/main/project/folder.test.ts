@@ -314,10 +314,8 @@ describe('following the project folder', () => {
    * The reason this filter exists: every git command writes half a dozen files into `.git/`, and
    * the studio rewrites `.index/` on its own account. Announced, each of them makes the panel
    * re-read the folder — and the git panel run git again, which writes into `.git/`.
-   *
-   * The rule is `isPrivatePath`, the one the explorer already reads: a dot on any segment.
    */
-  it('says nothing about what the studio keeps under a dot', () => {
+  it('says nothing about the git folder or the index the studio rebuilds', () => {
     vi.useFakeTimers()
     onTestFinished(() => {
       vi.useRealTimers()
@@ -328,10 +326,30 @@ describe('following the project folder', () => {
 
     emit('.git/index')
     emit('.index/catalog.db')
-    emit('Repérages/.project.json')
     vi.advanceTimersByTime(5000)
 
     expect(announce).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Those two and NOT everything under a dot, which is how the explorer decides what to hide:
+   * `.scenario/items.json` holds the prompt, model and seed of every asset, it is deliberately
+   * versioned, and the studio rewrites it whenever one is generated. Skipped, the version panel
+   * would not know the one file no rescan can rebuild had changed.
+   */
+  it('announces the hidden files a project actually versions', () => {
+    vi.useFakeTimers()
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const announce = vi.fn()
+    const { open, emit } = driving()
+    watches.push(watchProjectFolder('/projects/demo', announce, open))
+
+    emit('.scenario/items.json')
+    vi.advanceTimersByTime(5000)
+
+    expect(announce).toHaveBeenCalledTimes(1)
   })
 
   /**

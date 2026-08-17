@@ -8,7 +8,7 @@ import type {
   GitStashEntry,
 } from '@shared/domain/git'
 import type { GitDiff } from '@shared/domain/gitDiff'
-import { getBridge } from '@/services/bridge'
+import { gitBridge } from '@/services/bridge'
 
 /**
  * How much history one round trip brings back.
@@ -85,6 +85,12 @@ type GitState = {
   fetch: () => Promise<void>
   pull: () => Promise<void>
   push: (setUpstream: boolean) => Promise<void>
+  /**
+   * Runs the last command that talked to a server again — what the token field takes once the
+   * token is in. Answers nothing where none has been run, which is not a state the panel reaches:
+   * it is only offered after a server refused one.
+   */
+  retryRemote: () => Promise<void>
   resolve: (paths: readonly string[], side: 'ours' | 'theirs') => Promise<void>
   abortMerge: () => Promise<void>
   stash: (message: string) => Promise<void>
@@ -113,9 +119,21 @@ export const useGit = create<GitState>()((set, get) => {
   let running = 0
   /** The status read that is out, shared by every panel that asks while it is. */
   let reading: Promise<GitRepository> | null = null
+  /** Whether a page of history is already on its way. */
+  let paging = false
+  /**
+   * The last command that talked to a server, kept so the token field can run THAT one again.
+   *
+   * A refusal is answered by asking for a token, and what asked was a fetch, a pull, or a push
+   * that may have carried `--set-upstream` — the first push of a branch, which is precisely the
+   * one that meets a refusal. Replayed as a plain push, it fails on a branch with nothing to
+   * track, and the panel shows a failure where the token had just been accepted.
+   */
+  let lastRemote: (() => Promise<void>) | null = null
 
-  const run = async (answer: Promise<GitRepository> | undefined): Promise<void> => {
-    if (!answer) return
+  /** Answers whether the command came BACK — false where the channel itself failed. */
+  const runAnswering = async (answer: Promise<GitRepository> | undefined): Promise<boolean> => {
+    if (!answer) return false
 
     running += 1
     set({ busy: true })
@@ -128,16 +146,29 @@ export const useGit = create<GitState>()((set, get) => {
       // field by field: one side builds all of these, so the key order is its own, and a signature
       // written by hand is a field forgotten the day one is added.
       if (JSON.stringify(get().repository) !== JSON.stringify(read)) set({ repository: read })
+      return true
     } catch {
       // The main process answers a union for every git failure, so a rejection here means the
       // channel itself failed. What was on screen is the last thing known to be true about the
       // folder — better than a state invented from an error that says nothing about git.
+      return false
     } finally {
       running -= 1
       // Only the LAST one lifts it: two panels refreshing together would otherwise have the
       // first to land clear the flag while the second is still running.
       if (running === 0) set({ busy: false })
     }
+  }
+
+  /** The same for the commands whose answer is the state itself, which is most of them. */
+  const run = async (answer: Promise<GitRepository> | undefined): Promise<void> => {
+    await runAnswering(answer)
+  }
+
+  /** A command that talks to a server, remembered so a token can send the same one again. */
+  const reachOut = (ask: () => Promise<GitRepository> | undefined): Promise<void> => {
+    lastRemote = () => run(ask())
+    return lastRemote()
   }
 
   return {
@@ -158,7 +189,7 @@ export const useGit = create<GitState>()((set, get) => {
       // by the same event, and dockview keeps the one behind mounted — so without this, every
       // signal starts two git processes to read the same folder twice.
       if (!reading) {
-        const answer = getBridge()?.git.read()
+        const answer = gitBridge()?.read()
         if (!answer) return
         reading = answer.finally(() => {
           reading = null
@@ -167,38 +198,52 @@ export const useGit = create<GitState>()((set, get) => {
 
       await run(reading)
     },
-    initRepository: () => run(getBridge()?.git.init()),
-    stage: paths => run(getBridge()?.git.stage(paths)),
-    unstage: paths => run(getBridge()?.git.unstage(paths)),
-    restore: paths => run(getBridge()?.git.restore(paths)),
+    initRepository: () => run(gitBridge()?.init()),
+    stage: paths => run(gitBridge()?.stage(paths)),
+    unstage: paths => run(gitBridge()?.unstage(paths)),
+    restore: paths => run(gitBridge()?.restore(paths)),
 
     commit: async () => {
       const { message, amend } = get()
-      await run(getBridge()?.git.commit(message, amend))
+      const answered = await runAnswering(gitBridge()?.commit(message, amend))
 
       // Emptied only where the commit actually landed. A message cleared after a refusal — no
       // identity configured is the one everybody meets first — would lose what was typed at the
       // exact moment the user has to fix something and try again.
-      if (get().repository.kind === 'ready') set({ message: '', amend: false })
+      //
+      // `answered` and not the state alone: a channel that fails outright leaves the repository
+      // as it was, and it was `ready` — so the message was thrown away for a commit that never
+      // reached git at all.
+      if (answered && get().repository.kind === 'ready') set({ message: '', amend: false })
     },
 
-    branches: async () => (await getBridge()?.git.branches()) ?? [],
-    createBranch: name => run(getBridge()?.git.createBranch(name)),
-    checkout: name => run(getBridge()?.git.checkout(name)),
+    branches: async () => (await gitBridge()?.branches()) ?? [],
+    createBranch: name => run(gitBridge()?.createBranch(name)),
+    checkout: name => run(gitBridge()?.checkout(name)),
 
     writeMessage: message => set({ message }),
     setAmend: amend => set({ amend }),
 
     readHistory: async more => {
-      const held = more ? get().commits : []
-      const page = (await getBridge()?.git.log(HISTORY_PAGE, held.length)) ?? []
+      // One page at a time. Two clicks on "show more" inside one round trip both read the same
+      // `commits`, both ask git to skip the same number, and both append the same sixty — which
+      // hands the list duplicate keys and the graph a history holding each commit twice.
+      if (paging) return
+      paging = true
 
-      set({
-        commits: [...held, ...page],
-        // A page that came back short is the end. Asking again to find out would cost a command
-        // per scroll for the rest of the session, on a history that is not going to grow.
-        historyEnded: page.length < HISTORY_PAGE,
-      })
+      try {
+        const held = more ? get().commits : []
+        const page = (await gitBridge()?.log(HISTORY_PAGE, held.length)) ?? []
+
+        set({
+          commits: [...held, ...page],
+          // A page that came back short is the end. Asking again to find out would cost a command
+          // per scroll for the rest of the session, on a history that is not going to grow.
+          historyEnded: page.length < HISTORY_PAGE,
+        })
+      } finally {
+        paging = false
+      }
     },
 
     pick: async hash => {
@@ -207,7 +252,7 @@ export const useGit = create<GitState>()((set, get) => {
       set({ picked: hash, pickedFiles: [] })
       if (hash === null) return
 
-      const files = (await getBridge()?.git.commitFiles(hash)) ?? []
+      const files = (await gitBridge()?.commitFiles(hash)) ?? []
 
       // Only if it is still the one being looked at. Two quick clicks race, and the slower answer
       // would otherwise land last and fill the row that is no longer picked.
@@ -217,7 +262,7 @@ export const useGit = create<GitState>()((set, get) => {
     compare: async (path, commit) => {
       set({ compared: { path, commit }, diff: null })
 
-      const diff = (await getBridge()?.git.diff(path, commit)) ?? { kind: 'empty' }
+      const diff = (await gitBridge()?.diff(path, commit)) ?? { kind: 'empty' }
 
       // The same race as `pick`, and it bites harder here: a diff is the slowest thing git is
       // asked for, so a second file clicked while the first is still out is the ordinary case.
@@ -228,38 +273,41 @@ export const useGit = create<GitState>()((set, get) => {
     stopComparing: () => set({ compared: null, diff: null }),
 
     readRemotes: async () => {
-      const [first] = (await getBridge()?.git.remotes()) ?? []
+      const [first] = (await gitBridge()?.remotes()) ?? []
       set({ remote: first ?? null })
     },
 
     addRemote: async (name, url) => {
-      await run(getBridge()?.git.addRemote(name, url))
+      await run(gitBridge()?.addRemote(name, url))
       await get().readRemotes()
     },
-    fetch: () => run(getBridge()?.git.fetch()),
-    pull: () => run(getBridge()?.git.pull()),
-    push: setUpstream => run(getBridge()?.git.push(setUpstream)),
+    fetch: () => reachOut(() => gitBridge()?.fetch()),
+    pull: () => reachOut(() => gitBridge()?.pull()),
+    push: setUpstream => reachOut(() => gitBridge()?.push(setUpstream)),
+    retryRemote: async () => {
+      await lastRemote?.()
+    },
 
-    resolve: (paths, side) => run(getBridge()?.git.resolve(paths, side)),
-    abortMerge: () => run(getBridge()?.git.abortMerge()),
-    stash: message => run(getBridge()?.git.stash(message)),
-    stashes: async () => (await getBridge()?.git.stashes()) ?? [],
-    stashPop: index => run(getBridge()?.git.stashPop(index)),
-    stashDrop: index => run(getBridge()?.git.stashDrop(index)),
+    resolve: (paths, side) => run(gitBridge()?.resolve(paths, side)),
+    abortMerge: () => run(gitBridge()?.abortMerge()),
+    stash: message => run(gitBridge()?.stash(message)),
+    stashes: async () => (await gitBridge()?.stashes()) ?? [],
+    stashPop: index => run(gitBridge()?.stashPop(index)),
+    stashDrop: index => run(gitBridge()?.stashDrop(index)),
 
     tag: async (name, commit) => {
-      await run(getBridge()?.git.tag(name, commit))
+      await run(gitBridge()?.tag(name, commit))
       // The log carries the names pointing at each commit, so a tag that is not read back is a
       // tag the user made and cannot see.
       await get().readHistory(false)
     },
 
-    hasCredentials: async host => (await getBridge()?.git.hasCredentials(host)) ?? false,
+    hasCredentials: async host => (await gitBridge()?.hasCredentials(host)) ?? false,
     setCredentials: async (host, user, token) => {
-      await getBridge()?.git.setCredentials(host, user, token)
+      await gitBridge()?.setCredentials(host, user, token)
     },
     clearCredentials: async host => {
-      await getBridge()?.git.clearCredentials(host)
+      await gitBridge()?.clearCredentials(host)
     },
   }
 })

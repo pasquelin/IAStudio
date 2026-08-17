@@ -36,7 +36,6 @@ export function GitBranchButton({ status }: { status: GitStatus }) {
         label={t('git.newBranch')}
         placeholder={t('git.newBranchPlaceholder')}
         accepts={isRefName}
-        disabled={busy}
         onSubmit={name => {
           void createBranch(name)
           setNaming(false)

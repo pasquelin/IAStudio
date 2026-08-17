@@ -89,6 +89,24 @@ export function parseOptionalHash(value: unknown): string | null {
 }
 
 /**
+ * Where the BYTES of a file are read from, which is a wider question than which commit: the
+ * picture comparison asks for `HEAD` and for a commit's first parent, both spelled the way git
+ * spells them.
+ *
+ * Two spellings beyond a hash and no more, each written out here rather than allowed as a class:
+ * git's revision language has a dozen suffixes that reach into the history, and none of the rest
+ * has a caller. The door `commitHash` closes stays closed — nothing here can begin with `-`.
+ */
+const blobRef = z
+  .string()
+  .max(65)
+  .refine(value => /^(HEAD|[0-9a-fA-F]{4,64})\^?$/.test(value))
+
+export function parseBlobRef(value: unknown): string | null {
+  return value === null ? null : blobRef.parse(value)
+}
+
+/**
  * How much of the history to ask for, and how far in.
  *
  * Whole numbers, and bounded on both: they are interpolated into `--max-count=` and `--skip=`,

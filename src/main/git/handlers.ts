@@ -14,6 +14,7 @@ import {
   parseGitPaths,
   parseHost,
   parseLogPage,
+  parseBlobRef,
   parseOptionalHash,
   parseRefName,
   parseRemoteUrl,
@@ -79,7 +80,7 @@ export function registerGitHandlers({
     service.diff(parseGitPath(path), parseOptionalHash(commit)),
   )
   handle(CHANNELS.gitBytes, (_event, path, ref) =>
-    service.bytes(parseGitPath(path), parseOptionalHash(ref)),
+    service.bytes(parseGitPath(path), parseBlobRef(ref)),
   )
   handle(CHANNELS.gitRemotes, () => service.remotes())
   handle(CHANNELS.gitAddRemote, (_event, name, url) =>

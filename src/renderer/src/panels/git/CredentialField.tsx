@@ -27,7 +27,7 @@ export function CredentialField({ host }: { host: string }) {
   const [held, setHeld] = useState(false)
   const busy = useGit(state => state.busy)
   const setCredentials = useGit(state => state.setCredentials)
-  const push = useGit(state => state.push)
+  const retryRemote = useGit(state => state.retryRemote)
 
   // Whether one is already held changes what this screen MEANS: a refusal with no token is a
   // token that was never given, a refusal with one is a token that is wrong — and the second is
@@ -41,9 +41,11 @@ export function CredentialField({ host }: { host: string }) {
 
     void setCredentials(host, user.trim(), token).then(() => {
       setToken('')
-      // Straight back to what was refused. The refusal is the only reason this field is on
-      // screen, so leaving the user to find the button again would be leaving the job half done.
-      return push(false)
+      // Straight back to what was refused — the very command, not a push made up here. The
+      // refusal is the only reason this field is on screen, so leaving the user to find the
+      // button again would be leaving the job half done; and the send that meets a refusal is
+      // most often the FIRST push of a branch, which carries `--set-upstream` and fails without.
+      return retryRemote()
     })
   }
 

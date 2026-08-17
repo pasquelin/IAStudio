@@ -104,15 +104,6 @@
       "untracked": "Never recorded",
       "conflicted": "In conflict"
     },
-    "changeBadge": {
-      "added": "A",
-      "modified": "M",
-      "deleted": "D",
-      "renamed": "R",
-      "copied": "C",
-      "untracked": "?",
-      "conflicted": "U"
-    },
     "failure": {
       "binaryMissing": "Git cannot be found on this computer.",
       "notARepository": "This folder does not follow its versions.",
