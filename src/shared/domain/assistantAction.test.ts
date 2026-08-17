@@ -51,6 +51,22 @@ describe('an input, checked against the fields that declare it', () => {
     expect(validatesInput(fields, { opacity: 2 })).toBe(false)
   })
 
+  /**
+   * A required field may not be present-but-empty, and that lives here rather than in the
+   * handlers: it was one `=== ''` and one `length === 0` per action before, ninety times over,
+   * and an action that forgot either had nothing behind it.
+   */
+  it('refuses a required text that is blank, and a required list that is empty', () => {
+    expect(
+      validatesInput([field({ key: 'name', kind: 'text', required: true })], { name: ' ' }),
+    ).toBe(false)
+    expect(validatesInput([field({ key: 'name', kind: 'text' })], { name: '' })).toBe(true)
+
+    const many = [field({ key: 'paths', kind: 'text', required: true, repeated: true })]
+    expect(validatesInput(many, { paths: [] })).toBe(false)
+    expect(validatesInput(many, { paths: ['a'] })).toBe(true)
+  })
+
   it('takes a list only where the field says it repeats, and checks each item', () => {
     const one = [field({ key: 'paths', kind: 'text' })]
     const many = [field({ key: 'paths', kind: 'text', repeated: true })]

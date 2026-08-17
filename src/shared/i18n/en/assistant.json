@@ -359,6 +359,7 @@
       "notSubmitted": "The generation did not go out.",
       "badInput": "The parameters given do not suit this action.",
       "noBridge": "The studio is not answering.",
+      "noProject": "No project is open, and these paths are relative to one.",
       "noConfirmer": "That action needs a yes, and no window was there to give one.",
       "declined": "You turned that action down.",
       "noWindow": "No studio window was in front to run that action.",
@@ -467,7 +468,7 @@
     "confirm": {
       "credits": "This action will spend {{cost}}.",
       "unknownCost": "This action will spend creative units. The studio could not estimate how many, and does not invent a figure.",
-      "files": "This action will change files in your project folder. It costs no creative units, and the Explorer can undo it.",
+      "files": "This action will change what your project holds — files, or the assets in its library. It costs no creative units.",
       "asset": "This action will upload an image, which then stays in your library. It costs no creative units.",
       "yes": "Allow",
       "yesHint": "Runs the action above, and commits what it commits",

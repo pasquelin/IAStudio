@@ -6,7 +6,6 @@ import {
 } from './assistantAction'
 import { ASSET_ACTIONS } from './assetActions'
 import { CANVAS_ACTIONS } from './canvasActions'
-import { type CommandId } from './command'
 import { CORE_ACTIONS } from './coreActions'
 import { FILE_ACTIONS } from './fileActions'
 import { GIT_ACTIONS } from './gitActions'
@@ -64,35 +63,7 @@ export const DEFAULT_ASSISTANT_MODEL: AssistantModel = 'claude-haiku-4-5'
 export const INSTRUCTION_MAX = 10_000
 export const HISTORY_MAX = 10
 
-/**
- * The commands that upload a picture before they prepare anything.
- *
- * Not the same list as "the AI edits": `prepareEdit` prepares and stops — the form is never
- * short-circuited and nothing is billed until the user submits (invariant 5). What it does do,
- * every time, is flatten the canvas and upload it, and the code says why in as many words: "an
- * upload is a permanent asset in the user's library".
- */
-const UPLOADING_COMMANDS: readonly CommandId[] = [
-  'canvas.regenerate',
-  'canvas.cutout',
-  'canvas.enlarge',
-  'canvas.vectorize',
-  'canvas.extend',
-]
-
-/**
- * What `command.run` engages, which depends entirely on the command it is pointed at.
- *
- * The one place in the registry where a level is derived rather than declared, and therefore the
- * one guarded command by command: a miss here is a permanent asset created without a yes, and
- * nothing downstream would catch it.
- */
-export function commitmentOfCommand(id: string): ActionCommitment {
-  // A `string` for the same reason `commandDescriptor` takes one: what asks holds a name, not a
-  // narrowed id. An id nothing declares rates as `none`, which is the level of a call that will
-  // be refused before it runs anyway.
-  return UPLOADING_COMMANDS.some(uploading => uploading === id) ? 'asset' : 'none'
-}
+export { commitmentOfCommand } from './coreActions'
 
 /**
  * Every action the studio publishes, one family after another.
@@ -160,9 +131,8 @@ export function commitmentOfCall(
   name: ActionName,
   input: Record<string, unknown>,
 ): ActionCommitment {
-  if (name === 'generator.submit') return 'credits'
-  if (name !== 'command.run') return assistantAction(name)?.commitment ?? 'none'
+  const action = assistantAction(name)
+  if (!action) return 'none'
 
-  const id = input.command
-  return typeof id === 'string' ? commitmentOfCommand(id) : 'none'
+  return action.raises?.(input) ?? action.commitment
 }

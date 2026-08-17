@@ -2,10 +2,10 @@ import {
   assistantAction,
   commitmentOfCall,
   needsConfirmation,
+  refused,
   validatesInput,
   type ActionName,
   type ActionOutcome,
-  type ActionRefusal,
 } from '@shared/domain/assistant'
 import { getBridge } from '@/services/bridge'
 import type { ActionHandlers } from './actionHandler'
@@ -41,27 +41,28 @@ const HANDLERS: ActionHandlers = {
   ...SETTINGS_HANDLERS,
 }
 
-const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })
-
 /** Every name the table answers, so a test can compare it with the registry. */
 export function handledActions(): readonly string[] {
   return Object.keys(HANDLERS)
 }
 
 /**
- * Runs one action, its input already agreed to fit the registry.
+ * Runs one action, having checked its input against the fields that declare it.
  *
- * Kept exported and unconfirmed for the store that replays a plan step by step, and for the
- * suite. Everything arriving from outside this window goes through `runConfirmedAction`.
+ * The check lives HERE rather than one level up, and that is what lets every handler read its
+ * input plainly: `runAction` is exported, so a gate on the confirmed path alone would be a gate
+ * with a way around it. Nothing else does the work either — the IPC boundary checks the
+ * envelope, the reply parser checks the NAME, and the MCP server passes `params.arguments`
+ * through untouched, its `additionalProperties: false` being a promise to the client rather than
+ * an enforcement.
  */
 export async function runAction(
   name: ActionName,
   input: Record<string, unknown>,
 ): Promise<ActionOutcome> {
+  const action = assistantAction(name)
   const handler = HANDLERS[name]
-  // Not reachable through either door — both check the registry first — and answered rather
-  // than thrown all the same: the client on the other end waits two minutes for a reply.
-  if (!handler) return refused('badInput')
+  if (!action || !handler || !validatesInput(action.fields, input)) return refused('badInput')
 
   return handler(input)
 }
@@ -79,15 +80,8 @@ export async function runConfirmedAction(
   name: ActionName,
   input: Record<string, unknown>,
 ): Promise<ActionOutcome> {
-  /**
-   * The one place an input is checked, and the reason handlers may read theirs plainly.
-   *
-   * Nothing upstream does it: the IPC boundary checks the envelope, the reply parser checks that
-   * the action NAME is declared, and the MCP server passes `params.arguments` through untouched
-   * — its `additionalProperties: false` is a promise to the client, not an enforcement. What
-   * fills these values is a language model, the one caller in the studio that answers something
-   * plausible instead of failing.
-   */
+  // Checked before the question as well as inside `runAction`: a bad input asked about first
+  // would have the person approve a spend that was never going to happen.
   const action = assistantAction(name)
   if (!action || !validatesInput(action.fields, input)) return refused('badInput')
 

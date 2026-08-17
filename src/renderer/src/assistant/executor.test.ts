@@ -107,10 +107,16 @@ describe('running a command', () => {
     stop()
   })
 
-  it('refuses a command nothing declares', async () => {
+  /**
+   * `badInput` and not `unknownCommand`, because the field closes over every declared id: the
+   * schema promised the client an enum, so a value outside it never reaches the handler. The
+   * handler keeps its own `unknownCommand` all the same — it is what would answer the day the
+   * registry and the field parted company.
+   */
+  it('refuses a command nothing declares, at the schema rather than at the surface', async () => {
     const outcome = await runAction('command.run', { command: 'canvas.summonADragon' })
 
-    expect(outcome).toEqual({ ok: false, refusal: 'unknownCommand' })
+    expect(outcome).toEqual({ ok: false, refusal: 'badInput' })
   })
 
   // The catalogue offers these to the model, so refusing them all was the assistant announcing

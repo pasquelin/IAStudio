@@ -359,6 +359,7 @@
       "notSubmitted": "La génération n’est pas partie.",
       "badInput": "Les paramètres fournis ne conviennent pas à cette action.",
       "noBridge": "Le studio ne répond pas.",
+      "noProject": "Aucun projet n’est ouvert, et ces chemins sont relatifs à un projet.",
       "noConfirmer": "Cette action demande un accord, et aucune fenêtre n’était là pour le donner.",
       "declined": "Vous avez refusé cette action.",
       "noWindow": "Aucune fenêtre du studio n’était au premier plan pour exécuter cette action.",
@@ -467,7 +468,7 @@
     "confirm": {
       "credits": "Cette action va dépenser {{cost}}.",
       "unknownCost": "Cette action va dépenser des unités créatives. Le studio n’a pas pu en estimer le montant, et n’en invente pas.",
-      "files": "Cette action va modifier des fichiers de votre dossier de projet. Elle ne coûte aucune unité créative, et l’Explorateur peut l’annuler.",
+      "files": "Cette action va modifier ce que porte votre projet — des fichiers, ou les assets de sa bibliothèque. Elle ne coûte aucune unité créative.",
       "asset": "Cette action va téléverser une image, qui restera dans votre bibliothèque. Elle ne coûte aucune unité créative.",
       "yes": "Autoriser",
       "yesHint": "Lance l’action décrite au-dessus, et engage ce qu’elle engage",

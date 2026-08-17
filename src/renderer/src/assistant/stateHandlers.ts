@@ -1,4 +1,4 @@
-import type { ActionOutcome, ActionRefusal } from '@shared/domain/assistant'
+import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { scopeOfWorkspace } from '@shared/domain/command'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { closeDocument, documentIsDirty } from '@/app/documentIo'
@@ -9,18 +9,14 @@ import { useDocuments } from '@/stores/documents'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
-import type { ActionHandlers } from './actionHandler'
+import { withBridge, type ActionHandlers } from './actionHandler'
 import { numberOf, textOf } from './actionInputs'
 
 /**
- * What the studio is, read from the stores the screen reads.
- *
- * Nothing here computes a second answer: the surface comes from `toolSurface`, the dirty mark
- * from the same predicate the tab bullet uses. A client and the person in front of the machine
- * have to be looking at one studio, not two descriptions of one.
+ * What the studio is, read from the stores the screen reads. Nothing here computes a second
+ * answer — the surface comes from `toolSurface`, the dirty mark from the predicate the tab
+ * bullet uses: a client and the person at the machine must see one studio, not two.
  */
-
-const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })
 
 const summaryOf = (document: DocumentDescriptor, activeId: string | null) => ({
   id: document.id,
@@ -97,31 +93,28 @@ async function openByPath(input: Record<string, unknown>): Promise<ActionOutcome
   return { ok: true, data: { documentId: document.id } }
 }
 
-function activate(input: Record<string, unknown>): ActionOutcome {
-  const documentId = textOf(input, 'documentId')
-  const state = useDocuments.getState()
-  if (documentId === null || !state.documents[documentId]) return refused('badInput')
-
-  state.activate(documentId)
-  return { ok: true }
+/** The open document a call names, or nothing — every action of this family takes one by id. */
+function named(input: Record<string, unknown>): string | null {
+  const documentId = textOf(input, 'documentId') ?? ''
+  return useDocuments.getState().documents[documentId] ? documentId : null
 }
 
 async function close(input: Record<string, unknown>): Promise<ActionOutcome> {
-  const documentId = textOf(input, 'documentId')
-  if (documentId === null || !useDocuments.getState().documents[documentId]) {
-    return refused('badInput')
-  }
+  const documentId = named(input)
+  if (documentId === null) return refused('badInput')
 
-  // The same path the tab's cross takes, question about unsaved work included. A second one that
-  // skipped the question would be the only way in the studio to lose work silently.
+  /**
+   * The same path the tab's cross takes, question about unsaved work included — and the reason
+   * this action commits `none`: `closeDocument` raises the only question that knows whether
+   * there is anything at stake, so a second one before it would ask twice for one gesture.
+   */
   return (await closeDocument(documentId)) ? { ok: true } : refused('declined')
 }
 
 async function rename(input: Record<string, unknown>): Promise<ActionOutcome> {
-  const documentId = textOf(input, 'documentId')
-  const title = textOf(input, 'title')
-  if (documentId === null || title === null) return refused('badInput')
-  if (!useDocuments.getState().documents[documentId]) return refused('badInput')
+  const documentId = named(input)
+  const title = textOf(input, 'title') ?? ''
+  if (documentId === null) return refused('badInput')
 
   const failure = await useDocuments.getState().rename(documentId, title)
   if (failure) {
@@ -132,20 +125,23 @@ async function rename(input: Record<string, unknown>): Promise<ActionOutcome> {
   return { ok: true }
 }
 
-async function recentActivity(input: Record<string, unknown>): Promise<ActionOutcome> {
-  const bridge = getBridge()
-  if (!bridge) return refused('noBridge')
-
-  const limit = numberOf(input, 'limit')
-  return { ok: true, data: await bridge.activity.read(limit === null ? {} : { limit }) }
-}
-
 export const STATE_HANDLERS: ActionHandlers = {
   'studio.state': studioState,
   'documents.list': listDocuments,
   'document.open': openByPath,
-  'document.activate': activate,
   'document.close': close,
   'document.rename': rename,
-  'activity.recent': recentActivity,
+
+  'document.activate': input => {
+    const documentId = named(input)
+    if (documentId === null) return refused('badInput')
+
+    useDocuments.getState().activate(documentId)
+    return { ok: true }
+  },
+
+  'activity.recent': input => {
+    const limit = numberOf(input, 'limit')
+    return withBridge(bridge => bridge.activity.read(limit === null ? {} : { limit }))
+  },
 }

@@ -1,11 +1,9 @@
-import { isRecord } from '@shared/guards'
+import { isRecord, readBoolean } from '@shared/guards'
 
 /**
- * Reading an action's input, after `validatesInput` has agreed it fits the registry.
- *
- * The checks are therefore narrowing rather than guarding: the type is known, and what these
- * answer for an absent optional field is the caller's default. They stay total — a handler that
- * threw here would cross the boundary as a bare `badInput` and tell the client nothing.
+ * Reading an action's input, after `validatesInput` has agreed it fits the registry. The checks
+ * are therefore narrowing rather than guarding, and they stay total: a handler that threw here
+ * would cross the boundary as a bare `badInput` and tell the client nothing.
  */
 
 export function textOf(input: Record<string, unknown>, key: string): string | null {
@@ -18,9 +16,8 @@ export function numberOf(input: Record<string, unknown>, key: string): number | 
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
-export function boolOf(input: Record<string, unknown>, key: string, fallback = false): boolean {
-  const value = input[key]
-  return typeof value === 'boolean' ? value : fallback
+export function boolOf(input: Record<string, unknown>, key: string): boolean {
+  return readBoolean(input, key, false)
 }
 
 export function oneOf<T extends string>(

@@ -1,4 +1,4 @@
-import { action, type AssistantAction } from './assistantAction'
+import { action, type ActionField, type AssistantAction } from './assistantAction'
 
 /**
  * The project folder, as something a program can walk and change.
@@ -12,6 +12,21 @@ import { action, type AssistantAction } from './assistantAction'
  * system dialog nobody outside the machine can fill, so a client that called them would hang the
  * studio on a modal — these take the path instead.
  */
+const PATHS: ActionField = {
+  key: 'paths',
+  kind: 'text',
+  labelKey: 'assistant.fields.filePaths',
+  required: true,
+  repeated: true,
+}
+
+const FOLDER: ActionField = {
+  key: 'folder',
+  kind: 'text',
+  labelKey: 'assistant.fields.folderPath',
+  required: true,
+}
+
 export const FILE_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'project.open',
@@ -61,16 +76,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.filesMove.description',
     commitment: 'files',
     reach: 'mcp',
-    fields: [
-      {
-        key: 'paths',
-        kind: 'text',
-        labelKey: 'assistant.fields.filePaths',
-        required: true,
-        repeated: true,
-      },
-      { key: 'folder', kind: 'text', labelKey: 'assistant.fields.folderPath', required: true },
-    ],
+    fields: [PATHS, FOLDER],
   }),
   action({
     // Adds rather than destroys, so no question — see the note on `files` in `assistantAction`.
@@ -79,16 +85,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.filesCopy.description',
     commitment: 'none',
     reach: 'mcp',
-    fields: [
-      {
-        key: 'paths',
-        kind: 'text',
-        labelKey: 'assistant.fields.filePaths',
-        required: true,
-        repeated: true,
-      },
-      { key: 'folder', kind: 'text', labelKey: 'assistant.fields.folderPath', required: true },
-    ],
+    fields: [PATHS, FOLDER],
   }),
   action({
     name: 'files.duplicate',
@@ -96,15 +93,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.filesDuplicate.description',
     commitment: 'none',
     reach: 'mcp',
-    fields: [
-      {
-        key: 'paths',
-        kind: 'text',
-        labelKey: 'assistant.fields.filePaths',
-        required: true,
-        repeated: true,
-      },
-    ],
+    fields: [PATHS],
   }),
   action({
     name: 'files.trash',
@@ -112,15 +101,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.filesTrash.description',
     commitment: 'files',
     reach: 'mcp',
-    fields: [
-      {
-        key: 'paths',
-        kind: 'text',
-        labelKey: 'assistant.fields.filePaths',
-        required: true,
-        repeated: true,
-      },
-    ],
+    fields: [PATHS],
   }),
   action({
     name: 'file.rename',
@@ -148,7 +129,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     reach: 'mcp',
     fields: [
-      { key: 'folder', kind: 'text', labelKey: 'assistant.fields.folderPath', required: true },
+      FOLDER,
       { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true },
     ],
   }),

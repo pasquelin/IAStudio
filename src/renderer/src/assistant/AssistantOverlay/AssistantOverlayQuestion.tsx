@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { assistantAction } from '@shared/domain/assistant'
+import { assistantAction, confirmKey } from '@shared/domain/assistant'
 import { Button } from '@/design/Button'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant } from '@/stores/assistant'
@@ -18,9 +18,12 @@ export function AssistantOverlayQuestion({ request }: { request: ConfirmRequest 
   const action = assistantAction(request.action)
   const answer = useAssistant(state => state.answer)
 
+  /**
+   * Keyed off the commitment rather than branched on it, so a fifth level cannot fall silently
+   * into the wrong sentence — which a chain of `if` ending on credits would let it do.
+   */
   const reason = (): string => {
-    if (request.commitment === 'files') return t('assistant.confirm.files')
-    if (request.commitment === 'asset') return t('assistant.confirm.asset')
+    if (request.commitment !== 'credits') return t(confirmKey(request.commitment))
     if (typeof request.estimate !== 'number') return t('assistant.confirm.unknownCost')
 
     return t('assistant.confirm.credits', {

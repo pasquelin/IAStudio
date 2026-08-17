@@ -1,4 +1,5 @@
-import type { ActionOutcome, ActionRefusal } from '@shared/domain/assistant'
+import { refused, type ActionOutcome } from '@shared/domain/assistant'
+import { readColor } from '@shared/domain/color'
 import type { Vector3 } from '@shared/domain/scene'
 import {
   addNode,
@@ -11,45 +12,53 @@ import {
   setSelection,
   setTransform,
 } from '@/engines/scene/commands'
-import { createNodeOf, modelNode } from '@/engines/scene/nodeFactory'
-import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import type { Command } from '@/engines/core/history'
+import { createNodeOf, modelNode } from '@/engines/scene/nodeFactory'
+import { nodeById, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import type { ActionHandlers } from './actionHandler'
+import { type ActionHandlers } from './actionHandler'
 import { boolOf, numberOf, textOf, textsOf } from './actionInputs'
 
 /**
  * The scene graph, driven by value.
  *
- * Every node enters through `createNodeOf`, the same factory the Add menu and the native menu
- * go through — a second way of building a box is a second set of defaults to keep in step.
+ * Every node enters through `createNodeOf`, the factory the Add menu and the native menu go
+ * through — a second way of building a box is a second set of defaults to keep in step.
  */
 
-const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })
-
-function sceneId(): string | null {
-  return activeSceneId(useDocuments.getState())
+/** The scene in front and its state, or nothing — which reads as `wrongSurface`. */
+function mounted(): { documentId: string; state: SceneState } | null {
+  const documentId = activeSceneId(useDocuments.getState())
+  return documentId === null
+    ? null
+    : { documentId, state: sceneOf(useScenes.getState(), documentId) }
 }
 
-function stateOf(documentId: string): SceneState {
-  return sceneOf(useScenes.getState(), documentId)
+function edit(build: () => Command<SceneState>): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
+
+  useScenes.getState().runCommand(open.documentId, build())
+  return { ok: true }
 }
 
-function findNode(documentId: string, nodeId: string): SceneNode | null {
-  return stateOf(documentId).nodes.find(node => node.id === nodeId) ?? null
-}
-
-/** Runs one command against the scene in front, the node it names having been found first. */
-function edit(
-  nodeId: string | null,
-  build: (documentId: string) => Command<SceneState>,
+/**
+ * The same, for one named node, found before anything runs — a command whose node is gone
+ * answers by returning the state untouched, so every miss would otherwise be reported as done.
+ */
+function editNode(
+  input: Record<string, unknown>,
+  build: (node: SceneNode) => Command<SceneState> | null,
 ): ActionOutcome {
-  const documentId = sceneId()
-  if (!documentId) return refused('wrongSurface')
-  if (nodeId !== null && !findNode(documentId, nodeId)) return refused('badInput')
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
 
-  useScenes.getState().runCommand(documentId, build(documentId))
+  const node = nodeById(open.state, textOf(input, 'nodeId') ?? '')
+  const command = node && build(node)
+  if (!command) return refused('badInput')
+
+  useScenes.getState().runCommand(open.documentId, command)
   return { ok: true }
 }
 
@@ -62,26 +71,19 @@ function vectorOf(input: Record<string, unknown>, of: string, current: Vector3):
   }
 }
 
-/** `#rrggbb` in, the same string out — the descriptors store colours as CSS, not as packed ints. */
-function colourOf(input: Record<string, unknown>): string | null {
-  const written = textOf(input, 'color')
-  return written !== null && /^#[0-9a-f]{6}$/i.test(written) ? written : null
-}
-
 function readState(): ActionOutcome {
-  const documentId = sceneId()
-  if (!documentId) return refused('wrongSurface')
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
 
-  const state = stateOf(documentId)
   return {
     ok: true,
     data: {
-      documentId,
-      selectedIds: state.selectedIds,
-      environment: state.environment,
+      documentId: open.documentId,
+      selectedIds: open.state.selectedIds,
+      environment: open.state.environment,
       // The flat list the state itself holds — the tree is derived from `parentId`, and handing
       // one over would be a second shape of the same thing for a client to walk.
-      nodes: state.nodes.map(node => ({
+      nodes: open.state.nodes.map(node => ({
         id: node.id,
         name: node.name,
         type: node.type,
@@ -96,150 +98,108 @@ function readState(): ActionOutcome {
   }
 }
 
-function add(input: Record<string, unknown>): ActionOutcome {
-  const kind = textOf(input, 'kind')
-  if (kind === null) return refused('badInput')
-
-  const node = createNodeOf(kind)
-  // A kind no registry declares. The factory answers `null` rather than throwing, so this is
-  // where it becomes a refusal instead of a node that never arrived.
+/** Adds a node the caller built, answering the id it was born with. */
+function place(node: SceneNode | null): ActionOutcome {
   if (!node) return refused('badInput')
 
-  const placed: SceneNode = {
+  const outcome = edit(() => addNode(node))
+  return outcome.ok ? { ok: true, data: { nodeId: node.id } } : outcome
+}
+
+function add(input: Record<string, unknown>): ActionOutcome {
+  // The factory answers `null` for a kind no registry declares, which is where it becomes a
+  // refusal rather than a node that never arrived.
+  const node = createNodeOf(textOf(input, 'kind') ?? '')
+  if (!node) return refused('badInput')
+
+  return place({
     ...node,
     name: textOf(input, 'name') ?? node.name,
     transform: {
       ...node.transform,
       position: vectorOf(input, 'position', node.transform.position),
     },
-  }
-
-  const outcome = edit(null, () => addNode(placed))
-  return outcome.ok ? { ok: true, data: { nodeId: placed.id } } : outcome
-}
-
-function addModel(input: Record<string, unknown>): ActionOutcome {
-  const assetId = textOf(input, 'assetId')
-  if (assetId === null) return refused('badInput')
-
-  const node = modelNode(assetId, textOf(input, 'name') ?? assetId)
-  const outcome = edit(null, () => addNode(node))
-  return outcome.ok ? { ok: true, data: { nodeId: node.id } } : outcome
-}
-
-function transform(input: Record<string, unknown>): ActionOutcome {
-  const nodeId = textOf(input, 'nodeId')
-  const documentId = sceneId()
-  if (nodeId === null) return refused('badInput')
-  if (!documentId) return refused('wrongSurface')
-
-  const current = findNode(documentId, nodeId)?.transform
-  if (!current) return refused('badInput')
-
-  return edit(nodeId, () =>
-    setTransform(nodeId, {
-      position: vectorOf(input, 'position', current.position),
-      // Radians in the state, and radians here: unlike a layer's single angle, three Euler
-      // angles in degrees would have to be converted back for every read of `scene.state`.
-      rotation: vectorOf(input, 'rotation', current.rotation),
-      scale: vectorOf(input, 'scale', current.scale),
-    }),
-  )
-}
-
-function material(input: Record<string, unknown>): ActionOutcome {
-  const nodeId = textOf(input, 'nodeId')
-  const documentId = sceneId()
-  if (nodeId === null) return refused('badInput')
-  if (!documentId) return refused('wrongSurface')
-
-  const node = findNode(documentId, nodeId)
-  // Text wears the same material as a mesh, and `setMeshMaterial` writes only a mesh's — the
-  // two are separate commands, so a text node here would be a silent no-op.
-  if (node?.type !== 'mesh') return refused('badInput')
-
-  const colour = colourOf(input)
-  return edit(nodeId, () =>
-    setMeshMaterial(nodeId, {
-      ...node.material,
-      ...(colour === null ? {} : { color: colour }),
-      roughness: numberOf(input, 'roughness') ?? node.material.roughness,
-      metalness: numberOf(input, 'metalness') ?? node.material.metalness,
-    }),
-  )
-}
-
-function light(input: Record<string, unknown>): ActionOutcome {
-  const nodeId = textOf(input, 'nodeId')
-  const documentId = sceneId()
-  if (nodeId === null) return refused('badInput')
-  if (!documentId) return refused('wrongSurface')
-
-  const node = findNode(documentId, nodeId)
-  if (node?.type !== 'light') return refused('badInput')
-
-  const colour = colourOf(input)
-  const intensity = numberOf(input, 'intensity')
-  return edit(nodeId, () =>
-    setLight(nodeId, {
-      ...node.light,
-      // A hemisphere light has no `color` at all — two of its own instead — so the field is
-      // written only where the kind carries one.
-      ...(colour !== null && 'color' in node.light ? { color: colour } : {}),
-      ...(intensity === null ? {} : { intensity }),
-    }),
-  )
+  })
 }
 
 function select(input: Record<string, unknown>): ActionOutcome {
-  const documentId = sceneId()
-  if (!documentId) return refused('wrongSurface')
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
 
+  const known = new Set(open.state.nodes.map(node => node.id))
   const nodeIds = textsOf(input, 'nodeIds')
-  const known = stateOf(documentId).nodes.map(node => node.id)
-  if (nodeIds.some(id => !known.includes(id))) return refused('badInput')
+  if (nodeIds.some(id => !known.has(id))) return refused('badInput')
 
   // Selection is not a command: it stays out of the history, so `replace` writes the state.
-  const store = useScenes.getState()
-  store.replace(documentId, setSelection(stateOf(documentId), nodeIds))
+  useScenes.getState().replace(open.documentId, setSelection(open.state, nodeIds))
   return { ok: true }
 }
 
 function reparent(input: Record<string, unknown>): ActionOutcome {
-  const nodeId = textOf(input, 'nodeId')
-  const parentId = textOf(input, 'parentId')
-  const documentId = sceneId()
-  if (nodeId === null) return refused('badInput')
-  if (!documentId) return refused('wrongSurface')
-  if (parentId !== null && !findNode(documentId, parentId)) return refused('badInput')
+  const open = mounted()
+  if (!open) return refused('wrongSurface')
 
-  return edit(nodeId, () => reparentNode(nodeId, parentId))
+  const parentId = textOf(input, 'parentId')
+  if (parentId !== null && !nodeById(open.state, parentId)) return refused('badInput')
+
+  return editNode(input, node => reparentNode(node.id, parentId))
 }
 
 export const SCENE_HANDLERS: ActionHandlers = {
   'scene.state': readState,
   'node.add': add,
-  'node.addModel': addModel,
-  'node.remove': input => {
-    const nodeId = textOf(input, 'nodeId')
-    return nodeId === null ? refused('badInput') : edit(nodeId, () => removeNode(nodeId))
-  },
-  'node.rename': input => {
-    const nodeId = textOf(input, 'nodeId')
-    const name = textOf(input, 'name')
-    return nodeId === null || name === null
-      ? refused('badInput')
-      : edit(nodeId, () => renameNode(nodeId, name))
-  },
-  'node.transform': transform,
-  'node.visible': input => {
-    const nodeId = textOf(input, 'nodeId')
-    return nodeId === null
-      ? refused('badInput')
-      : edit(nodeId, () => setNodeVisible(nodeId, boolOf(input, 'visible')))
-  },
-  'node.material': material,
-  'node.light': light,
-  'node.reparent': reparent,
   'node.select': select,
+  'node.reparent': reparent,
+
+  'node.addModel': input => {
+    const assetId = textOf(input, 'assetId') ?? ''
+    return place(modelNode(assetId, textOf(input, 'name') ?? assetId))
+  },
+
+  'node.remove': input => editNode(input, node => removeNode(node.id)),
+
+  'node.rename': input =>
+    editNode(input, node => renameNode(node.id, textOf(input, 'name') ?? node.name)),
+
+  'node.visible': input =>
+    editNode(input, node => setNodeVisible(node.id, boolOf(input, 'visible'))),
+
+  'node.transform': input =>
+    editNode(input, node =>
+      setTransform(node.id, {
+        position: vectorOf(input, 'position', node.transform.position),
+        // Radians in the state and radians here: unlike a layer's single angle, three Euler
+        // angles in degrees would have to be converted back for every read of `scene.state`.
+        rotation: vectorOf(input, 'rotation', node.transform.rotation),
+        scale: vectorOf(input, 'scale', node.transform.scale),
+      }),
+    ),
+
+  // Text wears the same material as a mesh, but `setMeshMaterial` writes only a mesh's — the two
+  // are separate commands, so a text node here would be a silent no-op.
+  'node.material': input =>
+    editNode(input, node =>
+      node.type !== 'mesh'
+        ? null
+        : setMeshMaterial(node.id, {
+            ...node.material,
+            color: readColor(input, 'color', node.material.color ?? ''),
+            roughness: numberOf(input, 'roughness') ?? node.material.roughness,
+            metalness: numberOf(input, 'metalness') ?? node.material.metalness,
+          }),
+    ),
+
+  'node.light': input =>
+    editNode(input, node => {
+      if (node.type !== 'light') return null
+      const intensity = numberOf(input, 'intensity')
+
+      return setLight(node.id, {
+        ...node.light,
+        // A hemisphere light has no `color` at all — a sky and a ground colour instead — so the
+        // field is written only where the kind carries one.
+        ...('color' in node.light ? { color: readColor(input, 'color', node.light.color) } : {}),
+        ...(intensity === null ? {} : { intensity }),
+      })
+    }),
 }

@@ -1,7 +1,33 @@
-import { action, type AssistantAction } from './assistantAction'
-import { COMMAND_REGISTRY } from './command'
+import { action, type ActionCommitment, type AssistantAction } from './assistantAction'
+import { COMMAND_REGISTRY, type CommandId } from './command'
 import { MODEL_FAMILIES } from './model'
 import { WORKSPACE_IDS } from './workspace'
+
+/**
+ * The commands that upload a picture before they prepare anything.
+ *
+ * Not the same list as "the AI edits": `prepareEdit` prepares and stops, and nothing is billed
+ * until the user submits. What it does do, every time, is flatten the canvas and upload it —
+ * a permanent asset in the user's library, which is what earns the yes.
+ */
+const UPLOADING_COMMANDS: readonly CommandId[] = [
+  'canvas.regenerate',
+  'canvas.cutout',
+  'canvas.enlarge',
+  'canvas.vectorize',
+  'canvas.extend',
+]
+
+/**
+ * What a command engages — the one level in the registry derived rather than declared, and so
+ * the one guarded command by command: a miss here is a permanent asset created without a yes,
+ * and nothing downstream would catch it.
+ */
+export function commitmentOfCommand(id: string): ActionCommitment {
+  // A `string` for the same reason `commandDescriptor` takes one: what asks holds a name, not a
+  // narrowed id. An id nothing declares rates as `none`, the level of a call refused anyway.
+  return UPLOADING_COMMANDS.some(uploading => uploading === id) ? 'asset' : 'none'
+}
 
 /**
  * What a spoken request needs, and the only family reaching `both` doors in full.
@@ -15,8 +41,9 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     name: 'command.run',
     titleKey: 'assistant.actions.commandRun.title',
     descriptionKey: 'assistant.actions.commandRun.description',
-    // The floor, not the answer: what this call really engages comes from `commitmentOfCommand`.
     commitment: 'none',
+    raises: input =>
+      typeof input.command === 'string' ? commitmentOfCommand(input.command) : 'none',
     reach: 'both',
     fields: [
       {

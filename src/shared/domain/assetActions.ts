@@ -1,5 +1,29 @@
 import { ASSET_TYPES } from './asset'
-import { action, type AssistantAction } from './assistantAction'
+import { action, type ActionField, type AssistantAction } from './assistantAction'
+
+const ASSET_IDS: ActionField = {
+  key: 'assetIds',
+  kind: 'text',
+  labelKey: 'assistant.fields.assetIds',
+  required: true,
+  repeated: true,
+}
+
+const TAGS: ActionField = {
+  key: 'tags',
+  kind: 'text',
+  labelKey: 'assistant.fields.tags',
+  required: false,
+  repeated: true,
+}
+
+const KIND: ActionField = {
+  key: 'type',
+  kind: 'choice',
+  labelKey: 'assistant.fields.assetType',
+  required: false,
+  options: ASSET_TYPES,
+}
 
 /**
  * The library, as something a program can query and correct.
@@ -17,20 +41,8 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     reach: 'mcp',
     fields: [
       { key: 'text', kind: 'text', labelKey: 'assistant.fields.query', required: false },
-      {
-        key: 'type',
-        kind: 'choice',
-        labelKey: 'assistant.fields.assetType',
-        required: false,
-        options: ASSET_TYPES,
-      },
-      {
-        key: 'tags',
-        kind: 'text',
-        labelKey: 'assistant.fields.tags',
-        required: false,
-        repeated: true,
-      },
+      KIND,
+      TAGS,
       {
         key: 'generated',
         kind: 'boolean',
@@ -68,15 +80,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.assetGet.description',
     commitment: 'none',
     reach: 'mcp',
-    fields: [
-      {
-        key: 'assetIds',
-        kind: 'text',
-        labelKey: 'assistant.fields.assetIds',
-        required: true,
-        repeated: true,
-      },
-    ],
+    fields: [ASSET_IDS],
   }),
   action({
     // Tags are replaced wholesale, which the channel decided long before this: `[]` genuinely
@@ -89,20 +93,8 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     fields: [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
       { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: false },
-      {
-        key: 'tags',
-        kind: 'text',
-        labelKey: 'assistant.fields.tags',
-        required: false,
-        repeated: true,
-      },
-      {
-        key: 'type',
-        kind: 'choice',
-        labelKey: 'assistant.fields.assetType',
-        required: false,
-        options: ASSET_TYPES,
-      },
+      TAGS,
+      KIND,
     ],
   }),
   action({
@@ -112,13 +104,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     commitment: 'files',
     reach: 'mcp',
     fields: [
-      {
-        key: 'assetIds',
-        kind: 'text',
-        labelKey: 'assistant.fields.assetIds',
-        required: true,
-        repeated: true,
-      },
+      ASSET_IDS,
       {
         key: 'alsoRemote',
         kind: 'boolean',

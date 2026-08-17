@@ -46,12 +46,15 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    // `files`: a tab closed with unsaved work in it loses that work, and no Explorer undo brings
-    // an edit back — only what reached the disk.
+    /**
+     * `none`, and that is not an oversight: `closeDocument` raises its OWN question about unsaved
+     * work, and it is the one that knows whether there is any. A `files` level here asked twice
+     * for one gesture, and the first question could not say what was at stake.
+     */
     name: 'document.close',
     titleKey: 'assistant.actions.documentClose.title',
     descriptionKey: 'assistant.actions.documentClose.description',
-    commitment: 'files',
+    commitment: 'none',
     reach: 'mcp',
     fields: [
       { key: 'documentId', kind: 'text', labelKey: 'assistant.fields.documentId', required: true },

@@ -102,6 +102,18 @@ describe('reading what came back', () => {
   })
 
   /**
+   * Held to the share the model was SHOWN, not to the registry. The catalogue lists it eleven
+   * actions; the other seventy-six exist for a program that read `tools/list`. Checking against
+   * the whole registry let a name the model had never been given through on its own plausibility
+   * — and `git.checkout` rewrites the working tree.
+   */
+  it('refuses a call naming an action the model was never shown', () => {
+    const text = '{"say":"","calls":[{"action":"git.checkout","input":{"name":"main"}}]}'
+
+    expect(parseReply(text)).toBeNull()
+  })
+
+  /**
    * Refused whole rather than filtered down to the calls that are real. Dropping the unknown one
    * silently would run the remainder of a plan its author meant to run entire — the studio would
    * do half of something nobody asked for.

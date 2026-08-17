@@ -64,16 +64,19 @@ describe('walking the project folder', () => {
     })
   })
 
-  // Every action of this family reads the open project first: without one there is nothing for a
-  // relative path to be relative TO, and the channel would answer for whatever was open last.
-  it('refuses everything while no project is open', async () => {
+  /**
+   * Its own refusal, not `noBridge`: the two were answered together at first, which told a
+   * client its window was unreachable when the real answer was that a relative path had nothing
+   * to be relative to — and the two are fixed by opposite gestures.
+   */
+  it('refuses everything while no project is open, and says which of the two it is', async () => {
     installFakeBridge()
     useProject.setState({ project: null })
 
-    expect(await runAction('files.list', {})).toEqual({ ok: false, refusal: 'noBridge' })
+    expect(await runAction('files.list', {})).toEqual({ ok: false, refusal: 'noProject' })
     expect(await runAction('files.trash', { paths: ['a.png'] })).toEqual({
       ok: false,
-      refusal: 'noBridge',
+      refusal: 'noProject',
     })
   })
 })

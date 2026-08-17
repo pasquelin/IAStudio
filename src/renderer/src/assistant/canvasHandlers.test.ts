@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { assistantAction, type ActionName } from '@shared/domain/assistant'
 import {
+  ADJUSTMENT_KINDS,
+  BLEND_MODES,
   DEFAULT_CANVAS,
+  LAYER_KINDS,
   pixelLayer,
   textLayer,
   type CanvasState,
@@ -24,6 +28,27 @@ const layerIds = (): string[] => canvas().layers.map(layer => layer.id)
 
 beforeEach(() => {
   withLayers(pixelLayer('layer-a', 'Fond'), pixelLayer('layer-b', 'Sujet'))
+})
+
+/**
+ * Every other closed field of the registry reads its source — `MODEL_FAMILIES`, `ASSET_TYPES`,
+ * `WORKSPACE_IDS`, the three scene registries. The image family cannot: blend modes and
+ * adjustment kinds live in `engines/canvas`, which `shared/` may not import, so they are written
+ * out by hand there. This is what holds the copies to their originals, and it has to live on this
+ * side of the boundary for the same reason.
+ */
+describe('what the registry offers a layer', () => {
+  const optionsOf = (name: ActionName, key: string): string[] =>
+    [...(assistantAction(name)?.fields.find(field => field.key === key)?.options ?? [])].sort()
+
+  it('is exactly what the engine declares', () => {
+    expect(optionsOf('layer.style', 'blend')).toEqual([...BLEND_MODES].sort())
+    expect(optionsOf('layer.add', 'adjustment')).toEqual([...ADJUSTMENT_KINDS].sort())
+    // Every kind but `group`, which is made by grouping a selection rather than added.
+    expect(optionsOf('layer.add', 'kind')).toEqual(
+      LAYER_KINDS.filter(kind => kind !== 'group').sort(),
+    )
+  })
 })
 
 describe('reading the image in front', () => {

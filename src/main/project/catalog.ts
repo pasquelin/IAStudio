@@ -879,6 +879,20 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       const conditions: string[] = ['missing_at IS NULL']
       const params: SqlValue[] = []
 
+      /**
+       * A column held to a set of values, in one round trip.
+       *
+       * An EMPTY set means nothing rather than no filter — `'0'`, which SQLite reads as false —
+       * and that is the arm worth naming: read as "no filter", a caller asking about none of the
+       * rows would be answered with all of them.
+       */
+      const narrowTo = (column: string, values: readonly string[]): void => {
+        conditions.push(
+          values.length > 0 ? `${column} IN (${values.map(() => '?').join(', ')})` : '0',
+        )
+        params.push(...values)
+      }
+
       if (query.type) {
         conditions.push('type = ?')
         params.push(query.type)
@@ -908,19 +922,11 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       // The same question for a whole listing, in one round trip: a browser showing four hundred
       // files would otherwise ask four hundred times to learn which of them are ours. Empty means
       // nothing, exactly as `types` does — a caller with no path to ask about asks nothing.
-      if (query.paths) {
-        const placeholders = query.paths.map(() => '?').join(', ')
-        conditions.push(query.paths.length > 0 ? `path IN (${placeholders})` : '0')
-        params.push(...query.paths)
-      }
+      if (query.paths) narrowTo('path', query.paths)
 
       // What a finished generation hands back is ids and nothing else, so this is how its output
       // is read. Empty means nothing, as it does for `paths` just above.
-      if (query.ids) {
-        const placeholders = query.ids.map(() => '?').join(', ')
-        conditions.push(query.ids.length > 0 ? `id IN (${placeholders})` : '0')
-        params.push(...query.ids)
-      }
+      if (query.ids) narrowTo('id', query.ids)
 
       if (query.syncStatus) {
         conditions.push('sync_state = ?')

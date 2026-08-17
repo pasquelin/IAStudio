@@ -41,15 +41,16 @@ describe('the settings', () => {
     expect(write).not.toHaveBeenCalled()
   })
 
-  it('refuses a change that sets a value to what it already is', async () => {
+  // Writing a value that is already set is a legitimate call — a client settling a state it did
+  // not read first — and refusing it would make idempotence a failure.
+  it('lets a value be written to what it already is', async () => {
     const write = vi.fn(async () => DEFAULT_SETTINGS)
     installFakeBridge({ settings: { write } })
 
-    expect(await runAction('settings.write', { settings: { mcp: { enabled: false } } })).toEqual({
-      ok: false,
-      refusal: 'badInput',
-    })
-    expect(write).not.toHaveBeenCalled()
+    expect(
+      await runAction('settings.write', { settings: { mcp: { enabled: false } } }),
+    ).toMatchObject({ ok: true })
+    expect(write).toHaveBeenCalledWith({ mcp: { enabled: false } })
   })
 })
 

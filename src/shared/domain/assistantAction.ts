@@ -11,10 +11,10 @@ import type { FieldKind } from './model'
 /**
  * Every action the studio publishes, in one list.
  *
- * Written out rather than composed from the family modules, and that is the point: the union
- * cannot live beside the tables without those tables importing it back. One list also reads as
- * the table of contents it is, and `assistant.test.ts` holds it to the registry in both
- * directions — a name declared here and never built is as much a defect as the reverse.
+ * Written out rather than composed from the family modules: the union cannot live beside the
+ * tables without those tables importing it back. The compiler holds families → union; only
+ * `exhaustive.test.ts` holds union → families, and it has to — a name declared here and never
+ * built leaves the registry and the handler table in perfect agreement about nothing.
  */
 export type ActionName =
   | 'command.run'
@@ -167,7 +167,16 @@ export type AssistantAction = {
   titleKey: string
   /** Never optional: an action the model cannot be told the purpose of is one it will misuse. */
   descriptionKey: string
+  /** The floor. What one CALL engages may be higher — see `raises`. */
   commitment: ActionCommitment
+  /**
+   * What this call engages, when its own input decides — a command that uploads, an amend that
+   * rewrites a version, a removal that reaches the remote library.
+   *
+   * On the descriptor rather than as names spelled out in `commitmentOfCall`: that function held
+   * one action by name, and the two others that needed it silently did not get it.
+   */
+  raises?: (input: Record<string, unknown>) => ActionCommitment
   reach: ActionReach
   fields: readonly ActionField[]
 }
@@ -193,6 +202,8 @@ export type ActionRefusal =
   | 'notSubmitted'
   | 'badInput'
   | 'noBridge'
+  /** A path is relative to a project, and there is none open to be relative to. */
+  | 'noProject'
   /** Nobody was there to be asked — see `runConfirmedAction`. Never a silent yes. */
   | 'noConfirmer'
   | 'declined'
@@ -214,6 +225,7 @@ export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'notSubmitted',
   'badInput',
   'noBridge',
+  'noProject',
   'noConfirmer',
   'declined',
   'noWindow',
@@ -235,12 +247,29 @@ export function refusalKey(refusal: ActionRefusal): string {
   return `assistant.refusals.${refusal}`
 }
 
-/** Whether running this needs a yes first. `asset` and `credits` do; only `credits` quotes a figure. */
+/**
+ * The sentence a commitment is announced with. Keyed rather than branched on, so a fifth level
+ * cannot fall silently into the wrong question — which a chain of `if` in the modal would let it.
+ */
+export function confirmKey(commitment: ActionCommitment): string {
+  return `assistant.confirm.${commitment}`
+}
+
+/** Whether running this needs a yes first. Only `credits` quotes a figure. */
 export function needsConfirmation(commitment: ActionCommitment): boolean {
   return commitment !== 'none'
 }
 
-/** What each kind accepts, as a check rather than as a name. `raw` takes anything defined. */
+/** A refusal, spelled once for the ten modules that hand one back. */
+export const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })
+
+/**
+ * What each kind accepts, as a check rather than as a name.
+ *
+ * A required `text` may not be blank, and a required `repeated` may not be empty — see
+ * `validatesInput`. Both were left to the handlers first, which meant one `=== ''` and one
+ * `length === 0` per action, and a handler that forgot either had nothing behind it.
+ */
 function fits(field: ActionField, value: unknown): boolean {
   switch (field.kind) {
     case 'text':
@@ -248,7 +277,11 @@ function fits(field: ActionField, value: unknown): boolean {
     case 'choice':
     case 'color':
     case 'image':
-      return typeof value === 'string' && (!field.options || field.options.includes(value))
+      return (
+        typeof value === 'string' &&
+        (!field.required || value.trim() !== '') &&
+        (!field.options || field.options.includes(value))
+      )
     case 'number':
     case 'integer':
     case 'seed':
@@ -291,6 +324,11 @@ export function validatesInput(
     if (value === undefined) return !field.required
 
     if (!field.repeated) return fits(field, value)
-    return Array.isArray(value) && value.every(item => fits(field, item))
+
+    return (
+      Array.isArray(value) &&
+      (!field.required || value.length > 0) &&
+      value.every(item => fits(field, item))
+    )
   })
 }
