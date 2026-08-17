@@ -102,10 +102,6 @@ describe('Rail', () => {
         // Same half as the folder, and after it: the folder is what the half opens on, the
         // versions of that folder are what one switches to. Both need a project open.
         'Git',
-        // At the FOOT of the rail rather than in either half, because it is the band's: the
-        // left rail is the legend of the left column and of the band under it. No separator
-        // before it — the two blocks are pushed apart by the rail's own layout.
-        'Historique',
       ])
 
       // `marksOf` reads buttons and separators, so it cannot see the hole an empty zone leaves:
@@ -116,13 +112,14 @@ describe('Rail', () => {
     })
 
     /**
-     * The right rail is the legend of the right column: two ways into something, and no
-     * separator — a lone populated half has nothing to be cut from.
+     * The right rail is the legend of the right column and of the band's right half: one way
+     * into something above, the history of the open project at the foot, and no separator —
+     * the two blocks are pushed apart by the rail's own layout.
      */
-    it('draws the right rail as one half, with no cut', () => {
+    it('draws the right rail as one half, with the band under it', () => {
       const { container } = render(<Rail side="right" />)
 
-      expect(marksOf(container)).toEqual(['Votre bibliothèque'])
+      expect(marksOf(container)).toEqual(['Votre bibliothèque', 'Historique'])
     })
 
     // No half names a panel on the default layout, so what reads as up is the first one the
@@ -191,9 +188,8 @@ describe('Rail', () => {
       'separator',
       'Explorateur',
       'Git',
-      'Timeline',
-      // The band's own, at the foot of the rail: the versions of the folder the two above read.
-      'Historique',
+      // Nothing at the foot: the band's left half is where a panel is dragged, and no placement
+      // declares one there — its tools all hang on the right, and so do their icons.
     ])
   })
 
@@ -209,6 +205,10 @@ describe('Rail', () => {
       'Assets',
       'separator',
       'Inspecteur',
+      // At the FOOT of this rail since the band was split: its right half is the one this side
+      // carries, and every panel of the band declares that half.
+      'Timeline',
+      'Historique',
     ])
   })
 
@@ -232,14 +232,15 @@ describe('Rail', () => {
   it('accents the icon of the panel the half actually shows', async () => {
     useLayouts.setState({ activeWorkspace: 'video' })
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { bottom: { primary: 'assets' } } }),
+      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
     })
-    render(<Rail side="left" />)
+    // The right rail: the band's right half is the one it carries, and the montage lies there.
+    render(<Rail side="right" />)
 
     const montage = screen.getByRole('button', { name: 'Timeline' })
     expect(montage).toHaveAttribute('aria-pressed', 'true')
 
     await userEvent.click(montage)
-    expect(arrangementOf(useTools.getState(), 'image').open.bottom?.primary).toBeUndefined()
+    expect(arrangementOf(useTools.getState(), 'image').open.bottomRight?.primary).toBeUndefined()
   })
 })

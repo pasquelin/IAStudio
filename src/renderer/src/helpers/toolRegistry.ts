@@ -83,7 +83,7 @@ const BY_ZONE = TOOLS.reduce<Record<ToolZone, Tool[]>>(
     index[tool.zone].push(tool)
     return index
   },
-  { left: [], right: [], top: [], bottom: [] },
+  { left: [], right: [], top: [], bottomLeft: [], bottomRight: [] },
 )
 
 /**

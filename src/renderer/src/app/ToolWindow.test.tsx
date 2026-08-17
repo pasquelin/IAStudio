@@ -6,7 +6,7 @@ import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { ToolWindow } from './ToolWindow'
 
-function renderShelf(zone: 'bottom' | 'left') {
+function renderShelf(zone: 'bottomRight' | 'left') {
   return render(<ToolWindow tool="assets" zone={zone} onFocus={vi.fn()} onClose={vi.fn()} />)
 }
 
@@ -41,7 +41,7 @@ describe('a panel lying in a band', () => {
   it(
     'carries its filter bar on the title row',
     async () => {
-      renderShelf('bottom')
+      renderShelf('bottomRight')
 
       expect(headerOf(await screen.findByRole('searchbox', {}, ARRIVES))).not.toBeNull()
     },
@@ -49,7 +49,7 @@ describe('a panel lying in a band', () => {
   )
 
   it('leaves the way out of the panel reachable beside it', () => {
-    renderShelf('bottom')
+    renderShelf('bottomRight')
 
     expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()
   })
@@ -57,7 +57,7 @@ describe('a panel lying in a band', () => {
   // A bar given `flex-1` weighs nothing when the row runs short, so every missing pixel is
   // taken from whatever else can shrink. The panel's name is not what should pay for it.
   it('keeps the panel name off the table when the row runs short', () => {
-    const { container } = renderShelf('bottom')
+    const { container } = renderShelf('bottomRight')
 
     expect(container.querySelector('header > span')?.className).toContain('shrink-0')
   })
@@ -66,7 +66,7 @@ describe('a panel lying in a band', () => {
   // two buttons shares the band and would otherwise see them drift away from the close button.
   it('spreads the actions of the panel that declared it, and no other', () => {
     const { container } = render(
-      <ToolWindow tool="scene" zone="bottom" onFocus={vi.fn()} onClose={vi.fn()} />,
+      <ToolWindow tool="scene" zone="bottomRight" onFocus={vi.fn()} onClose={vi.fn()} />,
     )
 
     const actions = container.querySelector('header > span:nth-of-type(2)')

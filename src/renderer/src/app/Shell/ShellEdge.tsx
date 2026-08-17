@@ -1,17 +1,10 @@
 import { useCallback } from 'react'
 import { cn } from '@/helpers/cn'
 import { useToolSurface } from '@/stores/layouts'
-import { arrangementOf, DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
+import { arrangementOf, DEFAULT_SIZES, DEFAULT_SPLIT, sizeKeyOf, useTools } from '@/stores/tools'
 import { ResizeHandle } from '@/design/ResizeHandle'
-import {
-  isHorizontal,
-  isLeading,
-  type ToolId,
-  type ToolSlot,
-  type ToolZone,
-} from '@shared/domain/tool'
-import { shownTool } from '@/helpers/toolRegistry'
-import { useToolState } from '@/hooks/useToolState'
+import { isHorizontal, isLeading, type ToolZone } from '@shared/domain/tool'
+import { useShownTools } from '@/hooks/useShownTools'
 import { ToolWindow } from '../ToolWindow'
 
 /**
@@ -32,18 +25,12 @@ export function ShellEdge({ zone }: { zone: ToolZone }) {
     [surface, zone],
   )
 
-  const slots = useTools(state => arrangementOf(state, surface).open[zone])
-  const size = useTools(state => arrangementOf(state, surface).sizes[zone] ?? DEFAULT_SIZES[zone])
+  const size = useTools(
+    state => arrangementOf(state, surface).sizes[sizeKeyOf(zone)] ?? DEFAULT_SIZES[zone],
+  )
   const split = useTools(state => arrangementOf(state, surface).splits[zone] ?? DEFAULT_SPLIT)
-  const state = useToolState(surface)
 
-  // The stored value straight through: `undefined` is a closed half and `null` an unchosen one,
-  // and collapsing the two would close every half nobody has clicked.
-  const shown = (slot: ToolSlot): ToolId | null =>
-    shownTool(slots?.[slot], zone, slot, surface, state)
-
-  const primary = shown('primary')
-  const secondary = shown('secondary')
+  const { primary, secondary } = useShownTools(zone)
   if (!primary && !secondary) return null
 
   // Actions are stable for the store's lifetime: subscribing to them would only add

@@ -168,7 +168,7 @@ describe('AssetBrowser', () => {
   describe('the filter bar', () => {
     it('draws none of its own in a band, leaving it to the title row', () => {
       render(
-        <ToolZoneProvider zone="bottom">
+        <ToolZoneProvider zone="bottomRight">
           <AssetBrowser />
         </ToolZoneProvider>,
       )

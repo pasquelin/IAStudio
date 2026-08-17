@@ -2,7 +2,9 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { clamp } from '@shared/numeric'
 import {
+  BOTTOM_ZONES,
   familyOf,
+  isBottom,
   isHorizontal,
   placementIn,
   placementOf,
@@ -51,6 +53,11 @@ export type Arrangement = {
   sizes: SizesByZone
   /** Length the second half takes inside its zone, along the zone's other axis. */
   splits: SizesByZone
+  /**
+   * Width the band's LEFT zone takes while both halves draw. Unset means half each — a fraction
+   * would have to be re-read on every resize, where a length is what the handle drags.
+   */
+  bandSplit?: number
 }
 
 type ToolsState = {
@@ -65,6 +72,8 @@ type ToolsState = {
   resize: (surface: ToolSurface, zone: ToolZone, size: number, available: number) => void
   /** Moves the divider between a zone's two halves. */
   resplit: (surface: ToolSurface, zone: ToolZone, size: number, available: number) => void
+  /** Moves the divider BETWEEN the band's two zones, which is a width. */
+  resplitBand: (surface: ToolSurface, size: number, available: number) => void
   /** Re-clamps every zone of every family after the window changed size. */
   fit: (width: number, height: number) => void
   reset: () => void
@@ -81,10 +90,23 @@ export const DEFAULT_SIZES: Record<ToolZone, number> = {
   left: 320,
   right: 260,
   top: 180,
-  bottom: 240,
+  bottomLeft: 240,
+  bottomRight: 240,
 }
 
 export const DEFAULT_SPLIT = 240
+
+/**
+ * The half that carries what the single `bottom` zone used to: the strip's height, stored once
+ * because two halves lying at two heights would leave the frame above them in a step, and
+ * whatever a layout written before the split still holds.
+ */
+const BAND_MAIN: ToolZone = 'bottomRight'
+
+/** Where a zone's length is read and written — the band's halves share the one key. */
+export function sizeKeyOf(zone: ToolZone): ToolZone {
+  return isBottom(zone) ? BAND_MAIN : zone
+}
 
 /**
  * Which halves start open — and nothing about what they draw. Every one of them is `null`, so
@@ -106,7 +128,7 @@ export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
   workspaces: {
     left: { primary: null, secondary: null },
     right: { primary: null, secondary: null },
-    bottom: { primary: null },
+    bottomRight: { primary: null },
   },
   home: {
     // Both halves of the left column, as every space has: the projects above, and under them
@@ -116,7 +138,7 @@ export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
     // The band, since 17 August, and it holds one thing: the history of the project that is
     // open. `null` means "the half is there and nothing was chosen", which is what leaves it to
     // the first tool the registry serves — and with no project open, that is no tool at all.
-    bottom: { primary: null },
+    bottomRight: { primary: null },
   },
 }
 
@@ -128,8 +150,10 @@ export const DEFAULT_ARRANGEMENTS: Record<SurfaceFamily, Arrangement> = {
 const OPPOSITE: Record<ToolZone, ToolZone> = {
   left: 'right',
   right: 'left',
-  top: 'bottom',
-  bottom: 'top',
+  // The band as a whole faces the top strip: either half of it takes the same height off.
+  top: BAND_MAIN,
+  bottomLeft: 'top',
+  bottomRight: 'top',
 }
 
 /**
@@ -154,8 +178,14 @@ function isZoneOpen(open: OpenByZone, zone: ToolZone): boolean {
   return TOOL_SLOTS.some(slot => slots[slot] !== undefined)
 }
 
+/** The band takes its height as soon as EITHER half holds something: the strip is one strip. */
+function isBandOpen(open: OpenByZone): boolean {
+  return BOTTOM_ZONES.some(zone => isZoneOpen(open, zone))
+}
+
 function sizeOf(sizes: SizesByZone, zone: ToolZone, open: OpenByZone): number {
-  return isZoneOpen(open, zone) ? (sizes[zone] ?? DEFAULT_SIZES[zone]) : 0
+  const taken = isBottom(zone) ? isBandOpen(open) : isZoneOpen(open, zone)
+  return taken ? (sizes[sizeKeyOf(zone)] ?? DEFAULT_SIZES[zone]) : 0
 }
 
 /** One family's arrangement, patched — the others left as they were, which is the whole point. */
@@ -191,7 +221,12 @@ function fitted(arrangement: Arrangement, width: number, height: number): Arrang
     splits[zone] = fitSplit(divider, isHorizontal(zone) ? width : height)
   }
 
-  return { ...arrangement, sizes, splits }
+  // The band's own divider runs across the WHOLE width: it parts two zones rather than the two
+  // halves of one, so it is clamped against the window and not against a zone's length.
+  const bandSplit =
+    arrangement.bandSplit === undefined ? undefined : fitSplit(arrangement.bandSplit, width)
+
+  return { ...arrangement, sizes, splits, bandSplit }
 }
 
 /**
@@ -206,6 +241,12 @@ export function openFrom(persisted: unknown): OpenByZone {
     const slots = slotsFrom(Reflect.get(persisted, zone))
     if (slots) open[zone] = slots
   }
+
+  // Up to version 14 the band was ONE zone called `bottom`. Read as an unknown key it would be
+  // dropped, and everyone who had a montage or a shelf down there would find the band closed.
+  const band = slotsFrom(Reflect.get(persisted, 'bottom'))
+  if (band) open[BAND_MAIN] ??= band
+
   return openEverywhereItSits(open)
 }
 
@@ -288,14 +329,36 @@ function arrangementFrom(persisted: unknown, version: number): Arrangement {
   const splits: unknown = Reflect.get(persisted, 'splits')
   const open = openFrom(Reflect.get(persisted, 'open'))
 
+  const bandSplit: unknown = Reflect.get(persisted, 'bandSplit')
+
   return {
     // Up to version 7 every half named a panel, including the ones nobody had ever clicked —
     // the default did the naming. Kept as chosen, an untouched Image would still open on the
     // explorer rather than its layers, and no update would ever fix it.
     open: version < 8 ? unchosen(open) : open,
-    sizes: isRecord(sizes) ? sizes : {},
-    splits: isRecord(splits) ? splits : {},
+    sizes: lengthsFrom(sizes),
+    splits: lengthsFrom(splits),
+    ...(typeof bandSplit === 'number' ? { bandSplit } : {}),
   }
+}
+
+/**
+ * The lengths this version still has a zone for, plus the band's: up to version 14 the strip was
+ * one zone called `bottom`, and what it was dragged to is the height of `bottomRight` today.
+ */
+function lengthsFrom(persisted: unknown): SizesByZone {
+  if (!isRecord(persisted)) return {}
+
+  const lengths: SizesByZone = {}
+  for (const zone of TOOL_ZONES) {
+    const stored: unknown = Reflect.get(persisted, zone)
+    if (typeof stored === 'number') lengths[zone] = stored
+  }
+
+  const band: unknown = Reflect.get(persisted, 'bottom')
+  if (typeof band === 'number') lengths[BAND_MAIN] ??= band
+
+  return lengths
 }
 
 /** The same halves, open on no panel in particular — which section decides is then the section's. */
@@ -380,8 +443,9 @@ export const useTools = create<ToolsState>()(
         set(state => {
           const { open, sizes } = arrangementOf(state, surface)
           const next = fitZoneSize(size, available, sizeOf(sizes, OPPOSITE[zone], open))
-          if (next === sizes[zone]) return state
-          return { arrangements: written(state, surface, { sizes: { ...sizes, [zone]: next } }) }
+          const key = sizeKeyOf(zone)
+          if (next === sizes[key]) return state
+          return { arrangements: written(state, surface, { sizes: { ...sizes, [key]: next } }) }
         }),
 
       resplit: (surface, zone, size, available) =>
@@ -390,6 +454,13 @@ export const useTools = create<ToolsState>()(
           const next = fitSplit(size, available)
           if (next === splits[zone]) return state
           return { arrangements: written(state, surface, { splits: { ...splits, [zone]: next } }) }
+        }),
+
+      resplitBand: (surface, size, available) =>
+        set(state => {
+          const next = fitSplit(size, available)
+          if (next === arrangementOf(state, surface).bandSplit) return state
+          return { arrangements: written(state, surface, { bandSplit: next }) }
         }),
 
       // Every family, not just the one in front: the window is as wide for the home as for a
@@ -431,7 +502,10 @@ export const useTools = create<ToolsState>()(
       // open. Same withholding as every bump above it if left alone: a stored arrangement
       // naming only the upper half is a half nobody could have closed, and the panel the plan
       // put there would be invisible to the whole installed base.
-      version: 14,
+      // 15 splits the band in two — `bottom` becomes `bottomLeft` and `bottomRight`, and every
+      // panel that lay in it hangs on the right one. What was open is rebuilt from the
+      // placements, so only the strip's stored HEIGHT needs moving; `lengthsFrom` does it.
+      version: 15,
       migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.

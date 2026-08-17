@@ -4,21 +4,21 @@ import { RailGroup } from './RailGroup'
 import { RailNewButton } from './RailNewButton'
 
 export type RailProps = {
-  /** Edge the rail sticks to. The left rail also carries the bottom strip's tools. */
+  /** Edge the rail sticks to. Each rail also carries the band's half on its own side. */
   side: 'left' | 'right'
 }
 
 const ZONES_BY_SIDE: Record<'left' | 'right', { top: ToolZone[]; bottom: ToolZone[] }> = {
-  left: { top: ['left', 'top'], bottom: ['bottom'] },
-  right: { top: ['right'], bottom: [] },
+  left: { top: ['left', 'top'], bottom: ['bottomLeft'] },
+  right: { top: ['right'], bottom: ['bottomRight'] },
 }
 
 /**
  * An edge's icon rail, IDE-style: it stays in place when the zone is closed, so a closed tool
  * is always one click away. "View ▸ Tool windows" in the native menu is the second way back.
  *
- * The left rail is split into two groups — left-column tools at the top, bottom-strip tools
- * at the bottom — so that an icon's position tells where the tool will open.
+ * Each rail is split into two groups — its column's tools at the top, its half of the bottom
+ * band at the foot — so that an icon's position tells where the tool will open.
  */
 export function Rail({ side }: RailProps) {
   const { top, bottom } = ZONES_BY_SIDE[side]
