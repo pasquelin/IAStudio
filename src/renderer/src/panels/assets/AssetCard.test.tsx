@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset, AssetBadge, AssetType } from '@shared/domain/asset'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useCloud } from '@/stores/cloud'
 import { job } from '@/stores/job-fixtures'

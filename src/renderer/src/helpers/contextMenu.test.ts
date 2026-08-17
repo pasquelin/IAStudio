@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ContextMenuItem } from '@shared/domain/context-menu'
+import type { ContextMenuItem } from '@shared/domain/contextMenu'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { showContextMenu } from './contextMenu'
 

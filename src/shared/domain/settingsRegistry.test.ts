@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '../guards'
 import { LANGUAGES, TRANSLATIONS } from '../i18n'
-import { defaultAt } from './settings-path'
+import { defaultAt } from './settingsPath'
 import {
   boundsOf,
   childSections,
@@ -15,7 +15,7 @@ import {
   SETTING_SECTIONS,
   UNLISTED_PATHS,
   type SettingKind,
-} from './settings-registry'
+} from './settingsRegistry'
 
 function resolve(bundle: unknown, key: string): unknown {
   return key

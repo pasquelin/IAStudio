@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import fr from './model-text.fr.json'
 import { breakableSpots } from './typography'
-import { normalizeModelText, translateModelText } from './model-text'
+import { normalizeModelText, translateModelText } from './modelText'
 
 /**
  * The words the dictionary deliberately does not hold, because the studio says them in English

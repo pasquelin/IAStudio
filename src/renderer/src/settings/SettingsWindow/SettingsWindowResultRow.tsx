@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { bindingOf } from '@shared/domain/command'
-import type { SearchHit } from '@shared/domain/settings-search'
+import type { SearchHit } from '@shared/domain/settingsSearch'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'

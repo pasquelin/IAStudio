@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AssetType } from '@shared/domain/asset'
-import type { CloudAsset, CloudPage } from '@shared/domain/cloud-asset'
+import type { CloudAsset, CloudPage } from '@shared/domain/cloudAsset'
 import { getBridge } from '@/services/bridge'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 

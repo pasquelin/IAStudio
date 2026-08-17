@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkDocumentName, documentFileName, nextFreeDocumentName } from './document-name'
+import { checkDocumentName, documentFileName, nextFreeDocumentName } from './documentName'
 
 const named = (fileName: string, id = fileName): { id: string; fileName: string } => ({
   id,

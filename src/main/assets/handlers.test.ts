@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
 import type { Asset } from '@shared/domain/asset'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { invoke as invokeChannel, resetHandlers } from '@main/ipc/test-harness'
 import { recordFailuresTo } from '@main/scenario/client'
 import { createActivityLog, type ActivityLog } from '@main/project/activityLog'

@@ -5,7 +5,7 @@ import {
   valueAt,
   type SettingPath,
   type SettingValue,
-} from '@shared/domain/settings-path'
+} from '@shared/domain/settingsPath'
 import { useSettings } from './settings'
 
 type DraftState = {

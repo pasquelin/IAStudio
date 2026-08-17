@@ -183,8 +183,8 @@ describe('the opening chunk', () => {
     // reused by an onboarding, say — walk back in with the guard still green.
     expect([...files].filter(path => path.startsWith('./settings/'))).toEqual([])
     expect(files).not.toContain('./stores/settingsDraft.ts')
-    expect(files).not.toContain('../../shared/domain/settings-registry.ts')
-    expect(files).not.toContain('../../shared/domain/settings-search.ts')
+    expect(files).not.toContain('../../shared/domain/settingsRegistry.ts')
+    expect(files).not.toContain('../../shared/domain/settingsSearch.ts')
   })
 
   // The heaviest row of the table, and the one that was described but never held: six editors,

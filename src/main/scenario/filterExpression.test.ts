@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
-import { assetTypeOfRemote } from '@shared/domain/asset-kind'
+import { assetTypeOfRemote } from '@shared/domain/assetKind'
 import { filterExpression, publicFeedFilter } from './filterExpression'
 import { remoteTypesFor } from './remoteTypes'
 

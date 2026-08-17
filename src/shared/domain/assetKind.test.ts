@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assetTypeOfRemote } from './asset-kind'
+import { assetTypeOfRemote } from './assetKind'
 
 describe('assetTypeOfRemote', () => {
   it('files every PBR channel as a texture, whatever its kind says', () => {

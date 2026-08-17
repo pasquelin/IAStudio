@@ -5,7 +5,7 @@ import {
   type PromptSuggestion,
   type PromptStyle,
   type PromptTranslation,
-} from '@shared/domain/prompt-assist'
+} from '@shared/domain/promptAssist'
 import { adoptableParameters } from './callParameters'
 
 /**

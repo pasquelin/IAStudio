@@ -15,7 +15,7 @@ import {
   PROMPT_INPUT_MAX,
   PROMPT_SUGGESTIONS_MAX,
   type SuggestPromptsRequest,
-} from '@shared/domain/prompt-assist'
+} from '@shared/domain/promptAssist'
 import { USAGE_PERIODS, type UsageCursors, type UsagePeriod } from '@shared/domain/usage'
 
 const usagePeriod = z.literal(USAGE_PERIODS)

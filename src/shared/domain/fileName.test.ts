@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { foldForFileName, isSafeFileName, safeFileName } from './file-name'
+import { foldForFileName, isSafeFileName, safeFileName } from './fileName'
 
 /**
  * What `safeFileName` already did when it belonged to the texture export is covered in
- * `texture-export.test.ts`, where those cases stay: one of them carries a literal NUL byte.
+ * `textureExport.test.ts`, where those cases stay: one of them carries a literal NUL byte.
  * Here is what it learnt when documents came to be named by hand.
  */
 describe('the name a file takes', () => {

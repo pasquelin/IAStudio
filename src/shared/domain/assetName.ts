@@ -1,5 +1,5 @@
 import { ASSET_NAME_MAX_LENGTH } from './asset'
-import { isSafeFileName, safeFileName } from './file-name'
+import { isSafeFileName, safeFileName } from './fileName'
 
 /**
  * Naming an asset, which since an asset is named by what it is called is also naming a file.

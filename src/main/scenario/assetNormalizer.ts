@@ -1,8 +1,8 @@
 import { defined, isRecord } from '@shared/guards'
 import { probeNumber, type AssetGeneration } from '@shared/domain/asset'
-import { assetTypeOfRemote } from '@shared/domain/asset-kind'
-import { generatedAssetName } from '@shared/domain/asset-name'
-import type { AssetPrivacy, CloudAsset } from '@shared/domain/cloud-asset'
+import { assetTypeOfRemote } from '@shared/domain/assetKind'
+import { generatedAssetName } from '@shared/domain/assetName'
+import type { AssetPrivacy, CloudAsset } from '@shared/domain/cloudAsset'
 
 /**
  * Turning an API asset into one the studio can show, from either of the two shapes it arrives in.

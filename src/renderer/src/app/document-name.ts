@@ -1,5 +1,5 @@
 import type { DocumentKind } from '@shared/domain/document'
-import type { DocumentNameFailure, NamedDocument } from '@shared/domain/document-name'
+import type { DocumentNameFailure, NamedDocument } from '@shared/domain/documentName'
 import { createMountedHost } from '@/helpers/hostRegistry'
 
 /** What a document is about to be called, put to whoever is showing the field. */

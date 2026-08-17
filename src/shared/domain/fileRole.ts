@@ -1,7 +1,7 @@
 import { ASSET_TYPES, type AssetType } from './asset'
-import { typeOfWorkspace } from './asset-kind'
+import { typeOfWorkspace } from './assetKind'
 import { kindForExtension, workspaceForKind } from './document'
-import { extensionOf } from './file-name'
+import { extensionOf } from './fileName'
 
 /**
  * Which of the studio's six domains a file belongs to, plus the answer for one it does not.

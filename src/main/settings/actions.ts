@@ -1,6 +1,6 @@
 import { BrowserWindow, clipboard, shell } from 'electron'
 import { APP_NAME } from '@shared/constants'
-import type { SettingActionId } from '@shared/domain/settings-registry'
+import type { SettingActionId } from '@shared/domain/settingsRegistry'
 import { mcpAddCommand, type McpEndpoint } from '@main/mcp/endpoint'
 import type { SettingsStore } from './store'
 

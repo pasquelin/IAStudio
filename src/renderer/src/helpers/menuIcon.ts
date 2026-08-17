@@ -1,4 +1,4 @@
-import { MENU_ICON_SIZE } from '@shared/domain/context-menu'
+import { MENU_ICON_SIZE } from '@shared/domain/contextMenu'
 import { THEME_ATTRIBUTE } from '@shared/domain/settings'
 import { MDI_VIEWBOX, mdiPath } from './mdiCanvas'
 

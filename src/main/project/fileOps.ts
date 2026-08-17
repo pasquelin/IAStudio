@@ -1,5 +1,5 @@
 import type { Asset } from '@shared/domain/asset'
-import type { FileOutcome, PathChange } from '@shared/domain/file-op'
+import type { FileOutcome, PathChange } from '@shared/domain/fileOp'
 import { moveAssetFile, moveAssetFileToFree } from '@main/assets/asset-file'
 import type { AsyncCatalog } from './catalogClient'
 import { appendMove, clearJournal } from './fileJournal'

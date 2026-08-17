@@ -1,5 +1,5 @@
 import type Scenario from '@scenario-labs/sdk'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { log } from '@main/log'
 import { cloudAssetOfHit, cloudAssetOfListing } from './assetNormalizer'
 import { offsetAfter, tokenAfter } from './cursor'

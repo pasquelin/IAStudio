@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '../guards'
 import { TRANSLATIONS } from '../i18n'
-import { hitId, matchSettings, sectionsOf, type SearchHit } from './settings-search'
+import { hitId, matchSettings, sectionsOf, type SearchHit } from './settingsSearch'
 
 function resolve(bundle: unknown, key: string): unknown {
   return key

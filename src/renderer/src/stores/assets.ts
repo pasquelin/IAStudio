@@ -11,8 +11,8 @@ import {
   ASSET_NAME_FAILURES,
   checkAssetName,
   type AssetNameFailure,
-} from '@shared/domain/asset-name'
-import { nameFailureOf } from '@shared/domain/file-name'
+} from '@shared/domain/assetName'
+import { nameFailureOf } from '@shared/domain/fileName'
 import { isRecord } from '@shared/guards'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'

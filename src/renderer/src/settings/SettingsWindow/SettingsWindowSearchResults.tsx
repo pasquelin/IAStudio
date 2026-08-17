@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { sectionEntry } from '@shared/domain/settings-registry'
-import { hitId, sectionsOf, type SearchHit } from '@shared/domain/settings-search'
+import { sectionEntry } from '@shared/domain/settingsRegistry'
+import { hitId, sectionsOf, type SearchHit } from '@shared/domain/settingsSearch'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { WINDOW_CAPTION } from '@/design/window-styles'
 import { SettingList } from '../SettingList'

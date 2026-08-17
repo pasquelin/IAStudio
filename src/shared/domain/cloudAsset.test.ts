@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cloudPreviewUrl, type CloudAsset } from './cloud-asset'
+import { cloudPreviewUrl, type CloudAsset } from './cloudAsset'
 
 function cloudAsset(overrides: Partial<CloudAsset> = {}): CloudAsset {
   return {

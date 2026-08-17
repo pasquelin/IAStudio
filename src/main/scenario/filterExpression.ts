@@ -1,5 +1,5 @@
 import type { AssetType } from '@shared/domain/asset'
-import type { UploadKind } from '@shared/domain/asset-mime'
+import type { UploadKind } from '@shared/domain/assetMime'
 
 /**
  * The filter `POST /search/assets` takes, in its Meilisearch-style syntax.

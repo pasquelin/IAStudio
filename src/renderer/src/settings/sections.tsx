@@ -5,7 +5,7 @@ import {
   rootSections,
   SETTING_SECTIONS,
   type SettingSectionEntry,
-} from '@shared/domain/settings-registry'
+} from '@shared/domain/settingsRegistry'
 import { AccountSettings } from './AccountSettings/AccountSettings'
 import { DictationSettings } from './DictationSettings'
 import { MediaSettings } from './MediaSettings'

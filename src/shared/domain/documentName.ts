@@ -1,5 +1,5 @@
 import { EXTENSION_BY_KIND, type DocumentKind } from './document'
-import { foldForFileName, isSafeFileName, safeFileName, stemForSuffix } from './file-name'
+import { foldForFileName, isSafeFileName, safeFileName, stemForSuffix } from './fileName'
 
 /**
  * Naming a document, which since documents are named by what they are called is also naming a

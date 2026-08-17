@@ -1,4 +1,4 @@
-import type { SettingDescriptor } from '@shared/domain/settings-registry'
+import type { SettingDescriptor } from '@shared/domain/settingsRegistry'
 import { SettingRow } from './SettingRow/SettingRow'
 
 /**

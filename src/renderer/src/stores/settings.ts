@@ -6,7 +6,7 @@ import {
   type Settings,
   type SettingsSectionId,
 } from '@shared/domain/settings'
-import { partialFor, type SettingPath, type SettingValue } from '@shared/domain/settings-path'
+import { partialFor, type SettingPath, type SettingValue } from '@shared/domain/settingsPath'
 import { getBridge } from '@/services/bridge'
 
 const UNKNOWN_AUTH: AuthState = { authenticated: false, reason: 'missing' }

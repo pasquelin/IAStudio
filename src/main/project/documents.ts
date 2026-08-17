@@ -26,8 +26,8 @@ import {
   documentFileName,
   nextFreeDocumentName,
   type NamedDocument,
-} from '@shared/domain/document-name'
-import { extensionOf, foldForFileName } from '@shared/domain/file-name'
+} from '@shared/domain/documentName'
+import { extensionOf, foldForFileName } from '@shared/domain/fileName'
 import { parentOf, type FolderEntry } from '@shared/domain/folder'
 import { isRecord } from '@shared/guards'
 import { exists, isMissing, writeAtomic } from '@main/persistence'

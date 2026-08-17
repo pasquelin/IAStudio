@@ -8,7 +8,7 @@ import {
   type NativeImage,
   type WebContents,
 } from 'electron'
-import { MENU_ICON_SCALE } from '@shared/domain/context-menu'
+import { MENU_ICON_SCALE } from '@shared/domain/contextMenu'
 import { TRANSLATIONS } from '@shared/i18n'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'

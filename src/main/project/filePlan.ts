@@ -1,5 +1,5 @@
-import type { PathChange, Refusal } from '@shared/domain/file-op'
-import { extensionOf, foldForFileName, stemForSuffix, stemOf } from '@shared/domain/file-name'
+import type { PathChange, Refusal } from '@shared/domain/fileOp'
+import { extensionOf, foldForFileName, stemForSuffix, stemOf } from '@shared/domain/fileName'
 import { isPrivatePath, moveRefusal, nameOf, parentOf } from '@shared/domain/folder'
 
 /**

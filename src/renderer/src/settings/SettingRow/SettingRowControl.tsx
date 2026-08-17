@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import type { SettingValue } from '@shared/domain/settings-path'
+import type { SettingValue } from '@shared/domain/settingsPath'
 import {
   boundsOf,
   optionLabel,
   optionsOf,
   type SettingDescriptor,
-} from '@shared/domain/settings-registry'
+} from '@shared/domain/settingsRegistry'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
 import { WINDOW_CAPTION } from '@/design/window-styles'

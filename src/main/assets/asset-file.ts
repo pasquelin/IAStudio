@@ -1,18 +1,14 @@
 import { mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Asset } from '@shared/domain/asset'
-import {
-  assetFileName,
-  FALLBACK_ASSET_NAME,
-  type AssetNameFailure,
-} from '@shared/domain/asset-name'
+import { assetFileName, FALLBACK_ASSET_NAME, type AssetNameFailure } from '@shared/domain/assetName'
 import {
   extensionOf,
   foldForFileName,
   isSameFileName,
   safeFileName,
   stemForSuffix,
-} from '@shared/domain/file-name'
+} from '@shared/domain/fileName'
 import { parentOf } from '@shared/domain/folder'
 import { exists } from '@main/persistence'
 import { assetFilePath } from './protocol'

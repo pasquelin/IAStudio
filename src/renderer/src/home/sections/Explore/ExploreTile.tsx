@@ -1,4 +1,4 @@
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { MediaTile } from '@/design/MediaTile'
 import { cloudTileFace } from '@/helpers/cloudTile'
 

@@ -60,5 +60,5 @@ export function fillHoles(sentence: string, values: Record<string, string | numb
 }
 
 export * from './languages'
-export * from './model-text'
+export * from './modelText'
 export * from './pseudo'

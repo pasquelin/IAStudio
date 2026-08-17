@@ -25,7 +25,7 @@ import {
   type Project,
   type ProjectAccountPlan,
 } from '@shared/domain/project'
-import type { PathKind } from '@shared/domain/settings-registry'
+import type { PathKind } from '@shared/domain/settingsRegistry'
 import { ASSISTANT_MODEL_ID } from '@shared/domain/assistant'
 import type { AuthState } from '@shared/domain/settings'
 import { log } from './log'

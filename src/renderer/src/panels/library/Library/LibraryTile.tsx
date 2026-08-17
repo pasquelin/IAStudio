@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
 import { cloudTileFace } from '@/helpers/cloudTile'
 import { TIP_LEFT } from '@/helpers/tooltip'

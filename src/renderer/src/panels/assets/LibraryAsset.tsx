@@ -1,7 +1,7 @@
 import { mdiDownloadOutline } from '@mdi/js'
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { startLibraryDrag } from '@/helpers/assetDrag'
 import { showContextMenu } from '@/helpers/contextMenu'
 import { useCloud } from '@/stores/cloud'

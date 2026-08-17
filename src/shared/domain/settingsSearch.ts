@@ -7,7 +7,7 @@ import {
   SETTING_SECTIONS,
   type SettingAction,
   type SettingDescriptor,
-} from './settings-registry'
+} from './settingsRegistry'
 
 /**
  * What the search box can find. Three registries rather than one: a settings window that only

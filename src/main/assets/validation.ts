@@ -6,7 +6,7 @@ import {
   type ActivityQuery,
 } from '@shared/domain/activity'
 import { ASSET_NAME_MAX_LENGTH, ASSET_TYPES, type AssetChanges } from '@shared/domain/asset'
-import type { CloudQuery, ExploreQuery } from '@shared/domain/cloud-asset'
+import type { CloudQuery, ExploreQuery } from '@shared/domain/cloudAsset'
 
 import { SYNC_POLICIES, type SyncPolicy } from '@shared/domain/sync'
 import { GET_BULK_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
