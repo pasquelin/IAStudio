@@ -1319,6 +1319,31 @@ describe('the explorer read by domain', () => {
     expect(await screen.findByText('Texture')).toBeInTheDocument()
   })
 
+  /**
+   * A `.scene` and a `.glb` are both filed under Maillage, and one of them opens in the studio
+   * where the other is a source it reads. The row already says which: a document is drawn by its
+   * TITLE and wears its space's glyph, off the same table the rail and the asset menu read,
+   * where a plain file keeps its file name and the generic one. That is the distinction, drawn
+   * in the vocabulary the whole studio already uses — a word "document" beside it would be a
+   * second one, on the narrowest column the studio has.
+   */
+  it('tells a document from a source filed under the same domain', async () => {
+    withProject()
+    byDomain()
+    const filed = { ...scene, path: 'Acte 1/a3f1.scene' }
+    install({ '': [folder('Acte 1')] }, [filed], [], {}, [
+      file('a3f1.scene', 'Acte 1'),
+      file('chaise.glb', 'Acte 1'),
+    ])
+
+    render(<Explorer />)
+
+    // The document by its title, the source by its file name.
+    expect(await screen.findByText('Niveau')).toBeInTheDocument()
+    expect(screen.getByText('chaise.glb')).toBeInTheDocument()
+    expect(screen.queryByText('a3f1.scene')).not.toBeInTheDocument()
+  })
+
   /** A domain names files rather than holding a place: nothing can be selected or written there. */
   it('folds a domain shut rather than picking it', async () => {
     withProject()

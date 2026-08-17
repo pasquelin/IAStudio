@@ -102,7 +102,7 @@ export function nameOf(path: string): string {
  * picture leave `assets/img`. What kept the catalogue in step was the ban; what keeps it in step
  * now is `repath` and the rescan.
  */
-export function isStudioPrivate(path: string): boolean {
+function isStudioPrivate(path: string): boolean {
   return path.split('/').some(isHiddenEntry)
 }
 

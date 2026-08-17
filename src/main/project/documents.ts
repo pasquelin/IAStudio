@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
-import { basename, dirname, extname, join, relative, sep } from 'node:path'
+import { basename, dirname, join, relative, sep } from 'node:path'
 import {
   DOCUMENT_MANIFEST,
   documentPath,
@@ -25,7 +25,7 @@ import {
   nextFreeDocumentName,
   type NamedDocument,
 } from '@shared/domain/document-name'
-import { foldForFileName } from '@shared/domain/file-name'
+import { extensionOf, foldForFileName } from '@shared/domain/file-name'
 import { parentOf, type FolderEntry } from '@shared/domain/folder'
 import { isRecord } from '@shared/guards'
 import { exists, isMissing, writeAtomic } from '@main/persistence'
@@ -87,11 +87,15 @@ const STAGING_PATTERN = /\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a
  * Pure, and separate from the sweep itself: `readdir` and `rm` are as testable as any other
  * disk call, which is to say not, and the rule is the part worth being sure of.
  */
+export function isStagingCopy(path: string, inFlight: ReadonlySet<string>): boolean {
+  return STAGING_PATTERN.test(path) && !inFlight.has(basename(path))
+}
+
 export function orphanStagingCopies(
   paths: readonly string[],
   inFlight: ReadonlySet<string>,
 ): string[] {
-  return paths.filter(path => STAGING_PATTERN.test(path) && !inFlight.has(basename(path)))
+  return paths.filter(path => isStagingCopy(path, inFlight))
 }
 
 export type DocumentFilesDeps = {
@@ -118,8 +122,11 @@ export type DocumentFilesDeps = {
  * many of. Everything else — every `.png`, `.glb`, `.wav` a project is full of — is turned away
  * on its name.
  */
-export function claimsDocument(path: string): boolean {
-  const extension = extname(path)
+function claimsDocument(path: string): boolean {
+  // `extensionOf` and not `extname`: the studio has one spelling of "what is this file's
+  // extension", and it exists because three sites had quietly disagreed about `.gitignore`.
+  // Over the NAME, since it reads back to the last dot and a folder may hold one.
+  const extension = extensionOf(basename(path))
   return extension === '' || kindForExtension(extension) !== null
 }
 
@@ -132,7 +139,7 @@ const HEAD_POOL = 16
  *
  * The order is not cosmetic: it is what settles which of two files claiming one id keeps it,
  * and that answer has to be the same on every machine. */
-async function pooledHeads<T>(
+export async function pooledHeads<T>(
   items: readonly string[],
   read: (item: string) => Promise<T>,
 ): Promise<T[]> {
@@ -415,21 +422,19 @@ export function createDocumentFiles({
   }
 
   /** Swept while listing rather than on a timer: nothing else ever walks the whole folder. */
-  const sweep = async (paths: readonly string[]): Promise<void> => {
+  const sweep = async (orphans: readonly string[]): Promise<void> => {
     // Failure is nothing to report: the listing is what was asked for, and the copy will be
     // offered again at the next open.
     await Promise.all(
       // `recursive`: a folder document stages a folder, and `rm` refuses one without it.
-      orphanStagingCopies(paths, staging).map(orphan =>
-        rm(absoluteOf(orphan), { force: true, recursive: true }),
-      ),
+      orphans.map(orphan => rm(absoluteOf(orphan), { force: true, recursive: true })),
     )
   }
 
   /** A document read off its path, or nothing. */
   const descriptorOf = async (path: string): Promise<DocumentDescriptor | null> => {
     const entry = basename(path)
-    const extension = extname(entry)
+    const extension = extensionOf(entry)
     const claimed = kindForExtension(extension)
     // An entry with no extension at all claims nothing, so there is nothing for the envelope to
     // contradict — and one that lost its extension is a document the studio would otherwise stop
@@ -486,18 +491,25 @@ export function createDocumentFiles({
    * sitting in the folder and absent from every list in the studio.
    */
   const walk = async (): Promise<DocumentDescriptor[]> => {
-    const entries = await walkFiles()
-    const paths = entries.map(entry => entry.path)
+    // One pass over the walk, not three. A project of a hundred thousand files is a hundred
+    // thousand strings, and this runs on the thread that owns every window — mapping them to
+    // paths, then filtering for staging copies, then filtering again for documents was three
+    // uninterrupted blocks where one loop answers both questions.
+    const candidates: string[] = []
+    const orphans: string[] = []
 
-    await sweep(paths)
+    for (const { path } of await walkFiles()) {
+      if (claimsDocument(path)) candidates.push(path)
+      else if (isStagingCopy(path, staging)) orphans.push(path)
+    }
+
+    await sweep(orphans)
 
     index.clear()
 
     // By code unit, and said so: this ordering reaches no reader — it only settles WHICH of two
     // files claiming one id keeps it, and that answer has to be the same on every machine.
-    const candidates = paths
-      .filter(claimsDocument)
-      .sort((one, other) => (one < other ? -1 : one > other ? 1 : 0))
+    candidates.sort((one, other) => (one < other ? -1 : one > other ? 1 : 0))
 
     const found: DocumentDescriptor[] = []
     for (const descriptor of await pooledHeads(candidates, descriptorOf)) {

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { HINT_TOP } from '@/helpers/tooltip'
+import { ProgressRow } from '@/design/ProgressRow'
 import { getBridge } from '@/services/bridge'
 import { useRescan } from '@/hooks/useRescan'
 
@@ -11,8 +11,13 @@ import { useRescan } from '@/hooks/useRescan'
  * this on screen is a project where something moved outside the studio — the one case where the
  * pass reads files, and the one where a reader deserves to know why the disk is busy.
  *
+ * `ProgressRow` and not a row of its own: the jobs bar and the media import had grown two copies
+ * of "something is happening, here is how far" and they had already drifted. The `<ul>` is here
+ * because that row is an `<li>` and this panel is not a list — one item, and the reading stays
+ * the same as everywhere else.
+ *
  * The counts wait for a total: until the pass knows how many files it will read, `0 of 0` would
- * be a number that says less than no number at all.
+ * be a number saying less than no number at all.
  */
 export function RescanBar() {
   const { t } = useTranslation()
@@ -21,21 +26,17 @@ export function RescanBar() {
   if (!running) return null
 
   return (
-    <div className="text-muted text-tiny flex items-center gap-(--sc-gutter) px-(--sc-gutter) py-(--sc-gutter)">
-      <span className="min-w-0 flex-1 truncate">{t('explorer.rescan')}</span>
-      {total > 0 && (
-        <span className="tabular-nums">{t('explorer.rescanCount', { done, total })}</span>
-      )}
-      {/* The label is on screen, so the tooltip EXPLAINS rather than repeats — and no
-          `aria-label`, which would replace the visible name for a screen reader (WCAG 2.5.3). */}
-      <button
-        type="button"
-        className="hover:bg-elevated shrink-0 rounded px-(--sc-gutter)"
-        {...HINT_TOP(t('explorer.rescanStopHint'))}
-        onClick={() => void getBridge()?.project.stopRescan()}
-      >
-        {t('explorer.rescanStop')}
-      </button>
-    </div>
+    <ul>
+      <ProgressRow
+        label={t('explorer.rescan')}
+        {...(total > 0
+          ? { ratio: done / total, status: t('explorer.rescanCount', { done, total }) }
+          : { status: '' })}
+        cancel={{
+          label: t('explorer.rescanStop'),
+          onClick: () => void getBridge()?.project.stopRescan(),
+        }}
+      />
+    </ul>
   )
 }

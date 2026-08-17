@@ -1,5 +1,6 @@
 import { describe, expect, it, onTestFinished } from 'vitest'
 import { createCatalogQueue, serveCatalog, type CatalogServerPort } from './catalog-queue'
+import type { RescanDisk } from './catalog-rescan'
 import { createCatalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
 import {
@@ -154,11 +155,17 @@ describe('a catalogue served on a port', () => {
   /** One turn of the loop, which is what `serveCatalog` yields to between two requests. */
   const settle = (): Promise<void> => new Promise(resolve => setImmediate(resolve))
 
+  /** A folder holding nothing: these cases are about routing, and a rescan of it changes nothing. */
+  const emptyDisk = (): RescanDisk => ({
+    list: () => Promise.resolve([]),
+    hash: () => Promise.resolve(null),
+  })
+
   it('answers what it is asked, off the catalogue it was given', async () => {
     const port = fakePort()
     const catalog = createCatalog(openMemoryDatabase())
     onTestFinished(catalog.close)
-    serveCatalog(catalog, port)
+    serveCatalog(catalog, port, emptyDisk)
 
     port.send({ id: 1, op: 'search', query: {} })
     await settle()
@@ -172,7 +179,7 @@ describe('a catalogue served on a port', () => {
     const port = fakePort()
     const catalog = createCatalog(openMemoryDatabase())
     onTestFinished(catalog.close)
-    serveCatalog(catalog, port)
+    serveCatalog(catalog, port, emptyDisk)
 
     port.send({ id: 1, op: 'search', query: { text: 'mo' } })
     port.send({ id: 2, op: 'search', query: { text: 'mos' } })

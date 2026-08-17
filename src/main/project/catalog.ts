@@ -196,8 +196,11 @@ const MIGRATIONS: readonly string[] = [
   -- every open and every focus does not write a line each time.
   ALTER TABLE assets ADD COLUMN missing_at TEXT;
 
-  -- The rescan reads every filed row at once, and reads nothing else of them.
-  CREATE INDEX assets_missing_at_idx ON assets(missing_at);
+  -- PARTIAL, and it has to be: in the ordinary project every row is NULL here, so a plain index
+  -- would be the size of the table, maintained on every insert, and answer nothing — the two
+  -- queries that read this column ask \`IS NULL\`, which no index serves. What IS worth an index
+  -- is the handful of dated rows, which is what a listing of them would seek.
+  CREATE INDEX assets_missing_at_idx ON assets(missing_at) WHERE missing_at IS NOT NULL;
   `,
 ]
 

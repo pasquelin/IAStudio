@@ -15,7 +15,7 @@ import {
   type CatalogResponse,
 } from './catalog-protocol'
 import { rescanProject, type RescanDisk, type RescanReport } from './catalog-rescan'
-import { itemsBackupOf, writeItemsBackup } from './items-backup'
+import { itemsBackupOf, worthBackingUp, writeItemsBackup } from './items-backup'
 
 export type CatalogQueue = {
   /** Takes one message. A request is queued; an abandon marks one that has not run yet. */
@@ -103,7 +103,7 @@ export type CatalogDiskOpener = (root: string) => RescanDisk
 export function serveCatalog(
   catalog: Catalog,
   port: CatalogServerPort,
-  openDisk: CatalogDiskOpener | null = null,
+  openDisk: CatalogDiskOpener,
 ): void {
   const queue = createCatalogQueue({
     run: request => dispatchCatalogRequest(catalog, request),
@@ -116,25 +116,16 @@ export function serveCatalog(
   const stopping = new Set<number>()
 
   const rescan = (message: CatalogRescan): void => {
-    if (!openDisk) {
-      port.postMessage({ id: message.id, ok: false, error: 'this catalogue cannot reach a disk' })
-      return
-    }
-
     /**
-     * The backup is written after a COMPLETE pass, and only there.
+     * The backup, written here because this thread holds both the rows and a folder to write
+     * into — the whole table never crosses a boundary to be saved. WHETHER to write it is
+     * `worthBackingUp`'s, beside the file it decides about.
      *
-     * It is the one moment the catalogue has just been held against the disk, so what it says is
-     * as true as it will ever be — and it is in this thread, which holds both the rows and a
-     * folder to write into, so the whole table never crosses a boundary to be saved.
-     *
-     * A pass that was called off writes nothing: what it read is a partial reading of the folder,
-     * and a backup of that would be a backup of less than what exists.
+     * Failure is not the pass's failure: reconciling worked, and a backup that could not be
+     * written is a project with no backup rather than a project that was not reconciled.
      */
     const saveBackup = async (report: RescanReport): Promise<RescanReport> => {
-      // Failure is not the pass's failure: reconciling worked, and a backup that could not be
-      // written is a project with no backup rather than a project that was not reconciled.
-      if (report.complete) {
+      if (worthBackingUp(report)) {
         await writeItemsBackup(
           message.root,
           itemsBackupOf(catalog.backup(), new Date().toISOString()),
@@ -149,7 +140,8 @@ export function serveCatalog(
       // `setImmediate` for the reason the queue uses it: a microtask resolves before the port is
       // ever polled, so a stop posted mid-pass would not be seen until the pass was over.
       yieldTo: () => new Promise<void>(resume => setImmediate(resume)),
-      onProgress: ({ done, total }) => port.postMessage({ rescan: message.id, done, total }),
+      onProgress: ({ done, total }) =>
+        port.postMessage({ rescanProgress: message.id, done, total }),
     })
       .then(saveBackup)
       .then(

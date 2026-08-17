@@ -4,7 +4,9 @@ import { join } from 'node:path'
 import { deserialize, serialize } from 'node:v8'
 import { afterAll, bench, describe } from 'vitest'
 import { DOCUMENT_VERSION, ENVELOPE_LIMIT, type DocumentFile } from '@shared/domain/document'
-import { splitDocument } from './documents'
+// The production pool, not a copy of it: this bench measures the exact syscall shape `list()`
+// takes, and a second implementation beside it would drift from the one being measured.
+import { pooledHeads, splitDocument } from './documents'
 
 /**
  * What one save and one open cost the main process.
@@ -112,6 +114,7 @@ describe('reading a document: the whole main-thread cost of one open', () => {
  */
 const DOCUMENT_COUNT = 2_000
 const FOLDER_COUNT = 200
+/** What the labels say. The pool itself is `pooledHeads`, and its size lives with it. */
 const POOL = 16
 
 /**
@@ -171,23 +174,6 @@ async function candidates(): Promise<string[]> {
     .map(entry => join(entry.parentPath, entry.name))
 }
 
-async function pooled<T>(
-  items: readonly string[],
-  run: (item: string) => Promise<T>,
-): Promise<T[]> {
-  const done: T[] = new Array<T>(items.length)
-  let next = 0
-
-  const worker = async (): Promise<void> => {
-    for (let index = next++; index < items.length; index = next++) {
-      done[index] = await run(items[index] ?? '')
-    }
-  }
-
-  await Promise.all(Array.from({ length: POOL }, worker))
-  return done
-}
-
 describe('listing a project of 2 000 documents in 200 folders', () => {
   afterAll(async () => {
     if (laid) await rm(await laid, { recursive: true, force: true })
@@ -199,12 +185,12 @@ describe('listing a project of 2 000 documents in 200 folders', () => {
   })
 
   bench(`${POOL} heads in flight`, async () => {
-    await pooled(await candidates(), headOf)
+    await pooledHeads(await candidates(), headOf)
   })
 
   // The cache as it would be: a `stat` says nothing moved, and the head is not opened at all.
   // It replaces one `open`/`read`/`close` with one `stat`, and that is the whole trade.
   bench(`${POOL} heads in flight, all of them cached`, async () => {
-    await pooled(await candidates(), file => stat(file))
+    await pooledHeads(await candidates(), file => stat(file))
   })
 })

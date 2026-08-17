@@ -109,30 +109,25 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     }
   }
 
-  port.onMessage(message => {
-    if (isRescanProgress(message)) {
-      rescans.get(message.rescan)?.onProgress?.({ done: message.done, total: message.total })
+  port.onMessage(response => {
+    if (isRescanProgress(response)) {
+      rescans
+        .get(response.rescanProgress)
+        ?.onProgress?.({ done: response.done, total: response.total })
       return
     }
 
-    const response = message
-
-    if (isRescanResponse(response)) {
-      const slot = rescans.get(response.id)
-      if (!slot) return
+    /**
+     * Which table is waiting on this id is what says whether it was a rescan — an id belongs to
+     * one or the other and never to both, `nextId` being shared. A rescan that FAILED comes back
+     * as an ordinary error response, so the shape alone cannot tell them apart.
+     */
+    const waiting = rescans.get(response.id)
+    if (waiting) {
       rescans.delete(response.id)
-      slot.release()
-      slot.resolve(response.rescan)
-      return
-    }
-
-    // A rescan that FAILED comes back as an ordinary error response — the shape carries no `op`,
-    // so which table is waiting is what tells the two apart.
-    const stopped = rescans.get(response.id)
-    if (stopped) {
-      rescans.delete(response.id)
-      stopped.release()
-      stopped.reject(new Error(response.ok ? 'unexpected answer to a rescan' : response.error))
+      waiting.release()
+      if (isRescanResponse(response)) waiting.resolve(response.rescan)
+      else if (!response.ok) waiting.reject(new Error(response.error))
       return
     }
 
@@ -143,7 +138,7 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     slot.release()
 
     if (response.ok && !isRescanResponse(response)) slot.resolve(response.value)
-    else slot.reject(new Error(response.ok ? 'unexpected answer' : response.error))
+    else if (!response.ok) slot.reject(new Error(response.error))
   })
 
   port.onFailure(error => {

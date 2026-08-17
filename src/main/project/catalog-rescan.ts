@@ -104,37 +104,48 @@ export async function rescanProject(
     }
   }
 
-  if (lost.length === 0) return { moved: 0, missing: 0, returned, complete: true }
+  // The fingerprints worth looking for, and nothing else. A row imported before fingerprints
+  // were recorded cannot be matched by one — reading files on its behalf would be reading them
+  // for an answer that could never come, and one such row in a project holding a checkout is
+  // ten thousand files hashed for nothing.
+  const wanted = new Set(lost.flatMap(row => (row.hash ? [row.hash] : [])))
 
-  // Only the files no row claims can be where a lost one went. A file the catalogue already
-  // knows about is not up for adoption, however its bytes read.
-  const claimed = new Set(rows.map(row => row.path))
-  const orphans = [...onDisk].filter(path => !claimed.has(path))
+  const byHash = wanted.size === 0 ? new Map<string, string | null>() : await fingerprints()
 
-  const byHash = new Map<string, string[]>()
-  let done = 0
+  async function fingerprints(): Promise<Map<string, string | null>> {
+    // Only the files no row claims can be where a lost one went. A file the catalogue already
+    // knows about is not up for adoption, however its bytes read.
+    const claimed = new Set(rows.map(row => row.path))
+    const orphans = [...onDisk].filter(path => !claimed.has(path))
 
-  onProgress({ done, total: orphans.length })
+    // `null` marks a fingerprint two files share: it cannot say which of them a row meant, and
+    // the second one arriving is what turns the first into a refusal. See the note above.
+    const found = new Map<string, string | null>()
+    onProgress({ done: 0, total: orphans.length })
 
-  for (let start = 0; start < orphans.length; start += BATCH) {
-    if (stopped()) return { moved: 0, missing: 0, returned, complete: false }
+    for (let start = 0; start < orphans.length; start += BATCH) {
+      if (stopped()) return found
 
-    const batch = orphans.slice(start, start + BATCH)
-    const hashes = await Promise.all(batch.map(path => disk.hash(path)))
+      const batch = orphans.slice(start, start + BATCH)
+      const hashes = await Promise.all(batch.map(path => disk.hash(path)))
 
-    batch.forEach((path, index) => {
-      const hash = hashes[index]
-      if (!hash) return
-      byHash.set(hash, [...(byHash.get(hash) ?? []), path])
-    })
+      batch.forEach((path, index) => {
+        const hash = hashes[index]
+        if (!hash || !wanted.has(hash)) return
+        found.set(hash, found.has(hash) ? null : path)
+      })
 
-    done += batch.length
-    onProgress({ done, total: orphans.length })
+      onProgress({ done: Math.min(start + BATCH, orphans.length), total: orphans.length })
 
-    // Between batches, and only here: a fingerprint cannot be interrupted once begun, so what a
-    // stop actually buys is the batches that have not started.
-    await yieldTo()
+      // Between batches, and only here: a fingerprint cannot be interrupted once begun, so what
+      // a stop actually buys is the batches that have not started.
+      await yieldTo()
+    }
+
+    return found
   }
+
+  if (stopped()) return { moved: 0, missing: 0, returned, complete: false }
 
   const at = now()
   let moved = 0
@@ -144,14 +155,9 @@ export async function rescanProject(
   const taken = new Set<string>()
 
   for (const row of lost) {
-    const candidates = (row.hash ? (byHash.get(row.hash) ?? []) : []).filter(
-      path => !taken.has(path),
-    )
+    const found = row.hash ? byHash.get(row.hash) : null
 
-    // Exactly one, or nothing: see the note on ambiguity above.
-    const found = candidates.length === 1 ? candidates[0] : undefined
-
-    if (found !== undefined) {
+    if (found && !taken.has(found)) {
       taken.add(found)
       catalog.repath(row.path, found)
       if (row.missingAt !== null) catalog.markMissing(found, null)

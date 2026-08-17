@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { writeAtomic } from '@main/persistence'
 import type { BackedUpItem } from './catalog'
+import type { RescanReport } from './catalog-rescan'
 
 /**
  * Where the backup sits. Under a dot, so it is the studio's own by the one rule that says so —
@@ -54,4 +55,18 @@ export async function writeItemsBackup(root: string, backup: ItemsBackup): Promi
   const file = join(root, ITEMS_BACKUP)
   await mkdir(dirname(file), { recursive: true })
   await writeAtomic(file, JSON.stringify(backup, null, 2))
+}
+
+/**
+ * Whether a reconciliation pass is worth writing the backup after — the policy, beside the file
+ * it decides about rather than in the routing that happens to call it.
+ *
+ * A COMPLETE pass, because a stopped one read part of the folder and a backup of that would be a
+ * backup of less than what exists. A pass that CHANGED something, because rebuilding the whole
+ * table costs a full scan and a JSON of every row: the ordinary pass runs on every return to the
+ * window and finds nothing moved, and paying that each time would make the pass the expensive
+ * thing rather than the quiet one.
+ */
+export function worthBackingUp({ complete, moved, missing, returned }: RescanReport): boolean {
+  return complete && moved + missing + returned > 0
 }

@@ -72,11 +72,16 @@ export type CatalogRescanStop = { op: 'rescan-stop'; target: number }
 /**
  * How far a rescan has got. Not a response: a response settles the request, and this is sent
  * many times before the one that does.
+ *
+ * `rescanProgress` carries the id AND tells the two apart, and it is named that rather than
+ * `rescan` for a measured reason: the finished ANSWER carries a `rescan` field too, so a guard
+ * reading that name answered true for both — the progress path swallowed the answer and the
+ * promise never settled. The row saying the studio was working stayed on screen for good.
  */
-export type CatalogRescanProgress = { rescan: number; done: number; total: number }
+export type CatalogRescanProgress = { rescanProgress: number; done: number; total: number }
 
 export function isRescanProgress(message: unknown): message is CatalogRescanProgress {
-  return typeof message === 'object' && message !== null && 'rescan' in message
+  return typeof message === 'object' && message !== null && 'rescanProgress' in message
 }
 
 /** What the QUEUE takes: one request at a time, and the abandons that spare the ones still in it. */

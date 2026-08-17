@@ -39,6 +39,9 @@ export type FolderReader = {
    * Folders are left out; a document written as a folder is not one for this purpose and is
    * answered as the item it is. Same depth bound and same refusal to walk into a document as
    * the search: the two are one walk.
+   *
+   * **In no order.** Every caller groups, re-sorts or de-duplicates what comes back, and this is
+   * the walk that crosses the whole project on every save.
    */
   walk: (hidden?: boolean) => Promise<FolderEntry[]>
   /**
@@ -70,10 +73,10 @@ export type FolderReader = {
  * express the language they depend on, while an unrelated suite's `beforeEach` was free to move it.
  */
 export function createFolderReader(rootOf: () => string, languageOf: () => string): FolderReader {
-  const level = async (relative: string, hidden = false): Promise<FolderEntry[]> => {
+  const level = async (relative: string, hidden = false, sorted = true): Promise<FolderEntry[]> => {
     const entries = await readdir(join(rootOf(), relative), { withFileTypes: true })
 
-    return entries
+    const read = entries
       .filter(entry => hidden || !isHiddenEntry(entry.name))
       .map((entry): FolderEntry => {
         // NFC, and this is one of the two places the studio settles that question — the other is
@@ -88,7 +91,8 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
           kind: entry.isDirectory() ? 'folder' : 'file',
         }
       })
-      .sort(entriesByName(languageOf()))
+
+    return sorted ? read.sort(entriesByName(languageOf())) : read
   }
 
   /**
@@ -101,11 +105,12 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
   const walkAll = async (
     hidden: boolean,
     keep: (entry: FolderEntry) => boolean,
+    sorted = true,
   ): Promise<FolderEntry[]> => {
     const found: FolderEntry[] = []
 
     const walk = async (relative: string, depth: number): Promise<void> => {
-      const entries = await level(relative, hidden).catch((): FolderEntry[] => [])
+      const entries = await level(relative, hidden, sorted).catch((): FolderEntry[] => [])
       const deeper: Promise<void>[] = []
 
       for (const entry of entries) {
@@ -129,7 +134,8 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
   }
 
   return {
-    list: level,
+    // Sorted, because this one IS displayed: the tree draws a level in the order it comes back.
+    list: async (relative, hidden) => await level(relative, hidden),
 
     search: async (term, hidden = false) => {
       // Trimmed here as well as in the panel: a term of spaces alone would otherwise match every
@@ -143,9 +149,15 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
     walk: async (hidden = false) =>
       // Folders are left out, documents written as one excepted: the domain view answers what a
       // file IS, and a folder is not a domain.
+      //
+      // UNSORTED, unlike `list` and `search`: `localeCompare` builds a collator per comparison,
+      // and not one caller of this keeps the order — the domain view groups what comes back, the
+      // document listing re-sorts by code unit, and the reconciliation pass puts it into a `Set`.
+      // This is the walk that crosses a hundred thousand files on every save.
       await walkAll(
         hidden,
         entry => entry.kind === 'file' || kindForExtension(extensionOf(entry.name)) !== null,
+        false,
       ),
 
     names: async relative => await readdir(join(rootOf(), relative)).catch(() => null),

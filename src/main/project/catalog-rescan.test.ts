@@ -185,14 +185,20 @@ describe('reconciling the catalogue with the disk', () => {
     expect(folder.hashed).toEqual([])
   })
 
-  // A row imported before fingerprints were recorded cannot be matched by one, and must not be
-  // matched by anything else either.
-  it('dates a row that carries no fingerprint rather than guessing', async () => {
+  /**
+   * A row imported before fingerprints were recorded cannot be matched by one, and must not be
+   * matched by anything else either — nor cost a single read on its behalf. One such row in a
+   * project holding a checkout would otherwise hash ten thousand files for an answer that could
+   * never come.
+   */
+  it('dates a row that carries no fingerprint, without reading a file for it', async () => {
     const catalog = catalogWith([{ id: 'a', path: 'Images/dusk.png' }])
+    const folder = disk({ 'Repérages/dusk.png': 'h1', 'Repérages/other.png': 'h2' })
 
-    const report = await rescanProject(catalog, disk({ 'Repérages/dusk.png': 'h1' }), options())
+    const report = await rescanProject(catalog, folder, options())
 
     expect(report).toMatchObject({ moved: 0, missing: 1 })
+    expect(folder.hashed).toEqual([])
   })
 
   // A file that will not read costs the row it might have matched, never the whole pass.
