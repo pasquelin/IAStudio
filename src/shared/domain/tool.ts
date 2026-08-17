@@ -208,7 +208,7 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // Every surface, and one placement rather than two: a tool is held to one slot across all of
   // its placements, and splitting these would only be a way of writing the same slot twice.
   //
-  // Offered only while a project IS open — `tool-registry.ts`, for the reason the Explorer gives
+  // Offered only while a project IS open — `toolRegistry.ts`, for the reason the Explorer gives
   // there. In a space that is always true; on the home it is the whole point.
   { id: 'git', zone: 'left', slot: 'secondary', surfaces: [...WORKSPACE_IDS, HOME_SURFACE] },
 

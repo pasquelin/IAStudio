@@ -11,7 +11,7 @@ import { Row } from '@/design/Row'
 import { ToolButton } from '@/design/ToolButton'
 import { TONE_TEXT, type StatusTone } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { revealTool } from '@/helpers/reveal-panel'
+import { revealTool } from '@/helpers/revealPanel'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
 

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GitCommit, GitCommitFile, GitRepository } from '@shared/domain/git'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { HISTORY_PAGE, useGit } from '@/stores/git'
 import { History } from './History'
 
