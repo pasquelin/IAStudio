@@ -29,6 +29,25 @@ type DropZone = 'before' | 'into' | 'after'
 type DropTarget =
   { zone: 'into' } | { zone: 'before' | 'after'; parentId: string | null; index: number }
 
+/**
+ * A drag from somewhere else, and what releasing it here does. Shared with the grid that reads
+ * the same folder, so the two views of one panel answer one gesture the same way.
+ *
+ * `carries` is asked at HOVER, so it must read the announced types and never the payload — the
+ * platform answers nothing about the latter until the drop itself.
+ */
+export type ForeignDrop<T> = {
+  carries: (event: { dataTransfer: DataTransfer | null }) => boolean
+  /**
+   * Which rows receive it. Its own rather than `droppable`, which answers about the batch this
+   * tree picked up: asked with an empty one it drops the very test that refuses a destination —
+   * `canMoveInto` is a question about a PAIR, and there is no source here to make the pair.
+   */
+  accepts: (node: T) => boolean
+  /** `null` for the blank below the rows, which means the folder being read. */
+  onDrop: (event: React.DragEvent<HTMLElement>, node: T | null) => void
+}
+
 export type TreeRow<T> = {
   node: T
   depth: number
@@ -154,6 +173,16 @@ export type TreeProps<T extends TreeNode> = {
    */
   onDropRoot?: (ids: readonly string[]) => void
   /**
+   * A drag that did NOT start in this tree — the asset shelf's, for the Explorer.
+   *
+   * It lands INSIDE a row or on the blank, never between two: what it carries is not a row of
+   * this tree, so it has no place in an ordering. Everything else the hover already does is
+   * unchanged, spring-loaded folders included — that is the whole reason it is a prop here
+   * rather than a second set of handlers written beside the tree.
+   *
+   */
+  foreign?: ForeignDrop<T>
+  /**
    * A right-click on that same blank, which aims at the same place a drop there does: the project
    * folder itself. Absent leaves the browser's own menu.
    *
@@ -233,6 +262,7 @@ export function Tree<T extends TreeNode>({
   onContextMenuRoot,
   onDragStart,
   droppable,
+  foreign,
   onActivate,
   onContextMenu,
   renderRow,
@@ -604,15 +634,23 @@ export function Tree<T extends TreeNode>({
       // them has the row as its target and is that row's business. Without this test the whole
       // panel would answer for every hover, outline included.
       onDragOver={event => {
-        if (!onDropRoot || event.target !== event.currentTarget || !rowDrag.carries(event)) return
+        if (event.target !== event.currentTarget) return
+        if (foreign?.carries(event)) {
+          event.preventDefault()
+          event.dataTransfer.dropEffect = 'copy'
+          return setOver(null)
+        }
+        if (!onDropRoot || !rowDrag.carries(event)) return
         event.preventDefault()
         event.dataTransfer.dropEffect = 'move'
         setOver(null)
       }}
       onDrop={event => {
-        if (!onDropRoot || event.target !== event.currentTarget) return
+        if (event.target !== event.currentTarget) return
         event.preventDefault()
         setOver(null)
+        if (foreign?.carries(event)) return foreign.onDrop(event, null)
+        if (!onDropRoot) return
         setDragged(null)
         const carried = rowDrag.idsFrom(event)
         if (carried.length > 0) onDropRoot(carried)
@@ -719,6 +757,15 @@ export function Tree<T extends TreeNode>({
                   setDragged(batch)
                 }}
                 onDragOver={event => {
+                  // A drag from elsewhere only ever lands INSIDE a row, so it takes the same
+                  // outline and the same spring-loaded open — `restingIn` reads `into`.
+                  if (foreign?.carries(event)) {
+                    if (!foreign.accepts(row.node)) return
+                    event.preventDefault()
+                    // What leaves the shelf is COPIED into the folder, never taken from it.
+                    event.dataTransfer.dropEffect = 'copy'
+                    return setOver({ id: row.node.id, zone: 'into' })
+                  }
                   if (!rowDrag.carries(event)) return
                   const target = dropTargetFor(row, event)
                   if (target === null) {
@@ -738,6 +785,13 @@ export function Tree<T extends TreeNode>({
                 }}
                 onDrop={event => {
                   event.preventDefault()
+                  // Before the tree's own reading: `dragged` is null for this one, and every
+                  // check below would refuse it on that alone.
+                  if (foreign?.carries(event)) {
+                    setOver(null)
+                    if (foreign.accepts(row.node)) foreign.onDrop(event, row.node)
+                    return
+                  }
                   const target = dropTargetFor(row, event)
                   setOver(null)
 

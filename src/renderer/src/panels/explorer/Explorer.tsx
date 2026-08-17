@@ -19,6 +19,7 @@ import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
 import { openDocument } from '@/app/dockviewApi'
 import { assetAt } from '@/helpers/assetAt'
+import { carriesAsset, landAssetIn } from '@/helpers/assetDrag'
 import { isDomainHeading, type ExplorerNode } from '@/helpers/domainNodes'
 import { entriesSorted, FOLDER_SORTS } from '@/helpers/folderSort'
 import { renameAsset, renameDocument } from '@/helpers/rename'
@@ -289,6 +290,25 @@ export function Explorer() {
     const stop = getBridge()?.project.onFilesChanged(settled)
     return () => stop?.()
   }, [settled])
+
+  /**
+   * What the shelf may be dropped ON, and what dropping it there does — written once and read by
+   * BOTH views, which is the whole of why they behave alike: same outline, same spring-loaded
+   * folder, same landing.
+   *
+   * A folder, never a file: an asset lands IN a place, and a file is not one. A heading is not a
+   * place either, and `.index/` is not the user's to write into — the main process refuses that
+   * one again, this only keeps the outline from promising it.
+   */
+  const acceptsAsset = (node: ExplorerNode): boolean =>
+    !isDomainHeading(node) && node.kind === 'folder' && !isPrivatePath(node.path)
+
+  const landAsset = useCallback(
+    (event: React.DragEvent<HTMLElement>, folder: string): void => {
+      void landAssetIn(event, folder).then(outcome => outcome && settled(outcome))
+    },
+    [settled],
+  )
 
   // The stack belongs to the project: opening another one leaves nothing to take back, and a
   // clipboard holding paths of the folder just closed means nothing in the new one.
@@ -587,6 +607,9 @@ export function Explorer() {
               setCarried(null)
               void getBridge()?.project.moveFiles(paths, browsed).then(settled)
             }}
+            // The blank of the grid means the folder on screen, as it does for every other
+            // gesture here — a new folder, a paste, a drop of the panel's own rows.
+            foreign={{ carries: carriesAsset, onDrop: event => landAsset(event, browsed) }}
             onContextMenuRoot={() => raiseRootMenu(browsed)}
             // A message is not a card, so `onBlank` counts it as blank and an empty folder still
             // offers the one gesture that gets you out of it.
@@ -622,6 +645,11 @@ export function Explorer() {
                   carried !== null &&
                   carried.every(one => canMoveInto(one, node.path))
                 }
+                foreign={{
+                  accepts: acceptsAsset(node),
+                  carries: carriesAsset,
+                  onDrop: event => landAsset(event, node.path),
+                }}
                 onPickUp={setCarried}
                 onRelease={() => setCarried(null)}
                 onDropInto={paths =>
@@ -691,6 +719,13 @@ export function Explorer() {
             onDropRoot={paths =>
               void getBridge()?.project.moveFiles(paths, FOLDER_ROOT).then(settled)
             }
+            // The same object the grid takes: one predicate, one landing, two views.
+            foreign={{
+              carries: carriesAsset,
+              accepts: acceptsAsset,
+              onDrop: (event, node) =>
+                landAsset(event, node && !isDomainHeading(node) ? node.path : FOLDER_ROOT),
+            }}
             // The blank aims at the project folder, as the drop above does: the tree shows the
             // whole of it, so there is only ever one place its blank could mean.
             onContextMenuRoot={() => raiseRootMenu(FOLDER_ROOT)}

@@ -1156,3 +1156,120 @@ describe('Tree, a folder hovered while something is being dragged', () => {
     expect(onToggle).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * A drag that began somewhere else — the asset shelf, for the Explorer. Nothing of this tree is
+ * in hand, so every check the tree makes about what it picked up would refuse it; this is the
+ * path that lets it through, and it has to reuse the rest rather than repeat it.
+ */
+describe('Tree, a drag that did not start in it', () => {
+  const FOREIGN = 'application/x-foreign'
+
+  function foreignTransfer(): DataTransfer {
+    const data = dragTransfer()
+    data.setData(FOREIGN, 'whatever')
+    return data
+  }
+
+  const carries = (event: { dataTransfer: DataTransfer | null }): boolean =>
+    event.dataTransfer?.types.includes(FOREIGN) ?? false
+
+  function renderForeign(
+    onDrop: (event: unknown, node: { id: string } | null) => void,
+    accepts: (node: { id: string }) => boolean = () => true,
+    extra?: { onToggle?: (id: string) => void },
+  ) {
+    return render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={extra?.onToggle ?? (() => {})}
+        // Present so the tree's OWN gesture is fully wired: what is tested is that the foreign
+        // path does not go through it.
+        onDrop={() => {}}
+        onInsert={() => {}}
+        onDropRoot={() => {}}
+        foreign={{ carries, accepts, onDrop }}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+  }
+
+  it('lands it in the row it was released on, nothing having been picked up here', () => {
+    const onDrop = vi.fn()
+    renderForeign(onDrop)
+
+    fireEvent.drop(screen.getAllByRole('treeitem')[1]!, { dataTransfer: foreignTransfer() })
+
+    expect(onDrop).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id: 'a' }))
+  })
+
+  it('leaves a row that refuses it alone', () => {
+    const onDrop = vi.fn()
+    renderForeign(onDrop, node => node.id !== 'a')
+
+    fireEvent.drop(screen.getAllByRole('treeitem')[1]!, { dataTransfer: foreignTransfer() })
+
+    expect(onDrop).not.toHaveBeenCalled()
+  })
+
+  /**
+   * `null` for the blank, which every caller reads as "the place this list is showing". The
+   * tree's own blank means the same thing, and `onDropRoot` is what says it for the tree's rows.
+   */
+  it('reads the blank below the rows as no row at all', () => {
+    const onDrop = vi.fn()
+    renderForeign(onDrop)
+
+    fireEvent.drop(screen.getByRole('tree').parentElement!, { dataTransfer: foreignTransfer() })
+
+    expect(onDrop).toHaveBeenCalledWith(expect.anything(), null)
+  })
+
+  /**
+   * It lands INSIDE a row and never between two, `onInsert` or no `onInsert`: what it carries is
+   * not a row of this tree, so it has no place in an ordering. Read at the very top of the row,
+   * where the tree's own drag would insert before it.
+   */
+  it('never inserts between two rows, whatever part of one it is released on', () => {
+    const onDrop = vi.fn()
+    const onInsert = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={() => {}}
+        onInsert={onInsert}
+        foreign={{ carries, accepts: () => true, onDrop }}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const row = screen.getAllByRole('treeitem')[1]!
+    fireEvent.drop(row, { dataTransfer: foreignTransfer(), clientY: 0 })
+
+    expect(onInsert).not.toHaveBeenCalled()
+    expect(onDrop).toHaveBeenCalled()
+  })
+
+  // The half of the gesture the user asked for by name: carrying something two levels down
+  // without letting go works the same whichever list the thing came from.
+  it('opens a folder it rests on, exactly as the tree’s own drag does', () => {
+    vi.useFakeTimers()
+    const onToggle = vi.fn()
+    renderForeign(() => {}, undefined, { onToggle })
+
+    fireEvent.dragOver(screen.getAllByRole('treeitem')[1]!, { dataTransfer: foreignTransfer() })
+    act(() => void vi.advanceTimersByTime(600))
+
+    expect(onToggle).toHaveBeenCalledWith('a')
+    vi.useRealTimers()
+  })
+})
