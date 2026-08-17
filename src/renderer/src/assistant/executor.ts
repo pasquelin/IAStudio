@@ -18,6 +18,7 @@ import { mountedGenerator } from './generatorBridge'
 import { GIT_HANDLERS } from './gitHandlers'
 import { JOB_HANDLERS } from './jobHandlers'
 import { SCENE_HANDLERS } from './sceneHandlers'
+import { SETTINGS_HANDLERS } from './settingsHandlers'
 import { STATE_HANDLERS } from './stateHandlers'
 
 /**
@@ -37,6 +38,7 @@ const HANDLERS: ActionHandlers = {
   ...CANVAS_HANDLERS,
   ...SCENE_HANDLERS,
   ...GIT_HANDLERS,
+  ...SETTINGS_HANDLERS,
 }
 
 const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })

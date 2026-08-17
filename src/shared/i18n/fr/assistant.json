@@ -332,6 +332,22 @@
       "gitTag": {
         "title": "Étiqueter une version",
         "description": "Pose un nom sur une version enregistrée, pour la retrouver sans son empreinte."
+      },
+      "settingsRead": {
+        "title": "Lire les réglages",
+        "description": "Rend tous les réglages que porte le studio, section par section, exactement tels que la fenêtre des réglages les montre."
+      },
+      "settingsWrite": {
+        "title": "Changer les réglages",
+        "description": "Écrit un ou plusieurs réglages, section par section. Ce qui n’est pas nommé reste tel quel, et un changement qui ne nomme rien que le studio connaisse est refusé plutôt qu’écrit sans être lu."
+      },
+      "accountsList": {
+        "title": "Lister les comptes",
+        "description": "Rend les comptes Scenario que porte ce studio, en disant lequel est actif et lesquels peuvent être renommés ou retirés. Aucune clé ni aucun secret n’est jamais rendu."
+      },
+      "accountsActivate": {
+        "title": "Changer de compte",
+        "description": "Fait de l’un des comptes détenus celui par lequel le studio génère. Tout ce qui part ensuite le fait avec ses identifiants."
       }
     },
     "refusals": {
@@ -427,7 +443,9 @@
       "amend": "Corriger la dernière version au lieu d’en ajouter une",
       "branchName": "Nom de la branche",
       "tagName": "Nom de l’étiquette",
-      "stashIndex": "Place dans la pile, la plus récente d’abord"
+      "stashIndex": "Place dans la pile, la plus récente d’abord",
+      "settings": "Réglages à changer, par section",
+      "accountId": "Identifiant du compte"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

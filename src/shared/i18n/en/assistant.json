@@ -332,6 +332,22 @@
       "gitTag": {
         "title": "Tag a version",
         "description": "Puts a name on one recorded version, so it can be found again without its hash."
+      },
+      "settingsRead": {
+        "title": "Read the settings",
+        "description": "Returns every setting the studio holds, section by section, exactly as the settings window shows them."
+      },
+      "settingsWrite": {
+        "title": "Change the settings",
+        "description": "Writes one or more settings, section by section. What is not named is left alone, and a change that names nothing the studio knows is refused rather than written through unread."
+      },
+      "accountsList": {
+        "title": "List the accounts",
+        "description": "Returns the Scenario accounts this studio holds, saying which one is active and which may be renamed or removed. No key or secret is ever answered."
+      },
+      "accountsActivate": {
+        "title": "Switch account",
+        "description": "Makes one of the held accounts the one the studio generates through. Everything sent from then on goes out with its credentials."
       }
     },
     "refusals": {
@@ -427,7 +443,9 @@
       "amend": "Amend the last version instead of adding one",
       "branchName": "Branch name",
       "tagName": "Tag name",
-      "stashIndex": "Place in the shelf, newest first"
+      "stashIndex": "Place in the shelf, newest first",
+      "settings": "Settings to change, by section",
+      "accountId": "Account identifier"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

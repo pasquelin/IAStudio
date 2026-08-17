@@ -100,6 +100,10 @@ export type ActionName =
   | 'git.stash'
   | 'git.stashPop'
   | 'git.tag'
+  | 'settings.read'
+  | 'settings.write'
+  | 'accounts.list'
+  | 'accounts.activate'
 
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.

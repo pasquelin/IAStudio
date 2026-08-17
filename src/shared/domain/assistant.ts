@@ -12,6 +12,7 @@ import { FILE_ACTIONS } from './fileActions'
 import { GIT_ACTIONS } from './gitActions'
 import { JOB_ACTIONS } from './jobActions'
 import { SCENE_ACTIONS } from './sceneActions'
+import { SETTINGS_ACTIONS } from './settingsActions'
 import { STATE_ACTIONS } from './stateActions'
 
 /**
@@ -108,6 +109,7 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
   ...CANVAS_ACTIONS,
   ...SCENE_ACTIONS,
   ...GIT_ACTIONS,
+  ...SETTINGS_ACTIONS,
 ]
 
 /** The share of the registry one door offers. `mcp` is everything; `both` is the short list. */
