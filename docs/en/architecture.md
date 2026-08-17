@@ -1094,7 +1094,7 @@ rendered verbatim is a way to the screen**, and the rule that follows holds for 
 script carries the fact (`unmodified: true`), the render carries the sentence, and the sentence
 comes from a bundle.
 
-**Fixtures are out of EVERY sweep — `*-fixtures.ts` and `*-fixtures.tsx`, in both guards.** A fixture builds the data a suite asserts on and reaches no screen: measured, none of the 23 fixture files in `src/` is imported by production code. The label it carries is the one the API returns, not a word this studio writes. It is a **decision**, taken on 11/08: forcing a fixture through a bundle key makes nothing truer and reads worse.
+**Fixtures are out of EVERY sweep — `*-fixtures.ts` and `*-fixtures.tsx`, in both guards.** A fixture builds the data a suite asserts on and reaches no screen: measured, no fixture file in `src/` is imported by production code. The label it carries is the one the API returns, not a word this studio writes. It is a **decision**, taken on 11/08: forcing a fixture through a bundle key makes nothing truer and reads worse.
 
 **What the exclusion would cost if it drifted, and the guard that stops it**: a file named `*-fixtures.ts` imported by a panel would be invisible to both guards — two blind spots on one file, neither of which would say a word. `main/import-cycles.test.ts`, § *what a shipped file may reach*, refuses that import. It judges the RESOLVED path, so an alias, a `.js` spelt for a `.ts` and Vite's `?worker` suffix all land in the same place. **What it cannot see**, and says so: a worker named through `new URL(…, import.meta.url)` is a URL, not an import.
 
@@ -1208,11 +1208,14 @@ opaquely.
 
 ## Testing
 
-**Over 8,100 tests across more than 570 files**, run by Vitest — the exact figure moves with every
-merge, and `pnpm test` states it. Unit tests are colocated (`*.test.ts` next to the code) and
+**Over 9,000 tests across nearly 700 files**, run by Vitest — the exact figure moves with every
+merge, and `pnpm test` states it (9,315 across 686 on 2026-08-17). Unit tests are colocated (`*.test.ts` next to the code) and
 written in the same movement as the code, never after.
 
-`pnpm validate` — typecheck, lint, format check, tests — must be green before any commit.
+`pnpm validate` must be green before any commit. It chains the links `package.json` declares, and
+that is where they are read: spelling them out here would make a second list, and a second list
+drifts the day a link is added — which is what happened to the CI job, now calling the command
+itself.
 
 **No coverage measurement**, removed on 2026-08-13: it was paid on every loop for a benefit that
 did not repay the time it took from features ([ADR-14](../ci/adr/ADR-14-portee-de-la-validation-continue.md)).

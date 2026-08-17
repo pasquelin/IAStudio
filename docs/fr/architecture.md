@@ -1142,7 +1142,7 @@ porte la phrase, et la phrase vient d'un bundle.
 
 **Les fixtures sont hors de TOUS les balayages, `*-fixtures.ts` comme `*-fixtures.tsx`, et des deux
 gardes à la fois.** Une fixture construit la donnée qu'une suite affirme et n'atteint aucun écran —
-mesuré : aucun des 23 fichiers de fixtures de `src/` n'est importé par du code de production. Le
+mesuré : aucun fichier de fixtures de `src/` n'est importé par du code de production. Le
 libellé qu'elle porte est celui que l'API rend, pas un mot que ce studio écrit. C'est une
 **décision**, prise le 11/08 : forcer une fixture à passer par une clé de bundle ne rend rien plus
 vrai et se lit plus mal.
@@ -1270,12 +1270,14 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d’é
 
 ## Les tests
 
-**Plus de 8 100 tests, sur plus de 570 fichiers**, exécutés par Vitest — le chiffre exact bouge à
-chaque fusion, `pnpm test` le dit. Les tests unitaires sont colocalisés (`*.test.ts` à côté du
+**Plus de 9 000 tests, sur près de 700 fichiers**, exécutés par Vitest — le chiffre exact bouge à
+chaque fusion, `pnpm test` le dit (9 315 sur 686 le 17/08). Les tests unitaires sont colocalisés (`*.test.ts` à côté du
 code) et écrits dans le même mouvement que le code, jamais après.
 
-`pnpm validate` — typecheck, lint, vérification de format, tests — doit être vert avant tout
-commit.
+`pnpm validate` doit être vert avant tout commit. Il enchaîne les maillons que `package.json`
+déclare, et c'est là qu'ils se lisent : les réécrire ici ferait une seconde liste, qui se
+périmerait au premier maillon ajouté — c'est arrivé au job de CI, qui appelle désormais la
+commande elle-même.
 
 **Aucune mesure de couverture**, retirée le 2026-08-13 : elle était payée à chaque tour de boucle
 pour un bénéfice qui ne compensait pas le temps pris sur les fonctionnalités ([ADR-14](../ci/adr/ADR-14-portee-de-la-validation-continue.md)).

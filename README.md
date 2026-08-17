@@ -11,7 +11,7 @@ Generate and edit images, videos, 3D models, audio, textures and skyboxes — in
 [![three.js](https://img.shields.io/badge/three.js-0.185-2b2d30?logo=three.js&logoColor=ffffff)](https://threejs.org)
 [![PixiJS](https://img.shields.io/badge/PixiJS-8.19-2b2d30?logo=javascript&logoColor=e8639b)](https://pixijs.com)
 [![Vite](https://img.shields.io/badge/Vite-7-2b2d30?logo=vite&logoColor=ffd028)](https://vite.dev)
-[![Tests](https://img.shields.io/badge/tests-8096%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
+[![Tests](https://img.shields.io/badge/tests-9000%2B%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-2b2d30)](#license)
 
 **[→ Presentation site](https://pasquelin.github.io/scenario/)**
@@ -94,7 +94,7 @@ Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained
 | `pnpm test` · `pnpm test:watch` | vitest, single run or watching |
 | `pnpm lint` · `pnpm lint:fix` | eslint over `src` |
 | `pnpm format` · `pnpm format:check` | prettier, write or check |
-| `pnpm validate` | typecheck + lint + format check + tests |
+| `pnpm validate` | the gate: every check a commit must pass, chained. `package.json` names its links, and the CI job runs this very command rather than a copy of it |
 | `pnpm unused:main` | knip — exports, files and dependencies nothing reaches. **`src/main` only**: the same unreachable export is reported there and ignored under `renderer` and `shared`, and no configuration found so far widens it |
 | `pnpm duplication` | jscpd — blocks written twice, from sixty tokens up, over the whole of `src` |
 | `pnpm rebuild:native` | electron-rebuild — required after touching better-sqlite3 |
@@ -136,9 +136,10 @@ A selection, not an inventory — enough to find your way, and no more.
 
 ## Quality bar
 
-`pnpm validate` must be green before any commit: typecheck, lint, format check and the full
-test suite — **8,096 tests across 591 files**. Unit tests are colocated with the
-code they cover and written in the same movement, never after.
+`pnpm validate` must be green before any commit. It chains every check this repository
+enforces — `package.json` is where they are listed, so that no second list can drift from it —
+and the suite it runs is **north of 9,000 tests** (9,315 across 686 files on 2026-08-17). Unit
+tests are colocated with the code they cover and written in the same movement, never after.
 
 Every change also goes through a reuse-and-simplification pass and an automated review before
 it is called done.
