@@ -158,7 +158,7 @@ export function NumberField({
           setTyped(null)
           onGestureEnd?.()
         }}
-        className={cn(FIELD_FILL, 'text-tiny')}
+        className={FIELD_FILL}
       />
     </div>
   )

@@ -1,4 +1,3 @@
-import { cn } from '@/helpers/cn'
 import { FIELD_FILL, FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
 export type TextFieldProps = GestureProps & {
@@ -38,7 +37,7 @@ export function TextField({
         // One entry per session at the field, not one per keystroke.
         onFocus={() => onGestureStart?.()}
         onBlur={() => onGestureEnd?.()}
-        className={cn(FIELD_FILL, 'text-tiny')}
+        className={FIELD_FILL}
         {...hint}
       />
     </label>
