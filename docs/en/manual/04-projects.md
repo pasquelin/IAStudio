@@ -192,8 +192,12 @@ the two is always lit:
 **Other** for what belongs to none — each followed by how many files it counts. **A domain nothing
 fills does not appear**: seven empty headings over a new project would say nothing at all.
 
-A heading names, it does not open: it cannot be selected, it cannot be renamed, and **this reading
-offers no drag at all** — there is no folder on screen left to carry a file into.
+A heading names, it does not open: it cannot be selected, it cannot be renamed, and nothing drops
+onto it.
+
+**It has almost nowhere to drop**, and that is mechanical: filing a file needs a folder to carry
+it into, and there is no folder left on screen. A row can still be picked up, but the only target
+remaining is the blank below the tree — the project root. **To file, go back to By folder.**
 
 It is what answers "where did my videos go?" when they are spread across five folders you made
 yourself.
@@ -229,6 +233,7 @@ field it was typed in off the screen**, or there would be no way back.
 | **⌘-click** / `Ctrl`-click | adds the row to the selection, or takes it out |
 | **⇧-click** | takes everything from the last row picked to this one |
 | **Drag** a row onto a folder | moves the file or folder into it, under the same name |
+| **Drag** a row into the blank below the tree | takes it out of its folder, to the project root |
 
 **Everything below holds for the whole selection**, not for the clicked row alone: a drag carries
 several at once, and the right-click menu applies to all of them. **Three files carried into a
@@ -284,15 +289,19 @@ nothing can be dropped into them either.
 
 **And it holds for what they CONTAIN, as far as moving goes.** A file under `assets/img` cannot be
 cut, copied, duplicated or dragged elsewhere: its path is still what says what it is, and taking
-it out of there would cost it its kind. **Two gestures are the exception, because they do not move
-it**: **renaming** it — the index follows the name — and **moving it to the trash**, where the
-index lets the row go with the file.
+it out of there would cost it its kind. **The trash is the exception, because it does not move
+it**: the index lets the row go with the file.
 
-**Their contents can be renamed.** An asset and a document each have a gesture of their own, and
+**And renaming, on one condition.** An asset and a document each have a gesture of their own, and
 the Explorer leads to it: the name changes, and the file follows in the same move. A document
 renamed here keeps its tab open, which takes the new name. An asset renamed here changes name
 everywhere at once — the Explorer, the shelf, the Inspector, the tab editing it — because there
 is only **one name**: its index row's name IS its file's name.
+
+> **The studio only renames what it knows.** A picture you dropped into `assets/img` yourself,
+> without going through the studio, has no index row: it is neither a document nor an asset, and
+> **Rename** is greyed out on it. Rename it from your own file browser — the Explorer will read it
+> again. **Outside the studio's folders, everything of yours renames without condition.**
 
 > A name your file system would not accept is refused rather than silently corrected — a slash,
 > for instance. So is a name the folder already holds, rather than overwriting somebody else's

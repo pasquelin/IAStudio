@@ -203,8 +203,13 @@ l’un des deux est toujours allumé :
 domaine que rien ne remplit n’apparaît pas** : sept en-têtes vides sur un projet neuf ne diraient
 rien.
 
-Un en-tête nomme, il n’ouvre pas : on ne le sélectionne pas, on ne le renomme pas, et **cette
-lecture n’offre aucun glisser** — il n’y a plus de dossier à l’écran où porter un fichier.
+Un en-tête nomme, il n’ouvre pas : on ne le sélectionne pas, on ne le renomme pas, et rien ne s’y
+dépose.
+
+**Elle n’a presque nulle part où déposer**, et c’est mécanique : ranger un fichier demande un
+dossier où le porter, et il n’y a plus de dossier à l’écran. Une ligne se prend toujours, mais la
+seule cible qui reste est le vide sous l’arbre — la racine du projet. **Pour ranger, revenez
+Par dossier.**
 
 C’est ce qui répond à « où sont passées mes vidéos ? » quand elles sont réparties dans cinq
 dossiers que vous avez faits vous-même.
@@ -240,6 +245,7 @@ disparaître le champ où elle a été tapée** — sinon il n’y aurait plus d
 | **⌘-clic** / `Ctrl`-clic | ajoute la ligne à la sélection, ou l’en retire |
 | **⇧-clic** | prend tout ce qui va de la dernière ligne prise à celle-ci |
 | **Glisser** une ligne sur un dossier | y déplace le fichier ou le dossier, sous le même nom |
+| **Glisser** une ligne dans le vide sous l’arbre | la sort de son dossier, à la racine du projet |
 
 **Tout ce qui suit vaut pour la sélection entière**, pas pour la seule ligne cliquée : glisser en
 emporte plusieurs d’un coup, et le menu du clic droit s’applique à toutes. **Trois fichiers portés
@@ -296,14 +302,20 @@ pas, et rien ne s’y dépose non plus.
 **Et il vaut aussi pour ce qu’ils CONTIENNENT, tant que le déplacement est en jeu.** Un fichier
 sous `assets/img` ne se coupe pas, ne se copie pas, ne se duplique pas et ne se glisse pas
 ailleurs : c’est encore son chemin qui dit ce qu’il est, et le sortir de là lui ferait perdre son
-type. **Deux gestes font exception, parce qu’ils ne le déplacent pas** : le **renommer** — l’index
-suit le nom — et le **mettre à la corbeille**, où l’index lâche la ligne avec le fichier.
+type. **La corbeille fait exception, parce qu’elle ne le déplace pas** : l’index lâche la ligne
+avec le fichier.
 
-**Leur contenu, lui, se renomme.** Un asset et un document ont chacun leur propre geste, et
+**Et le renommage, mais à une condition.** Un asset et un document ont chacun leur propre geste, et
 l’Explorateur y mène : le nom change, et le fichier suit dans le même mouvement. Un document
 renommé ici garde son onglet ouvert, qui prend le nouveau nom. Un asset renommé ici change de nom
 partout à la fois — l’Explorateur, l’étagère, l’Inspecteur, l’onglet qui l’édite — parce qu’il
 n’y a **qu’un seul nom** : celui de sa ligne d’index EST celui de son fichier.
+
+> **Le studio ne renomme que ce qu’il connaît.** Une image que vous auriez déposée vous-même dans
+> `assets/img` sans passer par le studio n’a pas de ligne d’index : elle n’est ni un document, ni
+> un asset, et **Renommer** est grisé sur elle. Renommez-la depuis votre système de fichiers —
+> l’Explorateur la relira. **Hors des dossiers du studio, tout ce qui est à vous se renomme sans
+> condition.**
 
 > Un nom que votre système de fichiers n’accepterait pas est refusé plutôt que corrigé en
 > silence — une barre oblique, par exemple. Un nom que le dossier tient déjà l’est aussi, plutôt
