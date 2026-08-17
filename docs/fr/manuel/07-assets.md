@@ -54,19 +54,23 @@ ligne est large et presque vide, mais l’étagère n’y lit plus.
 
 | Contrôle | Ce qu’il fait |
 |---|---|
-| **Rechercher…** | filtre sur le **nom** de l’asset, à la frappe |
+| **Rechercher…** | filtre les assets du projet sur leur **nom**, et interroge la bibliothèque, à la frappe |
 | **Type** | ne garde qu’**une seule** sorte d’assets — en choisir une remplace la précédente |
 | **Emplacement** | ne garde que les assets dans un certain état vis-à-vis de la bibliothèque — et, sur **Publié par quelqu’un d’autre**, va chercher ce que les autres ont publié |
 | **Icônes** / **Liste** | grille de vignettes, ou liste dense |
 | **Réduire les vignettes** / **Agrandir les vignettes** | leur taille |
 
-Le filtrage est **instantané**, même sur un gros projet : tout le catalogue est déjà chargé en
-mémoire, contrairement au panneau Modèles qui interroge le catalogue Scenario à distance.
+Les assets **du projet** répondent instantanément : ils sont déjà en mémoire. Ceux de la
+**bibliothèque** demandent un aller-retour — le mot part une fois que la frappe s’arrête, et il y
+est cherché dans le nom, mais aussi dans le prompt et la description, que le projet ne connaît pas.
+
+La liste se remplit **au fil du défilement**, dans les deux sens : le catalogue du projet comme la
+bibliothèque livrent leurs assets par paquets, et arriver en bas en demande la suite.
 
 > **La recherche ne réclame pas vos accents.** Taper `foret` trouve « Forêt d’hiver », et `ete`
-> trouve « Été ». C’est vrai ici et dans la recherche des préférences : on cherche en tapant, pas
-> en épelant. Le panneau **Modèles** n’en dit rien, parce qu’il ne cherche pas lui-même — il passe
-> le mot à l’API et affiche ce qu’elle rend.
+> trouve « Été ». C’est vrai pour les assets du projet et dans la recherche des préférences : on
+> cherche en tapant, pas en épelant. Pour la moitié **bibliothèque**, c’est l’API qui répond, et
+> elle décide seule — comme dans le panneau **Modèles**, qui ne cherche pas lui-même non plus.
 >
 > Cela vaut aussi pour les fichiers venus du Finder. macOS écrit les noms sous une forme où
 > l’accent est un caractère à part, invisible à l’œil mais différent pour la machine — un asset

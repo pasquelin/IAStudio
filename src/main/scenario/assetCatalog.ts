@@ -66,7 +66,7 @@ type AssetSearchRequest = {
    * not after the SDK's `public`, which cannot be destructured — it is a reserved word.
    */
   publicFeed?: boolean
-  /** `attribute:asc|desc` pairs. `score` is NOT among them — see `PUBLIC_FEED_SORT`. */
+  /** `attribute:asc|desc` pairs. `score` is NOT among them — see `NEWEST_FIRST`. */
   sortBy?: readonly string[]
   /**
    * Asset ids to look like. The API answers by visual and semantic likeness, and includes the

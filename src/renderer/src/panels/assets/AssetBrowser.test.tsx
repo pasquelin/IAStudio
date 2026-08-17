@@ -15,7 +15,15 @@ import { useCloud } from '@/stores/cloud'
 import { useJobs } from '@/stores/jobs'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { job } from '@/stores/job-fixtures'
+import { withQueries } from '@/app/query-fixtures'
 import { AssetBrowser } from './AssetBrowser'
+
+/**
+ * The shelf under a query client, which is what `Application.tsx` mounts around it: the library
+ * and the public feed are both read a page at a time, and `useInfiniteQuery` is what holds their
+ * cursors.
+ */
+const shelf = () => withQueries(<AssetBrowser />)
 
 const openAsset = vi.fn()
 vi.mock('@/helpers/openAsset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
@@ -55,13 +63,17 @@ describe('AssetBrowser', () => {
    * facet had to be set by hand this branch was simply unreachable — it now carries the space's
    * own kind from the moment the panel opens.
    */
-  it('tells a project with no asset of this kind from no project at all', () => {
-    const { rerender } = render(<AssetBrowser />)
+  it('tells a project with no asset of this kind from no project at all', async () => {
+    const { rerender } = render(shelf())
     expect(screen.getByText(/Ouvrez un projet/)).toBeInTheDocument()
 
     useProject.setState({ project: PROJECT })
-    rerender(<AssetBrowser />)
-    expect(screen.getByText(/Aucun asset de ce type/)).toBeInTheDocument()
+    rerender(shelf())
+
+    // Awaited, because the shelf no longer answers « nothing here » while the library is still
+    // being read: with a project open and nothing drawn, it says so rather than blaming the
+    // project for an emptiness it cannot know yet.
+    expect(await screen.findByText(/Aucun asset de ce type/)).toBeInTheDocument()
   })
 
   // And a narrowing the user asked for is blamed, where the space's own default is not: only
@@ -69,7 +81,7 @@ describe('AssetBrowser', () => {
   it('blames the filter only when the user set one', async () => {
     useProject.setState({ project: PROJECT })
     useAssets.setState({ items: [asset('a')] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.type(screen.getByLabelText(/Rechercher/i), 'nothing matches this')
 
@@ -78,7 +90,7 @@ describe('AssetBrowser', () => {
 
   it('renders a window over the assets rather than all of them', () => {
     useAssets.setState({ items: Array.from({ length: 2000 }, (_, i) => asset(`a${i}`)) })
-    render(<AssetBrowser />)
+    render(shelf())
 
     const shown = screen.getAllByText(/^Asset a\d+$/)
     expect(shown.length).toBeGreaterThan(0)
@@ -89,7 +101,7 @@ describe('AssetBrowser', () => {
     useAssets.setState({
       items: [asset('one', { name: 'Sunset' }), asset('two', { name: 'Robot' })],
     })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.type(screen.getByLabelText('Rechercher…'), 'sun')
 
@@ -100,7 +112,7 @@ describe('AssetBrowser', () => {
   it('distinguishes a filter that matched nothing from an empty project', async () => {
     useProject.setState({ project: PROJECT })
     useAssets.setState({ items: [asset('one', { name: 'Sunset' })] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.type(screen.getByLabelText('Rechercher…'), 'zzz')
 
@@ -109,7 +121,7 @@ describe('AssetBrowser', () => {
 
   it('names the asset type in the user language', () => {
     useAssets.setState({ items: [asset('vid', { name: 'Clip', type: 'video' })] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(screen.getByText('Vidéo')).toBeInTheDocument()
   })
@@ -118,7 +130,7 @@ describe('AssetBrowser', () => {
     useAssets.setState({
       items: [asset('img', { name: 'Sunset' }), asset('vid', { name: 'Clip', type: 'video' })],
     })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.selectOptions(screen.getByLabelText('Type'), 'video')
 
@@ -131,7 +143,7 @@ describe('AssetBrowser', () => {
     useMedia.setState({
       progress: { vid: { assetId: 'vid', stage: 'proxy', ratio: 0.5 } },
     })
-    render(<AssetBrowser />)
+    render(shelf())
 
     // Named after the asset it prepares, not after its id: the row below says the same name.
     expect(screen.getByLabelText('A001 50 %')).toBeInTheDocument()
@@ -142,7 +154,7 @@ describe('AssetBrowser', () => {
     const cancel = vi.fn(async () => undefined)
     useAssets.setState({ items: [asset('vid', { name: 'A001', type: 'video' })] })
     useMedia.setState({ progress: { vid: { assetId: 'vid', stage: 'failed', ratio: 1 } }, cancel })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.click(screen.getByRole('button', { name: /Retirer de la liste/ }))
 
@@ -157,7 +169,7 @@ describe('AssetBrowser', () => {
       capabilities: { ffmpeg: false },
       progress: { vid: { assetId: 'vid', stage: 'probe', ratio: 0.1 } },
     })
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(screen.queryByText(/Préparation vidéo indisponible/)).not.toBeInTheDocument()
   })
@@ -168,7 +180,7 @@ describe('AssetBrowser', () => {
    * and the branch that chose between them went with the placement.
    */
   it('stacks its filter bar under the title, where that row has no room', () => {
-    render(<AssetBrowser />)
+    render(shelf())
 
     const bar = screen.getByRole('searchbox').closest('label')?.parentElement
     expect(bar?.className).toContain('flex-col')
@@ -187,7 +199,7 @@ describe('what the shelf shows of where an asset lives', () => {
   // about, and the list, which has room, shows every state.
   it('leaves a settled asset unmarked in the grid', () => {
     useAssets.setState({ items: [asset('a', { name: 'Boulder' })] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(screen.queryByLabelText('Local seulement')).not.toBeInTheDocument()
   })
@@ -197,7 +209,7 @@ describe('what the shelf shows of where an asset lives', () => {
       items: [asset('a', { name: 'Boulder' })],
       collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' },
     })
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(screen.getByLabelText('Local seulement')).toBeInTheDocument()
   })
@@ -213,7 +225,7 @@ describe('what the shelf shows of where an asset lives', () => {
         }),
       ],
     })
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(screen.getByLabelText(/à envoyer/)).toBeInTheDocument()
   })
@@ -229,7 +241,7 @@ describe('what the shelf shows of where an asset lives', () => {
         }),
       ],
     })
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(screen.getByLabelText('Appartient à un autre projet')).toBeInTheDocument()
   })
@@ -252,7 +264,7 @@ describe('the kinds a space has any use for', () => {
     useAssets.setState({ setScope })
     useLayouts.setState({ activeWorkspace: 'audio' })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(setScope).toHaveBeenCalledWith(['audio'])
   })
@@ -262,7 +274,7 @@ describe('the kinds a space has any use for', () => {
     useAssets.setState({ setScope })
     useLayouts.setState({ activeWorkspace: 'image' })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(setScope).toHaveBeenCalledWith(['image', 'texture', 'skybox'])
   })
@@ -276,7 +288,7 @@ describe('the kinds a space has any use for', () => {
     const setScope = vi.fn()
     useAssets.setState({ setScope })
     useLayouts.setState({ activeWorkspace: 'image' })
-    render(<AssetBrowser />)
+    render(shelf())
     setScope.mockClear()
 
     await userEvent.selectOptions(screen.getByLabelText('Type'), 'audio')
@@ -292,7 +304,7 @@ describe('the kinds a space has any use for', () => {
   it('writes the space’s own kind into the Type facet', () => {
     useLayouts.setState({ activeWorkspace: '3d' })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(useAssets.getState().collection.selections.type).toEqual(['mesh'])
   })
@@ -301,7 +313,7 @@ describe('the kinds a space has any use for', () => {
   // under the hand that set it is one nobody can use.
   it('rewrites it when the space changes, and not under the user’s own choice', async () => {
     useLayouts.setState({ activeWorkspace: '3d' })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.selectOptions(screen.getByLabelText('Type'), 'image')
     expect(useAssets.getState().collection.selections.type).toEqual(['image'])
@@ -331,7 +343,7 @@ describe('the shelf hands its rows to the collection', () => {
 
   it('selects the row a click lands on, and paints it', async () => {
     useAssets.setState({ items: [asset('one'), asset('two')] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.click(screen.getByText('Asset two'))
 
@@ -347,7 +359,7 @@ describe('the shelf hands its rows to the collection', () => {
   it('adds to the selection rather than replacing it, under the modifier', async () => {
     const user = userEvent.setup()
     useAssets.setState({ items: [asset('one'), asset('two'), asset('three')] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await user.click(screen.getByText('Asset one'))
     await user.keyboard('{Meta>}')
@@ -359,7 +371,7 @@ describe('the shelf hands its rows to the collection', () => {
 
   it('opens an asset from the keyboard, which the shelf could not do at all', async () => {
     useAssets.setState({ items: [asset('one')] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.click(screen.getByText('Asset one'))
     await userEvent.keyboard('{Enter}')
@@ -369,7 +381,7 @@ describe('the shelf hands its rows to the collection', () => {
 
   it('still opens on a double-click, which is the gesture people know', async () => {
     useAssets.setState({ items: [asset('one')] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.dblClick(screen.getByText('Asset one'))
 
@@ -383,7 +395,7 @@ describe('the shelf hands its rows to the collection', () => {
       items: [asset('one'), asset('two')],
       collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' },
     })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.click(screen.getByText('Asset two'))
     expect(useSelection.getState().selection).toMatchObject({ kind: 'asset', ids: ['two'] })
@@ -426,7 +438,7 @@ describe('the three provenances, as the panel draws them', () => {
     })
     useAssets.setState({ items: [asset('asset_1')] })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(await screen.findByText('A library picture')).toBeInTheDocument()
     expect(screen.getByText('Asset asset_1')).toBeInTheDocument()
@@ -443,7 +455,7 @@ describe('the three provenances, as the panel draws them', () => {
     })
     useAssets.setState({ items: [asset('asset_1')] })
 
-    const { unmount } = render(<AssetBrowser />)
+    const { unmount } = render(shelf())
     await screen.findByText('A library picture')
 
     expect(useAssets.getState().shownCount).toBe(2)
@@ -452,12 +464,81 @@ describe('the three provenances, as the panel draws them', () => {
     expect(useAssets.getState().shownCount).toBeNull()
   })
 
+  /**
+   * The catalogue holds this project's rows and nothing else, so a word matched in memory could
+   * only ever find what had already been pulled — the library was unsearchable from the shelf
+   * that draws it.
+   */
+  it('sends what was typed to the library', async () => {
+    const browse = vi.fn(() => Promise.resolve({ assets: [], cursor: null }))
+    installFakeBridge({ cloud: { browse } })
+
+    render(shelf())
+    await userEvent.type(screen.getByLabelText(/Rechercher/i), 'dragon')
+
+    await vi.waitFor(() =>
+      expect(browse).toHaveBeenCalledWith(expect.objectContaining({ text: 'dragon' })),
+    )
+  })
+
+  it('sends it to the public feed too, once that facet asks for one', async () => {
+    const explore = vi.fn(() => Promise.resolve({ assets: [], cursor: null }))
+    installFakeBridge({ cloud: { explore } })
+    useAssets.setState({
+      collection: { ...DEFAULT_COLLECTION_STATE, selections: { location: ['published'] } },
+    })
+
+    render(shelf())
+    await userEvent.type(screen.getByLabelText(/Rechercher/i), 'dragon')
+
+    await vi.waitFor(() =>
+      expect(explore).toHaveBeenCalledWith(expect.objectContaining({ text: 'dragon' })),
+    )
+  })
+
+  /**
+   * The defect this closes: the index matches a prompt and a description as well as a name, so a
+   * library hit found on its PROMPT was weighed again here against a name that never held the
+   * word — and vanished from the very search that turned it up.
+   */
+  it('keeps a library row the API matched on something this side cannot see', async () => {
+    installFakeBridge({
+      cloud: { browse: () => Promise.resolve({ assets: [cloudAsset], cursor: null }) },
+    })
+    useAssets.setState({ items: [asset('asset_1')] })
+
+    render(shelf())
+    await screen.findByText('A library picture')
+    await userEvent.type(screen.getByLabelText(/Rechercher/i), 'dragon')
+
+    // The project's own row goes, judged on its name as it always was. The library's stays.
+    await vi.waitFor(() => expect(screen.queryByText('Asset asset_1')).not.toBeInTheDocument())
+    expect(screen.getByText('A library picture')).toBeInTheDocument()
+  })
+
+  /**
+   * The main process narrows the API's page AFTER it lands, so a full library page holding
+   * nothing of the kind on screen comes back empty with its cursor still alive. Read as « this
+   * source could still hold anything newer », it hid the project's own catalogue behind it — and
+   * an empty grid has no end for a scroll to reach, so nothing brought it back.
+   */
+  it('keeps drawing the project when the library answers a page of another kind', async () => {
+    installFakeBridge({
+      cloud: { browse: () => Promise.resolve({ assets: [], cursor: 't:page-2' }) },
+    })
+    useAssets.setState({ items: [asset('asset_1')] })
+
+    render(shelf())
+
+    expect(await screen.findByText('Asset asset_1')).toBeInTheDocument()
+  })
+
   // The whole point of the merged list: the thing being made is on it before it exists.
   it('draws a generation that is still running', () => {
     installFakeBridge({})
     useJobs.setState({ jobs: [job({ label: 'A skeleton', status: 'running', progress: 0.4 })] })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(screen.getByText('A skeleton')).toBeInTheDocument()
   })
@@ -479,7 +560,7 @@ describe('the three provenances, as the panel draws them', () => {
     })
     useAssets.setState({ items: [asset('asset_gone', { path: 'assets/img/gone.png' })] })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     await screen.findByTitle(/introuvable/i)
     expect(asked).toEqual(['asset_gone'])
@@ -498,7 +579,7 @@ describe('the three provenances, as the panel draws them', () => {
       items: [asset('asset_gone', { path: 'assets/img/gone.png', remoteAssetId: 'asset_remote' })],
     })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     // Its own name is gone with it: what stands there now is the library's line.
     expect(await screen.findByText('A library picture')).toBeInTheDocument()
@@ -520,7 +601,7 @@ describe('the three provenances, as the panel draws them', () => {
     })
     useAssets.setState({ items: [asset('asset_gone', { path: 'assets/img/gone.png' })] })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     await vi.waitFor(() => expect(removed).toEqual(['asset_gone']))
   })
@@ -544,7 +625,7 @@ describe('the three provenances, as the panel draws them', () => {
     useAssets.setState({ items: [asset('asset_rush', { type: 'video' })] })
     useLayouts.setState({ activeWorkspace: 'video' })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     await screen.findByTitle(/introuvable/i)
     expect(removed).toBe(0)
@@ -583,7 +664,7 @@ describe('what each gesture on a line does', () => {
   it('opens a catalogue row on a double-click', async () => {
     installFakeBridge({})
     useAssets.setState({ items: [asset('asset_1')] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.dblClick(screen.getByText('Asset asset_1'))
 
@@ -605,7 +686,7 @@ describe('what each gesture on a line does', () => {
       },
       assets: { search: () => Promise.resolve([pulled]) },
     })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.dblClick(await screen.findByText('A library picture'))
 
@@ -627,7 +708,7 @@ describe('what each gesture on a line does', () => {
         },
       },
     })
-    render(<AssetBrowser />)
+    render(shelf())
     const tile = await screen.findByText('A library picture')
 
     useCloud.setState({ busy: true })
@@ -644,7 +725,7 @@ describe('what each gesture on a line does', () => {
     installFakeBridge({
       cloud: { browse: () => Promise.resolve({ assets: [cloudAsset], cursor: null }) },
     })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.click(await screen.findByText('A library picture'))
 
@@ -667,7 +748,7 @@ describe('what each gesture on a line does', () => {
       },
     })
     useAssets.setState({ items: [asset('asset_gone', { path: 'assets/img/gone.png' })] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await screen.findByTitle(/introuvable/i)
     // A refresh of the catalogue is what re-opens the question.
@@ -685,7 +766,7 @@ describe('what each gesture on a line does', () => {
       collection: { ...DEFAULT_COLLECTION_STATE, search: 'nothing matches this' },
     })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(await screen.findByText(/Aucun résultat|ne correspond/i)).toBeInTheDocument()
   })
@@ -709,7 +790,7 @@ describe('what each gesture on a line does', () => {
       collection: { ...DEFAULT_COLLECTION_STATE, selections: { type: ['image'] } },
     })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     await vi.waitFor(() => expect(asked).toEqual({ pageSize: 60, types: ['image'] }))
   })
@@ -732,7 +813,7 @@ describe('what each gesture on a line does', () => {
         },
       })
 
-      render(<AssetBrowser />)
+      render(shelf())
       await vi.waitFor(() => expect(screen.getByRole('searchbox')).toBeInTheDocument())
 
       expect(explored).toBe(0)
@@ -758,7 +839,7 @@ describe('what each gesture on a line does', () => {
         },
       })
 
-      render(<AssetBrowser />)
+      render(shelf())
 
       await vi.waitFor(() => expect(asked).toEqual({ type: 'image', pageSize: 60 }))
     })
@@ -781,7 +862,7 @@ describe('what each gesture on a line does', () => {
         },
       })
 
-      render(<AssetBrowser />)
+      render(shelf())
 
       expect(await screen.findByText('Somebody else’s')).toBeInTheDocument()
     })
@@ -797,7 +878,7 @@ describe('what each gesture on a line does', () => {
       },
       assets: { search: () => Promise.resolve([]) },
     })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await userEvent.dblClick(await screen.findByText('A library picture'))
 
@@ -826,7 +907,7 @@ describe('what each gesture on a line does', () => {
       items: [asset('asset_gone', { path: 'assets/img/gone.png', remoteAssetId: 'asset_remote' })],
     })
 
-    render(<AssetBrowser />)
+    render(shelf())
 
     await screen.findByText('A library picture')
     expect(removed).toBe(0)
@@ -846,7 +927,7 @@ describe('what each gesture on a line does', () => {
     })
     const row = asset('asset_back', { path: 'assets/img/back.png' })
     useAssets.setState({ items: [row] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await screen.findByTitle(/introuvable/i)
     useAssets.setState({ items: [{ ...row }] })
@@ -873,7 +954,7 @@ describe('what each gesture on a line does', () => {
     })
     const row = asset('asset_1', { path: 'assets/img/one.png' })
     useAssets.setState({ items: [row] })
-    render(<AssetBrowser />)
+    render(shelf())
 
     await vi.waitFor(() => expect(attempts).toBe(1))
     // A refresh puts the same rows back on screen, and they are asked about afresh.
@@ -894,7 +975,7 @@ describe('what each gesture on a line does', () => {
     installFakeBridge({})
     useJobs.setState({ jobs: [job({ label: 'A skeleton', status: 'running', progress: 0.4 })] })
     useAssets.setState({ collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' } })
-    render(<AssetBrowser />)
+    render(shelf())
 
     expect(screen.getByText('A skeleton')).toBeInTheDocument()
 

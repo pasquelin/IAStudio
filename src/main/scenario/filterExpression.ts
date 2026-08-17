@@ -104,8 +104,12 @@ export function publicFeedFilter(type: AssetType): string {
 }
 
 /**
- * How the feed is ordered. `score:desc` reads as the obvious choice and the documentation lists
- * `score` among the sortable fields; the API refuses it outright — `400 Invalid sort field`,
- * measured 9 August 2026. Newest first is the honest fallback.
+ * How every search the shelf makes is ordered — the feed's, and the library's the moment a word
+ * is typed. Newest first is what `GET /assets` is already asked for, and the shelf interleaves
+ * the three sources on that stamp alone: one of them ranked otherwise has no place in that merge.
+ *
+ * `score:desc` reads as the obvious choice for a search, and the documentation lists `score`
+ * among the sortable fields; the API refuses it outright — `400 Invalid sort field`, measured
+ * 9 August 2026.
  */
-export const PUBLIC_FEED_SORT: readonly string[] = ['createdAt:desc']
+export const NEWEST_FIRST: readonly string[] = ['createdAt:desc']

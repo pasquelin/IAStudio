@@ -9,6 +9,8 @@
     "count_other": "{{count, number}} assets",
     "countHint": "Everything this list shows — the project, your library and the generations under way, filters included",
     "openProject": "Open a project to see its assets.",
+    "libraryRefused": "Your library did not answer. What this project holds is still shown.",
+    "libraryRefusedHint": "Asks Scenario for the library again, leaving the project alone",
     "import": "Import media",
     "importHint": "Link a video, audio or image file — it stays where it is",
     "badge": {

@@ -116,8 +116,12 @@ export function isFiltered(state: CollectionState, offered?: readonly string[]):
 }
 
 export type LocalFilter<T> = {
-  /** The text a search matches against. */
-  text: (item: T) => string
+  /**
+   * The text a search matches against, or `null` for an item this side is not the one to judge —
+   * one the API has already matched, on fields it holds and this side does not. Weighed again
+   * here, such a hit would vanish from the very search that found it.
+   */
+  text: (item: T) => string | null
   /** Values held by an item, per facet key. A facet with no reader here is left to the caller. */
   facets?: Record<string, (item: T) => readonly string[]>
 }
@@ -134,15 +138,20 @@ export function filterLocally<T>(
 ): T[] {
   const needle = foldForSearch(state.search.trim())
 
+  // Resolved once for the list rather than per item: the shelf that calls this holds a thousand
+  // rows now that it pages, and re-entering the facets per row allocated two objects each.
+  const narrowing = Object.entries(state.selections).flatMap(([key, values]) => {
+    const read = filter.facets?.[key]
+    return read && values.length > 0 ? [{ read, wanted: values }] : []
+  })
+
   return items.filter(item => {
-    if (needle && !foldForSearch(filter.text(item)).includes(needle)) return false
+    const against = needle ? filter.text(item) : null
+    if (against !== null && !foldForSearch(against).includes(needle)) return false
 
-    for (const [key, values] of Object.entries(state.selections)) {
-      const read = filter.facets?.[key]
-      if (!read || values.length === 0) continue
-
-      const held = new Set(read(item))
-      if (!values.some(value => held.has(value))) return false
+    for (const { read, wanted } of narrowing) {
+      const held = read(item)
+      if (!wanted.some(value => held.includes(value))) return false
     }
 
     return true

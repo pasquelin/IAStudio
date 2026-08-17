@@ -247,14 +247,20 @@ export function mergeRows({
  * only ever sees the two shapes that have a `createdAt`.
  */
 function newestFirst(one: AssetRowModel, other: AssetRowModel): number {
-  return madeAt(other) - madeAt(one)
+  return stampOfRow(other) - stampOfRow(one)
 }
 
-function madeAt(row: AssetRowModel): number {
-  if (row.from === 'job') return 0
+/**
+ * When a line was made, as a number. Exported for `mergeFeed`, which cuts the timeline on the
+ * same stamp this sorts by — reading it any other way there would cut it in a different order.
+ */
+export function stampOfRow(row: AssetRowModel): number {
+  return row.from === 'job' ? 0 : stampOfIso(row.asset.createdAt)
+}
 
-  const at = Date.parse(row.asset.createdAt)
-  // An unreadable stamp sorts last rather than throwing the whole list into an arbitrary order.
+/** An unreadable stamp sorts last rather than throwing the whole list into an arbitrary order. */
+export function stampOfIso(createdAt: string): number {
+  const at = Date.parse(createdAt)
   return Number.isNaN(at) ? 0 : at
 }
 

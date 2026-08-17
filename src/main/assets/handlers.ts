@@ -17,8 +17,8 @@ import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
 import {
   filterExpression,
   publicFeedFilter,
+  NEWEST_FIRST,
   NSFW_EMPTY,
-  PUBLIC_FEED_SORT,
 } from '@main/scenario/filterExpression'
 import { remoteTypesFor } from '@main/scenario/remoteTypes'
 import { OFFSET_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
@@ -126,6 +126,10 @@ async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<Cl
         .search({
           ...(query.text ? { query: query.text } : {}),
           ...defined({ filter: filterExpression(query) }),
+          // The same order the listing is asked for, so typing a word does not reorder the half
+          // of the shelf this answers for: the index ranks by relevance left to itself, and the
+          // merged timeline places its three sources on `createdAt` and nothing else.
+          sortBy: NEWEST_FIRST,
           limit: pageSize,
           offset: offsetFrom(query.cursor),
         })
@@ -175,9 +179,14 @@ async function explore(remote: RemoteAssetCatalog, query: ExploreQuery): Promise
    */
   for (let round = 0; round < EMPTY_ROUNDS_MAX; round += 1) {
     const page = await remote.search({
+      ...(query.text ? { query: query.text } : {}),
       filter: publicFeedFilter(query.type),
       publicFeed: true,
-      sortBy: PUBLIC_FEED_SORT,
+      // Kept with a text as without one, and it is an arbitrage rather than an oversight: the
+      // shelf merges this feed with two other sources on `createdAt` alone, and a page ranked by
+      // relevance would carry no stamp the merge could interleave on. What it costs is a
+      // ranking; what it buys is a timeline that is not silently wrong.
+      sortBy: NEWEST_FIRST,
       limit,
       offset,
     })

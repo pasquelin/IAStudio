@@ -199,6 +199,13 @@ describe('browsing the library', () => {
     expect(harness.searched[0]).toMatchObject({ query: 'boulder' })
   })
 
+  it('keeps newest-first when the index answers in the listing place', async () => {
+    // Left to itself the index ranks by relevance, and the shelf merges this source with two
+    // others on `createdAt` alone: typing a word would reorder one lane of three.
+    await invoke(CHANNELS.cloudBrowse, { text: 'boulder' })
+    expect(harness.searched[0]).toMatchObject({ sortBy: ['createdAt:desc'] })
+  })
+
   it('narrows a search too, not only a listing', async () => {
     // The index knows the API's eight media classes, not our six: asking for skies through it
     // comes back as every image, and only this filter tells them apart.
@@ -257,6 +264,24 @@ describe('the public feed', () => {
       sortBy: ['createdAt:desc'],
       offset: 0,
     })
+  })
+
+  it('looks for what was typed, keeping the order the shelf merges on', async () => {
+    await invoke(CHANNELS.cloudExplore, { type: 'image', text: 'dragon' })
+
+    // The order stands with a text as without one: the shelf interleaves this feed with the
+    // library and the project on `createdAt`, and a page ranked by relevance carries no stamp
+    // that merge could place.
+    expect(harness.searched[0]).toMatchObject({
+      query: 'dragon',
+      publicFeed: true,
+      sortBy: ['createdAt:desc'],
+    })
+  })
+
+  it('asks for the whole feed when nothing was typed', async () => {
+    await invoke(CHANNELS.cloudExplore, { type: 'image', text: '   ' })
+    expect(harness.searched[0]).not.toHaveProperty('query')
   })
 
   it('leaves out anything the API flagged', async () => {
