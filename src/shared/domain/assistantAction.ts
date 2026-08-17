@@ -57,6 +57,22 @@ export type ActionName =
   | 'asset.get'
   | 'asset.update'
   | 'assets.remove'
+  | 'canvas.state'
+  | 'canvas.resize'
+  | 'canvas.crop'
+  | 'canvas.orient'
+  | 'layer.add'
+  | 'layer.remove'
+  | 'layer.select'
+  | 'layer.rename'
+  | 'layer.style'
+  | 'layer.transform'
+  | 'layer.text'
+  | 'layer.move'
+  | 'layer.duplicate'
+  | 'layer.group'
+  | 'layer.ungroup'
+  | 'layer.mergeDown'
 
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.

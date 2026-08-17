@@ -160,6 +160,70 @@
       "assetsRemove": {
         "title": "Retirer des assets",
         "description": "Sort des assets de la bibliothèque du projet, et de la bibliothèque distante quand on le demande. Cette action demande d’abord, et ce qu’elle a retiré figure dans l’activité récente."
+      },
+      "canvasState": {
+        "title": "Lire l’image en cours d’édition",
+        "description": "Rend le cadre de l’image devant — sa taille et sa résolution — et toute sa pile de calques mise à plat, chacun avec son identifiant, sa nature, son opacité, son mode de fusion et sa transformation."
+      },
+      "canvasResize": {
+        "title": "Redimensionner l’image",
+        "description": "Change le cadre de l’image devant. Redimensionne les calques avec lui quand on le demande, et les laisse en place sinon, ce qui est toute la différence entre taille de l’image et taille du canevas."
+      },
+      "canvasCrop": {
+        "title": "Recadrer l’image",
+        "description": "Referme le cadre sur un rectangle donné en coordonnées du document. Les calques gardent leur place, donc ce qui tombe dehors est ce qui est coupé."
+      },
+      "canvasOrient": {
+        "title": "Retourner ou pivoter l’image",
+        "description": "Reflète l’image selon un axe, ou la fait pivoter d’un quart de tour dans un sens ou dans l’autre. Un quart de tour échange la largeur et la hauteur du cadre, donc un portrait devient un paysage."
+      },
+      "layerAdd": {
+        "title": "Ajouter un calque",
+        "description": "Pose un calque de pixels, de texte ou de réglage au sommet de la pile de l’image devant, et répond avec l’identifiant qui lui a été donné. Un calque de réglage doit nommer le réglage qu’il porte."
+      },
+      "layerRemove": {
+        "title": "Retirer un calque",
+        "description": "Sort un calque de la pile de l’image devant. S’annule comme n’importe quelle autre édition de ce document."
+      },
+      "layerSelect": {
+        "title": "Armer un calque",
+        "description": "Fait d’un calque celui qui est armé, c’est-à-dire celui sur lequel agissent les outils de l’espace Image. C’est une façon de regarder la pile plutôt qu’une édition, donc rien ne s’ajoute à l’historique."
+      },
+      "layerRename": {
+        "title": "Renommer un calque",
+        "description": "Appelle autrement un calque de l’image devant. L’identifiant ne change pas, donc rien de ce qui le désignait n’est perdu."
+      },
+      "layerStyle": {
+        "title": "Régler la composition d’un calque",
+        "description": "Change l’opacité d’un calque, son opacité de fond, son mode de fusion, sa visibilité ou son masquage. Chaque champ est facultatif, et ce qui n’est pas donné reste exactement tel quel."
+      },
+      "layerTransform": {
+        "title": "Placer un calque",
+        "description": "Déplace, redimensionne ou fait tourner un calque dans le cadre. La rotation se donne en degrés, et tout champ omis garde la valeur que le calque avait déjà."
+      },
+      "layerText": {
+        "title": "Régler les mots d’un calque de texte",
+        "description": "Change ce que dit un calque de texte, la taille à laquelle il le dit, ou sa couleur. Refuse un calque qui porte des pixels plutôt que des mots, que la commande laisserait sinon intact."
+      },
+      "layerMove": {
+        "title": "Réordonner un calque",
+        "description": "Déplace un calque ailleurs dans la pile, et dans un groupe ou hors d’un groupe. L’indice zéro est le bas de la pile, c’est-à-dire ce que l’œil voit en dernier."
+      },
+      "layerDuplicate": {
+        "title": "Dupliquer un calque",
+        "description": "Copie un calque juste au-dessus de lui-même, enfants compris, chaque copie recevant un identifiant neuf. Répond avec l’identifiant de la copie."
+      },
+      "layerGroup": {
+        "title": "Grouper des calques",
+        "description": "Rassemble des calques de premier niveau en un groupe, qui se déplace ensuite d’un bloc. Répond avec l’identifiant du groupe."
+      },
+      "layerUngroup": {
+        "title": "Dissoudre un groupe",
+        "description": "Défait un groupe en laissant ses enfants là où le groupe se tenait dans la pile."
+      },
+      "layerMergeDown": {
+        "title": "Fusionner un calque vers le bas",
+        "description": "Replie un calque dans celui qui est sous lui, à l’intérieur de son propre niveau de pile. Le résultat garde l’identité du calque du dessous."
       }
     },
     "refusals": {
@@ -211,7 +275,29 @@
       "tags": "Tags",
       "generated": "Seulement ce qui a été généré",
       "offset": "Nombre d’entrées à sauter",
-      "alsoRemote": "Retirer aussi de la bibliothèque distante"
+      "alsoRemote": "Retirer aussi de la bibliothèque distante",
+      "layerId": "Identifiant du calque",
+      "layerIds": "Identifiants des calques",
+      "layerKind": "Nature du calque",
+      "adjustment": "Réglage que porte le calque",
+      "parentId": "Groupe dans lequel le déplacer",
+      "index": "Place dans la pile, comptée depuis le bas",
+      "opacity": "Opacité, de 0 à 1",
+      "fillOpacity": "Opacité du fond, de 0 à 1",
+      "blend": "Mode de fusion",
+      "visible": "Visible",
+      "clipped": "Masqué par le calque du dessous",
+      "x": "X, en coordonnées du document",
+      "y": "Y, en coordonnées du document",
+      "scaleX": "Échelle en largeur",
+      "scaleY": "Échelle en hauteur",
+      "rotation": "Rotation, en degrés",
+      "fontSize": "Corps du texte",
+      "colour": "Couleur, en #rrggbb",
+      "width": "Largeur",
+      "height": "Hauteur",
+      "scalePixels": "Redimensionner les calques avec le cadre",
+      "turn": "Sens du retournement ou du quart de tour"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

@@ -160,6 +160,70 @@
       "assetsRemove": {
         "title": "Remove assets",
         "description": "Takes assets out of the project’s library, and out of the remote one when asked to. This asks first, and what it removed is listed in the recent activity."
+      },
+      "canvasState": {
+        "title": "Read the image being edited",
+        "description": "Returns the frame of the image in front — its size and resolution — and its whole layer stack flattened, each layer with its id, kind, opacity, blend mode and transform."
+      },
+      "canvasResize": {
+        "title": "Resize the image",
+        "description": "Changes the frame of the image in front. Rescales the layers with it when asked to, and otherwise leaves them where they are, which is the difference between image size and canvas size."
+      },
+      "canvasCrop": {
+        "title": "Crop the image",
+        "description": "Closes the frame onto a rectangle given in document coordinates. The layers keep their place, so what falls outside is what is cut away."
+      },
+      "canvasOrient": {
+        "title": "Flip or turn the image",
+        "description": "Mirrors the image across an axis, or turns it a quarter turn either way. A turn swaps the frame’s width and height, so a portrait becomes a landscape."
+      },
+      "layerAdd": {
+        "title": "Add a layer",
+        "description": "Puts a new pixel, text or adjustment layer on top of the stack of the image in front, and answers with the id it was given. An adjustment layer must name the dial it carries."
+      },
+      "layerRemove": {
+        "title": "Remove a layer",
+        "description": "Takes one layer out of the stack of the image in front. Undoes like any other edit of that document."
+      },
+      "layerSelect": {
+        "title": "Arm a layer",
+        "description": "Makes one layer the armed one, which is what the tools of the image workspace act on. This is a way of looking at the stack rather than an edit, so it adds nothing to the history."
+      },
+      "layerRename": {
+        "title": "Rename a layer",
+        "description": "Calls one layer of the image in front something else. The id does not change, so nothing that referred to it is lost."
+      },
+      "layerStyle": {
+        "title": "Set how a layer is composited",
+        "description": "Changes a layer’s opacity, fill opacity, blend mode, visibility or clipping. Every field is optional, and what is not given is left exactly as it was."
+      },
+      "layerTransform": {
+        "title": "Place a layer",
+        "description": "Moves, scales or turns one layer inside the frame. The rotation is given in degrees, and every field left out keeps the value the layer already had."
+      },
+      "layerText": {
+        "title": "Set a text layer’s words",
+        "description": "Changes what a text layer says, the size it says it at, or its colour. Refuses a layer that holds pixels rather than words, which the command would otherwise leave untouched."
+      },
+      "layerMove": {
+        "title": "Reorder a layer",
+        "description": "Moves a layer to another place in the stack, and into or out of a group. Index zero is the bottom of the stack, which is what the eye sees last."
+      },
+      "layerDuplicate": {
+        "title": "Duplicate a layer",
+        "description": "Copies one layer just above itself, children included, every copy given a fresh id. Answers with the id of the copy."
+      },
+      "layerGroup": {
+        "title": "Group layers",
+        "description": "Gathers top-level layers into one group, which then moves as a whole. Answers with the group’s own id."
+      },
+      "layerUngroup": {
+        "title": "Dissolve a group",
+        "description": "Takes a group apart, leaving its children where the group stood in the stack."
+      },
+      "layerMergeDown": {
+        "title": "Merge a layer down",
+        "description": "Folds one layer into the layer below it, within its own level of the stack. The result keeps the lower layer’s identity."
       }
     },
     "refusals": {
@@ -211,7 +275,29 @@
       "tags": "Tags",
       "generated": "Only what was generated",
       "offset": "How many entries to skip",
-      "alsoRemote": "Remove from the remote library too"
+      "alsoRemote": "Remove from the remote library too",
+      "layerId": "Layer identifier",
+      "layerIds": "Layer identifiers",
+      "layerKind": "Layer kind",
+      "adjustment": "Which dial the adjustment carries",
+      "parentId": "Group to move it into",
+      "index": "Place in the stack, counted from the bottom",
+      "opacity": "Opacity, from 0 to 1",
+      "fillOpacity": "Fill opacity, from 0 to 1",
+      "blend": "Blend mode",
+      "visible": "Visible",
+      "clipped": "Clipped by the layer below",
+      "x": "X, in document coordinates",
+      "y": "Y, in document coordinates",
+      "scaleX": "Scale across",
+      "scaleY": "Scale down",
+      "rotation": "Rotation, in degrees",
+      "fontSize": "Type size",
+      "colour": "Colour, as #rrggbb",
+      "width": "Width",
+      "height": "Height",
+      "scalePixels": "Rescale the layers with the frame",
+      "turn": "Which way to flip or turn"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

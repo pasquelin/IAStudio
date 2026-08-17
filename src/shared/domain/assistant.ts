@@ -5,6 +5,7 @@ import {
   type ActionReach,
 } from './assistantAction'
 import { ASSET_ACTIONS } from './assetActions'
+import { CANVAS_ACTIONS } from './canvasActions'
 import { type CommandId } from './command'
 import { CORE_ACTIONS } from './coreActions'
 import { FILE_ACTIONS } from './fileActions'
@@ -102,6 +103,7 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
   ...FILE_ACTIONS,
   ...JOB_ACTIONS,
   ...ASSET_ACTIONS,
+  ...CANVAS_ACTIONS,
 ]
 
 /** The share of the registry one door offers. `mcp` is everything; `both` is the short list. */
