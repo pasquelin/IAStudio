@@ -19,7 +19,7 @@
     "fileTexture": "The file’s own",
     "fileTextureHint": "Leaves this channel as the model’s own file carries it",
     "clearTexture": "Remove the texture",
-    "modelOverrides": "Swap a map",
+    "modelOverrides": "Swap a channel",
     "noModelTexture": "No image was taken out of this model.",
     "openTextureHint": "Double-click to open this image in the Textures space",
     "modelMaterial": "Model material",
