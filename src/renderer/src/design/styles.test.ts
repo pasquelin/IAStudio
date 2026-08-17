@@ -6,6 +6,8 @@ import {
   FIELD_FILL,
   NATIVE_SELECT,
   OVERLAY_BUTTON,
+  PANEL_GROUP_LABEL,
+  PANEL_GROUP_LABEL_WIDE,
   ROW_INK,
   ROW_LINE,
   ROW_QUIET,
@@ -524,6 +526,59 @@ describe('the shape of a row line', () => {
       '../panels/styles/StyleRow.tsx',
       './Row.tsx',
       './Tree.tsx',
+    ])
+  })
+})
+
+/**
+ * All four words or none: `text-muted` with `uppercase` is also a caption that titles nothing.
+ * The two group titles of the SETTINGS windows sit one word away, on `text-base-content/70` —
+ * DaisyUI ink, and a window harmonised towards `text-muted` would be told off by this wrongly.
+ */
+const spellsOutGroupLabel = spellsOut(PANEL_GROUP_LABEL.split(' '))
+
+/** The three the wide one adds to claim its line, required together or not at all. */
+const widensGroupLabel = rewrites('PANEL_GROUP_LABEL', ['min-w-0', 'flex-1', 'truncate'])
+
+describe('the word that names a group in a panel', () => {
+  it('is the label, plus what a wide one claims of its line and nothing more', () => {
+    expect(PANEL_GROUP_LABEL_WIDE.split(' ')).toEqual([
+      ...PANEL_GROUP_LABEL.split(' '),
+      'min-w-0',
+      'flex-1',
+      'truncate',
+      'font-medium',
+    ])
+  })
+
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutGroupLabel(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('is worn rather than widened again at the call', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && widensGroupLabel(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  // Named rather than counted, and `DiffImages` wears it twice — the two sides of a comparison.
+  // **Blind**: raw text, so a file naming the constant in a comment alone would still count.
+  it('is worn by the four files it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && /\bPANEL_GROUP_LABEL(?:_WIDE)?\b/.test(source),
+    ).map(([path]) => path)
+
+    expect(wearing.sort()).toEqual([
+      '../panels/git/GitFileGroup.tsx',
+      '../panels/history/CommitFiles.tsx',
+      '../panels/history/DiffImages.tsx',
+      './DynamicForm/DynamicForm.tsx',
     ])
   })
 })

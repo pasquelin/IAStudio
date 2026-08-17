@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { QuietNote } from '@/design/QuietNote'
+import { PANEL_GROUP_LABEL } from '@/design/styles'
 import { useGitBlobUrl } from '@/hooks/useGitBlobUrl'
 
 export type DiffImagesProps = {
@@ -28,9 +29,7 @@ export function DiffImages({ path, commit }: DiffImagesProps) {
   return (
     <div className="flex min-h-0 flex-1 gap-2 p-2">
       <figure className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-        <figcaption className="text-muted text-tiny tracking-wide uppercase">
-          {t('git.compareBefore')}
-        </figcaption>
+        <figcaption className={PANEL_GROUP_LABEL}>{t('git.compareBefore')}</figcaption>
         {/* A file being ADDED has no earlier side, and that is the answer rather than a gap: the
             column stays, so the two pictures keep their halves of the width. */}
         {before ? (
@@ -45,9 +44,7 @@ export function DiffImages({ path, commit }: DiffImagesProps) {
       </figure>
 
       <figure className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-        <figcaption className="text-muted text-tiny tracking-wide uppercase">
-          {t('git.compareAfter')}
-        </figcaption>
+        <figcaption className={PANEL_GROUP_LABEL}>{t('git.compareAfter')}</figcaption>
         {after ? (
           <img src={after} alt={t('git.compareAfter')} className="min-h-0 flex-1 object-contain" />
         ) : (

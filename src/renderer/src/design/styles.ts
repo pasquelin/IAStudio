@@ -453,6 +453,16 @@ export const PANE_TOOLBAR = 'absolute top-2 left-2'
 export const TOOLBAR_LABEL = 'text-muted text-tiny px-1'
 
 /**
+ * The word that divides a LIST into groups — a git stage, the side of a comparison, a set of
+ * parameters. Small caps rather than a heavier weight: `PropertyGroup` takes the weight instead,
+ * and the two are a rank apart on purpose, an inspector titling more often than a list does.
+ */
+export const PANEL_GROUP_LABEL = 'text-muted text-tiny tracking-wide uppercase'
+
+/** The same word sharing its line with a control, which is what asks for the weight as well. */
+export const PANEL_GROUP_LABEL_WIDE = cn(PANEL_GROUP_LABEL, 'min-w-0 flex-1 truncate font-medium')
+
+/**
  * The corners a tile cuts, without the plate behind them — for a tile that draws a SHAPE rather
  * than a picture. A folder is the case: a frame bounds a picture that may be pale or transparent,
  * and a silhouette needs no bounding.

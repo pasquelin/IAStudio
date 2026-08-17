@@ -14,6 +14,8 @@ import {
   type FormValues,
 } from '@/helpers/dynamicForm'
 import { buildSchema } from '@/helpers/dynamicFormSchema'
+import { cn } from '@/helpers/cn'
+import { PANEL_GROUP_LABEL } from '../styles'
 import { useModelText } from '@/hooks/useModelText'
 import { Button } from '../Button'
 import { DynamicFormControl } from './DynamicFormControl'
@@ -119,11 +121,7 @@ export function DynamicForm({
     >
       {groups.map(([group, groupedFields]) => (
         <fieldset key={group} className="m-0 flex flex-col gap-2 border-0 p-0">
-          {group && (
-            <legend className="text-muted text-tiny p-0 tracking-wide uppercase">
-              {say(group)}
-            </legend>
-          )}
+          {group && <legend className={cn(PANEL_GROUP_LABEL, 'p-0')}>{say(group)}</legend>}
 
           {visibleFields(groupedFields, values).map(field => (
             // The accessory sits outside the label rather than in it: it holds buttons, and a

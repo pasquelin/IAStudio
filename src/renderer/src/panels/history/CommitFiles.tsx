@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { GitCommitFile } from '@shared/domain/git'
 import { QuietNote } from '@/design/QuietNote'
-import { PANEL_SCROLL } from '@/design/styles'
+import { PANEL_GROUP_LABEL_WIDE, PANEL_SCROLL } from '@/design/styles'
 import { ChangedFileRow } from '@/panels/shared/ChangedFileRow'
 import { useGit } from '@/stores/git'
 import { TagField } from './TagField'
@@ -27,9 +27,7 @@ export function CommitFiles({ files, commit }: CommitFilesProps) {
   return (
     <div className={PANEL_SCROLL}>
       <div className="flex items-center gap-2 px-2 py-1">
-        <h3 className="text-muted text-tiny min-w-0 flex-1 truncate font-medium tracking-wide uppercase">
-          {t('git.commitFiles')}
-        </h3>
+        <h3 className={PANEL_GROUP_LABEL_WIDE}>{t('git.commitFiles')}</h3>
         <TagField commit={commit} />
       </div>
 
