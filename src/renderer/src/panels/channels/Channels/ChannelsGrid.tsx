@@ -1,41 +1,16 @@
-import { mdiTextureBox } from '@mdi/js'
 import { useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { isLocalPicture, PICTURES, type Asset } from '@shared/domain/asset'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
-import { EmptyState } from '@/design/EmptyState'
 import { setChannel } from '@/engines/texture/commands'
 import { canDerive, sourceFor } from '@/engines/texture/texture-state'
 import { placeTextureChannel } from '@/spaces/textures/place-channel'
 import { useAssets } from '@/stores/assets'
-import { activeTextureId, useDocuments } from '@/stores/documents'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
-import { ChannelTile, type DerivationState } from './ChannelTile'
+import { ChannelTile, type DerivationState } from '../ChannelTile'
 
-/**
- * The eight channels a material is made of, each one a tile.
- *
- * A grid rather than the strip the brief drew: it lives in the right column, where what speaks
- * about the document lives, so the eight wrap instead of running across a band the asset shelf
- * already owns — and a channel and the shelf you drag onto it stay on screen together.
- */
-export function Channels() {
-  const { t } = useTranslation()
-  const documentId = useDocuments(activeTextureId)
-
-  return documentId ? (
-    // Keyed: the derivation in flight is the grid's own state, and one instance shared across
-    // documents left every derivable row of the texture in front dead for a job running in
-    // another tab — with a reason that was true of a document nobody was looking at.
-    <Grid key={documentId} documentId={documentId} />
-  ) : (
-    <EmptyState icon={mdiTextureBox} message={t('texture.noDocument')} />
-  )
-}
-
-function Grid({ documentId }: { documentId: string }) {
+export function ChannelsGrid({ documentId }: { documentId: string }) {
   const channels = useTextures(state => textureOf(state, documentId).channels)
   const assets = useAssets(state => state.items)
 

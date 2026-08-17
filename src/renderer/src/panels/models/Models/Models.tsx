@@ -1,20 +1,14 @@
 import { mdiCubeScan } from '@mdi/js'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import type { TFunction } from 'i18next'
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MODEL_IDS_BATCH_LIMIT, type ModelPage, type ModelSummary } from '@shared/domain/model'
 import { failureKeyOf } from '@/services/failure-message'
 import { usePlanAccess, usePlanRefusal } from '@/helpers/plan-access'
-import { HINT_LEFT } from '@/helpers/tooltip'
-import { cn } from '@/helpers/cn'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { isFiltered } from '@/helpers/collection-state'
 import { useModelForFamily } from '@/helpers/model-for-family'
-import { MediaTile } from '@/design/MediaTile'
-import { Thumbnail } from '@/design/Thumbnail'
-import { Row } from '@/design/Row'
 import { useDebounced } from '@/hooks/useDebounced'
 import { getBridge } from '@/services/bridge'
 import { useLayouts } from '@/stores/layouts'
@@ -23,7 +17,10 @@ import { useSettings } from '@/stores/settings'
 import { workspaceById } from '@/helpers/workspaces'
 import { EmptyState } from '@/design/EmptyState'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
-import { facetsFor, queryFrom, sortOptions } from './model-filters'
+import { facetsFor, queryFrom, sortOptions } from '../model-filters'
+import { ModelsCard } from './ModelsCard'
+import { ModelsRow } from './ModelsRow'
+import { ModelsSelected } from './ModelsSelected'
 
 const SEARCH_DELAY_MS = 250
 const PAGE_LIMIT = 24
@@ -216,7 +213,7 @@ export function Models() {
 
   return (
     <div className="flex h-full flex-col">
-      <SelectedModel model={selected} picture={selected ? pictureOf(selected) : undefined} />
+      <ModelsSelected model={selected} picture={selected ? pictureOf(selected) : undefined} />
 
       <CollectionBar
         state={collection}
@@ -239,14 +236,14 @@ export function Models() {
           isDisabled={model => refusalFor(model.requiredPlanLevel) !== undefined}
           rowHeight={ROW_HEIGHT}
           renderCard={model => (
-            <ModelCard
+            <ModelsCard
               model={model}
               picture={pictureOf(model)}
               refusal={refusalFor(model.requiredPlanLevel)}
             />
           )}
           renderRow={model => (
-            <ModelRow
+            <ModelsRow
               model={model}
               picture={pictureOf(model)}
               refusal={refusalFor(model.requiredPlanLevel)}
@@ -279,108 +276,3 @@ export function Models() {
     </div>
   )
 }
-
-/**
- * What the API actually says about a model, in one line: who published it and what it does.
- * Rating, generation time and category come back empty on all 642 public models — measured.
- *
- * "Featured" outranks the origin: a third-party model Scenario highlights reads as vetted,
- * whereas calling GPT Image 2 "community" says the opposite of what the tag means.
- */
-function subtitleOf(model: ModelSummary, t: TFunction): string {
-  const standing = model.featured
-    ? t('models.featured')
-    : t(model.origin === 'official' ? 'models.official' : 'models.community')
-  const [capability] = model.capabilities
-
-  // An unknown capability shows its API name rather than its missing translation key.
-  return capability
-    ? `${standing} · ${t(`capabilities.${capability}`, { defaultValue: capability })}`
-    : standing
-}
-
-/** The chosen model, kept in view: it is what the generator below will run. */
-function SelectedModel({ model, picture }: { model: ModelSummary | null; picture?: string }) {
-  const { t } = useTranslation()
-
-  // Height stated rather than grown into: `Row` sizes itself against its parent, and 56 px is
-  // what this header measured when it was written by hand. The bottom border eats a pixel of it.
-  return (
-    <div className="border-border h-14 border-b px-1 py-1.5">
-      <Row
-        media={<Thumbnail url={picture} className="size-10" />}
-        title={model?.name ?? t('models.noSelection')}
-        subtitle={model ? t(`families.${model.family}`) : t('models.pickOne')}
-      />
-    </div>
-  )
-}
-
-/** The tile's corner label: a standing, or the reason the model cannot be picked. */
-const BADGE = cn(
-  'bg-chassis/75 text-text absolute top-1 right-1 max-w-[calc(100%-0.5rem)]',
-  'truncate rounded-(--radius-sc-sm) px-1 py-px text-micro leading-tight',
-)
-
-/**
- * The tile's corner label. The refusal outranks "featured": a highlighted model the plan will
- * not run is first of all one that cannot be picked, and the tile has room for one label.
- */
-function badgeFor(model: ModelSummary, refusal: string | undefined, t: TFunction): ReactNode {
-  // Left, not right: the badge already sits against the tile's right edge, and this panel is
-  // docked to a side — a tooltip opening outward would leave the window. HINT and not TIP:
-  // the badge's own words are on screen, so this explains them instead of repeating them.
-  if (refusal) {
-    return (
-      <span {...HINT_LEFT(refusal)} className={BADGE}>
-        {t('models.planLocked')}
-      </span>
-    )
-  }
-
-  if (!model.featured) return null
-
-  return (
-    <span title={t('models.featured')} className={BADGE}>
-      {t('models.featured')}
-    </span>
-  )
-}
-
-const ModelCard = memo(function ModelCard({
-  model,
-  picture,
-  refusal,
-}: {
-  model: ModelSummary
-  picture?: string
-  refusal?: string
-}) {
-  const { t } = useTranslation()
-
-  return <MediaTile url={picture} caption={model.name} badge={badgeFor(model, refusal, t)} />
-})
-
-/** Memoized like the card: a scroll re-renders every mounted row on each frame. */
-const ModelRow = memo(function ModelRow({
-  model,
-  picture,
-  refusal,
-}: {
-  model: ModelSummary
-  picture?: string
-  refusal?: string
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <Row
-      media={<Thumbnail url={picture} className="size-8" />}
-      title={model.name}
-      // The subtitle says what the model IS; the refusal says why it is out of reach, and it
-      // replaces the standing rather than crowding a 10px line with both.
-      subtitle={refusal ? t('models.planLocked') : subtitleOf(model, t)}
-      hint={refusal}
-    />
-  )
-})

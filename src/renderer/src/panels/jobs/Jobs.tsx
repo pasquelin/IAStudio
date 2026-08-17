@@ -2,7 +2,7 @@ import { mdiProgressClock } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { useJobs } from '@/stores/jobs'
 import { EmptyState } from '@/design/EmptyState'
-import { JobRow } from './JobRow'
+import { JobRow } from './JobRow/JobRow'
 
 /**
  * Global jobs list: a generation is launched and the user goes on working elsewhere. Read from

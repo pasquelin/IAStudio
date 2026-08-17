@@ -238,7 +238,8 @@ describe('the opening chunk', () => {
 
     expect([...files].filter(path => path.startsWith('./panels/')).sort()).toEqual([
       './panels/assets/type-facet.ts',
-      './panels/jobs/JobRow.tsx',
+      './panels/jobs/JobRow/JobRow.tsx',
+      './panels/jobs/JobRow/JobRowDetail.tsx',
       './panels/jobs/Jobs.tsx',
     ])
   })
@@ -251,7 +252,7 @@ describe('the opening chunk', () => {
 
   // The chart library is the reason this one is deferred, more than the window's own weight.
   // `format.ts` is the exception, and it earns it: a job row prices a run in the units the
-  // window totals (`panels/jobs/JobRow.tsx:7`), and the status bar carries those rows.
+  // window totals (`panels/jobs/JobRow/JobRowDetail.tsx`), and the status bar carries those rows.
   it('never reaches the usage window, nor what draws its charts', () => {
     const { files, packages } = GRAPH
 
