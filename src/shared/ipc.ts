@@ -226,6 +226,7 @@ export type Channels = {
 
   textureExport: 'texture:export'
   skyboxExport: 'skybox:export'
+  projectExport: 'project:export'
 
   fontsList: 'fonts:list'
   fontsRead: 'fonts:read'
@@ -401,6 +402,7 @@ export const CHANNELS: Channels = {
 
   textureExport: 'texture:export',
   skyboxExport: 'skybox:export',
+  projectExport: 'project:export',
 
   fontsList: 'fonts:list',
   fontsRead: 'fonts:read',
@@ -533,6 +535,8 @@ export type LogScope =
   | 'scene.export'
   | 'scene.render'
   | 'sequence.export'
+  /** An export asked for from outside, whichever space rendered it. */
+  | 'document.export'
   | 'texture.map'
   | 'texture.channel'
   | 'texture.seam'
@@ -599,6 +603,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'scene.export',
   'scene.render',
   'sequence.export',
+  'document.export',
   'texture.map',
   'texture.channel',
   'texture.seam',
@@ -932,6 +937,19 @@ export type StudioBridge = {
      * open while the file it names was moved in the Finder.
      */
     fileFacts: (relative: string) => Promise<FileFacts | null>
+    /**
+     * Writes an export INSIDE the open project, in a folder of its own named by the caller.
+     *
+     * The other three export channels raise a native picker, which is why they exist as they do
+     * and why no outside client can use them: nobody is there to fill it. This one takes the
+     * destination instead, and pays for that by never letting it leave the project — `folder` is
+     * one `pathSegment`, and the main process resolves both ends before it writes.
+     *
+     * Answers the folder name, never the path, exactly as its three neighbours do. `null` when
+     * the destination resolved outside the project, which is the one refusal worth telling apart
+     * from a failure.
+     */
+    exportInto: (request: FolderExportRequest) => Promise<string | null>
     /** Shows the file in the system's own file manager, so the path never leaves the process. */
     revealFile: (relative: string) => Promise<void>
     /**

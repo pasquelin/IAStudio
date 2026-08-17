@@ -3,9 +3,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetUrl, PICTURES, posterUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
-import { safeFileName } from '@shared/domain/fileName'
 import { type TextureExportTarget } from '@shared/domain/textureExport'
-import { exportChannelsOf } from '@/engines/texture/export/channels'
 import { activation } from '@/helpers/activation'
 import { pixelEditorIntent } from '@/helpers/assetIntents'
 import { cn } from '@/helpers/cn'
@@ -23,6 +21,7 @@ import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { isTextureDirty, textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './placeChannel'
+import { textureExportFiles } from './textureExportFiles'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
@@ -40,25 +39,9 @@ async function exportTexture(documentId: string, target: TextureExportTarget): P
   if (!bridge) return
 
   try {
-    const texture = textureOf(useTextures.getState(), documentId)
-    // Cleaned before it is either a folder or a file name: a document is titled by hand.
-    const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'texture')
-
-    const { createTextureExportPort } = await import('@/engines/texture/export/exportPort')
-
-    const files = await createTextureExportPort({ loadTexture })({
-      target,
-      channels: exportChannelsOf(texture),
-      name,
-      material: texture.material,
-      shape: texture.preview.shape,
-    })
-
-    // A texture with no channels resolves to no file, and a dialog asking where to put nothing
-    // is a dialog that cannot be answered.
-    if (files.length === 0) throw new Error('this texture has no channel to export')
-
-    await bridge.texture.export({ folder: name, files })
+    // The baking is `textureExportFiles`, which the outside door shares — including its refusal
+    // of a material with no channel, which throws before any dialog is raised.
+    await bridge.texture.export(await textureExportFiles(documentId, target))
   } catch (error) {
     reportFailure('texture.export', target, error)
   }

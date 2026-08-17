@@ -219,6 +219,8 @@ export type Services = {
   pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Where a folder the studio is about to fill goes — an exported texture is several files. */
   pickFolder: () => Promise<string | null>
+  /** Where the open project sits, or nothing when none is — what confines an export by name. */
+  projectPath: () => string | null
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
   /** Whether a path is still there — `reveal` above answers nothing for one that has gone. */
@@ -1352,6 +1354,9 @@ export function createServices(settings: SettingsStore): Services {
     ownerScope,
     removeAssetFile,
     project,
+    // `current()` rather than `path()`, which throws: "no project open" is an ordinary answer
+    // here, and an export named against nothing is a refusal rather than a failure.
+    projectPath: () => project.current()?.path ?? null,
     journal,
     flushJobs: () => jobStore.flush(),
     documents,

@@ -19,10 +19,10 @@ it on screen** — wherever the request came from.
 
 They do not see the same share of it, and that is deliberate. **The assistant knows eleven**, the
 ones a spoken sentence needs: open a workspace, find a model, prepare a generation. **The way in
-offers a hundred and forty-five**, everything a program drives deliberately — the file tree, the
+offers a hundred and forty-six**, everything a program drives deliberately — the file tree, the
 layer stack, the montage, the sky, the material, the 3D scene, the git repository, the remote
 library. The reason is a plain one: the model that reads your sentences is given the whole
-catalogue before each of them, and a hundred and forty-five actions would leave no room left for
+catalogue before each of them, and a hundred and forty-six actions would leave no room left for
 the sentence.
 
 ---
@@ -184,7 +184,7 @@ the prepared generation** has had your yes on screen, nothing has gone out.
 
 ## The catalogue
 
-**A hundred and forty-five actions, in thirteen families.** The table below says what each family covers and what
+**A hundred and forty-six actions, in thirteen families.** The table below says what each family covers and what
 it **commits** — that last column is what decides whether the studio will ask you anything. The
 exact list, with every parameter of every action, is what your client shows when you ask it for its
 tools: it is not copied out here, because it moves and because your client reads it at the source.
@@ -193,7 +193,7 @@ tools: it is not copied out here, because it moves and because your client reads
 |---|---|---|
 | **The studio** | what is open, which document is in front, what has just happened | nothing |
 | **Files** | open a project, list, search, move, copy, rename, bin | **files**, for whatever moves or destroys |
-| **Documents** | open, bring to the front, rename, close | **files**, for closing and renaming |
+| **Documents** | open, bring to the front, rename, close, export into the project | **files**, for closing, renaming and exporting |
 | **Generating** | read a model's inputs, price them, prepare, start, wait, cancel | **creative units** for starting, and for starting alone |
 | **The library** | search, read, tag and remove assets | **files**, for removing |
 | **The remote library** | browse your own and the public feed, find likenesses, plan, fetch, send | **an asset**, for sending |

@@ -79,6 +79,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       // Nothing on disk unless a suite says otherwise, which is what the window under test then
       // reads as « this entry is no longer there » rather than as a blank pane.
       fileFacts: () => Promise.resolve(null),
+      exportInto: () => Promise.resolve<string | null>(null),
       revealFile: () => Promise.resolve(),
       revealFolder: () => Promise.resolve(true),
       rename: () => Promise.reject(new Error('no project')),

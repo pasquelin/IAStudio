@@ -18,6 +18,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // With the document, as every other export is: it writes outside the project, and what its
   // failure says something about is the sequence that was open.
   'sequence.export': 'document',
+  // With the PROJECT, unlike its neighbours: this one writes inside the project folder, and what
+  // a reader looks for afterwards is the folder that was or was not created.
+  'document.export': 'project',
   'texture.map': 'document',
   'texture.channel': 'document',
   'texture.seam': 'document',

@@ -339,7 +339,7 @@ de se charger.
 ### Un registre d’actions, deux lecteurs
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) déclare ce que le studio sait faire sur demande —
-**cent quarante-cinq actions en treize familles**, une famille par module `*Actions.ts`, leurs
+**cent quarante-six actions en treize familles**, une famille par module `*Actions.ts`, leurs
 champs, **ce que chacune engage** (`none`, `files`, `asset`, `remote`, `credits`) et **quelle porte l’offre**
 (`reach`). Il a deux lecteurs, et **aucun des deux ne décide** :
 

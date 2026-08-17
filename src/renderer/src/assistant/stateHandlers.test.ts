@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { DocumentNameFailure } from '@shared/domain/documentName'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { holdCanvas } from '@/spaces/image/canvasHosts'
 import { installDocuments } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
@@ -189,5 +190,78 @@ describe('reading the activity', () => {
 
     await runAction('activity.recent', {})
     expect(read).toHaveBeenCalledWith({})
+  })
+})
+
+/**
+ * The only export an outside client can ask for. Every other export channel raises a native picker
+ * nobody outside can fill, and the destination here is NAMED rather than pointed at — which is why
+ * it is held inside the project by the main process rather than trusted.
+ */
+describe('exporting the document in front', () => {
+  /** A one-pixel PNG, base64, which is what a mounted engine hands its snapshot over as. */
+  const PIXEL = 'data:image/png;base64,iVBORw0KGgo='
+
+  const withImage = (): void => {
+    installDocuments({ 'doc-b': 'image' }, 'doc-b')
+    holdCanvas('doc-b', () => ({
+      pixelSnapshots: async () => [],
+      restoreSnapshot: async () => {},
+      snapshot: async () => PIXEL,
+      forgetPicture: async () => {},
+    }))
+  }
+
+  it('renders the image in front and writes it under its own title', async () => {
+    withImage()
+    const exportInto = vi.fn(async () => 'doc-b')
+    installFakeBridge({ project: { exportInto } })
+
+    expect(await runAction('document.export', {})).toEqual({ ok: true, data: 'doc-b' })
+    expect(exportInto).toHaveBeenCalledWith(
+      expect.objectContaining({
+        folder: 'doc-b',
+        files: [expect.objectContaining({ extension: '.png' })],
+      }),
+    )
+  })
+
+  it('writes into the folder it was given rather than the title', async () => {
+    withImage()
+    const exportInto = vi.fn(async () => 'Rendus')
+    installFakeBridge({ project: { exportInto } })
+
+    await runAction('document.export', { folder: 'Rendus' })
+    expect(exportInto).toHaveBeenCalledWith(expect.objectContaining({ folder: 'Rendus' }))
+  })
+
+  /**
+   * A sequence is rendered frame by frame through a session the viewport drives, not encoded in
+   * one call like the other four — so there is nothing here for a client to hold.
+   */
+  it('refuses a kind that has no single-call export', async () => {
+    installDocuments({ 'doc-v': 'video' }, 'doc-v')
+    const exportInto = vi.fn(async () => null)
+    installFakeBridge({ project: { exportInto } })
+
+    expect(await runAction('document.export', {})).toEqual({ ok: false, refusal: 'wrongSurface' })
+    expect(exportInto).not.toHaveBeenCalled()
+  })
+
+  // Every rendering throws rather than answering half an export — here, an engine that is not
+  // mounted, which is what a headless test always is.
+  it('refuses rather than writing half an export when the rendering fails', async () => {
+    installDocuments({ 'doc-s': 'skyboxes' }, 'doc-s')
+    const exportInto = vi.fn(async () => null)
+    installFakeBridge({ project: { exportInto } })
+
+    expect(await runAction('document.export', {})).toEqual({ ok: false, refusal: 'badInput' })
+    expect(exportInto).not.toHaveBeenCalled()
+  })
+
+  it('refuses with no document in front at all', async () => {
+    installDocuments({}, '')
+
+    expect(await runAction('document.export', {})).toEqual({ ok: false, refusal: 'wrongSurface' })
   })
 })

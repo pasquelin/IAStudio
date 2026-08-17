@@ -333,6 +333,10 @@
         "title": "Remplir ou vider un canal",
         "description": "Met une image de la bibliothèque dans un des huit canaux de la matière devant. Sans asset nommé, le canal est vidé plutôt que rempli."
       },
+      "documentExport": {
+        "title": "Exporter le document devant dans le projet",
+        "description": "Écrit l’image, la scène, le ciel ou la matière devant dans un dossier du projet, portant son titre à défaut d’un nom donné. La destination ne peut pas sortir du projet."
+      },
       "gitStashDrop": {
         "title": "Jeter une remise",
         "description": "Supprime une remise de la pile sans la réappliquer. Ce qu’elle portait n’a jamais été enregistré, donc rien ne le rend."
@@ -635,6 +639,11 @@
       "alsoRemote": "Retirer aussi de la bibliothèque distante",
       "layerId": "Identifiant du calque",
       "layerIds": "Identifiants des calques",
+      "exportFolder": "Dossier du projet où écrire, à défaut le titre",
+      "exportFormat": "Format du fichier 3D",
+      "exportScope": "Toute la scène ou la sélection",
+      "exportTarget": "Moteur visé par l’export de matière",
+      "faceSize": "Côté d’une face, en pixels",
       "conflictSide": "Côté du conflit à retenir",
       "remoteName": "Nom du dépôt distant",
       "remoteUrl": "Adresse du dépôt distant",

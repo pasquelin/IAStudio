@@ -19,10 +19,10 @@ l’ayez vu à l’écran** — d’où que vienne la demande.
 
 Elles n’en voient pas la même part, et c’est délibéré. **L’assistant en connaît onze**, celles
 d’une phrase parlée : ouvrir un espace, chercher un modèle, préparer une génération. **Le point
-d’entrée en offre cent quarante-cinq**, tout ce qu’un programme conduit délibérément — l’arbre des
+d’entrée en offre cent quarante-six**, tout ce qu’un programme conduit délibérément — l’arbre des
 fichiers, la pile de calques, le montage, le ciel, la matière, la scène 3D, le dépôt git, la
 bibliothèque distante. La raison est prosaïque : le modèle qui lit vos phrases reçoit le catalogue
-entier avant chacune d’elles, et cent quarante-cinq actions n’y laisseraient plus de place pour la
+entier avant chacune d’elles, et cent quarante-six actions n’y laisseraient plus de place pour la
 phrase.
 
 ---
@@ -187,7 +187,7 @@ n’est parti.
 
 ## Le catalogue
 
-**Cent quarante-cinq actions, en treize familles.** Le tableau ci-dessous dit ce que chacune couvre
+**Cent quarante-six actions, en treize familles.** Le tableau ci-dessous dit ce que chacune couvre
 et ce qu’elle **engage** — c’est cette dernière colonne qui décide si le studio vous demandera
 quelque chose. La liste exacte, avec le détail de chaque paramètre, est ce que votre client
 affiche quand vous lui demandez ses outils : elle n’est pas recopiée ici, parce qu’elle bouge et
@@ -197,7 +197,7 @@ que lui la lit à la source.
 |---|---|---|
 | **Le studio** | ce qui est ouvert, quel document est devant, ce qui vient de se passer | rien |
 | **Les fichiers** | ouvrir un projet, lister, chercher, déplacer, copier, renommer, mettre à la corbeille | **des fichiers** pour ce qui déplace ou détruit |
-| **Les documents** | ouvrir, mettre devant, renommer, fermer | **des fichiers** pour fermer et renommer |
+| **Les documents** | ouvrir, mettre devant, renommer, fermer, exporter dans le projet | **des fichiers** pour fermer, renommer et exporter |
 | **Générer** | lire les entrées d’un modèle, chiffrer, préparer, lancer, attendre, annuler | **des unités créatives** pour lancer, et pour lancer seulement |
 | **La bibliothèque** | chercher, lire, étiqueter et retirer des assets | **des fichiers** pour retirer |
 | **La bibliothèque distante** | parcourir la vôtre et le flux public, chercher des ressemblances, prévoir, rapatrier, envoyer | **un asset** pour envoyer |

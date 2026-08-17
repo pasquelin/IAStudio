@@ -8,8 +8,14 @@ import { pathSegment } from '@main/validation'
  * a separator is a write outside the folder the user picked.
  */
 
-/** What a target writes. An unknown one would be an extension chosen by the sandboxed side. */
-const extension = z.enum(['.png', '.glb'])
+/**
+ * What a target writes. An unknown one would be an extension chosen by the sandboxed side.
+ *
+ * The three 3D ones are `EXPORT_EXTENSIONS` — spelled out rather than derived, zod's enum wanting
+ * a literal tuple and this project banning `as const`. They joined the list when a scene became
+ * exportable through this writer as well as through its own channel.
+ */
+const extension = z.enum(['.png', '.glb', '.gltf', '.usdz'])
 
 /**
  * What one export may weigh, all of its files together.

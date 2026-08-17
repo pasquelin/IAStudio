@@ -1,6 +1,9 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { scopeOfWorkspace } from '@shared/domain/command'
 import type { DocumentDescriptor } from '@shared/domain/document'
+import { EXPORT_FORMATS } from '@shared/domain/scene'
+import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
+import type { FolderExportRequest } from '@shared/ipc'
 import { closeDocument, documentIsDirty } from '@/app/documentIo'
 import { openDocument } from '@/app/dockviewApi'
 import { getBridge } from '@/services/bridge'
@@ -10,7 +13,12 @@ import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { withBridge, type ActionHandlers } from './actionHandler'
-import { numberOf, textOf } from './actionInputs'
+import { numberOf, oneOf, textOf } from './actionInputs'
+
+/** The face a sky is exported at when a client names none — the row the native menu offers. */
+const DEFAULT_FACE = 2048
+
+const SCENE_SCOPES: readonly ('scene' | 'selection')[] = ['scene', 'selection']
 
 /**
  * What the studio is, read from the stores the screen reads. Nothing here computes a second
@@ -127,8 +135,78 @@ async function rename(input: Record<string, unknown>): Promise<ActionOutcome> {
   return { ok: true }
 }
 
+/**
+ * The files an export of the document in front comes to, one space at a time.
+ *
+ * Loaded on the call rather than imported at the top: this table is evaluated by the first screen,
+ * and `eager-graph.test.ts` holds that chunk to reaching no third module out of an editor's
+ * folder. Each of the four is the SAME rendering the native menu goes through.
+ *
+ * `null` for a kind that has no single-call export — a sequence, which is rendered frame by frame
+ * through a session the viewport drives, and a take, which is not a picture at all.
+ */
+async function exportOf(
+  document: DocumentDescriptor,
+  input: Record<string, unknown>,
+): Promise<FolderExportRequest | null> {
+  switch (document.kind) {
+    case 'image': {
+      const { imageExportFiles } = await import('@/spaces/image/imageExportFiles')
+      return imageExportFiles(document.id)
+    }
+    case 'scene': {
+      const { sceneExportFiles } = await import('@/spaces/three/sceneExportFiles')
+      return sceneExportFiles(
+        document.id,
+        oneOf(input, 'format', EXPORT_FORMATS) ?? 'glb',
+        oneOf(input, 'scope', SCENE_SCOPES) ?? 'scene',
+      )
+    }
+    case 'skybox': {
+      const { skyboxExportFiles } = await import('@/spaces/skyboxes/skyboxExportFiles')
+      return skyboxExportFiles(document.id, numberOf(input, 'size') ?? DEFAULT_FACE)
+    }
+    case 'texture': {
+      const { textureExportFiles } = await import('@/spaces/textures/textureExportFiles')
+      return textureExportFiles(
+        document.id,
+        oneOf(input, 'target', TEXTURE_EXPORT_TARGETS) ?? 'raw',
+      )
+    }
+    default:
+      return null
+  }
+}
+
+/**
+ * Writes the document in front into the project, in a folder of its own.
+ *
+ * Every rendering throws rather than answering half an export — a sky with no picture, a material
+ * with no channel, an engine that is not mounted — so a refusal here is the honest answer to all
+ * three, and the journal keeps the sentence.
+ */
+async function exportDocument(input: Record<string, unknown>): Promise<ActionOutcome> {
+  const documents = useDocuments.getState()
+  const document = documents.activeId ? documents.documents[documents.activeId] : undefined
+  if (!document) return refused('wrongSurface')
+
+  try {
+    const request = await exportOf(document, input)
+    if (!request) return refused('wrongSurface')
+
+    const folder = textOf(input, 'folder')
+    return withBridge(bridge =>
+      bridge.project.exportInto(folder === null ? request : { ...request, folder }),
+    )
+  } catch (error) {
+    reportFailure('document.export', document.id, error)
+    return refused('badInput')
+  }
+}
+
 export const STATE_HANDLERS: ActionHandlers = {
   'studio.state': studioState,
+  'document.export': exportDocument,
   'documents.list': listDocuments,
   'document.open': openByPath,
   'document.close': close,

@@ -35,6 +35,7 @@ export type ActionName =
   | 'document.activate'
   | 'document.close'
   | 'document.rename'
+  | 'document.export'
   | 'activity.recent'
   | 'project.open'
   | 'project.create'

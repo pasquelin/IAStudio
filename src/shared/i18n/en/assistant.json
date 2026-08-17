@@ -333,6 +333,10 @@
         "title": "Fill or empty a channel",
         "description": "Puts an image from the library into one of the eight channels of the material in front. With no asset named, the channel is emptied rather than filled."
       },
+      "documentExport": {
+        "title": "Export the document in front into the project",
+        "description": "Writes the image, scene, sky or material in front into a folder of the project, named after its title when none is given. The destination cannot leave the project."
+      },
       "gitStashDrop": {
         "title": "Throw a shelved change away",
         "description": "Removes a shelved change from the stack without applying it back. What it held was never recorded, so nothing gives it back."
@@ -635,6 +639,11 @@
       "alsoRemote": "Remove from the remote library too",
       "layerId": "Layer identifier",
       "layerIds": "Layer identifiers",
+      "exportFolder": "Folder of the project to write into, the title by default",
+      "exportFormat": "Format of the 3D file",
+      "exportScope": "The whole scene, or the selection",
+      "exportTarget": "Which engine the material export is for",
+      "faceSize": "Side of one face, in pixels",
       "conflictSide": "Which side of the conflict to keep",
       "remoteName": "Name of the remote",
       "remoteUrl": "Address of the remote",

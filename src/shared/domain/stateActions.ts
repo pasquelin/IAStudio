@@ -1,4 +1,6 @@
 import { action, type AssistantAction } from './assistantAction'
+import { EXPORT_FORMATS } from './scene'
+import { TEXTURE_EXPORT_TARGETS } from './textureExport'
 
 /**
  * What the studio is, and which document is in front.
@@ -69,6 +71,55 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     fields: [
       { key: 'documentId', kind: 'text', labelKey: 'assistant.fields.documentId', required: true },
       { key: 'title', kind: 'text', labelKey: 'assistant.fields.title', required: true },
+    ],
+  }),
+  action({
+    /**
+     * The one export an outside client can ask for, and the reason it takes a FOLDER rather than a
+     * path: every other export channel raises a native picker nobody outside can fill, and a path
+     * a client chose freely is a write anywhere on the disk. Held inside the open project instead.
+     *
+     * `files` rather than `none`: it writes into the project folder, and a folder that was already
+     * there is written over.
+     *
+     * The montage is not here. A film is rendered frame by frame through a session the viewport
+     * drives, not encoded in one call like the other four, and a client cannot hold that session.
+     */
+    name: 'document.export',
+    titleKey: 'assistant.actions.documentExport.title',
+    descriptionKey: 'assistant.actions.documentExport.description',
+    commitment: 'files',
+    reach: 'mcp',
+    fields: [
+      { key: 'folder', kind: 'text', labelKey: 'assistant.fields.exportFolder', required: false },
+      {
+        key: 'format',
+        kind: 'choice',
+        labelKey: 'assistant.fields.exportFormat',
+        required: false,
+        options: EXPORT_FORMATS,
+      },
+      {
+        key: 'scope',
+        kind: 'choice',
+        labelKey: 'assistant.fields.exportScope',
+        required: false,
+        options: ['scene', 'selection'],
+      },
+      {
+        key: 'target',
+        kind: 'choice',
+        labelKey: 'assistant.fields.exportTarget',
+        required: false,
+        options: TEXTURE_EXPORT_TARGETS,
+      },
+      {
+        key: 'size',
+        kind: 'integer',
+        labelKey: 'assistant.fields.faceSize',
+        required: false,
+        min: 1,
+      },
     ],
   }),
   action({
