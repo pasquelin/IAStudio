@@ -106,7 +106,7 @@
     "back": "Précédent",
     "backHint": "Revient au dossier affiché juste avant",
     "forward": "Suivant",
-    "forwardHint": "Retourne au dossier quitté par le bouton précédent",
+    "forwardHint": "Retourne au dossier quitté par le bouton Précédent",
     "up": "Dossier parent",
     "upHint": "Remonte d’un niveau dans le projet",
     "enterFolder": "Ouvrir ce dossier dans la grille",
