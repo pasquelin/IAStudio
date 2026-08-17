@@ -46,7 +46,7 @@
     },
     "explorerNewFolder": {
       "title": "Nouveau dossier",
-      "help": "Crée un dossier vide dans celui que l’Explorateur affiche, et ouvre son nom à la saisie. Le dossier vous appartient, comme tout ce que vous rangez dedans."
+      "help": "Crée un dossier vide dans celui que l’explorateur affiche, et ouvre son nom à la saisie. Le dossier vous appartient, comme tout ce que vous rangez dedans."
     },
     "explorerDuplicate": {
       "title": "Dupliquer",
@@ -66,7 +66,7 @@
     },
     "explorerTrash": {
       "title": "Mettre à la corbeille",
-      "help": "Envoie la sélection à la corbeille du système, d’où vous pouvez la récupérer. C’est le seul geste de l’Explorateur que le studio ne sait pas annuler."
+      "help": "Envoie la sélection à la corbeille du système, d’où vous pouvez la récupérer. C’est le seul geste de l’explorateur que le studio ne sait pas annuler."
     },
     "explorerUndo": {
       "title": "Annuler le dernier geste sur les fichiers",

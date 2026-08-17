@@ -149,7 +149,7 @@
     "create": "New project",
     "open": "Open project",
     "occupiedTitle": "Set up the project “{{folder}}” in this folder?",
-    "occupiedBody": "This folder already holds files, and it will BECOME the project: the studio adds its “assets” and “documents” folders inside it, and everything you make lands there. Nothing already there is changed or moved.",
+    "occupiedBody": "This folder already holds files, and it will BECOME the project: the studio adds its “assets” and “documents” folders inside it. Nothing already there is changed or moved.",
     "occupiedConfirm": "Set up here",
     "occupiedCancel": "Cancel",
     "openHint": "Opens a project folder already made, with what it holds",
