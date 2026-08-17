@@ -64,10 +64,12 @@ export function DynamicFormControl({
              * the button takes the focus, the click gives it back — which nothing here can see
              * but a scrolled panel and a lost selection would.
              *
-             * `pr-4` leaves the grip its corner: the strip ends before it rather than over it.
+             * The padding is the text's own, so the microphone lines up with the words above it.
+             * The resize grip shares that corner: it is reached from the very edge, the button
+             * from anywhere else on it.
              */
             <div
-              className="flex items-center justify-end gap-2 pr-4 pb-1 pl-1.5"
+              className="flex items-center justify-end gap-2 px-2 pb-1"
               onMouseDown={event => event.preventDefault()}
               onClick={() => box.current?.focus()}
             >
