@@ -6,6 +6,7 @@ import { DISPLAY_MODES, VIEW_DIRECTIONS } from '../domain/scene'
 import { TOOL_PLACEMENTS } from '../domain/tool'
 import { ASSET_BADGES } from '../domain/asset'
 import { FILE_DOMAINS } from '../domain/fileRole'
+import { GIT_CHANGES, GIT_FAILURE_KEYS, GIT_REF_KINDS, GIT_STAGES } from '../domain/git'
 import { ASSISTANT_MODELS } from '../domain/assistant'
 import { STT_ERROR_CODES } from '../domain/dictation'
 import { breakableSpots } from './typography'
@@ -232,6 +233,9 @@ describe('the translation bundles', () => {
       'exportFormats.gltf',
       'exportFormats.usdz',
       'settings.ffmpegPath.placeholder',
+      // The other binary path a user may name. A filesystem path is not a sentence in any
+      // language, and translating `/usr/bin/git` would be inventing a folder nobody has.
+      'settings.gitBinary.placeholder',
       // Two engines and a format. `roblox` and `raw` are one word each, which this already skips.
       'textureExportTargets.gltf',
       'textureExportTargets.unity',
@@ -800,6 +804,15 @@ const DYNAMIC_KEYS: readonly string[] = [
   // turns the progress row into a raw code at the exact moment something is happening.
   ...JOB_STATUSES.map(status => `jobs.status.${status}`),
   ...INGEST_STAGES.map(stage => `ingest.${stage}`),
+  // The version panel groups by stage and names the change in each row's hint, both composed
+  // from the union. A value without its line puts the raw word — `untracked` — where a heading
+  // belongs. The BADGE is not here: its letter is git's own, and it lives in `GIT_CHANGE_BADGES`.
+  ...GIT_STAGES.map(stage => `git.stage.${stage}`),
+  ...GIT_CHANGES.map(change => `git.change.${change}`),
+  // The three kinds of name a commit can carry, each drawn as its own badge.
+  ...GIT_REF_KINDS.map(kind => `git.ref.${kind}`),
+  // Why git did not answer. The compiler holds the other half — see `GIT_FAILURE_KEYS`.
+  ...Object.values(GIT_FAILURE_KEYS),
   /**
    * The models the assistant may think with, named in the picker of its own modal.
    *

@@ -23,6 +23,15 @@ import type {
   DocumentKind,
   DocumentWrite,
 } from './domain/document'
+import type {
+  GitBranch,
+  GitCommit,
+  GitCommitFile,
+  GitRemote,
+  GitRepository,
+  GitStashEntry,
+} from './domain/git'
+import type { GitDiff } from './domain/gitDiff'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -109,6 +118,35 @@ export type Channels = {
   projectFileHistory: 'project:file-history'
   projectStopRescan: 'project:stop-rescan'
   projectRescanState: 'project:rescan-state'
+
+  gitRead: 'git:read'
+  gitInit: 'git:init'
+  gitStage: 'git:stage'
+  gitUnstage: 'git:unstage'
+  gitRestore: 'git:restore'
+  gitCommit: 'git:commit'
+  gitBranches: 'git:branches'
+  gitCreateBranch: 'git:create-branch'
+  gitCheckout: 'git:checkout'
+  gitLog: 'git:log'
+  gitCommitFiles: 'git:commit-files'
+  gitDiff: 'git:diff'
+  gitBytes: 'git:bytes'
+  gitRemotes: 'git:remotes'
+  gitAddRemote: 'git:add-remote'
+  gitFetch: 'git:fetch'
+  gitPull: 'git:pull'
+  gitPush: 'git:push'
+  gitResolve: 'git:resolve'
+  gitAbortMerge: 'git:abort-merge'
+  gitStash: 'git:stash'
+  gitStashes: 'git:stashes'
+  gitStashPop: 'git:stash-pop'
+  gitStashDrop: 'git:stash-drop'
+  gitTag: 'git:tag'
+  gitHasCredentials: 'git:has-credentials'
+  gitSetCredentials: 'git:set-credentials'
+  gitClearCredentials: 'git:clear-credentials'
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
@@ -252,6 +290,35 @@ export const CHANNELS: Channels = {
   projectFileHistory: 'project:file-history',
   projectStopRescan: 'project:stop-rescan',
   projectRescanState: 'project:rescan-state',
+
+  gitRead: 'git:read',
+  gitInit: 'git:init',
+  gitStage: 'git:stage',
+  gitUnstage: 'git:unstage',
+  gitRestore: 'git:restore',
+  gitCommit: 'git:commit',
+  gitBranches: 'git:branches',
+  gitCreateBranch: 'git:create-branch',
+  gitCheckout: 'git:checkout',
+  gitLog: 'git:log',
+  gitCommitFiles: 'git:commit-files',
+  gitDiff: 'git:diff',
+  gitBytes: 'git:bytes',
+  gitRemotes: 'git:remotes',
+  gitAddRemote: 'git:add-remote',
+  gitFetch: 'git:fetch',
+  gitPull: 'git:pull',
+  gitPush: 'git:push',
+  gitResolve: 'git:resolve',
+  gitAbortMerge: 'git:abort-merge',
+  gitStash: 'git:stash',
+  gitStashes: 'git:stashes',
+  gitStashPop: 'git:stash-pop',
+  gitStashDrop: 'git:stash-drop',
+  gitTag: 'git:tag',
+  gitHasCredentials: 'git:has-credentials',
+  gitSetCredentials: 'git:set-credentials',
+  gitClearCredentials: 'git:clear-credentials',
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
@@ -897,6 +964,96 @@ export type StudioBridge = {
      * the selection at what has just appeared rather than guessing at it after a re-read.
      */
     onFilesChanged: (callback: (outcome: FileOutcome) => void) => Unsubscribe
+  }
+  /**
+   * Version control over the PROJECT folder — the user's own files. Nothing here reaches the
+   * repository the studio itself is built from.
+   */
+  git: {
+    /**
+     * Everything the panel draws, in one answer. A union rather than a status plus a handful of
+     * booleans: no project, no git on this machine, and a folder never initialised each want
+     * their own screen, and asking three channels would let two of them disagree.
+     */
+    read: () => Promise<GitRepository>
+    /** `git init` on the open project, plus the ignore file, then the state it left. */
+    init: () => Promise<GitRepository>
+    /**
+     * Every gesture answers with the state it LEFT rather than with nothing. One round trip
+     * instead of two, and no window in which two panels could draw a folder already out of date.
+     */
+    stage: (paths: readonly string[]) => Promise<GitRepository>
+    unstage: (paths: readonly string[]) => Promise<GitRepository>
+    /** Puts files back the way the last recorded version has them — see `canRestore`. */
+    restore: (paths: readonly string[]) => Promise<GitRepository>
+    commit: (message: string, amend: boolean) => Promise<GitRepository>
+    /** Read when the menu opens rather than with every status: it costs a command of its own. */
+    branches: () => Promise<GitBranch[]>
+    createBranch: (name: string) => Promise<GitRepository>
+    checkout: (name: string) => Promise<GitRepository>
+    /**
+     * A page of the history, newest first, across every branch. Paged rather than read whole: a
+     * project of two years is tens of thousands of commits, and the band shows twenty.
+     */
+    log: (limit: number, skip: number) => Promise<GitCommit[]>
+    /** What one recorded version changed. Read when a row is picked, never with the page. */
+    commitFiles: (hash: string) => Promise<GitCommitFile[]>
+    /**
+     * What changed inside one file — within `commit`, or against the last recorded version when
+     * it is `null`. `binary` is the ordinary answer for most of a studio project, and what sends
+     * the panel to `bytes` below.
+     */
+    diff: (path: string, commit: string | null) => Promise<GitDiff>
+    /**
+     * The bytes of a file at one version, or as it stands on disk when `ref` is `null` — which
+     * is how two versions of a picture are put side by side.
+     *
+     * `null` for a path that version does not hold, and for anything past the ceiling the main
+     * process keeps: these cross the boundary and are held in a window, and a project holds video.
+     */
+    bytes: (path: string, ref: string | null) => Promise<Uint8Array | null>
+    remotes: () => Promise<GitRemote[]>
+    addRemote: (name: string, url: string) => Promise<GitRepository>
+    /** Takes what the server has without touching the working tree. */
+    fetch: () => Promise<GitRepository>
+    pull: () => Promise<GitRepository>
+    /** `setUpstream` on the first push of a branch — the one that has nothing to track yet. */
+    push: (setUpstream: boolean) => Promise<GitRepository>
+    /**
+     * Whether a token is held for a host — and NOTHING else about it.
+     *
+     * There is no channel that answers with a token, and that absence is the point: invariant 1
+     * says the window asks whether it is authenticated, never what the credential is. The token
+     * goes down to the main process once and only ever comes back out inside the environment of
+     * a git command.
+     */
+    /**
+     * Settles a conflict by keeping one whole side, and marks it settled in the same breath.
+     *
+     * During a MERGE, `ours` is the branch that is out and `theirs` is what is being brought in.
+     * The two swap during a rebase — one reason the studio pulls with `--ff-only` and offers no
+     * rebase: a gesture whose meaning depends on which operation is running is a gesture nobody
+     * can be sure of.
+     */
+    resolve: (paths: readonly string[], side: 'ours' | 'theirs') => Promise<GitRepository>
+    abortMerge: () => Promise<GitRepository>
+    /** Sets the whole working tree aside, untracked files included, and comes back clean. */
+    stash: (message: string) => Promise<GitRepository>
+    stashes: () => Promise<GitStashEntry[]>
+    stashPop: (index: number) => Promise<GitRepository>
+    stashDrop: (index: number) => Promise<GitRepository>
+    tag: (name: string, commit: string) => Promise<GitRepository>
+    /**
+     * Whether a token is held for a host — and NOTHING else about it.
+     *
+     * There is no channel that answers with a token, and that absence is the point: invariant 1
+     * says the window asks whether it is authenticated, never what the credential is. The token
+     * goes down to the main process once and only ever comes back out inside the environment of
+     * a git command.
+     */
+    hasCredentials: (host: string) => Promise<boolean>
+    setCredentials: (host: string, user: string, token: string) => Promise<void>
+    clearCredentials: (host: string) => Promise<void>
   }
   dialog: {
     /**

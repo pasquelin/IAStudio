@@ -569,6 +569,39 @@ The **Browse…** button opens your system's file picker.
 
 ---
 
+## Versions
+
+*Version tracking of the project folder, by git. Your files only.*
+
+This section governs the **Git** panel and the **History** panel. It has nothing to do with the
+studio itself: what is tracked is your project folder.
+
+### Path to git
+
+Version tracking needs the **git** program, which is not shipped with the studio. On most
+machines it is already there and this setting stays empty.
+
+Fill it in only if you insist on a particular git. **A path holding a space is refused** — a limit
+of the component that runs git, not a choice — and the application then behaves as it does when
+git is missing altogether.
+
+> **When git is missing**, the Git panel says so and offers no button: there is nothing to offer
+> while the program is not there.
+
+### Author name, Author address
+
+What is written into every recorded version. **Leave both empty** if you already use git on this
+computer: the studio then takes what git knows, and overwrites nothing.
+
+**Both or neither**: git wants a name AND an address, and filling in only one would make every
+recording fail on the other.
+
+> **Nothing leaves or arrives unless you ask for it.** There is no automatic check: the three
+> buttons of the Git panel — check, take, send — are the only moments the studio speaks to the
+> server.
+
+---
+
 ## Storage
 
 *Where your projects are kept on disk.*

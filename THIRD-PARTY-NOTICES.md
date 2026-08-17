@@ -43,6 +43,7 @@ Studio itself (LICENSE) nor by the application's terms of use (EULA.md).
 | remark-gfm | 4.0.1 | MIT |
 | sherpa-onnx-node | 1.13.5 | Apache-2.0 |
 | Silero VAD | v5 | MIT |
+| simple-git | 3.36.0 | MIT |
 | tailwind-merge | 3.6.0 | MIT |
 | tailwindcss | 4.3.3 | MIT |
 | three | 0.185.1 | MIT |
@@ -1526,6 +1527,14 @@ Silero VAD decides when someone is speaking. It ships beside the application, in
 resources/stt/, and is read by the recognition engine rather than executed.
 
 Full terms: https://github.com/snakers4/silero-vad/blob/master/LICENSE
+```
+## simple-git
+
+Version: 3.36.0  
+Licence: MIT
+
+```
+See readme.md of the package.
 ```
 ## tailwind-merge
 

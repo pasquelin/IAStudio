@@ -133,6 +133,7 @@ function merge(base: Settings, partial: PartialSettings): Settings {
     three: { ...base.three, ...partial.three },
     shortcuts: { ...base.shortcuts, ...partial.shortcuts },
     media: { ...base.media, ...partial.media },
+    git: { ...base.git, ...partial.git },
     advanced: { ...base.advanced, ...partial.advanced },
     assistant: { ...base.assistant, ...partial.assistant },
     mcp: { ...base.mcp, ...partial.mcp },

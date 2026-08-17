@@ -8,6 +8,8 @@ export type RefusedPanelProps = {
   tool: ToolId
   /** What did not answer, in the panel's own words. The generic line stands in when it has none. */
   message?: string
+  /** What the machine said, for a refusal whose named reason does not say which file or server. */
+  detail?: string
   onRetry: () => void
 }
 
@@ -19,13 +21,14 @@ export type RefusedPanelProps = {
  * exactly the count at which the bands' copy became a debt — five sites, each taking itself off
  * the page on a refusal, indistinguishably from having nothing to show.
  */
-export function RefusedPanel({ tool, message, onRetry }: RefusedPanelProps) {
+export function RefusedPanel({ tool, message, detail, onRetry }: RefusedPanelProps) {
   const { t } = useTranslation()
 
   return (
     <EmptyState
       icon={toolIcon(tool)}
       message={message ?? t('home.refused')}
+      detail={detail}
       action={{ label: t('home.retry'), hint: t('actions.retryHint'), onClick: onRetry }}
     />
   )

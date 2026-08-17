@@ -21,6 +21,12 @@ export type EmptyStateProps = {
    * button: neither is the lesser, and a third would be a menu rather than an empty state.
    */
   secondary?: EmptyStateAction
+  /**
+   * What the machine said, under the sentence the studio wrote. A named reason still does not say
+   * WHICH file or which server, and for a failure nothing recognised it is all there is to show.
+   * Left as it came — it is quoted, not written.
+   */
+  detail?: string
 }
 
 /**
@@ -29,11 +35,17 @@ export type EmptyStateProps = {
  * The actions are labels and callbacks rather than free nodes: every panel offers its way out
  * the same way, and a node would let each one grow its own button.
  */
-export function EmptyState({ icon, message, action, secondary }: EmptyStateProps) {
+export function EmptyState({ icon, message, action, secondary, detail }: EmptyStateProps) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
       <UiIcon path={icon} size={32} className="text-muted/40" />
       <p className="text-muted max-w-56 text-xs leading-relaxed">{message}</p>
+
+      {detail !== undefined && detail !== '' && (
+        <pre className="text-muted text-tiny m-0 max-w-72 break-words whitespace-pre-wrap">
+          {detail}
+        </pre>
+      )}
 
       {(action || secondary) && (
         <div className="flex flex-wrap items-center justify-center gap-2">

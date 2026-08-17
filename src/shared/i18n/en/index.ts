@@ -4,6 +4,7 @@ import type * as frAssets from '../fr/assets.json'
 import type * as frAssistant from '../fr/assistant.json'
 import type * as frCommands from '../fr/commands.json'
 import type * as frCommon from '../fr/common.json'
+import type * as frGit from '../fr/git.json'
 import type * as frImage from '../fr/image.json'
 import type * as frInspector from '../fr/inspector.json'
 import type * as frModels from '../fr/models.json'
@@ -17,6 +18,7 @@ import assets from './assets.json'
 import assistant from './assistant.json'
 import commands from './commands.json'
 import common from './common.json'
+import git from './git.json'
 import image from './image.json'
 import inspector from './inspector.json'
 import models from './models.json'
@@ -45,6 +47,7 @@ export const en = {
   ...(assistant satisfies Section<keyof typeof frAssistant>),
   ...(commands satisfies Section<keyof typeof frCommands>),
   ...(common satisfies Section<keyof typeof frCommon>),
+  ...(git satisfies Section<keyof typeof frGit>),
   ...(image satisfies Section<keyof typeof frImage>),
   ...(inspector satisfies Section<keyof typeof frInspector>),
   ...(models satisfies Section<keyof typeof frModels>),

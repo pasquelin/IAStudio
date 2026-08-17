@@ -10,6 +10,9 @@ import { registerAssistantHandlers } from '@main/assistant/handlers'
 import { registerDictationHandlers } from '@main/dictation/handlers'
 import { registerMediaHandlers } from '@main/media/handlers'
 import { registerMenuHandlers } from '@main/menu'
+import { createCredentialVault } from '@main/git/credentials'
+import { registerGitHandlers } from '@main/git/handlers'
+import { createElectronAdapter } from '@main/settings/adapter'
 import { registerProjectHandlers } from '@main/project/handlers'
 import { registerScenarioHandlers } from '@main/scenario/handlers'
 import { runSettingAction } from '@main/settings/actions'
@@ -46,6 +49,27 @@ export function registerIpc(services: Services): void {
   })
   registerScenarioHandlers(services)
   registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
+  const git = registerGitHandlers({
+    // The same file and the same keychain the API key already uses. A second store would be a
+    // second place a secret can be left behind on a machine somebody stops trusting.
+    vault: createCredentialVault(createElectronAdapter()),
+    project: services.project,
+    binaryPath: () => services.settings.read().git.binary || undefined,
+    // Both halves or neither: git wants a name AND an address, and handing it one would make
+    // every commit fail on the other. Left out, git reads the machine's own configuration.
+    identity: () => {
+      const { userName, userEmail } = services.settings.read().git
+      return userName && userEmail ? { name: userName, email: userEmail } : undefined
+    },
+  })
+
+  /**
+   * A changed binary has to reach the service, which holds both the detection and the port bound
+   * to it. Without this the preference could be edited and nothing would read it until the next
+   * launch — the service would go on saying git is missing on a machine that has just been told
+   * where it is.
+   */
+  services.settings.subscribe(() => git.forget())
   registerAssetHandlers({
     catalog: () => services.project.catalog(),
     remote: services.remote,

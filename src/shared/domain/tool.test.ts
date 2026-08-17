@@ -119,25 +119,30 @@ describe('every workspace', () => {
 
 describe('the home', () => {
   /**
-   * Two columns and no band, which is what makes it a surface like the others: what one opens
-   * FROM on the left, what one opens on the right, and the centre kept for the page.
-   *
-   * THREE placements, where there were eleven until 13 August. The eight that went answered a
+   * FIVE placements, where there were eleven until 13 August. The eight that went answered a
    * question about the studio — what it spent, how many assets it holds by kind, the newest ones,
    * favourites, ideas, look-alikes, and two journals the status bar already carries — and this
    * screen is where one comes to OPEN something. The list is spelled out rather than counted: an
    * id creeping back in is the exact regression this holds against.
    *
+   * The two that came back are the two about the project that is OPEN, and both are withheld
+   * while none is: what has changed in its folder, and what came before. That is a different
+   * thing from the eight, which spoke about the studio whether or not anything was open.
+   *
    * The order is the order of the rail, and the first of a half is what an unchosen half draws —
    * so this holds both the icon stack and what the screen opens on.
    */
-  it('stands its panels in two columns, in the order their icons stack', () => {
+  it('stands its panels in two columns and a band, in the order their icons stack', () => {
     const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
 
     expect(served.map(placement => [placement.id, placement.zone, placement.slot])).toEqual([
       ['projects', 'left', 'primary'],
       ['explorer', 'left', 'secondary'],
       ['library', 'right', 'primary'],
+      // Declared LAST on purpose, and the order is what says so: the folder is what an unchosen
+      // half opens on, and the versions of that folder are what one goes to look at next.
+      ['git', 'left', 'secondary'],
+      ['history', 'bottom', 'primary'],
     ])
   })
 
@@ -147,6 +152,11 @@ describe('the home', () => {
    * The left column now holds both halves, as every space does — the projects above, and under
    * them the one that is open, read as a folder. The right keeps one: a rota there is where the
    * projects stopped being the thing this screen opens on.
+   *
+   * The BAND is new on 17 August, and it is the one zone this screen had never had. What it
+   * holds is read across — a history is one commit per line, and a branch graph in a 280 px
+   * column is a graph nobody can follow — and it is offered only while a project is open, so the
+   * screen a reader arrives on with nothing open is the one it has always been.
    */
   it('reads its two columns the way every space reads its own', () => {
     const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
@@ -156,10 +166,11 @@ describe('the home', () => {
         .map(placement => placement.id)
 
     expect(inHalf('left', 'primary')).toEqual(['projects'])
-    expect(inHalf('left', 'secondary')).toEqual(['explorer'])
+    // A rota of two: the open project read as a folder, and the same folder read as a history.
+    expect(inHalf('left', 'secondary')).toEqual(['explorer', 'git'])
     expect(inHalf('right', 'primary')).toEqual(['library'])
     expect(inHalf('right', 'secondary')).toEqual([])
-    expect(served.filter(placement => placement.zone === 'bottom')).toEqual([])
+    expect(inHalf('bottom', 'primary')).toEqual(['history'])
   })
 
   /**
@@ -239,7 +250,10 @@ describe('the left column', () => {
         WORKSPACE_IDS.some(workspace => serves(placement, workspace)),
     )
 
-    expect(lower.map(placement => placement.id)).toEqual(['explorer'])
+    // Two, and both read the PROJECT FOLDER — as a tree, and as a history of the same files.
+    // That is what keeps them one rota rather than a pile: whichever is in front, the half is
+    // still "the folder I am working in". A third reading of something else would not belong.
+    expect(lower.map(placement => placement.id)).toEqual(['explorer', 'git'])
   })
 })
 

@@ -136,6 +136,11 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     descriptionKey: 'settings.mediaDescription',
   },
   {
+    id: 'git',
+    labelKey: 'settings.git',
+    descriptionKey: 'settings.gitDescription',
+  },
+  {
     id: 'storage',
     labelKey: 'settings.storage',
     descriptionKey: 'settings.storageDescription',
@@ -548,6 +553,31 @@ export const SETTING_REGISTRY = [
     titleKey: 'settings.ffmpegPath.title',
     helpKey: 'settings.ffmpegPath.help',
     placeholderKey: 'settings.ffmpegPath.placeholder',
+  }),
+  setting({
+    path: 'git.binary',
+    kind: 'path',
+    pathKind: 'file',
+    section: 'git',
+    titleKey: 'settings.gitBinary.title',
+    helpKey: 'settings.gitBinary.help',
+    placeholderKey: 'settings.gitBinary.placeholder',
+  }),
+  setting({
+    path: 'git.userName',
+    kind: 'text',
+    section: 'git',
+    titleKey: 'settings.gitUserName.title',
+    helpKey: 'settings.gitUserName.help',
+    placeholderKey: 'settings.gitUserName.placeholder',
+  }),
+  setting({
+    path: 'git.userEmail',
+    kind: 'text',
+    section: 'git',
+    titleKey: 'settings.gitUserEmail.title',
+    helpKey: 'settings.gitUserEmail.help',
+    placeholderKey: 'settings.gitUserEmail.placeholder',
   }),
 ]
 

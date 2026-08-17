@@ -80,6 +80,12 @@ const storage = z.object({
 // storable, and `resolveFfmpeg` falls through to the PATH when it does not resolve.
 const media = z.object({ ffmpegPath: z.string().min(1).optional() })
 
+const git = z.object({
+  binary: z.string().min(1).optional(),
+  userName: z.string().min(1).optional(),
+  userEmail: z.string().min(1).optional(),
+})
+
 const general = z.object({
   language: z.enum(LANGUAGE_PREFERENCES).optional(),
   startup: z.enum(STARTUP_BEHAVIOURS).optional(),
@@ -209,6 +215,7 @@ const partialSettings = z.object({
   three: three.optional(),
   shortcuts: shortcuts.optional(),
   media: media.optional(),
+  git: git.optional(),
   advanced: advanced.optional(),
   assistant: assistant.optional(),
   mcp: mcp.optional(),

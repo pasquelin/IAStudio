@@ -43,6 +43,8 @@ export type ToolId =
   | 'lights'
   | 'timeline'
   | 'explorer'
+  | 'git'
+  | 'history'
   | 'scene'
   | 'models'
   | 'generator'
@@ -93,6 +95,18 @@ export type ToolPlacement = {
   /** Surfaces the tool belongs to. Spelled out even when it is all of them: a panel that
    * never chose is a panel nobody decided about. */
   surfaces: readonly ToolSurface[]
+  /**
+   * What has to exist for this placement to be offered at all — absent rather than disabled,
+   * because neither is something the reader can act on from the rail.
+   *
+   * On the PLACEMENT rather than on the tool, and the Explorer is why: it needs a project on the
+   * home, where offering it would say « no project open » beside the very shelf that opens one,
+   * and needs nothing in a space, which is already a project being edited.
+   *
+   * The state itself is not answered here — `shared/` holds no runtime dependency — but which
+   * question to ask is a property of the panel, and it belongs beside the panel.
+   */
+  requires?: 'project' | 'model'
 }
 
 export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
@@ -106,7 +120,8 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The upper half of the left column is generation, and only generation, in every space: the
   // same two panels in the same place, right under the button that makes a document.
   { id: 'models', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
-  { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
+  // Generating without a model is impossible, so it is absent rather than disabled.
+  { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS, requires: 'model' },
 
   // The lower half: the documents to produce into. Its own half rather than a third turn in the
   // upper one, so the generator stays visible WHILE the Explorer is read.
@@ -189,14 +204,62 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // the studio's own documents and nothing else; the folder holds them and everything the user
   // put beside them, which is what an entry point should offer a way into.
   //
-  // Offered only while a project IS open — `toolRegistry.ts`, which is where a rule that
-  // depends on state lives: the panel would otherwise stand on the home saying that nothing is
-  // open, beside the shelf whose whole purpose is to open one.
-  { id: 'explorer', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
+  // Offered only while a project IS open: the panel would otherwise stand on the home saying
+  // that nothing is open, beside the shelf whose whole purpose is to open one. Here and not on
+  // the workspace placement above, a space being a project already being edited.
+  {
+    id: 'explorer',
+    zone: 'left',
+    slot: 'secondary',
+    surfaces: [HOME_SURFACE],
+    requires: 'project',
+  },
 
   // The right column: what the account holds outside this project — a way into something, which
   // is what this screen is for.
   { id: 'library', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
+
+  // The project's own history, in the half the project's own FOLDER occupies — it answers about
+  // the same files, and the two are read one after the other rather than side by side. Declared
+  // last so the Explorer stays what an untouched half opens on, in every surface: the folder is
+  // what one reaches for, and the versions are what one goes to look at.
+  //
+  // Every surface, and one placement rather than two: a tool is held to one slot across all of
+  // its placements, and splitting these would only be a way of writing the same slot twice.
+  //
+  // Offered only while a project IS open, for the reason the Explorer gives above: what is
+  // versioned is a project folder, and there is nothing to say about one that is not open. In a
+  // space that is always true; on the home it is the whole point.
+  {
+    id: 'git',
+    zone: 'left',
+    slot: 'secondary',
+    surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
+    requires: 'project',
+  },
+
+  // The versions themselves, in the band — where the timeline is, and for the same reason: both
+  // are read ACROSS, one commit or one frame at a time, and a branch graph in a 280 px column is
+  // a graph nobody can follow. The column beside it holds the files of whichever version is
+  // picked, which is why the band and not a second column.
+  //
+  // Declared after the shelf and the montage, so entering a space still opens on the panel that
+  // space is for. Someone who wants the history asks for it.
+  //
+  // The home as well, which reverses what this said until 17 August — and the argument it
+  // reversed is worth keeping, because it still holds for the eight panels the home lost on
+  // 13 August: a panel that answers a question about the studio stands between the reader and
+  // their projects. The history is not one of those. It answers a question about the project
+  // that is OPEN, it is offered only while one is (`requires`), and the Git panel already sits
+  // in the home's left column saying what has changed — a reader who can see that and not what
+  // came before it is reading half a sentence.
+  {
+    id: 'history',
+    zone: 'bottom',
+    slot: 'primary',
+    surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
+    requires: 'project',
+  },
 ]
 
 /**

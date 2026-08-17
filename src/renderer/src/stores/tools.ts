@@ -113,6 +113,10 @@ export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
     // the one that is open, read as a folder. The right column keeps one.
     left: { primary: null, secondary: null },
     right: { primary: null },
+    // The band, since 17 August, and it holds one thing: the history of the project that is
+    // open. `null` means "the half is there and nothing was chosen", which is what leaves it to
+    // the first tool the registry serves — and with no project open, that is no tool at all.
+    bottom: { primary: null },
   },
 }
 

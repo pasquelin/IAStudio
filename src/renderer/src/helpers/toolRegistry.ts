@@ -6,9 +6,11 @@ import {
   mdiFolderMultipleOutline,
   mdiFolderOutline,
   mdiGridLarge,
+  mdiHistory,
   mdiImageMultipleOutline,
   mdiLayersOutline,
   mdiPaletteSwatchOutline,
+  mdiSourceBranch,
   mdiTuneVariant,
   mdiVideoVintage,
   mdiWeatherPartlyCloudy,
@@ -16,7 +18,6 @@ import {
 } from '@mdi/js'
 import { useMemo } from 'react'
 import {
-  HOME_SURFACE,
   placementIn,
   serves,
   TOOL_PLACEMENTS,
@@ -45,6 +46,11 @@ const ICONS: Record<ToolId, string> = {
   lights: NODE_KINDS.light.icon,
   timeline: mdiVideoVintage,
   explorer: mdiFolderOutline,
+  // The fork every version tool draws, and the one glyph nobody mistakes for a folder.
+  git: mdiSourceBranch,
+  // The same subject read as a line of time, which is what the band holds — and a glyph that is
+  // neither the fork above it nor the film reel the montage wears.
+  history: mdiHistory,
   scene: mdiFileTreeOutline,
   models: mdiCubeScan,
   generator: mdiCreationOutline,
@@ -131,15 +137,15 @@ export type ToolState = {
 /**
  * Whether a section can offer this panel at all.
  *
- * Two panels answer to more than the registry. Generating without a model is impossible, so the
- * generator is absent rather than disabled. And the Explorer stands on the HOME only while a
- * project is open — every space keeps it whatever happens, because a space is already a project
- * being edited, but on the entry point it would say « no project open » beside the very shelf
- * that opens one.
+ * WHAT each placement needs is declared beside it, in the registry; this only answers whether the
+ * studio has it. Written as a run of `if (id === …)` it grew a third arm within a week of the
+ * second, each of them a rule about a panel sitting a file away from where the panel is declared.
  */
 function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
-  if (id === 'generator') return state.hasModel
-  if (id === 'explorer' && surface === HOME_SURFACE) return state.hasProject
+  const requires = placementIn(id, surface)?.requires
+
+  if (requires === 'model') return state.hasModel
+  if (requires === 'project') return state.hasProject
   return true
 }
 

@@ -50,6 +50,7 @@
     "react-is": "^19.2.8",
     "recharts": "^3.10.1",
     "sherpa-onnx-node": "1.13.5",
+    "simple-git": "^3.36.0",
     "three": "0.185.1",
     "three-mesh-bvh": "^0.9.14"
   },

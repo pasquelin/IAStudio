@@ -1,0 +1,111 @@
+import { CHANNELS } from '@shared/ipc'
+import type { GitIdentity } from '@shared/domain/git'
+import { handle } from '@main/ipc/handle'
+import type { ProjectStore } from '@main/project/store'
+import { gitVersionProbe } from './binary'
+import { openRepository } from './repository'
+import { createGitService, type GitService } from './service'
+import type { CredentialVault } from './credentials'
+import {
+  parseCommitHash,
+  parseCommitMessage,
+  parseCredential,
+  parseGitPath,
+  parseGitPaths,
+  parseHost,
+  parseLogPage,
+  parseBlobRef,
+  parseOptionalHash,
+  parseRefName,
+  parseRemoteUrl,
+  parseStashIndex,
+} from './validation'
+
+export type GitHandlerDeps = {
+  /**
+   * Where a token is kept and read from. Injected because it needs `safeStorage` and a store on
+   * disk, neither of which exists outside a packaged application.
+   */
+  vault: CredentialVault
+  /** Only what version control reads: which project is open, if any. */
+  project: Pick<ProjectStore, 'current'>
+  /** A binary the user named in the preferences, or nothing to take whatever is on the PATH. */
+  binaryPath: () => string | undefined
+  /** Who to record a commit under, or nothing to leave git reading its own configuration. */
+  identity: () => GitIdentity | undefined
+}
+
+/**
+ * Wires the version panels to git.
+ *
+ * The service is answered back rather than kept here, so whoever follows the preferences can tell
+ * it to forget a binary that has just changed — the instance holds both the detection and the
+ * command queue, and neither survives being rebuilt per call.
+ *
+ * Every argument is parsed before it reaches a command. These are paths and names that become
+ * arguments to a process that WRITES, and the renderer is the sandboxed side.
+ */
+export function registerGitHandlers({
+  vault,
+  project,
+  binaryPath,
+  identity,
+}: GitHandlerDeps): GitService {
+  const service = createGitService({
+    vault,
+    projectPath: () => project.current()?.path ?? null,
+    binaryPath,
+    identity,
+    probe: gitVersionProbe,
+    open: openRepository,
+  })
+
+  handle(CHANNELS.gitRead, () => service.read())
+  handle(CHANNELS.gitInit, () => service.init())
+  handle(CHANNELS.gitStage, (_event, paths) => service.stage(parseGitPaths(paths)))
+  handle(CHANNELS.gitUnstage, (_event, paths) => service.unstage(parseGitPaths(paths)))
+  handle(CHANNELS.gitRestore, (_event, paths) => service.restore(parseGitPaths(paths)))
+  handle(CHANNELS.gitCommit, (_event, message, amend) =>
+    service.commit(parseCommitMessage(message), amend === true),
+  )
+  handle(CHANNELS.gitBranches, () => service.branches())
+  handle(CHANNELS.gitCreateBranch, (_event, name) => service.createBranch(parseRefName(name)))
+  handle(CHANNELS.gitCheckout, (_event, name) => service.checkout(parseRefName(name)))
+  handle(CHANNELS.gitLog, (_event, limit, skip) => {
+    const page = parseLogPage(limit, skip)
+    return service.log(page.limit, page.skip)
+  })
+  handle(CHANNELS.gitCommitFiles, (_event, hash) => service.commitFiles(parseCommitHash(hash)))
+  handle(CHANNELS.gitDiff, (_event, path, commit) =>
+    service.diff(parseGitPath(path), parseOptionalHash(commit)),
+  )
+  handle(CHANNELS.gitBytes, (_event, path, ref) =>
+    service.bytes(parseGitPath(path), parseBlobRef(ref)),
+  )
+  handle(CHANNELS.gitRemotes, () => service.remotes())
+  handle(CHANNELS.gitAddRemote, (_event, name, url) =>
+    service.addRemote(parseRefName(name), parseRemoteUrl(url)),
+  )
+  handle(CHANNELS.gitFetch, () => service.fetch())
+  handle(CHANNELS.gitPull, () => service.pull())
+  handle(CHANNELS.gitPush, (_event, setUpstream) => service.push(setUpstream === true))
+  handle(CHANNELS.gitResolve, (_event, paths, side) =>
+    service.resolve(parseGitPaths(paths), side === 'theirs' ? 'theirs' : 'ours'),
+  )
+  handle(CHANNELS.gitAbortMerge, () => service.abortMerge())
+  handle(CHANNELS.gitStash, (_event, message) => service.stash(parseCommitMessage(message)))
+  handle(CHANNELS.gitStashes, () => service.stashes())
+  handle(CHANNELS.gitStashPop, (_event, index) => service.stashPop(parseStashIndex(index)))
+  handle(CHANNELS.gitStashDrop, (_event, index) => service.stashDrop(parseStashIndex(index)))
+  handle(CHANNELS.gitTag, (_event, name, commit) =>
+    service.tag(parseRefName(name), parseCommitHash(commit)),
+  )
+  handle(CHANNELS.gitHasCredentials, (_event, host) => service.hasCredentials(parseHost(host)))
+  handle(CHANNELS.gitSetCredentials, (_event, host, user, token) => {
+    const credential = parseCredential(user, token)
+    service.setCredentials(parseHost(host), credential.user, credential.token)
+  })
+  handle(CHANNELS.gitClearCredentials, (_event, host) => service.clearCredentials(parseHost(host)))
+
+  return service
+}

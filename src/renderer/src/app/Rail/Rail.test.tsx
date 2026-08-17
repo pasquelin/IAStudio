@@ -99,6 +99,13 @@ describe('Rail', () => {
         'Vos projets',
         'separator',
         'Explorateur',
+        // Same half as the folder, and after it: the folder is what the half opens on, the
+        // versions of that folder are what one switches to. Both need a project open.
+        'Git',
+        // At the FOOT of the rail rather than in either half, because it is the band's: the
+        // left rail is the legend of the left column and of the band under it. No separator
+        // before it — the two blocks are pushed apart by the rail's own layout.
+        'Historique',
       ])
 
       // `marksOf` reads buttons and separators, so it cannot see the hole an empty zone leaves:
@@ -183,7 +190,10 @@ describe('Rail', () => {
       'Génération',
       'separator',
       'Explorateur',
+      'Git',
       'Timeline',
+      // The band's own, at the foot of the rail: the versions of the folder the two above read.
+      'Historique',
     ])
   })
 

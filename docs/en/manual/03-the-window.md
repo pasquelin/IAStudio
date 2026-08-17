@@ -93,14 +93,19 @@ to what one produces IN: the projects.
 |---|---|---|---|
 | **Your projects** | 1st | the ones you opened recently, with their folder, reopened with a click — [its per-row menu](04-projects.md#the-home-screens-project-list) | nothing |
 | **Explorer** | 2nd | the open project, read as a folder | an open project |
+| **Git** | 2nd | what has changed in that folder since the last recorded version | an open project |
 
 **It is the same Explorer as in the workspaces**, in the same place — see
 [Projects](04-projects.md#walking-the-project--the-explorer-panel). It shows the whole folder:
 your documents, your assets, and everything you put there yourself.
 
-**With no project open, it is not there at all** — the only panel on the home that behaves this
-way. Elsewhere a panel stays and says what it lacks; here it would say "no project open" right
+**With no project open, neither is there at all** — the only panels on the home that behave this
+way. Elsewhere a panel stays and says what it lacks; here they would say "no project open" right
 beside the panel whose whole job is to open one.
+
+The **Git** panel reads the same folder as the Explorer, from another angle: not what it holds,
+but what has changed in it since you last recorded a state. The two take turns in the same half —
+their icons sit side by side in the rail.
 
 ### The right column
 
@@ -224,8 +229,8 @@ zone's cut: the icons above it open in the first half, those below in the second
 | *separator* | |
 | **Upper half** icons | Models, then Generate; the home puts **Your projects** there |
 | *separator* | |
-| **Lower half** icons | the Explorer, on the home as in the workspaces |
-| At the bottom | Assets or Timeline, depending on the workspace |
+| **Lower half** icons | the Explorer then Git, on the home as in the workspaces |
+| At the bottom | Assets or Timeline, then History, depending on the workspace; on the home, History alone |
 
 > **The + button makes what the screen makes.** In a workspace it is greyed out while no project
 > is open: a document is a file in a project folder. **On the home it is never greyed out** — it
@@ -302,16 +307,20 @@ close button never goes**, and the panel's name keeps its size.
 | **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
 | **Assets** | right | 1st | Video, Audio, 3D | the project's shelf, as a column |
 | **Explorer** | left | 2nd | everywhere | the project folder, folders and files |
+| **Git** | left | 2nd | everywhere *(with a project open)* | what has changed in the project folder since the last recorded version |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
 | **Assets** | bottom | 1st | Image, Textures, Skyboxes | the same shelf, as a strip |
 | **Timeline** | bottom | 1st | Video, Audio, 3D | the sequence being edited, or the animation |
+| **History** | bottom | 1st | everywhere *(with a project open)* | the project's recorded versions, and what each one changed |
 
 > **"Everywhere" means the workspaces, not the home screen.** The home has panels of its own —
-> three, in its two columns — that this table does not list. **The Explorer belongs to both**: it
-> is the same panel, in the same place, on the home as in a workspace.
+> five — that this table does not list. **Three belong to both**: the Explorer and Git in the
+> left column, and History in a bottom strip the home did not have before. All three appear only
+> with a project open: with none, the home is the screen it has always been — two columns and
+> nothing below.
 
 **The left column belongs to what produces.** Above, **Models** and **Generate**, which take
-turns. Below, the **Explorer**.
+turns. Below, the **Explorer** and **Git**, which take turns as well.
 
 **The right column belongs to the open document**: what it holds, what lights it, what is
 selected. The panels take their turn in the upper half; the **Inspector** always holds the lower

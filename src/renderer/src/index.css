@@ -702,6 +702,27 @@ body,
   }
 }
 
+/*
+ * `truncate`, cutting at the START. What it is for is a PATH: `Images/Croquis/etude.jpg` clipped
+ * the ordinary way leaves `Images/Croqui…`, which is the half nobody reads — the file's own name
+ * is at the far end, and it is what the row is about.
+ *
+ * `direction: rtl` is the whole trick: the browser only ever puts its ellipsis at the end of the
+ * writing direction, so the text is laid out right to left and the clip lands on the left. What
+ * it costs is that a path ENDING in punctuation would draw that punctuation on the wrong side,
+ * which `unicode-bidi: plaintext` settles by reading each run in its own direction.
+ *
+ * A utility rather than three declarations in a component: they are one rule, and one of the
+ * three alone is a name that reads backwards.
+ */
+@utility truncate-start {
+  overflow: hidden;
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 body {
   margin: 0;
   background: var(--color-chassis);

@@ -389,6 +389,15 @@ export const FIELD_LABEL_WIDE = 'text-muted min-w-0 flex-1 truncate'
 export const FIELD_READOUT = 'text-muted w-14 shrink-0 text-right tabular-nums'
 
 /**
+ * A tick, wherever one is drawn. `accent-accent` is the whole of it and the whole of why this is
+ * written once: left off, a checkbox comes out in the browser's own blue — the one colour in the
+ * studio that answers to nothing in `index.css`, on the control a reader scans a list for.
+ *
+ * The size is the caller's: a tick in a property row is bigger than one in a list of files.
+ */
+export const CHECKBOX = 'accent-accent cursor-pointer'
+
+/**
  * Both ends of one gesture. Everything a field emits between them is one thing the user did,
  * and whoever owns the value is expected to keep exactly one history entry for it.
  */
