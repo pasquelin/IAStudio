@@ -1,6 +1,6 @@
 import { APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
-import { createAssistQueue, type AssistQueueDeps } from './assist-queue'
+import { createAssistQueue, type AssistQueueDeps } from './assistQueue'
 
 function queueOf(overrides: Partial<AssistQueueDeps> = {}) {
   return createAssistQueue({

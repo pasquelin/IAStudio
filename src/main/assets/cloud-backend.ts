@@ -4,7 +4,7 @@ import { UPLOAD_KIND_BY_TYPE, uploadMimeTypeOf, type UploadKind } from '@shared/
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { defined } from '@shared/guards'
 import type { AsyncCatalog } from '@main/project/catalog-client'
-import type { DownloadFormat, RemoteAssetCatalog } from '@main/scenario/asset-catalog'
+import type { DownloadFormat, RemoteAssetCatalog } from '@main/scenario/assetCatalog'
 import { twinOf, type LocalBackend } from './local-backend'
 
 /**

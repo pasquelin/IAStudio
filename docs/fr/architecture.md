@@ -200,19 +200,19 @@ src/main/
 ├── scenario/
 │   ├── client.ts            le client @scenario-labs/sdk, bâti sur les identifiants stockés
 │   ├── credentials.ts       lecture, validation, état d'authentification
-│   ├── model-registry.ts    GET /models/{id} → FieldDescriptor[]
-│   ├── model-catalog.ts     listing paginé des modèles, mis en cache
-│   ├── job-manager.ts       la file, la concurrence, le polling
+│   ├── modelRegistry.ts     GET /models/{id} → FieldDescriptor[]
+│   ├── modelCatalog.ts      listing paginé des modèles, mis en cache
+│   ├── jobManager.ts        la file, la concurrence, le polling
 │   ├── runner.ts            ce qui appelle réellement generate
 │   ├── schema.ts            traduction de schéma et déduction de famille
 │   ├── retry.ts             le backoff exponentiel, sorti du JobManager et partagé
-│   ├── asset-catalog.ts     la bibliothèque distante, lue et paginée
-│   ├── asset-normalizer.ts  un asset de l'API ramené à la forme du studio
-│   ├── owner-scope.ts       à quel projet la clé active donne accès
-│   ├── filter-expression.ts la recherche traduite pour l'API
+│   ├── assetCatalog.ts      la bibliothèque distante, lue et paginée
+│   ├── assetNormalizer.ts   un asset de l'API ramené à la forme du studio
+│   ├── ownerScope.ts        à quel projet la clé active donne accès
+│   ├── filterExpression.ts  la recherche traduite pour l'API
 │   ├── limits.ts            les tailles de lot que l'API impose
-│   ├── prompt-assist.ts     variantes, traduction, lecture de style
-│   ├── assist-queue.ts      la file bornée de l'assistance de fond
+│   ├── promptAssist.ts      variantes, traduction, lecture de style
+│   ├── assistQueue.ts       la file bornée de l'assistance de fond
 │   ├── uploader.ts          l'envoi d'un fichier vers la bibliothèque
 │   ├── cost.ts              ce qu'une génération coûterait, sans la lancer
 │   ├── usage.ts             les unités consommées et la grille de prix
@@ -690,7 +690,7 @@ qu’obtiennent une ou deux générations, pas une cadence fixe. À cadence fixe
 simultanées demandent 120 requêtes par minute contre les cent que l’API accorde — le limiteur
 retient alors chaque poll, le SDK réessaie, et **une génération qui tourne et qui est facturée est
 rapportée comme un échec de débit au bout de quinze secondes**. Le budget lui-même est *dérivé*
-des constantes de `rate-limiter.ts` et non écrit en clair, précisément pour qu’il ne devienne pas
+des constantes de `rateLimiter.ts` et non écrit en clair, précisément pour qu’il ne devienne pas
 faux en silence le jour où l’une d’elles bouge.
 
 **L’étape 5b lit un prix dans deux formes de réponse, parce que la référence et le serveur ne

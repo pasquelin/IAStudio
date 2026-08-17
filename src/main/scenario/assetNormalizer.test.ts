@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
-import { cloudAssetOfHit, cloudAssetOfListing, withPublicThumbnail } from './asset-normalizer'
+import { cloudAssetOfHit, cloudAssetOfListing, withPublicThumbnail } from './assetNormalizer'
 
 const LISTING = {
   id: 'asset_1',

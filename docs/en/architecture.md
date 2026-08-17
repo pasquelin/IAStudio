@@ -196,19 +196,19 @@ src/main/
 ├── scenario/
 │   ├── client.ts            the @scenario-labs/sdk client, built from stored credentials
 │   ├── credentials.ts       reading, validating, and reporting auth state
-│   ├── model-registry.ts    GET /models/{id} → FieldDescriptor[]
-│   ├── model-catalog.ts     paginated model listing, cached
-│   ├── job-manager.ts       the queue, the concurrency, the polling
+│   ├── modelRegistry.ts     GET /models/{id} → FieldDescriptor[]
+│   ├── modelCatalog.ts      paginated model listing, cached
+│   ├── jobManager.ts        the queue, the concurrency, the polling
 │   ├── runner.ts            what actually calls generate
 │   ├── schema.ts            schema translation and model family inference
 │   ├── retry.ts             exponential backoff, taken out of the JobManager and shared
-│   ├── asset-catalog.ts     the remote library, read and paginated
-│   ├── asset-normalizer.ts  an API asset brought back to the studio's shape
-│   ├── owner-scope.ts       which project the active key opens onto
-│   ├── filter-expression.ts the search translated for the API
+│   ├── assetCatalog.ts      the remote library, read and paginated
+│   ├── assetNormalizer.ts   an API asset brought back to the studio's shape
+│   ├── ownerScope.ts        which project the active key opens onto
+│   ├── filterExpression.ts  the search translated for the API
 │   ├── limits.ts            the batch sizes the API imposes
-│   ├── prompt-assist.ts     variants, translation, style reading
-│   ├── assist-queue.ts      the bounded queue of background assistance
+│   ├── promptAssist.ts      variants, translation, style reading
+│   ├── assistQueue.ts       the bounded queue of background assistance
 │   ├── uploader.ts          sending a file up to the library
 │   ├── cost.ts              what a generation would cost, without running it
 │   ├── usage.ts             the units spent, and the price list
@@ -665,7 +665,7 @@ form that silently loses a field is worse than an ugly one.
 generations get, not a fixed rate. At a fixed rate, four concurrent generations ask for 120
 requests a minute against the hundred the API grants — the limiter then holds every poll, the SDK
 retries, and **a generation that is running and being paid for is reported as a rate-limit failure
-fifteen seconds in**. The budget itself is *derived* from the constants of `rate-limiter.ts` rather
+fifteen seconds in**. The budget itself is *derived* from the constants of `rateLimiter.ts` rather
 than written out, precisely so it cannot go quietly false the day one of them is tuned.
 
 **Step 5b reads a price out of two shapes of answer, because the reference and the server do not

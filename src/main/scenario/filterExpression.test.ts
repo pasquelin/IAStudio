@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import { assetTypeOfRemote } from '@shared/domain/asset-kind'
-import { filterExpression, publicFeedFilter } from './filter-expression'
-import { remoteTypesFor } from './remote-types'
+import { filterExpression, publicFeedFilter } from './filterExpression'
+import { remoteTypesFor } from './remoteTypes'
 
 describe('the filter a search is narrowed by', () => {
   it('asks for nothing when nothing narrows anything', () => {

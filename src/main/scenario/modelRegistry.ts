@@ -11,7 +11,7 @@ import {
   type ModelSort,
   type ModelSummary,
 } from '@shared/domain/model'
-import type { WatchCredentials } from './credentials-watch'
+import type { WatchCredentials } from './credentialsWatch'
 import { familyOf, translateSchema, type ScenarioInput } from './schema'
 
 /**

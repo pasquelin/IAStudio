@@ -7,7 +7,7 @@ import type {
 } from '@shared/domain/usage'
 import type { Credentials } from '@main/settings/accounts'
 import type { KeyedAccount } from '@main/settings/store'
-import type { AssistQueue } from './assist-queue'
+import type { AssistQueue } from './assistQueue'
 import { failureOf } from './client'
 import {
   aggregate,
@@ -15,7 +15,7 @@ import {
   periodBounds,
   type AccountUsage,
   type UsageData,
-} from './usage-aggregate'
+} from './usageAggregate'
 
 /** The listing parameters this reader sends, named as the SDK names them. */
 export type UsageQuery = {

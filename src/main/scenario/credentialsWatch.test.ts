@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createCredentialsWatch } from './credentials-watch'
+import { createCredentialsWatch } from './credentialsWatch'
 
 describe('credentials watch', () => {
   it('runs every purge on a change', () => {

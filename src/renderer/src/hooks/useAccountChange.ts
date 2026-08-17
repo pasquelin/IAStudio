@@ -3,7 +3,7 @@ import { activeAccount, useAccounts } from '@/stores/accounts'
 
 /**
  * Runs `purge` whenever the active account changes. The window's counterpart to the main
- * process's `credentials-watch`: a cache added later subscribes here rather than being added
+ * process's `credentialsWatch`: a cache added later subscribes here rather than being added
  * to a list somewhere else.
  */
 export function useAccountChange(purge: () => void): void {

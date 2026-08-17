@@ -14,8 +14,8 @@ import {
   type JobManagerDeps,
   type JobRunner,
   type RemoteJob,
-} from './job-manager'
-import type { PersistedJob } from './persisted-job'
+} from './jobManager'
+import type { PersistedJob } from './persistedJob'
 
 const settled = (): Promise<void> => new Promise(resolve => setImmediate(resolve))
 
@@ -196,7 +196,7 @@ describe('job manager', () => {
 
   /**
    * The ids a form hands over are the studio's own, which the API answers 404 on — see
-   * `asset-inputs.ts`. Translated here rather than at the boundary, so that sending a file up
+   * `assetInputs.ts`. Translated here rather than at the boundary, so that sending a file up
    * happens under this loop's bound, with the job already on screen.
    */
   it('runs what the asset translation gave back, over the body it was submitted with', async () => {

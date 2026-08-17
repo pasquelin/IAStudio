@@ -1,5 +1,5 @@
 import type { CloudAsset } from '@shared/domain/cloud-asset'
-import type { WatchCredentials } from './credentials-watch'
+import type { WatchCredentials } from './credentialsWatch'
 
 export type OwnerScope = {
   /** The project the active key opens onto, or `null` while nothing has said which. */

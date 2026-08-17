@@ -32,7 +32,7 @@ const THUMBNAIL_EXTENSION = '.png'
  * The pinned recipes, in a folder of their own beside the settings — see `domain/favorite.ts`
  * for why they live outside every project.
  *
- * Written the way `job-store` writes its notes, and for the same reason: through a staging copy
+ * Written the way `jobStore` writes its notes, and for the same reason: through a staging copy
  * renamed into place, refusing to rewrite from an index that could not be read, and one write at
  * a time. What is at stake is what a favourite exists to promise — that it is still there.
  */

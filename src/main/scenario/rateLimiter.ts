@@ -211,11 +211,11 @@ export type RateLimiters = {
 
 /**
  * One window per account, because the quota is per project and a key carries its own project
- * (`owner-scope.ts`). Shared, they would halve what each account may spend; reset on every
+ * (`ownerScope.ts`). Shared, they would halve what each account may spend; reset on every
  * switch, going back and forth would spend two hundred a minute on one of them.
  *
  * The converse is not enforced, and cannot be here: two keys of the *same* project would get a
- * window each. Only `owner-scope` knows they are one, and it knows it too late — it answers
+ * window each. Only `ownerScope` knows they are one, and it knows it too late — it answers
  * `null` until a listing has come back, which is exactly when a cold start is bursting.
  */
 export function createRateLimiters(options: RateLimiterOptions): RateLimiters {

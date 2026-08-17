@@ -7,7 +7,7 @@ import { recordFailuresTo } from '@main/scenario/client'
 import { createActivityLog, type ActivityLog } from '@main/project/activity-log'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import type { AsyncCatalog } from '@main/project/catalog-client'
-import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
+import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
 import { registerAssetHandlers, type AssetHandlerDeps } from './handlers'
 import type { CloudBackend } from './cloud-backend'
 
@@ -280,7 +280,7 @@ describe('the public feed', () => {
   })
 
   // The thumbnail a hit does not carry is filled in by `cloudAssetOfHit`, one layer down — see
-  // `asset-normalizer.test.ts` and `asset-catalog.test.ts`. The fake catalogue here answers with
+  // `assetNormalizer.test.ts` and `assetCatalog.test.ts`. The fake catalogue here answers with
   // `CloudAsset`s directly, so it never crosses that reader.
 
   it('walks past a page the retyping emptied rather than reporting the end', async () => {

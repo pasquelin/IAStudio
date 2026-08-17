@@ -4,13 +4,13 @@ import type {
   RemotePrompts,
   RemoteStyle,
   RemoteTranslation,
-} from './prompt-assist'
+} from './promptAssist'
 
 /**
  * The slice of the SDK prompt assistance touches.
  *
  * Structural rather than `Scenario` itself, so the mapping below can be tested without standing
- * a whole client up — `runner` and `model-catalog` beside it pay that price and go untested. The
+ * a whole client up — `runner` and `modelCatalog` beside it pay that price and go untested. The
  * real client is still checked against this at the call site: a shape the SDK stops honouring is
  * a compile error, not a surprise at runtime.
  */

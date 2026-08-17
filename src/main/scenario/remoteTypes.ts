@@ -1,5 +1,5 @@
 import type { AssetType } from '@shared/domain/asset'
-import type { RemoteAssetType } from './asset-catalog'
+import type { RemoteAssetType } from './assetCatalog'
 
 /**
  * Which `metadata.type` values stand for each of our six kinds, for the ONE filter the API

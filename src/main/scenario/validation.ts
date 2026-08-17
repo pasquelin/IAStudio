@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
 import type { JobTarget } from '@shared/domain/job'
-import type { PersistedJob } from './persisted-job'
+import type { PersistedJob } from './persistedJob'
 import {
   MODEL_FAMILIES,
   MODEL_IDS_BATCH_LIMIT,

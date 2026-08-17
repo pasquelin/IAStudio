@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SCENARIO_MAINTAINER, SKYBOX_TAG, SYSTEM_TAG_PREFIX } from '@shared/domain/model'
-import { createCredentialsWatch } from './credentials-watch'
+import { createCredentialsWatch } from './credentialsWatch'
 import {
   createModelRegistry,
   type ListRequest,
@@ -9,7 +9,7 @@ import {
   type RegistryOptions,
   type RemoteModel,
   type SearchRequest,
-} from './model-registry'
+} from './modelRegistry'
 
 /** The account switch is its own subject, below: everything else is built deaf to it. */
 const registryOf = (options: Omit<RegistryOptions, 'watch'>): ModelRegistry =>

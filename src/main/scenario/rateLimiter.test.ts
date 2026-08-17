@@ -11,7 +11,7 @@ import {
   type Admission,
   type RateLimiter,
   type RateLimiterOptions,
-} from './rate-limiter'
+} from './rateLimiter'
 
 /**
  * A clock the test moves by hand, and a delay that moves it. Never the real one: a window of a

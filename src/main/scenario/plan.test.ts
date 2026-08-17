@@ -2,7 +2,7 @@ import { APIError } from '@scenario-labs/sdk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { log } from '@main/log'
 import { createPlanReader, teamsOf, type RemoteTeams, type TeamsCatalog } from './plan'
-import { createCredentialsWatch } from './credentials-watch'
+import { createCredentialsWatch } from './credentialsWatch'
 
 vi.mock('@main/log', () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },

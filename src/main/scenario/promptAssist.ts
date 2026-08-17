@@ -6,7 +6,7 @@ import {
   type PromptStyle,
   type PromptTranslation,
 } from '@shared/domain/prompt-assist'
-import { adoptableParameters } from './call-parameters'
+import { adoptableParameters } from './callParameters'
 
 /**
  * One ready-to-run call the API proposes, index-aligned with the prompt of the same rank.

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { createAssetInputResolver } from './asset-inputs'
+import { createAssetInputResolver } from './assetInputs'
 
 const asset = (id: string, extra: Partial<Asset> = {}): Asset => ({
   id,

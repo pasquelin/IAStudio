@@ -84,7 +84,7 @@ import {
   type AssetCollector,
   type JobAccount,
   type JobManager,
-} from './scenario/job-manager'
+} from './scenario/jobManager'
 import { runnerOf } from './scenario/runner'
 import type { AskUser } from './project/document-dialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
@@ -100,12 +100,12 @@ import { createProjectStore, openFailureKey, type ProjectStore } from './project
 import { createReconciler, type Reconciler } from './project/reconcile'
 import { createActivityLog, type ActivityLog } from './project/activity-log'
 import { openCatalogThread } from './project/catalog-thread'
-import { catalogOf } from './scenario/model-catalog'
+import { catalogOf } from './scenario/modelCatalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './scenario/uploader'
-import { createAssetInputResolver } from './scenario/asset-inputs'
-import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/asset-catalog'
-import { generationOfMetadata } from './scenario/asset-normalizer'
-import { createOwnerScope, type OwnerScope } from './scenario/owner-scope'
+import { createAssetInputResolver } from './scenario/assetInputs'
+import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/assetCatalog'
+import { generationOfMetadata } from './scenario/assetNormalizer'
+import { createOwnerScope, type OwnerScope } from './scenario/ownerScope'
 import { accountFingerprint } from './settings/accounts'
 import { createCloudBackend, type CloudBackend } from './assets/cloud-backend'
 import { isRecord } from '@shared/guards'
@@ -117,15 +117,15 @@ import {
 } from './scenario/client'
 import { costEstimatorOf, type CostEstimator } from './scenario/cost'
 import { createUsageReader, type UsageReader } from './scenario/usage'
-import { createJobStore } from './scenario/job-store'
-import { createRateLimiters, limitedTransport } from './scenario/rate-limiter'
-import { createCredentialsWatch } from './scenario/credentials-watch'
+import { createJobStore } from './scenario/jobStore'
+import { createRateLimiters, limitedTransport } from './scenario/rateLimiter'
+import { createCredentialsWatch } from './scenario/credentialsWatch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
-import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
+import { createModelRegistry, type ModelRegistry } from './scenario/modelRegistry'
 import { createPlanReader, teamsOf, type PlanReader } from './scenario/plan'
-import { createAssistQueue } from './scenario/assist-queue'
-import { createPromptAssist, type PromptAssist } from './scenario/prompt-assist'
-import { promptAssistApiOf } from './scenario/prompt-assist-api'
+import { createAssistQueue } from './scenario/assistQueue'
+import { createPromptAssist, type PromptAssist } from './scenario/promptAssist'
+import { promptAssistApiOf } from './scenario/promptAssistApi'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type AccountChange, type SettingsStore } from './settings/store'
 import { buildMenu } from './menu'
@@ -136,7 +136,7 @@ import { applyTheme } from './window/theme'
  * Keys queried at once when reading usage. Fixed and low, so that asking about every stored
  * account does not spend one window's worth of requests on a screen nobody is waiting on — the
  * limiter would hold the rest of the studio behind it. It bounds concurrency, not rate: the
- * hundred a minute the API allows is `rate-limiter.ts`'s business.
+ * hundred a minute the API allows is `rateLimiter.ts`'s business.
  */
 const USAGE_CONCURRENCY = 4
 

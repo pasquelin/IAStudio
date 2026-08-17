@@ -1,7 +1,7 @@
 import type Scenario from '@scenario-labs/sdk'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { log } from '@main/log'
-import { cloudAssetOfHit, cloudAssetOfListing } from './asset-normalizer'
+import { cloudAssetOfHit, cloudAssetOfListing } from './assetNormalizer'
 import { offsetAfter, tokenAfter } from './cursor'
 import { chunk, DELETE_MAX, GET_BULK_MAX, PAGE_SIZE_MAX } from './limits'
 
@@ -57,7 +57,7 @@ type AssetListRequest = {
 
 type AssetSearchRequest = {
   query?: string
-  /** The Meilisearch-style expression built by `filter-expression`. */
+  /** The Meilisearch-style expression built by `filterExpression`. */
   filter?: string
   limit: number
   offset: number

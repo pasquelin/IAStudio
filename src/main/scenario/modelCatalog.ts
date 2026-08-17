@@ -2,7 +2,7 @@ import type Scenario from '@scenario-labs/sdk'
 import type { ModelSort } from '@shared/domain/model'
 import { log } from '@main/log'
 import { offsetAfter, tokenAfter } from './cursor'
-import type { CatalogPage, ListRequest, ModelCatalog, SearchRequest } from './model-registry'
+import type { CatalogPage, ListRequest, ModelCatalog, SearchRequest } from './modelRegistry'
 
 /**
  * The API sorts public models by `score` — usage and popularity blended — when asked for
