@@ -171,14 +171,24 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
                 folderTaken: t('documents.folderTaken'),
                 folderFailed: t('documents.folderFailed'),
               }}
+              // Handed to the picker rather than drawn under it: the three buttons belong on one
+              // line, and only the picker knows when its own field has taken that line over.
+              actions={
+                <>
+                  <Button className="shrink-0" onClick={() => settle(null)}>
+                    {t('documents.cancel')}
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="shrink-0"
+                    disabled={refusal !== null}
+                  >
+                    {t('documents.create')}
+                  </Button>
+                </>
+              }
             />
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => settle(null)}>{t('documents.cancel')}</Button>
-            <Button type="submit" variant="primary" disabled={refusal !== null}>
-              {t('documents.create')}
-            </Button>
           </div>
         </form>
       </div>

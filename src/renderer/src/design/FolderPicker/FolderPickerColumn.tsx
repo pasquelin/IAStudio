@@ -1,5 +1,6 @@
 import { mdiChevronRight, mdiFolderOutline } from '@mdi/js'
-import type { KeyboardEvent } from 'react'
+import { useEffect, useRef, type KeyboardEvent } from 'react'
+import { COLUMN_ARROWS } from '@/hooks/useColumnKeys'
 import type { FolderColumn } from '@/hooks/useFolderColumns'
 import { cn } from '@/helpers/cn'
 import { Row } from '../Row'
@@ -11,6 +12,10 @@ export type FolderPickerColumnProps = {
   /** The folder chosen IN this column, if the walk goes on past it. */
   chosen: string | undefined
   onPick: (folder: string) => void
+  /** An arrow was pressed on a row. The picker answers, since only it sees the other columns. */
+  onArrow: (from: string, key: string) => void
+  /** The row to put the caret on, once the keyboard has moved the choice. */
+  focused: string | null
   /** Already translated — shown in place of the rows when the folder holds no sub-folder. */
   emptyLabel: string
   /** Names the column for a reader, since a listbox with no name is announced as « list box ». */
@@ -28,9 +33,19 @@ export function FolderPickerColumn({
   column,
   chosen,
   onPick,
+  onArrow,
+  focused,
   emptyLabel,
   label,
 }: FolderPickerColumnProps) {
+  const caret = useRef<HTMLDivElement>(null)
+
+  // Only where the keyboard put it: taking the focus on every render would pull the caret out of
+  // the name field above on the first listing to come back.
+  useEffect(() => {
+    if (focused !== null && caret.current) caret.current.focus()
+  }, [focused])
+
   if (column.read && column.entries.length === 0)
     return (
       <p className="text-muted m-0 w-(--sc-folder-column) shrink-0 px-2 py-1.5 text-xs">
@@ -38,11 +53,21 @@ export function FolderPickerColumn({
       </p>
     )
 
-  const onKeyDown = (folder: string) => (event: KeyboardEvent) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-    event.preventDefault()
-    onPick(folder)
-  }
+  const onKeyDown =
+    (folder: string) =>
+    (event: KeyboardEvent): void => {
+      if (COLUMN_ARROWS.includes(event.key)) {
+        // The dialog behind binds none of these, but the columns scroll on them: an arrow that
+        // both moved the choice and scrolled the frame moved the row out from under itself.
+        event.preventDefault()
+        onArrow(folder, event.key)
+        return
+      }
+
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      event.preventDefault()
+      onPick(folder)
+    }
 
   return (
     <div
@@ -55,12 +80,17 @@ export function FolderPickerColumn({
       {column.entries.map(entry => (
         <div
           key={entry.path}
+          ref={entry.path === focused ? caret : undefined}
           role="option"
           aria-selected={entry.path === chosen}
           // Both, and on the same element: `aria-selected` is what a reader hears, `data-selected`
           // is what lifts the row's own words out of `muted` on the picked fill.
           data-selected={entry.path === chosen ? '' : undefined}
-          tabIndex={0}
+          // A roving stop: one per column, so Tab steps from column to column rather than
+          // through every folder a project holds.
+          tabIndex={
+            entry.path === chosen || (chosen === undefined && entry === column.entries[0]) ? 0 : -1
+          }
           onClick={() => onPick(entry.path)}
           onKeyDown={onKeyDown(entry.path)}
           // The gauge, and it has to be HERE: `Row` draws itself at `h-full`, so a parent with no

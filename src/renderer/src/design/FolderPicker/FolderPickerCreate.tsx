@@ -20,6 +20,12 @@ export type FolderPickerCreateProps = {
     folderTaken: string
     folderFailed: string
   }
+  /**
+   * Whether a name is being typed. Held by the picker rather than here: the line this sits on
+   * carries the dialog's own buttons too, and they are withdrawn while a folder is being named.
+   */
+  naming: boolean
+  onNaming: (naming: boolean) => void
   /** The folder was made: its path, which becomes the chosen one. */
   onCreated: (folder: string) => void
   /** Reads the chosen folder's column again, so the row that just appeared is drawn. */
@@ -39,14 +45,22 @@ export type FolderPickerCreateProps = {
 export function FolderPickerCreate({
   folder,
   labels,
+  naming,
+  onNaming,
   onCreated,
   onReread,
 }: FolderPickerCreateProps) {
-  const [draft, setDraft] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
   const [refusal, setRefusal] = useState<string | null>(null)
 
+  const give = (open: boolean): void => {
+    onNaming(open)
+    setDraft(open ? labels.newFolderName : '')
+    setRefusal(null)
+  }
+
   const create = async (): Promise<void> => {
-    const name = draft?.trim()
+    const name = draft.trim()
     if (!name) return
 
     const outcome = await getBridge()
@@ -64,8 +78,7 @@ export function FolderPickerCreate({
     }
 
     onReread()
-    setDraft(null)
-    setRefusal(null)
+    give(false)
     onCreated(made)
   }
 
@@ -74,28 +87,23 @@ export function FolderPickerCreate({
     // neither, or naming a folder would make the document.
     event.stopPropagation()
     if (isComposing(event)) return
-    if (event.key === 'Escape') setDraft(null)
+    if (event.key === 'Escape') give(false)
     if (event.key === 'Enter') void create()
   }
 
-  if (draft === null)
+  if (!naming)
     return (
-      <div className="flex">
-        {/* Bordered, and that is not decoration: `Button`'s neutral fill IS `bg-surface`, which
-            is also what a dialog is painted with — the button came out as a line of text. */}
-        <Button
-          onClick={() => setDraft(labels.newFolderName)}
-          className="border-border gap-1.5 border"
-        >
-          <UiIcon path={mdiFolderPlusOutline} size={14} />
-          {labels.newFolderIn}
-        </Button>
-      </div>
+      // Truncated, and `min-w-0` is the half that gets forgotten: the label carries a folder's
+      // name, and a folder named by a sentence would push the dialog's own buttons off the line.
+      <Button onClick={() => give(true)} className="min-w-0 flex-1 justify-start gap-1.5">
+        <UiIcon path={mdiFolderPlusOutline} size={14} className="shrink-0" />
+        <span className="truncate">{labels.newFolderIn}</span>
+      </Button>
     )
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-muted text-xs" htmlFor="sc-folder-picker-name">
+    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <label className="text-muted truncate text-xs" htmlFor="sc-folder-picker-name">
         {labels.newFolderIn}
       </label>
 
@@ -115,8 +123,15 @@ export function FolderPickerCreate({
 
         {/* Spelt out rather than left to Enter: a field whose only way out is a key looks stuck
             to whoever does not try one. */}
-        <Button onClick={() => setDraft(null)}>{labels.cancel}</Button>
-        <Button variant="primary" disabled={draft.trim() === ''} onClick={() => void create()}>
+        <Button className="shrink-0" onClick={() => give(false)}>
+          {labels.cancel}
+        </Button>
+        <Button
+          variant="primary"
+          className="shrink-0"
+          disabled={draft.trim() === ''}
+          onClick={() => void create()}
+        >
           {labels.create}
         </Button>
       </div>
