@@ -458,6 +458,27 @@ export type FiledAsset = {
   missingAt: string | null
 }
 
+/**
+ * One row as the backup keeps it — what a reader would need to recognise a file again if the
+ * catalogue itself were gone.
+ *
+ * The provenance and nothing else: what the file is, what it was called, and what was asked for
+ * to make it. Everything derived — the proxy, the waveform, the poster — is rebuildable from the
+ * file, and everything about the remote twin belongs to an account rather than to a project.
+ */
+export type BackedUpItem = {
+  hash: string
+  id: string
+  name: string
+  type: string
+  path: string
+  createdAt: string
+  tags: string[]
+  prompt?: string
+  modelId?: string
+  seed?: number
+}
+
 export type Catalog = {
   add: (asset: Asset) => Asset
   find: (assetId: string) => Asset | null
@@ -512,6 +533,14 @@ export type Catalog = {
    * deliberate gesture, told apart from an absence nobody asked for.
    */
   markMissing: (path: string, at: string | null) => void
+  /**
+   * Every row that has a file AND a fingerprint, as the backup keeps them.
+   *
+   * Its own query rather than a `search`: what goes into the backup is a handful of columns, and
+   * carrying whole assets — the probe, the generation parameters, the sync stamps — for a file
+   * that keeps none of them would be the cost this shape exists to avoid.
+   */
+  backup: () => BackedUpItem[]
   /**
    * Writes lines to the journal, in one transaction, and trims it back to its bound.
    *
@@ -588,6 +617,13 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   )
 
   const setMissingAt = driver.prepare('UPDATE assets SET missing_at = ? WHERE path = ?')
+
+  const selectBackup = driver.prepare(`
+    SELECT id, name, type, path, created_at, hash, prompt, model_id, seed
+      FROM assets
+     WHERE hash IS NOT NULL AND hash <> '' AND path IS NOT NULL AND path <> ''
+     ORDER BY created_at, id
+  `)
 
   // The port's `run` answers nothing, so what the DELETE touched is asked for separately. Inside
   // the same transaction, where no other statement can have run in between.
@@ -764,6 +800,32 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       const filed = withoutTrailingSlash(path)
       if (!filed) return
       setMissingAt.run(at, filed)
+    },
+
+    backup: () => {
+      const rows = selectBackup.all()
+      // The grouped read, for the reason a search uses it: a project of ten thousand assets would
+      // otherwise be ten thousand more queries, in the thread that answers every window's.
+      const tags = tagsByAsset(rows.map(row => text(row, 'id')))
+
+      return rows.map(row => {
+        const seed = optionalNumber(row, 'seed')
+        const prompt = optionalText(row, 'prompt')
+        const modelId = optionalText(row, 'model_id')
+
+        return {
+          hash: text(row, 'hash'),
+          id: text(row, 'id'),
+          name: text(row, 'name'),
+          type: text(row, 'type'),
+          path: text(row, 'path'),
+          createdAt: text(row, 'created_at'),
+          tags: tags.get(text(row, 'id')) ?? [],
+          ...(prompt === undefined ? {} : { prompt }),
+          ...(modelId === undefined ? {} : { modelId }),
+          ...(seed === undefined ? {} : { seed }),
+        }
+      })
     },
 
     forgetUnder: path => {

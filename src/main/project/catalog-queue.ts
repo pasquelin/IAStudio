@@ -14,7 +14,8 @@ import {
   type CatalogRescanProgress,
   type CatalogResponse,
 } from './catalog-protocol'
-import { rescanProject, type RescanDisk } from './catalog-rescan'
+import { rescanProject, type RescanDisk, type RescanReport } from './catalog-rescan'
+import { itemsBackupOf, writeItemsBackup } from './items-backup'
 
 export type CatalogQueue = {
   /** Takes one message. A request is queued; an abandon marks one that has not run yet. */
@@ -120,6 +121,28 @@ export function serveCatalog(
       return
     }
 
+    /**
+     * The backup is written after a COMPLETE pass, and only there.
+     *
+     * It is the one moment the catalogue has just been held against the disk, so what it says is
+     * as true as it will ever be — and it is in this thread, which holds both the rows and a
+     * folder to write into, so the whole table never crosses a boundary to be saved.
+     *
+     * A pass that was called off writes nothing: what it read is a partial reading of the folder,
+     * and a backup of that would be a backup of less than what exists.
+     */
+    const saveBackup = async (report: RescanReport): Promise<RescanReport> => {
+      // Failure is not the pass's failure: reconciling worked, and a backup that could not be
+      // written is a project with no backup rather than a project that was not reconciled.
+      if (report.complete) {
+        await writeItemsBackup(
+          message.root,
+          itemsBackupOf(catalog.backup(), new Date().toISOString()),
+        ).catch(() => {})
+      }
+      return report
+    }
+
     rescanProject(catalog, openDisk(message.root), {
       now: () => new Date().toISOString(),
       stopped: () => stopping.has(message.id),
@@ -128,6 +151,7 @@ export function serveCatalog(
       yieldTo: () => new Promise<void>(resume => setImmediate(resume)),
       onProgress: ({ done, total }) => port.postMessage({ rescan: message.id, done, total }),
     })
+      .then(saveBackup)
       .then(
         report => port.postMessage({ id: message.id, ok: true, rescan: report }),
         (error: unknown) =>
