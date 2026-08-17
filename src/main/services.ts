@@ -9,6 +9,7 @@ import type { AccountSummary } from '@shared/domain/account'
 import {
   ASSET_HOST,
   ASSET_ID_PREFIX,
+  DEFAULT_ASSET_FOLDERS,
   POSTER_HOST,
   type Asset,
   type AssetType,
@@ -17,7 +18,9 @@ import {
 import type { MediaCapabilities } from '@shared/domain/media'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import {
+  LEGACY_ASSETS_FOLDER,
   planProjectAccount,
+  revealsLegacyLayout,
   withRecentProject,
   type Project,
   type ProjectAccountPlan,
@@ -744,6 +747,40 @@ export function createServices(settings: SettingsStore): Services {
       log.warn('media', `could not record what was derived for ${assetId}: ${String(error)}`),
     )
 
+  /**
+   * The projects already told they wear two trees, by folder. Once per opening is enough: this
+   * describes the SHAPE of the project rather than the file that just landed, and a line repeated
+   * at every import would bury the journal it is written in.
+   */
+  const toldOfLegacyLayout = new Set<string>()
+
+  /**
+   * A project made before the tree became the user's keeps its files under `assets/`, and nothing
+   * migrates them out — leaving them alone is the decision, not an oversight. The next import
+   * then creates `Images/` beside it, and until this line nothing in the app said why one project
+   * suddenly wore two trees.
+   *
+   * Said when an asset actually LANDS in the new folder, which is the moment it becomes true, and
+   * from the one door every asset comes through.
+   */
+  const noteLegacyLayout = (asset: Asset): void => {
+    const root = project.path()
+    const folder = DEFAULT_ASSET_FOLDERS[asset.type]
+
+    if (!root || toldOfLegacyLayout.has(root)) return
+
+    const holdsLegacy = existsSync(join(root, LEGACY_ASSETS_FOLDER))
+    if (!revealsLegacyLayout(asset.path, folder, holdsLegacy)) return
+
+    toldOfLegacyLayout.add(root)
+    journal.record({
+      level: 'info',
+      topic: 'project',
+      messageKey: 'activity.projectLegacyAssetsFolder',
+      params: { legacy: LEGACY_ASSETS_FOLDER, folder },
+    })
+  }
+
   const assets = createLocalBackend({
     download,
     projectPath: () => project.path(),
@@ -762,6 +799,8 @@ export function createServices(settings: SettingsStore): Services {
     // awaited by the import: a model of half a dozen 2048² pictures would otherwise hold up the
     // download that produced it, and a failure here must not cost the model itself.
     onImported: asset => {
+      noteLegacyLayout(asset)
+
       // A take that came down from the API never met the picker, so nothing ever derived what
       // a montage reads: no waveform under its sound clip, and no proxy for a codec the window
       // cannot decode. Both are what `ingest` writes for a file picked off a disk.

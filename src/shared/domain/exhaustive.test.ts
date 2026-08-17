@@ -138,6 +138,7 @@ describe('the lists that stand for a union', () => {
       projectAccountRestored: true,
       projectAccountSwitched: true,
       projectHoldsProjects: true,
+      projectLegacyAssetsFolder: true,
       projectNested: true,
       projectNotAProject: true,
       projectNotCreated: true,
