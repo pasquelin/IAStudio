@@ -26,8 +26,8 @@ import { newTexture } from '@/engines/texture/textureState'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { isSceneDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isPartName } from '@shared/domain/document'
-import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvasState'
-import { addLayer, resizeCanvas } from '@/engines/canvas/commands'
+import { DEFAULT_CANVAS, pixelLayer, textLayer } from '@/engines/canvas/canvasState'
+import { addLayer, removeLayer, renameLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas, type CanvasHost } from '@/spaces/image/canvasHosts'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import { EMPTY_AUDIO_EDIT, pushEdit } from '@/engines/audio/edits'
@@ -363,6 +363,14 @@ describe('saveDocument', () => {
     }
 
     /**
+     * An edit that leaves the document flat. `addLayer` cannot serve here any more: a second
+     * layer is precisely what stops ⌘S from writing a flatten over the source file, so a test
+     * about the write itself has to edit the one layer the document opened with.
+     */
+    const editImage = (documentId: string): void =>
+      useCanvases.getState().runCommand(documentId, renameLayer('layer-1', 'Backdrop'))
+
+    /**
      * The order is the guarantee: the document holds the layers and the history, the asset only
      * a flat picture. Writing the asset first and failing on the document would leave a fresh
      * tile standing in front of work that never reached the disk.
@@ -383,7 +391,7 @@ describe('saveDocument', () => {
         assets: { savePicture },
       })
       const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(documentId)
 
       await expect(saveDocument(documentId)).resolves.toBe(true)
       release()
@@ -408,7 +416,7 @@ describe('saveDocument', () => {
         assets: { savePicture: () => Promise.resolve(picture()) },
       })
       const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(documentId)
 
       await saveDocument(documentId)
       release()
@@ -428,7 +436,7 @@ describe('saveDocument', () => {
         assets: { savePicture },
       })
       const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(documentId)
       useCanvases.getState().runCommand(documentId, resizeCanvas(320, 200, { x: 0, y: 0 }))
 
       await expect(saveDocument(documentId)).resolves.toBe(true)
@@ -473,6 +481,90 @@ describe('saveDocument', () => {
       release()
 
       expect(savePicture).not.toHaveBeenCalled()
+    })
+
+    /**
+     * The rule the whole feature turns on: a flat picture cannot hold a stack, so ⌘S writes the
+     * document and leaves the file it was opened from exactly as it was.
+     *
+     * What used to happen instead is what makes this worth a test: the stack was flattened over
+     * the source, and a remount then redrew the layers carrying `source` from that flatten —
+     * folding the whole picture into the one layer it came from, with nothing said.
+     */
+    it('leaves the source file alone once the document holds more than it can', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture },
+      })
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await expect(saveDocument(documentId)).resolves.toBe(true)
+      release()
+
+      expect(savePicture).not.toHaveBeenCalled()
+      expect(entries()[0]).toMatchObject({ scope: 'canvas.flatten' })
+    })
+
+    /** Which traits stood in the way, so the journal names them rather than saying « something ». */
+    it('names what the source file could not have held', async () => {
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture: () => Promise.resolve(picture()) },
+      })
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases
+        .getState()
+        .runCommand(documentId, addLayer(textLayer('t', 'Hello', { x: 0, y: 0 })))
+
+      await saveDocument(documentId)
+      release()
+
+      expect(entries()[0]?.message).toContain('layers')
+      expect(entries()[0]?.message).toContain('liveText')
+    })
+
+    /**
+     * The refusal is not a debt. `assetBehind` exists so a save whose second half FAILED is tried
+     * again; retrying a refusal would write the very flatten that was refused, the next time
+     * anything else marked the asset late.
+     */
+    it('does not retry a refusal on the next ⌘S', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture },
+      })
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await saveDocument(documentId)
+      await saveDocument(documentId)
+      release()
+
+      expect(savePicture).not.toHaveBeenCalled()
+    })
+
+    /**
+     * And it lifts. Flattening the stack by hand leaves one layer again, which the source file
+     * can hold — so the picture behind the tab catches up rather than staying stale for ever.
+     */
+    it('writes the source again once the document is flat enough for it', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { savePicture },
+      })
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+      await saveDocument(documentId)
+
+      useCanvases.getState().runCommand(documentId, removeLayer('layer-2'))
+      await expect(saveDocument(documentId)).resolves.toBe(true)
+      release()
+
+      expect(savePicture).toHaveBeenCalledTimes(1)
     })
 
     /** The blank document of the `+` button edits no asset: ⌘S writes the file and stops there. */
@@ -637,7 +729,7 @@ describe('saveDocument', () => {
         assets: { savePicture },
       })
       const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(documentId)
 
       await saveDocument(documentId)
       // Nothing was edited in between, and the document is clean: only the debt makes it retry.
@@ -666,7 +758,7 @@ describe('saveDocument', () => {
       useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
 
       const booting = holdCanvas(created.id, () => fakeCanvas())
-      useCanvases.getState().runCommand(created.id, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(created.id)
       await saveDocument(created.id)
       booting()
 
@@ -694,7 +786,7 @@ describe('saveDocument', () => {
         assets: { savePicture: () => Promise.reject(new Error('disk full')) },
       })
       const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+      editImage(documentId)
 
       await expect(saveDocument(documentId)).resolves.toBe(true)
       release()

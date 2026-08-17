@@ -19,6 +19,8 @@ import {
   type SequenceState,
 } from '@/engines/timeline/timelineState'
 import { isRecord } from '@shared/guards'
+import { lossesFor, type CapabilityTrait } from '@shared/domain/formatCapability'
+import { traitsOfCanvas } from '@/engines/canvas/canvasTraits'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
 import { reportFailure } from '@/services/diagnostics'
@@ -120,6 +122,13 @@ type DocumentIo = {
    * says why at its own line of `IO_BY_KIND` rather than here, because the reasons differ.
    */
   writeAsset?: (documentId: string, target: AssetTarget) => Promise<Asset | null>
+  /**
+   * What this document holds that a format has to carry, measured on its state.
+   *
+   * Absent means « nothing this kind writes back could be lost », which is the case for the five
+   * kinds without a `writeAsset`: they never overwrite the file they were opened from.
+   */
+  traitsOf?: (documentId: string) => CapabilityTrait[]
   /** Whether the document is already filled — a remount must not read over what is open. */
   holds: (documentId: string) => boolean
   /** Whether closing the document would throw work away — never true for an untouched tab. */
@@ -401,6 +410,7 @@ const IMAGE_IO: DocumentIo = {
     if (target.replaces) await host.forgetPicture(target.replaces)
     return written
   },
+  traitsOf: documentId => traitsOfCanvas(canvasOf(useCanvases.getState(), documentId)),
   createDefault: documentId => useCanvases.getState().ensure(documentId, () => DEFAULT_CANVAS),
   holds: documentId => canvasStore.hasState(useCanvases.getState(), documentId),
   dirty: documentId => canvasStore.hasUnsavedWork(useCanvases.getState(), documentId),
@@ -556,6 +566,16 @@ async function rewriteSourceAsset(
   if (!source || !io.writeAsset) return
   // An edit to carry over, or one that never made it: both are a reason to write the asset.
   if (!wasEdited && !assetBehind.has(document.id)) return
+
+  // Against `png` because that is what `savePicture` writes, whatever the source arrived as —
+  // so what the flatten costs is the same question for a `.jpg` and for a `.png`.
+  const losses = io.traitsOf ? lossesFor(io.traitsOf(document.id), 'png') : []
+  if (losses.length > 0) {
+    // NOT `assetBehind`: this is a refusal, not a failure, and a retry would write the very
+    // thing that was refused the moment anything else marked the asset late.
+    reportFailure('canvas.flatten', document.title, new Error(losses.join(', ')))
+    return
+  }
 
   try {
     const written = await io.writeAsset(document.id, { replaces: source, name: document.title })

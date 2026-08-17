@@ -551,6 +551,8 @@ export type LogScope =
   // Said under `assets.open`, it read « this asset has nowhere to go » while the asset was
   // appearing on screen.
   | 'canvas.size'
+  /** A save that refused to flatten a document over a source file whose format cannot hold it. */
+  | 'canvas.flatten'
   | 'image.export'
   | 'document.load'
   | 'document.save'
@@ -613,6 +615,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'skybox.export',
   'canvas.layer',
   'canvas.size',
+  'canvas.flatten',
   'image.export',
   'document.load',
   'document.save',
