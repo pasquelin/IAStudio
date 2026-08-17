@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { assistantAction } from '@shared/domain/assistant'
 import { Button } from '@/design/Button'
-import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant } from '@/stores/assistant'
 import { formatUnits } from '@/usage/format'
 import type { ConfirmRequest } from '../confirm'
+import { OVERLAY_CARD } from './overlayStyles'
 
 /**
  * The yes-or-no, with what it engages stated first.
@@ -30,12 +30,7 @@ export function AssistantOverlayQuestion({ request }: { request: ConfirmRequest 
   }
 
   return (
-    <div
-      className={cn(
-        'border-border bg-surface flex shrink-0 flex-col gap-2',
-        'rounded-(--radius-sc-md) border p-2',
-      )}
-    >
+    <div className={OVERLAY_CARD}>
       <p className="text-text m-0 text-xs font-medium">
         {action ? t(action.titleKey) : request.action}
       </p>

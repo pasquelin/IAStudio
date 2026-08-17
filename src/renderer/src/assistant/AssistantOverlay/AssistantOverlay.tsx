@@ -21,6 +21,7 @@ import { registerDictationTarget } from '@/dictation/destination'
 import { registerConfirmer } from '../confirm'
 import { AssistantOverlayQuestion } from './AssistantOverlayQuestion'
 import { AssistantOverlayTurn } from './AssistantOverlayTurn'
+import { OVERLAY_CARD } from './overlayStyles'
 
 /**
  * The assistant, as a modal over the whole window.
@@ -224,10 +225,7 @@ export function AssistantOverlay() {
             controls beside a one-line input, which read as a form rather than as the place one
             talks. */}
           <form
-            className={cn(
-              'border-border bg-surface flex shrink-0 flex-col gap-2',
-              'rounded-(--radius-sc-lg) border p-2',
-            )}
+            className={OVERLAY_CARD}
             onSubmit={event => {
               event.preventDefault()
               send()
