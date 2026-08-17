@@ -99,6 +99,42 @@ describe('color tokens', () => {
 })
 
 /**
+ * `--radius-sc-*` sits in `@theme`, so Tailwind builds `rounded-sc-lg` from it — but the gauges
+ * sit in `:root`, where it builds nothing at all and `h-sc-control` would paint nothing without
+ * a word from anyone. One spelling for both leaves that trap no entrance.
+ *
+ * Any prefix rather than a list of them: a misspelt gauge is the deadly case, and a list holds
+ * only the prefixes written the day it was typed — `size` and `shadow` were already missing from
+ * it. The lookbehind is what spares the correct form, whose `radius-sc-lg` follows a dash.
+ *
+ * **Blind**: a class assembled at runtime, the name arriving from a variable. And it reads raw
+ * text, so a production module that merely NAMES `rounded-sc-lg` — a comment, an import path —
+ * fails the rule while painting nothing wrong.
+ */
+const GENERATED_FROM_A_STUDIO_TOKEN = /(?<![\w-])[a-z][a-z0-9-]*-sc-[a-z0-9-]+/g
+
+describe('a studio token written into a class', () => {
+  it('finds the sources at all, so the rule below cannot pass on an empty list', () => {
+    expect(WRITTEN_SOURCES.length).toBeGreaterThan(100)
+  })
+
+  it('is read through its variable, never through a utility Tailwind may not have built', () => {
+    const generated = WRITTEN_SOURCES.flatMap(([path, source]) =>
+      [...source.matchAll(GENERATED_FROM_A_STUDIO_TOKEN)].map(([written]) => `${path} ${written}`),
+    )
+
+    expect(generated).toEqual([])
+  })
+
+  it('matches at all, so the rule above cannot pass on a dead pattern', () => {
+    expect('rounded-sc-lg h-sc-control'.match(GENERATED_FROM_A_STUDIO_TOKEN)).toEqual([
+      'rounded-sc-lg',
+      'h-sc-control',
+    ])
+  })
+})
+
+/**
  * Read per theme: the light theme restates every token, and an ink that clears its dark
  * background is exactly the wrong colour on the light one. The dark values are the reference and
  * live in `@theme`; the light ones restate them from its own daisyUI block onwards, so reading

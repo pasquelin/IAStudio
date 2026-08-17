@@ -12,7 +12,7 @@ export function AssistantOverlayTurn({ turn }: { turn: AssistantTurn }) {
           bounded because a dictated request runs long, and a bubble the width of the thread
           stops reading as one side of an exchange. */}
       <div className="flex justify-end">
-        <p className="bg-surface text-text rounded-sc-lg m-0 max-w-4/5 px-3 py-2 text-base">
+        <p className="bg-surface text-text m-0 max-w-4/5 rounded-(--radius-sc-lg) px-3 py-2 text-base">
           {turn.said}
         </p>
       </div>
