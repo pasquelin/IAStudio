@@ -69,7 +69,7 @@ export type AsyncCatalog = {
   close: () => Promise<void>
 }
 
-export type RescanCall = {
+type RescanCall = {
   signal?: AbortSignal
   onProgress?: (progress: RescanProgress) => void
 }
