@@ -170,7 +170,7 @@ export function openRepository(root: string, binary?: string, deps?: RepositoryD
     init: () => initialise(git, root),
     status: () => statusOf(git),
     stage: async paths => {
-      await git.add([...paths])
+      await git.raw(['add', '--', ...paths])
     },
     unstage: paths => unstage(git, paths),
     restore: async paths => {
