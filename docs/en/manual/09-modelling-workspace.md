@@ -582,7 +582,9 @@ section:
 **The pose is saved with the document.** Reopening the scene finds it where you left it, not back
 at the start.
 
-**A model with no clip shows no section at all** — rather than an empty picker.
+**A model with no clip keeps the section**, which then says what it is missing — that it carries no
+skeleton yet, or one the studio does not recognise. The picker itself only appears when there is
+something to choose.
 
 **The chosen clip also shows on the band below**, laid as a block at its real length, on a line of
 its own bearing **the clip's name**. Blocks are grouped **under** the key lines, never mixed into
