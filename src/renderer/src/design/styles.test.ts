@@ -7,6 +7,7 @@ import {
   NATIVE_SELECT,
   OVERLAY_BUTTON,
   ROW_INK,
+  ROW_LINE,
   ROW_QUIET,
   rowSkin,
   TILE_QUIET,
@@ -495,5 +496,34 @@ describe('the named control of a title bar', () => {
     )
 
     expect(wearing.length).toBeGreaterThanOrEqual(2)
+  })
+})
+
+/** The blind spot of `rewrites`: a site that never wore the constant leaves no call to read. */
+const spellsOutRowLine = spellsOut(ROW_LINE.split(' '))
+
+describe('the shape of a row line', () => {
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutRowLine(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  // Named rather than counted: a count stays green when one site drops the constant and another
+  // picks it up, and a fifth adopting it fails here ON PURPOSE. **Blind**: raw text, so `Row.tsx`
+  // would still count on the comment that names the constant, with no `cn()` left.
+  it('is worn by the four that draw a line', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && /\bROW_LINE\b/.test(source),
+    ).map(([path]) => path)
+
+    expect(wearing.sort()).toEqual([
+      '../panels/projects/ProjectRow.tsx',
+      '../panels/styles/StyleRow.tsx',
+      './Row.tsx',
+      './Tree.tsx',
+    ])
   })
 })

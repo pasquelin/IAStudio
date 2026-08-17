@@ -7,6 +7,8 @@ import { MenuButton } from '@/design/MenuButton'
 import { Row } from '@/design/Row'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { InlineRename } from '@/design/InlineRename'
+import { ROW_LINE } from '@/design/styles'
+import { cn } from '@/helpers/cn'
 import { useStyles } from '@/stores/styles'
 import { StyleMenu } from './StyleMenu/StyleMenu'
 import { StyleMenuRows, STYLE_MENU_ROWS } from './StyleMenu/StyleMenuRows'
@@ -36,7 +38,7 @@ export const StyleRow = memo(function StyleRow({ style }: StyleRowProps) {
 
   if (renaming) {
     return (
-      <div className="flex h-full min-w-0 items-center px-1">
+      <div className={cn(ROW_LINE, 'min-w-0')}>
         <InlineRename
           value={style.name}
           label={t('styles.rename')}
