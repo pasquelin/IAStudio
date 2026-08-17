@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { UsagePeriod, UsageReport } from '@shared/domain/usage'
-import { WINDOW_CAPTION } from '@/design/window-styles'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { UsageActivities } from '../UsageActivities/UsageActivities'
 import { UsageJournal } from '../UsageJournal'

@@ -9,7 +9,7 @@ import {
   type Capture,
 } from '@/dictation/capture'
 import { mountedDictationTarget } from '@/dictation/destination'
-import { insertAtCaret } from '@/dictation/insert-at-caret'
+import { insertAtCaret } from '@/dictation/insertAtCaret'
 import { useSettings } from './settings'
 
 type DictationState = {

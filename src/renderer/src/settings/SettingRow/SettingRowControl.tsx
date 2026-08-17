@@ -8,7 +8,7 @@ import {
 } from '@shared/domain/settingsRegistry'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
-import { WINDOW_CAPTION } from '@/design/window-styles'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
 import type { Labelled } from './controls'
 import { SettingRowColorControl } from './SettingRowColorControl'
 import { SettingRowPathControl } from './SettingRowPathControl'

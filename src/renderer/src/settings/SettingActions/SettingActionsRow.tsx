@@ -4,7 +4,7 @@ import { getBridge } from '@/services/bridge'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from '../SettingLine'
 import { useSettingsDraft } from '@/stores/settingsDraft'
-import { WINDOW_HELP } from '@/design/window-styles'
+import { WINDOW_HELP } from '@/design/windowStyles'
 
 /**
  * A button that acts, rather than a setting that holds a value — which is why these live in a

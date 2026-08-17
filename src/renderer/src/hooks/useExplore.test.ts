@@ -4,7 +4,7 @@ import type { AssetType } from '@shared/domain/asset'
 import type { CloudAsset, CloudPage } from '@shared/domain/cloudAsset'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
-import { useExplore } from './use-explore'
+import { useExplore } from './useExplore'
 
 function cloudAsset(id: string, type: AssetType = 'image'): CloudAsset {
   return {

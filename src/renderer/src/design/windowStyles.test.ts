@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { rewrites, spellsOut, WRITTEN_SOURCES } from './testHarness'
-import { WINDOW_ROW, WINDOW_ROW_BUTTON } from './window-styles'
+import { WINDOW_ROW, WINDOW_ROW_BUTTON } from './windowStyles'
 
 /** As `WRITTEN_SOURCES` keys it: the glob resolves against `testHarness.ts`, its own neighbour. */
-const GUARDED = './window-styles.ts'
+const GUARDED = './windowStyles.ts'
 
 /**
  * The rule off the constant, minus the last-child clause: a hand copy that borders every line

@@ -20,7 +20,7 @@ describe('the deferred generation form', () => {
       .filter(([, source]) => /import\([^)]*DynamicForm'\)/.test(source))
       .map(([path]) => path)
 
-    expect(declaring).toEqual(['./dynamic-form-lazy.ts'])
+    expect(declaring).toEqual(['./dynamicFormLazy.ts'])
   })
 
   /**
@@ -29,7 +29,7 @@ describe('the deferred generation form', () => {
    * everything that reads it — the three panels included, and silently.
    */
   it('reaches the form only through the deferred import', () => {
-    const source = SOURCES['./dynamic-form-lazy.ts'] ?? ''
+    const source = SOURCES['./dynamicFormLazy.ts'] ?? ''
 
     expect(source).toMatch(/lazy\(/)
     expect(source).not.toMatch(/^import .*DynamicForm'/m)

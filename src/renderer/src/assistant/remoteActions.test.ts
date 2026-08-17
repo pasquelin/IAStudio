@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ActionName, ActionOutcome } from '@shared/domain/assistant'
 import type { AssistantActionRequest, AssistantActionResult } from '@shared/ipc'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { connectRemoteActions } from './remote-actions'
+import { connectRemoteActions } from './remoteActions'
 
 /**
  * The executor stands in: what each action does is its own suite's business. What this one is

@@ -6,7 +6,7 @@ import { UiIcon } from '@/design/UiIcon'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from '../SettingLine'
 import { useSettingsDraft, useSettingValue } from '@/stores/settingsDraft'
-import { WINDOW_HELP } from '@/design/window-styles'
+import { WINDOW_HELP } from '@/design/windowStyles'
 import { SettingRowControl } from './SettingRowControl'
 
 /**
