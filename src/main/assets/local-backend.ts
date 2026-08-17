@@ -30,6 +30,15 @@ export type LocalBackendDeps = {
   catalog: () => AsyncCatalog
   now: () => string
   /**
+   * The fingerprint of a file the project now holds — `null` when it cannot be read.
+   *
+   * The SAME one the rescan computes, and that is the whole point of asking for it here: a row
+   * with no fingerprint cannot be followed when its file moves, and everything that arrives
+   * through this door — a generation collected, a twin pulled — used to arrive without one.
+   * Only a file picked off a disk was ever fingerprinted, by the ingest.
+   */
+  hash: (path: string) => Promise<string | null>
+  /**
    * Reads a written file back for its length and its tracks — `null` when the tool is missing
    * or the file says nothing.
    *
@@ -166,6 +175,7 @@ export function createLocalBackend({
   projectPath,
   catalog,
   now,
+  hash,
   probeFile,
   onImported,
 }: LocalBackendDeps): LocalBackend {
@@ -238,12 +248,13 @@ export function createLocalBackend({
       : await freeAssetPath(projectPath(), DEFAULT_ASSET_FOLDERS[request.type], name, extension)
 
     // The probe spawns ffprobe, so it runs beside the still rather than after it.
-    const written = writeFile(join(projectPath(), relativePath), bytes)
-    const [, posterPath, probe] = await Promise.all([
-      written,
+    const absolute = join(projectPath(), relativePath)
+    const written = writeFile(absolute, bytes)
+    const [posterPath, probe, fingerprint] = await Promise.all([
       poster,
-      // After the write, and only after it: this one reads the file that was just laid down.
+      // After the write, and only after it: these two read the file that was just laid down.
       written.then(() => probeWritten(request, relativePath)),
+      written.then(() => hash(absolute)),
     ])
 
     const at = now()
@@ -266,6 +277,9 @@ export function createLocalBackend({
       tags: existing?.tags ?? [],
       createdAt: existing?.createdAt ?? at,
       localChangedAt: at,
+      // Absent rather than cleared, like the poster below: a read that failed this time leaves
+      // the fingerprint an earlier write recorded, which still describes the same bytes.
+      ...(fingerprint ? { hash: fingerprint } : {}),
       ...(probe ? { probe } : {}),
       // Absent rather than cleared: a still that failed to come down this time leaves the one
       // an earlier pull already put on disk, which is still a true picture of the same asset.
@@ -338,7 +352,9 @@ export function createLocalBackend({
             safeExtension(extension, existing.type),
           )
 
-      await writeFile(join(projectPath(), relativePath), bytes)
+      const absolute = join(projectPath(), relativePath)
+      await writeFile(absolute, bytes)
+      const fingerprint = await hash(absolute)
 
       // The extension follows the bytes: an edited take goes back as a `.wav`, and leaving it
       // under the `.mp3` it was imported as would hand every reader a file that lies. Only a
@@ -366,6 +382,13 @@ export function createLocalBackend({
         ...(probe ? { probe } : {}),
       }
       delete rewritten.peaksPath
+
+      // The fingerprint follows the bytes for the same reason the waveform does: the one the row
+      // carried describes a take that no longer exists, so a rescan would hunt for a file nobody
+      // can produce, and a fresh import of the ORIGINAL bytes would be called a duplicate of this
+      // row. Dropped rather than kept when it cannot be recomputed.
+      if (fingerprint) rewritten.hash = fingerprint
+      else delete rewritten.hash
 
       return announce(await catalog().add(rewritten))
     },

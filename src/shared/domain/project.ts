@@ -1,6 +1,7 @@
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
 import { DEFAULT_ASSET_FOLDERS } from './asset'
+import { parentOf } from './folder'
 
 export const MANIFEST_VERSION = 1
 
@@ -272,6 +273,32 @@ export const MACHINE_FOLDERS: readonly string[] = [
  * the first save, exactly as an import recreates `Images/`.
  */
 export const STARTER_FOLDERS: readonly string[] = Object.values(DEFAULT_ASSET_FOLDERS)
+
+/**
+ * The one folder every asset used to be filed under, back when the tree was the studio's.
+ *
+ * Nothing writes into it any more and nothing is migrated out of it: a project made before the
+ * change keeps its files exactly where they are, and the next import lands in `Images/` beside
+ * them. That leaves a project wearing two trees, which is a decision rather than an accident —
+ * named here only so the studio can SAY it once, in the journal, instead of leaving the user to
+ * work it out from a folder that appeared on its own.
+ */
+export const LEGACY_ASSETS_FOLDER = 'assets'
+
+/**
+ * Whether an asset that just landed at `path` was filed in the DEFAULT folder for its kind.
+ *
+ * Half of what says a project wears two trees, and the free half: the other is whether the old
+ * folder is still there, which only the disk knows. Asked FIRST, so a project that never had one
+ * does not pay a `stat` per import to be told so.
+ *
+ * False for a second pull, which keeps the path the row already had — under `assets/img` for a
+ * project of that age — and false for a file the user has since filed deeper. Neither is the
+ * studio choosing a tree.
+ */
+export function landedInDefaultFolder(path: string | undefined, folder: string): boolean {
+  return path !== undefined && parentOf(path) === folder
+}
 
 /**
  * How far the pass reconciling the catalogue with the project folder has got.

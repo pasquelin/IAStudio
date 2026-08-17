@@ -648,6 +648,13 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   const rowsChanged = driver.prepare('SELECT changes() AS touched')
 
   // Oldest first: re-importing the same API asset must not move where its children point.
+  //
+  // No `missing_at IS NULL` here, unlike `findByHash` below, and the difference is what the two
+  // questions are. This one asks which local row an API asset IS, not whether its bytes are
+  // there: a pull writes over the row it finds, so filtering would leave a dated row beside a
+  // fresh duplicate instead of repairing it, and would cut the lineage of a texture whose parent
+  // picture the user has tidied away. A caller that is about to act on the FILE asks the disk —
+  // see the collector, which will not skip a download for a row whose file has gone.
   const selectByRemoteId = driver.prepare(
     'SELECT * FROM assets WHERE remote_asset_id = ? ORDER BY created_at, id LIMIT 1',
   )

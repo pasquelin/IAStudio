@@ -373,6 +373,22 @@ describe('createDocumentFiles', () => {
   })
 
   /**
+   * The folder is the user's, and the studio's memory of it is filled by a listing. A file that
+   * landed since — copied in by hand, or left by a window that never listed — was invisible to a
+   * check taken from that memory, and the first save of a fresh document wrote straight over it.
+   * `file-plan` asks the folder for the same question, and now so does this.
+   */
+  it('suffixes around a file it was never told about', async () => {
+    await mkdir(join(root, 'documents'), { recursive: true })
+    await writeFile(join(root, 'documents/Niveau.scene'), 'theirs', 'utf8')
+
+    await documents.write('doc-1', 'scene', { title: 'Niveau', content: 'mine' })
+
+    expect(await readFile(join(root, 'documents/Niveau.scene'), 'utf8')).toBe('theirs')
+    expect((await documents.read('doc-1', 'scene'))?.content).toBe('mine')
+  })
+
+  /**
    * A title is a file name now, and a file name cannot hold a separator: `Brique 1/2` would
    * land on `Brique 1 2` and the document would answer to two names again.
    */
@@ -542,6 +558,29 @@ describe('createDocumentFiles', () => {
         path: 'documents/niveau.scene',
       })
       expect(await readdir(join(root, 'documents'))).toEqual(['niveau.scene'])
+    })
+
+    /**
+     * The same rename, on a file the volume stores DECOMPOSED — how `Été.scene` arrives from a
+     * zip made by Archive Utility, a share, or a restore off HFS+. The name check exempts the
+     * document being renamed by plain equality, so a listing left as the disk spells it would
+     * refuse the user their own document: the composed name it was known by no longer matches
+     * the decomposed entry beside it.
+     */
+    it('lets a name change its case on a file the disk spells decomposed', async () => {
+      await mkdir(join(root, 'documents'), { recursive: true })
+      const envelope = `${JSON.stringify({
+        version: DOCUMENT_VERSION,
+        kind: 'scene',
+        title: 'Été',
+        updatedAt: NOW,
+        id: 'doc-1',
+      })}\n{}`
+      await writeFile(join(root, 'documents', 'Été.scene'.normalize('NFD')), envelope, 'utf8')
+
+      await expect(documents.rename('doc-1', 'scene', 'ÉTÉ')).resolves.toMatchObject({
+        title: 'ÉTÉ',
+      })
     })
 
     /**

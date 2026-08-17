@@ -171,7 +171,9 @@ describe('asset collector', () => {
       backend,
       newId: () => 'asset_1',
       heldFor: async remoteAssetId =>
-        remoteAssetId === 'remote_source' ? { id: 'asset_source', type: 'image' } : null,
+        remoteAssetId === 'remote_source'
+          ? { id: 'asset_source', type: 'image', onDisk: true }
+          : null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -239,12 +241,84 @@ describe('asset collector', () => {
       retrieve,
       backend,
       newId: () => 'asset_new',
-      heldFor: async () => ({ id: 'asset_already_here', jobId: JOB.id, type: 'image' }),
+      heldFor: async () => ({
+        id: 'asset_already_here',
+        jobId: JOB.id,
+        type: 'image',
+        onDisk: true,
+      }),
     })
 
     expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_already_here'] })
     expect(retrieve).not.toHaveBeenCalled()
     expect(imported).toEqual([])
+  })
+
+  /**
+   * Skipping the download on the strength of a row alone put a dead id among the job's outputs,
+   * and nothing ever came back for the bytes. The bytes come back INTO the row that was already
+   * there: a fresh id would leave two rows claiming one remote asset and one path, and
+   * `findByRemoteId` answers oldest first — every later pass would hand back the dead one.
+   */
+  it('downloads its own output back into the row whose file has gone', async () => {
+    const { backend, imported } = backendSpy()
+    const retrieve = vi.fn(() => Promise.resolve(remote('image')))
+
+    const collect = createAssetCollector({
+      retrieve,
+      backend,
+      newId: () => 'asset_new',
+      heldFor: async () => ({
+        id: 'asset_thrown_away',
+        jobId: JOB.id,
+        type: 'image',
+        onDisk: false,
+      }),
+    })
+
+    expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_thrown_away'] })
+    expect(retrieve).toHaveBeenCalled()
+    expect(imported[0]).toMatchObject({ id: 'asset_thrown_away', jobId: JOB.id })
+  })
+
+  /**
+   * The generation expired on the account while the file was removed here. Before this branch
+   * existed the output was never fetched at all, so a job in that state settled as succeeded;
+   * letting the refusal through would fail the whole job — and lose the outputs collected before
+   * it in the same loop.
+   */
+  it('keeps the row it holds when the API will not answer for an output it collected', async () => {
+    const { backend, imported } = backendSpy()
+
+    const collect = createAssetCollector({
+      retrieve: () => Promise.reject(new Error('gone from the account')),
+      backend,
+      newId: () => 'asset_new',
+      heldFor: async () => ({
+        id: 'asset_thrown_away',
+        jobId: JOB.id,
+        type: 'image',
+        onDisk: false,
+      }),
+    })
+
+    expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_thrown_away'] })
+    expect(imported).toEqual([])
+  })
+
+  // Everywhere else a refusal is a collection that failed: reporting the job as succeeded with a
+  // shelf missing is the one thing worse than reporting it as failed.
+  it('lets the refusal through for an output it never collected', async () => {
+    const { backend } = backendSpy()
+
+    const collect = createAssetCollector({
+      retrieve: () => Promise.reject(new Error('gone from the account')),
+      backend,
+      newId: () => 'asset_new',
+      heldFor: async () => null,
+    })
+
+    await expect(collect(JOB, ['remote_1'])).rejects.toThrow('gone from the account')
   })
 
   it('collects its own output even when the library already holds a copy from elsewhere', async () => {
@@ -253,7 +327,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('image')),
       backend,
       newId: () => 'asset_generated',
-      heldFor: async () => ({ id: 'asset_pulled_from_cloud', type: 'image' }),
+      heldFor: async () => ({ id: 'asset_pulled_from_cloud', type: 'image', onDisk: true }),
     })
 
     expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_generated'] })

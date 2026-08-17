@@ -4,16 +4,20 @@ import type { DeriveRequest } from './service'
 /**
  * Whether a take in the catalogue never met the pipeline that derives what a montage reads.
  *
- * `hash` is the marker, and it is the right one because BOTH ways in write it — a picked file
- * through `ingest`, a generation through `derive`. A row without one has been through neither,
- * which for a generation was every row until the pipeline learnt to run on downloads.
+ * `probe` is the marker: it is what ffprobe answers, so a timed row without one has not been
+ * read by the tool — which is exactly the state a studio whose ffmpeg is not resolved yet leaves
+ * every generated take in. It SETTLES, because the pass below writes it down before deriving:
+ * once the tool is there, a take is caught up once and never again.
  *
- * Reading `peaksPath` instead would never settle: a silent rush legitimately has no waveform,
- * so it would be picked up again on every project opened, for ever.
+ * It used to be `hash`, and that stopped being true the day an import started fingerprinting the
+ * file it wrote: `hashOrNull` is plain `node:fs` and answers whether or not ffmpeg exists, so a
+ * rush generated without the tool was stamped as one the pipeline had been through — and skipped
+ * for good once the tool arrived. Reading `peaksPath` would not settle either: a silent rush
+ * legitimately has no waveform, and would be picked up on every project opened, for ever.
  */
 export function needsDeriving(asset: Asset): boolean {
   const timed = asset.type === 'video' || asset.type === 'audio'
-  return timed && asset.location === 'local' && !asset.hash && Boolean(asset.path)
+  return timed && asset.location === 'local' && !asset.probe && Boolean(asset.path)
 }
 
 /** How many rows a page of the catalogue holds — its own default, stated rather than inherited. */

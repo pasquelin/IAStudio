@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
@@ -9,6 +9,7 @@ import type { AccountSummary } from '@shared/domain/account'
 import {
   ASSET_HOST,
   ASSET_ID_PREFIX,
+  DEFAULT_ASSET_FOLDERS,
   POSTER_HOST,
   type Asset,
   type AssetType,
@@ -17,6 +18,8 @@ import {
 import type { MediaCapabilities } from '@shared/domain/media'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import {
+  LEGACY_ASSETS_FOLDER,
+  landedInDefaultFolder,
   planProjectAccount,
   withRecentProject,
   type Project,
@@ -60,6 +63,7 @@ import {
   companionPath,
   findOnPath,
   forgetBinaries,
+  hashOrNull,
   hashSource,
   probeSource,
   runProcess,
@@ -73,6 +77,7 @@ import { createTextureExtraction, type TextureExtraction } from './assets/textur
 import { broadcast, sendTo } from './ipc/broadcast'
 import { studioWindow } from './window/windows'
 import { setLogVerbosity } from './log'
+import { exists } from './persistence'
 import type Scenario from '@scenario-labs/sdk'
 import {
   createJobManager,
@@ -744,11 +749,70 @@ export function createServices(settings: SettingsStore): Services {
       log.warn('media', `could not record what was derived for ${assetId}: ${String(error)}`),
     )
 
+  /**
+   * Whether the project holds the folder every asset used to be filed under — that exact entry,
+   * and a directory. `existsSync` would answer for a `Assets/` the user made themselves, the case
+   * being folded by APFS and NTFS alike, and for a FILE of that name.
+   */
+  const holdsLegacyAssetsFolder = (root: string): boolean => {
+    try {
+      return readdirSync(root, { withFileTypes: true }).some(
+        entry => entry.name === LEGACY_ASSETS_FOLDER && entry.isDirectory(),
+      )
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * The projects whose two-tree question has been answered, by folder — answered, not told: a
+   * project that turns out to wear ONE tree is settled just as much, and settling it is what
+   * keeps a modern project from reading its folder on every import for ever. A set rather than
+   * one root, because the answer is per project and the user comes back to the one they left.
+   */
+  const legacyLayoutSettled = new Set<string>()
+
+  /**
+   * A project made before the tree became the user's keeps its files under `assets/`, and nothing
+   * migrates them out — leaving them alone is the decision, not an oversight. The import that
+   * follows creates `Images/` beside it, and until this line nothing in the app said why one
+   * project suddenly wore two trees.
+   *
+   * The free half of the question first, then ONE reading of the folder per project. Read rather
+   * than `existsSync(join(root, 'assets'))`, which answers `true` for a folder the user made and
+   * called `Assets` — APFS and NTFS both fold the case — and `true` for a file of that name: the
+   * studio would be stating something false about their project and inviting them to tidy it.
+   */
+  const noteLegacyLayout = (asset: Asset): void => {
+    // `current()` and not `path()`, which THROWS when no project is open. This is the first thing
+    // `onImported` does, and `announce` swallows what that listener raises: a project closed while
+    // the catalogue was answering would have cost a mesh its textures, silently.
+    const root = project.current()?.path
+    const folder = DEFAULT_ASSET_FOLDERS[asset.type]
+
+    if (!root || legacyLayoutSettled.has(root)) return
+    if (!landedInDefaultFolder(asset.path, folder)) return
+
+    legacyLayoutSettled.add(root)
+    if (!holdsLegacyAssetsFolder(root)) return
+
+    journal.record({
+      level: 'info',
+      topic: 'project',
+      messageKey: 'activity.projectLegacyAssetsFolder',
+      params: { legacy: LEGACY_ASSETS_FOLDER, folder },
+    })
+  }
+
   const assets = createLocalBackend({
     download,
     projectPath: () => project.path(),
     catalog: () => project.catalog(),
     now: timestamp,
+    // The same function the rescan hashes with (`project-disk` passes the very same one), which
+    // is what makes the two comparable: a fingerprint recorded here is what lets a generated file
+    // be followed after the user files it away themselves.
+    hash: hashOrNull,
     // The API states no duration and no track list beside the bytes it hands over, so a
     // generated take reached the timeline as an untimed clip: five arbitrary seconds, and no
     // way to tell whether it carries a sound. ffprobe reads the file that just landed.
@@ -758,6 +822,8 @@ export function createServices(settings: SettingsStore): Services {
     // awaited by the import: a model of half a dozen 2048² pictures would otherwise hold up the
     // download that produced it, and a failure here must not cost the model itself.
     onImported: asset => {
+      noteLegacyLayout(asset)
+
       // A take that came down from the API never met the picker, so nothing ever derived what
       // a montage reads: no waveform under its sound clip, and no proxy for a codec the window
       // cannot decode. Both are what `ingest` writes for a file picked off a disk.
@@ -976,7 +1042,17 @@ export function createServices(settings: SettingsStore): Services {
       },
       backend: assets,
       newId: newAssetId,
-      heldFor: remoteAssetId => project.catalog().findByRemoteId(remoteAssetId),
+      // The disk rather than `missing_at`, which the row does not carry out of the catalogue
+      // anyway: the date says what the last reconciliation pass saw, and this is asked at the
+      // moment the answer is acted on. Through the async `exists` and never `existsSync` — this
+      // runs on the main process while a generation is being collected.
+      heldFor: async remoteAssetId => {
+        const held = await project.catalog().findByRemoteId(remoteAssetId)
+        if (!held) return null
+
+        const file = ownFileOf(project.path(), held)
+        return { ...held, onDisk: file !== null && (await exists(file)) }
+      },
     })
 
   // Rebuilt only when the client is, so every job of one account shares a single graph rather

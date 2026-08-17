@@ -4,6 +4,7 @@ import {
   listedAt,
   planProjectAccount,
   projectPickerFolder,
+  landedInDefaultFolder,
   projectsByCreation,
   renamedRecentProject,
   RECENT_PROJECTS_MAX,
@@ -253,5 +254,34 @@ describe('where the folder dialog should open', () => {
   // A first launch has neither, and the system opening where it likes is the right answer then.
   it('answers nothing when there is no preference and no project yet', () => {
     expect(projectPickerFolder(undefined, [])).toBeUndefined()
+  })
+})
+
+/**
+ * What tells a project it wears two trees: an old project keeps its files under `assets/`, nothing
+ * migrates them out, and the import that follows creates `Images/` beside it. The journal says so
+ * once — without it, a folder appears on its own and nothing in the app explains it.
+ */
+describe('an asset filed in the default folder of its kind', () => {
+  it('is what the studio just chose a tree for', () => {
+    expect(landedInDefaultFolder('Images/Boulder.png', 'Images')).toBe(true)
+  })
+
+  /**
+   * A second pull writes over the row it finds, which keeps the path it already had — under
+   * `assets/img` for a project of that age. Nothing new appeared, so nothing is said.
+   */
+  it('is not an asset that landed where it already was', () => {
+    expect(landedInDefaultFolder('assets/img/Boulder.png', 'Images')).toBe(false)
+  })
+
+  // Filed by the user into a folder of their own, which says nothing about which tree was chosen.
+  it('is not an asset sitting under a folder of the default one', () => {
+    expect(landedInDefaultFolder('Images/Repérages/Boulder.png', 'Images')).toBe(false)
+  })
+
+  // An asset linked where the user left it, or one that lives in the library alone.
+  it('is not an asset with no file in the project', () => {
+    expect(landedInDefaultFolder(undefined, 'Images')).toBe(false)
   })
 })

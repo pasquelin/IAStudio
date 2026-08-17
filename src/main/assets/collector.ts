@@ -25,16 +25,21 @@ export type RemoteAsset = {
   generation?: AssetGeneration
 }
 
+/**
+ * A local row an API asset became, as the collector needs to see it.
+ *
+ * `jobId` is what put it there, and the collector reads it: a row alone does not say whose
+ * output it is. `type` too, so a second pass over outputs already collected still names their
+ * shelves. `onDisk` because a row is not a file — see the two readings below.
+ */
+export type HeldAsset = Pick<Asset, 'id' | 'jobId' | 'type'> & { onDisk: boolean }
+
 export type CollectorDeps = {
   retrieve: (remoteAssetId: string) => Promise<RemoteAsset>
   backend: LocalBackend
   newId: () => string
-  /**
-   * The local asset an API one became, or `null` when it never entered the project. `jobId` is
-   * what put it there, and the collector reads it: a row alone does not say whose output it is.
-   * `type` too, so a second pass over outputs already collected still names their shelves.
-   */
-  heldFor: (remoteAssetId: string) => Promise<Pick<Asset, 'id' | 'jobId' | 'type'> | null>
+  /** The local asset an API one became, or `null` when it never entered the project. */
+  heldFor: (remoteAssetId: string) => Promise<HeldAsset | null>
 }
 
 export function createAssetCollector({
@@ -43,6 +48,21 @@ export function createAssetCollector({
   newId,
   heldFor,
 }: CollectorDeps): AssetCollector {
+  /**
+   * What the API says about an output, or `null` when it will not say.
+   *
+   * Only forgiving for an output this job already holds: everywhere else a retrieve that fails is
+   * a collection that failed, and swallowing it would report a job as succeeded with a shelf
+   * missing.
+   */
+  const fetchRemote = async (
+    remoteAssetId: string,
+    mine: HeldAsset | null,
+  ): Promise<RemoteAsset | null> => {
+    if (!mine) return await retrieve(remoteAssetId)
+    return await retrieve(remoteAssetId).catch(() => null)
+  }
+
   return async (job, remoteAssetIds) => {
     const collected: string[] = []
     // A set, and read back as one: the seven channels of a PBR pack are one shelf, not seven.
@@ -56,24 +76,47 @@ export function createAssetCollector({
       // every output and pay for the transfer twice. Scoped to the job rather than to the remote
       // id alone, or a copy the user had pulled from the account library would be adopted as the
       // output — and it carries neither the prompt behind it, nor its group, nor its label.
+      // `onDisk`, because what this branch decides is NOT to download: a row whose file the user
+      // has since thrown away would otherwise put a dead id among the outputs of the job, and
+      // nothing would ever come back for the bytes. The row is not the file.
       const held = await heldFor(remoteAssetId)
-      if (held?.jobId === job.id) {
-        collected.push(held.id)
-        shelves.add(workspaceOfType(held.type))
+      const mine = held?.jobId === job.id ? held : null
+
+      if (mine?.onDisk) {
+        collected.push(mine.id)
+        shelves.add(workspaceOfType(mine.type))
         continue
       }
 
-      const remote = await retrieve(remoteAssetId)
+      const remote = await fetchRemote(remoteAssetId, mine)
+
+      // The API no longer answers for an output this job did collect: the row is all that is left
+      // of it, and failing the whole job over one output — the other three having just been paid
+      // for again — is worse than handing back a row whose file the user removed.
+      if (!remote) {
+        if (!mine) continue
+        collected.push(mine.id)
+        shelves.add(workspaceOfType(mine.type))
+        continue
+      }
+
       const source = channelFromScenarioType(remote.metadataType)
       const type = assetTypeOfRemote(remote)
       if (!type) continue
 
       // What the channels of one texture hang from. Absent when the parent never entered the
       // project — an image uploaded straight to the API, or converted before it was imported.
+      // `onDisk` is not read here: a lineage points at an id, and a row keeps its own whatever
+      // became of its file.
       const parent = remote.parentId ? await heldFor(remote.parentId) : null
 
       const asset = await backend.importFromUrl({
-        id: newId(),
+        // The row this job already made for this output, when there is one: `write` finds it,
+        // rewrites it in place and — `INSERT OR REPLACE` naming no `missing_at` — undates it. A
+        // fresh id would leave the old row beside the new one, both claiming one remote asset and
+        // one path, and `findByRemoteId` answers OLDEST first: every later pass would hand back
+        // the dead one, and the browser would show the output twice.
+        id: mine?.id ?? newId(),
         url: remote.url,
         // What was ASKED for, not which model answered: a shelf named after models is a shelf
         // where everything of one model reads the same. The label is the fallback, and an

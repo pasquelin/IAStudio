@@ -4,6 +4,9 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { AssetType } from '@shared/domain/asset'
 import type { AsyncCatalog } from '@main/project/catalog-client'
+// `hashOrNull` where the backend is wired, `hashSource` where a test states the value it expects:
+// the first is what production injects, the second is the same answer without the `null` arm.
+import { hashOrNull, hashSource } from '@main/media/runner'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import {
   createLocalBackend,
@@ -51,6 +54,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
+      hash: hashOrNull,
     })
   })
 
@@ -78,6 +82,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
+      hash: hashOrNull,
       probeFile,
     })
 
@@ -101,6 +106,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
+      hash: hashOrNull,
       probeFile: () => Promise.reject(new Error('no ffprobe')),
     })
 
@@ -266,8 +272,10 @@ describe('local backend', () => {
       type: 'audio',
     })
 
-    expect(rewritten.hash).toBe('abc123')
     expect(rewritten.peaksPath).toBe('.index/peaks/abc123.bin')
+    // Not among them: the file was written again, so the fingerprint describes what is on the
+    // disk now rather than what the row remembered.
+    expect(rewritten.hash).toBe(await hashSource(join(root, 'Audio/Take.wav')))
   })
 
   it('records everything a generation reported about an import', async () => {
@@ -358,6 +366,27 @@ describe('local backend', () => {
   })
 
   /**
+   * Measured on the running app before this existed: a picture pulled from the library, moved out
+   * of `Images/` with the Finder, was DATED rather than followed — the rescan looks a lost row up
+   * by its fingerprint, and every row that came through this door carried none. Only a file picked
+   * off a disk was ever fingerprinted, by the ingest, and that is not how assets reach a project
+   * here: they are generated or pulled.
+   *
+   * Compared against `hashSource` itself rather than against a literal, because the value proves
+   * nothing on its own — what matters is that it is the SAME one the rescan will compute.
+   */
+  it('fingerprints the file it wrote, so a rescan can follow it when the user files it away', async () => {
+    const asset = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/render.png',
+      name: 'Boulder',
+      type: 'image',
+    })
+
+    expect(asset.hash).toBe(await hashSource(join(root, 'Images/Boulder.png')))
+  })
+
+  /**
    * The one door every asset comes through, which is why extracting a model's pictures hangs off
    * it rather than off each import site. Told AFTER the catalogue holds the row: a listener that
    * goes looking for what just arrived — that extraction does exactly that — would find nothing.
@@ -372,6 +401,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
+      hash: hashOrNull,
       onImported: imported => {
         asked.push(catalog.find(imported.id))
       },
@@ -398,6 +428,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
+      hash: hashOrNull,
       onImported: () => {
         throw new Error('a listener that has its own troubles')
       },
@@ -419,6 +450,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
+      hash: hashOrNull,
     })
 
     await expect(
@@ -558,6 +590,22 @@ describe('local backend', () => {
     expect((await catalog.find('asset_4'))?.peaksPath).toBeUndefined()
   })
 
+  // Same reasoning as the waveform above: the fingerprint the row carried describes bytes that
+  // are gone. Left alone, it would send a rescan hunting for a file nobody can produce, and would
+  // have a fresh import of the ORIGINAL bytes turned away as a duplicate of this row.
+  it('re-fingerprints the take when its bytes are replaced', async () => {
+    await backend.importFromBytes(
+      { id: 'asset_5', name: 'Take', type: 'audio', extension: '.wav' },
+      new Uint8Array([1]),
+    )
+    const before = (await catalog.find('asset_5'))?.hash
+
+    const replaced = await backend.replaceBytes('asset_5', new Uint8Array([4, 5]), '.wav')
+
+    expect(replaced.hash).not.toBe(before)
+    expect(replaced.hash).toBe(await hashSource(join(root, 'Audio/Take.wav')))
+  })
+
   // Dropping the waveform is only half the job. Nothing used to derive the new one — `ingest`
   // hangs off the file picker alone — so applying an edit left every clip of that take
   // waveform-less, in every montage, for good.
@@ -568,6 +616,7 @@ describe('local backend', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
+      hash: hashOrNull,
       onImported: asset => {
         landed.push(asset.id)
       },
@@ -627,6 +676,7 @@ describe('the still brought down beside the bytes', () => {
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
+      hash: hashOrNull,
     })
   })
 

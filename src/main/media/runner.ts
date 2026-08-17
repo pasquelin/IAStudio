@@ -133,6 +133,17 @@ export function hashSource(path: string): Promise<string> {
   return hashFile(path, hashDeps)
 }
 
+/**
+ * The same fingerprint, for the two ports that record one rather than compare one: what an import
+ * writes on a row, and what the rescan reads off an orphan file.
+ *
+ * Beside `hashSource` and not at each wiring, which is what makes them the same answer AND the
+ * same failure by construction: a file that cannot be read leaves the row without a fingerprint,
+ * where throwing would cost the import that was carrying it.
+ */
+export const hashOrNull = (path: string): Promise<string | null> =>
+  hashSource(path).catch(() => null)
+
 /** How long a binary gets to print its own version before it counts as broken. */
 const VERSION_TIMEOUT_MS = 5_000
 
