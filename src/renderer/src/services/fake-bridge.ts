@@ -187,6 +187,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     },
     media: {
       ingest: () => Promise.resolve([]),
+      adopt: () => Promise.resolve(null),
       cancel: () => Promise.resolve(),
       capabilities: () => Promise.resolve({ ffmpeg: true }),
       onProgress: noSubscription,

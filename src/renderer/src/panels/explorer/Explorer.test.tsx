@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
+import { stemOf } from '@shared/domain/file-name'
 import type { FileOutcome } from '@shared/domain/file-op'
+import { natureOf, opensInStudio } from '@shared/domain/file-role'
 import type { FolderEntry } from '@shared/domain/folder'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
@@ -95,6 +97,32 @@ function install(
   )
   const walkFolder = vi.fn((_hidden?: boolean) => Promise.resolve(walked))
   const openFile = vi.fn(() => Promise.resolve(true))
+  /**
+   * What the main process answers, minus the disk: the row it already holds, else one minted for
+   * a file the studio can show, else nothing at all. `opensInStudio` is the very table the main
+   * reads, so a case here cannot describe an opening the studio would refuse.
+   */
+  const adopt = vi.fn((relative: string): Promise<Asset | null> => {
+    const known = catalogued.find(asset => asset.path === relative)
+    if (known) return Promise.resolve(known)
+
+    // A document is never adopted — it is opened, or it is nothing: a `.scene` the project has
+    // no envelope for is a file like any other. `adoptFile` refuses it for the same reason.
+    const { domain, role } = natureOf(relative)
+    if (role === 'edit' || domain === 'other' || !opensInStudio(relative)) {
+      return Promise.resolve(null)
+    }
+
+    return Promise.resolve({
+      id: `asset_${relative}`,
+      name: stemOf(relative),
+      type: domain,
+      location: 'local',
+      path: relative,
+      tags: [],
+      createdAt: '2026-08-17T10:00:00.000Z',
+    })
+  })
   const revealFile = vi.fn(() => Promise.resolve())
   const renameFile = vi.fn(nothingMoved)
   const moveFiles = vi.fn(nothingMoved)
@@ -127,6 +155,7 @@ function install(
       redoFile,
     },
     documents: { list: () => Promise.resolve(documents) },
+    media: { adopt },
     menu: menu.bridge,
     assets: {
       // Both shapes of the same question: one path, or the whole listing at once.
@@ -144,6 +173,7 @@ function install(
     searchFolder,
     walkFolder,
     openFile,
+    adopt,
     revealFile,
     renameFile,
     moveFiles,
@@ -499,20 +529,53 @@ describe('the project explorer', () => {
       expect(openFile).not.toHaveBeenCalled()
     })
 
-    // A file under a project folder the catalogue has never recorded — dropped in by hand — is
-    // not an asset, and the system is still where it goes.
-    it('still hands a file the catalogue does not know to the system', async () => {
+    /**
+     * The complaint, in one case: a picture copied into the project by hand launched macOS
+     * Preview. The catalogue has never heard of it — and the catalogue is not what decides. The
+     * studio adopts the file where it lies, then opens it in its own space.
+     */
+    it('adopts a picture the catalogue has never heard of, and opens it here', async () => {
       withProject()
-      const { openFile } = install({
-        '': [folder('assets')],
-        assets: [file('stray.png', 'assets')],
+      const { openFile, adopt } = install({
+        '': [folder('Images')],
+        Images: [file('facade.jpg', 'Images')],
       })
 
       render(<Explorer />)
-      await userEvent.dblClick(await screen.findByText('assets'))
-      await userEvent.dblClick(await screen.findByText('stray.png'))
+      await userEvent.dblClick(await screen.findByText('Images'))
+      await userEvent.dblClick(await screen.findByText('facade.jpg'))
 
-      await waitFor(() => expect(openFile).toHaveBeenCalledWith('assets/stray.png'))
+      await waitFor(() => expect(openAsset).toHaveBeenCalledTimes(1))
+      expect(adopt).toHaveBeenCalledWith('Images/facade.jpg')
+      expect(vi.mocked(openAsset).mock.calls[0]?.[0]).toMatchObject({ path: 'Images/facade.jpg' })
+      expect(openFile).not.toHaveBeenCalled()
+    })
+
+    // The other half of the same rule, and it is deliberate: the studio has no editor for prose,
+    // and pretending otherwise would be worse than opening it outside.
+    it('still hands a file it has no editor for to the system', async () => {
+      withProject()
+      const { openFile } = install({ '': [folder('Notes')], Notes: [file('brief.txt', 'Notes')] })
+
+      render(<Explorer />)
+      await userEvent.dblClick(await screen.findByText('Notes'))
+      await userEvent.dblClick(await screen.findByText('brief.txt'))
+
+      await waitFor(() => expect(openFile).toHaveBeenCalledWith('Notes/brief.txt'))
+      expect(openAsset).not.toHaveBeenCalled()
+    })
+
+    // A window that asked while the project was closing hears a rejection, and a rejection is
+    // not an answer: the file is still there, and the system still opens it.
+    it('falls back to the system when the adoption could not be answered', async () => {
+      withProject()
+      const { openFile, adopt } = install({ '': [file('facade.jpg')] })
+      adopt.mockRejectedValueOnce(new Error('no project'))
+
+      render(<Explorer />)
+      await userEvent.dblClick(await screen.findByText('facade.jpg'))
+
+      await waitFor(() => expect(openFile).toHaveBeenCalledWith('facade.jpg'))
       expect(openAsset).not.toHaveBeenCalled()
     })
 

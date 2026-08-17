@@ -42,6 +42,7 @@
     "projectAccountRestored": "Projet rouvert sur le compte « {{name}} »",
     "projectAccountSwitched": "Ce projet passe au compte « {{name}} » : les assets envoyés sous le compte précédent ne seront plus visibles dans la bibliothèque distante. Vos fichiers locaux ne bougent pas",
     "projectAccountMissing": "Ce projet travaillait avec un compte que le studio ne connaît plus ; il s’ouvre sur « {{name}} »",
+    "fileAdopted": "« {{name}} » est entré au catalogue du projet, là où il est",
     "fileNotOpened": "Ce fichier n’a pas pu être ouvert par le système",
     "filesRefused_one": "{{count, number}} élément n’a pas bougé — nom déjà pris, fichier disparu, ou dossier que le studio garde pour lui",
     "filesRefused_many": "{{count, number}} éléments n’ont pas bougé — nom déjà pris, fichier disparu, ou dossier que le studio garde pour lui",

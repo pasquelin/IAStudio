@@ -22,6 +22,7 @@ function deps(overrides: Partial<MediaHandlerDeps> = {}): MediaHandlerDeps {
         now: '2026-08-07T10:00:00.000Z',
       }),
     ),
+    adopt: vi.fn(async () => null),
     pickMedia: vi.fn(async () => ['/Volumes/Rushes/A001.mov']),
     capabilities: async () => ({ ffmpeg: true }),
     ...overrides,
@@ -88,6 +89,40 @@ describe('media handlers', () => {
 
     await expect(invoke(CHANNELS.mediaIngest)).resolves.toEqual([])
     expect(injected.media.ingest).not.toHaveBeenCalled()
+  })
+
+  it('adopts a file of the project, and answers the row without its whereabouts', async () => {
+    const injected = deps({
+      adopt: vi.fn(async (relative: string) =>
+        linkedAsset(`/projects/one/${relative}`, {
+          id: 'asset-9',
+          type: 'image',
+          now: '2026-08-17T10:00:00.000Z',
+        }),
+      ),
+    })
+    registerMediaHandlers(injected)
+
+    const asset = await invoke(CHANNELS.mediaAdopt, 'Images/facade.jpg')
+
+    expect(injected.adopt).toHaveBeenCalledWith('Images/facade.jpg')
+    expect(asset).toEqual(expect.not.objectContaining({ sourcePath: expect.anything() }))
+  })
+
+  it('answers nothing for a file the studio has no editor for', async () => {
+    registerMediaHandlers(deps())
+
+    await expect(invoke(CHANNELS.mediaAdopt, 'Notes/brief.txt')).resolves.toBeNull()
+  })
+
+  // The one channel where a window names a path of its own — `../../.ssh/id_rsa` would otherwise
+  // reach the disk through it.
+  it('refuses a path that walks out of the project', async () => {
+    const injected = deps()
+    registerMediaHandlers(injected)
+
+    await expect(invoke(CHANNELS.mediaAdopt, '../../.ssh/id_rsa')).rejects.toThrow()
+    expect(injected.adopt).not.toHaveBeenCalled()
   })
 
   it('cancels the ingest of one asset', async () => {

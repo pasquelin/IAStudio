@@ -367,16 +367,21 @@ export function Explorer() {
 
     if (node.kind === 'folder') return toggle(node.id)
 
-    // A file the catalogue knows is an asset, and it opens like one from the shelf — a folder
-    // holds paths, and only the catalogue can say whether one of them is an asset.
-    const asset = await assetAt(node.path)
+    // The catalogue is not what decides here, and that is the whole change: it hands back the row
+    // it already holds, and MINTS one for a file it does not — a picture copied into the project
+    // by hand used to fall through to the system, which is the one thing this panel must not do.
+    // Answered from the EXTENSION, never from what is catalogued.
+    const asset = await getBridge()
+      ?.media.adopt(node.path)
+      .catch(() => null)
+
     if (asset) {
       const { openAsset } = await import('@/helpers/open-asset')
       return openAsset(asset)
     }
 
-    // Handed to the system, and the journal is what says so when it refuses: a folder the user
-    // owns can hold anything, and the studio has no business throwing about a `.pdf`.
+    // Handed to the system, and the journal is what says so when it refuses: a `.txt` and a `.pdf`
+    // have no editor here, and pretending otherwise would be worse than opening them outside.
     void getBridge()?.project.openFile(node.path)
   }
 

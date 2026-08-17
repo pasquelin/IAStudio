@@ -153,6 +153,7 @@ export type Channels = {
 
   activityRead: 'activity:read'
 
+  mediaAdopt: 'media:adopt'
   mediaIngest: 'media:ingest'
   mediaCancel: 'media:cancel'
   mediaAvailable: 'media:available'
@@ -295,6 +296,7 @@ export const CHANNELS: Channels = {
 
   activityRead: 'activity:read',
 
+  mediaAdopt: 'media:adopt',
   mediaIngest: 'media:ingest',
   mediaCancel: 'media:cancel',
   mediaAvailable: 'media:available',
@@ -1169,6 +1171,16 @@ export type StudioBridge = {
      * ingest runs on and reports through `onProgress`.
      */
     ingest: () => Promise<Asset[]>
+    /**
+     * Gives a file the project ALREADY holds a row in the catalogue, so the studio can open it
+     * instead of handing it to the system — the explorer's double-click on a `.jpg` somebody
+     * copied in by hand. The bytes stay exactly where they are, as `ingest` leaves them.
+     *
+     * `null` when the studio has no editor for that file: the caller then opens it outside,
+     * which is what a `.txt` and a `.pdf` are meant to do. The path is relative to the project,
+     * and one that leaves it is refused.
+     */
+    adopt: (relative: string) => Promise<Asset | null>
     cancel: (assetId: string) => Promise<void>
     capabilities: () => Promise<MediaCapabilities>
     onProgress: (callback: (progress: IngestProgress) => void) => Unsubscribe

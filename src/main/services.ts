@@ -57,6 +57,7 @@ import { fetchModel, modelIsComplete } from './dictation/model-download'
 import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/model-store'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
 import { openSttProcess } from './dictation/stt-process'
+import { adoptFile } from './media/adoptFile'
 import { linkedAsset, mediaFilters } from './media/link'
 import {
   binaryRuns,
@@ -204,6 +205,8 @@ export type Services = {
   openMicrophoneSettings: () => void
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
   link: (source: string, type: AssetType) => Promise<Asset>
+  /** The same for a file the project already holds, `null` when nothing here opens it. */
+  adopt: (relative: string) => Promise<Asset | null>
   capabilities: () => Promise<MediaCapabilities>
   /** The language in force. Injected where it is needed, so no module reads the source itself. */
   language: () => Language
@@ -804,6 +807,54 @@ export function createServices(settings: SettingsStore): Services {
     })
   }
 
+  /**
+   * What every asset that lands in the project goes through — a download, a generation collected,
+   * a file the explorer adopted. Named rather than inlined because the adoption needs the very
+   * same derivation: two callers, one deriver, and no way for the two to drift apart.
+   */
+  const onAssetLanded = (asset: Asset): void => {
+    noteLegacyLayout(asset)
+
+    // A take that came down from the API never met the picker, so nothing ever derived what
+    // a montage reads: no waveform under its sound clip, and no proxy for a codec the window
+    // cannot decode. Both are what `ingest` writes for a file picked off a disk.
+    //
+    // Only with a probe: `deriveFiles` needs the length, and a `null` one means ffprobe is
+    // missing — in which case there is no ffmpeg to derive anything with either.
+    if ((asset.type === 'video' || asset.type === 'audio') && asset.probe && asset.path) {
+      void media
+        .derive({
+          assetId: asset.id,
+          path: join(project.path() ?? '', asset.path),
+          kind: asset.type,
+          probe: asset.probe,
+          // The library's own still is a picture of the take; ours would be a frame of it.
+          poster: !asset.posterPath,
+          // The user is waiting on this take: what is being prepared belongs on screen.
+          announce: true,
+        })
+        .then(() => broadcast(EVENTS.assetsChanged))
+        .catch((error: unknown) =>
+          log.warn('media', `could not derive the files of ${asset.name}: ${String(error)}`),
+        )
+      return
+    }
+
+    if (asset.type !== 'mesh') return
+    void extractTextures(asset)
+      .then(textures => {
+        // The one write no window ordered, so the one nothing else would say out loud: the
+        // import that started this is long answered, and its shelf refreshed, by the time a
+        // GLB has been read and its pictures written.
+        if (textures.length > 0) broadcast(EVENTS.assetsChanged)
+      })
+      .catch((error: unknown) =>
+        // The journal already carries the line `extractTextures` writes; this is the rejection
+        // itself, which nothing else would ever hear.
+        log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
+      )
+  }
+
   const assets = createLocalBackend({
     download,
     projectPath: () => project.path(),
@@ -821,48 +872,7 @@ export function createServices(settings: SettingsStore): Services {
     // something to show beside a model without anyone having gone looking for a menu row. Not
     // awaited by the import: a model of half a dozen 2048² pictures would otherwise hold up the
     // download that produced it, and a failure here must not cost the model itself.
-    onImported: asset => {
-      noteLegacyLayout(asset)
-
-      // A take that came down from the API never met the picker, so nothing ever derived what
-      // a montage reads: no waveform under its sound clip, and no proxy for a codec the window
-      // cannot decode. Both are what `ingest` writes for a file picked off a disk.
-      //
-      // Only with a probe: `deriveFiles` needs the length, and a `null` one means ffprobe is
-      // missing — in which case there is no ffmpeg to derive anything with either.
-      if ((asset.type === 'video' || asset.type === 'audio') && asset.probe && asset.path) {
-        void media
-          .derive({
-            assetId: asset.id,
-            path: join(project.path() ?? '', asset.path),
-            kind: asset.type,
-            probe: asset.probe,
-            // The library's own still is a picture of the take; ours would be a frame of it.
-            poster: !asset.posterPath,
-            // The user is waiting on this take: what is being prepared belongs on screen.
-            announce: true,
-          })
-          .then(() => broadcast(EVENTS.assetsChanged))
-          .catch((error: unknown) =>
-            log.warn('media', `could not derive the files of ${asset.name}: ${String(error)}`),
-          )
-        return
-      }
-
-      if (asset.type !== 'mesh') return
-      void extractTextures(asset)
-        .then(textures => {
-          // The one write no window ordered, so the one nothing else would say out loud: the
-          // import that started this is long answered, and its shelf refreshed, by the time a
-          // GLB has been read and its pictures written.
-          if (textures.length > 0) broadcast(EVENTS.assetsChanged)
-        })
-        .catch((error: unknown) =>
-          // The journal already carries the line `extractTextures` writes; this is the rejection
-          // itself, which nothing else would ever hear.
-          log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
-        )
-    },
+    onImported: onAssetLanded,
   })
 
   const extractTextures = createTextureExtraction({
@@ -1328,6 +1338,17 @@ export function createServices(settings: SettingsStore): Services {
       await project
         .catalog()
         .add(linkedAsset(source, { id: newAssetId(), type, now: timestamp() })),
+    adopt: relative =>
+      adoptFile(relative, {
+        projectPath: () => project.path(),
+        catalog: () => project.catalog(),
+        newAssetId,
+        now: timestamp,
+        hash: hashOrNull,
+        probeFile: probeLocalFile,
+        onAdopted: onAssetLanded,
+        record: report => journal.record(report),
+      }),
     // Asked, not cached: this is what the settings pane consults after the user installed the
     // binary it just said was missing. Run rather than looked for — a half-written download and
     // a binary built for the other architecture both exist on disk and encode nothing.
