@@ -1,5 +1,5 @@
 import type { Job } from '@shared/domain/job'
-import { createMountedHost } from '@/helpers/host-registry'
+import { createMountedHost } from '@/helpers/hostRegistry'
 
 /**
  * The generator's form, reachable from outside it.

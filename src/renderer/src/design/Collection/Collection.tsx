@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
+import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { rowDrag } from '../rowDrag'
 import type { RowTone } from '../styles'

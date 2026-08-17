@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { CollectionBar } from './CollectionBar'
-import { DEFAULT_COLLECTION_STATE, type FacetDescriptor } from '@/helpers/collection-state'
+import { DEFAULT_COLLECTION_STATE, type FacetDescriptor } from '@/helpers/collectionState'
 
 function facet(key: string): FacetDescriptor {
   return {

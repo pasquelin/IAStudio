@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { PICTURES } from '@shared/domain/asset'
 import { TextureField } from '@/design/TextureField/TextureField'
-import { openAssetById } from '@/helpers/open-asset'
+import { openAssetById } from '@/helpers/openAsset'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
 
 export type PictureFieldProps = {

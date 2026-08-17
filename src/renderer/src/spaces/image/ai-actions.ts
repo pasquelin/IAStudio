@@ -1,11 +1,11 @@
 import type { FieldDescriptor, ModelFamily } from '@shared/domain/model'
 import { layerById } from '@/engines/canvas/canvasState'
-import { modelForFamily } from '@/helpers/model-for-family'
+import { modelForFamily } from '@/helpers/modelForFamily'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useModels } from '@/stores/models'
 import { fillEditFields } from './ai-fields'
-import { offerModelsOfFamily } from '@/helpers/offer-model'
-import { revealTool } from '@/helpers/reveal-panel'
+import { offerModelsOfFamily } from '@/helpers/offerModel'
+import { revealTool } from '@/helpers/revealPanel'
 
 /** The engine, seen from an edit: it flattens, and it hands back the mask it was painted. */
 export type EditHost = {

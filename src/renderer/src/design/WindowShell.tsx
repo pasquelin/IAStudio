@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { TooltipHost } from './TooltipHost'
-import { DRAGGABLE } from '@/helpers/app-region'
+import { DRAGGABLE } from '@/helpers/appRegion'
 
 export type WindowShellProps = {
   /** Already translated, as every design component takes its words. */

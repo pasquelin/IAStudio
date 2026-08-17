@@ -1,7 +1,7 @@
 import { isLocalPicture, type Asset } from '@shared/domain/asset'
 import type { PbrChannel } from '@shared/domain/texture'
 import { openDocument } from '@/app/dockview-api'
-import { readyForWriting } from '@/helpers/asset-intents'
+import { readyForWriting } from '@/helpers/assetIntents'
 import { reportFailure } from '@/services/diagnostics'
 import { documentForAsset, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'

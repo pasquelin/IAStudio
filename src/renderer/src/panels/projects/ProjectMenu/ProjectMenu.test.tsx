@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FileOutcome } from '@shared/domain/file-op'
-import { installFakeBridge, type BridgeOverrides } from '@/services/fake-bridge'
+import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useProject } from '@/stores/project'
 import { ProjectMenu } from './ProjectMenu'
 

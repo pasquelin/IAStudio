@@ -14,7 +14,7 @@ import {
 } from '@/engines/scene/sceneState'
 import type { Transform } from '@shared/domain/scene'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'

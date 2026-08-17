@@ -3,7 +3,7 @@ import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
 import { useEffect, useRef, type RefObject } from 'react'
 import { commandDescriptor, commandFor, heldCommandFor } from '@shared/domain/command'
 import { isTyping } from '@/helpers/typing'
-import { subscribeToCommands } from '@/services/command-bus'
+import { subscribeToCommands } from '@/services/commandBus'
 import { currentOverrides, motionFor } from '@/stores/bindings'
 
 export type ShortcutsOptions = {

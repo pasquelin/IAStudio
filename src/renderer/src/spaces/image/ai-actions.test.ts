@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { setLayerMask } from '@/engines/canvas/commands'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { useCanvases } from '@/stores/canvases'
 import { useLayouts } from '@/stores/layouts'

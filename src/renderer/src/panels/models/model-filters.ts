@@ -15,7 +15,7 @@ import {
   selectedValues,
   type CollectionState,
   type FacetDescriptor,
-} from '@/helpers/collection-state'
+} from '@/helpers/collectionState'
 
 export const ORIGIN_FACET = 'origin'
 export const CAPABILITY_FACET = 'capability'

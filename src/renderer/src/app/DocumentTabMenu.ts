@@ -1,6 +1,6 @@
 import { mdiClose, mdiCloseBoxMultipleOutline, mdiRenameOutline, mdiTrashCanOutline } from '@mdi/js'
 import type { TFunction } from 'i18next'
-import { showContextMenu } from '@/helpers/context-menu'
+import { showContextMenu } from '@/helpers/contextMenu'
 import { reportFailure } from '@/services/diagnostics'
 import { closeTab } from './close-tab'
 import { closeDocument, deleteDocument } from './document-io'

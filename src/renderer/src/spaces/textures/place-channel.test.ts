@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { bridgeWatchingLogs } from '@/services/fake-bridge'
+import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'

@@ -1,5 +1,5 @@
 import type { FieldDescriptor } from '@shared/domain/model'
-import type { FormValues } from '@/helpers/dynamic-form'
+import type { FormValues } from '@/helpers/dynamicForm'
 
 /** What an edit hands a model: the picture it edits, and the region it may repaint. */
 export type EditPayload = { image: string; mask?: string }

@@ -2,13 +2,13 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import type * as OpenModelMaterial from '@/spaces/textures/open-model-material'
 import { ModelTexturesSection } from './ModelTexturesSection'
 
 const openAsset = vi.fn()
-vi.mock('@/helpers/open-asset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
+vi.mock('@/helpers/openAsset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
 
 const openModelMaterial = vi.fn()
 // Partial: `hasChannel` is what decides which rows this section draws at all, so a copy of it

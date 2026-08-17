@@ -10,7 +10,7 @@ import {
 import type { TFunction } from 'i18next'
 import { commandDescriptor, type CommandId } from '@shared/domain/command'
 import type { SceneNode } from '@/engines/scene/sceneState'
-import { showContextMenu, type ContextMenuRow } from '@/helpers/context-menu'
+import { showContextMenu, type ContextMenuRow } from '@/helpers/contextMenu'
 
 export type SceneNodeMenuProps = {
   /** The node the pointer is over. Already selected by the caller — see below. */

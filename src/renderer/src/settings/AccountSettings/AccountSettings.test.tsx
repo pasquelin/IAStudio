@@ -8,7 +8,7 @@ import {
 } from '@shared/domain/account'
 import type { ApiFailure } from '@shared/domain/failure'
 import type { AuthState } from '@shared/domain/settings'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAccounts } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
 import { AccountSettings } from './AccountSettings'

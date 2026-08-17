@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS, type PartialSettings } from '@shared/domain/settings'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
 import { HideSection } from './HideSection'
 

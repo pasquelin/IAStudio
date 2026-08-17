@@ -18,9 +18,9 @@ import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
 import { openDocument } from '@/app/dockview-api'
-import { assetAt } from '@/helpers/asset-at'
+import { assetAt } from '@/helpers/assetAt'
 import { renameAsset, renameDocument } from '@/helpers/rename'
-import { startSceneDrag } from '@/helpers/scene-drag'
+import { startSceneDrag } from '@/helpers/sceneDrag'
 import { applySelection } from '@/helpers/selection'
 import { workspaceById } from '@/helpers/workspaces'
 import { useShortcuts } from '@/hooks/useShortcuts'
@@ -371,7 +371,7 @@ export function Explorer() {
     // holds paths, and only the catalogue can say whether one of them is an asset.
     const asset = await assetAt(node.path)
     if (asset) {
-      const { openAsset } = await import('@/helpers/open-asset')
+      const { openAsset } = await import('@/helpers/openAsset')
       return openAsset(asset)
     }
 

@@ -1,6 +1,6 @@
 import type { DocumentKind } from '@shared/domain/document'
 import type { DocumentNameFailure, NamedDocument } from '@shared/domain/document-name'
-import { createMountedHost } from '@/helpers/host-registry'
+import { createMountedHost } from '@/helpers/hostRegistry'
 
 /** What a document is about to be called, put to whoever is showing the field. */
 export type DocumentNameRequest = {

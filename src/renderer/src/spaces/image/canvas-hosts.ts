@@ -1,5 +1,5 @@
 import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
-import { createHostRegistry } from '@/helpers/host-registry'
+import { createHostRegistry } from '@/helpers/hostRegistry'
 
 /** The engine, seen from the disk: it hands its pixels over, and takes them back. */
 export type CanvasHost = {

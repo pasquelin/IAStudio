@@ -77,7 +77,7 @@ const FAMILIES: Record<WorkspaceId, ModelFamily> = {
 }
 
 /**
- * Derived from the shared registry rather than relisted, the way `tool-registry.ts` derives
+ * Derived from the shared registry rather than relisted, the way `toolRegistry.ts` derives
  * from `TOOL_PLACEMENTS`: a new workspace is then declared once, and the compiler demands its
  * icon and its family instead of letting the list drift. Its LABEL it does not demand — that
  * one is guarded by `dynamic-keys.i18n.test.ts`.

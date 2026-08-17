@@ -397,7 +397,7 @@ src/renderer/src/
 ├── stores/       zustand: documents, tools, layouts, models, assets, jobs, settings, keymap
 ├── hooks/        shortcuts, native menu, density, window state, debounce…
 ├── helpers/      pure functions, all unit-tested
-├── services/     the bridge accessor and failure-message mapping
+├── services/     the bridge accessor and failure message mapping
 ├── i18n/         the window-side i18next setup
 ├── types/        `window.studio`, declared global — the renderer's only types file
 ├── main.tsx      the entry — everything it reaches statically is in the first screen
@@ -520,7 +520,7 @@ well as zone would land in a different row of the rail depending on where you ca
 
 **Two rules escape the registry**, and only two, because they depend on state or on the workspace,
 where `shared/` holds no runtime dependency. Hence a layer above it, in
-`helpers/tool-registry.ts`, rather than inside:
+`helpers/toolRegistry.ts`, rather than inside:
 
 - the generator is offered only where a model is chosen or preferred;
 - a half nobody has chosen for shows the **first panel the workspace declares there**. It holds
@@ -690,7 +690,7 @@ ceiling, only a cliff — type slower than its delay and every keystroke becomes
 same estimate is never bought twice, and it does not retry.
 
 **`DynamicForm` is lazy-loaded**, and the three functions that call zod live in
-`helpers/dynamic-form-schema`, apart from `helpers/dynamic-form`. The two halves go together:
+`helpers/dynamicFormSchema`, apart from `helpers/dynamicForm`. The two halves go together:
 without the second, `referencePictures` kept zod in the eager graph. zod, `react-hook-form` and
 `@hookform/resolvers` are at **zero** in the initial chunk, which drops from 2,030.50 to
 1,810.88 kB — measured by VLQ-decoding the sourcemaps, and locked by tests that read the source.

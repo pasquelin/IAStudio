@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { LIST_ONLY } from '@/helpers/collection-state'
+import { LIST_ONLY } from '@/helpers/collectionState'
 import { useExplorerView } from '@/stores/explorer-view'
 import { ExplorerActions } from './ExplorerActions'
 

@@ -1,4 +1,4 @@
-import { createMountedHost } from '@/helpers/host-registry'
+import { createMountedHost } from '@/helpers/hostRegistry'
 
 /**
  * Where a settled sentence goes, when it is not going to the caret.

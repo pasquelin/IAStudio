@@ -6,7 +6,7 @@ import {
   DEFAULT_COLLECTION_STATE,
   withoutSearch,
   type CollectionState,
-} from '@/helpers/collection-state'
+} from '@/helpers/collectionState'
 import {
   ASSET_NAME_FAILURES,
   checkAssetName,

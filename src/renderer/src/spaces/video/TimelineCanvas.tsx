@@ -40,11 +40,11 @@ import {
   zoomAt,
   ZOOM_STEP,
 } from '@/engines/timeline/viewport'
-import { assetIdFromDrag, carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/asset-drag'
+import { assetIdFromDrag, carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { cn } from '@/helpers/cn'
-import { showContextMenu } from '@/helpers/context-menu'
-import { cachedImage } from '@/helpers/image-cache'
-import { carriesScene, droppedSceneId } from '@/helpers/scene-drag'
+import { showContextMenu } from '@/helpers/contextMenu'
+import { cachedImage } from '@/helpers/imageCache'
+import { carriesScene, droppedSceneId } from '@/helpers/sceneDrag'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'

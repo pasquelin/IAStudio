@@ -3,18 +3,18 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { settleHome } from '@/home/home-fixtures'
 import { useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
-import { openAsset } from '@/helpers/open-asset'
+import { openAsset } from '@/helpers/openAsset'
 import { Library } from './Library'
 
 // Which editor the asset opens in is `openAsset`'s business, and it makes a document to answer.
 // What this panel answers for is which of the two gestures it calls.
-vi.mock('@/helpers/open-asset', () => ({ openAsset: vi.fn() }))
+vi.mock('@/helpers/openAsset', () => ({ openAsset: vi.fn() }))
 
 /** The local twin of `cloudAsset`, as the collector writes it after a pull. */
 function localAsset(overrides: Partial<Asset> = {}): Asset {

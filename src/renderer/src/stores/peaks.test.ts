@@ -14,7 +14,7 @@ const decodeAsset = vi.hoisted(() =>
   ),
 )
 
-vi.mock('@/helpers/audio-decode', () => ({ decodeAsset }))
+vi.mock('@/helpers/audioDecode', () => ({ decodeAsset }))
 
 /** A three-minute take, as it is written at ingest: 50 pairs a second, two floats a pair. */
 const TAKE_FLOATS = 180 * 50 * 2

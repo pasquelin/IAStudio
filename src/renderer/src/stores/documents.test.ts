@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor, DocumentWrite } from '@shared/domain/document'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { documentForAsset, documentsIn, panelIds, useDocuments } from './documents'
 import { showPanels } from './layout-fixtures'
 import { useLayouts } from './layouts'

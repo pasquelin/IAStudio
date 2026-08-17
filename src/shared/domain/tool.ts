@@ -189,7 +189,7 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // the studio's own documents and nothing else; the folder holds them and everything the user
   // put beside them, which is what an entry point should offer a way into.
   //
-  // Offered only while a project IS open — `tool-registry.ts`, which is where a rule that
+  // Offered only while a project IS open — `toolRegistry.ts`, which is where a rule that
   // depends on state lives: the panel would otherwise stand on the home saying that nothing is
   // open, beside the shelf whose whole purpose is to open one.
   { id: 'explorer', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },

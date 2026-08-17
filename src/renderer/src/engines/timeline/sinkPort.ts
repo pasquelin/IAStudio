@@ -1,6 +1,6 @@
 import { ALL_FORMATS, BlobSource, Input, VideoSampleSink } from 'mediabunny'
 import type { Asset } from '@shared/domain/asset'
-import { fetchAsset } from '@/helpers/asset-fetch'
+import { fetchAsset } from '@/helpers/assetFetch'
 import { createSceneStage, type SceneStage, type SceneStageOptions } from '../scene/sceneStage'
 import type { CameraPlacement } from '../scene/sceneView'
 import type { SceneState } from '../scene/sceneState'
@@ -102,7 +102,7 @@ async function openVideo(blob: Blob): Promise<SinkLike | null> {
 }
 
 /**
- * A second reserve of decoded pictures beside `image-cache`, which holds the very same URL for the
+ * A second reserve of decoded pictures beside `imageCache`, which holds the very same URL for the
  * clip's thumbnail. Not shared: `cachedImage` answers by callback with an `HTMLImageElement`, and
  * the pool wants a promise of an `ImageBitmap`. So a 4K still on a track is decoded twice.
  */

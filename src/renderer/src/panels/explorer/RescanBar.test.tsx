@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { IDLE_RESCAN, type RescanState } from '@shared/domain/project'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { RescanBar } from './RescanBar'
 
 /** The main process's announcements, as a test hands them over one at a time. */

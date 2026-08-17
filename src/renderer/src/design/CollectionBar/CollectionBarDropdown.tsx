@@ -1,6 +1,6 @@
 import { mdiChevronDown } from '@mdi/js'
 import { cn } from '@/helpers/cn'
-import type { FacetOption } from '@/helpers/collection-state'
+import type { FacetOption } from '@/helpers/collectionState'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { CONTROL } from '../styles'
 import { UiIcon } from '../UiIcon'

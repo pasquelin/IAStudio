@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
 import type { FontRef } from '@shared/domain/font'
 import type { FaceRegistrar } from './canvasFonts'
-import { bridgeWatchingLogs } from '@/services/fake-bridge'
+import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { layerFixture } from './canvas-fixtures'
 import {
   adjustmentLayer,
