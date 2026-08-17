@@ -5,14 +5,21 @@
 
 > **Au 2026-08-13, toute la mesure de couverture a été supprimée** : `vitest run --coverage`, les
 > budgets absolus par glob, `scripts/coverage-slack.mjs`, `src/main/coverage-budgets.ts` et ses
-> gardes. `pnpm validate` vaut désormais `typecheck && lint && format:check && test`. La CI et le
-> poste de développement exécutent donc la MÊME chose, ce qui vide de son objet la décision
+> gardes. `pnpm validate` valait alors `typecheck && lint && format:check && test`. La CI et le
+> poste de développement exécutaient donc la MÊME chose, ce qui vidait de son objet la décision
 > ci-dessous : elle n'existait que pour trancher l'écart entre les deux. Le texte reste tel qu'il
 > a été écrit, comme tout contenu d'ADR.
 >
 > Raison : le coût de la couverture était payé à chaque tour de boucle et son bénéfice — faire
 > baisser la dette — ne compensait pas le temps qu'elle prenait sur les fonctionnalités. Décision
 > du propriétaire du dépôt, pas un arbitrage technique.
+>
+> **Au 2026-08-17, l'écart est ROUVERT.** `pnpm validate` a reçu un cinquième maillon,
+> `pnpm unused:main` (knip), tandis que `.github/workflows/ci.yml` continue d'énumérer les quatre
+> premiers un par un sans jamais appeler `validate`. **Un export mort dans `src/main` laisse donc
+> une pull request VERTE**, et seul un `validate` lancé à la main la rougit. Le refermer — faire
+> appeler `validate` par la CI — est décidé et fait l'objet du lot suivant ; ce paragraphe se
+> corrige avec lui.
 
 ## Contexte
 
