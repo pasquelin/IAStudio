@@ -393,7 +393,8 @@ first one carries on quietly.
 The line turns to **Done**, and the asset appears:
 
 - in the **Assets** panel — the project's shelf;
-- on your disk, in `assets/img/`, `assets/vid/`, `assets/aud/`… depending on its type.
+- on your disk, in `Images/`, `Video/`, `Audio/`… depending on its type, until you file it
+  elsewhere.
 
 **What you can then do with it depends on its type**, and this is where the studio surprises
 people most often:

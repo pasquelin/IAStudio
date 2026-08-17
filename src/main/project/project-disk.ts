@@ -1,4 +1,7 @@
+import { stat } from 'node:fs/promises'
+import { join } from 'node:path'
 import { hashSource } from '@main/media/runner'
+import { isMissing } from '@main/persistence'
 import { createFolderReader } from './folder'
 import type { RescanDisk } from './catalog-rescan'
 
@@ -26,8 +29,17 @@ export function openProjectDisk(root: string): RescanDisk {
   return {
     list: async () => (await reader.walk()).map(entry => entry.path),
 
+    // The disk itself, not the walk — see `RescanDisk.exists`. A path that cannot be reached at
+    // all answers "there", which is the safe way round: the pass then dates nothing, where the
+    // other way it would date everything on a volume that blinked.
+    exists: async path =>
+      await stat(join(root, path)).then(
+        () => true,
+        error => !isMissing(error),
+      ),
+
     // `null` rather than a throw: a file that will not read — permissions, a volume that went
     // away mid-pass — must cost the row it might have matched, never the whole pass.
-    hash: async path => await hashSource(`${root}/${path}`).catch(() => null),
+    hash: async path => await hashSource(join(root, path)).catch(() => null),
   }
 }

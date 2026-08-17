@@ -88,7 +88,7 @@ export type CatalogServerPort = {
  * everything else in this file is: what is worth testing is the routing, and a `node:fs` bound
  * into it would make that need a folder.
  */
-export type CatalogDiskOpener = (root: string) => RescanDisk
+type CatalogDiskOpener = (root: string) => RescanDisk
 
 /**
  * A catalogue answering on a port. Here rather than in the worker entry point for the reason

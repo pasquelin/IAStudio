@@ -29,14 +29,19 @@ right column, the one holding the panels that serve the open document.
 
 Six asset types:
 
-| Type | What it is | Where it is filed |
+| Type | What it is | Where it lands |
 |---|---|---|
-| **Image** | a still image | `assets/img/` |
-| **Video** | a moving shot | `assets/vid/` |
-| **Audio** | a sound, a piece of music | `assets/aud/` |
-| **Mesh** | a 3D object | `assets/3d/` |
-| **Texture** | a material | `assets/tex/` |
-| **Skybox** | a 360° sky | `assets/sky/` |
+| **Image** | a still image | `Images/` |
+| **Video** | a moving shot | `Video/` |
+| **Audio** | a sound, a piece of music | `Audio/` |
+| **Mesh** | a 3D object | `3D/` |
+| **Texture** | a material | `Textures/` |
+| **Skybox** | a 360° sky | `Sky/` |
+
+**Where it lands, not where it lives.** These six folders are laid down when the project is
+created and are only a starting point: move an asset wherever you like, rename the folder, empty
+it. What a file IS does not depend on where it sits — the studio finds it again, and its entry
+follows.
 
 ---
 

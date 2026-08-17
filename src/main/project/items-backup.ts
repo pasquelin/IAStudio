@@ -10,7 +10,7 @@ import type { RescanReport } from './catalog-rescan'
  */
 export const ITEMS_BACKUP = '.scenario/items.json'
 
-export const ITEMS_BACKUP_VERSION = 1
+const ITEMS_BACKUP_VERSION = 1
 
 /**
  * What a project's files were, keyed by what their bytes fingerprint to.

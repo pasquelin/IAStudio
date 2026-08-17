@@ -650,6 +650,22 @@ export function createServices(settings: SettingsStore): Services {
     catalogOf: () => (project.current() ? project.catalog() : null),
     announce: state => broadcast(EVENTS.projectRescan, state),
     report: found => {
+      /**
+       * The windows are told, and this is what makes the pass VISIBLE rather than merely true.
+       *
+       * Every panel that lists assets reads the catalogue once and then waits to be told —
+       * `assets.onChanged` is the shelf's only trigger, and the explorer re-reads its folders on
+       * `onFolderChanged`. Without these two lines the pass would refile twelve rows, write its
+       * line to the journal, and leave the shelf drawing the answer from before it: thumbnails
+       * that open nothing, and assets missing from a library that holds them.
+       *
+       * Only when something actually changed, which is what keeps a pass on every focus quiet.
+       */
+      if (found.moved + found.missing + found.returned > 0) {
+        broadcast(EVENTS.assetsChanged)
+        broadcast(EVENTS.projectFolderChanged)
+      }
+
       // Only what CHANGED, and that is what makes running this on every focus quiet: a pass over
       // a project nothing moved in writes nothing at all.
       if (found.moved > 0) {
@@ -807,6 +823,7 @@ export function createServices(settings: SettingsStore): Services {
     // The listing walks the project through the same reader the explorer does — one walk with
     // one depth bound, rather than a second one free to disagree about how deep a project goes.
     walkFiles: () => folder.walk(),
+    folderNames: relative => folder.names(relative),
   })
 
   const files = createFileOps({

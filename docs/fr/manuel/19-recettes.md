@@ -55,7 +55,7 @@ Retenez ces trois lignes et vous ne serez bloqué nulle part.
 3. cliquez l’icône **Génération** du rail gauche — choisir un modèle n’ouvre pas le panneau à
    votre place — puis écrivez votre phrase dans le **prompt** ;
 4. **Générer**. La ligne d’état, en bas à droite, suit l’avancement ;
-5. le résultat arrive dans le panneau **Assets**, et dans `assets/img/` sur votre disque.
+5. le résultat arrive dans le panneau **Assets**, et dans `Images/` sur votre disque.
 
 **Le piège.** Sans projet ouvert, il n’y a **ni formulaire ni bouton** : le panneau affiche à la
 place « Ouvrez un projet pour générer. » Ce n’est pas un bouton grisé, c’est le panneau entier qui

@@ -158,6 +158,7 @@ describe('a catalogue served on a port', () => {
   /** A folder holding nothing: these cases are about routing, and a rescan of it changes nothing. */
   const emptyDisk = (): RescanDisk => ({
     list: () => Promise.resolve([]),
+    exists: () => Promise.resolve(false),
     hash: () => Promise.resolve(null),
   })
 

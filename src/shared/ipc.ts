@@ -905,8 +905,9 @@ export type StudioBridge = {
      * The id does not change, and that is the point: the layout, the recent list and the open
      * tab all hold it, so a document may be renamed while it is open.
      *
-     * Answers with the descriptor as it now stands, `fileName` included, so no window has to
-     * work out where the document went. Rejects when the folder already holds that name —
+     * Answers with the descriptor as it now stands, `path` included, so no window has to work
+     * out where the document went — and it stays in the folder it was in, a rename being a name
+     * and not a move. Rejects when THAT folder already holds the name —
      * `checkDocumentName` says the same thing before the gesture, this is what makes it true.
      */
     rename: (id: string, kind: DocumentKind, title: string) => Promise<DocumentDescriptor>

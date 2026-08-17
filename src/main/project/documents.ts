@@ -9,7 +9,9 @@ import {
   ENVELOPE_LIMIT,
   FOLDER_KINDS,
   isPartName,
+  isStagingName,
   kindForExtension,
+  STAGING_SUFFIX,
   workspaceForKind,
   type DocumentDescriptor,
   type DocumentDraft,
@@ -67,14 +69,6 @@ export type DocumentFiles = {
  */
 const DUPLICATE_NAME = 'duplicate-name'
 
-const STAGING_SUFFIX = '.tmp'
-
-/**
- * A staging copy of ours, and only ours: `<file>.<uuid>.tmp`. The project folder is the user's
- * own, and a `render.tmp` they left in there is not something to delete on their behalf.
- */
-const STAGING_PATTERN = /\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/i
-
 /**
  * The staging copies in a folder that nobody is writing any more — the remains of a process
  * that died between the write and the rename, which the `catch` of a failed write never sees.
@@ -87,8 +81,8 @@ const STAGING_PATTERN = /\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a
  * Pure, and separate from the sweep itself: `readdir` and `rm` are as testable as any other
  * disk call, which is to say not, and the rule is the part worth being sure of.
  */
-export function isStagingCopy(path: string, inFlight: ReadonlySet<string>): boolean {
-  return STAGING_PATTERN.test(path) && !inFlight.has(basename(path))
+function isStagingCopy(path: string, inFlight: ReadonlySet<string>): boolean {
+  return isStagingName(path) && !inFlight.has(basename(path))
 }
 
 export function orphanStagingCopies(
@@ -111,6 +105,14 @@ export type DocumentFilesDeps = {
    * entries is a document, which is the only part it knows about.
    */
   walkFiles: () => Promise<readonly FolderEntry[]>
+  /**
+   * Every name one folder holds, hidden ones included — `FolderReader.names`.
+   *
+   * The walk above cannot answer for a staging copy of a folder document: it is a directory with
+   * no document extension, so the walk neither shows it nor descends into it. This reads the
+   * folders documents were actually found in, which is the only place a staging copy can be.
+   */
+  folderNames: (relative: string) => Promise<readonly string[] | null>
 }
 
 /**
@@ -208,6 +210,7 @@ export function createDocumentFiles({
   projectPath,
   now,
   walkFiles,
+  folderNames,
 }: DocumentFilesDeps): DocumentFiles {
   /**
    * In-flight work per DOCUMENT, so writing, renaming and removing one cannot interleave.
@@ -503,7 +506,27 @@ export function createDocumentFiles({
       else if (isStagingCopy(path, staging)) orphans.push(path)
     }
 
-    await sweep(orphans)
+    /**
+     * A folder document stages a FOLDER — `Planche.img.<uuid>.tmp` — and the walk answers files
+     * and documents, so it never shows one. Its own folder is read for it: the folders documents
+     * were found in, which is where the writer puts them and the only place one can be.
+     *
+     * Read once the candidates are known, so it costs one `readdir` per folder actually holding
+     * a document — one or two in an ordinary project — rather than a second walk.
+     */
+    const folders = new Set(candidates.map(path => parentOf(path) ?? ''))
+    folders.add(DOCUMENTS_FOLDER)
+
+    const staged = await Promise.all(
+      [...folders].map(async folder => {
+        const names = (await folderNames(folder)) ?? []
+        return names
+          .map(name => (folder === '' ? name : `${folder}/${name}`))
+          .filter(path => isStagingCopy(path, staging))
+      }),
+    )
+
+    await sweep([...orphans, ...staged.flat()])
 
     index.clear()
 

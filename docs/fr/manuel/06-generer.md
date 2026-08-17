@@ -413,7 +413,8 @@ un modèle, et la première continue tranquillement.
 La ligne passe à **Terminée**, et l’asset apparaît :
 
 - dans le panneau **Assets** — l’étagère du projet ;
-- sur votre disque, dans `assets/img/`, `assets/vid/`, `assets/aud/`… selon son type.
+- sur votre disque, dans `Images/`, `Video/`, `Audio/`… selon son type, tant que vous ne l’avez pas
+  rangé ailleurs.
 
 **Ce que vous pouvez en faire ensuite dépend de son type**, et c’est là que le studio surprend le
 plus souvent :

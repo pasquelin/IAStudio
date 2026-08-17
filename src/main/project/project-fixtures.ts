@@ -18,14 +18,16 @@ import { createProjectStore, type ProjectStore } from './store'
  * only settles how names are ordered, and this reader's own order is taken by code unit.
  */
 export function documentFilesAt(root: string, now: string): DocumentFiles {
+  const reader = createFolderReader(
+    () => root,
+    () => 'en',
+  )
+
   return createDocumentFiles({
     projectPath: () => root,
     now: () => now,
-    walkFiles: () =>
-      createFolderReader(
-        () => root,
-        () => 'en',
-      ).walk(),
+    walkFiles: () => reader.walk(),
+    folderNames: relative => reader.names(relative),
   })
 }
 

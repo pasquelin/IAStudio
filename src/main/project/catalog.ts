@@ -456,6 +456,13 @@ function activityOf(row: SqlRow): ActivityEntry {
  * this shape exists to avoid.
  */
 export type FiledAsset = {
+  /**
+   * What the pass writes back by. NOT the path: the pass reads every row, then gives the thread
+   * back while it fingerprints, and the queue goes on serving `repath` and `add` in between — a
+   * write aimed at a path would land on whichever row occupies it by then, which is how a row
+   * whose file is perfectly present gets dated in place of the one that went.
+   */
+  id: string
   path: string
   hash: string | null
   missingAt: string | null
@@ -533,14 +540,13 @@ export type Catalog = {
    */
   filed: () => FiledAsset[]
   /**
-   * Dates the row filed at `path` as gone, or clears the date when the file is back.
+   * Dates a row as gone, or clears the date when its file is back. BY ID — see `FiledAsset.id`.
    *
    * The row itself is never dropped: it carries the prompt, the seed and the lineage, and none
    * of that is on the disk. A file the user moved outside the studio comes back to its row by
-   * fingerprint; one they deleted stays dated, and a `forgetUnder` is what lets it go — the
-   * deliberate gesture, told apart from an absence nobody asked for.
+   * fingerprint; one they deleted stays dated.
    */
-  markMissing: (path: string, at: string | null) => void
+  markMissing: (assetId: string, at: string | null) => void
   /**
    * Every row that has a file AND a fingerprint, as the backup keeps them.
    *
@@ -625,10 +631,10 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   // Every filed row, and only what the rescan reads of one. `SELECT *` would carry the prompt and
   // the generation parameters of a hundred thousand assets across a thread for nothing.
   const selectFiled = driver.prepare(
-    "SELECT path, hash, missing_at FROM assets WHERE path IS NOT NULL AND path <> ''",
+    "SELECT id, path, hash, missing_at FROM assets WHERE path IS NOT NULL AND path <> ''",
   )
 
-  const setMissingAt = driver.prepare('UPDATE assets SET missing_at = ? WHERE path = ?')
+  const setMissingAt = driver.prepare('UPDATE assets SET missing_at = ? WHERE id = ?')
 
   const selectBackup = driver.prepare(`
     SELECT id, name, type, path, created_at, hash, prompt, model_id, seed
@@ -647,8 +653,11 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   )
   // Same order, same reason: the row that has been there longest is the one carrying the tags
   // and the proxy, and it is the one a second import of the same file must land on.
+  // `missing_at IS NULL`, because this is what an import asks to know whether the project already
+  // holds these bytes. A row whose file is gone does not: answering it would call the import a
+  // duplicate of something that is not there, and the copy just written would be discarded.
   const selectByHash = driver.prepare(
-    'SELECT * FROM assets WHERE hash = ? ORDER BY created_at, id LIMIT 1',
+    'SELECT * FROM assets WHERE hash = ? AND missing_at IS NULL ORDER BY created_at, id LIMIT 1',
   )
   const insertActivity = driver.prepare(`
     INSERT INTO activity (at, level, topic, message_key, params, detail, asset_id)
@@ -802,15 +811,15 @@ export function createCatalog(driver: SqliteDriver): Catalog {
 
     filed: () =>
       selectFiled.all().map(row => ({
+        id: text(row, 'id'),
         path: text(row, 'path'),
         hash: optionalText(row, 'hash') ?? null,
         missingAt: optionalText(row, 'missing_at') ?? null,
       })),
 
-    markMissing: (path, at) => {
-      const filed = withoutTrailingSlash(path)
-      if (!filed) return
-      setMissingAt.run(at, filed)
+    markMissing: (assetId, at) => {
+      if (!assetId) return
+      setMissingAt.run(at, assetId)
     },
 
     backup: () => {

@@ -8,6 +8,15 @@ export type RescanDisk = {
   /** Every file the project holds, relative to its root — the explorer's own walk. */
   list: () => Promise<readonly string[]>
   /**
+   * Whether anything is at `path` — asked of the disk, not of the walk.
+   *
+   * The walk is a READER's view and turns three families away: what sits under a dot, what is
+   * deeper than its bound, and what a document written as a folder holds. A row filed at one of
+   * those is not gone — it is out of sight — and dating it would take the asset out of the
+   * library for good while its file sat there. This is the question the walk cannot answer.
+   */
+  exists: (path: string) => Promise<boolean>
+  /**
    * What identifies the bytes at `path`, or `null` when it cannot be read.
    *
    * The same fingerprint an import records (`hashSource`): head, middle and tail plus the size,
@@ -21,7 +30,8 @@ export type RescanDisk = {
 export type RescanCatalog = {
   filed: () => FiledAsset[]
   repath: (from: string, to: string) => void
-  markMissing: (path: string, at: string | null) => void
+  /** By ID, never by path — see `FiledAsset.id` for the race that settles. */
+  markMissing: (assetId: string, at: string | null) => void
 }
 
 export type RescanOptions = {
@@ -77,7 +87,12 @@ const BATCH = 128
  * pass must not have. A later pass picks it up if the doubt lifts.
  *
  * **Nothing is fingerprinted when nothing is lost.** The ordinary pass is one walk and one
- * SELECT; the reads only start once a row's file is missing from the walk.
+ * SELECT; the reads only start once a row's file has gone THIS pass. A row already dated does not
+ * bring them back — otherwise one file deleted for good would re-read every uncatalogued file of
+ * the project on every return to the window, for ever.
+ *
+ * **What the walk does not show is not gone.** The walk is a reader's view; the disk is asked
+ * directly about every row it did not show, and only what the disk says is absent is dated.
  */
 export async function rescanProject(
   catalog: RescanCatalog,
@@ -87,28 +102,51 @@ export async function rescanProject(
   const onDisk = new Set(await disk.list())
   const rows = catalog.filed()
 
-  const lost: FiledAsset[] = []
+  /** Rows the walk did not show, which is not the same as rows whose file has gone. */
+  const unseen = rows.filter(row => !onDisk.has(row.path))
+
+  /**
+   * The disk's own answer, for those rows only.
+   *
+   * The walk turns three families away — under a dot, past its depth bound, inside a document
+   * written as a folder — and a volume that went away mid-pass answers an empty walk for
+   * everything. Dating on the walk alone takes an asset out of the library for good while its
+   * file sits there, and a project on a network share that blinked would empty itself.
+   *
+   * Bounded by construction: one `stat` per row the walk did not show, and the ordinary pass
+   * shows every one of them.
+   */
+  const present = await Promise.all(unseen.map(row => disk.exists(row.path)))
+  const lost = unseen.filter((_row, index) => present[index] === false)
+
   let returned = 0
+  const seen = new Set(lost)
 
   for (const row of rows) {
-    if (!onDisk.has(row.path)) {
-      lost.push(row)
-      continue
-    }
-
-    // Where the catalogue said, after all — the file came back on its own, or the user put it
-    // back. Nothing to move, only a date to drop.
-    if (row.missingAt !== null) {
-      catalog.markMissing(row.path, null)
+    // Where the catalogue said, after all — the file came back on its own, the user put it back,
+    // or the walk simply could not show it. Nothing to move, only a date to drop.
+    if (!seen.has(row) && row.missingAt !== null) {
+      catalog.markMissing(row.id, null)
       returned += 1
     }
   }
 
-  // The fingerprints worth looking for, and nothing else. A row imported before fingerprints
-  // were recorded cannot be matched by one — reading files on its behalf would be reading them
-  // for an answer that could never come, and one such row in a project holding a checkout is
-  // ten thousand files hashed for nothing.
-  const wanted = new Set(lost.flatMap(row => (row.hash ? [row.hash] : [])))
+  /**
+   * The fingerprints worth looking for: the rows that went missing THIS pass.
+   *
+   * A row already dated is not among them, and that is two things at once. It is what keeps a
+   * single file deleted for good from re-hashing every uncatalogued file of the project on every
+   * return to the window, for ever. And it is what makes the trash stick: `forgetUnder` dates the
+   * rows of a folder the user threw away, and a fingerprint search would hand one of them back on
+   * the first identical file it found elsewhere — undoing a deliberate gesture with an automatic
+   * pass. A dated row comes back the one way that cannot be mistaken: its file, at its path.
+   *
+   * A row imported before fingerprints were recorded is not among them either — reading files on
+   * its behalf would be reading them for an answer that could never come.
+   */
+  const wanted = new Set(
+    lost.flatMap(row => (row.missingAt === null && row.hash ? [row.hash] : [])),
+  )
 
   const byHash = wanted.size === 0 ? new Map<string, string | null>() : await fingerprints()
 
@@ -155,12 +193,12 @@ export async function rescanProject(
   const taken = new Set<string>()
 
   for (const row of lost) {
-    const found = row.hash ? byHash.get(row.hash) : null
+    // Only a row that went missing THIS pass looks for its file by fingerprint — see `wanted`.
+    const found = row.missingAt === null && row.hash ? byHash.get(row.hash) : null
 
     if (found && !taken.has(found)) {
       taken.add(found)
       catalog.repath(row.path, found)
-      if (row.missingAt !== null) catalog.markMissing(found, null)
       moved += 1
       continue
     }
@@ -169,7 +207,7 @@ export async function rescanProject(
     // focus write a line to the journal every time.
     if (row.missingAt !== null) continue
 
-    catalog.markMissing(row.path, at)
+    catalog.markMissing(row.id, at)
     missing += 1
   }
 

@@ -2,7 +2,7 @@ import { watch, type FSWatcher } from 'node:fs'
 import { cp, mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import { exists } from '@main/persistence'
-import { kindForExtension } from '@shared/domain/document'
+import { isStagingName, kindForExtension } from '@shared/domain/document'
 import { extensionOf } from '@shared/domain/file-name'
 import { entriesByName, isHiddenEntry, type FolderEntry } from '@shared/domain/folder'
 import { foldForSearch } from '@shared/text'
@@ -117,8 +117,11 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
         if (keep(entry)) found.push(entry)
         if (entry.kind !== 'folder' || depth >= MAX_SEARCH_DEPTH) continue
         // An image document IS a folder, and what it holds is the studio's own writing — a walk
-        // that went into it would offer the parts instead of the document.
-        if (kindForExtension(extensionOf(entry.name))) continue
+        // that went into it would offer the parts instead of the document. The same holds for the
+        // copy of one being staged, `Planche.img.<uuid>.tmp`: a save interrupted leaves that
+        // folder behind, and walking into it would offer a manifest and a pile of layers as
+        // though they were the user's own files, in the domain view and to the rescan alike.
+        if (kindForExtension(extensionOf(entry.name)) || isStagingName(entry.name)) continue
         deeper.push(walk(entry.path, depth + 1))
       }
 

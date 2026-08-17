@@ -659,6 +659,27 @@ describe('createDocumentFiles', () => {
       await documents.list()
       expect(await readdir(join(root, 'documents'))).toEqual(['Level.scene'])
     })
+
+    /**
+     * A folder document stages a FOLDER, and the walk that feeds the listing answers files and
+     * documents — it never shows one, and would have descended into it and offered its manifest
+     * and its layers as though they were the user's own files. Its own folder is read for it.
+     */
+    it('sweeps a staging copy that is a folder, and never offers what it holds', async () => {
+      await documents.write('doc-1', 'image', {
+        title: 'Planche',
+        content: '{"layers":[]}',
+        parts: [],
+      })
+      const staged = join(root, 'documents', 'Planche.img.3f2a1c88-9d4e-4b7a-8c15-2e6f0a7b9d31.tmp')
+      await mkdir(staged, { recursive: true })
+      await writeFile(join(staged, 'document.json'), '{}', 'utf8')
+
+      const listed = await documents.list()
+
+      expect(listed.map(entry => entry.id)).toEqual(['doc-1'])
+      expect(await readdir(join(root, 'documents'))).toEqual(['Planche.img'])
+    })
   })
 
   /**
