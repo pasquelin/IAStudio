@@ -42,6 +42,12 @@ export type CollectionBarProps = {
    * field needs in a side column.
    */
   display?: boolean
+  /**
+   * What the collection is bounded to, drawn under the search — a breadcrumb, for a panel that
+   * browses INTO its items. Beside the search and not the view buttons because it NARROWS the
+   * collection, which is the half of the bar a facet belongs to. A slot: the bar knows no paths.
+   */
+  scope?: ReactNode
   className?: string
 }
 
@@ -53,6 +59,7 @@ export function CollectionBar({
   sorts,
   layout = 'stacked',
   display = true,
+  scope,
   className,
 }: CollectionBarProps) {
   const { t } = useTranslation()
@@ -169,6 +176,7 @@ export function CollectionBar({
         )}
       >
         {search}
+        {scope}
         {menus}
         <div className="ml-auto flex items-center gap-2">
           {sortMenu}
@@ -186,6 +194,7 @@ export function CollectionBar({
   return (
     <div className={cn('border-border flex flex-col gap-2 border-b p-2', className)}>
       {search}
+      {scope}
 
       {/* Two to a row: a tool window is too narrow for a single line of dropdowns, and
           wrapping them freely reflows the whole bar as soon as a label changes length. */}

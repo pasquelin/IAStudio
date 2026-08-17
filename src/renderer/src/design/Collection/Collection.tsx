@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
+import { rowDrag } from '../rowDrag'
 import type { RowTone } from '../styles'
 import { CollectionCell } from './CollectionCell'
 import {
@@ -17,6 +18,17 @@ import {
 
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
 const ROW_GAP = 4
+
+/**
+ * Whether a gesture landed on the blank rather than on a card — anything that is not IN one.
+ *
+ * `Tree` asks `target === currentTarget` instead, and may: its rows span the width, so there is no
+ * in-between. A grid has three — the gutters, the empty columns of a short last row, and the box
+ * the virtualizer sizes to its content — and each of them is a place a user right-clicks.
+ */
+function onBlank(event: { target: EventTarget | null }): boolean {
+  return event.target instanceof Element && event.target.closest('[data-cell]') === null
+}
 
 export type CollectionProps<T extends { id: string }> = {
   items: readonly T[]
@@ -100,6 +112,18 @@ export type CollectionProps<T extends { id: string }> = {
    * that picks, which is all of them but the projects.
    */
   selectionTone?: RowTone
+  /**
+   * A batch released on the blank BESIDE the cards — the place the collection is showing, there
+   * being no card standing for it to aim at. `Tree` offers the same three on its own blank.
+   */
+  onDropRoot?: (ids: readonly string[]) => void
+  /** A right-click on that blank. Raised after `onPressRoot`, never instead of it. */
+  onContextMenuRoot?: () => void
+  /**
+   * A press on that blank, read as picking nothing. A prop of its own where `Tree` clears the
+   * selection itself: `onSelect` here is told which ITEM was picked, so it cannot say "none".
+   */
+  onPressRoot?: () => void
 }
 
 type CollectionRoles = { list?: 'listbox' | 'list'; cell?: 'option' | 'listitem' }
@@ -184,6 +208,9 @@ export function Collection<T extends { id: string }>({
   footer,
   rowHeight = 'control',
   selectionTone = 'soft',
+  onDropRoot,
+  onContextMenuRoot,
+  onPressRoot,
 }: CollectionProps<T>) {
   const scroller = useRef<HTMLDivElement>(null)
   // Kept as the narrowed function rather than a boolean, so the cell below needs no second guard.
@@ -280,7 +307,31 @@ export function Collection<T extends { id: string }>({
     // A list is inset like the tree is, so the same row sits at the same distance from the panel
     // edge in both — `Tree` carries the same step, and moving one without the other is what makes
     // two lists of the same studio sit at two distances from the same edge.
-    <div ref={scroller} className="h-full overflow-auto p-2">
+    <div
+      ref={scroller}
+      className="h-full overflow-auto p-2"
+      // The secondary button belongs to `onContextMenu`: on macOS it arrives as Ctrl+click.
+      onPointerDown={event => {
+        if (event.button !== 2 && onBlank(event)) onPressRoot?.()
+      }}
+      onContextMenu={event => {
+        if (!onContextMenuRoot || !onBlank(event)) return
+        event.preventDefault()
+        onPressRoot?.()
+        onContextMenuRoot()
+      }}
+      onDragOver={event => {
+        if (!onDropRoot || !onBlank(event) || !rowDrag.carries(event)) return
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+      }}
+      onDrop={event => {
+        if (!onDropRoot || !onBlank(event)) return
+        event.preventDefault()
+        const carried = rowDrag.idsFrom(event)
+        if (carried.length > 0) onDropRoot(carried)
+      }}
+    >
       {items.length === 0 ? (
         empty
       ) : (

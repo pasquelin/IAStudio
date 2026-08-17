@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Collection, type CollectionProps } from './Collection'
@@ -611,5 +611,41 @@ describe('Collection, the height it estimates', () => {
     })
 
     expect(screen.getByRole('listbox')).toHaveStyle({ height: '84px' })
+  })
+})
+
+/**
+ * Found at the screen, on a real folder: a grid has blank the tree has not — the gutters, the empty
+ * columns of a short last row, and the box the virtualizer sizes to its content. Asking
+ * `target === currentTarget`, as the tree does, answered for none of them, and the one gesture that
+ * makes a folder where the user is looking did nothing wherever it was likeliest to be tried.
+ */
+describe('Collection, the blank a grid has and a list has not', () => {
+  it('raises the root menu from the row geometry beside a card', () => {
+    const onContextMenuRoot = vi.fn()
+    renderCollection(rows(3), { view: 'grid' }, { onSelect: vi.fn(), onContextMenuRoot })
+
+    // The row, not the scroller: it spans the width, so it IS what lies beside a card.
+    fireEvent.contextMenu(screen.getByText('Row 0').closest('[role="option"]')!.parentElement!)
+
+    expect(onContextMenuRoot).toHaveBeenCalled()
+  })
+
+  it('raises it from the box the virtualizer sizes, which lies under every row', () => {
+    const onContextMenuRoot = vi.fn()
+    renderCollection(rows(3), { view: 'grid' }, { onSelect: vi.fn(), onContextMenuRoot })
+
+    fireEvent.contextMenu(screen.getByRole('listbox'))
+
+    expect(onContextMenuRoot).toHaveBeenCalled()
+  })
+
+  it('leaves a card alone, which is the whole point of asking', () => {
+    const onContextMenuRoot = vi.fn()
+    renderCollection(rows(3), { view: 'grid' }, { onSelect: vi.fn(), onContextMenuRoot })
+
+    fireEvent.contextMenu(screen.getByText('Row 0'))
+
+    expect(onContextMenuRoot).not.toHaveBeenCalled()
   })
 })

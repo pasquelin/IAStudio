@@ -95,6 +95,11 @@
     "rescanCount": "{{done, number}} of {{total, number}}",
     "rescanStop": "Stop",
     "rescanStopHint": "Calls off the search. Whatever was found already stays found",
+    "emptyFolder": "This folder holds nothing.",
+    "crumbs": "Folder shown",
+    "projectFolder": "Project",
+    "crumbHint": "Goes back up to this folder",
+    "enterFolder": "Open this folder in the grid",
     "sort": {
       "name": "Name: A to Z",
       "nameDesc": "Name: Z to A"

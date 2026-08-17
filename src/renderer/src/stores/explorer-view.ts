@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
   COLLECTION_PERSIST_VERSION,
-  LIST_ONLY,
+  DEFAULT_COLLECTION_STATE,
   withoutSearch,
   type CollectionState,
 } from '@/helpers/collection-state'
@@ -17,7 +17,11 @@ import {
 export type ExplorerMode = 'folder' | 'domain'
 
 export type ExplorerViewState = {
-  /** What the bar in the panel's title row holds: the term being searched, and the sort. */
+  /**
+   * What the bar holds — and `view` says which rendering draws: `list` IS the tree, `grid` the
+   * tiles. A second axis and not a third value of `mode`, so the two multiply and a domain has its
+   * grid. Whoever adds a rendering adds it HERE: two places answering "which view" is the defect.
+   */
   collection: CollectionState
   /** Whether the studio's own bookkeeping is drawn — `.index/`, `.project.json`. */
   hidden: boolean
@@ -30,18 +34,13 @@ export type ExplorerViewState = {
 /**
  * What the Explorer is showing, as opposed to what the project folder holds.
  *
- * A store rather than state inside the panel, and for one reason: the bar that carries the
- * search rides in the TITLE row — `ExplorerActions` — which is a different component from the
- * tree it narrows. The shelf carries its own for the same reason.
- *
- * `LIST_ONLY` as the ground state: a tree has neither thumbnails nor a grid, so the two halves
- * of `CollectionState` that describe one stay where a `CollectionState` puts them and are never
- * read here.
+ * A store because `ExplorerActions` draws the title row, a different component from the tree its
+ * answers narrow. The ground state is written out and not `LIST_ONLY`, which means "no grid at all".
  */
 export const useExplorerView = create<ExplorerViewState>()(
   persist(
     set => ({
-      collection: LIST_ONLY,
+      collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' },
       hidden: false,
       mode: 'folder',
 
