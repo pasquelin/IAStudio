@@ -226,7 +226,7 @@ export function AssistantOverlay() {
           <form
             className={cn(
               'border-border bg-surface flex shrink-0 flex-col gap-2',
-              'rounded-sc-lg border p-2',
+              'rounded-(--radius-sc-lg) border p-2',
             )}
             onSubmit={event => {
               event.preventDefault()
