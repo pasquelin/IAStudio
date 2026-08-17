@@ -7,7 +7,7 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { textureOf, useTextures } from '@/stores/textures'
-import { openModelMaterial, type ChannelTexture } from './open-model-material'
+import { openModelMaterial, type ChannelTexture } from './openModelMaterial'
 
 const PROJECT: Project = {
   path: '/projects/demo',

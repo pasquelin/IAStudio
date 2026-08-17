@@ -6,7 +6,7 @@ import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { installTexture } from '@/stores/texture-fixtures'
 import { seamOf, useTextureViews } from '@/stores/textureViews'
 import { useTextures } from '@/stores/textures'
-import { measureTextureSeam } from './measure-seam'
+import { measureTextureSeam } from './measureSeam'
 
 const fill = () =>
   useTextures

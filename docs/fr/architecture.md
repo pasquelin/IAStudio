@@ -489,7 +489,7 @@ pour que cette mémoïsation morde.
 `sequence.mirror` ouvre une seconde fenêtre qui miroite le moniteur Programme, pour un second
 écran. **Le pont IPC n’y porte qu’une chose : l’ouverture de la fenêtre** (`main/window/mirror.ts`).
 Tout le reste — l’édition, le point de lecture, la lecture — voyage par un `BroadcastChannel`
-(`spaces/video/mirror-channel.ts`).
+(`spaces/video/mirrorChannel.ts`).
 
 **Ce n’est pas un contournement de l’invariant 2**, qui garde la frontière entre PROCESSUS. Les
 deux fenêtres chargent le même bundle de rendu : elles partagent déjà `SequenceState` comme type,
@@ -1227,7 +1227,7 @@ IPC, et les panneaux via Testing Library.
 | Un espace de travail | `WORKSPACE_IDS`, puis son icône et sa famille dans `helpers/workspaces.ts` — le compilateur réclame les deux |
 | Un canal IPC | `shared/ipc.ts` d’abord, le handler ensuite ; la signature en est dérivée, donc partez du contrat |
 | Un type de maillage ou de lumière | `mesh-primitives.ts` / `light-types.ts` — la barre d’outils, les panneaux et le menu natif lisent ces tables |
-| Un outil image | `spaces/image/image-tools.ts`, dans le bon groupe |
+| Un outil image | `spaces/image/imageTools.ts`, dans le bon groupe |
 | Une forme visuelle partagée | `design/`, un composant par fichier, avec son test |
 
 Deux règles qui font gagner le plus de temps : vérifier qu’un helper n’existe pas déjà avant d’en

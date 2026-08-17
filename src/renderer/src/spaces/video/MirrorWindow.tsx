@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timelineState'
-import { mirrorMessageOf, openMirrorChannel } from './mirror-channel'
-import { montageSink } from './montage-sink'
-import { silentSound } from './silent-sound'
+import { mirrorMessageOf, openMirrorChannel } from './mirrorChannel'
+import { montageSink } from './montageSink'
+import { silentSound } from './silentSound'
 
 /**
  * The video return: the program monitor, alone in a window of its own, for a second screen.

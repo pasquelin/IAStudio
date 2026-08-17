@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { layerNow } from '@/stores/canvas-fixtures'
 import { canvasHistoryOf, useCanvases } from '@/stores/canvases'
-import { layerPort } from './layer-port'
+import { layerPort } from './layerPort'
 
 const DOCUMENT = 'doc-1'
 

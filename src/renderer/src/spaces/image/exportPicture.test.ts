@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
-import { exportPicture } from './export-picture'
+import { exportPicture } from './exportPicture'
 
 const DOCUMENT = 'doc-1'
 

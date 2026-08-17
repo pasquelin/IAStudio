@@ -26,7 +26,7 @@ import { useBinding } from '@/stores/bindings'
 import { playbackOf, usePlayback } from '@/stores/playback'
 import { useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
-import { montageSink } from './montage-sink'
+import { montageSink } from './montageSink'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2

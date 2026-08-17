@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canvasHost, holdCanvas, type CanvasHost } from './canvas-hosts'
+import { canvasHost, holdCanvas, type CanvasHost } from './canvasHosts'
 
 const engine = (label: string): CanvasHost => ({
   pixelSnapshots: () => Promise.resolve([{ layerId: label, mask: false, data: '' }]),

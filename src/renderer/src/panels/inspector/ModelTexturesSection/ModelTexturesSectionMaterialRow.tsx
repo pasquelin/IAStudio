@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FIELD_THUMBNAIL } from '@/design/styles'
 import { Thumbnail } from '@/design/Thumbnail'
-import { openModelMaterial, type ChannelTexture } from '@/spaces/textures/open-model-material'
+import { openModelMaterial, type ChannelTexture } from '@/spaces/textures/openModelMaterial'
 import { ModelTexturesSectionRow, pictureOf } from './ModelTexturesSectionRow'
 
 /**

@@ -3,7 +3,7 @@ import { canUndo, canRedo } from '@/engines/core/history'
 import { renameLayer } from '@/engines/canvas/commands'
 import type { PatchSide } from '@/engines/canvas/PixelPatches'
 import { canvasHistoryOf, useCanvases } from '@/stores/canvases'
-import { pixelPort } from './pixel-port'
+import { pixelPort } from './pixelPort'
 
 const DOCUMENT = 'doc-1'
 

@@ -32,10 +32,10 @@ import { nextDisplayMode } from '@/engines/scene/sceneView'
 import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
 import { SceneCounters } from './SceneCounters'
-import { openSceneNodeMenu } from './SceneNodeMenu'
-import { runSceneCommand, toggleNodeVisible } from './scene-commands'
+import { openSceneNodeMenu } from './sceneNodeMenu'
+import { runSceneCommand, toggleNodeVisible } from './sceneCommands'
 import { ScenePaneGrid } from './ScenePaneGrid/ScenePaneGrid'
-import { SCENE_TOOLS } from './scene-tools'
+import { SCENE_TOOLS } from './sceneTools'
 
 /**
  * Encoded here, written by the main process: the renderer has no `fs`, and where the file lands

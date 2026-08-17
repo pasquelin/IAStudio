@@ -5,7 +5,7 @@ import { readyForWriting } from '@/helpers/assetIntents'
 import { reportFailure } from '@/services/diagnostics'
 import { documentForAsset, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
-import { placeTextureChannel } from './place-channel'
+import { placeTextureChannel } from './placeChannel'
 
 /** A picture the extraction gave a channel to — the only kind a material can be built out of. */
 export type ChannelTexture = Asset & { map: PbrChannel }

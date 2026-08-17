@@ -3,7 +3,7 @@ import type { Asset } from '@shared/domain/asset'
 import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { textureOf, useTextures } from '@/stores/textures'
-import { placeTextureChannel } from './place-channel'
+import { placeTextureChannel } from './placeChannel'
 
 const picture = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset_1',

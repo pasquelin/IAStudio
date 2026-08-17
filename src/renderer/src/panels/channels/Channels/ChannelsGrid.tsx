@@ -4,7 +4,7 @@ import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { setChannel } from '@/engines/texture/commands'
 import { canDerive, sourceFor } from '@/engines/texture/textureState'
-import { placeTextureChannel } from '@/spaces/textures/place-channel'
+import { placeTextureChannel } from '@/spaces/textures/placeChannel'
 import { useAssets } from '@/stores/assets'
 import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
 import { textureOf, useTextures } from '@/stores/textures'
@@ -45,7 +45,7 @@ export function ChannelsGrid({ documentId }: { documentId: string }) {
   const derive = async (channel: PbrChannel): Promise<void> => {
     setDeriving(channel)
     try {
-      const { deriveTextureChannel } = await import('@/spaces/textures/derive-channel')
+      const { deriveTextureChannel } = await import('@/spaces/textures/deriveChannel')
       await deriveTextureChannel(documentId, channel)
     } finally {
       setDeriving(null)

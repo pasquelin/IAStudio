@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { canvasOf, canvasHistoryOf, useCanvases } from '@/stores/canvases'
-import { guidePort } from './guide-port'
+import { guidePort } from './guidePort'
 
 const DOCUMENT = 'doc-1'
 

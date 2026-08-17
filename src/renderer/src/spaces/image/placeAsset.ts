@@ -4,7 +4,7 @@ import { addLayer } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
 import { reportFailure } from '@/services/diagnostics'
 import { canvasStore, useCanvases } from '@/stores/canvases'
-import type { PictureMeasure } from './picture-size'
+import type { PictureMeasure } from './pictureSize'
 
 /**
  * A picture laid on a document as a layer of its own — what a drop and a finished generation
@@ -51,7 +51,7 @@ export async function becomeAsset(
 
   // Reached through `import()`: this module is in the opening chunk — `eager-graph.test.ts`
   // holds that budget at two files — and measuring only ever happens on a double-click.
-  const { measureAsset, withinCeiling } = await import('./picture-size')
+  const { measureAsset, withinCeiling } = await import('./pictureSize')
   const measured = await measureAsset(asset.id, measure)
   const size = measured ? withinCeiling(measured) : DEFAULT_CANVAS
   // Said out loud EVERY way the document can fail to be the picture, because ⌘S writes the

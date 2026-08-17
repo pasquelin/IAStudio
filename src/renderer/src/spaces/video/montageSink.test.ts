@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { SceneStage, SceneStageOptions } from '@/engines/scene/sceneStage'
 import { forgetRememberedAssets, useAssets } from '@/stores/assets'
-import { montageSink } from './montage-sink'
+import { montageSink } from './montageSink'
 
 /**
  * Every source of the renderer, as text — read through Vite rather than through `fs`, for the
@@ -40,7 +40,7 @@ describe('the sink a montage reads the studio through', () => {
       .map(([path]) => path)
       .sort()
 
-    expect(wiring).toEqual(['../../engines/timeline/sinkPort.ts', './montage-sink.ts'])
+    expect(wiring).toEqual(['../../engines/timeline/sinkPort.ts', './montageSink.ts'])
   })
 
   /**

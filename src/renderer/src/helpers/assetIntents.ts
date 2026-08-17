@@ -10,9 +10,9 @@ import type { DocumentDescriptor, DocumentKind } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { openDocument } from '@/app/dockview-api'
 import { restoreDocument } from '@/app/document-io'
-import { loadTake } from '@/spaces/audio/load-take'
-import { becomeAsset, placeAsset } from '@/spaces/image/place-asset'
-import { placeTextureChannel } from '@/spaces/textures/place-channel'
+import { loadTake } from '@/spaces/audio/loadTake'
+import { becomeAsset, placeAsset } from '@/spaces/image/placeAsset'
+import { placeTextureChannel } from '@/spaces/textures/placeChannel'
 import { documentOfKind, useDocuments } from '@/stores/documents'
 import { addModelTo } from '@/stores/scenes'
 import { addAssetToSequence, sequenceTakes } from '@/stores/sequences'
@@ -207,7 +207,7 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     // the opening chunk's reach into the editors at two files, and nothing here runs before a
     // double-click lands on a picture.
     revisit: async (documentId, asset) => {
-      const { reportAssetDrift } = await import('@/spaces/image/asset-fidelity')
+      const { reportAssetDrift } = await import('@/spaces/image/assetFidelity')
       await reportAssetDrift(documentId, asset.id, asset.name)
     },
     ...inDocument('image', placeAsset, isLocalPicture, becomeAsset),

@@ -1,6 +1,6 @@
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_VIDEO_TOOL, isVideoTool, VIDEO_TOOLS } from './video-tools'
+import { DEFAULT_VIDEO_TOOL, isVideoTool, VIDEO_TOOLS } from './videoTools'
 
 describe('video tools', () => {
   it('names every tool through i18n rather than a literal', () => {

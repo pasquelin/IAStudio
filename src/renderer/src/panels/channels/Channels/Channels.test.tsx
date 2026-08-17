@@ -29,7 +29,7 @@ const channels = () => textureOf(useTextures.getState(), 'doc-1').channels
 /** The panel reaches it through an `import()`, and behind it sit three.js and a WebGL context. */
 const deriveTextureChannel = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 
-vi.mock('@/spaces/textures/derive-channel', () => ({ deriveTextureChannel }))
+vi.mock('@/spaces/textures/deriveChannel', () => ({ deriveTextureChannel }))
 
 beforeEach(() => {
   installTexture('doc-1')
