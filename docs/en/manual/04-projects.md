@@ -259,8 +259,10 @@ already taken in the destination is refused rather than overwritten, and the jou
 | | **Move to trash** | sends it to your system's trash |
 | going back | **Undo** · **Redo** | undo and redo the last batch of files |
 
-**Every row shows the shortcut it answers to**, and it is the one *in force*: if you remapped it
-in the settings, yours is what appears here.
+**Eight of these eleven rows show the shortcut they answer to**, and it is the one *in force*: if
+you remapped it in the settings, yours is what appears here. The other three — **Open**, **Show in
+folder**, **Rename** — show none, and that is correct: they are not commands of the registry.
+`Enter` does open the row, but it is the tree that listens for that key, and it cannot be changed.
 
 **No gesture ever leaves the menu; the ones that do not apply are greyed.** A menu whose length
 changes with the row you clicked is a menu one cannot learn.

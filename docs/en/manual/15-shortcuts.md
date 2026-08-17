@@ -191,8 +191,10 @@ item is the one refused; the rest go through.
 **`⌘⌫` rather than `⌫` alone**, and it is deliberate: this is the one gesture of this context the
 studio cannot undo, and a bare delete key is too close to what a hand does while reading a list.
 
-> **Rename has no shortcut.** It is the only Explorer gesture in that case: it lives in the
-> right-click menu, and nowhere else — see
+> **Three menu gestures are not in this table**, and they are not on the shortcuts screen either.
+> **Open** answers to `Enter`, but it is the tree that listens for that key, not the registry: it
+> cannot be changed. **Show in folder** and **Rename** answer to no key at all — they live in the
+> right-click menu, and nowhere else. See
 > [Projects](04-projects.md#right-clicking-eleven-gestures-in-four-groups).
 
 ---
