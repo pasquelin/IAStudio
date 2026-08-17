@@ -1,4 +1,8 @@
-import { kindForWorkspace, type DocumentDescriptor } from '@shared/domain/document'
+import {
+  DOCUMENTS_FOLDER,
+  kindForWorkspace,
+  type DocumentDescriptor,
+} from '@shared/domain/document'
 import { documentFileName } from '@shared/domain/document-name'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import type { DocumentStore } from './document-store'
@@ -51,7 +55,7 @@ export function installDocuments(tabs: Record<string, WorkspaceId>, activeId: st
       kind,
       workspace,
       title: documentId,
-      fileName: documentFileName(documentId, kind),
+      path: `${DOCUMENTS_FOLDER}/${documentFileName(documentId, kind)}`,
     }
   }
 

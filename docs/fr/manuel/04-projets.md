@@ -64,18 +64,18 @@ C’est le geste qui nettoie une liste où traîne un dossier déplacé.
 ```
 Mon projet/
 │
-├── assets/               TOUT CE QUE VOUS FABRIQUEZ
-│   ├── img/                les images
-│   ├── vid/                les vidéos
-│   ├── aud/                les sons
-│   ├── 3d/                 les objets 3D
-│   ├── tex/                les textures
-│   └── sky/                les ciels
-│
-├── documents/            VOS TRAVAUX EN COURS
-│                           un fichier par onglet enregistré — un dossier pour une image
+├── Images/               SIX DOSSIERS POUR COMMENCER
+├── Video/                  posés à la création, et ordinaires : renommez-les,
+├── Audio/                  videz-les, jetez-les, rangez-les autrement
+├── 3D/
+├── Textures/
+├── Sky/
+│                           …et tout ce que vous créez à côté
 │
 ├── .project.json         la carte d'identité — CACHÉ
+│
+├── .scenario/            UNE SAUVEGARDE DU CATALOGUE — CACHÉ
+│   └── items.json          ce qu'un fichier ne peut pas dire de lui-même
 │
 └── .index/               LE CATALOGUE ET SES CACHES — À GARDER, CACHÉ
     ├── catalog.db          l'index qui rend la recherche instantanée
@@ -84,10 +84,14 @@ Mon projet/
     └── filmstrips/         créé d’avance, encore vide
 ```
 
-**Deux entrées sur quatre sont cachées, et la règle est simple** : ce qui est à vous se voit, ce
-qui est à la machine se range. Vos assets et vos documents restent visibles — vous devez pouvoir
-les regarder, les copier, les réparer. La carte d’identité et l’index, non : ce sont les outils du
-studio, pas votre travail.
+**Ce qui commence par un point est à la machine ; tout le reste est à vous**, et c’est toute la
+règle. Vos fichiers restent visibles et vous les rangez comme vous l’entendez — vous devez pouvoir
+les regarder, les copier, les réparer. La carte d’identité, l’index et la sauvegarde, non : ce sont
+les outils du studio, pas votre travail.
+
+> **Les six dossiers de départ ne sont qu’un point de départ.** Ils sont posés à la création et
+> jamais remis : si vous supprimez `Images/`, il ne revient pas — sauf le jour où une génération a
+> besoin d’un endroit où atterrir, et le studio le recrée plutôt que de refuser de travailler.
 
 > **Sur Windows, un point ne cache rien** — l’Explorateur lit un attribut de fichier, pas le nom.
 > Le studio le pose lui-même sur les deux entrées. Si l’opération échoue, **le projet s’ouvre quand
@@ -96,9 +100,14 @@ studio, pas votre travail.
 
 ### Ce qui vous appartient
 
-**`assets/` et `documents/`.** C’est votre travail. Ce sont de vrais fichiers, dans de vrais
-formats — un PNG est un PNG, un MP4 est un MP4. Vous pouvez les ouvrir avec n’importe quel autre
-logiciel.
+**Tout ce qui ne commence pas par un point.** C’est votre travail. Ce sont de vrais fichiers, dans
+de vrais formats — un PNG est un PNG, un MP4 est un MP4. Vous pouvez les ouvrir avec n’importe
+quel autre logiciel, et les ranger dans les dossiers que vous voulez.
+
+**Ce qu’un fichier EST ne dépend pas de l’endroit où il est.** Une image reste une image dans
+`Repérages/Ruelles/` comme dans `Images/` : le studio lit son extension, et la fiche du catalogue
+corrige ce que l’extension ne peut pas deviner — un canal de normales et une couleur de base sont
+deux PNG. Déplacez, renommez, réorganisez : le studio suit.
 
 ### `.index/` porte plus que des caches — ne le supprimez pas
 
@@ -111,10 +120,16 @@ dimensions, le modèle et le prompt qui l’ont produit, ce dont il dérive — 
 importé, **le chemin de votre fichier d’origine**, qui n’est écrit nulle part ailleurs. Le journal
 d’activité vit dans la même base.
 
-**Le studio ne sait pas le reconstruire à partir du dossier.** Il n’y a aucun réexamen d’`assets/`
-au démarrage : le catalogue se remplit au fil des générations et des imports, jamais après coup.
-Supprimer `.index/` rend donc un projet dont les fichiers sont tous là et dont plus rien ne dit ce
-qu’ils sont.
+**Le studio ne sait pas le reconstruire à partir du dossier.** Le catalogue se remplit au fil des
+générations et des imports ; la passe qui relit le dossier à l’ouverture RETROUVE les fichiers qui
+ont bougé, elle ne redevine pas ce qu’ils sont. Supprimer `.index/` rend donc un projet dont les
+fichiers sont tous là et dont plus rien ne dit ce qu’ils sont.
+
+> **C’est à cela que sert `.scenario/items.json`.** Le studio y recopie, après chaque passe qui a
+> changé quelque chose, ce qu’un fichier ne peut pas dire de lui-même : son nom, ses tags, le
+> modèle et le prompt qui l’ont produit — rangés par empreinte du contenu, de sorte qu’un fichier
+> retrouvé se reconnaisse. Ce n’est pas une source : le studio ne la lit jamais de lui-même. C’est
+> ce qui reste à lire, à la main, le jour où l’index a disparu.
 
 > **Si vous devez alléger un projet**, jetez `proxies/` et `peaks/` — c’est là qu’est le poids.
 > Gardez `catalog.db`, qui pèse peu et sait tout.
@@ -160,8 +175,8 @@ que vous désignez et cherche ce fichier dedans.
 Un document est un travail en cours : une image avec ses calques, une scène 3D avec ses objets,
 un montage avec ses pistes.
 
-Il est enregistré avec `⌘S` / `Ctrl+S`, dans `documents/`, sous une extension qui dit ce qu’il
-est :
+Il est enregistré avec `⌘S` / `Ctrl+S` — dans `documents/` la première fois, faute de mieux, et
+ensuite là où vous l’avez rangé — sous une extension qui dit ce qu’il est :
 
 | Type de document | Extension | Espace |
 |---|---|---|
@@ -181,8 +196,8 @@ Cette extension est là pour que le dossier **se lise à l’œil**. `a3f1.scene
 
 ### Parcourir le projet — le panneau Explorateur
 
-Le panneau **Explorateur** montre **le dossier du projet**, en arborescence : `assets/`,
-`documents/`, et tout ce que vous y avez déposé vous-même. Les dossiers se déplient, les fichiers
+Le panneau **Explorateur** montre **le dossier du projet**, en arborescence : les six dossiers de
+départ, et tout ce que vous y avez créé ou déposé vous-même. Les dossiers se déplient, les fichiers
 sont dedans, exactement comme dans l’explorateur de votre système.
 
 **Il montre aussi ce que le studio ne sait pas ouvrir.** Un `.pdf`, un `.txt`, un dossier de notes :
@@ -237,7 +252,7 @@ disparaître le champ où elle a été tapée** — sinon il n’y aurait plus d
 |---|---|
 | **Double-clic** sur un dossier | l’ouvre ou le referme |
 | **Double-clic** sur un document du studio | l’ouvre, en changeant d’espace s’il appartient à un autre |
-| **Double-clic** sur un fichier d’`assets/` | **l’ouvre dans le studio**, dans l’espace qui édite son type — c’est un asset, pas un fichier quelconque |
+| **Double-clic** sur un asset | **l’ouvre dans le studio**, dans l’espace qui édite son type — où qu’il soit rangé |
 | **Double-clic** sur tout autre fichier | le confie à votre système, qui l’ouvre avec l’application prévue |
 | `→` `←` | déplie, replie |
 | `↑` `↓` | la ligne précédente, la suivante |
@@ -296,29 +311,29 @@ document ouvert : annuler dans le canevas ne doit pas atteindre votre disque.
 > d’un onglet, retire le fichier du dossier sans passer par la corbeille. Son dialogue annonce
 > « Cette action est irréversible », et c’est exact.
 
-**Un refus, et il est grisé plutôt que caché.** Ce que le studio range lui-même — `assets/`, ses
-six sous-dossiers par type, `documents/` — ne se renomme ni ne se jette : l’index range chaque
-asset par son chemin sous `assets/`, et renommer un de ces dossiers laisserait des lignes que plus
-rien ne retrouve. **Le même refus vaut des deux côtés du glisser** : ces dossiers ne se prennent
-pas, et rien ne s’y dépose non plus.
+**Un refus, et il est grisé plutôt que caché.** Ce que le studio garde pour lui — tout ce qui
+commence par un point : `.index/`, `.scenario/`, `.project.json` — ne se renomme ni ne se jette, et
+ne reçoit rien non plus. Ce sont ses outils ; renommer l’un d’eux casserait le projet pour un nom
+que personne ne lit. **Le même refus vaut des deux côtés du glisser** : vous voyez avant de lâcher.
 
-**Et il vaut aussi pour ce qu’ils CONTIENNENT, tant que le déplacement est en jeu.** Un fichier
-sous `assets/img` ne se coupe pas, ne se copie pas, ne se duplique pas et ne se glisse pas
-ailleurs : c’est encore son chemin qui dit ce qu’il est, et le sortir de là lui ferait perdre son
-type. **La corbeille fait exception, parce qu’elle ne le déplace pas** : l’index lâche la ligne
-avec le fichier.
+**Un document écrit comme un dossier ne reçoit rien non plus.** Une planche `.img` est un vrai
+répertoire, mais ce qu’il contient est l’écriture du studio : un fichier qu’on y déposerait
+serait effacé par la prochaine sauvegarde, qui reconstruit ce dossier. Le document lui-même se
+déplace comme n’importe quel fichier — c’est son intérieur qui ne s’ouvre pas.
 
-**Et le renommage, mais à une condition.** Un asset et un document ont chacun leur propre geste, et
+**Tout le reste vous obéit**, les six dossiers de départ compris : renommez-les, videz-les,
+jetez-les, sortez-en un asset pour le ranger ailleurs, coupez, copiez, dupliquez. Le studio suit —
+c’est ce que la passe de réconciliation fait à l’ouverture et au retour dans la fenêtre.
+
+**Le renommage, lui, passe par le geste de la chose.** Un asset et un document ont chacun le leur, et
 l’Explorateur y mène : le nom change, et le fichier suit dans le même mouvement. Un document
 renommé ici garde son onglet ouvert, qui prend le nouveau nom. Un asset renommé ici change de nom
 partout à la fois — l’Explorateur, l’étagère, l’Inspecteur, l’onglet qui l’édite — parce qu’il
 n’y a **qu’un seul nom** : celui de sa ligne d’index EST celui de son fichier.
 
-> **Le studio ne renomme que ce qu’il connaît.** Une image que vous auriez déposée vous-même dans
-> `assets/img` sans passer par le studio n’a pas de ligne d’index : elle n’est ni un document, ni
-> un asset, et **Renommer** est grisé sur elle. Renommez-la depuis votre système de fichiers —
-> l’Explorateur la relira. **Hors des dossiers du studio, tout ce qui est à vous se renomme sans
-> condition.**
+> **Une image que vous avez déposée vous-même se renomme aussi**, même si le studio n’en a
+> aucune fiche : c’est alors un fichier ordinaire, renommé comme tel. Ce qui change selon les
+> cas, c’est ce qui SUIT le nom — une fiche d’index, l’onglet d’un document, ou rien.
 
 > Un nom que votre système de fichiers n’accepterait pas est refusé plutôt que corrigé en
 > silence — une barre oblique, par exemple. Un nom que le dossier tient déjà l’est aussi, plutôt
@@ -338,7 +353,7 @@ fichiers emploient pour cela. Ce qu’il révèle reste **en lecture seule** : c
 tous les gestes, des deux côtés — ni renommer, ni corbeille, ni glisser, ni recevoir un dépôt.
 C’est ce que le studio tient pour lui, et le voir n’est pas y toucher.
 
-**Un dossier n’est lu qu’au moment où vous l’ouvrez.** `assets/img` peut contenir des milliers de
+**Un dossier n’est lu qu’au moment où vous l’ouvrez.** `Images/` peut contenir des milliers de
 fichiers dans un projet ordinaire, et les lire pour les compter coûterait une attente à chaque
 ouverture de projet.
 
@@ -348,12 +363,12 @@ volume réseau n’émet parfois aucun événement, et ce second filet le rattra
 
 > **C’est toujours par là qu’on rouvre un document fermé.** La disposition retient les onglets
 > ouverts, mais un document fermé alors qu’aucune disposition ne le portait n’est plus atteignable
-> par les onglets ; il est dans `documents/`, un repli plus bas.
+> par les onglets ; il est dans le dossier où vous l’avez rangé, un repli plus bas.
 
 > **Un document jamais enregistré ne revient pas au redémarrage**, et son onglet ne revient pas
 > non plus : il est retiré de la disposition plutôt que rouvert sur « Ce document n’est plus
-> ouvert. » La disposition est écrite sur votre disque, le contenu des documents non — c’est le
-> dossier `documents/` qui en tient lieu, et ce qui n’y a jamais été écrit n’a rien à rouvrir.
+> ouvert. » La disposition est écrite sur votre disque, le contenu des documents non — ce sont les
+> fichiers du projet qui en tiennent lieu, et ce qui n’a jamais été écrit n’a rien à rouvrir.
 
 Il n’y a pas de dialogue « Ouvrir un fichier », et il n’en est pas prévu : le studio n’ouvre que
 ce qui est dans le projet.

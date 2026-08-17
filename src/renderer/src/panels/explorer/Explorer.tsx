@@ -36,6 +36,7 @@ import { entriesSorted, FOLDER_SORTS } from './folder-sort'
 import { openEntryMenu } from './EntryMenu'
 import { DomainRow } from './DomainRow'
 import { EntryRow } from './EntryRow'
+import { RescanBar } from './RescanBar'
 import { useDomainTree } from './use-domain-tree'
 import { useFolderSearch } from './use-folder-search'
 import { useFolderTree, type FolderNode } from './use-folder-tree'
@@ -124,14 +125,13 @@ export function Explorer() {
     void useDocuments.getState().relist()
   }, [projectPath])
 
-  // Keyed by the file name the folder shows, which is what a directory entry carries — and it
-  // is the descriptor's own `fileName`, read off the disk. It used to be the id, which worked
-  // only for as long as the id WAS the file name: the day the two parted, this answered null
-  // for every document at once — no space glyph, no "open" mark, and a double-click handing the
-  // document to whatever application the system opens a `.scene` with.
+  // Keyed by the PATH the descriptor was read from, which is the tree's own id for a row. It
+  // used to be the id, which worked only for as long as the id WAS the file name; then the file
+  // name, which worked only for as long as every document sat in one folder — two `Niveau.scene`
+  // in two folders handed one document's descriptor to the other one's row.
   const documentsByFile = useMemo(() => {
     const found = new Map<string, DocumentDescriptor>()
-    for (const document of stored) found.set(document.fileName, document)
+    for (const document of stored) found.set(document.path, document)
     return found
   }, [stored])
 
@@ -148,7 +148,7 @@ export function Explorer() {
       const kind = kindForExtension(extensionOf(node.name))
       if (!kind) return null
       if (node.kind === 'folder' && !FOLDER_KINDS.has(kind)) return null
-      return documentsByFile.get(node.name) ?? null
+      return documentsByFile.get(node.path) ?? null
     },
     [documentsByFile],
   )
@@ -311,10 +311,9 @@ export function Explorer() {
    * Three names for three things, and the row cannot tell them apart by looking.
    *
    * A document is renamed through its own channel, which moves the file AND rewrites its
-   * envelope. An asset through the catalogue's, which moves the file AND rewrites its row — both
-   * refused as plain files by the main process, `isStudioOwned`, because renaming either behind
-   * the studio's back leaves it pointing at a path that is gone. Everything else the user put in
-   * the folder is a plain file and is renamed as one.
+   * envelope. An asset through the catalogue's, which moves the file AND rewrites its row —
+   * renaming either as a plain file would leave the row and the envelope pointing at a path that
+   * is gone. Everything else the user put in the folder is a plain file and is renamed as one.
    *
    * WHICH of the three this row is was settled when the menu opened — the catalogue was asked
    * then, and the answer is what decided whether the gesture was offered at all.
@@ -367,6 +366,10 @@ export function Explorer() {
           carries the name, the three readings and the way out — the field measured 76 px there.
           `display` is off for the reason a tree has no grid and no thumbnail to size. */}
       <CollectionBar state={collection} onChange={setCollection} sorts={sorts} display={false} />
+
+      {/* Nothing at all unless a pass is running, which on a project where nothing moved is
+          every time: the row appears when the studio is reading files and can be told to stop. */}
+      <RescanBar />
 
       <div className="min-h-0 flex-1">
         {nodes.length === 0 ? (

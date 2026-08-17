@@ -1,4 +1,5 @@
 import {
+  DOCUMENTS_FOLDER,
   kindForWorkspace,
   type DocumentDescriptor,
   type DocumentKind,
@@ -11,6 +12,7 @@ import {
   type NamedDocument,
 } from '@shared/domain/document-name'
 import { foldForFileName, nameFailureOf } from '@shared/domain/file-name'
+import { nameOf, parentOf } from '@shared/domain/folder'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
 import i18next from 'i18next'
@@ -322,11 +324,11 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       kind,
       workspace,
       title,
-      // Where it WOULD go, nothing having been written yet. Not a second answer disagreeing with
-      // the disk — there is no file to disagree with — and the first save answers for good: it
-      // may land on a suffixed name if the folder meanwhile took this one, and `relist` reads
-      // back what the folder actually holds.
-      fileName: documentFileName(title, kind),
+      // Where it WOULD go, nothing having been written yet — the default folder, which is where
+      // a first save lands. Not a second answer disagreeing with the disk (there is no file to
+      // disagree with), and the first save answers for good: it may land on a suffixed name if
+      // the folder meanwhile took this one, and `relist` reads back what the folder holds.
+      path: `${DOCUMENTS_FOLDER}/${documentFileName(title, kind)}`,
       ...(of?.sourceAssetId ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 
@@ -351,7 +353,11 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     // Asked here as well as in the main process, and neither is the redundant one: this spares a
     // round trip for what the window can already see, and the main process is what makes the
     // refusal true whatever the window believed.
-    const taken = get().stored.map(entry => ({ id: entry.id, fileName: entry.fileName }))
+    // In the folder the document SITS in, which is where its new name has to be free.
+    const taken = takenDocumentNames(
+      { documents: {}, stored: get().stored },
+      parentOf(document.path) ?? '',
+    )
     const refused = checkDocumentName(title, document.kind, taken, id)
     if (refused) return refused
 
@@ -408,14 +414,19 @@ let listing: Promise<DocumentDescriptor[] | null> | null = null
  * The listing is handed in rather than read off the store: `create` has to read the store and
  * write to it in one synchronous run, and it holds a fresher listing than the one `stored` has.
  */
-export function takenDocumentNames(state: {
-  documents: Record<string, DocumentDescriptor>
-  stored: readonly DocumentDescriptor[]
-}): NamedDocument[] {
-  return [...state.stored, ...Object.values(state.documents)].map(({ id, fileName }) => ({
-    id,
-    fileName,
-  }))
+export function takenDocumentNames(
+  state: {
+    documents: Record<string, DocumentDescriptor>
+    stored: readonly DocumentDescriptor[]
+  },
+  folder: string = DOCUMENTS_FOLDER,
+): NamedDocument[] {
+  // One folder, never the project: two folders may each hold a `Niveau.scene` and the disk is
+  // happy with both, so a name taken elsewhere in the tree is not taken here. The default is
+  // where a document nobody has placed goes, which is what every caller of this asks about.
+  return [...state.stored, ...Object.values(state.documents)]
+    .filter(document => (parentOf(document.path) ?? '') === folder)
+    .map(({ id, path }) => ({ id, fileName: nameOf(path) }))
 }
 
 /**

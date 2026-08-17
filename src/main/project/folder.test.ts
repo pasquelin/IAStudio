@@ -109,6 +109,30 @@ describe('reading the project folder', () => {
 
     expect((await reader.list('')).map(entry => entry.name)).toContain('only-here.txt')
   })
+
+  /**
+   * `Été` is six characters on screen and two different strings underneath — composed, as a
+   * keyboard sends it, or decomposed, as a volume that stores it that way hands it back. Left as
+   * they come, the catalogue holds one form and the folder answers the other, and every
+   * comparison of the two says no: the row the explorer joins to this file, the path a rescan
+   * recognises, the asset an inspector finds.
+   *
+   * Composed here and in `safeFileName`, which are the two places the studio meets the question:
+   * where the disk speaks, and where a name is made.
+   */
+  it('answers a decomposed name in the form a name made here takes', async () => {
+    const root = await project()
+    const named = 'Été.png'
+    const decomposed = named.normalize('NFD')
+    await writeFile(join(root, decomposed), 'bytes', 'utf8')
+
+    const found = await createFolderReader(() => root, inFrench).list('')
+    const names = found.map(entry => entry.name)
+
+    expect(names).toContain('Été'.normalize('NFC') + '.png')
+    expect(names).not.toContain(decomposed)
+    expect(found.find(entry => entry.name.startsWith('É'))?.path).toBe('Été.png'.normalize('NFC'))
+  })
 })
 
 describe('searching the project folder', () => {

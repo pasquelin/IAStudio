@@ -92,6 +92,7 @@ import {
   type FolderWatch,
 } from './project/folder'
 import { createProjectStore, openFailureKey, type ProjectStore } from './project/store'
+import { createReconciler, type Reconciler } from './project/reconcile'
 import { createActivityLog, type ActivityLog } from './project/activity-log'
 import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
@@ -212,6 +213,8 @@ export type Services = {
   exists: (path: string) => boolean
   /** The project folder, read one level at a time. */
   folder: FolderReader
+  /** The pass that puts the catalogue and the project folder back in agreement. */
+  reconciler: Reconciler
   /**
    * Everything that WRITES to the project folder, and the stack that takes a batch back.
    *
@@ -624,12 +627,74 @@ export function createServices(settings: SettingsStore): Services {
       folderWatch = current
         ? watchProjectFolder(current.path, () => broadcast(EVENTS.projectFolderChanged))
         : null
+
+      // What moved while the studio was closed. After the journal was replayed — that is what
+      // `activate` finishes before it publishes — so a move this session interrupted is already
+      // a row at the right path rather than one this pass would go looking for.
+      if (current) reconciler.request()
     },
     settle: async () => {
       // Both before the catalogue stops answering: the journal writes into it, and the pending
       // jobs are about to be attributed to whichever project opens next.
       await Promise.all([opened?.flush(), jobStore.flush()])
     },
+  })
+
+  /**
+   * Declared after the store because it reads it, and named before it because the store's own
+   * `onChange` asks for the first pass — a function-valued closure either way, so neither has to
+   * be built first.
+   */
+  const reconciler = createReconciler({
+    rootOf: () => project.current()?.path ?? null,
+    catalogOf: () => (project.current() ? project.catalog() : null),
+    announce: state => broadcast(EVENTS.projectRescan, state),
+    report: found => {
+      /**
+       * The windows are told, and this is what makes the pass VISIBLE rather than merely true.
+       *
+       * Every panel that lists assets reads the catalogue once and then waits to be told —
+       * `assets.onChanged` is the shelf's only trigger, and the explorer re-reads its folders on
+       * `onFolderChanged`. Without these two lines the pass would refile twelve rows, write its
+       * line to the journal, and leave the shelf drawing the answer from before it: thumbnails
+       * that open nothing, and assets missing from a library that holds them.
+       *
+       * Only when something actually changed, which is what keeps a pass on every focus quiet.
+       */
+      if (found.moved + found.missing + found.returned > 0) {
+        broadcast(EVENTS.assetsChanged)
+        broadcast(EVENTS.projectFolderChanged)
+      }
+
+      // Only what CHANGED, and that is what makes running this on every focus quiet: a pass over
+      // a project nothing moved in writes nothing at all.
+      if (found.moved > 0) {
+        journal.record({
+          level: 'info',
+          topic: 'project',
+          messageKey: 'activity.filesFound',
+          params: { count: found.moved },
+        })
+      }
+      if (found.missing > 0) {
+        journal.record({
+          level: 'warn',
+          topic: 'project',
+          messageKey: 'activity.filesMissing',
+          params: { count: found.missing },
+        })
+      }
+    },
+    warn: error => log.warn('project', `reconciling the project folder failed: ${String(error)}`),
+  })
+
+  /**
+   * The other half of when: the Finder is where a project folder is rearranged, and a window
+   * coming back to the front is the moment the studio can find out. One pass at a time, so
+   * clicking between two windows does not walk the project twice.
+   */
+  app.on('browser-window-focus', () => {
+    reconciler.request()
   })
 
   // Reads the catalogue per flush rather than holding one: a project can close and another open
@@ -742,11 +807,6 @@ export function createServices(settings: SettingsStore): Services {
     record: report => journal.record(report),
   })
 
-  const documents = createDocumentFiles({
-    projectPath: () => project.path(),
-    now: timestamp,
-  })
-
   // Reader and writer together: the handlers take the reading half, the orchestrator below takes
   // the writing one, and neither of them knows the catalogue is involved.
   const folder = {
@@ -756,6 +816,15 @@ export function createServices(settings: SettingsStore): Services {
       file => shell.trashItem(file),
     ),
   }
+
+  const documents = createDocumentFiles({
+    projectPath: () => project.path(),
+    now: timestamp,
+    // The listing walks the project through the same reader the explorer does — one walk with
+    // one depth bound, rather than a second one free to disagree about how deep a project goes.
+    walkFiles: () => folder.walk(),
+    folderNames: relative => folder.names(relative),
+  })
 
   const files = createFileOps({
     // `null` rather than `''`: with no project open there is no folder to write in, and every
@@ -1207,6 +1276,7 @@ export function createServices(settings: SettingsStore): Services {
     exists: existsSync,
     folder,
     files,
+    reconciler,
     openInSystem: file => shell.openPath(file),
     askUser,
     pickMedia: () => pickMedia(language()),

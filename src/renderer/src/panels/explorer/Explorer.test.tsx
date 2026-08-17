@@ -30,7 +30,7 @@ const scene: DocumentDescriptor = {
   kind: 'scene',
   title: 'Niveau',
   workspace: '3d',
-  fileName: 'a3f1.scene',
+  path: 'a3f1.scene',
 }
 
 /** Written as a folder — `FOLDER_KINDS` — which is what the folder reader sees of it. */
@@ -39,7 +39,7 @@ const picture: DocumentDescriptor = {
   kind: 'image',
   title: 'Planche',
   workspace: 'image',
-  fileName: 'a3f1.img',
+  path: 'a3f1.img',
 }
 
 const folder = (name: string, at = ''): FolderEntry => ({
@@ -402,13 +402,39 @@ describe('the project explorer', () => {
   describe('opening what a row names', () => {
     it('opens a document of the project, tab or no tab', async () => {
       withProject()
-      install({ '': [folder('documents')], documents: [file('a3f1.scene', 'documents')] }, [scene])
+      const filed = { ...scene, path: 'documents/a3f1.scene' }
+      install({ '': [folder('documents')], documents: [file('a3f1.scene', 'documents')] }, [filed])
 
       render(<Explorer />)
       await userEvent.dblClick(await screen.findByText('documents'))
       await userEvent.dblClick(await screen.findByText('Niveau'))
 
-      expect(openDocument).toHaveBeenCalledWith(scene)
+      expect(openDocument).toHaveBeenCalledWith(filed)
+    })
+
+    /**
+     * Rows are joined to descriptors by PATH, not by name. Two folders may each hold a
+     * `Niveau.scene`, and joined on the name one document's descriptor was handed to the other
+     * one's row — the wrong title on screen, and a double-click opening the wrong document.
+     */
+    it('tells two documents of the same name in two folders apart', async () => {
+      withProject()
+      const here = { ...scene, id: 'here', title: 'Ici', path: 'Acte 1/a3f1.scene' }
+      const there = { ...scene, id: 'there', title: 'Là', path: 'Acte 2/a3f1.scene' }
+      install(
+        {
+          '': [folder('Acte 1'), folder('Acte 2')],
+          'Acte 1': [file('a3f1.scene', 'Acte 1')],
+          'Acte 2': [file('a3f1.scene', 'Acte 2')],
+        },
+        [here, there],
+      )
+
+      render(<Explorer />)
+      await userEvent.dblClick(await screen.findByText('Acte 2'))
+      await userEvent.dblClick(await screen.findByText('Là'))
+
+      expect(openDocument).toHaveBeenCalledWith(there)
     })
 
     /**
@@ -658,24 +684,26 @@ describe('dragging a row of the explorer', () => {
     expect(moveFiles).toHaveBeenCalledWith(['notes/brief.pdf'], 'refs')
   })
 
-  // The catalogue stores every asset by a path under `assets/`, and the studio's own folders
-  // refuse on both sides of the gesture — as what moves, and as what receives.
-  it('will not pick up a studio folder', async () => {
+  // What the machine keeps refuses on both sides of the gesture — as what moves, and as what
+  // receives. The folders the user was given are picked up like any other.
+  it('will not pick up what the machine keeps for itself', async () => {
     withProject()
-    install({ '': [folder('assets'), folder('notes')] })
+    useExplorerView.setState({ hidden: true })
+    install({ '': [file('.project.json'), folder('assets')] })
 
     render(<Explorer />)
 
-    expect(await rowFor('assets')).not.toHaveAttribute('draggable', 'true')
-    expect(await rowFor('notes')).toHaveAttribute('draggable', 'true')
+    expect(await rowFor('.project.json')).not.toHaveAttribute('draggable', 'true')
+    expect(await rowFor('assets')).toHaveAttribute('draggable', 'true')
   })
 
-  it('drops nothing into a studio folder', async () => {
+  it('drops nothing into what the machine keeps for itself', async () => {
     withProject()
-    const { moveFiles } = install({ '': [folder('assets'), file('brief.pdf')] })
+    useExplorerView.setState({ hidden: true })
+    const { moveFiles } = install({ '': [folder('.index'), file('brief.pdf')] })
 
     render(<Explorer />)
-    await drag('brief.pdf', 'assets')
+    await drag('brief.pdf', '.index')
 
     expect(moveFiles).not.toHaveBeenCalled()
   })
@@ -946,20 +974,19 @@ describe('the explorer menu', () => {
   })
 
   /**
-   * The catalogue stores every asset by a path under `assets/`, so moving one orphans rows
-   * nobody can find again. Greyed rather than dropped: a menu that changes length is a menu one
-   * cannot learn.
+   * The folder a project was once laid out by is now a folder like any other — that is the whole
+   * of the phase, read from the surface it changes. What the catalogue points at follows through
+   * `repath`, so nothing is orphaned by the gesture the menu now offers.
    */
-  it('refuses to move the studio own folders, and says so before the click', async () => {
+  it('offers every gesture on the folders a project used to be laid out by', async () => {
     withProject()
     install({ '': [folder('assets')] })
 
     render(<Explorer />)
     await open('assets')
 
-    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
-    expect(menu.offers('Mettre à la corbeille')).toBe(false)
-    expect(menu.offers('Afficher dans le dossier')).toBe(true)
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(true))
+    expect(menu.offers('Mettre à la corbeille')).toBe(true)
   })
 
   /**
@@ -1083,12 +1110,12 @@ describe('the explorer menu', () => {
   })
 
   /**
-   * A picture the user dropped into `assets/` themselves is no row of ours: `renameFile` refuses
-   * everything under there, and no other channel claims it. Offering the gesture opened a field
-   * that closed on a failure only the journal mentioned — worse than the grey it replaced, which
-   * is why the catalogue is asked BEFORE the menu is drawn.
+   * A picture the user dropped into `assets/` themselves is no row of ours, and no longer needs
+   * to be one: `renameFile` carries it as the plain file it is. The catalogue is still asked
+   * before the menu is drawn — not to decide WHETHER the gesture is offered, but which of the
+   * three channels carries it.
    */
-  it('greys it out for a file under assets the catalogue never heard of', async () => {
+  it('renames a file the catalogue never heard of, wherever it sits', async () => {
     withProject()
     install({ '': [folder('assets')], assets: [file('dropped.png', 'assets')] })
 
@@ -1096,9 +1123,8 @@ describe('the explorer menu', () => {
     await userEvent.dblClick(await screen.findByText('assets'))
     await open('dropped.png')
 
-    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
-    // Not a refusal of the row itself: showing it in the folder is what still works.
-    expect(menu.offers('Afficher dans le dossier')).toBe(true)
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(true))
+    expect(menu.offers('Mettre à la corbeille')).toBe(true)
   })
 
   it('renames where the name is read', async () => {
@@ -1291,6 +1317,31 @@ describe('the explorer read by domain', () => {
     render(<Explorer />)
 
     expect(await screen.findByText('Texture')).toBeInTheDocument()
+  })
+
+  /**
+   * A `.scene` and a `.glb` are both filed under Maillage, and one of them opens in the studio
+   * where the other is a source it reads. The row already says which: a document is drawn by its
+   * TITLE and wears its space's glyph, off the same table the rail and the asset menu read,
+   * where a plain file keeps its file name and the generic one. That is the distinction, drawn
+   * in the vocabulary the whole studio already uses — a word "document" beside it would be a
+   * second one, on the narrowest column the studio has.
+   */
+  it('tells a document from a source filed under the same domain', async () => {
+    withProject()
+    byDomain()
+    const filed = { ...scene, path: 'Acte 1/a3f1.scene' }
+    install({ '': [folder('Acte 1')] }, [filed], [], {}, [
+      file('a3f1.scene', 'Acte 1'),
+      file('chaise.glb', 'Acte 1'),
+    ])
+
+    render(<Explorer />)
+
+    // The document by its title, the source by its file name.
+    expect(await screen.findByText('Niveau')).toBeInTheDocument()
+    expect(screen.getByText('chaise.glb')).toBeInTheDocument()
+    expect(screen.queryByText('a3f1.scene')).not.toBeInTheDocument()
   })
 
   /** A domain names files rather than holding a place: nothing can be selected or written there. */

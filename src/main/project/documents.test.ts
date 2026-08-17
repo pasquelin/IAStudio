@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DOCUMENT_VERSION } from '@shared/domain/document'
-import { createDocumentFiles, orphanStagingCopies, type DocumentFiles } from './documents'
+import { orphanStagingCopies, type DocumentFiles } from './documents'
+import { documentFilesAt } from './project-fixtures'
 
 const NOW = '2026-08-07T10:00:00.000Z'
 
@@ -13,7 +14,7 @@ describe('createDocumentFiles', () => {
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'scenario-documents-'))
-    documents = createDocumentFiles({ projectPath: () => root, now: () => NOW })
+    documents = documentFilesAt(root, NOW)
   })
 
   it('reads back what it wrote', async () => {
@@ -63,7 +64,13 @@ describe('createDocumentFiles', () => {
     await documents.write('doc-1', 'scene', { title: 'Level', content: 'not json at all' })
 
     expect(await documents.list()).toEqual([
-      { id: 'doc-1', kind: 'scene', title: 'Level', workspace: '3d', fileName: 'Level.scene' },
+      {
+        id: 'doc-1',
+        kind: 'scene',
+        title: 'Level',
+        workspace: '3d',
+        path: 'documents/Level.scene',
+      },
     ])
   })
 
@@ -220,7 +227,7 @@ describe('createDocumentFiles', () => {
           kind: 'scene',
           title: 'Niveau',
           workspace: '3d',
-          fileName: '6d517ff3.scene',
+          path: 'documents/6d517ff3.scene',
         },
       ])
     })
@@ -264,7 +271,7 @@ describe('createDocumentFiles', () => {
         kind: 'audio',
         title: 'ElevenLabs Sound Effects 2',
         workspace: 'audio',
-        fileName: 'demo',
+        path: 'documents/demo',
       },
     ])
   })
@@ -289,6 +296,54 @@ describe('createDocumentFiles', () => {
   })
 
   /**
+   * What the phase opens: a document lives where the user filed it, and the listing walks the
+   * project to find it. `documents/` is only where a first save lands.
+   */
+  describe('documents the user filed themselves', () => {
+    it('finds one wherever in the project it sits', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{"nodes":[]}' })
+      await mkdir(join(root, 'Acte 1', 'Ruelles'), { recursive: true })
+      await rename(
+        join(root, 'documents', 'Niveau.scene'),
+        join(root, 'Acte 1', 'Ruelles', 'Niveau.scene'),
+      )
+
+      expect((await documents.list())[0]).toMatchObject({
+        id: 'doc-1',
+        path: 'Acte 1/Ruelles/Niveau.scene',
+      })
+      expect((await documents.read('doc-1', 'scene'))?.content).toBe('{"nodes":[]}')
+    })
+
+    // A rename that moved the file back to `documents/` would tidy the project behind the user.
+    it('renames one where it sits, without moving it', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{"nodes":[]}' })
+      await mkdir(join(root, 'Acte 1'), { recursive: true })
+      await rename(join(root, 'documents', 'Niveau.scene'), join(root, 'Acte 1', 'Niveau.scene'))
+      await documents.list()
+
+      expect(await documents.rename('doc-1', 'scene', 'Décor')).toMatchObject({
+        path: 'Acte 1/Décor.scene',
+      })
+      expect(await readdir(join(root, 'Acte 1'))).toEqual(['Décor.scene'])
+    })
+
+    // The disk holds both, so a check taken over the whole tree would refuse a free name.
+    it('lets two folders each hold a document of the same name', async () => {
+      await documents.write('doc-1', 'scene', { title: 'Niveau', content: 'first' })
+      await mkdir(join(root, 'Acte 1'), { recursive: true })
+      await rename(join(root, 'documents', 'Niveau.scene'), join(root, 'Acte 1', 'Niveau.scene'))
+      await documents.write('doc-2', 'scene', { title: 'Autre', content: 'second' })
+      await documents.list()
+
+      await documents.rename('doc-2', 'scene', 'Niveau')
+
+      expect(await readdir(join(root, 'documents'))).toEqual(['Niveau.scene'])
+      expect(await readdir(join(root, 'Acte 1'))).toEqual(['Niveau.scene'])
+    })
+  })
+
+  /**
    * The identity is the envelope's, so a file renamed in the Finder is the same document under
    * another name — which is what lets the studio rename one without it becoming a different
    * document, and what the tabs, the layout and the recent list all depend on.
@@ -298,7 +353,10 @@ describe('createDocumentFiles', () => {
     await rename(join(root, 'documents', 'Niveau.scene'), join(root, 'documents', 'Décor.scene'))
 
     expect((await documents.read('doc-1', 'scene'))?.content).toBe('{"nodes":[]}')
-    expect((await documents.list())[0]).toMatchObject({ id: 'doc-1', fileName: 'Décor.scene' })
+    expect((await documents.list())[0]).toMatchObject({
+      id: 'doc-1',
+      path: 'documents/Décor.scene',
+    })
   })
 
   // The studio names what it engenders, and there is nobody to ask about a collision.
@@ -386,7 +444,7 @@ describe('createDocumentFiles', () => {
         kind: 'scene',
         title: 'Décor',
         workspace: '3d',
-        fileName: 'Décor.scene',
+        path: 'documents/Décor.scene',
       })
       expect(await readdir(join(root, 'documents'))).toEqual(['Décor.scene'])
       expect(await documents.read('doc-1', 'scene')).toMatchObject({
@@ -437,7 +495,7 @@ describe('createDocumentFiles', () => {
       await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{}' })
 
       await expect(documents.rename('doc-1', 'scene', 'Niveau')).resolves.toMatchObject({
-        fileName: 'Niveau.scene',
+        path: 'documents/Niveau.scene',
       })
     })
 
@@ -481,7 +539,7 @@ describe('createDocumentFiles', () => {
       await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{}' })
 
       await expect(documents.rename('doc-1', 'scene', 'niveau')).resolves.toMatchObject({
-        fileName: 'niveau.scene',
+        path: 'documents/niveau.scene',
       })
       expect(await readdir(join(root, 'documents'))).toEqual(['niveau.scene'])
     })
@@ -541,13 +599,19 @@ describe('createDocumentFiles', () => {
 
       expect(await documents.list()).toEqual(
         expect.arrayContaining([
-          { id: 'doc-1', kind: 'scene', title: 'Level', workspace: '3d', fileName: 'Level.scene' },
+          {
+            id: 'doc-1',
+            kind: 'scene',
+            title: 'Level',
+            workspace: '3d',
+            path: 'documents/Level.scene',
+          },
           {
             id: 'doc-2',
             kind: 'image',
             title: 'Poster',
             workspace: 'image',
-            fileName: 'Poster.img',
+            path: 'documents/Poster.img',
           },
         ]),
       )
@@ -594,6 +658,27 @@ describe('createDocumentFiles', () => {
 
       await documents.list()
       expect(await readdir(join(root, 'documents'))).toEqual(['Level.scene'])
+    })
+
+    /**
+     * A folder document stages a FOLDER, and the walk that feeds the listing answers files and
+     * documents — it never shows one, and would have descended into it and offered its manifest
+     * and its layers as though they were the user's own files. Its own folder is read for it.
+     */
+    it('sweeps a staging copy that is a folder, and never offers what it holds', async () => {
+      await documents.write('doc-1', 'image', {
+        title: 'Planche',
+        content: '{"layers":[]}',
+        parts: [],
+      })
+      const staged = join(root, 'documents', 'Planche.img.3f2a1c88-9d4e-4b7a-8c15-2e6f0a7b9d31.tmp')
+      await mkdir(staged, { recursive: true })
+      await writeFile(join(staged, 'document.json'), '{}', 'utf8')
+
+      const listed = await documents.list()
+
+      expect(listed.map(entry => entry.id)).toEqual(['doc-1'])
+      expect(await readdir(join(root, 'documents'))).toEqual(['Planche.img'])
     })
   })
 
@@ -651,7 +736,13 @@ describe('createDocumentFiles', () => {
       await documents.write('doc-1', 'image', { title: 'Poster', content: '{}' })
 
       expect(await documents.list()).toEqual([
-        { id: 'doc-1', kind: 'image', title: 'Poster', workspace: 'image', fileName: 'Poster.img' },
+        {
+          id: 'doc-1',
+          kind: 'image',
+          title: 'Poster',
+          workspace: 'image',
+          path: 'documents/Poster.img',
+        },
       ])
     })
 

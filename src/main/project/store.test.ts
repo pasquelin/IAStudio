@@ -6,7 +6,8 @@ import {
   LEGACY_MANIFEST_FILE,
   MANIFEST_FILE,
   MANIFEST_VERSION,
-  PROJECT_FOLDERS,
+  MACHINE_FOLDERS,
+  STARTER_FOLDERS,
 } from '@shared/domain/project'
 import { isRecord } from '@shared/guards'
 import { createProjectStore, NoProjectError, ProjectOpenError, type ProjectStore } from './store'
@@ -63,9 +64,14 @@ describe('project store', () => {
     // The folder handed in IS the project. Nothing is made from the name — a name that fabricated
     // a subfolder put a project inside the folder the user had just made for it.
     expect(project.path).toBe(root)
-    for (const folder of PROJECT_FOLDERS) {
+    for (const folder of [...MACHINE_FOLDERS, ...STARTER_FOLDERS]) {
       expect(await exists(join(project.path, folder))).toBe(true)
     }
+
+    // The old layout is gone: a document lands in `documents/` when nothing says otherwise and
+    // the folder appears with the first save, exactly as an import recreates `Images/`.
+    expect(await exists(join(project.path, 'assets'))).toBe(false)
+    expect(await exists(join(project.path, 'documents'))).toBe(false)
 
     const manifest: unknown = JSON.parse(
       await readFile(join(project.path, '.project.json'), 'utf8'),
@@ -81,7 +87,28 @@ describe('project store', () => {
   // The rule the entry states: what the folder holds for the user stays in the open, what the
   // machine keeps goes under a dot. `layouts/` was neither — nothing has ever written to it.
   it('leaves no folder behind that nothing writes to', () => {
-    expect(PROJECT_FOLDERS).not.toContain('layouts')
+    expect([...MACHINE_FOLDERS, ...STARTER_FOLDERS]).not.toContain('layouts')
+  })
+
+  /**
+   * What makes the starter folders ORDINARY, and the whole reason they are laid down once rather
+   * than ensured: a user who threw `Images/` away meant to, and a folder that came back at the
+   * next open would be the old layout wearing a new name.
+   *
+   * The machine's own are the other way round — rebuildable, so a missing cache folder must not
+   * be what stops a project from opening.
+   */
+  it('puts back the caches on open, and never the folders the user was given', async () => {
+    const project = await store.create(root, 'My project')
+
+    await rm(join(project.path, 'Images'), { recursive: true, force: true })
+    await rm(join(project.path, '.index/peaks'), { recursive: true, force: true })
+    store.close()
+
+    await store.open(project.path)
+
+    expect(await exists(join(project.path, 'Images'))).toBe(false)
+    expect(await exists(join(project.path, '.index/peaks'))).toBe(true)
   })
 
   /**
@@ -463,15 +490,6 @@ describe('project store', () => {
 
     expect(store.current()).toBeNull()
     expect(await store.open(created.path)).toEqual(created)
-  })
-
-  it('rebuilds a folder deleted between two sessions rather than refusing to open', async () => {
-    const created = await store.create(root, 'My project')
-    await rm(join(created.path, 'assets/vid'), { recursive: true })
-    store.close()
-
-    await store.open(created.path)
-    expect(await exists(join(created.path, 'assets/vid'))).toBe(true)
   })
 
   it('refuses a manifest it cannot make sense of', async () => {

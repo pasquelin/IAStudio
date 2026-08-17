@@ -40,12 +40,9 @@ describe('local backend', () => {
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'scenario-assets-'))
-    await mkdir(join(root, 'assets/img'), { recursive: true })
-    await mkdir(join(root, 'assets/aud'), { recursive: true })
-    await mkdir(join(root, 'assets/tex'), { recursive: true })
-    await mkdir(join(root, 'assets/3d'), { recursive: true })
-    await mkdir(join(root, 'assets/vid'), { recursive: true })
-    await mkdir(join(root, 'assets/sky'), { recursive: true })
+    // No landing folder is laid down: `DEFAULT_ASSET_FOLDERS` is a default now, not a layout, and
+    // every import below writes into a folder that has to be created on the way. A user who threw
+    // `Images/` away gets it back rather than an import that fails.
     await mkdir(join(root, '.index/posters'), { recursive: true })
 
     catalog = memoryCatalog()
@@ -94,7 +91,7 @@ describe('local backend', () => {
     expect(asset.probe?.duration).toBe(5_400_000)
     expect(asset.probe?.channels).toBe(2)
     // The file that was just written, never the URL it came from.
-    expect(probeFile).toHaveBeenCalledWith(join(root, 'assets/vid/Terrier.mp4'))
+    expect(probeFile).toHaveBeenCalledWith(join(root, 'Video/Terrier.mp4'))
   })
 
   // A tool the user has not installed must cost nothing but the length nobody could read.
@@ -114,7 +111,7 @@ describe('local backend', () => {
       type: 'video',
     })
 
-    expect(asset.path).toBe('assets/vid/Terrier.mp4')
+    expect(asset.path).toBe('Video/Terrier.mp4')
     expect(asset.probe).toBeUndefined()
   })
 
@@ -165,7 +162,7 @@ describe('local backend', () => {
     })
 
     expect(second.path).toBe(first.path)
-    expect(await readdir(join(root, 'assets/img'))).toEqual(['Boulder.png'])
+    expect(await readdir(join(root, 'Images'))).toEqual(['Boulder.png'])
   })
 
   /**
@@ -183,8 +180,7 @@ describe('local backend', () => {
 
     // As a rename leaves it: the row and the file say the same thing, which is the whole point.
     const held = await catalog.find('asset_1')
-    if (held)
-      await catalog.add({ ...held, name: 'Ruelle bleue', path: 'assets/img/Ruelle bleue.png' })
+    if (held) await catalog.add({ ...held, name: 'Ruelle bleue', path: 'Images/Ruelle bleue.png' })
 
     const rewritten = await backend.importFromUrl({
       id: 'asset_1',
@@ -194,7 +190,7 @@ describe('local backend', () => {
     })
 
     expect(rewritten.name).toBe('Ruelle bleue')
-    expect(rewritten.path).toBe('assets/img/Ruelle bleue.png')
+    expect(rewritten.path).toBe('Images/Ruelle bleue.png')
   })
 
   /** The suffix follows the bytes: a take that comes back re-encoded stops claiming to be a wav. */
@@ -211,7 +207,7 @@ describe('local backend', () => {
       type: 'audio',
     })
 
-    expect(rewritten.path).toBe('assets/aud/Prise.wav')
+    expect(rewritten.path).toBe('Audio/Prise.wav')
   })
 
   // One folder per kind, and the catalogue reads a texture's channel off the folder it sits in.
@@ -224,9 +220,9 @@ describe('local backend', () => {
       return asset.path
     }
 
-    expect(await landed('mesh')).toBe('assets/3d/Prise.bin')
-    expect(await landed('audio')).toBe('assets/aud/Prise.bin')
-    expect(await landed('skybox')).toBe('assets/sky/Prise.bin')
+    expect(await landed('mesh')).toBe('3D/Prise.bin')
+    expect(await landed('audio')).toBe('Audio/Prise.bin')
+    expect(await landed('skybox')).toBe('Sky/Prise.bin')
   })
 
   /**
@@ -247,8 +243,8 @@ describe('local backend', () => {
       type: 'image',
     })
 
-    expect(first.path).toBe('assets/img/Ruelle bleue.png')
-    expect(second.path).toBe('assets/img/Ruelle bleue 2.png')
+    expect(first.path).toBe('Images/Ruelle bleue.png')
+    expect(second.path).toBe('Images/Ruelle bleue 2.png')
   })
 
   it('keeps what the request says nothing about', async () => {
@@ -351,13 +347,13 @@ describe('local backend', () => {
       location: 'local',
       // The name, never the id: a folder of `asset_40f76c36-8ad4-….png` says nothing about
       // what is in it, and the row that does say could not be joined to it by eye.
-      path: 'assets/img/Boulder.png',
+      path: 'Images/Boulder.png',
       bytes: 4,
       jobId: 'job_1',
       remoteAssetId: 'asset_remote',
     })
 
-    expect(await readFile(join(root, 'assets/img/Boulder.png'))).toEqual(Buffer.from(BYTES))
+    expect(await readFile(join(root, 'Images/Boulder.png'))).toEqual(Buffer.from(BYTES))
     await expect(catalog.find('asset_1')).resolves.toEqual(asset)
   })
 
@@ -454,11 +450,11 @@ describe('local backend', () => {
     expect(asset).toMatchObject({
       // Cleaned on the way to the disk, having nobody to refuse it to: the studio wrote this
       // name itself, and a user's own is refused instead — see `checkAssetName`.
-      path: 'assets/aud/Pad (edited).wav',
+      path: 'Audio/Pad (edited).wav',
       bytes: 3,
       derivedFrom: 'asset_1',
     })
-    expect(await readFile(join(root, 'assets/aud/Pad (edited).wav'))).toEqual(Buffer.from(edited))
+    expect(await readFile(join(root, 'Audio/Pad (edited).wav'))).toEqual(Buffer.from(edited))
     await expect(catalog.find('asset_2')).resolves.toEqual(asset)
   })
 
@@ -471,7 +467,7 @@ describe('local backend', () => {
     const replaced = await backend.replaceBytes('asset_2', new Uint8Array([4, 5]), '.wav')
 
     expect(replaced).toMatchObject({ id: 'asset_2', name: 'Pad', jobId: 'job_1', bytes: 2 })
-    expect(await readFile(join(root, 'assets/aud/Pad.wav'))).toEqual(Buffer.from([4, 5]))
+    expect(await readFile(join(root, 'Audio/Pad.wav'))).toEqual(Buffer.from([4, 5]))
   })
 
   // An edited take goes back as a wav; leaving it under its old name would hand every reader
@@ -484,9 +480,9 @@ describe('local backend', () => {
 
     const replaced = await backend.replaceBytes('asset_3', new Uint8Array([4, 5]), '.wav')
 
-    expect(replaced.path).toBe('assets/aud/Import.wav')
-    expect(await readFile(join(root, 'assets/aud/Import.wav'))).toEqual(Buffer.from([4, 5]))
-    await expect(readFile(join(root, 'assets/aud/Import.mp3'))).rejects.toThrow()
+    expect(replaced.path).toBe('Audio/Import.wav')
+    expect(await readFile(join(root, 'Audio/Import.wav'))).toEqual(Buffer.from([4, 5]))
+    await expect(readFile(join(root, 'Audio/Import.mp3'))).rejects.toThrow()
   })
 
   it('refuses to replace an asset the catalogue does not hold', async () => {
@@ -517,9 +513,9 @@ describe('local backend', () => {
       name: 'Capture',
       // Its own name, the row having no file of ours to keep the stem of — and free, which is
       // asked of the folder rather than of the catalogue.
-      path: 'assets/img/Capture.png',
+      path: 'Images/Capture.png',
     })
-    expect(await readFile(join(root, 'assets/img/Capture.png'))).toEqual(Buffer.from([4, 5]))
+    expect(await readFile(join(root, 'Images/Capture.png'))).toEqual(Buffer.from([4, 5]))
   })
 
   // The file the user only pointed at is not ours to delete: the studio owns the copy it wrote.
@@ -707,7 +703,7 @@ describe('the still brought down beside the bytes', () => {
       thumbnailUrl: 'https://cdn.example/thumb/gone.jpg',
     })
 
-    expect(asset.path).toBe('assets/3d/Skeleton.glb')
+    expect(asset.path).toBe('3D/Skeleton.glb')
     expect(asset.posterPath).toBeUndefined()
   })
 

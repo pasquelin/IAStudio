@@ -89,38 +89,47 @@ describe('what may be dragged where', () => {
     expect(canMoveInto('notes', 'refs')).toBe(true)
   })
 
-  // The catalogue stores every asset by a path under `assets/`: moving one orphans rows nobody
-  // can find again, and a file landing there is a file no row knows about.
-  it('refuses a studio folder as what moves', () => {
-    expect(canMoveInto('assets', 'notes')).toBe(false)
-    expect(canMoveInto('assets/img', 'notes')).toBe(false)
-    expect(canMoveInto('documents', 'notes')).toBe(false)
-  })
-
-  it('refuses a studio folder as what receives, which is the half a drag adds', () => {
-    expect(canMoveInto('brief.pdf', 'assets')).toBe(false)
-    expect(canMoveInto('brief.pdf', 'assets/img')).toBe(false)
-    expect(canMoveInto('brief.pdf', 'documents')).toBe(false)
+  // The machine's own bookkeeping, refused on BOTH sides: as what moves and as what receives.
+  it('refuses what the machine keeps for itself', () => {
+    expect(canMoveInto('.index', 'notes')).toBe(false)
+    expect(canMoveInto('.index/catalog.db', 'notes')).toBe(false)
+    expect(canMoveInto('.project.json', 'notes')).toBe(false)
+    expect(canMoveInto('brief.pdf', '.index')).toBe(false)
+    expect(canMoveInto('brief.pdf', '.index/proxies')).toBe(false)
   })
 
   /**
-   * The root RECEIVES, which it did not: dropping on the blank below the tree means "to the
-   * project folder", and a file that could enter a folder the user made but never leave it was
-   * a browser missing one of its two ordinary gestures.
-   *
-   * Nothing about the root is one of the studio's own paths, so this needs no exception of its
-   * own — it falls out of `isStudioOwned` answering false for it.
+   * The whole point of the phase: an asset leaves the folder it was filed under, and a document
+   * leaves `documents/`. Their role is read off the extension and the catalogue row, and the row
+   * follows the file through `repath` — the folder said nothing about either.
    */
+  it('lets an asset and a document leave the folders they were filed under', () => {
+    expect(canMoveInto('assets/img/dusk.png', 'notes')).toBe(true)
+    expect(canMoveInto('documents/a3f1.scene', 'notes')).toBe(true)
+    expect(canMoveInto('assets/img', 'notes')).toBe(true)
+    expect(canMoveInto('brief.pdf', 'Images')).toBe(true)
+  })
+
+  // Dropping on the blank below the tree means "to the project folder", and a file that could
+  // enter a folder the user made but never leave it was a browser missing one of two gestures.
   it('takes the project root as a destination, which is how a file comes back out', () => {
     expect(canMoveInto('notes/brief.pdf', '')).toBe(true)
   })
 
-  // The other half of the same change: what the studio holds is refused by CONTENTS, not just
-  // as the folders themselves — `assets/` is still where a file's role is read from.
-  it('refuses what one of its own folders holds, on either side of the gesture', () => {
-    expect(canMoveInto('assets/img/dusk.png', 'notes')).toBe(false)
-    expect(canMoveInto('documents/a3f1.scene', 'notes')).toBe(false)
-    expect(canMoveInto('brief.pdf', 'assets/img')).toBe(false)
+  /**
+   * A document written as a folder is a DOCUMENT, whatever the disk calls it. `Planche.img` is a
+   * real directory, so every reader that asks the disk gets "folder" — and the drop was accepted.
+   * The next ⌘S rebuilds that folder from the document's own parts: the file dropped in there is
+   * DELETED by the save, and its catalogue row left pointing at nothing.
+   *
+   * The old lock refused this as a side effect of `documents/` being private. It is a rule of its
+   * own now.
+   */
+  it('refuses to drop anything into a document written as a folder', () => {
+    expect(canMoveInto('Images/tex.png', 'Planche.img')).toBe(false)
+    expect(canMoveInto('Images/tex.png', 'Repérages/Planche.img')).toBe(false)
+    // The document itself moves like any other file — it is only its INSIDE that is the studio's.
+    expect(canMoveInto('Planche.img', 'Repérages')).toBe(true)
   })
 
   it('refuses a folder dropped on itself', () => {

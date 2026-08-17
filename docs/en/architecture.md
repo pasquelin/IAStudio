@@ -707,15 +707,28 @@ The **catalogue** is `.index/catalog.db`, a SQLite index of every asset: id, nam
 location, tags, timestamps, and the path when the asset is local. It exists so the asset shelf
 can search thousands of items without touching the filesystem, and so a project remains portable.
 
-**It does not rebuild.** No rescan of `assets/` refills the catalogue: it fills up as you generate
-and import, never after the fact. Deleting it loses the names, the tags, the dimensions, the
-generation recipe, `derivedFrom`, the `sourcePath` of linked media and the activity journal — the
-files remain, and nothing says what they are any more.
+**It does not rebuild.** Nothing guesses again what a file IS: the catalogue fills up as you
+generate and import. Deleting it loses the names, the tags, the dimensions, the generation recipe,
+`derivedFrom`, the `sourcePath` of linked media and the activity journal — the files remain, and
+nothing says what they are any more. `.scenario/items.json` is what is left to read that day: a
+backup keyed by content fingerprint, written after every reconciliation pass that changed
+something, which the studio never reads of its own accord.
+
+**A pass puts it back in agreement with the disk**, which is not rebuilding it. `catalog-rescan.ts`
+runs in the catalogue's thread when a project opens and when a window comes back to the front
+(5 s floor, one pass at a time): it finds a file moved outside the studio by its content
+fingerprint and refiles its row (`repath`), and it DATES an absence — `missing_at` — without ever
+dropping a row. Two passes give the same state. On an ambiguous fingerprint it does nothing:
+rewriting the path of a row nobody asked to move is the one failure a reconciliation must not
+have. `search` and `countByType` hide what is dated, so the trash — which dates rather than
+deletes — gives a whole row back if the file comes out of it.
 
 Assets are either `local` (a file in the project) or `cloud` (still only on Scenario). A local
 image is served to the renderer as `scenario://<id>`.
 
-**Documents** are JSON files under `documents/`, one per document, **named after the document** —
+**Documents** are JSON files filed wherever the user wants them — `documents/` is only where a
+first save lands, and `documents.list()` walks the whole project to find them. One per document,
+**named after the document** —
 `Niveau.scene`, `Bande annonce.seq`. Its id lives in the envelope (format version 3) rather than
 in the file name: that is what lets a document be renamed, open or not, without becoming a
 different document — the layout, the recent list and every tab are keyed by that id. A file

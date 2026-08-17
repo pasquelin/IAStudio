@@ -100,7 +100,7 @@ fills. Click it for the detail. You can keep working while it runs.
 
 **7. Collect the result.**
 When the job reaches "Done", the image arrives in the **Assets** panel — the project's shelf —
-and on your disk, in the `assets/img/` folder. Click it: the **Inspector**, on the right, shows
+and on your disk, in the `Images/` folder. Click it: the **Inspector**, on the right, shows
 its model, its prompt and its seed, and can open the folder holding it.
 
 That is all. The rest of the manual details each of these seven steps, and the five other

@@ -1,5 +1,6 @@
 import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain/activity'
 import type { Asset, AssetCounts, AssetQuery } from '@shared/domain/asset'
+import type { RescanReport } from './catalog-rescan'
 
 /**
  * What the main process and the catalogue worker say to each other.
@@ -48,11 +49,62 @@ export type CatalogOp = CatalogRequest['op']
  */
 export type CatalogAbandon = { op: 'abandon'; target: number }
 
-/** Everything the thread receives. */
-export type CatalogMessage = CatalogRequest | CatalogAbandon
+/**
+ * Reconcile the catalogue with the disk. Its own message rather than a `CatalogRequest`, and it
+ * has to be: a request is answered by ONE value dispatched synchronously, where this walks a
+ * folder, reads files, and reports how far along it is while it does.
+ *
+ * `root` travels with it. The thread holds a database file, never a project — and the folder it
+ * would have to reconcile with is not something a database can be asked for.
+ */
+export type CatalogRescan = { id: number; op: 'rescan'; root: string }
 
-export function isAbandon(message: CatalogMessage): message is CatalogAbandon {
+/**
+ * Stops a rescan by id.
+ *
+ * NOT `CatalogAbandon`, for three reasons of which each would do: an abandon only saves what is
+ * still queued and interrupts nothing begun, it is handled on the client side so the worker
+ * never learns of it, and a rescan is precisely the operation that CAN be interrupted — between
+ * two batches, which is why the stop has to reach the thread.
+ */
+export type CatalogRescanStop = { op: 'rescan-stop'; target: number }
+
+/**
+ * How far a rescan has got. Not a response: a response settles the request, and this is sent
+ * many times before the one that does.
+ *
+ * `rescanProgress` carries the id AND tells the two apart, and it is named that rather than
+ * `rescan` for a measured reason: the finished ANSWER carries a `rescan` field too, so a guard
+ * reading that name answered true for both — the progress path swallowed the answer and the
+ * promise never settled. The row saying the studio was working stayed on screen for good.
+ */
+export type CatalogRescanProgress = { rescanProgress: number; done: number; total: number }
+
+export function isRescanProgress(message: unknown): message is CatalogRescanProgress {
+  return typeof message === 'object' && message !== null && 'rescanProgress' in message
+}
+
+/** What the QUEUE takes: one request at a time, and the abandons that spare the ones still in it. */
+export type CatalogQueueMessage = CatalogRequest | CatalogAbandon
+
+/** Everything the thread receives. A rescan runs beside the queue rather than in it. */
+export type CatalogMessage = CatalogQueueMessage | CatalogRescan | CatalogRescanStop
+
+export function isAbandon(message: CatalogQueueMessage): message is CatalogAbandon {
   return message.op === 'abandon'
+}
+
+export function isRescan(message: CatalogMessage): message is CatalogRescan {
+  return message.op === 'rescan'
+}
+
+export function isRescanStop(message: CatalogMessage): message is CatalogRescanStop {
+  return message.op === 'rescan-stop'
+}
+
+/** Everything the queue serves, told from what runs beside it. */
+export function isQueueMessage(message: CatalogMessage): message is CatalogQueueMessage {
+  return !isRescan(message) && !isRescanStop(message)
 }
 
 /** What an abandoned request rejects with, so a caller can tell it from a failure. */
@@ -60,7 +112,14 @@ export const ABANDONED = 'abandoned'
 
 export type CatalogResponse =
   | { id: number; ok: true; value: CatalogResults[CatalogOp] }
+  | { id: number; ok: true; rescan: RescanReport }
   | { id: number; ok: false; error: string }
+
+export function isRescanResponse(
+  response: CatalogResponse,
+): response is { id: number; ok: true; rescan: RescanReport } {
+  return response.ok && 'rescan' in response
+}
 
 /** The worker's first message: the database is open, or it never will be. */
 export type CatalogReady = { ready: true } | { ready: false; error: string }

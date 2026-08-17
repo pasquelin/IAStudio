@@ -734,15 +734,29 @@ type, emplacement, étiquettes, dates, et le chemin quand l’asset est local. I
 l’étagère puisse chercher parmi des milliers d’éléments sans toucher au système de fichiers, et
 pour qu’un projet reste transportable.
 
-**Il ne se reconstruit pas.** Aucun réexamen d’`assets/` ne repeuple le catalogue : il se remplit
-au fil des générations et des imports, jamais après coup. Le supprimer perd les noms, les
-étiquettes, les dimensions, la recette de génération, `derivedFrom`, le `sourcePath` des médias
-liés et le journal d’activité — les fichiers restent, plus rien ne dit ce qu’ils sont.
+**Il ne se reconstruit pas.** Rien ne redevine ce qu’un fichier EST : le catalogue se remplit au
+fil des générations et des imports. Le supprimer perd les noms, les étiquettes, les dimensions, la
+recette de génération, `derivedFrom`, le `sourcePath` des médias liés et le journal d’activité —
+les fichiers restent, plus rien ne dit ce qu’ils sont. `.scenario/items.json` est ce qui reste à
+lire ce jour-là : une sauvegarde indexée par empreinte de contenu, écrite après chaque passe de
+réconciliation qui a changé quelque chose, que le studio ne relit jamais de lui-même.
+
+**Une passe le remet d’accord avec le disque**, ce qui n’est pas le reconstruire. `catalog-rescan.ts`
+tourne dans le thread du catalogue à l’ouverture d’un projet et au retour de la fenêtre au premier
+plan (plancher de 5 s, un passage à la fois) : elle retrouve par empreinte de contenu un fichier
+déplacé hors du studio et refile sa ligne (`repath`), et elle DATE une absence — `missing_at` —
+sans jamais supprimer de ligne. Deux passages donnent le même état. En cas d’empreinte ambiguë
+elle ne fait rien : réécrire le chemin d’une ligne que personne n’a demandé à déplacer est la
+seule panne qu’une réconciliation ne doit pas avoir. `search` et `countByType` masquent ce qui est
+daté, si bien que la corbeille — qui date au lieu d’effacer — rend une ligne entière si le fichier
+en ressort.
 
 Un asset est soit `local` (un fichier du projet), soit `cloud` (encore uniquement chez Scenario).
 Une image locale est servie au renderer sous la forme `scenario://<id>`.
 
-Les **documents** sont des fichiers JSON dans `documents/`, un par document, **nommé d’après le
+Les **documents** sont des fichiers JSON rangés où l’utilisateur veut — `documents/` n’est que le
+dossier où atterrit une première sauvegarde, et `documents.list()` parcourt le projet entier pour
+les trouver. Un par document, **nommé d’après le
 document** — `Niveau.scene`, `Bande annonce.seq`. Son identifiant vit dans l’enveloppe (version 3
 du format) et non dans le nom du fichier : c’est ce qui permet de renommer un document, y compris
 ouvert, sans qu’il devienne un autre document — la mise en page, la liste des récents et chaque

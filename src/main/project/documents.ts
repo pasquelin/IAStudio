@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
-import { basename, dirname, extname, join } from 'node:path'
+import { basename, dirname, join, relative, sep } from 'node:path'
 import {
   DOCUMENT_MANIFEST,
   documentPath,
@@ -9,7 +9,9 @@ import {
   ENVELOPE_LIMIT,
   FOLDER_KINDS,
   isPartName,
+  isStagingName,
   kindForExtension,
+  STAGING_SUFFIX,
   workspaceForKind,
   type DocumentDescriptor,
   type DocumentDraft,
@@ -23,8 +25,10 @@ import {
   checkDocumentName,
   documentFileName,
   nextFreeDocumentName,
+  type NamedDocument,
 } from '@shared/domain/document-name'
-import { foldForFileName } from '@shared/domain/file-name'
+import { extensionOf, foldForFileName } from '@shared/domain/file-name'
+import { parentOf, type FolderEntry } from '@shared/domain/folder'
 import { isRecord } from '@shared/guards'
 import { exists, isMissing, writeAtomic } from '@main/persistence'
 import { parseDocumentEnvelope } from './validation'
@@ -65,34 +69,94 @@ export type DocumentFiles = {
  */
 const DUPLICATE_NAME = 'duplicate-name'
 
-const STAGING_SUFFIX = '.tmp'
-
-/**
- * A staging copy of ours, and only ours: `<file>.<uuid>.tmp`. The project folder is the user's
- * own, and a `render.tmp` they left in there is not something to delete on their behalf.
- */
-const STAGING_PATTERN = /\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/i
-
 /**
  * The staging copies in a folder that nobody is writing any more — the remains of a process
  * that died between the write and the rename, which the `catch` of a failed write never sees.
  *
  * `inFlight` is what keeps a save happening right now from being swept: every window writes
- * through the one main process, so that set is the whole truth about who is holding what.
+ * through the one main process, so that set is the whole truth about who is holding what. It
+ * holds NAMES, as the writer registers them, and the paths come from a walk of the project —
+ * two folders may each be staging a copy, and the question is only whether this file is one.
  *
  * Pure, and separate from the sweep itself: `readdir` and `rm` are as testable as any other
  * disk call, which is to say not, and the rule is the part worth being sure of.
  */
+function isStagingCopy(path: string, inFlight: ReadonlySet<string>): boolean {
+  return isStagingName(path) && !inFlight.has(basename(path))
+}
+
 export function orphanStagingCopies(
-  entries: readonly string[],
+  paths: readonly string[],
   inFlight: ReadonlySet<string>,
 ): string[] {
-  return entries.filter(entry => STAGING_PATTERN.test(entry) && !inFlight.has(entry))
+  return paths.filter(path => isStagingCopy(path, inFlight))
 }
 
 export type DocumentFilesDeps = {
   projectPath: () => string
   now: () => string
+  /**
+   * Every file the project folder holds, at any depth — `FolderReader.walk`, handed in rather
+   * than walked again here.
+   *
+   * That walk already carries what a listing needs and what a second one would have to be kept
+   * in step with: the depth bound, the refusal to descend into a document written as a folder,
+   * and the exclusion of everything under a dot. What is left for this file is which of those
+   * entries is a document, which is the only part it knows about.
+   */
+  walkFiles: () => Promise<readonly FolderEntry[]>
+  /**
+   * Every name one folder holds, hidden ones included — `FolderReader.names`.
+   *
+   * The walk above cannot answer for a staging copy of a folder document: it is a directory with
+   * no document extension, so the walk neither shows it nor descends into it. This reads the
+   * folders documents were actually found in, which is the only place a staging copy can be.
+   */
+  folderNames: (relative: string) => Promise<readonly string[] | null>
+}
+
+/**
+ * Whether a path is worth opening for a document envelope — the filter that runs BEFORE any file
+ * is opened, and what keeps reading a whole project down to one open per document.
+ *
+ * An extension the studio writes, or none at all: a document that lost its extension is still
+ * one, and reading a head it does not have costs one bounded read of a file the user cannot have
+ * many of. Everything else — every `.png`, `.glb`, `.wav` a project is full of — is turned away
+ * on its name.
+ */
+function claimsDocument(path: string): boolean {
+  // `extensionOf` and not `extname`: the studio has one spelling of "what is this file's
+  // extension", and it exists because three sites had quietly disagreed about `.gitignore`.
+  // Over the NAME, since it reads back to the last dot and a folder may hold one.
+  const extension = extensionOf(basename(path))
+  return extension === '' || kindForExtension(extension) !== null
+}
+
+/** How many heads are read at once. Measured in `documents.bench.ts`: 2 000 documents across
+ * 200 folders take 117 ms one at a time and 35 ms over this pool. A cache of `mtime`/`size`
+ * would take it to 19 ms and was not written — 16 ms does not pay for a map to keep in step. */
+const HEAD_POOL = 16
+
+/** Runs `read` over `items` with at most `HEAD_POOL` in flight, ANSWERING IN ORDER.
+ *
+ * The order is not cosmetic: it is what settles which of two files claiming one id keeps it,
+ * and that answer has to be the same on every machine. */
+export async function pooledHeads<T>(
+  items: readonly string[],
+  read: (item: string) => Promise<T>,
+): Promise<T[]> {
+  const done = new Array<T>(items.length)
+  let next = 0
+
+  const worker = async (): Promise<void> => {
+    for (let index = next++; index < items.length; index = next++) {
+      const item = items[index]
+      if (item !== undefined) done[index] = await read(item)
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(HEAD_POOL, items.length) }, worker))
+  return done
 }
 
 /**
@@ -142,7 +206,12 @@ async function headOf(file: string): Promise<DocumentEnvelope> {
  * Documents as files in the project folder — a document is the user's own work, and it has to
  * survive a catalogue rebuilt from that folder.
  */
-export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): DocumentFiles {
+export function createDocumentFiles({
+  projectPath,
+  now,
+  walkFiles,
+  folderNames,
+}: DocumentFilesDeps): DocumentFiles {
   /**
    * In-flight work per DOCUMENT, so writing, renaming and removing one cannot interleave.
    *
@@ -163,8 +232,23 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
    *
    * A cache and not a registry: `walk` rebuilds it from the folder, which stays the only thing
    * that says what exists. Missing or stale, the answer is one listing away.
+   *
+   * The value is a path relative to the PROJECT, not a directory entry: a document may sit
+   * anywhere now, and a bare entry would have to be resolved against a folder nobody carries.
    */
   const index = new Map<string, string>()
+
+  /**
+   * The documents ONE folder holds, as a name check needs to see them.
+   *
+   * Per folder and not across the project: two folders may each hold a `Niveau.scene` and the
+   * disk is happy with both, so a check taken over the whole tree would refuse a name nothing
+   * where the document sits answers to.
+   */
+  const namesIn = (folder: string, except?: string): NamedDocument[] =>
+    [...index]
+      .filter(([key, path]) => key !== except && (parentOf(path) ?? '') === folder)
+      .map(([key, path]) => ({ id: key, fileName: basename(path) }))
 
   /**
    * The modification time each document's file carried when the studio last read or wrote it.
@@ -184,7 +268,18 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
 
   const stampKey = (id: string, kind: DocumentKind): string => `${projectPath()}|${keyOf(id, kind)}`
 
-  const folderPath = (): string => join(projectPath(), DOCUMENTS_FOLDER)
+  /**
+   * Where a document nobody has placed goes — a DEFAULT, not where documents live.
+   *
+   * They live wherever the user put them, which is what `walkFiles` finds; this is only the
+   * folder a first save lands in, and it is created on the way like any other.
+   */
+  const defaultFolder = (): string => join(projectPath(), DOCUMENTS_FOLDER)
+
+  /** An absolute path back to the spelling every boundary of the studio uses. */
+  const relativeOf = (file: string): string => relative(projectPath(), file).split(sep).join('/')
+
+  const absoluteOf = (path: string): string => join(projectPath(), path)
 
   /**
    * The file that actually holds a document's bytes.
@@ -329,34 +424,31 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
     return { ...document, parts }
   }
 
-  /** Swept while listing rather than on a timer: nothing else ever reads that folder. */
-  const sweep = async (folder: string, entries: readonly string[]): Promise<void> => {
+  /** Swept while listing rather than on a timer: nothing else ever walks the whole folder. */
+  const sweep = async (orphans: readonly string[]): Promise<void> => {
     // Failure is nothing to report: the listing is what was asked for, and the copy will be
     // offered again at the next open.
     await Promise.all(
-      orphanStagingCopies(entries, staging).map(orphan =>
-        // `recursive`: a folder document stages a folder, and `rm` refuses one without it.
-        rm(join(folder, orphan), { force: true, recursive: true }),
-      ),
+      // `recursive`: a folder document stages a folder, and `rm` refuses one without it.
+      orphans.map(orphan => rm(absoluteOf(orphan), { force: true, recursive: true })),
     )
   }
 
-  const descriptorOf = async (
-    folder: string,
-    entry: string,
-  ): Promise<DocumentDescriptor | null> => {
-    const extension = extname(entry)
+  /** A document read off its path, or nothing. */
+  const descriptorOf = async (path: string): Promise<DocumentDescriptor | null> => {
+    const entry = basename(path)
+    const extension = extensionOf(entry)
     const claimed = kindForExtension(extension)
     // An entry with no extension at all claims nothing, so there is nothing for the envelope to
     // contradict — and one that lost its extension is a document the studio would otherwise stop
-    // seeing altogether: present in the folder, absent from every list, unopenable and, since
-    // the explorer only renames what it recognises, unrepairable from inside the studio.
+    // seeing altogether: present in the folder, absent from every list, and unopenable. Reading
+    // a head it does not have costs one bounded read, which is what `claimsDocument` bounds.
     if (!claimed && extension !== '') return null
 
     try {
-      const path = join(folder, entry)
+      const file = absoluteOf(path)
       const envelope = await headOf(
-        claimed && FOLDER_KINDS.has(claimed) ? join(path, DOCUMENT_MANIFEST) : path,
+        claimed && FOLDER_KINDS.has(claimed) ? join(file, DOCUMENT_MANIFEST) : file,
       )
       // The folder's word beats the file's, exactly as `read` has it: an extension changed by
       // hand must not send a document to an editor that cannot open it. With no extension there
@@ -379,7 +471,7 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
         // with no title would drop out of every listing while sitting in the folder.
         title: envelope.title || stem,
         workspace,
-        fileName: entry,
+        path,
         ...(envelope.sourceAssetId ? { sourceAssetId: envelope.sourceAssetId } : {}),
       }
     } catch {
@@ -389,42 +481,66 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
   }
 
   /**
-   * The folder, read once: the documents it holds, and where each one sits.
+   * The PROJECT, read once: every document it holds, wherever the user put it.
+   *
+   * One walk, then the heads. The walk is the folder reader's — depth bound, no descent into a
+   * document written as a folder, nothing under a dot — and what it answers is filtered by
+   * extension BEFORE a single file is opened, which is what makes reading a whole project cost
+   * one open per document rather than one per file.
    *
    * Two files can claim the same id — a document duplicated in the Finder carries the id of the
-   * one it was copied from. The first in `readdir` order keeps it and the second is called after
-   * its own file, which is unique by construction: dropping it instead would leave a file
-   * plainly sitting in the folder and absent from every list in the studio.
+   * one it was copied from. The first in path order keeps it and the second is called after its
+   * own path, which is unique by construction: dropping it instead would leave a file plainly
+   * sitting in the folder and absent from every list in the studio.
    */
   const walk = async (): Promise<DocumentDescriptor[]> => {
-    const folder = folderPath()
+    // One pass over the walk, not three. A project of a hundred thousand files is a hundred
+    // thousand strings, and this runs on the thread that owns every window — mapping them to
+    // paths, then filtering for staging copies, then filtering again for documents was three
+    // uninterrupted blocks where one loop answers both questions.
+    const candidates: string[] = []
+    const orphans: string[] = []
 
-    let entries: string[]
-    try {
-      entries = await readdir(folder)
-    } catch (error) {
-      // A project that has never saved anything has no folder yet, and holds no document.
-      if (isMissing(error)) return []
-      throw error
+    for (const { path } of await walkFiles()) {
+      if (claimsDocument(path)) candidates.push(path)
+      else if (isStagingCopy(path, staging)) orphans.push(path)
     }
 
-    await sweep(folder, entries)
+    /**
+     * A folder document stages a FOLDER — `Planche.img.<uuid>.tmp` — and the walk answers files
+     * and documents, so it never shows one. Its own folder is read for it: the folders documents
+     * were found in, which is where the writer puts them and the only place one can be.
+     *
+     * Read once the candidates are known, so it costs one `readdir` per folder actually holding
+     * a document — one or two in an ordinary project — rather than a second walk.
+     */
+    const folders = new Set(candidates.map(path => parentOf(path) ?? ''))
+    folders.add(DOCUMENTS_FOLDER)
+
+    const staged = await Promise.all(
+      [...folders].map(async folder => {
+        const names = (await folderNames(folder)) ?? []
+        return names
+          .map(name => (folder === '' ? name : `${folder}/${name}`))
+          .filter(path => isStagingCopy(path, staging))
+      }),
+    )
+
+    await sweep([...orphans, ...staged.flat()])
 
     index.clear()
 
-    // One at a time rather than all at once: a folder of a few thousand documents opened in
-    // parallel runs the process out of file descriptors, and every failed read would come
-    // back as a document silently missing from the list.
-    const found: DocumentDescriptor[] = []
     // By code unit, and said so: this ordering reaches no reader — it only settles WHICH of two
     // files claiming one id keeps it, and that answer has to be the same on every machine.
-    for (const entry of [...entries].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
-      const descriptor = await descriptorOf(folder, entry)
+    candidates.sort((one, other) => (one < other ? -1 : one > other ? 1 : 0))
+
+    const found: DocumentDescriptor[] = []
+    for (const descriptor of await pooledHeads(candidates, descriptorOf)) {
       if (!descriptor) continue
 
       const claimed = index.has(keyOf(descriptor.id, descriptor.kind))
-      const id = claimed ? entry : descriptor.id
-      index.set(keyOf(id, descriptor.kind), entry)
+      const id = claimed ? descriptor.path : descriptor.id
+      index.set(keyOf(id, descriptor.kind), descriptor.path)
       found.push(claimed ? { ...descriptor, id } : descriptor)
     }
     return found
@@ -438,15 +554,13 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
    * `writeFile` answers by creating it, leaving two files where the user made one.
    */
   const locate = async (id: string, kind: DocumentKind): Promise<string> => {
-    const folder = folderPath()
-
-    const holds = async (entry: string): Promise<boolean> => {
-      const descriptor = await descriptorOf(folder, entry)
+    const holds = async (path: string): Promise<boolean> => {
+      const descriptor = await descriptorOf(path)
       return descriptor?.id === id && descriptor.kind === kind
     }
 
     const cached = index.get(keyOf(id, kind))
-    if (cached && (await holds(cached))) return join(folder, cached)
+    if (cached && (await holds(cached))) return absoluteOf(cached)
 
     // A folder that cannot be read answers "not found" rather than throwing: whatever is wrong
     // with it, the caller is about to touch it and will fail with its OWN error, which is the
@@ -458,7 +572,7 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
     }
 
     const found = index.get(keyOf(id, kind))
-    if (found && (await holds(found))) return join(folder, found)
+    if (found && (await holds(found))) return absoluteOf(found)
 
     // Never listed, so never written: a document saved for the first time is named after itself
     // by `write`, and this is only what `read` and `remove` ask about before that happens.
@@ -477,8 +591,8 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
   const freshFile = (kind: DocumentKind, title: string): string => {
     // Only the file names matter here — a free name is one no entry of the folder wears — so the
     // key is handed over as the id it stands for and nothing reads it.
-    const taken = [...index].map(([key, fileName]) => ({ id: key, fileName }))
-    return join(folderPath(), documentFileName(nextFreeDocumentName(title, kind, taken), kind))
+    const taken = namesIn(DOCUMENTS_FOLDER)
+    return join(defaultFolder(), documentFileName(nextFreeDocumentName(title, kind, taken), kind))
   }
 
   /**
@@ -537,19 +651,19 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
         const document = { ...draft, version: DOCUMENT_VERSION, kind, updatedAt: now(), id }
 
         await (FOLDER_KINDS.has(kind) ? storeFolder(file, document) : store(file, document))
-        index.set(keyOf(id, kind), basename(file))
+        index.set(keyOf(id, kind), relativeOf(file))
         await remember(id, kind, file)
         return 'written'
       }),
 
     rename: (id, kind, title) =>
       queued(id, async () => {
-        const folder = folderPath()
         const from = await locate(id, kind)
+        // A rename stays where the document IS. Landing it in `documents/` would move it behind
+        // the user's back, and the folder they filed it in is the one the name has to be free in.
+        const inFolder = parentOf(relativeOf(from)) ?? ''
 
-        const taken = [...index]
-          .filter(([key]) => key !== keyOf(id, kind))
-          .map(([key, fileName]) => ({ id: key, fileName }))
+        const taken = namesIn(inFolder, keyOf(id, kind))
 
         // The failure travels as the message, so the window says which of the four it was rather
         // than reporting every refusal as a name already taken.
@@ -557,11 +671,12 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
         if (refused) throw new Error(refused)
 
         const entry = documentFileName(title, kind)
-        const to = join(folder, entry)
+        const path = inFolder === '' ? entry : `${inFolder}/${entry}`
+        const to = absoluteOf(path)
 
-        const descriptor = await descriptorOf(folder, basename(from))
+        const descriptor = await descriptorOf(relativeOf(from))
         if (!descriptor) throw new Error(`Document ${id} is not there to rename`)
-        if (to === from) return { ...descriptor, title, fileName: entry }
+        if (to === from) return { ...descriptor, title, path }
 
         /**
          * Asked before renaming, because `fs.rename` overwrites without a word on POSIX — and
@@ -604,13 +719,13 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
           : store(from, renamed))
 
         await rename(from, to)
-        index.set(keyOf(id, kind), entry)
+        index.set(keyOf(id, kind), path)
         // The envelope was just rewritten and the file just moved, both by the studio. Without
         // this, the next ⌘S would read a time it does not recognise and accuse the user of
         // having edited their own document elsewhere.
         await remember(id, kind, to)
 
-        return { ...descriptor, title, fileName: entry }
+        return { ...descriptor, title, path }
       }),
 
     // `force`: closing a document that was never saved must not fail on a file that is absent.

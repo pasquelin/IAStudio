@@ -4,7 +4,7 @@ import type { ActivityEntry } from '@shared/domain/activity'
 import type { CommandId } from '@shared/domain/command'
 import type { SttEvent } from '@shared/domain/dictation'
 import type { FileOutcome } from '@shared/domain/file-op'
-import type { Project } from '@shared/domain/project'
+import type { Project, RescanState } from '@shared/domain/project'
 import type { Job, JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
 import type { Settings } from '@shared/domain/settings'
@@ -85,6 +85,9 @@ const bridge: StudioBridge = {
     walkFolder: hidden => ipcRenderer.invoke(CHANNELS.projectWalkFolder, hidden),
     openFile: relative => ipcRenderer.invoke(CHANNELS.projectOpenFile, relative),
     onFolderChanged: callback => subscribe<void>(EVENTS.projectFolderChanged, callback),
+    onRescan: callback => subscribe<RescanState>(EVENTS.projectRescan, callback),
+    rescanState: () => ipcRenderer.invoke(CHANNELS.projectRescanState),
+    stopRescan: () => ipcRenderer.invoke(CHANNELS.projectStopRescan),
     revealFile: relative => ipcRenderer.invoke(CHANNELS.projectRevealFile, relative),
     revealFolder: path => ipcRenderer.invoke(CHANNELS.projectRevealFolder, path),
     rename: (path, name) => ipcRenderer.invoke(CHANNELS.projectRename, path, name),

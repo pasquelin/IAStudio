@@ -33,7 +33,12 @@ const RESERVED = new Set([
  * there is nobody to ask.
  */
 export function safeFileName(name: string, fallback = 'texture'): string {
-  const printable = [...name]
+  // NFC first, and this is one of the two places the studio settles that question — the other is
+  // the folder reader, where the disk speaks. `Été` typed here and `Été` pasted from elsewhere
+  // are the same six characters on screen and two different strings underneath; left as they
+  // came, one of them would be written to disk and the OTHER stored in the catalogue, and every
+  // comparison of the two — the explorer joining a row to a file above all — would answer no.
+  const printable = [...name.normalize('NFC')]
     // Control characters pass on Linux and are refused on Windows, so a name holding one would
     // export on the machine it was written on and nowhere else. Mapped by code point rather than
     // by a regex, which cannot hold this range without the linter being told to look away.

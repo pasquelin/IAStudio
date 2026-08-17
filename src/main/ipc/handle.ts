@@ -55,6 +55,8 @@ type ChannelMethod = {
   [CHANNELS.projectUndoFile]: StudioBridge['project']['undoFile']
   [CHANNELS.projectRedoFile]: StudioBridge['project']['redoFile']
   [CHANNELS.projectFileHistory]: StudioBridge['project']['fileHistory']
+  [CHANNELS.projectRescanState]: StudioBridge['project']['rescanState']
+  [CHANNELS.projectStopRescan]: StudioBridge['project']['stopRescan']
   [CHANNELS.dialogPickPath]: StudioBridge['dialog']['pickPath']
   [CHANNELS.dialogExportPicture]: StudioBridge['dialog']['exportPicture']
 

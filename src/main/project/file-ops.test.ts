@@ -127,7 +127,12 @@ describe('duplicating', () => {
 })
 
 describe('trashing', () => {
-  it('hands the file to the system and lets the rows underneath go', async () => {
+  /**
+   * The row is dated, not dropped: `shell.trashItem` is reversible, and a file taken back out of
+   * the trash must come back with its prompt and its lineage rather than as bytes nobody knows.
+   * It leaves every listing all the same — what is not there is not shown.
+   */
+  it('hands the file to the system and takes the rows underneath out of every listing', async () => {
     const { files, root, catalog, trashed, assetsChanged } = harnessed
     await catalog.add(asset({ path: 'Rushes/A001.mov' }))
 
@@ -135,7 +140,8 @@ describe('trashing', () => {
 
     expect(trashed).toEqual([join(root, 'Rushes')])
     expect(outcome.done).toEqual([{ from: 'Rushes', to: '' }])
-    expect(await catalog.find('asset-1')).toBeNull()
+    expect(await catalog.search({})).toEqual([])
+    expect(await catalog.find('asset-1')).not.toBeNull()
     expect(assetsChanged).toHaveBeenCalled()
   })
 

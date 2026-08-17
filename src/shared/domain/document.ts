@@ -31,13 +31,19 @@ export type DocumentDescriptor = {
   title: string
   workspace: WorkspaceId
   /**
-   * The directory entry this document was read from, extension included — `Niveau.scene`.
+   * Where this document was read from, relative to the project folder, extension included —
+   * `Repérages/Niveau.scene`. The same spelling every other path on this boundary uses, `/` on
+   * every platform.
    *
-   * Carried because the id no longer spells it: whoever joins a folder listing to a document
-   * has only the entry to go on, and rebuilding it from the title would be a second answer free
-   * to disagree with the disk.
+   * The whole path and not the entry alone, since a document may sit anywhere in the project:
+   * two folders may each hold a `Niveau.scene`, and a listing joined on the name would hand the
+   * explorer one document's descriptor for the other one's row.
+   *
+   * Carried because the id no longer spells it: whoever joins a folder listing to a document has
+   * only the path to go on, and rebuilding it from the title would be a second answer free to
+   * disagree with the disk.
    */
-  fileName: string
+  path: string
   /**
    * The asset this document was opened to edit, when it was opened for one.
    *
@@ -106,8 +112,9 @@ export const EXTENSION_BY_KIND: Record<DocumentKind, string> = {
  * before version 3 still lives, its file having been called after its id. Relative: a project
  * folder can be moved.
  *
- * NOT where a document lives in general: it is named after itself now, so what says where one
- * sits is its descriptor's `fileName`, read off the folder.
+ * NOT where a document lives in general: it is named after itself now and filed wherever the user
+ * put it, so what says where one sits is its descriptor's `path`, read off the walk. This is only
+ * the folder a first save falls back to.
  */
 export function documentPath(id: string, kind: DocumentKind): string {
   return `${DOCUMENTS_FOLDER}/${id}${EXTENSION_BY_KIND[kind]}`
@@ -177,6 +184,24 @@ export const FOLDER_KINDS: ReadonlySet<DocumentKind> = new Set<DocumentKind>(['i
 
 /** The manifest inside a folder document, holding exactly what a file document's body holds. */
 export const DOCUMENT_MANIFEST = 'document.json'
+
+/** The suffix on a copy being written, before the rename that makes it the document. */
+export const STAGING_SUFFIX = '.tmp'
+
+/**
+ * A staging copy of OURS, and only ours: `<file>.<uuid>.tmp`. The project folder is the user's
+ * own, and a `render.tmp` they left in there is not something to delete on their behalf.
+ *
+ * Here rather than beside the writer because two readers need it and neither owns the other: the
+ * listing sweeps these away, and the folder walk refuses to descend into one — a folder document
+ * stages a FOLDER, and walking into it would offer a manifest and a pile of layers as though
+ * they were the user's own files.
+ */
+export function isStagingName(name: string): boolean {
+  return STAGING_PATTERN.test(name)
+}
+
+const STAGING_PATTERN = /\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/i
 
 /**
  * Whether a part may become a file name. Deliberately narrow: the renderer picks these, and a

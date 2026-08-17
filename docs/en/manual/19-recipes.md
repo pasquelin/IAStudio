@@ -56,7 +56,7 @@ Remember those three lines and nothing will block you.
 3. click the **Generate** icon in the left rail — choosing a model does not open the panel for
    you — then write your sentence in the **prompt**;
 4. **Generate**. The status line, bottom right, follows the progress;
-5. the result arrives in the **Assets** panel, and in `assets/img/` on your disk.
+5. the result arrives in the **Assets** panel, and in `Images/` on your disk.
 
 **The catch.** With no project open there is **neither form nor button**: the panel shows "Open a
 project to generate." instead. It is not a greyed-out button, it is the whole panel waiting for a

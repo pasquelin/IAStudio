@@ -2,7 +2,7 @@ import { watch, type FSWatcher } from 'node:fs'
 import { cp, mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import { exists } from '@main/persistence'
-import { kindForExtension } from '@shared/domain/document'
+import { isStagingName, kindForExtension } from '@shared/domain/document'
 import { extensionOf } from '@shared/domain/file-name'
 import { entriesByName, isHiddenEntry, type FolderEntry } from '@shared/domain/folder'
 import { foldForSearch } from '@shared/text'
@@ -19,7 +19,7 @@ export type FolderReader = {
    * One level of the project folder. `''` is the project root.
    *
    * `hidden` shows what a leading dot hides — the studio's own bookkeeping, which the explorer
-   * offers to reveal. Shown, never written to: `isHiddenPath` refuses every gesture over them.
+   * offers to reveal. Shown, never written to: `isStudioPrivate` refuses every gesture over them.
    * Left out, nothing under a dot comes back, which is what a reader sees by default.
    */
   list: (relative: string, hidden?: boolean) => Promise<FolderEntry[]>
@@ -39,6 +39,9 @@ export type FolderReader = {
    * Folders are left out; a document written as a folder is not one for this purpose and is
    * answered as the item it is. Same depth bound and same refusal to walk into a document as
    * the search: the two are one walk.
+   *
+   * **In no order.** Every caller groups, re-sorts or de-duplicates what comes back, and this is
+   * the walk that crosses the whole project on every save.
    */
   walk: (hidden?: boolean) => Promise<FolderEntry[]>
   /**
@@ -70,17 +73,26 @@ export type FolderReader = {
  * express the language they depend on, while an unrelated suite's `beforeEach` was free to move it.
  */
 export function createFolderReader(rootOf: () => string, languageOf: () => string): FolderReader {
-  const level = async (relative: string, hidden = false): Promise<FolderEntry[]> => {
+  const level = async (relative: string, hidden = false, sorted = true): Promise<FolderEntry[]> => {
     const entries = await readdir(join(rootOf(), relative), { withFileTypes: true })
 
-    return entries
+    const read = entries
       .filter(entry => hidden || !isHiddenEntry(entry.name))
-      .map((entry): FolderEntry => ({
-        path: relative === '' ? entry.name : `${relative}/${entry.name}`,
-        name: entry.name,
-        kind: entry.isDirectory() ? 'folder' : 'file',
-      }))
-      .sort(entriesByName(languageOf()))
+      .map((entry): FolderEntry => {
+        // NFC, and this is one of the two places the studio settles that question — the other is
+        // `safeFileName`, where a name is made. A volume that stores decomposed hands back `Été`
+        // as `E` plus an accent where the catalogue holds it composed, and every comparison of
+        // the two answers no: the row the explorer would have joined to this file, the path a
+        // rescan would have recognised, the asset an inspector would have found.
+        const name = entry.name.normalize('NFC')
+        return {
+          path: relative === '' ? name : `${relative}/${name}`,
+          name,
+          kind: entry.isDirectory() ? 'folder' : 'file',
+        }
+      })
+
+    return sorted ? read.sort(entriesByName(languageOf())) : read
   }
 
   /**
@@ -93,19 +105,23 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
   const walkAll = async (
     hidden: boolean,
     keep: (entry: FolderEntry) => boolean,
+    sorted = true,
   ): Promise<FolderEntry[]> => {
     const found: FolderEntry[] = []
 
     const walk = async (relative: string, depth: number): Promise<void> => {
-      const entries = await level(relative, hidden).catch((): FolderEntry[] => [])
+      const entries = await level(relative, hidden, sorted).catch((): FolderEntry[] => [])
       const deeper: Promise<void>[] = []
 
       for (const entry of entries) {
         if (keep(entry)) found.push(entry)
         if (entry.kind !== 'folder' || depth >= MAX_SEARCH_DEPTH) continue
         // An image document IS a folder, and what it holds is the studio's own writing — a walk
-        // that went into it would offer the parts instead of the document.
-        if (kindForExtension(extensionOf(entry.name))) continue
+        // that went into it would offer the parts instead of the document. The same holds for the
+        // copy of one being staged, `Planche.img.<uuid>.tmp`: a save interrupted leaves that
+        // folder behind, and walking into it would offer a manifest and a pile of layers as
+        // though they were the user's own files, in the domain view and to the rescan alike.
+        if (kindForExtension(extensionOf(entry.name)) || isStagingName(entry.name)) continue
         deeper.push(walk(entry.path, depth + 1))
       }
 
@@ -121,7 +137,8 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
   }
 
   return {
-    list: level,
+    // Sorted, because this one IS displayed: the tree draws a level in the order it comes back.
+    list: async (relative, hidden) => await level(relative, hidden),
 
     search: async (term, hidden = false) => {
       // Trimmed here as well as in the panel: a term of spaces alone would otherwise match every
@@ -135,9 +152,15 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
     walk: async (hidden = false) =>
       // Folders are left out, documents written as one excepted: the domain view answers what a
       // file IS, and a folder is not a domain.
+      //
+      // UNSORTED, unlike `list` and `search`: `localeCompare` builds a collator per comparison,
+      // and not one caller of this keeps the order — the domain view groups what comes back, the
+      // document listing re-sorts by code unit, and the reconciliation pass puts it into a `Set`.
+      // This is the walk that crosses a hundred thousand files on every save.
       await walkAll(
         hidden,
         entry => entry.kind === 'file' || kindForExtension(extensionOf(entry.name)) !== null,
+        false,
       ),
 
     names: async relative => await readdir(join(rootOf(), relative)).catch(() => null),

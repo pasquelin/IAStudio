@@ -1,6 +1,7 @@
 import { parentPort, workerData } from 'node:worker_threads'
 import { createCatalog } from './catalog'
 import { serveCatalog } from './catalog-queue'
+import { openProjectDisk } from './project-disk'
 import { openNativeDatabase } from './sqlite-native'
 
 /**
@@ -15,7 +16,7 @@ const file = typeof workerData === 'string' ? workerData : ''
 if (!file) throw new Error('catalog worker started without a database file')
 
 try {
-  serveCatalog(createCatalog(openNativeDatabase(file)), port)
+  serveCatalog(createCatalog(openNativeDatabase(file)), port, openProjectDisk)
 
   // Only once the database is open and the migrations have run: the main process waits on this
   // before handing the catalogue out, so a corrupt file fails the open rather than the first query.

@@ -61,18 +61,18 @@ back. It is the gesture that cleans up a list where a moved folder lingers.
 ```
 My project/
 │
-├── assets/               EVERYTHING YOU MAKE
-│   ├── img/                images
-│   ├── vid/                videos
-│   ├── aud/                sounds
-│   ├── 3d/                 3D objects
-│   ├── tex/                textures
-│   └── sky/                skies
-│
-├── documents/            YOUR WORKS IN PROGRESS
-│                           one file per saved tab — a folder for an image
+├── Images/               SIX FOLDERS TO START FROM
+├── Video/                  laid down at creation, and ordinary: rename them,
+├── Audio/                  empty them, throw them away, arrange them otherwise
+├── 3D/
+├── Textures/
+├── Sky/
+│                           …and whatever you make beside them
 │
 ├── .project.json         the identity card — HIDDEN
+│
+├── .scenario/            A BACKUP OF THE CATALOGUE — HIDDEN
+│   └── items.json          what a file cannot say about itself
 │
 └── .index/               THE CATALOGUE AND ITS CACHES — KEEP THIS, HIDDEN
     ├── catalog.db          the index that makes search instant
@@ -81,10 +81,14 @@ My project/
     └── filmstrips/         created ahead of time, still empty
 ```
 
-**Two entries out of four are hidden, and the rule is simple**: what is yours shows, what is the
-machine's is filed away. Your assets and your documents stay visible — you must be able to look at
-them, copy them, repair them. The identity card and the index do not: they are the studio's tools,
-not your work.
+**What starts with a dot is the machine's; everything else is yours**, and that is the whole rule.
+Your files stay visible and you arrange them as you see fit — you must be able to look at them,
+copy them, repair them. The identity card, the index and the backup do not: they are the studio's
+tools, not your work.
+
+> **The six starter folders are only a starting point.** They are laid down at creation and never
+> put back: delete `Images/` and it stays deleted — except the day a generation needs somewhere to
+> land, where the studio recreates it rather than refusing to work.
 
 > **On Windows a dot hides nothing** — Explorer reads a file attribute, not the name. The studio
 > sets it on both entries itself. If that fails, **the project opens anyway**: a service file left
@@ -92,8 +96,14 @@ not your work.
 
 ### What belongs to you
 
-**`assets/` and `documents/`.** This is your work. They are real files, in real formats — a PNG is
-a PNG, an MP4 is an MP4. You can open them with any other software.
+**Everything that does not start with a dot.** This is your work. They are real files, in real
+formats — a PNG is a PNG, an MP4 is an MP4. You can open them with any other software, and file
+them in whatever folders you like.
+
+**What a file IS does not depend on where it sits.** A picture is still a picture in
+`Locations/Alleys/` as much as in `Images/`: the studio reads its extension, and the catalogue
+entry corrects what an extension cannot guess — a normal map and a base colour are both PNGs. Move
+things, rename them, rearrange them: the studio follows.
 
 ### `.index/` holds more than caches — do not delete it
 
@@ -106,9 +116,16 @@ model and prompt that produced it, what it derives from — and, for an imported
 to your original file**, which is written nowhere else. The activity journal lives in the same
 database.
 
-**The studio cannot rebuild it from the folder.** There is no rescan of `assets/` at startup: the
-catalogue fills up as you generate and import, never after the fact. Deleting `.index/` therefore
-leaves a project whose files are all still there and about which nothing says what they are.
+**The studio cannot rebuild it from the folder.** The catalogue fills up as you generate and
+import; the pass that re-reads the folder when a project opens FINDS files that have moved, it
+does not guess again what they are. Deleting `.index/` therefore leaves a project whose files are
+all still there and about which nothing says what they are.
+
+> **That is what `.scenario/items.json` is for.** After every pass that changed something, the
+> studio copies into it what a file cannot say about itself: its name, its tags, the model and the
+> prompt that produced it — keyed by the fingerprint of the contents, so that a file found again
+> can be recognised. It is not a source: the studio never reads it of its own accord. It is what is
+> left to read, by hand, the day the index is gone.
 
 > **If you need to slim a project down**, throw away `proxies/` and `peaks/` — that is where the
 > weight is. Keep `catalog.db`, which weighs little and knows everything.
@@ -152,7 +169,8 @@ point it at and looks for this file inside.
 A document is a work in progress: an image with its layers, a 3D scene with its objects, an edit
 with its tracks.
 
-It is saved with `⌘S` / `Ctrl+S`, into `documents/`, under an extension that says what it is:
+It is saved with `⌘S` / `Ctrl+S` — into `documents/` the first time, for want of anywhere better,
+and afterwards wherever you filed it — under an extension that says what it is:
 
 | Document type | Extension | Workspace |
 |---|---|---|
@@ -171,8 +189,8 @@ what each one is; `a3f1.json` next to `b204.json` says nothing.
 
 ### Walking the project — the Explorer panel
 
-The **Explorer** panel shows **the project folder**, as a tree: `assets/`, `documents/`, and
-whatever you dropped in there yourself. Folders unfold, files are inside them, exactly as in your
+The **Explorer** panel shows **the project folder**, as a tree: the six starter folders, and
+whatever you made or dropped in there yourself. Folders unfold, files are inside them, as in your
 system's own file browser.
 
 **It shows what the studio cannot open, too.** A `.pdf`, a `.txt`, a folder of notes: it is your
@@ -225,7 +243,7 @@ field it was typed in off the screen**, or there would be no way back.
 |---|---|
 | **Double-click** a folder | opens or closes it |
 | **Double-click** a studio document | opens it, switching workspace if it belongs to another |
-| **Double-click** a file under `assets/` | **opens it in the studio**, in the workspace that edits its kind — it is an asset, not just any file |
+| **Double-click** an asset | **opens it in the studio**, in the workspace that edits its kind — wherever it is filed |
 | **Double-click** any other file | hands it to your system, which opens it with the right application |
 | `→` `←` | unfolds, folds |
 | `↑` `↓` | the previous row, the next one |
@@ -283,27 +301,30 @@ document: undoing on the canvas must not reach your disk.
 > menu, takes the file out of the folder without going through the trash. Its dialogue announces
 > "This cannot be undone.", and it means it.
 
-**One refusal, greyed rather than hidden.** What the studio files itself — `assets/`, its six
-per-kind subfolders, `documents/` — cannot be renamed or trashed: the index files every asset by
-its path under `assets/`, and renaming one of those folders would leave rows nothing can find
-again. **The same refusal holds on both sides of a drag**: those folders cannot be picked up, and
-nothing can be dropped into them either.
+**One refusal, greyed rather than hidden.** What the studio keeps for itself — everything starting
+with a dot: `.index/`, `.scenario/`, `.project.json` — cannot be renamed or trashed, and receives
+nothing either. Those are its tools; renaming one would break the project for a name nobody reads.
+**The same refusal holds on both sides of a drag**: you see before you let go.
 
-**And it holds for what they CONTAIN, as far as moving goes.** A file under `assets/img` cannot be
-cut, copied, duplicated or dragged elsewhere: its path is still what says what it is, and taking
-it out of there would cost it its kind. **The trash is the exception, because it does not move
-it**: the index lets the row go with the file.
+**A document written as a folder receives nothing either.** An `.img` sheet is a real directory,
+but what it holds is the studio's own writing: a file dropped in there would be erased by the next
+save, which rebuilds that folder. The document itself moves like any other file — it is its inside
+that does not open.
 
-**And renaming, on one condition.** An asset and a document each have a gesture of their own, and
+**Everything else obeys you**, the six starter folders included: rename them, empty them, throw
+them away, take an asset out of one and file it elsewhere, cut, copy, duplicate. The studio
+follows — that is what the reconciliation pass does when a project opens and when you come back to
+the window.
+
+**Renaming goes through the gesture of the thing.** An asset and a document each have one, and
 the Explorer leads to it: the name changes, and the file follows in the same move. A document
 renamed here keeps its tab open, which takes the new name. An asset renamed here changes name
 everywhere at once — the Explorer, the shelf, the Inspector, the tab editing it — because there
 is only **one name**: its index row's name IS its file's name.
 
-> **The studio only renames what it knows.** A picture you dropped into `assets/img` yourself,
-> without going through the studio, has no index row: it is neither a document nor an asset, and
-> **Rename** is greyed out on it. Rename it from your own file browser — the Explorer will read it
-> again. **Outside the studio's folders, everything of yours renames without condition.**
+> **A picture you dropped in yourself renames too**, even where the studio holds no entry for
+> it: it is then an ordinary file, renamed as one. What changes from case to case is what
+> FOLLOWS the name — an index row, a document's tab, or nothing.
 
 > A name your file system would not accept is refused rather than silently corrected — a slash,
 > for instance. So is a name the folder already holds, rather than overwriting somebody else's
@@ -322,7 +343,7 @@ for this. What it reveals stays **read-only**: those rows refuse every gesture, 
 no rename, no trash, no drag, and nothing dropped into them. It is what the studio holds for
 itself, and seeing it is not touching it.
 
-**A folder is only read once you open it.** `assets/img` can hold thousands of files in an ordinary
+**A folder is only read once you open it.** `Images/` can hold thousands of files in an ordinary
 project, and reading them to count them would cost a wait on every project opening.
 
 **The tree follows the disk.** Copy a file into the folder from your system: it appears, with
@@ -331,12 +352,12 @@ network volume sometimes emits no event at all, and that second net catches it.
 
 > **It is still where a closed document is found again.** The layout remembers which tabs are open,
 > but a document closed while no layout held it is no longer reachable through tabs; it is in
-> `documents/`, one fold down.
+> the folder you filed it in, one fold down.
 
 > **A document never saved does not come back on restart**, and neither does its tab: it is
 > dropped from the layout rather than reopened onto "This document is no longer open." The layout
-> is written to your disk, the contents of documents are not — the `documents/` folder stands for
-> them, and what was never written there has nothing to reopen.
+> is written to your disk, the contents of documents are not — the project's own files stand for
+> them, and what was never written has nothing to reopen.
 
 There is no "Open file" dialogue, and none is planned: the studio only opens what is in the
 project.

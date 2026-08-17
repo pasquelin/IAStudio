@@ -31,14 +31,18 @@ document ouvert.
 
 Six types d’assets :
 
-| Type | Ce que c’est | Où il est rangé |
+| Type | Ce que c’est | Où il atterrit |
 |---|---|---|
-| **Image** | une image fixe | `assets/img/` |
-| **Vidéo** | un plan animé | `assets/vid/` |
-| **Audio** | un son, une musique | `assets/aud/` |
-| **Maillage** | un objet en 3D | `assets/3d/` |
-| **Texture** | une matière | `assets/tex/` |
-| **Skybox** | un ciel à 360° | `assets/sky/` |
+| **Image** | une image fixe | `Images/` |
+| **Vidéo** | un plan animé | `Video/` |
+| **Audio** | un son, une musique | `Audio/` |
+| **Maillage** | un objet en 3D | `3D/` |
+| **Texture** | une matière | `Textures/` |
+| **Skybox** | un ciel à 360° | `Sky/` |
+
+**Où il atterrit, pas où il vit.** Ces six dossiers sont posés à la création du projet et ne sont
+qu’un point de départ : déplacez un asset où vous voulez, renommez le dossier, videz-le. Ce qu’un
+fichier EST ne dépend pas de l’endroit où il est — le studio le retrouve, et sa fiche le suit.
 
 ---
 

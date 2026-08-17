@@ -1,7 +1,6 @@
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
-import { ASSET_FOLDERS } from './asset'
-import { DOCUMENTS_FOLDER } from './document'
+import { DEFAULT_ASSET_FOLDERS } from './asset'
 
 export const MANIFEST_VERSION = 1
 
@@ -235,11 +234,6 @@ export function withoutRecentProject(
 }
 
 /**
- * Subfolders created when a project is opened — see spec § 5. The asset folders are derived
- * from `ASSET_FOLDERS` rather than relisted, so adding a kind cannot leave the writer pointing
- * at a folder this never created.
- */
-/**
  * Rebuildable cache, not user content: proxies, waveforms and filmstrips of ingested media.
  * Named rather than spelled out at each use — the folder the ingest writes into and the folder
  * the project creates have to be the same string.
@@ -253,13 +247,43 @@ export const FILMSTRIPS_FOLDER = '.index/filmstrips'
  */
 export const POSTERS_FOLDER = '.index/posters'
 
-export const PROJECT_FOLDERS: readonly string[] = [
-  'assets',
-  ...Object.values(ASSET_FOLDERS),
-  DOCUMENTS_FOLDER,
+/**
+ * The machine's own, created with the project and never the user's to touch: hidden, read-only,
+ * rebuildable. Every one of them sits under a leading dot, which is what `isStudioPrivate` reads
+ * instead of this list — a list is what gets a fifth entry added without the predicate hearing
+ * about it.
+ */
+export const MACHINE_FOLDERS: readonly string[] = [
   '.index',
   PROXIES_FOLDER,
   PEAKS_FOLDER,
   FILMSTRIPS_FOLDER,
   POSTERS_FOLDER,
 ]
+
+/**
+ * What a new project opens with — ORDINARY folders from the first second, renamed, filled and
+ * thrown away like any the user makes. They are a starting point, not a layout the studio reads
+ * anything back from.
+ *
+ * Derived from `DEFAULT_ASSET_FOLDERS` rather than relisted, so adding a kind cannot leave the
+ * writer pointing at a folder this never created. `assets/` and `documents/` are no longer among
+ * them: a document lands in `documents/` when nothing says otherwise and the folder appears with
+ * the first save, exactly as an import recreates `Images/`.
+ */
+export const STARTER_FOLDERS: readonly string[] = Object.values(DEFAULT_ASSET_FOLDERS)
+
+/**
+ * How far the pass reconciling the catalogue with the project folder has got.
+ *
+ * `total` is 0 until the pass knows how much it will read — and stays 0 for the ordinary pass,
+ * where every row is where the catalogue says and nothing is read at all. A window shows the
+ * counts only once there is something to count.
+ */
+export type RescanState = {
+  running: boolean
+  done: number
+  total: number
+}
+
+export const IDLE_RESCAN: RescanState = { running: false, done: 0, total: 0 }

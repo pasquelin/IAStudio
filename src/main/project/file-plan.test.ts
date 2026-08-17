@@ -73,11 +73,12 @@ describe('planning a batch of file gestures', () => {
   })
 
   /**
-   * `assets/` is still where a file's role is read from, so a picture dragged out of it would
-   * stop being a picture. The reconciliation pass is what lifts this, and it is not written yet.
+   * What the phase opens, and what every other file of it exists to make safe: an asset and a
+   * document leave the folders they were filed under. Their role is read off the extension and
+   * the catalogue row, and the row follows the file — the folder never said what either was.
    */
   it.each(['assets/img/dusk.png', 'documents/a3f1.scene', 'assets'])(
-    'refuses %s, which the studio still holds for itself',
+    'lets %s leave the folder the studio used to hold',
     path => {
       const held = {
         '': ['assets', 'documents', 'refs'],
@@ -85,16 +86,17 @@ describe('planning a batch of file gestures', () => {
         documents: ['a3f1.scene'],
         refs: [],
       }
-      const { refused } = plan({ op: 'move', paths: [path], folder: 'refs' }, held)
+      const { acts, refused } = plan({ op: 'move', paths: [path], folder: 'refs' }, held)
 
-      expect(refused).toEqual([{ path, reason: 'private' }])
+      expect(acts).toEqual([{ act: 'move', from: path, to: `refs/${path.split('/').pop()}` }])
+      expect(refused).toEqual([])
     },
   )
 
   it('refuses every member when the destination is one of them', () => {
     const { acts, refused } = plan(
-      { op: 'move', paths: ['a.png', 'b.png'], folder: 'assets/img' },
-      { '': ['a.png', 'b.png'], 'assets/img': [] },
+      { op: 'move', paths: ['a.png', 'b.png'], folder: '.index' },
+      { '': ['a.png', 'b.png'], '.index': [] },
     )
 
     expect(acts).toEqual([])
@@ -157,12 +159,6 @@ describe('creating a folder', () => {
 
     expect(acts).toEqual([{ act: 'createFolder', to: 'Characters' }])
   })
-
-  it('refuses to lay one inside what the studio holds for itself', () => {
-    const { refused } = plan({ op: 'createFolder', folder: 'assets', name: 'mine' }, { assets: [] })
-
-    expect(refused).toEqual([{ path: 'assets', reason: 'private' }])
-  })
 })
 
 describe('renaming', () => {
@@ -190,19 +186,19 @@ describe('renaming', () => {
 
 describe('trashing', () => {
   /**
-   * Told apart from every other gesture: what a folder of the studio HOLDS may go — the
-   * catalogue lets go of the rows underneath with it — where the folder itself is the layout the
-   * project is read by.
+   * The one thing `'shown'` still tells apart, now that the studio holds no ordinary folder: the
+   * project folder RECEIVES — it is a destination like any other — but throwing it away would
+   * throw away the project, and nothing on screen is meant to be able to ask for that.
    */
-  it('takes a file out of the studio own folders, but not the folders', () => {
-    const held = { '': ['assets'], 'assets/img': ['dusk.png'] }
+  it('refuses the project folder itself, which receives but does not go', () => {
+    const held = { '': ['refs'], refs: [] }
 
-    expect(plan({ op: 'trash', paths: ['assets/img/dusk.png'] }, held).acts).toEqual([
-      { act: 'trash', from: 'assets/img/dusk.png' },
+    expect(plan({ op: 'trash', paths: [''] }, held).refused).toEqual([
+      { path: '', reason: 'private' },
     ])
-    expect(plan({ op: 'trash', paths: ['assets'] }, held).refused).toEqual([
-      { path: 'assets', reason: 'private' },
-    ])
+    expect(
+      plan({ op: 'move', paths: ['refs/a.png'], folder: '' }, { ...held, refs: ['a.png'] }).acts,
+    ).toEqual([{ act: 'move', from: 'refs/a.png', to: 'a.png' }])
   })
 })
 

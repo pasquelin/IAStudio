@@ -1,4 +1,4 @@
-import { readdir, rename } from 'node:fs/promises'
+import { mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Asset } from '@shared/domain/asset'
 import {
@@ -40,9 +40,9 @@ export const DUPLICATE_NAME: AssetNameFailure = 'duplicate'
  *
  * **One `stat`, then one `readdir`.** The nominal case is a name nobody holds, and it costs a
  * single check. Only a collision opens the folder, and then the candidates are tried in memory:
- * running the same prompt K times used to cost K sequential `stat`s on the K-th run — the folder
- * is flat (`ASSET_FOLDERS` files every picture under `assets/img`) and an unnumbered prompt is
- * the ordinary case, so that grew without a bound anybody would notice.
+ * running the same prompt K times used to cost K sequential `stat`s on the K-th run — one folder
+ * takes every picture an import lands, and an unnumbered prompt is the ordinary case, so that
+ * grew without a bound anybody would notice.
  */
 async function freeAssetName(
   root: string,
@@ -70,13 +70,21 @@ async function freeAssetName(
   }
 }
 
-/** The same answer as a path, which is what an import needs to write. */
+/**
+ * The same answer as a path, which is what an import needs to write.
+ *
+ * The folder is CREATED rather than required. `DEFAULT_ASSET_FOLDERS` is a default and no longer
+ * a layout: a user who threw `Images/` away did nothing wrong, and the two answers that were
+ * available without this — failing the import, or emptying it into the project root — are both
+ * worse than putting the folder back.
+ */
 export async function freeAssetPath(
   root: string,
   folder: string,
   name: string,
   extension: string,
 ): Promise<string> {
+  await mkdir(join(root, folder), { recursive: true })
   const free = await freeAssetName(root, folder, name, extension)
   return `${folder}/${assetFileName(free, extension)}`
 }

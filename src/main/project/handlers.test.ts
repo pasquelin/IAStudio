@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor, DocumentKind, DocumentWrite } from '@shared/domain/document'
 import type { FileOutcome } from '@shared/domain/file-op'
+import { IDLE_RESCAN } from '@shared/domain/project'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { glbFile, glbWearing } from '@main/assets/glb-fixtures'
 import { ownFileOf } from '@main/assets/protocol'
@@ -115,7 +116,7 @@ function base(catalog: AsyncCatalog) {
           kind,
           title,
           workspace: '3d',
-          fileName: `${title}.scene`,
+          path: `documents/${title}.scene`,
         }),
       ),
     },
@@ -131,6 +132,8 @@ function base(catalog: AsyncCatalog) {
     // Answers an empty batch by default: what a channel DOES with an outcome is what these
     // suites are about, and `file-ops.test.ts` is where the outcome itself is settled.
     files: emptyFileOps(),
+    // Idle: a window may watch a pass and call one off, and no channel here starts one.
+    reconciler: { request: vi.fn(() => false), stop: vi.fn(), state: () => IDLE_RESCAN },
     // An empty string is what `shell.openPath` answers when the system took the file.
     openInSystem: vi.fn(async () => ''),
     // Cancel: the safe answer, so a test that does not care about the dialog cannot destroy

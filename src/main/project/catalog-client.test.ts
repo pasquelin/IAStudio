@@ -3,7 +3,15 @@ import { createCatalogClient, type CatalogPort } from './catalog-client'
 import { dispatchCatalogRequest } from './catalog-dispatch'
 import { createCatalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
-import { ABANDONED, isAbandon, type CatalogMessage, type CatalogResponse } from './catalog-protocol'
+import {
+  ABANDONED,
+  isAbandon,
+  isQueueMessage,
+  type CatalogMessage,
+  type CatalogRescanProgress,
+  type CatalogResponse,
+} from './catalog-protocol'
+import type { RescanProgress, RescanReport } from './catalog-rescan'
 import type { Asset } from '@shared/domain/asset'
 
 /** The DOM lib is not on this target: the signal's own signature is where the type lives. */
@@ -31,7 +39,9 @@ function loopbackPort(): CatalogPort & { requests: CatalogMessage[] } {
     requests,
     postMessage: message => {
       requests.push(message)
-      if (isAbandon(message)) return
+      // Only what the queue would run comes back with an answer: a rescan runs beside it, and
+      // this loopback holds a catalogue with no disk to walk.
+      if (!isQueueMessage(message) || isAbandon(message)) return
       void Promise.resolve().then(() => listener?.(dispatchCatalogRequest(catalog, message)))
     },
     onMessage: next => {
@@ -45,10 +55,10 @@ function loopbackPort(): CatalogPort & { requests: CatalogMessage[] } {
 /** A port that records requests and lets the test answer them by hand, in any order. */
 function manualPort(): CatalogPort & {
   requests: CatalogMessage[]
-  answer: (response: CatalogResponse) => void
+  answer: (response: CatalogResponse | CatalogRescanProgress) => void
   fail: (error: Error) => void
 } {
-  let listener: ((response: CatalogResponse) => void) | null = null
+  let listener: ((response: CatalogResponse | CatalogRescanProgress) => void) | null = null
   let onFailure: ((error: Error) => void) | null = null
   const requests: CatalogMessage[] = []
 
@@ -126,7 +136,9 @@ describe('createCatalogClient', () => {
     controller.abort()
 
     await expect(search).rejects.toThrow(ABANDONED)
-    expect(port.requests.filter(isAbandon)).toEqual([{ op: 'abandon', target: 1 }])
+    expect(port.requests.filter(isQueueMessage).filter(isAbandon)).toEqual([
+      { op: 'abandon', target: 1 },
+    ])
   })
 
   /** An answer to a search already given up on settles nothing and is not an error either. */
@@ -246,7 +258,9 @@ describe('createCatalogClient', () => {
 
     await Promise.all([catalog.find('a'), catalog.find('b'), catalog.find('c')])
 
-    const ids = port.requests.flatMap(request => (isAbandon(request) ? [] : [request.id]))
+    const ids = port.requests.flatMap((request: CatalogMessage) =>
+      isQueueMessage(request) && !isAbandon(request) ? [request.id] : [],
+    )
     expect(new Set(ids).size).toBe(3)
   })
 
@@ -322,5 +336,54 @@ describe('createCatalogClient', () => {
     await catalog.close()
 
     await expect(pending).rejects.toThrow(/closed/i)
+  })
+})
+
+/**
+ * A rescan is the one operation that reports on itself before it answers, so its two message
+ * shapes travel the same port. Telling them apart is the whole of what these cases hold: the
+ * progress guard once read a field the ANSWER carries too, and the answer went down the progress
+ * path — the promise never settled, and the row saying the studio was working stayed on screen
+ * for good. Nothing in the suite noticed; the screen did.
+ */
+describe('reconciling, as the main process asks for it', () => {
+  const REPORT: RescanReport = { moved: 1, missing: 0, returned: 0, complete: true }
+
+  it('settles on the report, and reports its way there', async () => {
+    const port = manualPort()
+    const catalog = createCatalogClient(port)
+    const seen: RescanProgress[] = []
+
+    const pass = catalog.rescan('/tmp/project', { onProgress: progress => seen.push(progress) })
+    port.answer({ rescanProgress: 1, done: 128, total: 512 })
+    port.answer({ id: 1, ok: true, rescan: REPORT })
+
+    await expect(pass).resolves.toEqual(REPORT)
+    expect(seen).toEqual([{ done: 128, total: 512 }])
+  })
+
+  // The stop reaches the THREAD — unlike a search's abandon, which this side handles — because a
+  // pass is the one thing that can actually be interrupted part-way.
+  it('sends the stop to the thread, and still settles on what the pass reports', async () => {
+    const port = manualPort()
+    const catalog = createCatalogClient(port)
+    const controller = new AbortController()
+
+    const pass = catalog.rescan('/tmp/project', { signal: controller.signal })
+    controller.abort()
+
+    expect(port.requests).toContainEqual({ op: 'rescan-stop', target: 1 })
+    port.answer({ id: 1, ok: true, rescan: { ...REPORT, complete: false } })
+    await expect(pass).resolves.toMatchObject({ complete: false })
+  })
+
+  it('rejects when the pass itself failed', async () => {
+    const port = manualPort()
+    const catalog = createCatalogClient(port)
+
+    const pass = catalog.rescan('/tmp/project')
+    port.answer({ id: 1, ok: false, error: 'this catalogue cannot reach a disk' })
+
+    await expect(pass).rejects.toThrow(/cannot reach a disk/)
   })
 })

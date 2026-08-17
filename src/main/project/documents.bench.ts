@@ -1,7 +1,12 @@
+import { mkdir, mkdtemp, open, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { deserialize, serialize } from 'node:v8'
-import { bench, describe } from 'vitest'
-import { DOCUMENT_VERSION, type DocumentFile } from '@shared/domain/document'
-import { splitDocument } from './documents'
+import { afterAll, bench, describe } from 'vitest'
+import { DOCUMENT_VERSION, ENVELOPE_LIMIT, type DocumentFile } from '@shared/domain/document'
+// The production pool, not a copy of it: this bench measures the exact syscall shape `list()`
+// takes, and a second implementation beside it would drift from the one being measured.
+import { pooledHeads, splitDocument } from './documents'
 
 /**
  * What one save and one open cost the main process.
@@ -88,4 +93,104 @@ describe('reading a document: the whole main-thread cost of one open', () => {
       serialize(splitDocument(body))
     })
   }
+})
+
+/**
+ * What listing a project of 2 000 documents across 200 folders costs, three ways.
+ *
+ * This is the measure that decides how `list()` is written, and it is here rather than argued
+ * about: the walk opens the head of every candidate, so the question is whether the opens have
+ * to be spread over a pool and whether a `stat` cache is worth the second syscall it adds. A
+ * main thread busy for more than 16 ms freezes every window — CLAUDE.md, invariant 6 — but this
+ * runs off the thread's critical path, so the number that matters is how long a reader waits.
+ *
+ * Written on a temporary folder rather than mocked: what is being compared is syscall shape, and
+ * a mock would compare nothing.
+ *
+ * **Measured 2026-08-17** (macOS, APFS, Node 24): 117 ms one at a time, 35 ms over a pool of 16,
+ * 19 ms when every head is cached. The pool alone is what `list()` does — a cache saving 16 ms
+ * of the 35 does not pay for a map to keep in step, nor for the file rewritten within the same
+ * millisecond at the same size that it would answer stale for.
+ */
+const DOCUMENT_COUNT = 2_000
+const FOLDER_COUNT = 200
+/** What the labels say. The pool itself is `pooledHeads`, and its size lives with it. */
+const POOL = 16
+
+/**
+ * Laid down once, on the first bench that asks for it — `beforeAll` is not honoured by
+ * `vitest bench`, which is why this is a promise rather than a hook.
+ */
+let laid: Promise<string> | null = null
+
+/** The envelope a real document carries, as one line — the only part any of these three reads. */
+const HEAD = `${JSON.stringify({
+  version: DOCUMENT_VERSION,
+  kind: 'scene',
+  id: 'a3f1',
+  title: 'Bench',
+  updatedAt: '2026-08-17T10:00:00.000Z',
+})}\n${'x'.repeat(4_000)}`
+
+async function headOf(file: string): Promise<unknown> {
+  const handle = await open(file, 'r')
+  try {
+    const buffer = Buffer.alloc(ENVELOPE_LIMIT)
+    const { bytesRead } = await handle.read(buffer, 0, ENVELOPE_LIMIT, 0)
+    const head = buffer.toString('utf8', 0, bytesRead)
+    const cut = head.indexOf('\n')
+    return cut === -1 ? null : JSON.parse(head.slice(0, cut))
+  } finally {
+    await handle.close()
+  }
+}
+
+async function layDown(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), 'scenario-list-bench-'))
+  const perFolder = DOCUMENT_COUNT / FOLDER_COUNT
+
+  for (let folder = 0; folder < FOLDER_COUNT; folder += 1) {
+    // Two levels deep, as a project organised by hand ends up: `Act 3/Ruelles/`.
+    const path = join(root, `Act ${folder % 20}`, `Scene ${folder}`)
+    await mkdir(path, { recursive: true })
+    await Promise.all(
+      Array.from({ length: perFolder }, async (_unused, file) => {
+        await writeFile(join(path, `document ${file}.scene`), HEAD, 'utf8')
+        // Half the folder is something else, which is what filtering before any open is for.
+        await writeFile(join(path, `still ${file}.png`), 'not a document', 'utf8')
+      }),
+    )
+  }
+
+  return root
+}
+
+/** Every `.scene` under the root, found by one recursive `readdir` — what all three then read. */
+async function candidates(): Promise<string[]> {
+  const root = await (laid ??= layDown())
+  const entries = await readdir(root, { recursive: true, withFileTypes: true })
+  return entries
+    .filter(entry => entry.isFile() && entry.name.endsWith('.scene'))
+    .map(entry => join(entry.parentPath, entry.name))
+}
+
+describe('listing a project of 2 000 documents in 200 folders', () => {
+  afterAll(async () => {
+    if (laid) await rm(await laid, { recursive: true, force: true })
+  })
+
+  bench('one head at a time', async () => {
+    const found = await candidates()
+    for (const file of found) await headOf(file)
+  })
+
+  bench(`${POOL} heads in flight`, async () => {
+    await pooledHeads(await candidates(), headOf)
+  })
+
+  // The cache as it would be: a `stat` says nothing moved, and the head is not opened at all.
+  // It replaces one `open`/`read`/`close` with one `stat`, and that is the whole trade.
+  bench(`${POOL} heads in flight, all of them cached`, async () => {
+    await pooledHeads(await candidates(), file => stat(file))
+  })
 })

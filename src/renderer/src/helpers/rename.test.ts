@@ -14,7 +14,7 @@ const POSTER: DocumentDescriptor = {
   kind: 'image',
   title: 'Poster',
   workspace: 'image',
-  fileName: 'Poster.img',
+  path: 'documents/Poster.img',
 }
 
 const ASSET: Asset = {
@@ -110,7 +110,7 @@ describe('the tabs editing a renamed asset', () => {
     kind: 'image',
     title: 'Pas courus',
     workspace: 'image',
-    fileName: 'Pas courus.img',
+    path: 'documents/Pas courus.img',
     sourceAssetId: 'asset_1',
   }
 
