@@ -1424,4 +1424,102 @@ describe('project handlers', () => {
       ).rejects.toThrow()
     })
   })
+
+  describe('a layered picture the editor edited', () => {
+    const PNG_BASE64 = png(1024, 768).toString('base64')
+
+    const backend = () => ({
+      importFromUrl: vi.fn(),
+      importFromBytes: vi.fn(async () => asset({ id: 'asset-2', type: 'image' })),
+      replaceBytes: vi.fn(async () => asset({ id: 'asset-1', type: 'image' })),
+    })
+
+    const holdingPicture = () => ({
+      ...catalog,
+      find: vi.fn(async () => asset({ id: 'asset-1', type: 'image' })),
+    })
+
+    const layered = (over: Record<string, unknown> = {}) => ({
+      name: 'Hero',
+      document: {
+        width: 1024,
+        height: 768,
+        nodes: [
+          {
+            kind: 'layer',
+            name: 'Ink',
+            src: 'data/p_ink.png',
+            x: 0,
+            y: 0,
+            opacity: 1,
+            visible: true,
+            composite: 'svg:src-over',
+            png: PNG_BASE64,
+          },
+        ],
+        merged: PNG_BASE64,
+        studio: '{}',
+        extras: {},
+      },
+      ...over,
+    })
+
+    /**
+     * The difference an open container buys, and the reason this channel exists beside
+     * `savePicture`: a stack goes back over the file it came from, under the extension that
+     * holds it, rather than being flattened into a PNG under the same name.
+     */
+    it('overwrites the file it came from, as a container', async () => {
+      const assets = backend()
+      registerProjectHandlers(deps(holdingPicture(), { assets }))
+
+      await invoke(CHANNELS.assetsSaveLayered, layered({ replaces: 'asset-1' }))
+
+      expect(assets.replaceBytes).toHaveBeenCalledWith(
+        'asset-1',
+        expect.any(Uint8Array),
+        '.ora',
+        expect.objectContaining({ width: 1024, height: 768 }),
+      )
+    })
+
+    /** The dimensions come off the FLATTEN the container carries, which is what a tile shows. */
+    it('files a copy beside its source, keeping them traceable to each other', async () => {
+      const assets = backend()
+      registerProjectHandlers(deps(holdingPicture(), { assets }))
+
+      await invoke(CHANNELS.assetsSaveLayered, layered({ derivedFrom: 'asset-1' }))
+
+      expect(assets.importFromBytes).toHaveBeenCalledWith(
+        expect.objectContaining({ extension: '.ora', derivedFrom: 'asset-1', name: 'Hero' }),
+        expect.any(Uint8Array),
+      )
+    })
+
+    /** The same guard `savePicture` carries: an id naming a take would write over a recording. */
+    it('refuses to overwrite a row that is not a picture', async () => {
+      registerProjectHandlers(
+        deps(
+          { ...catalog, find: vi.fn(async () => asset({ id: 'asset-1', type: 'audio' })) },
+          {
+            assets: backend(),
+          },
+        ),
+      )
+
+      await expect(
+        invoke(CHANNELS.assetsSaveLayered, layered({ replaces: 'asset-1' })),
+      ).rejects.toThrow()
+    })
+
+    /** A path out of `data/` is a path out of the project folder once the container is unpacked. */
+    it('refuses a layer whose file would land outside the container', async () => {
+      registerProjectHandlers(deps(holdingPicture(), { assets: backend() }))
+
+      const escaping = layered()
+      escaping.document.nodes[0]!.src = '../../etc/passwd.png'
+
+      await expect(invoke(CHANNELS.assetsSaveLayered, escaping)).rejects.toThrow()
+    })
+  })
 })

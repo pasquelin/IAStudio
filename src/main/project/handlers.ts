@@ -10,6 +10,7 @@ import { broadcast } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { isPngBytes, probePng } from '@main/media/png'
+import { packOpenRaster, unpackOpenRaster } from '@main/assets/openRasterFile'
 import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/localBackend'
 import { fileFactsOf } from './fileFacts'
@@ -42,6 +43,7 @@ import {
   parseProjectPath,
   parseProjectTitle,
   parseSaveAudio,
+  parseSaveLayered,
   parseSavePicture,
   parseSaveTexture,
   parseSearchTerm,
@@ -52,6 +54,9 @@ const WAV_EXTENSION = '.wav'
 
 /** What `saveTexture` writes. Lossless, because a channel is data before it is a picture. */
 const PNG_EXTENSION = '.png'
+
+/** What `saveLayered` writes: OpenRaster, the open container for a stack. */
+const ORA_EXTENSION = '.ora'
 
 export type ProjectHandlerDeps = {
   project: ProjectStore
@@ -447,6 +452,60 @@ export function registerProjectHandlers({
         png,
       ),
     )
+  })
+
+  handle(CHANNELS.assetsSaveLayered, async (_event, value) => {
+    const request = parseSaveLayered(value)
+    const bytes = packOpenRaster(request.document)
+    // Read off the FLATTEN the container carries, not off the container: what the shelf and the
+    // inspector show of a `.ora` is its `mergedimage.png`, and its dimensions are the picture's.
+    const probe = probePng(Buffer.from(request.document.merged, 'base64')) ?? undefined
+
+    if (request.replaces) {
+      // Checked against the catalogue for the reason `savePicture` gives at its own line: an id
+      // naming a take would write `audio/<id>.ora` and delete the recording beside it.
+      const replaced = await project.catalog().find(request.replaces)
+      if (!replaced || !PICTURES.includes(replaced.type)) {
+        throw new Error(`asset ${request.replaces} is not a picture to overwrite`)
+      }
+
+      return withoutSourcePath(
+        await assets.replaceBytes(request.replaces, bytes, ORA_EXTENSION, probe),
+      )
+    }
+
+    const source = request.derivedFrom ? await project.catalog().find(request.derivedFrom) : null
+
+    return withoutSourcePath(
+      await assets.importFromBytes(
+        {
+          id: newAssetId(),
+          name: request.name,
+          type: source?.type ?? 'image',
+          extension: ORA_EXTENSION,
+          ...(probe ? { probe } : {}),
+          ...(source?.map ? { map: source.map } : {}),
+          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
+        },
+        bytes,
+      ),
+    )
+  })
+
+  handle(CHANNELS.assetsReadLayered, async (_event, value) => {
+    const asset = await project.catalog().find(parseAssetId(value))
+    // `ownFileOf`, like every reader here: a linked file is the user's own, and the container is
+    // read from wherever they left it.
+    const file = asset ? ownFileOf(project.path(), asset) : null
+    if (!file?.toLowerCase().endsWith(ORA_EXTENSION)) return null
+
+    try {
+      return unpackOpenRaster(await readFile(file))
+    } catch {
+      // A `.ora` that will not unpack is a file to open as a flat picture rather than a tab that
+      // refuses to appear — the caller falls back, and the container's own flatten still draws.
+      return null
+    }
   })
 
   handle(CHANNELS.assetsSaveTexture, async (_event, value) => {

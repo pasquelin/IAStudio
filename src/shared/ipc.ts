@@ -5,6 +5,7 @@ import type { FavoriteRecipe } from './domain/favorite'
 import type { FileFacts } from './domain/fileInfo'
 import type { FileHistory, FileOutcome } from './domain/fileOp'
 import type { FolderEntry } from './domain/folder'
+import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloudAsset'
 import type { CommandId, MenuCheck } from './domain/command'
@@ -177,6 +178,8 @@ export type Channels = {
   assetsAbsent: 'assets:absent'
   assetsSaveAudio: 'assets:save-audio'
   assetsSavePicture: 'assets:save-picture'
+  assetsSaveLayered: 'assets:save-layered'
+  assetsReadLayered: 'assets:read-layered'
   assetsSaveTexture: 'assets:save-texture'
   assetsExtractTextures: 'assets:extract-textures'
   assetsUpdate: 'assets:update'
@@ -353,6 +356,8 @@ export const CHANNELS: Channels = {
   assetsAbsent: 'assets:absent',
   assetsSaveAudio: 'assets:save-audio',
   assetsSavePicture: 'assets:save-picture',
+  assetsSaveLayered: 'assets:save-layered',
+  assetsReadLayered: 'assets:read-layered',
   assetsSaveTexture: 'assets:save-texture',
   assetsExtractTextures: 'assets:extract-textures',
   assetsUpdate: 'assets:update',
@@ -450,6 +455,20 @@ export type SavePictureRequest = {
   derivedFrom?: string
   /** PNG payload, base64 and never a data URL — the prefix is part of the picture otherwise. */
   png: string
+}
+
+/**
+ * A layered picture on its way to disk as OpenRaster — see `StudioBridge['assets']['saveLayered']`.
+ *
+ * The same shape as `SavePictureRequest` down to `derivedFrom`, and it carries a whole stack
+ * instead of one flatten. Two channels rather than one taking either: what the main process does
+ * with them differs entirely — one writes bytes it was handed, the other assembles a container.
+ */
+export type SaveLayeredRequest = {
+  replaces?: string
+  name: string
+  derivedFrom?: string
+  document: OraDocument
 }
 
 /**
@@ -1215,6 +1234,21 @@ export type StudioBridge = {
      * edited as a picture stays a channel, which keeps it on the right shelf.
      */
     savePicture: (request: SavePictureRequest) => Promise<Asset>
+    /**
+     * Puts a LAYERED picture into the project, as an OpenRaster container.
+     *
+     * Unlike `savePicture` it may overwrite: the container holds the whole stack, so writing it
+     * back over the file the document was opened from loses nothing — which is the difference an
+     * open format buys, and the reason `formatCapability` exists to tell the two cases apart.
+     */
+    saveLayered: (request: SaveLayeredRequest) => Promise<Asset>
+    /**
+     * Reads a layered picture back, or `null` for an asset that is not one.
+     *
+     * `null` rather than a throw: opening a `.png` through this path is the ordinary case, not a
+     * failure — the caller falls back to the one-layer document any flat picture opens as.
+     */
+    readLayered: (assetId: string) => Promise<OraDocument | null>
     /**
      * Puts a channel the renderer computed into the project.
      *

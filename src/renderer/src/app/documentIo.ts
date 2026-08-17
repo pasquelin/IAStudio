@@ -19,14 +19,20 @@ import {
   type SequenceState,
 } from '@/engines/timeline/timelineState'
 import { isRecord } from '@shared/guards'
-import { lossesFor, type CapabilityTrait } from '@shared/domain/formatCapability'
+import {
+  formatOfFile,
+  lossesFor,
+  type CapabilityTrait,
+  type WritableFormat,
+} from '@shared/domain/formatCapability'
 import { traitsOfCanvas } from '@/engines/canvas/canvasTraits'
+import { oraDocumentOf } from '@/engines/canvas/oraDocument'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
 import { reportFailure } from '@/services/diagnostics'
 import i18next from 'i18next'
 import { closePanel, openDocument } from './dockviewApi'
-import { useAssets } from '@/stores/assets'
+import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audioEdits'
 import { sceneStore } from '@/stores/scenes'
@@ -63,6 +69,11 @@ export type AssetTarget = {
   derivedFrom?: string
   /** Names a NEW asset. Ignored by an overwrite, which keeps the name the asset already has. */
   name: string
+  /**
+   * Which format to write. An overwrite passes the one the file already IS — writing a `.ora`
+   * back as a PNG would destroy the very stack the container was chosen to hold.
+   */
+  format: WritableFormat
 }
 
 /**
@@ -98,6 +109,11 @@ type DocumentIo = {
    * folds the whole picture into the one layer it came from.
    */
   rehydrate?: (documentId: string, parts: readonly DocumentPart[]) => void
+  /**
+   * The same, for a tab whose pixels are still in the ASSET it was opened from — a container
+   * opened and not yet saved has no document file to read them out of.
+   */
+  rehydrateFromAsset?: (documentId: string, assetId: string) => Promise<void>
   /** What an unsaved document holds until something is done to it. */
   createDefault: (documentId: string) => void
   /**
@@ -371,6 +387,16 @@ const IMAGE_IO: DocumentIo = {
       if (pixels) void host.restoreSnapshot(pixels).catch(() => undefined)
     }
   },
+  rehydrateFromAsset: async (documentId, assetId) => {
+    const host = canvasHost(documentId)
+    const layered = host ? await getBridge()?.assets.readLayered(assetId) : null
+    if (!host || !layered) return
+
+    const { canvasFromOra } = await import('@/engines/canvas/oraDocument')
+    for (const pixels of canvasFromOra(layered).pixels) {
+      void host.restoreSnapshot(pixels).catch(() => undefined)
+    }
+  },
   writeAsset: async (documentId, target) => {
     const bridge = getBridge()
     const host = canvasHost(documentId)
@@ -404,7 +430,17 @@ const IMAGE_IO: DocumentIo = {
     const png = await host.snapshot()
     if (!png) return null
 
-    const written = await bridge.assets.savePicture({ ...target, png })
+    const written =
+      target.format === 'ora'
+        ? await bridge.assets.saveLayered({
+            ...target,
+            document: oraDocumentOf(
+              canvasOf(useCanvases.getState(), documentId),
+              await host.pixelSnapshots(),
+              png,
+            ),
+          })
+        : await bridge.assets.savePicture({ ...target, png })
     // After the write, and only for an overwrite: the id did not move, so the loader would keep
     // answering with the picture it cached before this save.
     if (target.replaces) await host.forgetPicture(target.replaces)
@@ -557,6 +593,26 @@ export async function saveDocument(documentId: string, byHand = true): Promise<b
  * every refusal in `IO_BY_KIND` says why at its own line — or for a tab nobody touched whose
  * asset is not already behind.
  */
+/**
+ * Which format overwriting the source means writing, and what it would destroy.
+ *
+ * A format the table does not write — a `.tif`, a `.gif` — reports everything the document holds
+ * rather than nothing: « no answer » must never read as « nothing to lose », which is the exact
+ * shape of the silent loss this path exists to stop. Its `format` is then never used, the losses
+ * having already refused the write.
+ */
+function writePlanFor(
+  document: DocumentDescriptor,
+  io: DocumentIo,
+  sourceAssetId: string,
+): { format: WritableFormat; losses: CapabilityTrait[] } {
+  const format = formatOfFile(assetsById(useAssets.getState()).get(sourceAssetId)?.name ?? '')
+  if (!io.traitsOf) return { format: format ?? 'png', losses: [] }
+
+  const traits = io.traitsOf(document.id)
+  return { format: format ?? 'png', losses: format ? lossesFor(traits, format) : traits }
+}
+
 async function rewriteSourceAsset(
   document: DocumentDescriptor,
   io: DocumentIo,
@@ -567,9 +623,10 @@ async function rewriteSourceAsset(
   // An edit to carry over, or one that never made it: both are a reason to write the asset.
   if (!wasEdited && !assetBehind.has(document.id)) return
 
-  // Against `png` because that is what `savePicture` writes, whatever the source arrived as —
-  // so what the flatten costs is the same question for a `.jpg` and for a `.png`.
-  const losses = io.traitsOf ? lossesFor(io.traitsOf(document.id), 'png') : []
+  // Against what the source file IS. A `.ora` holds the whole stack, so the same document that
+  // cannot be written back to a `.png` writes back to it whole — which is what makes an open
+  // format worth reaching for rather than a second place to keep the same picture.
+  const { format, losses } = writePlanFor(document, io, source)
   if (losses.length > 0) {
     // NOT `assetBehind`: this is a refusal, not a failure, and a retry would write the very
     // thing that was refused the moment anything else marked the asset late.
@@ -578,7 +635,11 @@ async function rewriteSourceAsset(
   }
 
   try {
-    const written = await io.writeAsset(document.id, { replaces: source, name: document.title })
+    const written = await io.writeAsset(document.id, {
+      replaces: source,
+      name: document.title,
+      format,
+    })
     // `null` is "nothing to bake yet" — an engine still bringing its GPU context up, which is
     // exactly when a ⌘S after switching workspace lands. Not a success, and not silent either:
     // treated as such it left every consumer of the asset on the pre-edit picture for good.
@@ -609,6 +670,11 @@ async function rewriteSourceAsset(
  * derives a name and the renaming happens in the inspector, so asking here would be a second way
  * to name an asset, next to a gesture that never asks.
  *
+ * Its FORMAT is not asked either, and for the same reason: the copy takes the source's format
+ * when that format holds the document, and OpenRaster when it does not. A menu of formats here
+ * would be a second way to answer a question the document has already answered — and the one
+ * choice it would add, flattening on purpose, is what Export is for.
+ *
  * Answers whether anything was written, like `saveDocument` — a document that edits no asset has
  * nothing to copy, and says so in the journal rather than in silence.
  */
@@ -626,9 +692,16 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
   }
 
   const name = i18next.t('documents.copyName', { name: document.title })
+  // The source's own format when it holds the document, OpenRaster when it does not: a copy of a
+  // stack must not be the one write that flattens it.
+  const { format, losses } = writePlanFor(document, io, source)
 
   try {
-    const copy = await io.writeAsset(documentId, { derivedFrom: source, name })
+    const copy = await io.writeAsset(documentId, {
+      derivedFrom: source,
+      name,
+      format: losses.length === 0 ? format : 'ora',
+    })
     if (!copy) {
       reportFailure('assets.copy', document.title, new Error('nothing to bake yet'))
       return false
@@ -763,7 +836,11 @@ export async function rehydrateDocument(documentId: string): Promise<void> {
 
   try {
     const file = await bridge.documents.read(document.id, document.kind)
-    if (file?.parts) io.rehydrate(documentId, file.parts)
+    if (file?.parts?.length) return io.rehydrate(documentId, file.parts)
+
+    // No file of its own yet — a tab opened from a container and never saved. Its pixels are
+    // still where they were read from, and only the container holds them layer by layer.
+    if (document.sourceAssetId) await io.rehydrateFromAsset?.(documentId, document.sourceAssetId)
   } catch (error) {
     reportFailure('document.load', document.title, error)
   }

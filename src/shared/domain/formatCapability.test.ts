@@ -3,6 +3,7 @@ import {
   CAPABILITY_TRAITS,
   WRITABLE_FORMATS,
   capabilityOf,
+  formatOfFile,
   lossesFor,
   unseenBy,
   type CapabilityTrait,
@@ -47,6 +48,20 @@ describe('what another application would not see', () => {
   it('answers the same as a definitive loss where there is no extension to ride on', () => {
     // A flat picture has no second answer to give: what it drops, it drops for everyone.
     expect(unseenBy(STACKED, 'png')).toEqual(lossesFor(STACKED, 'png'))
+  })
+})
+
+describe('what a file name says its format is', () => {
+  it('reads the extension, whatever its case', () => {
+    expect(formatOfFile('hero.ORA')).toBe('ora')
+    expect(formatOfFile('hero.jpeg')).toBe('jpeg')
+    expect(formatOfFile('hero.jpg')).toBe('jpeg')
+  })
+
+  /** Not « nothing to lose »: a format this table cannot write has no answer to give at all. */
+  it('answers nothing for a format it does not write, and for a name with no extension', () => {
+    expect(formatOfFile('scan.tif')).toBeNull()
+    expect(formatOfFile('README')).toBeNull()
   })
 })
 

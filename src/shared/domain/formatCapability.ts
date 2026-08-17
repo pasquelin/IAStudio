@@ -108,6 +108,26 @@ const CAPABILITY_BY_FORMAT: Record<WritableFormat, FormatCapability> = {
 export const capabilityOf = (format: WritableFormat): FormatCapability =>
   CAPABILITY_BY_FORMAT[format]
 
+const FORMAT_BY_EXTENSION: Record<string, WritableFormat> = {
+  '.png': 'png',
+  '.jpg': 'jpeg',
+  '.jpeg': 'jpeg',
+  '.webp': 'webp',
+  '.ora': 'ora',
+  '.img': 'img',
+}
+
+/**
+ * Which format a file name says it is, or `null` for one this table does not write.
+ *
+ * `null` is not « no loss »: it is « no answer », and a caller has to tell the two apart — a
+ * `.tif` the studio cannot write is not a container that holds everything.
+ */
+export function formatOfFile(fileName: string): WritableFormat | null {
+  const dot = fileName.lastIndexOf('.')
+  return dot === -1 ? null : (FORMAT_BY_EXTENSION[fileName.slice(dot).toLowerCase()] ?? null)
+}
+
 /**
  * What writing `format` would destroy of a document holding `traits` — the question ⌘S asks
  * before it writes over anything. Empty is the licence to overwrite.

@@ -161,6 +161,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       absent: () => Promise.resolve([]),
       saveAudio: () => Promise.reject(new Error('no project')),
       savePicture: () => Promise.reject(new Error('no project')),
+      saveLayered: () => Promise.reject(new Error('no project')),
+      // `null`, not a rejection: « this asset is not a container » is the ordinary answer, and
+      // every caller of it falls back to opening a flat picture.
+      readLayered: () => Promise.resolve(null),
       saveTexture: () => Promise.reject(new Error('no project')),
       extractTextures: () => Promise.reject(new Error('no project')),
       update: () => Promise.reject(new Error('no project')),
