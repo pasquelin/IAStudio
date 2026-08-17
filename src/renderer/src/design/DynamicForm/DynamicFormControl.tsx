@@ -35,23 +35,22 @@ export function DynamicFormControl({
 
   switch (field.kind) {
     case 'longText':
-      // The box is the FRAME and the strip is stacked UNDER the text rather than laid over it:
-      // laid over, it covered the foot of the scrollbar, which four rows grow as soon as a prompt
-      // runs long. `overflow-hidden` keeps the text inside the frame's corners.
-      //
-      // The resize grip stays on the TEXT, where it lands above the strip instead of in the
-      // corner the microphone wants: a control has to reach the edge of what holds it.
+      // The box is the FRAME: it resizes, and the text takes what is left of it. The strip is
+      // stacked UNDER the text rather than laid over it — laid over, it covered the foot of the
+      // scrollbar, which four rows grow as soon as a prompt runs long. `overflow-hidden` is what
+      // makes a div resizable at all, and it keeps the text inside the frame's corners.
       return (
-        <div className={cn(FIELD, 'flex h-auto flex-col overflow-hidden p-0')}>
+        <div className={cn(FIELD, 'flex h-auto resize-y flex-col overflow-hidden p-0')}>
           <textarea
             id={id}
             rows={4}
-            className="w-full resize-y bg-transparent px-2 py-1"
+            className="min-h-0 w-full flex-1 resize-none bg-transparent px-2 py-1"
             {...registration}
           />
 
           {accessory && (
-            <div className="flex items-center justify-end gap-2 px-1.5 pb-1">{accessory}</div>
+            // `pr-4` leaves the grip its corner: the strip ends before it rather than over it.
+            <div className="flex items-center justify-end gap-2 pr-4 pb-1 pl-1.5">{accessory}</div>
           )}
         </div>
       )
