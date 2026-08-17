@@ -2,6 +2,7 @@ import {
   Box3,
   BufferGeometry,
   CameraHelper,
+  type AnimationClip,
   DirectionalLight,
   GridHelper,
   Light,
@@ -71,6 +72,7 @@ import { textGeometry } from './textGeometry'
 import { createGltfSource, type GltfSource } from './gltfSource'
 import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
 import { drivenNodes, poseAt } from './animationEval'
+import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
 import { nearestBone, type ProjectedBone } from './bonePicking'
 import { evenSize, flipInto, frameTimes, type FilmRequest } from './film'
@@ -746,8 +748,36 @@ export class SceneRenderer {
         // The objects wear node ids, which is what picking reads back off a hit. A file wears the
         // names the document gave them.
         nameOf: id => this.applied.get(id)?.name,
+        clipsFor: copies => this.bakedClips(copies),
       },
     )
+  }
+
+  /**
+   * The document's animation as a clip the file carries — baked, because glTF holds one absolute
+   * value per node while a track here holds a delta several tracks add up.
+   *
+   * Read off the COPIES, which still wear node ids at this point: a clip bound to the objects on
+   * screen would name nodes the file does not hold.
+   */
+  private bakedClips(copies: readonly Object3D[]): AnimationClip[] {
+    const targets: ClipTarget[] = []
+    for (const nodeId of drivenNodes(this.timeline)) {
+      const node = this.applied.get(nodeId)
+      const object = copies.flatMap(root => root.getObjectByName(nodeId) ?? []).at(0)
+      if (!node || !object) continue
+
+      targets.push({
+        nodeId,
+        object,
+        // A bone's rest is the one the FILE gave it, remembered the first time a track asked —
+        // never the node's, which would move the whole rig by the node's own placement.
+        restOf: bone => (bone ? (this.boneRests.get(`${nodeId}/${bone}`) ?? null) : node.transform),
+      })
+    }
+
+    const clip = timelineClip(this.timeline, targets)
+    return clip ? [clip] : []
   }
 
   /** A node whose parent is going out too travels with it, and must not be handed over twice. */
