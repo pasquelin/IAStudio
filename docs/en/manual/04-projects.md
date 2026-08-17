@@ -78,6 +78,7 @@ My project/
     ├── catalog.db          the index that makes search instant
     ├── proxies/            lightweight copies of videos, for smooth scrubbing
     ├── peaks/              the drawing of audio waveforms
+    ├── posters/            the picture a video or model thumbnail carries
     └── filmstrips/         created ahead of time, still empty
 ```
 
@@ -91,8 +92,11 @@ tools, not your work.
 > land, where the studio recreates it rather than refusing to work.
 
 > **On Windows a dot hides nothing** — Explorer reads a file attribute, not the name. The studio
-> sets it on both entries itself. If that fails, **the project opens anyway**: a service file left
-> visible is a blemish; refusing to open the project over it would be a real fault.
+> sets it on `.project.json` and on `.index/` itself. **`.scenario/` does not get it**: the day it
+> appears — it is only written after a pass that found something — you will see it in Windows
+> Explorer, beside your own folders. There is nothing to do about it: it is the backup described
+> below. If setting the attribute fails, **the project opens anyway**: a service
+> file left visible is a blemish; refusing to open the project over it would be a real fault.
 
 ### What belongs to you
 
@@ -107,9 +111,21 @@ things, rename them, rearrange them: the studio follows.
 
 ### `.index/` holds more than caches — do not delete it
 
-**Two of its four entries really are caches**: `proxies/` and `peaks/` are remade when a medium is
-imported, and throwing them away costs one reimport. `filmstrips/` is created ahead of time and
-stays empty — nothing writes to it yet.
+It holds five entries, and **two of them really are caches**: `proxies/` and `peaks/` are remade
+when a medium is imported, and throwing them away costs one reimport. `filmstrips/` is created
+ahead of time and stays empty — nothing writes to it yet.
+
+**`posters/` is not one.** It is the picture a thumbnail carries, and **two kinds get one**: video
+and 3D model — the two no thumbnail could tell apart otherwise, a shelf of rushes being a shelf of
+grey rectangles.
+
+For an imported video the frame is grabbed **a tenth of the way in**, not at the start: a take
+opens on black often enough that a shelf of first frames would be a shelf of black tiles. For a
+model, it is the preview that came down with it.
+
+**It is written once** — on import or on fetching — and nothing remakes it afterwards. Throw that
+folder away and your thumbnails fall back to their kind's generic glyph. None of your work is
+lost; it is the shelf that stops being readable at a glance.
 
 **`catalog.db` is not one.** It is what holds every asset's name, its tags, its dimensions, the
 model and prompt that produced it, what it derives from — and, for an imported medium, **the path
@@ -128,7 +144,8 @@ all still there and about which nothing says what they are.
 > left to read, by hand, the day the index is gone.
 
 > **If you need to slim a project down**, throw away `proxies/` and `peaks/` — that is where the
-> weight is. Keep `catalog.db`, which weighs little and knows everything.
+> weight is, and they are the only two the studio can remake. Keep `catalog.db`, which weighs
+> little and knows everything, and `posters/`, which weighs little and does not come back.
 
 ### `.project.json`
 

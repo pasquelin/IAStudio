@@ -81,6 +81,7 @@ Mon projet/
     ├── catalog.db          l'index qui rend la recherche instantanée
     ├── proxies/            des copies allégées des vidéos, pour naviguer sans à-coups
     ├── peaks/              le dessin des formes d'onde audio
+    ├── posters/            l'image que porte une vignette de vidéo ou de modèle
     └── filmstrips/         créé d’avance, encore vide
 ```
 
@@ -94,7 +95,10 @@ les outils du studio, pas votre travail.
 > besoin d’un endroit où atterrir, et le studio le recrée plutôt que de refuser de travailler.
 
 > **Sur Windows, un point ne cache rien** — l’Explorateur lit un attribut de fichier, pas le nom.
-> Le studio le pose lui-même sur les deux entrées. Si l’opération échoue, **le projet s’ouvre quand
+> Le studio le pose lui-même sur `.project.json` et sur `.index/`. **`.scenario/` ne le reçoit
+> pas** : le jour où il apparaît — il n’est écrit qu’après une passe qui a trouvé quelque chose —
+> vous le verrez dans l’Explorateur de Windows, à côté de vos dossiers. Il n’y a rien à en faire :
+> c’est la sauvegarde décrite plus bas. Si la pose échoue, **le projet s’ouvre quand
 > même** : un fichier de service qui reste visible est un défaut d’apparence, refuser d’ouvrir le
 > projet pour cela en serait un vrai.
 
@@ -111,9 +115,21 @@ deux PNG. Déplacez, renommez, réorganisez : le studio suit.
 
 ### `.index/` porte plus que des caches — ne le supprimez pas
 
-**Deux de ses quatre entrées sont bien des caches** : `proxies/` et `peaks/` sont refabriqués à
-l’import d’un média, et les jeter ne coûte qu’une réimportation. `filmstrips/` est créé d’avance
-et reste vide — rien ne l’écrit encore.
+Il porte cinq entrées, et **deux d’entre elles sont bien des caches** : `proxies/` et `peaks/`
+sont refabriqués à l’import d’un média, et les jeter ne coûte qu’une réimportation. `filmstrips/`
+est créé d’avance et reste vide — rien ne l’écrit encore.
+
+**`posters/` n’en est pas un.** C’est l’image que porte la vignette, et **deux types y ont droit** :
+la vidéo et le modèle 3D — les deux qu’aucune vignette ne saurait distinguer autrement, une
+étagère de rushes étant une étagère de rectangles gris.
+
+Pour une vidéo importée, l’image est saisie **au dixième de la durée**, et non au début : une
+prise commence assez souvent sur du noir pour qu’une étagère de premières images soit une étagère
+de tuiles noires. Pour un modèle, c’est l’aperçu descendu avec lui.
+
+**Elle n’est écrite qu’une fois** — à l’import ou au rapatriement — et rien ne la refabrique après
+coup. Jetez ce dossier, et vos vignettes retombent sur l’icône générique de leur type. Rien n’est
+perdu de votre travail ; c’est l’étagère qui devient illisible d’un coup d’œil.
 
 **`catalog.db` n’en est pas un.** C’est lui qui garde le nom de chaque asset, ses tags, ses
 dimensions, le modèle et le prompt qui l’ont produit, ce dont il dérive — et, pour un média
@@ -131,8 +147,9 @@ fichiers sont tous là et dont plus rien ne dit ce qu’ils sont.
 > retrouvé se reconnaisse. Ce n’est pas une source : le studio ne la lit jamais de lui-même. C’est
 > ce qui reste à lire, à la main, le jour où l’index a disparu.
 
-> **Si vous devez alléger un projet**, jetez `proxies/` et `peaks/` — c’est là qu’est le poids.
-> Gardez `catalog.db`, qui pèse peu et sait tout.
+> **Si vous devez alléger un projet**, jetez `proxies/` et `peaks/` — c’est là qu’est le poids, et
+> ce sont les deux seuls que le studio sait refaire. Gardez `catalog.db`, qui pèse peu et sait
+> tout, et `posters/`, qui pèse peu et ne revient pas.
 
 ### `.project.json`
 
