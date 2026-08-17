@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
-import { useFolded } from '@/hooks/useFolded'
 import { domainNodes, type ExplorerNode } from '@/panels/explorer/domainNodes'
 import { entriesSorted } from '@/panels/explorer/folderSort'
+import { useFolded } from './useFolded'
 import { useProjectItems } from './useProjectItems'
 import type { FolderTree } from './useFolderTree'
 

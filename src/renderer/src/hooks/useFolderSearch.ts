@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { entriesByName, nameOf, parentOf, type FolderEntry } from '@shared/domain/folder'
-import { useDebounced } from '@/hooks/useDebounced'
-import { useFolded } from '@/hooks/useFolded'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
+import { useDebounced } from './useDebounced'
+import { useFolded } from './useFolded'
 import type { FolderNode, FolderTree } from './useFolderTree'
 
 /** How long a hand keeps typing. Every keystroke otherwise walks the whole project folder. */
