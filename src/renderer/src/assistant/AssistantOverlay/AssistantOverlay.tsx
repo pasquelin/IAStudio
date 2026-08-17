@@ -1,12 +1,7 @@
 import { mdiClose } from '@mdi/js'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  ASSISTANT_MODELS,
-  assistantAction,
-  type AssistantModel,
-  refusalKey,
-} from '@shared/domain/assistant'
+import { ASSISTANT_MODELS, type AssistantModel } from '@shared/domain/assistant'
 import { Button } from '@/design/Button'
 import { QuietNote } from '@/design/QuietNote'
 import { Spinner } from '@/design/Spinner'
@@ -23,9 +18,9 @@ import { formatUnits } from '@/usage/format'
 import { DictationButton } from '@/dictation/DictationButton'
 import { Heard } from '@/dictation/Heard'
 import { registerDictationTarget } from '@/dictation/destination'
-import type { ConfirmRequest } from './confirm'
-import { registerConfirmer } from './confirm'
-import type { AssistantStep, AssistantTurn } from './conversation'
+import { registerConfirmer } from '../confirm'
+import { AssistantOverlayQuestion } from './AssistantOverlayQuestion'
+import { AssistantOverlayTurn } from './AssistantOverlayTurn'
 
 /**
  * The assistant, as a modal over the whole window.
@@ -208,7 +203,7 @@ export function AssistantOverlay() {
               className="m-0 flex min-h-0 flex-1 scrollbar-none list-none flex-col gap-3 overflow-y-auto p-0"
             >
               {turns.map(turn => (
-                <Turn key={turn.id} turn={turn} />
+                <AssistantOverlayTurn key={turn.id} turn={turn} />
               ))}
             </ol>
           )}
@@ -217,7 +212,7 @@ export function AssistantOverlay() {
             <Spinner label={t('assistant.thinking')} size={16} className="text-muted shrink-0" />
           )}
 
-          {asked && <Question request={asked.request} />}
+          {asked && <AssistantOverlayQuestion request={asked.request} />}
 
           {/* The running hypothesis, above the field it will land in. The label is what makes it
             this window's: it says where the words are going, which "Listening…" does not — the
@@ -329,101 +324,4 @@ function endSession(): void {
  */
 function asModel(value: string): AssistantModel {
   return value as AssistantModel
-}
-
-/** One exchange: what was asked, what came back, and what each action actually did. */
-function Turn({ turn }: { turn: AssistantTurn }) {
-  const { t } = useTranslation()
-
-  return (
-    <li className="flex flex-col gap-3">
-      {/* What one said, in a bubble, on the right — the side a chat has always put it. It is
-          bounded because a dictated request runs long, and a bubble the width of the thread
-          stops reading as one side of an exchange. */}
-      <div className="flex justify-end">
-        <p className="bg-surface text-text rounded-sc-lg m-0 max-w-4/5 px-3 py-2 text-base">
-          {turn.said}
-        </p>
-      </div>
-
-      {/* What came back carries no bubble, and the asymmetry is the point: one side of this
-          conversation is a request and the other is the studio answering for itself. Bubbles on
-          both sides read as two people talking, which is not what this is. */}
-      {turn.answered !== '' && <p className="text-text m-0 text-base">{turn.answered}</p>}
-
-      {turn.steps.map((step, index) => (
-        // Keyed by position: the same action can legitimately run twice in one plan, and the
-        // list only ever grows to the end.
-        <Step key={index} step={step} />
-      ))}
-
-      {turn.lost && <p className="text-warning text-mini m-0">{t('assistant.lost')}</p>}
-    </li>
-  )
-}
-
-function Step({ step }: { step: AssistantStep }) {
-  const { t } = useTranslation()
-  const action = assistantAction(step.action)
-  // An action the registry no longer declares cannot reach here — the executor checks first —
-  // but a thread rendered from a turn kept across a reload could, and a blank line says nothing.
-  const title = action ? t(action.titleKey) : step.action
-
-  if (step.refusal === null) return <p className="text-muted text-mini m-0 px-2">{title}</p>
-
-  return (
-    <p className="text-warning text-mini m-0 px-2">
-      {t('assistant.refused', { action: title, reason: t(refusalKey(step.refusal)) })}
-    </p>
-  )
-}
-
-/**
- * The yes-or-no, with what it engages stated first.
- *
- * A figure is quoted only when there is one: an upload has no price, and `null` means the API
- * declined to give one — said as such rather than filled in with a guess.
- */
-function Question({ request }: { request: ConfirmRequest }) {
-  const { t, i18n } = useTranslation()
-  const action = assistantAction(request.action)
-  const answer = useAssistant(state => state.answer)
-
-  const reason = (): string => {
-    if (request.commitment === 'asset') return t('assistant.confirm.asset')
-    if (typeof request.estimate !== 'number') return t('assistant.confirm.unknownCost')
-
-    return t('assistant.confirm.credits', {
-      cost: t('generation.estimatedCost', {
-        units: formatUnits(request.estimate, i18n.language),
-      }),
-    })
-  }
-
-  return (
-    <div
-      className={cn(
-        'border-border bg-surface flex shrink-0 flex-col gap-2',
-        'rounded-(--radius-sc-md) border p-2',
-      )}
-    >
-      <p className="text-text m-0 text-xs font-medium">
-        {action ? t(action.titleKey) : request.action}
-      </p>
-      <p className="text-muted text-mini m-0">{reason()}</p>
-
-      <div className="flex items-center gap-2">
-        <Button
-          variant="primary"
-          onClick={() => answer(true)}
-          {...HINT_TOP(t('assistant.confirm.yesHint'))}
-        >
-          {t('assistant.confirm.yes')}
-        </Button>
-        <Button onClick={() => answer(false)} {...HINT_TOP(t('assistant.confirm.noHint'))}>
-          {t('assistant.confirm.no')}
-        </Button>
-      </div>
-    </div>
-  )
 }

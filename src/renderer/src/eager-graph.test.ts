@@ -193,7 +193,7 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     const editors = [
-      './spaces/image/ImageDocument.tsx',
+      './spaces/image/ImageDocument/ImageDocument.tsx',
       './spaces/three/SceneDocument.tsx',
       './spaces/video/SequenceDocument.tsx',
       './spaces/audio/AudioDocument.tsx',

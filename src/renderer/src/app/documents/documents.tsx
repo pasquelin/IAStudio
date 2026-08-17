@@ -15,7 +15,7 @@ export type DocumentPanelParams = { documentId: string }
  * the one it opens costs a few hundred milliseconds it was going to spend anyway.
  */
 const ImageDocument = lazy(async () => ({
-  default: (await import('@/spaces/image/ImageDocument')).ImageDocument,
+  default: (await import('@/spaces/image/ImageDocument/ImageDocument')).ImageDocument,
 }))
 const SceneDocument = lazy(async () => ({
   default: (await import('@/spaces/three/SceneDocument')).SceneDocument,

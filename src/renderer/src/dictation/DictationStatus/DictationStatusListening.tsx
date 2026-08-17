@@ -1,0 +1,37 @@
+import { mdiMicrophone } from '@mdi/js'
+import { useTranslation } from 'react-i18next'
+import { UiIcon } from '@/design/UiIcon'
+import { useAssistant } from '@/stores/assistant'
+import { Heard } from '../Heard'
+import { LevelMeter } from '../LevelMeter'
+
+/**
+ * A live microphone, and WHERE the words are going.
+ *
+ * Saying only that it is on is half an answer: the same microphone types into a prompt and talks
+ * to the assistant, and the two are told apart nowhere else on screen — the assistant claims the
+ * spoken word without necessarily showing its window.
+ *
+ * It is also the only thing left visible once that window IS up: the conversation lays the studio's
+ * own panel colour over everything at 80%, plus a blur, so the title bar and its entry are sunk
+ * behind it. The status line never is.
+ */
+export function DictationStatusListening() {
+  const { t } = useTranslation()
+  // Open IS the claim: the window takes the spoken word for as long as it is up, and nothing
+  // else in the studio does.
+  const toAssistant = useAssistant(state => state.open)
+
+  return (
+    <span className="text-accent-ink flex items-center gap-1.5">
+      <span role="status" className="flex items-center gap-1.5">
+        <UiIcon path={mdiMicrophone} size={12} />
+        {toAssistant ? t('assistant.listening') : t('dictation.active')}
+      </span>
+      <LevelMeter />
+      {/* Capped and truncated: the line has no width to give — four other indicators share its
+          end, and a spoken sentence has no length limit. */}
+      <Heard className="max-w-64 truncate" />
+    </span>
+  )
+}
