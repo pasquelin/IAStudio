@@ -430,23 +430,16 @@ without having run `pnpm ffmpeg:fetch`.
 
 ## Where your files really are
 
-Everything is in the project folder, in a precise and readable place:
+**Wherever you put them.** A generated asset lands in one of the six starter folders — see
+[What you find there](#what-you-find-there) — and nothing holds it there: move it, file it in a
+tree of your own, the shelf keeps showing it and its entry follows. The layout of the project
+folder is described in [Projects](04-projects.md#what-is-inside).
 
-```
-My project/
-└── assets/
-    ├── img/     images
-    ├── vid/     videos
-    ├── aud/     sounds
-    ├── 3d/      3D objects
-    ├── tex/     textures
-    └── sky/     skies
-```
+These are **real files, in real formats**. You can open them with any other software, copy them,
+send them.
 
-These are real files, in real formats. You can open them with any other software, copy them, send
-them.
-
-**Except imported media**, which stay where they were — that is the whole point of the link.
+**Except imported media**, which stay where they were — that is the whole point of the link. Until
+you edit them: the saved version is written into the project.
 
 ---
 
