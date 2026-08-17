@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Fragment, useEffect, useMemo, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { FieldDescriptor } from '@shared/domain/model'
@@ -47,15 +47,15 @@ export type DynamicFormProps = {
    */
   preset?: FormValues
   /**
-   * Rendered under each field, for whatever the caller wants to hang there — dictation hangs on
-   * anything a sentence can be spoken into. Called for every field so that nothing about any
-   * particular feature is decided here; answering `null` leaves the field alone.
+   * Rendered inside each field that has room for it — the foot of a long text box, where a
+   * spoken prompt is dictated. Called for every field so that nothing about any particular
+   * feature is decided here; answering `null` leaves the field alone.
    *
-   * The field alone, with no handle onto its value. It carried one — `read`, `write`, `readAll`
-   * — for prompt assistance, which rewrote the field it hung under. That moved to the assistant,
-   * which reaches the form through `GeneratorBridge` instead, and nothing was left reading it.
+   * `append` is the only handle onto the value, and it goes one way: the accessory adds a
+   * sentence to that field and can neither read it nor replace it. The full trio — `read`,
+   * `write`, `readAll` — was here for prompt assistance, which moved to the assistant.
    */
-  accessory?: (field: FieldDescriptor) => ReactNode
+  accessory?: (field: FieldDescriptor, append: (text: string) => void) => ReactNode
 }
 
 /**
@@ -75,6 +75,9 @@ export function DynamicForm({
 }: DynamicFormProps) {
   const { t } = useTranslation()
   const say = useModelText()
+  // Two generators can be open at once — the panel and a detached window — and an id repeated
+  // across them would point every label at the first form's field.
+  const formId = useId()
   const schema = useMemo(() => buildSchema(fields), [fields])
   const initial = useMemo(() => defaultValues(fields, preset), [fields, preset])
   const groups = useMemo(() => groupFields(fields), [fields])
@@ -101,6 +104,16 @@ export function DynamicForm({
     return () => subscription.unsubscribe()
   }, [fields, getValues, onValuesChange, watch])
 
+  // Through the form rather than into the element: a sentence lands while the focus is on the
+  // button that opened the microphone, and the caret it left is no longer in the field.
+  const append = (key: string, text: string): void => {
+    const current = String(getValues(key) ?? '')
+    setValue(key, current === '' ? text : `${current} ${text}`, {
+      shouldValidate: true,
+      shouldDirty: true,
+    })
+  }
+
   // Watching the whole form would re-render every control on every keystroke. Only the keys
   // another field declares a dependency on can change what is on screen.
   const watched = dependencies.length > 0 ? watch(dependencies) : []
@@ -124,32 +137,30 @@ export function DynamicForm({
           {group && <legend className={cn(PANEL_GROUP_LABEL, 'p-0')}>{say(group)}</legend>}
 
           {visibleFields(groupedFields, values).map(field => (
-            // The accessory sits outside the label rather than in it: it holds buttons, and a
-            // control nested in a label steals the click meant for the field.
-            <Fragment key={field.key}>
-              <label className="flex flex-col gap-2 text-xs">
-                <span className="text-muted">
-                  {say(field.label)}
-                  {field.required && <span aria-hidden> *</span>}
-                </span>
-
-                <DynamicFormControl
-                  field={field}
-                  registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
-                  initial={initial[field.key]}
-                  onRoll={() => setValue(field.key, randomSeed())}
-                />
-
-                {field.help && <span className="text-muted text-tiny">{say(field.help)}</span>}
-                {formState.errors[field.key] && (
-                  <span role="alert" className="text-danger text-tiny">
-                    {t('errors.invalidValue')}
-                  </span>
-                )}
+            // Named THROUGH the label rather than by nesting the control in it: an accessory
+            // holds buttons, and everything a label wraps is read out as the control's own name.
+            <div key={field.key} className="flex flex-col gap-2 text-xs">
+              <label htmlFor={`${formId}${field.key}`} className="text-muted">
+                {say(field.label)}
+                {field.required && <span aria-hidden> *</span>}
               </label>
 
-              {accessory?.(field)}
-            </Fragment>
+              <DynamicFormControl
+                id={`${formId}${field.key}`}
+                field={field}
+                registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
+                initial={initial[field.key]}
+                onRoll={() => setValue(field.key, randomSeed())}
+                accessory={accessory?.(field, text => append(field.key, text))}
+              />
+
+              {field.help && <span className="text-muted text-tiny">{say(field.help)}</span>}
+              {formState.errors[field.key] && (
+                <span role="alert" className="text-danger text-tiny">
+                  {t('errors.invalidValue')}
+                </span>
+              )}
+            </div>
           ))}
         </fieldset>
       ))}

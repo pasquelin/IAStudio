@@ -112,9 +112,9 @@ de mots, la plupart des modèles diluent. Mieux vaut une phrase juste que trois 
 
 ## Dicter au lieu de taper
 
-Un quatrième bouton, en forme de micro, se tient au même endroit. Il apparaît sur **tous** les
-champs de texte long du formulaire, pas seulement sur le prompt : un prompt négatif se dicte
-aussi bien.
+Un bouton en forme de micro se tient **dans le coin inférieur droit du champ**. Il apparaît sur
+**tous** les champs de texte long du formulaire, pas seulement sur le prompt : un prompt négatif
+se dicte aussi bien.
 
 **Tout se passe sur votre ordinateur.** Rien de ce que vous dites n’est envoyé nulle part, il
 n'y a pas de clé à saisir, et la dictée fonctionne sans connexion.
@@ -146,12 +146,15 @@ tapé n'est jamais écrasé.
 Cela vaut pour tous les champs du studio, pas seulement le prompt : la recherche d'assets, le
 renommage d'un calque, un nom de document.
 
+**Le bouton, lui, écrit toujours dans le champ qui le porte**, et à la suite de ce qui s'y
+trouve : appuyer dessus sort le curseur du champ, et la phrase doit bien aller quelque part.
+
 ### Ce que vous voyez pendant
 
-Pendant que vous parlez, une phrase grisée s'affiche **sous** le champ : c'est ce que la
-reconnaissance croit entendre, et elle se corrige au fil des mots. Elle n'entre pas dans le
-champ. Quand vous marquez un silence — ou que vous relâchez la touche — la phrase est arrêtée,
-ponctuée, et **elle seule** est écrite dans le champ.
+Pendant que vous parlez, une phrase grisée s'affiche **en bas du champ, à gauche du micro** :
+c'est ce que la reconnaissance croit entendre, et elle se corrige au fil des mots. Elle n'entre
+pas dans le champ. Quand vous marquez un silence — ou que vous relâchez la touche — la phrase est
+arrêtée, ponctuée, et **elle seule** est écrite dans le champ.
 
 Un petit indicateur à côté du micro monte et descend avec votre voix. S'il ne bouge pas, le
 micro n'entend rien : vérifiez lequel votre ordinateur utilise.

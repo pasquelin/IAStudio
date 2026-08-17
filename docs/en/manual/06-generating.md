@@ -109,8 +109,9 @@ most models dilute. One accurate sentence beats three vague ones.
 
 ## Speaking instead of typing
 
-A fourth button, shaped like a microphone, sits in the same place. It appears on **every** long
-text field of the form, not only on the prompt: a negative prompt is worth dictating too.
+A button shaped like a microphone sits **in the bottom right corner of the field**. It appears on
+**every** long text field of the form, not only on the prompt: a negative prompt is worth
+dictating too.
 
 **Everything happens on your computer.** Nothing you say is sent anywhere, there is no key to
 enter, and dictation works with no connection at all.
@@ -139,12 +140,16 @@ the text lands **at the caret** — not at the end. What you had already typed i
 This holds for every field in the studio, not only the prompt: the asset search, renaming a
 layer, naming a document.
 
+**The button, on the other hand, always writes into the field carrying it**, after whatever is
+already there: pressing it takes the caret out of the field, and the sentence has to land
+somewhere.
+
 ### What you see while it listens
 
-While you speak, a greyed sentence appears **below** the field: it is what recognition believes
-it is hearing, and it corrects itself as the words come. It does not enter the field. When you
-pause — or let go of the key — the sentence is settled, punctuated, and **only then** written
-into the field.
+While you speak, a greyed sentence appears **at the foot of the field, left of the microphone**:
+it is what recognition believes it is hearing, and it corrects itself as the words come. It does
+not enter the field. When you pause — or let go of the key — the sentence is settled, punctuated,
+and **only then** written into the field.
 
 A small indicator beside the microphone rises and falls with your voice. If it does not move,
 the microphone is hearing nothing: check which one your computer is using.

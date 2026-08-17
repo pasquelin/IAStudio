@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
@@ -133,7 +133,7 @@ describe('DynamicForm', () => {
     expect(screen.getByRole('group', { name: 'Avancé' })).toBeInTheDocument()
   })
 
-  describe('the accessory a caller hangs under a field', () => {
+  describe('the accessory a caller hangs in a field', () => {
     const fields = [
       field({ key: 'prompt', label: 'Prompt', kind: 'longText' }),
       field({ key: 'steps', label: 'Steps', kind: 'integer' }),
@@ -191,6 +191,64 @@ describe('DynamicForm', () => {
       )
 
       expect(screen.getByRole('button', { name: 'Adopter' }).closest('label')).toBeNull()
+    })
+
+    it('sits in the long text box rather than under it', () => {
+      render(
+        <DynamicForm
+          fields={[fields[0] ?? field({ key: 'prompt' })]}
+          onSubmit={vi.fn()}
+          submitLabel="Générer"
+          accessory={() => (
+            <button type="button" onClick={() => {}}>
+              Adopter
+            </button>
+          )}
+        />,
+      )
+
+      const box = screen.getByLabelText(/Prompt/).parentElement
+      expect(box?.contains(screen.getByRole('button', { name: 'Adopter' }))).toBe(true)
+    })
+
+    /**
+     * The field a model asked for, not the descriptor: `append` goes through the form, so what
+     * is added is submitted and validated like anything typed. A sentence dictated while the
+     * focus sat on the microphone had nowhere else to go — the caret path refuses a `<button>`.
+     */
+    it('adds a sentence to the field it sits in, leaving what is already there', async () => {
+      let add: (text: string) => void = () => {}
+      render(
+        <DynamicForm
+          fields={fields}
+          onSubmit={vi.fn()}
+          submitLabel="Générer"
+          accessory={(shown, append) => {
+            if (shown.key === 'prompt') add = append
+            return null
+          }}
+        />,
+      )
+
+      await userEvent.type(screen.getByLabelText(/Prompt/), 'un chat')
+      act(() => add('roux'))
+
+      expect(screen.getByLabelText(/Prompt/)).toHaveValue('un chat roux')
+    })
+
+    // Silently, and that is the price of drawing it INSIDE the control: only a long text box
+    // has a strip to put one in, and no other kind grew one for a caller that hangs on all.
+    it('draws nothing on a field with no room for it', () => {
+      render(
+        <DynamicForm
+          fields={fields}
+          onSubmit={vi.fn()}
+          submitLabel="Générer"
+          accessory={shown => shown.key === 'steps' && <span>Sous les pas</span>}
+        />,
+      )
+
+      expect(screen.queryByText('Sous les pas')).not.toBeInTheDocument()
     })
   })
 })
