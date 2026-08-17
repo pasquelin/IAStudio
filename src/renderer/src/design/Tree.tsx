@@ -2,6 +2,7 @@ import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import type { DragLike } from '@/helpers/drag'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { isTyping } from '@/helpers/typing'
 import { useRemeasure } from '@/hooks/useRemeasure'
@@ -37,7 +38,7 @@ type DropTarget =
  * platform answers nothing about the latter until the drop itself.
  */
 export type ForeignDrop<T> = {
-  carries: (event: { dataTransfer: DataTransfer | null }) => boolean
+  carries: (event: DragLike) => boolean
   /**
    * Which rows receive it. Its own rather than `droppable`, which answers about the batch this
    * tree picked up: asked with an empty one it drops the very test that refuses a destination —

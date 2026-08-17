@@ -218,15 +218,17 @@ export function mergeRows({
 
   // Deduped against the library page and the project's twins, so an asset this account happens
   // to own AND to have published is one line — the account's own, which is the truer of the two.
-  const held = new Set([...twinned, ...remote.map(asset => asset.id)])
-  const publics: AssetRowModel[] = published
-    .filter(asset => !held.has(asset.id) && wanted(asset.type))
-    .map(asset => ({
-      id: `${REMOTE_PREFIX}${asset.id}`,
-      from: 'remote',
-      asset,
-      published: true,
-    }))
+  //
+  // Built only when there IS a feed to dedup: this runs on every catalogue refresh, and walking
+  // the library page to fill a set nothing then reads is the ordinary case, not the exception.
+  const publics: AssetRowModel[] = []
+  if (published.length > 0) {
+    const held = new Set([...twinned, ...inLibrary.keys()])
+    for (const asset of published) {
+      if (held.has(asset.id) || !wanted(asset.type)) continue
+      publics.push({ id: `${REMOTE_PREFIX}${asset.id}`, from: 'remote', asset, published: true })
+    }
+  }
 
   /**
    * Sorted, and that is what makes it a timeline rather than three lists in a row.

@@ -1,6 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import type { DragLike } from '@/helpers/drag'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { useGrid } from '@/hooks/useGrid'
@@ -112,7 +113,7 @@ export type CollectionProps<T extends { id: string }> = {
    * two views of one folder answer the gesture alike.
    */
   foreign?: {
-    carries: (event: { dataTransfer: DataTransfer | null }) => boolean
+    carries: (event: DragLike) => boolean
     onDrop: (event: React.DragEvent<HTMLElement>) => void
   }
   /** A right-click on that blank. Raised after `onPressRoot`, never instead of it. */

@@ -6,6 +6,7 @@ import { MediaTile } from '@/design/MediaTile'
 import { rowDrag } from '@/design/rowDrag'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
+import type { DragLike } from '@/helpers/drag'
 
 /**
  * What the card stands for, which decides the SHAPE it draws: a folder, a plain file, or a file
@@ -50,7 +51,7 @@ export type EntryCardProps = {
    */
   foreign?: {
     accepts: boolean
-    carries: (event: { dataTransfer: DataTransfer | null }) => boolean
+    carries: (event: DragLike) => boolean
     onDrop: (event: React.DragEvent<HTMLElement>) => void
   }
   onDropInto: (ids: readonly string[]) => void
