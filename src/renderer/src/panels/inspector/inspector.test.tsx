@@ -151,7 +151,7 @@ describe('inspector panel', () => {
 
     expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Géométrie/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Matériau/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Matière/ })).toBeInTheDocument()
   })
 
   it('shows a light its own section, and no geometry', () => {
@@ -177,7 +177,7 @@ describe('inspector panel', () => {
     render(<Content />)
 
     expect(screen.getByRole('button', { name: /Sprite/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Matériau/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Matière/ })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
   })
 

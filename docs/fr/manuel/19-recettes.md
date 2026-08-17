@@ -141,10 +141,10 @@ Une *matière* (ou *texture*) n’est pas une image : c’est une surface qu’o
 4. **Inspecteur** → section **Aperçu** : choisissez la forme — **sphère**, cube, cylindre, plan ou
    nœud de tore. La **sphère** montre le mieux la lumière, le **plan** montre le mieux la
    répétition du motif ;
-5. **Inspecteur** : la section **Matériau** règle la rugosité et le métal ; **Relief** et
+5. **Inspecteur** : la section **Matière** règle la rugosité et le métal ; **Relief** et
    **Émission** sont deux sections voisines, pas son contenu. Si la matière paraît uniformément
    moyenne, ce sont les **plages** — « Plage de rugosité », « Plage de métal » — qu’il faut
-   reprendre ; elles sont dans la section Matériau, sous les deux réglages ;
+   reprendre ; elles sont dans la section Matière, sous les deux réglages ;
 6. panneau **Canaux** : déposez une image sur la vignette de chaque canal que vous voulez remplir —
    et pour la **hauteur**, la **normale**, l’**occlusion** et la **rugosité**, le menu de la vignette
    les calcule depuis un autre canal, sans rien dépenser ;

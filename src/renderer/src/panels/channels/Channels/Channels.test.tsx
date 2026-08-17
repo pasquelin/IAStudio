@@ -178,7 +178,7 @@ describe('Channels', () => {
       render(<Channels />)
 
       await userEvent.click(screen.getByRole('button', { name: /Regarder Normale seul/ }))
-      await userEvent.click(screen.getByRole('button', { name: /Revenir au matériau éclairé/ }))
+      await userEvent.click(screen.getByRole('button', { name: /Revenir à la matière éclairée/ }))
 
       expect(inspectedChannel(useTextureViews.getState(), 'doc-1')).toBeNull()
     })
@@ -227,7 +227,7 @@ describe('Channels', () => {
 
       await userEvent.click(tile)
 
-      expect(screen.getByRole('button', { name: /Revenir au matériau éclairé/ })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: /Revenir à la matière éclairée/ })).toHaveAttribute(
         'aria-pressed',
         'true',
       )

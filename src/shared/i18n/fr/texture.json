@@ -103,13 +103,13 @@
       "edge": "Cavité"
     },
     "inspectChannel": "Regarder {{channel}} seul",
-    "showMaterial": "Revenir au matériau éclairé",
+    "showMaterial": "Revenir à la matière éclairée",
     "noPicture": "Aucune image dans ce projet",
     "tilingPreviewHint": "Ne change que l’aperçu — la texture exportée n’est pas répétée pour autant",
     "previewShapeHint": "Change la forme sur laquelle l’aperçu est plaqué, pas la texture",
     "measureSeamHint": "Compare les bords opposés de la texture pour dire si la couture se voit",
     "deriveHint": "Calcule ce canal à partir d’un autre plutôt que d’une image importée",
-    "clearChannelHint": "Retire l’image du canal ; le matériau reprend sa valeur par défaut",
+    "clearChannelHint": "Retire l’image du canal ; la matière reprend sa valeur par défaut",
     "noPictureHint": "Générez ou importez une image pour pouvoir en poser une ici",
     "pickChannelHint": "Pose cette image sur le canal"
   }

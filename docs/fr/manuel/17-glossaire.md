@@ -379,6 +379,11 @@ retire — l’image d’origine n’a jamais bougé.
 
 Un masque se fabrique aussi à partir d’une *sélection*, en une commande.
 
+**Matière** *(material)*
+Ce dont une surface est faite : sa couleur, son grain, ce qu’elle renvoie de la lumière. C’est ce
+que l’espace **Textures** fabrique, et ce que la section **Matière** de l’inspecteur règle sur un
+objet 3D. Le studio ne dit jamais *matériau* : un seul mot pour une seule chose.
+
 **MCP** *(Model Context Protocol)*
 La langue commune que parlent les assistants de programmation et les outils qu’ils pilotent. Le
 studio peut se présenter comme l’un de ces outils : un client comme Claude Code lance alors les
