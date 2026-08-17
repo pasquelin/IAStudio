@@ -5,7 +5,7 @@ import { useDebounced } from '@/hooks/useDebounced'
 import { useFolded } from '@/hooks/useFolded'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
-import type { FolderNode, FolderTree } from './use-folder-tree'
+import type { FolderNode, FolderTree } from './useFolderTree'
 
 /** How long a hand keeps typing. Every keystroke otherwise walks the whole project folder. */
 const SETTLE_MS = 200
@@ -56,7 +56,7 @@ function withAncestors(entries: readonly FolderEntry[]): FolderNode[] {
  * answers a flat list; the chain of folders above each match is rebuilt here.
  *
  * An empty term answers nothing at all, which is what puts the lazy tree back on screen — no
- * contract of `use-folder-tree` moves for this.
+ * contract of `useFolderTree` moves for this.
  */
 export function useFolderSearch(term: string, hidden: boolean): FolderSearch {
   const projectPath = useProject(state => state.project?.path ?? null)
