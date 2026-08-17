@@ -14,16 +14,14 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
- * The floor `scripts/check.mjs` refuses to run below.
+ * The floor `scripts/check.mjs` refuses to run below. A detector that recognises nothing prints
+ * the same green as one that works, and every hardcoded word would sail through it.
  *
- * A detector that recognises nothing prints the same green as one that works, and every hardcoded
- * word would sail through it — the failure this whole module exists to prevent.
- *
- * Measured at 29 on 2026-08-13, then at 42 the same day — the figure moves with every guard
- * added, which is exactly why the floor does not follow it. Set well under: guards come and go,
- * and a floor tracking the count exactly would fail for a suite legitimately deleted.
+ * Under the real count rather than on it — a suite legitimately deleted must not fail this — but
+ * close enough to mean something: it sat at 20 while the count reached 58, where a silent loss of
+ * thirty-eight guards would have passed. Raise it when the gap grows back, and never to the count.
  */
-export const LEAST_GUARDS = 20
+export const LEAST_GUARDS = 50
 
 /**
  * A glob standing for files it does not name, rather than one naming a single file.
