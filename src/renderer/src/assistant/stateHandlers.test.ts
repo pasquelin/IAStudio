@@ -115,7 +115,7 @@ describe('putting a document in front', () => {
 
     expect(await runAction('document.activate', { documentId: 'doc-z' })).toEqual({
       ok: false,
-      refusal: 'badInput',
+      refusal: 'notFound',
     })
     expect(useDocuments.getState().activeId).toBe('doc-a')
     expect(openDocument).not.toHaveBeenCalled()
@@ -148,6 +148,17 @@ describe('putting a document in front', () => {
       ok: true,
     })
     expect(relist).toHaveBeenCalled()
+  })
+
+  // `badInput` sent a client back to check a path that was well formed all along, when the only
+  // true answer was that nothing sits there.
+  it('says the document is not there rather than blaming the parameters', async () => {
+    installDocuments({}, '')
+
+    expect(await runAction('document.open', { path: 'Nowhere/Absent.img' })).toEqual({
+      ok: false,
+      refusal: 'notFound',
+    })
   })
 })
 
@@ -265,7 +276,10 @@ describe('exporting the document in front', () => {
     const exportInto = vi.fn(async () => null)
     installFakeBridge({ project: { exportInto } })
 
-    expect(await runAction('document.export', {})).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('document.export', {})).toEqual({
+      ok: false,
+      refusal: 'notRenderable',
+    })
     expect(exportInto).not.toHaveBeenCalled()
   })
 

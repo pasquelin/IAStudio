@@ -57,6 +57,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.documentClose.title',
     descriptionKey: 'assistant.actions.documentClose.description',
     commitment: 'none',
+    asksItself: true,
     reach: 'mcp',
     fields: [
       { key: 'documentId', kind: 'text', labelKey: 'assistant.fields.documentId', required: true },

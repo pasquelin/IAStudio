@@ -7,7 +7,7 @@
       },
       "workspaceOpen": {
         "title": "Open a workspace",
-        "description": "Switches to a workspace, and creates a document there when asked to. This is what answers “open a new 3D file”."
+        "description": "Switches to a workspace, and creates a document there when asked to. Given no title, the creation puts a name field on screen and the call waits for it. This is what answers “open a new 3D file”."
       },
       "modelsSearch": {
         "title": "Search for a model",
@@ -63,7 +63,7 @@
       },
       "documentClose": {
         "title": "Close a document",
-        "description": "Closes an open document’s tab. Work that never reached the disk is lost with it, which is why this asks first."
+        "description": "Closes an open document’s tab. Work that never reached the disk is lost with it."
       },
       "documentRename": {
         "title": "Rename a document",
@@ -91,7 +91,7 @@
       },
       "filesMove": {
         "title": "Move files",
-        "description": "Moves files and folders of the project into another folder of it. The disk changes, so this asks first — the Explorer can still undo it afterwards."
+        "description": "Moves files and folders of the project into another folder of it. The disk changes, though the Explorer can still undo it afterwards."
       },
       "filesCopy": {
         "title": "Copy files",
@@ -103,11 +103,11 @@
       },
       "filesTrash": {
         "title": "Move files to the bin",
-        "description": "Sends files and folders of the project to the system bin. This asks first, and what it took is listed in the recent activity."
+        "description": "Sends files and folders of the project to the system bin. What it took is listed in the recent activity."
       },
       "fileRename": {
         "title": "Rename a file",
-        "description": "Gives one file or folder of the project another name, in the folder it already sits in. This asks first: another program may already know it by the old one."
+        "description": "Gives one file or folder of the project another name, in the folder it already sits in. Another program may already know it by the old one."
       },
       "fileFacts": {
         "title": "Read a file’s facts",
@@ -123,7 +123,7 @@
       },
       "costEstimate": {
         "title": "Estimate what a generation would cost",
-        "description": "Prices a model and a set of parameters without running anything. Answers nothing at all where the API declines to price that model, rather than inventing a figure."
+        "description": "Prices a model and a set of parameters without running anything. Its parameters take the shape model_schema answers with. Answers nothing at all where the API declines to price that model, rather than inventing a figure."
       },
       "jobGet": {
         "title": "Read one job",
@@ -159,7 +159,7 @@
       },
       "assetsRemove": {
         "title": "Remove assets",
-        "description": "Takes assets out of the project’s library, and out of the remote one when asked to. This asks first, and what it removed is listed in the recent activity."
+        "description": "Takes assets out of the project’s library, and out of the remote one when asked to. What it removed is listed in the recent activity."
       },
       "canvasState": {
         "title": "Read the image being edited",
@@ -289,7 +289,7 @@
         "title": "Rename a track",
         "description": "Gives a track the name the header column shows. Its identifier never changes."
       },
-      "trackState": {
+      "trackAdjust": {
         "title": "Set how a track is worked",
         "description": "Changes a track’s mute, solo, lock or height. Those four say how one works rather than what one made, and so never enter the history."
       },
@@ -543,7 +543,7 @@
       },
       "gitRestore": {
         "title": "Discard changes to files",
-        "description": "Puts files back the way the last recorded version has them. This asks first: what was never recorded is gone, and no undo in the studio reaches it."
+        "description": "Puts files back the way the last recorded version has them. What was never recorded is gone, and no undo in the studio reaches it."
       },
       "gitCommit": {
         "title": "Record a version",
@@ -555,15 +555,15 @@
       },
       "gitCheckout": {
         "title": "Switch branch",
-        "description": "Moves onto another branch, rewriting the working tree to match it. This asks first: a document open in a tab is then a document whose file changed under it."
+        "description": "Moves onto another branch, rewriting the working tree to match it. A document open in a tab is then a document whose file changed under it."
       },
       "gitStash": {
         "title": "Shelve the current changes",
-        "description": "Sets the working tree’s changes aside and returns it to the last recorded version. This asks first, since it takes the changes off the disk."
+        "description": "Sets the working tree’s changes aside and returns it to the last recorded version. It takes the changes off the disk."
       },
       "gitStashPop": {
         "title": "Bring shelved changes back",
-        "description": "Puts one set of shelved changes back into the working tree and drops it from the shelf. This asks first, since it rewrites files."
+        "description": "Puts one set of shelved changes back into the working tree and drops it from the shelf. It rewrites files."
       },
       "gitTag": {
         "title": "Tag a version",
@@ -601,7 +601,11 @@
       "noWindow": "No studio window was in front to run that action.",
       "timedOut": "The request stood on screen unanswered, and was given up on.",
       "noReference": "The form carries no reference image to read a style from.",
-      "formChanged": "The form changed after the cost was quoted. Nothing was sent — ask again for a fresh figure."
+      "formChanged": "The form changed after the cost was quoted. Nothing was sent — ask again for a fresh figure.",
+      "notFound": "Nothing of that name is there to act on. The call itself was well formed.",
+      "notAllowed": "The studio does not let a call from outside change that. Only its own window does.",
+      "notRenderable": "The document in front has nothing this can render — an empty sky, a material with no channel, or an engine that is not mounted.",
+      "failed": "The studio tried and it did not go through. The reason is in its journal, and it was not the parameters."
     },
     "models": {
       "claude-haiku-4-5": "Haiku 4.5 — the fastest and the cheapest",
@@ -759,7 +763,7 @@
       "unknownCost": "This action will spend creative units. The studio could not estimate how many, and does not invent a figure.",
       "files": "This action will change what your project holds — files, or the assets in its library. It costs no creative units.",
       "asset": "This action will upload an image, which then stays in your library. It costs no creative units.",
-    "remote": "This action will publish to a server, off this machine. It costs no creative units, and nothing here takes it back.",
+      "remote": "This action will publish to a server, off this machine. It costs no creative units, and nothing here takes it back.",
       "yes": "Allow",
       "yesHint": "Runs the action above, and commits what it commits",
       "no": "Don’t allow",

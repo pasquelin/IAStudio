@@ -40,7 +40,7 @@ import { boolOf, numberOf, oneOf, textOf } from './actionInputs'
  *
  * Every one of these runs a command of `engines/timeline/commands.ts` — the same ones the strip
  * runs, so an edit made from outside undoes exactly like one made with the mouse. The four dials
- * of `track.state` are the exception the header column already makes: they never enter the
+ * of `track.adjust` are the exception the header column already makes: they never enter the
  * history.
  */
 
@@ -75,7 +75,9 @@ function editClipOf(
   if (!open) return refused('wrongSurface')
 
   const clip = clipById(open.state, textOf(input, 'clipId') ?? '')
-  const command = clip && build(clip, open.state)
+  if (!clip) return refused('notFound')
+
+  const command = build(clip, open.state)
   return command ? run(open.documentId, command) : refused('badInput')
 }
 
@@ -216,18 +218,18 @@ function select(input: Record<string, unknown>): ActionOutcome {
   if (!open) return refused('wrongSurface')
 
   const clip = clipById(open.state, textOf(input, 'clipId') ?? '')
-  if (!clip) return refused('badInput')
+  if (!clip) return refused('notFound')
 
   useSequences.getState().replace(open.documentId, { ...open.state, selectedId: clip.id })
   return { ok: true }
 }
 
-function trackState(input: Record<string, unknown>): ActionOutcome {
+function adjustTrack(input: Record<string, unknown>): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface')
 
   const track = trackById(open.state, textOf(input, 'trackId') ?? '')
-  if (!track) return refused('badInput')
+  if (!track) return refused('notFound')
 
   const height = numberOf(input, 'height')
   writeTrack(open.documentId, track.id, current => ({
@@ -246,7 +248,7 @@ export const SEQUENCE_HANDLERS: ActionHandlers = {
   'clip.add': addClip,
   'clip.trim': trim,
   'clip.select': select,
-  'track.state': trackState,
+  'track.adjust': adjustTrack,
 
   'clip.remove': input => editClipOf(input, clip => removeClip(clip.id)),
   'clip.unlink': input => editClipOf(input, clip => unlinkClip(clip.id)),

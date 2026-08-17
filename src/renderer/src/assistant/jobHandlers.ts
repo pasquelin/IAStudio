@@ -30,7 +30,7 @@ function jobOf(jobId: string): Job | null {
 function waitForJob(input: Record<string, unknown>): Promise<ActionOutcome> {
   const jobId = textOf(input, 'jobId') ?? ''
   const job = jobOf(jobId)
-  if (!job) return Promise.resolve(refused('badInput'))
+  if (!job) return Promise.resolve(refused('notFound'))
   if (isFinished(job.status)) return Promise.resolve({ ok: true, data: job })
 
   return new Promise(resolve => {
@@ -63,21 +63,23 @@ function waitForJob(input: Record<string, unknown>): Promise<ActionOutcome> {
 
 async function cancelJob(input: Record<string, unknown>): Promise<ActionOutcome> {
   const jobId = textOf(input, 'jobId') ?? ''
-  if (!jobOf(jobId)) return refused('badInput')
+  if (!jobOf(jobId)) return refused('notFound')
 
   await useJobs.getState().cancel(jobId)
   return { ok: true }
 }
 
 /**
- * Both of these ask the API about something that may not be there, and a rejection is the answer
- * for a model id nothing declares — a well-formed question about a model that is not.
+ * Both of these ask the API about something that may not be there. `failed` rather than
+ * `badInput`: a rejection here is a model id nothing declares AND a network that dropped, and
+ * nothing at this level tells the two apart — naming the caller's parameters guesses wrong half
+ * the time.
  */
 async function asking(run: () => Promise<ActionOutcome>): Promise<ActionOutcome> {
   try {
     return await run()
   } catch {
-    return refused('badInput')
+    return refused('failed')
   }
 }
 
@@ -87,7 +89,7 @@ export const JOB_HANDLERS: ActionHandlers = {
 
   'job.get': input => {
     const job = jobOf(textOf(input, 'jobId') ?? '')
-    return job ? { ok: true, data: job } : refused('badInput')
+    return job ? { ok: true, data: job } : refused('notFound')
   },
 
   'model.schema': input =>

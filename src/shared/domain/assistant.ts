@@ -55,9 +55,20 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
   ...SHELL_ACTIONS,
 ]
 
-/** The share of the registry one door offers. `mcp` is everything; `both` is the short list. */
+/**
+ * The share of the registry one door offers. `mcp` is everything; `both` is the short list.
+ *
+ * A `switch` rather than a ternary: `reach === 'mcp' ? ALL : …` made publishing EVERYTHING the
+ * fallback, so a third value would have gone out on the MCP wire with nothing red. Here it leaves
+ * the function without a return path, and the compiler says so.
+ */
 export function actionsReaching(reach: ActionReach): readonly AssistantAction[] {
-  return reach === 'mcp' ? ACTION_REGISTRY : ACTION_REGISTRY.filter(entry => entry.reach === 'both')
+  switch (reach) {
+    case 'both':
+      return ACTION_REGISTRY.filter(entry => entry.reach === 'both')
+    case 'mcp':
+      return ACTION_REGISTRY
+  }
 }
 
 /** One thing the assistant decided to do. Checked against the registry before it is run. */

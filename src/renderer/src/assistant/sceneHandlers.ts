@@ -128,7 +128,7 @@ function select(input: Record<string, unknown>): ActionOutcome {
 
   const known = new Set(open.state.nodes.map(node => node.id))
   const nodeIds = textsOf(input, 'nodeIds')
-  if (nodeIds.some(id => !known.has(id))) return refused('badInput')
+  if (nodeIds.some(id => !known.has(id))) return refused('notFound')
 
   // Selection is not a command: it stays out of the history, so `replace` writes the state.
   useScenes.getState().replace(open.documentId, setSelection(open.state, nodeIds))
@@ -140,7 +140,7 @@ function reparent(input: Record<string, unknown>): ActionOutcome {
   if (!open) return refused('wrongSurface')
 
   const parentId = textOf(input, 'parentId')
-  if (parentId !== null && !nodeById(open.state, parentId)) return refused('badInput')
+  if (parentId !== null && !nodeById(open.state, parentId)) return refused('notFound')
 
   // A move that would close the tree on itself is refused by handing the state back untouched,
   // which without this reads as done.

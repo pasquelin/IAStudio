@@ -370,9 +370,12 @@ file. `main/mcp/asking.ts` compose l’aller-retour que l’IPC n’a pas dans c
 `broadcast` redescend, un `callId` recoud les deux moitiés, et **toute façon d’échouer répond**,
 parce qu’à l’autre bout il y a un client qui attendrait sinon.
 
-`commitmentOfCommand` est **le seul niveau dérivé plutôt que déclaré**, et le seul gardé commande
-par commande : cinq commandes du canevas aplatissent et téléversent l’image, ce qui crée un asset
-permanent. Un oubli y passerait sans que rien en aval ne le rattrape.
+**Le niveau déclaré n’est qu’un plancher.** `raises` l’élève depuis l’entrée de l’appel —
+`commitmentOfCommand` pour `command.run`, un `amend` pour `git.commit` — et `asksItself` marque
+l’action dont le gestionnaire pose sa PROPRE question, ce qui est la raison pour laquelle son
+niveau reste au plancher. `commitmentOfCommand` est le seul gardé commande par commande : cinq
+commandes du canevas aplatissent et téléversent l’image, ce qui crée un asset permanent. Un oubli
+y passerait sans que rien en aval ne le rattrape.
 
 **`files` est délibérément étroit** — détruire, déplacer, renommer, réécrire la copie de travail,
 fermer un onglet qui porte du travail non enregistré — et jamais « tout ce qui écrit » : un dossier
