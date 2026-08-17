@@ -15,7 +15,7 @@ import { inspectedTextureId } from './inspected'
  * a layer, a clip, a track, an asset, a graph node, a scene, a texture — so one posted here
  * unconditionally
  * would offer to save a material while a video clip filled the panel below it. Which face is
- * drawn is `inspectedTextureId`, the same answer `Face` renders from.
+ * drawn is `inspectedTextureId`, the same answer `InspectorFace` renders from.
  */
 export function InspectorActions() {
   const { t } = useTranslation()
