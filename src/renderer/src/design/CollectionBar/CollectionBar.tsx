@@ -12,7 +12,7 @@ import {
   type FacetOption,
 } from '@/helpers/collectionState'
 import { HINT_TOP, TIP_BOTTOM } from '@/helpers/tooltip'
-import { CONTROL } from '../styles'
+import { CONTROL, PANEL_HEAD } from '../styles'
 import { ToolButton } from '../ToolButton'
 import { UiIcon } from '../UiIcon'
 import { CollectionBarDropdown } from './CollectionBarDropdown'
@@ -191,7 +191,7 @@ export function CollectionBar({
   const visible = expanded || !folded ? all : all.slice(0, FACETS_BEFORE_FOLD)
 
   return (
-    <div className={cn('border-border flex flex-col gap-2 border-b p-2', className)}>
+    <div className={cn(PANEL_HEAD, className)}>
       {leading ? (
         <div className="flex items-center gap-2">
           {leading}

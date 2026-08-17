@@ -236,6 +236,13 @@ export const TILE_QUIET = cn(ROW_QUIET, 'group-hover/row:text-text')
 export const ROW_INK = 'text-text transition-colors'
 
 /**
+ * What a line NAMES, among metadata left muted beside it: the room the rest leaves, cut short.
+ * No transition, unlike `ROW_INK` — these words never change ink, and a row that lifts its name
+ * on selection wants the pair above instead.
+ */
+export const ROW_SUBJECT = 'text-text min-w-0 flex-1 truncate text-xs'
+
+/**
  * A labelled toggle: the shape buttons of a texture, the view modes of a sky, the shelves of the
  * home. Written once because three surfaces had it, and one had already drifted — it lit up in
  * `accent-soft` where the others use `elevated`, the studio's hover token.
@@ -283,6 +290,13 @@ export const FILLED_ROW_HEIGHT = 44
  * of every row — which in an inspector is the value one is trying to read.
  */
 export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
+
+/**
+ * The stacked box a panel puts ABOVE what it acts on — a bar of filters, a message being written.
+ * Ruled off rather than spaced: the body scrolls under a boundary, and a gap would let the first
+ * row of a list read as part of the controls.
+ */
+export const PANEL_HEAD = 'border-border flex flex-col gap-2 border-b p-2'
 
 /**
  * The body of a titled run of properties — `PropertyGroup`'s and `PropertySection`'s alike.

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { canCommit, type GitStatus } from '@shared/domain/git'
 import { Button } from '@/design/Button'
-import { CHECKBOX, FIELD } from '@/design/styles'
+import { CHECKBOX, FIELD, PANEL_HEAD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
@@ -23,7 +23,7 @@ export function CommitBox({ status }: { status: GitStatus }) {
   const commit = useGit(state => state.commit)
 
   return (
-    <div className="border-border flex flex-col gap-2 border-b p-2">
+    <div className={PANEL_HEAD}>
       <textarea
         rows={3}
         value={message}
