@@ -32,6 +32,7 @@ import { displayOfPane, useSceneViews, sceneViewOf } from '@/stores/sceneViews'
 import { nextDisplayMode } from '@/engines/scene/sceneView'
 import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
+import { CameraPreview } from './CameraPreview/CameraPreview'
 import { SceneCounters } from './SceneCounters'
 import { openSceneNodeMenu } from './sceneNodeMenu'
 import { runSceneCommand, toggleNodeVisible } from './sceneCommands'
@@ -395,6 +396,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
       <div ref={host} className="absolute inset-0" />
       <SceneCounters scene={stats.scene} selected={stats.selected} />
+      <CameraPreview documentId={documentId} />
       {view.quad && (
         <ScenePaneGrid
           views={view.panes}

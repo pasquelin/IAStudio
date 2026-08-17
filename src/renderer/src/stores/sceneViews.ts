@@ -22,6 +22,11 @@ export type SceneView = {
   quad: boolean
   /** Whether the wireframe drops its triangulation diagonals. Never real quads — see the engine. */
   quadEdges: boolean
+  /**
+   * How big the camera preview is drawn. It opens by itself on a camera being selected and
+   * closes with that selection, so there is no third value: what it shows is never a question.
+   */
+  previewSize: 'inset' | 'full'
   /** What each of the four views shows. Only a free one turns — see `PaneView`. */
   panes: readonly PaneView[]
   /** Where the animation head stands, in microseconds. Never in the document — see `AnimationTimeline`. */
@@ -53,6 +58,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   pickedBone: null,
   quad: false,
   quadEdges: false,
+  previewSize: 'inset',
   panes: DEFAULT_PANE_VIEWS,
   playhead: 0,
   playing: false,
@@ -76,6 +82,7 @@ export type SceneViewsState = {
   setPickedBone: (documentId: string, pickedBone: SceneView['pickedBone']) => void
   setQuad: (documentId: string, quad: boolean) => void
   setQuadEdges: (documentId: string, quadEdges: boolean) => void
+  setPreviewSize: (documentId: string, previewSize: SceneView['previewSize']) => void
   setPaneView: (documentId: string, pane: number, view: PaneView) => void
   setPlayhead: (documentId: string, playhead: Us) => void
   setPlaying: (documentId: string, playing: boolean) => void
@@ -125,6 +132,11 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setQuadEdges: (documentId, quadEdges) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), quadEdges } },
+    })),
+
+  setPreviewSize: (documentId, previewSize) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), previewSize } },
     })),
 
   setPaneView: (documentId, pane, view) =>

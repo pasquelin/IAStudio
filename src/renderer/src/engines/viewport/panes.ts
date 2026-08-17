@@ -47,6 +47,41 @@ export function paneRects(layout: PaneLayout, width: number, height: number): Pa
   ]
 }
 
+/** How wide the inset sits, as a share of the surface, and how far it stands off its corner. */
+const INSET_SHARE = 0.28
+const INSET_MARGIN = 12
+
+/** Past this share of the height the inset stops being an inset and starts being the view. */
+const INSET_MAX_HEIGHT = 0.4
+
+/**
+ * Where a camera preview sits: bottom right, at the aspect of what that camera films.
+ *
+ * `null` for a surface with no room for one — an inset wider than the view it sits on would hide
+ * the very thing it is a preview OF. Sized from the surface rather than fixed, so it stays the
+ * same fraction of a detached panel as of a full window.
+ */
+export function insetRect(width: number, height: number, aspect: number): PaneRect | null {
+  if (width <= 0 || height <= 0 || aspect <= 0) return null
+
+  const insetWidth = Math.round(width * INSET_SHARE)
+  const insetHeight = Math.round(insetWidth / aspect)
+  if (insetHeight > height * INSET_MAX_HEIGHT) return null
+  if (insetWidth + INSET_MARGIN * 2 > width) return null
+
+  return {
+    x: width - insetWidth - INSET_MARGIN,
+    y: height - insetHeight - INSET_MARGIN,
+    width: insetWidth,
+    height: insetHeight,
+  }
+}
+
+/** Whether a point falls inside a rectangle — the inset's own test, and `paneAt`'s. */
+export function inRect(rect: PaneRect, x: number, y: number): boolean {
+  return x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height
+}
+
 /**
  * Which view a point falls in, or `null` when it falls outside the surface entirely.
  *
@@ -54,9 +89,7 @@ export function paneRects(layout: PaneLayout, width: number, height: number): Pa
  * one, so no coordinate is claimed twice and none is claimed by nobody.
  */
 export function paneAt(rects: readonly PaneRect[], x: number, y: number): number | null {
-  const found = rects.findIndex(
-    rect => x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height,
-  )
+  const found = rects.findIndex(rect => inRect(rect, x, y))
   return found === -1 ? null : found
 }
 

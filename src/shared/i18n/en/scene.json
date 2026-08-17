@@ -59,6 +59,9 @@
   },
   "scene": {
     "root": "Scene",
+    "onAir": "On air",
+    "previewFull": "Grow the preview to the whole view",
+    "previewInset": "Put the preview back in its corner",
     "visible": "Show or hide",
     "noDocument": "Open a scene to see its contents.",
     "rename": "Rename object",

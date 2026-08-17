@@ -38,6 +38,7 @@ import {
   type ViewportCamera,
   type ViewportOutput,
 } from '../viewport/ViewportEngine'
+import type { PaneRect } from '../viewport/panes'
 import {
   canReceiveShadow,
   type ModelNode,
@@ -292,6 +293,8 @@ export class SceneRenderer {
     onFrame: delta => this.advance(delta),
     onOverlay: renderer => this.viewHelper?.render(renderer),
     onPane: (index, camera) => this.dressPane(index, camera),
+    // A preview shows what the camera FILMS: the same pass the film and the montage take.
+    onInset: () => this.hideWorkshop(),
     // Read back rather than computed here: only the controls know where an orbit ended up.
     onCameraSettled: () => this.options.onView?.(this.viewPlacement()),
     // Only here: the texture and skybox viewports show what they show without any light told to
@@ -1130,6 +1133,17 @@ export class SceneRenderer {
       restore()
     }
     return canvas
+  }
+
+  /**
+   * Shows what a camera of the scene films, in a corner of the viewport. `null` closes it.
+   *
+   * The rectangle is the caller's because the frame drawn around the preview is DOM: two
+   * rectangles that agree until one of them drifts would be a border sitting beside its picture.
+   */
+  setCameraPreview(cameraNodeId: string | null, rect: PaneRect | null): void {
+    const camera = this.cameraObject(cameraNodeId)
+    this.viewport.setInsetPane(camera && rect ? { camera, rect } : null)
   }
 
   /** The camera a node id stands for, or `null` when nothing in the scene answers to it. */

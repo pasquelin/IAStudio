@@ -59,6 +59,9 @@
   },
   "scene": {
     "root": "Scène",
+    "onAir": "À l’antenne",
+    "previewFull": "Agrandir l’aperçu à toute la vue",
+    "previewInset": "Remettre l’aperçu dans son coin",
     "visible": "Afficher ou masquer",
     "noDocument": "Ouvrez une scène pour voir son contenu.",
     "rename": "Renommer l’objet",

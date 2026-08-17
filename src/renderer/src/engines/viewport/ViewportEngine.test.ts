@@ -210,6 +210,49 @@ describe('a viewport', () => {
       expect(viewported).not.toHaveBeenCalledWith(0, HOST_HEIGHT, HOST_WIDTH, HOST_HEIGHT)
     })
 
+    it('draws the camera preview as one more scissored pass, never a second context', () => {
+      const engine = atRest()
+      rendered.mockClear()
+
+      engine.setInsetPane({
+        camera: new PerspectiveCamera(),
+        rect: { x: 500, y: 700, width: 100, height: 56 },
+      })
+      drawFrames()
+
+      expect(rendered).toHaveBeenCalledTimes(2)
+      // Bottom-right, in WebGL's own frame: the host is 800 tall, so a rect 700 down sits at 44.
+      expect(scissored).toHaveBeenCalledWith(500, HOST_HEIGHT - 700 - 56, 100, 56)
+      expect(scissorTest).toHaveBeenLastCalledWith(false)
+    })
+
+    it('hides the workshop for the preview pass and puts it back after', () => {
+      const restore = vi.fn()
+      const hide = vi.fn(() => restore)
+      const engine = atRest({ onInset: hide })
+
+      engine.setInsetPane({
+        camera: new PerspectiveCamera(),
+        rect: { x: 0, y: 0, width: 100, height: 56 },
+      })
+      drawFrames()
+
+      expect(hide).toHaveBeenCalledTimes(1)
+      expect(restore).toHaveBeenCalledTimes(1)
+    })
+
+    // Without this a drag inside the preview would orbit the view underneath it.
+    it('answers no pane for a pointer inside the preview', () => {
+      const engine = atRest()
+      engine.setInsetPane({
+        camera: new PerspectiveCamera(),
+        rect: { x: 500, y: 700, width: 100, height: 56 },
+      })
+
+      expect(engine.paneAtPointer(pointerAt(550, 720))).toBeNull()
+      expect(engine.paneAtPointer(pointerAt(100, 100))).toBe(0)
+    })
+
     it('draws one pass and no scissor while there is one view', () => {
       const engine = atRest()
       rendered.mockClear()
