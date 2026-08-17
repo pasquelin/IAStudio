@@ -96,14 +96,19 @@ moitié haute va à ce dans quoi on produit : les projets.
 |---|---|---|---|
 | **Vos projets** | 1re | ceux que vous avez ouverts récemment, avec leur dossier, à rouvrir d’un clic — [son menu par ligne](04-projets.md#la-liste-des-projets-de-laccueil) | rien |
 | **Explorateur** | 2de | le projet ouvert, lu comme un dossier | un projet ouvert |
+| **Git** | 2de | ce qui a changé dans ce dossier depuis la dernière version enregistrée | un projet ouvert |
 
 **C’est le même Explorateur que dans les espaces**, à la même place — voir
 [Les projets](04-projets.md#parcourir-le-projet--le-panneau-explorateur). Il montre le dossier
 entier : vos documents, vos assets, et tout ce que vous y avez déposé vous-même.
 
-**Sans projet ouvert, il n’est pas là du tout** — c’est le seul panneau de l’accueil dans ce cas.
-Ailleurs, un panneau reste et dit ce qui lui manque ; ici il dirait « aucun projet ouvert » juste
-à côté du panneau dont le métier est d’en ouvrir un.
+**Sans projet ouvert, ces deux-là ne sont pas là du tout** — les seuls panneaux de l’accueil dans
+ce cas. Ailleurs, un panneau reste et dit ce qui lui manque ; ici ils diraient « aucun projet
+ouvert » juste à côté du panneau dont le métier est d’en ouvrir un.
+
+Le panneau **Git** lit le même dossier que l’Explorateur, sous un autre angle : non pas ce qu’il
+contient, mais ce qui y a changé depuis la dernière fois que vous avez enregistré un état. Les
+deux se relaient dans la même moitié — leurs icônes sont côte à côte dans le rail.
 
 ### La colonne de droite
 
@@ -230,8 +235,8 @@ dessous dans la seconde.
 | *séparateur* | |
 | Icônes de la **moitié haute** | Modèles, puis Génération ; l’accueil y met **Vos projets** |
 | *séparateur* | |
-| Icônes de la **moitié basse** | l’Explorateur, à l’accueil comme dans les espaces |
-| Tout en bas | Assets ou Timeline, selon l’espace |
+| Icônes de la **moitié basse** | l’Explorateur puis Git, à l’accueil comme dans les espaces |
+| Tout en bas | Assets ou Timeline, puis Historique, selon l’espace |
 
 > **Le bouton + fait ce que l’écran sait faire.** Dans un espace, il est grisé tant qu’aucun
 > projet n’est ouvert : un document est un fichier dans un dossier de projet. **À l’accueil il
@@ -311,16 +316,20 @@ garde sa taille.
 | **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
 | **Assets** | droite | 1re | Vidéo, Audio, 3D | l’étagère du projet, en colonne |
 | **Explorateur** | gauche | 2de | partout | le dossier du projet, dossiers et fichiers |
+| **Git** | gauche | 2de | partout *(si un projet est ouvert)* | ce qui a changé dans le dossier du projet depuis la dernière version enregistrée |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
 | **Assets** | bas | 1re | Image, Textures, Skyboxes | la même étagère, en bande |
 | **Timeline** | bas | 1re | Vidéo, Audio, 3D | la séquence en cours de montage, ou l’animation |
+| **Historique** | bas | 1re | partout *(si un projet est ouvert)* | les versions enregistrées du projet, et ce que chacune a changé |
 
 > **« Partout » veut dire les espaces de travail, pas l’accueil.** L’accueil a ses propres
-> panneaux — trois, dans ses deux colonnes — que ce tableau ne liste pas. **L’Explorateur est
-> commun aux deux** : c’est le même panneau, à la même place, à l’accueil comme dans un espace.
+> panneaux — quatre, dans ses deux colonnes — que ce tableau ne liste pas. **L’Explorateur et Git
+> sont communs aux deux** : les mêmes panneaux, à la même place, à l’accueil comme dans un espace.
+> **L’Historique, lui, ne vient pas à l’accueil** : il se lit pendant qu’on travaille, pas avant
+> d’avoir commencé, et l’accueil n’a pas de bande basse.
 
 **La colonne de gauche est celle de ce qui produit.** En haut, **Modèles** et **Génération**,
-qui se relaient. En bas, l’**Explorateur**.
+qui se relaient. En bas, l’**Explorateur** et **Git**, qui se relaient aussi.
 
 **La colonne de droite est celle du document ouvert** : ce qu’il contient, ce qui l’éclaire, ce
 qui est sélectionné. Les panneaux prennent leur tour dans la moitié haute, l’**Inspecteur**

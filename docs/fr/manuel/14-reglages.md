@@ -587,6 +587,46 @@ Le bouton **Parcourir…** ouvre le sélecteur de fichiers de votre système.
 
 ---
 
+## Versions
+
+*Suivi des versions du dossier de projet, par git. Ne concerne que vos fichiers.*
+
+Cette section règle le panneau **Git** et le panneau **Historique**. Elle ne concerne à aucun
+moment le studio lui-même : ce qui est suivi, c’est le dossier de votre projet.
+
+### Chemin de git
+
+Le suivi des versions a besoin du programme **git**, qui n’est pas fourni avec le studio. Sur la
+plupart des machines il est déjà là et ce réglage reste vide.
+
+Renseignez-le seulement si vous tenez à un git précis. **Un chemin contenant une espace est
+refusé** — c’est une limite du composant qui lance git, pas un choix — et l’application se
+comporte alors comme si git était absent.
+
+> **Si git manque**, le panneau Git le dit et n’offre aucun bouton : il n’y a rien à proposer
+> tant que le programme n’est pas là.
+
+### Nom de l’auteur, Adresse de l’auteur
+
+Ce qui est inscrit dans chaque version enregistrée. **Laissez les deux vides** si vous utilisez
+déjà git sur cet ordinateur : le studio reprend alors ce que git connaît, et n’écrase rien.
+
+**Les deux ensemble, ou aucun des deux** : git veut un nom ET une adresse, et n’en renseigner
+qu’un ferait échouer chaque enregistrement sur l’autre.
+
+### Relève automatique
+
+Le nombre de minutes entre deux relevés de ce qui est arrivé sur le serveur distant. **Zéro n’en
+fait aucun**, et c’est la valeur par défaut : rien ne part ni n’arrive sans que vous le demandiez.
+
+### Suivre les versions dès la création
+
+Prépare le suivi dans chaque nouveau projet, sans avoir à y penser. Désactivé par défaut : mettre
+un projet sous suivi de versions est une décision, et le panneau Git l’offre d’un bouton le jour
+où vous en voulez.
+
+---
+
 ## Stockage
 
 *Où vos projets sont rangés sur le disque.*
