@@ -21,11 +21,24 @@ describe('the paths a gesture may touch', () => {
     expect(parseGitPaths(['documents/board.scimg'])).toEqual(['documents/board.scimg'])
   })
 
+  // A backslash is refused where it SEPARATES, not everywhere: this is a legal file name on macOS
+  // and Linux, and git hands it back as it stands. Refusing it outright would be the easy fix.
+  it('takes a name that merely contains a backslash', () => {
+    expect(parseGitPaths(['documents/a\\b.png'])).toEqual(['documents/a\\b.png'])
+  })
+
   it.each([
     ['/etc/passwd', 'an absolute path'],
     ['../../.ssh/id_rsa', 'a path that climbs out'],
     ['documents/../../secrets', 'one that climbs out halfway through'],
     ['--upload-pack=touch /tmp/pwned', 'a value git would read as an option'],
+    ['..\\..\\.ssh\\id_rsa', 'the same climb written the way Windows joins'],
+    ['documents\\..\\..\\secrets', 'a backslash climb starting inside the project'],
+    ['C:\\Users\\someone\\.ssh\\id_rsa', 'a Windows absolute path'],
+    ['\\\\server\\share\\secrets', 'a UNC path, absolute on Windows and not here'],
+    ['*', 'a glob, which names every file a restore would throw away'],
+    [':/', 'pathspec magic for the whole repository, which `--` does not stop'],
+    ['documents/*.scimg', 'a glob buried in an otherwise ordinary path'],
   ])('refuses %s — %s', path => {
     expect(() => parseGitPaths([path])).toThrow()
   })

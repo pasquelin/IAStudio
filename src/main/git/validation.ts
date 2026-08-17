@@ -1,4 +1,3 @@
-import { isAbsolute } from 'node:path'
 import { z } from 'zod'
 import { isRefName } from '@shared/domain/git'
 
@@ -12,22 +11,22 @@ import { isRefName } from '@shared/domain/git'
 const PATHS_MAX = 2000
 
 /**
- * A path inside the project, as git writes them.
+ * The only barrier on the path `workingBlob` joins to the root and reads with no git in between,
+ * so Windows shapes are refused on every platform. A leading dash is refused for git's sake, not
+ * for the path's: it would arrive as an option rather than as a file.
  *
- * Relative, slash-joined, and unable to climb out. The renderer is the sandboxed side and these
- * become arguments to a command that writes: an absolute path would send `git restore` at a file
- * outside the project entirely, and `..` would walk it there a segment at a time.
- *
- * A leading dash is refused as well, and it is not a path problem: git would read `-f` as an
- * option rather than as a file. Every command here also passes `--`, so this is the second of
- * two locks on the same door.
+ * Glob and pathspec magic are refused for a third reason, and it is the one that costs most:
+ * `--` stops OPTIONS, never magic. `git restore -- '*'` and `-- ':/'` both name the whole
+ * repository, so either would throw away every uncommitted change from a window's request.
  */
 const gitPath = z
   .string()
   .min(1)
   .max(1024)
-  .refine(value => !isAbsolute(value) && !value.startsWith('/') && !value.startsWith('-'))
-  .refine(value => !value.split('/').includes('..'))
+  .refine(value => !/^[/\\]/.test(value) && !/^[a-zA-Z]:/.test(value))
+  .refine(value => !value.startsWith('-'))
+  .refine(value => !value.split(/[/\\]/).includes('..'))
+  .refine(value => !value.startsWith(':') && !/[*?[\]]/.test(value))
   .refine(value => !/\p{Cc}/u.test(value))
 
 const paths = z.array(gitPath).min(1).max(PATHS_MAX)
