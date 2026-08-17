@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Asset } from '@shared/domain/asset'
+import type { Asset, AssetQuery } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { assetsById, forgetRememberedAssets, useAssets } from './assets'
 
@@ -93,7 +93,7 @@ describe('the kinds the catalogue is asked for', () => {
 
     await useAssets.getState().setScope(['image', 'texture'])
 
-    expect(asked).toEqual([{ types: ['image', 'texture'] }])
+    expect(asked).toEqual([{ types: ['image', 'texture'], limit: 200, offset: 0 }])
   })
 
   it('asks for everything once the scope is dropped', async () => {
@@ -102,7 +102,7 @@ describe('the kinds the catalogue is asked for', () => {
 
     await useAssets.getState().setScope(null)
 
-    expect(asked).toEqual([{}])
+    expect(asked).toEqual([{ limit: 200, offset: 0 }])
   })
 
   // The panel calls this on every render; without the guard it would re-read the catalogue in
@@ -123,6 +123,110 @@ describe('the kinds the catalogue is asked for', () => {
     await useAssets.getState().setScope(['image', 'skybox'])
 
     expect(asked).toHaveLength(2)
+  })
+})
+
+/**
+ * A catalogue of `total` rows, answering whichever page it is asked for — which is what the real
+ * one does and what nothing on this side used to ask: `catalog.search` stops at 200 rows however
+ * it is questioned, so a project of a thousand assets showed two hundred and said nothing.
+ */
+function catalogueOf(total: number): readonly AssetQuery[] {
+  const asked: AssetQuery[] = []
+  installFakeBridge({
+    assets: {
+      search: query => {
+        asked.push(query)
+        const offset = query.offset ?? 0
+        const length = Math.max(0, Math.min(query.limit ?? total, total - offset))
+        return Promise.resolve(
+          Array.from({ length }, (_unused, index) => asset(`a${offset + index}`, 'Row')),
+        )
+      },
+    },
+  })
+  return asked
+}
+
+describe('reading the catalogue a page at a time', () => {
+  beforeEach(() => {
+    forgetRememberedAssets()
+    useAssets.setState({ items: [], scope: null, hasMore: false })
+  })
+
+  it('says the catalogue holds more when the page came back full', async () => {
+    catalogueOf(500)
+
+    await useAssets.getState().refresh()
+
+    expect(useAssets.getState().items).toHaveLength(200)
+    expect(useAssets.getState().hasMore).toBe(true)
+  })
+
+  it('says nothing more is coming when the page came back short', async () => {
+    catalogueOf(120)
+
+    await useAssets.getState().refresh()
+
+    expect(useAssets.getState().hasMore).toBe(false)
+  })
+
+  it('appends the next page rather than replacing what is on screen', async () => {
+    const asked = catalogueOf(500)
+    await useAssets.getState().refresh()
+
+    await useAssets.getState().loadMore()
+
+    expect(useAssets.getState().items).toHaveLength(400)
+    expect(asked[1]).toMatchObject({ offset: 200 })
+  })
+
+  // `onReachEnd` fires on every row that nears the end, and each page costs a query on the
+  // process every window shares.
+  it('asks once for a scroll that fires twice', async () => {
+    const asked = catalogueOf(500)
+    await useAssets.getState().refresh()
+    const before = asked.length
+
+    await Promise.all([useAssets.getState().loadMore(), useAssets.getState().loadMore()])
+
+    expect(asked.length - before).toBe(1)
+  })
+
+  it('asks for nothing at the end of the catalogue', async () => {
+    const asked = catalogueOf(120)
+    await useAssets.getState().refresh()
+    const before = asked.length
+
+    await useAssets.getState().loadMore()
+
+    expect(asked.length).toBe(before)
+  })
+
+  /**
+   * What a refresh must not do: a generation finishing while the reader sits at row 300 would
+   * otherwise cut the list back to 200 under them, and only another scroll would bring it back.
+   */
+  it('hands back as many pages as the shelf was holding', async () => {
+    catalogueOf(500)
+    await useAssets.getState().refresh()
+    await useAssets.getState().loadMore()
+
+    await useAssets.getState().refresh()
+
+    expect(useAssets.getState().items).toHaveLength(400)
+  })
+
+  it('starts again at one page when the space changes', async () => {
+    catalogueOf(500)
+    await useAssets.getState().refresh()
+    await useAssets.getState().loadMore()
+
+    useAssets.getState().setScope(['mesh'])
+    // The read `setScope` started, shared rather than opened a second time.
+    await useAssets.getState().refresh()
+
+    expect(useAssets.getState().items).toHaveLength(200)
   })
 })
 

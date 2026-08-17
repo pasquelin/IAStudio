@@ -4,10 +4,17 @@ import { DEFAULT_COLLECTION_STATE } from '@/helpers/collectionState'
 import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
+import { withQueries } from './query-fixtures'
 import { ToolWindow } from './ToolWindow'
 
+/**
+ * Under a query client, as `Application.tsx` mounts every panel: the shelf reads the account's
+ * library a page at a time, and `useInfiniteQuery` is what holds its cursor.
+ */
 function renderShelf() {
-  return render(<ToolWindow tool="assets" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
+  return render(
+    withQueries(<ToolWindow tool="assets" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />),
+  )
 }
 
 /** The panel's own row: title, actions, close button. */

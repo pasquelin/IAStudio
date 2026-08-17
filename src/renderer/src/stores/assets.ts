@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Asset, AssetType } from '@shared/domain/asset'
+import type { Asset, AssetQuery, AssetType } from '@shared/domain/asset'
 import {
   COLLECTION_PERSIST_VERSION,
   DEFAULT_COLLECTION_STATE,
@@ -46,6 +46,17 @@ type AssetsState = {
    */
   shownCount: number | null
   setShownCount: (count: number | null) => void
+  /**
+   * Whether the catalogue holds rows past the ones read so far. The read was ALWAYS paged —
+   * `catalog.search` answers 200 rows whatever it is asked — and nothing said so.
+   */
+  hasMore: boolean
+  /**
+   * Reads the next page and appends it, or does nothing at the end of the catalogue. Appended
+   * rather than replacing: every other reader of `items` would otherwise lose rows to a scroll
+   * happening in the shelf.
+   */
+  loadMore: () => Promise<void>
   refresh: () => Promise<void>
   /**
    * Hears the writes the MAIN process makes on its own — the pictures a model sheds on import.
@@ -99,6 +110,17 @@ type AssetsState = {
 }
 
 const COALESCE_MS = 200
+
+/**
+ * How many rows one read brings back — the ceiling `catalog.search` already applies when asked
+ * for nothing. Said out loud so a page AFTER the first can be asked for, and left at 200 so no
+ * reader of `items` sees less than before this store learned to page.
+ */
+const LOCAL_PAGE = 200
+
+function pageOf(scope: readonly AssetType[] | null, offset: number): AssetQuery {
+  return { ...(scope ? { types: [...scope] } : {}), limit: LOCAL_PAGE, offset }
+}
 
 /** Two scopes that ask for the same kinds, so a re-render does not re-read the catalogue. */
 function sameScope(
@@ -182,6 +204,14 @@ export const useAssets = create<AssetsState>()(
       let reading: Promise<void> | null = null
       // Which scope the read in flight is answering for.
       let readingScope: readonly AssetType[] | null = null
+      // The page in flight, so a scroll that fires twice asks once.
+      let growing: Promise<void> | null = null
+      /**
+       * How many pages the shelf has been shown, so a refresh hands back as much as it took away:
+       * a generation finishing while the reader sits at row 800 would otherwise cut the list to
+       * 200 under them. Not derived from `items.length`, which still holds the scope being left.
+       */
+      let pagesRead = 1
 
       return {
         collection: DEFAULT_COLLECTION_STATE,
@@ -195,13 +225,52 @@ export const useAssets = create<AssetsState>()(
           if (get().shownCount !== shownCount) set({ shownCount })
         },
 
+        hasMore: false,
+
         // A change of space changes what the catalogue is asked for, so the rows follow at once
-        // rather than on the next invalidation.
+        // rather than on the next invalidation — and back to one page with it, the pages read
+        // belonging to the list being left. The rows stay until the new ones arrive: the panel
+        // sets its scope as it mounts, so emptying here blanks the shelf on every open.
         setScope: scope => {
           if (sameScope(get().scope, scope)) return
 
+          pagesRead = 1
           set({ scope })
           void get().refresh()
+        },
+
+        loadMore: async () => {
+          if (growing) return growing
+          // A refresh in flight is already reading every page this shelf has been shown.
+          if (reading || !get().hasMore) return
+
+          const scope = get().scope
+          const offset = get().items.length
+
+          growing = (async () => {
+            const bridge = getBridge()
+            if (!bridge) return
+
+            try {
+              const page = await bridge.assets.search(pageOf(scope, offset))
+              // The space may have changed while this was in flight, and its rows are another
+              // list's: appended they would be two scopes shown as one.
+              if (!sameScope(get().scope, scope)) return
+
+              pagesRead += 1
+              set(state => ({
+                items: [...state.items, ...page],
+                hasMore: page.length === LOCAL_PAGE,
+              }))
+            } catch {
+              // No project open — the catalogue throws, and there is nothing more to read.
+              set({ hasMore: false })
+            }
+          })().finally(() => {
+            growing = null
+          })
+
+          return growing
         },
 
         // Callers that need the rows NOW share the read already in flight rather than opening a
@@ -221,10 +290,27 @@ export const useAssets = create<AssetsState>()(
             if (!bridge) return
 
             try {
-              set({ items: await bridge.assets.search(scope ? { types: [...scope] } : {}) })
+              const found: Asset[] = []
+              const held = pagesRead
+              let pages = 0
+              let more = false
+
+              // In sequence, and not as one wide query: `limit` refuses past 500, and each call is
+              // a synchronous SQLite query on the process every window shares.
+              for (let page = 0; page < held; page += 1) {
+                const rows = await bridge.assets.search(pageOf(scope, page * LOCAL_PAGE))
+                found.push(...rows)
+                pages += 1
+                more = rows.length === LOCAL_PAGE
+                if (!more) break
+              }
+
+              pagesRead = pages
+              set({ items: found, hasMore: more })
             } catch {
               // No project open: the catalogue throws, and an empty list is the honest answer.
-              set({ items: [] })
+              pagesRead = 1
+              set({ items: [], hasMore: false })
             }
           })().finally(() => {
             reading = null

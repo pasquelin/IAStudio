@@ -82,6 +82,14 @@ export type CloudPage = {
 export type ExploreQuery = {
   /** One tab of the feed. The kinds a masonry can show are the six the studio already has. */
   type: AssetType
+  /**
+   * What to look for in the feed, or nothing to take it whole.
+   *
+   * The feed keeps its `createdAt:desc` order with a text as without one, which is not what a
+   * search index would choose: the shelf merges this source with two others on that stamp, and a
+   * page ordered by relevance instead would place rows the merge then has no way to interleave.
+   */
+  text?: string
   /** Opaque, straight from the previous page. */
   cursor?: string
   pageSize?: number

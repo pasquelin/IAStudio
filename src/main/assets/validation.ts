@@ -67,6 +67,7 @@ export function parseCloudQuery(value: unknown): CloudQuery {
 /** One tab of the public feed. `type` is required: the feed is never asked for everything. */
 const exploreQuery = z.object({
   type: z.enum(ASSET_TYPES),
+  text: z.string().trim().max(500).optional(),
   cursor: z.string().max(2048).optional(),
   pageSize: z.number().int().min(1).max(PAGE_SIZE_MAX).optional(),
 })

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, isAssetType, type AssetType } from '@shared/domain/asset'
 import { typeOfWorkspace } from '@shared/domain/assetKind'
-import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
@@ -14,7 +13,8 @@ import { HINT_LEFT } from '@/helpers/tooltip'
 import { assetTypesOf } from '@/helpers/workspaces'
 import { useAssetFacets } from '@/hooks/useAssetFacets'
 import { useBadgeLabels } from '@/hooks/useBadgeLabels'
-import { useShelf } from '@/hooks/useShelf'
+import { useCloudPages } from '@/hooks/useCloudPages'
+import { useDebounced } from '@/hooks/useDebounced'
 import { useTypeLabels } from '@/hooks/useTypeLabels'
 import { getBridge } from '@/services/bridge'
 import { renameAsset } from '@/helpers/rename'
@@ -29,6 +29,7 @@ import { AssetCard } from './AssetCard'
 import { AssetRow } from './AssetRow'
 import { ImportProgress } from './ImportProgress'
 import { LOCATION_FACET, PUBLISHED_BADGE, TYPE_FACET } from './facets'
+import { mergeFeed, type FeedSource, type FeedSourceName } from './feed'
 import {
   markOf,
   mergeRows,
@@ -39,10 +40,20 @@ import {
   type AssetRowModel,
 } from './rows'
 
-/** How much of the account's library one panel reads. It pages no further today. */
+/** How much of a cloud listing one page asks for. The scroll asks for the next. */
 const LIBRARY_PAGE = 60
 
-const NO_REMOTE: readonly CloudAsset[] = []
+/**
+ * How long the typing must stop before the word travels. The panel that already searches the API
+ * as one types waits the same — `panels/models`.
+ */
+const SEARCH_DELAY_MS = 250
+
+/**
+ * How many pages the shelf walks on its own before it waits for a scroll. A bound, not a policy:
+ * every cloud page costs a search quota, and a kind nobody has published would walk to the end.
+ */
+const AUTOMATIC_PULLS = 3
 
 /** A stable empty set, so an untouched panel hands the same identity to every memo. */
 const EMPTY_IDS: ReadonlySet<string> = new Set()
@@ -62,6 +73,8 @@ const EMPTY_IDS: ReadonlySet<string> = new Set()
 export function AssetBrowser() {
   const { t } = useTranslation()
   const items = useAssets(state => state.items)
+  const hasMore = useAssets(state => state.hasMore)
+  const loadMore = useAssets(state => state.loadMore)
   const collection = useAssets(state => state.collection)
   const setCollection = useAssets(state => state.setCollection)
   const project = useProject(state => state.project)
@@ -110,14 +123,23 @@ export function AssetBrowser() {
     setScope(scope)
   }, [setScope, scope])
 
-  // Read again when the key changes — another key is another library — and when the scope does,
-  // since the kinds asked for change with it. Keyed rather than cached: the URL that draws a
-  // library tile is signed and expires, so a page held for a fortnight draws broken pictures.
-  const { value: remote } = useShelf(
-    NO_REMOTE,
-    () => browseLibrary(scope),
-    `${ownerId ?? ''}/${scope.join(',')}`,
+  /**
+   * What was typed, held back until the typing stops — and sent to the API from here on, which is
+   * what makes the library searchable at all: matched in memory, a word could only ever find what
+   * had already been pulled. The local half stays in memory, where the answer is instant.
+   */
+  const search = useDebounced(collection.search.trim(), SEARCH_DELAY_MS)
+
+  // Keyed on the account, on what is asked for and on the word: another key is another library.
+  const library = useCloudPages(['assets', 'library', ownerId, scope, search], from =>
+    getBridge()?.cloud.browse({
+      pageSize: LIBRARY_PAGE,
+      types: scope,
+      ...(search ? { text: search } : {}),
+      ...from,
+    }),
   )
+  const remote = library.assets
 
   /**
    * What everyone else published, read only while the Location facet asks for it — see
@@ -128,11 +150,21 @@ export function AssetBrowser() {
    */
   const wantsPublished = (collection.selections[LOCATION_FACET] ?? []).includes(PUBLISHED_BADGE)
   const publishedType = wantsPublished ? (scope[0] ?? null) : null
-  const { value: published } = useShelf(
-    NO_REMOTE,
-    () => browsePublic(publishedType),
-    publishedType ?? '',
+  const feed = useCloudPages(
+    ['assets', 'published', publishedType, search],
+    from =>
+      publishedType === null
+        ? undefined
+        : getBridge()?.cloud.explore({
+            type: publishedType,
+            pageSize: LIBRARY_PAGE,
+            ...(search ? { text: search } : {}),
+            ...from,
+          }),
+    // Never read while nobody asks for it: the feed is unbounded, and reading it costs a search.
+    publishedType !== null,
   )
+  const published = feed.assets
 
   /**
    * The rows whose file the disk no longer has.
@@ -277,10 +309,15 @@ export function AssetBrowser() {
     [rows],
   )
 
-  const shown = useMemo(
+  const filtered = useMemo(
     () =>
       filterLocally(marked, collection, {
-        text: nameOfRow,
+        /**
+         * The name for a line this project holds, and nothing for a library one: the index has
+         * already matched those, on a prompt and a description this side cannot see. Judged again
+         * here, a hit found on its PROMPT would vanish from the search that turned it up.
+         */
+        text: row => (row.from === 'remote' ? null : nameOfRow(row)),
         facets: {
           /**
            * A running generation holds no kind yet, so it holds them ALL: nothing about it says
@@ -302,6 +339,85 @@ export function AssetBrowser() {
       }),
     [marked, collection],
   )
+
+  /**
+   * How far each source has been read — and only the ones that have ANSWERED, which is where this
+   * panel departs from the rule `mergeFeed` states. Counted from the first render, the library
+   * would hold the list back for as long as the API takes to reply, and an opening shelf would go
+   * blank for a second where it now draws the project at once. What the cut protects is the
+   * SCROLL, and there every source has long since answered.
+   *
+   * The feed is a source only while it is read: one nobody asks sits at « nothing read, not
+   * finished » for ever.
+   */
+  // The stamps rather than the lists: a refresh hands back a fresh array of the same rows, and
+  // depending on it would walk the whole timeline again on every generation that lands.
+  const localReadTo = items.at(-1)?.createdAt
+  const libraryReadTo = remote.at(-1)?.createdAt
+  const publishedReadTo = published.at(-1)?.createdAt
+
+  const sources = useMemo<Partial<Record<FeedSourceName, FeedSource>>>(
+    () => ({
+      local: { readTo: localReadTo, exhausted: !hasMore },
+      ...(library.pending
+        ? {}
+        : { library: { readTo: libraryReadTo, exhausted: library.exhausted } }),
+      ...(publishedType !== null && !feed.pending
+        ? { published: { readTo: publishedReadTo, exhausted: feed.exhausted } }
+        : {}),
+    }),
+    [
+      localReadTo,
+      hasMore,
+      libraryReadTo,
+      library.exhausted,
+      library.pending,
+      publishedReadTo,
+      publishedType,
+      feed.exhausted,
+      feed.pending,
+    ],
+  )
+
+  // Cut AFTER the filters: what is hidden has still been read, so the frontier is the same either
+  // way, and cutting first would leave the tail of a filtered list unreachable.
+  const { rows: shown, hungry } = useMemo(() => mergeFeed(filtered, sources), [filtered, sources])
+
+  /**
+   * Asks the source holding the list back, and only it — which one it is changes as the scroll
+   * goes: the library runs out first on a project full of its own assets, the catalogue first on
+   * one that has pulled nothing.
+   */
+  // Through its contents, because `mergeFeed` allocates a fresh list every render: handed to the
+  // end-of-list effect as it comes, a keystroke would re-arm it and spend a page on each one.
+  const asking = hungry.join(' ')
+  const readMoreLibrary = library.more
+  const readMoreFeed = feed.more
+  const askForMore = useCallback(() => {
+    const wanted = asking.split(' ')
+    if (wanted.includes('local')) void loadMore()
+    if (wanted.includes('library')) readMoreLibrary()
+    if (wanted.includes('published')) readMoreFeed()
+  }, [asking, loadMore, readMoreLibrary, readMoreFeed])
+
+  /**
+   * Asks on its own while nothing is drawn, up to a ceiling: a surface with no row has no end for
+   * `onReachEnd` to near, and a source CAN hold the list at nothing while having more to give — a
+   * page the feed's retyping emptied does exactly that. Past the ceiling, it waits for a scroll.
+   */
+  const pulls = useRef(0)
+  // `ownerId` among them: another account is another library, read from nothing — with the count
+  // left where the previous one stopped, the shelf would sit empty with no scroll able to fill it.
+  useEffect(() => {
+    pulls.current = 0
+  }, [ownerId, search, scope, publishedType])
+
+  useEffect(() => {
+    if (shown.length > 0 || asking === '' || pulls.current >= AUTOMATIC_PULLS) return
+
+    pulls.current += 1
+    askForMore()
+  }, [shown.length, asking, askForMore])
 
   /**
    * The count in the title row says what this list holds, not what the catalogue does — the
@@ -333,13 +449,23 @@ export function AssetBrowser() {
   const narrowedByHand = isFiltered(
     atSpaceDefault ? setFacetValue(collection, TYPE_FACET, null) : collection,
   )
+  /**
+   * And a fifth, between the first and the rest: a shelf with a project open and a source still
+   * reading does not KNOW that it is empty, and « this project has no asset » is an answer to a
+   * question nobody has been able to ask yet.
+   */
+  // The same question `sources` asks, read off its answer: a source that has not answered is not
+  // in the record, and the two must not drift apart.
+  const reading = !('library' in sources) || (publishedType !== null && !('published' in sources))
   const emptyMessage = !project
     ? t('assets.openProject')
-    : narrowedByHand
-      ? t('collection.noMatch')
-      : atSpaceDefault
-        ? t('assets.noneOfKind')
-        : t('assets.none')
+    : reading
+      ? t('collection.loading')
+      : narrowedByHand
+        ? t('collection.noMatch')
+        : atSpaceDefault
+          ? t('assets.noneOfKind')
+          : t('assets.none')
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -364,6 +490,7 @@ export function AssetBrowser() {
         // no bytes to open, so it is fetched FIRST and opened after — stopping at the download
         // left the user having to guess that a second gesture was now needed, and which one.
         onVisible={checkPresence}
+        onReachEnd={askForMore}
         onActivate={row => {
           if (row.from === 'local') return void openAsset(row.asset)
           if (row.from === 'remote' && project && !busy) void openFetched(row.asset.id)
@@ -437,31 +564,6 @@ async function forgetOrphans(absentIds: readonly string[]): Promise<void> {
     // removed before it threw, and the caller runs this as a side errand it never awaits.
     useAssets.getState().invalidate()
   }
-}
-
-/** One page of the account's library, narrowed to what the space in front can take. */
-function browseLibrary(scope: readonly AssetType[] | null): Promise<CloudAsset[]> | undefined {
-  return getBridge()
-    ?.cloud.browse({ pageSize: LIBRARY_PAGE, ...(scope ? { types: scope } : {}) })
-    .then(page => page.assets)
-}
-
-/**
- * One page of what everyone published, of ONE kind.
- *
- * One kind and not the scope, because that is what the index can answer: the feed pages by kind
- * alone, and a mixed one would be a grid of grey rectangles anyway — a sound file has no picture
- * to sit beside an image. The kind is the one the Type facet holds, which the space in front
- * fills in whenever it changes, so the reader is never asked to pick it twice.
- *
- * `undefined` while nobody has asked, which is what keeps the search — and its quota — unspent.
- */
-function browsePublic(type: AssetType | null): Promise<CloudAsset[]> | undefined {
-  if (!type) return undefined
-
-  return getBridge()
-    ?.cloud.explore({ type, pageSize: LIBRARY_PAGE })
-    .then(page => page.assets)
 }
 
 /** Blank for a job: it has no kind to name until it answers, and a guess would be one. */

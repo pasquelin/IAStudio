@@ -54,19 +54,23 @@ empty, but the shelf no longer reads in one.
 
 | Control | What it does |
 |---|---|
-| **Search…** | filters on the asset's **name**, as you type |
+| **Search…** | filters the project's assets on their **name**, and queries the library, as you type |
 | **Type** | keeps only **one** kind of asset — picking one replaces the previous |
 | **Location** | keeps only assets in a given state with respect to the library — and, on **Published by somebody else**, goes and reads what other people published |
 | **Icons** / **List** | grid of thumbnails, or dense list |
 | **Smaller thumbnails** / **Larger thumbnails** | their size |
 
-Filtering is **instant**, even on a large project: the whole catalogue is already loaded in memory,
-unlike the Models panel which queries the Scenario catalogue remotely.
+The **project's** assets answer instantly: they are already in memory. The **library's** take a
+round trip — the word travels once the typing stops, and it is looked for in the name, but also in
+the prompt and the description, which the project knows nothing about.
+
+The list fills in **as you scroll**, on both sides: the project catalogue and the library both hand
+over their assets in batches, and reaching the bottom asks for the next one.
 
 > **Search does not ask you for accents.** Typing `foret` finds "Forêt d'hiver", and `ete` finds
-> "Été". That holds here and in the settings search: you search by typing, not by spelling. The
-> **Models** panel says nothing about it, because it does not search itself — it hands the word to
-> the API and shows what comes back.
+> "Été". That holds for the project's assets and in the settings search: you search by typing, not
+> by spelling. For the **library** half the API answers, and it decides on its own — as in the
+> **Models** panel, which does not search itself either.
 >
 > It applies to files coming from the Finder too. macOS writes names in a form where the accent is
 > a character of its own — invisible to the eye, different to the machine — so an imported asset
