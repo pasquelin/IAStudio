@@ -379,9 +379,13 @@ export const FIELD_FILL = cn(FIELD, 'min-w-0 flex-1')
 /**
  * The surface a menu wears, whether it hangs from a control or opens at the pointer. Its width
  * is left to the caller: a flyout is as wide as its anchor suggests, a context menu wider.
+ *
+ * Above the modals (`z-60`) and not merely above the panels: a menu is opened BY the surface
+ * under it, and a dialog holding a field with a menu drew its rows behind its own scrim —
+ * measured on the new-document dialog, whose tree came out cut in half.
  */
 export const MENU_SURFACE = cn(
-  'border-border bg-surface fixed z-50 flex flex-col gap-0.5',
+  'border-border bg-surface fixed z-70 flex flex-col gap-0.5',
   'rounded-(--radius-sc-lg) border p-1 shadow-(--sc-shadow-floating)',
 )
 

@@ -1,6 +1,6 @@
 import { mdiChevronDown, mdiFolderOutline } from '@mdi/js'
 import { useEffect, useMemo } from 'react'
-import { FOLDER_ROOT, folderTrail, nameOf } from '@shared/domain/folder'
+import { FOLDER_ROOT, folderTrail, isDocumentFolder, nameOf } from '@shared/domain/folder'
 import { cn } from '@/helpers/cn'
 import { activation } from '@/helpers/activation'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
@@ -68,8 +68,9 @@ export function FolderField({ value, onChange, id, rootName, labels }: FolderFie
     for (const folder of folderTrail(value)) if (folder !== FOLDER_ROOT) unfold(folder)
   }, [value, unfold])
 
-  // Folders only: this picks a place to put something, and a file is not one. The root is the
-  // studio's own row — the tree reads the project folder's CONTENTS and never itself.
+  // Folders only, and a document is not one even when it IS one on disk: an image writes itself
+  // as `TOTO.img/`, which the tree shows as a folder and which nothing may be filed inside. The
+  // root is the studio's own row — the tree reads the project folder's CONTENTS, never itself.
   //
   // Memoised, both of them: `Tree` flattens its nodes and measures its rows off these two, so a
   // fresh array and a fresh Set on every keystroke of the dialog above would redo that work for
@@ -78,7 +79,7 @@ export function FolderField({ value, onChange, id, rootName, labels }: FolderFie
     () => [
       { id: TREE_ROOT, parentId: null, path: FOLDER_ROOT, name: rootName, kind: 'folder' },
       ...tree.nodes
-        .filter(node => node.kind === 'folder')
+        .filter(node => node.kind === 'folder' && !isDocumentFolder(node.path))
         .map(node => ({ ...node, parentId: node.parentId ?? TREE_ROOT })),
     ],
     [tree.nodes, rootName],
@@ -110,9 +111,9 @@ export function FolderField({ value, onChange, id, rootName, labels }: FolderFie
       {flyout.showing && (
         <Flyout
           anchor={flyout.anchor}
-          // Below, not beside: the anchor is the whole line, so the default placement would hang
-          // the tree a field's width out to the side of the row it belongs to.
-          placement="below"
+          // A field's menu: under the line, on its left edge and at its width, the way a
+          // `<select>` opens. `below` aligns RIGHT edges, which hung the tree off-centre.
+          placement="under"
           {...flyout.flyoutProps}
         >
           {/* No scroller of its own: `Flyout` already bounds its height and scrolls, and a second

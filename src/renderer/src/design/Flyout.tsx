@@ -5,8 +5,14 @@ import { useDismiss } from '@/hooks/useDismiss'
 import { useMenuKeys } from '@/hooks/useMenuKeys'
 import { MENU_SURFACE } from './styles'
 
-/** Which side of its anchor the menu hangs on. */
-export type FlyoutPlacement = 'right' | 'above' | 'below'
+/**
+ * Which side of its anchor the menu hangs on.
+ *
+ * `under` is the one that belongs to a FIELD: it takes the anchor's left edge and its width, the
+ * way a `<select>` does. The other three hang from a control whose own width means nothing to
+ * the rows, and align right so a bar at the window edge does not push them off it.
+ */
+export type FlyoutPlacement = 'right' | 'above' | 'below' | 'under'
 
 export type FlyoutProps = {
   anchor: HTMLElement | null
@@ -92,6 +98,15 @@ export function Flyout({
         // the left of its anchor lands at a negative x, and runs off the side it flipped to.
         const wanted = fits ? beside : box.left - node.offsetWidth - OFFSET
         node.style.left = `${clamped(wanted, node.offsetWidth, window.innerWidth)}px`
+        return
+      }
+
+      if (placement === 'under') {
+        // The field's own width, set BEFORE the left edge is clamped: the clamp reads
+        // `offsetWidth`, and reading it first would measure the menu's content instead.
+        node.style.width = `${box.width}px`
+        node.style.top = `${box.bottom + OFFSET}px`
+        node.style.left = `${clamped(box.left, box.width, window.innerWidth)}px`
         return
       }
 
