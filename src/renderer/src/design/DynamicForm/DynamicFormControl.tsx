@@ -35,23 +35,22 @@ export function DynamicFormControl({
 
   switch (field.kind) {
     case 'longText':
+      // The box is the FRAME: it resizes, and the text takes what is left of it. Laid OVER the
+      // text instead, the strip covered the foot of the scrollbar — which four rows grow as soon
+      // as a prompt runs long — and sat on the very corner the grip needs. `overflow-hidden` is
+      // what makes a div resizable at all, and it is also what keeps the text inside the corners.
       return (
-        <div className="relative">
-          {/* `pb-7` and not a gap: the strip is laid OVER the box, so the room it takes has to be
-              taken out of the text's own, or a line scrolls under the microphone. */}
+        <div className={cn(FIELD, 'flex h-auto resize-y flex-col overflow-hidden p-0')}>
           <textarea
             id={id}
             rows={4}
-            className={cn(FIELD, 'h-auto w-full resize-none py-1', accessory ? 'pb-7' : '')}
+            className="min-h-0 w-full flex-1 resize-none bg-transparent px-2 py-1"
             {...registration}
           />
 
           {accessory && (
-            // Opaque, and inside the border rather than over it: what scrolls past has to be
-            // hidden, and a strip drawn on the border would cut the box's own outline.
-            <div className="bg-surface absolute inset-x-px bottom-px flex items-center justify-end gap-2 rounded-b-(--radius-sc-sm) px-1.5 py-1">
-              {accessory}
-            </div>
+            // `pr-4` leaves the grip its corner: the strip ends before it rather than over it.
+            <div className="flex items-center justify-end gap-2 pr-4 pb-1 pl-1.5">{accessory}</div>
           )}
         </div>
       )
