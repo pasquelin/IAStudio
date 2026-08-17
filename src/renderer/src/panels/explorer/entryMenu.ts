@@ -19,8 +19,8 @@ import type { FileHistory } from '@shared/domain/fileOp'
 import { isPrivatePath } from '@shared/domain/folder'
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { showContextMenu, type ContextMenuRow } from '@/helpers/contextMenu'
+import type { FolderNode } from '@/hooks/useFolderTree'
 import { getBridge } from '@/services/bridge'
-import type { FolderNode } from './use-folder-tree'
 
 export type EntryMenuProps = {
   node: FolderNode

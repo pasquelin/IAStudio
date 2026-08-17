@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FolderEntry } from '@shared/domain/folder'
-import { entriesSorted } from './folder-sort'
+import { entriesSorted } from './folderSort'
 
 const entry = (name: string, kind: FolderEntry['kind']): FolderEntry => ({
   path: name,

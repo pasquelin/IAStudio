@@ -1,7 +1,7 @@
 import { FILE_DOMAINS, type FileDomain } from '@shared/domain/fileRole'
 import { nameOf } from '@shared/domain/folder'
 import type { ProjectItem } from '@/helpers/projectItem'
-import type { FolderNode } from './use-folder-tree'
+import type { FolderNode } from '@/hooks/useFolderTree'
 
 /** One of the domains, standing as a root of the tree — a row that names rather than opens. */
 export type DomainHeading = {

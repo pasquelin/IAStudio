@@ -23,20 +23,6 @@ import { PROJECT_TREES, SOURCE_ROOT, WHOLE_PROJECT, sourceFiles } from './source
  */
 const RULE = 'a capital is earned by exporting a component or a class of that name'
 
-/**
- * The debt, counted rather than listed — and this is the weaker of the two ratchets this
- * repository uses, on purpose.
- *
- * Listing the paths would tie the guard to names about to change: the migration that empties this
- * count is under way. A count cannot see a swap — one file renamed while another is added
- * off-convention leaves it green — and that hole is real for as long as the number is not zero.
- *
- * **When a count reaches zero it is deleted, not kept at zero**: the assertion then reads as the
- * rule itself, and the next offending file fails on sight. The hooks did that one lot after this
- * guard landed, and the crowded files eight lots after — both constants went with them.
- */
-const KNOWN_OFF_CONVENTION = 7
-
 /** `.d.ts` names the module it declares, not a module of ours: `sherpa-onnx-node` is a package. */
 const isDeclaration = (path: string): boolean => path.endsWith('.d.ts')
 
@@ -85,6 +71,11 @@ const projectSources = PROJECT_TREES.flatMap(tree => sourceFiles(tree)).filter(
 const reported = (path: string): string => relative(SOURCE_ROOT, path)
 
 describe(`file names — ${RULE}`, () => {
+  /**
+   * Counted rather than listed while it emptied, because listing paths about to change would have
+   * tied the guard to them. Fifteen lots took it to zero, so the count is gone and this reads as
+   * the rule itself — the next off-convention file fails on sight.
+   */
   it(
     'holds every name to the case its exports earn',
     () => {
@@ -94,7 +85,7 @@ describe(`file names — ${RULE}`, () => {
         return isPascalCase(name) ? !handsOut(readFileSync(path, 'utf8'), name) : !isCamelCase(name)
       })
 
-      expect(wrong.map(reported).sort()).toHaveLength(KNOWN_OFF_CONVENTION)
+      expect(wrong.map(reported).sort()).toEqual([])
     },
     WHOLE_PROJECT,
   )
