@@ -268,6 +268,70 @@
       "nodeSelect": {
         "title": "Select objects",
         "description": "Makes these nodes the selection the inspector reads and the gizmo moves. Selection is not an edit, so it adds nothing to the history."
+      },
+      "gitStatus": {
+        "title": "Read the repository",
+        "description": "Returns the branch, what it tracks, how far ahead or behind it is, and every changed file with the half of git it sits in. Also says when the project has no repository at all."
+      },
+      "gitLog": {
+        "title": "Read the history",
+        "description": "Returns a page of recorded versions, newest first, across every branch, with the names that point at each one."
+      },
+      "gitCommitFiles": {
+        "title": "Read what a version changed",
+        "description": "Returns the files one recorded version touched, and how each was touched — added, changed, removed or renamed."
+      },
+      "gitDiff": {
+        "title": "Read what changed in a file",
+        "description": "Returns the change inside one file, within a recorded version, or against the last one when no version is named."
+      },
+      "gitBranches": {
+        "title": "List the branches",
+        "description": "Returns every branch of the project’s repository, saying which one is checked out."
+      },
+      "gitStashes": {
+        "title": "List the shelved changes",
+        "description": "Returns what has been set aside, newest first, so a client can put one back by its place in the list."
+      },
+      "gitInit": {
+        "title": "Start recording versions",
+        "description": "Runs git init on the open project and writes its ignore file, then answers the state it left. Does nothing to a project already recording."
+      },
+      "gitStage": {
+        "title": "Stage files",
+        "description": "Moves changes into what the next recorded version will hold. Answers with the state it left, so nothing needs reading back."
+      },
+      "gitUnstage": {
+        "title": "Unstage files",
+        "description": "Takes changes back out of what the next recorded version will hold, leaving the files themselves untouched."
+      },
+      "gitRestore": {
+        "title": "Discard changes to files",
+        "description": "Puts files back the way the last recorded version has them. This asks first: what was never recorded is gone, and no undo in the studio reaches it."
+      },
+      "gitCommit": {
+        "title": "Record a version",
+        "description": "Records what is staged, under a message. Can amend the last version instead of adding one, which rewrites it rather than following it."
+      },
+      "gitCreateBranch": {
+        "title": "Create a branch",
+        "description": "Starts a branch at the current version and moves onto it. The working tree is left exactly as it stands."
+      },
+      "gitCheckout": {
+        "title": "Switch branch",
+        "description": "Moves onto another branch, rewriting the working tree to match it. This asks first: a document open in a tab is then a document whose file changed under it."
+      },
+      "gitStash": {
+        "title": "Shelve the current changes",
+        "description": "Sets the working tree’s changes aside and returns it to the last recorded version. This asks first, since it takes the changes off the disk."
+      },
+      "gitStashPop": {
+        "title": "Bring shelved changes back",
+        "description": "Puts one set of shelved changes back into the working tree and drops it from the shelf. This asks first, since it rewrites files."
+      },
+      "gitTag": {
+        "title": "Tag a version",
+        "description": "Puts a name on one recorded version, so it can be found again without its hash."
       }
     },
     "refusals": {
@@ -354,7 +418,16 @@
       "scaleZ": "Scale in depth",
       "roughness": "Roughness, from 0 to 1",
       "metalness": "Metalness, from 0 to 1",
-      "intensity": "Intensity"
+      "intensity": "Intensity",
+      "gitPath": "Path inside the repository",
+      "gitPaths": "Paths inside the repository",
+      "commitHash": "Version identifier",
+      "skip": "How many entries to skip",
+      "message": "Message",
+      "amend": "Amend the last version instead of adding one",
+      "branchName": "Branch name",
+      "tagName": "Tag name",
+      "stashIndex": "Place in the shelf, newest first"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

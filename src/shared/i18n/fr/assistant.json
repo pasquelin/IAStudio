@@ -268,6 +268,70 @@
       "nodeSelect": {
         "title": "Sélectionner des objets",
         "description": "Fait de ces objets la sélection que lit l’inspecteur et que déplace le manipulateur. Une sélection n’est pas une édition, donc rien ne s’ajoute à l’historique."
+      },
+      "gitStatus": {
+        "title": "Lire le dépôt",
+        "description": "Rend la branche, ce qu’elle suit, son avance ou son retard, et chaque fichier modifié avec la moitié de git où il se trouve. Dit aussi quand le projet n’a aucun dépôt."
+      },
+      "gitLog": {
+        "title": "Lire l’historique",
+        "description": "Rend une page de versions enregistrées, de la plus récente à la plus ancienne, toutes branches confondues, avec les noms qui pointent sur chacune."
+      },
+      "gitCommitFiles": {
+        "title": "Lire ce qu’une version a changé",
+        "description": "Rend les fichiers qu’une version enregistrée a touchés, et comment chacun l’a été — ajouté, modifié, supprimé ou renommé."
+      },
+      "gitDiff": {
+        "title": "Lire ce qui a changé dans un fichier",
+        "description": "Rend la modification à l’intérieur d’un fichier, dans une version enregistrée, ou contre la dernière quand aucune version n’est nommée."
+      },
+      "gitBranches": {
+        "title": "Lister les branches",
+        "description": "Rend toutes les branches du dépôt du projet, en disant laquelle est active."
+      },
+      "gitStashes": {
+        "title": "Lister les remises",
+        "description": "Rend ce qui a été mis de côté, de la plus récente à la plus ancienne, pour qu’un client puisse en reprendre une par sa place dans la liste."
+      },
+      "gitInit": {
+        "title": "Commencer à enregistrer les versions",
+        "description": "Lance git init sur le projet ouvert et écrit son fichier d’exclusions, puis répond l’état qu’il a laissé. Ne fait rien à un projet qui enregistre déjà."
+      },
+      "gitStage": {
+        "title": "Indexer des fichiers",
+        "description": "Fait passer des modifications dans ce que portera la prochaine version enregistrée. Répond avec l’état laissé, donc rien n’est à relire."
+      },
+      "gitUnstage": {
+        "title": "Désindexer des fichiers",
+        "description": "Ressort des modifications de ce que portera la prochaine version enregistrée, sans toucher aux fichiers eux-mêmes."
+      },
+      "gitRestore": {
+        "title": "Abandonner les modifications de fichiers",
+        "description": "Remet des fichiers tels que la dernière version enregistrée les porte. Cette action demande d’abord, car ce qui n’a jamais été enregistré est perdu et aucune annulation du studio ne l’atteint."
+      },
+      "gitCommit": {
+        "title": "Enregistrer une version",
+        "description": "Enregistre ce qui est indexé, sous un message. Peut corriger la dernière version au lieu d’en ajouter une, ce qui la réécrit plutôt que de la suivre."
+      },
+      "gitCreateBranch": {
+        "title": "Créer une branche",
+        "description": "Démarre une branche à la version courante et bascule dessus. La copie de travail est laissée exactement telle quelle."
+      },
+      "gitCheckout": {
+        "title": "Changer de branche",
+        "description": "Bascule sur une autre branche en réécrivant la copie de travail. Cette action demande d’abord, car un document ouvert dans un onglet devient alors un document dont le fichier a changé sous lui."
+      },
+      "gitStash": {
+        "title": "Remiser les modifications en cours",
+        "description": "Met de côté les modifications de la copie de travail et la ramène à la dernière version enregistrée. Cette action demande d’abord, car elle retire les modifications du disque."
+      },
+      "gitStashPop": {
+        "title": "Reprendre une remise",
+        "description": "Remet un jeu de modifications remisées dans la copie de travail et le retire de la pile. Cette action demande d’abord, car elle réécrit des fichiers."
+      },
+      "gitTag": {
+        "title": "Étiqueter une version",
+        "description": "Pose un nom sur une version enregistrée, pour la retrouver sans son empreinte."
       }
     },
     "refusals": {
@@ -354,7 +418,16 @@
       "scaleZ": "Échelle en profondeur",
       "roughness": "Rugosité, de 0 à 1",
       "metalness": "Aspect métallique, de 0 à 1",
-      "intensity": "Intensité"
+      "intensity": "Intensité",
+      "gitPath": "Chemin dans le dépôt",
+      "gitPaths": "Chemins dans le dépôt",
+      "commitHash": "Identifiant de la version",
+      "skip": "Nombre d’entrées à sauter",
+      "message": "Message",
+      "amend": "Corriger la dernière version au lieu d’en ajouter une",
+      "branchName": "Nom de la branche",
+      "tagName": "Nom de l’étiquette",
+      "stashIndex": "Place dans la pile, la plus récente d’abord"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

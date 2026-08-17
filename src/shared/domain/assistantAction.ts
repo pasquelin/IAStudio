@@ -84,6 +84,22 @@ export type ActionName =
   | 'node.light'
   | 'node.reparent'
   | 'node.select'
+  | 'git.status'
+  | 'git.log'
+  | 'git.commitFiles'
+  | 'git.diff'
+  | 'git.branches'
+  | 'git.stashes'
+  | 'git.init'
+  | 'git.stage'
+  | 'git.unstage'
+  | 'git.restore'
+  | 'git.commit'
+  | 'git.createBranch'
+  | 'git.checkout'
+  | 'git.stash'
+  | 'git.stashPop'
+  | 'git.tag'
 
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.
