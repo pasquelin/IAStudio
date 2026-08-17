@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDocuments } from '@/stores/documents'
 import { showPanels } from '@/stores/layout-fixtures'
 import { useLayouts } from '@/stores/layouts'
-import { closeOrphanTabs } from './orphan-tabs'
+import { closeOrphanTabs } from './orphanTabs'
 
 const closePanel = vi.hoisted(() => vi.fn())
-vi.mock('./dockview-api', () => ({ closePanel }))
+vi.mock('./dockviewApi', () => ({ closePanel }))
 
 const SAVED: DocumentDescriptor = {
   id: 'saved',

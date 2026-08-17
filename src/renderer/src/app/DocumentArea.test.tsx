@@ -10,7 +10,7 @@ import { useLayouts } from '@/stores/layouts'
 import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { DocumentArea } from './DocumentArea'
-import { openDocument, setDocumentTitle } from './dockview-api'
+import { openDocument, setDocumentTitle } from './dockviewApi'
 
 const addPanel = vi.fn()
 const setTitle = vi.fn()

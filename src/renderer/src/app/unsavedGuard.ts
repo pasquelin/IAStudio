@@ -1,5 +1,5 @@
 import { reportFailure } from '@/services/diagnostics'
-import { settleUnsavedWork, unsavedDocumentIds } from './document-io'
+import { settleUnsavedWork, unsavedDocumentIds } from './documentIo'
 
 /**
  * Keeps the window from going while a document still holds unsaved work, and says so instead of

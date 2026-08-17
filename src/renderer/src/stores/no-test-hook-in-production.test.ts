@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { WRITTEN_SOURCES } from '@/design/testHarness'
 
 /**
- * `resetForTests` is offered on `DocumentStore<S>`, the type `document-io` receives — so it sits
+ * `resetForTests` is offered on `DocumentStore<S>`, the type `documentIo` receives — so it sits
  * in the autocompletion of production code that has a store in hand, and what it does there is
  * exactly the accident `step` guards against: every closed document reopened at once, silently.
  *

@@ -1,6 +1,6 @@
 import type { AssetType } from '@shared/domain/asset'
 import { placementIn, type ToolId } from '@shared/domain/tool'
-import { showWorkspace } from '@/app/dockview-api'
+import { showWorkspace } from '@/app/dockviewApi'
 import { setFacetValue } from '@/helpers/collectionState'
 import { shownTool, toolStateOf } from '@/helpers/toolRegistry'
 import { workspaceOfType } from '@/helpers/workspaces'

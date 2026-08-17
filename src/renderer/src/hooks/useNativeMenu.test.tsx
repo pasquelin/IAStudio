@@ -25,8 +25,8 @@ import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
 const saveDocumentAs = vi.fn((_documentId: string) => Promise.resolve(true))
 
-// What saving does is `document-io`'s own suite; what this one is about is the menu reaching it.
-vi.mock('@/app/document-io', () => ({
+// What saving does is `documentIo`'s own suite; what this one is about is the menu reaching it.
+vi.mock('@/app/documentIo', () => ({
   saveDocument: (documentId: string) => saveDocument(documentId),
   saveDocumentAs: (documentId: string) => saveDocumentAs(documentId),
 }))

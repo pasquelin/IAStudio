@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useDocuments } from '@/stores/documents'
-import { setDocumentTitle } from '@/app/dockview-api'
+import { setDocumentTitle } from '@/app/dockviewApi'
 
 /**
  * Keeps a document's tab saying what the document is called, and whether it holds unsaved work.

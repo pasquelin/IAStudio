@@ -49,12 +49,12 @@ import {
   saveDocument,
   saveDocumentAs,
   unsavedDocumentIds,
-} from './document-io'
+} from './documentIo'
 
 // The real one needs a live Dockview; what this file checks is that closing and opening reach it.
 const closePanel = vi.fn()
 const openDocument = vi.fn()
-vi.mock('./dockview-api', () => ({
+vi.mock('./dockviewApi', () => ({
   closePanel: (id: string) => closePanel(id),
   openDocument: (document: DocumentDescriptor) => openDocument(document),
 }))

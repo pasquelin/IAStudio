@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { bridgeWatchingLogs } from '@/services/fakeBridge'
-import { ROOT_ERROR_REPORTING, traceDroppedRejections } from './root-errors'
+import { ROOT_ERROR_REPORTING, traceDroppedRejections } from './rootErrors'
 
 function Boom(): never {
   throw new Error('panel exploded')

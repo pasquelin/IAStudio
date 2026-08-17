@@ -17,7 +17,7 @@ import { definition as skybox } from '@/panels/skybox'
 import { definition as styles } from '@/panels/styles'
 import { definition as timeline } from '@/panels/timeline'
 import { definition as view } from '@/panels/view'
-import { isKnownTool, TOOL_ENTRIES, toolDefinition } from './tool-components'
+import { isKnownTool, TOOL_ENTRIES, toolDefinition } from './toolComponents'
 
 /**
  * The panels themselves, imported outright — which only a test may do. The table reaches them

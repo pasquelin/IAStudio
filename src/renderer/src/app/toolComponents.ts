@@ -16,7 +16,7 @@ type ToolEntry = {
 
 /**
  * Every panel: the module it lives in, and what its header does. Exported so
- * `tool-components.test.ts` can resolve each specifier — a specifier written beside a key is a
+ * `toolComponents.test.ts` can resolve each specifier — a specifier written beside a key is a
  * second copy of the panel's name, and `layers` naming the meshes module would swap the two in
  * silence. `import()` takes a literal, so the copy stays. That test holds this column and the
  * header roles; what `panel()` then wires them to is only covered where a panel is rendered.

@@ -10,7 +10,7 @@ import {
   registerDocumentNamer,
   type DocumentNameRequest,
   type DocumentNamer,
-} from './document-name'
+} from './documentName'
 
 type Asked = { request: DocumentNameRequest; answer: (name: string | null) => void }
 

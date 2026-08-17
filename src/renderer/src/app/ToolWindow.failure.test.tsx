@@ -5,7 +5,7 @@ import { ToolWindow } from './ToolWindow'
 // A tool that cannot render, which no real one does on demand. Its own file because `vi.mock`
 // is hoisted over the whole module, and the other ToolWindow tests need the real registry.
 // The factory is async so it can reach `lazy` — hoisting puts it above every import.
-vi.mock('./tool-components', async () => {
+vi.mock('./toolComponents', async () => {
   const { lazy } = await import('react')
 
   const panels: Record<string, unknown> = {

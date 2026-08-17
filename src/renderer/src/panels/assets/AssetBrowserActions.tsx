@@ -5,7 +5,7 @@ import {
   mdiTextBoxOutline,
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { useToolLying } from '@/app/tool-zone'
+import { useToolLying } from '@/app/toolZone'
 import { getBridge } from '@/services/bridge'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { ToolButton } from '@/design/ToolButton'

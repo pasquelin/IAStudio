@@ -1,4 +1,4 @@
-import { closeDocument } from './document-io'
+import { closeDocument } from './documentIo'
 import { reportFailure } from '@/services/diagnostics'
 
 /**

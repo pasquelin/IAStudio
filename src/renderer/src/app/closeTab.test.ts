@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
-import { closeTab } from './close-tab'
+import { closeTab } from './closeTab'
 
 const closeDocument = vi.fn((_id: string) => Promise.resolve(true))
-vi.mock('./document-io', () => ({ closeDocument: (id: string) => closeDocument(id) }))
+vi.mock('./documentIo', () => ({ closeDocument: (id: string) => closeDocument(id) }))
 
 beforeEach(() => {
   vi.clearAllMocks()

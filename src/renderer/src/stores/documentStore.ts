@@ -66,7 +66,7 @@ type Readable<S> = Pick<DocumentStoreState<S>, 'states' | 'histories' | 'saved'>
 
 /**
  * A space's store, as anything generic over spaces sees it. Spelled out rather than inferred so
- * that `document-io` can take one as an argument: five kinds reach the disk the same way, and
+ * that `documentIo` can take one as an argument: five kinds reach the disk the same way, and
  * the alternative was that mechanism written out once per kind.
  */
 export type DocumentStore<S> = {

@@ -2,15 +2,15 @@ import { kindForWorkspace } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { takenDocumentNames, untitledDocumentName, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
-import { mountedDocumentNamer } from './document-name'
-import { openDocument } from './dockview-api'
+import { mountedDocumentNamer } from './documentName'
+import { openDocument } from './dockviewApi'
 
 /**
  * Makes a document in a workspace, on the name its author gives it, and puts it in front.
  *
  * Its own file because three surfaces ask for it — the rail's plus button, the home's tools and
  * the assistant — and the copies had already started to differ. Deliberately away from
- * `document-io`, which reaches every engine: the rail must not import three megabytes to open an
+ * `documentIo`, which reaches every engine: the rail must not import three megabytes to open an
  * empty canvas.
  *
  * A folder gone read-only, or removed under us, leaves the workspace empty rather than failing

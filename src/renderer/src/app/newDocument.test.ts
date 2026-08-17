@@ -3,11 +3,11 @@ import type { DocumentDescriptor } from '@shared/domain/document'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
-import { registerDocumentNamer, type DocumentNamer } from './document-name'
-import { createDocumentIn } from './new-document'
+import { registerDocumentNamer, type DocumentNamer } from './documentName'
+import { createDocumentIn } from './newDocument'
 
 const openDocument = vi.fn()
-vi.mock('./dockview-api', () => ({ openDocument: (...args: unknown[]) => openDocument(...args) }))
+vi.mock('./dockviewApi', () => ({ openDocument: (...args: unknown[]) => openDocument(...args) }))
 
 const stored = (title: string, fileName: string): DocumentDescriptor => ({
   id: fileName,
