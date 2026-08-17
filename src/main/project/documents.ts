@@ -186,8 +186,11 @@ export function splitDocument(body: string): DocumentFile {
  *
  * A version 1 file has no first line, so its head is truncated and fails to parse; it falls
  * back to the whole file, which is the only way to read one.
+ *
+ * Exported for the bench beside it rather than for callers — like `pooledHeads`, and for the same
+ * reason: timing a copy of it would time something else.
  */
-async function headOf(file: string): Promise<DocumentEnvelope> {
+export async function headOf(file: string): Promise<DocumentEnvelope> {
   const handle = await open(file, 'r')
   try {
     const buffer = Buffer.alloc(ENVELOPE_LIMIT)

@@ -1,12 +1,14 @@
-import { mkdir, mkdtemp, open, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { deserialize, serialize } from 'node:v8'
 import { afterAll, bench, describe } from 'vitest'
-import { DOCUMENT_VERSION, ENVELOPE_LIMIT, type DocumentFile } from '@shared/domain/document'
-// The production pool, not a copy of it: this bench measures the exact syscall shape `list()`
-// takes, and a second implementation beside it would drift from the one being measured.
-import { pooledHeads, splitDocument } from './documents'
+import { DOCUMENT_VERSION, type DocumentFile } from '@shared/domain/document'
+// The production read and the production pool, not copies of them: this bench measures the exact
+// syscall shape `list()` takes, and a second implementation beside it would drift from the one
+// being measured. It did — `headOf` was copied here without its envelope parse, so the pool was
+// timed against a lighter read than the one it runs.
+import { headOf, pooledHeads, splitDocument } from './documents'
 
 /**
  * What one save and one open cost the main process.
@@ -111,6 +113,9 @@ describe('reading a document: the whole main-thread cost of one open', () => {
  * 19 ms when every head is cached. The pool alone is what `list()` does — a cache saving 16 ms
  * of the 35 does not pay for a map to keep in step, nor for the file rewritten within the same
  * millisecond at the same size that it would answer stale for.
+ *
+ * Those three predate the import of the real `headOf` above, and the shape held when it landed —
+ * the ratio moved by a few percent, not the conclusion. To be retaken on a quiet machine.
  */
 const DOCUMENT_COUNT = 2_000
 const FOLDER_COUNT = 200
@@ -131,19 +136,6 @@ const HEAD = `${JSON.stringify({
   title: 'Bench',
   updatedAt: '2026-08-17T10:00:00.000Z',
 })}\n${'x'.repeat(4_000)}`
-
-async function headOf(file: string): Promise<unknown> {
-  const handle = await open(file, 'r')
-  try {
-    const buffer = Buffer.alloc(ENVELOPE_LIMIT)
-    const { bytesRead } = await handle.read(buffer, 0, ENVELOPE_LIMIT, 0)
-    const head = buffer.toString('utf8', 0, bytesRead)
-    const cut = head.indexOf('\n')
-    return cut === -1 ? null : JSON.parse(head.slice(0, cut))
-  } finally {
-    await handle.close()
-  }
-}
 
 async function layDown(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'scenario-list-bench-'))
