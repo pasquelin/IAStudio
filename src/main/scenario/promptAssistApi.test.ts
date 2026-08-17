@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { promptAssistApiOf, type PromptEndpoints } from './prompt-assist-api'
+import { promptAssistApiOf, type PromptEndpoints } from './promptAssistApi'
 
 function endpoints(overrides: Partial<PromptEndpoints['generate']> = {}): PromptEndpoints {
   return {

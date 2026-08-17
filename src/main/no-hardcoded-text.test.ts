@@ -354,7 +354,7 @@ describe('the registries', () => {
     const main = sourceFiles(MAIN)
 
     expect(main.filter(path => path.endsWith('-fixtures.ts'))).toEqual([])
-    expect(main.some(path => path.endsWith('job-manager.ts'))).toBe(true)
+    expect(main.some(path => path.endsWith('jobManager.ts'))).toBe(true)
   })
 })
 

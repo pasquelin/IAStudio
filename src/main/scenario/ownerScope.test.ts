@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
-import { createCredentialsWatch } from './credentials-watch'
-import { createOwnerScope } from './owner-scope'
+import { createCredentialsWatch } from './credentialsWatch'
+import { createOwnerScope } from './ownerScope'
 
 function cloudAsset(ownerId: string): CloudAsset {
   return {

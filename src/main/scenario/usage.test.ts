@@ -2,9 +2,9 @@ import { APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
 import type { Credentials } from '@main/settings/accounts'
 import type { KeyedAccount } from '@main/settings/store'
-import { createAssistQueue, type AssistQueue } from './assist-queue'
+import { createAssistQueue, type AssistQueue } from './assistQueue'
 import { createUsageReader, priceOf, type UsageClient, type UsageQuery } from './usage'
-import type { UsageData } from './usage-aggregate'
+import type { UsageData } from './usageAggregate'
 
 const NOW = new Date('2026-08-08T12:00:00Z')
 

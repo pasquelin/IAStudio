@@ -3,7 +3,7 @@ import { assetTypeOfRemote, workspaceOfType } from '@shared/domain/asset-kind'
 import { generatedAssetName } from '@shared/domain/asset-name'
 import { channelFromScenarioType } from '@shared/domain/texture'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import type { AssetCollector } from '@main/scenario/job-manager'
+import type { AssetCollector } from '@main/scenario/jobManager'
 import type { LocalBackend } from './local-backend'
 
 /**

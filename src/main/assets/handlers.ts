@@ -13,14 +13,14 @@ import {
   quietlyReducedBy,
   reducedBy,
 } from '@main/scenario/client'
-import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
+import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
 import {
   filterExpression,
   publicFeedFilter,
   NSFW_EMPTY,
   PUBLIC_FEED_SORT,
-} from '@main/scenario/filter-expression'
-import { remoteTypesFor } from '@main/scenario/remote-types'
+} from '@main/scenario/filterExpression'
+import { remoteTypesFor } from '@main/scenario/remoteTypes'
 import { OFFSET_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 import type { ActivityLog } from '@main/project/activity-log'

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { isMissing, writeAtomic, writeQueue } from '@main/persistence'
-import type { PersistedJob } from './persisted-job'
+import type { PersistedJob } from './persistedJob'
 import { parseStoredJobs } from './validation'
 
 export type JobStore = {

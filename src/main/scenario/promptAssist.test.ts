@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
-import { createPromptAssist, type PromptAssistApi, type RemotePrompts } from './prompt-assist'
+import { createPromptAssist, type PromptAssistApi, type RemotePrompts } from './promptAssist'
 
 const MODEL = 'model_google-gemini-3-1-flash'
 

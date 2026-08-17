@@ -1,6 +1,6 @@
 import type Scenario from '@scenario-labs/sdk'
-import type { JobRunner, RemoteJob } from './job-manager'
-import { asUrgent } from './rate-limiter'
+import type { JobRunner, RemoteJob } from './jobManager'
+import { asUrgent } from './rateLimiter'
 
 /** What the endpoint hands back, before the studio has narrowed it. */
 type RemoteJobPayload = {

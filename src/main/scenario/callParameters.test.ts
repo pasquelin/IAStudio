@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FieldDescriptor, FieldKind } from '@shared/domain/model'
-import { adoptableParameters } from './call-parameters'
+import { adoptableParameters } from './callParameters'
 
 function field(
   key: string,

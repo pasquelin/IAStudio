@@ -1,7 +1,7 @@
 import { levelOfPlan, type PlanAccess } from '@shared/domain/plan'
 import { log } from '@main/log'
 import { describeFailure } from './client'
-import type { WatchCredentials } from './credentials-watch'
+import type { WatchCredentials } from './credentialsWatch'
 
 /**
  * What `GET /teams` answers, reduced to the one field the studio reads. Narrower than the

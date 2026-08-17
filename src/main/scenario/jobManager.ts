@@ -13,8 +13,8 @@ import {
 } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activity-log'
 import { failureOf } from './client'
-import type { PersistedJob } from './persisted-job'
-import { ORDINARY_REQUESTS_PER_WINDOW } from './rate-limiter'
+import type { PersistedJob } from './persistedJob'
+import { ORDINARY_REQUESTS_PER_WINDOW } from './rateLimiter'
 import { createRetry, DEFAULT_BACKOFF_BASE_MS } from './retry'
 
 /**
@@ -145,7 +145,7 @@ const DEFAULT_POLL_INTERVAL_MS = 2000
  * hundred the API grants: the limiter then holds every poll, the SDK retries, and a generation
  * that is running and being paid for is reported as a rate-limit failure fifteen seconds in.
  *
- * Derived and not written down: the budget it stays under is three constants of `rate-limiter.ts`
+ * Derived and not written down: the budget it stays under is three constants of `rateLimiter.ts`
  * away, and stated as prose it would go quietly false the day one of them is tuned — with that
  * same failure as the symptom.
  */

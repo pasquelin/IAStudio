@@ -9,9 +9,9 @@ import {
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { registerScenarioHandlers, type ScenarioHandlerDeps } from './handlers'
 import type { AssetUploader } from './uploader'
-import type { JobManager } from './job-manager'
-import type { ModelRegistry } from './model-registry'
-import type { PromptAssist } from './prompt-assist'
+import type { JobManager } from './jobManager'
+import type { ModelRegistry } from './modelRegistry'
+import type { PromptAssist } from './promptAssist'
 import type { CostEstimator } from './cost'
 import type { UsageReader } from './usage'
 
