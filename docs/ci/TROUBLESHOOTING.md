@@ -17,11 +17,25 @@ runner, alors que tout passe en local.
 des autres. Les binaires natifs de Rollup, esbuild, Tailwind oxide et lightningcss sont un paquet
 par couple OS/architecture.
 
-**Correction** : vérifier que les quatre cibles sont dans `pnpm-lock.yaml`.
+**Correction** : vérifier que les quatre cibles sont dans `pnpm-lock.yaml`. La commande doit rendre
+**4**, et rien d’autre ne se lit :
 
 ```bash
-grep -c "rollup-linux-x64-gnu\|rollup-win32-x64-msvc\|rollup-darwin-arm64\|rollup-darwin-x64" pnpm-lock.yaml
+grep -oE "rollup-(linux-x64-gnu|win32-x64-msvc|darwin-arm64|darwin-x64)" pnpm-lock.yaml \
+  | sort -u | wc -l
 ```
+
+> **Pourquoi pas un `grep -c`**, qui paraît plus court. Il compte des LIGNES, pas des cibles, et
+> il rend donc un nombre que ce paragraphe ne peut pas annoncer d'avance : chaque cible figure
+> sur autant de lignes que le lockfile a de sections qui la nomment. **Mesuré le 17/08** sur un
+> lockfile complet : `-c` → **12**, quatre cibles sur trois lignes chacune. Le jour où une cible
+> manque, `-c` rend un autre nombre tout aussi plausible, et un lecteur n'a rien pour trancher.
+> La forme ci-dessus rend **4** ou moins, et 4 est la seule bonne réponse.
+
+**Rollup est le témoin qu'on interroge, pas le seul concerné** : esbuild, Tailwind oxide et
+lightningcss ont la même forme de paquet, et la même commande les couvre en remplaçant `rollup-`
+par `@esbuild/`, `@tailwindcss/oxide-` ou `lightningcss-`. Les interroger tous les quatre est la
+seule façon de le savoir — rien ne garantit qu'ils manquent ou tiennent ensemble.
 
 Si l’une manque, régénérer le lockfile sans filtre de plateforme :
 `rm pnpm-lock.yaml && pnpm install`. Ne jamais committer un lockfile produit avec
