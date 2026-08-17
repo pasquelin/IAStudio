@@ -48,3 +48,23 @@ mis à jour en conséquence : création de worktree depuis `develop`, rebase sur
   locales non publiées disparaîtraient.
 - Les 24 branches de feature existantes restent en place. Elles seront rebasées sur `develop` au
   fil de leur reprise, pas en masse.
+
+---
+
+## Amendement du 17 août 2026 — la branche par défaut du dépôt est `main`
+
+**La § Décision annonce `develop` comme branche par défaut du dépôt. Le dépôt est sur `main`**, et
+c’est le dépôt qui a raison. Mesuré le 17/08 : `gh repo view --json defaultBranchRef` répond
+`main`, `git remote show origin` affiche `HEAD branch: main`.
+
+Ce que cela change tient en une ligne : **une PR ouverte depuis une branche de feature cible `main`
+par défaut**, et doit être réorientée vers `develop` à la main. L’alternative « `main` par défaut,
+`develop` seulement locale » que cet ADR écartait n’est pas revenue pour autant — `develop` est
+publiée sur `origin` et suivie ; c’est la seule destination des merges de feature.
+
+**Le reste du modèle est inchangé** : `develop` intègre, `main` publie et ne reçoit que des merges
+de release, les worktrees partent de `develop`, le rebase se fait sur `develop` **local**.
+
+`git symbolic-ref refs/remotes/origin/HEAD` ne fait pas foi sur cette question — c’est un cache
+local, et il pointait encore le 17/08 sur `feat/scenario-pipeline`, la branche que cet ADR a
+précisément écartée. `git remote set-head origin -a` le réaligne.
