@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { checkDocumentName } from '@shared/domain/documentName'
-import { FOLDER_ROOT, nameOf } from '@shared/domain/folder'
+import { FOLDER_ROOT } from '@shared/domain/folder'
 import { Button } from '@/design/Button'
 import { FolderPicker } from '@/design/FolderPicker/FolderPicker'
 import { FIELD } from '@/design/styles'
@@ -159,11 +159,7 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
               labels={{
                 columns: t('documents.folderField'),
                 empty: t('documents.folderEmpty'),
-                // Interpolated HERE, where the chosen folder lives: a component of `design/`
-                // draws the sentence it is handed and never reaches for a bundle.
-                newFolderIn: t('documents.newFolderIn', {
-                  folder: folder === FOLDER_ROOT ? projectName : nameOf(folder),
-                }),
+                newFolder: t('documents.newFolder'),
                 newFolderName: t('documents.newFolderName'),
                 newFolderLabel: t('documents.newFolderLabel'),
                 create: t('documents.create'),

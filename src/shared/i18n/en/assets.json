@@ -120,7 +120,7 @@
     "folderField": "Location",
     "folderHint": "Chooses the project folder the document will be saved in",
     "folderEmpty": "No sub-folder",
-    "newFolderIn": "New folder in {{folder}}",
+    "newFolder": "New folder",
     "newFolderName": "New folder",
     "newFolderLabel": "Folder name",
     "folderTaken": "That folder already holds a folder of this name.",

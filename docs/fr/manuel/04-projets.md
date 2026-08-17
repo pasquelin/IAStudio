@@ -198,12 +198,12 @@ Le bouton **+** en haut du rail gauche en crée un, et demande deux choses : son
 L’emplacement se parcourt **en colonnes**, comme la fenêtre d’enregistrement du système : chaque
 colonne montre ce qu’un dossier contient, et choisir un dossier ouvre son contenu dans la colonne
 suivante. **Le dernier dossier choisi est celui où le document ira** — il n’y a pas deux notions à
-suivre. Le chemin complet est écrit sous les colonnes. On ne sort jamais du projet : rien d’autre
-n’est proposé.
+suivre. Le chemin complet est écrit au-dessus des colonnes. On ne sort jamais du projet : rien
+d’autre n’est proposé.
 
 Les colonnes s’ouvrent sur le dossier que l’Explorateur montre, ou sur `documents/` si rien n’y
-est sélectionné. En dessous, **Nouveau dossier dans …** nomme ce dossier et en crée un sans
-quitter la fenêtre.
+est sélectionné. En dessous, **Nouveau dossier** en crée un dans le dossier choisi, sans quitter
+la fenêtre.
 
 Il est enregistré avec `⌘S` / `Ctrl+S` — dans le dossier que vous avez choisi en le créant, et
 ensuite là où vous l’avez rangé — sous une extension qui dit ce qu’il est :

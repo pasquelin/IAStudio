@@ -120,7 +120,7 @@
     "folderField": "Emplacement",
     "folderHint": "Choisit le dossier du projet où le document sera enregistré",
     "folderEmpty": "Aucun sous-dossier",
-    "newFolderIn": "Nouveau dossier dans {{folder}}",
+    "newFolder": "Nouveau dossier",
     "newFolderName": "Nouveau dossier",
     "newFolderLabel": "Nom du dossier",
     "folderTaken": "Ce dossier contient déjà un dossier de ce nom.",

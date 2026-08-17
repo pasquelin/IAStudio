@@ -11,8 +11,7 @@ export type FolderPickerCreateProps = {
   /** Where the new folder is made — the one the columns have chosen. */
   folder: string
   labels: {
-    /** Already naming the chosen folder — « Nouveau dossier dans Images ». Caller interpolates. */
-    newFolderIn: string
+    newFolder: string
     newFolderName: string
     newFolderLabel: string
     create: string
@@ -35,9 +34,8 @@ export type FolderPickerCreateProps = {
 /**
  * Making a folder without leaving the dialog, in the folder the columns have chosen.
  *
- * Bottom left, which is where every save panel on this machine puts it. The button NAMES its
- * destination rather than saying « New folder » alone: the first version said nothing, and
- * nothing on screen told which folder a new one would land in.
+ * Bottom left, which is where every save panel on this machine puts it. Where the folder lands is
+ * read off the trail above the columns, not off this button's label.
  *
  * Committed on the button and on Enter — deliberately NOT on blur, which is what `InlineRename`
  * does: a blur-commit would make a folder nobody asked for out of a half-typed name.
@@ -93,18 +91,16 @@ export function FolderPickerCreate({
 
   if (!naming)
     return (
-      // Truncated, and `min-w-0` is the half that gets forgotten: the label carries a folder's
-      // name, and a folder named by a sentence would push the dialog's own buttons off the line.
-      <Button onClick={() => give(true)} className="min-w-0 flex-1 justify-start gap-1.5">
+      <Button variant="primary" onClick={() => give(true)} className="shrink-0 gap-1.5">
         <UiIcon path={mdiFolderPlusOutline} size={14} className="shrink-0" />
-        <span className="truncate">{labels.newFolderIn}</span>
+        {labels.newFolder}
       </Button>
     )
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
       <label className="text-muted truncate text-xs" htmlFor="sc-folder-picker-name">
-        {labels.newFolderIn}
+        {labels.newFolder}
       </label>
 
       <div className="flex items-center gap-2">

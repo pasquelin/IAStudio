@@ -18,8 +18,7 @@ export type FolderPickerProps = {
   labels: {
     columns: string
     empty: string
-    /** Already naming the chosen folder — the caller interpolates. */
-    newFolderIn: string
+    newFolder: string
     newFolderName: string
     newFolderLabel: string
     create: string
@@ -109,7 +108,9 @@ export function FolderPicker({ value, onChange, rootName, labels, actions }: Fol
           onReread={() => reread(value)}
         />
 
-        {!naming && actions}
+        {/* `ml-auto` and not a stretched button on the left: what makes a folder is as wide as its
+            own label, and the room between the two ends belongs to neither. */}
+        {!naming && <div className="ml-auto flex items-center gap-2">{actions}</div>}
       </div>
     </div>
   )

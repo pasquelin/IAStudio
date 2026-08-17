@@ -8,7 +8,7 @@ import { FolderPicker } from './FolderPicker'
 const LABELS = {
   columns: 'Emplacement',
   empty: 'Aucun sous-dossier',
-  newFolderIn: 'Nouveau dossier dans Images',
+  newFolder: 'Nouveau dossier',
   newFolderName: 'Nouveau dossier',
   newFolderLabel: 'Nom du dossier',
   create: 'Créer',
@@ -107,18 +107,6 @@ describe('FolderPicker', () => {
     expect(await screen.findByText('Project1 / Images / Croquis')).toBeInTheDocument()
   })
 
-  /**
-   * Named on the button itself. The first versions said « Nouveau dossier » alone at the foot of
-   * a tree, and nothing on screen told which folder it would land in.
-   */
-  it('names the folder a new one would be made in', async () => {
-    show('Images')
-
-    expect(
-      await screen.findByRole('button', { name: 'Nouveau dossier dans Images' }),
-    ).toBeInTheDocument()
-  })
-
   it('makes a folder where the columns point, and moves into it', async () => {
     const newFolder = vi.fn(() =>
       Promise.resolve({ done: [{ from: '', to: 'Images/Neuf' }], refused: [], batch: 'b' }),
@@ -126,9 +114,7 @@ describe('FolderPicker', () => {
     installFakeBridge({ project: { listFolder, newFolder } })
     const { onChange } = show('Images')
 
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Nouveau dossier dans Images' }),
-    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Nouveau dossier' }))
     await userEvent.clear(screen.getByRole('textbox', { name: 'Nom du dossier' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'Nom du dossier' }), 'Neuf')
     await userEvent.click(screen.getByRole('button', { name: 'Créer' }))
@@ -142,9 +128,7 @@ describe('FolderPicker', () => {
     installFakeBridge({ project: { listFolder, newFolder } })
     show('Images')
 
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Nouveau dossier dans Images' }),
-    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Nouveau dossier' }))
     await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
 
     expect(newFolder).not.toHaveBeenCalled()
@@ -163,9 +147,7 @@ describe('FolderPicker', () => {
     })
     show('Images')
 
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Nouveau dossier dans Images' }),
-    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Nouveau dossier' }))
     await userEvent.click(screen.getByRole('button', { name: 'Créer' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(LABELS.folderTaken)
