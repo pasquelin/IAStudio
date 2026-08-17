@@ -361,6 +361,40 @@ ouverture de projet.
 sans rien à cliquer. Il se relit aussi quand vous revenez sur la fenêtre — un projet posé sur un
 volume réseau n’émet parfois aucun événement, et ce second filet le rattrape.
 
+#### Ce qui se passe quand vous rangez le dossier sans le studio
+
+L’arbre, lui, ne fait que montrer. **Ce qui suit vraiment vos fichiers est une passe** qui remet
+le catalogue et le disque d’accord, et elle se déclenche à deux moments : **à l’ouverture d’un
+projet** — ce qui a bougé pendant que le studio était fermé — et **quand la fenêtre revient au
+premier plan** — ce qui a bougé pendant qu’il était ouvert. Le Finder est l’autre moitié de tout
+dossier de projet ; ni l’un ni l’autre moment ne suffit seul.
+
+**Elle reconnaît un fichier à son contenu, pas à son chemin.** Déplacez une image d’un dossier à
+l’autre, renommez-la, faites les deux : la fiche la retrouve et la suit. Les identifiants ne
+changent pas, donc **une scène 3D continue de pointer sur sa texture** après que vous l’avez
+rangée ailleurs.
+
+**Elle n’efface jamais une fiche.** Un fichier introuvable est **daté comme absent**, et sa fiche
+reste : le prompt, la graine et la filiation ne sont écrits sur aucun disque, et les perdre parce
+qu’un fichier est sur une clé USB débranchée serait perdre plus que le fichier. Rebranchez la clé,
+la passe suivante remet la fiche en service.
+
+**Le plus souvent, vous ne la verrez pas.** Une barre s’affiche en tête du panneau **tant qu’une
+passe tourne** — mais une passe ordinaire lit le dossier, trouve tout là où le catalogue l’annonce
+et se termine avant d’avoir pu être peinte. Ce qui la rend visible est un projet où quelque chose
+a bougé : c’est le cas où la passe doit lire des fichiers, donc le seul où l’attente dure assez
+pour mériter une explication.
+
+| Ce que la barre montre | |
+|---|---|
+| **Le studio retrouve les fichiers déplacés hors du projet** | et l’avancement, dès qu’il sait combien de fichiers il va lire |
+| **Arrêter** | interrompt la recherche ; **ce qui a déjà été retrouvé reste retrouvé** |
+
+**Le journal ne parle que si quelque chose a changé** : *n fichiers déplacés hors du studio ont
+été retrouvés et suivis*, et — en avertissement — *n fichiers du catalogue sont introuvables dans
+le projet, leurs fiches sont conservées*. Une passe sur un projet où rien n’a bougé n’écrit rien
+du tout, et c’est ce qui la rend supportable à chaque retour dans la fenêtre.
+
 > **C’est toujours par là qu’on rouvre un document fermé.** La disposition retient les onglets
 > ouverts, mais un document fermé alors qu’aucune disposition ne le portait n’est plus atteignable
 > par les onglets ; il est dans le dossier où vous l’avez rangé, un repli plus bas.
