@@ -67,7 +67,7 @@
     "openEntry": "Open",
     "openEntryHint": "Opens the file in its space, or unfolds the folder",
     "fileInfo": "File information",
-    "fileInfoHint": "Opens a window telling everything the studio knows about this entry",
+    "fileInfoHint": "Opens a window that tells everything the studio knows about this entry",
     "newFolder": "New folder",
     "newFolderHint": "Creates an empty folder inside the one on screen",
     "newFolderName": "folder",
