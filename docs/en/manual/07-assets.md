@@ -187,7 +187,7 @@ The asset's kind picks its editor, and nothing else weighs in:
 | a **picture** | the Image workspace |
 | a **texture** | the Textures workspace |
 | a **sky** | the Skyboxes workspace |
-| a **mesh** | the 3D workspace |
+| a **mesh** | the Modelling workspace |
 | a **sound** | the Audio workspace |
 | a **video** | the Video workspace |
 

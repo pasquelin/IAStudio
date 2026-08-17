@@ -53,7 +53,7 @@ sont des panneaux qui vous disent ce qu’il leur manque pour se remplir.
 | « Ouvrez un projet pour générer. » | le formulaire attend un projet où déposer le résultat |
 | « Ouvrez un projet pour voir ses assets. » | idem, pour l’étagère |
 | « Ouvrez une scène pour voir son contenu. » | l’explorateur attend une scène 3D |
-| « L’explorateur suit une scène 3D. Ouvrez l’espace 3D pour en voir le contenu. » | vous êtes dans un autre espace ; ce panneau ne sert qu’en 3D |
+| « L’explorateur suit une scène 3D. Ouvrez l’espace Modélisation pour en voir le contenu. » | vous êtes dans un autre espace ; ce panneau ne sert qu’en Modélisation |
 | « Aucun modèle choisi » / « Choisissez-en un dans la liste » | le panneau Génération attend qu’un modèle soit sélectionné |
 | « Ce modèle n’attend aucun paramètre. » | c’est normal : certains modèles ne prennent qu’un prompt |
 | « Aucun résultat pour ce filtre. » | votre recherche ne trouve rien ; élargissez-la |

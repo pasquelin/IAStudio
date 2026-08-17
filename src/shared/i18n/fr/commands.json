@@ -98,7 +98,7 @@
     },
     "sceneSnap": {
       "title": "Magnétisme",
-      "help": "Fait avancer les poignées par pas réguliers au lieu de les laisser libres. Pratique pour poser des objets bien alignés. La finesse des pas se règle dans les réglages de l’espace 3D."
+      "help": "Fait avancer les poignées par pas réguliers au lieu de les laisser libres. Pratique pour poser des objets bien alignés. La finesse des pas se règle dans les réglages de l’espace Modélisation."
     },
     "sceneSpace": {
       "title": "Repère local",

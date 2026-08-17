@@ -1,6 +1,6 @@
 # 8. Espace Image
 
-[← Les assets](07-assets.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace 3D →](09-espace-3d.md)
+[← Les assets](07-assets.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Modélisation →](09-espace-modelisation.md)
 
 L’espace où l’on peint, gomme, recadre et empile des calques.
 
@@ -222,9 +222,9 @@ suivant. Le **Lasso** l’ignore : une zone tracée point par point n’a pas de
 Un calque texte reste du texte : il se corrige, et il reste net à tous les zooms. L’inspecteur en
 règle le **contenu**, le **corps** et la **police**.
 
-**La liste des polices est celle de l’espace 3D** : les trois polices que le studio embarque
+**La liste des polices est celle de l’espace Modélisation** : les trois polices que le studio embarque
 d’abord, puis celles de votre machine. Ce que dit
-[l’espace 3D](09-espace-3d.md#les-polices-offertes) des polices absentes vaut mot pour mot ici.
+[l’espace Modélisation](09-espace-modelisation.md#les-polices-offertes) des polices absentes vaut mot pour mot ici.
 
 ### Groupe Gomme
 
@@ -385,4 +385,4 @@ composités à l’export ; les règles, les repères et les pointillés de sél
 
 ---
 
-[← Les assets](07-assets.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace 3D →](09-espace-3d.md)
+[← Les assets](07-assets.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Modélisation →](09-espace-modelisation.md)

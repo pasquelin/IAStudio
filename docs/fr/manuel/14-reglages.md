@@ -458,7 +458,7 @@ Le grain du bord d’une ombre.
 | **Douce** | un bord adouci, plus proche de la réalité |
 
 **Ce réglage dit à quoi ressemble une ombre, pas qui en projette une.** Cela se décide objet par
-objet, dans l’Inspecteur — voir [Espace 3D](09-espace-3d.md).
+objet, dans l’Inspecteur — voir [Espace Modélisation](09-espace-modelisation.md).
 
 ### Finesse des ombres
 

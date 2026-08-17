@@ -45,7 +45,7 @@ Nine contexts:
 | **Anywhere in the application** | any window, any workspace |
 | **In the bar of spaces** | the top bar, while the focus is on one of its tabs |
 | **In the explorer** | the project folder panel, in every workspace and on the home |
-| **In the 3D view** | the viewport of the 3D workspace |
+| **In the 3D view** | the viewport of the Modelling workspace |
 | **In the edit** | the timeline of the Video and Audio workspaces |
 | **In the image** | the canvas of the Image workspace |
 | **In the sky** | the view of the Skyboxes workspace |
@@ -53,7 +53,7 @@ Nine contexts:
 | **In the material** | the preview and channels of the Textures workspace |
 
 **A surface can listen to a key without being a context, and the guarantee above does not cover it
-then.** The 3D workspace's animation band is that case: `Delete` and `Backspace` take off the
+then.** The Modelling workspace's animation band is that case: `Delete` and `Backspace` take off the
 chosen key there, the key being bound to the band rather than to the register of contexts. So it
 does not appear on the shortcuts screen, and cannot be changed.
 
@@ -141,7 +141,7 @@ changed.
 either, and stopping on one would make the walk look stuck.
 
 **A ticked row says what its tick means.** Some are alternatives — a tool's mode, the active
-account, the view of one quarter of the 3D space: ticking one unticks the rest. Others answer for themselves,
+account, the view of one quarter of the Modelling workspace: ticking one unticks the rest. Others answer for themselves,
 like a layer's two padlocks. A screen reader announces the first kind as radio buttons and the
 second as checkboxes.
 

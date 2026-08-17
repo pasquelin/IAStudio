@@ -219,7 +219,7 @@ empreinte, même s’ils portent des noms différents. C’est ainsi que le stud
 **Environnement** *(d’une scène 3D)*
 Ce qui éclaire une scène en dehors de ses lampes. Deux valeurs : **Studio**, un éclairage neutre
 calculé, ou **une *skybox* du projet**, qui pose sa lumière et ses reflets sur tout. Se choisit
-dans l’Inspecteur de l’espace 3D, section Environnement.
+dans l’Inspecteur de l’espace Modélisation, section Environnement.
 
 **Équirectangulaire**
 Le format d’une image qui contient toute une sphère, aplatie : deux fois plus large que haute,
@@ -294,7 +294,7 @@ image. Changez la graine, vous obtenez une autre image de la même famille. Lais
 C’est le réglage le plus utile du formulaire, et le plus souvent ignoré.
 
 **Groupe**
-Plusieurs objets rangés sous un même parent. Dans l’espace 3D (`⌘G`) comme dans la pile de
+Plusieurs objets rangés sous un même parent. Dans l’espace Modélisation (`⌘G`) comme dans la pile de
 calques : déplacer le groupe déplace tout ce qui pend dessous, et le replier rend une scène
 chargée lisible.
 
@@ -518,7 +518,7 @@ Une ligne fine, horizontale ou verticale, posée sur l’image pour aligner ce q
 fait pas partie de l’image et ne s’exporte pas. Masquer les repères ne les efface pas.
 
 **Repère local / repère monde**
-L’orientation des poignées de manipulation, dans l’espace 3D. En repère **monde**, la flèche rouge
+L’orientation des poignées de manipulation, dans l’espace Modélisation. En repère **monde**, la flèche rouge
 pointe toujours dans la même direction. En repère **local**, elle suit l’orientation de l’objet :
 c’est ce qu’il faut pour faire avancer une voiture dans le sens où elle roule. La touche `L`
 bascule de l’un à l’autre.

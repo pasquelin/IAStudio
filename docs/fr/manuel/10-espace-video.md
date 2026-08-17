@@ -1,6 +1,6 @@
 # 10. Espace Vidéo
 
-[← Espace 3D](09-espace-3d.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Audio →](11-espace-audio.md)
+[← Espace Modélisation](09-espace-modelisation.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Audio →](11-espace-audio.md)
 
 L’espace où l’on assemble des plans les uns après les autres pour en faire une séquence.
 
@@ -429,4 +429,4 @@ l’importer.
 
 ---
 
-[← Espace 3D](09-espace-3d.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Audio →](11-espace-audio.md)
+[← Espace Modélisation](09-espace-modelisation.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Audio →](11-espace-audio.md)

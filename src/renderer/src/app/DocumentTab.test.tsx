@@ -79,7 +79,7 @@ describe('a document tab', () => {
 
     const { container } = render(<DocumentTab {...props('doc-1')} />)
 
-    const glyph = container.querySelector('[data-tooltip-content="3D"] path')
+    const glyph = container.querySelector('[data-tooltip-content="Modélisation"] path')
     expect(glyph?.getAttribute('d')).toBe(workspaceById('3d').icon)
   })
 

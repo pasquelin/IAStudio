@@ -166,7 +166,7 @@ client already registered under the same name is replaced; there is nothing to r
 Once connected, Claude Code speaks to the studio the way you would speak to the assistant, but
 from your code project:
 
-> *Open the 3D workspace in the studio and create a document*
+> *Open the Modelling workspace in the studio and create a document*
 > *Find me a night skybox model*
 > *List the generations under way*
 > *Prepare an image generation with this prompt, but do not send it*

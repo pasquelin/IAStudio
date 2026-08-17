@@ -207,7 +207,7 @@ even with no light around.
 **Environment** *(of a 3D scene)*
 What lights a scene besides its own lamps. Two values: **Studio**, a neutral computed lighting, or
 **a *skybox* from the project**, which lays its light and its reflections over everything. Chosen
-in the 3D workspace's Inspector, under Environment.
+in the Modelling workspace's Inspector, under Environment.
 
 **Equirectangular**
 The format of an image holding a whole sphere, flattened: twice as wide as it is tall, the way a
@@ -265,7 +265,7 @@ To ask a *model* to make something. The request leaves for Scenario, comes back 
 result lands in your *assets*.
 
 **Group**
-Several objects filed under one parent. In the 3D workspace (`⌘G`) as in the layer stack: moving
+Several objects filed under one parent. In the Modelling workspace (`⌘G`) as in the layer stack: moving
 the group moves everything hanging below it, and folding it away makes a busy scene readable.
 
 **Guidance** *(ControlNet, cfg)*
@@ -362,7 +362,7 @@ which is a folder on your disk. The two are separate and nothing travels between
 action of yours. Today only the **project → library** direction has a button (**Send**).
 
 **Local frame / world frame**
-The orientation of the manipulation handles, in the 3D workspace. In the **world** frame the red
+The orientation of the manipulation handles, in the Modelling workspace. In the **world** frame the red
 arrow always points the same way. In the **local** frame it follows the object's orientation:
 which is what you need to drive a car forwards along the way it faces. The `L` key switches.
 

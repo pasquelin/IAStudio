@@ -168,7 +168,7 @@ client déjà enregistré sous le même nom se remplace ; il n’y a rien à sup
 Une fois branché, Claude Code parle au studio comme vous parleriez à l’assistant, mais depuis
 votre projet de code :
 
-> *Ouvre l’espace 3D dans le studio et crée un document*
+> *Ouvre l’espace Modélisation dans le studio et crée un document*
 > *Cherche-moi un modèle de skybox nocturne*
 > *Liste les générations en cours*
 > *Prépare une génération d’image avec ce prompt, mais ne l’envoie pas*

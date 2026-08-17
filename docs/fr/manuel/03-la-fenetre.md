@@ -515,7 +515,7 @@ Le menu du système — en haut de l’écran sur macOS, en haut de la fenêtre 
 | **Fichier** | Nouveau projet…, Ouvrir un projet…, Enregistrer, Réglages… |
 | **Édition** | Annuler, Rétablir, et les commandes de texte du système |
 | **Affichage** | Modules, Réinitialiser la disposition, Plein écran, zoom de l’image |
-| **Objets** | Ajouter ▸ Maille, Ajouter ▸ Lumière — dans l’espace 3D |
+| **Objets** | Ajouter ▸ Maille, Ajouter ▸ Lumière — dans l’espace Modélisation |
 | **Fenêtre** | les commandes de fenêtre du système |
 | **Aide** | À propos de Scenario Studio, Consommation…, Licences |
 

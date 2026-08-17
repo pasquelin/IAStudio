@@ -98,7 +98,7 @@
     },
     "sceneSnap": {
       "title": "Snap",
-      "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the 3D space settings."
+      "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the Modelling workspace settings."
     },
     "sceneSpace": {
       "title": "Local frame",

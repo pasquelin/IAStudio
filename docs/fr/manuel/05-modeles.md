@@ -22,7 +22,7 @@ rendent en dix secondes, d’autres en trois minutes.
 
 Il est dans la colonne de gauche, au même endroit dans tous les espaces. Il liste le catalogue
 **pour l’espace où vous êtes** : dans
-l’espace Image, les modèles d’image ; dans l’espace 3D, les modèles 3D.
+l’espace Image, les modèles d’image ; dans l’espace Modélisation, les modèles 3D.
 
 Il n’y a pas d’onglets de type à choisir : la barre de titre dit déjà dans quel espace vous
 êtes.
@@ -94,7 +94,7 @@ C’est le filtre le plus utile. Le vocabulaire est technique mais court :
 | **Image vers vidéo** | une image fixe se met à bouger |
 | **Vidéo vers vidéo** | une vidéo est transformée en une autre |
 
-**Dans l’espace 3D**
+**Dans l’espace Modélisation**
 
 | Capacité | En français clair |
 |---|---|
