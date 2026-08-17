@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { blockMapsExpected, manifestFiles } from './update-manifests'
+import { blockMapsExpected, manifestFiles } from './updateManifests'
 
 const ROOT = join(import.meta.dirname, '..', '..')
 const read = (name: string) => readFileSync(join(ROOT, name), 'utf8')

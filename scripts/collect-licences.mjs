@@ -19,7 +19,7 @@ import { VAD as STT_VAD } from './fetch-stt.mjs'
 // rule that decides who owes a source offer must be the one the tests check, not a twin of it,
 // and the same goes for the list of what is shipped.
 import { isCopyleft, NO_VERSION } from '../src/shared/domain/licence.ts'
-import { SHIPPED } from '../src/main/shipped-packages.ts'
+import { SHIPPED } from '../src/main/shippedPackages.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = join(ROOT, 'src', 'shared', 'licences.json')

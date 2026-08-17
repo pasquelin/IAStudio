@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PROJECT_TREES, sourceFiles } from './source-files'
+import { PROJECT_TREES, sourceFiles } from './sourceFiles'
 
 /**
  * The sweep every guard of the main process borrows, held once rather than re-asserted by each.
@@ -29,7 +29,7 @@ describe('the sweep the guards read the project through', () => {
   })
 
   /**
-   * Test material is out, `-fixtures` included — the decision `source-files.ts` explains. Asserted
+   * Test material is out, `-fixtures` included — the decision `sourceFiles.ts` explains. Asserted
    * on the real sweep rather than on a temporary folder: what the guards actually read is the
    * thing worth holding, and an exclusion that stops matching would let a fixture's label be
    * judged as a word this studio writes.

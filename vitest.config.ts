@@ -200,7 +200,7 @@ export default defineConfig({
           // measured the branches of other sessions — 72 lines of another checkout's numbers,
           // presented as this one's.
           benchmark: { include: ['src/{main,preload,shared}/**/*.bench.ts'] },
-          setupFiles: ['src/main/test-setup.ts'],
+          setupFiles: ['src/main/testSetup.ts'],
         },
       },
       {

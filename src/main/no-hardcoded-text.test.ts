@@ -3,7 +3,7 @@ import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './source-files'
+import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './sourceFiles'
 
 const MAIN = dirname(fileURLToPath(import.meta.url))
 
@@ -261,7 +261,7 @@ describe('the main process', () => {
 /**
  * Reading and parsing every file of the project is not a unit test's usual budget: 2.5 s idle,
  * and past the shared 15 s the moment a dozen other suites share the machine. `WHOLE_PROJECT`
- * comes from `source-files.ts` with the sweep it belongs to, rather than being raised for
+ * comes from `sourceFiles.ts` with the sweep it belongs to, rather than being raised for
  * everyone — the rest of this file has no business taking that long.
  */
 describe('the registries', () => {
@@ -464,7 +464,7 @@ describe('the words nobody puts in a tag', () => {
     WHOLE_PROJECT,
   )
 
-  // That the four trees were actually opened is held by `source-files.test.ts`, on the walk both
+  // That the four trees were actually opened is held by `sourceFiles.test.ts`, on the walk both
   // guards borrow — an empty result here proves nothing unless the files were read.
 
   it('would see a sentence parked in a constant', () => {

@@ -7,7 +7,7 @@ Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), numérotation
 est extraite telle quelle par le job `release` et **devient le corps de la release GitHub** — une
 version taguée sans sa section ici fait échouer la publication, délibérément. La procédure est
 dans [`docs/ci/RELEASE.md`](docs/ci/RELEASE.md), la règle d'extraction dans
-`src/main/release-notes.ts`.
+`src/main/releaseNotes.ts`.
 
 Conséquence sur l'écriture : **dans une section de version, les liens sont absolus.** Une page de
 release ne résout pas les chemins relatifs du dépôt, et ces liens-là sont les premiers qu'un

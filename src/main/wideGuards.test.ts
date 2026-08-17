@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { LEAST_GUARDS, readsTheTree, wideGuardsUnder } from './wide-guards'
+import { LEAST_GUARDS, readsTheTree, wideGuardsUnder } from './wideGuards'
 
 const ROOT = join(import.meta.dirname, '..', '..')
 const GUARDED = wideGuardsUnder(join(ROOT, 'src')).map(path => path.replace(`${ROOT}/`, ''))
@@ -67,16 +67,16 @@ describe('finding the tests no import graph reaches', () => {
   })
 
   /**
-   * A guard that borrows `source-files.ts` reads the tree without a `readdirSync` of its own — and
+   * A guard that borrows `sourceFiles.ts` reads the tree without a `readdirSync` of its own — and
    * the day that module was extracted, `no-bare-locale-compare.test.ts` fell out of the net exactly
    * that way while the count still read 36 and looked healthy.
    */
   it('sees the suite that borrows the shared sweep rather than writing one', () => {
-    expect(readsTheTree("import { sourceFiles } from './source-files'")).toBe(true)
-    expect(readsTheTree("import { PROJECT_TREES } from '@main/source-files'")).toBe(true)
+    expect(readsTheTree("import { sourceFiles } from './sourceFiles'")).toBe(true)
+    expect(readsTheTree("import { PROJECT_TREES } from '@main/sourceFiles'")).toBe(true)
     // A guard one folder down, which the first version of the rule would have dropped.
-    expect(readsTheTree("import { sourceFiles } from '../source-files'")).toBe(true)
-    expect(readsTheTree("import { sourceFiles } from '../../source-files'")).toBe(true)
+    expect(readsTheTree("import { sourceFiles } from '../sourceFiles'")).toBe(true)
+    expect(readsTheTree("import { sourceFiles } from '../../sourceFiles'")).toBe(true)
     expect(GUARDED).toContain('src/main/no-bare-locale-compare.test.ts')
     expect(GUARDED).toContain('src/main/no-hardcoded-text.test.ts')
   })

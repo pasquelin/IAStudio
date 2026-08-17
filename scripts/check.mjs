@@ -24,7 +24,7 @@ import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 // A `.ts` from a `.mjs`, as `check-artefact.mjs` does: Node 24 strips the types on the way in, so
 // the rule the tests check is the one that runs rather than a twin of it.
-import { LEAST_GUARDS, wideGuardsUnder } from '../src/main/wide-guards.ts'
+import { LEAST_GUARDS, wideGuardsUnder } from '../src/main/wideGuards.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -63,7 +63,7 @@ function touchedFiles(since) {
   return [...seen]
 }
 
-/** Why these must always run, and why they are detected rather than listed: `wide-guards.ts`. */
+/** Why these must always run, and why they are detected rather than listed: `wideGuards.ts`. */
 function wideGuards() {
   const found = wideGuardsUnder(join(ROOT, 'src')).map(path => relative(ROOT, path))
 
@@ -72,7 +72,7 @@ function wideGuards() {
       `\nERROR: found ${found.length} wide guards, expected at least ${LEAST_GUARDS}.\n` +
         `These are the tests no import graph reaches, so a selection that drops them is green\n` +
         `on a hardcoded word. Either they were removed — lower LEAST_GUARDS and say why — or\n` +
-        `the detector in src/main/wide-guards.ts no longer recognises how they read the tree.\n`,
+        `the detector in src/main/wideGuards.ts no longer recognises how they read the tree.\n`,
     )
     process.exit(1)
   }

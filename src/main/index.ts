@@ -1,7 +1,7 @@
 import { app, session } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import { EVENTS } from '@shared/ipc'
-import { registerAboutPanel } from '@main/about-panel'
+import { registerAboutPanel } from '@main/aboutPanel'
 import { APP_ICON_PATH } from '@main/resources'
 import { buildMenu } from '@main/menu'
 import { registerAssetScheme } from '@main/assets/protocol'

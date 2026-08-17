@@ -5,9 +5,9 @@
  * push where it sits as `path:line`. What differs between the guards is the rule alone, which is
  * the argument here.
  *
- * `source-files.ts` is the other half — it says WHICH files are read, this says how a finding is
+ * `sourceFiles.ts` is the other half — it says WHICH files are read, this says how a finding is
  * located inside one. A guard borrowing this still imports that one for its trees, so
- * `wide-guards.ts` keeps recognising it through `borrowsTheSweep`; adding an import of this
+ * `wideGuards.ts` keeps recognising it through `borrowsTheSweep`; adding an import of this
  * module alone would NOT be enough to stay in the short loop.
  */
 import ts from 'typescript'
