@@ -44,6 +44,17 @@ export function DictationButton({ variant = 'bar', tooltip, onStart }: Dictation
 
   return (
     <span className="flex items-center gap-2">
+      {/* Before the button, not after: what follows the microphone is the edge of whatever holds
+          it — the foot of a field, the send button — and a meter wedged in there pushed the one
+          control of the pair away from that edge.
+
+          Named here, where the button beside it says "stop dictating" rather than that anything
+          is being heard. The status line's copy is decorative — its own phrase says it. */}
+      {dictation.isListening && <LevelMeter label={t('dictation.listening')} />}
+      {dictation.state === 'loadingEngine' && (
+        <span className="text-muted text-tiny">{t('dictation.loadingEngine')}</span>
+      )}
+
       <ToolButton
         icon={dictation.isListening ? mdiMicrophone : mdiMicrophoneOff}
         label={dictation.isListening ? t('dictation.stop') : t('dictation.start')}
@@ -59,13 +70,6 @@ export function DictationButton({ variant = 'bar', tooltip, onStart }: Dictation
           void (dictation.isListening ? dictation.stop() : dictation.start())
         }}
       />
-
-      {/* Named here, where the button beside it says "stop dictating" rather than that anything
-          is being heard. The status line's copy is decorative — its own phrase says it. */}
-      {dictation.isListening && <LevelMeter label={t('dictation.listening')} />}
-      {dictation.state === 'loadingEngine' && (
-        <span className="text-muted text-tiny">{t('dictation.loadingEngine')}</span>
-      )}
     </span>
   )
 }

@@ -2,6 +2,7 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
+import { insertAtCaret } from '@/dictation/insertAtCaret'
 import { field } from '@/helpers/dynamic-form-fixtures'
 import { DynamicForm } from './DynamicForm'
 
@@ -234,6 +235,21 @@ describe('DynamicForm', () => {
       act(() => add('roux'))
 
       expect(screen.getByLabelText(/Prompt/)).toHaveValue('un chat roux')
+    })
+
+    /**
+     * The OTHER way in, and it has to keep working: the held shortcut writes wherever the caret
+     * is, in every field of the studio, and it reaches this one through the DOM rather than
+     * through the form. Wrapping the box in a frame is exactly what could have broken it.
+     */
+    it('is not the only way in — the caret path still writes into the box', () => {
+      render(<DynamicForm fields={fields} onSubmit={vi.fn()} submitLabel="Générer" />)
+
+      const box = screen.getByLabelText(/Prompt/)
+      box.focus()
+
+      expect(insertAtCaret('un chat roux')).toBe(true)
+      expect(box).toHaveValue('un chat roux')
     })
 
     // Silently, and that is the price of drawing it INSIDE the control: only a long text box
