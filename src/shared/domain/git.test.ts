@@ -7,7 +7,9 @@ import {
   hasChanges,
   hasStagedFiles,
   isBranchName,
+  needsCredentials,
   pathsOf,
+  remoteHost,
   type GitFile,
 } from './git'
 
@@ -153,6 +155,26 @@ describe('a name git would take as a branch', () => {
     'refuses %s, which git would read as an option',
     name => {
       expect(isBranchName(name)).toBe(false)
+    },
+  )
+})
+
+describe('the server a token belongs to', () => {
+  it('is the host of an address git speaks over the web', () => {
+    expect(remoteHost('https://github.com/alban/projet.git')).toBe('github.com')
+    expect(remoteHost('https://git.company.fr:8443/projet.git')).toBe('git.company.fr:8443')
+  })
+
+  /**
+   * An SSH remote answers nothing on purpose: its credentials are the machine's own key and
+   * agent, which the studio neither holds nor should. `git@host:owner/repo` is the shape most
+   * people paste, and it has no scheme for `URL` to read.
+   */
+  it.each(['git@github.com:alban/projet.git', 'ssh://git@github.com/alban/projet.git'])(
+    'is nothing for %s',
+    url => {
+      expect(remoteHost(url)).toBeNull()
+      expect(needsCredentials(url)).toBe(false)
     },
   )
 })

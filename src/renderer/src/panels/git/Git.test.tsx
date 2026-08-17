@@ -304,6 +304,128 @@ describe('the branch button', () => {
   })
 })
 
+describe('the server this project talks to', () => {
+  const AHEAD: GitRepository = {
+    kind: 'ready',
+    status: { ...CLEAN, upstream: 'origin/main', ahead: 2, behind: 1 },
+  }
+
+  const withRemote = (repository: GitRepository, overrides = {}) =>
+    installFakeBridge({
+      git: {
+        read: () => Promise.resolve(repository),
+        remotes: () => Promise.resolve([{ name: 'origin', url: 'https://github.com/a/b.git' }]),
+        ...overrides,
+      },
+    })
+
+  it('says what is waiting each way, and moves it', async () => {
+    const push = vi.fn(() => Promise.resolve(AHEAD))
+    withRemote(AHEAD, { push })
+    render(<Git />)
+
+    expect(await screen.findByText('2 à envoyer')).toBeTruthy()
+    expect(screen.getByText('1 à recevoir')).toBeTruthy()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }))
+    expect(push).toHaveBeenCalledWith(false)
+  })
+
+  /**
+   * The first push of a branch has nothing ahead to send and nothing to track. Refusing it there
+   * would leave no way to make the branch on the server at all.
+   */
+  it('offers the first push of a branch that tracks nothing', async () => {
+    const push = vi.fn(() => Promise.resolve(CLEAN_READY))
+    withRemote(CLEAN_READY, { push })
+    render(<Git />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Envoyer' }))
+
+    expect(push).toHaveBeenCalledWith(true)
+  })
+
+  it('asks where to send once there is a version and no server', async () => {
+    const addRemote = vi.fn(() => Promise.resolve(CLEAN_READY))
+    installFakeBridge({ git: { read: () => Promise.resolve(CLEAN_READY), addRemote } })
+    render(<Git />)
+
+    await userEvent.type(
+      await screen.findByRole('textbox', { name: 'Adresse du serveur' }),
+      'https://github.com/a/b.git',
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Relier' }))
+
+    expect(addRemote).toHaveBeenCalledWith('origin', 'https://github.com/a/b.git')
+  })
+})
+
+describe('a server that refused', () => {
+  const REFUSED: GitRepository = {
+    kind: 'failed',
+    reason: 'authentication',
+    detail: 'fatal: Authentication failed',
+  }
+
+  /**
+   * The token goes DOWN and never comes back: there is no channel that answers with one. Asked at
+   * the moment of the refusal rather than up front, which would be asking for a secret before it
+   * is needed, from somebody who may never push at all.
+   */
+  it('asks for a token, keeps it, and runs the refused send again', async () => {
+    const setCredentials = vi.fn(() => Promise.resolve())
+    const push = vi.fn(() => Promise.resolve(CLEAN_READY))
+    installFakeBridge({
+      git: {
+        read: () => Promise.resolve(REFUSED),
+        remotes: () => Promise.resolve([{ name: 'origin', url: 'https://github.com/a/b.git' }]),
+        setCredentials,
+        push,
+      },
+    })
+    render(<Git />)
+
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Nom d’utilisateur' }), 'alban')
+    await userEvent.type(screen.getByLabelText('Jeton'), 'ghp_secret')
+    await userEvent.click(screen.getByRole('button', { name: 'Retenir et réessayer' }))
+
+    await waitFor(() =>
+      expect(setCredentials).toHaveBeenCalledWith('github.com', 'alban', 'ghp_secret'),
+    )
+    await waitFor(() => expect(push).toHaveBeenCalled())
+  })
+
+  /** A screen being recorded is what a studio's screen often is. */
+  it('hides the token as it is typed', async () => {
+    installFakeBridge({
+      git: {
+        read: () => Promise.resolve(REFUSED),
+        remotes: () => Promise.resolve([{ name: 'origin', url: 'https://github.com/a/b.git' }]),
+      },
+    })
+    render(<Git />)
+
+    expect(await screen.findByLabelText('Jeton')).toHaveAttribute('type', 'password')
+  })
+
+  /**
+   * An SSH remote is answered by the machine's own key and agent. A token field there would be a
+   * question nothing does anything with.
+   */
+  it('offers no token field for a server reached over ssh', async () => {
+    installFakeBridge({
+      git: {
+        read: () => Promise.resolve(REFUSED),
+        remotes: () => Promise.resolve([{ name: 'origin', url: 'git@github.com:a/b.git' }]),
+      },
+    })
+    render(<Git />)
+
+    expect(await screen.findByText(/Le serveur distant a refusé vos identifiants/)).toBeTruthy()
+    expect(screen.queryByLabelText('Jeton')).toBeNull()
+  })
+})
+
 describe('a command git refused', () => {
   it('says why in the studio own words, and shows git line under it', async () => {
     panelOn({

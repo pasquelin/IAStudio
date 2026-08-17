@@ -98,3 +98,70 @@ const page = z.object({
 export function parseLogPage(limit: unknown, skip: unknown): { limit: number; skip: number } {
   return page.parse({ limit, skip })
 }
+
+/**
+ * What a remote is called. `origin` in all but the odd case, and git's own rules for a ref name
+ * cover the rest — including the leading dash that would otherwise be read as an option.
+ */
+const remoteName = z.string().max(100).refine(isBranchName)
+
+export function parseRemoteName(value: unknown): string {
+  return remoteName.parse(value)
+}
+
+/**
+ * Where a remote lives.
+ *
+ * Two shapes and no others, because a git URL can name a great deal more than a server. `ext::`
+ * and `file://` are the two worth naming: the first RUNS A COMMAND the URL contains, and the
+ * second turns a clone into a read of any path on the machine. Neither is something anybody
+ * types into a version panel, and both are how a pasted string becomes an execution.
+ *
+ * A leading dash is refused for the reason every argument here refuses one.
+ */
+const remoteUrl = z
+  .string()
+  .min(1)
+  .max(2048)
+  .refine(value => !value.startsWith('-'))
+  .refine(value => !/\p{Cc}/u.test(value))
+  .refine(value => /^https?:\/\/[^\s]+$/i.test(value) || /^(ssh:\/\/|[\w.-]+@)[^\s]+$/i.test(value))
+
+export function parseRemoteUrl(value: unknown): string {
+  return remoteUrl.parse(value)
+}
+
+/** The server a token belongs to. A host and nothing else — no scheme, no path, no credentials. */
+const host = z
+  .string()
+  .min(1)
+  .max(255)
+  .refine(value => /^[a-z0-9.-]+(:\d+)?$/i.test(value))
+
+export function parseHost(value: unknown): string {
+  return host.parse(value)
+}
+
+/**
+ * A username and a token on their way IN.
+ *
+ * Bounded and stripped of control characters, because both are written into the environment of a
+ * child process: a newline in a token would end the line the credential helper echoes and let
+ * whatever follows be read as the next field git asks for.
+ */
+const credential = z.object({
+  user: z
+    .string()
+    .min(1)
+    .max(200)
+    .refine(value => !/\p{Cc}/u.test(value)),
+  token: z
+    .string()
+    .min(1)
+    .max(4096)
+    .refine(value => !/\p{Cc}/u.test(value)),
+})
+
+export function parseCredential(user: unknown, token: unknown): { user: string; token: string } {
+  return credential.parse({ user, token })
+}

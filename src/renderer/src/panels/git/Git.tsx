@@ -1,10 +1,11 @@
 import { mdiSourceBranch } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { GIT_FAILURE_KEYS } from '@shared/domain/git'
+import { GIT_FAILURE_KEYS, remoteHost } from '@shared/domain/git'
 import { EmptyState } from '@/design/EmptyState'
 import { QuietNote } from '@/design/QuietNote'
 import { useGitStatus } from '@/hooks/useGitStatus'
 import { useGit } from '@/stores/git'
+import { CredentialField } from './CredentialField'
 import { GitReady } from './GitReady'
 
 /**
@@ -20,6 +21,8 @@ export function Git() {
   const repository = useGitStatus()
   const busy = useGit(state => state.busy)
   const initRepository = useGit(state => state.initRepository)
+  const remote = useGit(state => state.remote)
+  const host = remote ? remoteHost(remote.url) : null
 
   switch (repository.kind) {
     case 'no-project':
@@ -48,6 +51,13 @@ export function Git() {
       )
 
     case 'failed':
+      // The one refusal with a way out of its own: the server said no, and what it wants is a
+      // token. Only for a server that HAS a host — an SSH remote is answered by the machine's own
+      // key and agent, which no field here could stand in for.
+      if (repository.reason === 'authentication' && host !== null) {
+        return <CredentialField host={host} />
+      }
+
       return (
         <div className="flex flex-col gap-2 p-3">
           <QuietNote>{t(GIT_FAILURE_KEYS[repository.reason])}</QuietNote>

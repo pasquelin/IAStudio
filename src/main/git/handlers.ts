@@ -5,17 +5,27 @@ import type { ProjectStore } from '@main/project/store'
 import { gitVersionProbe } from './binary'
 import { openRepository } from './repository'
 import { createGitService, type GitService } from './service'
+import type { CredentialVault } from './credentials'
 import {
   parseBranchName,
   parseCommitHash,
   parseCommitMessage,
+  parseCredential,
   parseGitPath,
   parseGitPaths,
+  parseHost,
   parseLogPage,
   parseOptionalHash,
+  parseRemoteName,
+  parseRemoteUrl,
 } from './validation'
 
 export type GitHandlerDeps = {
+  /**
+   * Where a token is kept and read from. Injected because it needs `safeStorage` and a store on
+   * disk, neither of which exists outside a packaged application.
+   */
+  vault: CredentialVault
   /** Only what version control reads: which project is open, if any. */
   project: Pick<ProjectStore, 'current'>
   /** A binary the user named in the preferences, or nothing to take whatever is on the PATH. */
@@ -34,8 +44,14 @@ export type GitHandlerDeps = {
  * Every argument is parsed before it reaches a command. These are paths and names that become
  * arguments to a process that WRITES, and the renderer is the sandboxed side.
  */
-export function registerGitHandlers({ project, binaryPath, identity }: GitHandlerDeps): GitService {
+export function registerGitHandlers({
+  vault,
+  project,
+  binaryPath,
+  identity,
+}: GitHandlerDeps): GitService {
   const service = createGitService({
+    vault,
     projectPath: () => project.current()?.path ?? null,
     binaryPath,
     identity,
@@ -65,6 +81,20 @@ export function registerGitHandlers({ project, binaryPath, identity }: GitHandle
   handle(CHANNELS.gitBytes, (_event, path, ref) =>
     service.bytes(parseGitPath(path), parseOptionalHash(ref)),
   )
+  handle(CHANNELS.gitRemotes, () => service.remotes())
+  handle(CHANNELS.gitAddRemote, (_event, name, url) =>
+    service.addRemote(parseRemoteName(name), parseRemoteUrl(url)),
+  )
+  handle(CHANNELS.gitRemoveRemote, (_event, name) => service.removeRemote(parseRemoteName(name)))
+  handle(CHANNELS.gitFetch, () => service.fetch())
+  handle(CHANNELS.gitPull, () => service.pull())
+  handle(CHANNELS.gitPush, (_event, setUpstream) => service.push(setUpstream === true))
+  handle(CHANNELS.gitHasCredentials, (_event, host) => service.hasCredentials(parseHost(host)))
+  handle(CHANNELS.gitSetCredentials, (_event, host, user, token) => {
+    const credential = parseCredential(user, token)
+    service.setCredentials(parseHost(host), credential.user, credential.token)
+  })
+  handle(CHANNELS.gitClearCredentials, (_event, host) => service.clearCredentials(parseHost(host)))
 
   return service
 }

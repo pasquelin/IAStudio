@@ -23,7 +23,7 @@ import type {
   DocumentKind,
   DocumentWrite,
 } from './domain/document'
-import type { GitBranch, GitCommit, GitCommitFile, GitRepository } from './domain/git'
+import type { GitBranch, GitCommit, GitCommitFile, GitRemote, GitRepository } from './domain/git'
 import type { GitDiff } from './domain/gitDiff'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
@@ -125,6 +125,15 @@ export type Channels = {
   gitCommitFiles: 'git:commit-files'
   gitDiff: 'git:diff'
   gitBytes: 'git:bytes'
+  gitRemotes: 'git:remotes'
+  gitAddRemote: 'git:add-remote'
+  gitRemoveRemote: 'git:remove-remote'
+  gitFetch: 'git:fetch'
+  gitPull: 'git:pull'
+  gitPush: 'git:push'
+  gitHasCredentials: 'git:has-credentials'
+  gitSetCredentials: 'git:set-credentials'
+  gitClearCredentials: 'git:clear-credentials'
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
@@ -282,6 +291,15 @@ export const CHANNELS: Channels = {
   gitCommitFiles: 'git:commit-files',
   gitDiff: 'git:diff',
   gitBytes: 'git:bytes',
+  gitRemotes: 'git:remotes',
+  gitAddRemote: 'git:add-remote',
+  gitRemoveRemote: 'git:remove-remote',
+  gitFetch: 'git:fetch',
+  gitPull: 'git:pull',
+  gitPush: 'git:push',
+  gitHasCredentials: 'git:has-credentials',
+  gitSetCredentials: 'git:set-credentials',
+  gitClearCredentials: 'git:clear-credentials',
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
@@ -975,6 +993,25 @@ export type StudioBridge = {
      * process keeps: these cross the boundary and are held in a window, and a project holds video.
      */
     bytes: (path: string, ref: string | null) => Promise<Uint8Array | null>
+    remotes: () => Promise<GitRemote[]>
+    addRemote: (name: string, url: string) => Promise<GitRepository>
+    removeRemote: (name: string) => Promise<GitRepository>
+    /** Takes what the server has without touching the working tree. */
+    fetch: () => Promise<GitRepository>
+    pull: () => Promise<GitRepository>
+    /** `setUpstream` on the first push of a branch — the one that has nothing to track yet. */
+    push: (setUpstream: boolean) => Promise<GitRepository>
+    /**
+     * Whether a token is held for a host — and NOTHING else about it.
+     *
+     * There is no channel that answers with a token, and that absence is the point: invariant 1
+     * says the window asks whether it is authenticated, never what the credential is. The token
+     * goes down to the main process once and only ever comes back out inside the environment of
+     * a git command.
+     */
+    hasCredentials: (host: string) => Promise<boolean>
+    setCredentials: (host: string, user: string, token: string) => Promise<void>
+    clearCredentials: (host: string) => Promise<void>
   }
   dialog: {
     /**

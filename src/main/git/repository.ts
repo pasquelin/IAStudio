@@ -6,12 +6,14 @@ import {
   type GitCommit,
   type GitCommitFile,
   type GitIdentity,
+  type GitRemote,
   type GitStatus,
 } from '@shared/domain/git'
 import type { GitDiff } from '@shared/domain/gitDiff'
 import { parseUnifiedDiff } from '@shared/domain/gitDiff'
-import { exists, writeAtomic } from '@main/persistence'
+import { exists, writeAtomic, writeQueue } from '@main/persistence'
 import { blobAt, workingBlob } from './blob'
+import type { GitCredential } from './credentials'
 import { filesOf, LOG_FORMAT, parseLog, parseNameStatus } from './parse'
 
 export const GITIGNORE_FILE = '.gitignore'
@@ -44,14 +46,46 @@ export type Repository = {
   diff: (path: string, commit: string | null) => Promise<GitDiff>
   /** The bytes of a file at one version, or as it stands on disk when `ref` is `null`. */
   bytes: (path: string, ref: string | null) => Promise<Uint8Array | null>
+  remotes: () => Promise<GitRemote[]>
+  addRemote: (name: string, url: string) => Promise<void>
+  removeRemote: (name: string) => Promise<void>
+  /** Takes what the server has without touching the working tree. */
+  fetch: () => Promise<void>
+  pull: () => Promise<void>
+  /** `setUpstream` on the first push of a branch, which is the one that has nothing to track. */
+  push: (setUpstream: boolean) => Promise<void>
 }
+
+/**
+ * How git is handed a token: a helper that reads two variables out of its own environment.
+ *
+ * The environment and NOT the command line, which is the whole of the design. An argument is
+ * visible to every process listing on the machine and lands in whatever shell history or crash
+ * report happens to be watching; an environment variable of a child process is neither.
+ *
+ * The string is a constant — nothing from the user is interpolated into it — so the `!` that
+ * sends it through a shell adds no surface. `credential.helper=` empty first, on purpose: it
+ * clears whatever the machine has configured, so a system helper cannot answer before this one
+ * and hand git a credential for a different account.
+ */
+const CREDENTIAL_ARGS: readonly string[] = [
+  '-c',
+  'credential.helper=',
+  '-c',
+  'credential.helper=!f() { echo "username=${GIT_STUDIO_USER}"; echo "password=${GIT_STUDIO_TOKEN}"; }; f',
+]
 
 /**
  * Builds the port. THROWS when the binary named cannot be used — simple-git validates a custom
  * binary as the instance is built, and refuses any path holding a character outside its own list.
  * The caller turns that into the ordinary "no git" answer.
  */
-export function openRepository(root: string, binary?: string): Repository {
+export type RepositoryDeps = {
+  /** The token held for the host a remote lives on, or nothing — SSH answers nothing. */
+  credentials: (url: string) => GitCredential | null
+}
+
+export function openRepository(root: string, binary?: string, deps?: RepositoryDeps): Repository {
   const git = simpleGit({
     baseDir: root,
     /**
@@ -63,6 +97,9 @@ export function openRepository(root: string, binary?: string): Repository {
     maxConcurrentProcesses: 1,
     ...(binary === undefined ? {} : { binary }),
   })
+
+  /** One command that talks to a server at a time — see `reachOut` for why that is its own. */
+  const remoteQueue = writeQueue()
 
   return {
     root,
@@ -132,6 +169,76 @@ export function openRepository(root: string, binary?: string): Repository {
 
     bytes: (path, ref) =>
       ref === null ? workingBlob(root, path) : blobAt(root, ref, path, binary ?? 'git'),
+
+    remotes: async () =>
+      (await git.getRemotes(true)).map(remote => ({
+        name: remote.name,
+        // `fetch` and `push` can differ; the one shown is the one taken FROM, which is the one a
+        // token is asked for and the one every ordinary project has set to the same string.
+        url: remote.refs.fetch || remote.refs.push,
+      })),
+
+    addRemote: async (name, url) => {
+      await git.addRemote(name, url)
+    },
+
+    removeRemote: async name => {
+      await git.removeRemote(name)
+    },
+
+    fetch: () => reachOut(['fetch', '--prune']),
+    pull: () => reachOut(['pull', '--ff-only']),
+    push: setUpstream =>
+      reachOut(['push', ...(setUpstream ? ['--set-upstream', 'origin', 'HEAD'] : [])]),
+  }
+
+  /**
+   * Runs one command that talks to a server, with whatever credentials that server has.
+   *
+   * Serialised on its own, above simple-git's queue, and the reason is the environment: it is set
+   * on the INSTANCE, so two remote commands scheduled together could have the second's token in
+   * place when the first spawns. One at a time keeps set, spawn and reset in one piece.
+   *
+   * `GIT_TERMINAL_PROMPT=0` and an empty `GIT_ASKPASS` on every one of them. A studio window has
+   * no terminal to answer a prompt in, and git left to ask would hang for ever on a command the
+   * user would have no way to cancel — which is worse than the failure it is trying to avoid.
+   *
+   * `BatchMode=yes` says the same thing to ssh, and it has a cost worth stating: a key protected
+   * by a passphrase with no agent loaded fails here rather than asking. The alternative is the
+   * same silent hang, and the agent is what every ssh setup already has.
+   */
+  async function reachOut(args: readonly string[]): Promise<void> {
+    await remoteQueue.next(async () => {
+      const credential = deps?.credentials((await firstRemoteUrl(git)) ?? '') ?? null
+
+      git.env({
+        ...process.env,
+        GIT_TERMINAL_PROMPT: '0',
+        GIT_ASKPASS: '',
+        GIT_SSH_COMMAND: 'ssh -o BatchMode=yes',
+        ...(credential
+          ? { GIT_STUDIO_USER: credential.user, GIT_STUDIO_TOKEN: credential.token }
+          : {}),
+      })
+
+      try {
+        await git.raw([...(credential ? CREDENTIAL_ARGS : []), ...args])
+      } finally {
+        // The token leaves the instance the moment the command is done, so nothing that runs
+        // afterwards — a status, a log — carries it into a process it has no business being in.
+        git.env({ ...process.env, GIT_TERMINAL_PROMPT: '0' })
+      }
+    })
+  }
+}
+
+/** Where this project talks to, as far as a token is concerned. Nothing when it talks nowhere. */
+async function firstRemoteUrl(git: SimpleGit): Promise<string | null> {
+  try {
+    const [first] = await git.getRemotes(true)
+    return first ? first.refs.fetch || first.refs.push : null
+  } catch {
+    return null
   }
 }
 

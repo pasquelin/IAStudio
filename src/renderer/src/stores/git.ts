@@ -1,5 +1,11 @@
 import { create } from 'zustand'
-import type { GitBranch, GitCommit, GitCommitFile, GitRepository } from '@shared/domain/git'
+import type {
+  GitBranch,
+  GitCommit,
+  GitCommitFile,
+  GitRemote,
+  GitRepository,
+} from '@shared/domain/git'
 import type { GitDiff } from '@shared/domain/gitDiff'
 import { getBridge } from '@/services/bridge'
 
@@ -65,6 +71,22 @@ type GitState = {
   pick: (hash: string | null) => Promise<void>
   compare: (path: string, commit: string | null) => Promise<void>
   stopComparing: () => void
+  /**
+   * The server this project talks to, or nothing.
+   *
+   * The FIRST one, and the studio offers no way to make a second: a project with two servers is
+   * a situation git handles and a version panel would only obscure. Somebody who has one has a
+   * terminal too, and the panel goes on working around it.
+   */
+  remote: GitRemote | null
+  readRemotes: () => Promise<void>
+  addRemote: (name: string, url: string) => Promise<void>
+  fetch: () => Promise<void>
+  pull: () => Promise<void>
+  push: (setUpstream: boolean) => Promise<void>
+  /** Whether a token is held for a host. The token itself never comes back this way. */
+  hasCredentials: (host: string) => Promise<boolean>
+  setCredentials: (host: string, user: string, token: string) => Promise<void>
 }
 
 /**
@@ -107,6 +129,7 @@ export const useGit = create<GitState>()((set, get) => {
     amend: false,
     commits: [],
     historyEnded: false,
+    remote: null,
     picked: null,
     pickedFiles: [],
     compared: null,
@@ -172,5 +195,23 @@ export const useGit = create<GitState>()((set, get) => {
     },
 
     stopComparing: () => set({ compared: null, diff: null }),
+
+    readRemotes: async () => {
+      const [first] = (await getBridge()?.git.remotes()) ?? []
+      set({ remote: first ?? null })
+    },
+
+    addRemote: async (name, url) => {
+      await run(getBridge()?.git.addRemote(name, url))
+      await get().readRemotes()
+    },
+    fetch: () => run(getBridge()?.git.fetch()),
+    pull: () => run(getBridge()?.git.pull()),
+    push: setUpstream => run(getBridge()?.git.push(setUpstream)),
+
+    hasCredentials: async host => (await getBridge()?.git.hasCredentials(host)) ?? false,
+    setCredentials: async (host, user, token) => {
+      await getBridge()?.git.setCredentials(host, user, token)
+    },
   }
 })

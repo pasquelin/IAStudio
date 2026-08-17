@@ -117,6 +117,16 @@ const bridge: StudioBridge = {
     commitFiles: hash => ipcRenderer.invoke(CHANNELS.gitCommitFiles, hash),
     diff: (path, commit) => ipcRenderer.invoke(CHANNELS.gitDiff, path, commit),
     bytes: (path, ref) => ipcRenderer.invoke(CHANNELS.gitBytes, path, ref),
+    remotes: () => ipcRenderer.invoke(CHANNELS.gitRemotes),
+    addRemote: (name, url) => ipcRenderer.invoke(CHANNELS.gitAddRemote, name, url),
+    removeRemote: name => ipcRenderer.invoke(CHANNELS.gitRemoveRemote, name),
+    fetch: () => ipcRenderer.invoke(CHANNELS.gitFetch),
+    pull: () => ipcRenderer.invoke(CHANNELS.gitPull),
+    push: setUpstream => ipcRenderer.invoke(CHANNELS.gitPush, setUpstream),
+    hasCredentials: host => ipcRenderer.invoke(CHANNELS.gitHasCredentials, host),
+    setCredentials: (host, user, token) =>
+      ipcRenderer.invoke(CHANNELS.gitSetCredentials, host, user, token),
+    clearCredentials: host => ipcRenderer.invoke(CHANNELS.gitClearCredentials, host),
   },
   dialog: {
     pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),

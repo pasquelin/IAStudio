@@ -123,6 +123,39 @@ export type GitBinary = { found: false } | { found: true; version: string }
 /** A local branch. What it tracks belongs to the remote, and arrives with it. */
 export type GitBranch = { name: string; current: boolean }
 
+/** A server this project can send to and take from. `origin` in all but the odd case. */
+export type GitRemote = { name: string; url: string }
+
+/**
+ * The host a remote lives on, or nothing where the question does not arise.
+ *
+ * What it is FOR is deciding where a token belongs: one token per host, so a project on GitHub
+ * and one on a company server never see each other's. An SSH remote answers nothing on purpose —
+ * its credentials are the machine's own key and agent, which the studio neither holds nor should.
+ *
+ * `git@host:owner/repo` is SSH written the short way, and it is the shape most people paste. It
+ * has no scheme, so `URL` cannot read it and the studio must not try.
+ */
+export function remoteHost(url: string): string | null {
+  if (!/^https?:\/\//i.test(url)) return null
+
+  try {
+    return new URL(url).host
+  } catch {
+    return null
+  }
+}
+
+/** Whether git will ask the studio for credentials, rather than the system's own ssh. */
+export function needsCredentials(url: string): boolean {
+  return remoteHost(url) !== null
+}
+
+/** Whether there is anything to send or take — what greys the two buttons. */
+export function isSynced(status: GitStatus): boolean {
+  return status.ahead === 0 && status.behind === 0
+}
+
 /**
  * One recorded version.
  *

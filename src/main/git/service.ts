@@ -6,12 +6,16 @@ import type {
   GitIdentity,
   GitRepository,
 } from '@shared/domain/git'
+import { remoteHost, type GitRemote } from '@shared/domain/git'
 import type { GitDiff } from '@shared/domain/gitDiff'
 import { detectGit, type VersionProbe } from './binary'
+import type { CredentialVault } from './credentials'
 import { failureOf, safeMessage } from './parse'
-import type { Repository } from './repository'
+import type { Repository, RepositoryDeps } from './repository'
 
 export type GitServiceDeps = {
+  /** Tokens for the servers this studio pushes to. Read here, never past the boundary. */
+  vault: CredentialVault
   /** The open project's folder, or nothing when none is open. */
   projectPath: () => string | null
   /** A binary the user named in the preferences, or nothing to take whatever is on the PATH. */
@@ -20,7 +24,7 @@ export type GitServiceDeps = {
   identity: () => GitIdentity | undefined
   probe: (binary?: string) => VersionProbe
   /** Throws for a binary simple-git will not accept — see `openRepository`. */
-  open: (root: string, binary?: string) => Repository
+  open: (root: string, binary: string | undefined, deps: RepositoryDeps) => Repository
 }
 
 export type GitService = {
@@ -41,6 +45,16 @@ export type GitService = {
   /** What changed in one file. `empty` covers both "nothing" and "git could not say". */
   diff: (path: string, commit: string | null) => Promise<GitDiff>
   bytes: (path: string, ref: string | null) => Promise<Uint8Array | null>
+  remotes: () => Promise<GitRemote[]>
+  addRemote: (name: string, url: string) => Promise<GitRepository>
+  removeRemote: (name: string) => Promise<GitRepository>
+  fetch: () => Promise<GitRepository>
+  pull: () => Promise<GitRepository>
+  push: (setUpstream: boolean) => Promise<GitRepository>
+  /** Whether a token is held for the host a URL lives on. Never the token. */
+  hasCredentials: (host: string) => boolean
+  setCredentials: (host: string, user: string, token: string) => void
+  clearCredentials: (host: string) => void
   /** Drops what was detected and held, so a changed preference is read afresh. */
   forget: () => void
 }
@@ -59,6 +73,7 @@ export type GitService = {
  * two panels could draw a repository that is already out of date.
  */
 export function createGitService({
+  vault,
   projectPath,
   binaryPath,
   identity,
@@ -82,7 +97,18 @@ export function createGitService({
     if (held?.root === root && held.binary === binary) return held.repository
 
     try {
-      held = { root, binary, repository: open(root, binary) }
+      held = {
+        root,
+        binary,
+        repository: open(root, binary, {
+          // An SSH remote has no host as far as a token goes, and answers nothing: its
+          // credentials are the machine's own key and agent, which the studio does not hold.
+          credentials: url => {
+            const host = remoteHost(url)
+            return host === null ? null : vault.read(host)
+          },
+        }),
+      }
       return held.repository
     } catch {
       held = null
@@ -156,6 +182,15 @@ export function createGitService({
       perform(repository => repository.commit(message, amend, identity())),
     createBranch: name => perform(repository => repository.createBranch(name)),
     checkout: name => perform(repository => repository.checkout(name)),
+    addRemote: (name, url) => perform(repository => repository.addRemote(name, url)),
+    removeRemote: name => perform(repository => repository.removeRemote(name)),
+    fetch: () => perform(repository => repository.fetch()),
+    pull: () => perform(repository => repository.pull()),
+    push: setUpstream => perform(repository => repository.push(setUpstream)),
+
+    hasCredentials: host => vault.has(host),
+    setCredentials: (host, user, token) => vault.set(host, { user, token }),
+    clearCredentials: host => vault.clear(host),
 
     /**
      * The three reads that answer with DATA rather than with a state.
@@ -166,6 +201,7 @@ export function createGitService({
      * twice, in two panels, over one folder, would be saying it twice.
      */
     branches: () => data(repository => repository.branches()),
+    remotes: () => data(repository => repository.remotes()),
     log: (limit, skip) => data(repository => repository.log(limit, skip)),
     commitFiles: hash => data(repository => repository.commitFiles(hash)),
 

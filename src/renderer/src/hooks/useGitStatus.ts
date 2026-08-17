@@ -22,10 +22,15 @@ import { useGit } from '@/stores/git'
 export function useGitStatus(): GitRepository {
   const repository = useGit(state => state.repository)
   const refresh = useGit(state => state.refresh)
+  const readRemotes = useGit(state => state.readRemotes)
 
   useEffect(() => {
     const ask = (): void => {
       void refresh()
+      // Read on the same three signals rather than on its own: a remote is added far less often
+      // than a file changes, but a project opened is a different repository entirely — and the
+      // one it replaced may well have talked to a different server.
+      void readRemotes()
     }
 
     ask()
@@ -40,7 +45,7 @@ export function useGitStatus(): GitRepository {
       offFolder?.()
       window.removeEventListener('focus', ask)
     }
-  }, [refresh])
+  }, [refresh, readRemotes])
 
   return repository
 }

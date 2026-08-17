@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { GitStatus } from '@shared/domain/git'
+import type { CredentialVault } from './credentials'
 import { createGitService, type GitServiceDeps } from './service'
 import type { Repository } from './repository'
 
@@ -29,12 +30,27 @@ function repository(overrides: Partial<Repository> = {}): Repository {
     commitFiles: () => Promise.resolve([]),
     diff: () => Promise.resolve({ kind: 'empty' }),
     bytes: () => Promise.resolve(null),
+    remotes: () => Promise.resolve([]),
+    addRemote: () => Promise.resolve(),
+    removeRemote: () => Promise.resolve(),
+    fetch: () => Promise.resolve(),
+    pull: () => Promise.resolve(),
+    push: () => Promise.resolve(),
     ...overrides,
   }
 }
 
+/** No token for any host, which is what a repository with no remote is looking at. */
+const emptyVault: CredentialVault = {
+  has: () => false,
+  set: () => {},
+  clear: () => {},
+  read: () => null,
+}
+
 function service(overrides: Partial<GitServiceDeps> = {}) {
   return createGitService({
+    vault: emptyVault,
     projectPath: () => '/projects/Mon projet',
     binaryPath: () => undefined,
     identity: () => undefined,
