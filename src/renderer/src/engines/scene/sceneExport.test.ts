@@ -1,4 +1,5 @@
 import {
+  AnimationClip,
   Bone,
   BoxGeometry,
   CompressedTexture,
@@ -12,6 +13,7 @@ import {
   SkinnedMesh,
   Texture,
   Vector3,
+  VectorKeyframeTrack,
   type Object3D,
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
@@ -22,6 +24,7 @@ import { exportObjects, placedCopy } from './sceneExport'
 type GltfFile = {
   meshes?: { name?: string }[]
   nodes?: { name?: string }[]
+  animations?: { name?: string; channels?: { target?: { path?: string } }[] }[]
 }
 
 async function gltfOf(objects: Parameters<typeof exportObjects>[0]): Promise<GltfFile> {
@@ -345,5 +348,50 @@ describe('placedCopy of a rigged model', () => {
     expect(bone).not.toBe(source.skeleton.bones[0])
     // The bone the copy is bound to has to be IN the copy: an exporter walks the subtree.
     expect(copy.children).toContain(bone)
+  })
+})
+
+/**
+ * The exporter writes NOTHING of an animation it was not handed, and it was handed none: a scene
+ * animated in the studio and a model that arrived animated both left as still poses. Measured
+ * before it was fixed — `parseAsync` was called with `{ binary }` alone.
+ */
+describe('exportObjects and the animation a reader plays', () => {
+  const walking = (object: Object3D, target: Object3D): void => {
+    object.animations = [
+      new AnimationClip('Walk', 1, [
+        new VectorKeyframeTrack(`${target.uuid}.position`, [0, 1], [0, 0, 0, 1, 0, 0]),
+      ]),
+    ]
+  }
+
+  it('carries the clips a loaded model brought with it', async () => {
+    const model = named('rig')
+    walking(model, model)
+
+    const file = await gltfOf([model])
+
+    expect(file.animations?.map(one => one.name)).toEqual(['Walk'])
+  })
+
+  it('carries the document’s own animation, built from the copies', async () => {
+    const box = named('box-1')
+    const bytes = await exportObjects([box], 'gltf', {
+      // The copy is what the file holds, so the clip has to name that — never the object on screen.
+      clipsFor: copies => [
+        new AnimationClip('Scenario', 2, [
+          new VectorKeyframeTrack(`${copies[0]?.uuid}.position`, [0, 2], [0, 0, 0, 5, 0, 0]),
+        ]),
+      ],
+    })
+    const file = JSON.parse(new TextDecoder().decode(bytes)) as GltfFile
+
+    expect(file.animations?.map(one => one.name)).toEqual(['Scenario'])
+    expect(file.animations?.[0]?.channels?.[0]?.target?.path).toBe('translation')
+  })
+
+  /** A still scene must not gain an empty animation, which every reader would list as one. */
+  it('writes no animation for a scene that holds none', async () => {
+    expect((await gltfOf([named('box-1')])).animations).toBeUndefined()
   })
 })

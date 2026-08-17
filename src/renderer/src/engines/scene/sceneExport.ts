@@ -1,5 +1,6 @@
 import {
   DirectionalLight,
+  type AnimationClip,
   Group,
   Object3D,
   SpotLight,
@@ -78,12 +79,28 @@ export type ExportOptions = {
   nameOf?: (id: string) => string | undefined
   /** Injected by the tests: jsdom has no WebGL, so nothing can decode a compressed texture. */
   decoder?: TextureDecoder
+  /**
+   * The document's own animation, built from the COPIES — the file holds those, not the objects
+   * on screen. Called before the copies are renamed, so each still wears the node id.
+   *
+   * The clips a loaded model brought are not asked for here: they ride on the objects themselves
+   * and `clone` carries them over, so they are collected from the copies directly.
+   */
+  clipsFor?: (copies: readonly Object3D[]) => AnimationClip[]
+}
+
+/** The clips the copied models brought with them, gathered wherever they hang in the subtree. */
+function clipsIn(roots: readonly Object3D[]): AnimationClip[] {
+  const found: AnimationClip[] = []
+  for (const root of roots) root.traverse(child => found.push(...child.animations))
+
+  return found
 }
 
 export async function exportObjects(
   objects: readonly Object3D[],
   format: ExportFormat,
-  { nameOf, decoder }: ExportOptions = {},
+  { nameOf, decoder, clipsFor }: ExportOptions = {},
 ): Promise<Uint8Array> {
   // Said rather than written: both exporters default to `onlyVisible`, so a hidden node used to
   // produce a valid, empty file — and nothing on screen distinguished that from a success.
@@ -94,8 +111,13 @@ export async function exportObjects(
   const owned = decoder ? null : ownedDecoder()
 
   try {
-    const roots = objects.map(object => placedCopy(object, nameOf))
-    return await write(roots, format, decoder ?? owned ?? ownedDecoder())
+    const roots = objects.map(object => placedCopy(object))
+    // BEFORE the rename, which is what lets a caller find a node by the id it still wears. The
+    // baked clips name their objects by uuid, so renaming afterwards cannot unbind them.
+    const animations = [...clipsIn(roots), ...(clipsFor?.(roots) ?? [])]
+    if (nameOf) for (const root of roots) rename(root, nameOf)
+
+    return await write(roots, format, decoder ?? owned ?? ownedDecoder(), animations)
   } finally {
     owned?.dispose()
   }
@@ -105,8 +127,9 @@ function write(
   roots: readonly Object3D[],
   format: ExportFormat,
   decoder: TextureDecoder,
+  animations: readonly AnimationClip[],
 ): Promise<Uint8Array> {
-  if (format !== 'usdz') return toGltf(roots, format, decoder)
+  if (format !== 'usdz') return toGltf(roots, format, decoder, animations)
 
   const exporter = new USDZExporter()
   exporter.setTextureUtils(decoder)
@@ -124,10 +147,7 @@ function write(
  * A copy standing where the original stands in the world. Geometries and materials are shared
  * rather than duplicated — `clone` keeps the references — so the copy costs objects, not buffers.
  */
-export function placedCopy(
-  object: Object3D,
-  nameOf?: (id: string) => string | undefined,
-): Object3D {
+export function placedCopy(object: Object3D): Object3D {
   // `SkeletonUtils.clone` rather than `clone`: `SkinnedMesh.copy` keeps the ORIGINAL's skeleton,
   // whose bones live outside the copied subtree. glTF then writes `"joints":[null,null]` — a file
   // no viewer opens — and this one call rebinds each copied mesh onto the copied bones.
@@ -142,7 +162,6 @@ export function placedCopy(
   copy.updateMatrix()
 
   dropOverlays(copy)
-  if (nameOf) rename(copy, nameOf)
   return copy
 }
 
@@ -193,6 +212,7 @@ async function toGltf(
   roots: readonly Object3D[],
   format: Exclude<ExportFormat, 'usdz'>,
   decoder: TextureDecoder,
+  animations: readonly AnimationClip[],
 ): Promise<Uint8Array> {
   const binary = format === 'glb'
   const exporter = new GLTFExporter()
@@ -200,7 +220,11 @@ async function toGltf(
 
   // An array, not a wrapper group: `GLTFExporter` takes several roots, and wrapping them would
   // add a node the document never held.
-  const result = await exporter.parseAsync([...roots], { binary })
+  //
+  // `animations` is passed rather than left out, and that is the whole point of this option: the
+  // exporter writes NOTHING of an animation it was not handed — a scene animated in the studio,
+  // and a model that arrived animated, both left as still poses.
+  const result = await exporter.parseAsync([...roots], { binary, animations: [...animations] })
 
   if (result instanceof ArrayBuffer) return new Uint8Array(result)
   // `.gltf` is JSON, and what a text file holds is its bytes: the encoding is the writer's, and
