@@ -1,5 +1,5 @@
 import type { Asset } from '@shared/domain/asset'
-import { openDocument } from '@/app/dockview-api'
+import { openDocument } from '@/app/dockviewApi'
 import { reportFailure } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
 import { documentForAsset, useDocuments } from '@/stores/documents'

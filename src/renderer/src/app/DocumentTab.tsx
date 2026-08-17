@@ -8,8 +8,8 @@ import { InlineRename } from '@/design/InlineRename'
 import { renameDocument } from '@/helpers/rename'
 import { workspaceById, workspaceLabelKey } from '@/helpers/workspaces'
 import { useDocuments } from '@/stores/documents'
-import { closeTab } from './close-tab'
-import { openDocumentTabMenu } from './DocumentTabMenu'
+import { closeTab } from './closeTab'
+import { openDocumentTabMenu } from './documentTabMenu'
 import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
 
 /**

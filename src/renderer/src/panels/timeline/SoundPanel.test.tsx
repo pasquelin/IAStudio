@@ -13,7 +13,7 @@ const DOCUMENT = 'take-1'
 
 const tracksOf = () => sequenceOf(useSequences.getState(), DOCUMENT).tracks
 
-/** What `document-io` installs when a take is opened — the panel itself installs nothing. */
+/** What `documentIo` installs when a take is opened — the panel itself installs nothing. */
 function openTake(): void {
   installDocument(DOCUMENT, 'audio')
   useSequences.getState().ensure(DOCUMENT, () => EMPTY_SOUND_SEQUENCE)
@@ -43,7 +43,7 @@ describe('the sound montage of a take', () => {
   /**
    * Nothing at all until the document is filled, and that is the point: the montage store answers
    * with the SEQUENCE default — which carries a picture track — for any id it has never seen. A
-   * panel installing its own default beside `document-io` would show that montage while the file
+   * panel installing its own default beside `documentIo` would show that montage while the file
    * was still in flight, and the read landing after would replace whatever had been dropped on it.
    */
   it('shows nothing until the document itself is installed', () => {

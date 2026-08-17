@@ -9,7 +9,7 @@ import { useProject } from './project'
 import { useSettings } from './settings'
 
 const closeOrphanTabs = vi.hoisted(() => vi.fn())
-vi.mock('@/app/orphan-tabs', () => ({ closeOrphanTabs }))
+vi.mock('@/app/orphanTabs', () => ({ closeOrphanTabs }))
 
 const MANIFEST = { version: 1, name: 'demo', createdAt: '', updatedAt: '' }
 

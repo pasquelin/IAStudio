@@ -1,11 +1,11 @@
 import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSettings } from '@/stores/settings'
-import * as documentIo from '@/app/document-io'
+import * as documentIo from '@/app/documentIo'
 import { AUTOSAVE_INTERVAL_MS, useAutosave } from './useAutosave'
 
 /**
- * The pass itself is covered by `document-io.test.ts`; what is only here is the SCHEDULE — that
+ * The pass itself is covered by `documentIo.test.ts`; what is only here is the SCHEDULE — that
  * a slow pass is never started twice, and that turning the setting off stops the clock.
  */
 describe('useAutosave', () => {

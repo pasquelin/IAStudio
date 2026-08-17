@@ -10,7 +10,7 @@ import {
   setDockviewApi,
   setDocumentTitle,
   showWorkspace,
-} from './dockview-api'
+} from './dockviewApi'
 
 const scene: DocumentDescriptor = {
   id: 'doc-1',

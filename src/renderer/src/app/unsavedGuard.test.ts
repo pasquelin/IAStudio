@@ -7,11 +7,11 @@ import { forgetReportedFailures } from '@/services/diagnostics'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useScenes } from '@/stores/scenes'
-import { unsavedDocumentIds } from './document-io'
-import { guardUnsavedWork } from './unsaved-guard'
+import { unsavedDocumentIds } from './documentIo'
+import { guardUnsavedWork } from './unsavedGuard'
 
 // The real one needs a live Dockview; this file only checks what the guard asks of the document.
-vi.mock('./dockview-api', () => ({ closePanel: vi.fn() }))
+vi.mock('./dockviewApi', () => ({ closePanel: vi.fn() }))
 
 const box = meshNode('box-1')
 

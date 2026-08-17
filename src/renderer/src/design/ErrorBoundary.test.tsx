@@ -81,7 +81,7 @@ describe('ErrorBoundary', () => {
     expect(screen.queryByText('Ce panneau a rencontré une erreur.')).not.toBeInTheDocument()
   })
 
-  // What it catches reaches the log through the root, never from here: `app/root-errors.test.tsx`
+  // What it catches reaches the log through the root, never from here: `app/rootErrors.test.tsx`
   // mounts this very boundary and asserts the entry that crosses.
   it('renders the children again after a retry, once they stop throwing', async () => {
     // Outside the component on purpose: the boundary unmounts what threw, so state held

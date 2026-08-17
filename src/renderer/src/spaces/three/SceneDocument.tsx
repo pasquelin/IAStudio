@@ -89,7 +89,7 @@ function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
  * already in the selection — a right-click on one of six must not shrink it to one.
  *
  * No rename row: a viewport draws no name to type over. `i18next.t` rather than the hook's, for
- * the reason `document-io` reads it that way — this runs from an engine callback, outside any
+ * the reason `documentIo` reads it that way — this runs from an engine callback, outside any
  * render, and the singleton is always the language in force.
  */
 function openNodeMenu(documentId: string, nodeId: string): void {

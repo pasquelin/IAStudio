@@ -1,5 +1,5 @@
 import type { WorkspaceId } from '@shared/domain/workspace'
-import { createDocumentIn } from '@/app/new-document'
+import { createDocumentIn } from '@/app/newDocument'
 import { useLayouts } from '@/stores/layouts'
 
 /**

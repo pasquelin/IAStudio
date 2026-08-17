@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { DocumentNameDialog } from './DocumentNameDialog'
-import { mountedDocumentNamer, type DocumentNameRequest } from './document-name'
+import { mountedDocumentNamer, type DocumentNameRequest } from './documentName'
 
 const HELD = [{ id: 'held', fileName: 'Niveau.scene' }]
 

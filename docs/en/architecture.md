@@ -434,7 +434,7 @@ undoes the gain while breaking nothing visible — the worst kind of regression,
 stopwatch sees.
 
 **The panels went out in their turn**, and that is what shrank the neighbours list.
-`app/tool-components.ts` used to import them all outright; it now declares, per panel, **the
+`app/toolComponents.ts` used to import them all outright; it now declares, per panel, **the
 module to load and what its header does** — that second half is needed, because the title row lays
 itself out on the first paint and a separator arriving a frame later would shift a row already on
 screen. Measured at the same commit on both sides, preloads counted, no sourcemaps:
@@ -443,7 +443,7 @@ screen. Measured at the same commit on both sides, preloads counted, no sourcema
 > **A glob on the folder would remove the copy of each panel's name, and it was written then taken
 > back out.** `eager-graph.test.ts` walks **static** imports: a glob is invisible to it, and the
 > very guard that watches this property would have stayed green whatever the glob did to the entry
-> chunk. The copy stays, and `tool-components.test.ts` holds it — a `layers` naming the meshes
+> chunk. The copy stays, and `toolComponents.test.ts` holds it — a `layers` naming the meshes
 > module would swap the two in silence.
 
 **Two neighbours remain**, and neither is an editor: they are helpers something on the first
@@ -741,7 +741,7 @@ leave a truncated document where the work was.
 The body belongs to the space that wrote it: the main process never reads into it, it stamps an
 envelope and hands it back untouched. A space that learns to save therefore needs no channel of
 its own. **All six kinds can write themselves today** — image, scene, sequence, audio, skybox and
-texture, declared in one place, `IO_BY_KIND` in `app/document-io.ts`. A kind absent from
+texture, declared in one place, `IO_BY_KIND` in `app/documentIo.ts`. A kind absent from
 that table has a Save that does nothing, rather than one that writes an empty body.
 
 ---

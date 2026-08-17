@@ -1,5 +1,5 @@
 import type { CommandId } from '@shared/domain/command'
-import { saveDocument, saveDocumentAs } from '@/app/document-io'
+import { saveDocument, saveDocumentAs } from '@/app/documentIo'
 import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'

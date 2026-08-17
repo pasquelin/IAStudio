@@ -6,7 +6,7 @@ export type SoundPanelProps = { documentId: string }
 /**
  * The sound montage of a take: the same montage the Video workspace shows, with sound only.
  *
- * It installs nothing itself, and waits instead. `document-io` is what fills a document — from
+ * It installs nothing itself, and waits instead. `documentIo` is what fills a document — from
  * the file when there is one, from `EMPTY_SOUND_SEQUENCE` when there is not — and a panel posting
  * its own default beside it would be a second owner of the same state: the montage would be
  * usable while the file was still in flight, and the read landing after would replace whatever

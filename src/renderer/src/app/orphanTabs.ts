@@ -1,6 +1,6 @@
 import { panelIds, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
-import { closePanel } from './dockview-api'
+import { closePanel } from './dockviewApi'
 
 /**
  * Closes the tabs of documents nothing can open any more — the other half of `refresh`, which

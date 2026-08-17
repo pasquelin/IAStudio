@@ -143,7 +143,7 @@ describe('the opening chunk', () => {
     expect([...unresolved]).toEqual([])
     expect(packages).toContain('react')
     expect(packages).toContain('dockview-react')
-    expect(files).toContain('./app/tool-components.ts')
+    expect(files).toContain('./app/toolComponents.ts')
     expect(files).toContain('../../shared/domain/tool.ts')
     // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
     // point and past the shell, or every negative assertion below passes on an empty graph.
@@ -222,7 +222,7 @@ describe('the opening chunk', () => {
   })
 
   /**
-   * Deferred by `app/tool-components.ts` on 9 August: every panel of the table, the home screen's
+   * Deferred by `app/toolComponents.ts` on 9 August: every panel of the table, the home screen's
    * own included. Stated over the whole folder, so a panel added tomorrow cannot land eager with
    * the guard still green.
    *

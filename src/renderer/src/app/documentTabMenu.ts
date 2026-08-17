@@ -2,9 +2,9 @@ import { mdiClose, mdiCloseBoxMultipleOutline, mdiRenameOutline, mdiTrashCanOutl
 import type { TFunction } from 'i18next'
 import { showContextMenu } from '@/helpers/contextMenu'
 import { reportFailure } from '@/services/diagnostics'
-import { closeTab } from './close-tab'
-import { closeDocument, deleteDocument } from './document-io'
-import { openPanelIds } from './dockview-api'
+import { closeTab } from './closeTab'
+import { closeDocument, deleteDocument } from './documentIo'
+import { openPanelIds } from './dockviewApi'
 
 export type DocumentTabMenuProps = {
   documentId: string

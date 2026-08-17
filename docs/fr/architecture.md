@@ -446,7 +446,7 @@ y penser défait le gain sans rien casser de visible — le pire des régression
 voit qu’au chronomètre.
 
 **Les panneaux sont sortis à leur tour**, et c’est ce qui a rétréci la liste des voisins.
-`app/tool-components.ts` les importait tous d’un coup ; il déclare désormais, par panneau, **le
+`app/toolComponents.ts` les importait tous d’un coup ; il déclare désormais, par panneau, **le
 module à charger et ce que son en-tête fait** — cette seconde moitié est nécessaire, parce que la
 ligne de titre se dispose au premier rendu et qu’un séparateur qui arriverait une frame plus tard
 décalerait une rangée déjà à l’écran. Mesuré sur le même commit des deux côtés, préchargés
@@ -455,7 +455,7 @@ comptés, sans sourcemaps : **2 331 395 → 2 081 385 octets, −250 010, soit �
 > **Un glob sur le dossier supprimerait la copie du nom de chaque panneau, et il a été écrit puis
 > retiré.** `eager-graph.test.ts` marche les imports **statiques** : un glob lui est invisible, et
 > la garde qui surveille précisément cette propriété serait restée verte quoi que le glob fasse au
-> chunk d’entrée. La copie reste, et `tool-components.test.ts` la tient — un `layers` qui
+> chunk d’entrée. La copie reste, et `toolComponents.test.ts` la tient — un `layers` qui
 > nommerait le module des mailles échangerait les deux en silence.
 
 **Il reste deux voisins**, et aucun n’est un éditeur : ce sont des helpers que quelque chose du
@@ -770,7 +770,7 @@ coupure en cours d’écriture ne laisse jamais un document tronqué là où ét
 Le corps du fichier appartient à l’espace qui l’a écrit : le processus principal ne le lit pas, il
 l’estampille et le rend tel quel. Un espace qui apprend à s’enregistrer n’a donc pas de canal à
 lui. **Les six genres savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et
-matière, déclarés en un seul endroit, `IO_BY_KIND` dans `app/document-io.ts`. Un genre absent de
+matière, déclarés en un seul endroit, `IO_BY_KIND` dans `app/documentIo.ts`. Un genre absent de
 cette table a un Enregistrer qui ne fait rien, plutôt qu’un qui écrit un corps vide.
 
 ---

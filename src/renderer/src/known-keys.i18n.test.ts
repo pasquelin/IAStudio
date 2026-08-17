@@ -85,7 +85,7 @@ function keysIn(
 ): { keys: { key: string; line: number }[]; filled: Interpolated[] } {
   // No `ScriptKind`: TypeScript reads it off the name, and forcing TSX on a `.ts` was worse than
   // useless — `const f = <T,>(x: T) => x` opens a tag, the parser drops into error recovery, and
-  // nothing after it is visited. Measured on this glob: 697 nodes of `app/document-io.ts` seen
+  // nothing after it is visited. Measured on this glob: 697 nodes of `app/documentIo.ts` seen
   // out of 1653.
   const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true)
   const keys: { key: string; line: number }[] = []
@@ -188,7 +188,7 @@ describe('every key the renderer names outright', () => {
    * costliest defect of all, a raw key on screen, was reading half of three modules.
    */
   it('reads a module whose generic arrow used to open a tag', () => {
-    // Without the comma, which is how `app/document-io.ts:105` writes it — `<T,>` stays a
+    // Without the comma, which is how `app/documentIo.ts:105` writes it — `<T,>` stays a
     // generic even in TSX, so a probe using it would pass whatever the mode.
     const code = "const asIs = <S>(state: S): unknown => state\nconst title = t('panels.assets')"
 
