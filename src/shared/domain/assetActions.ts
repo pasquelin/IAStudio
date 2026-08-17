@@ -1,4 +1,4 @@
-import { ASSET_TYPES } from './asset'
+import { ASSET_SEARCH_LIMIT_MAX, ASSET_TYPES } from './asset'
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 
 const ASSET_IDS: ActionField = {
@@ -55,7 +55,9 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
         labelKey: 'assistant.fields.limit',
         required: false,
         min: 1,
-        max: 500,
+        // The bound the main process holds this action to: `assets.search` reaches
+        // `parseAssetQuery`, which REFUSES past it rather than trimming.
+        max: ASSET_SEARCH_LIMIT_MAX,
       },
       {
         key: 'offset',

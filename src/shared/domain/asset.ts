@@ -437,6 +437,13 @@ export function hasSound(asset: Asset | null): boolean {
  */
 export const ASSET_PATHS_MAX = 2000
 
+/**
+ * The widest `limit` one `AssetQuery` may ask for. Read on both sides like `ASSET_PATHS_MAX`: the
+ * main process REFUSES a larger one rather than trimming it, so a caller that cuts its reads into
+ * batches has to know where the refusal starts.
+ */
+export const ASSET_SEARCH_LIMIT_MAX = 500
+
 export type AssetQuery = {
   type?: AssetType
   /**
@@ -491,6 +498,7 @@ export type AssetQuery = {
    * reaches is a branch nothing tests.
    */
   generated?: true
+  /** Bounded by `ASSET_SEARCH_LIMIT_MAX`, past which the query is refused rather than cut. */
   limit?: number
   offset?: number
 }

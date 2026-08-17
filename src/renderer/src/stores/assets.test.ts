@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Asset, AssetQuery } from '@shared/domain/asset'
+import { ASSET_SEARCH_LIMIT_MAX, type Asset, type AssetQuery } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { assetsById, forgetRememberedAssets, useAssets } from './assets'
 
@@ -215,6 +215,77 @@ describe('reading the catalogue a page at a time', () => {
     await useAssets.getState().refresh()
 
     expect(useAssets.getState().items).toHaveLength(400)
+  })
+
+  // `refresh` runs on every catalogue event, and each read is a synchronous SQLite query on the
+  // process every window shares: a reader at row 400 paid two to learn one page had moved.
+  it('re-reads a shelf of two pages in one query rather than two', async () => {
+    const asked = catalogueOf(1200)
+    // The page count lives in the store's closure, where no `setState` reaches it and where it
+    // outlives a case. A change of space is the only seam from outside that puts it back to one.
+    useAssets.getState().setScope(['image'])
+    await useAssets.getState().refresh()
+    await useAssets.getState().loadMore()
+    const before = asked.length
+
+    await useAssets.getState().refresh()
+
+    expect(asked.length - before).toBe(1)
+    expect(asked[before]).toMatchObject({ offset: 0, limit: 400 })
+    expect(useAssets.getState().items).toHaveLength(400)
+  })
+
+  // The bound is the main process's, and it refuses rather than trims: past it the read has to
+  // be cut, and cut as few times as the bound allows.
+  it('cuts a shelf wider than one query at the bound the main process refuses past', async () => {
+    const asked = catalogueOf(1200)
+    useAssets.getState().setScope(['image'])
+    await useAssets.getState().refresh()
+    for (let page = 0; page < 4; page += 1) await useAssets.getState().loadMore()
+    const before = asked.length
+
+    await useAssets.getState().refresh()
+
+    expect(asked.slice(before)).toMatchObject([
+      { limit: ASSET_SEARCH_LIMIT_MAX, offset: 0 },
+      { limit: ASSET_SEARCH_LIMIT_MAX, offset: ASSET_SEARCH_LIMIT_MAX },
+    ])
+    expect(useAssets.getState().items).toHaveLength(1000)
+    expect(useAssets.getState().hasMore).toBe(true)
+  })
+
+  // 200 rows for a read that asked 400. Read as full against `LOCAL_PAGE`, the shelf believes a
+  // page more is waiting and spends a SECOND query to find nothing — which is what is counted
+  // here: the end state alone is the same either way, only the cost differs.
+  it('says nothing more is coming when a wide read came back short', async () => {
+    catalogueOf(1200)
+    useAssets.getState().setScope(['image'])
+    await useAssets.getState().refresh()
+    await useAssets.getState().loadMore()
+
+    // The catalogue shrank between two events — a selection removed while the reader sat there.
+    const asked = catalogueOf(200)
+    await useAssets.getState().refresh()
+
+    expect(asked).toHaveLength(1)
+    expect(useAssets.getState().items).toHaveLength(200)
+    expect(useAssets.getState().hasMore).toBe(false)
+  })
+
+  /**
+   * Without the floor under the page count, an empty catalogue leaves it at zero, the loop stops
+   * running at all, and the shelf never fills again — not on an import, not on a generation.
+   */
+  it('still reads the catalogue after finding it empty', async () => {
+    catalogueOf(0)
+    useAssets.getState().setScope(['image'])
+    await useAssets.getState().refresh()
+    expect(useAssets.getState().items).toEqual([])
+
+    catalogueOf(30)
+    await useAssets.getState().refresh()
+
+    expect(useAssets.getState().items).toHaveLength(30)
   })
 
   it('starts again at one page when the space changes', async () => {
