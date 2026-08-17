@@ -5,11 +5,9 @@ import { ProgressBar } from '@/design/ProgressBar'
 import { STATUS_BUTTON } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { formatBytes } from '@/helpers/format'
-import { useAssistant } from '@/stores/assistant'
-import { Heard } from './Heard'
-import { LevelMeter } from './LevelMeter'
 import { useDictation } from '@/hooks/useDictation'
 import { HINT_TOP } from '@/helpers/tooltip'
+import { DictationStatusListening } from './DictationStatusListening'
 
 /**
  * What dictation has to say to the whole application, rather than to one field.
@@ -28,7 +26,7 @@ export function DictationStatus() {
 
   if (!dictation.enabled) return null
 
-  if (dictation.isListening) return <Listening />
+  if (dictation.isListening) return <DictationStatusListening />
 
   if (dictation.state === 'modelMissing') {
     const size = formatBytes(STT_MODEL_BYTES, unit => t(`units.${unit}`), i18n.language)
@@ -98,35 +96,4 @@ export function DictationStatus() {
   }
 
   return null
-}
-
-/**
- * A live microphone, and WHERE the words are going.
- *
- * Saying only that it is on is half an answer: the same microphone types into a prompt and talks
- * to the assistant, and the two are told apart nowhere else on screen — the assistant claims the
- * spoken word without necessarily showing its window.
- *
- * It is also the only thing left visible once that window IS up: the conversation lays the studio's
- * own panel colour over everything at 80%, plus a blur, so the title bar and its entry are sunk
- * behind it. The status line never is.
- */
-function Listening() {
-  const { t } = useTranslation()
-  // Open IS the claim: the window takes the spoken word for as long as it is up, and nothing
-  // else in the studio does.
-  const toAssistant = useAssistant(state => state.open)
-
-  return (
-    <span className="text-accent-ink flex items-center gap-1.5">
-      <span role="status" className="flex items-center gap-1.5">
-        <UiIcon path={mdiMicrophone} size={12} />
-        {toAssistant ? t('assistant.listening') : t('dictation.active')}
-      </span>
-      <LevelMeter />
-      {/* Capped and truncated: the line has no width to give — four other indicators share its
-          end, and a spoken sentence has no length limit. */}
-      <Heard className="max-w-64 truncate" />
-    </span>
-  )
 }

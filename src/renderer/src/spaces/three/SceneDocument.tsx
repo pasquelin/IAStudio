@@ -34,7 +34,7 @@ import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
 import { SceneCounters } from './SceneCounters'
 import { openSceneNodeMenu } from './SceneNodeMenu'
 import { runSceneCommand, toggleNodeVisible } from './scene-commands'
-import { ScenePaneGrid } from './ScenePaneGrid'
+import { ScenePaneGrid } from './ScenePaneGrid/ScenePaneGrid'
 import { SCENE_TOOLS } from './scene-tools'
 
 /**

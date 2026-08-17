@@ -27,16 +27,15 @@ const RULE = 'a capital is earned by exporting a component or a class of that na
  * The debt, counted rather than listed — and this is the weaker of the two ratchets this
  * repository uses, on purpose.
  *
- * Listing the paths would tie the guard to names about to change: the migration that empties these
- * counts is under way. A count cannot see a swap — one file renamed while another is added
- * off-convention leaves it green — and that hole is real for as long as the numbers are not zero.
+ * Listing the paths would tie the guard to names about to change: the migration that empties this
+ * count is under way. A count cannot see a swap — one file renamed while another is added
+ * off-convention leaves it green — and that hole is real for as long as the number is not zero.
  *
  * **When a count reaches zero it is deleted, not kept at zero**: the assertion then reads as the
- * rule itself, and the next offending file fails on sight. The hooks did exactly that, one lot
- * after this guard landed — twelve, then none, and the constant went with them.
+ * rule itself, and the next offending file fails on sight. The hooks did that one lot after this
+ * guard landed, and the crowded files eight lots after — both constants went with them.
  */
 const KNOWN_OFF_CONVENTION = 286
-const KNOWN_CROWDED = 5
 
 /** `.d.ts` names the module it declares, not a module of ours: `sherpa-onnx-node` is a package. */
 const isDeclaration = (path: string): boolean => path.endsWith('.d.ts')
@@ -125,6 +124,9 @@ describe(`file names — ${RULE}`, () => {
    *
    * Declarations, not exports, and that is the one place the two questions part ways: what names
    * a file is what it hands out, but what crowds a file is what lives in it.
+   *
+   * Its count went the way the hooks' did — 46 the day this guard landed, then zero eight lots
+   * later — so the assertion is the rule itself, and the next crowded file fails on sight.
    */
   it(
     'gives every component a file of its own',
@@ -133,7 +135,7 @@ describe(`file names — ${RULE}`, () => {
         path => path.endsWith('.tsx') && componentsIn(readFileSync(path, 'utf8')).size > 1,
       )
 
-      expect(crowded.map(reported).sort()).toHaveLength(KNOWN_CROWDED)
+      expect(crowded.map(reported).sort()).toEqual([])
     },
     WHOLE_PROJECT,
   )

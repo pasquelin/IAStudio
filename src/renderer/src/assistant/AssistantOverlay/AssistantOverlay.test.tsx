@@ -8,7 +8,7 @@ import { useAssistant } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { AssistantOverlay } from './AssistantOverlay'
-import { mountedConfirmer } from './confirm'
+import { mountedConfirmer } from '../confirm'
 
 const say = vi.hoisted(() => vi.fn<(utterance: string) => Promise<void>>())
 
