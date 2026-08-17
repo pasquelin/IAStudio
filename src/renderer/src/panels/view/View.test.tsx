@@ -37,7 +37,7 @@ describe('the View panel', () => {
   it('sets the field of view', () => {
     render(<View />)
 
-    fireEvent.change(screen.getByLabelText('Champ de vision'), { target: { value: '90' } })
+    fireEvent.change(screen.getByLabelText('Angle de vue'), { target: { value: '90' } })
 
     expect(skyboxViewOf(useSkyboxViews.getState(), 'sky-1').fieldOfView).toBe(90)
   })
