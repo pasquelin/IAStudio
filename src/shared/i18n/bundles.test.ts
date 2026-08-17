@@ -29,6 +29,7 @@ import { WORKSPACE_IDS } from '../domain/workspace'
 import { USAGE_ACTIONS, USAGE_ASSET_KINDS, USAGE_EVENT_ACTIONS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 import { americanVerbs, americanWords } from './spelling-fixtures'
+import modelTextFr from './model-text.fr.json'
 
 function flatten(
   bundle: unknown,
@@ -406,6 +407,45 @@ describe('the translation bundles', () => {
         })
         .map(key => `${key} — no longer says what ${dropped.source} exempts it for`),
     )
+
+    expect(covering).toEqual([])
+  })
+
+  /**
+   * The same settled words, asked of the dictionary the generation form reads. It is NOT a locale
+   * — indexed on the English phrase, absent from `BUNDLES` — so the two readings above never saw
+   * it, and three `matériaux PBR` lived there through the whole batch that banned the word.
+   *
+   * French only: this file's keys are Scenario's English, which the studio neither chooses nor
+   * spells. The four exemptions are one story rather than four — `maillage` is the PAVAGE and
+   * stays, exactly what `sceneDisplay.wireframeHint` is exempted for. Two are the option labels a
+   * 3D model offers, two are the descriptions that cite them.
+   */
+  const PAVAGE_NOT_THE_OBJECT: ReadonlySet<string> = new Set([
+    'smart low poly',
+    'quad',
+    'maximum face count. adaptive if unset. with smart low poly: 1,000-20,000 (500-10,000 if ' +
+      'quad is also enabled). otherwise capped at 1,500,000 (standard geometry) or 2,000,000 ' +
+      '(detailed geometry). quad alone caps face limit at 150,000',
+    'enable quad mesh output (fbx format). when smart low poly is off, face limit is capped at ' +
+      '150,000. when smart low poly is on and face limit is unset, defaults to 10,000',
+  ])
+
+  it('says one thing one way in the dictionary of what a model wrote about itself', () => {
+    const drifted = Object.entries(modelTextFr).flatMap(([source, french]) =>
+      SETTLED_WORDS.fr
+        .filter(({ dropped }) => dropped.test(french) && !PAVAGE_NOT_THE_OBJECT.has(source))
+        .map(({ kept }) => `${source} — say "${kept}"`),
+    )
+
+    expect(drifted).toEqual([])
+  })
+
+  it('drops a dictionary exemption once its entry stops saying the word', () => {
+    const covering = [...PAVAGE_NOT_THE_OBJECT].filter(source => {
+      const french = Object.entries(modelTextFr).find(([key]) => key === source)?.[1]
+      return french === undefined || !/maillages?/i.test(french)
+    })
 
     expect(covering).toEqual([])
   })
