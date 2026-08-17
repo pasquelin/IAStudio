@@ -223,11 +223,11 @@ src/main/
 │   ├── sqliteNative.ts      better-sqlite3 — production
 │   └── sqliteMemory.ts      node:sqlite — tests
 ├── assets/
-│   ├── local-backend.ts     the project's assets, on disk
-│   ├── cloud-backend.ts     the same ones, on the library's side
-│   ├── sync-plan.ts         what two sides would have to do about each other
+│   ├── localBackend.ts      the project's assets, on disk
+│   ├── cloudBackend.ts      the same ones, on the library's side
+│   ├── syncPlan.ts          what two sides would have to do about each other
 │   ├── collector.ts         what a generation drops into the project
-│   ├── auto-caption.ts      naming a picture from what the API sees in it
+│   ├── autoCaption.ts       naming a picture from what the API sees in it
 │   └── protocol.ts          the scenario:// protocol
 ├── dictation/               speech recognition: permissions, model, segmenting, handlers
 ├── assistant/               the assistant's thinking, behind a port, and how its reply is read
@@ -269,8 +269,8 @@ is assumed. Bypassing the queue with a direct SDK call is how you get a burst of
 ### Two asset backends, one planner
 
 The project and the account's library are two stores, served by two backends of the same shape:
-`local-backend.ts` for the folder on disk, `cloud-backend.ts` for the API. What decides what
-should move between them lives elsewhere, and is **pure**: `sync-plan.ts`.
+`localBackend.ts` for the folder on disk, `cloudBackend.ts` for the API. What decides what
+should move between them lives elsewhere, and is **pure**: `syncPlan.ts`.
 
 That separation carries two promises:
 

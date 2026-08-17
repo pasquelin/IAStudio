@@ -24,9 +24,9 @@ import { remoteTypesFor } from '@main/scenario/remoteTypes'
 import { OFFSET_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { ActivityLog } from '@main/project/activityLog'
-import type { AutoCaption, DescribeAssets } from './auto-caption'
-import type { CloudBackend } from './cloud-backend'
-import { planSync, type SyncSide } from './sync-plan'
+import type { AutoCaption, DescribeAssets } from './autoCaption'
+import type { CloudBackend } from './cloudBackend'
+import { planSync, type SyncSide } from './syncPlan'
 import {
   parseActivityQuery,
   parseAlsoRemote,

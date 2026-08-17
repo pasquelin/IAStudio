@@ -3,12 +3,12 @@ import { ACCOUNT_NAME_MAX_LENGTH, type AccountSummary } from '@shared/domain/acc
 import { DEFAULT_SETTINGS, type AuthState, type SettingsSectionId } from '@shared/domain/settings'
 import type { SettingActionId } from '@shared/domain/settingsRegistry'
 import { CHANNELS } from '@shared/ipc'
-import { invoke, resetHandlers } from '@main/ipc/test-harness'
+import { invoke, resetHandlers } from '@main/ipc/testHarness'
 import { registerSettingsHandlers } from './handlers'
-import { memoryAdapter } from './memory-adapter'
+import { memoryAdapter } from './memoryAdapter'
 import { createSettingsStore, type SettingsStore } from './store'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 describe('settings handlers', () => {
   let settings: SettingsStore

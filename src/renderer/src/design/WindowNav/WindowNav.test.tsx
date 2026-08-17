@@ -2,10 +2,10 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { WindowNav } from './WindowNav'
 import { WindowNavItem } from './WindowNavItem'
-import { WRITTEN_SOURCES } from '../test-harness'
+import { WRITTEN_SOURCES } from '../testHarness'
 
 /**
- * As `WRITTEN_SOURCES` keys it: the glob resolves against `test-harness.ts`, which sits one
+ * As `WRITTEN_SOURCES` keys it: the glob resolves against `testHarness.ts`, which sits one
  * folder up now that the entry has a file of its own. It is the ITEM that wears the skin, not
  * the list around it — splitting the two is what made the distinction visible.
  */

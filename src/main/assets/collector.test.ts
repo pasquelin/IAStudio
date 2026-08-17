@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
 import { createAssetCollector, type RemoteAsset } from './collector'
-import type { ImportRequest, LocalBackend } from './local-backend'
+import type { ImportRequest, LocalBackend } from './localBackend'
 
 const JOB: Job = {
   id: 'job_1',

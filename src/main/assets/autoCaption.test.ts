@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ASSET_NAME_MAX_LENGTH, type Asset } from '@shared/domain/asset'
 import type { ActivityReport } from '@main/project/activityLog'
-import { CAPTION_BATCH, createCaptioner, worthCaptioning } from './auto-caption'
+import { CAPTION_BATCH, createCaptioner, worthCaptioning } from './autoCaption'
 
 function asset(overrides: Partial<Asset> = {}): Asset {
   return {

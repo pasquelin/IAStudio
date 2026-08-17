@@ -4,8 +4,8 @@ import type { CloudAsset } from '@shared/domain/cloudAsset'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
-import { createCloudBackend, type CloudBackendDeps } from './cloud-backend'
-import type { ImportRequest, LocalBackend } from './local-backend'
+import { createCloudBackend, type CloudBackendDeps } from './cloudBackend'
+import type { ImportRequest, LocalBackend } from './localBackend'
 
 const SMALL_LIMIT = 6 * 1024 * 1024
 

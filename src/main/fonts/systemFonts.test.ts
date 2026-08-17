@@ -8,7 +8,7 @@ import {
   isOfferedFamily,
   type FontDisk,
   type FontFile,
-} from './system-fonts'
+} from './systemFonts'
 
 /** A disk that is a map of paths to bytes, so a test needs no font folder of its own. */
 function fakeDisk(files: Record<string, Record<string, Uint8Array>>): FontDisk {

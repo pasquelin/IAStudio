@@ -139,7 +139,7 @@ export function createPromptAssist({
     },
 
     // Not resolved, unlike the two above: its one caller captions what has ALREADY gone up
-    // (`Describable.remoteAssetId`, `assets/auto-caption.ts`), so there is nothing to rewrite —
+    // (`Describable.remoteAssetId`, `assets/autoCaption.ts`), so there is nothing to rewrite —
     // and it runs per arriving asset, where a catalogue hop each would be paid for nothing.
     caption: async images => [...(await api().caption({ images })).captions],
   }

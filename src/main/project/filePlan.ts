@@ -78,7 +78,7 @@ function present(folders: FolderSnapshot, path: string): boolean {
  * a stem already at the length limit comes back cut to itself, every candidate then reads as
  * taken, and the loop would never end — in the process that owns every window.
  *
- * The disk-bound twin of this lives in `assets/asset-file.ts` and answers for an ASSET, whose
+ * The disk-bound twin of this lives in `assets/assetFile.ts` and answers for an ASSET, whose
  * name and extension are held apart by the catalogue. Here there is one file name and no row.
  */
 export function freeName(taken: ReadonlySet<string>, fileName: string): string {

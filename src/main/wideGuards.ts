@@ -71,7 +71,7 @@ function readsAnchoredFile(code: string): boolean {
  * good move that MUST come with a line here**, and the count is the only proof: the three window
  * guards that gave up their own glob were counted before and after, 41 both times.
  *
- * `design/test-harness` joined on 2026-08-16, and it had been missing since the day it was
+ * `design/testHarness` joined on 2026-08-16, and it had been missing since the day it was
  * written: 49 guards before, 53 after. Found by an adversarial review, not by the floor, which a
  * silent drop of four never reaches.
  *
@@ -87,10 +87,10 @@ function borrowsTheSweep(code: string): boolean {
   // review caught the two literal spellings before anyone wrote that guard.
   //
   // `(design/)?` is the third spelling, and it cost a day: the five guards that SIT BESIDE
-  // `test-harness.ts` write `'./test-harness'`, which the folder-qualified form does not match.
+  // `testHarness.ts` write `'./testHarness'`, which the folder-qualified form does not match.
   // The line added for it on 2026-08-16 caught its five distant consumers and none of its
   // neighbours — a fix measured by a count that went up, which is exactly how a half-fix looks.
-  return /from '\.[./]*\/(sourceFiles|window-sources|(design\/)?test-harness)'|from '@main\/sourceFiles'|from '@\/(window-sources|design\/test-harness)'|from '\.[./]*\/scripts\/[\w-]+\.ts'/.test(
+  return /from '\.[./]*\/(sourceFiles|window-sources|(design\/)?testHarness)'|from '@main\/sourceFiles'|from '@\/(window-sources|design\/testHarness)'|from '\.[./]*\/scripts\/[\w-]+\.ts'/.test(
     code,
   )
 }

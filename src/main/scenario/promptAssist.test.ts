@@ -354,7 +354,7 @@ describe('createPromptAssist', () => {
   describe('caption', () => {
     /**
      * The one caller captions assets that have already gone up — `Describable.remoteAssetId` in
-     * `assets/auto-caption.ts` — so its ids are the API's own and nothing here can rewrite them.
+     * `assets/autoCaption.ts` — so its ids are the API's own and nothing here can rewrite them.
      * Asked all the same: it runs per arriving asset, and a catalogue hop each would be paid on
      * every import for a rewrite that cannot happen.
      */

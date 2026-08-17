@@ -13,7 +13,7 @@ import {
   extensionFromUrl,
   type Download,
   type LocalBackend,
-} from './local-backend'
+} from './localBackend'
 
 const BYTES = new Uint8Array([1, 2, 3, 4])
 
