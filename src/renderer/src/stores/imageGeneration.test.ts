@@ -7,7 +7,7 @@ import { installDocument } from './document-fixtures'
 import { catalogueHolds, flush } from './generation-fixtures'
 import { useDocuments } from './documents'
 import { job as jobOf } from './job-fixtures'
-import { claimImageOnSubmit, connectImageGeneration } from './image-generation'
+import { claimImageOnSubmit, connectImageGeneration } from './imageGeneration'
 import { useJobs } from './jobs'
 
 const picture = (id: string, overrides: Partial<Asset> = {}): Asset => ({

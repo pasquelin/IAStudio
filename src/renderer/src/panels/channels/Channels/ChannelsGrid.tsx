@@ -6,7 +6,7 @@ import { setChannel } from '@/engines/texture/commands'
 import { canDerive, sourceFor } from '@/engines/texture/textureState'
 import { placeTextureChannel } from '@/spaces/textures/place-channel'
 import { useAssets } from '@/stores/assets'
-import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
+import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
 import { textureOf, useTextures } from '@/stores/textures'
 import { ChannelTile, type DerivationState } from '../ChannelTile'
 

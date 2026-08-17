@@ -25,7 +25,7 @@ import { SECOND, trackOfClip, type Us } from '@/engines/timeline/timelineState'
 import { cn } from '@/helpers/cn'
 import { getBridge } from '@/services/bridge'
 import { assetsById, useAssets } from '@/stores/assets'
-import { audioEditsOf, useAudioEdits } from '@/stores/audio-edits'
+import { audioEditsOf, useAudioEdits } from '@/stores/audioEdits'
 import {
   flattenTakeClip,
   sequenceOf,

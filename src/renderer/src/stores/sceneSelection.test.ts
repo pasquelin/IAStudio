@@ -4,7 +4,7 @@ import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { installDocuments } from './document-fixtures'
 import { useDocuments } from './documents'
-import { connectSceneSelection } from './scene-selection'
+import { connectSceneSelection } from './sceneSelection'
 import { useScenes } from './scenes'
 import { useSelection } from './selection'
 

@@ -6,7 +6,7 @@ import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import { useDocuments } from '@/stores/documents'
 import { clearScenes } from '@/stores/scene-fixtures'
-import { useSceneClipboard } from '@/stores/scene-clipboard'
+import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { SceneDocument } from './SceneDocument'
 

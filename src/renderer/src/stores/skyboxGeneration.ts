@@ -1,9 +1,9 @@
 import { isLocalPicture } from '@shared/domain/asset'
-import { createGenerationLanding } from './generation-landing'
+import { createGenerationLanding } from './generationLanding'
 import { setSkyboxSource } from './skyboxes'
 
 /**
- * A sky generation comes back into the skybox it was launched from. See `generation-landing`,
+ * A sky generation comes back into the skybox it was launched from. See `generationLanding`,
  * which holds the machinery this and the 3D workspace share.
  */
 const landing = createGenerationLanding({

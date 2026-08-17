@@ -5,7 +5,7 @@ import type { CameraPlacement } from '@/engines/scene/sceneView'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { sceneOf, sceneStore, useScenes } from './scenes'
-import { sceneViewOf, useSceneViews } from './scene-views'
+import { sceneViewOf, useSceneViews } from './sceneViews'
 
 type SceneSourcesState = {
   /** Keyed by document id, and holding only scenes NO tab has open — see `montageSceneOf`. */

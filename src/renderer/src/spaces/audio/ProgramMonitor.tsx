@@ -55,7 +55,7 @@ export function ProgramMonitor({ sequence, transport, onSeek }: ProgramMonitorPr
    * The view, or null while it is still the whole montage — which is what makes the fit hold as
    * the montage grows, where a viewport computed once would freeze on the length it was built at.
    *
-   * Its own rather than the strip's `timeline-view`: the two surfaces are not the same width, so
+   * Its own rather than the strip's `timelineView`: the two surfaces are not the same width, so
    * one viewport would put them at the same SCALE showing different spans, and a wheel over the
    * monitor would drag the strip under it.
    */

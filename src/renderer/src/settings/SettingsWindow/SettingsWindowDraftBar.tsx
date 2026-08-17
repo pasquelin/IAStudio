@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { HINT_TOP } from '@/helpers/tooltip'
-import { isSettingsDraftDirty, useSettingsDraft } from '@/stores/settings-draft'
+import { isSettingsDraftDirty, useSettingsDraft } from '@/stores/settingsDraft'
 
 /**
  * Apply, Cancel, OK — and nothing at all while nothing is waiting, so the window is not a form

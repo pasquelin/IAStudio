@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { layoutShowing } from './layout-fixtures'
 import { useLayouts } from './layouts'
-import type { SerializedLayout } from './serialized-layout'
+import type { SerializedLayout } from './serializedLayout'
 
 // The store never reads a layout back, it only stores and returns it — the marker is what
 // tells two of them apart.

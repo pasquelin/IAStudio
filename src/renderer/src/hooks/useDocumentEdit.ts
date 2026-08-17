@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { GestureProps } from '@/design/styles'
 import type { Command } from '@/engines/core/history'
-import type { DocumentStoreState } from '@/stores/document-store'
+import type { DocumentStoreState } from '@/stores/documentStore'
 
 export type DocumentEdit<S> = {
   run: (command: Command<S>) => void

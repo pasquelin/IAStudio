@@ -11,10 +11,10 @@ import {
 import { animationRows } from '@/engines/scene/animationRows'
 import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
-import { useAnimationViews } from '@/stores/animation-view'
+import { useAnimationViews } from '@/stores/animationView'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
-import { useSceneViews } from '@/stores/scene-views'
+import { useSceneViews } from '@/stores/sceneViews'
 import { AnimationCanvas } from './AnimationCanvas'
 
 const DOCUMENT = 'doc-1'

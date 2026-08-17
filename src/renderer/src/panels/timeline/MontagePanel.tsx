@@ -1,5 +1,5 @@
 import { TimelineCanvas } from '@/spaces/video/TimelineCanvas'
-import { useVideoTool } from '@/stores/video-tool'
+import { useVideoTool } from '@/stores/videoTool'
 import { TrackHeaders } from './TrackHeaders/TrackHeaders'
 
 export type MontagePanelProps = {

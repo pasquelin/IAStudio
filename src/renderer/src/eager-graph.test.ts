@@ -182,7 +182,7 @@ describe('the opening chunk', () => {
     // The whole folder, not a sample of it: naming files lets a sibling — `AccountSettings`
     // reused by an onboarding, say — walk back in with the guard still green.
     expect([...files].filter(path => path.startsWith('./settings/'))).toEqual([])
-    expect(files).not.toContain('./stores/settings-draft.ts')
+    expect(files).not.toContain('./stores/settingsDraft.ts')
     expect(files).not.toContain('../../shared/domain/settings-registry.ts')
     expect(files).not.toContain('../../shared/domain/settings-search.ts')
   })

@@ -5,7 +5,7 @@ import { descriptorAt, type SettingDescriptor } from '@shared/domain/settings-re
 import { UiIcon } from '@/design/UiIcon'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from '../SettingLine'
-import { useSettingsDraft, useSettingValue } from '@/stores/settings-draft'
+import { useSettingsDraft, useSettingValue } from '@/stores/settingsDraft'
 import { WINDOW_HELP } from '@/design/window-styles'
 import { SettingRowControl } from './SettingRowControl'
 

@@ -7,7 +7,7 @@ import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures
 import { DEFAULT_TRACK_HEIGHT, type Track } from '@/engines/timeline/timelineState'
 import { useSelection } from '@/stores/selection'
 import { sequenceHistoryOf, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { useTimelineView } from '@/stores/timeline-view'
+import { useTimelineView } from '@/stores/timelineView'
 import { TrackHeaders } from './TrackHeaders'
 
 const trackOf = (id: string): Track | undefined =>

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
-import { useSettingsDraft } from '@/stores/settings-draft'
+import { useSettingsDraft } from '@/stores/settingsDraft'
 import { DictationSettings } from './DictationSettings'
 
 const listeners = new Map<string, () => void>()

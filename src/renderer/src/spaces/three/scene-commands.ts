@@ -8,8 +8,8 @@ import {
   setNodeVisible,
 } from '@/engines/scene/commands'
 import { nodeById, selectedNodes } from '@/engines/scene/sceneState'
-import { sceneEngineOf } from '@/stores/scene-engines'
-import { useSceneClipboard } from '@/stores/scene-clipboard'
+import { sceneEngineOf } from '@/stores/sceneEngines'
+import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { sceneOf, useScenes } from '@/stores/scenes'
 
 /**

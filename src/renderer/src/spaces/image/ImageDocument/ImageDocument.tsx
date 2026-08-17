@@ -29,7 +29,7 @@ import {
 import { newId } from '@/helpers/ids'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { canvasOf, isCanvasDirty, useCanvases } from '@/stores/canvases'
-import { selectionOf, useCanvasViews, canvasViewOf } from '@/stores/canvas-views'
+import { selectionOf, useCanvasViews, canvasViewOf } from '@/stores/canvasViews'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from '../canvas-view'
 import { guidePort } from '../guide-port'

@@ -1,5 +1,5 @@
 import { EMPTY_AUDIO_EDIT, type AudioEditState } from '@/engines/audio/edits'
-import { createDocumentStore } from './document-store'
+import { createDocumentStore } from './documentStore'
 
 /**
  * One edit chain per document, with its own history — the same bookkeeping every editable

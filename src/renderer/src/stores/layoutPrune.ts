@@ -1,4 +1,4 @@
-import type { SerializedLayout } from './serialized-layout'
+import type { SerializedLayout } from './serializedLayout'
 
 type GridNode = SerializedLayout['grid']['root']
 /** The leaf half of a grid node: one group of tabs, named by the ids it holds. */

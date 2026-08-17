@@ -4,7 +4,7 @@ import { Button } from '@/design/Button'
 import { PropertyRow } from '@/design/PropertyRow'
 import { seamVerdict, type SeamVerdict } from '@shared/domain/texture'
 import { textureOf, useTextures } from '@/stores/textures'
-import { seamOf, useTextureViews } from '@/stores/texture-views'
+import { seamOf, useTextureViews } from '@/stores/textureViews'
 import { HINT_LEFT } from '@/helpers/tooltip'
 
 /** i18n key of a verdict — never the label itself, as `SHAPE_LABELS` does next door. */

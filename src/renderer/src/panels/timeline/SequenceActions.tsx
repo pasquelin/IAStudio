@@ -8,7 +8,7 @@ import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timelineState'
 import { tipFor } from '@/helpers/tooltip'
 import { VIDEO_TOOLS, isVideoTool } from '@/spaces/video/video-tools'
 import { useSequences } from '@/stores/sequences'
-import { useVideoTool } from '@/stores/video-tool'
+import { useVideoTool } from '@/stores/videoTool'
 import { TRACK_KIND_ICONS } from './track-flags'
 
 export type SequenceActionsProps = {

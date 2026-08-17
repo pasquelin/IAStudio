@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
 import { DEFAULT_VIEW } from '@/engines/canvas/viewport'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { useCanvasViews, canvasViewOf } from '@/stores/canvas-views'
+import { useCanvasViews, canvasViewOf } from '@/stores/canvasViews'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 

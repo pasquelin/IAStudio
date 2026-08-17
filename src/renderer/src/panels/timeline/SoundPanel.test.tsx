@@ -6,7 +6,7 @@ import { EMPTY_SOUND_SEQUENCE, makeClip } from '@/engines/timeline/timelineState
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
-import { useTimelineView } from '@/stores/timeline-view'
+import { useTimelineView } from '@/stores/timelineView'
 import { TimelinePanel } from './TimelinePanel'
 
 const DOCUMENT = 'take-1'
