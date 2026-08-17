@@ -914,6 +914,14 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         params.push(...query.paths)
       }
 
+      // What a finished generation hands back is ids and nothing else, so this is how its output
+      // is read. Empty means nothing, as it does for `paths` just above.
+      if (query.ids) {
+        const placeholders = query.ids.map(() => '?').join(', ')
+        conditions.push(query.ids.length > 0 ? `id IN (${placeholders})` : '0')
+        params.push(...query.ids)
+      }
+
       if (query.syncStatus) {
         conditions.push('sync_state = ?')
         params.push(query.syncStatus)

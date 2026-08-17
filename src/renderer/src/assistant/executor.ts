@@ -10,9 +10,11 @@ import {
 import { getBridge } from '@/services/bridge'
 import type { ActionHandlers } from './actionHandler'
 import { mountedConfirmer } from './confirm'
+import { ASSET_HANDLERS } from './assetHandlers'
 import { CORE_HANDLERS } from './coreHandlers'
 import { FILE_HANDLERS } from './fileHandlers'
 import { mountedGenerator } from './generatorBridge'
+import { JOB_HANDLERS } from './jobHandlers'
 import { STATE_HANDLERS } from './stateHandlers'
 
 /**
@@ -27,6 +29,8 @@ const HANDLERS: ActionHandlers = {
   ...CORE_HANDLERS,
   ...STATE_HANDLERS,
   ...FILE_HANDLERS,
+  ...JOB_HANDLERS,
+  ...ASSET_HANDLERS,
 }
 
 const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })

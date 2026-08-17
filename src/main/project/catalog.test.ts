@@ -337,6 +337,25 @@ describe('catalog', () => {
     expect(found.map(one => one.id).sort()).toEqual(['asset_1', 'asset_2'])
   })
 
+  /**
+   * By id, which is all a finished generation hands back — `metadata.assetIds` and nothing else.
+   * The catalogue could be asked by path, by group and by origin, but never by the identifier
+   * the API itself answers in, so its own output was the one thing it could not look up.
+   */
+  it('answers for a set of ids, which is what a generation hands back', () => {
+    catalog.add(asset({ id: 'asset_1' }))
+    catalog.add(asset({ id: 'asset_2' }))
+    catalog.add(asset({ id: 'asset_3' }))
+
+    expect(
+      catalog
+        .search({ ids: ['asset_1', 'asset_3'] })
+        .map(one => one.id)
+        .sort(),
+    ).toEqual(['asset_1', 'asset_3'])
+    expect(catalog.search({ ids: [] })).toEqual([])
+  })
+
   // As `types` does, and for the same reason: a caller with nothing to ask about asks nothing,
   // where an empty list read as « no filter » would answer with the whole catalogue.
   it('answers nothing at all for an empty listing', () => {

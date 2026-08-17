@@ -1,0 +1,130 @@
+import { ASSET_TYPES } from './asset'
+import { action, type AssistantAction } from './assistantAction'
+
+/**
+ * The library, as something a program can query and correct.
+ *
+ * What a generation produces lands here, so this is the other half of `job.wait`: the ids that
+ * came back are looked up through `asset.get`, and everything a client wants to say about them
+ * — a name, tags, a corrected kind — goes through `asset.update`.
+ */
+export const ASSET_ACTIONS: readonly AssistantAction[] = [
+  action({
+    name: 'assets.search',
+    titleKey: 'assistant.actions.assetsSearch.title',
+    descriptionKey: 'assistant.actions.assetsSearch.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'text', kind: 'text', labelKey: 'assistant.fields.query', required: false },
+      {
+        key: 'type',
+        kind: 'choice',
+        labelKey: 'assistant.fields.assetType',
+        required: false,
+        options: ASSET_TYPES,
+      },
+      {
+        key: 'tags',
+        kind: 'text',
+        labelKey: 'assistant.fields.tags',
+        required: false,
+        repeated: true,
+      },
+      {
+        key: 'generated',
+        kind: 'boolean',
+        labelKey: 'assistant.fields.generated',
+        required: false,
+      },
+      {
+        key: 'limit',
+        kind: 'integer',
+        labelKey: 'assistant.fields.limit',
+        required: false,
+        min: 1,
+        max: 500,
+      },
+      {
+        key: 'offset',
+        kind: 'integer',
+        labelKey: 'assistant.fields.offset',
+        required: false,
+        min: 0,
+      },
+    ],
+  }),
+  action({
+    name: 'assets.counts',
+    titleKey: 'assistant.actions.assetsCounts.title',
+    descriptionKey: 'assistant.actions.assetsCounts.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    name: 'asset.get',
+    titleKey: 'assistant.actions.assetGet.title',
+    descriptionKey: 'assistant.actions.assetGet.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'assetIds',
+        kind: 'text',
+        labelKey: 'assistant.fields.assetIds',
+        required: true,
+        repeated: true,
+      },
+    ],
+  }),
+  action({
+    // Tags are replaced wholesale, which the channel decided long before this: `[]` genuinely
+    // means "no tags", and an absent field means "leave it alone".
+    name: 'asset.update',
+    titleKey: 'assistant.actions.assetUpdate.title',
+    descriptionKey: 'assistant.actions.assetUpdate.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
+      { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: false },
+      {
+        key: 'tags',
+        kind: 'text',
+        labelKey: 'assistant.fields.tags',
+        required: false,
+        repeated: true,
+      },
+      {
+        key: 'type',
+        kind: 'choice',
+        labelKey: 'assistant.fields.assetType',
+        required: false,
+        options: ASSET_TYPES,
+      },
+    ],
+  }),
+  action({
+    name: 'assets.remove',
+    titleKey: 'assistant.actions.assetsRemove.title',
+    descriptionKey: 'assistant.actions.assetsRemove.description',
+    commitment: 'files',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'assetIds',
+        kind: 'text',
+        labelKey: 'assistant.fields.assetIds',
+        required: true,
+        repeated: true,
+      },
+      {
+        key: 'alsoRemote',
+        kind: 'boolean',
+        labelKey: 'assistant.fields.alsoRemote',
+        required: false,
+      },
+    ],
+  }),
+]

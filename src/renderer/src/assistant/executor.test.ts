@@ -273,13 +273,15 @@ describe('the prompt assistance, now asked for', () => {
 })
 
 describe('listing the jobs', () => {
-  it('answers what the studio is tracking', async () => {
-    useJobs.setState({ jobs: [aJob('job_1')] })
+  /**
+   * Whole jobs. Four fields were picked out here — id, label, status, progress — which left a
+   * client able to start a generation and unable to learn what it produced.
+   */
+  it('answers what the studio is tracking, whole', async () => {
+    const job = aJob('job_1')
+    useJobs.setState({ jobs: [job] })
 
-    expect(await runAction('jobs.list', {})).toEqual({
-      ok: true,
-      data: [{ id: 'job_1', label: 'Knight', status: 'running', progress: 0.5 }],
-    })
+    expect(await runAction('jobs.list', {})).toEqual({ ok: true, data: [job] })
   })
 })
 

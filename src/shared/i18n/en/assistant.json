@@ -116,6 +116,50 @@
       "folderNew": {
         "title": "Create a folder",
         "description": "Makes a new folder inside a folder of the open project. Answers with the path it was given, which may differ if the name was taken."
+      },
+      "modelSchema": {
+        "title": "Read a model’s own inputs",
+        "description": "Returns the fields one generation model accepts, with their kinds and bounds, as the studio builds its form from. This is what to fill the parameters of a prepared generation with."
+      },
+      "costEstimate": {
+        "title": "Estimate what a generation would cost",
+        "description": "Prices a model and a set of parameters without running anything. Answers nothing at all where the API declines to price that model, rather than inventing a figure."
+      },
+      "jobGet": {
+        "title": "Read one job",
+        "description": "Returns one generation whole — its status, how far along it is, what it produced, what it cost, and why it failed if it did."
+      },
+      "jobWait": {
+        "title": "Wait for a job to finish",
+        "description": "Waits until a generation succeeds, fails or is cancelled, then returns it with the assets it produced. Returns the job as it stands if the wait runs out, which is an answer rather than a failure."
+      },
+      "jobCancel": {
+        "title": "Cancel a job",
+        "description": "Stops a generation that is still queued or running. What has already been spent is not given back."
+      },
+      "usageReport": {
+        "title": "Read the usage report",
+        "description": "Returns what the account has spent over a window of seven, thirty-one or a hundred and twenty days, as the usage window shows it."
+      },
+      "assetsSearch": {
+        "title": "Search the library",
+        "description": "Searches the project’s assets by text, kind and tags, and can narrow to what was generated. Answers with the rows the catalogue holds."
+      },
+      "assetsCounts": {
+        "title": "Count the library",
+        "description": "Returns how many assets of each kind the project holds, counted in the catalogue rather than by listing them."
+      },
+      "assetGet": {
+        "title": "Read assets",
+        "description": "Returns everything the catalogue holds about the named assets — where they are, what they came from, and how they are tagged. This is what to call on the ids a finished generation handed back."
+      },
+      "assetUpdate": {
+        "title": "Correct an asset",
+        "description": "Changes an asset’s name, its tags, or the kind the studio read from its extension. Tags are replaced whole, so an empty list genuinely clears them."
+      },
+      "assetsRemove": {
+        "title": "Remove assets",
+        "description": "Takes assets out of the project’s library, and out of the remote one when asked to. This asks first, and what it removed is listed in the recent activity."
       }
     },
     "refusals": {
@@ -157,7 +201,17 @@
       "filePath": "Path inside the project, with / between segments",
       "filePaths": "Paths inside the project, with / between segments",
       "folderPath": "Folder path",
-      "hidden": "Include hidden entries"
+      "hidden": "Include hidden entries",
+      "jobId": "Job identifier",
+      "timeoutMs": "How long to wait at most, in milliseconds",
+      "days": "Window in days",
+      "assetId": "Asset identifier",
+      "assetIds": "Asset identifiers",
+      "assetType": "Asset kind",
+      "tags": "Tags",
+      "generated": "Only what was generated",
+      "offset": "How many entries to skip",
+      "alsoRemote": "Remove from the remote library too"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

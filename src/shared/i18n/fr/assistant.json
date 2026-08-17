@@ -116,6 +116,50 @@
       "folderNew": {
         "title": "Créer un dossier",
         "description": "Crée un dossier dans un dossier du projet ouvert. Répond avec le chemin qui lui a été donné, qui peut différer si le nom était pris."
+      },
+      "modelSchema": {
+        "title": "Lire les entrées d’un modèle",
+        "description": "Rend les champs qu’un modèle de génération accepte, avec leur nature et leurs bornes, tels que le studio en construit son formulaire. C’est de quoi remplir les paramètres d’une génération préparée."
+      },
+      "costEstimate": {
+        "title": "Estimer ce que coûterait une génération",
+        "description": "Chiffre un modèle et un jeu de paramètres sans rien lancer. Ne répond aucun montant là où l’API refuse de chiffrer ce modèle, plutôt que d’inventer un nombre."
+      },
+      "jobGet": {
+        "title": "Lire une tâche",
+        "description": "Rend une génération entière — son état, son avancement, ce qu’elle a produit, ce qu’elle a coûté, et pourquoi elle a échoué le cas échéant."
+      },
+      "jobWait": {
+        "title": "Attendre la fin d’une tâche",
+        "description": "Attend qu’une génération réussisse, échoue ou soit annulée, puis la rend avec les assets produits. Rend la tâche telle quelle si l’attente expire, ce qui est une réponse et non un échec."
+      },
+      "jobCancel": {
+        "title": "Annuler une tâche",
+        "description": "Arrête une génération encore en file ou en cours. Ce qui a déjà été dépensé n’est pas rendu."
+      },
+      "usageReport": {
+        "title": "Lire le rapport de consommation",
+        "description": "Rend ce que le compte a dépensé sur une fenêtre de sept, trente-et-un ou cent vingt jours, telle que la fenêtre de consommation l’affiche."
+      },
+      "assetsSearch": {
+        "title": "Chercher dans la bibliothèque",
+        "description": "Cherche les assets du projet par texte, par nature et par tags, et peut se restreindre à ce qui a été généré. Répond avec les lignes que porte le catalogue."
+      },
+      "assetsCounts": {
+        "title": "Compter la bibliothèque",
+        "description": "Rend le nombre d’assets de chaque nature que porte le projet, compté dans le catalogue plutôt qu’en les listant."
+      },
+      "assetGet": {
+        "title": "Lire des assets",
+        "description": "Rend tout ce que le catalogue sait des assets nommés — où ils sont, d’où ils viennent, comment ils sont étiquetés. C’est ce qu’il faut appeler sur les identifiants qu’une génération finie a rendus."
+      },
+      "assetUpdate": {
+        "title": "Corriger un asset",
+        "description": "Change le nom d’un asset, ses tags, ou la nature que le studio a lue dans son extension. Les tags sont remplacés en entier, donc une liste vide les efface vraiment."
+      },
+      "assetsRemove": {
+        "title": "Retirer des assets",
+        "description": "Sort des assets de la bibliothèque du projet, et de la bibliothèque distante quand on le demande. Cette action demande d’abord, et ce qu’elle a retiré figure dans l’activité récente."
       }
     },
     "refusals": {
@@ -157,7 +201,17 @@
       "filePath": "Chemin dans le projet, avec / entre les segments",
       "filePaths": "Chemins dans le projet, avec / entre les segments",
       "folderPath": "Chemin du dossier",
-      "hidden": "Inclure les entrées masquées"
+      "hidden": "Inclure les entrées masquées",
+      "jobId": "Identifiant de la tâche",
+      "timeoutMs": "Attente maximale, en millisecondes",
+      "days": "Fenêtre en jours",
+      "assetId": "Identifiant de l’asset",
+      "assetIds": "Identifiants des assets",
+      "assetType": "Nature de l’asset",
+      "tags": "Tags",
+      "generated": "Seulement ce qui a été généré",
+      "offset": "Nombre d’entrées à sauter",
+      "alsoRemote": "Retirer aussi de la bibliothèque distante"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

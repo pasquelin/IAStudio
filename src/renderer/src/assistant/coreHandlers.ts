@@ -171,15 +171,14 @@ export const CORE_HANDLERS: ActionHandlers = {
   'models.select': selectModel,
   'generator.prepare': prepareGenerator,
   'generator.submit': submitPrepared,
-  'jobs.list': () => ({
-    ok: true,
-    data: useJobs.getState().jobs.map(job => ({
-      id: job.id,
-      label: job.label,
-      status: job.status,
-      progress: job.progress,
-    })),
-  }),
+  /**
+   * Whole jobs, `assetIds` above all.
+   *
+   * Four fields were picked out here — id, label, status, progress — which made a client able to
+   * start a generation and unable to learn what it produced, or what it cost, or why it failed.
+   * The type is the boundary's own and every field of it is meant to cross.
+   */
+  'jobs.list': () => ({ ok: true, data: useJobs.getState().jobs }),
   'prompt.suggest': suggestPrompts,
   'prompt.translate': translatePrompt,
   'prompt.describeStyle': describeStyle,

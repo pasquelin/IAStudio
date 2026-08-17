@@ -46,6 +46,17 @@ export type ActionName =
   | 'file.rename'
   | 'file.facts'
   | 'folder.new'
+  | 'model.schema'
+  | 'cost.estimate'
+  | 'job.get'
+  | 'job.wait'
+  | 'job.cancel'
+  | 'usage.report'
+  | 'assets.search'
+  | 'assets.counts'
+  | 'asset.get'
+  | 'asset.update'
+  | 'assets.remove'
 
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.

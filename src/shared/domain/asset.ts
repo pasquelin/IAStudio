@@ -465,6 +465,14 @@ export type AssetQuery = {
    * REFUSED rather than cut, and a folder of rushes goes past it easily.
    */
   paths?: readonly string[]
+  /**
+   * Exactly these rows, by id — how a caller holding the output of a generation reads it back.
+   *
+   * `metadata.assetIds` is all a finished job hands over, and until this the catalogue could be
+   * asked by path, by group and by origin but never by the one identifier the API itself
+   * answers in. Empty means nothing, as it does for `paths`.
+   */
+  ids?: readonly string[]
   /** Narrows to one side of the library, or to what still has to move between them. */
   location?: AssetLocation
   syncStatus?: SyncStatus
