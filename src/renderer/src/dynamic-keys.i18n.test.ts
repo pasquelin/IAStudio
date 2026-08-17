@@ -14,7 +14,7 @@ import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
 import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
 import { ASSET_INTENTS } from '@/helpers/assetIntents'
-import { FOLDER_SORTS } from '@/panels/explorer/folderSort'
+import { FOLDER_SORTS } from '@/helpers/folderSort'
 import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
 import { DOCUMENT_NAME_REFUSALS } from '@/app/documentName'
 
