@@ -12,7 +12,7 @@ import type { CommandId } from '@shared/domain/command'
 import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
 import { extensionOf, stemOf } from '@shared/domain/fileName'
 import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/fileOp'
-import { canMoveInto, FOLDER_ROOT, isPrivatePath, parentOf } from '@shared/domain/folder'
+import { canMoveInto, FOLDER_ROOT, isPrivatePath, nameOf, parentOf } from '@shared/domain/folder'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
@@ -30,6 +30,7 @@ import { useFolderSearch } from '@/hooks/useFolderSearch'
 import { useFolderTree, type FolderNode } from '@/hooks/useFolderTree'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 import { currentOverrides } from '@/stores/bindings'
 import { useDocuments } from '@/stores/documents'
 import { fileClipboardCut, useFileClipboard } from '@/stores/fileClipboard'
@@ -356,13 +357,21 @@ export function Explorer() {
     // The catalogue still answers first for what it holds; what changed is the FALLBACK. A file
     // it has never heard of used to go to the system — a picture copied in by hand, the one thing
     // this panel must not do — and is now judged on its extension, and adopted where it can be.
-    const asset = await getBridge()
+    // Wrapped so a REJECTION is told from an answer of `null`: the two used to be one, and a
+    // busy catalogue sent a `.glb` to macOS Preview seconds after a download, silently.
+    const answered = await getBridge()
       ?.media.adopt(node.path)
-      .catch(() => null)
+      .then(asset => ({ asset }))
+      .catch(error => {
+        reportFailure('explorer.open', nameOf(node.path), error)
+        return null
+      })
 
-    if (asset) {
+    if (!answered) return
+
+    if (answered.asset) {
       const { openAsset } = await import('@/helpers/openAsset')
-      return openAsset(asset)
+      return openAsset(answered.asset)
     }
 
     // Handed to the system, and the journal is what says so when it refuses: a `.txt` and a `.pdf`

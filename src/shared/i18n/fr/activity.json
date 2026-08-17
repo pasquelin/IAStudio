@@ -118,6 +118,7 @@
       "shell.layout": "L’agencement enregistré d’un espace était illisible",
       "shell.menu": "Un menu contextuel n’a pas pu être ouvert",
       "sequence.mirror": "La fenêtre de retour n’a pas pu s’ouvrir",
+      "explorer.open": "Le studio n’a pas pu déterminer ce qu’est ce fichier",
       "sequence.export": "L’export de la séquence a échoué",
       "scene": {
         "render": "Le rendu vidéo a échoué"

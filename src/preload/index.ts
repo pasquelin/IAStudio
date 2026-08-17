@@ -88,6 +88,7 @@ const bridge: StudioBridge = {
     onRescan: callback => subscribe<RescanState>(EVENTS.projectRescan, callback),
     rescanState: () => ipcRenderer.invoke(CHANNELS.projectRescanState),
     stopRescan: () => ipcRenderer.invoke(CHANNELS.projectStopRescan),
+    fileFacts: relative => ipcRenderer.invoke(CHANNELS.projectFileFacts, relative),
     revealFile: relative => ipcRenderer.invoke(CHANNELS.projectRevealFile, relative),
     revealFolder: path => ipcRenderer.invoke(CHANNELS.projectRevealFolder, path),
     rename: (path, name) => ipcRenderer.invoke(CHANNELS.projectRename, path, name),
@@ -232,6 +233,9 @@ const bridge: StudioBridge = {
   },
   mirror: {
     open: () => ipcRenderer.invoke(CHANNELS.mirrorOpen),
+  },
+  fileInfo: {
+    open: relative => ipcRenderer.invoke(CHANNELS.fileInfoOpen, relative),
   },
   window: {
     toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),

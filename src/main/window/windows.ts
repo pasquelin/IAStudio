@@ -2,6 +2,7 @@ import { BrowserWindow, dialog, screen, type WebPreferences } from 'electron'
 import { join } from 'node:path'
 import { chromeColor } from './theme'
 import { MIRROR_BACKGROUND } from '@shared/constants'
+import { fileInfoRoute } from '@shared/domain/fileInfo'
 import { LICENCES_ROUTE } from '@shared/domain/licence'
 import { MANUAL_ROUTE } from '@shared/domain/manual'
 import { MIRROR_ROUTE } from '@shared/domain/mirror'
@@ -313,6 +314,21 @@ export function openManualWindow(): BrowserWindow {
     height: 700,
     minWidth: 640,
     minHeight: 420,
+  })
+}
+
+/**
+ * Everything the studio knows about one file, as its own window — the ⌘I of this application.
+ *
+ * One window PER FILE, which the route carries: comparing two files means having both open, and
+ * a single window following the last right-click would close the comparison as it opened it.
+ */
+export function openFileInfoWindow(path: string): BrowserWindow {
+  return openAuxiliaryWindow(fileInfoRoute(path), {
+    width: 460,
+    height: 560,
+    minWidth: 380,
+    minHeight: 320,
   })
 }
 

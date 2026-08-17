@@ -12,6 +12,7 @@ import { peaksFromBytes } from '@main/media/peaks'
 import { isPngBytes, probePng } from '@main/media/png'
 import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/localBackend'
+import { fileFactsOf } from './fileFacts'
 import type { FileOps } from './fileOps'
 import type { FolderReader } from './folder'
 import type { Reconciler } from './reconcile'
@@ -156,6 +157,12 @@ export function registerProjectHandlers({
   handle(CHANNELS.projectRevealFile, async (_event, relative) => {
     reveal(join(project.path(), parseFolderPath(relative)))
   })
+
+  // Parsed like every other path a window names, and for the same reason: a renderer says where
+  // it wants to look, and `..` would look outside the folder the user opened.
+  handle(CHANNELS.projectFileFacts, async (_event, relative) =>
+    fileFactsOf(join(project.path(), parseFolderPath(relative))),
+  )
 
   // An absolute path, unlike the one above: the home's shelf points at projects that are NOT
   // open, so there is no root to resolve against. `parseProjectPath` is the same refusal

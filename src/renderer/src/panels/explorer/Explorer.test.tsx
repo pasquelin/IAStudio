@@ -124,6 +124,7 @@ function install(
     })
   })
   const revealFile = vi.fn(() => Promise.resolve())
+  const openFileInfo = vi.fn(() => Promise.resolve())
   const renameFile = vi.fn(nothingMoved)
   const moveFiles = vi.fn(nothingMoved)
   const trashFiles = vi.fn(nothingMoved)
@@ -155,6 +156,7 @@ function install(
       redoFile,
     },
     documents: { list: () => Promise.resolve(documents) },
+    fileInfo: { open: openFileInfo },
     media: { adopt },
     menu: menu.bridge,
     assets: {
@@ -175,6 +177,7 @@ function install(
     openFile,
     adopt,
     revealFile,
+    openFileInfo,
     renameFile,
     moveFiles,
     trashFiles,
@@ -587,17 +590,21 @@ describe('the project explorer', () => {
       expect(openAsset).not.toHaveBeenCalled()
     })
 
-    // A window that asked while the project was closing hears a rejection, and a rejection is
-    // not an answer: the file is still there, and the system still opens it.
-    it('falls back to the system when the adoption could not be answered', async () => {
+    /**
+     * `null` means « nothing here opens this ». A REJECTION means the question failed, and the
+     * two used to arrive as one answer: a `.glb` double-clicked seconds after a download, while
+     * the catalogue was busy, went to macOS Preview with nothing said anywhere.
+     */
+    it('hands nothing to the system when the adoption could not be answered', async () => {
       withProject()
-      const { openFile, adopt } = install({ '': [file('facade.jpg')] })
-      adopt.mockRejectedValueOnce(new Error('no project'))
+      const { openFile, adopt } = install({ '': [file('car.glb')] })
+      adopt.mockRejectedValueOnce(new Error('catalogue busy'))
 
       render(<Explorer />)
-      await userEvent.dblClick(await screen.findByText('facade.jpg'))
+      await userEvent.dblClick(await screen.findByText('car.glb'))
 
-      await waitFor(() => expect(openFile).toHaveBeenCalledWith('facade.jpg'))
+      await waitFor(() => expect(adopt).toHaveBeenCalledWith('car.glb'))
+      expect(openFile).not.toHaveBeenCalled()
       expect(openAsset).not.toHaveBeenCalled()
     })
 
@@ -1107,6 +1114,39 @@ describe('the explorer menu', () => {
     await open('brief.pdf')
 
     await waitFor(() => expect(revealFile).toHaveBeenCalledWith('brief.pdf'))
+  })
+
+  /**
+   * The window is about ONE entry, so the row carries the path that was right-clicked — never
+   * the selection, which the gestures around it act on.
+   */
+  it('opens the information window on the entry that was right-clicked', async () => {
+    withProject()
+    const { openFileInfo } = install({ '': [file('brief.pdf'), file('a.png')] })
+    menu.picks('Informations sur le fichier')
+
+    render(<Explorer />)
+    await open('brief.pdf')
+
+    await waitFor(() => expect(openFileInfo).toHaveBeenCalledWith('brief.pdf'))
+  })
+
+  /**
+   * A folder has no type, no dimensions, no fingerprint and no catalogue row: the window would
+   * open with three of its four screens missing. Greyed rather than dropped, as every row of
+   * this menu is — one that comes and goes cannot be learnt.
+   */
+  it('offers the information window on a file and greys it on a folder', async () => {
+    withProject()
+    install({ '': [folder('Notes'), file('brief.pdf')] })
+
+    render(<Explorer />)
+    await open('brief.pdf')
+    expect(menu.offers('Informations sur le fichier')).toBe(true)
+
+    await open('Notes')
+    expect(menu.labels()).toContain('Informations sur le fichier')
+    expect(menu.offers('Informations sur le fichier')).toBe(false)
   })
 
   it('moves a file to the trash rather than deleting it', async () => {

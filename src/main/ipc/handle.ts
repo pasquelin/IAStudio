@@ -43,6 +43,7 @@ type ChannelMethod = {
   [CHANNELS.projectSearchFolder]: StudioBridge['project']['searchFolder']
   [CHANNELS.projectWalkFolder]: StudioBridge['project']['walkFolder']
   [CHANNELS.projectOpenFile]: StudioBridge['project']['openFile']
+  [CHANNELS.projectFileFacts]: StudioBridge['project']['fileFacts']
   [CHANNELS.projectRevealFile]: StudioBridge['project']['revealFile']
   [CHANNELS.projectRevealFolder]: StudioBridge['project']['revealFolder']
   [CHANNELS.projectRename]: StudioBridge['project']['rename']
@@ -168,6 +169,8 @@ type ChannelMethod = {
   [CHANNELS.windowWorkspace]: StudioBridge['window']['setWorkspace']
 
   [CHANNELS.mirrorOpen]: StudioBridge['mirror']['open']
+
+  [CHANNELS.fileInfoOpen]: StudioBridge['fileInfo']['open']
 
   [CHANNELS.menuPopup]: StudioBridge['menu']['popup']
 

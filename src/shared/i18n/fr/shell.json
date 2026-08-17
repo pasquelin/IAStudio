@@ -66,6 +66,8 @@
     "trashHint": "Envoie le fichier à la corbeille du système ; rien n’est effacé tout de suite",
     "openEntry": "Ouvrir",
     "openEntryHint": "Ouvre le fichier dans son espace, ou déplie le dossier",
+    "fileInfo": "Informations sur le fichier",
+    "fileInfoHint": "Ouvre une fenêtre qui dit tout ce que le studio sait de cette entrée",
     "newFolder": "Nouveau dossier",
     "newFolderHint": "Crée un dossier vide dans le dossier affiché",
     "newFolderName": "dossier",

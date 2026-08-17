@@ -7,6 +7,14 @@ import { extensionOf } from './fileName'
  * A project's `assets/img` can hold thousands of files, and a reader who never opens it should
  * not pay for them. So the panel asks for the folder it is expanding, and nothing else.
  */
+/**
+ * The two things a project folder holds. A list as well as a union: a screen composes a word
+ * from it, and the bundles are held to that list.
+ */
+export type FileKind = 'folder' | 'file'
+
+export const FILE_KINDS: readonly FileKind[] = ['folder', 'file']
+
 export type FolderEntry = {
   /**
    * Where the entry is, relative to the project root, with `/` between segments on every
@@ -15,7 +23,7 @@ export type FolderEntry = {
    */
   path: string
   name: string
-  kind: 'folder' | 'file'
+  kind: FileKind
 }
 
 /** The root of the tree, which is the project folder itself. */

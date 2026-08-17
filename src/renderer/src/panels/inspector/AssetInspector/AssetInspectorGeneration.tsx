@@ -47,7 +47,7 @@ export function AssetInspectorGeneration({
         <PropertyRow label={t('inspector.seed')}>{generation.seed}</PropertyRow>
       )}
       {generation.prompt && (
-        <PropertyRow label={t('inspector.prompt')} stacked>
+        <PropertyRow label={t('inspector.prompt')} shape="stacked">
           <p className="text-text bg-surface text-tiny rounded-(--radius-sc-sm) p-1.5 whitespace-pre-wrap select-text">
             {generation.prompt}
           </p>

@@ -26,6 +26,9 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'assets.reveal',
   // A double-click is a gesture too: refusing the same asset twice must say so twice.
   'assets.open',
+  // The same double-click, one step earlier — before there is an asset to open. A reader whose
+  // file did nothing tries again; silenced from the second press, the studio looks broken.
+  'explorer.open',
   // Same gesture, same rule — and here silence costs more: each reopening re-arms a ⌘S that
   // would write the document's size back over a bigger picture.
   'canvas.size',

@@ -2,6 +2,7 @@ import type { AccountSummary, AccountsResult } from './domain/account'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
+import type { FileFacts } from './domain/fileInfo'
 import type { FileHistory, FileOutcome } from './domain/fileOp'
 import type { FolderEntry } from './domain/folder'
 import type { MaterialStyle } from './domain/style'
@@ -118,6 +119,15 @@ export type Channels = {
   projectFileHistory: 'project:file-history'
   projectStopRescan: 'project:stop-rescan'
   projectRescanState: 'project:rescan-state'
+  projectFileFacts: 'project:file-facts'
+
+  /**
+   * Opens one file's information window, or reveals the one that path already has.
+   *
+   * Under `window:` because opening one is the whole of it — and because a channel's domain is
+   * held to a single lowercase word (`ipc.test.ts`), which `file-info:` is not.
+   */
+  fileInfoOpen: 'window:file-info'
 
   gitRead: 'git:read'
   gitInit: 'git:init'
@@ -290,6 +300,9 @@ export const CHANNELS: Channels = {
   projectFileHistory: 'project:file-history',
   projectStopRescan: 'project:stop-rescan',
   projectRescanState: 'project:rescan-state',
+  projectFileFacts: 'project:file-facts',
+
+  fileInfoOpen: 'window:file-info',
 
   gitRead: 'git:read',
   gitInit: 'git:init',
@@ -574,6 +587,10 @@ export type LogScope =
   // The video return is a WINDOW, and a window the main process refuses to open leaves nothing
   // on screen to look at — the button simply appears not to work.
   | 'sequence.mirror'
+  // Asking what a file IS can FAIL, and a failure is not the answer « the studio has no editor
+  // for this ». Swallowed, it sent a file the studio opens to the system instead — measured on a
+  // `.glb` double-clicked while a download held the catalogue.
+  | 'explorer.open'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -612,6 +629,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'shell.layout',
   'shell.menu',
   'sequence.mirror',
+  'explorer.open',
 ]
 
 /**
@@ -904,6 +922,16 @@ export type StudioBridge = {
     rescanState: () => Promise<RescanState>
     /** Calls off the pass that is running. What it had already written stays written. */
     stopRescan: () => Promise<void>
+    /**
+     * What the disk says about one entry — size and stamps, for a folder as much as for a file.
+     *
+     * Asked path by path rather than folded into `listFolder`: a listing of four hundred rows
+     * would pay four hundred `stat` calls for facts one window reads about one of them.
+     *
+     * `null` for a path that is no longer there, which is the ordinary case for a window left
+     * open while the file it names was moved in the Finder.
+     */
+    fileFacts: (relative: string) => Promise<FileFacts | null>
     /** Shows the file in the system's own file manager, so the path never leaves the process. */
     revealFile: (relative: string) => Promise<void>
     /**
@@ -1427,6 +1455,16 @@ export type StudioBridge = {
    */
   mirror: {
     open: () => Promise<void>
+  }
+  /**
+   * One file's information, as a window of its own — the studio's ⌘I.
+   *
+   * The only thing this side cannot do itself, exactly as `mirror` above: open a window. What
+   * the window then SHOWS it reads for itself, through `project.fileFacts` and the catalogue.
+   */
+  fileInfo: {
+    /** A path relative to the project folder — the spelling every panel names a file with. */
+    open: (relative: string) => Promise<void>
   }
   menu: {
     /**
