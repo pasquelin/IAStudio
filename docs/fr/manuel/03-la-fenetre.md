@@ -236,7 +236,7 @@ dessous dans la seconde.
 | Icônes de la **moitié haute** | Modèles, puis Génération ; l’accueil y met **Vos projets** |
 | *séparateur* | |
 | Icônes de la **moitié basse** | l’Explorateur puis Git, à l’accueil comme dans les espaces |
-| Tout en bas | Assets ou Timeline, puis Historique, selon l’espace |
+| Tout en bas | Assets ou Timeline, puis Historique, selon l’espace ; à l’accueil, l’Historique seul |
 
 > **Le bouton + fait ce que l’écran sait faire.** Dans un espace, il est grisé tant qu’aucun
 > projet n’est ouvert : un document est un fichier dans un dossier de projet. **À l’accueil il
@@ -323,10 +323,10 @@ garde sa taille.
 | **Historique** | bas | 1re | partout *(si un projet est ouvert)* | les versions enregistrées du projet, et ce que chacune a changé |
 
 > **« Partout » veut dire les espaces de travail, pas l’accueil.** L’accueil a ses propres
-> panneaux — quatre, dans ses deux colonnes — que ce tableau ne liste pas. **L’Explorateur et Git
-> sont communs aux deux** : les mêmes panneaux, à la même place, à l’accueil comme dans un espace.
-> **L’Historique, lui, ne vient pas à l’accueil** : il se lit pendant qu’on travaille, pas avant
-> d’avoir commencé, et l’accueil n’a pas de bande basse.
+> panneaux — cinq — que ce tableau ne liste pas. **Trois sont communs aux deux** : l’Explorateur
+> et Git dans la colonne de gauche, l’Historique dans une bande basse que l’accueil n’avait pas
+> avant. Tous trois ne s’affichent qu’avec un projet ouvert : sans projet, l’accueil est celui
+> qu’il a toujours été, deux colonnes et rien en bas.
 
 **La colonne de gauche est celle de ce qui produit.** En haut, **Modèles** et **Génération**,
 qui se relaient. En bas, l’**Explorateur** et **Git**, qui se relaient aussi.

@@ -43,8 +43,8 @@ export function ChangedFileRow({ file, leading, actions, selected }: ChangedFile
     // A HEIGHT and `rowSkin` — the radius and the fill a picked line wears — which is what `Tree`
     // gives a row and what these two panels gave none: the line had no height of its own (`Row`
     // is `h-full`, and a list answers that with a row of its own) and came out at 198px each, one
-    // file per screenful. Not `ROW_LINE` on top of it: `Row` already wears that, and the two
-    // paddings stacked put every name 4px past the heading above it.
+    // file per screenful. The line SHAPE is not restated on top of it: `Row` already wears it,
+    // and the two paddings stacked put every name 4px past the heading above it.
     //
     // The height is a CONTROL's, the gauge every list in the studio measures by: the path is one
     // line clipped at its start, not a name stacked over its folder. `Tree` settled that same

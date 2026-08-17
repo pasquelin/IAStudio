@@ -246,16 +246,18 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // Declared after the shelf and the montage, so entering a space still opens on the panel that
   // space is for. Someone who wants the history asks for it.
   //
-  // The spaces and NOT the home, unlike the Git panel above it. The home lost eight panels on
-  // 13 August for one reason — every panel that answered a question about the studio instead of
-  // offering a way into it stood between the reader and their projects — and a band of past
-  // versions is exactly such a panel. It would also give that screen a bottom zone it has never
-  // had, for a reading one does while working rather than before starting.
+  // The home as well, which reverses what this said until 17 August — and the argument it
+  // reversed is worth keeping, because it still holds for the eight panels the home lost on
+  // 13 August: a panel that answers a question about the studio stands between the reader and
+  // their projects. The history is not one of those. It answers a question about the project
+  // that is OPEN, it is offered only while one is (`requires`), and the Git panel already sits
+  // in the home's left column saying what has changed — a reader who can see that and not what
+  // came before it is reading half a sentence.
   {
     id: 'history',
     zone: 'bottom',
     slot: 'primary',
-    surfaces: WORKSPACE_IDS,
+    surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
     requires: 'project',
   },
 ]

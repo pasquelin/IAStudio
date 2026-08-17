@@ -230,7 +230,7 @@ zone's cut: the icons above it open in the first half, those below in the second
 | **Upper half** icons | Models, then Generate; the home puts **Your projects** there |
 | *separator* | |
 | **Lower half** icons | the Explorer then Git, on the home as in the workspaces |
-| At the bottom | Assets or Timeline, then History, depending on the workspace |
+| At the bottom | Assets or Timeline, then History, depending on the workspace; on the home, History alone |
 
 > **The + button makes what the screen makes.** In a workspace it is greyed out while no project
 > is open: a document is a file in a project folder. **On the home it is never greyed out** — it
@@ -314,10 +314,10 @@ close button never goes**, and the panel's name keeps its size.
 | **History** | bottom | 1st | everywhere *(with a project open)* | the project's recorded versions, and what each one changed |
 
 > **"Everywhere" means the workspaces, not the home screen.** The home has panels of its own —
-> four, in its two columns — that this table does not list. **The Explorer and Git belong to
-> both**: the same panels, in the same place, on the home as in a workspace. **History does not
-> come to the home**: it is read while working rather than before starting, and the home has no
-> bottom strip.
+> five — that this table does not list. **Three belong to both**: the Explorer and Git in the
+> left column, and History in a bottom strip the home did not have before. All three appear only
+> with a project open: with none, the home is the screen it has always been — two columns and
+> nothing below.
 
 **The left column belongs to what produces.** Above, **Models** and **Generate**, which take
 turns. Below, the **Explorer** and **Git**, which take turns as well.
