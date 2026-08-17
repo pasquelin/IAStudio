@@ -44,6 +44,21 @@ export function isCatalogueGone(error: unknown): boolean {
 }
 
 /**
+ * A catalogue read, with the project going answered by `gone` rather than by a rejection.
+ *
+ * Takes a THUNK, not a promise: `catalog()` throws before any promise exists, so a `.catch()`
+ * hung off the call is never attached and the throw leaves by the stack instead.
+ */
+export async function orWhenGone<T>(read: () => Promise<T>, gone: T): Promise<T> {
+  try {
+    return await read()
+  } catch (error: unknown) {
+    if (isCatalogueGone(error)) return gone
+    throw error
+  }
+}
+
+/**
  * Why a folder would not serve as a project. Each case asks the user for a different thing: pick
  * another folder, repair this one, update the studio, or — for a folder sitting inside a project
  * already — pick one that is not there.

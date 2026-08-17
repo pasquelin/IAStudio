@@ -14,6 +14,7 @@ import {
   createProjectStore,
   isCatalogueGone,
   NoProjectError,
+  orWhenGone,
   ProjectOpenError,
   type ProjectStore,
 } from './store'
@@ -681,5 +682,31 @@ describe('telling a project that has gone from something that broke', () => {
     expect(isCatalogueGone(new TypeError('find is not a function'))).toBe(false)
     expect(isCatalogueGone(new Error('catalogue thread failed: out of memory'))).toBe(false)
     expect(isCatalogueGone('catalogue is closed')).toBe(false)
+  })
+
+  /**
+   * The shape, and the reason this takes a thunk: `project.catalog()` throws BEFORE any promise
+   * exists, so a `.catch()` hung off the call is never attached and the throw leaves by the
+   * stack — reaching the scheme as a defect on a path that is merely a project being left.
+   */
+  it('answers for a read that throws before it ever returns a promise', async () => {
+    await expect(
+      orWhenGone(() => {
+        throw new NoProjectError()
+      }, null),
+    ).resolves.toBeNull()
+
+    await expect(
+      orWhenGone<readonly string[]>(() => {
+        throw new Error(CATALOGUE_CLOSED)
+      }, []),
+    ).resolves.toEqual([])
+  })
+
+  it('hands back what the read answered, and lets a defect travel', async () => {
+    await expect(orWhenGone(() => Promise.resolve('a file'), null)).resolves.toBe('a file')
+    await expect(orWhenGone(() => Promise.reject(new TypeError('broke')), null)).rejects.toThrow(
+      TypeError,
+    )
   })
 })

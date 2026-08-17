@@ -92,12 +92,7 @@ import {
   type FolderReader,
   type FolderWatch,
 } from './project/folder'
-import {
-  createProjectStore,
-  isCatalogueGone,
-  openFailureKey,
-  type ProjectStore,
-} from './project/store'
+import { createProjectStore, openFailureKey, orWhenGone, type ProjectStore } from './project/store'
 import { createReconciler, type Reconciler } from './project/reconcile'
 import { createActivityLog, type ActivityLog } from './project/activityLog'
 import { openCatalogThread } from './project/catalogThread'
@@ -1284,13 +1279,10 @@ export function createServices(settings: SettingsStore): Services {
       // Both refusals are answered « no preview » rather than thrown, because both are ordinary
       // and `servedPath` now reads a rejection as a defect: the catalogue is closing under this
       // request, or the row names a still the folder no longer holds — what a rescan repairs.
-      const [asset] = await project
-        .catalog()
-        .search({ path: relative, limit: 1 })
-        .catch((error: unknown) => {
-          if (isCatalogueGone(error)) return []
-          throw error
-        })
+      const [asset] = await orWhenGone(
+        () => project.catalog().search({ path: relative, limit: 1 }),
+        [],
+      )
       const poster = asset ? posterFileOf(current.path, asset) : null
       return poster ? await readFile(poster).catch(() => null) : null
     },
