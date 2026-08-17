@@ -237,7 +237,7 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.startsWith('./panels/')).sort()).toEqual([
-      './panels/assets/type-facet.ts',
+      './panels/assets/typeFacet.ts',
       './panels/jobs/JobRow/JobRow.tsx',
       './panels/jobs/JobRow/JobRowDetail.tsx',
       './panels/jobs/Jobs.tsx',

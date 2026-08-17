@@ -27,8 +27,8 @@ import { AssetCard } from './AssetCard'
 import { AssetRow } from './AssetRow'
 import { ImportProgress } from './ImportProgress'
 import { useAssetFacets } from './facets'
-import { LOCATION_FACET, useBadgeLabels } from './location-facet'
-import { TYPE_FACET, useTypeLabels } from './type-facet'
+import { LOCATION_FACET, useBadgeLabels } from './locationFacet'
+import { TYPE_FACET, useTypeLabels } from './typeFacet'
 import {
   markOf,
   mergeRows,

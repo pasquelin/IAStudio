@@ -26,7 +26,7 @@ import {
   setLayerTransform,
 } from '@/engines/canvas/commands'
 import { cn } from '@/helpers/cn'
-import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
+import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
 import { useCanvases } from '@/stores/canvases'
 import { FontField } from './FontField'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'

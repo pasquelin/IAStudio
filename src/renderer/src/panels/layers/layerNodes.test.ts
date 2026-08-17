@@ -6,7 +6,7 @@ import {
   type CanvasState,
   type Layer,
 } from '@/engines/canvas/canvasState'
-import { layerNodes, stackIndex } from './layer-nodes'
+import { layerNodes, stackIndex } from './layerNodes'
 
 const canvasOf = (layers: readonly Layer[]): CanvasState => ({
   ...DEFAULT_CANVAS,

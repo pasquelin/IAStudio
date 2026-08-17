@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import type { AssetType } from '@shared/domain/asset'
 import type { FacetDescriptor } from '@/helpers/collectionState'
-import { useLocationFacet } from './location-facet'
-import { useTypeFacet } from './type-facet'
+import { useLocationFacet } from './locationFacet'
+import { useTypeFacet } from './typeFacet'
 
 /**
  * Every facet the shelf offers, in one place.

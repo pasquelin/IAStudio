@@ -1,3 +1,3 @@
-import { nodePanel } from '@/panels/shared/node-panel'
+import { nodePanel } from '@/panels/shared/nodePanel'
 
 export const definition = nodePanel('mesh')

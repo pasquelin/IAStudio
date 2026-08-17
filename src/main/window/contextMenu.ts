@@ -18,7 +18,7 @@ import { parseContextMenuItems } from './validation'
 /**
  * The rows a right-click offers inside a text field.
  *
- * Disabled rather than dropped, as `AssetMenu` explains: a menu whose length changes with the
+ * Disabled rather than dropped, as `assetMenu` explains: a menu whose length changes with the
  * selection is one nobody can learn. `registerAccelerator: false` for the reason the Edit menu
  * already gives — reserving ⌘X would take the key from the very field this was raised in.
  */

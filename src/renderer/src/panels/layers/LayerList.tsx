@@ -7,8 +7,8 @@ import { canvasOf, collapseLayerIn, selectLayerIn, useCanvases } from '@/stores/
 import { useSelection } from '@/stores/selection'
 import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { LayerRow } from './LayerRow'
-import { openLayerMenu } from './LayerMenu'
-import { layerNodes, levelIndexOf, stackIndex } from './layer-nodes'
+import { openLayerMenu } from './layerMenu'
+import { layerNodes, levelIndexOf, stackIndex } from './layerNodes'
 
 /**
  * The stack of the document in front, listed through the same `Tree` as the scene outliner and

@@ -5,7 +5,7 @@ import { fakeMenu } from '@/helpers/menu-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
-import { openAssetMenu } from './AssetMenu'
+import { openAssetMenu } from './assetMenu'
 
 function asset(overrides: Partial<Asset> = {}): Asset {
   return {
