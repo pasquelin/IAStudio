@@ -88,27 +88,10 @@ export function ContextMenu({ at, onClose, children }: ContextMenuProps) {
 }
 
 /**
- * The pointer a right-click reported, held until the menu it opened is done with it.
- *
- * Three hosts draw a `ContextMenu` — the project row, the style row and a track header — and each
- * one had written the same `useState`, the same `preventDefault` and the same pair of client
- * coordinates. They are the three the studio deliberately did NOT hand to the system, because a
- * `⋯` button renders their rows too; the rest go through `showContextMenu` in
- * `helpers/contextMenu.ts`, which holds no state at all. **This hook belongs to the DRAWN menu**,
- * and lives beside it rather than beside that helper so the two paths cannot be reached for by
- * mistake.
- *
- * `open` is the handler itself, not a setter: preventing the default is not a caller's choice, it
- * is what stops the platform menu from arriving on top of this one. A host with its own reason to
- * let that menu through — a right-click inside a text field asks the system for spelling and
- * clipboard — decides BEFORE calling, not after.
- *
- * Both are stable, which two of the three hosts had already learnt the hard way, for reasons that
- * are NOT the same one: an open menu re-subscribes its three global listeners whenever `onClose`
- * changes identity (`useDismiss.ts:51`), and every write in the styles panel answers with the
- * whole list re-read from disk — while the projects shelf re-renders on any SETTINGS write at
- * all, density or theme included, because `Projects.tsx` reads `useSettings` to build its rows.
- * The wider of the two triggers is the one nothing else records.
+ * For the DRAWN menu, not the system one — `helpers/contextMenu.ts` holds that path, and no state.
+ * `open` is the handler rather than a setter: the `preventDefault` that keeps the platform menu
+ * away is not a caller's choice, so a host wanting it through decides before calling. Both stay
+ * stable, or an open menu re-subscribes its global listeners on every render of its host.
  */
 export function useContextMenu(): {
   at: { x: number; y: number } | null

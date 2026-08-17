@@ -162,24 +162,10 @@ export function useToolState(surface: ToolSurface): ToolState {
 }
 
 /**
- * What a half of a zone actually draws, given what it holds — `undefined` for a closed half,
- * `null` for one open on no panel in particular, an id for a panel the user chose.
- *
- * Three substitutions are settled here rather than in the store, which knows what is open per
- * zone and nothing about sections.
- *
- * A half nobody has chosen for shows the first panel this section declares there. That first
- * panel differs in each — the layers in Image, the shelf in Video, the sky in Skyboxes — which
- * is exactly why the store holds no id for it.
- *
- * A half holding a tool this section puts elsewhere — or does not have at all — shows what the
- * section does put there. What the user opened is a zone, and it stays that zone: the bottom
- * band is the shelf in Image and the montage in Video, without either of them being reopened
- * by hand on every switch. Closing the half still empties it everywhere, which is the one
- * thing the click actually said.
- *
- * And a generator without a model gives way to the Models panel. All three leave the persisted
- * state alone, so a section that has what was asked for restores it.
+ * `undefined` for a closed half, `null` for one open on no panel in particular, an id for one the
+ * user chose. Three substitutions — an unchosen half falls to the section's first panel, a half
+ * holding a tool the section puts elsewhere shows what it does put there, a generator with no
+ * model gives way to Models — and none of them touches the persisted state.
  */
 export function shownTool(
   tool: ToolId | null | undefined,
