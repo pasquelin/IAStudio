@@ -31,8 +31,8 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { canvasOf, isCanvasDirty, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, canvasViewOf } from '@/stores/canvasViews'
 import { useDocuments } from '@/stores/documents'
-import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from '../canvas-view'
-import { guidePort } from '../guide-port'
+import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from '../canvasView'
+import { guidePort } from '../guidePort'
 import {
   armedBy,
   armingCommand,
@@ -42,15 +42,15 @@ import {
   IMAGE_TOOLS,
   selectionShapeFor,
   shapeKindFor,
-} from '../image-tools'
-import { layerPort } from '../layer-port'
-import { prepareEdit, type AiEdit } from '../ai-actions'
-import { exportPicture } from '../export-picture'
-import { maskFromSelection } from '../mask-actions'
-import { placeAsset } from '../place-asset'
+} from '../imageTools'
+import { layerPort } from '../layerPort'
+import { prepareEdit, type AiEdit } from '../aiActions'
+import { exportPicture } from '../exportPicture'
+import { maskFromSelection } from '../maskActions'
+import { placeAsset } from '../placeAsset'
 import { revealAssets } from '@/helpers/revealPanel'
-import { holdCanvas } from '../canvas-hosts'
-import { pixelPort } from '../pixel-port'
+import { holdCanvas } from '../canvasHosts'
+import { pixelPort } from '../pixelPort'
 import { ZoomBar } from '../ZoomBar'
 
 export type ImageDocumentProps = { documentId: string }

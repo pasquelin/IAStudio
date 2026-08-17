@@ -3,7 +3,7 @@ import type { Asset } from '@shared/domain/asset'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
 import { reportFailure } from '@/services/diagnostics'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
-import { becomeAsset, placeAsset } from './place-asset'
+import { becomeAsset, placeAsset } from './placeAsset'
 
 vi.mock('@/services/diagnostics', () => ({ reportFailure: vi.fn() }))
 

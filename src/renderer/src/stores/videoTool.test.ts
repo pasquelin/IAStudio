@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_VIDEO_TOOL } from '@/spaces/video/video-tools'
+import { DEFAULT_VIDEO_TOOL } from '@/spaces/video/videoTools'
 import { useVideoTool } from './videoTool'
 
 describe('video tool store', () => {

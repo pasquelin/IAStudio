@@ -4,7 +4,7 @@ import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import { fakeMenu } from '@/helpers/menu-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { openSceneNodeMenu } from './SceneNodeMenu'
+import { openSceneNodeMenu } from './sceneNodeMenu'
 
 let menu = fakeMenu()
 const run = vi.fn()

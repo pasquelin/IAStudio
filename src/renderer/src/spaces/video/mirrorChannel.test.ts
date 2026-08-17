@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mirrorMessageOf } from './mirror-channel'
+import { mirrorMessageOf } from './mirrorChannel'
 
 /**
  * A `BroadcastChannel` is reachable by anything running on this origin, so what arrives on it is

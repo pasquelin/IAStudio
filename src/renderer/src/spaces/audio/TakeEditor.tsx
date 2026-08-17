@@ -33,9 +33,9 @@ import {
   useSequences,
   writeTakeClip,
 } from '@/stores/sequences'
-import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
+import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audioTools'
 import { decodeAsset } from '@/helpers/audioDecode'
-import { loadTake } from './load-take'
+import { loadTake } from './loadTake'
 import { useAudioRenderer } from '@/hooks/useAudioRenderer'
 import { useWaveSurfer } from '@/hooks/useWaveSurfer'
 

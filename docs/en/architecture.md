@@ -472,7 +472,7 @@ Their callbacks are kept stable for that memo to bite.
 `sequence.mirror` opens a second window mirroring the Program monitor, for a second screen. **The
 IPC bridge carries one thing only: opening that window** (`main/window/mirror.ts`). Everything else
 — the edit, the playhead, playback — travels over a `BroadcastChannel`
-(`spaces/video/mirror-channel.ts`).
+(`spaces/video/mirrorChannel.ts`).
 
 **This is no way around invariant 2**, which guards the boundary between PROCESSES. Both windows
 load the same renderer bundle: they already share `SequenceState` as a type, and routing it through
@@ -1166,7 +1166,7 @@ and the panels through Testing Library.
 | A workspace | `WORKSPACE_IDS`, then its icon and family in `helpers/workspaces.ts` — the compiler asks for both |
 | An IPC channel | `shared/ipc.ts` first, then the handler; the signature is derived, so start from the contract |
 | A mesh or light kind | `mesh-primitives.ts` / `light-types.ts` — the toolbar, the panels and the native menu all read those tables |
-| An image tool | `spaces/image/image-tools.ts`, in the right group |
+| An image tool | `spaces/image/imageTools.ts`, in the right group |
 | A shared visual shape | `design/`, one component per file, plus its test |
 
 Two rules that save the most time: check that a helper does not already exist before writing one,

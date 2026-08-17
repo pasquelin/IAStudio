@@ -216,8 +216,8 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.startsWith('./spaces/')).sort()).toEqual([
-      './spaces/image/canvas-hosts.ts',
-      './spaces/image/place-asset.ts',
+      './spaces/image/canvasHosts.ts',
+      './spaces/image/placeAsset.ts',
     ])
   })
 

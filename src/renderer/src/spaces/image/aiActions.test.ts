@@ -9,7 +9,7 @@ import { useModels } from '@/stores/models'
 import { preferModels } from '@/stores/settings-fixtures'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { arrangementOf, useTools } from '@/stores/tools'
-import { prepareEdit } from './ai-actions'
+import { prepareEdit } from './aiActions'
 
 const DOCUMENT = 'doc-1'
 

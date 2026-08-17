@@ -39,7 +39,7 @@ export function TextureInspectorSeamReading({ documentId }: { documentId: string
   const measure = async (): Promise<void> => {
     setMeasuring(true)
     try {
-      const { measureTextureSeam } = await import('@/spaces/textures/measure-seam')
+      const { measureTextureSeam } = await import('@/spaces/textures/measureSeam')
       await measureTextureSeam(documentId)
     } finally {
       setMeasuring(false)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
-import { fillEditFields } from './ai-fields'
+import { fillEditFields } from './aiFields'
 
 const field = (overrides: Partial<FieldDescriptor>): FieldDescriptor => ({
   key: 'field',

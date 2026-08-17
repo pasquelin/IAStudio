@@ -55,8 +55,8 @@ import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { useSelection } from '@/stores/selection'
 import { addSceneToSequence, sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
-import { exportSequence } from './sequence-export'
-import type { VideoToolId } from './video-tools'
+import { exportSequence } from './sequenceExport'
+import type { VideoToolId } from './videoTools'
 
 export type TimelineCanvasProps = {
   documentId: string

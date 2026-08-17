@@ -32,7 +32,7 @@ import { skyboxStore } from '@/stores/skyboxes'
 import type { DocumentStore } from '@/stores/documentStore'
 import { DEFAULT_CANVAS, deserializeCanvas, serializeCanvas } from '@/engines/canvas/canvasState'
 import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
-import { canvasHost } from '@/spaces/image/canvas-hosts'
+import { canvasHost } from '@/spaces/image/canvasHosts'
 import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
 import { newTexture, parseTexture } from '@/engines/texture/textureState'
 import { useSkyboxViews } from '@/stores/skyboxViews'
@@ -379,10 +379,10 @@ const IMAGE_IO: DocumentIo = {
     // NOT awaited, and that is the difference from the refusal it replaces. This only SAYS
     // something — the save happens either way — so making ⌘S wait on a picture decode would buy
     // nothing and cost the responsiveness of the one gesture that must never feel stuck.
-    // Through `import()` for the reason `place-asset` gives: this file is in the opening chunk.
+    // Through `import()` for the reason `placeAsset` gives: this file is in the opening chunk.
     const replaced = target.replaces
     if (replaced) {
-      void import('@/spaces/image/asset-fidelity')
+      void import('@/spaces/image/assetFidelity')
         .then(({ reportAssetDrift }) => reportAssetDrift(documentId, replaced, target.name))
         // Nothing is rethrown into a save: a notice that cannot be given has nowhere to go, and
         // an unhandled rejection here would be the only trace of it.
@@ -426,7 +426,7 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   // destroy the only copy of what they are meant to stay undoable against.
   skybox: textDocumentIo(skyboxStore, asIs, parseSkybox, createSkyboxContent),
   // The one whose absence is NOT a refusal: a channel is a reference, not pixels, and what does
-  // produce pixels — `derive-channel` — already writes them as an asset when it derives them.
+  // produce pixels — `deriveChannel` — already writes them as an asset when it derives them.
   texture: textDocumentIo(textureStore, asIs, parseTexture, newTexture),
 }
 

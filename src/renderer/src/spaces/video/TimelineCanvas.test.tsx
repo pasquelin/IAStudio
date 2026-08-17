@@ -21,7 +21,7 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { TIMELESS_DURATION } from '@/engines/timeline/insert'
 import { TimelineCanvas } from './TimelineCanvas'
-import type { VideoToolId } from './video-tools'
+import type { VideoToolId } from './videoTools'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',

@@ -9,7 +9,7 @@ import {
 } from '@/engines/timeline/timelineState'
 import { useSelection } from '@/stores/selection'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { loadTake } from './load-take'
+import { loadTake } from './loadTake'
 
 const take = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'take-1',

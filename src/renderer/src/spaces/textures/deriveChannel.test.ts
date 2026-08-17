@@ -8,7 +8,7 @@ import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { installTexture } from '@/stores/texture-fixtures'
 import { textureOf, useTextures } from '@/stores/textures'
-import { deriveTextureChannel } from './derive-channel'
+import { deriveTextureChannel } from './deriveChannel'
 
 const asset = (id: string, name: string): Asset => ({
   id,

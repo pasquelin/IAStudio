@@ -13,7 +13,7 @@ import { useSettings } from '@/stores/settings'
 import { preferModels } from '@/stores/settings-fixtures'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { useTools } from '@/stores/tools'
-import { prepareEdit } from '@/spaces/image/ai-actions'
+import { prepareEdit } from '@/spaces/image/aiActions'
 import panelSource from './Generator.tsx?raw'
 import { Generator } from './Generator'
 

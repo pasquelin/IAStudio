@@ -3,7 +3,7 @@ import { layerById } from '@/engines/canvas/canvasState'
 import { modelForFamily } from '@/helpers/modelForFamily'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useModels } from '@/stores/models'
-import { fillEditFields } from './ai-fields'
+import { fillEditFields } from './aiFields'
 import { offerModelsOfFamily } from '@/helpers/offerModel'
 import { revealTool } from '@/helpers/revealPanel'
 

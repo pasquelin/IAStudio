@@ -2,7 +2,7 @@ import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
 import { DISPLAY_MODES } from '@shared/domain/scene'
-import { SCENE_TOOLS } from './scene-tools'
+import { SCENE_TOOLS } from './sceneTools'
 
 const display = SCENE_TOOLS.find(tool => tool.id === 'display')
 

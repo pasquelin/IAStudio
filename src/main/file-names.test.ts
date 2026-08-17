@@ -35,7 +35,7 @@ const RULE = 'a capital is earned by exporting a component or a class of that na
  * rule itself, and the next offending file fails on sight. The hooks did that one lot after this
  * guard landed, and the crowded files eight lots after — both constants went with them.
  */
-const KNOWN_OFF_CONVENTION = 67
+const KNOWN_OFF_CONVENTION = 40
 
 /** `.d.ts` names the module it declares, not a module of ours: `sherpa-onnx-node` is a package. */
 const isDeclaration = (path: string): boolean => path.endsWith('.d.ts')

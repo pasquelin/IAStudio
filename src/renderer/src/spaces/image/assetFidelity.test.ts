@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
 import { reportFailure } from '@/services/diagnostics'
 import { useCanvases } from '@/stores/canvases'
-import { matchesAsset, reportAssetDrift } from './asset-fidelity'
-import { lendPictureMeasure } from './picture-size'
+import { matchesAsset, reportAssetDrift } from './assetFidelity'
+import { lendPictureMeasure } from './pictureSize'
 
 vi.mock('@/services/diagnostics', () => ({ reportFailure: vi.fn() }))
 

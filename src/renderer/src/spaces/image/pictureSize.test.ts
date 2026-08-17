@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { measureAsset, MAX_PICTURE_SIDE, withinCeiling } from './picture-size'
+import { measureAsset, MAX_PICTURE_SIDE, withinCeiling } from './pictureSize'
 
 describe('bringing a picture under the ceiling', () => {
   it('leaves one that already fits exactly as it is', () => {

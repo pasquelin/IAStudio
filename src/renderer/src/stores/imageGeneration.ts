@@ -1,5 +1,5 @@
 import { isLocalPicture } from '@shared/domain/asset'
-import { placeAsset } from '@/spaces/image/place-asset'
+import { placeAsset } from '@/spaces/image/placeAsset'
 import { createGenerationLanding } from './generationLanding'
 
 /**

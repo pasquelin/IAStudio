@@ -15,9 +15,9 @@ import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 export async function matchesAsset(documentId: string, assetId: string): Promise<boolean | null> {
   if (!canvasStore.hasState(useCanvases.getState(), documentId)) return null
 
-  // Through `import()` for the reason `place-asset` gives: this file is in the opening chunk, and
+  // Through `import()` for the reason `placeAsset` gives: this file is in the opening chunk, and
   // nothing measures a picture until a gesture lands on a document that edits one.
-  const { measureAsset } = await import('./picture-size')
+  const { measureAsset } = await import('./pictureSize')
   const size = await measureAsset(assetId)
   if (!size) return null
 
@@ -51,7 +51,7 @@ export async function reportAssetDrift(
     // `canvas.size` rather than `assets.save`, which is where this used to land and where it was
     // false at both call sites: at ⌘S the asset IS rewritten — the save happens either way — and
     // on a revisit nothing is saved at all. Both moments say the same thing as the two warnings
-    // in `place-asset`: the document does not measure its picture, and ⌘S writes that size back.
+    // in `placeAsset`: the document does not measure its picture, and ⌘S writes that size back.
     reportFailure('canvas.size', name, new Error('document no longer measures its asset'))
   }
 }

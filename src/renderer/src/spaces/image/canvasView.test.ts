@@ -4,7 +4,7 @@ import { DEFAULT_VIEW } from '@/engines/canvas/viewport'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useCanvasViews, canvasViewOf } from '@/stores/canvasViews'
 import { useDocuments } from '@/stores/documents'
-import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
+import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvasView'
 
 const DOCUMENT = 'doc-1'
 const HOST = { width: 800, height: 600 }
