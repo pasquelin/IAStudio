@@ -26,7 +26,7 @@ le fond : il pose une lumière orange rasante sur tout ce qui est devant.
 
 > **Un ciel fabriqué ici éclaire vos scènes 3D.** Une fois enregistré dans le projet, il se
 > choisit dans l’Inspecteur de l’espace 3D, section **Environnement** : la scène s’allume, et les
-> matériaux le reflètent. C’est le vrai usage d’une skybox, au-delà du décor —
+> matières le reflètent. C’est le vrai usage d’une skybox, au-delà du décor —
 > voir [Espace 3D](09-espace-3d.md).
 
 ---

@@ -117,14 +117,14 @@
     "waiting": "En attente du studio. Ouvrez un montage pour le voir ici."
   },
   "styles": {
-    "none": "Aucun style enregistré. Réglez un matériau, puis enregistrez-le depuis l’inspecteur.",
+    "none": "Aucun style enregistré. Réglez une matière, puis enregistrez-la depuis l’inspecteur.",
     "rename": "Renommer",
     "actions": "Actions du style",
     "actionsHint": "Renommer ou supprimer ce style.",
     "remove": "Supprimer",
     "newName": "Style",
     "save": "Enregistrer comme style",
-    "saveHint": "Garde les réglages du matériau courant, sans ses maps, pour les rejouer sur une autre texture.",
+    "saveHint": "Garde les réglages de la matière courante, sans ses maps, pour les rejouer sur une autre texture.",
     "renameHint": "Change le nom du style enregistré, sans toucher à ce qu’il contient",
     "removeHint": "Retire le style de la liste ; les documents qui s’en servaient gardent leur réglage"
   },

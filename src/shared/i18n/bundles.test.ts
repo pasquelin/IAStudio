@@ -334,6 +334,12 @@ describe('the translation bundles', () => {
    * head-word `Maille`, and the panel is `Mailles`. Its `except` is the one reading French keeps:
    * `sceneDisplay.wireframeHint` says `la densité du maillage`, the TESSELLATION, not the object.
    *
+   * `matériau` against `matière` is the fifth, and the first the glossary could NOT settle — it
+   * had an entry for neither. The manual settles it by weight instead: `matière` 82 times over
+   * thirteen chapters against `matériau` 18, and the glossary now carries the entry it lacked.
+   * Its blind spot is `model-text.fr.json`, which this reading never sees: indexed on the English
+   * phrase, it is not a locale, so its three `matières PBR` are held by nothing.
+   *
    * What this does NOT catch: a form split across two lines, a THIRD synonym nobody has written
    * yet (`explorateur de fichiers`, `file explorer`), and text in NFD. And what it catches TOO
    * much, the day a bundle says it: `préférence` in the sense of a taste — "ce n'est pas une
@@ -363,6 +369,7 @@ describe('the translation bundles', () => {
       { dropped: /préférences?/i, kept: 'réglages' },
       { dropped: /champ de vision/i, kept: 'angle de vue' },
       { dropped: /maillages?/i, kept: 'maille', except: ['sceneDisplay.wireframeHint'] },
+      { dropped: /matériaux?/i, kept: 'matière' },
     ],
     en: [
       { dropped: /file browser/i, kept: 'file manager' },

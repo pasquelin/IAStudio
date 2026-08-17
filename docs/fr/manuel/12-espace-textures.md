@@ -98,7 +98,7 @@ différent de la surface.
 | **Occlusion ambiante** | les coins où la lumière entre mal | de la profondeur dans les creux |
 | **Hauteur** | le relief réel | un déplacement de la surface, plus fort que les normales |
 | **Émission** | ce qui brille par soi-même | une enseigne au néon, des braises |
-| **Cavité** | les creux et les arêtes de la surface | assombrit le fond des rainures, réglable par le curseur *Cavité* de la section **Matériau** |
+| **Cavité** | les creux et les arêtes de la surface | assombrit le fond des rainures, réglable par le curseur *Cavité* de la section **Matière** |
 
 > **Le panneau écrit trois de ces noms plus court** : la vignette dit **Normale**, **Métal** et
 > **Occlusion** là où ce tableau et le [glossaire](17-glossaire.md) disent *Normales*,
@@ -159,7 +159,7 @@ plat, part avec le projet — et le canal la porte avec le badge « dérivé ».
 nouvelle : relancer trois fois laisse trois images, dont une seule est en place.
 
 **Aucune force n’est figée dans les pixels.** L’intensité se règle après coup, dans l’Inspecteur :
-*Normale* (section **Relief**) pour la force du relief, *Occlusion* (section **Matériau**) pour
+*Normale* (section **Relief**) pour la force du relief, *Occlusion* (section **Matière**) pour
 l’ombrage des creux, la *plage de rugosité* pour le contraste du mat au brillant. C’est ce qui rend
 une dérivation réversible sans la refaire.
 
@@ -226,10 +226,10 @@ sauf sur un métal peint ou rouillé, où la valeur varie **zone par zone** grâ
 
 ## Régler la matière
 
-Inspecteur, section **Matériau**. Quatre sections en tout, et elles répondent à quatre questions
+Inspecteur, section **Matière**. Quatre sections en tout, et elles répondent à quatre questions
 différentes.
 
-### Matériau
+### Matière
 
 | Réglage | Ce qu’il fait |
 |---|---|
@@ -293,7 +293,7 @@ désaligneraient et le relief cesserait de correspondre à l’image qu’il sou
 Une matière bien réglée, c’est une quinzaine de valeurs. Les retrouver à la main sur la matière
 d’après, c’est le genre de travail qu’on ne refait pas deux fois de bon cœur.
 
-**Le bouton en haut à droite de l’inspecteur** enregistre l’état courant du matériau sous un nom
+**Le bouton en haut à droite de l’inspecteur** enregistre l’état courant de la matière sous un nom
 généré — « Style 1 », « Style 2 ». Le panneau **Styles**, dans la colonne de droite à côté des
 Canaux, les liste tous.
 
@@ -390,7 +390,7 @@ retient qu'elle est inversée. Un fichier `_Roughness` contient donc bien de la 
 
 ### Quatre choses à savoir
 
-**Vos réglages de plage partent avec.** La double poignée du panneau Matériau — celle qui
+**Vos réglages de plage partent avec.** La double poignée du panneau Matière — celle qui
 resserre la rugosité ou la métallicité — n’existe dans aucun des quatre formats. Elle est donc
 **écrite dans les pixels** : une rugosité resserrée entre 0,3 et 0,7 à l’écran sort resserrée.
 Une seule exception, et c’est sa raison d’être : **les canaux bruts sortent tels qu’ils sont
@@ -415,7 +415,7 @@ contienne que le dernier export.
 ### Ce que le `.glb` emporte en plus
 
 Lui seul est un objet et pas un jeu de fichiers : il part avec **la forme de l'aperçu**, et avec
-les réglages du panneau Matériau que le format sait porter : la teinte, la rugosité, la
+les réglages du panneau Matière que le format sait porter : la teinte, la rugosité, la
 métallicité, la force de la normale, l'intensité d'occlusion, l'émission et son intensité, et la
 répétition avec son décalage et sa rotation. Ouvert ailleurs, il ressemble à ce que vous jugiez à
 l'écran.

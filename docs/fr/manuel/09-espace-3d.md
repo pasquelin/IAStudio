@@ -163,7 +163,7 @@ en montre trois choses : le **contenu**, la **police**, et les nombres qui donne
 lettres — le **corps**, la **profondeur** (mettez-la à zéro pour des lettres plates) et les
 **segments de courbe**, qui décident de la finesse des arrondis.
 
-Un texte est éclairé comme une maille, et porte le même **matériau** : couleur, rugosité, métal,
+Un texte est éclairé comme une maille, et porte la même **matière** : couleur, rugosité, métal,
 et les cinq textures. Il projette et reçoit les ombres.
 
 #### Les polices offertes
@@ -189,8 +189,8 @@ que soit l’angle de la vue. C’est ce qu’on emploie pour une étincelle, un
 étiquette au-dessus d’un objet — tout ce qui doit rester lisible d’où qu’on regarde.
 
 **Ajouter ▸ Sprite** en pose un à l’origine. Il arrive sans image : choisissez-la dans
-l’Inspecteur, section **Sprite**, parmi les images du projet — les mêmes que celles qu’un
-matériau accepte en texture.
+l’Inspecteur, section **Sprite**, parmi les images du projet — les mêmes que celles qu’une
+matière accepte en texture.
 
 | Réglage | Ce qu’il fait |
 |---|---|
@@ -265,11 +265,11 @@ aligne.
 
 | Mode | Ce qui est dessiné |
 |---|---|
-| **Rendu** | les surfaces peintes par leur matériau, sans les arêtes |
+| **Rendu** | les surfaces peintes par leur matière, sans les arêtes |
 | **Filaire** | les arêtes seules — ce qui montre la densité du maillage |
 | **Rendu et filaire** | les surfaces peintes, et les arêtes par-dessus |
-| **Solide** | une argile unie sur toutes les surfaces : la forme, sans les matériaux |
-| **Aperçu matériau** | les matériaux sous le seul éclairage du studio, sans les lumières de la scène |
+| **Solide** | une argile unie sur toutes les surfaces : la forme, sans les matières |
+| **Aperçu matière** | les matières sous le seul éclairage du studio, sans les lumières de la scène |
 | **Matcap** | un éclairage capté sur une sphère : c’est le relief qui se lit, pas la couleur |
 | **Densité** | du vert au rouge selon les triangles au centimètre carré : le rouge est à optimiser |
 
@@ -420,7 +420,7 @@ montre son rayon, un tore montre son tube, un projecteur montre son angle.
 | **Identité** | le nom, modifiable |
 | **Transformation** | Position, Rotation, Échelle — trois nombres chacune (X, Y, Z). Un sprite sans enfant, sélectionné seul, n’a pas de ligne Rotation : elle ne se verrait nulle part |
 | **Géométrie** | ce qui définit la forme : rayon, largeur, segments… |
-| **Matériau** | Couleur, Rugosité, Métallicité, et cinq emplacements de textures |
+| **Matière** | Couleur, Rugosité, Métallicité, et cinq emplacements de textures |
 
 #### Les champs de géométrie, tous
 
@@ -501,7 +501,7 @@ scène entière et non à un objet.
 | Valeur | Ce que ça donne |
 |---|---|
 | **Studio** *(départ)* | un éclairage neutre, calculé, qui existe avant que vous n’ayez rien généré |
-| *une skybox du projet* | le ciel choisi éclaire la scène **et** se reflète dans les matériaux |
+| *une skybox du projet* | le ciel choisi éclaire la scène **et** se reflète dans les matières |
 
 C’est le pont entre les deux espaces : un ciel fabriqué dans l’espace **Skyboxes** devient ici la
 lumière de votre scène. Un coucher de soleil pose une lumière orange rasante sur tout, sans que

@@ -37,7 +37,7 @@ describe('ChannelTile', () => {
     )
     expect(screen.getByRole('menuitemradio', { name: 'Vider ce canal' })).toHaveAttribute(
       'data-tooltip-content',
-      `Retire l’image du canal${NO_BREAK_SPACE}; le matériau reprend sa valeur par défaut`,
+      `Retire l’image du canal${NO_BREAK_SPACE}; la matière reprend sa valeur par défaut`,
     )
     expect(screen.getByRole('menuitemradio', { name: 'Brick' })).toHaveAttribute(
       'data-tooltip-content',
