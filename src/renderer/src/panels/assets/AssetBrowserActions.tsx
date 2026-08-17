@@ -7,7 +7,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useToolLying } from '@/app/tool-zone'
 import { getBridge } from '@/services/bridge'
-import { CollectionBar } from '@/design/CollectionBar'
+import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
 import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'

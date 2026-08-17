@@ -22,7 +22,7 @@ import {
   mdiThermometer,
   mdiVectorSquare,
 } from '@mdi/js'
-import type { ToolbarItem, ToolMode } from '@/design/Toolbar'
+import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
 import { type PaneView } from '@/engines/scene/scene-view'
 import { DISPLAY_MODES, type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 

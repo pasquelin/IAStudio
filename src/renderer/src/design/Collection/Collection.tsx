@@ -4,7 +4,7 @@ import { cn } from '@/helpers/cn'
 import { isTyping } from '@/helpers/typing'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
-import { rowSkin, type RowTone } from './styles'
+import { rowSkin, type RowTone } from '../styles'
 import {
   columnsIn,
   GAP,
@@ -13,7 +13,7 @@ import {
   useRemeasure,
   useRowHeight,
   type RowHeight,
-} from './virtual'
+} from '../virtual'
 
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
 const ROW_GAP = 4

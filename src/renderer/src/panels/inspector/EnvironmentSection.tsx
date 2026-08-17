@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import type { AssetType } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, type EnvironmentRef } from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
-import { TextureField } from '@/design/TextureField'
+import { TextureField } from '@/design/TextureField/TextureField'
 import { openAssetById } from '@/helpers/open-asset'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
 

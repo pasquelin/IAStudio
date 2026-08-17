@@ -1,7 +1,8 @@
 import { mdiCheckCircleOutline, mdiAlertOutline } from '@mdi/js'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Toast, ToastStack } from '@/design/Toast'
+import { Toast } from '@/design/Toast/Toast'
+import { ToastStack } from '@/design/Toast/ToastStack'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant } from '@/stores/assistant'
 

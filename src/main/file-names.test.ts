@@ -36,7 +36,7 @@ const RULE = 'a capital is earned by exporting a component or a class of that na
  * after this guard landed — twelve, then none, and the constant went with them.
  */
 const KNOWN_OFF_CONVENTION = 286
-const KNOWN_CROWDED = 42
+const KNOWN_CROWDED = 37
 
 /** `.d.ts` names the module it declares, not a module of ours: `sherpa-onnx-node` is a package. */
 const isDeclaration = (path: string): boolean => path.endsWith('.d.ts')

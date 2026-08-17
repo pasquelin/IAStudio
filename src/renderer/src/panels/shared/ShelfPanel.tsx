@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ToolId } from '@shared/domain/tool'
-import { Collection } from '@/design/Collection'
+import { Collection } from '@/design/Collection/Collection'
 import { EmptyState } from '@/design/EmptyState'
 import { TILES_ONLY } from '@/helpers/collection-state'
 import { toolIcon, toolTitleKey } from '@/helpers/tool-registry'

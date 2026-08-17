@@ -1,12 +1,10 @@
-import { mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
-import { SHELF_OVERLAY } from './styles'
-import { TIP_BOTTOM, TIP_TOP } from '@/helpers/tooltip'
-import { UiIcon } from './UiIcon'
-import { GAP } from './virtual'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { CarouselArrow } from './CarouselArrow'
+import { GAP } from '../virtual'
 
 /**
  * Beyond this, dots count rather than orient: a reader cannot tell the eleventh from the
@@ -194,8 +192,8 @@ export function Carousel<T extends { id: string }>({
         </div>
       </div>
 
-      <Arrow side="left" hidden={position.atStart} onClick={() => scrollByPage(-1)} />
-      <Arrow side="right" hidden={position.atEnd} onClick={() => scrollByPage(1)} />
+      <CarouselArrow side="left" hidden={position.atStart} onClick={() => scrollByPage(-1)} />
+      <CarouselArrow side="right" hidden={position.atEnd} onClick={() => scrollByPage(1)} />
 
       {dots && (
         <div className="mt-2 flex justify-center gap-1.5">
@@ -225,42 +223,5 @@ export function Carousel<T extends { id: string }>({
         </div>
       )}
     </div>
-  )
-}
-
-type ArrowProps = {
-  side: 'left' | 'right'
-  hidden: boolean
-  onClick: () => void
-}
-
-/**
- * Revealed by hovering the shelf: a control permanently laid over the artwork hides part of
- * what the shelf exists to show. It disappears at the end it can no longer serve rather than
- * sitting there greyed — there is no rail left to point at.
- *
- * Named, so a screen reader can announce it, but out of the tab order: the rail itself takes
- * focus and scrolls with the arrow keys, which is the shorter path. A tab stop per direction
- * on every shelf would put a dozen presses between the home and its first card.
- */
-function Arrow({ side, hidden, onClick }: ArrowProps) {
-  const { t } = useTranslation()
-  if (hidden) return null
-
-  return (
-    <button
-      type="button"
-      tabIndex={-1}
-      {...TIP_TOP(t(side === 'left' ? 'carousel.previous' : 'carousel.next'))}
-      onClick={onClick}
-      className={cn(
-        SHELF_OVERLAY,
-        'text-text top-1/2 size-7 -translate-y-1/2',
-        'hover:bg-elevated shadow-(--sc-shadow-floating)',
-        side === 'left' ? 'left-1' : 'right-1',
-      )}
-    >
-      <UiIcon path={side === 'left' ? mdiChevronLeft : mdiChevronRight} size={16} />
-    </button>
   )
 }

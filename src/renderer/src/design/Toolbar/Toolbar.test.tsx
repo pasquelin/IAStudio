@@ -2,7 +2,8 @@ import { mdiCursorDefaultOutline, mdiPencil } from '@mdi/js'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { Toolbar, type ToolbarItem } from './Toolbar'
+import { Toolbar } from './Toolbar'
+import type { ToolbarItem } from './tools'
 
 // The expected labels below are French because they come from the i18n bundle: they are
 // user-facing text, not identifiers.

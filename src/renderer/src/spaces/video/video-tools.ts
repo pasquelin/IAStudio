@@ -1,5 +1,5 @@
 import { mdiCursorDefault, mdiHandBackRight, mdiKnife } from '@mdi/js'
-import type { ToolbarItem } from '@/design/Toolbar'
+import type { ToolbarItem } from '@/design/Toolbar/tools'
 
 export type VideoToolId = 'select' | 'blade' | 'hand'
 

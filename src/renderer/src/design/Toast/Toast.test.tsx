@@ -2,7 +2,8 @@ import { mdiAlertOutline } from '@mdi/js'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { Toast, ToastStack } from './Toast'
+import { Toast } from './Toast'
+import { ToastStack } from './ToastStack'
 
 const renderToast = (onDismiss = vi.fn()) =>
   render(

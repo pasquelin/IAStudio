@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Carousel } from './Carousel'
-import { SHELF_OVERLAY } from './styles'
+import { SHELF_OVERLAY } from '../styles'
 
 type Card = { id: string; name: string }
 
