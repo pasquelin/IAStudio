@@ -186,8 +186,14 @@ point it at and looks for this file inside.
 A document is a work in progress: an image with its layers, a 3D scene with its objects, an edit
 with its tracks.
 
-It is saved with `⌘S` / `Ctrl+S` — into `documents/` the first time, for want of anywhere better,
-and afterwards wherever you filed it — under an extension that says what it is:
+The **+** button at the top of the left rail makes one, and asks two things: its **name** and its
+**location**. The Location field opens the project's own folder tree — and nothing else: a
+document stays inside its project. It opens on the folder the Explorer is showing, or on
+`documents/` when nothing is picked there, and the **New folder…** row makes one without leaving
+the window.
+
+It is saved with `⌘S` / `Ctrl+S` — into the folder you chose when you made it, and afterwards
+wherever you filed it — under an extension that says what it is:
 
 | Document type | Extension | Workspace |
 |---|---|---|

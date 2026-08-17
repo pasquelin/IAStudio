@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
+import type { FileFacts } from '@shared/domain/fileInfo'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
+import { useSelection } from '@/stores/selection'
 import { registerDocumentNamer, type DocumentNamer } from './documentName'
 import { createDocumentIn } from './newDocument'
 
@@ -17,6 +19,15 @@ const stored = (title: string, fileName: string): DocumentDescriptor => ({
   path: `documents/${fileName}`,
 })
 
+const FILE_FACTS: FileFacts = {
+  kind: 'file',
+  bytes: 1,
+  createdAt: null,
+  modifiedAt: '2026-08-16T10:00:00.000Z',
+}
+
+const FOLDER_FACTS: FileFacts = { ...FILE_FACTS, kind: 'folder' }
+
 let release: (() => void) | null = null
 
 const namedBy = (namer: DocumentNamer): void => {
@@ -30,6 +41,7 @@ describe('createDocumentIn', () => {
     vi.clearAllMocks()
     installFakeBridge()
     useDocuments.setState({ documents: {}, stored: [] })
+    useSelection.getState().clear()
     const stamp = '2026-08-16T10:00:00.000Z'
     useProject.setState({
       project: {
@@ -45,7 +57,7 @@ describe('createDocumentIn', () => {
   })
 
   it('calls the document what the dialog answers, and opens it', async () => {
-    namedBy(() => Promise.resolve('Niveau'))
+    namedBy(() => Promise.resolve({ title: 'Niveau', folder: 'documents' }))
 
     createDocumentIn('3d')
 
@@ -85,9 +97,72 @@ describe('createDocumentIn', () => {
     createDocumentIn('3d')
 
     await vi.waitFor(() => expect(asked).toHaveBeenCalled())
-    expect(asked.mock.calls[0]?.[0].taken.map(document => document.fileName)).toEqual(
-      expect.arrayContaining(['Niveau.scene', 'Brouillon.scene']),
-    )
+    expect(
+      asked.mock.calls[0]?.[0].takenIn('documents').map(document => document.fileName),
+    ).toEqual(expect.arrayContaining(['Niveau.scene', 'Brouillon.scene']))
+  })
+
+  // A name is taken in ONE folder: two folders may each hold a `Niveau.scene`, and the disk is
+  // happy with both.
+  it('answers what another folder holds, not what this one does', async () => {
+    installFakeBridge({
+      documents: { list: () => Promise.resolve([stored('Niveau', 'Niveau.scene')]) },
+    })
+    const asked = vi.fn<DocumentNamer>(() => Promise.resolve(null))
+    namedBy(asked)
+
+    createDocumentIn('3d')
+
+    await vi.waitFor(() => expect(asked).toHaveBeenCalled())
+    expect(asked.mock.calls[0]?.[0].takenIn('Images')).toEqual([])
+  })
+
+  // Where the Explorer is pointing, which is where a user looking at a folder means to create.
+  it('opens the field on the folder holding the picked row', async () => {
+    installFakeBridge({
+      project: { fileFacts: () => Promise.resolve(FILE_FACTS) },
+    })
+    useSelection.getState().selectFiles(['Images/Croquis/etude.jpg'])
+    const asked = vi.fn<DocumentNamer>(() => Promise.resolve(null))
+    namedBy(asked)
+
+    createDocumentIn('3d')
+
+    await vi.waitFor(() => expect(asked).toHaveBeenCalled())
+    expect(asked.mock.calls[0]?.[0].folder).toBe('Images/Croquis')
+  })
+
+  it('opens the field on a picked folder itself', async () => {
+    installFakeBridge({
+      project: { fileFacts: () => Promise.resolve(FOLDER_FACTS) },
+    })
+    useSelection.getState().selectFiles(['Images/Croquis'])
+    const asked = vi.fn<DocumentNamer>(() => Promise.resolve(null))
+    namedBy(asked)
+
+    createDocumentIn('3d')
+
+    await vi.waitFor(() => expect(asked).toHaveBeenCalled())
+    expect(asked.mock.calls[0]?.[0].folder).toBe('Images/Croquis')
+  })
+
+  it('falls back to the documents folder when nothing is picked', async () => {
+    const asked = vi.fn<DocumentNamer>(() => Promise.resolve(null))
+    namedBy(asked)
+
+    createDocumentIn('3d')
+
+    await vi.waitFor(() => expect(asked).toHaveBeenCalled())
+    expect(asked.mock.calls[0]?.[0].folder).toBe('documents')
+  })
+
+  it('files the document in the folder the dialog answers', async () => {
+    namedBy(() => Promise.resolve({ title: 'Niveau', folder: 'Images/Croquis' }))
+
+    createDocumentIn('3d')
+
+    await vi.waitFor(() => expect(created()).toHaveLength(1))
+    expect(created()[0]?.path).toBe('Images/Croquis/Niveau.scene')
   })
 
   it('makes nothing when the creation is called off', async () => {
@@ -112,7 +187,7 @@ describe('createDocumentIn', () => {
 
   it('makes nothing with no project open', async () => {
     useProject.setState({ project: null })
-    const asked = vi.fn<DocumentNamer>(() => Promise.resolve('Niveau'))
+    const asked = vi.fn<DocumentNamer>(() => Promise.resolve({ title: 'Niveau', folder: '' }))
     namedBy(asked)
 
     createDocumentIn('3d')

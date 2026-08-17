@@ -1,10 +1,9 @@
 import { mdiChevronRight } from '@mdi/js'
 import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FOLDER_ROOT, nameOf } from '@shared/domain/folder'
+import { FOLDER_ROOT, folderTrail, nameOf } from '@shared/domain/folder'
 import { UiIcon } from '@/design/UiIcon'
 import { HINT_TOP } from '@/helpers/tooltip'
-import { folderTrail } from './folderTrail'
 
 export type FolderCrumbsProps = {
   /** The folder being browsed. `FOLDER_ROOT` shows the project's own crumb, alone. */

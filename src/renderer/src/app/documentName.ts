@@ -7,16 +7,21 @@ export type DocumentNameRequest = {
   kind: DocumentKind
   /** What the studio would have called it. The field opens on it, selected. */
   suggested: string
+  /** Where it would go — the folder the field opens on, which the user may then move. */
+  folder: string
   /**
-   * What the folder and the open tabs already hold. Carried with the request rather than read
-   * from the store by the field: the name is refused where it is TYPED — a name suffixed behind
-   * the user's back is a document called something they did not write.
+   * What the open tabs already hold, and what each FOLDER holds, asked as the choice moves: the
+   * name is refused where it is TYPED — a name suffixed behind the user's back is a document
+   * called something they did not write — and a name taken in one folder is free in the next.
    */
-  taken: readonly NamedDocument[]
+  takenIn: (folder: string) => readonly NamedDocument[]
 }
 
-/** Answers with the name to give, or `null` when the creation was called off. */
-export type DocumentNamer = (request: DocumentNameRequest) => Promise<string | null>
+/** What a named document is to be: where it goes and what it is called. */
+export type NamedDocumentPlace = { title: string; folder: string }
+
+/** Answers with the name and the folder, or `null` when the creation was called off. */
+export type DocumentNamer = (request: DocumentNameRequest) => Promise<NamedDocumentPlace | null>
 
 const host = createMountedHost<DocumentNamer>()
 

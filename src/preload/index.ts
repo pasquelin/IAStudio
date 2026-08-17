@@ -142,8 +142,8 @@ const bridge: StudioBridge = {
   documents: {
     list: () => ipcRenderer.invoke(CHANNELS.documentList),
     read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),
-    write: (id, kind, file, force) =>
-      ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file, force),
+    write: (id, kind, file, force, folder) =>
+      ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file, force, folder),
     rename: (id, kind, title) => ipcRenderer.invoke(CHANNELS.documentRename, id, kind, title),
     remove: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRemove, id, kind),
     confirmClose: title => ipcRenderer.invoke(CHANNELS.documentConfirmClose, title),

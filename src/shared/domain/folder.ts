@@ -96,6 +96,30 @@ export function nameOf(path: string): string {
 }
 
 /**
+ * The path an entry called `name` has inside `folder` — the inverse of `parentOf`.
+ *
+ * The root is what makes this worth a function: `FOLDER_ROOT` is the empty string, so joining on
+ * `/` unconditionally yields `/Notes`, an absolute path every boundary of the studio refuses.
+ */
+export function pathIn(folder: string, name: string): string {
+  return folder === FOLDER_ROOT ? name : `${folder}/${name}`
+}
+
+/**
+ * The folders leading to `folder`, the project itself first and `folder` last.
+ *
+ * Walked with `parentOf` rather than split on the separator, which is the same rule both
+ * processes already read a path by.
+ */
+export function folderTrail(folder: string): readonly string[] {
+  const above: string[] = []
+  for (let at: string | null = folder; at !== null && at !== FOLDER_ROOT; at = parentOf(at))
+    above.unshift(at)
+
+  return [FOLDER_ROOT, ...above]
+}
+
+/**
  * Whether the studio holds `path` for itself — the ONE spelling of that question, and the whole
  * of what a project folder is not the user's to arrange.
  *
