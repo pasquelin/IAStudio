@@ -50,11 +50,21 @@ async function exists(path: string): Promise<boolean> {
   )
 }
 
+/**
+ * Ten seconds, where `vi.waitFor` defaults to one and `testTimeout` governs none of it: the first
+ * case pays the dynamic import of the MCP SDK — 290 ms against 51 ms for the next one, measured on
+ * an idle machine — and a whole suite across every core multiplies that until it times out.
+ */
+const WAIT = { timeout: 10_000 }
+
+const waitForConfig = (present: boolean): Promise<void> =>
+  vi.waitFor(async () => expect(await exists(configPath())).toBe(present), WAIT)
+
 describe('the file a client is pointed at', () => {
   it('names the port and the token once the server is on', async () => {
     const mcp = running()
     mcp.apply(settings(true))
-    await vi.waitFor(async () => expect(await exists(configPath())).toBe(true))
+    await waitForConfig(true)
 
     const written: unknown = JSON.parse(await readFile(configPath(), 'utf8'))
     expect(written).toEqual({ port: mcp.endpoint()?.port, token: mcp.endpoint()?.token })
@@ -67,7 +77,7 @@ describe('the file a client is pointed at', () => {
   it('keeps it to this user alone', async () => {
     const mcp = running()
     mcp.apply(settings(true))
-    await vi.waitFor(async () => expect(await exists(configPath())).toBe(true))
+    await waitForConfig(true)
 
     // The low nine bits: the rest is the file type, which is not what this is about.
     expect((await stat(configPath())).mode & 0o777).toBe(0o600)
@@ -76,10 +86,10 @@ describe('the file a client is pointed at', () => {
   it('takes it away again when the switch goes off', async () => {
     const mcp = running()
     mcp.apply(settings(true))
-    await vi.waitFor(async () => expect(await exists(configPath())).toBe(true))
+    await waitForConfig(true)
 
     mcp.apply(settings(false))
-    await vi.waitFor(async () => expect(await exists(configPath())).toBe(false))
+    await waitForConfig(false)
   })
 
   /**
@@ -93,7 +103,7 @@ describe('the file a client is pointed at', () => {
     const mcp = running()
     mcp.apply(settings(false))
 
-    await vi.waitFor(async () => expect(await exists(configPath())).toBe(false))
+    await waitForConfig(false)
   })
 
   // `stop` is awaited at quit rather than fired off beside it — the removal must land before the
@@ -101,7 +111,7 @@ describe('the file a client is pointed at', () => {
   it('is gone once stopping has settled', async () => {
     const mcp = running()
     mcp.apply(settings(true))
-    await vi.waitFor(async () => expect(await exists(configPath())).toBe(true))
+    await waitForConfig(true)
 
     await mcp.stop()
 
@@ -129,13 +139,13 @@ describe('the switch', () => {
     })
 
     control.apply(settings(true))
-    await vi.waitFor(() => expect(control?.endpoint()).toBeNull())
+    await vi.waitFor(() => expect(control?.endpoint()).toBeNull(), WAIT)
 
     // The retry reaches a folder that exists, and this time it comes up.
     await control.stop()
     control = mcp
     mcp.apply(settings(true))
 
-    await vi.waitFor(() => expect(mcp.endpoint()).not.toBeNull())
+    await vi.waitFor(() => expect(mcp.endpoint()).not.toBeNull(), WAIT)
   })
 })
