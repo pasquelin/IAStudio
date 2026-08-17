@@ -7,7 +7,6 @@ import { openRepository } from './repository'
 import { createGitService, type GitService } from './service'
 import type { CredentialVault } from './credentials'
 import {
-  parseBranchName,
   parseCommitHash,
   parseCommitMessage,
   parseCredential,
@@ -16,7 +15,7 @@ import {
   parseHost,
   parseLogPage,
   parseOptionalHash,
-  parseRemoteName,
+  parseRefName,
   parseRemoteUrl,
   parseStashIndex,
 } from './validation'
@@ -69,8 +68,8 @@ export function registerGitHandlers({
     service.commit(parseCommitMessage(message), amend === true),
   )
   handle(CHANNELS.gitBranches, () => service.branches())
-  handle(CHANNELS.gitCreateBranch, (_event, name) => service.createBranch(parseBranchName(name)))
-  handle(CHANNELS.gitCheckout, (_event, name) => service.checkout(parseBranchName(name)))
+  handle(CHANNELS.gitCreateBranch, (_event, name) => service.createBranch(parseRefName(name)))
+  handle(CHANNELS.gitCheckout, (_event, name) => service.checkout(parseRefName(name)))
   handle(CHANNELS.gitLog, (_event, limit, skip) => {
     const page = parseLogPage(limit, skip)
     return service.log(page.limit, page.skip)
@@ -84,9 +83,8 @@ export function registerGitHandlers({
   )
   handle(CHANNELS.gitRemotes, () => service.remotes())
   handle(CHANNELS.gitAddRemote, (_event, name, url) =>
-    service.addRemote(parseRemoteName(name), parseRemoteUrl(url)),
+    service.addRemote(parseRefName(name), parseRemoteUrl(url)),
   )
-  handle(CHANNELS.gitRemoveRemote, (_event, name) => service.removeRemote(parseRemoteName(name)))
   handle(CHANNELS.gitFetch, () => service.fetch())
   handle(CHANNELS.gitPull, () => service.pull())
   handle(CHANNELS.gitPush, (_event, setUpstream) => service.push(setUpstream === true))
@@ -98,11 +96,9 @@ export function registerGitHandlers({
   handle(CHANNELS.gitStashes, () => service.stashes())
   handle(CHANNELS.gitStashPop, (_event, index) => service.stashPop(parseStashIndex(index)))
   handle(CHANNELS.gitStashDrop, (_event, index) => service.stashDrop(parseStashIndex(index)))
-  handle(CHANNELS.gitTags, () => service.tags())
   handle(CHANNELS.gitTag, (_event, name, commit) =>
-    service.tag(parseBranchName(name), parseCommitHash(commit)),
+    service.tag(parseRefName(name), parseCommitHash(commit)),
   )
-  handle(CHANNELS.gitDeleteTag, (_event, name) => service.deleteTag(parseBranchName(name)))
   handle(CHANNELS.gitHasCredentials, (_event, host) => service.hasCredentials(parseHost(host)))
   handle(CHANNELS.gitSetCredentials, (_event, host, user, token) => {
     const credential = parseCredential(user, token)

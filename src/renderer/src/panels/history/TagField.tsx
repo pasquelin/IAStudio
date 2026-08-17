@@ -1,9 +1,9 @@
 import { mdiTagOutline } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { isBranchName } from '@shared/domain/git'
+import { isRefName } from '@shared/domain/git'
+import { NameField } from '@/design/NameField'
 import { ToolButton } from '@/design/ToolButton'
-import { FIELD_FILL } from '@/design/styles'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
 
@@ -19,7 +19,6 @@ import { useGit } from '@/stores/git'
 export function TagField({ commit }: { commit: string }) {
   const { t } = useTranslation()
   const [naming, setNaming] = useState(false)
-  const [name, setName] = useState('')
   const busy = useGit(state => state.busy)
   const tag = useGit(state => state.tag)
 
@@ -38,24 +37,16 @@ export function TagField({ commit }: { commit: string }) {
   }
 
   return (
-    <input
-      autoFocus
-      type="text"
-      value={name}
-      aria-label={t('git.tagVersion')}
+    <NameField
+      label={t('git.tagVersion')}
       placeholder={t('git.tagPlaceholder')}
-      className={FIELD_FILL}
-      onChange={event => setName(event.target.value)}
-      onKeyDown={event => {
-        if (event.key === 'Enter' && isBranchName(name)) {
-          void tag(name, commit)
-          setNaming(false)
-          setName('')
-        }
-        if (event.key === 'Escape') setNaming(false)
+      accepts={isRefName}
+      disabled={busy}
+      onSubmit={name => {
+        void tag(name, commit)
+        setNaming(false)
       }}
-      // Leaving abandons rather than tags: a half-typed name never becomes a name in the history.
-      onBlur={() => setNaming(false)}
+      onCancel={() => setNaming(false)}
     />
   )
 }

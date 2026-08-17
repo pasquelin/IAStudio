@@ -579,22 +579,6 @@ export const SETTING_REGISTRY = [
     helpKey: 'settings.gitUserEmail.help',
     placeholderKey: 'settings.gitUserEmail.placeholder',
   }),
-  setting({
-    path: 'git.autoFetchMinutes',
-    kind: 'number',
-    section: 'git',
-    titleKey: 'settings.gitAutoFetch.title',
-    helpKey: 'settings.gitAutoFetch.help',
-    min: 0,
-    max: 120,
-  }),
-  setting({
-    path: 'git.initOnCreate',
-    kind: 'boolean',
-    section: 'git',
-    titleKey: 'settings.gitInitOnCreate.title',
-    helpKey: 'settings.gitInitOnCreate.help',
-  }),
 ]
 
 /**

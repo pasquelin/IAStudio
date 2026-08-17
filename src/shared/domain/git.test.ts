@@ -6,8 +6,7 @@ import {
   filesInStage,
   hasChanges,
   hasStagedFiles,
-  isBranchName,
-  needsCredentials,
+  isRefName,
   pathsOf,
   remoteHost,
   type GitFile,
@@ -128,8 +127,8 @@ describe('whether a file can be put back', () => {
 
 describe('a name git would take as a branch', () => {
   it('accepts the shapes people actually type', () => {
-    expect(isBranchName('essai-lumiere')).toBe(true)
-    expect(isBranchName('feat/panneau_git')).toBe(true)
+    expect(isRefName('essai-lumiere')).toBe(true)
+    expect(isRefName('feat/panneau_git')).toBe(true)
   })
 
   it.each([
@@ -142,7 +141,7 @@ describe('a name git would take as a branch', () => {
     ['essai/', 'a trailing slash'],
     ['essai.lock', 'the suffix git keeps for itself'],
   ])('refuses %s — %s', name => {
-    expect(isBranchName(name)).toBe(false)
+    expect(isRefName(name)).toBe(false)
   })
 
   /**
@@ -154,7 +153,7 @@ describe('a name git would take as a branch', () => {
   it.each(['-f', '--upload-pack=touch /tmp/pwned', '-'])(
     'refuses %s, which git would read as an option',
     name => {
-      expect(isBranchName(name)).toBe(false)
+      expect(isRefName(name)).toBe(false)
     },
   )
 })
@@ -174,7 +173,6 @@ describe('the server a token belongs to', () => {
     'is nothing for %s',
     url => {
       expect(remoteHost(url)).toBeNull()
-      expect(needsCredentials(url)).toBe(false)
     },
   )
 })

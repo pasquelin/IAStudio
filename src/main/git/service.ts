@@ -1,5 +1,4 @@
 import type {
-  GitBinary,
   GitBranch,
   GitCommit,
   GitCommitFile,
@@ -47,7 +46,6 @@ export type GitService = {
   bytes: (path: string, ref: string | null) => Promise<Uint8Array | null>
   remotes: () => Promise<GitRemote[]>
   addRemote: (name: string, url: string) => Promise<GitRepository>
-  removeRemote: (name: string) => Promise<GitRepository>
   fetch: () => Promise<GitRepository>
   pull: () => Promise<GitRepository>
   push: (setUpstream: boolean) => Promise<GitRepository>
@@ -57,9 +55,7 @@ export type GitService = {
   stashes: () => Promise<GitStashEntry[]>
   stashPop: (index: number) => Promise<GitRepository>
   stashDrop: (index: number) => Promise<GitRepository>
-  tags: () => Promise<string[]>
   tag: (name: string, commit: string) => Promise<GitRepository>
-  deleteTag: (name: string) => Promise<GitRepository>
   /** Whether a token is held for the host a URL lives on. Never the token. */
   hasCredentials: (host: string) => boolean
   setCredentials: (host: string, user: string, token: string) => void
@@ -89,10 +85,10 @@ export function createGitService({
   probe,
   open,
 }: GitServiceDeps): GitService {
-  let detected: GitBinary | null = null
+  let detected: boolean | null = null
   let held: { root: string; binary: string | undefined; repository: Repository } | null = null
 
-  const binaryOf = async (): Promise<GitBinary> => {
+  const hasBinary = async (): Promise<boolean> => {
     detected ??= await detectGit(probe(binaryPath()))
     return detected
   }
@@ -132,7 +128,7 @@ export function createGitService({
     const root = projectPath()
     if (!root) return { reached: false, state: { kind: 'no-project' } }
 
-    if (!(await binaryOf()).found) return { reached: false, state: { kind: 'no-binary' } }
+    if (!(await hasBinary())) return { reached: false, state: { kind: 'no-binary' } }
 
     const repository = repositoryAt(root)
     return repository
@@ -168,15 +164,21 @@ export function createGitService({
     return await read()
   }
 
-  /** Runs one read and answers with nothing where git could not — see the three callers below. */
-  const data = async <T>(run: (repository: Repository) => Promise<T[]>): Promise<T[]> => {
+  /**
+   * Runs one READ and falls back where git could not answer.
+   *
+   * The fallback is the caller's, because what "nothing" looks like differs: an empty list for a
+   * menu, an empty comparison for the diff pane, no bytes for a picture. What they share — reach
+   * the folder, run, swallow — is here rather than written out five times.
+   */
+  const value = async <T>(run: (repository: Repository) => Promise<T>, fallback: T): Promise<T> => {
     const found = await reach()
-    if (!found.reached) return []
+    if (!found.reached) return fallback
 
     try {
       return await run(found.repository)
     } catch {
-      return []
+      return fallback
     }
   }
 
@@ -192,7 +194,6 @@ export function createGitService({
     createBranch: name => perform(repository => repository.createBranch(name)),
     checkout: name => perform(repository => repository.checkout(name)),
     addRemote: (name, url) => perform(repository => repository.addRemote(name, url)),
-    removeRemote: name => perform(repository => repository.removeRemote(name)),
     fetch: () => perform(repository => repository.fetch()),
     pull: () => perform(repository => repository.pull()),
     push: setUpstream => perform(repository => repository.push(setUpstream)),
@@ -202,44 +203,26 @@ export function createGitService({
     stashPop: index => perform(repository => repository.stashPop(index)),
     stashDrop: index => perform(repository => repository.stashDrop(index)),
     tag: (name, commit) => perform(repository => repository.tag(name, commit)),
-    deleteTag: name => perform(repository => repository.deleteTag(name)),
 
     hasCredentials: host => vault.has(host),
     setCredentials: (host, user, token) => vault.set(host, { user, token }),
     clearCredentials: host => vault.clear(host),
 
     /**
-     * The three reads that answer with DATA rather than with a state.
+     * The reads that answer with DATA rather than with a state.
      *
-     * Empty on failure, and it is the honest answer for all three: a repository with no first
-     * commit has no history, and one whose `git log` refused has none the panel can draw. The
+     * Falling back rather than failing is the honest answer for all of them: a repository with no
+     * first commit has no history, a file the version does not hold has nothing to compare. The
      * screen that says WHY is the Git panel's, which is looking at the same folder — saying it
      * twice, in two panels, over one folder, would be saying it twice.
      */
-    branches: () => data(repository => repository.branches()),
-    remotes: () => data(repository => repository.remotes()),
-    stashes: () => data(repository => repository.stashes()),
-    tags: () => data(repository => repository.tags()),
-    log: (limit, skip) => data(repository => repository.log(limit, skip)),
-    commitFiles: hash => data(repository => repository.commitFiles(hash)),
-
-    diff: async (path, commit) => {
-      const found = await reach()
-      if (!found.reached) return { kind: 'empty' }
-
-      try {
-        return await found.repository.diff(path, commit)
-      } catch {
-        // A file the version does not hold, a path git will not read: nothing to compare, which
-        // is what `empty` says. The Git panel carries the screen that explains a broken folder.
-        return { kind: 'empty' }
-      }
-    },
-
-    bytes: async (path, ref) => {
-      const found = await reach()
-      return found.reached ? await found.repository.bytes(path, ref) : null
-    },
+    branches: () => value(repository => repository.branches(), []),
+    remotes: () => value(repository => repository.remotes(), []),
+    stashes: () => value(repository => repository.stashes(), []),
+    log: (limit, skip) => value(repository => repository.log(limit, skip), []),
+    commitFiles: hash => value(repository => repository.commitFiles(hash), []),
+    diff: (path, commit) => value(repository => repository.diff(path, commit), { kind: 'empty' }),
+    bytes: (path, ref) => value(repository => repository.bytes(path, ref), null),
 
     forget: () => {
       detected = null

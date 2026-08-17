@@ -64,14 +64,6 @@
       "help": "The address written beside the name in every recorded version. Leave empty to take the one git already knows.",
       "placeholder": "you@example.com"
     },
-    "gitAutoFetch": {
-      "title": "Automatic check",
-      "help": "Minutes between two looks at what has arrived on the remote server. Zero takes none, and nothing leaves or arrives unless you ask for it."
-    },
-    "gitInitOnCreate": {
-      "title": "Track versions from creation",
-      "help": "Sets version tracking up in every new project, with nothing to think about. Turned off, tracking starts from a button the day you want it."
-    },
     "dictationEnabled": {
       "title": "Enable dictation",
       "help": "Offers a microphone button beside text fields, and puts the listening shortcut into service. Switched off, dictation loads nothing and never asks for microphone access."

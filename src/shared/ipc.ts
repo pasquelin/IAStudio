@@ -134,7 +134,6 @@ export type Channels = {
   gitBytes: 'git:bytes'
   gitRemotes: 'git:remotes'
   gitAddRemote: 'git:add-remote'
-  gitRemoveRemote: 'git:remove-remote'
   gitFetch: 'git:fetch'
   gitPull: 'git:pull'
   gitPush: 'git:push'
@@ -144,9 +143,7 @@ export type Channels = {
   gitStashes: 'git:stashes'
   gitStashPop: 'git:stash-pop'
   gitStashDrop: 'git:stash-drop'
-  gitTags: 'git:tags'
   gitTag: 'git:tag'
-  gitDeleteTag: 'git:delete-tag'
   gitHasCredentials: 'git:has-credentials'
   gitSetCredentials: 'git:set-credentials'
   gitClearCredentials: 'git:clear-credentials'
@@ -309,7 +306,6 @@ export const CHANNELS: Channels = {
   gitBytes: 'git:bytes',
   gitRemotes: 'git:remotes',
   gitAddRemote: 'git:add-remote',
-  gitRemoveRemote: 'git:remove-remote',
   gitFetch: 'git:fetch',
   gitPull: 'git:pull',
   gitPush: 'git:push',
@@ -319,9 +315,7 @@ export const CHANNELS: Channels = {
   gitStashes: 'git:stashes',
   gitStashPop: 'git:stash-pop',
   gitStashDrop: 'git:stash-drop',
-  gitTags: 'git:tags',
   gitTag: 'git:tag',
-  gitDeleteTag: 'git:delete-tag',
   gitHasCredentials: 'git:has-credentials',
   gitSetCredentials: 'git:set-credentials',
   gitClearCredentials: 'git:clear-credentials',
@@ -1020,7 +1014,6 @@ export type StudioBridge = {
     bytes: (path: string, ref: string | null) => Promise<Uint8Array | null>
     remotes: () => Promise<GitRemote[]>
     addRemote: (name: string, url: string) => Promise<GitRepository>
-    removeRemote: (name: string) => Promise<GitRepository>
     /** Takes what the server has without touching the working tree. */
     fetch: () => Promise<GitRepository>
     pull: () => Promise<GitRepository>
@@ -1049,9 +1042,15 @@ export type StudioBridge = {
     stashes: () => Promise<GitStashEntry[]>
     stashPop: (index: number) => Promise<GitRepository>
     stashDrop: (index: number) => Promise<GitRepository>
-    tags: () => Promise<string[]>
     tag: (name: string, commit: string) => Promise<GitRepository>
-    deleteTag: (name: string) => Promise<GitRepository>
+    /**
+     * Whether a token is held for a host — and NOTHING else about it.
+     *
+     * There is no channel that answers with a token, and that absence is the point: invariant 1
+     * says the window asks whether it is authenticated, never what the credential is. The token
+     * goes down to the main process once and only ever comes back out inside the environment of
+     * a git command.
+     */
     hasCredentials: (host: string) => Promise<boolean>
     setCredentials: (host: string, user: string, token: string) => Promise<void>
     clearCredentials: (host: string) => Promise<void>

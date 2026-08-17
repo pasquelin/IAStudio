@@ -1,16 +1,10 @@
 import { simpleGit } from 'simple-git'
-import type { GitBinary } from '@shared/domain/git'
 
 /**
  * Asking git which version it is. Injected rather than called, so the two answers the studio has
  * to draw — found and not found — are both reachable from a test on a machine that has git.
  */
-export type VersionProbe = () => Promise<{
-  installed: boolean
-  major: number
-  minor: number
-  patch: number | string
-}>
+export type VersionProbe = () => Promise<{ installed: boolean }>
 
 /**
  * Whether this machine has git, and which one answered.
@@ -23,14 +17,11 @@ export type VersionProbe = () => Promise<{
  * Anything thrown is the same answer as `installed: false` — a binary that will not start is a
  * binary this machine does not have, whichever way it declines.
  */
-export async function detectGit(probe: VersionProbe): Promise<GitBinary> {
+export async function detectGit(probe: VersionProbe): Promise<boolean> {
   try {
-    const version = await probe()
-    if (!version.installed) return { found: false }
-
-    return { found: true, version: `${version.major}.${version.minor}.${version.patch}` }
+    return (await probe()).installed
   } catch {
-    return { found: false }
+    return false
   }
 }
 

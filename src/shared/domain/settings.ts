@@ -186,10 +186,6 @@ export type Settings = {
      */
     userName?: string
     userEmail?: string
-    /** Minutes between two automatic fetches. Zero turns it off, which is the default. */
-    autoFetchMinutes: number
-    /** Whether creating a project runs `git init` in it straight away. Off: it is a decision. */
-    initOnCreate: boolean
   }
   /** Talking to the studio instead of driving it — see `domain/assistant.ts`. */
   assistant: {
@@ -268,7 +264,7 @@ export const DEFAULT_SETTINGS: Settings = {
   shortcuts: { overrides: {} },
   advanced: { logLevel: 'info' },
   media: {},
-  git: { autoFetchMinutes: 0, initOnCreate: false },
+  git: {},
   assistant: { model: DEFAULT_ASSISTANT_MODEL },
   mcp: { enabled: false },
   dictation: {

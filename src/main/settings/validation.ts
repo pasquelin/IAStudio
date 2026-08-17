@@ -80,14 +80,10 @@ const storage = z.object({
 // storable, and `resolveFfmpeg` falls through to the PATH when it does not resolve.
 const media = z.object({ ffmpegPath: z.string().min(1).optional() })
 
-const autoFetch = boundsOf('git.autoFetchMinutes')
-
 const git = z.object({
   binary: z.string().min(1).optional(),
   userName: z.string().min(1).optional(),
   userEmail: z.string().min(1).optional(),
-  autoFetchMinutes: z.number().int().min(autoFetch.min).max(autoFetch.max).optional(),
-  initOnCreate: z.boolean().optional(),
 })
 
 const general = z.object({

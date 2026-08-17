@@ -32,7 +32,6 @@ function repository(overrides: Partial<Repository> = {}): Repository {
     bytes: () => Promise.resolve(null),
     remotes: () => Promise.resolve([]),
     addRemote: () => Promise.resolve(),
-    removeRemote: () => Promise.resolve(),
     fetch: () => Promise.resolve(),
     pull: () => Promise.resolve(),
     push: () => Promise.resolve(),
@@ -42,9 +41,7 @@ function repository(overrides: Partial<Repository> = {}): Repository {
     stashes: () => Promise.resolve([]),
     stashPop: () => Promise.resolve(),
     stashDrop: () => Promise.resolve(),
-    tags: () => Promise.resolve([]),
     tag: () => Promise.resolve(),
-    deleteTag: () => Promise.resolve(),
     ...overrides,
   }
 }
@@ -63,7 +60,7 @@ function service(overrides: Partial<GitServiceDeps> = {}) {
     projectPath: () => '/projects/Mon projet',
     binaryPath: () => undefined,
     identity: () => undefined,
-    probe: () => async () => ({ installed: true, major: 2, minor: 45, patch: 1 }),
+    probe: () => async () => ({ installed: true }),
     open: () => repository(),
     ...overrides,
   })
@@ -76,7 +73,7 @@ describe('what the panel is looking at', () => {
 
   it('has no git when the machine has none', async () => {
     const missing = service({
-      probe: () => async () => ({ installed: false, major: 0, minor: 0, patch: 0 }),
+      probe: () => async () => ({ installed: false }),
     })
 
     expect(await missing.read()).toEqual({ kind: 'no-binary' })
@@ -132,7 +129,7 @@ describe('what the service holds rather than asks again', () => {
    * status the panel draws, for an answer that cannot change while the studio runs.
    */
   it('asks the machine for git once, however often the panel refreshes', async () => {
-    const probe = vi.fn(async () => ({ installed: true, major: 2, minor: 45, patch: 1 }))
+    const probe = vi.fn(async () => ({ installed: true }))
     const held = service({ probe: () => probe })
 
     await held.read()
@@ -142,7 +139,7 @@ describe('what the service holds rather than asks again', () => {
   })
 
   it('asks again once told to forget, which is how a changed preference lands', async () => {
-    const probe = vi.fn(async () => ({ installed: true, major: 2, minor: 45, patch: 1 }))
+    const probe = vi.fn(async () => ({ installed: true }))
     const held = service({ probe: () => probe })
 
     await held.read()

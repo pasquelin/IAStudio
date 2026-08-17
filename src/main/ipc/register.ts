@@ -49,7 +49,7 @@ export function registerIpc(services: Services): void {
   })
   registerScenarioHandlers(services)
   registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
-  registerGitHandlers({
+  const git = registerGitHandlers({
     // The same file and the same keychain the API key already uses. A second store would be a
     // second place a secret can be left behind on a machine somebody stops trusting.
     vault: createCredentialVault(createElectronAdapter()),
@@ -62,6 +62,14 @@ export function registerIpc(services: Services): void {
       return userName && userEmail ? { name: userName, email: userEmail } : undefined
     },
   })
+
+  /**
+   * A changed binary has to reach the service, which holds both the detection and the port bound
+   * to it. Without this the preference could be edited and nothing would read it until the next
+   * launch — the service would go on saying git is missing on a machine that has just been told
+   * where it is.
+   */
+  services.settings.subscribe(() => git.forget())
   registerAssetHandlers({
     catalog: () => services.project.catalog(),
     remote: services.remote,

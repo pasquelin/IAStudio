@@ -1,12 +1,12 @@
 import { mdiPlus, mdiSourceBranch } from '@mdi/js'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { GitBranch, GitStatus } from '@shared/domain/git'
+import { isRefName, type GitBranch, type GitStatus } from '@shared/domain/git'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
+import { NameField } from '@/design/NameField'
 import { HINT_LEFT, TIP_BOTTOM } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
-import { NewBranchField } from './NewBranchField'
 
 /**
  * Which branch is out, and the way to any other.
@@ -21,6 +21,7 @@ export function GitBranchButton({ status }: { status: GitStatus }) {
   const [naming, setNaming] = useState(false)
   const listBranches = useGit(state => state.branches)
   const checkout = useGit(state => state.checkout)
+  const createBranch = useGit(state => state.createBranch)
   const busy = useGit(state => state.busy)
 
   // Keyed on the head as well as the branch: a commit can be the only thing that changed, and
@@ -29,7 +30,21 @@ export function GitBranchButton({ status }: { status: GitStatus }) {
     void listBranches().then(setBranches)
   }, [listBranches, status.branch, status.head])
 
-  if (naming) return <NewBranchField onDone={() => setNaming(false)} />
+  if (naming) {
+    return (
+      <NameField
+        label={t('git.newBranch')}
+        placeholder={t('git.newBranchPlaceholder')}
+        accepts={isRefName}
+        disabled={busy}
+        onSubmit={name => {
+          void createBranch(name)
+          setNaming(false)
+        }}
+        onCancel={() => setNaming(false)}
+      />
+    )
+  }
 
   return (
     <MenuButton

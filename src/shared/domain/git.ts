@@ -6,6 +6,7 @@
  * arithmetic over what git already said, which is what lets the whole of it be tested without a
  * binary, a repository, or a browser.
  */
+import { byCodeUnit } from '../text'
 import { INDEX_FOLDER } from './project'
 
 /**
@@ -117,8 +118,22 @@ export type GitRepository =
    */
   | { kind: 'failed'; reason: GitFailure; detail: string }
 
-/** Whether git itself was found on this machine, and which version answered. */
-export type GitBinary = { found: false } | { found: true; version: string }
+/**
+ * The letter each change wears, which is git's own vocabulary and not a language.
+ *
+ * Here rather than in the bundles: `M` is `M` in French, and putting it there put seven values
+ * in two files that a translator would be right to leave alone and wrong to touch. `GIT_FAILURE_KEYS`
+ * above applies the same shape the other way round — what a reader's language DOES decide.
+ */
+export const GIT_CHANGE_BADGES: Record<GitChange, string> = {
+  added: 'A',
+  modified: 'M',
+  deleted: 'D',
+  renamed: 'R',
+  copied: 'C',
+  untracked: '?',
+  conflicted: 'U',
+}
 
 /** A local branch. What it tracks belongs to the remote, and arrives with it. */
 export type GitBranch = { name: string; current: boolean }
@@ -144,16 +159,6 @@ export function remoteHost(url: string): string | null {
   } catch {
     return null
   }
-}
-
-/** Whether git will ask the studio for credentials, rather than the system's own ssh. */
-export function needsCredentials(url: string): boolean {
-  return remoteHost(url) !== null
-}
-
-/** Whether there is anything to send or take — what greys the two buttons. */
-export function isSynced(status: GitStatus): boolean {
-  return status.ahead === 0 && status.behind === 0
 }
 
 /**
@@ -231,14 +236,18 @@ export function canRestore(file: GitFile): boolean {
 }
 
 /**
- * Whether git would accept the name as a branch.
+ * Whether git would accept the name as a REF — a branch, a tag, or a remote.
+ *
+ * One predicate for the three because git has one rule for all three, and the studio names all
+ * three: `check-ref-format` is what it comes from. Calling it after the branch alone was three
+ * borrowings from the neighbour's name for a generality that was already there.
  *
  * Asked BEFORE the command rather than after, because git's own refusal is a `check-ref-format`
  * message written for someone reading a manual page. This is not the whole of git's rule — it
  * cannot be, the rule mentions the reflog — and it does not need to be: git still refuses what
  * gets past, and what gets past is no longer the ordinary mistakes.
  */
-export function isBranchName(name: string): boolean {
+export function isRefName(name: string): boolean {
   if (name.trim() !== name || name === '') return false
   if (/[\s~^:?*[\\]/.test(name)) return false
   if (name.includes('..') || name.includes('@{')) return false
@@ -261,11 +270,9 @@ export function isBranchName(name: string): boolean {
  * that found the same thing. A list that reshuffles under a refresh is a list nobody can click.
  */
 export function filesInStage(files: readonly GitFile[], stage: GitStage): GitFile[] {
-  return files.filter(file => file.stage === stage).sort((one, other) => byPath(one, other))
-}
-
-function byPath(one: GitFile, other: GitFile): number {
-  return one.path < other.path ? -1 : one.path > other.path ? 1 : 0
+  return files
+    .filter(file => file.stage === stage)
+    .sort((one, other) => byCodeUnit(one.path, other.path))
 }
 
 /**

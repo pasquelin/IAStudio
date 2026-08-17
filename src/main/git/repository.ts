@@ -49,7 +49,6 @@ export type Repository = {
   bytes: (path: string, ref: string | null) => Promise<Uint8Array | null>
   remotes: () => Promise<GitRemote[]>
   addRemote: (name: string, url: string) => Promise<void>
-  removeRemote: (name: string) => Promise<void>
   /** Takes what the server has without touching the working tree. */
   fetch: () => Promise<void>
   pull: () => Promise<void>
@@ -64,9 +63,7 @@ export type Repository = {
   /** Brings one back and takes it off the stack — the gesture nobody means to split in two. */
   stashPop: (index: number) => Promise<void>
   stashDrop: (index: number) => Promise<void>
-  tags: () => Promise<string[]>
   tag: (name: string, commit: string) => Promise<void>
-  deleteTag: (name: string) => Promise<void>
 }
 
 /**
@@ -195,10 +192,6 @@ export function openRepository(root: string, binary?: string, deps?: RepositoryD
       await git.addRemote(name, url)
     },
 
-    removeRemote: async name => {
-      await git.removeRemote(name)
-    },
-
     fetch: () => reachOut(['fetch', '--prune']),
     pull: () => reachOut(['pull', '--ff-only']),
     push: setUpstream =>
@@ -241,14 +234,8 @@ export function openRepository(root: string, binary?: string, deps?: RepositoryD
       await git.raw(['stash', 'drop', `stash@{${index}}`])
     },
 
-    tags: async () => (await git.tags()).all,
-
     tag: async (name, commit) => {
       await git.raw(['tag', '--', name, commit])
-    },
-
-    deleteTag: async name => {
-      await git.raw(['tag', '-d', '--', name])
     },
   }
 

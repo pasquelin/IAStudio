@@ -64,14 +64,6 @@
       "help": "L’adresse inscrite à côté du nom dans chaque version enregistrée. Laissez vide pour reprendre celle que git connaît déjà.",
       "placeholder": "vous@exemple.fr"
     },
-    "gitAutoFetch": {
-      "title": "Relève automatique",
-      "help": "Nombre de minutes entre deux relevés de ce qui est arrivé sur le serveur distant. Zéro n’en fait aucun, et rien ne part ni n’arrive sans que vous le demandiez."
-    },
-    "gitInitOnCreate": {
-      "title": "Suivre les versions dès la création",
-      "help": "Prépare le suivi des versions dans chaque nouveau projet, sans avoir à y penser. Désactivé, le suivi se met en place d’un bouton le jour où vous en voulez."
-    },
     "dictationEnabled": {
       "title": "Activer la dictée",
       "help": "Propose un bouton de micro à côté des champs de texte, et met en service le raccourci qui écoute. Désactivée, la dictée ne charge rien et ne demande jamais l’accès au micro."

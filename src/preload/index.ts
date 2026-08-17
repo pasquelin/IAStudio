@@ -119,7 +119,6 @@ const bridge: StudioBridge = {
     bytes: (path, ref) => ipcRenderer.invoke(CHANNELS.gitBytes, path, ref),
     remotes: () => ipcRenderer.invoke(CHANNELS.gitRemotes),
     addRemote: (name, url) => ipcRenderer.invoke(CHANNELS.gitAddRemote, name, url),
-    removeRemote: name => ipcRenderer.invoke(CHANNELS.gitRemoveRemote, name),
     fetch: () => ipcRenderer.invoke(CHANNELS.gitFetch),
     pull: () => ipcRenderer.invoke(CHANNELS.gitPull),
     push: setUpstream => ipcRenderer.invoke(CHANNELS.gitPush, setUpstream),
@@ -129,9 +128,7 @@ const bridge: StudioBridge = {
     stashes: () => ipcRenderer.invoke(CHANNELS.gitStashes),
     stashPop: index => ipcRenderer.invoke(CHANNELS.gitStashPop, index),
     stashDrop: index => ipcRenderer.invoke(CHANNELS.gitStashDrop, index),
-    tags: () => ipcRenderer.invoke(CHANNELS.gitTags),
     tag: (name, commit) => ipcRenderer.invoke(CHANNELS.gitTag, name, commit),
-    deleteTag: name => ipcRenderer.invoke(CHANNELS.gitDeleteTag, name),
     hasCredentials: host => ipcRenderer.invoke(CHANNELS.gitHasCredentials, host),
     setCredentials: (host, user, token) =>
       ipcRenderer.invoke(CHANNELS.gitSetCredentials, host, user, token),

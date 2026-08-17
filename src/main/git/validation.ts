@@ -1,6 +1,6 @@
 import { isAbsolute } from 'node:path'
 import { z } from 'zod'
-import { isBranchName } from '@shared/domain/git'
+import { isRefName } from '@shared/domain/git'
 
 /**
  * How many files one gesture may name.
@@ -50,11 +50,16 @@ export function parseCommitMessage(value: unknown): string {
   return commitMessage.parse(value)
 }
 
-/** Checked here as well as in the panel: the panel is the side that cannot be trusted. */
-const branchName = z.string().max(255).refine(isBranchName)
+/**
+ * A branch, a tag, or a remote — one rule for the three, because git has one.
+ *
+ * Checked here as well as in the panel: the panel is the side that cannot be trusted, and
+ * `isRefName` refuses the leading dash that would otherwise reach a command as an option.
+ */
+const refName = z.string().max(255).refine(isRefName)
 
-export function parseBranchName(value: unknown): string {
-  return branchName.parse(value)
+export function parseRefName(value: unknown): string {
+  return refName.parse(value)
 }
 
 /**
@@ -97,16 +102,6 @@ const page = z.object({
 
 export function parseLogPage(limit: unknown, skip: unknown): { limit: number; skip: number } {
   return page.parse({ limit, skip })
-}
-
-/**
- * What a remote is called. `origin` in all but the odd case, and git's own rules for a ref name
- * cover the rest — including the leading dash that would otherwise be read as an option.
- */
-const remoteName = z.string().max(100).refine(isBranchName)
-
-export function parseRemoteName(value: unknown): string {
-  return remoteName.parse(value)
 }
 
 /**

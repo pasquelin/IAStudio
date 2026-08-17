@@ -596,16 +596,9 @@ computer: the studio then takes what git knows, and overwrites nothing.
 **Both or neither**: git wants a name AND an address, and filling in only one would make every
 recording fail on the other.
 
-### Automatic check
-
-Minutes between two looks at what has arrived on the remote server. **Zero takes none**, and that
-is the default: nothing leaves or arrives unless you ask for it.
-
-### Track versions from creation
-
-Sets tracking up in every new project, with nothing to think about. Off by default: putting a
-project under version tracking is a decision, and the Git panel offers it from a button the day
-you want it.
+> **Nothing leaves or arrives unless you ask for it.** There is no automatic check: the three
+> buttons of the Git panel — check, take, send — are the only moments the studio speaks to the
+> server.
 
 ---
 

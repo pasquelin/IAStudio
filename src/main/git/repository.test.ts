@@ -19,7 +19,7 @@ import { GITIGNORE_FILE, openRepository, type Repository } from './repository'
 let hasGit = false
 
 beforeAll(async () => {
-  hasGit = (await detectGit(gitVersionProbe())).found
+  hasGit = await detectGit(gitVersionProbe())
 })
 
 async function project(): Promise<string> {
@@ -409,30 +409,22 @@ describe('work set aside', () => {
 })
 
 describe('a version given a name', () => {
-  it('is listed, and comes back on the commit it names', async ({ skip }) => {
+  /**
+   * The name comes back through the LOG rather than through a list of its own: that is where the
+   * panel reads it, on the row it belongs to. A list of tags nobody draws would be a second way
+   * of asking the same question.
+   */
+  it('comes back on the commit it names', async ({ skip }) => {
     if (!hasGit) return skip()
 
     const repository = await repositoryWithACommit()
     const [head] = await repository.log(1, 0)
     await repository.tag('livraison-client', head?.hash ?? '')
 
-    expect(await repository.tags()).toContain('livraison-client')
     expect((await repository.log(1, 0))[0]?.refs).toContainEqual({
       kind: 'tag',
       name: 'livraison-client',
     })
-  })
-
-  it('goes away again', async ({ skip }) => {
-    if (!hasGit) return skip()
-
-    const repository = await repositoryWithACommit()
-    const [head] = await repository.log(1, 0)
-    await repository.tag('livraison-client', head?.hash ?? '')
-
-    await repository.deleteTag('livraison-client')
-
-    expect(await repository.tags()).not.toContain('livraison-client')
   })
 })
 

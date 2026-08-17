@@ -614,16 +614,9 @@ déjà git sur cet ordinateur : le studio reprend alors ce que git connaît, et 
 **Les deux ensemble, ou aucun des deux** : git veut un nom ET une adresse, et n’en renseigner
 qu’un ferait échouer chaque enregistrement sur l’autre.
 
-### Relève automatique
-
-Le nombre de minutes entre deux relevés de ce qui est arrivé sur le serveur distant. **Zéro n’en
-fait aucun**, et c’est la valeur par défaut : rien ne part ni n’arrive sans que vous le demandiez.
-
-### Suivre les versions dès la création
-
-Prépare le suivi dans chaque nouveau projet, sans avoir à y penser. Désactivé par défaut : mettre
-un projet sous suivi de versions est une décision, et le panneau Git l’offre d’un bouton le jour
-où vous en voulez.
+> **Rien ne part ni n’arrive sans que vous le demandiez.** Il n’y a pas de relève automatique :
+> les trois boutons du panneau Git — relever, recevoir, envoyer — sont les seuls moments où le
+> studio parle au serveur.
 
 ---
 
