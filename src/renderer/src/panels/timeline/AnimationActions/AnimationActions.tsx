@@ -1,29 +1,23 @@
-import { mdiMovieOpenOutline, mdiRecordCircleOutline, mdiRhombus } from '@mdi/js'
+import { mdiRecordCircleOutline } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { secondsToUs, snapToFrame, usToSeconds, type Us } from '@shared/domain/time'
+import { secondsToUs, usToSeconds, type Us } from '@shared/domain/time'
 import { NumberField } from '@/design/NumberField'
 import { ToolButton } from '@/design/ToolButton'
 import { NATIVE_SELECT } from '@/design/styles'
-import { keySubject, setTimelineSettings } from '@/engines/scene/animation-commands'
-import { firstCameraId, selectedNodes } from '@/engines/scene/scene-state'
+import { setTimelineSettings } from '@/engines/scene/animation-commands'
+import { selectedNodes } from '@/engines/scene/scene-state'
 import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
-import { getBridge } from '@/services/bridge'
-import { reportFailure } from '@/services/diagnostics'
 import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
-import { useDocuments } from '@/stores/documents'
 import { bonesOfNode, useModelClips } from '@/stores/model-clips'
-import { sceneEngineOf } from '@/stores/scene-engines'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/scene-views'
-import { TimelineTransport } from './TimelineTransport'
+import { TimelineTransport } from '../TimelineTransport'
+import { AnimationActionsKeyButton } from './AnimationActionsKeyButton'
+import { AnimationActionsRenderButton } from './AnimationActionsRenderButton'
 
 export type AnimationActionsProps = { documentId: string }
-
-/** What a film is written at. One size for now, and a setting the day somebody asks for one. */
-const FILM_WIDTH = 1920
-const FILM_HEIGHT = 1080
 
 /** What a band may be asked to last, in seconds — a frame at the low end, an hour at the top. */
 const MIN_DURATION = 0.1
@@ -94,7 +88,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
         active={autoKey}
         onClick={() => useAnimationViews.getState().setAutoKey(documentId, !autoKey)}
       />
-      <KeyButton documentId={documentId} />
+      <AnimationActionsKeyButton documentId={documentId} />
 
       <div className="flex-1" />
 
@@ -139,100 +133,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
         />
       </div>
 
-      <RenderButton documentId={documentId} />
+      <AnimationActionsRenderButton documentId={documentId} />
     </>
-  )
-}
-
-/**
- * One key on every channel of every animated subject, at the head — Blender's `LocRotScale`.
- *
- * It writes what each channel already stands at, never a neutral: a key holding nothing moves
- * nothing, and that is what made the old diamond button appear to do nothing at all.
- */
-function KeyButton({ documentId }: AnimationActionsProps) {
-  const { t } = useTranslation()
-  const tracks = useScenes(state => sceneOf(state, documentId).animation.tracks)
-  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
-
-  return (
-    <ToolButton
-      icon={mdiRhombus}
-      label={t('animation.keyAll')}
-      description={t('animation.keyAllHint')}
-      tooltip={TIP_BOTTOM}
-      variant="header"
-      disabled={tracks.length === 0}
-      onClick={() => {
-        const store = useScenes.getState()
-        const state = sceneOf(store, documentId)
-        const command = keySubject(
-          state,
-          tracks.map(track => track.id),
-          snapToFrame(playhead, state.animation.fps),
-        )
-        if (command) store.runCommand(documentId, command)
-      }}
-    />
-  )
-}
-
-/**
- * Writes the film. The camera is the first one the scene holds — a scene without one has nothing
- * to render FROM, so the button says that rather than being missing.
- */
-function RenderButton({ documentId }: AnimationActionsProps) {
-  const { t } = useTranslation()
-  const [busy, setBusy] = useState(false)
-  const nodes = useScenes(state => sceneOf(state, documentId).nodes)
-  // The same rule a montage draws a live scene by — one place decides which camera a scene is
-  // seen through, or the film and the clip would show two different shots of it.
-  const camera = firstCameraId(nodes)
-
-  const render = async (): Promise<void> => {
-    const engine = sceneEngineOf(documentId)
-    const bridge = getBridge()
-    if (!engine || !bridge || !camera) return
-
-    const { animation } = sceneOf(useScenes.getState(), documentId)
-    const title = useDocuments.getState().documents[documentId]?.title ?? 'render'
-
-    setBusy(true)
-    const id = await bridge.render.start({ name: title, fps: animation.fps })
-    if (!id) {
-      setBusy(false)
-      return
-    }
-
-    try {
-      await engine.renderFilm(
-        camera,
-        {
-          width: FILM_WIDTH,
-          height: FILM_HEIGHT,
-          fps: animation.fps,
-          duration: animation.duration,
-        },
-        (index, png) => bridge.render.frame({ id, index, png }),
-      )
-      await bridge.render.finish(id)
-    } catch (error) {
-      await bridge.render.cancel(id)
-      reportFailure('scene.render', title, error)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <ToolButton
-      icon={mdiMovieOpenOutline}
-      label={t('animation.render')}
-      description={camera ? t('animation.renderHint') : t('animation.renderNeedsCamera')}
-      tooltip={TIP_BOTTOM}
-      variant="header"
-      disabled={!camera || busy}
-      onClick={() => void render()}
-    />
   )
 }

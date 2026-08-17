@@ -10,7 +10,7 @@ import { useModelClips } from '@/stores/model-clips'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/scene-views'
 import { AnimationCanvas } from './AnimationCanvas'
-import { AnimationHeaders } from './AnimationHeaders'
+import { AnimationHeaders } from './AnimationHeaders/AnimationHeaders'
 
 export type AnimationPanelProps = { documentId: string }
 

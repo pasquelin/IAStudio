@@ -1,26 +1,18 @@
-import { mdiChevronDown, mdiChevronRight, mdiDeleteOutline, mdiRhombus } from '@mdi/js'
-import { useCallback, useMemo } from 'react'
-import type { Viewport } from '@/engines/timeline/timeline-geometry'
+import { mdiChevronDown, mdiChevronRight, mdiRhombus } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { TrackProperty } from '@shared/domain/animation'
+import { snapToFrame } from '@shared/domain/time'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
-import { keyNode, removeAnimationTrack, unkeySubject } from '@/engines/scene/animation-commands'
-import { snapToFrame } from '@shared/domain/time'
+import { keyNode, unkeySubject } from '@/engines/scene/animation-commands'
+import { trackIdsOf, type SubjectRow } from '@/engines/scene/animation-rows'
 import { newId } from '@/helpers/ids'
-import {
-  trackIdsOf,
-  type AnimationRow,
-  type ChannelRow,
-  type ClipRow,
-  type SubjectRow,
-} from '@/engines/scene/animation-rows'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
-import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
+import { useAnimationViews } from '@/stores/animation-view'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
-import { TimelineHeaderColumn, TimelineRow } from './TimelineRow'
-import { isFlagOnAll, TRACK_FLAGS } from './track-flags'
+import { TimelineRow } from '../TimelineRow/TimelineRow'
+import { isFlagOnAll, TRACK_FLAGS } from '../track-flags'
 
 /** A row id back into the pair its channels are addressed by — the inverse of `subjectKey`. */
 function subjectOf(rowId: string): { nodeId: string; bone?: string } {
@@ -39,79 +31,15 @@ function channelNames(t: (key: string) => string, subject: string): Record<Track
   }
 }
 
-export type AnimationHeadersProps = {
+export function AnimationHeadersSubject({
+  documentId,
+  row,
+  shown,
+}: {
   documentId: string
-  rows: readonly AnimationRow[]
-}
-
-function shownSubjects(rows: readonly AnimationRow[]): string[] {
-  return rows.filter(row => row.kind === 'subject').map(row => row.id)
-}
-
-/**
- * The column beside the band: one line per row, aligned with the row it names.
- *
- * The name and the switches are stacked, never laid side by side. Side by side is what the old
- * panel did, and six non-shrinking buttons in a 140 px column left the name exactly zero pixels
- * wide — no track ever showed what it drove.
- */
-export function AnimationHeaders({ documentId, rows }: AnimationHeadersProps) {
-  const { t } = useTranslation()
-  const scrollTop = useAnimationViews(
-    state => animationViewOf(state, documentId).viewport.scrollTop,
-  )
-  // Memoised on `rows`, whose identity the panel keeps stable: this column re-renders on every
-  // frame of playback, and two arrays allocated per frame is two arrays nobody reads.
-  const shown = useMemo(() => shownSubjects(rows), [rows])
-
-  // Read out of the store rather than subscribed to: the column asks for the whole viewport only
-  // at the moment of a gesture, and a subscription would redraw every line on a zoom.
-  const viewportNow = useCallback(
-    () => animationViewOf(useAnimationViews.getState(), documentId).viewport,
-    [documentId],
-  )
-  const setViewport = useCallback(
-    (next: Viewport) => useAnimationViews.getState().setViewport(documentId, next),
-    [documentId],
-  )
-
-  return (
-    <TimelineHeaderColumn
-      scrollTop={scrollTop}
-      label={t('animation.rowList')}
-      viewportNow={viewportNow}
-      setViewport={setViewport}
-    >
-      {rows.map(row => (
-        <HeaderRow key={row.id} documentId={documentId} row={row} shown={shown} />
-      ))}
-    </TimelineHeaderColumn>
-  )
-}
-
-type HeaderRowProps = { documentId: string; row: AnimationRow; shown: readonly string[] }
-
-function HeaderRow({ documentId, row, shown }: HeaderRowProps) {
-  if (row.kind === 'subject')
-    return <SubjectHeader documentId={documentId} row={row} shown={shown} />
-  if (row.kind === 'channel') return <ChannelHeader documentId={documentId} row={row} />
-  return <ClipHeader row={row} />
-}
-
-/** A block names the clip it plays, and offers nothing else: it is driven from the inspector. */
-function ClipHeader({ row }: { row: ClipRow }) {
-  return (
-    <TimelineRow height={row.height} nested data-testid={`anim-clip-${row.nodeId}`}>
-      <span className="text-muted text-tiny min-w-0 truncate" {...HINT_RIGHT(row.name)}>
-        {row.name}
-      </span>
-    </TimelineRow>
-  )
-}
-
-type SubjectRowProps = { documentId: string; row: SubjectRow; shown: readonly string[] }
-
-function SubjectHeader({ documentId, row, shown }: SubjectRowProps) {
+  row: SubjectRow
+  shown: readonly string[]
+}) {
   const { t } = useTranslation()
   const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
   const fps = useScenes(state => sceneOf(state, documentId).animation.fps)
@@ -188,31 +116,6 @@ function SubjectHeader({ documentId, row, shown }: SubjectRowProps) {
             }}
           />
         ))}
-      </div>
-    </TimelineRow>
-  )
-}
-
-type ChannelRowProps = { documentId: string; row: ChannelRow }
-
-function ChannelHeader({ documentId, row }: ChannelRowProps) {
-  const { t } = useTranslation()
-
-  return (
-    <TimelineRow height={row.height} nested level={2} data-testid={`anim-channel-${row.id}`}>
-      <div className="flex items-center gap-0.5">
-        <span className="text-muted text-tiny min-w-0 flex-1 truncate" {...HINT_RIGHT(row.name)}>
-          {row.name}
-        </span>
-        <ToolButton
-          icon={mdiDeleteOutline}
-          label={t('animation.removeTrack', { name: row.name })}
-          tooltip={TIP_RIGHT}
-          variant="header"
-          onClick={() =>
-            useScenes.getState().runCommand(documentId, removeAnimationTrack(row.track.id))
-          }
-        />
       </div>
     </TimelineRow>
   )
