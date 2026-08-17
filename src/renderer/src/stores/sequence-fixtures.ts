@@ -1,4 +1,4 @@
-import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timeline-state'
+import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timelineState'
 import { installIn } from './document-fixtures'
 import { sequenceStore } from './sequences'
 

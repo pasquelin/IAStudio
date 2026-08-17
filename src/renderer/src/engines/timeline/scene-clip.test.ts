@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import type { SceneStage, SceneStageOptions } from '../scene/scene-stage'
+import type { SceneStage, SceneStageOptions } from '../scene/sceneStage'
 import { clipForScene, trackForScene } from './insert'
-import { createStudioSink } from './sink-port'
+import { createStudioSink } from './sinkPort'
 import {
   clipSource,
   DEFAULT_SETTINGS,
@@ -11,7 +11,7 @@ import {
   makeClip,
   parseSequence,
   sceneIdOfSource,
-} from './timeline-state'
+} from './timelineState'
 
 const SETTINGS = DEFAULT_SETTINGS
 

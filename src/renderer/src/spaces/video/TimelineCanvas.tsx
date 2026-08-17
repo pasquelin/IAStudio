@@ -21,9 +21,9 @@ import {
 } from '@/engines/timeline/interactions'
 import { newTracksForAsset, opensTrackFor, placementsForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
-import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
+import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timelineGeometry'
 import type { Point, Size } from '@/engines/core/geometry'
-import { paintOn } from '@/engines/core/canvas-2d'
+import { paintOn } from '@/engines/core/canvas2d'
 import {
   clipById,
   clipEnd,
@@ -32,7 +32,7 @@ import {
   snapToFrame,
   type Clip,
   type SequenceState,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import {
   clampViewport,
   fitToWidth,

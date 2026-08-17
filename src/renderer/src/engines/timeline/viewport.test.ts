@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { RULER_HEIGHT, xToTime, type Viewport } from './timeline-geometry'
+import { RULER_HEIGHT, xToTime, type Viewport } from './timelineGeometry'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
-import { EMPTY_SEQUENCE } from './timeline-state'
+import { EMPTY_SEQUENCE } from './timelineState'
 import {
   clampScale,
   clampViewport,

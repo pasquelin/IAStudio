@@ -11,8 +11,8 @@ import {
   videoTracksByDepth,
 } from './TimelineEngine'
 import { clipFixture, sequenceWith, settled, trackFixture } from './timeline-fixtures'
-import type { SoundCue, SoundPort } from './sound-schedule'
-import type { Clip, SequenceState } from './timeline-state'
+import type { SoundCue, SoundPort } from './soundSchedule'
+import type { Clip, SequenceState } from './timelineState'
 
 const clip = (id: string, start: number, duration: number, inPoint = 0): Clip =>
   clipFixture(id, start, duration, { inPoint })

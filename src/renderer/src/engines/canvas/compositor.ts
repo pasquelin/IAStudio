@@ -1,4 +1,4 @@
-import { isGroup, type Layer } from './canvas-state'
+import { isGroup, type Layer } from './canvasState'
 
 /**
  * What the engine has to build, as plain data: one node per layer, groups nesting.

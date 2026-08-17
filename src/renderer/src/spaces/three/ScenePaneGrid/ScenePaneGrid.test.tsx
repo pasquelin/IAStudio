@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { DEFAULT_PANE_VIEWS } from '@/engines/scene/scene-view'
+import { DEFAULT_PANE_VIEWS } from '@/engines/scene/sceneView'
 import { ScenePaneGrid } from './ScenePaneGrid'
 
 describe('the four views and their seams', () => {

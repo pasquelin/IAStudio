@@ -1,6 +1,6 @@
 import { Texture, type ColorSpace } from 'three'
 import type { LightDescriptor, TextDescriptor } from '@shared/domain/scene'
-import type { TextureCache } from './texture-cache'
+import type { TextureCache } from './textureCache'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
@@ -12,7 +12,7 @@ import {
   type ModelNode,
   type SpriteNode,
   type TextNode,
-} from './scene-state'
+} from './sceneState'
 
 /**
  * Scene nodes for tests. Declared once so a new required field on `SceneNodeBase` breaks in one

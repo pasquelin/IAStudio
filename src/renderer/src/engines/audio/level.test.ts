@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fromDb, toDb } from './audio-data'
+import { fromDb, toDb } from './audioData'
 import {
   CLIP_AMPLITUDE,
   CLIP_DB,

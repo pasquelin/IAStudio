@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SceneRenderer } from './SceneRenderer'
 import { directionalLight, meshNode } from './scene-fixtures'
-import { EMPTY_SCENE, type SceneState } from './scene-state'
+import { EMPTY_SCENE, type SceneState } from './sceneState'
 
 /**
  * What the engine hands the exporters, checked on the file it produces.

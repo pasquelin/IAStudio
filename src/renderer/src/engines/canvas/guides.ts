@@ -1,4 +1,4 @@
-import type { CanvasState, Guide } from './canvas-state'
+import type { CanvasState, Guide } from './canvasState'
 
 export type Axis = 'x' | 'y'
 

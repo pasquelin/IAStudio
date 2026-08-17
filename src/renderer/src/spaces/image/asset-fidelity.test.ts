@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
+import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
 import { reportFailure } from '@/services/diagnostics'
 import { useCanvases } from '@/stores/canvases'
 import { matchesAsset, reportAssetDrift } from './asset-fidelity'

@@ -27,9 +27,9 @@ import {
   mdiVectorLine,
 } from '@mdi/js'
 import type { CommandId } from '@shared/domain/command'
-import type { SelectionShape } from '@/engines/canvas/canvas-selection'
-import { SHAPE_KINDS, type ShapeKind } from '@/engines/canvas/shape-geometry'
-import type { CanvasTool } from '@/engines/canvas/canvas-tool'
+import type { SelectionShape } from '@/engines/canvas/canvasSelection'
+import { SHAPE_KINDS, type ShapeKind } from '@/engines/canvas/shapeGeometry'
+import type { CanvasTool } from '@/engines/canvas/canvasTool'
 import type { ToolbarItem } from '@/design/Toolbar/tools'
 
 export type ImageTool = ToolbarItem & { tool: CanvasTool }

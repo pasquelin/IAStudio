@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { SceneNode } from '@/engines/scene/scene-state'
+import type { SceneNode } from '@/engines/scene/sceneState'
 
 type ClipboardState = {
   /** What was last copied, as whole subtrees. Empty until something is. */

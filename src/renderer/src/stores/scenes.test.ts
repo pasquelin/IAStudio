@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { canRedo, canUndo, HISTORY_LIMIT } from '@/engines/core/history'
 import { addNode, setTransform } from '@/engines/scene/commands'
-import { createDefaultScene } from '@/engines/scene/default-scene'
+import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { meshNode } from '@/engines/scene/scene-fixtures'
-import { EMPTY_SCENE, IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
+import { EMPTY_SCENE, IDENTITY_TRANSFORM } from '@/engines/scene/sceneState'
 import { clearScenes } from './scene-fixtures'
 import { sceneHistoryOf, isSceneDirty, sceneOf, sceneStore, useScenes } from './scenes'
 

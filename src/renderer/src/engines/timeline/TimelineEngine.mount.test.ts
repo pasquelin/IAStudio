@@ -107,7 +107,7 @@ const resize = (host: Element): void => {
 
 const { TimelineEngine } = await import('./TimelineEngine')
 const { clipFixture, sequenceWith, settled, trackFixture } = await import('./timeline-fixtures')
-const { reindexTracks } = await import('./timeline-state')
+const { reindexTracks } = await import('./timelineState')
 
 /** No output in jsdom: the suite plays nothing, and every load is refused. */
 const silence = () => ({

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
-import { peaksFromSamples } from '@/engines/audio/audio-data'
+import { peaksFromSamples } from '@/engines/audio/audioData'
 import { decodeAsset } from '@/helpers/audio-decode'
 import { getBridge } from '@/services/bridge'
 

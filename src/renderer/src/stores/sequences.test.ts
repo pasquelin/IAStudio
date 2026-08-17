@@ -12,7 +12,7 @@ import {
   updateClip,
   type Clip,
   type SequenceState,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import {
   addAssetToSequence,
   sequenceHistoryOf,

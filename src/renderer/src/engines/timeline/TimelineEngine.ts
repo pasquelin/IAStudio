@@ -1,13 +1,13 @@
 import { Container, Graphics, Sprite, Texture, type Application, type TextureSource } from 'pixi.js'
 import { createClock, type Clock } from './clock'
-import { createDecoderPool, type DecoderPool, type SinkLike } from './decoder-pool'
+import { createDecoderPool, type DecoderPool, type SinkLike } from './decoderPool'
 import { playbackToken } from './playback'
 import {
   createSoundScheduler,
   SOUND_HORIZON,
   type SoundPort,
   type SoundScheduler,
-} from './sound-schedule'
+} from './soundSchedule'
 import {
   clipEnd,
   clipSource,
@@ -19,7 +19,7 @@ import {
   type SequenceState,
   type Track,
   type Us,
-} from './timeline-state'
+} from './timelineState'
 import { followHostSize, mountApplication } from '../core/mount'
 import { tokenAsHex } from '../core/palette'
 import type { Size } from '../core/geometry'

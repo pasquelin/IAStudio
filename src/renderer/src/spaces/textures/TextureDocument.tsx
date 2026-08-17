@@ -17,7 +17,7 @@ import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
-import { loadTexture } from '@/engines/scene/texture-cache'
+import { loadTexture } from '@/engines/scene/textureCache'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
@@ -44,7 +44,7 @@ async function exportTexture(documentId: string, target: TextureExportTarget): P
     // Cleaned before it is either a folder or a file name: a document is titled by hand.
     const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'texture')
 
-    const { createTextureExportPort } = await import('@/engines/texture/export/export-port')
+    const { createTextureExportPort } = await import('@/engines/texture/export/exportPort')
 
     const files = await createTextureExportPort({ loadTexture })({
       target,

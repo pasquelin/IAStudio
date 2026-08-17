@@ -5,7 +5,7 @@ import { PropertySection } from '@/design/PropertySection'
 import { TextField } from '@/design/TextField'
 import { VectorField } from '@/design/VectorField'
 import { batch, renameNode, setTransform } from '@/engines/scene/commands'
-import { hasChildren, rotationShows, type SceneNode } from '@/engines/scene/scene-state'
+import { hasChildren, rotationShows, type SceneNode } from '@/engines/scene/sceneState'
 import { changedFields } from '@/helpers/objects'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
 

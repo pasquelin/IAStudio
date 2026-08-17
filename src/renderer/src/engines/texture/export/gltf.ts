@@ -7,13 +7,13 @@ import {
   type Texture,
 } from 'three'
 import type { MaterialRole } from '@shared/domain/texture-export'
-import { disposeTree } from '../../scene/model-cache'
-import { exportObjects } from '../../scene/scene-export'
-import type { TextureSource } from '../../scene/texture-cache'
-import { previewGeometry } from '../preview-geometry'
-import { contentOf } from '../texture-state'
+import { disposeTree } from '../../scene/modelCache'
+import { exportObjects } from '../../scene/sceneExport'
+import type { TextureSource } from '../../scene/textureCache'
+import { previewGeometry } from '../previewGeometry'
+import { contentOf } from '../textureState'
 import type { MaterialSettings } from '@shared/domain/texture'
-import type { PreviewShape } from '../texture-state'
+import type { PreviewShape } from '../textureState'
 
 /**
  * A texture as one file an engine opens without being told anything.

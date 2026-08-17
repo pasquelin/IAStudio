@@ -1,7 +1,7 @@
 import i18next from 'i18next'
 import { describe, expect, it } from 'vitest'
 import { UNBUILT_TOOLS } from '@/engines/canvas/CanvasEngine'
-import type { CanvasTool } from '@/engines/canvas/canvas-tool'
+import type { CanvasTool } from '@/engines/canvas/canvasTool'
 import { IMAGE_TOOLS, canvasToolFor, toolById } from './image-tools'
 
 /**

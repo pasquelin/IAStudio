@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SECOND, frameDuration } from '@shared/domain/time'
 import { paintRuler, tickStep, type RulerStyle } from './ruler'
-import { RULER_HEIGHT, type Viewport } from './timeline-geometry'
+import { RULER_HEIGHT, type Viewport } from './timelineGeometry'
 
 const style: RulerStyle = {
   background: '#111',

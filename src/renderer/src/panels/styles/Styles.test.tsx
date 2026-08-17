@@ -8,7 +8,7 @@ import { useDocuments } from '@/stores/documents'
 import { useStyles } from '@/stores/styles'
 import { installTexture } from '@/stores/texture-fixtures'
 import { useTextures } from '@/stores/textures'
-import { newTexture } from '@/engines/texture/texture-state'
+import { newTexture } from '@/engines/texture/textureState'
 import { Styles } from './Styles'
 
 const METAL: MaterialStyle = {

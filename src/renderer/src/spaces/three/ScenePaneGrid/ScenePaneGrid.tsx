@@ -1,4 +1,4 @@
-import type { PaneView } from '@/engines/scene/scene-view'
+import type { PaneView } from '@/engines/scene/sceneView'
 import { ScenePaneGridMenu } from './ScenePaneGridMenu'
 
 export type ScenePaneGridProps = {

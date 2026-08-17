@@ -1,5 +1,5 @@
 import { mdiLockOpenVariantOutline, mdiLockOutline } from '@mdi/js'
-import type { LayerLocks } from '@/engines/canvas/canvas-state'
+import type { LayerLocks } from '@/engines/canvas/canvasState'
 
 /**
  * The three padlocks, declared once for the stack row and the inspector — the same reason

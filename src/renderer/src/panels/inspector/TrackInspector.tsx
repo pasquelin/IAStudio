@@ -10,7 +10,7 @@ import {
   MAX_TRACK_HEIGHT,
   MIN_TRACK_HEIGHT,
   type Track,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { writeTrack } from '@/stores/sequences'
 
 export type TrackInspectorProps = { documentId: string; track: Track }

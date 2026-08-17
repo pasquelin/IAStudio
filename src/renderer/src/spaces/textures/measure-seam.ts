@@ -1,6 +1,6 @@
 import { assetUrl } from '@shared/domain/asset'
-import { loadTexture } from '@/engines/scene/texture-cache'
-import { createSeamPort, type SeamPort } from '@/engines/texture/derive/seam-port'
+import { loadTexture } from '@/engines/scene/textureCache'
+import { createSeamPort, type SeamPort } from '@/engines/texture/derive/seamPort'
 import { reportFailure } from '@/services/diagnostics'
 import { textureOf, useTextures } from '@/stores/textures'
 import { useTextureViews } from '@/stores/texture-views'

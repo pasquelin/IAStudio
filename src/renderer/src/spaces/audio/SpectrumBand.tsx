@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { paintSpectrum, readSpectrumInk, spectrumLabels } from '@/engines/audio/spectrum-painter'
+import { paintSpectrum, readSpectrumInk, spectrumLabels } from '@/engines/audio/spectrumPainter'
 import { spectrumBands, type SpectrumBand as Band } from '@/engines/audio/spectrum'
-import { paintOn } from '@/engines/core/canvas-2d'
-import type { AudioTap } from '@/engines/timeline/sound-schedule'
+import { paintOn } from '@/engines/core/canvas2d'
+import type { AudioTap } from '@/engines/timeline/soundSchedule'
 import { useFrameLoop } from '@/hooks/useFrameLoop'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 

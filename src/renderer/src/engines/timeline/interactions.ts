@@ -1,6 +1,6 @@
 import type { Command } from '../core/history'
 import { moveClip, setClipFade, trimClip, type MediaExtent } from './commands'
-import { hitTest, rowAt, snap, xToTime, type Viewport } from './timeline-geometry'
+import { hitTest, rowAt, snap, xToTime, type Viewport } from './timelineGeometry'
 import type { Point } from '../core/geometry'
 import { scrollBy } from './viewport'
 import {
@@ -12,7 +12,7 @@ import {
   type SequenceState,
   type Track,
   type Us,
-} from './timeline-state'
+} from './timelineState'
 
 /**
  * A gesture is data, not component state: that is what makes dragging, trimming and scrubbing

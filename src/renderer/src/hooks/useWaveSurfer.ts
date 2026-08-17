@@ -6,12 +6,12 @@ import { clamp } from '@shared/numeric'
 import { playbackToken } from '@/engines/timeline/playback'
 import { MAX_SCALE, ZOOM_STEP } from '@/engines/timeline/viewport'
 import { useToken } from '@/hooks/useToken'
-import { durationOf } from '@/engines/audio/audio-data'
-import type { RenderedAudio } from '@/engines/audio/audio-render'
+import { durationOf } from '@/engines/audio/audioData'
+import type { RenderedAudio } from '@/engines/audio/audioRender'
 import type { Region } from '@/engines/audio/edits'
 import { formatDuration } from '@/engines/timeline/timecode'
-import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
-import { SECOND, type Us } from '@/engines/timeline/timeline-state'
+import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
+import { SECOND, type Us } from '@/engines/timeline/timelineState'
 
 export type WaveSurferHandle = {
   playing: boolean

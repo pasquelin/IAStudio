@@ -1,6 +1,6 @@
 import { Texture } from 'three'
 import { vi, type Mock } from 'vitest'
-import type { TextureSource } from '../scene/texture-cache'
+import type { TextureSource } from '../scene/textureCache'
 import type { ViewportEnvironment } from './environment'
 
 /**

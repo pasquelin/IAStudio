@@ -1,4 +1,4 @@
-import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
+import type { SequenceState, Us } from '@/engines/timeline/timelineState'
 
 /**
  * What the studio publishes to the video return, and how.

@@ -13,10 +13,10 @@ import { MonitorFrame } from '@/design/MonitorFrame'
 import { TOOLBAR_LABEL } from '@/design/styles'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
-import { paintOn } from '@/engines/core/canvas-2d'
+import { paintOn } from '@/engines/core/canvas2d'
 import type { Size } from '@/engines/core/geometry'
-import { paintProgram, programViewport, readProgramPalette } from '@/engines/timeline/program-wave'
-import { xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
+import { paintProgram, programViewport, readProgramPalette } from '@/engines/timeline/programWave'
+import { xToTime, type Viewport } from '@/engines/timeline/timelineGeometry'
 import { clampViewport, revealTime } from '@/engines/timeline/viewport'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import {
@@ -24,7 +24,7 @@ import {
   type Clip,
   type SequenceState,
   type Us,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { usePeaks } from '@/stores/peaks'
 import { OutputMeter } from './OutputMeter'

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Viewport } from '@/engines/timeline/timeline-geometry'
+import type { Viewport } from '@/engines/timeline/timelineGeometry'
 import { DEFAULT_VIEWPORT } from '@/engines/timeline/viewport'
 
 type TimelineViewState = {

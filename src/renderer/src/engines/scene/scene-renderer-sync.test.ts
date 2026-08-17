@@ -1,9 +1,9 @@
 import { BufferGeometry, Group, Material, Mesh, Object3D } from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock, type MockInstance } from 'vitest'
 import { nodeIdOf, SceneRenderer } from './SceneRenderer'
-import type { ModelSource } from './model-cache'
+import type { ModelSource } from './modelCache'
 import { directionalLight, meshNode, modelNodeFixture, spriteNodeFixture } from './scene-fixtures'
-import { EMPTY_SCENE, type SceneNode, type SceneState } from './scene-state'
+import { EMPTY_SCENE, type SceneNode, type SceneState } from './sceneState'
 
 /**
  * What an edit does to a scene already built — and, above all, what it frees. The renderer is

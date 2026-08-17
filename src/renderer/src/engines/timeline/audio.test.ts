@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { audioChunksIn, fadeAt, type ClipFade } from './audio'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
-import type { Clip, SequenceState } from './timeline-state'
+import type { Clip, SequenceState } from './timelineState'
 
 const clip = (id: string, start: number, duration: number, inPoint = 0): Clip =>
   clipFixture(id, start, duration, { inPoint })

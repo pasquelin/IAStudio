@@ -1,5 +1,5 @@
-import { clipById, trackById } from '@/engines/timeline/timeline-state'
-import { layerById } from '@/engines/canvas/canvas-state'
+import { clipById, trackById } from '@/engines/timeline/timelineState'
+import { layerById } from '@/engines/canvas/canvasState'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import {
   activeImageId,

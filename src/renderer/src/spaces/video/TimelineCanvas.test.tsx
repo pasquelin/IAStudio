@@ -8,14 +8,10 @@ import {
   tracksHeight,
   xToTime,
   type Viewport,
-} from '@/engines/timeline/timeline-geometry'
+} from '@/engines/timeline/timelineGeometry'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
-import type { Clip } from '@/engines/timeline/timeline-state'
-import {
-  EMPTY_SEQUENCE,
-  EMPTY_SOUND_SEQUENCE,
-  snapToFrame,
-} from '@/engines/timeline/timeline-state'
+import type { Clip } from '@/engines/timeline/timelineState'
+import { EMPTY_SEQUENCE, EMPTY_SOUND_SEQUENCE, snapToFrame } from '@/engines/timeline/timelineState'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { fakeMenu } from '@/helpers/menu-fixtures'

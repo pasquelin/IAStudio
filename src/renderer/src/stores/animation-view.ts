@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { movedWithin } from '@/engines/scene/animation-rows'
-import type { Viewport } from '@/engines/timeline/timeline-geometry'
+import { movedWithin } from '@/engines/scene/animationRows'
+import type { Viewport } from '@/engines/timeline/timelineGeometry'
 import { DEFAULT_VIEWPORT } from '@/engines/timeline/viewport'
 
 /**

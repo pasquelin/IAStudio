@@ -8,15 +8,15 @@ import {
   type DocumentPart,
 } from '@shared/domain/document'
 import { chainsOnMontage, parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
-import { createDefaultScene } from '@/engines/scene/default-scene'
-import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
-import { parseSkybox } from '@/engines/skybox/skybox-state'
+import { createDefaultScene } from '@/engines/scene/defaultScene'
+import { scenePayload, sceneFromPayload } from '@/engines/scene/sceneDocument'
+import { parseSkybox } from '@/engines/skybox/skyboxState'
 import {
   EMPTY_SEQUENCE,
   EMPTY_SOUND_SEQUENCE,
   parseSequence,
   type SequenceState,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { isRecord } from '@shared/guards'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
@@ -30,11 +30,11 @@ import { sceneStore } from '@/stores/scenes'
 import { sequenceStore } from '@/stores/sequences'
 import { skyboxStore } from '@/stores/skyboxes'
 import type { DocumentStore } from '@/stores/document-store'
-import { DEFAULT_CANVAS, deserializeCanvas, serializeCanvas } from '@/engines/canvas/canvas-state'
+import { DEFAULT_CANVAS, deserializeCanvas, serializeCanvas } from '@/engines/canvas/canvasState'
 import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
 import { canvasHost } from '@/spaces/image/canvas-hosts'
 import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
-import { newTexture, parseTexture } from '@/engines/texture/texture-state'
+import { newTexture, parseTexture } from '@/engines/texture/textureState'
 import { useSkyboxViews } from '@/stores/skybox-views'
 import { useTextureViews } from '@/stores/texture-views'
 import { textureStore } from '@/stores/textures'

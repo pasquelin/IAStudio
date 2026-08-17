@@ -1,4 +1,4 @@
-import { createStudioSink, type StudioSinkDeps } from '@/engines/timeline/sink-port'
+import { createStudioSink, type StudioSinkDeps } from '@/engines/timeline/sinkPort'
 import { assetsById, useAssets } from '@/stores/assets'
 import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/scene-sources'
 

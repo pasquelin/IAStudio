@@ -21,7 +21,7 @@ import {
   type SequenceState,
   type Track,
   type Us,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { sameValues } from '@/helpers/objects'
 import { createDocumentStore } from './document-store'
 

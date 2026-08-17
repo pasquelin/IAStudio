@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import AudioWorker from '@/engines/audio/audio.worker?worker'
-import { createAudioRenderer, type AudioRenderer } from '@/engines/audio/audio-render'
+import { createAudioRenderer, type AudioRenderer } from '@/engines/audio/audioRender'
 
 /**
  * The editor's render worker, one per open take.

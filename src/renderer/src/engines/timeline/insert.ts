@@ -13,7 +13,7 @@ import {
   type Track,
   type TrackKind,
   type Us,
-} from './timeline-state'
+} from './timelineState'
 
 /** What a media with no length of its own is worth on the strip — a still, or an unprobed asset. */
 export const TIMELESS_DURATION: Us = 5_000_000

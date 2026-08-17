@@ -14,7 +14,7 @@ import {
   type BlendMode,
   type Layer,
   type Transform,
-} from '@/engines/canvas/canvas-state'
+} from '@/engines/canvas/canvasState'
 import {
   setLayerAdjustment,
   setLayerBlend,

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
-import { EMPTY_SCENE } from '@/engines/scene/scene-state'
+import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { installDocuments } from './document-fixtures'
 import { useDocuments } from './documents'
 import { connectSceneSelection } from './scene-selection'

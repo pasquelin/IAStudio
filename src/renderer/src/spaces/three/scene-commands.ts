@@ -7,7 +7,7 @@ import {
   rootedIn,
   setNodeVisible,
 } from '@/engines/scene/commands'
-import { nodeById, selectedNodes } from '@/engines/scene/scene-state'
+import { nodeById, selectedNodes } from '@/engines/scene/sceneState'
 import { sceneEngineOf } from '@/stores/scene-engines'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { sceneOf, useScenes } from '@/stores/scenes'

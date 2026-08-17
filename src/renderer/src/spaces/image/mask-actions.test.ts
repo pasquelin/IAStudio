@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { layerById } from '@/engines/canvas/canvas-state'
+import { layerById } from '@/engines/canvas/canvasState'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useCanvasViews } from '@/stores/canvas-views'

@@ -1,4 +1,4 @@
-import type { AudioData } from '@/engines/audio/audio-data'
+import type { AudioData } from '@/engines/audio/audioData'
 import { fetchAsset } from '@/helpers/asset-fetch'
 
 /**

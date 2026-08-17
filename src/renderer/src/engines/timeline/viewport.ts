@@ -5,8 +5,8 @@
  */
 import { clamp } from '@shared/numeric'
 import { maxOffsetFor, maxScrollTopFor } from './band'
-import { RULER_HEIGHT, tracksHeight, visibleRange, type Viewport } from './timeline-geometry'
-import { sequenceDuration, type SequenceState, type Us } from './timeline-state'
+import { RULER_HEIGHT, tracksHeight, visibleRange, type Viewport } from './timelineGeometry'
+import { sequenceDuration, type SequenceState, type Us } from './timelineState'
 import type { Size } from '../core/geometry'
 
 // Bare because the CANVAS took the prefix: the two ranges are four orders apart and an
