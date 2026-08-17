@@ -441,6 +441,198 @@ intacte au lieu d’un fichier à moitié écrit.
 
 ---
 
+## Enregistrer des versions — le panneau Git
+
+Le panneau **Git** suit **le dossier de votre projet**, et rien d’autre : vos fichiers, jamais le
+studio lui-même. Une version enregistrée est un état complet du dossier, auquel vous pouvez
+revenir — ce que le panneau **Historique**, dans la bande du bas, montre ensuite.
+
+C’est le filet du travail long : une piste de lumière tentée avant le week-end, une matière qu’on
+préfère abandonner, un dossier de vingt documents dont on veut l’état d’hier.
+
+### Mettre le suivi en place
+
+Sur un projet qui ne suit pas encore ses versions, le panneau propose un seul bouton :
+**Suivre les versions**. Il prépare le dossier, sur cet ordinateur, et **n’envoie rien nulle
+part** — un serveur, si vous en voulez un, se relie plus tard.
+
+Trois choses se passent à ce moment-là, et il vaut mieux les savoir :
+
+- Le studio écrit un fichier d’exclusions qui laisse `.index/` de côté : ce dossier se
+  **reconstruit** à partir de vos fichiers, l’enregistrer serait enregistrer un cache.
+  **Un fichier d’exclusions déjà présent n’est pas touché** — un projet qui revient d’ailleurs
+  garde les règles que quelqu’un a écrites.
+- Le nom de la première branche est celui que **votre** git utilise par défaut. Le studio n’en
+  impose aucun.
+- Le suivi porte sur **la racine du projet**. Un dossier de projet posé à l’intérieur d’un dépôt
+  qui ne le concerne pas — un dossier personnel versionné une fois — n’est pas considéré comme
+  suivi, et le panneau propose de le mettre en place pour lui-même.
+
+> **Si git n’est pas installé**, le panneau le dit et n’offre aucun bouton : il n’y a rien à
+> proposer tant que le programme n’est pas là. Voir [Réglages ▸ Versions](14-reglages.md#versions).
+
+### Enregistrer une version
+
+En haut du panneau, un champ où écrire **ce que dit cette version**. En dessous, la liste de ce
+qui a changé, chaque fichier avec une case.
+
+**La case est le geste central** : la cocher, c’est dire « celui-là fera partie de la prochaine
+version ». La décocher l’en retire. Il n’y a rien d’autre à comprendre, et aucun autre bouton pour
+la même chose.
+
+Le bouton **Commit** demande **un message et au moins un fichier coché**. Tant que l’un des deux
+manque, il reste éteint — sauf si **Corriger la dernière** est cochée, où le message seul suffit :
+refaire une version pour son seul message est le cas le plus courant.
+
+| Ce que vous voulez | Le geste |
+|---|---|
+| Enregistrer une partie de ce qui a changé | cochez ces fichiers-là, écrivez le message, **Commit** |
+| Enregistrer tout un groupe d’un coup | le bouton **Tout cocher dans…** de son en-tête, puis **Commit** |
+| Corriger la version que vous venez d’enregistrer | cochez ce qui manquait, cochez **Corriger la dernière**, **Commit** |
+
+**Corriger la dernière** refait la dernière version au lieu d’en ajouter une — un message mal
+tourné, un fichier oublié d’une minute. La case n’apparaît qu’une fois qu’il y a une version à
+corriger.
+
+> **Un message n’est jamais perdu.** Il n’est effacé que si la version a réellement été
+> enregistrée : un refus — l’auteur non renseigné est celui que tout le monde rencontre d’abord —
+> vous laisse votre texte pour réessayer. Il survit aussi au fait de quitter le panneau, et même
+> de changer de projet.
+
+### Les quatre groupes de fichiers
+
+La liste est rangée sous quatre en-têtes, dans cet ordre, et **un groupe vide n’apparaît pas** :
+
+| Groupe | Ce qu’il contient |
+|---|---|
+| **En conflit** | ce qu’une fusion n’a pas su départager — à régler avant tout le reste |
+| **Retenus** | ce qui est coché, donc ce que la prochaine version enregistrera |
+| **Modifiés** | ce qui a changé depuis la dernière version, et n’est pas coché |
+| **Nouveaux** | ce que le suivi n’a jamais vu — un asset qui vient d’être généré, par exemple |
+
+Chaque en-tête porte le **nombre** de fichiers du groupe et un bouton qui les prend **tous** —
+« Tout cocher dans Modifiés », « Tout décocher dans Retenus ». Un import qui écrit trente fichiers
+se coche en un clic plutôt qu’en trente.
+
+**La liste est à plat, pas en arborescence** : ce qu’on lit ici est la courte liste de ce qui a
+bougé. L’arbre, c’est l’Explorateur, une icône plus haut.
+
+### Les gestes d’une ligne
+
+| Geste | Effet |
+|---|---|
+| **La case** | fait entrer le fichier dans la prochaine version, ou l’en retire |
+| **Comparer** | montre l’avant et l’après **dans la bande du bas**, et l’amène au premier plan |
+| **Restaurer** | remet le fichier tel qu’il était dans la dernière version enregistrée |
+
+**Comparer** n’est pas offert sur un fichier **Nouveau** — il n’a pas de version d’avant à
+laquelle se comparer — ni sur un fichier en conflit, qui porte les deux versions à la fois.
+
+**Restaurer** n’est offert que sur un fichier **modifié** ou **supprimé**, et c’est le même
+raisonnement : un fichier neuf n’a rien où revenir. **Le supprimer est le travail de
+l’Explorateur**, qui passe par la corbeille de votre système — un fichier ne disparaît pas d’un
+panneau de versions. Un fichier **renommé** n’est pas restaurable non plus : remettre un renommage
+en place toucherait deux chemins, dont un que vous n’avez pas cliqué.
+
+### Le panneau se tient à jour tout seul
+
+Il se relit quand vous **changez de projet**, quand le **dossier bouge sur le disque** — y compris
+sous une main qui n’est pas le studio — et quand la **fenêtre revient au premier plan**. Rien
+n’est interrogé en boucle.
+
+Le bouton **Actualiser**, en tête du panneau, est là pour l’impatience légitime : vous venez de
+faire quelque chose dans un terminal et vous voulez le voir **maintenant**.
+
+### Les branches
+
+Le bouton de gauche porte le nom de la branche sortie — ou **Hors branche**, si vous vous êtes
+posé sur une version précise plutôt que sur une branche. Il ouvre la liste des branches, avec une
+coche sur celle qui est sortie, et une ligne **Nouvelle branche**.
+
+> **Cette liste-là se relit moins souvent que le reste du panneau** : quand vous changez de
+> branche, quand une version est enregistrée, et quand vous revenez sur le panneau. Une branche
+> créée dans un terminal **sans y basculer** n’y apparaît donc qu’après un aller-retour sur le
+> panneau — le bouton **Actualiser** relit les fichiers, pas les branches.
+
+Une branche est la façon d’essayer autre chose sans rien perdre : deux directions artistiques sur
+le même projet, chacune la sienne.
+
+> **Avant la première version enregistrée, il n’existe aucune branche** — git n’en a pas tant que
+> rien n’est enregistré. Le bouton va alors droit au champ de nom, sans ouvrir de liste d’un seul
+> élément.
+
+Un nom que git refuserait est refusé **avant** la commande, plutôt que de vous renvoyer un message
+écrit pour quelqu’un qui lit une page de manuel : pas d’espace, et aucun des caractères
+`~ ^ : ? * [ \`.
+
+### Mettre de côté
+
+**Mettre de côté** range tout ce qui a changé — **fichiers neufs compris** — et vous rend un
+dossier propre. C’est pour l’essai qu’on veut écarter le temps de regarder ce qu’il y avait
+dessous, sans l’enregistrer et sans le perdre.
+
+Rien ne vous est demandé : la pile est nommée toute seule d’après la branche et le moment. Le
+menu du bouton liste ensuite ce qui est en attente.
+
+| Geste | Effet |
+|---|---|
+| **Mettre de côté maintenant** | range tout, et rend le dossier propre |
+| **Cliquer une pile** | la remet dans le dossier **et la retire de la liste** |
+| **Jeter** | la supprime sans la remettre — **rien ne la récupère ensuite** |
+
+### Un serveur, si vous en voulez un
+
+Tant que le projet ne parle à aucun serveur, et **une fois une première version enregistrée**, le
+panneau montre un champ d’adresse et un bouton **Relier**. L’adresse se colle : c’est celle que
+votre hébergeur affiche après avoir créé un dépôt. Rien d’autre n’est demandé, et **rien n’est
+envoyé à ce moment-là**.
+
+Une fois relié, trois boutons apparaissent en tête du panneau :
+
+| Bouton | Ce qu’il fait |
+|---|---|
+| **Relever** | va voir ce que le serveur a de neuf, **sans rien changer chez vous** |
+| **Recevoir** | ramène chez vous les versions enregistrées ailleurs |
+| **Envoyer** | met vos versions sur le serveur |
+
+À côté d’eux, deux compteurs — « 3 à envoyer », « 2 à recevoir » — qui **n’apparaissent que
+lorsqu’ils ne sont pas à zéro**.
+
+> **Le premier envoi d’une branche est offert même avec rien en avance** : c’est lui qui crée
+> cette branche sur le serveur.
+
+**Le studio ne demande jamais de mot de passe.** Si le serveur refuse l’accès, le panneau demande
+alors — et alors seulement — un identifiant et un **jeton personnel**, une fois par serveur et non
+par projet. Il est chiffré par le trousseau de votre système, ne ressort jamais de l’application,
+et **l’envoi qui avait été refusé est relancé tout seul**. Si un jeton est déjà retenu et que le
+serveur le refuse quand même, un bouton **Oublier le jeton** l’efface.
+
+**Rien ne part ni n’arrive sans l’un de ces trois boutons** : il n’y a aucune relève automatique.
+Un seul serveur par projet, nommé `origin`, ce que git et tous les hébergeurs supposent.
+
+### Quand deux versions se contredisent
+
+Après une réception, des fichiers peuvent atterrir **En conflit** : les deux côtés ont touché le
+même endroit, et personne ne peut décider à votre place. Ce groupe passe en tête de liste, et ses
+lignes portent deux boutons au lieu des gestes habituels :
+
+| Bouton | Effet |
+|---|---|
+| **Garder ma version de…** | conserve ce que vous aviez, et écarte ce qui arrivait |
+| **Garder l’autre version de…** | conserve ce qui arrivait, et écarte ce que vous aviez |
+
+Une fois tous les conflits réglés et les fichiers cochés, **Commit** termine la fusion.
+
+L’en-tête du groupe porte la sortie de secours : **Abandonner la fusion** remet le dossier tel
+qu’il était avant qu’elle commence.
+
+> Ce que le panneau **ne fait pas** — un client git complet, une fusion à la main, un mot de passe
+> demandé, une clé SSH à phrase de passe — est écrit noir sur blanc au chapitre
+> [Ce qui n’existe pas encore](18-limites.md#git). Les réglages du suivi, dont le nom d’auteur
+> inscrit dans chaque version, sont au chapitre [Réglages ▸ Versions](14-reglages.md#versions).
+
+---
+
 ## Déplacer, copier, sauvegarder un projet
 
 | Vous voulez… | Faites |

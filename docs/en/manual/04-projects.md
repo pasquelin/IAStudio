@@ -429,6 +429,189 @@ half-written file.
 
 ---
 
+## Recording versions — the Git panel
+
+The **Git** panel tracks **your project folder**, and nothing else: your files, never the studio
+itself. A recorded version is a complete state of the folder that you can come back to — which the
+**History** panel, in the bottom band, then shows.
+
+It is the safety net of long work: a lighting pass tried out before the weekend, a material you
+would rather abandon, a folder of twenty documents you want back the way it was yesterday.
+
+### Setting the tracking up
+
+On a project that does not track its versions yet, the panel offers a single button: **Track
+versions**. It prepares the folder, on this computer, and **sends nothing anywhere** — a server, if
+you want one, is linked later.
+
+Three things happen at that moment, and they are worth knowing:
+
+- The studio writes an ignore file that leaves `.index/` out: that folder is **rebuilt** from your
+  own files, and recording it would be recording a cache. **An ignore file already there is left
+  alone** — a project coming from somewhere else keeps the rules somebody wrote.
+- The name of the first branch is the one **your** git uses by default. The studio imposes none.
+- Tracking covers **the project root**. A project folder sitting inside a repository that has
+  nothing to do with it — a home folder somebody versioned once — does not count as tracked, and
+  the panel offers to set it up for itself.
+
+> **If git is not installed**, the panel says so and offers no button: there is nothing to offer
+> until the program is there. See [Settings ▸ Versions](14-settings.md#versions).
+
+### Recording a version
+
+At the top of the panel, a field for **what this version says**. Below it, the list of what has
+changed, each file with a tick box.
+
+**The tick box is the central gesture**: ticking it says "this one will be part of the next
+version". Unticking takes it back out. There is nothing else to understand, and no second pair of
+buttons for the same thing.
+
+The **Commit** button wants **a message and at least one ticked file**. While either is missing, it
+stays off — unless **Correct the last one** is ticked, where the message alone is enough: redoing a
+version for its message alone is the commonest case.
+
+| What you want | The gesture |
+|---|---|
+| Record part of what changed | tick those files, write the message, **Commit** |
+| Record a whole group at once | the **Tick all of…** button on its heading, then **Commit** |
+| Fix the version you just recorded | tick what was missing, tick **Correct the last one**, **Commit** |
+
+**Correct the last one** redoes the last version instead of adding one — a badly worded message, a
+file forgotten by a minute. The box only appears once there is a version to correct.
+
+> **A message is never lost.** It is only cleared once the version has actually been recorded: a
+> refusal — no author configured is the one everybody meets first — leaves your text there to try
+> again. It also survives leaving the panel, and even changing project.
+
+### The four groups of files
+
+The list sits under four headings, in this order, and **an empty group does not appear**:
+
+| Group | What it holds |
+|---|---|
+| **In conflict** | what a merge could not settle — to be dealt with before anything else |
+| **Held** | what is ticked, so what the next version will record |
+| **Changed** | what has changed since the last version, and is not ticked |
+| **New** | what the tracking has never seen — a freshly generated asset, for instance |
+
+Every heading carries the **count** of its files and a button that takes them **all** — "Tick all
+of Changed", "Untick all of Held". An import that writes thirty files is ticked in one click
+rather than thirty.
+
+**The list is flat, not a tree**: what is read here is the short list of what MOVED. The tree is
+the Explorer, one icon up.
+
+### The gestures on a row
+
+| Gesture | Effect |
+|---|---|
+| **The tick box** | brings the file into the next version, or takes it back out |
+| **Compare** | shows the before and after **in the bottom band**, and brings it forward |
+| **Restore** | puts the file back the way the last recorded version has it |
+
+**Compare** is not offered on a **New** file — it has no earlier version to be compared against —
+nor on a file in conflict, which holds both versions at once.
+
+**Restore** is only offered on a **changed** or **deleted** file, for the same reasoning: a brand
+new file has nothing to go back to. **Deleting it is the Explorer's job**, which goes through your
+system's wastebasket — a file does not vanish out of a version panel. A **renamed** file cannot be
+restored either: putting a rename back would touch two paths, one of which you did not click.
+
+### The panel keeps itself current
+
+It reads again when you **change project**, when the **folder moves on disk** — including under a
+hand that is not the studio — and when the **window comes back to the front**. Nothing is polled.
+
+The **Refresh** button, at the top of the panel, is there for legitimate impatience: you have just
+done something in a terminal and you want to see it **now**.
+
+### Branches
+
+The left-hand button carries the name of the branch that is out — or **Off any branch**, if you
+have landed on a precise version rather than on a branch. It opens the list of branches, with a
+tick on the one that is out, and a **New branch** row.
+
+> **That list is read less often than the rest of the panel**: when you change branch, when a
+> version is recorded, and when you come back to the panel. A branch created in a terminal
+> **without switching to it** therefore only appears after leaving the panel and returning — the
+> **Refresh** button reads the files, not the branches.
+
+A branch is how you try something else without losing anything: two artistic directions on the same
+project, each with its own.
+
+> **Before the first recorded version there is no branch at all** — git has none until something is
+> recorded. The button then goes straight to the name field, rather than opening a list of one.
+
+A name git would refuse is refused **before** the command, rather than handing you a message
+written for someone reading a manual page: no whitespace, and none of the characters
+`~ ^ : ? * [ \`.
+
+### Setting work aside
+
+**Set aside** puts away everything that changed — **new files included** — and gives you back a
+clean folder. It is for the attempt you want out of the way while you look at what was underneath,
+without recording it and without losing it.
+
+Nothing is asked of you: the pile is named on its own after the branch and the moment. The button's
+menu then lists what is waiting.
+
+| Gesture | Effect |
+|---|---|
+| **Set aside now** | puts everything away, and leaves the folder clean |
+| **Clicking a pile** | brings it back into the folder **and takes it off the list** |
+| **Throw away** | deletes it without bringing it back — **nothing recovers it afterwards** |
+
+### A server, if you want one
+
+While the project talks to no server, and **once a first version has been recorded**, the panel
+shows an address field and a **Connect** button. The address is pasted: it is the one your host
+displays after a repository is made. Nothing else is asked, and **nothing is sent at that moment**.
+
+Once connected, three buttons appear at the top of the panel:
+
+| Button | What it does |
+|---|---|
+| **Check** | goes to see what the server has that is new, **without changing anything on your side** |
+| **Take** | brings home the versions recorded elsewhere |
+| **Send** | puts your versions on the server |
+
+Beside them, two counts — "3 to send", "2 to take" — which **only appear when they are not zero**.
+
+> **The first send of a branch is offered even with nothing ahead**: it is what creates that branch
+> on the server.
+
+**The studio never asks for a password.** If the server refuses access, the panel then — and only
+then — asks for a username and a **personal token**, once per server rather than per project. It is
+encrypted by your system's keychain, never comes back out of the application, and **the send that
+was refused is retried on its own**. If a token is already held and the server refuses it anyway, a
+**Forget the token** button erases it.
+
+**Nothing leaves or arrives without one of those three buttons**: the server is never checked on
+its own. One server per project, named `origin`, which is what git and every host assume.
+
+### When two versions disagree
+
+After taking versions in, files can land under **In conflict**: both sides touched the same place,
+and nobody can decide for you. That group goes to the top of the list, and its rows carry two
+buttons instead of the usual gestures:
+
+| Button | Effect |
+|---|---|
+| **Keep my version of…** | keeps what you had, and drops what was arriving |
+| **Keep the other version of…** | keeps what was arriving, and drops what you had |
+
+Once every conflict is settled and the files are ticked, **Commit** finishes the merge.
+
+The group's heading carries the way out: **Abandon the merge** puts the folder back the way it was
+before the merge started.
+
+> What the panel **does not do** — a complete git client, a merge by hand, a password prompt, an
+> SSH key with a passphrase — is written plainly in
+> [What does not exist yet](18-limits.md#git). The tracking settings, including the author name
+> written into every version, are in [Settings ▸ Versions](14-settings.md#versions).
+
+---
+
 ## Moving, copying, backing up a project
 
 | You want to… | Do this |

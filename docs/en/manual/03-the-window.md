@@ -105,7 +105,8 @@ beside the panel whose whole job is to open one.
 
 The **Git** panel reads the same folder as the Explorer, from another angle: not what it holds,
 but what has changed in it since you last recorded a state. The two take turns in the same half —
-their icons sit side by side in the rail.
+their icons sit side by side in the rail. How to use it is in
+[Projects](04-projects.md#recording-versions--the-git-panel).
 
 ### The right column
 
