@@ -43,7 +43,8 @@ import { openEntryMenu, openRootMenu } from './entryMenu'
 import { DomainRow } from './DomainRow'
 import { EntryCard, type EntryKind } from './EntryCard'
 import { EntryRow } from './EntryRow'
-import { FolderCrumbs } from './FolderCrumbs'
+import { FolderCrumbs } from '@/design/FolderCrumbs'
+import { HINT_TOP } from '@/helpers/tooltip'
 import { FolderNav } from './FolderNav'
 import {
   canWalkBy,
@@ -770,7 +771,21 @@ export function Explorer() {
       {/* Under the rows rather than over them: the trail says where the listing came FROM, and a
           reader looks at it after the listing, not before. Only where there is somewhere to go —
           a search and a domain are flat answers about the whole project. */}
-      {browsable && <FolderCrumbs folder={browsed} onPick={browse} />}
+      {browsable && (
+        <FolderCrumbs
+          folder={browsed}
+          onPick={browse}
+          labels={{
+            nav: t('explorer.crumbs'),
+            projectFolder: t('explorer.projectFolder'),
+            hint: t('explorer.crumbHint'),
+          }}
+          // At the FOOT of the panel, so it carries its own rule and hints upward: one below it
+          // would open off the panel.
+          tip={HINT_TOP}
+          className="border-border border-t"
+        />
+      )}
     </div>
   )
 }

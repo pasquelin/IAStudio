@@ -193,10 +193,16 @@ Un document est un travail en cours : une image avec ses calques, une scène 3D 
 un montage avec ses pistes.
 
 Le bouton **+** en haut du rail gauche en crée un, et demande deux choses : son **nom**, et son
-**emplacement**. Le champ Emplacement ouvre l’arborescence du projet — et rien d’autre : un
-document reste dans son projet. Il s’ouvre sur le dossier que l’Explorateur montre, ou sur
-`documents/` si rien n’y est sélectionné, et la ligne **Nouveau dossier…** en crée un sans quitter
-la fenêtre.
+**emplacement**.
+
+Le champ Emplacement se parcourt **un dossier à la fois**, comme le sélecteur de fichiers du
+système : le chemin est écrit en haut, chaque étape ramène à ce niveau, et la liste en dessous
+montre les sous-dossiers. Cliquer sur l’un d’eux y entre — et c’est là que le document ira. On ne
+sort jamais du projet : rien d’autre n’est proposé.
+
+Le champ s’ouvre sur le dossier que l’Explorateur montre, ou sur `documents/` si rien n’y est
+sélectionné. En bas, **Nouveau dossier dans …** nomme le dossier courant et en crée un sans
+quitter la fenêtre.
 
 Il est enregistré avec `⌘S` / `Ctrl+S` — dans le dossier que vous avez choisi en le créant, et
 ensuite là où vous l’avez rangé — sous une extension qui dit ce qu’il est :

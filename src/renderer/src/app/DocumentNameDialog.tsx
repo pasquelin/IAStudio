@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { checkDocumentName } from '@shared/domain/documentName'
-import { FOLDER_ROOT } from '@shared/domain/folder'
+import { FOLDER_ROOT, nameOf } from '@shared/domain/folder'
 import { Button } from '@/design/Button'
 import { FolderField } from '@/design/FolderField/FolderField'
 import { FIELD } from '@/design/styles'
@@ -155,11 +155,20 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
               onChange={setFolder}
               rootName={projectName}
               labels={{
-                tree: t('documents.folderTree'),
+                crumbs: t('documents.folderCrumbs'),
+                crumbHint: t('documents.folderCrumbHint'),
                 hint: t('documents.folderHint'),
-                newFolder: t('documents.newFolder'),
+                enterHint: t('documents.folderEnterHint'),
+                empty: t('documents.folderEmpty'),
+                // Interpolated HERE, where the chosen folder lives: the field draws the sentence
+                // it is handed, and a component of `design/` never reaches for a bundle.
+                newFolderIn: t('documents.newFolderIn', {
+                  folder: folder === FOLDER_ROOT ? projectName : nameOf(folder),
+                }),
                 newFolderName: t('documents.newFolderName'),
                 newFolderLabel: t('documents.newFolderLabel'),
+                create: t('documents.create'),
+                cancel: t('documents.cancel'),
                 folderTaken: t('documents.folderTaken'),
                 folderFailed: t('documents.folderFailed'),
               }}

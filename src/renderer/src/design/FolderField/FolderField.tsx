@@ -1,27 +1,16 @@
 import { mdiChevronDown, mdiFolderOutline } from '@mdi/js'
-import { useEffect, useMemo } from 'react'
-import { FOLDER_ROOT, folderTrail, isDocumentFolder, nameOf } from '@shared/domain/folder'
+import { FOLDER_ROOT, folderTrail, nameOf } from '@shared/domain/folder'
 import { cn } from '@/helpers/cn'
 import { activation } from '@/helpers/activation'
-import { HINT_BOTTOM } from '@/helpers/tooltip'
-import { useFolderTree, type FolderNode } from '@/hooks/useFolderTree'
+import { HINT_BOTTOM, HINT_RIGHT } from '@/helpers/tooltip'
+import { useFolderChildren } from '@/hooks/useFolderChildren'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
 import { Flyout } from '../Flyout'
-import { Tree } from '../Tree'
+import { FolderCrumbs } from '../FolderCrumbs'
+import { MenuRow } from '../MenuRow'
 import { UiIcon } from '../UiIcon'
 import { FIELD } from '../styles'
 import { FolderFieldCreate } from './FolderFieldCreate'
-
-/**
- * The id the ROOT row carries, standing for the project folder itself.
- *
- * `FOLDER_ROOT` is the empty string, which no tree can key a row on; a leading slash is what
- * `parseFolderPath` refuses outright, so it can never be mistaken for a path either.
- */
-const TREE_ROOT = '/'
-
-const folderOf = (id: string): string => (id === TREE_ROOT ? FOLDER_ROOT : id)
-const idOf = (folder: string): string => (folder === FOLDER_ROOT ? TREE_ROOT : folder)
 
 export type FolderFieldProps = {
   /** The chosen folder, relative to the project. `FOLDER_ROOT` is the project folder itself. */
@@ -29,65 +18,41 @@ export type FolderFieldProps = {
   onChange: (folder: string) => void
   /** Goes on the line itself, so a visible `<label>` can name it — a button IS labelable. */
   id?: string
-  /** The project's own name, which is what the root row is called. Already translated. */
+  /** The project's own name, which is what the root is called. Already translated. */
   rootName: string
   /**
    * Every word this field puts on screen, already translated: it draws what it is handed and
    * looks nothing up, the way every other field of `design/` does.
    */
   labels: {
-    tree: string
+    crumbs: string
+    crumbHint: string
     hint: string
-    newFolder: string
+    enterHint: string
+    empty: string
+    /** Names the folder being browsed — `{{folder}}` is filled by the caller's own bundle. */
+    newFolderIn: string
     newFolderName: string
     newFolderLabel: string
+    create: string
+    cancel: string
     folderTaken: string
     folderFailed: string
   }
 }
 
 /**
- * Where something goes in the project, picked from the project's own folders.
+ * Where something goes in the project, picked the way every desktop file dialog picks it: ONE
+ * folder at a time, its path written above it, its sub-folders listed below.
  *
- * The whole line opens the tree, and the tree is `Tree` itself, fed by the Explorer's own
- * `useFolderTree` — the same rows, chevrons, indentation and disk watch, rather than a second
- * file tree that would drift from the first.
- *
- * Written for the new-document dialog and for whatever else has to place a file: the reading,
- * the unfolding and the making of a new folder are all in here, so a caller holds the answer
- * and nothing else.
+ * The folder shown IS the folder chosen — walking into one picks it. That is what a tree could
+ * not say: it drew every level at once and left "where am I" to be read off the indentation,
+ * and a New-folder row at the bottom of it named no parent at all. macOS, Windows and GTK all
+ * answer this question the same way, and none of them unfolds a tree to do it.
  */
 export function FolderField({ value, onChange, id, rootName, labels }: FolderFieldProps) {
   const flyout = useHoverFlyout(2)
-  const tree = useFolderTree(false)
-
-  // The walk down to the chosen folder, so a field opening on `Images/Croquis` shows that row
-  // rather than a root with everything closed. Idempotent, hence `unfold` and not `toggle`.
-  const { unfold } = tree
-  useEffect(() => {
-    for (const folder of folderTrail(value)) if (folder !== FOLDER_ROOT) unfold(folder)
-  }, [value, unfold])
-
-  // Folders only, and a document is not one even when it IS one on disk: an image writes itself
-  // as `TOTO.img/`, which the tree shows as a folder and which nothing may be filed inside. The
-  // root is the studio's own row — the tree reads the project folder's CONTENTS, never itself.
-  //
-  // Memoised, both of them: `Tree` flattens its nodes and measures its rows off these two, so a
-  // fresh array and a fresh Set on every keystroke of the dialog above would redo that work for
-  // a field nobody touched.
-  const nodes: readonly FolderNode[] = useMemo(
-    () => [
-      { id: TREE_ROOT, parentId: null, path: FOLDER_ROOT, name: rootName, kind: 'folder' },
-      ...tree.nodes
-        .filter(node => node.kind === 'folder' && !isDocumentFolder(node.path))
-        .map(node => ({ ...node, parentId: node.parentId ?? TREE_ROOT })),
-    ],
-    [tree.nodes, rootName],
-  )
-
-  // The project's own row stays open: it is the head of the tree, and folding it would leave a
-  // field whose only row is the one already written on the line.
-  const expandedIds = useMemo(() => new Set([TREE_ROOT, ...tree.expandedIds]), [tree.expandedIds])
+  const children = useFolderChildren(value)
 
   return (
     <div {...flyout.wrapProps}>
@@ -112,38 +77,40 @@ export function FolderField({ value, onChange, id, rootName, labels }: FolderFie
         <Flyout
           anchor={flyout.anchor}
           // A field's menu: under the line, on its left edge and at its width, the way a
-          // `<select>` opens. `below` aligns RIGHT edges, which hung the tree off-centre.
+          // `<select>` opens. `below` aligns RIGHT edges, which hung it off-centre.
           placement="under"
           {...flyout.flyoutProps}
         >
-          {/* No scroller of its own: `Flyout` already bounds its height and scrolls, and a second
-              one inside it puts two bars on one list. */}
-          <Tree
-            nodes={nodes}
-            label={labels.tree}
-            selectedIds={[idOf(value)]}
-            expandedIds={expandedIds}
-            // A folder nobody has opened cannot say whether it holds any, and a row with no
-            // chevron is a row nobody can ask to be read.
-            expandable={() => true}
-            onToggle={row => {
-              if (row !== TREE_ROOT) tree.toggle(row)
-            }}
-            onSelect={ids => {
-              const picked = ids.at(-1)
-              if (picked !== undefined) onChange(folderOf(picked))
-            }}
-            renderRow={row => <span className="truncate">{row.node.name}</span>}
+          {/* Where you ARE, first and in words. Every segment but the last walks back up. */}
+          <FolderCrumbs
+            folder={value}
+            onPick={onChange}
+            labels={{ nav: labels.crumbs, projectFolder: rootName, hint: labels.crumbHint }}
+            tip={HINT_RIGHT}
+            className="border-border border-b"
           />
+
+          {children.entries.map(entry => (
+            <MenuRow
+              key={entry.path}
+              label={entry.name}
+              icon={mdiFolderOutline}
+              tip={HINT_RIGHT(labels.enterHint)}
+              onSelect={() => onChange(entry.path)}
+            />
+          ))}
+
+          {/* Said rather than left blank: an empty list and a list still loading look alike, and
+              a menu that shows nothing at all reads as broken. */}
+          {children.read && children.entries.length === 0 && (
+            <p className="text-muted m-0 px-2 py-1.5 text-xs">{labels.empty}</p>
+          )}
 
           <FolderFieldCreate
             folder={value}
             labels={labels}
-            onCreated={folder => {
-              onChange(folder)
-              flyout.close()
-            }}
-            onReread={tree.reload}
+            onCreated={onChange}
+            onReread={children.reread}
           />
         </Flyout>
       )}
