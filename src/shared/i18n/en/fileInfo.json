@@ -7,7 +7,7 @@
       "catalogue": "Catalogue",
       "git": "Git"
     },
-    "gitUnchanged": "No pending change",
+    "gitUnchanged": "No pending changes",
     "kind": {
       "file": "File",
       "folder": "Folder"
