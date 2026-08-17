@@ -42,6 +42,16 @@ export type CollectionBarProps = {
    * field needs in a side column.
    */
   display?: boolean
+  /**
+   * What the collection is currently bounded to, drawn just under the search — a breadcrumb for a
+   * panel that browses INTO its items rather than listing them all at once.
+   *
+   * A slot and not a `folder` prop: the bar knows nothing about paths, and the one panel that
+   * needs this owns both the trail and what a crumb does when clicked. It sits beside the search
+   * rather than beside the view buttons because it narrows the collection — same half of the bar
+   * as a facet, and the eye reads the two together.
+   */
+  scope?: ReactNode
   className?: string
 }
 
@@ -53,6 +63,7 @@ export function CollectionBar({
   sorts,
   layout = 'stacked',
   display = true,
+  scope,
   className,
 }: CollectionBarProps) {
   const { t } = useTranslation()
@@ -169,6 +180,7 @@ export function CollectionBar({
         )}
       >
         {search}
+        {scope}
         {menus}
         <div className="ml-auto flex items-center gap-2">
           {sortMenu}
@@ -186,6 +198,7 @@ export function CollectionBar({
   return (
     <div className={cn('border-border flex flex-col gap-2 border-b p-2', className)}>
       {search}
+      {scope}
 
       {/* Two to a row: a tool window is too narrow for a single line of dropdowns, and
           wrapping them freely reflows the whole bar as soon as a label changes length. */}

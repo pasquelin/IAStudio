@@ -250,6 +250,8 @@ function dimmingPercent(fraction = '', unit = '', step = ''): number {
  */
 const DIMMING_ALLOWED: Record<string, string> = {
   '/ShelfTile.tsx': 'a caption at ~17:1 on its own gradient, a tenth off it changes nothing',
+  '/EntryCard.tsx':
+    'a tile that has been CUT and is waiting for a paste, dimmed as every file browser dims one — the same MediaTile caption on the same gradient as /ShelfTile.tsx above, so half off it stays well clear of the bar, and there is no ink to quieten on a picture',
   '/Tree.tsx':
     'the row a drag is holding, for the length of the gesture, while the ghost reads at full ink',
   '/TimelineRow.tsx':

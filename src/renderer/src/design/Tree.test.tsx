@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
@@ -1029,5 +1029,130 @@ describe('flattenTree, asked what can expand', () => {
     const rows = flattenTree([{ id: 'assets', parentId: null }], new Set(), () => true)
 
     expect(rows[0]?.hasChildren).toBe(true)
+  })
+})
+
+/**
+ * Hovering a folder while dragging opens it, which is how something is carried two levels down
+ * without letting go.
+ *
+ * A SECOND root, and the drag always starts there: `accepts` refuses any row sitting under the
+ * node being dragged, so a batch taken from inside `scene` would make every hover below it a
+ * no-op — and the case that matters most here, an already-open folder that must NOT fold, would
+ * then pass for a reason that has nothing to do with the guard being tested.
+ */
+describe('Tree, a folder hovered while something is being dragged', () => {
+  const HOVER_NODES = [...NODES, { id: 'elsewhere', parentId: null }]
+  /** `scene` is open and `a` is not, so both sides of the guard are reachable from one render. */
+  const ROW = { scene: 0, a: 1, elsewhere: 3 }
+
+  function renderHoverable(onToggle: (id: string) => void) {
+    return render(
+      <Tree
+        nodes={HOVER_NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={onToggle}
+        // Without it no row has an `into` zone at all — see `dropTargetFor`.
+        onDrop={() => {}}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+  }
+
+  /** `fireEvent` only, and never `userEvent`: its own timers do not survive being faked. */
+  function hover(row: HTMLElement, data: DataTransfer): void {
+    fireEvent.dragOver(row, { dataTransfer: data })
+  }
+
+  function wait(ms: number): void {
+    act(() => void vi.advanceTimersByTime(ms))
+  }
+
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('opens it once the hover has lasted, and not before', () => {
+    const onToggle = vi.fn()
+    renderHoverable(onToggle)
+    const data = dragTransfer()
+    const rows = screen.getAllByRole('treeitem')
+
+    fireEvent.dragStart(rows[ROW.elsewhere]!, { dataTransfer: data })
+    hover(rows[ROW.a]!, data)
+
+    wait(599)
+    expect(onToggle).not.toHaveBeenCalled()
+
+    wait(1)
+    expect(onToggle).toHaveBeenCalledWith('a')
+  })
+
+  /**
+   * The defect this guards is the one a user cannot recover from: a tree that folds what it had
+   * opened moves under a hand still holding something, and the row being aimed at is gone.
+   */
+  it('leaves one that is already open alone, however long it is hovered', () => {
+    const onToggle = vi.fn()
+    renderHoverable(onToggle)
+    const data = dragTransfer()
+    const rows = screen.getAllByRole('treeitem')
+
+    fireEvent.dragStart(rows[ROW.elsewhere]!, { dataTransfer: data })
+    hover(rows[ROW.scene]!, data)
+    wait(5_000)
+
+    expect(onToggle).not.toHaveBeenCalled()
+  })
+
+  it('forgets it when the pointer moves on before the hover has lasted', () => {
+    const onToggle = vi.fn()
+    renderHoverable(onToggle)
+    const data = dragTransfer()
+    const rows = screen.getAllByRole('treeitem')
+
+    fireEvent.dragStart(rows[ROW.elsewhere]!, { dataTransfer: data })
+    hover(rows[ROW.a]!, data)
+    wait(300)
+    hover(rows[ROW.scene]!, data)
+    wait(600)
+
+    expect(onToggle).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A timer that survived the drop would open a folder after the gesture had ended — the tree
+   * rearranging itself on its own, a beat after the hand had let go.
+   */
+  it('forgets it on the drop, so nothing opens after the gesture has ended', () => {
+    const onToggle = vi.fn()
+    renderHoverable(onToggle)
+    const data = dragTransfer()
+    const rows = screen.getAllByRole('treeitem')
+
+    fireEvent.dragStart(rows[ROW.elsewhere]!, { dataTransfer: data })
+    hover(rows[ROW.a]!, data)
+    wait(300)
+    fireEvent.drop(rows[ROW.a]!, { dataTransfer: data })
+    wait(600)
+
+    expect(onToggle).not.toHaveBeenCalled()
+  })
+
+  it('forgets it when the drag ends without a drop', () => {
+    const onToggle = vi.fn()
+    renderHoverable(onToggle)
+    const data = dragTransfer()
+    const rows = screen.getAllByRole('treeitem')
+
+    fireEvent.dragStart(rows[ROW.elsewhere]!, { dataTransfer: data })
+    hover(rows[ROW.a]!, data)
+    wait(300)
+    fireEvent.dragEnd(rows[ROW.elsewhere]!, { dataTransfer: data })
+    wait(600)
+
+    expect(onToggle).not.toHaveBeenCalled()
   })
 })

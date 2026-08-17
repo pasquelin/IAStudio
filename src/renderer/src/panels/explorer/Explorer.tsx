@@ -13,6 +13,7 @@ import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared
 import { extensionOf, stemOf } from '@shared/domain/file-name'
 import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/file-op'
 import { canMoveInto, FOLDER_ROOT, isPrivatePath, parentOf } from '@shared/domain/folder'
+import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
@@ -35,7 +36,9 @@ import { isDomainHeading, type ExplorerNode } from './domain-nodes'
 import { entriesSorted, FOLDER_SORTS } from './folder-sort'
 import { openEntryMenu, openRootMenu } from './EntryMenu'
 import { DomainRow } from './DomainRow'
+import { EntryCard } from './EntryCard'
 import { EntryRow } from './EntryRow'
+import { FolderCrumbs } from './FolderCrumbs'
 import { RescanBar } from './RescanBar'
 import { useDomainTree } from './use-domain-tree'
 import { useFolderSearch } from './use-folder-search'
@@ -118,6 +121,27 @@ export function Explorer() {
    * asked again on commit: two answers to one question are free to disagree.
    */
   const [renaming, setRenaming] = useState<{ nodeId: string; asset: Asset | null } | null>(null)
+  /**
+   * Which folder the GRID is showing. The tree needs none — nesting is drawn there, and the panel
+   * shows the whole project at once.
+   *
+   * Panel state and not the store's: a path means nothing outside the project it belongs to, and
+   * the store is persisted whole and shared by every window. It follows `search`, which is dropped
+   * for the same reason — reopening a studio deep inside a folder nobody navigated to reads as a
+   * project gone missing.
+   */
+  const [browsing, setBrowsing] = useState<{ project: string | null; folder: string }>({
+    project: projectPath,
+    folder: FOLDER_ROOT,
+  })
+  /**
+   * The batch a card has picked up, while it is in the hand.
+   *
+   * Kept here because `getData` answers nothing until the drop itself, by design of the platform:
+   * a card asked whether it accepts what is passing over it has no other way to know what that is.
+   * `Tree` holds the same thing for the same reason, one component further in.
+   */
+  const [carried, setCarried] = useState<readonly string[] | null>(null)
 
   // Opening a project already lists its documents; this is for what has been written since.
   // `relist` and not `refresh`: settling which tabs are open is the project's business.
@@ -184,6 +208,50 @@ export function Explorer() {
     if (!node || isDomainHeading(node)) return FOLDER_ROOT
     return node.kind === 'folder' ? node.path : (parentOf(node.path) ?? FOLDER_ROOT)
   }, [selectedIds, nodeById])
+
+  /**
+   * The grid, and whether it may be gone down into.
+   *
+   * Only a folder reading has somewhere to go: a search and a domain are both flat answers about
+   * the whole project, and a crumb trail over either would claim a place the rows do not come from.
+   */
+  const grid = collection.view === 'grid'
+  const browsable = grid && !searching && !inDomain
+  /**
+   * Where the grid actually is, which is where it was told to be until that folder stops existing —
+   * another window can trash or rename the one being browsed, and a trail pointing at a folder that
+   * is gone shows an empty grid with no hint of why.
+   *
+   * `nodes.length === 0` holds it in place: the tree is empty for the beat a reload takes, and
+   * falling back then would throw the user to the root every time a file moved.
+   */
+  /**
+   * The folder asked for, forgotten the moment another project is opened: a path of the folder just
+   * closed names nothing in the new one. Read here rather than reset by an effect, which is a
+   * cascading render the linter refuses — and rightly, the answer is a derivation.
+   */
+  const asked = browsing.project === projectPath ? browsing.folder : FOLDER_ROOT
+  const browse = (folder: string): void => setBrowsing({ project: projectPath, folder })
+  const browsed =
+    !browsable || asked === FOLDER_ROOT || nodes.length === 0 || nodeById.has(asked)
+      ? asked
+      : FOLDER_ROOT
+
+  /**
+   * What the grid lists: the children of the folder being browsed, or — where there is nothing to
+   * browse — the flat answer itself, headings dropped. A heading holds files without being a place,
+   * and a grid has no way to draw the difference.
+   */
+  const entries = useMemo((): readonly FolderNode[] => {
+    const files: FolderNode[] = []
+    for (const node of nodes) {
+      if (isDomainHeading(node)) continue
+      if (browsable && node.parentId !== (browsed === FOLDER_ROOT ? null : browsed)) continue
+      files.push(node)
+    }
+
+    return files
+  }, [nodes, browsable, browsed])
 
   // Answers the history rather than writing it, so the two callers below own their own
   // `setState` — an effect that calls one is an effect the linter reads as cascading.
@@ -346,6 +414,79 @@ export function Explorer() {
   // Drawn INSIDE the panel rather than in its place, which is what the wrapper below is for: a
   // search that matches nothing would otherwise take the field it was typed in off the screen,
   // and leave no way back to the folder.
+  /**
+   * What a double-click on a CARD means.
+   *
+   * A folder is gone into rather than folded open: a grid draws no nesting, so the only way it can
+   * show what a folder holds is to become that folder. Everything else opens as it does in the tree.
+   *
+   * It is expanded in the tree as well, and that is not bookkeeping: a folder's children are read
+   * only once it has been opened, so descending without expanding would land the grid in a folder
+   * whose entries have never been fetched and show it as empty.
+   */
+  /**
+   * The glyph an entry wears. Asked of the descriptor first: an image document IS a directory, and
+   * the folder question answered first showed the folder glyph over every other space's own.
+   */
+  const iconFor = (node: FolderNode, expanded: boolean): string => {
+    const document = documentOf(node)
+    if (document) return workspaceById(document.workspace).icon
+    if (node.kind !== 'folder') return mdiFileOutline
+
+    return expanded ? mdiFolderOpenOutline : mdiFolderOutline
+  }
+
+  const enter = (node: FolderNode): void => {
+    if (documentOf(node) || node.kind !== 'folder') return void activate(node)
+    if (!expandedIds.has(node.id)) toggle(node.id)
+    browse(node.path)
+  }
+
+  /**
+   * The menu a right-click on an entry offers, wherever that entry was drawn.
+   *
+   * Asked BEFORE the menu appears, and that round trip is the point: only the catalogue knows
+   * whether a file under `assets/` is an asset, and the answer decides whether renaming is offered
+   * or greyed. One reader for both renderings — two copies of this would be two menus free to
+   * offer different rows over the same file.
+   */
+  const raiseEntryMenu = (node: FolderNode): void => {
+    void assetAt(node.path).then(asset =>
+      openEntryMenu({
+        node,
+        // Read at the click rather than from the render's copy: the list arms the menu on the row
+        // it was raised on, and that write has not reached this closure yet.
+        selection: selectedFilePaths(useSelection.getState()),
+        document: documentOf(node),
+        asset,
+        folder: node.kind === 'folder' ? node.path : (parentOf(node.path) ?? FOLDER_ROOT),
+        clipboard: clipboard.length,
+        history,
+        bindings: currentOverrides(),
+        t,
+        onOpen: () => void activate(node),
+        onRename: () => setRenaming({ nodeId: node.id, asset }),
+        run,
+      }),
+    )
+  }
+
+  /**
+   * The menu the blank offers, aimed at `into`: the project folder for the tree, which shows all of
+   * it at once, and the folder being browsed for the grid, which shows one of them.
+   *
+   * No round trip to the catalogue — the gestures it offers are about a place, not about a file.
+   */
+  const raiseRootMenu = (into: string): void => {
+    openRootMenu({
+      clipboard: clipboard.length,
+      history,
+      bindings: currentOverrides(),
+      t,
+      run: command => run(command, into),
+    })
+  }
+
   const emptyState = searching ? (
     <EmptyState
       icon={mdiMagnify}
@@ -369,16 +510,83 @@ export function Explorer() {
       onBlur={() => setFocused(false)}
     >
       {/* Under the title row and not on it: this panel stands in a column, where the row already
-          carries the name, the three readings and the way out — the field measured 76 px there.
-          `display` is off for the reason a tree has no grid and no thumbnail to size. */}
-      <CollectionBar state={collection} onChange={setCollection} sorts={sorts} display={false} />
+          carries the name, the two readings, the hidden items and the way out — the field measured
+          76 px there. The two READINGS stay up in that row and do not come down here: they are
+          answers about the project, where everything this bar holds is about the list on screen.
+
+          `display` is on now that the grid exists. The thumbnail buttons grey themselves out on a
+          list, which the tree is — `CollectionBar` owns that, so nothing here has to say it. */}
+      <CollectionBar
+        state={collection}
+        onChange={setCollection}
+        sorts={sorts}
+        // Only where there is somewhere to go. A search and a domain are flat answers about the
+        // whole project, and a trail over either would name a folder the rows do not come from.
+        {...(browsable ? { scope: <FolderCrumbs folder={browsed} onPick={browse} /> } : {})}
+      />
 
       {/* Nothing at all unless a pass is running, which on a project where nothing moved is
           every time: the row appears when the studio is reading files and can be told to stop. */}
       <RescanBar />
 
       <div className="min-h-0 flex-1">
-        {nodes.length === 0 ? (
+        {grid ? (
+          <Collection
+            items={entries}
+            state={collection}
+            label={t('panels.explorer')}
+            multiple
+            selectedIds={selectedIds}
+            // The item is ignored: `pickFrom` has already resolved what the click ASKED for against
+            // the cards on screen, and composing that with what is held is this panel's half.
+            onSelect={(_, ids, mode) => pick(applySelection(selectedIds, ids, mode))}
+            onActivate={enter}
+            onContextMenu={raiseEntryMenu}
+            // The three the blank owns. `browsed` and not `FOLDER_ROOT`: the grid shows ONE folder,
+            // so its blank means the folder on screen — a new folder made here belongs where the
+            // user is looking, not at the top of the project.
+            onPressRoot={() => pick([])}
+            onDropRoot={paths => void getBridge()?.project.moveFiles(paths, browsed).then(settled)}
+            onContextMenuRoot={() => raiseRootMenu(browsed)}
+            // Inert to the pointer, so the blank underneath keeps taking the right-click that makes
+            // a folder. Without it, going into an empty folder would be a dead end: no card to aim
+            // at, and a message swallowing the one gesture that gets you out of it.
+            empty={<div className="pointer-events-none size-full">{emptyState}</div>}
+            renderCard={node => (
+              <EntryCard
+                name={documentOf(node)?.title ?? node.name}
+                // Never the open glyph: a grid draws no children under a folder, so an open one
+                // would promise a nesting that is not on screen.
+                icon={iconFor(node, false)}
+                open={isOpen(documentOf(node))}
+                waiting={waiting.has(node.path)}
+                // The whole selection where this card is part of one, so three cards carried
+                // together arrive together — `Tree` composes the same batch for its rows.
+                dragIds={selectedIds.includes(node.id) ? selectedIds : [node.id]}
+                // Read on BOTH sides of the gesture, as the tree reads it: the main process
+                // refuses the same things, and an outline offered over a folder that will refuse
+                // the drop is a promise the studio does not keep.
+                accepts={
+                  node.kind === 'folder' &&
+                  !documentOf(node) &&
+                  !isPrivatePath(node.path) &&
+                  carried !== null &&
+                  carried.every(one => canMoveInto(one, node.path))
+                }
+                onPickUp={setCarried}
+                onRelease={() => setCarried(null)}
+                onDropInto={paths =>
+                  void getBridge()?.project.moveFiles(paths, node.path).then(settled)
+                }
+                {...(renaming?.nodeId === node.id
+                  ? {
+                      onRename: (name: string) => commitRename(node, renaming.asset, name),
+                    }
+                  : {})}
+              />
+            )}
+          />
+        ) : nodes.length === 0 ? (
           emptyState
         ) : (
           <Tree
@@ -434,43 +642,15 @@ export function Explorer() {
             onDropRoot={paths =>
               void getBridge()?.project.moveFiles(paths, FOLDER_ROOT).then(settled)
             }
-            // The blank aims at the project folder, as the drop above does. No round trip to the
-            // catalogue first: the four gestures it offers are about a place, not about a file.
-            onContextMenuRoot={() =>
-              openRootMenu({
-                clipboard: clipboard.length,
-                history,
-                bindings: currentOverrides(),
-                t,
-                run: command => run(command, FOLDER_ROOT),
-              })
-            }
+            // The blank aims at the project folder, as the drop above does: the tree shows the
+            // whole of it, so there is only ever one place its blank could mean.
+            onContextMenuRoot={() => raiseRootMenu(FOLDER_ROOT)}
             onActivate={node => void (isDomainHeading(node) ? toggle(node.id) : activate(node))}
-            // Asked BEFORE the menu is drawn, and that round trip is the point: only the catalogue
-            // knows whether a file under `assets/` is an asset, and the answer decides whether
-            // « Renommer » is offered or greyed. A heading raises none: every gesture it carries is
-            // about a file, and it is not one.
+            // A heading raises none: every gesture the menu carries is about a file, and a domain
+            // that names files is not one.
             onContextMenu={node => {
               if (isDomainHeading(node)) return
-
-              void assetAt(node.path).then(asset =>
-                openEntryMenu({
-                  node,
-                  // Read at the click rather than from the render's copy: `Tree` arms the menu on
-                  // the row it was raised on, and that write has not reached this closure yet.
-                  selection: selectedFilePaths(useSelection.getState()),
-                  document: documentOf(node),
-                  asset,
-                  folder: node.kind === 'folder' ? node.path : (parentOf(node.path) ?? FOLDER_ROOT),
-                  clipboard: clipboard.length,
-                  history,
-                  bindings: currentOverrides(),
-                  t,
-                  onOpen: () => void activate(node),
-                  onRename: () => setRenaming({ nodeId: node.id, asset }),
-                  run,
-                }),
-              )
+              raiseEntryMenu(node)
             }}
             renderRow={row => {
               // The domain itself, and what it holds. Not an `EntryRow`: it opens nothing, it is
@@ -481,28 +661,14 @@ export function Explorer() {
               // Bound rather than read through `row` below: the narrowing above does not survive
               // into the rename closure, and this is what carries it there.
               const node = row.node
-              const document = documentOf(node)
-              // The descriptor carries its own workspace, so the glyph comes off the same table the
-              // rail and the asset menu read — never derived from the kind a second time, which would
-              // be a second answer free to disagree with the first. Asked before the folder question
-              // for the reason `activate` is: an image document is a directory, and the folder glyph
-              // said so where every other document showed its space.
-              const icon = document
-                ? workspaceById(document.workspace).icon
-                : node.kind === 'folder'
-                  ? row.expanded
-                    ? mdiFolderOpenOutline
-                    : mdiFolderOutline
-                  : mdiFileOutline
 
               return (
                 <EntryRow
-                  // The document's name where there is one — which is its file name for anything
-                  // written since documents came to be named, and its title for the older ones whose
+                  // The document's name where there is one — its title for the older ones whose
                   // file still wears a uuid.
-                  name={document?.title ?? node.name}
-                  icon={icon}
-                  open={isOpen(document)}
+                  name={documentOf(node)?.title ?? node.name}
+                  icon={iconFor(node, row.expanded)}
+                  open={isOpen(documentOf(node))}
                   // What a cut looks like before it is pasted: the rows are still there, still
                   // openable, and on their way out.
                   waiting={waiting.has(node.path)}

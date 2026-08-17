@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
+import { rowDrag } from '../rowDrag'
 import type { RowTone } from '../styles'
 import { CollectionCell } from './CollectionCell'
 import {
@@ -100,6 +101,21 @@ export type CollectionProps<T extends { id: string }> = {
    * that picks, which is all of them but the projects.
    */
   selectionTone?: RowTone
+  /**
+   * What a batch released on the blank BELOW the cards means — the folder being browsed itself,
+   * there being no card standing for it to aim at. The same gesture `Tree` offers on its own
+   * blank, and it carries the same payload, so a file dragged in either rendering lands alike.
+   */
+  onDropRoot?: (ids: readonly string[]) => void
+  /** What a right-click on that same blank offers. Raised after `onPressRoot`, never instead. */
+  onContextMenuRoot?: () => void
+  /**
+   * A press on that blank, which every file browser reads as picking nothing.
+   *
+   * A prop of its own where `Tree` clears the selection itself, and the difference is forced:
+   * this collection's `onSelect` is told which ITEM was picked, so it has no way to say "none".
+   */
+  onPressRoot?: () => void
 }
 
 type CollectionRoles = { list?: 'listbox' | 'list'; cell?: 'option' | 'listitem' }
@@ -184,6 +200,9 @@ export function Collection<T extends { id: string }>({
   footer,
   rowHeight = 'control',
   selectionTone = 'soft',
+  onDropRoot,
+  onContextMenuRoot,
+  onPressRoot,
 }: CollectionProps<T>) {
   const scroller = useRef<HTMLDivElement>(null)
   // Kept as the narrowed function rather than a boolean, so the cell below needs no second guard.
@@ -280,7 +299,36 @@ export function Collection<T extends { id: string }>({
     // A list is inset like the tree is, so the same row sits at the same distance from the panel
     // edge in both — `Tree` carries the same step, and moving one without the other is what makes
     // two lists of the same studio sit at two distances from the same edge.
-    <div ref={scroller} className="h-full overflow-auto p-2">
+    <div
+      ref={scroller}
+      className="h-full overflow-auto p-2"
+      // Only the blank BESIDE and BELOW the cards: anything over one of them has that card as its
+      // target and is the card's own business. Without the test the whole panel would answer for
+      // every hover. `Tree` carries the same three handlers, spelled the same way — the two
+      // renderings of one folder must not take a drop differently.
+      // The secondary button is left to `onContextMenu` below, as the tree's rows leave it: on
+      // macOS it arrives as Ctrl+click, and reading it here would clear the selection twice.
+      onPointerDown={event => {
+        if (event.button !== 2 && event.target === event.currentTarget) onPressRoot?.()
+      }}
+      onContextMenu={event => {
+        if (!onContextMenuRoot || event.target !== event.currentTarget) return
+        event.preventDefault()
+        onPressRoot?.()
+        onContextMenuRoot()
+      }}
+      onDragOver={event => {
+        if (!onDropRoot || event.target !== event.currentTarget || !rowDrag.carries(event)) return
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+      }}
+      onDrop={event => {
+        if (!onDropRoot || event.target !== event.currentTarget) return
+        event.preventDefault()
+        const carried = rowDrag.idsFrom(event)
+        if (carried.length > 0) onDropRoot(carried)
+      }}
+    >
       {items.length === 0 ? (
         empty
       ) : (

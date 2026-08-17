@@ -1,28 +1,28 @@
 import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { dragListChannel } from '@/helpers/drag'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { isTyping } from '@/helpers/typing'
+import { rowDrag } from './rowDrag'
 import { ROW_LINE, rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
 import { useRemeasure, useRowHeight } from './virtual'
 
 export type TreeNode = { id: string; parentId: string | null }
 
-/**
- * One channel for every tree of the studio, carrying a LIST — of one row, or of the whole
- * selection where the caller asked for it.
- *
- * Always a list, even for the trees that never drag more than one: a payload that is sometimes
- * a string and sometimes a list is a payload each target has to sniff, and the day one of them
- * guesses wrong is the day a drag silently does nothing.
- */
-const ROWS = dragListChannel('application/x-scenario-tree-row')
-
 /** A pick that composes with nothing — what aiming a menu at a row asks for. */
 const NO_MODIFIERS: Modifiers = { shiftKey: false, metaKey: false, ctrlKey: false }
+
+/**
+ * How long a folder must be hovered, mid-drag, before it opens by itself.
+ *
+ * The figure is the whole of the feature. Under ~400 ms a folder merely CROSSED on the way
+ * somewhere else opens by accident, and the list reflows under a pointer that is still moving;
+ * past ~800 ms the hand has already given up and dropped short of where it was going. 600 ms is
+ * about where a deliberate hover parts from a transit.
+ */
+const HOVER_EXPAND_MS = 600
 
 /** Where in a row the pointer is: its edges insert beside it, its middle drops into it. */
 type DropZone = 'before' | 'into' | 'after'
@@ -260,6 +260,39 @@ export function Tree<T extends TreeNode>({
     () => flattenTree(nodes, expandedIds, expandable),
     [nodes, expandedIds, expandable],
   )
+
+  /**
+   * Which folder the pointer is resting IN, mid-drag — the only shape of hover that opens one.
+   *
+   * A primitive and not `over` itself: `onDragOver` fires on every tick of the hover and sets a
+   * fresh object each time, so an effect depending on the object would clear and rearm its timer
+   * for ever and never fire once. The zone is read here too, so drifting to a row's edge — where
+   * the drop would insert BESIDE it rather than into it — disarms as leaving the row does.
+   */
+  const restingIn = over?.zone === 'into' ? over.id : null
+
+  /**
+   * A folder hovered long enough opens by itself, so something can be carried two levels down
+   * without letting go of it.
+   *
+   * The cleanup IS the three cancellations this needs, and that is why it is an effect: the
+   * pointer reaching another row, the drop, and the end of the drag all change or clear `over`,
+   * and each of them runs the cleanup before anything else happens.
+   *
+   * Nothing ever folds back up. A tree that closed what it had opened would move under a hand
+   * still holding something, and the user would be aiming at rows that are no longer there.
+   */
+  useEffect(() => {
+    if (restingIn === null) return
+    // `hasChildren` is what the caller's `expandable` says, so a folder nobody has opened counts:
+    // opening it is what READS it, and refusing one because it holds nothing yet would refuse
+    // every folder in a tree that loads lazily.
+    const row = rows.find(one => one.node.id === restingIn)
+    if (!row?.hasChildren || row.expanded) return
+
+    const timer = setTimeout(() => onToggle(restingIn), HOVER_EXPAND_MS)
+    return () => clearTimeout(timer)
+  }, [restingIn, rows, onToggle])
 
   /**
    * Where the ghost sits, and what it shows: the row being dragged, at the depth of the level
@@ -584,7 +617,7 @@ export function Tree<T extends TreeNode>({
       // them has the row as its target and is that row's business. Without this test the whole
       // panel would answer for every hover, outline included.
       onDragOver={event => {
-        if (!onDropRoot || event.target !== event.currentTarget || !ROWS.carries(event)) return
+        if (!onDropRoot || event.target !== event.currentTarget || !rowDrag.carries(event)) return
         event.preventDefault()
         event.dataTransfer.dropEffect = 'move'
         setOver(null)
@@ -594,7 +627,7 @@ export function Tree<T extends TreeNode>({
         event.preventDefault()
         setOver(null)
         setDragged(null)
-        const carried = ROWS.idsFrom(event)
+        const carried = rowDrag.idsFrom(event)
         if (carried.length > 0) onDropRoot(carried)
       }}
     >
@@ -688,7 +721,7 @@ export function Tree<T extends TreeNode>({
                 onDragStart={event => {
                   if (event.target !== event.currentTarget) return event.preventDefault()
                   const batch = batchFrom(row.node)
-                  ROWS.start(
+                  rowDrag.start(
                     event,
                     batch.map(one => one.id),
                   )
@@ -699,7 +732,7 @@ export function Tree<T extends TreeNode>({
                   setDragged(batch)
                 }}
                 onDragOver={event => {
-                  if (!ROWS.carries(event)) return
+                  if (!rowDrag.carries(event)) return
                   const target = dropTargetFor(row, event)
                   if (target === null) {
                     return setOver(current => (current?.id === row.node.id ? null : current))
@@ -731,7 +764,7 @@ export function Tree<T extends TreeNode>({
                    * The head of the list is what is compared: it is the row the gesture started
                    * on, and no two trees can be holding the same one.
                    */
-                  const carried = ROWS.idsFrom(event)
+                  const carried = rowDrag.idsFrom(event)
                   if (held && target !== null && carried[0] === held.id) {
                     if (target.zone === 'into') onDrop?.(carried, row.node.id)
                     else onInsert?.(carried, target.parentId, target.index)
