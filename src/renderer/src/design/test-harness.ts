@@ -28,3 +28,27 @@ export const WRITTEN_SOURCES = Object.entries(SOURCES).filter(
  * sweep anchored here reads all 429 (2026-08-16), including the guards.
  */
 export const SUITE_SOURCES = Object.entries(SOURCES).filter(([path]) => /\.test\.tsx?$/.test(path))
+
+const hasAllWords = (words: readonly string[]) => (written: string) =>
+  words.every(one => written.split(/\s+/).includes(one))
+
+/**
+ * What a caller writes back, at the CALL, of the constant it already wears — all the words or
+ * none, and the call rather than the file, a component being free to wear `CONTROL` and to pad
+ * something else. **Blind**: `cn(CONTROL, aVariable)`, or words reached by a second argument.
+ */
+export const rewrites = (constant: string, words: readonly string[]) => {
+  // `\b` keeps `cn(WINDOW_ROW, …)` from reading a call to `WINDOW_ROW_BUTTON`.
+  const call = new RegExp('cn\\(\\s*' + constant + '\\b\\s*,\\s*[\'"`]([^\'"`\\n]*)[\'"`]', 'g')
+
+  return (source: string): boolean =>
+    [...source.matchAll(call)].some(match => hasAllWords(words)(match[1] ?? ''))
+}
+
+/**
+ * The same for a constant nobody wears yet: the whole set in ONE raw string, any order — the
+ * formatter sorts stably, so an ordered pattern is walked past by retyping. **Blind**: the set
+ * split across two strings; and it reads raw text, so a comment reciting the list reads as a copy.
+ */
+export const spellsOut = (words: readonly string[]) => (source: string) =>
+  [...source.matchAll(/['"`]([^'"`\n]*)['"`]/g)].some(match => hasAllWords(words)(match[1] ?? ''))
