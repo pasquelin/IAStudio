@@ -11,10 +11,12 @@
     "appearance": "Apparence",
     "generation": "Génération",
     "media": "Médias",
+    "git": "Versions",
     "dictation": "Dictée",
     "accountDescription": "Identifiants API, chiffrés par le trousseau du système.",
     "appearanceDescription": "Thème et densité des contrôles.",
     "generationDescription": "File de génération et modèles par défaut, par famille.",
+    "gitDescription": "Suivi des versions du dossier de projet, par git. Ne concerne que vos fichiers.",
     "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
     "dictationDescription": "Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous dites n’est envoyé nulle part.",
     "theme": {
@@ -46,6 +48,29 @@
       "title": "Chemin de ffmpeg",
       "help": "Emplacement d’un programme ffmpeg à utiliser à la place de celui fourni avec l’application. Laissez vide, sauf si vous tenez au vôtre.",
       "placeholder": "/opt/homebrew/bin/ffmpeg"
+    },
+    "gitBinary": {
+      "title": "Chemin de git",
+      "help": "Emplacement d’un programme git à utiliser à la place de celui du système. Laissez vide dans presque tous les cas. Un chemin contenant un espace est refusé, et l’application se comporte alors comme si git était absent.",
+      "placeholder": "/usr/bin/git"
+    },
+    "gitUserName": {
+      "title": "Nom de l’auteur",
+      "help": "Le nom inscrit dans chaque version enregistrée. Laissez vide pour reprendre celui que git connaît déjà sur cet ordinateur.",
+      "placeholder": "Votre nom"
+    },
+    "gitUserEmail": {
+      "title": "Adresse de l’auteur",
+      "help": "L’adresse inscrite à côté du nom dans chaque version enregistrée. Laissez vide pour reprendre celle que git connaît déjà.",
+      "placeholder": "vous@exemple.fr"
+    },
+    "gitAutoFetch": {
+      "title": "Relève automatique",
+      "help": "Nombre de minutes entre deux relevés de ce qui est arrivé sur le serveur distant. Zéro n’en fait aucun, et rien ne part ni n’arrive sans que vous le demandiez."
+    },
+    "gitInitOnCreate": {
+      "title": "Suivre les versions dès la création",
+      "help": "Prépare le suivi des versions dans chaque nouveau projet, sans avoir à y penser. Désactivé, le suivi se met en place d’un bouton le jour où vous en voulez."
     },
     "dictationEnabled": {
       "title": "Activer la dictée",

@@ -107,7 +107,9 @@ describe('the explorer on the home', () => {
     expect(idsOf('left', HOME_SURFACE)).toEqual(['projects'])
 
     openProject()
-    expect(idsOf('left', HOME_SURFACE)).toEqual(['projects', 'explorer'])
+    // Two panels answer to a project on this screen now, and both for the same reason: the
+    // folder, and the history of that folder.
+    expect(idsOf('left', HOME_SURFACE)).toEqual(['projects', 'explorer', 'git'])
   })
 
   it('stays in every space, which is a project already open', () => {

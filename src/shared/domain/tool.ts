@@ -43,6 +43,7 @@ export type ToolId =
   | 'lights'
   | 'timeline'
   | 'explorer'
+  | 'git'
   | 'scene'
   | 'models'
   | 'generator'
@@ -197,6 +198,18 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The right column: what the account holds outside this project — a way into something, which
   // is what this screen is for.
   { id: 'library', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
+
+  // The project's own history, in the half the project's own FOLDER occupies — it answers about
+  // the same files, and the two are read one after the other rather than side by side. Declared
+  // last so the Explorer stays what an untouched half opens on, in every surface: the folder is
+  // what one reaches for, and the versions are what one goes to look at.
+  //
+  // Every surface, and one placement rather than two: a tool is held to one slot across all of
+  // its placements, and splitting these would only be a way of writing the same slot twice.
+  //
+  // Offered only while a project IS open — `tool-registry.ts`, for the reason the Explorer gives
+  // there. In a space that is always true; on the home it is the whole point.
+  { id: 'git', zone: 'left', slot: 'secondary', surfaces: [...WORKSPACE_IDS, HOME_SURFACE] },
 ]
 
 /**

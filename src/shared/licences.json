@@ -216,6 +216,12 @@
     "sources": "https://github.com/snakers4/silero-vad"
   },
   {
+    "name": "simple-git",
+    "version": "3.36.0",
+    "spdx": "MIT",
+    "text": "See readme.md of the package."
+  },
+  {
     "name": "tailwind-merge",
     "version": "3.6.0",
     "spdx": "MIT",

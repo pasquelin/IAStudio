@@ -10,6 +10,7 @@ import { registerAssistantHandlers } from '@main/assistant/handlers'
 import { registerDictationHandlers } from '@main/dictation/handlers'
 import { registerMediaHandlers } from '@main/media/handlers'
 import { registerMenuHandlers } from '@main/menu'
+import { registerGitHandlers } from '@main/git/handlers'
 import { registerProjectHandlers } from '@main/project/handlers'
 import { registerScenarioHandlers } from '@main/scenario/handlers'
 import { runSettingAction } from '@main/settings/actions'
@@ -46,6 +47,10 @@ export function registerIpc(services: Services): void {
   })
   registerScenarioHandlers(services)
   registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
+  registerGitHandlers({
+    project: services.project,
+    binaryPath: () => services.settings.read().git.binary || undefined,
+  })
   registerAssetHandlers({
     catalog: () => services.project.catalog(),
     remote: services.remote,

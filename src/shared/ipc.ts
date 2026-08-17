@@ -23,6 +23,7 @@ import type {
   DocumentKind,
   DocumentWrite,
 } from './domain/document'
+import type { GitRepository } from './domain/git'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -109,6 +110,9 @@ export type Channels = {
   projectFileHistory: 'project:file-history'
   projectStopRescan: 'project:stop-rescan'
   projectRescanState: 'project:rescan-state'
+
+  gitRead: 'git:read'
+  gitInit: 'git:init'
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
@@ -252,6 +256,9 @@ export const CHANNELS: Channels = {
   projectFileHistory: 'project:file-history',
   projectStopRescan: 'project:stop-rescan',
   projectRescanState: 'project:rescan-state',
+
+  gitRead: 'git:read',
+  gitInit: 'git:init',
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
@@ -897,6 +904,20 @@ export type StudioBridge = {
      * the selection at what has just appeared rather than guessing at it after a re-read.
      */
     onFilesChanged: (callback: (outcome: FileOutcome) => void) => Unsubscribe
+  }
+  /**
+   * Version control over the PROJECT folder — the user's own files. Nothing here reaches the
+   * repository the studio itself is built from.
+   */
+  git: {
+    /**
+     * Everything the panel draws, in one answer. A union rather than a status plus a handful of
+     * booleans: no project, no git on this machine, and a folder never initialised each want
+     * their own screen, and asking three channels would let two of them disagree.
+     */
+    read: () => Promise<GitRepository>
+    /** `git init` on the open project, plus the ignore file, then the state it left. */
+    init: () => Promise<GitRepository>
   }
   dialog: {
     /**

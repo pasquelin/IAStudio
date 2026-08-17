@@ -1,0 +1,47 @@
+{
+  "git": {
+    "noProject": "Open a project to follow the history of its files.",
+    "noBinary": "Git is not installed on this computer. Version tracking needs it to work. Install it, then come back here.",
+    "uninitialised": "This project does not follow its versions yet. Once tracking is set up, you record the state of your files whenever you like, and come back to it when you have to.",
+    "start": "Track versions",
+    "startHint": "Prepares the project folder. Everything stays on this computer, nothing is sent anywhere.",
+    "refresh": "Refresh",
+    "refreshHint": "Reads what has changed in the folder since the last look.",
+    "clean": "Nothing has changed since the last recorded version.",
+    "noCommitYet": "No version recorded yet",
+    "detached": "Off any branch",
+    "stage": {
+      "conflicted": "In conflict",
+      "staged": "Held",
+      "unstaged": "Changed",
+      "untracked": "New"
+    },
+    "change": {
+      "added": "Added",
+      "modified": "Changed",
+      "deleted": "Deleted",
+      "renamed": "Renamed",
+      "copied": "Copied",
+      "untracked": "Never recorded",
+      "conflicted": "In conflict"
+    },
+    "changeBadge": {
+      "added": "A",
+      "modified": "M",
+      "deleted": "D",
+      "renamed": "R",
+      "copied": "C",
+      "untracked": "?",
+      "conflicted": "U"
+    },
+    "failure": {
+      "binaryMissing": "Git cannot be found on this computer.",
+      "notARepository": "This folder does not follow its versions.",
+      "locked": "Another git command is busy in this folder. Wait for it to finish, then refresh.",
+      "authentication": "The remote server refused your credentials.",
+      "network": "The remote server cannot be reached.",
+      "conflict": "Some files are in conflict. Settle them before going on.",
+      "unknown": "Git refused the command."
+    }
+  }
+}

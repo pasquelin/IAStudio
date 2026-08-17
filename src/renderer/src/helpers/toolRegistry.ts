@@ -9,6 +9,7 @@ import {
   mdiImageMultipleOutline,
   mdiLayersOutline,
   mdiPaletteSwatchOutline,
+  mdiSourceBranch,
   mdiTuneVariant,
   mdiVideoVintage,
   mdiWeatherPartlyCloudy,
@@ -45,6 +46,8 @@ const ICONS: Record<ToolId, string> = {
   lights: NODE_KINDS.light.icon,
   timeline: mdiVideoVintage,
   explorer: mdiFolderOutline,
+  // The fork every version tool draws, and the one glyph nobody mistakes for a folder.
+  git: mdiSourceBranch,
   scene: mdiFileTreeOutline,
   models: mdiCubeScan,
   generator: mdiCreationOutline,
@@ -140,6 +143,9 @@ export type ToolState = {
 function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
   if (id === 'generator') return state.hasModel
   if (id === 'explorer' && surface === HOME_SURFACE) return state.hasProject
+  // Every surface, unlike the Explorer above: what is versioned is a project folder, and there
+  // is nothing to say about one that is not open. In a space it is always true.
+  if (id === 'git') return state.hasProject
   return true
 }
 

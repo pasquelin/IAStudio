@@ -1,0 +1,179 @@
+/**
+ * Version control over the PROJECT folder — the user's files, never this repository's code.
+ *
+ * Shared because both processes read the same shapes: the main process produces them by running
+ * git, and the two panels draw them. Nothing here runs git or touches a disk; every function is
+ * arithmetic over what git already said, which is what lets the whole of it be tested without a
+ * binary, a repository, or a browser.
+ */
+import { INDEX_FOLDER } from './project'
+
+/**
+ * Which half of git a change sits in. This is what the panel GROUPS by, and it is the one thing
+ * `change` cannot answer: the same modification reads `staged` or `unstaged` depending only on
+ * whether it has been added to the index.
+ */
+export type GitStage = 'staged' | 'unstaged' | 'untracked' | 'conflicted'
+
+export const GIT_STAGES: readonly GitStage[] = ['conflicted', 'staged', 'unstaged', 'untracked']
+
+/**
+ * What happened to the file. This is what the row's BADGE reads.
+ *
+ * `untracked` and `conflicted` appear here as well as in `GitStage`, and the overlap is
+ * deliberate rather than redundant: a file in those two states has a badge of its own — `?` and
+ * `U` — that no other value produces, so deriving the badge from `stage` would leave every
+ * other row without one.
+ */
+export type GitChange =
+  'added' | 'modified' | 'deleted' | 'renamed' | 'copied' | 'untracked' | 'conflicted'
+
+export const GIT_CHANGES: readonly GitChange[] = [
+  'added',
+  'modified',
+  'deleted',
+  'renamed',
+  'copied',
+  'untracked',
+  'conflicted',
+]
+
+export type GitFile = {
+  /** Slash-joined and relative to the repository root, as git writes it on every platform. */
+  path: string
+  stage: GitStage
+  change: GitChange
+  /** Where a rename came FROM. Absent for every other change. */
+  from?: string
+}
+
+/**
+ * The repository as the panel draws it once a project is open and git answered.
+ *
+ * `branch` is null on a detached HEAD, and `head` is null before the first commit — a fresh
+ * `git init` is a perfectly ordinary state the panel has to show, not an error to hide.
+ */
+export type GitStatus = {
+  branch: string | null
+  head: string | null
+  /** The remote branch being tracked, `origin/main` shape, or null when none is. */
+  upstream: string | null
+  ahead: number
+  behind: number
+  files: readonly GitFile[]
+}
+
+/**
+ * Why a git command did not answer. A union rather than a message, for the reason every union in
+ * this repository is one: the panel owes the user a different sentence for each, and a string
+ * from git is not a sentence anybody chose.
+ *
+ * `locked` is the one worth naming on its own — git holds `index.lock` for the duration of a
+ * command, and two commands at once is the failure a serialised queue exists to prevent. Seeing
+ * it means something outside the studio is running git on the same folder.
+ */
+export type GitFailure =
+  | 'binary-missing'
+  | 'not-a-repository'
+  | 'locked'
+  | 'authentication'
+  | 'network'
+  | 'conflict'
+  | 'unknown'
+
+/**
+ * The sentence each failure earns, named here rather than composed from the value.
+ *
+ * A record rather than a template, and the compiler is the reason: it holds one entry per member
+ * or it does not build, so a failure added without a sentence never reaches a screen. Composing
+ * `git.failure.${reason}` would take a hyphenated key and, worse, would go missing in silence.
+ */
+export const GIT_FAILURE_KEYS: Record<GitFailure, string> = {
+  'binary-missing': 'git.failure.binaryMissing',
+  'not-a-repository': 'git.failure.notARepository',
+  locked: 'git.failure.locked',
+  authentication: 'git.failure.authentication',
+  network: 'git.failure.network',
+  conflict: 'git.failure.conflict',
+  unknown: 'git.failure.unknown',
+}
+
+/**
+ * Everything the Git panel can be looking at. One union rather than a status plus three booleans:
+ * the four states before `ready` each want their own screen, and a shape that can be "no project
+ * open AND has files" is a shape somebody eventually renders.
+ */
+export type GitRepository =
+  | { kind: 'no-project' }
+  | { kind: 'no-binary' }
+  | { kind: 'uninitialised' }
+  | { kind: 'ready'; status: GitStatus }
+  /**
+   * `detail` is git's OWN line, credentials stripped, shown under the translated sentence. It is
+   * the only thing there is to show for `unknown`, and even for a reason we did name it says
+   * which file or which remote — which the sentence cannot.
+   */
+  | { kind: 'failed'; reason: GitFailure; detail: string }
+
+/** Whether git itself was found on this machine, and which version answered. */
+export type GitBinary = { found: false } | { found: true; version: string }
+
+/**
+ * The files of one stage, in a stable order.
+ *
+ * Sorted by path rather than left in git's order because git's order is its own — porcelain
+ * walks the index and the worktree separately, so a file edited twice can move between two runs
+ * that found the same thing. A list that reshuffles under a refresh is a list nobody can click.
+ */
+export function filesInStage(files: readonly GitFile[], stage: GitStage): GitFile[] {
+  return files.filter(file => file.stage === stage).sort((one, other) => byPath(one, other))
+}
+
+function byPath(one: GitFile, other: GitFile): number {
+  return one.path < other.path ? -1 : one.path > other.path ? 1 : 0
+}
+
+/**
+ * Whether a commit would record anything.
+ *
+ * Conflicts count: resolving one and staging it is exactly how a merge is finished, and a
+ * commit button greyed out at that moment is the one moment it must not be.
+ */
+export function hasStagedFiles(files: readonly GitFile[]): boolean {
+  return files.some(file => file.stage === 'staged')
+}
+
+/** Whether anything at all is waiting — what decides between the empty state and the tree. */
+export function hasChanges(status: GitStatus): boolean {
+  return status.files.length > 0
+}
+
+/**
+ * Paths a gesture applies to, deduplicated.
+ *
+ * A path appears TWICE when the same file is modified both in the index and in the worktree, and
+ * git refuses `git add` twice in one command with an "unable to lock" that reads like a bug in
+ * the studio. Callers pass whatever the tree had selected; this is what makes that safe.
+ */
+export function pathsOf(files: readonly GitFile[]): string[] {
+  return [...new Set(files.map(file => file.path))]
+}
+
+/**
+ * What the studio writes into `.gitignore` when it initialises a repository.
+ *
+ * ONE folder, and the reasoning is worth keeping next to it. `.index/` holds `catalog.db`, a
+ * SQLite database the studio rewrites on every open: git would store a fresh copy of the whole
+ * file at each commit, and — far worse — a pull from a second machine would land an unresolvable
+ * binary conflict. Nothing is lost, because the catalogue is rebuilt by the rescan from the files
+ * themselves.
+ *
+ * `.scenario/items.json` is deliberately NOT here. It is JSON, it is small, and it holds the one
+ * thing no rescan can recover: which prompt, model and seed produced each asset. A project cloned
+ * back without it comes home with its pictures and none of their history.
+ *
+ * English, like the rest of a file collaborators read.
+ */
+export function defaultIgnore(): string {
+  return `# Rebuilt by Scenario Studio from the project's own files — never versioned.\n${INDEX_FOLDER}/\n`
+}

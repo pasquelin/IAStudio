@@ -103,6 +103,10 @@ const bridge: StudioBridge = {
     fileHistory: () => ipcRenderer.invoke(CHANNELS.projectFileHistory),
     onFilesChanged: callback => subscribe<FileOutcome>(EVENTS.filesChanged, callback),
   },
+  git: {
+    read: () => ipcRenderer.invoke(CHANNELS.gitRead),
+    init: () => ipcRenderer.invoke(CHANNELS.gitInit),
+  },
   dialog: {
     pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),
     exportPicture: (name, image) => ipcRenderer.invoke(CHANNELS.dialogExportPicture, name, image),

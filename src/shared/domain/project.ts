@@ -18,7 +18,15 @@ export const MANIFEST_FILE = '.project.json'
 /** What projects made before the rename carry. Read, never written — see `openManifest`. */
 export const LEGACY_MANIFEST_FILE = 'project.json'
 
-export const CATALOG_FILE = '.index/catalog.db'
+/**
+ * The machine's own folder inside a project. Named on its own because three separate readers now
+ * need to SAY it rather than sit under it: the folders below, `MACHINE_FOLDERS`, and the
+ * `.gitignore` the version panel writes — and three spellings of one folder is how one of them
+ * ends up pointing at a folder nothing creates.
+ */
+export const INDEX_FOLDER = '.index'
+
+export const CATALOG_FILE = `${INDEX_FOLDER}/catalog.db`
 
 /**
  * Where a move that is under way writes down what it has already done.
@@ -29,7 +37,7 @@ export const CATALOG_FILE = '.index/catalog.db'
  *
  * Under `.index/` because it is machinery the studio can rebuild, not the user's work.
  */
-export const PENDING_FILES_FILE = '.index/pending-files.ndjson'
+export const PENDING_FILES_FILE = `${INDEX_FOLDER}/pending-files.ndjson`
 
 export type Manifest = {
   version: number
@@ -239,14 +247,14 @@ export function withoutRecentProject(
  * Named rather than spelled out at each use — the folder the ingest writes into and the folder
  * the project creates have to be the same string.
  */
-export const PROXIES_FOLDER = '.index/proxies'
-export const PEAKS_FOLDER = '.index/peaks'
-export const FILMSTRIPS_FOLDER = '.index/filmstrips'
+export const PROXIES_FOLDER = `${INDEX_FOLDER}/proxies`
+export const PEAKS_FOLDER = `${INDEX_FOLDER}/peaks`
+export const FILMSTRIPS_FOLDER = `${INDEX_FOLDER}/filmstrips`
 /**
  * Stills for the assets that are not pictures: a mesh's, brought down with its bytes, and a
  * rush's — the library's when it came from there, one grabbed by ffmpeg when it came off a disk.
  */
-export const POSTERS_FOLDER = '.index/posters'
+export const POSTERS_FOLDER = `${INDEX_FOLDER}/posters`
 /**
  * What the explorer draws on its tiles, for every file it shows — asset or not. Beside the
  * catalogue rather than beside the file: `.index/` is thrown away without breaking anything,
@@ -272,7 +280,7 @@ export const THUMBNAIL_SIZE = 208
  * about it.
  */
 export const MACHINE_FOLDERS: readonly string[] = [
-  '.index',
+  INDEX_FOLDER,
   PROXIES_FOLDER,
   PEAKS_FOLDER,
   FILMSTRIPS_FOLDER,

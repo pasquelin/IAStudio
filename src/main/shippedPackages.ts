@@ -25,6 +25,7 @@ export const SHIPPED: string[] = [
   'opentype.js',
   'pixi.js',
   'sherpa-onnx-node',
+  'simple-git',
   'three',
   'three-mesh-bvh',
   // The runtime itself.

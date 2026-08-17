@@ -121,6 +121,7 @@ describe('SettingsWindow', () => {
       'Raccourcis',
       'Dictée',
       'Médias',
+      'Versions',
       'Stockage',
       'Avancé',
     ])

@@ -11,10 +11,12 @@
     "appearance": "Appearance",
     "generation": "Generation",
     "media": "Media",
+    "git": "Versions",
     "dictation": "Dictation",
     "accountDescription": "API credentials, encrypted by the system keychain.",
     "appearanceDescription": "Theme and control density.",
     "generationDescription": "Generation queue and default models, per family.",
+    "gitDescription": "Version tracking of the project folder, by git. Your files only.",
     "mediaDescription": "Preparation of imported files: proxies and waveforms.",
     "dictationDescription": "Speaking a text instead of typing it. Everything happens on this computer: nothing you say is sent anywhere.",
     "theme": {
@@ -46,6 +48,29 @@
       "title": "Path to ffmpeg",
       "help": "Where to find an ffmpeg to use instead of the one shipped with the application. Leave empty unless you insist on your own.",
       "placeholder": "/opt/homebrew/bin/ffmpeg"
+    },
+    "gitBinary": {
+      "title": "Path to git",
+      "help": "Where to find a git to use instead of the system one. Leave empty in nearly every case. A path holding a space is refused, and the application then behaves as it does when git is missing altogether.",
+      "placeholder": "/usr/bin/git"
+    },
+    "gitUserName": {
+      "title": "Author name",
+      "help": "The name written into every recorded version. Leave empty to take the one git already knows on this computer.",
+      "placeholder": "Your name"
+    },
+    "gitUserEmail": {
+      "title": "Author address",
+      "help": "The address written beside the name in every recorded version. Leave empty to take the one git already knows.",
+      "placeholder": "you@example.com"
+    },
+    "gitAutoFetch": {
+      "title": "Automatic check",
+      "help": "Minutes between two looks at what has arrived on the remote server. Zero takes none, and nothing leaves or arrives unless you ask for it."
+    },
+    "gitInitOnCreate": {
+      "title": "Track versions from creation",
+      "help": "Sets version tracking up in every new project, with nothing to think about. Turned off, tracking starts from a button the day you want it."
     },
     "dictationEnabled": {
       "title": "Enable dictation",

@@ -57,6 +57,10 @@ type ChannelMethod = {
   [CHANNELS.projectFileHistory]: StudioBridge['project']['fileHistory']
   [CHANNELS.projectRescanState]: StudioBridge['project']['rescanState']
   [CHANNELS.projectStopRescan]: StudioBridge['project']['stopRescan']
+
+  [CHANNELS.gitRead]: StudioBridge['git']['read']
+  [CHANNELS.gitInit]: StudioBridge['git']['init']
+
   [CHANNELS.dialogPickPath]: StudioBridge['dialog']['pickPath']
   [CHANNELS.dialogExportPicture]: StudioBridge['dialog']['exportPicture']
 

@@ -170,6 +170,27 @@ export type Settings = {
      */
     ffmpegPath?: string
   }
+  /**
+   * Version control over the PROJECT folder — never over the repository the studio is built from.
+   */
+  git: {
+    /**
+     * A git binary to use instead of the one on the PATH, on the model of `media.ffmpegPath`.
+     * Absent is the normal case. simple-git REFUSES a path holding a space — which is where the
+     * default Windows install puts it — and the studio then answers as it does for no git at all.
+     */
+    binary?: string
+    /**
+     * Who commits. Absent means "whatever `git config user.name` says", which is the right
+     * answer for anyone who already uses git on this machine — and the wrong one to overwrite.
+     */
+    userName?: string
+    userEmail?: string
+    /** Minutes between two automatic fetches. Zero turns it off, which is the default. */
+    autoFetchMinutes: number
+    /** Whether creating a project runs `git init` in it straight away. Off: it is a decision. */
+    initOnCreate: boolean
+  }
   /** Talking to the studio instead of driving it — see `domain/assistant.ts`. */
   assistant: {
     /**
@@ -247,6 +268,7 @@ export const DEFAULT_SETTINGS: Settings = {
   shortcuts: { overrides: {} },
   advanced: { logLevel: 'info' },
   media: {},
+  git: { autoFetchMinutes: 0, initOnCreate: false },
   assistant: { model: DEFAULT_ASSISTANT_MODEL },
   mcp: { enabled: false },
   dictation: {
@@ -326,6 +348,7 @@ export type SettingsSectionId =
   | 'shortcuts'
   | 'dictation'
   | 'media'
+  | 'git'
   | 'storage'
   | 'advanced'
 
@@ -346,6 +369,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'shortcuts',
   'dictation',
   'media',
+  'git',
   'storage',
   'advanced',
 ]

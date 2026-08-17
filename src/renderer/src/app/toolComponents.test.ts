@@ -4,6 +4,7 @@ import type { ToolDefinition } from '@/panels/definition'
 import { definition as assets } from '@/panels/assets'
 import { definition as channels } from '@/panels/channels'
 import { definition as explorer } from '@/panels/explorer'
+import { definition as git } from '@/panels/git'
 import { definition as library } from '@/panels/library'
 import { definition as generator } from '@/panels/generator'
 import { definition as inspector } from '@/panels/inspector'
@@ -33,6 +34,7 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   lights,
   timeline,
   explorer,
+  git,
   scene,
   models,
   generator,

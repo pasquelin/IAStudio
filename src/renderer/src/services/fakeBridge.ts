@@ -94,6 +94,13 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onFilesChanged: noSubscription,
       ...overrides.project,
     },
+    git: {
+      // No project by default, which is the state every screen has to survive — and the one a
+      // test that never mentions version control should be looking at.
+      read: () => Promise.resolve({ kind: 'no-project' }),
+      init: () => Promise.resolve({ kind: 'no-project' }),
+      ...overrides.git,
+    },
     dialog: {
       exportPicture: () => Promise.resolve(null),
       pickPath: () => Promise.resolve(null),

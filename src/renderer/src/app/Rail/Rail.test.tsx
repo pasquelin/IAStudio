@@ -99,6 +99,9 @@ describe('Rail', () => {
         'Vos projets',
         'separator',
         'Explorateur',
+        // Same half as the folder, and after it: the folder is what the half opens on, the
+        // versions of that folder are what one switches to. Both need a project open.
+        'Git',
       ])
 
       // `marksOf` reads buttons and separators, so it cannot see the hole an empty zone leaves:
@@ -183,6 +186,7 @@ describe('Rail', () => {
       'Génération',
       'separator',
       'Explorateur',
+      'Git',
       'Timeline',
     ])
   })
