@@ -169,7 +169,7 @@ describe('the row skin and the state it publishes', () => {
    * can open from a line one only reads, and what says a row opens is its tooltip.
    */
   const MAY_FILL_UNDER_THE_POINTER = [
-    '../home/sections/Tools.tsx',
+    '../home/sections/Tools/ToolsGroup.tsx',
     '../panels/channels/ChannelTile.tsx',
   ]
 
