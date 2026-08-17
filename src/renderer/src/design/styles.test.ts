@@ -14,7 +14,7 @@ import {
   TITLE_BAR_TRIGGER,
   TOOLBAR_LABEL,
 } from './styles'
-import { WRITTEN_SOURCES } from './testHarness'
+import { rewrites, spellsOut, WRITTEN_SOURCES } from './testHarness'
 
 /**
  * Read off the skin rather than spelled out again, so a change of shade moves the rule with it.
@@ -336,25 +336,11 @@ describe('the neutral fill of a button', () => {
 })
 
 /**
- * Read off the constant and compared word for word, which settles two things a regex over the
- * raw source got wrong. Order first: `prettier-plugin-tailwindcss` sorts stably and leaves
- * `text-tiny text-muted px-1` exactly as written, so an ordered pattern is a rule anyone can
- * walk past by typing the three in another order. Exactness second: `px-1` as a SUBSTRING is
- * also in `px-10` and `px-1.5`.
- *
- * All three are required, and `text-tiny` is what does the work: `text-muted … px-1` alone is
- * worn by the zoom readout of the image space, which is a BUTTON one clicks to return to 100 %
- * and not a word the bar sets down. A rule without it would call that a violation and be wrong.
- *
- * **What it cannot see**: the trio split across two strings of one `cn()`, or assembled from a
- * variable. A site determined to write the shade again can still do it; this catches the copy
- * that happens by habit, which is the one that happened five times.
+ * All three words are required, and `text-tiny` is what does the work: `text-muted … px-1` alone
+ * is worn by the zoom readout of the image space, which is a BUTTON one clicks to return to
+ * 100 % and not a word the bar sets down. A rule without it would call that a violation.
  */
-const rewritesLabel = (source: string): boolean =>
-  [...source.matchAll(/['"`]([^'"`\n]*)['"`]/g)].some(match => {
-    const words = (match[1] ?? '').split(/\s+/)
-    return TOOLBAR_LABEL.split(' ').every(part => words.includes(part))
-  })
+const rewritesLabel = spellsOut(TOOLBAR_LABEL.split(' '))
 
 describe('the word a bar sets beside its buttons', () => {
   it('carries the ink, the size and the room around it, and nothing else', () => {
@@ -391,27 +377,6 @@ describe('the word a bar sets beside its buttons', () => {
     expect(wearing.length).toBeGreaterThanOrEqual(4)
   })
 })
-
-/**
- * A caller writing back, at the call, what the constant it wears already carries. Read at the
- * CALL and not over the whole file: a component is free to wear `CONTROL` and to have `px-1`
- * somewhere else entirely on another element, and a rule by file would call that a violation.
- *
- * All the words or none — a constant is only rewritten when everything it added comes back.
- *
- * **What it cannot see**: `cn(CONTROL, someVariable)`, or words reached through a second
- * argument — `cn(CONTROL, 'w-full', 'px-1')`. Both are ways of writing it again on purpose;
- * this catches the shape the habit produces.
- */
-const rewrites = (constant: string, words: readonly string[]) => {
-  const call = new RegExp('cn\\(\\s*' + constant + '\\s*,\\s*[\'"`]([^\'"`\\n]*)[\'"`]', 'g')
-
-  return (source: string): boolean =>
-    [...source.matchAll(call)].some(match => {
-      const written = (match[1] ?? '').split(/\s+/)
-      return words.every(one => written.includes(one))
-    })
-}
 
 /** The shape the four native pickers had before they were given a constant. */
 const repadsControl = rewrites('CONTROL', ['px-1'])

@@ -14,17 +14,16 @@ describe('finding the tests no import graph reaches', () => {
   })
 
   /**
-   * One folder deep counts. Both of these are real — `SettingLine` and `property-line` read their
-   * neighbours through `?raw` — and a net that only knew `**` left them out while they are exactly
-   * what it exists for.
+   * One folder deep counts, and a net that only knew `**` left these out while they are exactly
+   * what it exists for. `SettingLine` was the second of them until its rule moved to a shared
+   * constant on 2026-08-17, so only the spelling it used is still anchored on a real file below.
    */
   it('sees a wildcard that stays in its own folder', () => {
     expect(readsTheTree("import.meta.glob('./*.tsx', { query: '?raw' })")).toBe(true)
     expect(readsTheTree("import.meta.glob('./*Field.tsx', { query: '?raw' })")).toBe(true)
   })
 
-  it('holds the two the narrow reading missed', () => {
-    expect(GUARDED).toContain('src/renderer/src/settings/SettingLine.test.tsx')
+  it('holds the one the narrow reading missed', () => {
     expect(GUARDED).toContain('src/renderer/src/design/property-line.test.ts')
   })
 
