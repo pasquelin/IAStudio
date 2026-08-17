@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/design/Button'
 import { FIELD_FILL } from '@/design/styles'
+import { isComposing } from '@/helpers/composition'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
 
@@ -32,7 +33,9 @@ export function RemoteSetup() {
         className={FIELD_FILL}
         onChange={event => setUrl(event.target.value)}
         onKeyDown={event => {
-          if (event.key === 'Enter' && url.trim() !== '') void addRemote(ORIGIN, url.trim())
+          // Enter belongs to the input method while it composes — see `isComposing`.
+          if (event.key !== 'Enter' || isComposing(event)) return
+          if (url.trim() !== '') void addRemote(ORIGIN, url.trim())
         }}
       />
       <Button

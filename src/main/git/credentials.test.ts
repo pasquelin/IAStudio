@@ -5,6 +5,11 @@ import { createCredentialVault, type SecretStore } from './credentials'
  * The keychain, stood in for. `safeStorage` does not exist outside a packaged application, and
  * what is checked here is the bookkeeping around it — which host holds what, and what happens
  * when the machine can no longer read what it wrote.
+ *
+ * NOT `memoryAdapter`, which the settings store is checked through, and the difference is the
+ * whole of one case below: its `encrypt` writes `enc:<plain>`, so "what lands on disk is not the
+ * token" would read the token straight out of the sealed value. A stand-in has to be opaque for
+ * that case to be about the code at all.
  */
 function store(broken = false): SecretStore & { values: Record<string, unknown> } {
   const values: Record<string, unknown> = {}
@@ -15,8 +20,6 @@ function store(broken = false): SecretStore & { values: Record<string, unknown> 
     write: (key, value) => {
       values[key] = value
     },
-    // Opaque, like the real one. A stand-in that kept the plaintext readable would let the case
-    // below — "what lands on disk is not the token" — pass on the stand-in rather than the code.
     encrypt: plain => Buffer.from(plain, 'utf8').toString('base64'),
     decrypt: sealed => {
       if (broken) throw new Error('this keychain has moved on')

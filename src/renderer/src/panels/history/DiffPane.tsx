@@ -25,7 +25,7 @@ export function DiffPane() {
 
   if (!compared) return null
 
-  const tally = diff ? diffTally(diff) : { added: 0, removed: 0 }
+  const tally = diffTally(diff)
 
   return (
     <div className="border-border flex min-h-0 flex-1 flex-col border-l">

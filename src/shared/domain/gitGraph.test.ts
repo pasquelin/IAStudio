@@ -14,20 +14,20 @@ const commit = (hash: string, ...parents: string[]): GitCommit => ({
 
 /** Which lane each commit landed in, by hash — what every case below is really asking. */
 function lanesOf(commits: readonly GitCommit[]): Record<string, number> {
-  return Object.fromEntries(laneLayout(commits).map(row => [row.hash, row.lane]))
+  return Object.fromEntries(laneLayout(commits).rows.map(row => [row.commit.hash, row.lane]))
 }
 
 describe('a history with no branching', () => {
   it('keeps every commit in one lane', () => {
-    const rows = laneLayout([commit('c', 'b'), commit('b', 'a'), commit('a')])
+    const graph = laneLayout([commit('c', 'b'), commit('b', 'a'), commit('a')])
 
-    expect(rows.map(row => row.lane)).toEqual([0, 0, 0])
-    expect(rows.map(row => row.width)).toEqual([1, 1, 1])
+    expect(graph.rows.map(row => row.lane)).toEqual([0, 0, 0])
+    expect(graph.width).toBe(1)
   })
 
   /** The first commit has no parent, so nothing leaves the bottom of its row. */
   it('draws no line below the very first commit', () => {
-    const [row] = laneLayout([commit('a')])
+    const [row] = laneLayout([commit('a')]).rows
 
     expect(row?.links).toEqual([])
   })
@@ -50,13 +50,13 @@ describe('a branch that leaves and comes back', () => {
     expect(lanesOf(history)).toEqual({ m: 0, c: 0, b: 1, a: 0 })
   })
 
-  it('reserves the width for both lanes on every row, so nothing shifts while scrolling', () => {
-    expect(laneLayout(history).map(row => row.width)).toEqual([2, 2, 2, 2])
+  it('reserves the width for both lanes, so nothing shifts while scrolling', () => {
+    expect(laneLayout(history).width).toBe(2)
   })
 
   /** The merge's own row is where the branch is drawn leaving: lane 0 down to lane 1. */
   it('draws the fork on the merge row', () => {
-    const [merge] = laneLayout(history)
+    const [merge] = laneLayout(history).rows
 
     expect(merge?.links).toContainEqual({ from: 0, to: 1 })
   })
@@ -66,8 +66,7 @@ describe('a branch that leaves and comes back', () => {
    * — the other column ends there, and is given back rather than running down the rest of the log.
    */
   it('brings the second lane back in at the commit they parted from', () => {
-    const rows = laneLayout(history)
-    const parted = rows[3]
+    const parted = laneLayout(history).rows[3]
 
     expect(parted?.lane).toBe(0)
     expect(parted?.links).toContainEqual({ from: 1, to: 0 })
@@ -97,7 +96,7 @@ describe('a lane that has been given back', () => {
    * ```
    */
   it('is taken again by the next fork rather than a new column', () => {
-    const rows = laneLayout([
+    const graph = laneLayout([
       commit('m1', 'c', 'b'),
       commit('c', 'a'),
       commit('b', 'a'),
@@ -108,7 +107,7 @@ describe('a lane that has been given back', () => {
       commit('g'),
     ])
 
-    expect(rows.every(row => row.width === 2)).toBe(true)
+    expect(graph.width).toBe(2)
   })
 })
 

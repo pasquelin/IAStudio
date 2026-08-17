@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/design/Button'
+import { QuietNote } from '@/design/QuietNote'
 import { FIELD_FILL } from '@/design/styles'
+import { isComposing } from '@/helpers/composition'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
 
@@ -22,9 +24,17 @@ export function CredentialField({ host }: { host: string }) {
   const { t } = useTranslation()
   const [user, setUser] = useState('')
   const [token, setToken] = useState('')
+  const [held, setHeld] = useState(false)
   const busy = useGit(state => state.busy)
   const setCredentials = useGit(state => state.setCredentials)
   const push = useGit(state => state.push)
+
+  // Whether one is already held changes what this screen MEANS: a refusal with no token is a
+  // token that was never given, a refusal with one is a token that is wrong — and the second is
+  // the only one where erasing it is the way out.
+  useEffect(() => {
+    void useGit.getState().hasCredentials(host).then(setHeld)
+  }, [host])
 
   const submit = (): void => {
     if (user.trim() === '' || token === '') return
@@ -39,7 +49,7 @@ export function CredentialField({ host }: { host: string }) {
 
   return (
     <div className="flex flex-col gap-2 p-3">
-      <p className="text-muted m-0 text-xs leading-normal">{t('git.tokenAsked', { host })}</p>
+      <QuietNote>{held ? t('git.tokenHeld', { host }) : t('git.tokenAsked', { host })}</QuietNote>
 
       <input
         type="text"
@@ -61,7 +71,8 @@ export function CredentialField({ host }: { host: string }) {
         className={FIELD_FILL}
         onChange={event => setToken(event.target.value)}
         onKeyDown={event => {
-          if (event.key === 'Enter') submit()
+          // Enter belongs to the input method while it composes — see `isComposing`.
+          if (event.key === 'Enter' && !isComposing(event)) submit()
         }}
       />
 
@@ -73,6 +84,21 @@ export function CredentialField({ host }: { host: string }) {
       >
         {t('git.tokenSave')}
       </Button>
+
+      {held && (
+        <Button
+          {...HINT_TOP(t('git.tokenForgetHint'))}
+          disabled={busy}
+          onClick={() => {
+            void useGit
+              .getState()
+              .clearCredentials(host)
+              .then(() => setHeld(false))
+          }}
+        >
+          {t('git.tokenForget')}
+        </Button>
+      )}
     </div>
   )
 }

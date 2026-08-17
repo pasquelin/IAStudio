@@ -1,16 +1,12 @@
 import { isRecord } from '@shared/guards'
+import type { PersistenceAdapter } from '@main/settings/store'
 
 /**
- * What a token is stored through. The same two calls the settings store uses, named here rather
- * than imported so this can be checked without `safeStorage` — which does not exist outside a
- * packaged application.
+ * What a token is stored through: the four calls of the settings adapter this needs, and no more.
+ * Narrowed rather than redeclared — written out again, the two shapes are free to drift, and this
+ * is handed the studio's own adapter at every call site but the tests.
  */
-export type SecretStore = {
-  read: <T>(key: string) => T | undefined
-  write: (key: string, value: unknown) => void
-  encrypt: (plain: string) => string
-  decrypt: (encrypted: string) => string
-}
+export type SecretStore = Pick<PersistenceAdapter, 'read' | 'write' | 'encrypt' | 'decrypt'>
 
 /** The user and the token git will be handed for one host. NEVER leaves the main process. */
 export type GitCredential = { user: string; token: string }

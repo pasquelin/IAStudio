@@ -7,6 +7,7 @@ import type {
   GitRef,
   GitStashEntry,
 } from '@shared/domain/git'
+import { messageOf } from '@shared/guards'
 
 /**
  * One row of `git status --porcelain`, as simple-git hands it over.
@@ -141,33 +142,33 @@ export function parseRefs(decoration: string): GitRef[] {
     })
 }
 
-/** `git stash list` under a format of its own: the place in the stack, then what it says. */
-export function parseStashList(output: string): GitStashEntry[] {
+/** Git's output, line by line, with the blank one it ends on left out. */
+function lines(output: string): string[] {
   return output
     .split('\n')
     .map(line => line.trim())
     .filter(line => line !== '')
-    .map((message, index) => ({ index, message }))
+}
+
+/** `git stash list` under a format of its own: the place in the stack, then what it says. */
+export function parseStashList(output: string): GitStashEntry[] {
+  return lines(output).map((message, index) => ({ index, message }))
 }
 
 /** What `--name-status` writes: a letter, a tab, a path — and for a rename, two paths. */
 export function parseNameStatus(output: string): GitCommitFile[] {
-  return output
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line !== '')
-    .flatMap(line => {
-      const [code, first, second] = line.split('\t')
-      // `R096` and `C075` carry their similarity score in the letter's own field.
-      const change = CHANGES[(code ?? '').charAt(0)]
-      if (change === undefined || first === undefined) return []
+  return lines(output).flatMap(line => {
+    const [code, first, second] = line.split('\t')
+    // `R096` and `C075` carry their similarity score in the letter's own field.
+    const change = CHANGES[(code ?? '').charAt(0)]
+    if (change === undefined || first === undefined) return []
 
-      // A rename writes the OLD path first and the new one second, which is the way round a
-      // reader wants it: the row is named for where the file is now.
-      return second === undefined
-        ? [{ path: first, change }]
-        : [{ path: second, change, from: first }]
-    })
+    // A rename writes the OLD path first and the new one second, which is the way round a
+    // reader wants it: the row is named for where the file is now.
+    return second === undefined
+      ? [{ path: first, change }]
+      : [{ path: second, change, from: first }]
+  })
 }
 
 /**
@@ -211,11 +212,6 @@ export function failureOf(error: unknown): GitFailure {
   if (/conflict|merge failed|needs merge/i.test(message)) return 'conflict'
 
   return 'unknown'
-}
-
-function messageOf(error: unknown): string {
-  if (error instanceof Error) return error.message
-  return typeof error === 'string' ? error : ''
 }
 
 /**

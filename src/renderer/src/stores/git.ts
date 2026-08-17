@@ -95,6 +95,7 @@ type GitState = {
   /** Whether a token is held for a host. The token itself never comes back this way. */
   hasCredentials: (host: string) => Promise<boolean>
   setCredentials: (host: string, user: string, token: string) => Promise<void>
+  clearCredentials: (host: string) => Promise<void>
 }
 
 /**
@@ -256,6 +257,9 @@ export const useGit = create<GitState>()((set, get) => {
     hasCredentials: async host => (await getBridge()?.git.hasCredentials(host)) ?? false,
     setCredentials: async (host, user, token) => {
       await getBridge()?.git.setCredentials(host, user, token)
+    },
+    clearCredentials: async host => {
+      await getBridge()?.git.clearCredentials(host)
     },
   }
 })

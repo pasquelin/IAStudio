@@ -22,13 +22,13 @@ const ROW = 20
  * `currentColor` throughout: the ink comes from the row it sits in, which is what lets the picked
  * row lift its whole line at once, and what keeps a hexadecimal out of a component.
  */
-export function HistoryGraph({ row }: { row: GitLaneRow }) {
+export function HistoryGraph({ row, width }: { row: GitLaneRow; width: number }) {
   return (
     <svg
       aria-hidden
       className="text-muted h-full shrink-0"
-      style={{ width: `calc(var(--sc-control-inline) * ${row.width} / 2)` }}
-      viewBox={`0 0 ${row.width * LANE} ${ROW}`}
+      style={{ width: `calc(var(--sc-control-inline) * ${width} / 2)` }}
+      viewBox={`0 0 ${width * LANE} ${ROW}`}
       preserveAspectRatio="none"
     >
       {row.links.map(link => (

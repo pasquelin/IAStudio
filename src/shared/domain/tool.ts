@@ -95,6 +95,18 @@ export type ToolPlacement = {
   /** Surfaces the tool belongs to. Spelled out even when it is all of them: a panel that
    * never chose is a panel nobody decided about. */
   surfaces: readonly ToolSurface[]
+  /**
+   * What has to exist for this placement to be offered at all — absent rather than disabled,
+   * because neither is something the reader can act on from the rail.
+   *
+   * On the PLACEMENT rather than on the tool, and the Explorer is why: it needs a project on the
+   * home, where offering it would say « no project open » beside the very shelf that opens one,
+   * and needs nothing in a space, which is already a project being edited.
+   *
+   * The state itself is not answered here — `shared/` holds no runtime dependency — but which
+   * question to ask is a property of the panel, and it belongs beside the panel.
+   */
+  requires?: 'project' | 'model'
 }
 
 export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
@@ -108,7 +120,8 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The upper half of the left column is generation, and only generation, in every space: the
   // same two panels in the same place, right under the button that makes a document.
   { id: 'models', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
-  { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
+  // Generating without a model is impossible, so it is absent rather than disabled.
+  { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS, requires: 'model' },
 
   // The lower half: the documents to produce into. Its own half rather than a third turn in the
   // upper one, so the generator stays visible WHILE the Explorer is read.
@@ -191,10 +204,16 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // the studio's own documents and nothing else; the folder holds them and everything the user
   // put beside them, which is what an entry point should offer a way into.
   //
-  // Offered only while a project IS open — `toolRegistry.ts`, which is where a rule that
-  // depends on state lives: the panel would otherwise stand on the home saying that nothing is
-  // open, beside the shelf whose whole purpose is to open one.
-  { id: 'explorer', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
+  // Offered only while a project IS open: the panel would otherwise stand on the home saying
+  // that nothing is open, beside the shelf whose whole purpose is to open one. Here and not on
+  // the workspace placement above, a space being a project already being edited.
+  {
+    id: 'explorer',
+    zone: 'left',
+    slot: 'secondary',
+    surfaces: [HOME_SURFACE],
+    requires: 'project',
+  },
 
   // The right column: what the account holds outside this project — a way into something, which
   // is what this screen is for.
@@ -208,9 +227,16 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // Every surface, and one placement rather than two: a tool is held to one slot across all of
   // its placements, and splitting these would only be a way of writing the same slot twice.
   //
-  // Offered only while a project IS open — `toolRegistry.ts`, for the reason the Explorer gives
-  // there. In a space that is always true; on the home it is the whole point.
-  { id: 'git', zone: 'left', slot: 'secondary', surfaces: [...WORKSPACE_IDS, HOME_SURFACE] },
+  // Offered only while a project IS open, for the reason the Explorer gives above: what is
+  // versioned is a project folder, and there is nothing to say about one that is not open. In a
+  // space that is always true; on the home it is the whole point.
+  {
+    id: 'git',
+    zone: 'left',
+    slot: 'secondary',
+    surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
+    requires: 'project',
+  },
 
   // The versions themselves, in the band — where the timeline is, and for the same reason: both
   // are read ACROSS, one commit or one frame at a time, and a branch graph in a 280 px column is
@@ -225,7 +251,13 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // offering a way into it stood between the reader and their projects — and a band of past
   // versions is exactly such a panel. It would also give that screen a bottom zone it has never
   // had, for a reading one does while working rather than before starting.
-  { id: 'history', zone: 'bottom', slot: 'primary', surfaces: WORKSPACE_IDS },
+  {
+    id: 'history',
+    zone: 'bottom',
+    slot: 'primary',
+    surfaces: WORKSPACE_IDS,
+    requires: 'project',
+  },
 ]
 
 /**

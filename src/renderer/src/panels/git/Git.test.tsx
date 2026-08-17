@@ -399,6 +399,32 @@ describe('a server that refused', () => {
     await waitFor(() => expect(push).toHaveBeenCalled())
   })
 
+  /**
+   * A token that is already held and is still refused is the one case where pasting another is
+   * not obviously the answer — the one on file may be a revoked token, or one for the wrong
+   * account. Said plainly, and erasable: otherwise nothing on this screen acknowledges that a
+   * token is in play at all.
+   */
+  it('says when a token is already held, and lets it be forgotten', async () => {
+    const clearCredentials = vi.fn(() => Promise.resolve())
+    installFakeBridge({
+      git: {
+        read: () => Promise.resolve(REFUSED),
+        remotes: () => Promise.resolve([{ name: 'origin', url: 'https://github.com/a/b.git' }]),
+        hasCredentials: () => Promise.resolve(true),
+        clearCredentials,
+      },
+    })
+    render(<Git />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Oublier le jeton' }))
+
+    expect(clearCredentials).toHaveBeenCalledWith('github.com')
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Oublier le jeton' })).toBeNull(),
+    )
+  })
+
   /** A screen being recorded is what a studio's screen often is. */
   it('hides the token as it is typed', async () => {
     installFakeBridge({

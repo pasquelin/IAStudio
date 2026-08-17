@@ -15,13 +15,26 @@ export type GitLink = {
 }
 
 export type GitLaneRow = {
-  hash: string
+  /**
+   * The commit this row draws. Carried rather than left to the caller to line up by position: a
+   * graph and a log joined on an index are two lists a single filter puts out of step, and what
+   * that draws is a message beside somebody else's lane.
+   */
+  commit: GitCommit
   /** Column the commit's own dot sits in. */
   lane: number
   /** Every line crossing this row, the commit's own included. */
   links: readonly GitLink[]
-  /** Columns in use across the whole log — what the drawing reserves width for. */
+}
+
+export type GitGraph = {
+  /**
+   * Columns in use across the WHOLE log — what the drawing reserves width for, and the same on
+   * every row on purpose. A graph whose column count changed per row would shift every message
+   * sideways as one scrolls, which is exactly what one is reading.
+   */
   width: number
+  rows: readonly GitLaneRow[]
 }
 
 /**
@@ -36,11 +49,8 @@ export type GitLaneRow = {
  * take lanes of their own. Two branches meeting again is the case worth stating: several lanes
  * can be waiting for the same commit, and all but the first are freed on the spot — otherwise a
  * merged branch would leave an empty column running down the rest of the history.
- *
- * `width` is the same on every row on purpose. A graph whose column count changed per row would
- * shift every message sideways as one scrolls, which is exactly what one is reading.
  */
-export function laneLayout(commits: readonly GitCommit[]): GitLaneRow[] {
+export function laneLayout(commits: readonly GitCommit[]): GitGraph {
   /** What each lane is waiting for, or nothing where the lane is free. */
   const waiting: (string | null)[] = []
   const rows: GitLaneRow[] = []
@@ -78,12 +88,12 @@ export function laneLayout(commits: readonly GitCommit[]): GitLaneRow[] {
     }
 
     width = Math.max(width, waiting.length, lane + 1)
-    rows.push({ hash: commit.hash, lane, links, width: 0 })
+    rows.push({ commit, lane, links })
   }
 
-  // Written back once the whole log is known: a row cannot say how wide the graph is while there
-  // are commits below it that have not been placed.
-  return rows.map(row => ({ ...row, width }))
+  // Beside the rows rather than on each of them: it is one number for the whole log, and a row
+  // cannot say it anyway while there are commits below it that have not been placed.
+  return { width, rows }
 }
 
 /** The leftmost lane nothing is waiting in, extending the row when they are all taken. */

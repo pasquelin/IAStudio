@@ -18,28 +18,24 @@ import { HistoryRow } from './HistoryRow'
 export function HistoryList({ commits }: { commits: readonly GitCommit[] }) {
   const { t } = useTranslation()
   const picked = useGit(state => state.picked)
-  const pick = useGit(state => state.pick)
   const historyEnded = useGit(state => state.historyEnded)
   const readHistory = useGit(state => state.readHistory)
 
   // Held across renders: picking a row re-renders the list, and laying the whole graph out again
-  // to change which row is highlighted is work for nothing on every click.
-  const rows = useMemo(() => laneLayout(commits), [commits])
+  // to change which row is highlighted is work for nothing on every click. It is also what keeps
+  // each row's props identical across that render, which is what makes memoising them worth it.
+  const { width, rows } = useMemo(() => laneLayout(commits), [commits])
 
   return (
     <div className={PANEL_SCROLL}>
-      {commits.map((commit, index) => {
-        const row = rows[index]
-        return row === undefined ? null : (
-          <HistoryRow
-            key={commit.hash}
-            commit={commit}
-            row={row}
-            picked={picked === commit.hash}
-            onPick={() => void pick(picked === commit.hash ? null : commit.hash)}
-          />
-        )
-      })}
+      {rows.map(row => (
+        <HistoryRow
+          key={row.commit.hash}
+          row={row}
+          width={width}
+          picked={picked === row.commit.hash}
+        />
+      ))}
 
       {!historyEnded && (
         <div className="flex justify-center p-2">
