@@ -118,6 +118,15 @@ function marked(prefix: string, token: string | null): string | null {
   return token === null ? null : `${prefix}${token}`
 }
 
+/**
+ * The order a search is asked for, or nothing — which is how relevance is asked for, the index
+ * ranking what it is not overruled on. Newest first everywhere else, and with no text at all:
+ * relevance over an unqueried index is not a ranking, it is whatever order the shard answers in.
+ */
+function ordering(query: CloudQuery): { sortBy?: readonly string[] } {
+  return query.order === 'relevance' && query.text ? {} : { sortBy: NEWEST_FIRST }
+}
+
 async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<CloudPage> {
   const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, PAGE_SIZE_MAX)
 
@@ -126,10 +135,7 @@ async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<Cl
         .search({
           ...(query.text ? { query: query.text } : {}),
           ...defined({ filter: filterExpression(query) }),
-          // The same order the listing is asked for, so typing a word does not reorder the half
-          // of the shelf this answers for: the index ranks by relevance left to itself, and the
-          // merged timeline places its three sources on `createdAt` and nothing else.
-          sortBy: NEWEST_FIRST,
+          ...ordering(query),
           limit: pageSize,
           offset: offsetFrom(query.cursor),
         })

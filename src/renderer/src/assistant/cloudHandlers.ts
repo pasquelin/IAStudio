@@ -1,6 +1,6 @@
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import { refused } from '@shared/domain/assistant'
-import type { CloudQuery, ExploreQuery } from '@shared/domain/cloudAsset'
+import { CLOUD_ORDERS, type CloudQuery, type ExploreQuery } from '@shared/domain/cloudAsset'
 import { SYNC_POLICIES } from '@shared/domain/sync'
 import { withBridge, type ActionHandlers } from './actionHandler'
 import { numberOf, oneOf, textOf, textsOf } from './actionInputs'
@@ -24,6 +24,7 @@ function browseQuery(input: Record<string, unknown>): CloudQuery {
   const tags = textsOf(input, 'tags')
   const types = typesOf(input)
   const pageSize = numberOf(input, 'pageSize')
+  const order = oneOf(input, 'order', CLOUD_ORDERS)
 
   return {
     ...(text === null ? {} : { text }),
@@ -31,6 +32,7 @@ function browseQuery(input: Record<string, unknown>): CloudQuery {
     ...(types.length === 0 ? {} : { types }),
     ...(cursor === null ? {} : { cursor }),
     ...(pageSize === null ? {} : { pageSize }),
+    ...(order === null ? {} : { order }),
   }
 }
 

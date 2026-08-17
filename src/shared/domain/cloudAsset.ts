@@ -55,6 +55,18 @@ export type CloudAsset = {
  * one's own assets by tag is documented as impossible on `GET /assets`, which honours `tags`
  * for public assets only.
  */
+/**
+ * How a listing comes back ordered.
+ *
+ * `relevance` is the index's OWN ranking, obtained by asking for no order at all: the API refuses
+ * `score` as a sort field — `400 Invalid sort field`, measured 9 August 2026 — so relevance is
+ * never a value it is told, only one it is not overruled on. It needs a `text` to mean anything.
+ */
+export type CloudOrder = 'newest' | 'relevance'
+
+/** The values, beside the type: a validator and an action's choices both enumerate them. */
+export const CLOUD_ORDERS: readonly CloudOrder[] = ['newest', 'relevance']
+
 export type CloudQuery = {
   text?: string
   tags?: readonly string[]
@@ -64,6 +76,12 @@ export type CloudQuery = {
   /** Opaque, straight from the previous page. */
   cursor?: string
   pageSize?: number
+  /**
+   * Defaults to `newest`, which is what the shelf needs and what every panel asks for. A caller
+   * searching by words is the one that wants otherwise — an agent asking for stone textures gets
+   * the most recent assets rather than the most fitting ones.
+   */
+  order?: CloudOrder
 }
 
 export type CloudPage = {
@@ -85,9 +103,9 @@ export type ExploreQuery = {
   /**
    * What to look for in the feed, or nothing to take it whole.
    *
-   * The feed keeps its `createdAt:desc` order with a text as without one, which is not what a
-   * search index would choose: the shelf merges this source with two others on that stamp, and a
-   * page ordered by relevance instead would place rows the merge then has no way to interleave.
+   * The feed keeps its `createdAt:desc` order with a text as without one, and carries no `order`
+   * of its own — unlike `CloudQuery`, no caller can want otherwise: the shelf merges this source
+   * with two others on that stamp, and the feed is the one read the assistant cannot pass words to.
    */
   text?: string
   /** Opaque, straight from the previous page. */

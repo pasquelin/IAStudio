@@ -206,6 +206,20 @@ describe('browsing the library', () => {
     expect(harness.searched[0]).toMatchObject({ sortBy: ['createdAt:desc'] })
   })
 
+  it('asks for no order at all when the caller searches for what fits best', async () => {
+    // Relevance is never a value the API is told — it refuses `score` as a sort field — but the
+    // ranking it applies when nothing overrules it. An agent asking for stone textures wants it.
+    await invoke(CHANNELS.cloudBrowse, { text: 'boulder', order: 'relevance' })
+    expect(harness.searched[0]).not.toHaveProperty('sortBy')
+  })
+
+  it('keeps newest-first for a relevance asked with no words to rank by', async () => {
+    // Over an unqueried index, relevance is not a ranking — it is whatever order the shard
+    // answers in, which is worse than the stamp for every reader.
+    await invoke(CHANNELS.cloudBrowse, { tags: ['hero'], order: 'relevance' })
+    expect(harness.searched[0]).toMatchObject({ sortBy: ['createdAt:desc'] })
+  })
+
   it('narrows a search too, not only a listing', async () => {
     // The index knows the API's eight media classes, not our six: asking for skies through it
     // comes back as every image, and only this filter tells them apart.

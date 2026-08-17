@@ -23,6 +23,22 @@ describe('the remote library', () => {
     expect(browse).toHaveBeenLastCalledWith({})
   })
 
+  it('carries the order a client asks its search to come back in', async () => {
+    const browse = vi.fn(async () => ({ assets: [], cursor: null }))
+    installFakeBridge({ cloud: { browse } })
+
+    await runAction('cloud.browse', { text: 'stone', order: 'relevance' })
+    expect(browse).toHaveBeenCalledWith({ text: 'stone', order: 'relevance' })
+
+    // An order nobody offers is refused rather than dropped, as a kind nobody has is: answering
+    // a search the client did not ask for is worse than telling it the word means nothing here.
+    expect(await runAction('cloud.browse', { text: 'stone', order: 'cheapest' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(browse).toHaveBeenCalledTimes(1)
+  })
+
   /**
    * The whole call, not the one bad item: `types` closes over the six kinds, and the registry
    * refuses a list holding anything else. Dropping it silently would have the client believe it
