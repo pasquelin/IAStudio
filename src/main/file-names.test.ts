@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { basename, relative, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { PROJECT_TREES, SOURCE_ROOT, WHOLE_PROJECT, sourceFiles } from './source-files'
+import { PROJECT_TREES, SOURCE_ROOT, WHOLE_PROJECT, sourceFiles } from './sourceFiles'
 
 /**
  * How a source file is named, and where it sits. Decided 2026-08-17; nothing held it before, and
@@ -35,7 +35,7 @@ const RULE = 'a capital is earned by exporting a component or a class of that na
  * rule itself, and the next offending file fails on sight. The hooks did that one lot after this
  * guard landed, and the crowded files eight lots after — both constants went with them.
  */
-const KNOWN_OFF_CONVENTION = 286
+const KNOWN_OFF_CONVENTION = 29
 
 /** `.d.ts` names the module it declares, not a module of ours: `sherpa-onnx-node` is a package. */
 const isDeclaration = (path: string): boolean => path.endsWith('.d.ts')

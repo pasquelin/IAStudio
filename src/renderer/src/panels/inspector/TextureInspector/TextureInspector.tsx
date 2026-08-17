@@ -13,7 +13,7 @@ import {
   PREVIEW_SHAPES,
   TILING_PREVIEWS,
   type PreviewShape,
-} from '@/engines/texture/texture-state'
+} from '@/engines/texture/textureState'
 import { toDegrees, toRadians } from '@shared/domain/angles'
 import { MATERIAL_BOUNDS } from '@shared/domain/texture'
 import { textureOf, useTextures } from '@/stores/textures'

@@ -1,4 +1,4 @@
-import { handleRequest, type AudioWorkerRequest, type AudioWorkerState } from './audio-render'
+import { handleRequest, type AudioWorkerRequest, type AudioWorkerState } from './audioRender'
 
 /**
  * The audio chain, off the window's thread. Wiring only — the arithmetic and the ownership

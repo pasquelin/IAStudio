@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandIn, scopeOfWorkspace } from '@shared/domain/command'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import { WRITTEN_SOURCES } from '@/design/test-harness'
+import { WRITTEN_SOURCES } from '@/design/testHarness'
 
 /**
  * The half of the `SCOPE_BY_WORKSPACE` trap that `shared/` cannot see.
@@ -16,7 +16,7 @@ import { WRITTEN_SOURCES } from '@/design/test-harness'
  * but no test there can reach this one: which stores hold a history is a fact of `renderer/`.
  */
 const HISTORY_STORES: Readonly<Record<string, WorkspaceId>> = {
-  'audio-edits.ts': 'audio',
+  'audioEdits.ts': 'audio',
   'canvases.ts': 'image',
   'scenes.ts': '3d',
   'sequences.ts': 'video',
@@ -27,10 +27,10 @@ const HISTORY_STORES: Readonly<Record<string, WorkspaceId>> = {
 /**
  * Read off the tree rather than listed by hand, so the table above cannot fall behind it.
  *
- * `document-store.ts` declares the factory rather than calling it, and the bench builds one for
+ * `documentStore.ts` declares the factory rather than calling it, and the bench builds one for
  * a fake state: neither edits a document, so neither serves a workspace.
  */
-const FACTORY_ITSELF = 'document-store'
+const FACTORY_ITSELF = 'documentStore'
 
 const storesWithHistory = (): string[] =>
   WRITTEN_SOURCES.filter(

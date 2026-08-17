@@ -2,9 +2,9 @@ import { Group, Mesh, SphereGeometry } from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as Diagnostics from '@/services/diagnostics'
 import { SceneRenderer } from './SceneRenderer'
-import type { BvhBuilder } from './bvh-builder'
+import type { BvhBuilder } from './bvhBuilder'
 import { modelNodeFixture } from './scene-fixtures'
-import { EMPTY_SCENE } from './scene-state'
+import { EMPTY_SCENE } from './sceneState'
 
 /** The journal, stood in for: what reaches it is the only trace a failure without a surface has. */
 const reported = vi.hoisted(() => vi.fn())

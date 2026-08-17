@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, onTestFinished } from 'vitest'
 import { ACTIVITY_RETENTION, type ActivityDraft } from '@shared/domain/activity'
 import { createCatalog, type Catalog } from './catalog'
-import { openMemoryDatabase } from './sqlite-memory'
+import { openMemoryDatabase } from './sqliteMemory'
 
 const line = (overrides: Partial<ActivityDraft> = {}): ActivityDraft => ({
   at: '2026-08-08T10:00:00.000Z',

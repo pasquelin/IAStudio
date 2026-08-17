@@ -1,6 +1,6 @@
 import { useScenes } from '@/stores/scenes'
 import { useDocumentEdit, type DocumentEdit } from './useDocumentEdit'
-import type { SceneState } from '@/engines/scene/scene-state'
+import type { SceneState } from '@/engines/scene/sceneState'
 
 export type SceneEdit = DocumentEdit<SceneState>
 

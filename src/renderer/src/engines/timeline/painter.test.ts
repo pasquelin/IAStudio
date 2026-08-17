@@ -9,14 +9,14 @@ import {
   FADE_BAND,
   RULER_HEIGHT,
   type Viewport,
-} from './timeline-geometry'
+} from './timelineGeometry'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import {
   DEFAULT_TRACK_HEIGHT,
   EMPTY_SEQUENCE,
   type Clip,
   type SequenceState,
-} from './timeline-state'
+} from './timelineState'
 
 const viewport: Viewport = { scale: 100 / 1_000_000, offset: 0, scrollTop: 0 }
 const size = { width: 800, height: 200 }

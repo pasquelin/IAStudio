@@ -10,7 +10,7 @@ import {
   type ToolSlot,
   type ToolZone,
 } from '@shared/domain/tool'
-import { shownTool, useToolState } from '@/helpers/tool-registry'
+import { shownTool, useToolState } from '@/helpers/toolRegistry'
 import { ToolWindow } from '../ToolWindow'
 
 /**

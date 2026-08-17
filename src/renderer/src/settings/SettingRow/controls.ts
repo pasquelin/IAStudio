@@ -1,5 +1,5 @@
-import type { SettingValue } from '@shared/domain/settings-path'
-import type { SettingDescriptor } from '@shared/domain/settings-registry'
+import type { SettingValue } from '@shared/domain/settingsPath'
+import type { SettingDescriptor } from '@shared/domain/settingsRegistry'
 
 /**
  * What ties any control to the label above it and the help text under it. Every control takes

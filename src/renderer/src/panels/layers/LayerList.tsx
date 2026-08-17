@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Tree } from '@/design/Tree'
-import { allLayers, canRemoveLayer, isGroup } from '@/engines/canvas/canvas-state'
+import { allLayers, canRemoveLayer, isGroup } from '@/engines/canvas/canvasState'
 import { moveLayer, setLayerVisible } from '@/engines/canvas/commands'
 import { canvasOf, collapseLayerIn, selectLayerIn, useCanvases } from '@/stores/canvases'
 import { useSelection } from '@/stores/selection'

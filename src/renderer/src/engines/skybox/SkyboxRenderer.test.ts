@@ -4,9 +4,9 @@ import type { SphericalAngles } from '@shared/domain/angles'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import type * as AdjustModule from '../gpu/passes/adjust'
 import type { AdjustPass } from '../gpu/passes/adjust'
-import type { GpuPipeline } from '../gpu/GpuPipeline'
-import type * as TestObjectsModule from '../viewport/test-objects'
-import type { TestObjects } from '../viewport/test-objects'
+import type { GpuPipeline } from '../gpu/gpuPipeline'
+import type * as TestObjectsModule from '../viewport/testObjects'
+import type { TestObjects } from '../viewport/testObjects'
 import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import { SkyboxRenderer } from './SkyboxRenderer'
@@ -35,7 +35,7 @@ let adjust: AdjustPass
  */
 let probes: TestObjects
 
-vi.mock('../viewport/test-objects', async importOriginal => {
+vi.mock('../viewport/testObjects', async importOriginal => {
   const actual = await importOriginal<typeof TestObjectsModule>()
   return {
     ...actual,
@@ -47,7 +47,7 @@ vi.mock('../viewport/test-objects', async importOriginal => {
 })
 
 vi.mock('../viewport/environment', () => ({ createEnvironment: () => environment }))
-vi.mock('../gpu/GpuPipeline', () => ({ createGpuPipeline: () => pipeline }))
+vi.mock('../gpu/gpuPipeline', () => ({ createGpuPipeline: () => pipeline }))
 vi.mock('../gpu/passes/adjust', async importOriginal => {
   const actual = await importOriginal<typeof AdjustModule>()
   return {

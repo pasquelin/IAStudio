@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import { sitesIn } from './ast-sites'
-import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './source-files'
+import { sitesIn } from './astSites'
+import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './sourceFiles'
 
 /**
  * Whether an argument is a literal spelling a `{{hole}}` — quoted, backticked, or a regexp.
@@ -63,7 +63,7 @@ const handRolledFillsIn = (path: string, source: string): string[] => {
  *   Closing them needs to know what an identifier holds, which one file at a time cannot say.
  * - **a hole nobody FILLS is a different defect, and no shape betrays it** — the call is simply
  *   not written. Only output catches that: `menu/template.test.ts` sweeps every label of every
- *   submenu in both languages, `project/document-dialogs.test.ts` reads the message it builds, and
+ *   submenu in both languages, `project/documentDialogs.test.ts` reads the message it builds, and
  *   `project/handlers.test.ts` reads the name an extracted texture is written under.
  * - **the receiver is not typed, and `{{` is not always a translation.** `s.replace('{{', '')` —
  *   stripping braces, which a bundle tool or the pseudo-locale would do — is reported, as is a

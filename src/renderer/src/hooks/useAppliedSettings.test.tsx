@@ -2,7 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import i18next from 'i18next'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { Language } from '@shared/i18n/languages'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAppliedSettings } from './useAppliedSettings'
 
 afterEach(async () => {

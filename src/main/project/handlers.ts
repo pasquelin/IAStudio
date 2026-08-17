@@ -2,28 +2,28 @@ import { readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { PICTURES, withoutSourcePath } from '@shared/domain/asset'
-import type { FileOutcome } from '@shared/domain/file-op'
+import type { FileOutcome } from '@shared/domain/fileOp'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
-import type { TextureExtraction } from '@main/assets/texture-extraction'
+import type { TextureExtraction } from '@main/assets/textureExtraction'
 import { parseAssetIds } from '@main/assets/validation'
 import { broadcast } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { isPngBytes, probePng } from '@main/media/png'
 import { probeWav } from '@main/media/wav'
-import type { LocalBackend } from '@main/assets/local-backend'
-import type { FileOps } from './file-ops'
+import type { LocalBackend } from '@main/assets/localBackend'
+import type { FileOps } from './fileOps'
 import type { FolderReader } from './folder'
 import type { Reconciler } from './reconcile'
-import type { ActivityReport } from './activity-log'
+import type { ActivityReport } from './activityLog'
 import {
   askCloseChoice,
   askDeleteDocument,
   askOverwriteDocument,
   type AskUser,
-} from './document-dialogs'
+} from './documentDialogs'
 import type { DocumentFiles } from './documents'
-import { askTrashFiles, askUseOccupiedFolder } from './project-dialogs'
+import { askTrashFiles, askUseOccupiedFolder } from './projectDialogs'
 import { openFailureKey, type ProjectStore } from './store'
 import {
   parseAssetId,
@@ -84,7 +84,7 @@ export type ProjectHandlerDeps = {
    * like every other thing that leaves the process.
    */
   openInSystem: (file: string) => Promise<string>
-  /** `dialog.showMessageBox`, injected for the same reason — see `document-dialogs`. */
+  /** `dialog.showMessageBox`, injected for the same reason — see `documentDialogs`. */
   askUser: AskUser
 }
 
@@ -202,7 +202,7 @@ export function registerProjectHandlers({
    * The seven gestures that write to the project folder, and the one that reads their history.
    *
    * All of them go through `files`, and none of them decides anything: what may be written is
-   * settled in `file-plan.ts` against a reading of the folders taken before the first write.
+   * settled in `filePlan.ts` against a reading of the folders taken before the first write.
    * The panel used to route a rename through three channels depending on what the row turned
    * out to be — six more gestures would have been that branch written six more times.
    *

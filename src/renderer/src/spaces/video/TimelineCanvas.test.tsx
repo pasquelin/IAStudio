@@ -8,24 +8,20 @@ import {
   tracksHeight,
   xToTime,
   type Viewport,
-} from '@/engines/timeline/timeline-geometry'
+} from '@/engines/timeline/timelineGeometry'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
-import type { Clip } from '@/engines/timeline/timeline-state'
-import {
-  EMPTY_SEQUENCE,
-  EMPTY_SOUND_SEQUENCE,
-  snapToFrame,
-} from '@/engines/timeline/timeline-state'
-import { startAssetDrag } from '@/helpers/asset-drag'
+import type { Clip } from '@/engines/timeline/timelineState'
+import { EMPTY_SEQUENCE, EMPTY_SOUND_SEQUENCE, snapToFrame } from '@/engines/timeline/timelineState'
+import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { fakeMenu } from '@/helpers/menu-fixtures'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
-import { useTimelineView, viewportOf } from '@/stores/timeline-view'
+import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { TIMELESS_DURATION } from '@/engines/timeline/insert'
 import { TimelineCanvas } from './TimelineCanvas'
-import type { VideoToolId } from './video-tools'
+import type { VideoToolId } from './videoTools'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',

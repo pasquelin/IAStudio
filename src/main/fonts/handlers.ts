@@ -1,7 +1,7 @@
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { windowLanguage } from '@main/window/language'
-import type { SystemFonts } from './system-fonts'
+import type { SystemFonts } from './systemFonts'
 
 /**
  * What the machine has installed, offered to a renderer that has no filesystem to look with.

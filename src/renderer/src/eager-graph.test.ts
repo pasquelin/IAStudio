@@ -143,7 +143,7 @@ describe('the opening chunk', () => {
     expect([...unresolved]).toEqual([])
     expect(packages).toContain('react')
     expect(packages).toContain('dockview-react')
-    expect(files).toContain('./app/tool-components.ts')
+    expect(files).toContain('./app/toolComponents.ts')
     expect(files).toContain('../../shared/domain/tool.ts')
     // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
     // point and past the shell, or every negative assertion below passes on an empty graph.
@@ -156,7 +156,7 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     expect(files).not.toContain('./design/DynamicForm.tsx')
-    expect(files).not.toContain('./helpers/dynamic-form-schema.ts')
+    expect(files).not.toContain('./helpers/dynamicFormSchema.ts')
   })
 
   it('never reaches the form libraries', () => {
@@ -182,9 +182,9 @@ describe('the opening chunk', () => {
     // The whole folder, not a sample of it: naming files lets a sibling — `AccountSettings`
     // reused by an onboarding, say — walk back in with the guard still green.
     expect([...files].filter(path => path.startsWith('./settings/'))).toEqual([])
-    expect(files).not.toContain('./stores/settings-draft.ts')
-    expect(files).not.toContain('../../shared/domain/settings-registry.ts')
-    expect(files).not.toContain('../../shared/domain/settings-search.ts')
+    expect(files).not.toContain('./stores/settingsDraft.ts')
+    expect(files).not.toContain('../../shared/domain/settingsRegistry.ts')
+    expect(files).not.toContain('../../shared/domain/settingsSearch.ts')
   })
 
   // The heaviest row of the table, and the one that was described but never held: six editors,
@@ -216,21 +216,21 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.startsWith('./spaces/')).sort()).toEqual([
-      './spaces/image/canvas-hosts.ts',
-      './spaces/image/place-asset.ts',
+      './spaces/image/canvasHosts.ts',
+      './spaces/image/placeAsset.ts',
     ])
   })
 
   /**
-   * Deferred by `app/tool-components.ts` on 9 August: every panel of the table, the home screen's
+   * Deferred by `app/toolComponents.ts` on 9 August: every panel of the table, the home screen's
    * own included. Stated over the whole folder, so a panel added tomorrow cannot land eager with
    * the guard still green.
    *
    * The four left are reached for something other than a zone. `panels/jobs/Jobs.tsx` and its row
    * ARE a panel of the table since 11 August — but they are also what the status bar's flyout
    * opens (`app/JobsStatus.tsx:10`), which is the first screen, so the chunk holds them either
-   * way. That is why `Jobs.tsx` may not read `helpers/tool-registry`: it would drag the scene's
-   * node kinds in behind it. The facet key is read by `helpers/reveal-panel.ts`, which narrows a
+   * way. That is why `Jobs.tsx` may not read `helpers/toolRegistry`: it would drag the scene's
+   * node kinds in behind it. The facet key is read by `helpers/revealPanel.ts`, which narrows a
    * browser before bringing it up; it is a lone constant in a file of its own for that reason.
    */
   it('reaches no panel of the tool table, except the list the status bar itself opens', () => {

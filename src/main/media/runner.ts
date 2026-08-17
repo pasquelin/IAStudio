@@ -51,7 +51,7 @@ export type RunOptions = {
 }
 
 // Plain `spawn`: this runs in the main process for a probe, which is short and only waits on
-// a pipe, and inside the waveform process for a decode, which is neither — see `peaks-worker`.
+// a pipe, and inside the waveform process for a decode, which is neither — see `peaksWorker`.
 export function runProcess(
   binary: string,
   args: readonly string[],

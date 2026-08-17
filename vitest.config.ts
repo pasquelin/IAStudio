@@ -60,7 +60,7 @@ process.env.TZ = TEST_TZ
  * `forks` is what a native module that is not thread-safe demands, and ONE such module is reached
  * by the suites: `node:sqlite`. It is a native binding like any other, experimental at that — the
  * first `pnpm validate` with threads on all three projects ended in SIGSEGV. `better-sqlite3` is
- * NOT the one: only `sqlite-native.ts` imports it, which only `catalog-worker` loads. The
+ * NOT the one: only `sqliteNative.ts` imports it, which only `catalogWorker` loads. The
  * dictation addon sits behind a `utilityProcess` no test starts.
  *
  * Hence `forks` on the `node` project alone. Its effect is what a review measured, and it is the
@@ -107,62 +107,62 @@ const TEST_POOL = 'threads'
  * a stale entry costs only the second it wastes.
  */
 const DOM_BOUND = [
-  'src/renderer/src/app/document-io.test.ts',
+  'src/renderer/src/app/documentIo.test.ts',
   // Not for a DOM: the name it proposes is « Sans titre N », composed by `i18next` — only the
   // renderer setup initialises it, and an uninitialised `t` answers with no string at all.
-  'src/renderer/src/app/new-document.test.ts',
+  'src/renderer/src/app/newDocument.test.ts',
   // Imports the definition of all twenty-one panels, so it loads every panel component. It
   // PASSES under node — and covers less: the branches those modules run at import take the
   // other path without a browser, and `panels/**` went four branches over its budget.
-  'src/renderer/src/app/tool-components.test.ts',
-  'src/renderer/src/app/unsaved-guard.test.ts',
+  'src/renderer/src/app/toolComponents.test.ts',
+  'src/renderer/src/app/unsavedGuard.test.ts',
   'src/renderer/src/dictation/insert-at-caret.test.ts',
-  'src/renderer/src/engines/audio/audio-render.test.ts',
+  'src/renderer/src/engines/audio/audioRender.test.ts',
   'src/renderer/src/engines/canvas/CanvasEngine.test.ts',
   'src/renderer/src/engines/canvas/CanvasOverlay.test.ts',
-  'src/renderer/src/engines/core/canvas-2d.test.ts',
-  'src/renderer/src/engines/core/off-screen-host.test.ts',
+  'src/renderer/src/engines/core/canvas2d.test.ts',
+  'src/renderer/src/engines/core/offScreenHost.test.ts',
   'src/renderer/src/engines/core/palette.test.ts',
-  'src/renderer/src/engines/scene/animation-painter.test.ts',
-  'src/renderer/src/engines/scene/bvh-builder.test.ts',
+  'src/renderer/src/engines/scene/animationPainter.test.ts',
+  'src/renderer/src/engines/scene/bvhBuilder.test.ts',
   'src/renderer/src/engines/scene/bvh.worker.test.ts',
-  'src/renderer/src/engines/scene/node-kinds.test.ts',
-  'src/renderer/src/engines/scene/pane-dress.test.ts',
-  'src/renderer/src/engines/scene/pane-materials.test.ts',
-  'src/renderer/src/engines/scene/scene-export.test.ts',
+  'src/renderer/src/engines/scene/nodeKinds.test.ts',
+  'src/renderer/src/engines/scene/paneDress.test.ts',
+  'src/renderer/src/engines/scene/paneMaterials.test.ts',
+  'src/renderer/src/engines/scene/sceneExport.test.ts',
   'src/renderer/src/engines/scene/scene-models.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-animation.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-export.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-loaders.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-sync.test.ts',
-  'src/renderer/src/engines/scene/three-factory.test.ts',
+  'src/renderer/src/engines/scene/threeFactory.test.ts',
   'src/renderer/src/engines/skybox/SkyboxRenderer.test.ts',
   'src/renderer/src/engines/texture/TextureRenderer.test.ts',
   'src/renderer/src/engines/timeline/TimelineEngine.mount.test.ts',
   'src/renderer/src/engines/timeline/painter.test.ts',
   // The stage it stands in for hands back a canvas, and a canvas is what the sink wraps.
-  'src/renderer/src/engines/timeline/scene-sink.test.ts',
+  'src/renderer/src/engines/timeline/sceneSink.test.ts',
   'src/renderer/src/engines/viewport/ViewportEngine.test.ts',
-  'src/renderer/src/helpers/menu-icon.test.ts',
+  'src/renderer/src/helpers/menuIcon.test.ts',
   // Not for a DOM of their own: they read the labels a menu is raised with, and `i18next` is only
   // initialised by the renderer setup — `initI18n` reads `localStorage`, which node has not.
   'src/renderer/src/panels/assets/AssetMenu.test.ts',
   'src/renderer/src/panels/layers/LayerMenu.test.ts',
-  'src/renderer/src/spaces/three/SceneNodeMenu.test.ts',
-  'src/renderer/src/helpers/model-for-family.test.ts',
-  'src/renderer/src/helpers/plan-access.test.ts',
-  'src/renderer/src/helpers/scroll-parent.test.ts',
-  'src/renderer/src/helpers/tool-registry.test.ts',
+  'src/renderer/src/spaces/three/sceneNodeMenu.test.ts',
+  'src/renderer/src/helpers/modelForFamily.test.ts',
+  'src/renderer/src/helpers/planAccess.test.ts',
+  'src/renderer/src/helpers/scrollParent.test.ts',
+  'src/renderer/src/helpers/toolRegistry.test.ts',
   'src/renderer/src/helpers/typing.test.ts',
   'src/renderer/src/home/use-explore.test.ts',
   'src/renderer/src/hooks/useCostEstimate.test.ts',
   'src/renderer/src/hooks/useLoadable.test.ts',
   'src/renderer/src/hooks/useShortcutLabel.test.ts',
   'src/renderer/src/i18n/index.test.ts',
-  'src/renderer/src/spaces/image/image-tools.test.ts',
-  'src/renderer/src/spaces/textures/derive-channel.test.ts',
-  'src/renderer/src/spaces/three/scene-tools.test.ts',
-  'src/renderer/src/spaces/video/video-tools.test.ts',
+  'src/renderer/src/spaces/image/imageTools.test.ts',
+  'src/renderer/src/spaces/textures/deriveChannel.test.ts',
+  'src/renderer/src/spaces/three/sceneTools.test.ts',
+  'src/renderer/src/spaces/video/videoTools.test.ts',
   'src/renderer/src/stores/dictation.test.ts',
   'src/renderer/src/stores/documents.test.ts',
   'src/renderer/src/stores/layouts.test.ts',
@@ -200,7 +200,7 @@ export default defineConfig({
           // measured the branches of other sessions — 72 lines of another checkout's numbers,
           // presented as this one's.
           benchmark: { include: ['src/{main,preload,shared}/**/*.bench.ts'] },
-          setupFiles: ['src/main/test-setup.ts'],
+          setupFiles: ['src/main/testSetup.ts'],
         },
       },
       {

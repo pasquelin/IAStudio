@@ -9,7 +9,7 @@ import {
 } from '@shared/domain/color'
 import { THEME_ATTRIBUTE } from '@shared/domain/settings'
 import stylesheet from '../index.css?raw'
-import { WRITTEN_SOURCES } from './test-harness'
+import { WRITTEN_SOURCES } from './testHarness'
 
 /**
  * Tailwind 4 builds `text-<name>` from BOTH the font-size scale and the colour tokens, and the

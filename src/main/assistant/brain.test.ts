@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ACTION_REGISTRY, INSTRUCTION_MAX } from '@shared/domain/assistant'
 import type { Job } from '@shared/domain/job'
-import { createAssetText } from './asset-text'
-import { createScenarioBrain } from './brain-scenario'
+import { createAssetText } from './assetText'
+import { createScenarioBrain } from './brainScenario'
 import { actionCatalogue, instructionFor, preambleLength, recentHistory } from './instruction'
 import { jsonIn, parseReply } from './reply'
 

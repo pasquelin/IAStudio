@@ -1,11 +1,11 @@
 import type { AnimationTrack } from '@shared/domain/animation'
 import type { Asset } from '@shared/domain/asset'
-import { updateAnimationTrack } from '@/engines/scene/animation-commands'
+import { updateAnimationTrack } from '@/engines/scene/animationCommands'
 import { addNode, setSelection } from '@/engines/scene/commands'
-import { modelNode } from '@/engines/scene/node-factory'
-import { EMPTY_SCENE, type SceneState } from '@/engines/scene/scene-state'
+import { modelNode } from '@/engines/scene/nodeFactory'
+import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
 import type { SelectionMode } from '@/helpers/selection'
-import { createDocumentStore } from './document-store'
+import { createDocumentStore } from './documentStore'
 import { useSelection } from './selection'
 
 /** One scene per document, in memory like the documents themselves. */

@@ -26,7 +26,7 @@ import {
   type Track,
   type TrackKind,
   type Us,
-} from './timeline-state'
+} from './timelineState'
 
 /**
  * Sequence edits, on the pattern of `engines/scene/commands.ts`: a command captures what it

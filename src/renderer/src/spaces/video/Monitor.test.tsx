@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TimelineEngineDeps } from '@/engines/timeline/TimelineEngine'
 import { sequenceWith } from '@/engines/timeline/timeline-fixtures'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { Monitor } from './Monitor'
 
 /**

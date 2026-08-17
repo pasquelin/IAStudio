@@ -10,7 +10,7 @@ import {
   type ClipEdge,
   type SequenceState,
   type Us,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import {
   applyFades,
   applyGain,
@@ -20,7 +20,7 @@ import {
   rms,
   toDb,
   type AudioData,
-} from './audio-data'
+} from './audioData'
 
 /**
  * One step of the chain. Kept as an instruction rather than as the samples it produces: a

@@ -57,9 +57,9 @@ const sources = (from: string): string[] => {
  * — measured, before the substitution below existed.
  *
  * What it still cannot see, and neither can madge: a worker named through `new URL('./x.js',
- * import.meta.url)` — four of them, at `project/catalog-thread.ts`, `scenario/transform-thread.ts`,
- * `media/peaks-process.ts`, `dictation/stt-process.ts`. That is a URL, not an import, and each of
- * those workers is a build entry point of its own.
+ * import.meta.url)` — three of them, at `project/catalogThread.ts`, `media/peaksProcess.ts` and
+ * `dictation/sttProcess.ts`, one per worker entry of `electron.vite.config.ts`. That is a URL,
+ * not an import, and each of those workers is a build entry point of its own.
  */
 const resolveImport = (specifier: string, fromFile: string): string | null => {
   // `?worker` and `?raw` are Vite's, and the module they name is still a module.
@@ -122,7 +122,7 @@ const cyclesIn = (graph: Map<string, string[]>): string[] => {
  * Test material — fixtures, harnesses, the fake bridge, and the suites themselves. Kept here
  * because this is where the question « who may import this » is asked.
  */
-const TEST_MATERIAL = /(\.(test|bench)\.tsx?|-fixtures\.tsx?|test-harness\.ts|fake-bridge\.ts)$/
+const TEST_MATERIAL = /(\.(test|bench)\.tsx?|-fixtures\.tsx?|testHarness\.ts|fakeBridge\.ts)$/
 
 /** A fixture, recognised where the resolver LANDED rather than where a specifier pointed. */
 const IS_FIXTURE = /-fixtures\.tsx?$/

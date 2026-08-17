@@ -6,9 +6,9 @@ import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
-import { nodeById } from '@/engines/scene/scene-state'
-import { movesToCommand } from '@/engines/scene/animation-commands'
-import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
+import { nodeById } from '@/engines/scene/sceneState'
+import { movesToCommand } from '@/engines/scene/animationCommands'
+import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { snapToFrame } from '@shared/domain/time'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
@@ -22,20 +22,20 @@ import { useBindingOverrides } from '@/stores/bindings'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { assetVersionOf } from '@/stores/assets'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
-import type { NodeMove } from '@/engines/scene/scene-state'
-import { useModelClips } from '@/stores/model-clips'
-import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
-import { useSceneClipboard } from '@/stores/scene-clipboard'
+import type { NodeMove } from '@/engines/scene/sceneState'
+import { useModelClips } from '@/stores/modelClips'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
+import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { addModelTo, isSceneDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
-import { displayOfPane, useSceneViews, sceneViewOf } from '@/stores/scene-views'
-import { nextDisplayMode } from '@/engines/scene/scene-view'
+import { displayOfPane, useSceneViews, sceneViewOf } from '@/stores/sceneViews'
+import { nextDisplayMode } from '@/engines/scene/sceneView'
 import { isDisplayMode } from '@shared/domain/scene'
-import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
+import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
 import { SceneCounters } from './SceneCounters'
-import { openSceneNodeMenu } from './SceneNodeMenu'
-import { runSceneCommand, toggleNodeVisible } from './scene-commands'
+import { openSceneNodeMenu } from './sceneNodeMenu'
+import { runSceneCommand, toggleNodeVisible } from './sceneCommands'
 import { ScenePaneGrid } from './ScenePaneGrid/ScenePaneGrid'
-import { SCENE_TOOLS } from './scene-tools'
+import { SCENE_TOOLS } from './sceneTools'
 
 /**
  * Encoded here, written by the main process: the renderer has no `fs`, and where the file lands
@@ -89,7 +89,7 @@ function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
  * already in the selection — a right-click on one of six must not shrink it to one.
  *
  * No rename row: a viewport draws no name to type over. `i18next.t` rather than the hook's, for
- * the reason `document-io` reads it that way — this runs from an engine callback, outside any
+ * the reason `documentIo` reads it that way — this runs from an engine callback, outside any
  * render, and the singleton is always the language in force.
  */
 function openNodeMenu(documentId: string, nodeId: string): void {

@@ -1,6 +1,6 @@
 import { IDLE_RESCAN, type RescanState } from '@shared/domain/project'
-import type { RescanProgress, RescanReport } from './catalog-rescan'
-import type { AsyncCatalog } from './catalog-client'
+import type { RescanProgress, RescanReport } from './catalogRescan'
+import type { AsyncCatalog } from './catalogClient'
 
 export type ReconcilerDeps = {
   /** The open project, or null. Read per pass: a project can close while one is running. */

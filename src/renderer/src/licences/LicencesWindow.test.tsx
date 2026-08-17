@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { LicencesWindow } from './LicencesWindow'
 
 // Unfolding a licence puts its WHOLE text in the DOM — that is the point of the panel — and

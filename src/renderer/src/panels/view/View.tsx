@@ -13,7 +13,7 @@ import { SliderField } from '@/design/SliderField'
 import { ToggleField } from '@/design/ToggleField'
 import { FIELD_LABEL, FIELD_ROW, PANEL_SCROLL } from '@/design/styles'
 import { activeSkyboxId, useDocuments } from '@/stores/documents'
-import { useSkyboxViews, skyboxViewOf } from '@/stores/skybox-views'
+import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
 
 /** i18n key of a projection — never the label itself, as `SkyboxDocument` did before it. */
 const VIEW_LABELS: Record<SkyboxView, string> = {

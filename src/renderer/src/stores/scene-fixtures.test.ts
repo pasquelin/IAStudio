@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { renameNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
-import { EMPTY_SCENE, type SceneState } from '@/engines/scene/scene-state'
+import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
 import { installScene, sceneNodeNow } from './scene-fixtures'
 import { useScenes } from './scenes'
 

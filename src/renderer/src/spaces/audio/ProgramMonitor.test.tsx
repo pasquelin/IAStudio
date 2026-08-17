@@ -2,14 +2,14 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
-import { paintProgram } from '@/engines/timeline/program-wave'
-import type * as ProgramWave from '@/engines/timeline/program-wave'
+import { paintProgram } from '@/engines/timeline/programWave'
+import type * as ProgramWave from '@/engines/timeline/programWave'
 import { ProgramMonitor } from './ProgramMonitor'
 import type { SoundTransport } from '@/hooks/useSoundTransport'
 
 // The painter alone: `programViewport` and the palette stay real, being what the monitor's own
 // geometry is measured against elsewhere in this file.
-vi.mock('@/engines/timeline/program-wave', async importOriginal => ({
+vi.mock('@/engines/timeline/programWave', async importOriginal => ({
   ...(await importOriginal<typeof ProgramWave>()),
   paintProgram: vi.fn(),
 }))

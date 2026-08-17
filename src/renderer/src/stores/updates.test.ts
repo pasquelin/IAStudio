@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UpdateState } from '@shared/domain/update'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useUpdates } from './updates'
 
 beforeEach(() => {

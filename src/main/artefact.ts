@@ -12,7 +12,7 @@
  *
  * It sees one class of waste and not the other. Of the 1 899 658 bytes this lot removed, it would
  * have caught 835 738 — the four byte-identical twins. The rest had no twin at all, and it is
- * `decoder-urls.test.ts`, inside `pnpm validate`, that keeps those from coming back.
+ * `decoderUrls.test.ts`, inside `pnpm validate`, that keeps those from coming back.
  */
 import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync, statSync } from 'node:fs'

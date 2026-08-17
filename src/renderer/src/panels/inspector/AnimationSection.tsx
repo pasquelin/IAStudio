@@ -8,10 +8,10 @@ import { NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
 import { setModelAnimation } from '@/engines/scene/commands'
-import type { ModelNode } from '@/engines/scene/scene-state'
+import type { ModelNode } from '@/engines/scene/sceneState'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { clipsOfNode, useModelClips } from '@/stores/model-clips'
+import { clipsOfNode, useModelClips } from '@/stores/modelClips'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
 
 export type AnimationSectionProps = {

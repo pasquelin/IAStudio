@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { Masonry } from '@/design/Masonry'
 import { Section } from '../../Section'
 import { QuietNote } from '@/design/QuietNote'

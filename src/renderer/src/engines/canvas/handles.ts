@@ -1,5 +1,5 @@
-import type { Rect, Transform } from './canvas-state'
-import { applyTo, layerMatrix } from './layer-space'
+import type { Rect, Transform } from './canvasState'
+import { applyTo, layerMatrix } from './layerSpace'
 import { crisp, toScreen, type Viewport } from './viewport'
 import type { Point, Size } from '../core/geometry'
 

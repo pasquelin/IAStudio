@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, isAssetType } from '@shared/domain/asset'
-import type { FileDomain } from '@shared/domain/file-role'
+import type { FileDomain } from '@shared/domain/fileRole'
 import { PropertyRow } from '@/design/PropertyRow'
 import { FIELD } from '@/design/styles'
 import { HINT_LEFT } from '@/helpers/tooltip'

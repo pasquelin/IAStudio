@@ -3,13 +3,13 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetUrl, PICTURES, posterUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
-import { safeFileName } from '@shared/domain/file-name'
-import { type TextureExportTarget } from '@shared/domain/texture-export'
+import { safeFileName } from '@shared/domain/fileName'
+import { type TextureExportTarget } from '@shared/domain/textureExport'
 import { exportChannelsOf } from '@/engines/texture/export/channels'
 import { activation } from '@/helpers/activation'
-import { pixelEditorIntent } from '@/helpers/asset-intents'
+import { pixelEditorIntent } from '@/helpers/assetIntents'
 import { cn } from '@/helpers/cn'
-import { openAsset } from '@/helpers/open-asset'
+import { openAsset } from '@/helpers/openAsset'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -17,12 +17,12 @@ import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
-import { loadTexture } from '@/engines/scene/texture-cache'
+import { loadTexture } from '@/engines/scene/textureCache'
 import { TextureRenderer } from '@/engines/texture/TextureRenderer'
-import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
+import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { isTextureDirty, textureOf, useTextures } from '@/stores/textures'
-import { placeTextureChannel } from './place-channel'
+import { placeTextureChannel } from './placeChannel'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
@@ -44,7 +44,7 @@ async function exportTexture(documentId: string, target: TextureExportTarget): P
     // Cleaned before it is either a folder or a file name: a document is titled by hand.
     const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'texture')
 
-    const { createTextureExportPort } = await import('@/engines/texture/export/export-port')
+    const { createTextureExportPort } = await import('@/engines/texture/export/exportPort')
 
     const files = await createTextureExportPort({ loadTexture })({
       target,

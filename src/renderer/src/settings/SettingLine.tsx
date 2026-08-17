@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { WINDOW_ROW } from '@/design/window-styles'
 import { cn } from '@/helpers/cn'
 
 export type SettingLineProps = {
@@ -47,12 +48,7 @@ export function SettingLine({
   )
 
   return (
-    <div
-      className={cn(
-        'border-base-300 flex flex-col gap-2 border-b py-3 last:border-b-0',
-        disabled && 'pointer-events-none opacity-50',
-      )}
-    >
+    <div className={cn(WINDOW_ROW, 'flex-col', disabled && 'pointer-events-none opacity-50')}>
       <div className="flex items-center justify-between gap-4">
         {labelFor === undefined ? (
           <span className="flex items-center gap-1.5 text-xs font-medium">{heading}</span>

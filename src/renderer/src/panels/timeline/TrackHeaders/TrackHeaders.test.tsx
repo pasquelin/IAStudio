@@ -4,10 +4,10 @@ import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { canUndo } from '@/engines/core/history'
 import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
-import { DEFAULT_TRACK_HEIGHT, type Track } from '@/engines/timeline/timeline-state'
+import { DEFAULT_TRACK_HEIGHT, type Track } from '@/engines/timeline/timelineState'
 import { useSelection } from '@/stores/selection'
 import { sequenceHistoryOf, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { useTimelineView } from '@/stores/timeline-view'
+import { useTimelineView } from '@/stores/timelineView'
 import { TrackHeaders } from './TrackHeaders'
 
 const trackOf = (id: string): Track | undefined =>
@@ -248,7 +248,7 @@ describe('TrackHeaders', () => {
   /**
    * The rename field sits inside the header, so this row's own menu would take a press meant for
    * the native clipboard one — and `preventDefault` is what keeps Chromium from ever asking the
-   * main process for it (`main/window/context-menu.ts`).
+   * main process for it (`main/window/contextMenu.ts`).
    */
   it('leaves a right-click in the rename field to the native menu', async () => {
     headers()

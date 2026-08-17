@@ -3,7 +3,7 @@ import type { AssetType } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, type EnvironmentRef } from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
 import { TextureField } from '@/design/TextureField/TextureField'
-import { openAssetById } from '@/helpers/open-asset'
+import { openAssetById } from '@/helpers/openAsset'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
 
 const SKIES: readonly AssetType[] = ['skybox']

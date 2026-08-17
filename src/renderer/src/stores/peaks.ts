@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
-import { peaksFromSamples } from '@/engines/audio/audio-data'
-import { decodeAsset } from '@/helpers/audio-decode'
+import { peaksFromSamples } from '@/engines/audio/audioData'
+import { decodeAsset } from '@/helpers/audioDecode'
 import { getBridge } from '@/services/bridge'
 
 type ByAsset = Record<string, Float32Array | null>

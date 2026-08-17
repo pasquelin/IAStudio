@@ -2,12 +2,12 @@ import { open, stat } from 'node:fs/promises'
 import { basename } from 'node:path'
 import type { Asset, MediaProbe } from '@shared/domain/asset'
 import { domainFromSignature, SIGNATURE_BYTES } from '@shared/domain/domainFromSignature'
-import { stemOf } from '@shared/domain/file-name'
-import { natureOf, opensInStudio } from '@shared/domain/file-role'
+import { stemOf } from '@shared/domain/fileName'
+import { natureOf, opensInStudio } from '@shared/domain/fileRole'
 import { isPrivatePath } from '@shared/domain/folder'
 import { assetFilePath } from '@main/assets/protocol'
-import type { AsyncCatalog } from '@main/project/catalog-client'
-import type { ActivityReport } from '@main/project/activity-log'
+import type { AsyncCatalog } from '@main/project/catalogClient'
+import type { ActivityReport } from '@main/project/activityLog'
 
 export type AdoptFileDeps = {
   projectPath: () => string

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_CANVAS, type Guide } from './canvas-state'
+import { DEFAULT_CANVAS, type Guide } from './canvasState'
 import { boxEdges, guideNear, snapOffset, snapTargets, snapValue } from './guides'
 
 const GUIDES: Guide[] = [

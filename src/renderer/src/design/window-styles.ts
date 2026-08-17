@@ -19,6 +19,12 @@ export const WINDOW_CAPTION = 'text-base-content/70 text-xs'
  */
 export const WINDOW_HELP = cn(WINDOW_CAPTION, 'max-w-lg')
 
+/** A line of a list here: a setting, a search hit, a chapter. The direction stays at the call. */
+export const WINDOW_ROW = 'border-base-300 flex gap-2 border-b py-3 last:border-b-0'
+
+/** The same line when the whole of it is the button. */
+export const WINDOW_ROW_BUTTON = cn(WINDOW_ROW, 'hover:bg-base-300 w-full text-left')
+
 /**
  * A control of one of these windows: a section of the column, a period, a refresh.
  *

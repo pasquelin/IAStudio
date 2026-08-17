@@ -12,7 +12,7 @@ import {
   useAvailableTools,
   useToolState,
   type Tool,
-} from '@/helpers/tool-registry'
+} from '@/helpers/toolRegistry'
 
 /** The zone's populated halves, in order. Empty ones never reach the rail. */
 function halvesOf(tools: Tool[]): [ToolSlot, Tool[]][] {

@@ -2,15 +2,15 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import type { Asset } from '@shared/domain/asset'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { forgetReportedFailures } from '@/services/diagnostics'
-import { bridgeWatchingLogs } from '@/services/fake-bridge'
+import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { layoutShowing } from '@/stores/layout-fixtures'
 import { useAssets } from '@/stores/assets'
 import { useLayouts } from '@/stores/layouts'
-import { startAssetDrag } from '@/helpers/asset-drag'
+import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { DocumentArea } from './DocumentArea'
-import { openDocument, setDocumentTitle } from './dockview-api'
+import { openDocument, setDocumentTitle } from './dockviewApi'
 
 const addPanel = vi.fn()
 const setTitle = vi.fn()
@@ -219,7 +219,7 @@ describe('the last surface a dropped asset reaches', () => {
    */
   it('opens what no other surface took', async () => {
     const openAsset = vi.fn()
-    vi.doMock('@/helpers/open-asset', () => ({ openAsset }))
+    vi.doMock('@/helpers/openAsset', () => ({ openAsset }))
 
     render(<DocumentArea />)
     const dataTransfer = dragTransfer()
@@ -228,7 +228,7 @@ describe('the last surface a dropped asset reaches', () => {
     fireEvent.drop(screen.getByTestId('dockview').parentElement as Element, { dataTransfer })
 
     await vi.waitFor(() => expect(openAsset).toHaveBeenCalledWith(picture))
-    vi.doUnmock('@/helpers/open-asset')
+    vi.doUnmock('@/helpers/openAsset')
   })
 
   // A frame here would outline the whole middle of the window, which says nothing the user

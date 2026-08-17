@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { fakeMenu } from '@/helpers/menu-fixtures'
 import { workspaceById } from '@/helpers/workspaces'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import theme from './dockview-theme.css?raw'
 import { DocumentTab } from './DocumentTab'
@@ -14,12 +14,12 @@ const closeDocument = vi.fn((_id: string) => Promise.resolve(true))
 const deleteDocument = vi.fn((_id: string) => Promise.resolve(true))
 const openPanelIds = vi.fn(() => ['doc-1', 'doc-2'])
 
-vi.mock('./document-io', () => ({
+vi.mock('./documentIo', () => ({
   closeDocument: (id: string) => closeDocument(id),
   deleteDocument: (id: string) => deleteDocument(id),
 }))
 
-vi.mock('./dockview-api', () => ({ openPanelIds: () => openPanelIds() }))
+vi.mock('./dockviewApi', () => ({ openPanelIds: () => openPanelIds() }))
 
 // The real one needs a layout engine; what this file is about is the cross and the menu hung
 // beside it. `hideClose` is asserted on rather than assumed — it is what stops Dockview's own

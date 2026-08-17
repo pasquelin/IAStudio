@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { SttEvent } from '@shared/domain/dictation'
-import { ChecksumMismatch } from './model-download'
+import { ChecksumMismatch } from './modelDownload'
 import { createSession, MAX_RESTARTS, type EngineListeners, type SessionHost } from './session'
-import type { SttClient } from './stt-client'
+import type { SttClient } from './sttClient'
 
 function harness(overrides: Partial<SessionHost> = {}) {
   const events: SttEvent[] = []

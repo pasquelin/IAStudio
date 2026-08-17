@@ -7,10 +7,10 @@ import { Panel } from '@/design/Panel'
 import { PanelHeader } from '@/design/PanelHeader'
 import { Separator } from '@/design/Separator'
 import { ToolButton } from '@/design/ToolButton'
-import { isKnownTool, toolDefinition } from './tool-components'
+import { isKnownTool, toolDefinition } from './toolComponents'
 import { isHorizontal, type ToolId, type ToolZone } from '@shared/domain/tool'
-import { toolTitleKey } from '@/helpers/tool-registry'
-import { ToolZoneProvider } from './tool-zone'
+import { toolTitleKey } from '@/helpers/toolRegistry'
+import { ToolZoneProvider } from './toolZone'
 
 export type ToolWindowProps = {
   tool: ToolId

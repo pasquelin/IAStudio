@@ -1,4 +1,4 @@
-import { pixelLayer, type PixelLayer } from './canvas-state'
+import { pixelLayer, type PixelLayer } from './canvasState'
 
 /**
  * A layer for tests. Declared once so a new required field on `Layer` breaks in one place rather

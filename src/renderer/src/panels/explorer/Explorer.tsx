@@ -10,25 +10,25 @@ import { useTranslation } from 'react-i18next'
 import { thumbnailUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
 import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
-import { extensionOf, stemOf } from '@shared/domain/file-name'
-import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/file-op'
+import { extensionOf, stemOf } from '@shared/domain/fileName'
+import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/fileOp'
 import { canMoveInto, FOLDER_ROOT, isPrivatePath, parentOf } from '@shared/domain/folder'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
-import { openDocument } from '@/app/dockview-api'
-import { assetAt } from '@/helpers/asset-at'
+import { openDocument } from '@/app/dockviewApi'
+import { assetAt } from '@/helpers/assetAt'
 import { renameAsset, renameDocument } from '@/helpers/rename'
-import { startSceneDrag } from '@/helpers/scene-drag'
+import { startSceneDrag } from '@/helpers/sceneDrag'
 import { applySelection } from '@/helpers/selection'
 import { workspaceById } from '@/helpers/workspaces'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { currentOverrides } from '@/stores/bindings'
 import { useDocuments } from '@/stores/documents'
-import { fileClipboardCut, useFileClipboard } from '@/stores/file-clipboard'
-import { explorerSearch, useExplorerView } from '@/stores/explorer-view'
+import { fileClipboardCut, useFileClipboard } from '@/stores/fileClipboard'
+import { explorerSearch, useExplorerView } from '@/stores/explorerView'
 import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { NoProject } from '@/panels/shared/NoProject'
@@ -375,7 +375,7 @@ export function Explorer() {
       .catch(() => null)
 
     if (asset) {
-      const { openAsset } = await import('@/helpers/open-asset')
+      const { openAsset } = await import('@/helpers/openAsset')
       return openAsset(asset)
     }
 

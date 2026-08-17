@@ -3,7 +3,7 @@ import {
   layerById,
   type CanvasState,
   type Layer,
-} from '@/engines/canvas/canvas-state'
+} from '@/engines/canvas/canvasState'
 import { canvasOf, canvasStore, useCanvases } from './canvases'
 import { installIn } from './document-fixtures'
 

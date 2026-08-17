@@ -8,7 +8,7 @@ import { installDocument } from '@/stores/document-fixtures'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { installTexture } from '@/stores/texture-fixtures'
-import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
+import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
 import { textureOf, useTextures } from '@/stores/textures'
 import { Channels } from './Channels'
 
@@ -29,7 +29,7 @@ const channels = () => textureOf(useTextures.getState(), 'doc-1').channels
 /** The panel reaches it through an `import()`, and behind it sit three.js and a WebGL context. */
 const deriveTextureChannel = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 
-vi.mock('@/spaces/textures/derive-channel', () => ({ deriveTextureChannel }))
+vi.mock('@/spaces/textures/deriveChannel', () => ({ deriveTextureChannel }))
 
 beforeEach(() => {
   installTexture('doc-1')

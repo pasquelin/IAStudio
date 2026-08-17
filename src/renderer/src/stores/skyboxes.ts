@@ -2,7 +2,7 @@ import { isLocalPicture, type Asset } from '@shared/domain/asset'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import { applyGeneration } from '@/engines/skybox/commands'
 import { generationOf } from '@/helpers/generation'
-import { createDocumentStore } from './document-store'
+import { createDocumentStore } from './documentStore'
 import { useJobs } from './jobs'
 
 /** One skybox per document, with its own history — spec § 8.3. */

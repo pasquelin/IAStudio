@@ -1,22 +1,22 @@
 import { useEffect } from 'react'
 import type { CommandId, MenuCheck } from '@shared/domain/command'
-import { revealTool } from '@/helpers/reveal-panel'
-import { availableToolIds } from '@/helpers/tool-registry'
+import { revealTool } from '@/helpers/revealPanel'
+import { availableToolIds } from '@/helpers/toolRegistry'
 import { getBridge } from '@/services/bridge'
-import { publishCommand } from '@/services/command-bus'
-import { runGlobalCommand } from '@/services/global-commands'
+import { publishCommand } from '@/services/commandBus'
+import { runGlobalCommand } from '@/services/globalCommands'
 import { addNodeTo } from '@/hooks/useAddNode'
 import { useAssistant } from '@/stores/assistant'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
-import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/scene-views'
-import { sceneEngineOf } from '@/stores/scene-engines'
+import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { sceneEngineOf } from '@/stores/sceneEngines'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 
 function runCommand(command: CommandId): void {
-  // Kept out of `global-commands` to break an import loop: the assistant store imports the
+  // Kept out of `globalCommands` to break an import loop: the assistant store imports the
   // executor to run a confirmed action, so the module the executor calls cannot import the store
   // back. Untangling that means separating the panel's open state from the conversation store —
   // worth doing, not worth doing here. Nothing is lost meanwhile: the assistant dismisses itself

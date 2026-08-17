@@ -19,7 +19,7 @@ import {
   isGroup,
   layerById,
   pixelLayer,
-} from '@/engines/canvas/canvas-state'
+} from '@/engines/canvas/canvasState'
 import {
   addLayer,
   duplicateLayer,

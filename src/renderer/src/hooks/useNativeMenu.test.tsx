@@ -10,23 +10,23 @@ import type {
 import { installScene } from '@/stores/scene-fixtures'
 import type { CommandId } from '@shared/domain/command'
 import type { ToolId, ToolSurface } from '@shared/domain/tool'
-import type * as ToolRegistryModule from '@/helpers/tool-registry'
+import type * as ToolRegistryModule from '@/helpers/toolRegistry'
 
 type ToolRegistry = typeof ToolRegistryModule
-import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/scene-views'
-import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
+import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 
 const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
 const saveDocumentAs = vi.fn((_documentId: string) => Promise.resolve(true))
 
-// What saving does is `document-io`'s own suite; what this one is about is the menu reaching it.
-vi.mock('@/app/document-io', () => ({
+// What saving does is `documentIo`'s own suite; what this one is about is the menu reaching it.
+vi.mock('@/app/documentIo', () => ({
   saveDocument: (documentId: string) => saveDocument(documentId),
   saveDocumentAs: (documentId: string) => saveDocumentAs(documentId),
 }))
@@ -37,7 +37,7 @@ vi.mock('@/app/document-io', () => ({
  */
 const listedTools = vi.fn()
 
-vi.mock('@/helpers/tool-registry', async importOriginal => {
+vi.mock('@/helpers/toolRegistry', async importOriginal => {
   const actual = await importOriginal<ToolRegistry>()
   return {
     ...actual,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { run, undo, emptyHistory } from '../core/history'
 import { applyStyle, setChannel, setTextureMaterial, setPreview } from './commands'
-import { newTexture, type ChannelMap, type TextureState } from './texture-state'
+import { newTexture, type ChannelMap, type TextureState } from './textureState'
 
 const MAP: ChannelMap = { assetId: 'a1', origin: 'imported', width: 512, height: 512 }
 

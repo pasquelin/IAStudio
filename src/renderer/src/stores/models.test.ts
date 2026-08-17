@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { ModelFamily } from '@shared/domain/model'
-import { DEFAULT_COLLECTION_STATE, setFacetValue } from '@/helpers/collection-state'
+import { DEFAULT_COLLECTION_STATE, setFacetValue } from '@/helpers/collectionState'
 import { ORIGIN_FACET } from '@/panels/models/model-filters'
 import { useModels } from './models'
 

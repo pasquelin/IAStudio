@@ -30,7 +30,7 @@ import type { ExportFormat, Transform } from '@shared/domain/scene'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { SelectionMode } from '@/helpers/selection'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
-import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
+import { createSkyBinding, type SkyBinding } from '../viewport/skyBinding'
 import {
   ViewportEngine,
   type ProjectionKind,
@@ -46,8 +46,8 @@ import {
   type SceneState,
   type SpriteNode,
   type TextNode,
-} from './scene-state'
-import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './three-factory'
+} from './sceneState'
+import { geometryFor, helperFor, tuneViewHelper, type LightHelper } from './threeFactory'
 import {
   applyGeometry,
   applyLight,
@@ -55,27 +55,27 @@ import {
   applySprite,
   lightFor,
   standardMaterialOf,
-} from './three-sync'
+} from './threeSync'
 import {
   createMaterialTextures,
   createSpriteTexture,
   type MaterialTextures,
   type SpriteTexture,
-} from './material-textures'
-import { createModelTextures, type ModelTextures } from './model-textures'
+} from './materialTextures'
+import { createModelTextures, type ModelTextures } from './modelTextures'
 import { reportFailure } from '@/services/diagnostics'
 import { studioFonts } from '@/services/fonts'
 import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
-import { textGeometry } from './text-geometry'
-import { createGltfSource, type GltfSource } from './gltf-source'
+import { textGeometry } from './textGeometry'
+import { createGltfSource, type GltfSource } from './gltfSource'
 import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
-import { drivenNodes, poseAt } from './animation-eval'
+import { drivenNodes, poseAt } from './animationEval'
 import type { Us } from '@shared/domain/time'
-import { nearestBone, type ProjectedBone } from './bone-picking'
+import { nearestBone, type ProjectedBone } from './bonePicking'
 import { evenSize, flipInto, frameTimes, type FilmRequest } from './film'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
-import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
+import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './modelCache'
 import { applyTransform, carry, placePivot, release, transformOf } from './pivot'
 import {
   applyShadowFlags,
@@ -84,9 +84,9 @@ import {
   ownedByAnotherNode,
   resizeShadowMap,
 } from './shadows'
-import { createPaneMemory, dressForPane } from './pane-dress'
-import { createPaneMaterials, type PaneMaterials } from './pane-materials'
-import { statsOf, type SceneStats } from './scene-stats'
+import { createPaneMemory, dressForPane } from './paneDress'
+import { createPaneMaterials, type PaneMaterials } from './paneMaterials'
+import { statsOf, type SceneStats } from './sceneStats'
 import {
   applyWireOverlay,
   DEFAULT_PANE_VIEWS,
@@ -97,21 +97,21 @@ import {
   viewPosition,
   type CameraPlacement,
   type PaneView,
-} from './scene-view'
+} from './sceneView'
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
-import { createBvhBuilder, type BvhBuilder } from './bvh-builder'
-import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmo-target'
-import { exportObjects } from './scene-export'
-import { snapSteps } from './snap-steps'
+import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
+import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
+import { exportObjects } from './sceneExport'
+import { snapSteps } from './snapSteps'
 import {
   createTextureCache,
   loadTexture,
   type TextureCache,
   type TextureSource,
-} from './texture-cache'
+} from './textureCache'
 
-export type { TransformMode, TransformSpace } from './gizmo-target'
+export type { TransformMode, TransformSpace } from './gizmoTarget'
 
 export type SceneRendererOptions = {
   /**

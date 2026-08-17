@@ -27,7 +27,7 @@ import {
   type Project,
   type ProjectAccountPlan,
 } from '@shared/domain/project'
-import type { PathKind } from '@shared/domain/settings-registry'
+import type { PathKind } from '@shared/domain/settingsRegistry'
 import { ASSISTANT_MODEL_ID } from '@shared/domain/assistant'
 import type { AuthState } from '@shared/domain/settings'
 import { log } from './log'
@@ -37,7 +37,7 @@ import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createUpdates, type Updates } from '@main/updater'
 import { createAssetCollector } from './assets/collector'
-import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/auto-caption'
+import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/autoCaption'
 import {
   assetFilePath,
   ownFileOf,
@@ -49,16 +49,16 @@ import { createFavorites, type FavoritesStore } from './favorites/store'
 import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
 import { bundledFfmpeg, bundledVad, resourcesRoot } from './resources'
-import { createAssetText } from './assistant/asset-text'
+import { createAssetText } from './assistant/assetText'
 import { createRemoteActions, type RemoteActions } from './mcp/asking'
 import { createMcpControl, type McpControl } from './mcp/control'
-import type { AssistantBrain } from './assistant/brain-port'
-import { createScenarioBrain } from './assistant/brain-scenario'
+import type { AssistantBrain } from './assistant/brainPort'
+import { createScenarioBrain } from './assistant/brainScenario'
 import { createSession, type DictationSession } from './dictation/session'
-import { fetchModel, modelIsComplete } from './dictation/model-download'
-import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/model-store'
+import { fetchModel, modelIsComplete } from './dictation/modelDownload'
+import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/modelStore'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
-import { openSttProcess } from './dictation/stt-process'
+import { openSttProcess } from './dictation/sttProcess'
 import { adoptFile } from './media/adoptFile'
 import { linkedAsset, mediaFilters } from './media/link'
 import { renderThumbnail } from './media/renderThumbnail'
@@ -73,12 +73,12 @@ import {
   probeSource,
   runProcess,
 } from './media/runner'
-import { openPeaksProcess } from './media/peaks-process'
-import type { PeaksClient } from './media/peaks-client'
-import { catchUpMedia } from './media/catch-up'
+import { openPeaksProcess } from './media/peaksProcess'
+import type { PeaksClient } from './media/peaksClient'
+import { catchUpMedia } from './media/catchUp'
 import { createMediaService, type MediaService } from './media/service'
-import { createLocalBackend, type LocalBackend } from './assets/local-backend'
-import { createTextureExtraction, type TextureExtraction } from './assets/texture-extraction'
+import { createLocalBackend, type LocalBackend } from './assets/localBackend'
+import { createTextureExtraction, type TextureExtraction } from './assets/textureExtraction'
 import { broadcast, sendTo } from './ipc/broadcast'
 import { studioWindow } from './window/windows'
 import { setLogVerbosity } from './log'
@@ -89,11 +89,11 @@ import {
   type AssetCollector,
   type JobAccount,
   type JobManager,
-} from './scenario/job-manager'
+} from './scenario/jobManager'
 import { runnerOf } from './scenario/runner'
-import type { AskUser } from './project/document-dialogs'
+import type { AskUser } from './project/documentDialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
-import { createFileOps, type FileOps } from './project/file-ops'
+import { createFileOps, type FileOps } from './project/fileOps'
 import {
   createFolderReader,
   createFolderWriter,
@@ -103,16 +103,16 @@ import {
 } from './project/folder'
 import { createProjectStore, openFailureKey, type ProjectStore } from './project/store'
 import { createReconciler, type Reconciler } from './project/reconcile'
-import { createActivityLog, type ActivityLog } from './project/activity-log'
-import { openCatalogThread } from './project/catalog-thread'
-import { catalogOf } from './scenario/model-catalog'
+import { createActivityLog, type ActivityLog } from './project/activityLog'
+import { openCatalogThread } from './project/catalogThread'
+import { catalogOf } from './scenario/modelCatalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './scenario/uploader'
-import { createAssetInputResolver } from './scenario/asset-inputs'
-import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/asset-catalog'
-import { generationOfMetadata } from './scenario/asset-normalizer'
-import { createOwnerScope, type OwnerScope } from './scenario/owner-scope'
+import { createAssetInputResolver } from './scenario/assetInputs'
+import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/assetCatalog'
+import { generationOfMetadata } from './scenario/assetNormalizer'
+import { createOwnerScope, type OwnerScope } from './scenario/ownerScope'
 import { accountFingerprint } from './settings/accounts'
-import { createCloudBackend, type CloudBackend } from './assets/cloud-backend'
+import { createCloudBackend, type CloudBackend } from './assets/cloudBackend'
 import { isRecord } from '@shared/guards'
 import {
   clientFor,
@@ -122,15 +122,15 @@ import {
 } from './scenario/client'
 import { costEstimatorOf, type CostEstimator } from './scenario/cost'
 import { createUsageReader, type UsageReader } from './scenario/usage'
-import { createJobStore } from './scenario/job-store'
-import { createRateLimiters, limitedTransport } from './scenario/rate-limiter'
-import { createCredentialsWatch } from './scenario/credentials-watch'
+import { createJobStore } from './scenario/jobStore'
+import { createRateLimiters, limitedTransport } from './scenario/rateLimiter'
+import { createCredentialsWatch } from './scenario/credentialsWatch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
-import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
+import { createModelRegistry, type ModelRegistry } from './scenario/modelRegistry'
 import { createPlanReader, teamsOf, type PlanReader } from './scenario/plan'
-import { createAssistQueue } from './scenario/assist-queue'
-import { createPromptAssist, type PromptAssist } from './scenario/prompt-assist'
-import { promptAssistApiOf } from './scenario/prompt-assist-api'
+import { createAssistQueue } from './scenario/assistQueue'
+import { createPromptAssist, type PromptAssist } from './scenario/promptAssist'
+import { promptAssistApiOf } from './scenario/promptAssistApi'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type AccountChange, type SettingsStore } from './settings/store'
 import { buildMenu } from './menu'
@@ -141,7 +141,7 @@ import { applyTheme } from './window/theme'
  * Keys queried at once when reading usage. Fixed and low, so that asking about every stored
  * account does not spend one window's worth of requests on a screen nobody is waiting on — the
  * limiter would hold the rest of the studio behind it. It bounds concurrency, not rate: the
- * hundred a minute the API allows is `rate-limiter.ts`'s business.
+ * hundred a minute the API allows is `rateLimiter.ts`'s business.
  */
 const USAGE_CONCURRENCY = 4
 
@@ -237,7 +237,7 @@ export type Services = {
   files: FileOps
   /** Hands a file to the system. The one place the studio launches a third-party application. */
   openInSystem: (file: string) => Promise<string>
-  /** Asks the user a question the OS puts in front of the window — see `document-dialogs`. */
+  /** Asks the user a question the OS puts in front of the window — see `documentDialogs`. */
   askUser: AskUser
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
@@ -867,7 +867,7 @@ export function createServices(settings: SettingsStore): Services {
     projectPath: () => project.path(),
     catalog: () => project.catalog(),
     now: timestamp,
-    // The same function the rescan hashes with (`project-disk` passes the very same one), which
+    // The same function the rescan hashes with (`projectDisk` passes the very same one), which
     // is what makes the two comparable: a fingerprint recorded here is what lets a generated file
     // be followed after the user files it away themselves.
     hash: hashOrNull,

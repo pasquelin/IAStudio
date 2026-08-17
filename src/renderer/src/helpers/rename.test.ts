@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { renameAsset, renameDocument } from './rename'

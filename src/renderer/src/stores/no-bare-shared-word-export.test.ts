@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WRITTEN_SOURCES } from '@/design/test-harness'
+import { WRITTEN_SOURCES } from '@/design/testHarness'
 
 /**
  * The stores, as text. Taken from the renderer-wide sweep the other written-form guards read
@@ -32,9 +32,9 @@ const exportsOf = (source: string): string[] => [
  * The words two of this studio's domains both own. Each is a reader that answers for ONE kind of
  * document while its name says which of several it could be — so each needs the domain in front.
  *
- * `history`: six stores published `historyOf`, while `audio-edits.ts` had already written
+ * `history`: six stores published `historyOf`, while `audioEdits.ts` had already written
  * `audioHistoryOf` — the observed form the rest then followed. `view`: three did, returning three
- * different types, while `animation-view.ts:79` had already written `animationViewOf`.
+ * different types, while `animationView.ts:79` had already written `animationViewOf`.
  * **Each rule here was read off the repo before it was written down.**
  *
  * `node` was a third, and it LEFT the list the day its second claimant did: `nodeById` reads a
@@ -58,7 +58,7 @@ const SHARED_WORDS: readonly string[] = ['history', 'view']
  * The first camelCase word of a name — `viewportOf` opens on `viewport`, not on `view`.
  *
  * A prefix of LETTERS is what this compared at first, and it would have condemned `viewportOf`
- * (`stores/timeline-view.ts`) the day `view` joined the list. The reason it is spared is narrow
+ * (`stores/timelineView.ts`) the day `view` joined the list. The reason it is spared is narrow
  * and worth writing exactly: **one store exports it** — NOT that `viewport` names one domain, for
  * two `Viewport` types exist (`engines/canvas/viewport.ts`, `engines/timeline/timeline-geometry.ts`).
  * The day a second store publishes a `viewportOf`, the collision rule below catches it; this list
@@ -135,7 +135,7 @@ const bareExports = (sources: readonly (readonly [string, string])[]): string[] 
  * folder — nothing wider**, and saying so is the point: a guard whose silence could be read as
  * coverage would be worse than none.
  *
- * `document-store.ts` is deliberately untouched by all this: its `historyOf` is a member of the
+ * `documentStore.ts` is deliberately untouched by all this: its `historyOf` is a member of the
  * generic factory's contract, not a module export, so no import can reach it ambiguously.
  */
 describe('what a store exports about a shared word', () => {

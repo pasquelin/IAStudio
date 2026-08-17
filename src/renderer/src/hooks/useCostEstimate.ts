@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { formatUnits } from '@/usage/format'
 import { INTERACTIVE_REQUESTS_PER_MINUTE, type CostEstimate } from '@shared/domain/job'
 import type { FieldDescriptor } from '@shared/domain/model'
-import type { FormValues } from '@/helpers/dynamic-form'
+import type { FormValues } from '@/helpers/dynamicForm'
 import { getBridge } from '@/services/bridge'
 
 /**

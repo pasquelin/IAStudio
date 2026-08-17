@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
-import type { FacetDescriptor } from '@/helpers/collection-state'
+import type { FacetDescriptor } from '@/helpers/collectionState'
 
 export const TYPE_FACET = 'type'
 

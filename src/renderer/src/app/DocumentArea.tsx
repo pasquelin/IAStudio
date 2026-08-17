@@ -7,7 +7,7 @@ import { useDocuments } from '@/stores/documents'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { DocumentTab } from './DocumentTab'
 import { DOCUMENT_COMPONENTS } from './documents/documents'
-import { setDockviewApi } from './dockview-api'
+import { setDockviewApi } from './dockviewApi'
 
 /**
  * Imported at the drop rather than at the top, and the guard in `eager-graph.test.ts` is what
@@ -17,7 +17,7 @@ import { setDockviewApi } from './dockview-api'
  * hand has let go.
  */
 const openDropped = (asset: Asset): void => {
-  void import('@/helpers/open-asset').then(module => module.openAsset(asset))
+  void import('@/helpers/openAsset').then(module => module.openAsset(asset))
 }
 
 /**

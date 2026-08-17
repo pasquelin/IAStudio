@@ -2,7 +2,7 @@ import { mdiEyeOffOutline, mdiEyeOutline, mdiFileTreeOutline, mdiShapeOutline } 
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
-import { useExplorerView } from '@/stores/explorer-view'
+import { useExplorerView } from '@/stores/explorerView'
 
 /**
  * The Explorer's own title row: how the folder is READ, and how much of it is shown.

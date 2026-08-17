@@ -10,8 +10,8 @@ import {
   DOCUMENT_NAME_FAILURES,
   type DocumentNameFailure,
   type NamedDocument,
-} from '@shared/domain/document-name'
-import { foldForFileName, nameFailureOf } from '@shared/domain/file-name'
+} from '@shared/domain/documentName'
+import { foldForFileName, nameFailureOf } from '@shared/domain/fileName'
 import { nameOf, parentOf } from '@shared/domain/folder'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'

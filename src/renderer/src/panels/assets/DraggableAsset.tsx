@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
-import { startAssetDrag } from '@/helpers/asset-drag'
+import { startAssetDrag } from '@/helpers/assetDrag'
 import { isTyping } from '@/helpers/typing'
 import { useSelection } from '@/stores/selection'
 import { openAssetMenu } from './AssetMenu'

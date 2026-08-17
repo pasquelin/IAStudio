@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -11,7 +11,7 @@ import { DEFAULT_ARRANGEMENTS, arrangementOf, useTools } from '@/stores/tools'
 import { Rail } from './Rail'
 
 const openDocument = vi.fn()
-vi.mock('../dockview-api', () => ({ openDocument: (...args: unknown[]) => openDocument(...args) }))
+vi.mock('../dockviewApi', () => ({ openDocument: (...args: unknown[]) => openDocument(...args) }))
 
 describe('Rail', () => {
   beforeEach(() => {

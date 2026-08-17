@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
-import { openAsset } from '@/helpers/open-asset'
+import { openAsset } from '@/helpers/openAsset'
 import { ModelTexturesSectionRow, pictureOf } from './ModelTexturesSectionRow'
 
 /**
@@ -10,7 +10,7 @@ import { ModelTexturesSectionRow, pictureOf } from './ModelTexturesSectionRow'
  * Three files come out of an import with no channel claimed, and for two different reasons: a
  * `metallicRoughnessTexture` packs two of the studio's channels into one image and an ORM export
  * three, while a `clearcoatTexture` names something the studio has no channel for at all
- * (`glb-textures.ts` says both at its own line). WHICH of the two the catalogue cannot say — the
+ * (`glbTextures.ts` says both at its own line). WHICH of the two the catalogue cannot say — the
  * glTF slot survives only inside the asset's name — so the sentence says the one thing true of
  * every case: this image is not one channel. Blank underneath, the row read as an oversight.
  */

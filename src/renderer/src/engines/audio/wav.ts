@@ -1,4 +1,4 @@
-import { frameCount, type AudioData } from './audio-data'
+import { frameCount, type AudioData } from './audioData'
 
 const HEADER_BYTES = 44
 const BITS_PER_SAMPLE = 16

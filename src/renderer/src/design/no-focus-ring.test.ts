@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import stylesheet from '../index.css?raw'
-import { WRITTEN_SOURCES } from './test-harness'
+import { WRITTEN_SOURCES } from './testHarness'
 
 /**
  * The studio draws no focus ring — the owner's call, taken on 2026-08-15. What it costs is not

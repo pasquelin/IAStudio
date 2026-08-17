@@ -21,9 +21,9 @@ import {
 } from '@/engines/timeline/interactions'
 import { newTracksForAsset, opensTrackFor, placementsForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
-import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
+import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timelineGeometry'
 import type { Point, Size } from '@/engines/core/geometry'
-import { paintOn } from '@/engines/core/canvas-2d'
+import { paintOn } from '@/engines/core/canvas2d'
 import {
   clipById,
   clipEnd,
@@ -32,7 +32,7 @@ import {
   snapToFrame,
   type Clip,
   type SequenceState,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import {
   clampViewport,
   fitToWidth,
@@ -40,23 +40,23 @@ import {
   zoomAt,
   ZOOM_STEP,
 } from '@/engines/timeline/viewport'
-import { assetIdFromDrag, carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/asset-drag'
+import { assetIdFromDrag, carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { cn } from '@/helpers/cn'
-import { showContextMenu } from '@/helpers/context-menu'
-import { cachedImage } from '@/helpers/image-cache'
-import { carriesScene, droppedSceneId } from '@/helpers/scene-drag'
+import { showContextMenu } from '@/helpers/contextMenu'
+import { cachedImage } from '@/helpers/imageCache'
+import { carriesScene, droppedSceneId } from '@/helpers/sceneDrag'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { usePeaks } from '@/stores/peaks'
-import { loadSceneSource, montageSceneOf } from '@/stores/scene-sources'
+import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { useSelection } from '@/stores/selection'
 import { addSceneToSequence, sequenceOf, useSequences } from '@/stores/sequences'
-import { useTimelineView, viewportOf } from '@/stores/timeline-view'
-import { exportSequence } from './sequence-export'
-import type { VideoToolId } from './video-tools'
+import { useTimelineView, viewportOf } from '@/stores/timelineView'
+import { exportSequence } from './sequenceExport'
+import type { VideoToolId } from './videoTools'
 
 export type TimelineCanvasProps = {
   documentId: string

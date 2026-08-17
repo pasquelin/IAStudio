@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { ManualChapter } from '@shared/domain/manual'
-import { WINDOW_CAPTION } from '@/design/window-styles'
+import { WINDOW_CAPTION, WINDOW_ROW_BUTTON } from '@/design/window-styles'
+import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 
 /** The chapters the words appear in, as the settings window lists what it found. */
@@ -23,7 +24,7 @@ export function ManualWindowResults({
             type="button"
             {...HINT_RIGHT(t('manual.searchResultHint'))}
             onClick={() => onOpen(entry.slug)}
-            className="border-base-300 hover:bg-base-300 flex w-full items-baseline gap-2 border-b py-3 text-left last:border-b-0"
+            className={cn(WINDOW_ROW_BUTTON, 'items-baseline')}
           >
             <span className={WINDOW_CAPTION}>{entry.number}</span>
             <span className="text-xs font-medium">{entry.title}</span>

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { TextDescriptor } from '@shared/domain/scene'
 import { TextField } from '@/design/TextField'
 import type { GestureProps } from '@/design/styles'
-import { textFields, withField } from '@/engines/scene/property-fields'
+import { textFields, withField } from '@/engines/scene/propertyFields'
 import { DescriptorSection } from './DescriptorSection'
 import { FontField } from './FontField'
 

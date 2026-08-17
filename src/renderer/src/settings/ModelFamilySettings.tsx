@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next'
 import type { ModelFamily, ModelSummary } from '@shared/domain/model'
 import { ModelOptions, type PickableModel } from '@/design/ModelOptions'
 import { getBridge } from '@/services/bridge'
-import { usePlanAccess, usePlanRefusal } from '@/helpers/plan-access'
+import { usePlanAccess, usePlanRefusal } from '@/helpers/planAccess'
 import { useSettings } from '@/stores/settings'
-import { useSettingsDraft } from '@/stores/settings-draft'
+import { useSettingsDraft } from '@/stores/settingsDraft'
 
 /**
  * A `<select>` is not a browser: past a hundred entries it stops being usable long before it

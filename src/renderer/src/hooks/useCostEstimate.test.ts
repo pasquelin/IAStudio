@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { JobTarget } from '@shared/domain/job'
 import type { FieldDescriptor } from '@shared/domain/model'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import {
   ESTIMATE_DEBOUNCE_MS,
   ESTIMATE_MIN_INTERVAL_MS,

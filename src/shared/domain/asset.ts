@@ -1,4 +1,4 @@
-import { FILE_NAME_MAX_LENGTH } from './file-name'
+import { FILE_NAME_MAX_LENGTH } from './fileName'
 import type { PbrChannel } from './texture'
 
 export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'texture' | 'skybox'

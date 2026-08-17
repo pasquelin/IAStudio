@@ -2,10 +2,10 @@ import { mdiRhombus } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { snapToFrame } from '@shared/domain/time'
 import { ToolButton } from '@/design/ToolButton'
-import { keySubject } from '@/engines/scene/animation-commands'
+import { keySubject } from '@/engines/scene/animationCommands'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { sceneViewOf, useSceneViews } from '@/stores/scene-views'
+import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 
 /**
  * One key on every channel of every animated subject, at the head — Blender's `LocRotScale`.

@@ -7,8 +7,8 @@ import { EmptyState } from '@/design/EmptyState'
 import { MonitorFrame } from '@/design/MonitorFrame'
 import { TOOLBAR_LABEL } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
-import { durationOf } from '@/engines/audio/audio-data'
-import type { RenderedAudio } from '@/engines/audio/audio-render'
+import { durationOf } from '@/engines/audio/audioData'
+import type { RenderedAudio } from '@/engines/audio/audioRender'
 import {
   chainOf,
   clampRegion,
@@ -21,11 +21,11 @@ import {
   type Region,
 } from '@/engines/audio/edits'
 import { formatDuration } from '@/engines/timeline/timecode'
-import { SECOND, trackOfClip, type Us } from '@/engines/timeline/timeline-state'
+import { SECOND, trackOfClip, type Us } from '@/engines/timeline/timelineState'
 import { cn } from '@/helpers/cn'
 import { getBridge } from '@/services/bridge'
 import { assetsById, useAssets } from '@/stores/assets'
-import { audioEditsOf, useAudioEdits } from '@/stores/audio-edits'
+import { audioEditsOf, useAudioEdits } from '@/stores/audioEdits'
 import {
   flattenTakeClip,
   sequenceOf,
@@ -33,9 +33,9 @@ import {
   useSequences,
   writeTakeClip,
 } from '@/stores/sequences'
-import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
-import { decodeAsset } from '@/helpers/audio-decode'
-import { loadTake } from './load-take'
+import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audioTools'
+import { decodeAsset } from '@/helpers/audioDecode'
+import { loadTake } from './loadTake'
 import { useAudioRenderer } from '@/hooks/useAudioRenderer'
 import { useWaveSurfer } from '@/hooks/useWaveSurfer'
 

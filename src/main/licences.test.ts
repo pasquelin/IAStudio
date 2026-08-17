@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import licences from '@shared/licences.json'
 import { isCopyleft, type Licence, NO_VERSION } from '@shared/domain/licence'
 import manifest from '../../package.json'
-import { BUILD_ONLY, SHIPPED } from './shipped-packages'
+import { BUILD_ONLY, SHIPPED } from './shippedPackages'
 
 // Under `src/main` because `src/shared` compiles for the renderer, where `node:fs` has no types.
 const ROOT = join(import.meta.dirname, '..', '..')

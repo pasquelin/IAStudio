@@ -1,8 +1,8 @@
 import i18next from 'i18next'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { groupLayer, pixelLayer, type Layer } from '@/engines/canvas/canvas-state'
+import { groupLayer, pixelLayer, type Layer } from '@/engines/canvas/canvasState'
 import { fakeMenu } from '@/helpers/menu-fixtures'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { openLayerMenu } from './LayerMenu'
 
 let menu = fakeMenu()

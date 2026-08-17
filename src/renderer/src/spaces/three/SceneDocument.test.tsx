@@ -6,19 +6,19 @@ import type { SceneExportCommand } from '@shared/ipc'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { fakeMenu } from '@/helpers/menu-fixtures'
-import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
-import type { SceneNode } from '@/engines/scene/scene-state'
+import type { SceneNode } from '@/engines/scene/sceneState'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
-import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
+import { useSceneViews, sceneViewOf } from '@/stores/sceneViews'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
-import { bonesOfNode, clipsOfNode, useModelClips } from '@/stores/model-clips'
-import { IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
+import { bonesOfNode, clipsOfNode, useModelClips } from '@/stores/modelClips'
+import { IDENTITY_TRANSFORM } from '@/engines/scene/sceneState'
 import { DISPLAY_MODES } from '@shared/domain/scene'
 import { SceneDocument } from './SceneDocument'
 
@@ -26,7 +26,7 @@ const setDocumentTitle = vi.fn()
 
 // Dockview owns the tabs and needs a layout engine; what matters here is what the space asks
 // of it.
-vi.mock('@/app/dockview-api', () => ({
+vi.mock('@/app/dockviewApi', () => ({
   setDocumentTitle: (...args: unknown[]) => setDocumentTitle(...args),
 }))
 

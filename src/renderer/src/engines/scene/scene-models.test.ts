@@ -2,8 +2,8 @@ import { Mesh, BoxGeometry, MeshStandardMaterial, Object3D, Texture } from 'thre
 import { describe, expect, it, vi } from 'vitest'
 import { nodeIdOf, SceneRenderer } from './SceneRenderer'
 import { modelNodeFixture } from './scene-fixtures'
-import type { SceneState } from './scene-state'
-import { EMPTY_SCENE } from '@/engines/scene/scene-state'
+import type { SceneState } from './sceneState'
+import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 
 /**
  * The model path, driven through the loader port — the whole point of that port existing. jsdom

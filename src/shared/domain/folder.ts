@@ -1,5 +1,5 @@
 import { FOLDER_KINDS, kindForExtension } from './document'
-import { extensionOf } from './file-name'
+import { extensionOf } from './fileName'
 
 /**
  * The project folder as the explorer walks it — one level at a time, never the whole tree.
@@ -143,7 +143,7 @@ export function isPrivatePath(path: string, contents: 'own' | 'shown' = 'own'): 
  *
  * What it cannot answer is what only the disk knows: whether `folder` IS a folder, whether
  * either of them is still there, and whether the name is taken where it lands. The panel reads
- * the node's kind; `file-plan.ts` reads the folders and adds those refusals to this one.
+ * the node's kind; `filePlan.ts` reads the folders and adds those refusals to this one.
  */
 export function moveRefusal(path: string, folder: string): 'private' | 'into-itself' | null {
   if (isPrivatePath(path) || isPrivatePath(folder)) return 'private'

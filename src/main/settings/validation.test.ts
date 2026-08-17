@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { partialFor, type SettingValue } from '@shared/domain/settings-path'
+import { partialFor, type SettingValue } from '@shared/domain/settingsPath'
 import {
   optionsOf,
   SETTING_REGISTRY,
   type SettingDescriptor,
-} from '@shared/domain/settings-registry'
+} from '@shared/domain/settingsRegistry'
 import { parsePartialSettings, salvagePartialSettings } from './validation'
 
 /** A value the descriptor itself says is acceptable — no second table of examples to maintain. */
@@ -229,7 +229,7 @@ describe('the keys a settings file remaps', () => {
   })
 
   /**
-   * The write side drops it too rather than refusing the draft. `settings-draft` clears what is
+   * The write side drops it too rather than refusing the draft. `settingsDraft` clears what is
    * pending before the write settles, so a throw here would take the theme staged in the same
    * Apply with it — and say nothing about either.
    */

@@ -14,7 +14,7 @@ import {
   trackOfClip,
   type Clip,
   type SequenceState,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useSequenceEdit } from '@/hooks/useSequenceEdit'
 

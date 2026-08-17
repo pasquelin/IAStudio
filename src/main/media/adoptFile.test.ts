@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import type { AsyncCatalog } from '@main/project/catalog-client'
+import type { AsyncCatalog } from '@main/project/catalogClient'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import { adoptFile, type AdoptFileDeps } from './adoptFile'
 

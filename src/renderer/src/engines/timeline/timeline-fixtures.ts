@@ -7,7 +7,7 @@ import {
   type Track,
   type TrackKind,
   type Us,
-} from './timeline-state'
+} from './timelineState'
 
 /**
  * Sequences for tests. Declared once so a new required field on `Clip` or `Track` breaks in one

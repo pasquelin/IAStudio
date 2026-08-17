@@ -3,18 +3,18 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SphericalAngles } from '@shared/domain/angles'
 import { PICTURES, type Asset } from '@shared/domain/asset'
-import { safeFileName } from '@shared/domain/file-name'
+import { safeFileName } from '@shared/domain/fileName'
 import { EmptyState } from '@/design/EmptyState'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { setSunAngles } from '@/engines/skybox/commands'
-import { loadTexture } from '@/engines/scene/texture-cache'
+import { loadTexture } from '@/engines/scene/textureCache'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { isSkyboxDirty, setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { useDocuments } from '@/stores/documents'
-import { useSkyboxViews, skyboxViewOf } from '@/stores/skybox-views'
+import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { useShortcuts } from '@/hooks/useShortcuts'
@@ -45,7 +45,7 @@ async function exportSkybox(documentId: string, size: number): Promise<void> {
     // Cleaned before it is either a folder or a file name: a document is titled by hand.
     const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'skybox')
 
-    const { createSkyboxExportPort } = await import('@/engines/skybox/export-port')
+    const { createSkyboxExportPort } = await import('@/engines/skybox/exportPort')
 
     const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })({
       assetId: sky.source.assetId,

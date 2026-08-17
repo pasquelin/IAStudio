@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Job } from '@shared/domain/job'
 import type { ModelSummary } from '@shared/domain/model'
-import { installFakeBridge } from '@/services/fake-bridge'
-import { subscribeToCommands } from '@/services/command-bus'
+import { installFakeBridge } from '@/services/fakeBridge'
+import { subscribeToCommands } from '@/services/commandBus'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { job as jobOf } from '@/stores/job-fixtures'
@@ -17,9 +17,9 @@ const showWorkspace = vi.hoisted(() => vi.fn())
 const createDocumentIn = vi.hoisted(() => vi.fn())
 const revealTool = vi.hoisted(() => vi.fn())
 
-vi.mock('@/app/dockview-api', () => ({ showWorkspace }))
-vi.mock('@/app/new-document', () => ({ createDocumentIn }))
-vi.mock('@/helpers/reveal-panel', () => ({ revealTool }))
+vi.mock('@/app/dockviewApi', () => ({ showWorkspace }))
+vi.mock('@/app/newDocument', () => ({ createDocumentIn }))
+vi.mock('@/helpers/revealPanel', () => ({ revealTool }))
 
 function onImageDocument(): void {
   useLayouts.setState({ activeWorkspace: 'image', home: false })

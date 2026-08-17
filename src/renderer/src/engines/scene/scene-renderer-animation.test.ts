@@ -4,10 +4,10 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AnimationRef } from '@shared/domain/scene'
 import { DEFAULT_ANIMATION } from '@shared/domain/scene'
 import { SceneRenderer } from './SceneRenderer'
-import type { BvhBuilder } from './bvh-builder'
-import type * as ModelCache from './model-cache'
+import type { BvhBuilder } from './bvhBuilder'
+import type * as ModelCache from './modelCache'
 import { meshNode, modelNodeFixture } from './scene-fixtures'
-import { EMPTY_SCENE } from './scene-state'
+import { EMPTY_SCENE } from './sceneState'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 
 /**
@@ -15,7 +15,7 @@ import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation
  * the source back in its place is what makes the mixer's work observable — and it is the source's
  * clips that drive it either way, since `Object3D.copy` carries none.
  */
-vi.mock('./model-cache', async importOriginal => ({
+vi.mock('./modelCache', async importOriginal => ({
   ...(await importOriginal<typeof ModelCache>()),
   instanceOf: (source: Object3D) => source,
 }))

@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { clamp } from '@shared/numeric'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { scrollOffsetWithin, scrollParentOf } from '@/helpers/scroll-parent'
+import { scrollOffsetWithin, scrollParentOf } from '@/helpers/scrollParent'
 import { useScrollHost } from './ScrollHost'
 import { columnsIn, GAP, PREFETCH_ROWS, useReachEnd, useRemeasure } from './virtual'
 

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
-import { toolIcon } from '@/helpers/tool-registry'
+import { toolIcon } from '@/helpers/toolRegistry'
 import type { ToolId } from '@shared/domain/tool'
 
 export type RefusedPanelProps = {

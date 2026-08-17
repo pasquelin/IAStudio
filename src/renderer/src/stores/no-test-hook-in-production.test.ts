@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { WRITTEN_SOURCES } from '@/design/test-harness'
+import { WRITTEN_SOURCES } from '@/design/testHarness'
 
 /**
- * `resetForTests` is offered on `DocumentStore<S>`, the type `document-io` receives — so it sits
+ * `resetForTests` is offered on `DocumentStore<S>`, the type `documentIo` receives — so it sits
  * in the autocompletion of production code that has a store in hand, and what it does there is
  * exactly the accident `step` guards against: every closed document reopened at once, silently.
  *
@@ -17,7 +17,7 @@ const HOOKS = ['resetForTests', 'resetDocumentStoresForTests']
  * here is what a suite reaches THROUGH: the fixtures, the setup file that calls it between cases,
  * and the module that declares it.
  */
-const ALLOWED = ['/stores/document-store.ts', '/test-setup-stores.ts', '-fixtures.ts']
+const ALLOWED = ['/stores/documentStore.ts', '/test-setup-stores.ts', '-fixtures.ts']
 
 const isAllowed = (path: string): boolean => ALLOWED.some(allowed => path.endsWith(allowed))
 
@@ -40,7 +40,7 @@ describe('the reset hook of a document store', () => {
       HOOKS.some(hook => source.includes(hook)),
     ).map(([path]) => path)
 
-    expect(named).toContain('../stores/document-store.ts')
+    expect(named).toContain('../stores/documentStore.ts')
     expect(named).toContain('../test-setup-stores.ts')
   })
 })

@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import type { SettingAction } from '@shared/domain/settings-registry'
+import type { SettingAction } from '@shared/domain/settingsRegistry'
 import { getBridge } from '@/services/bridge'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from '../SettingLine'
-import { useSettingsDraft } from '@/stores/settings-draft'
+import { useSettingsDraft } from '@/stores/settingsDraft'
 import { WINDOW_HELP } from '@/design/window-styles'
 
 /**

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { UsageEvent, UsageEventPage } from '@shared/domain/usage'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { UsageJournal } from './UsageJournal'
 
 function page(events: readonly UsageEvent[]): UsageEventPage {

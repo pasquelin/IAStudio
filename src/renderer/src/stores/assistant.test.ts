@@ -5,7 +5,7 @@ import type {
   AssistantAnswer,
   AssistantThought,
 } from '@shared/domain/assistant'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssistant } from './assistant'
 
 /**

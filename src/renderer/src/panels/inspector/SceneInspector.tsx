@@ -9,8 +9,8 @@ import {
   setSpriteOn,
   setTextOn,
 } from '@/engines/scene/commands'
-import { geometryFields, lightFields } from '@/engines/scene/property-fields'
-import { selectedNodes } from '@/engines/scene/scene-state'
+import { geometryFields, lightFields } from '@/engines/scene/propertyFields'
+import { selectedNodes } from '@/engines/scene/sceneState'
 import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'

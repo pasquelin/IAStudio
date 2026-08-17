@@ -80,7 +80,7 @@ Dans la colonne de droite, sous le panneau Skybox. Deux sections.
 | **Équirect** | l’image à plat, telle qu’elle est stockée — deux fois plus large que haute |
 | **Croix** | les six faces dépliées en croix, sur une grille de 4 × 3 |
 | **6 faces** | les mêmes six faces serrées en 3 × 2 — la croix dépense la moitié de ses cases en vide, celle-ci aucune, donc une face s’inspecte presque deux fois plus grande |
-| **Champ de vision** | de 50° à 110°, 75° par défaut — **ne joue que sur la vue 360°** |
+| **Angle de vue** | de 50° à 110°, 75° par défaut — **ne joue que sur la vue 360°** |
 
 > **Les trois vues à plat ne sont pas des images fabriquées à côté** : chaque pixel du cadre pose
 > la question à l’envers — quelle direction du ciel est-ce, et où tombe-t-elle dans la source. Le
@@ -108,7 +108,7 @@ objets de test. `⌘Z` et `⇧⌘Z` annulent et rétablissent ici comme ailleurs
 métallique. Elles ne font pas partie du ciel — elles servent à **voir ce que le ciel éclaire**, et
 sont visibles par défaut.
 
-**Le champ de vision** est l’équivalent de l’objectif d’un appareil photo : petit angle =
+**L’angle de vue** est l’équivalent de l’objectif d’un appareil photo : petit angle =
 téléobjectif, on voit peu mais de près ; grand angle = on voit beaucoup, mais les bords se
 déforment.
 

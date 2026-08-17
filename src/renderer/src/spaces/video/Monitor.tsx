@@ -15,25 +15,25 @@ import { TOOLBAR_LABEL } from '@/design/styles'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
 import type { ToolbarItem } from '@/design/Toolbar/tools'
-import { createSoundPort } from '@/engines/timeline/sound-port'
+import { createSoundPort } from '@/engines/timeline/soundPort'
 import { transports } from '@/engines/timeline/playback'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
-import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
+import type { SequenceState, Us } from '@/engines/timeline/timelineState'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useBinding } from '@/stores/bindings'
 import { playbackOf, usePlayback } from '@/stores/playback'
 import { useScenes } from '@/stores/scenes'
-import { useSceneViews } from '@/stores/scene-views'
-import { montageSink } from './montage-sink'
+import { useSceneViews } from '@/stores/sceneViews'
+import { montageSink } from './montageSink'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2
 
 /**
  * Pictures answer to memory rather than to silicon. Four per monitor, and a sequence mounts two —
- * so eight 4K bitmaps at worst, against the 96 MB `image-cache` holds for the rest of the window.
+ * so eight 4K bitmaps at worst, against the 96 MB `imageCache` holds for the rest of the window.
  * A reasoned number, not a measured one: measuring it wants the application running.
  */
 const MAX_PICTURES = 4

@@ -911,7 +911,7 @@ describe('Tree, the menu a right-click opens', () => {
   /**
    * A row can BE a text field — the explorer renames in place — and the press then belongs to the
    * native clipboard menu, which Chromium never asks the main process for once this row has
-   * called `preventDefault` (`main/window/context-menu.ts`).
+   * called `preventDefault` (`main/window/contextMenu.ts`).
    */
   it('leaves a right-click inside a row that is a field to the native menu', () => {
     const onContextMenu = withMenu(row =>

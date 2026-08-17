@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import stylesheet from '../index.css?raw'
 import { cn } from '@/helpers/cn'
-import { WRITTEN_SOURCES } from './test-harness'
+import { WRITTEN_SOURCES } from './testHarness'
 
 /**
  * A size the studio writes has to come off the ladder, because the ladder is the only thing

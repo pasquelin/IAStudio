@@ -3,7 +3,7 @@ import userEvent, { PointerEventsCheckLevel, type UserEvent } from '@testing-lib
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useSettings } from '@/stores/settings'
-import { useSettingsDraft } from '@/stores/settings-draft'
+import { useSettingsDraft } from '@/stores/settingsDraft'
 import { ShortcutsSettings } from './ShortcutsSettings'
 
 const staged = () => useSettingsDraft.getState().pending.shortcuts?.overrides

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { job } from '@/stores/job-fixtures'
 import { badgeOfRow, mergeRows, nameOfRow, reconciled, typeOfRow } from './rows'
 

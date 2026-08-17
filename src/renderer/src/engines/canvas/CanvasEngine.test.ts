@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
 import type { FontRef } from '@shared/domain/font'
-import type { FaceRegistrar } from './canvas-fonts'
-import { bridgeWatchingLogs } from '@/services/fake-bridge'
+import type { FaceRegistrar } from './canvasFonts'
+import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { layerFixture } from './canvas-fixtures'
 import {
   adjustmentLayer,
@@ -18,13 +18,13 @@ import {
   type Layer,
   type Rect,
   type Transform,
-} from './canvas-state'
+} from './canvasState'
 import { DEFAULT_BRUSH } from './brush'
 import { PixelPatches } from './PixelPatches'
 import stylesheet from '@/index.css?raw'
 import { FALLBACK_COLORS, OVERLAY_TOKENS } from './CanvasEngine'
-import type { CanvasTool } from './canvas-tool'
-import type { CanvasSelection } from './canvas-selection'
+import type { CanvasTool } from './canvasTool'
+import type { CanvasSelection } from './canvasSelection'
 import type { Point } from '../core/geometry'
 import { RULER_SIZE } from './CanvasOverlay'
 import { DEFAULT_VIEW, toDocument, type Viewport } from './viewport'

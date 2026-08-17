@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_COLLECTION_STATE, type CollectionState } from '@/helpers/collection-state'
+import { DEFAULT_COLLECTION_STATE, type CollectionState } from '@/helpers/collectionState'
 import {
   CAPABILITY_FACET,
   facetsFor,

@@ -44,7 +44,7 @@ import {
   IDENTITY_TRANSFORM,
   nodeById,
   type SceneState,
-} from './scene-state'
+} from './sceneState'
 import type { EnvironmentRef, Transform } from '@shared/domain/scene'
 
 describe('addNode', () => {

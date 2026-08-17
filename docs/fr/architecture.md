@@ -119,7 +119,7 @@ Toute tâche longue est **annulable**, **rapporte sa progression**, et tourne da
 `better-sqlite3` est synchrone : une requête lourde dans le processus principal bloque toutes les
 fenêtres, donc les requêtes de catalogue non triviales passent par `worker_threads`.
 
-Trois fils existent précisément pour cela. `main/project/catalog-worker.ts` détient la base et
+Trois fils existent précisément pour cela. `main/project/catalogWorker.ts` détient la base et
 répond à une boucle de messages : une recherche parmi des milliers d’assets ne gèle plus aucune
 fenêtre. `renderer/src/engines/audio/audio.worker.ts` sort la chaîne sonore du thread de la
 fenêtre, les buffers d’échantillons étant **transférés** plutôt que copiés. Et
@@ -138,9 +138,9 @@ que rien ne mesure**, et c’est le même remède que `framingPlacement`, sorti 
 pour la même raison.
 
 **Et deux processus, pour ce qui ne doit pas partager un heap.**
-`main/media/peaks-worker.ts` réduit une forme d’onde dans un `utilityProcess` : une heure de PCM
+`main/media/peaksWorker.ts` réduit une forme d’onde dans un `utilityProcess` : une heure de PCM
 mesurée à 129 ms sur le thread principal, et toutes les fenêtres du studio attendaient.
-`main/dictation/stt-worker.ts` tient Parakeet
+`main/dictation/sttWorker.ts` tient Parakeet
 — six cents millions de paramètres, 640 Mo de poids — dans un `utilityProcess` à lui. Un thread
 n'aurait pas suffi : il partage le heap et le cycle de vie de son processus, donc les 700 Mo
 resteraient dans l'empreinte du principal et un plantage de l'addon natif emporterait le studio.
@@ -200,19 +200,19 @@ src/main/
 ├── scenario/
 │   ├── client.ts            le client @scenario-labs/sdk, bâti sur les identifiants stockés
 │   ├── credentials.ts       lecture, validation, état d'authentification
-│   ├── model-registry.ts    GET /models/{id} → FieldDescriptor[]
-│   ├── model-catalog.ts     listing paginé des modèles, mis en cache
-│   ├── job-manager.ts       la file, la concurrence, le polling
+│   ├── modelRegistry.ts     GET /models/{id} → FieldDescriptor[]
+│   ├── modelCatalog.ts      listing paginé des modèles, mis en cache
+│   ├── jobManager.ts        la file, la concurrence, le polling
 │   ├── runner.ts            ce qui appelle réellement generate
 │   ├── schema.ts            traduction de schéma et déduction de famille
 │   ├── retry.ts             le backoff exponentiel, sorti du JobManager et partagé
-│   ├── asset-catalog.ts     la bibliothèque distante, lue et paginée
-│   ├── asset-normalizer.ts  un asset de l'API ramené à la forme du studio
-│   ├── owner-scope.ts       à quel projet la clé active donne accès
-│   ├── filter-expression.ts la recherche traduite pour l'API
+│   ├── assetCatalog.ts      la bibliothèque distante, lue et paginée
+│   ├── assetNormalizer.ts   un asset de l'API ramené à la forme du studio
+│   ├── ownerScope.ts        à quel projet la clé active donne accès
+│   ├── filterExpression.ts  la recherche traduite pour l'API
 │   ├── limits.ts            les tailles de lot que l'API impose
-│   ├── prompt-assist.ts     variantes, traduction, lecture de style
-│   ├── assist-queue.ts      la file bornée de l'assistance de fond
+│   ├── promptAssist.ts      variantes, traduction, lecture de style
+│   ├── assistQueue.ts       la file bornée de l'assistance de fond
 │   ├── uploader.ts          l'envoi d'un fichier vers la bibliothèque
 │   ├── cost.ts              ce qu'une génération coûterait, sans la lancer
 │   ├── usage.ts             les unités consommées et la grille de prix
@@ -220,18 +220,18 @@ src/main/
 ├── project/
 │   ├── store.ts             créer et ouvrir un dossier de projet, lire/écrire le manifeste
 │   ├── catalog.ts           l'index SQLite des assets
-│   ├── catalog-thread.ts    le worker qui le porte, et son protocole
-│   ├── activity-log.ts      ce que le studio a fait et raté
+│   ├── catalogThread.ts     le worker qui le porte, et son protocole
+│   ├── activityLog.ts       ce que le studio a fait et raté
 │   ├── documents.ts         l'écriture atomique d'un document
 │   ├── sqlite.ts            le port SqliteDriver
-│   ├── sqlite-native.ts     better-sqlite3 — production
-│   └── sqlite-memory.ts     node:sqlite — tests
+│   ├── sqliteNative.ts      better-sqlite3 — production
+│   └── sqliteMemory.ts      node:sqlite — tests
 ├── assets/
-│   ├── local-backend.ts     les assets du projet, sur le disque
-│   ├── cloud-backend.ts     les mêmes, du côté de la bibliothèque
-│   ├── sync-plan.ts         ce que deux côtés devraient faire l'un de l'autre
+│   ├── localBackend.ts      les assets du projet, sur le disque
+│   ├── cloudBackend.ts      les mêmes, du côté de la bibliothèque
+│   ├── syncPlan.ts          ce que deux côtés devraient faire l'un de l'autre
 │   ├── collector.ts         ce qu'une génération dépose dans le projet
-│   ├── auto-caption.ts      nommer une image d'après ce que l’API y voit
+│   ├── autoCaption.ts       nommer une image d'après ce que l’API y voit
 │   └── protocol.ts          le protocole scenario://
 ├── dictation/               la reconnaissance vocale : permissions, modèle, découpage, handlers
 ├── assistant/               la pensée de l'assistant, derrière un port, et ce qu'on en relit
@@ -275,8 +275,8 @@ rafale de 429.
 ### Deux backends d’assets, un seul planificateur
 
 Le projet et la bibliothèque du compte sont deux stocks, servis par deux backends de même forme :
-`local-backend.ts` pour le dossier sur le disque, `cloud-backend.ts` pour l’API. Ce qui décide de
-ce qui devrait bouger entre les deux est ailleurs, et **pur** : `sync-plan.ts`.
+`localBackend.ts` pour le dossier sur le disque, `cloudBackend.ts` pour l’API. Ce qui décide de
+ce qui devrait bouger entre les deux est ailleurs, et **pur** : `syncPlan.ts`.
 
 Cette séparation porte deux promesses :
 
@@ -300,7 +300,7 @@ deux.
 
 ### Le journal d’activité
 
-`project/activity-log.ts` tient le compte de ce que le studio a fait et raté. Trois décisions y
+`project/activityLog.ts` tient le compte de ce que le studio a fait et raté. Trois décisions y
 sont figées, et chacune répond à un défaut précis :
 
 - **`record` rend la main immédiatement.** Il est appelé depuis des chemins d’échec : un journal
@@ -446,7 +446,7 @@ y penser défait le gain sans rien casser de visible — le pire des régression
 voit qu’au chronomètre.
 
 **Les panneaux sont sortis à leur tour**, et c’est ce qui a rétréci la liste des voisins.
-`app/tool-components.ts` les importait tous d’un coup ; il déclare désormais, par panneau, **le
+`app/toolComponents.ts` les importait tous d’un coup ; il déclare désormais, par panneau, **le
 module à charger et ce que son en-tête fait** — cette seconde moitié est nécessaire, parce que la
 ligne de titre se dispose au premier rendu et qu’un séparateur qui arriverait une frame plus tard
 décalerait une rangée déjà à l’écran. Mesuré sur le même commit des deux côtés, préchargés
@@ -455,7 +455,7 @@ comptés, sans sourcemaps : **2 331 395 → 2 081 385 octets, −250 010, soit �
 > **Un glob sur le dossier supprimerait la copie du nom de chaque panneau, et il a été écrit puis
 > retiré.** `eager-graph.test.ts` marche les imports **statiques** : un glob lui est invisible, et
 > la garde qui surveille précisément cette propriété serait restée verte quoi que le glob fasse au
-> chunk d’entrée. La copie reste, et `tool-components.test.ts` la tient — un `layers` qui
+> chunk d’entrée. La copie reste, et `toolComponents.test.ts` la tient — un `layers` qui
 > nommerait le module des mailles échangerait les deux en silence.
 
 **Il reste deux voisins**, et aucun n’est un éditeur : ce sont des helpers que quelque chose du
@@ -489,7 +489,7 @@ pour que cette mémoïsation morde.
 `sequence.mirror` ouvre une seconde fenêtre qui miroite le moniteur Programme, pour un second
 écran. **Le pont IPC n’y porte qu’une chose : l’ouverture de la fenêtre** (`main/window/mirror.ts`).
 Tout le reste — l’édition, le point de lecture, la lecture — voyage par un `BroadcastChannel`
-(`spaces/video/mirror-channel.ts`).
+(`spaces/video/mirrorChannel.ts`).
 
 **Ce n’est pas un contournement de l’invariant 2**, qui garde la frontière entre PROCESSUS. Les
 deux fenêtres chargent le même bundle de rendu : elles partagent déjà `SequenceState` comme type,
@@ -539,7 +539,7 @@ défaut ci-dessous — un test l’épingle espace par espace.
 
 **Deux règles échappent au registre**, et deux seulement, parce qu’elles dépendent de l’état ou de
 l’espace, quand `shared/` n’a aucune dépendance runtime. D’où une couche au-dessus, dans
-`helpers/tool-registry.ts`, plutôt qu’à l’intérieur :
+`helpers/toolRegistry.ts`, plutôt qu’à l’intérieur :
 
 - le générateur n’est offert que là où un modèle est choisi ou préféré ;
 - une moitié que personne n’a choisie affiche le **premier panneau que l’espace y déclare**. Elle
@@ -690,7 +690,7 @@ qu’obtiennent une ou deux générations, pas une cadence fixe. À cadence fixe
 simultanées demandent 120 requêtes par minute contre les cent que l’API accorde — le limiteur
 retient alors chaque poll, le SDK réessaie, et **une génération qui tourne et qui est facturée est
 rapportée comme un échec de débit au bout de quinze secondes**. Le budget lui-même est *dérivé*
-des constantes de `rate-limiter.ts` et non écrit en clair, précisément pour qu’il ne devienne pas
+des constantes de `rateLimiter.ts` et non écrit en clair, précisément pour qu’il ne devienne pas
 faux en silence le jour où l’une d’elles bouge.
 
 **L’étape 5b lit un prix dans deux formes de réponse, parce que la référence et le serveur ne
@@ -715,7 +715,7 @@ falaise — tapé plus lentement que son délai, chaque frappe part en requête.
 n’est pas achetée deux fois, et elle ne se réessaie pas.
 
 **`DynamicForm` est chargé paresseusement**, et les trois fonctions qui appellent zod vivent dans
-`helpers/dynamic-form-schema` séparément de `helpers/dynamic-form`. Les deux moitiés vont
+`helpers/dynamicFormSchema` séparément de `helpers/dynamicForm`. Les deux moitiés vont
 ensemble : sans la seconde, `referencePictures` retenait zod dans le graphe eager. zod,
 `react-hook-form` et `@hookform/resolvers` sont à **zéro** dans le chunk initial, qui passe de
 2 030,50 à 1 810,88 kB — mesuré par décodage VLQ des sourcemaps, et verrouillé par des tests qui
@@ -741,7 +741,7 @@ les fichiers restent, plus rien ne dit ce qu’ils sont. `.scenario/items.json` 
 lire ce jour-là : une sauvegarde indexée par empreinte de contenu, écrite après chaque passe de
 réconciliation qui a changé quelque chose, que le studio ne relit jamais de lui-même.
 
-**Une passe le remet d’accord avec le disque**, ce qui n’est pas le reconstruire. `catalog-rescan.ts`
+**Une passe le remet d’accord avec le disque**, ce qui n’est pas le reconstruire. `catalogRescan.ts`
 tourne dans le thread du catalogue à l’ouverture d’un projet et au retour de la fenêtre au premier
 plan (plancher de 5 s, un passage à la fois) : elle retrouve par empreinte de contenu un fichier
 déplacé hors du studio et refile sa ligne (`repath`), et elle DATE une absence — `missing_at` —
@@ -770,7 +770,7 @@ coupure en cours d’écriture ne laisse jamais un document tronqué là où ét
 Le corps du fichier appartient à l’espace qui l’a écrit : le processus principal ne le lit pas, il
 l’estampille et le rend tel quel. Un espace qui apprend à s’enregistrer n’a donc pas de canal à
 lui. **Les six genres savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et
-matière, déclarés en un seul endroit, `IO_BY_KIND` dans `app/document-io.ts`. Un genre absent de
+matière, déclarés en un seul endroit, `IO_BY_KIND` dans `app/documentIo.ts`. Un genre absent de
 cette table a un Enregistrer qui ne fait rien, plutôt qu’un qui écrit un corps vide.
 
 ---
@@ -1227,7 +1227,7 @@ IPC, et les panneaux via Testing Library.
 | Un espace de travail | `WORKSPACE_IDS`, puis son icône et sa famille dans `helpers/workspaces.ts` — le compilateur réclame les deux |
 | Un canal IPC | `shared/ipc.ts` d’abord, le handler ensuite ; la signature en est dérivée, donc partez du contrat |
 | Un type de maillage ou de lumière | `mesh-primitives.ts` / `light-types.ts` — la barre d’outils, les panneaux et le menu natif lisent ces tables |
-| Un outil image | `spaces/image/image-tools.ts`, dans le bon groupe |
+| Un outil image | `spaces/image/imageTools.ts`, dans le bon groupe |
 | Une forme visuelle partagée | `design/`, un composant par fichier, avec son test |
 
 Deux règles qui font gagner le plus de temps : vérifier qu’un helper n’existe pas déjà avant d’en

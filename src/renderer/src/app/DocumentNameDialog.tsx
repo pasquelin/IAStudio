@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { checkDocumentName } from '@shared/domain/document-name'
+import { checkDocumentName } from '@shared/domain/documentName'
 import { Button } from '@/design/Button'
 import { FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
@@ -10,7 +10,7 @@ import {
   registerDocumentNamer,
   type DocumentNameRequest,
   type DocumentNamer,
-} from './document-name'
+} from './documentName'
 
 type Asked = { request: DocumentNameRequest; answer: (name: string | null) => void }
 

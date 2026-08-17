@@ -5,7 +5,7 @@ import {
   type AssetBadge,
   type AssetType,
 } from '@shared/domain/asset'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { runningJobs, type Job } from '@shared/domain/job'
 
 /**

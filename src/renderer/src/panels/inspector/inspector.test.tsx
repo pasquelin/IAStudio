@@ -4,36 +4,36 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { addNode } from '@/engines/scene/commands'
-import { createNodeOf } from '@/engines/scene/node-factory'
+import { createNodeOf } from '@/engines/scene/nodeFactory'
 import { lightNodeFixture, meshNode, spriteNodeFixture } from '@/engines/scene/scene-fixtures'
 import {
   DEFAULT_MATERIAL,
   IDENTITY_TRANSFORM,
   type SceneNode,
   type SceneState,
-} from '@/engines/scene/scene-state'
+} from '@/engines/scene/sceneState'
 import type { Transform } from '@shared/domain/scene'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
-import { EMPTY_SOUND_SEQUENCE, SECOND } from '@/engines/timeline/timeline-state'
+import { EMPTY_SOUND_SEQUENCE, SECOND } from '@/engines/timeline/timelineState'
 import { useSequences } from '@/stores/sequences'
 import { installDocument, installDocuments } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useSelection } from '@/stores/selection'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
-import { useModelClips } from '@/stores/model-clips'
+import { useModelClips } from '@/stores/modelClips'
 import { installScene, sceneNodeNow } from '@/stores/scene-fixtures'
 import { installTexture } from '@/stores/texture-fixtures'
-import { useTextureViews } from '@/stores/texture-views'
+import { useTextureViews } from '@/stores/textureViews'
 import { textureOf, useTextures } from '@/stores/textures'
 import { setChannel } from '@/engines/texture/commands'
-import { connectSceneSelection } from '@/stores/scene-selection'
+import { connectSceneSelection } from '@/stores/sceneSelection'
 import { addModelTo, sceneHistoryOf, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { definition } from '.'
-import { EMPTY_SCENE } from '@/engines/scene/scene-state'
+import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 
 const { Content } = definition
 
@@ -873,7 +873,7 @@ describe('the inspector and what is picked in a scene', () => {
   it('describes the node an import just put down, not the asset it came from', () => {
     install(meshNode('box-1'), false)
     // The connector the application wires up: what the panel shows after an import is only half
-    // the answer, and the other half is who told it — see `scene-selection.test.ts`.
+    // the answer, and the other half is who told it — see `sceneSelection.test.ts`.
     const stop = connectSceneSelection()
     useSelection.getState().selectAssets(['asset-1'])
 

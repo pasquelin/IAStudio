@@ -1,6 +1,6 @@
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { MediaTile } from '@/design/MediaTile'
-import { cloudTileFace } from '@/helpers/cloud-tile'
+import { cloudTileFace } from '@/helpers/cloudTile'
 
 /**
  * What one column aims for. Wider than a shelf tile: this is the band people browse.

@@ -18,8 +18,8 @@ import { isHiddenEntry } from '@shared/domain/folder'
 import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
 import { exists, isMissing, writeAtomic, writeQueue } from '@main/persistence'
-import type { AsyncCatalog } from './catalog-client'
-import { applyJournal } from './file-journal'
+import type { AsyncCatalog } from './catalogClient'
+import { applyJournal } from './fileJournal'
 import { parseManifest } from './validation'
 
 /** Thrown when a channel needing a project is reached before one is open. */

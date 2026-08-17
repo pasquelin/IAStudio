@@ -10,7 +10,7 @@ import {
   playsThrough,
   type SequenceState,
   type Track,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { clamp } from '@shared/numeric'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { isTyping } from '@/helpers/typing'
@@ -87,7 +87,7 @@ export function TrackHeadersRow({
       onPointerDown={() => useSelection.getState().selectTrack(documentId, track.id)}
       onContextMenu={event => {
         // A right-click in the rename field belongs to the native clipboard and spelling menu
-        // (`main/window/context-menu.ts`), which `preventDefault` would keep from ever being asked.
+        // (`main/window/contextMenu.ts`), which `preventDefault` would keep from ever being asked.
         // Decided before `open`, which prevents it unconditionally — that is the hook's contract.
         if (isTyping(event.target)) return
         menu.open(event)

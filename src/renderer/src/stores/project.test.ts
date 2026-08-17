@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Project, RecentProject } from '@shared/domain/project'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import type { ActivityEntry } from '@shared/domain/activity'
-import type { FileOutcome } from '@shared/domain/file-op'
+import type { FileOutcome } from '@shared/domain/fileOp'
 import { useActivity } from './activity'
 import { assetsById, useAssets } from './assets'
 import { useProject } from './project'
 import { useSettings } from './settings'
 
 const closeOrphanTabs = vi.hoisted(() => vi.fn())
-vi.mock('@/app/orphan-tabs', () => ({ closeOrphanTabs }))
+vi.mock('@/app/orphanTabs', () => ({ closeOrphanTabs }))
 
 const MANIFEST = { version: 1, name: 'demo', createdAt: '', updatedAt: '' }
 

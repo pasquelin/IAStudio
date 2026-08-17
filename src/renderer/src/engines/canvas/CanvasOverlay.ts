@@ -1,9 +1,9 @@
-import { selectionOutline, type CanvasSelection } from './canvas-selection'
-import type { Guide, Rect } from './canvas-state'
+import { selectionOutline, type CanvasSelection } from './canvasSelection'
+import type { Guide, Rect } from './canvasState'
 import { cropChrome } from './crop'
 import { gripRects, HANDLE_IDS, outlinePoints, type Corners, type HandleId } from './handles'
 import { rulerStep, tickLabel, ticks } from './rulers'
-import { shapeOutline, type ShapeGeometry } from './shape-geometry'
+import { shapeOutline, type ShapeGeometry } from './shapeGeometry'
 import { crisp, toScreen, visibleRect, type Viewport } from './viewport'
 import type { Point, Size } from '../core/geometry'
 

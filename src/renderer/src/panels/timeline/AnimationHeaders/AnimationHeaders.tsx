@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Viewport } from '@/engines/timeline/timeline-geometry'
-import type { AnimationRow } from '@/engines/scene/animation-rows'
-import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
+import type { Viewport } from '@/engines/timeline/timelineGeometry'
+import type { AnimationRow } from '@/engines/scene/animationRows'
+import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { TimelineHeaderColumn } from '../TimelineHeaderColumn'
 import { AnimationHeadersRow } from './AnimationHeadersRow'
 

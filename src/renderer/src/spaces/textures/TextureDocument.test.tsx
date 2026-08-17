@@ -3,14 +3,14 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { TextureExportCommand, FolderExportRequest } from '@shared/ipc'
-import type { TextureExportTarget } from '@shared/domain/texture-export'
+import type { TextureExportTarget } from '@shared/domain/textureExport'
 import { setChannel } from '@/engines/texture/commands'
 import { reportFailure } from '@/services/diagnostics'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { installTexture } from '@/stores/texture-fixtures'
-import { useTextureViews } from '@/stores/texture-views'
+import { useTextureViews } from '@/stores/textureViews'
 import { textureOf, useTextures } from '@/stores/textures'
 import { TextureDocument } from './TextureDocument'
 
@@ -28,7 +28,7 @@ vi.mock('@/engines/texture/TextureRenderer', () => ({
 }))
 
 const openAsset = vi.fn()
-vi.mock('@/helpers/open-asset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
+vi.mock('@/helpers/openAsset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
 
 const DOCUMENT = 'tex-1'
 

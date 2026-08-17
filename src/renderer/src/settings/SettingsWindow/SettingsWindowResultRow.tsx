@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { bindingOf } from '@shared/domain/command'
-import type { SearchHit } from '@shared/domain/settings-search'
+import type { SearchHit } from '@shared/domain/settingsSearch'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'
-import { WINDOW_HELP } from '@/design/window-styles'
+import { WINDOW_HELP, WINDOW_ROW_BUTTON } from '@/design/window-styles'
+import { cn } from '@/helpers/cn'
 
 /** A hit that is not a setting: a button, or a command with the key it answers to. */
 export function SettingsWindowResultRow({ hit, onGo }: { hit: SearchHit; onGo: () => void }) {
@@ -22,7 +23,7 @@ export function SettingsWindowResultRow({ hit, onGo }: { hit: SearchHit; onGo: (
       type="button"
       {...HINT_RIGHT(t('settings.searchResultHint'))}
       onClick={onGo}
-      className="border-base-300 hover:bg-base-300 flex w-full flex-col gap-2 border-b py-3 text-left last:border-b-0"
+      className={cn(WINDOW_ROW_BUTTON, 'flex-col')}
     >
       <span className="flex items-center justify-between gap-4">
         <span className="text-xs font-medium">{t(entry.titleKey)}</span>

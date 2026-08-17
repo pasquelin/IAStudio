@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import { SliderField } from '@/design/SliderField'
-import { ADJUSTMENT_FIELDS } from '@/engines/skybox/adjustment-fields'
+import { ADJUSTMENT_FIELDS } from '@/engines/skybox/adjustmentFields'
 
 export type AdjustmentSlidersProps = {
   adjustments: AdjustmentStack

@@ -2,7 +2,7 @@ import { CHANNELS, type LogScope } from '@shared/ipc'
 import type { ActivityTopic } from '@shared/domain/activity'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
-import type { ActivityLog } from '@main/project/activity-log'
+import type { ActivityLog } from '@main/project/activityLog'
 import { parseLogEntry, parseTraceEntry } from './validation'
 
 /**

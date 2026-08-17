@@ -12,9 +12,9 @@ import {
   trackRows,
   visibleRange,
   type Viewport,
-} from './timeline-geometry'
-import { MDI_VIEWBOX, mdiPath } from '@/helpers/mdi-canvas'
-import { paintBandEnd } from './band-end'
+} from './timelineGeometry'
+import { MDI_VIEWBOX, mdiPath } from '@/helpers/mdiCanvas'
+import { paintBandEnd } from './bandEnd'
 import { paintRuler as paintBandRuler, readRulerStyle } from './ruler'
 import {
   clipEnd,
@@ -25,7 +25,7 @@ import {
   type Track,
   type TrackKind,
   type Us,
-} from './timeline-state'
+} from './timelineState'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
 import type { Point, Size } from '../core/geometry'
 import { waveformColumns, type WaveColumn } from './waveform'

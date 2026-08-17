@@ -3,7 +3,7 @@ import { cp, mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import { exists } from '@main/persistence'
 import { isStagingName, kindForExtension } from '@shared/domain/document'
-import { extensionOf } from '@shared/domain/file-name'
+import { extensionOf } from '@shared/domain/fileName'
 import { entriesByName, isHiddenEntry, type FolderEntry } from '@shared/domain/folder'
 import { foldForSearch } from '@shared/text'
 
@@ -255,7 +255,7 @@ export type FolderWriter = {
  * The four gestures that write to the project folder. Primitives, and deliberately naive.
  *
  * **They refuse nothing on their own account**, which is the change this phase made: what may
- * be written is decided once, in `file-plan.ts`, against a reading of the folders taken before
+ * be written is decided once, in `filePlan.ts`, against a reading of the folders taken before
  * anything moves. Two places deciding meant two answers free to disagree — and the panel would
  * grey a row the main process would have allowed, or the reverse.
  *

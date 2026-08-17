@@ -4,11 +4,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { canUndo } from '@/engines/core/history'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
-import { DEFAULT_VIDEO_TOOL } from '@/spaces/video/video-tools'
+import { DEFAULT_VIDEO_TOOL } from '@/spaces/video/videoTools'
 import { useDocuments } from '@/stores/documents'
 import { installSequence } from '@/stores/sequence-fixtures'
 import { sequenceHistoryOf, sequenceOf, useSequences } from '@/stores/sequences'
-import { useVideoTool } from '@/stores/video-tool'
+import { useVideoTool } from '@/stores/videoTool'
 import { TimelineActions } from './TimelineActions'
 
 const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })

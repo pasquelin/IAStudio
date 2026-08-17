@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MaterialStyle } from '@shared/domain/style'
 import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/texture'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useStyles } from './styles'
 
 function styleNamed(name: string): MaterialStyle {

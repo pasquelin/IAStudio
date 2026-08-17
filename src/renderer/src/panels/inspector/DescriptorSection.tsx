@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PropertySection } from '@/design/PropertySection'
 import type { GestureProps } from '@/design/styles'
-import type { FieldValue, PropertyField } from '@/engines/scene/property-fields'
+import type { FieldValue, PropertyField } from '@/engines/scene/propertyFields'
 import { PropertyControl } from './PropertyControl'
 
 export type DescriptorSectionProps = {

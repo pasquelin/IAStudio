@@ -1,8 +1,8 @@
 import { CHANNELS } from '@shared/ipc'
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
-import { checkAssetName } from '@shared/domain/asset-name'
+import { checkAssetName } from '@shared/domain/assetName'
 import { defined } from '@shared/guards'
-import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from '@shared/domain/cloud-asset'
+import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from '@shared/domain/cloudAsset'
 import type { SyncOutcome } from '@shared/domain/sync'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
@@ -13,20 +13,20 @@ import {
   quietlyReducedBy,
   reducedBy,
 } from '@main/scenario/client'
-import type { RemoteAssetCatalog } from '@main/scenario/asset-catalog'
+import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
 import {
   filterExpression,
   publicFeedFilter,
   NSFW_EMPTY,
   PUBLIC_FEED_SORT,
-} from '@main/scenario/filter-expression'
-import { remoteTypesFor } from '@main/scenario/remote-types'
+} from '@main/scenario/filterExpression'
+import { remoteTypesFor } from '@main/scenario/remoteTypes'
 import { OFFSET_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
-import type { AsyncCatalog } from '@main/project/catalog-client'
-import type { ActivityLog } from '@main/project/activity-log'
-import type { AutoCaption, DescribeAssets } from './auto-caption'
-import type { CloudBackend } from './cloud-backend'
-import { planSync, type SyncSide } from './sync-plan'
+import type { AsyncCatalog } from '@main/project/catalogClient'
+import type { ActivityLog } from '@main/project/activityLog'
+import type { AutoCaption, DescribeAssets } from './autoCaption'
+import type { CloudBackend } from './cloudBackend'
+import { planSync, type SyncSide } from './syncPlan'
 import {
   parseActivityQuery,
   parseAlsoRemote,

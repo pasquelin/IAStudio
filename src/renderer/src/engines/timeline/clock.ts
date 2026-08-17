@@ -1,4 +1,4 @@
-import type { Us } from './timeline-state'
+import type { Us } from './timelineState'
 
 export type ClockDeps = {
   /** `AudioContext.currentTime`, in seconds, or null when no audio is playing. */

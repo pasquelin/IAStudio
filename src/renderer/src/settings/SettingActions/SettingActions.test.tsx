@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SettingActionId } from '@shared/domain/settings-registry'
-import { installFakeBridge } from '@/services/fake-bridge'
-import { useSettingsDraft } from '@/stores/settings-draft'
+import type { SettingActionId } from '@shared/domain/settingsRegistry'
+import { installFakeBridge } from '@/services/fakeBridge'
+import { useSettingsDraft } from '@/stores/settingsDraft'
 import { SettingActions } from './SettingActions'
 
 const realConfirm = window.confirm

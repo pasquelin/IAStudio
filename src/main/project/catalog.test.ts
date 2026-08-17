@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, onTestFinished } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { createCatalog, migrate, type Catalog } from './catalog'
-import { openMemoryDatabase } from './sqlite-memory'
+import { openMemoryDatabase } from './sqliteMemory'
 import type { SqliteDriver } from './sqlite'
 
 function asset(overrides: Partial<Asset> = {}): Asset {

@@ -11,11 +11,11 @@ import {
   openWindow,
   resetHandlers,
   type FakeWindow,
-} from '@main/ipc/test-harness'
+} from '@main/ipc/testHarness'
 import { setWindowLanguage } from '@main/window/language'
 import { buildMenu, registerMenuHandlers } from './index'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 // The three neighbours the menu calls into. Real, they pull the whole window layer in — and
 // what is under test here is which window a command reaches, never what opening one does.
 vi.mock('@main/window/windows', () => ({

@@ -118,7 +118,7 @@ Every long task is **cancellable**, **reports progress**, and runs in a pool bou
 `better-sqlite3` is synchronous: a heavy query on the main process blocks every window, so
 non-trivial catalogue queries go through `worker_threads`.
 
-Three threads exist for exactly that reason. `main/project/catalog-worker.ts` owns the database
+Three threads exist for exactly that reason. `main/project/catalogWorker.ts` owns the database
 and answers a message loop, so a search across thousands of assets never freezes a window.
 `renderer/src/engines/audio/audio.worker.ts` runs the sound chain off the window's thread, with
 sample buffers **transferred** rather than copied. And `renderer/src/engines/scene/bvh.worker.ts`
@@ -134,9 +134,9 @@ refused send was an assurance no test could reach — emptied, the gate stayed g
 nothing can read is a register nothing measures**, which is the remedy `framingPlacement` already
 got when it left `frameSelection`.
 
-**And two processes, for what must not share a heap.** `main/media/peaks-worker.ts` reduces a
+**And two processes, for what must not share a heap.** `main/media/peaksWorker.ts` reduces a
 waveform in a `utilityProcess`: an hour of PCM measured 129 ms on the main thread, and every
-window of the studio waited it out. `main/dictation/stt-worker.ts` holds Parakeet — six
+window of the studio waited it out. `main/dictation/sttWorker.ts` holds Parakeet — six
 hundred million parameters, 640 MB of weights — in a `utilityProcess` of its own. A thread would
 not have done: it shares its process's heap and lifetime, so the 700 MB would stay in the main
 process's footprint and a crash in the native addon would take the studio with it. Everything
@@ -196,19 +196,19 @@ src/main/
 ├── scenario/
 │   ├── client.ts            the @scenario-labs/sdk client, built from stored credentials
 │   ├── credentials.ts       reading, validating, and reporting auth state
-│   ├── model-registry.ts    GET /models/{id} → FieldDescriptor[]
-│   ├── model-catalog.ts     paginated model listing, cached
-│   ├── job-manager.ts       the queue, the concurrency, the polling
+│   ├── modelRegistry.ts     GET /models/{id} → FieldDescriptor[]
+│   ├── modelCatalog.ts      paginated model listing, cached
+│   ├── jobManager.ts        the queue, the concurrency, the polling
 │   ├── runner.ts            what actually calls generate
 │   ├── schema.ts            schema translation and model family inference
 │   ├── retry.ts             exponential backoff, taken out of the JobManager and shared
-│   ├── asset-catalog.ts     the remote library, read and paginated
-│   ├── asset-normalizer.ts  an API asset brought back to the studio's shape
-│   ├── owner-scope.ts       which project the active key opens onto
-│   ├── filter-expression.ts the search translated for the API
+│   ├── assetCatalog.ts      the remote library, read and paginated
+│   ├── assetNormalizer.ts   an API asset brought back to the studio's shape
+│   ├── ownerScope.ts        which project the active key opens onto
+│   ├── filterExpression.ts  the search translated for the API
 │   ├── limits.ts            the batch sizes the API imposes
-│   ├── prompt-assist.ts     variants, translation, style reading
-│   ├── assist-queue.ts      the bounded queue of background assistance
+│   ├── promptAssist.ts      variants, translation, style reading
+│   ├── assistQueue.ts       the bounded queue of background assistance
 │   ├── uploader.ts          sending a file up to the library
 │   ├── cost.ts              what a generation would cost, without running it
 │   ├── usage.ts             the units spent, and the price list
@@ -216,18 +216,18 @@ src/main/
 ├── project/
 │   ├── store.ts             create and open a project folder, read/write the manifest
 │   ├── catalog.ts           the SQLite asset index
-│   ├── catalog-thread.ts    the worker carrying it, and its protocol
-│   ├── activity-log.ts      what the studio did and failed to do
+│   ├── catalogThread.ts     the worker carrying it, and its protocol
+│   ├── activityLog.ts       what the studio did and failed to do
 │   ├── documents.ts         the atomic write of a document
 │   ├── sqlite.ts            the SqliteDriver port
-│   ├── sqlite-native.ts     better-sqlite3 — production
-│   └── sqlite-memory.ts     node:sqlite — tests
+│   ├── sqliteNative.ts      better-sqlite3 — production
+│   └── sqliteMemory.ts      node:sqlite — tests
 ├── assets/
-│   ├── local-backend.ts     the project's assets, on disk
-│   ├── cloud-backend.ts     the same ones, on the library's side
-│   ├── sync-plan.ts         what two sides would have to do about each other
+│   ├── localBackend.ts      the project's assets, on disk
+│   ├── cloudBackend.ts      the same ones, on the library's side
+│   ├── syncPlan.ts          what two sides would have to do about each other
 │   ├── collector.ts         what a generation drops into the project
-│   ├── auto-caption.ts      naming a picture from what the API sees in it
+│   ├── autoCaption.ts       naming a picture from what the API sees in it
 │   └── protocol.ts          the scenario:// protocol
 ├── dictation/               speech recognition: permissions, model, segmenting, handlers
 ├── assistant/               the assistant's thinking, behind a port, and how its reply is read
@@ -269,8 +269,8 @@ is assumed. Bypassing the queue with a direct SDK call is how you get a burst of
 ### Two asset backends, one planner
 
 The project and the account's library are two stores, served by two backends of the same shape:
-`local-backend.ts` for the folder on disk, `cloud-backend.ts` for the API. What decides what
-should move between them lives elsewhere, and is **pure**: `sync-plan.ts`.
+`localBackend.ts` for the folder on disk, `cloudBackend.ts` for the API. What decides what
+should move between them lives elsewhere, and is **pure**: `syncPlan.ts`.
 
 That separation carries two promises:
 
@@ -291,7 +291,7 @@ mean rewriting every row on every key change — and showing a stale answer in b
 
 ### The activity journal
 
-`project/activity-log.ts` keeps account of what the studio did and failed to do. Three decisions
+`project/activityLog.ts` keeps account of what the studio did and failed to do. Three decisions
 are frozen into it, each answering a precise defect:
 
 - **`record` returns immediately.** It is called from failure paths: a journal that made its
@@ -397,7 +397,7 @@ src/renderer/src/
 ├── stores/       zustand: documents, tools, layouts, models, assets, jobs, settings, keymap
 ├── hooks/        shortcuts, native menu, density, window state, debounce…
 ├── helpers/      pure functions, all unit-tested
-├── services/     the bridge accessor and failure-message mapping
+├── services/     the bridge accessor and failure message mapping
 ├── i18n/         the window-side i18next setup
 ├── types/        `window.studio`, declared global — the renderer's only types file
 ├── main.tsx      the entry — everything it reaches statically is in the first screen
@@ -434,7 +434,7 @@ undoes the gain while breaking nothing visible — the worst kind of regression,
 stopwatch sees.
 
 **The panels went out in their turn**, and that is what shrank the neighbours list.
-`app/tool-components.ts` used to import them all outright; it now declares, per panel, **the
+`app/toolComponents.ts` used to import them all outright; it now declares, per panel, **the
 module to load and what its header does** — that second half is needed, because the title row lays
 itself out on the first paint and a separator arriving a frame later would shift a row already on
 screen. Measured at the same commit on both sides, preloads counted, no sourcemaps:
@@ -443,7 +443,7 @@ screen. Measured at the same commit on both sides, preloads counted, no sourcema
 > **A glob on the folder would remove the copy of each panel's name, and it was written then taken
 > back out.** `eager-graph.test.ts` walks **static** imports: a glob is invisible to it, and the
 > very guard that watches this property would have stayed green whatever the glob did to the entry
-> chunk. The copy stays, and `tool-components.test.ts` holds it — a `layers` naming the meshes
+> chunk. The copy stays, and `toolComponents.test.ts` holds it — a `layers` naming the meshes
 > module would swap the two in silence.
 
 **Two neighbours remain**, and neither is an editor: they are helpers something on the first
@@ -472,7 +472,7 @@ Their callbacks are kept stable for that memo to bite.
 `sequence.mirror` opens a second window mirroring the Program monitor, for a second screen. **The
 IPC bridge carries one thing only: opening that window** (`main/window/mirror.ts`). Everything else
 — the edit, the playhead, playback — travels over a `BroadcastChannel`
-(`spaces/video/mirror-channel.ts`).
+(`spaces/video/mirrorChannel.ts`).
 
 **This is no way around invariant 2**, which guards the boundary between PROCESSES. Both windows
 load the same renderer bundle: they already share `SequenceState` as a type, and routing it through
@@ -520,7 +520,7 @@ well as zone would land in a different row of the rail depending on where you ca
 
 **Two rules escape the registry**, and only two, because they depend on state or on the workspace,
 where `shared/` holds no runtime dependency. Hence a layer above it, in
-`helpers/tool-registry.ts`, rather than inside:
+`helpers/toolRegistry.ts`, rather than inside:
 
 - the generator is offered only where a model is chosen or preferred;
 - a half nobody has chosen for shows the **first panel the workspace declares there**. It holds
@@ -665,7 +665,7 @@ form that silently loses a field is worse than an ugly one.
 generations get, not a fixed rate. At a fixed rate, four concurrent generations ask for 120
 requests a minute against the hundred the API grants — the limiter then holds every poll, the SDK
 retries, and **a generation that is running and being paid for is reported as a rate-limit failure
-fifteen seconds in**. The budget itself is *derived* from the constants of `rate-limiter.ts` rather
+fifteen seconds in**. The budget itself is *derived* from the constants of `rateLimiter.ts` rather
 than written out, precisely so it cannot go quietly false the day one of them is tuned.
 
 **Step 5b reads a price out of two shapes of answer, because the reference and the server do not
@@ -690,7 +690,7 @@ ceiling, only a cliff — type slower than its delay and every keystroke becomes
 same estimate is never bought twice, and it does not retry.
 
 **`DynamicForm` is lazy-loaded**, and the three functions that call zod live in
-`helpers/dynamic-form-schema`, apart from `helpers/dynamic-form`. The two halves go together:
+`helpers/dynamicFormSchema`, apart from `helpers/dynamicForm`. The two halves go together:
 without the second, `referencePictures` kept zod in the eager graph. zod, `react-hook-form` and
 `@hookform/resolvers` are at **zero** in the initial chunk, which drops from 2,030.50 to
 1,810.88 kB — measured by VLQ-decoding the sourcemaps, and locked by tests that read the source.
@@ -714,7 +714,7 @@ nothing says what they are any more. `.scenario/items.json` is what is left to r
 backup keyed by content fingerprint, written after every reconciliation pass that changed
 something, which the studio never reads of its own accord.
 
-**A pass puts it back in agreement with the disk**, which is not rebuilding it. `catalog-rescan.ts`
+**A pass puts it back in agreement with the disk**, which is not rebuilding it. `catalogRescan.ts`
 runs in the catalogue's thread when a project opens and when a window comes back to the front
 (5 s floor, one pass at a time): it finds a file moved outside the studio by its content
 fingerprint and refiles its row (`repath`), and it DATES an absence — `missing_at` — without ever
@@ -741,7 +741,7 @@ leave a truncated document where the work was.
 The body belongs to the space that wrote it: the main process never reads into it, it stamps an
 envelope and hands it back untouched. A space that learns to save therefore needs no channel of
 its own. **All six kinds can write themselves today** — image, scene, sequence, audio, skybox and
-texture, declared in one place, `IO_BY_KIND` in `app/document-io.ts`. A kind absent from
+texture, declared in one place, `IO_BY_KIND` in `app/documentIo.ts`. A kind absent from
 that table has a Save that does nothing, rather than one that writes an empty body.
 
 ---
@@ -1166,7 +1166,7 @@ and the panels through Testing Library.
 | A workspace | `WORKSPACE_IDS`, then its icon and family in `helpers/workspaces.ts` — the compiler asks for both |
 | An IPC channel | `shared/ipc.ts` first, then the handler; the signature is derived, so start from the contract |
 | A mesh or light kind | `mesh-primitives.ts` / `light-types.ts` — the toolbar, the panels and the native menu all read those tables |
-| An image tool | `spaces/image/image-tools.ts`, in the right group |
+| An image tool | `spaces/image/imageTools.ts`, in the right group |
 | A shared visual shape | `design/`, one component per file, plus its test |
 
 Two rules that save the most time: check that a helper does not already exist before writing one,

@@ -3,29 +3,29 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { stemOf } from '@shared/domain/file-name'
-import type { FileOutcome } from '@shared/domain/file-op'
-import { natureOf, opensInStudio } from '@shared/domain/file-role'
+import { stemOf } from '@shared/domain/fileName'
+import type { FileOutcome } from '@shared/domain/fileOp'
+import { natureOf, opensInStudio } from '@shared/domain/fileRole'
 import type { FolderEntry } from '@shared/domain/folder'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { fakeMenu } from '@/helpers/menu-fixtures'
-import { LIST_ONLY } from '@/helpers/collection-state'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { LIST_ONLY } from '@/helpers/collectionState'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
-import { useExplorerView } from '@/stores/explorer-view'
+import { useExplorerView } from '@/stores/explorerView'
 import { useSelection } from '@/stores/selection'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { Explorer } from './Explorer'
 
 const openDocument = vi.fn()
-vi.mock('@/app/dockview-api', () => ({
+vi.mock('@/app/dockviewApi', () => ({
   openDocument: (...args: unknown[]) => openDocument(...args),
 }))
 
 const openAsset = vi.hoisted(() => vi.fn<(asset: Asset) => Promise<void>>(() => Promise.resolve()))
-vi.mock('@/helpers/open-asset', () => ({ openAsset }))
+vi.mock('@/helpers/openAsset', () => ({ openAsset }))
 
 const scene: DocumentDescriptor = {
   id: 'a3f1',
@@ -1392,7 +1392,7 @@ describe('searching the explorer', () => {
 
   /**
    * Shown, and only shown: what a dot hides is refused by every gesture on both sides
-   * (`file-plan.test.ts`). Which entries come back is the main process's answer, so what is read
+   * (`filePlan.test.ts`). Which entries come back is the main process's answer, so what is read
    * here is that the panel asked for them.
    */
   it('asks the folder for what a dot hides once the reader wants it', async () => {

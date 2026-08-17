@@ -11,11 +11,11 @@ import {
   trackOfClip,
   type SequenceState,
   type Us,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { clamp } from '@shared/numeric'
 import { useDocuments } from '@/stores/documents'
 import { playbackOf, usePlayback } from '@/stores/playback'
-import { mirrorMessageOf, openMirrorChannel } from './mirror-channel'
+import { mirrorMessageOf, openMirrorChannel } from './mirrorChannel'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
@@ -52,7 +52,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
    *
    * The whole sequence on every change, the playhead alone on every move: a scrub posts a few
    * hundred times a second, and re-posting every track with each would be the one thing making
-   * the return cost anything. `mirror-channel` says why this does not go through the bridge.
+   * the return cost anything. `mirrorChannel` says why this does not go through the bridge.
    */
   const channel = useRef<BroadcastChannel | null>(null)
   /** The last state posted, so a playhead that moved alone is not sent as a whole edit. */
@@ -63,7 +63,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
 
     const opened = openMirrorChannel()
     channel.current = opened
-    // The return opens after all this was published, and asks for it — see `mirror-channel`.
+    // The return opens after all this was published, and asks for it — see `mirrorChannel`.
     opened.onmessage = event => {
       const asked = mirrorMessageOf(event.data)?.kind === 'ask'
       if (asked && posted.current) opened.postMessage({ kind: 'edit', sequence: posted.current })

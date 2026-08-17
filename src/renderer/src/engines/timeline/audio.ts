@@ -1,5 +1,5 @@
 import { clamp } from '@shared/numeric'
-import { clipEnd, playsThrough, sourceTimeAt, type SequenceState, type Us } from './timeline-state'
+import { clipEnd, playsThrough, sourceTimeAt, type SequenceState, type Us } from './timelineState'
 
 /**
  * The clip's own ramps, as timeline instants rather than lengths.

@@ -77,7 +77,7 @@ export function registerAssetScheme(): void {
   ])
 }
 
-/** Asynchronous since the catalogue moved to its own thread — see `catalog-thread.ts`. */
+/** Asynchronous since the catalogue moved to its own thread — see `catalogThread.ts`. */
 type AssetResolver = (key: string) => Promise<string | null>
 
 /**

@@ -10,14 +10,14 @@ import {
   withChain,
   type TakeChain,
 } from '@/engines/audio/edits'
-import { startAssetDrag } from '@/helpers/asset-drag'
+import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { SECOND } from '@shared/domain/time'
 import { addClip } from '@/engines/timeline/commands'
-import { makeClip, updateClip, EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timeline-state'
+import { makeClip, updateClip, EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timelineState'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
+import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audioEdits'
 import { useDocuments } from '@/stores/documents'
 import { installDocuments } from '@/stores/document-fixtures'
 import { AudioDocument } from './AudioDocument'
@@ -32,7 +32,7 @@ const decodeAsset = vi.hoisted(() =>
   vi.fn(() => Promise.resolve({ sampleRate: 100, channels: [new Float32Array(200).fill(0.5)] })),
 )
 
-vi.mock('@/helpers/audio-decode', () => ({ decodeAsset }))
+vi.mock('@/helpers/audioDecode', () => ({ decodeAsset }))
 
 vi.mock('./useWaveSurfer', () => ({
   useWaveSurfer: () => ({ playing: false, currentTime: 0, toggle: vi.fn(), seek: vi.fn() }),

@@ -5,7 +5,7 @@ import { MAX_LOG_MESSAGE } from '@shared/ipc'
 import type { AuthState } from '@shared/domain/settings'
 import type { Credentials } from '@main/settings/accounts'
 import { log } from '@main/log'
-import type { WatchCredentials } from './credentials-watch'
+import type { WatchCredentials } from './credentialsWatch'
 
 /** Thrown when a channel needing the API is reached without usable credentials. */
 export class NotAuthenticatedError extends Error {

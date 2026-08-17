@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
-import { invoke, resetHandlers } from '@main/ipc/test-harness'
+import { invoke, resetHandlers } from '@main/ipc/testHarness'
 import { registerDialogHandlers } from './dialogs'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 const savePicture = vi.fn<(name: string, bytes: Uint8Array) => Promise<string | null>>(() =>
   Promise.resolve('/Users/someone/Pictures/canvas.png'),

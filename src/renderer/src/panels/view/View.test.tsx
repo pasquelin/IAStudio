@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
-import { useSkyboxViews, skyboxViewOf } from '@/stores/skybox-views'
+import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
 import { View } from './View'
 
 describe('the View panel', () => {
@@ -37,7 +37,7 @@ describe('the View panel', () => {
   it('sets the field of view', () => {
     render(<View />)
 
-    fireEvent.change(screen.getByLabelText('Champ de vision'), { target: { value: '90' } })
+    fireEvent.change(screen.getByLabelText('Angle de vue'), { target: { value: '90' } })
 
     expect(skyboxViewOf(useSkyboxViews.getState(), 'sky-1').fieldOfView).toBe(90)
   })
