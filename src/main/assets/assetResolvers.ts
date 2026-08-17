@@ -1,7 +1,7 @@
 import type { Asset } from '@shared/domain/asset'
 import { ASSET_HOST, POSTER_HOST, THUMB_HOST } from '@shared/domain/asset'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
-import { isCatalogueGone } from '@main/project/store'
+import { orWhenGone } from '@main/project/store'
 import { posterFileOf, servedFileOf, type AssetResolvers } from './protocol'
 
 /** What the four hosts read, each behind the narrowest port that answers for it. */
@@ -12,18 +12,6 @@ export type AssetResolverDeps = {
   findAsset: (assetId: string) => Promise<Asset | null>
   favouriteThumbnail: (favoriteId: string) => string | null
   thumbnailOf: (relative: string) => Promise<string | null>
-}
-
-// A refusal to answer a LEAVING project is « nothing », not a failure: `projectPath()` is read a
-// tick before the catalogue replies, and a project can be left in between. Told apart here
-// because only this side can — past it, a rejection is read as a defect.
-async function rowOrNothing(read: () => Promise<Asset | null>): Promise<Asset | null> {
-  try {
-    return await read()
-  } catch (error: unknown) {
-    if (isCatalogueGone(error)) return null
-    throw error
-  }
 }
 
 /**
@@ -38,7 +26,9 @@ export function createAssetResolvers(deps: AssetResolverDeps): AssetResolvers {
     const root = deps.projectPath()
     if (!root) return null
 
-    const asset = await rowOrNothing(() => deps.findAsset(assetId))
+    // `projectPath()` was read a tick before the catalogue replies, and a project can be left in
+    // between: the refusal that follows is the same fact, answered « no row » rather than thrown.
+    const asset = await orWhenGone(() => deps.findAsset(assetId), null)
     return asset ? pick(root, asset) : null
   }
 
