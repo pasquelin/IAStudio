@@ -6,8 +6,14 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent,
 } from 'react'
-import { snapToFrame, type Us } from '@shared/domain/time'
-import { moveAnimationKey, unkeySubject } from '@/engines/scene/animationCommands'
+import { frameDuration, snapToFrame, type Us } from '@shared/domain/time'
+import {
+  editCameraShot,
+  moveAnimationKey,
+  removeCameraShot,
+  unkeySubject,
+} from '@/engines/scene/animationCommands'
+import { activeShotAt, draggedShot } from '@/engines/scene/cameraShots'
 import { multi, setModelClips } from '@/engines/scene/commands'
 import type { Command } from '@/engines/core/history'
 import type { SceneState } from '@/engines/scene/sceneState'
@@ -37,6 +43,7 @@ type Grab =
   | { kind: 'scrub' }
   | { kind: 'key'; rowId: string; trackIds: readonly string[]; from: Us; at: Us }
   | { kind: 'block'; nodeId: string; clipId: string; grabbedAt: Us }
+  | { kind: 'shot'; shotId: string; edge: 'start' | 'end' | null; grabbedAt: Us }
 
 /** Slides one clip block along the band, keeping what it plays and leaving its neighbours put. */
 function moveBlock(documentId: string, nodeId: string, clipId: string, start: Us): void {
@@ -60,6 +67,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   const grabbed = useRef<Grab | null>(null)
 
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
+  const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
   const view = useAnimationViews(state => animationViewOf(state, documentId))
 
@@ -67,7 +75,17 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   // zustand a new snapshot on every render and the subscription would never settle.
   const selected = useMemo(() => keySetOf(view.selected), [view.selected])
 
-  const latest = useRef({ rows, viewport: view.viewport, timeline, playhead, selected })
+  const activeShotId = activeShotAt(timeline, nodes, playhead)?.id ?? null
+
+  const latest = useRef({
+    rows,
+    viewport: view.viewport,
+    timeline,
+    playhead,
+    selected,
+    activeShotId,
+    selectedShotId: view.selectedShotId,
+  })
   const size = useRef<Size>({ width: 0, height: 0 })
 
   const paint = useCallback((): void => {
@@ -84,6 +102,8 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
           duration: current.timeline.duration,
           playhead: current.playhead,
           selected: current.selected,
+          activeShotId: current.activeShotId,
+          selectedShotId: current.selectedShotId,
         },
         box,
       )
@@ -91,9 +111,17 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   }, [])
 
   useEffect(() => {
-    latest.current = { rows, viewport: view.viewport, timeline, playhead, selected }
+    latest.current = {
+      rows,
+      viewport: view.viewport,
+      timeline,
+      playhead,
+      selected,
+      activeShotId,
+      selectedShotId: view.selectedShotId,
+    }
     paint()
-  }, [rows, view.viewport, timeline, playhead, selected, paint])
+  }, [rows, view.viewport, timeline, playhead, selected, activeShotId, view.selectedShotId, paint])
 
   useRepaintOnResize(canvasRef, paint)
 
@@ -127,6 +155,13 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     if (event.key !== 'Delete' && event.key !== 'Backspace') return
 
     const current = latest.current
+    if (current.selectedShotId) {
+      event.preventDefault()
+      useScenes.getState().runCommand(documentId, removeCameraShot(current.selectedShotId))
+      useAnimationViews.getState().setSelectedShot(documentId, null)
+      return
+    }
+
     const picked = [...current.selected]
     if (picked.length === 0) return
 
@@ -171,6 +206,10 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>): void => {
     const hit = hitAt(event)
+    // Anywhere but a bar drops the picked shot: Delete would otherwise take away a shot the
+    // pointer left behind three gestures ago.
+    if (hit?.kind !== 'shot') useAnimationViews.getState().setSelectedShot(documentId, null)
+
     if (!hit) {
       useAnimationViews.getState().setSelected(documentId, [])
       return
@@ -201,6 +240,20 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       // in the history, and `runCoalescing` only merges while a gesture is open.
       useScenes.getState().beginGesture(documentId)
       useAnimationViews.getState().setSelected(documentId, [])
+      return
+    }
+
+    if (hit.kind === 'shot') {
+      grabbed.current = {
+        kind: 'shot',
+        shotId: hit.shotId,
+        edge: hit.edge,
+        grabbedAt: hit.grabbedAt,
+      }
+      useScenes.getState().beginGesture(documentId)
+      const views = useAnimationViews.getState()
+      views.setSelected(documentId, [])
+      views.setSelectedShot(documentId, hit.shotId)
       return
     }
 
@@ -236,6 +289,15 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       return
     }
 
+    if (grab.kind === 'shot') {
+      const shot = current.timeline.shots.find(held => held.id === grab.shotId)
+      const bounds = shot ? draggedShot(shot, grab, at, frameDuration(current.timeline.fps)) : null
+      // Written straight through, like a block: the bar IS the preview, and the run collapses
+      // into one entry because a gesture was opened on the press.
+      if (bounds) useScenes.getState().runCommand(documentId, editCameraShot(grab.shotId, bounds))
+      return
+    }
+
     // The preview follows the pointer; the command is written once, on release — a drag must
     // cost one entry in the history, not one per pixel.
     grabbed.current = { ...grab, at: clampPlayhead(at, current.timeline.duration) }
@@ -249,7 +311,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
 
     event.currentTarget.releasePointerCapture(event.pointerId)
 
-    if (grab.kind === 'block') {
+    if (grab.kind === 'block' || grab.kind === 'shot') {
       useScenes.getState().endGesture(documentId)
       return
     }

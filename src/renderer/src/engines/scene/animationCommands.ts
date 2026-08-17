@@ -1,6 +1,7 @@
 import {
   TRACK_PROPERTIES,
   type AnimationTrack,
+  type CameraShot,
   type Keyframe,
   type TrackProperty,
   type TrackTarget,
@@ -297,6 +298,82 @@ export function moveAnimationKey(trackId: string, from: Us, to: Us): Command<Sce
     // The key named is gone — dropped by another window between the grab and the release.
     return moving ? withKey(withoutKey(keys, from), { time: to, value: moving.value }) : null
   })
+}
+
+const writeShots = (
+  state: SceneState,
+  change: (shots: readonly CameraShot[]) => readonly CameraShot[],
+): SceneState => ({
+  ...state,
+  animation: { ...state.animation, shots: change(state.animation.shots) },
+})
+
+/**
+ * Puts a camera on air for a stretch of time. The shot arrives built, id included, for the same
+ * reason a track does: a redo must name the shot the undo took away.
+ */
+export function addCameraShot(shot: CameraShot): Command<SceneState> {
+  return {
+    id: `shot:add:${shot.id}`,
+    apply: state => writeShots(state, shots => [...shots, shot]),
+    revert: state => writeShots(state, shots => shots.filter(held => held.id !== shot.id)),
+  }
+}
+
+export function removeCameraShot(shotId: string): Command<SceneState> {
+  let before: { position: number; shot: CameraShot } | null = null
+
+  return {
+    id: `shot:remove:${shotId}`,
+    apply: state => {
+      const position = state.animation.shots.findIndex(shot => shot.id === shotId)
+      const shot = state.animation.shots[position]
+      if (!shot) return state
+
+      before = { position, shot }
+      return writeShots(state, shots => shots.filter(held => held.id !== shotId))
+    },
+    revert: state => {
+      const origin = before
+      if (!origin) return state
+      // Put back where it stood: two shots of one layer starting together are settled by their
+      // order, so a shot restored at the end would come back on top of what it was under.
+      return writeShots(state, shots => {
+        const restored = [...shots]
+        restored.splice(origin.position, 0, origin.shot)
+        return restored
+      })
+    },
+  }
+}
+
+/**
+ * A shot moved, trimmed or sent to another layer — the three are one command because they are
+ * one thing: the same shot with other bounds. Whichever fields are given are the ones written.
+ */
+export function editCameraShot(
+  shotId: string,
+  changes: Partial<Omit<CameraShot, 'id' | 'cameraId'>>,
+): Command<SceneState> {
+  let previous: CameraShot | null = null
+
+  return {
+    id: `shot:edit:${shotId}`,
+    apply: state => {
+      previous = state.animation.shots.find(shot => shot.id === shotId) ?? null
+      return previous === null
+        ? state
+        : writeShots(state, shots =>
+            shots.map(shot => (shot.id === shotId ? { ...shot, ...changes } : shot)),
+          )
+    },
+    revert: state => {
+      const origin = previous
+      return origin === null
+        ? state
+        : writeShots(state, shots => shots.map(shot => (shot.id === shotId ? origin : shot)))
+    },
+  }
 }
 
 /** How long the whole thing runs, and how finely it is cut. */

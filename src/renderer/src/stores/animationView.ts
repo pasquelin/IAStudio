@@ -18,6 +18,8 @@ export type AnimationView = {
   expanded: readonly string[]
   /** Picked keys, as `keyId(rowId, time)`. */
   selected: readonly string[]
+  /** The picked shot, which Delete takes away and the layer buttons act on. */
+  selectedShotId: string | null
   /** Whether moving an object writes a key rather than its rest pose. */
   autoKey: boolean
   /**
@@ -33,6 +35,7 @@ const DEFAULT_ANIMATION_VIEW: AnimationView = {
   viewport: DEFAULT_VIEWPORT,
   expanded: [],
   selected: [],
+  selectedShotId: null,
   autoKey: false,
   order: [],
 }
@@ -42,6 +45,7 @@ export type AnimationViewState = {
   setViewport: (documentId: string, viewport: Viewport) => void
   toggleExpanded: (documentId: string, subjectId: string) => void
   setSelected: (documentId: string, selected: readonly string[]) => void
+  setSelectedShot: (documentId: string, selectedShotId: string | null) => void
   setAutoKey: (documentId: string, autoKey: boolean) => void
   /**
    * Moves one line in the sheet's own arrangement, and answers how many places it ACTUALLY
@@ -75,6 +79,9 @@ export const useAnimationViews = create<AnimationViewState>()(set => ({
 
   setSelected: (documentId, selected) =>
     set(state => write(state, documentId, view => ({ ...view, selected }))),
+
+  setSelectedShot: (documentId, selectedShotId) =>
+    set(state => write(state, documentId, view => ({ ...view, selectedShotId }))),
 
   setAutoKey: (documentId, autoKey) =>
     set(state => write(state, documentId, view => ({ ...view, autoKey }))),

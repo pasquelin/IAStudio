@@ -4,7 +4,10 @@ import { SECOND } from '@shared/domain/time'
 import { poseAt } from './animationEval'
 import {
   addAnimationTrack,
+  addCameraShot,
+  editCameraShot,
   recordingTracksFor,
+  removeCameraShot,
   keyNode,
   keySubject,
   moveAnimationKey,
@@ -16,6 +19,7 @@ import {
   setTimelineSettings,
   updateAnimationTrack,
 } from './animationCommands'
+import { cameraShot } from './animation-fixtures'
 import { EMPTY_SCENE, type SceneNode, type SceneState } from './sceneState'
 
 const target = (nodeId: string, property: TrackTarget['property'] = 'position'): TrackTarget => ({
@@ -544,5 +548,45 @@ describe('dragging an object that is already keyed', () => {
     expect(
       movesToCommand(opened, move, 0, true)!.apply(opened).nodes[0]?.transform.position.x,
     ).toBe(0)
+  })
+})
+
+describe('the shots of a sequence', () => {
+  const shot = cameraShot('s1', { start: 1 * SECOND, duration: 2 * SECOND })
+  const other = cameraShot('s2', { cameraId: 'cam-b', start: 4 * SECOND })
+  const start: SceneState = {
+    ...EMPTY_SCENE,
+    animation: { ...EMPTY_SCENE.animation, shots: [shot, other] },
+  }
+
+  it('puts a camera on air, and takes it back off on undo', () => {
+    const command = addCameraShot(cameraShot('s3'))
+    const applied = command.apply(start)
+
+    expect(applied.animation.shots.map(held => held.id)).toEqual(['s1', 's2', 's3'])
+    expect(command.revert(applied)).toEqual(start)
+  })
+
+  // Two shots of one layer starting together are settled by their order, so a shot restored at
+  // the end would come back on top of what it was under.
+  it('puts a removed shot back where it stood', () => {
+    const command = removeCameraShot('s1')
+    const applied = command.apply(start)
+
+    expect(applied.animation.shots.map(held => held.id)).toEqual(['s2'])
+    expect(command.revert(applied).animation.shots.map(held => held.id)).toEqual(['s1', 's2'])
+  })
+
+  it('moves, trims and re-layers through one command, and reverts the whole shot', () => {
+    const moved = editCameraShot('s1', { start: 5 * SECOND, duration: 1 * SECOND }).apply(start)
+    expect(moved.animation.shots[0]).toMatchObject({ start: 5 * SECOND, duration: 1 * SECOND })
+
+    const raised = editCameraShot('s1', { layer: 3 })
+    expect(raised.revert(raised.apply(start))).toEqual(start)
+  })
+
+  it('leaves the state alone when the shot named is gone', () => {
+    expect(editCameraShot('nowhere', { layer: 9 }).apply(start)).toBe(start)
+    expect(removeCameraShot('nowhere').apply(start)).toBe(start)
   })
 })

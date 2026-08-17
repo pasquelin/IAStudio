@@ -15,6 +15,7 @@ describe('how a scene band is being looked at', () => {
       viewport: DEFAULT_VIEWPORT,
       expanded: [],
       selected: [],
+      selectedShotId: null,
       autoKey: false,
       order: [],
     })

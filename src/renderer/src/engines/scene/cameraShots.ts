@@ -36,6 +36,35 @@ export function activeShotAt(
 }
 
 /**
+ * Where a drag leaves a shot: its body slides, its edges trim it.
+ *
+ * `null` when nothing would move, so a drag that has not left the frame it started on costs no
+ * entry in the history. A shot never shrinks below `minimum` and never starts before zero — a
+ * bar of no length would be a shot nothing can grab back.
+ */
+export function draggedShot(
+  shot: CameraShot,
+  drag: { edge: 'start' | 'end' | null; grabbedAt: Us },
+  at: Us,
+  minimum: Us,
+): { start: Us; duration: Us } | null {
+  const end = shot.start + shot.duration
+  let start = shot.start
+  let duration = shot.duration
+
+  if (drag.edge === 'start') {
+    start = Math.max(0, Math.min(at, end - minimum))
+    duration = end - start
+  } else if (drag.edge === 'end') {
+    duration = Math.max(minimum, at - shot.start)
+  } else {
+    start = Math.max(0, at - drag.grabbedAt)
+  }
+
+  return start === shot.start && duration === shot.duration ? null : { start, duration }
+}
+
+/**
  * What a render looks through at an instant.
  *
  * The one place that decides, for the film, the montage and the viewport alike — two answers

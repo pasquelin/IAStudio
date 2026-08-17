@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import type { CameraShot } from '@shared/domain/animation'
 import { SECOND } from '@shared/domain/time'
-import { animationTrack, timelineWith } from './animation-fixtures'
+import { animationTrack, cameraShot, timelineWith } from './animation-fixtures'
 import {
   CHANNEL_HEIGHT,
+  CLIP_HEIGHT,
   SUBJECT_HEIGHT,
   animationRows,
   mergedKeys,
@@ -20,6 +22,52 @@ const rowsOf = (
   expanded: string[] = [],
   nodes = CUBE,
 ) => animationRows(timelineWith(tracks), { nodes, expanded: new Set(expanded) })
+
+describe('the shot lines', () => {
+  const CAMERAS = [
+    { id: 'cam-a', name: 'Camera A' },
+    { id: 'cam-b', name: 'Camera B' },
+  ]
+
+  const shotRowsOf = (...shots: CameraShot[]) =>
+    animationRows(timelineWith([], { shots }), { nodes: CAMERAS, expanded: new Set() })
+
+  it('draws one line per layer, highest first, above the subjects', () => {
+    const rows = shotRowsOf(
+      cameraShot('low', { cameraId: 'cam-a' }),
+      cameraShot('high', { cameraId: 'cam-b', layer: 3 }),
+    )
+
+    expect(rows.map(row => row.kind)).toEqual(['shot', 'shot', 'subject', 'subject'])
+    expect(rows[0]).toMatchObject({ layer: 3, height: CLIP_HEIGHT })
+    expect(rows[1]).toMatchObject({ layer: 0 })
+  })
+
+  it('puts two shots of one layer on one line, and names the camera each shows', () => {
+    const rows = shotRowsOf(
+      cameraShot('first', { cameraId: 'cam-a' }),
+      cameraShot('second', { cameraId: 'cam-b', start: 5 * SECOND }),
+    )
+
+    const line = rows[0]
+    expect(line?.kind === 'shot' && line.bars.map(bar => bar.name)).toEqual([
+      'Camera A',
+      'Camera B',
+    ])
+  })
+
+  // The same rule `activeShotAt` answers by: a bar naming nothing would be a line one could drag
+  // and never see on screen.
+  it('leaves out a shot whose camera the scene no longer holds', () => {
+    const rows = shotRowsOf(cameraShot('gone', { cameraId: 'cam-gone' }))
+    expect(rows.some(row => row.kind === 'shot')).toBe(false)
+  })
+
+  it('drives no channel, so nothing on it is dragged as a key', () => {
+    const line = shotRowsOf(cameraShot('s1', { cameraId: 'cam-a' }))[0]
+    expect(line && trackIdsOf(line)).toEqual([])
+  })
+})
 
 describe('naming a subject', () => {
   it('is the node alone when no bone is addressed', () => {
@@ -74,7 +122,7 @@ describe('laying out the sheet', () => {
 
   it('names the object plainly, not with the composed name its tracks carry', () => {
     const rows = rowsOf([animationTrack('a', 'position', [], { name: 'Circle · Position' })])
-    expect(rows[0]?.name).toBe('Circle')
+    expect(rows[0]).toMatchObject({ name: 'Circle' })
   })
 
   it('folds the channels away until the subject is unfolded', () => {
@@ -112,7 +160,7 @@ describe('laying out the sheet', () => {
     ])
 
     expect(rows).toHaveLength(2)
-    expect(rows[1]?.name).toBe('Circle · Hips')
+    expect(rows[1]).toMatchObject({ name: 'Circle · Hips' })
   })
 
   it('keeps the objects in the order the scene holds them, so rows never jump', () => {

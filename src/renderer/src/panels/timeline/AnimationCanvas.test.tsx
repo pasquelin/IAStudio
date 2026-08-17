@@ -2,14 +2,15 @@ import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
-import { animationTrack, timelineWith } from '@/engines/scene/animation-fixtures'
+import { animationTrack, cameraShot, timelineWith } from '@/engines/scene/animation-fixtures'
 import {
   addAnimationTrack,
   setAnimationKey,
   setTimelineSettings,
 } from '@/engines/scene/animationCommands'
-import { animationRows } from '@/engines/scene/animationRows'
-import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
+import { animationRows, CLIP_HEIGHT } from '@/engines/scene/animationRows'
+import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
+import { cameraNodeFixture, meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { useAnimationViews } from '@/stores/animationView'
 import { installScene } from '@/stores/scene-fixtures'
@@ -64,7 +65,14 @@ describe('dragging a clip block', () => {
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({
       views: {
-        [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] },
+        [DOCUMENT]: {
+          viewport: VIEWPORT,
+          expanded: [],
+          selected: [],
+          selectedShotId: null,
+          autoKey: false,
+          order: [],
+        },
       },
     })
   })
@@ -126,7 +134,14 @@ describe('scrubbing and picking on the band', () => {
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({
       views: {
-        [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] },
+        [DOCUMENT]: {
+          viewport: VIEWPORT,
+          expanded: [],
+          selected: [],
+          selectedShotId: null,
+          autoKey: false,
+          order: [],
+        },
       },
     })
   })
@@ -183,7 +198,14 @@ describe('following a duration that changes', () => {
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({
       views: {
-        [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] },
+        [DOCUMENT]: {
+          viewport: VIEWPORT,
+          expanded: [],
+          selected: [],
+          selectedShotId: null,
+          autoKey: false,
+          order: [],
+        },
       },
     })
   })
@@ -230,7 +252,14 @@ describe('removing a picked key with the keyboard', () => {
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({
       views: {
-        [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] },
+        [DOCUMENT]: {
+          viewport: VIEWPORT,
+          expanded: [],
+          selected: [],
+          selectedShotId: null,
+          autoKey: false,
+          order: [],
+        },
       },
     })
   })
@@ -288,5 +317,88 @@ describe('removing a picked key with the keyboard', () => {
     act(() => press(canvas(), 'Delete'))
 
     expect(keys()).toHaveLength(2)
+  })
+})
+
+describe('dragging a shot', () => {
+  const SHOT = cameraShot('s1', { cameraId: 'cam-a', start: 1 * SECOND, duration: 2 * SECOND })
+
+  /** The vertical middle of the shot line, which the sheet draws above every subject. */
+  const SHOT_MIDDLE = RULER_HEIGHT + CLIP_HEIGHT / 2
+
+  beforeEach(() => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [cameraNodeFixture('cam-a')],
+      animation: { ...EMPTY_SCENE.animation, shots: [SHOT] },
+    })
+    useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({
+      views: {
+        [DOCUMENT]: {
+          viewport: VIEWPORT,
+          expanded: [],
+          selected: [],
+          selectedShotId: null,
+          autoKey: false,
+          order: [],
+        },
+      },
+    })
+  })
+
+  const shotRows = () =>
+    animationRows(sceneOf(useScenes.getState(), DOCUMENT).animation, {
+      nodes: [{ id: 'cam-a', name: 'Camera A' }],
+      expanded: new Set(),
+    })
+
+  const shotNow = () => sceneOf(useScenes.getState(), DOCUMENT).animation.shots[0]
+
+  it('slides the bar, keeping where inside it the pointer took hold', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    // Grabbed half a second into a shot that starts at one second, dropped at three.
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 300, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 300, SHOT_MIDDLE))
+
+    expect(shotNow()).toMatchObject({ start: 2.5 * SECOND, duration: 2 * SECOND })
+  })
+
+  it('trims the tail by its edge, leaving the head where it stands', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    act(() => press(canvas(), 'pointerdown', 300, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 500, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 500, SHOT_MIDDLE))
+
+    expect(shotNow()).toMatchObject({ start: 1 * SECOND, duration: 4 * SECOND })
+  })
+
+  // One entry however far the bar travelled: a drag that cost thirty ⌘Z would be unusable.
+  it('costs one entry in the history', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
+
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 200, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 300, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 300, SHOT_MIDDLE))
+
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length).toBe(before + 1)
+  })
+
+  it('takes the picked shot away on Delete, and lets the pick go with it', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 150, SHOT_MIDDLE))
+
+    act(() =>
+      canvas().dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })),
+    )
+
+    expect(sceneOf(useScenes.getState(), DOCUMENT).animation.shots).toEqual([])
+    expect(useAnimationViews.getState().views[DOCUMENT]?.selectedShotId).toBeNull()
   })
 })

@@ -2,9 +2,11 @@ import {
   EMPTY_TIMELINE,
   type AnimationTimeline,
   type AnimationTrack,
+  type CameraShot,
   type Keyframe,
   type TrackProperty,
 } from '@shared/domain/animation'
+import { SECOND } from '@shared/domain/time'
 
 export function animationTrack(
   id: string,
@@ -23,6 +25,10 @@ export function animationTrack(
     keys,
     ...extra,
   }
+}
+
+export function cameraShot(id: string, extra: Partial<CameraShot> = {}): CameraShot {
+  return { id, cameraId: 'cam-a', layer: 0, start: 0, duration: SECOND, ...extra }
 }
 
 export function timelineWith(

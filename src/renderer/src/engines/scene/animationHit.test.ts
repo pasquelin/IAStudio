@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { RULER_HEIGHT, type Viewport } from '../timeline/timelineGeometry'
-import { animationTrack, timelineWith } from './animation-fixtures'
+import { animationTrack, cameraShot, timelineWith } from './animation-fixtures'
 import { hitAnimation, type HitContext } from './animationHit'
 import { CHANNEL_HEIGHT, CLIP_HEIGHT, SUBJECT_HEIGHT, animationRows } from './animationRows'
 
@@ -147,5 +147,44 @@ describe('pointing at a clip block', () => {
 
   it('reads the row rather than the block before its start', () => {
     expect(hitAnimation(withBlock(), { x: 20, y: middle })?.kind).toBe('row')
+  })
+})
+
+describe('pointing at a shot', () => {
+  const withShot = (): HitContext => ({
+    rows: animationRows(
+      timelineWith([], {
+        shots: [cameraShot('s1', { start: 1 * SECOND, duration: 2 * SECOND })],
+      }),
+      { nodes: [{ id: 'cam-a', name: 'Camera A' }], expanded: new Set() },
+    ),
+    viewport,
+    fps: 25,
+  })
+
+  /** The vertical middle of the shot line, which is the first row of the sheet. */
+  const middle = RULER_HEIGHT + CLIP_HEIGHT / 2
+
+  it('finds the shot, and says how far into it the pointer landed', () => {
+    expect(hitAnimation(withShot(), { x: 200, y: middle })).toEqual({
+      kind: 'shot',
+      rowId: 'shots:0',
+      shotId: 's1',
+      edge: null,
+      grabbedAt: 1 * SECOND,
+    })
+  })
+
+  // The handles are read in pixels: a two-second shot and a four-minute one offer the same grab.
+  it('reads the two edges as handles that trim', () => {
+    const head = hitAnimation(withShot(), { x: 101, y: middle })
+    const tail = hitAnimation(withShot(), { x: 299, y: middle })
+
+    expect(head?.kind === 'shot' && head.edge).toBe('start')
+    expect(tail?.kind === 'shot' && tail.edge).toBe('end')
+  })
+
+  it('reads the row rather than the shot away from any bar', () => {
+    expect(hitAnimation(withShot(), { x: 400, y: middle })?.kind).toBe('row')
   })
 })

@@ -18,6 +18,8 @@ export type AnimationHit =
   | { kind: 'key'; rowId: string; time: Us }
   /** A clip block, and how far into it the pointer landed — a drag must not snap it to the hand. */
   | { kind: 'block'; rowId: string; nodeId: string; clipId: string; grabbedAt: Us }
+  /** A shot: its body slides, its two edges trim. `grabbedAt` is how far into it the hand landed. */
+  | { kind: 'shot'; rowId: string; shotId: string; edge: 'start' | 'end' | null; grabbedAt: Us }
   | { kind: 'row'; rowId: string; time: Us }
 
 export type HitContext = {
@@ -31,6 +33,19 @@ export type HitContext = {
  * few pixels across, and asking a hand to land inside one is asking too much.
  */
 const GRAB_SLACK = 2
+
+/**
+ * Which edge of a bar the hand landed on, in PIXELS rather than in time: a shot two seconds long
+ * and one four minutes long must offer the same handle to grab, and a fraction of the duration
+ * would make the second one's handle four minutes wide.
+ */
+const EDGE_GRAB = 4
+
+function edgeOf(start: Us, duration: Us, x: number, viewport: Viewport): 'start' | 'end' | null {
+  if (Math.abs(timeToX(start, viewport) - x) <= EDGE_GRAB) return 'start'
+  if (Math.abs(timeToX(start + duration, viewport) - x) <= EDGE_GRAB) return 'end'
+  return null
+}
 
 export function hitAnimation(context: HitContext, point: Point): AnimationHit | null {
   const { rows, viewport, fps } = context
@@ -54,6 +69,22 @@ export function hitAnimation(context: HitContext, point: Point): AnimationHit | 
         nodeId: row.nodeId,
         clipId: row.clipId,
         grabbedAt: at - row.start,
+      }
+    }
+
+    if (row.kind === 'shot') {
+      const at = xToTime(point.x, viewport)
+      const bar = row.bars.find(
+        held => at >= held.shot.start && at <= held.shot.start + held.shot.duration,
+      )
+      if (!bar) return { kind: 'row', rowId: row.id, time: at }
+
+      return {
+        kind: 'shot',
+        rowId: row.id,
+        shotId: bar.shot.id,
+        edge: edgeOf(bar.shot.start, bar.shot.duration, point.x, viewport),
+        grabbedAt: at - bar.shot.start,
       }
     }
 

@@ -11,9 +11,9 @@ import { placeRows } from '../timeline/band'
 import { paintBandEnd } from '../timeline/bandEnd'
 import { paintRuler, readRulerStyle } from '../timeline/ruler'
 import { RULER_HEIGHT, timeToX, type Viewport } from '../timeline/timelineGeometry'
-import { memoPalette, rootColour } from '../core/palette'
+import { memoPalette, rootColour, rootFont } from '../core/palette'
 import type { Size } from '../core/geometry'
-import type { AnimationRow } from './animationRows'
+import type { AnimationRow, ShotBar } from './animationRows'
 
 /** Half the diagonal of a key, in pixels. A diamond reads at this size and crowds beyond it. */
 const KEY_REACH = 4
@@ -23,6 +23,9 @@ const CHANNEL_REACH = 3
 
 /** How far a block sits inside its row, so two stacked blocks do not read as one. */
 const BLOCK_INSET = 2
+
+/** How far the name of a shot sits from the left edge of its bar. */
+const BAR_PADDING = 4
 
 type Palette = {
   ruler: string
@@ -34,7 +37,13 @@ type Palette = {
   block: string
   playhead: string
   muted: string
+  text: string
+  font: string
 }
+
+/** The name inside a bar, at the size the ruler labels use — the smallest the scale carries. */
+const BAR_SIZE = '10px'
+const BAR_FAMILY = 'system-ui, sans-serif'
 
 const readPalette = memoPalette((): Palette => ({
   ruler: rootColour('--color-chassis'),
@@ -46,6 +55,8 @@ const readPalette = memoPalette((): Palette => ({
   block: rootColour('--color-elevated'),
   playhead: rootColour('--color-accent'),
   muted: rootColour('--color-muted'),
+  text: rootColour('--color-text'),
+  font: rootFont('--text-mini', BAR_SIZE, BAR_FAMILY),
 }))
 
 export type AnimationPaint = {
@@ -56,6 +67,14 @@ export type AnimationPaint = {
   playhead: Us
   /** The keys under a selection, as `<rowId>@<time>`, so a channel and its subject agree. */
   selected: ReadonlySet<string>
+  /**
+   * The shot the head is on air through, and the one under the pointer's last press.
+   *
+   * Apart from `rows` rather than inside them: which shot is on air follows the HEAD, so a row
+   * holding it would be rebuilt on every frame of playback.
+   */
+  activeShotId?: string | null
+  selectedShotId?: string | null
 }
 
 /** How a key is named in the selection set, and in a hit test. */
@@ -104,13 +123,13 @@ function paintKey(
 export function keysOf(row: AnimationRow): readonly Us[] {
   if (row.kind === 'subject') return row.keys
   if (row.kind === 'channel') return row.track.keys.map(key => key.time)
-  // A block holds no key: it is drawn as a bar — see `paintBlock`.
+  // Neither a block nor a shot holds a key: both are drawn as bars.
   return []
 }
 
 /**
- * Half a diamond's diagonal on that row, which a hit test needs as much as the paint does. A
- * block draws no diamond at all, so nothing on its row can be grabbed by one.
+ * Half a diamond's diagonal on that row, which a hit test needs as much as the paint does. A bar
+ * row draws no diamond at all, so nothing on it can be grabbed by one.
  */
 export function reachOf(row: AnimationRow): number {
   if (row.kind === 'subject') return KEY_REACH
@@ -167,6 +186,11 @@ function paintRows(
       continue
     }
 
+    if (row.kind === 'shot') {
+      for (const bar of row.bars) paintShot(context, bar, top, row.height, paint, palette)
+      continue
+    }
+
     const middle = top + row.height / 2
     const reach = reachOf(row)
 
@@ -195,6 +219,48 @@ function paintBlock(
 
   context.fillStyle = palette.block
   context.fillRect(left, top + BLOCK_INSET, Math.max(1, right - left), height - BLOCK_INSET * 2 - 1)
+}
+
+/**
+ * A shot: a bar carrying the name of the camera it puts on air.
+ *
+ * The one on air wears an outline in the head's own ink — a second bar covering the same instant
+ * is the only thing an eye cannot settle by itself, and it is the very case layers exist for.
+ * The picked one is filled brighter, which says CHOSEN without saying it in another colour.
+ */
+function paintShot(
+  context: CanvasRenderingContext2D,
+  bar: ShotBar,
+  top: number,
+  height: number,
+  paint: AnimationPaint,
+  palette: Palette,
+): void {
+  const left = timeToX(bar.shot.start, paint.viewport)
+  const right = timeToX(bar.shot.start + bar.shot.duration, paint.viewport)
+  const width = Math.max(1, right - left)
+  const boxTop = top + BLOCK_INSET
+  const boxHeight = height - BLOCK_INSET * 2 - 1
+
+  context.fillStyle = bar.shot.id === paint.selectedShotId ? palette.rowAlt : palette.block
+  context.fillRect(left, boxTop, width, boxHeight)
+
+  if (bar.shot.id === paint.activeShotId) {
+    context.strokeStyle = palette.playhead
+    context.lineWidth = 1
+    context.strokeRect(left + 0.5, boxTop + 0.5, width - 1, boxHeight - 1)
+  }
+
+  // Clipped to the bar: a name running past its end would read as belonging to the next shot.
+  context.save()
+  context.beginPath()
+  context.rect(left, boxTop, width, boxHeight)
+  context.clip()
+  context.font = palette.font
+  context.textBaseline = 'middle'
+  context.fillStyle = palette.text
+  context.fillText(bar.name, left + BAR_PADDING, boxTop + boxHeight / 2)
+  context.restore()
 }
 
 function paintHead(

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { RULER_HEIGHT, type Viewport } from '../timeline/timelineGeometry'
-import { animationTrack, timelineWith } from './animation-fixtures'
+import { animationTrack, cameraShot, timelineWith } from './animation-fixtures'
 import { keyId, keyParts, paintAnimation } from './animationPainter'
 import { refreshPalette } from '../core/palette'
 import type { Point } from '../core/geometry'
@@ -18,23 +18,39 @@ type Rect = { x: number; y: number; width: number; height: number }
 /** Records what was painted, so the test asserts on shapes and not on pixels. */
 function spyContext() {
   const rects: Rect[] = []
+  const outlines: Rect[] = []
   const lines: Point[] = []
   const fills: string[] = []
+  const strokes: string[] = []
+  const labels: string[] = []
 
   const context = {
     font: '',
     textBaseline: '',
+    lineWidth: 1,
     clearRect: vi.fn(),
     beginPath: vi.fn(),
     closePath: vi.fn(),
     fill: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    clip: vi.fn(),
+    rect: vi.fn(),
     moveTo: vi.fn((x: number, y: number) => void lines.push({ x, y })),
     lineTo: vi.fn((x: number, y: number) => void lines.push({ x, y })),
-    fillText: vi.fn(),
+    fillText: vi.fn((text: string) => void labels.push(text)),
     fillRect: vi.fn((x: number, y: number, width: number, height: number) =>
       rects.push({ x, y, width, height }),
     ),
+    strokeRect: vi.fn((x: number, y: number, width: number, height: number) =>
+      outlines.push({ x, y, width, height }),
+    ),
   }
+
+  Object.defineProperty(context, 'strokeStyle', {
+    get: () => strokes.at(-1) ?? '',
+    set: (value: string) => void strokes.push(value),
+  })
 
   // Every colour kept: the painter sets one per shape, and reading the property back would only
   // ever show the last.
@@ -44,7 +60,15 @@ function spyContext() {
   })
 
   // jsdom has no usable 2D context; the painter only ever calls these members.
-  return { context: context as unknown as CanvasRenderingContext2D, rects, lines, fills }
+  return {
+    context: context as unknown as CanvasRenderingContext2D,
+    rects,
+    outlines,
+    lines,
+    fills,
+    strokes,
+    labels,
+  }
 }
 
 const paintOf = (rows: Parameters<typeof paintAnimation>[1]['rows'], playhead = 0) => {
@@ -180,5 +204,46 @@ describe('painting the animation band', () => {
     expect(keyParts('cube@Infinity')).toBeUndefined()
     expect(keyParts('cube@2s')).toBeUndefined()
     expect(keyParts('@1000')).toBeUndefined()
+  })
+})
+
+describe('painting a shot', () => {
+  const shotRowsOf = () =>
+    animationRows(
+      timelineWith([], {
+        shots: [cameraShot('s1', { cameraId: 'cam-a', start: 1 * SECOND, duration: 2 * SECOND })],
+      }),
+      { nodes: [{ id: 'cam-a', name: 'Camera A' }], expanded: new Set() },
+    )
+
+  const paintShotOf = (active: string | null) => {
+    const spy = spyContext()
+    paintAnimation(
+      spy.context,
+      {
+        rows: shotRowsOf(),
+        viewport,
+        fps: 25,
+        duration: 5 * SECOND,
+        playhead: 0,
+        selected: new Set(),
+        activeShotId: active,
+      },
+      size,
+    )
+    return spy
+  }
+
+  it('draws the shot as a bar spanning the time it covers, and names its camera', () => {
+    const spy = paintShotOf(null)
+
+    expect(spy.rects.some(rect => rect.x === 100 && rect.width === 200)).toBe(true)
+    expect(spy.labels).toContain('Camera A')
+  })
+
+  // Two bars covering one instant is the only thing an eye cannot settle by itself.
+  it('outlines the shot that is on air, and only it', () => {
+    expect(paintShotOf('s1').outlines).toHaveLength(1)
+    expect(paintShotOf(null).outlines).toEqual([])
   })
 })

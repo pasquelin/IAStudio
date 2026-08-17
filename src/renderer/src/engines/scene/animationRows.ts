@@ -6,7 +6,7 @@
  * to evaluate: what a subject line adds is a way to READ them, which is why it is derived here
  * rather than stored. Folding a subject away must never lose a key.
  */
-import type { AnimationTimeline, AnimationTrack } from '@shared/domain/animation'
+import type { AnimationTimeline, AnimationTrack, CameraShot } from '@shared/domain/animation'
 import { reconcileOrder } from '@shared/domain/order'
 import type { Us } from '@shared/domain/time'
 import { ROW_PADDING } from '../timeline/timelineGeometry'
@@ -56,9 +56,30 @@ export type ClipRow = {
   duration: Us
 }
 
-export type AnimationRow = SubjectRow | ChannelRow | ClipRow
+/** One shot on the band, with the name of the camera it puts on air. */
+export type ShotBar = {
+  shot: CameraShot
+  name: string
+}
 
-/** A block is a bar, so it wants the room a bar reads in. */
+/**
+ * One LAYER of shots, top to bottom, highest first — the stack `activeShotAt` reads.
+ *
+ * A row per layer rather than per shot, because the layer is what settles an overlap: two bars on
+ * one line are two shots of equal standing, and a bar on the line above wins over both. Shown
+ * that way, the rule is visible instead of being something one has to remember.
+ */
+export type ShotRow = {
+  kind: 'shot'
+  id: string
+  height: number
+  layer: number
+  bars: readonly ShotBar[]
+}
+
+export type AnimationRow = SubjectRow | ChannelRow | ClipRow | ShotRow
+
+/** A block and a shot are bars, so they want the room a bar reads in. */
 export const CLIP_HEIGHT = 24
 
 /**
@@ -182,6 +203,7 @@ export type RowsOptions = {
  * the moment an object is renamed.
  */
 export function animationRows(timeline: AnimationTimeline, options: RowsOptions): AnimationRow[] {
+  const rows: AnimationRow[] = [...shotRows(timeline, options.nodes)]
   const grouped = new Map<string, AnimationTrack[]>()
 
   for (const track of timeline.tracks) {
@@ -192,7 +214,6 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
   }
 
   const named = new Map(options.nodes.map(node => [node.id, node.name]))
-  const rows: AnimationRow[] = []
 
   /** The objects first, in the order the scene holds them, then the bones keyed inside them. */
   const natural = [
@@ -249,10 +270,46 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
   return rows
 }
 
+/**
+ * The shot lines, highest layer first — the order `activeShotAt` settles an overlap in, drawn
+ * top to bottom so the picture and the rule agree.
+ *
+ * Above the subjects, and in one run: a shot is a different kind of thing from a key, and it is
+ * what the whole sequence is read from.
+ */
+function shotRows(timeline: AnimationTimeline, nodes: readonly SheetNode[]): ShotRow[] {
+  if (timeline.shots.length === 0) return []
+
+  const named = new Map(nodes.map(node => [node.id, node.name]))
+  const layers = new Map<number, ShotBar[]>()
+
+  for (const shot of timeline.shots) {
+    // A shot whose camera is gone is left out, as `activeShotAt` leaves it out of the answer:
+    // a bar naming nothing would be a line one could drag and never see on screen.
+    const name = named.get(shot.cameraId)
+    if (name === undefined) continue
+
+    const bars = layers.get(shot.layer)
+    if (bars) bars.push({ shot, name })
+    else layers.set(shot.layer, [{ shot, name }])
+  }
+
+  return [...layers.entries()]
+    .sort(([left], [right]) => right - left)
+    .map(([layer, bars]) => ({
+      kind: 'shot',
+      id: `shots:${layer}`,
+      height: CLIP_HEIGHT,
+      layer,
+      bars,
+    }))
+}
+
 /** The row a click lands on, folded or not, so a caller never walks the list a second time. */
 export function trackIdsOf(row: AnimationRow): string[] {
   if (row.kind === 'subject') return row.tracks.map(track => track.id)
   if (row.kind === 'channel') return [row.track.id]
-  // A block drives no channel: it plays a clip the file brought.
+  // Neither a block nor a shot drives a channel: one plays a clip the file brought, the other
+  // says which camera is on air.
   return []
 }
