@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { report } from './usage-fixtures'
+import { report } from '../usage-fixtures'
 import { UsageOverview } from './UsageOverview'
 
 describe('the usage overview', () => {

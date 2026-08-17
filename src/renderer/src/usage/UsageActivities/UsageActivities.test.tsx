@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { WINDOW_CAPTION } from '@/design/window-styles'
-import { report } from './usage-fixtures'
+import { report } from '../usage-fixtures'
 import { UsageActivities } from './UsageActivities'
 
 /**

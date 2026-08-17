@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '@shared/guards'
 import { LANGUAGES, TRANSLATIONS, type Language } from '@shared/i18n'
-import { SECTIONS } from './UsageWindow'
+import { SECTIONS } from './sections'
 
 function resolve(code: Language, key: string): unknown {
   // Widened, not cast: the bundle's inferred type carries no index signature, and the keys here
