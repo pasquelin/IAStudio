@@ -187,9 +187,15 @@ A document is a work in progress: an image with its layers, a 3D scene with its 
 with its tracks.
 
 The **+** button at the top of the left rail makes one, and asks two things: its **name** and its
-**location**. The Location field opens the project's own folder tree — and nothing else: a
-document stays inside its project. It opens on the folder the Explorer is showing, or on
-`documents/` when nothing is picked there, and the **New folder…** row makes one without leaving
+**location**.
+
+The Location field is walked **one folder at a time**, the way the system's own file dialogues are:
+the path is written across the top, every step in it goes back to that level, and the list below
+shows the sub-folders. Clicking one walks into it — and that is where the document will go. You
+never leave the project: nothing else is offered.
+
+The field opens on the folder the Explorer is showing, or on `documents/` when nothing is picked
+there. At the foot, **New folder in …** names the folder you are in and makes one without leaving
 the window.
 
 It is saved with `⌘S` / `Ctrl+S` — into the folder you chose when you made it, and afterwards

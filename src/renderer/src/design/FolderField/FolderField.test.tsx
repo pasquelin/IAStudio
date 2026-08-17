@@ -7,11 +7,16 @@ import { useProject } from '@/stores/project'
 import { FolderField } from './FolderField'
 
 const LABELS = {
-  tree: 'Dossiers du projet',
+  crumbs: 'Dossier ouvert',
+  crumbHint: 'Revenir à ce dossier',
   hint: 'Choisit le dossier',
-  newFolder: 'Nouveau dossier…',
+  enterHint: 'Ouvrir ce dossier',
+  empty: 'Ce dossier ne contient aucun sous-dossier.',
+  newFolderIn: 'Nouveau dossier dans Images',
   newFolderName: 'Nouveau dossier',
   newFolderLabel: 'Nom du dossier',
+  create: 'Créer',
+  cancel: 'Annuler',
   folderTaken: 'Ce dossier contient déjà un dossier de ce nom.',
   folderFailed: 'Ce dossier n’a pas pu être créé.',
 }
@@ -20,30 +25,28 @@ const FOLDERS: Record<string, readonly FolderEntry[]> = {
   '': [
     { path: 'Images', name: 'Images', kind: 'folder' },
     { path: 'lisezmoi.txt', name: 'lisezmoi.txt', kind: 'file' },
-    // A layered image is written AS a folder, and the tree answers it as one.
+    // A layered image is written AS a folder, and the listing answers it as one.
     { path: 'TOTO.img', name: 'TOTO.img', kind: 'folder' },
   ],
   Images: [{ path: 'Images/Croquis', name: 'Croquis', kind: 'folder' }],
+  'Images/Croquis': [],
 }
 
-const holding = (over: Partial<Parameters<typeof installFakeBridge>[0]> = {}) =>
-  installFakeBridge({
-    project: { listFolder: folder => Promise.resolve([...(FOLDERS[folder] ?? [])]) },
-    ...over,
-  })
+const listFolder = (folder: string): Promise<FolderEntry[]> =>
+  Promise.resolve([...(FOLDERS[folder] ?? [])])
 
 const show = (value = '', onChange = vi.fn()): { onChange: ReturnType<typeof vi.fn> } => {
   render(<FolderField value={value} onChange={onChange} rootName="Project1" labels={LABELS} />)
   return { onChange }
 }
 
-const openTree = async (): Promise<void> => {
-  await userEvent.click(screen.getByRole('button'))
+const open = async (): Promise<void> => {
+  await userEvent.click(screen.getAllByRole('button')[0] as HTMLElement)
 }
 
 describe('FolderField', () => {
   beforeEach(() => {
-    holding()
+    installFakeBridge({ project: { listFolder } })
     const stamp = '2026-08-16T10:00:00.000Z'
     useProject.setState({
       project: {
@@ -57,20 +60,23 @@ describe('FolderField', () => {
   // the first step of it.
   it('reads the chosen folder as the walk down to it', () => {
     show('Images/Croquis')
-    expect(screen.getByRole('button')).toHaveTextContent('Project1 / Images / Croquis')
+    expect(screen.getAllByRole('button')[0]).toHaveTextContent('Project1 / Images / Croquis')
   })
 
-  it('names the project folder itself for a document going to the root', () => {
-    show('')
-    expect(screen.getByRole('button')).toHaveTextContent('Project1')
-  })
-
-  it('offers the project folders, and no file among them', async () => {
+  it('shows what the folder holds, one level and no deeper', async () => {
     show()
-    await openTree()
+    await open()
 
-    expect(await screen.findByRole('treeitem', { name: /Images/ })).toBeInTheDocument()
-    expect(screen.queryByRole('treeitem', { name: /lisezmoi/ })).not.toBeInTheDocument()
+    expect(await screen.findByRole('menuitem', { name: 'Images' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Croquis' })).not.toBeInTheDocument()
+  })
+
+  it('offers no file among the folders', async () => {
+    show()
+    await open()
+
+    await screen.findByRole('menuitem', { name: 'Images' })
+    expect(screen.queryByRole('menuitem', { name: /lisezmoi/ })).not.toBeInTheDocument()
   })
 
   /**
@@ -80,61 +86,96 @@ describe('FolderField', () => {
    */
   it('offers no document, though one may be a folder', async () => {
     show()
-    await openTree()
+    await open()
 
-    expect(await screen.findByRole('treeitem', { name: /Images/ })).toBeInTheDocument()
-    expect(screen.queryByRole('treeitem', { name: /TOTO/ })).not.toBeInTheDocument()
+    await screen.findByRole('menuitem', { name: 'Images' })
+    expect(screen.queryByRole('menuitem', { name: /TOTO/ })).not.toBeInTheDocument()
   })
 
-  it('answers with the folder that was picked', async () => {
+  // Walking into a folder IS choosing it — the whole point of showing one at a time.
+  it('answers with the folder that was walked into', async () => {
     const { onChange } = show()
-    await openTree()
+    await open()
 
-    await userEvent.click(await screen.findByRole('treeitem', { name: /Images/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Images' }))
 
     expect(onChange).toHaveBeenCalledWith('Images')
   })
 
-  // A field opening on a folder deep in the tree has to SHOW that folder: unfolding the walk is
-  // what puts the row on screen, and `toggle` would have closed the very row it revealed.
-  it('unfolds the walk down to the chosen folder', async () => {
-    show('Images/Croquis')
-    await openTree()
+  it('walks back up through the crumbs', async () => {
+    const { onChange } = show('Images/Croquis')
+    await open()
 
-    expect(await screen.findByRole('treeitem', { name: /Croquis/ })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Images' }))
+
+    expect(onChange).toHaveBeenCalledWith('Images')
+  })
+
+  // Said rather than left blank: an empty list and a list still loading look alike, and a menu
+  // showing nothing at all reads as broken.
+  it('says a folder holds no sub-folder', async () => {
+    show('Images/Croquis')
+    await open()
+
+    expect(await screen.findByText(LABELS.empty)).toBeInTheDocument()
+  })
+
+  /**
+   * The parent is NAMED. The first version put a bare input at the foot of a tree, and nothing
+   * on screen said which folder it would land in — which is what made the field unreadable.
+   */
+  it('names the folder a new one would be made in', async () => {
+    show('Images')
+    await open()
+
+    expect(await screen.findByRole('menuitem', { name: LABELS.newFolderIn })).toBeInTheDocument()
   })
 
   it('makes a folder where the field is pointing, and moves into it', async () => {
     const newFolder = vi.fn(() =>
       Promise.resolve({ done: [{ from: '', to: 'Images/Neuf' }], refused: [], batch: 'b' }),
     )
-    holding({ project: { listFolder: f => Promise.resolve([...(FOLDERS[f] ?? [])]), newFolder } })
+    installFakeBridge({ project: { listFolder, newFolder } })
     const { onChange } = show('Images')
-    await openTree()
+    await open()
 
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Nouveau dossier…' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: LABELS.newFolderIn }))
     await userEvent.clear(screen.getByRole('textbox', { name: 'Nom du dossier' }))
-    await userEvent.type(screen.getByRole('textbox', { name: 'Nom du dossier' }), 'Neuf{Enter}')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Nom du dossier' }), 'Neuf')
+    await userEvent.click(screen.getByRole('button', { name: 'Créer' }))
 
     expect(newFolder).toHaveBeenCalledWith('Images', 'Neuf')
     expect(onChange).toHaveBeenCalledWith('Images/Neuf')
   })
 
+  it('gives up on the folder without making one', async () => {
+    const newFolder = vi.fn(() => Promise.resolve({ done: [], refused: [], batch: 'b' }))
+    installFakeBridge({ project: { listFolder, newFolder } })
+    show('Images')
+    await open()
+
+    await userEvent.click(await screen.findByRole('menuitem', { name: LABELS.newFolderIn }))
+    await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
+
+    expect(newFolder).not.toHaveBeenCalled()
+    expect(screen.queryByRole('textbox', { name: 'Nom du dossier' })).not.toBeInTheDocument()
+  })
+
   // Said where it was asked for rather than swallowed: a name the folder already holds is the
   // ordinary refusal, and a gesture that runs its course and does nothing is the worst outcome.
   it('says why a folder was refused, and keeps the field open', async () => {
-    holding({
+    installFakeBridge({
       project: {
-        listFolder: f => Promise.resolve([...(FOLDERS[f] ?? [])]),
+        listFolder,
         newFolder: () =>
           Promise.resolve({ done: [], refused: [{ path: 'Neuf', reason: 'exists' }], batch: 'b' }),
       },
     })
     show('Images')
-    await openTree()
+    await open()
 
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Nouveau dossier…' }))
-    await userEvent.type(screen.getByRole('textbox', { name: 'Nom du dossier' }), '{Enter}')
+    await userEvent.click(await screen.findByRole('menuitem', { name: LABELS.newFolderIn }))
+    await userEvent.click(screen.getByRole('button', { name: 'Créer' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(LABELS.folderTaken)
     expect(screen.getByRole('textbox', { name: 'Nom du dossier' })).toBeInTheDocument()
