@@ -227,10 +227,10 @@ zone's cut: the icons above it open in the first half, those below in the second
 |---|---|
 | **+** (blue button) | creates a **new document** in the active workspace — on the home, a **new project** |
 | *separator* | |
-| **Upper half** icons | Models, then Generate; the home puts **Your projects** there |
+| **Upper half** icons | Models, Generate, then Assets — what Scenario offers; the home puts **Your projects** there |
 | *separator* | |
 | **Lower half** icons | the Explorer then Git, on the home as in the workspaces |
-| At the bottom | Assets or Timeline, then History, depending on the workspace; on the home, History alone |
+| At the bottom | Timeline then History, depending on the workspace; on the home, History alone |
 
 > **The + button makes what the screen makes.** In a workspace it is greyed out while no project
 > is open: a document is a file in a project folder. **On the home it is never greyed out** — it
@@ -238,8 +238,11 @@ zone's cut: the icons above it open in the first half, those below in the second
 
 ### The right rail
 
-The right column's icons — Skybox, View, Layers, Channels, Styles, Scene, Lights, Meshes, Assets,
+The right column's icons — Skybox, View, Layers, Channels, Styles, Scene, Lights, Meshes,
 whichever the workspace declares, in that order — then, below the separator, Inspector.
+
+In **Video** and **Audio** the upper half of that column is empty: neither workspace declares
+anything there, and the rail then carries the Inspector alone.
 
 On the home it carries one: **Your library**, and nothing below the separator.
 
@@ -297,6 +300,7 @@ close button never goes**, and the panel's name keeps its size.
 |---|---|---|---|---|
 | **Models** | left | 1st | everywhere | the Scenario catalogue, filtered on the active workspace |
 | **Generate** | left | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
+| **Assets** | left | 1st | everywhere | the shelf: what the project holds, what your key owns, what is being made |
 | **Skybox** | right | 1st | Skyboxes | the open sky's settings |
 | **View** | right | 1st | Skyboxes | the projection, the field of view and the test objects |
 | **Layers** | right | 1st | Image | the layer stack of the open image |
@@ -305,11 +309,9 @@ close button never goes**, and the panel's name keeps its size.
 | **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |
 | **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
-| **Assets** | right | 1st | Video, Audio, 3D | the project's shelf, as a column |
 | **Explorer** | left | 2nd | everywhere | the project folder, folders and files |
 | **Git** | left | 2nd | everywhere *(with a project open)* | what has changed in the project folder since the last recorded version |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
-| **Assets** | bottom | 1st | Image, Textures, Skyboxes | the same shelf, as a strip |
 | **Timeline** | bottom | 1st | Video, Audio, 3D | the sequence being edited, or the animation |
 | **History** | bottom | 1st | everywhere *(with a project open)* | the project's recorded versions, and what each one changed |
 
@@ -319,21 +321,22 @@ close button never goes**, and the panel's name keeps its size.
 > with a project open: with none, the home is the screen it has always been — two columns and
 > nothing below.
 
-**The left column belongs to what produces.** Above, **Models** and **Generate**, which take
-turns. Below, the **Explorer** and **Git**, which take turns as well.
+**The left column reads in two parts: what Scenario offers, then what is already yours.** Above,
+**Models**, **Generate** and **Assets**, which take turns — a model to choose, its form, and the
+shelf of what it makes. Below, the **Explorer** and **Git**, which take turns as well: your
+project folder, and what has changed in it.
+
+The cut between the two halves is what makes the gesture possible: the shelf and the Explorer
+hold the screen **together**, and nothing enters the project without passing from one to the other.
 
 **The right column belongs to the open document**: what it holds, what lights it, what is
 selected. The panels take their turn in the upper half; the **Inspector** always holds the lower
 one.
 
-**The asset shelf moves depending on the workspace.** At the bottom in most; in **Video**,
-**Audio** and **3D**, the bottom strip belongs to the timeline, and the shelf moves to the right
-column — timeline and shelf then hold the screen together, so you can drag a take onto a track.
-
 ### A half shows what the workspace puts there
 
-Open the bottom strip in Image: it is the shelf. Switch to Video: the same strip becomes the
-edit, with nothing to reopen.
+Open the bottom strip in Video: it is the edit. Switch to Image: the same strip becomes History,
+with nothing to reopen.
 
 **What you opened is a zone**, and it stays one. Closing the half empties it everywhere.
 
@@ -345,16 +348,20 @@ edit, with nothing to reopen.
 Until you have clicked an icon of a half, it shows the first panel the workspace declares there.
 That is what you see on first opening, and what **View ▸ Reset layout** restores.
 
-The lower left half opens on the **Explorer** in every workspace.
+The upper left half opens on **Models** in every workspace — choosing a model is where everything
+starts, and the shelf is asked for. The lower half opens on the **Explorer**, everywhere too.
 
 | Workspace | The upper right half opens on | The bottom strip on |
 |---|---|---|
-| **Image** | Layers | Assets |
-| **Video** | Assets | Timeline |
+| **Image** | Layers | History |
+| **Video** | *nothing* | Timeline |
 | **3D** | Scene | Timeline |
-| **Audio** | Assets | Timeline |
-| **Textures** | Channels | Assets |
-| **Skyboxes** | Skybox | Assets |
+| **Audio** | *nothing* | Timeline |
+| **Textures** | Channels | History |
+| **Skyboxes** | Skybox | History |
+
+> **History needs a project open.** With none, the bottom strip of those three workspaces shows
+> nothing — the zone is there, and it is empty.
 
 As soon as you click an icon, that half remembers **your** choice and does not move again, until
 you click another one or reset the layout.

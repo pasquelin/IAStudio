@@ -12,18 +12,16 @@ que vous avez importé.
 C’est l’équivalent d’un navigateur de contenu — la bibliothèque de matière première dans
 laquelle vous piochez.
 
-**Où il se trouve** dépend de l’espace où vous êtes :
+**Où il se trouve : dans la colonne de gauche, moitié haute, dans tous les espaces.** Sous les
+**Modèles** et la **Génération**, avec lesquels il se relaie — les trois panneaux qui répondent à
+la même question, « qu’est-ce que Scenario me propose ».
 
-| Espace | Où se trouve l’étagère |
-|---|---|
-| Image, Textures, Skyboxes | dans la **bande basse** |
-| Vidéo, Audio, 3D | dans la **colonne de droite**, moitié haute |
+Cliquez son icône dans le rail de gauche pour l’amener devant : c’est le troisième des trois, et
+la moitié s’ouvre sur les Modèles tant que vous n’avez rien demandé.
 
-Ce n’est pas un caprice : dans les espaces Vidéo, Audio et 3D, la bande basse appartient à la
-timeline, qui a besoin de toute la largeur. Il faut pourtant que l’étagère et la timeline tiennent
-l’écran **ensemble** pour qu’on puisse glisser une prise ou un modèle de l’une vers l’autre —
-l’étagère prend donc la moitié haute de la colonne de droite, celle des panneaux qui servent le
-document ouvert.
+Sous le trait, dans la moitié basse de la même colonne, l’**Explorateur**. Les deux tiennent donc
+l’écran **ensemble**, et c’est délibéré : ce qui entre dans votre projet passe de l’étagère au
+dossier, jamais autrement.
 
 ---
 
@@ -48,17 +46,11 @@ fichier EST ne dépend pas de l’endroit où il est — le studio le retrouve, 
 
 ## Chercher et filtrer
 
-**Où sont les contrôles dépend de la place.**
+**Les contrôles sont sur leur propre ligne, sous le titre.**
 
-| Zone | Où ils sont |
-|---|---|
-| **Bande basse** | sur la **ligne de titre**, à côté du nom du panneau |
-| **Colonne de droite** (espaces Vidéo, Audio et 3D) | sur leur **propre ligne**, sous le titre |
-
-Dans une bande, la ligne est large et presque vide : y loger la barre épargne une rangée
-entière, et l’étagère est là pour montrer des assets, pas des boutons. Dans une colonne étroite,
-la même barre pousserait le bouton de fermeture hors du cadre — elle redescend donc sous le
-titre.
+Dans une colonne étroite, une barre posée sur la ligne de titre pousserait le bouton de fermeture
+hors du cadre : elle vit donc **sous** le titre. Le mécanisme existe encore pour les bandes, où la
+ligne est large et presque vide, mais l’étagère n’y lit plus.
 
 | Contrôle | Ce qu’il fait |
 |---|---|

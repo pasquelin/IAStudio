@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
 import type { Project } from '@shared/domain/project'
-import { ToolZoneProvider } from '@/app/toolZone'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collectionState'
 import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
@@ -163,29 +162,16 @@ describe('AssetBrowser', () => {
     expect(screen.queryByText(/Préparation vidéo indisponible/)).not.toBeInTheDocument()
   })
 
-  // The bar follows the shape of the zone, not the workspace: no exception is coded for Video,
-  // where the shelf stands in a column rather than lying across the band.
-  describe('the filter bar', () => {
-    it('draws none of its own in a band, leaving it to the title row', () => {
-      render(
-        <ToolZoneProvider zone="bottomRight">
-          <AssetBrowser />
-        </ToolZoneProvider>,
-      )
+  /**
+   * One bar, under the title, in every space — the shelf stands in a column everywhere since
+   * 17 August. It used to have two: the bar rode the title row while the shelf lay in a band,
+   * and the branch that chose between them went with the placement.
+   */
+  it('stacks its filter bar under the title, where that row has no room', () => {
+    render(<AssetBrowser />)
 
-      expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
-    })
-
-    it('stacks it under the title in a side column, where that row has no room', () => {
-      render(
-        <ToolZoneProvider zone="left">
-          <AssetBrowser />
-        </ToolZoneProvider>,
-      )
-
-      const bar = screen.getByRole('searchbox').closest('label')?.parentElement
-      expect(bar?.className).toContain('flex-col')
-    })
+    const bar = screen.getByRole('searchbox').closest('label')?.parentElement
+    expect(bar?.className).toContain('flex-col')
   })
 })
 

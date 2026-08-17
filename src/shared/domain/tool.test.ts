@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  GENERATION_TOOLS,
+  SCENARIO_TOOLS,
   isHorizontal,
   placementIn,
   placementOf,
@@ -44,15 +44,13 @@ describe('the placements of one tool', () => {
 })
 
 describe('resolving where a tool sits', () => {
-  it('puts the asset shelf in the bottom strip everywhere the band is free', () => {
-    const strips: readonly WorkspaceId[] = ['image', 'textures', 'skyboxes']
-    for (const workspace of strips)
-      expect(placementIn('assets', workspace)?.zone).toBe('bottomRight')
-  })
-
-  it('sends it to the column wherever a timeline owns the band', () => {
-    const timed: readonly WorkspaceId[] = ['video', 'audio', '3d']
-    for (const workspace of timed) expect(placementIn('assets', workspace)?.zone).toBe('right')
+  // One placement for all six, where there used to be two: the shelf reads the same question
+  // in every space — what can I get from Scenario — so it has no reason to move with the space.
+  it('puts the asset shelf in the left column of every workspace', () => {
+    for (const workspace of WORKSPACE_IDS) {
+      expect(placementIn('assets', workspace)?.zone).toBe('left')
+      expect(placementIn('assets', workspace)?.slot).toBe('primary')
+    }
   })
 
   it('serves the shelf in every workspace — it is never simply absent', () => {
@@ -218,18 +216,18 @@ describe('a horizontal band', () => {
 })
 
 describe('the left column', () => {
-  it('holds the generation panels, and only them, in the upper half of every workspace', () => {
+  it('holds the Scenario panels, and only them, in the upper half of every workspace', () => {
     for (const workspace of WORKSPACE_IDS) {
       const upper = TOOL_PLACEMENTS.filter(
         placement =>
           placement.zone === 'left' && placement.slot === 'primary' && serves(placement, workspace),
       )
-      expect(new Set(upper.map(placement => placement.id))).toEqual(new Set(GENERATION_TOOLS))
+      expect(new Set(upper.map(placement => placement.id))).toEqual(new Set(SCENARIO_TOOLS))
     }
   })
 
   it('is the only place they sit, and the same place in every workspace', () => {
-    for (const id of GENERATION_TOOLS) {
+    for (const id of SCENARIO_TOOLS) {
       for (const placement of placementsOf(id)) {
         expect(placement.zone).toBe('left')
         expect(placement.slot).toBe('primary')
@@ -239,13 +237,14 @@ describe('the left column', () => {
   })
 
   /**
-   * Two halves of two, never four turns in one. Four icons stacked in a rail is the moment a
-   * column stops being a place one knows and becomes a pile one searches — and a half keeps the
-   * generator visible WHILE the Explorer is read, which taking turns forbids by construction.
+   * Three turns above, two below, and the cut between them is what the column MEANS: what
+   * Scenario offers, then what is already on my disk. The half is what keeps the shelf visible
+   * WHILE the Explorer is read — which is the whole of the gesture that pulls one into the
+   * other, and which taking turns would forbid by construction.
    */
   it('holds what one produces with in its lower half, and nothing else', () => {
     // The spaces' own half. The home's left column is the same zone and the same slot, and it
-    // holds the projects — a surface that generates nothing, so the rule above is not about it.
+    // holds the projects — a surface that calls no model, so the rule above is not about it.
     const lower = TOOL_PLACEMENTS.filter(
       placement =>
         placement.zone === 'left' &&
@@ -267,15 +266,19 @@ describe('the rail order of the upper right', () => {
     expect(upperRightIn('image')).toEqual(['layers'])
   })
 
-  // The shelf comes last on purpose: a half with nothing chosen opens on the first tool it
-  // declares, and entering 3D must land on the outliner rather than on a list of assets.
-  it('leaves the outliner first in 3D, with the shelf behind it', () => {
-    expect(upperRightIn('3d')).toEqual(['scene', 'lights', 'meshes', 'assets'])
+  it('reads the scene in 3D, and no longer the shelf', () => {
+    expect(upperRightIn('3d')).toEqual(['scene', 'lights', 'meshes'])
   })
 
-  it('puts the shelf first where a take is dragged onto a track', () => {
-    expect(upperRightIn('video')).toEqual(['assets'])
-    expect(upperRightIn('audio')).toEqual(['assets'])
+  /**
+   * EMPTY, and it is the shelf leaving that empties it: these two spaces put nothing else in
+   * that half. Asserted rather than left unsaid — a half with no tool is a state the rail and
+   * the shell have to survive, and the day something is declared there this line is what asks
+   * whether it belongs.
+   */
+  it('leaves the upper right of Video and Audio to nothing at all', () => {
+    expect(upperRightIn('video')).toEqual([])
+    expect(upperRightIn('audio')).toEqual([])
   })
 
   // `view` sits right behind them: how a sky is being looked at is next of kin to what it is,
@@ -291,11 +294,25 @@ describe('the rail order of the upper right', () => {
 })
 
 describe('the montage band', () => {
-  it('is the timeline wherever there is time to read, and the shelf everywhere else', () => {
+  it('is the timeline wherever there is time to read, and free everywhere else', () => {
     const timed: readonly WorkspaceId[] = ['video', 'audio', '3d']
     for (const workspace of WORKSPACE_IDS) {
-      const band = timed.includes(workspace) ? 'timeline' : 'assets'
-      expect(placementIn(band, workspace)?.zone).toBe('bottomRight')
+      expect(placementIn('timeline', workspace)?.zone ?? null).toBe(
+        timed.includes(workspace) ? 'bottomRight' : null,
+      )
+    }
+  })
+
+  /**
+   * What the band holds in the three spaces with no montage: the history, and nothing else. It
+   * used to be the shelf, and the band emptied when the shelf went to the left column — a zone
+   * whose only tool is one nobody opens by default is a zone that reads as broken, so the fact
+   * that ONE tool is still declared there is worth an assertion rather than a hope.
+   */
+  it('still offers the history in the spaces that have no montage', () => {
+    const untimed: readonly WorkspaceId[] = ['image', 'textures', 'skyboxes']
+    for (const workspace of untimed) {
+      expect(placementIn('history', workspace)?.zone).toBe('bottomRight')
     }
   })
 })

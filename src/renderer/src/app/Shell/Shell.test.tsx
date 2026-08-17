@@ -58,52 +58,62 @@ describe('a horizontal band', () => {
    * The band is the RIGHT half's alone today, and a strip running the whole width under both
    * columns is what it replaces: the left column now reaches the foot of the frame, and the
    * band starts where it ends.
+   *
+   * Read in Video since 17 August: the band held the shelf in Image until then, and what is left
+   * there is the history, which asks for a project these tests do not open.
    */
   it('runs the left column past the band, and the right one down to it', () => {
+    useLayouts.setState({ activeWorkspace: 'video' })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
-    const band = screen.getByLabelText('Assets')
-    // Image reads its models on the left and its layers on the right.
+    const band = screen.getByLabelText('Timeline')
+    // Video reads its models on the left, and the inspector is what its right column holds.
     const left = screen.getByLabelText('Modèles')
-    const right = screen.getByLabelText('Calques')
+    const right = screen.getByLabelText('Inspecteur')
 
     // The right column shares the box the band hangs under; the left one is outside it.
     expect(boxOf(band, right)?.contains(left)).toBe(false)
   })
 
-  it('is one surface: the shelf and the zone handle, nothing else', () => {
+  // The montage, where this read the shelf until 17 August — the shelf answers from the left
+  // column now. Video rather than Image, and it is not a detail: the only tool left in Image's
+  // band is the history, and that one asks for a project these tests do not open.
+  it('is one surface: the panel and the zone handle, nothing else', () => {
+    useLayouts.setState({ activeWorkspace: 'video' })
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
+      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'timeline' } } }),
     })
     renderShell()
 
-    expect(screen.getByLabelText('Assets')).toBeInTheDocument()
+    expect(screen.getByLabelText('Timeline')).toBeInTheDocument()
     expect(handles()).toHaveLength(1)
   })
 
   // No placement declares a second half in a band, but a layout written by an older version
   // can still hold one. It must not draw a panel there.
   it('shows nothing in a second half a stored layout still asks for', () => {
+    useLayouts.setState({ activeWorkspace: 'video' })
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { bottomRight: { secondary: 'assets' } } }),
+      arrangements: arrangedFor('image', { open: { bottomRight: { secondary: 'timeline' } } }),
     })
     renderShell()
 
-    expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Timeline')).not.toBeInTheDocument()
   })
 
   // The divider is what would leave two panels too narrow to be either — and drawn from a
   // state nothing writes any more, nothing puts it back.
   it('draws no divider inside itself, whatever the stored layout holds', () => {
+    useLayouts.setState({ activeWorkspace: 'video' })
     useTools.setState({
       arrangements: arrangedFor('image', {
-        open: { bottomRight: { primary: 'assets', secondary: 'assets' } },
+        open: { bottomRight: { primary: 'timeline', secondary: 'timeline' } },
       }),
     })
     renderShell()
 
-    expect(screen.getAllByLabelText('Assets')).toHaveLength(1)
+    expect(screen.getAllByLabelText('Timeline')).toHaveLength(1)
     expect(handles()).toHaveLength(1)
   })
 })
@@ -111,25 +121,28 @@ describe('a horizontal band', () => {
 // What a fresh install shows, and what "Reset layout" restores. The stored layout is the same in
 // all six sections; each reads its own first panel into every half.
 describe('the default layout', () => {
-  it('opens Image on the layers, the inspector, the shelf and the Explorer', () => {
+  it('opens Image on the layers, the inspector, the models and the Explorer', () => {
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     expect(screen.getByLabelText('Calques')).toBeInTheDocument()
     expect(screen.getByLabelText('Inspecteur')).toBeInTheDocument()
-    expect(screen.getByLabelText('Assets')).toBeInTheDocument()
+    // The upper left, on the first panel it declares. The shelf shares that half and is NOT what
+    // a default layout opens on: one asks for it, and choosing a model comes first.
+    expect(screen.getByLabelText('Modèles')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
     // The lower half of the left column, open like every other half a surface has: two halves
-    // exist so the generator stays visible WHILE the Explorer is read.
+    // exist so the shelf stays visible WHILE the Explorer is read.
     expect(screen.getByLabelText('Explorateur')).toBeInTheDocument()
   })
 
-  it('opens Video on the montage and the shelf beside it', () => {
+  it('opens Video on the montage, with the same left column as Image', () => {
     useLayouts.setState({ activeWorkspace: 'video' })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     expect(screen.getByLabelText('Timeline')).toBeInTheDocument()
-    expect(screen.getByLabelText('Assets')).toBeInTheDocument()
+    expect(screen.getByLabelText('Modèles')).toBeInTheDocument()
   })
 
   it('opens Skyboxes on the sky controls', () => {
@@ -141,16 +154,17 @@ describe('the default layout', () => {
   })
 })
 
-// Spec § 3: the band belongs to the montage in Video, and the shelf moves to the right column
-// so a take can be dragged onto a track.
+// The band belongs to the montage in Video. The shelf stood in the right column there until
+// 17 August, so a take could be dragged onto a track; it holds the upper left in every space
+// now, and the gesture is unchanged — a column and a band are on screen together either way.
 describe('the Video layout', () => {
   // One stored layout, read by two sections: the halves keep their place, their contents follow.
   const SHELF_IN_COLUMN: OpenByZone = {
     ...DEFAULT_OPEN.workspaces,
-    right: { primary: 'assets', secondary: 'inspector' },
+    left: { primary: 'assets', secondary: 'explorer' },
   }
 
-  it('puts the montage in the band and the shelf in the right column', () => {
+  it('puts the montage in the band and the shelf in the left column', () => {
     useLayouts.setState({ activeWorkspace: 'video' })
     useTools.setState({ arrangements: arrangedFor('image', { open: SHELF_IN_COLUMN }) })
     renderShell()

@@ -15,7 +15,6 @@ import { assetTypesOf } from '@/helpers/workspaces'
 import { useAssetFacets } from '@/hooks/useAssetFacets'
 import { useBadgeLabels } from '@/hooks/useBadgeLabels'
 import { useShelf } from '@/hooks/useShelf'
-import { useToolLying } from '@/hooks/useToolLying'
 import { useTypeLabels } from '@/hooks/useTypeLabels'
 import { getBridge } from '@/services/bridge'
 import { renameAsset } from '@/helpers/rename'
@@ -71,7 +70,6 @@ export function AssetBrowser() {
   const typeLabels = useTypeLabels()
   const badgeLabels = useBadgeLabels()
   const facets = useAssetFacets(typeLabels)
-  const lying = useToolLying()
   const setScope = useAssets(state => state.setScope)
   const setShownCount = useAssets(state => state.setShownCount)
   const selectedIds = useSelection(selectedAssetIds)
@@ -330,8 +328,7 @@ export function AssetBrowser() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* In a band the bar rides on the title row instead — see `AssetBrowserActions`. */}
-      {!lying && <CollectionBar state={collection} onChange={setCollection} facets={facets} />}
+      <CollectionBar state={collection} onChange={setCollection} facets={facets} />
       <ImportProgress />
       <Collection
         label={t('panels.assets')}

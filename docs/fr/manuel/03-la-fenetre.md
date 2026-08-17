@@ -233,10 +233,10 @@ dessous dans la seconde.
 |---|---|
 | **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif — à l’accueil, un **nouveau projet** |
 | *séparateur* | |
-| Icônes de la **moitié haute** | Modèles, puis Génération ; l’accueil y met **Vos projets** |
+| Icônes de la **moitié haute** | Modèles, Génération, puis Assets — ce que Scenario propose ; l’accueil y met **Vos projets** |
 | *séparateur* | |
 | Icônes de la **moitié basse** | l’Explorateur puis Git, à l’accueil comme dans les espaces |
-| Tout en bas | Assets ou Timeline, puis Historique, selon l’espace ; à l’accueil, l’Historique seul |
+| Tout en bas | Timeline puis Historique, selon l’espace ; à l’accueil, l’Historique seul |
 
 > **Le bouton + fait ce que l’écran sait faire.** Dans un espace, il est grisé tant qu’aucun
 > projet n’est ouvert : un document est un fichier dans un dossier de projet. **À l’accueil il
@@ -245,7 +245,10 @@ dessous dans la seconde.
 ### Le rail de droite
 
 Les icônes de la colonne de droite — Skybox, Vue, Calques, Canaux, Styles, Scène, Lumières,
-Mailles, Assets, celles que l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
+Mailles, celles que l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
+
+En **Vidéo** et en **Audio**, la moitié haute de cette colonne est vide : ces deux espaces n’y
+déclarent rien, et le rail ne porte alors que l’Inspecteur.
 
 À l’accueil, il n’en porte qu’une : **Votre bibliothèque**, et rien sous le trait.
 
@@ -306,6 +309,7 @@ garde sa taille.
 |---|---|---|---|---|
 | **Modèles** | gauche | 1re | partout | le catalogue Scenario, filtré sur l’espace actif |
 | **Génération** | gauche | 1re | partout *(si un modèle est choisi)* | le formulaire du modèle choisi |
+| **Assets** | gauche | 1re | partout | l’étagère : ce que le projet tient, ce que votre clé possède, ce qui est en train d’être produit |
 | **Skybox** | droite | 1re | Skyboxes | les réglages du ciel ouvert |
 | **Vue** | droite | 1re | Skyboxes | la projection, l’angle de vue et les objets de test |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
@@ -314,11 +318,9 @@ garde sa taille.
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
 | **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
-| **Assets** | droite | 1re | Vidéo, Audio, 3D | l’étagère du projet, en colonne |
 | **Explorateur** | gauche | 2de | partout | le dossier du projet, dossiers et fichiers |
 | **Git** | gauche | 2de | partout *(si un projet est ouvert)* | ce qui a changé dans le dossier du projet depuis la dernière version enregistrée |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
-| **Assets** | bas | 1re | Image, Textures, Skyboxes | la même étagère, en bande |
 | **Timeline** | bas | 1re | Vidéo, Audio, 3D | la séquence en cours de montage, ou l’animation |
 | **Historique** | bas | 1re | partout *(si un projet est ouvert)* | les versions enregistrées du projet, et ce que chacune a changé |
 
@@ -328,22 +330,22 @@ garde sa taille.
 > avant. Tous trois ne s’affichent qu’avec un projet ouvert : sans projet, l’accueil est celui
 > qu’il a toujours été, deux colonnes et rien en bas.
 
-**La colonne de gauche est celle de ce qui produit.** En haut, **Modèles** et **Génération**,
-qui se relaient. En bas, l’**Explorateur** et **Git**, qui se relaient aussi.
+**La colonne de gauche se lit en deux temps : ce que Scenario propose, puis ce qui est déjà à
+vous.** En haut, **Modèles**, **Génération** et **Assets**, qui se relaient — un modèle à choisir,
+son formulaire, et l’étagère de ce qu’il produit. En bas, l’**Explorateur** et **Git**, qui se
+relaient aussi : le dossier de votre projet, et ce qui y a changé.
+
+La coupure entre les deux moitiés est ce qui rend le geste possible : l’étagère et l’Explorateur
+tiennent l’écran **ensemble**, et rien n’entre dans le projet sans passer de l’une à l’autre.
 
 **La colonne de droite est celle du document ouvert** : ce qu’il contient, ce qui l’éclaire, ce
 qui est sélectionné. Les panneaux prennent leur tour dans la moitié haute, l’**Inspecteur**
 occupe toujours la moitié basse.
 
-**L’étagère à assets change de place selon l’espace.** En bas dans la plupart ; en **Vidéo**,
-**Audio** et **3D**, la bande basse appartient à la timeline, et l’étagère passe dans la colonne
-de droite — timeline et étagère tiennent alors l’écran ensemble, pour glisser une prise sur une
-piste.
-
 ### Une moitié montre ce que l’espace y met
 
-Ouvrez la bande basse en Image : c’est l’étagère. Passez en Vidéo : la même bande devient le
-montage, sans rien rouvrir.
+Ouvrez la bande basse en Vidéo : c’est le montage. Passez en Image : la même bande devient
+l’Historique, sans rien rouvrir.
 
 **Ce que vous avez ouvert, c’est une zone**, et elle le reste. Fermer la moitié la vide partout.
 
@@ -356,16 +358,21 @@ Tant que vous n’avez cliqué aucune icône d’une moitié, elle affiche le pr
 l’espace y déclare. C’est ce que vous voyez à la première ouverture, et ce que **Affichage ▸
 Réinitialiser la disposition** rétablit.
 
-La moitié basse de gauche s’ouvre sur l’**Explorateur** dans tous les espaces.
+La moitié haute de gauche s’ouvre sur les **Modèles** dans tous les espaces — choisir un modèle
+est ce par quoi tout commence, et l’étagère se demande. La moitié basse s’ouvre sur
+l’**Explorateur**, partout aussi.
 
 | Espace | La moitié haute de droite s’ouvre sur | La bande basse sur |
 |---|---|---|
-| **Image** | Calques | Assets |
-| **Vidéo** | Assets | Timeline |
+| **Image** | Calques | Historique |
+| **Vidéo** | *rien* | Timeline |
 | **3D** | Scène | Timeline |
-| **Audio** | Assets | Timeline |
-| **Textures** | Canaux | Assets |
-| **Skyboxes** | Skybox | Assets |
+| **Audio** | *rien* | Timeline |
+| **Textures** | Canaux | Historique |
+| **Skyboxes** | Skybox | Historique |
+
+> **L’Historique demande un projet ouvert.** Sans projet, la bande basse de ces trois espaces
+> n’affiche rien — la zone est là, elle est vide.
 
 Dès que vous cliquez une icône, cette moitié retient **votre** choix et ne bouge plus, jusqu’à ce
 que vous en cliquiez une autre ou que vous réinitialisiez la disposition.

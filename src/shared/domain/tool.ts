@@ -62,16 +62,19 @@ export type ToolId =
   | 'library'
 
 /**
- * The panels the upper half of a WORKSPACE's left column is reserved for: choosing a model, then
- * filling its form. Nothing else may sit in that half of a workspace, and neither sits anywhere
- * else — `tool.test.ts` enforces both directions, and both are scoped to `WORKSPACE_IDS`. The
- * home is outside the rule and always was: it generates nothing, and its upper left holds the
- * projects.
+ * The panels the upper half of a WORKSPACE's left column is reserved for: what the Scenario API
+ * offers. A model to pick, its form to fill, and the assets the account holds. Nothing else may
+ * sit in that half of a workspace, and none of the three sits anywhere else — `tool.test.ts`
+ * enforces both directions, and both are scoped to `WORKSPACE_IDS`. The home is outside the rule
+ * and always was: it calls no model, and its upper left holds the projects.
  *
- * The upper half of every space's left column, so generating — the one thing every space does —
- * keeps the same place in each, under the same button that creates a document.
+ * The half used to be generation ALONE, and the shelf lay in the bottom band or the right column
+ * depending on the space. What that arrangement said was "the shelf belongs to the document in
+ * front of you", and it is the opposite of what the shelf is: nothing in it is in the project
+ * until it is pulled down. Read together, the three answer one question — what can I get from
+ * Scenario — and the half under them answers the other: what is already mine, on my disk.
  */
-export const GENERATION_TOOLS: readonly ToolId[] = ['models', 'generator']
+export const SCENARIO_TOOLS: readonly ToolId[] = ['models', 'generator', 'assets']
 
 /**
  * A zone is cut in two, and each half shows one tool at a time. The rail draws the same cut as
@@ -83,10 +86,9 @@ export const GENERATION_TOOLS: readonly ToolId[] = ['models', 'generator']
 export type ToolSlot = 'primary' | 'secondary'
 
 /**
- * Where a tool sits. A tool may declare **more than one**, for disjoint sets of surfaces:
- * the asset shelf belongs in the bottom strip nearly everywhere, and in the column beside the
- * montage in Video and Audio, where dragging a take onto a track is the gesture the space is
- * built around.
+ * Where a tool sits. A tool may declare **more than one**, for disjoint sets of surfaces: the
+ * Explorer sits in the same half of every space and of the home, but only the home's asks for a
+ * project first — a space is a project already being edited.
  *
  * Two invariants hold across the placements of one tool, and `tool.test.ts` enforces them:
  * their surfaces never overlap, and they share a slot — a tool that changed half as well as
@@ -121,11 +123,14 @@ export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
  * across the whole width, and cutting it leaves two panels too narrow to be either.
  */
 export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
-  // The upper half of the left column is generation, and only generation, in every space: the
-  // same two panels in the same place, right under the button that makes a document.
+  // The upper half of the left column is the Scenario side, in every space: the same three
+  // panels in the same place, right under the button that makes a document.
   { id: 'models', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
   // Generating without a model is impossible, so it is absent rather than disabled.
   { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS, requires: 'model' },
+  // Last of the three, so entering a space still lands on the models: a half with nothing chosen
+  // opens on the first tool it declares, and choosing a model is where every space starts.
+  { id: 'assets', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
 
   // The lower half: the documents to produce into. Its own half rather than a third turn in the
   // upper one, so the generator stays visible WHILE the Explorer is read.
@@ -143,8 +148,7 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'view', zone: 'right', slot: 'primary', surfaces: ['skyboxes'] },
   { id: 'layers', zone: 'right', slot: 'primary', surfaces: ['image'] },
   // The eight channels of a material, first in Textures for the same reason the sky controls come
-  // first in Skyboxes: it is what the space is for. In the column rather than the band, so a
-  // channel and the shelf a picture is dragged from stay on screen together.
+  // first in Skyboxes: it is what the space is for.
   { id: 'channels', zone: 'right', slot: 'primary', surfaces: ['textures'] },
   // Saved ways of reading a material, beside the channels they read. In the upper half so the
   // inspector keeps the lower one: a style is saved FROM the inspector, and a panel that took
@@ -155,28 +159,12 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'scene', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'lights', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'meshes', zone: 'right', slot: 'primary', surfaces: ['3d'] },
-  // Where a take is dragged onto a track, the shelf and the montage have to be on screen
-  // together — and the montage owns the band, so the shelf takes the column. 3D joined them
-  // when its own timeline did: the rule is the band's, not the montage's.
-  //
-  // Declared AFTER the three 3D panels, and it matters: a half with nothing chosen shows the
-  // first tool it declares, so a shelf listed above them would open in front of the outliner
-  // every time the space is entered.
-  { id: 'assets', zone: 'right', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
 
   // The other half of the right column, and always up: what is selected is read WHILE a
   // model is chosen and a prompt written, and in an editor the inspector is never the panel
   // you have to switch away to.
   { id: 'inspector', zone: 'right', slot: 'secondary', surfaces: WORKSPACE_IDS },
 
-  // The shelf belongs in the bottom band wherever the band is free: it is a shelf, read across
-  // the width, and the column is where the things that act on the document live.
-  {
-    id: 'assets',
-    zone: 'bottomRight',
-    slot: 'primary',
-    surfaces: ['image', 'textures', 'skyboxes'],
-  },
   // The band is the timeline's, across the whole width — that is how time is read, in Audio and
   // Video as in 3D, where an animation runs along the same line a montage does.
   { id: 'timeline', zone: 'bottomRight', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
@@ -299,7 +287,8 @@ export function workspacePlacementsOf(id: unknown): ToolPlacement[] {
 /**
  * Where a tool sits **on this surface**, or `null` if it does not serve it. This is what a
  * caller wants whenever it is about to open one: `placementOf` would answer with whichever
- * placement was declared first, which for the asset shelf is the wrong zone half the time.
+ * placement was declared first, which for the Explorer is the one that asks for no project —
+ * offered on the home, where there may not be one.
  */
 export function placementIn(id: unknown, surface: ToolSurface): ToolPlacement | null {
   return placementsOf(id).find(placement => serves(placement, surface)) ?? null

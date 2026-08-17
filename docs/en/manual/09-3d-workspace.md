@@ -563,8 +563,8 @@ nothing had been written for it.
 
 ## Animating the scene
 
-The bottom strip of the 3D workspace carries a **timeline**, as Video and Audio do — and the asset
-shelf moves up into the right column to leave it the full width.
+The bottom strip of the 3D workspace carries a **timeline**, as Video and Audio do, across the full
+width of the screen.
 
 ### What a model already brings
 
