@@ -5,12 +5,9 @@ import { ASSET_SCHEME } from '@shared/domain/asset'
 const RETRIES = 1
 
 /**
- * Whether a failure is worth asking about twice.
- *
- * Only what this process serves. A still travels over `scenario://`, whose resolver reads a
- * catalogue that refuses while a project closes — a refusal, not an answer. A signed CDN URL that
- * has expired answers the same 403 however often it is asked, and a grid of them would double
- * every request to learn what the first already said.
+ * Whether a failure is worth asking about twice — only what this process serves: an expired CDN
+ * URL answers the same 403 however often it is asked. The retry leaves with no delay once the
+ * failure is known, so only a fault healing within one round trip is won; a closed project is not.
  */
 function worthRetrying(url: string): boolean {
   return url.startsWith(`${ASSET_SCHEME}:`)
