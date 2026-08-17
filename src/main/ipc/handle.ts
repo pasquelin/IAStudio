@@ -113,6 +113,7 @@ type ChannelMethod = {
   [CHANNELS.fontsRead]: StudioBridge['fonts']['read']
 
   [CHANNELS.diagnosticsReport]: StudioBridge['diagnostics']['report']
+  [CHANNELS.diagnosticsTrace]: StudioBridge['diagnostics']['trace']
 
   [CHANNELS.mediaIngest]: StudioBridge['media']['ingest']
   [CHANNELS.mediaCancel]: StudioBridge['media']['cancel']

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
-import { ROOT_ERROR_REPORTING } from './root-errors'
+import { ROOT_ERROR_REPORTING, traceDroppedRejections } from './root-errors'
 
 function Boom(): never {
   throw new Error('panel exploded')
@@ -66,5 +66,90 @@ describe('ROOT_ERROR_REPORTING', () => {
     const main = await sources['../main.tsx']?.()
 
     expect(main).toContain('createRoot(root, ROOT_ERROR_REPORTING)')
+  })
+})
+
+/**
+ * The event is assembled rather than provoked: jsdom exposes no `PromiseRejectionEvent`, and a
+ * real `Promise.reject` raises the Node-side warning, not a DOM event on this window.
+ */
+function rejectWith(reason: unknown): void {
+  window.dispatchEvent(Object.assign(new Event('unhandledrejection'), { reason }))
+}
+
+describe('traceDroppedRejections', () => {
+  it('writes a rejection nobody caught to the log, and nowhere else', () => {
+    const log = bridgeWatchingLogs()
+    const stop = traceDroppedRejections()
+
+    rejectWith(new TypeError('disk is full'))
+    stop()
+
+    expect(log.trace).toHaveBeenCalledWith({
+      scope: 'shell.dropped',
+      message: 'TypeError: disk is full',
+    })
+    // The channel that draws a toast is the other one, and this must never reach it.
+    expect(log.report).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Two things at once, and they hold each other up: a constant subject is the defect this
+   * replaced — the log would read as one recurring failure whatever threw — and the repeat is
+   * what proves the trace is not deduplicated the way a reported failure is. Dropping the second
+   * `RangeError` is what the reader of a log comes for.
+   */
+  it('names what threw, and says so again when the same thing throws twice', () => {
+    const log = bridgeWatchingLogs()
+    const stop = traceDroppedRejections()
+
+    rejectWith(new RangeError('out of bounds'))
+    rejectWith(new RangeError('out of bounds'))
+    rejectWith('a bare string')
+    stop()
+
+    expect(log.trace.mock.calls.map(([entry]) => entry.message)).toEqual([
+      'RangeError: out of bounds',
+      'RangeError: out of bounds',
+      'string: a bare string',
+    ])
+  })
+
+  // An unbounded burst is what this application forbids everywhere else: a promise rejected in
+  // an animation frame would otherwise send one message per frame, for as long as it runs.
+  it('stops writing once a session has said it enough times', () => {
+    const log = bridgeWatchingLogs()
+    const stop = traceDroppedRejections()
+
+    for (let i = 0; i < 150; i += 1) rejectWith(new Error(`again ${i}`))
+    stop()
+
+    expect(log.trace.mock.calls).toHaveLength(100)
+  })
+
+  it('stops writing once the window is done with it', () => {
+    const log = bridgeWatchingLogs()
+
+    traceDroppedRejections()()
+    rejectWith(new Error('too late'))
+
+    expect(log.trace).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Same reason as the root options above — nothing else would notice the call going away — plus
+   * the ORDER, which is half of what it is worth: `main.tsx` has top-level awaits, so the module
+   * splits at the first one. Armed after them, the window starts up with nobody listening, and a
+   * presence check alone stays green through exactly that move.
+   */
+  it('is what the window arms, before anything it awaits', async () => {
+    const sources = import.meta.glob<string>('../main.tsx', {
+      query: '?raw',
+      import: 'default',
+    })
+    const main = (await sources['../main.tsx']?.()) ?? ''
+
+    expect(main).toContain('traceDroppedRejections()')
+    expect(main.indexOf('traceDroppedRejections()')).toBeLessThan(main.indexOf('await '))
   })
 })

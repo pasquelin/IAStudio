@@ -182,6 +182,7 @@ export type Channels = {
   fontsRead: 'fonts:read'
 
   diagnosticsReport: 'diagnostics:report'
+  diagnosticsTrace: 'diagnostics:trace'
 
   windowToggleFullScreen: 'window:toggle-full-screen'
   windowState: 'window:state'
@@ -323,6 +324,7 @@ export const CHANNELS: Channels = {
   fontsRead: 'fonts:read',
 
   diagnosticsReport: 'diagnostics:report',
+  diagnosticsTrace: 'diagnostics:trace',
 
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
@@ -567,6 +569,31 @@ export type LogEntry = {
   scope: string
   message: string
 }
+
+/**
+ * What a trace is about — and the reason it is a union of its own rather than another `LogScope`.
+ *
+ * A scope names a failure the reader is meant to SEE: it lands in the project's journal, under a
+ * translated sentence, and shows up as a toast on the way. A trace names one that only ever
+ * reaches the log file the main process owns. Nothing about it is drawn.
+ *
+ * Merging the two lists would cost both sides: `TOPIC_OF_SCOPE` would have to answer "nowhere"
+ * for some of its rows, and the bundle guard would ask for a sentence no surface displays.
+ */
+export type TraceScope =
+  // A promise nobody awaited, rejected. This is the renderer's own silence: the calls that cross
+  // to the main process throw their answer away, so a full disk on a rename reaches no `catch`.
+  'shell.dropped'
+
+/**
+ * Disjoint from `LOG_SCOPES`, and the compiler is what holds that: while no name appears in both
+ * unions, comparing one to the other does not typecheck. A name in both would reach the journal
+ * through one channel and dodge it through the other.
+ */
+export const TRACE_SCOPES: readonly TraceScope[] = ['shell.dropped']
+
+/** No level: a trace is always a failure, and a field with one legal value is a branch to test. */
+export type TraceEntry = { scope: TraceScope; message: string }
 
 /** Channels pushed from the main process to the renderer. */
 export const EVENTS = {
@@ -1260,6 +1287,15 @@ export type StudioBridge = {
      * would make reporting a failure cost a round trip.
      */
     report: (entry: LogEntry) => Promise<void>
+    /**
+     * The same direction, for what nobody should be shown: this one stops at the log file. A
+     * rejected promise is nothing the reader can act on — it names no gesture and no document —
+     * so putting it in the journal would raise a toast about something already lost.
+     *
+     * Fire and forget, like `report`, and never deduplicated: a trace is read after the fact,
+     * and how many times a thing happened is half of what it says.
+     */
+    trace: (entry: TraceEntry) => Promise<void>
   }
   updates: {
     /**

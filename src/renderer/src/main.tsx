@@ -8,11 +8,15 @@ import { isUsageRoute } from '@shared/domain/usage'
 import { UNKNOWN_SYSTEM_LANGUAGE } from '@shared/i18n'
 import { Application } from '@/app/Application'
 import { getBridge } from '@/services/bridge'
-import { ROOT_ERROR_REPORTING } from '@/app/root-errors'
+import { ROOT_ERROR_REPORTING, traceDroppedRejections } from '@/app/root-errors'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { Failure } from '@/design/Failure'
 import { initI18n } from '@/i18n'
 import './index.css'
+
+// First of all, and above the two awaits below: this module splits there, and a rejection during
+// the language read or `initI18n` is exactly the kind nothing else in the window would catch.
+traceDroppedRejections()
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Root element not found in index.html')
