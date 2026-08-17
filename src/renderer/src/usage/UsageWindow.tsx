@@ -21,6 +21,7 @@ import { UsageNotes } from './UsageNotes'
 import { UsageOverview } from './UsageOverview'
 import { useUsageReport } from './useUsageReport'
 import { windowControl, WINDOW_CAPTION } from '@/design/window-styles'
+import { WindowNav, WindowNavItem } from '@/design/WindowNav'
 
 export type UsageSectionId = 'overview' | 'models' | 'activities' | 'journal'
 
@@ -70,22 +71,20 @@ export function UsageWindow() {
         <>
           {/* The list scrolls, not the column: refresh stays reachable however long the list
               grows, which it did not when the whole nav scrolled. */}
-          <ul className="m-0 flex min-h-0 flex-1 list-none flex-col gap-0.5 overflow-auto p-0">
+          <WindowNav>
             {SECTIONS.map(id => (
-              <li key={id}>
-                <button
-                  type="button"
-                  aria-current={id === section ? 'page' : undefined}
-                  // The sentence the pane already carries, said before one gets there.
-                  {...HINT_RIGHT(t(`usage.descriptions.${id}`))}
-                  onClick={() => setSection(id)}
-                  className={cn(windowControl(id === section), 'w-full px-3 text-left')}
-                >
-                  {t(`usage.sections.${id}`)}
-                </button>
-              </li>
+              <WindowNavItem
+                key={id}
+                active={id === section}
+                // The sentence the pane already carries, said before one gets there.
+                hint={t(`usage.descriptions.${id}`)}
+                onSelect={() => setSection(id)}
+                className="px-3"
+              >
+                {t(`usage.sections.${id}`)}
+              </WindowNavItem>
             ))}
-          </ul>
+          </WindowNav>
 
           <button
             type="button"
