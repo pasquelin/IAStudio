@@ -38,12 +38,13 @@ The studio files each action under a **context** — the surface where it makes 
 surface listens at a time, the one you are looking at. A key shared between two contexts can
 therefore never be ambiguous.
 
-Eight contexts:
+Nine contexts:
 
 | Context | Where it applies |
 |---|---|
 | **Anywhere in the application** | any window, any workspace |
 | **In the bar of spaces** | the top bar, while the focus is on one of its tabs |
+| **In the explorer** | the project folder panel, in every workspace and on the home |
 | **In the 3D view** | the viewport of the 3D workspace |
 | **In the edit** | the timeline of the Video and Audio workspaces |
 | **In the image** | the canvas of the Image workspace |
@@ -157,6 +158,42 @@ trade one gesture for another. Dragging and right-clicking do the same thing —
 
 Both keys can be changed like any other, under the **In the bar of spaces** context of the
 shortcuts screen.
+
+---
+
+## In the explorer
+
+The one context that is not a workspace: it is the project folder panel, and it listens wherever
+that panel is open — in all six workspaces as on the home. The shortcuts screen names it exactly
+as this heading does.
+
+**It only listens while the focus is inside it.** Click a row, or `Tab` into it: while you are
+elsewhere, these keys belong to the open document. That is what lets `⌘Z`, `⌘C` and `⌘V` exist
+here without ever treading on the canvas's own.
+
+| Action | Key | What it does |
+|---|---|---|
+| **New folder** | `⇧⌘N` | creates an empty folder inside the one on screen, and opens its name for typing |
+| **Duplicate** | `⌘D` | lays a copy of each chosen item beside the original, under the first free name |
+| **Cut** | `⌘X` | holds the selection, to be moved on the next paste |
+| **Copy** | `⌘C` | holds the selection, to be copied on the next paste |
+| **Paste** | `⌘V` | drops what the clipboard holds into the folder on screen |
+| **Move to trash** | `⌘⌫` | sends the selection to the system trash |
+| **Undo the last file gesture** | `⌘Z` | puts the last batch moved, renamed, duplicated or created back where it was |
+| **Redo the file gesture** | `⇧⌘Z` | redoes the batch just undone, exactly as it was |
+
+**Cut moves nothing**: the rows being held are drawn dimmed, and nothing shifts until you paste.
+**A folder is duplicated with everything inside it.**
+
+**A paste refuses one by one, not in bulk.** If a name is already taken in the destination, that
+item is the one refused; the rest go through.
+
+**`⌘⌫` rather than `⌫` alone**, and it is deliberate: this is the one gesture of this context the
+studio cannot undo, and a bare delete key is too close to what a hand does while reading a list.
+
+> **Rename has no shortcut.** It is the only Explorer gesture in that case: it lives in the
+> right-click menu, and nowhere else — see
+> [Projects](04-projects.md#right-clicking-eleven-gestures-in-four-groups).
 
 ---
 
@@ -443,7 +480,7 @@ taken from the bar, under the waveform.
 
 ## In the material
 
-The eighth context, and the shortest: the Textures workspace listens for undo alone.
+The last context on the list, and the shortest: the Textures workspace listens for undo alone.
 
 | Action | Key | What it does |
 |---|---|---|
@@ -465,6 +502,14 @@ image has not moved.
 
 > **"⌘Z seems to do nothing."** It is almost always this: the action you have in mind belongs to
 > another tab. Activate the tab, then undo.
+
+**And one stack belongs to no document: the files'.** Moving, renaming, duplicating, creating a
+folder touches no tab — those gestures belong to the project, and so does their stack. It
+therefore outlives closing a document, and it is the same one in every window.
+
+`⌘Z` picks between the two by the focus, and by nothing else: **inside the Explorer it steps back
+one file gesture; anywhere else it steps back one notch in the document in front of you.** The
+trash gesture enters neither.
 
 **While you are typing, `⌘Z` undoes your text.** Rename a layer or a track, make a typo, press
 `⌘Z`: the word you have just typed steps back, not the last brush stroke. The studio stands aside
@@ -542,6 +587,10 @@ are bound to the band, not to a context.
 
 ## Crib sheet, all on one page
 
+The columns are the workspaces. **The Explorer has its own table, below**: it is the one context
+that is not a workspace — it is open in all of them at once — and one more column would suggest
+`⌘D` or `⌘Z` do there what they do in the workspace of the column next to it.
+
 | Key | Anywhere | Bar | 3D view | Edit | Image | Sky | Audio | Material |
 |---|---|---|---|---|---|---|---|---|
 | `⌘N` | New project |  |  |  |  |  |  |  |
@@ -600,6 +649,16 @@ are bound to the band, not to a context.
 | `Esc` |  |  |  |  | Abandon the crop |  |  |  |
 | `⌥←` |  | Move left |  |  |  |  |  |  |
 | `⌥→` |  | Move right |  |  |  |  |  |  |
+
+**In the explorer** — while the focus is in the panel, and only then:
+
+| Key | What it does |
+|---|---|
+| `⇧⌘N` | New folder |
+| `⌘D` | Duplicate |
+| `⌘X` / `⌘C` / `⌘V` | Cut / Copy / Paste |
+| `⌘⌫` | Move to trash |
+| `⌘Z` / `⇧⌘Z` | Undo / Redo the file gesture |
 
 ---
 

@@ -38,12 +38,13 @@ Le studio range chaque action dans un **contexte** — la surface où elle a un 
 surface écoute à la fois, celle que vous regardez. Une touche partagée entre deux contextes ne
 peut donc jamais être ambiguë.
 
-Huit contextes :
+Neuf contextes :
 
 | Contexte | Où il s’applique |
 |---|---|
 | **Partout dans l’application** | n’importe quelle fenêtre, n’importe quel espace |
 | **Dans la barre des espaces** | la barre du haut, quand le focus est sur l’un de ses onglets |
+| **Dans l’Explorateur** | le panneau du dossier de projet, dans tous les espaces et à l’accueil |
 | **Dans la vue 3D** | le viewport de l’espace 3D |
 | **Dans le montage** | la timeline de l’espace Vidéo et de l’espace Audio |
 | **Dans l’image** | le canvas de l’espace Image |
@@ -161,6 +162,42 @@ d’écran annonce les premières comme des boutons radio et les secondes comme 
 
 Ces deux touches se changent comme les autres, sous le contexte **Dans la barre des espaces** de
 l’écran des raccourcis.
+
+---
+
+## Dans l’Explorateur
+
+Le seul contexte qui ne soit pas un espace : c’est le panneau du dossier de projet, et il écoute
+partout où ce panneau est ouvert — dans les six espaces comme à l’accueil.
+
+**Il n’écoute que si le focus est dedans.** Cliquez une ligne, ou entrez-y au `Tab` : tant que
+vous êtes ailleurs, ces touches appartiennent au document ouvert. C’est ce qui permet à `⌘Z`,
+`⌘C` et `⌘V` d’exister ici sans jamais marcher sur celles du canevas.
+
+| Action | Touche | Ce qu’elle fait |
+|---|---|---|
+| **Nouveau dossier** | `⇧⌘N` | crée un dossier vide dans celui qui est affiché, et ouvre son nom à la saisie |
+| **Dupliquer** | `⌘D` | pose une copie de chaque élément choisi à côté de l’original, sous le premier nom libre |
+| **Couper** | `⌘X` | retient la sélection pour la déplacer au prochain collage |
+| **Copier** | `⌘C` | retient la sélection pour en poser une copie au prochain collage |
+| **Coller** | `⌘V` | dépose dans le dossier affiché ce que le presse-papiers retient |
+| **Mettre à la corbeille** | `⌘⌫` | envoie la sélection à la corbeille du système |
+| **Annuler le dernier geste sur les fichiers** | `⌘Z` | remet à sa place le dernier lot déplacé, renommé, dupliqué ou créé |
+| **Rétablir le geste sur les fichiers** | `⇧⌘Z` | refait à l’identique le lot qui vient d’être annulé |
+
+**Couper ne déplace rien** : les lignes retenues s’affichent atténuées, et rien ne bouge tant que
+vous n’avez pas collé. **Un dossier se duplique avec tout ce qu’il contient.**
+
+**Un collage refuse au détail, pas en bloc.** Si un nom est déjà pris dans le dossier d’arrivée,
+c’est cet élément-là qui est refusé ; les autres passent.
+
+**`⌘⌫` plutôt que `⌫` seul**, et c’est délibéré : c’est le seul geste de ce contexte que le studio
+ne sait pas annuler, et une touche de suppression nue est trop proche de ce qu’une main fait en
+parcourant une liste.
+
+> **Renommer n’a pas de raccourci.** C’est le seul geste de l’Explorateur dans ce cas : il vit dans
+> le menu du clic droit, et nulle part ailleurs — voir
+> [Les projets](04-projets.md#le-clic-droit--onze-gestes-en-quatre-groupes).
 
 ---
 
@@ -451,7 +488,7 @@ touche : ils se prennent à la barre, sous la forme d’onde.
 
 ## Dans la matière
 
-Le huitième contexte, et le plus court : l’espace Textures n’écoute que l’annulation.
+Le dernier contexte de la liste, et le plus court : l’espace Textures n’écoute que l’annulation.
 
 | Action | Touche | Ce qu’elle fait |
 |---|---|---|
@@ -473,6 +510,15 @@ la scène qui recule d’un cran — l’image n’a pas bougé.
 
 > **« ⌘Z semble ne rien faire. »** C’est presque toujours ceci : l’action que vous visez appartient
 > à un autre onglet. Activez l’onglet, puis annulez.
+
+**Et il y a une pile qui n’appartient à aucun document : celle des fichiers.** Déplacer, renommer,
+dupliquer, créer un dossier ne touche aucun onglet — ces gestes appartiennent au projet, et leur
+pile aussi. Elle survit donc à la fermeture d’un document, et elle est la même dans toutes les
+fenêtres.
+
+`⌘Z` choisit entre les deux par le focus, et par rien d’autre : **dans l’Explorateur il recule
+d’un geste de fichier ; ailleurs il recule d’un cran dans le document devant vous.** La mise à la
+corbeille n’entre dans aucune des deux.
 
 **Quand vous tapez du texte, `⌘Z` annule votre texte.** Renommez un calque ou une piste, faites une
 faute, appuyez sur `⌘Z` : c’est le mot que vous venez de taper qui recule, pas le dernier trait de
@@ -553,6 +599,10 @@ ils sont liés à la bande, pas à un contexte.
 
 ## Aide-mémoire, tout sur une page
 
+Les colonnes sont les espaces. **L’Explorateur a sa table à part, en dessous** : c’est le seul
+contexte qui n’est pas un espace — il est ouvert dans tous à la fois — et une colonne de plus
+laisserait croire que `⌘D` ou `⌘Z` y font ce qu’ils font dans l’espace de la colonne d’à côté.
+
 | Touche | Partout | Barre | Vue 3D | Montage | Image | Ciel | Audio | Matière |
 |---|---|---|---|---|---|---|---|---|
 | `⌘N` | Nouveau projet |  |  |  |  |  |  |  |
@@ -611,6 +661,16 @@ ils sont liés à la bande, pas à un contexte.
 | `Échap` |  |  |  |  | Abandonner le recadrage |  |  |  |
 | `⌥←` |  | Déplacer à gauche |  |  |  |  |  |  |
 | `⌥→` |  | Déplacer à droite |  |  |  |  |  |  |
+
+**Dans l’Explorateur** — quand le focus est dans le panneau, et là seulement :
+
+| Touche | Ce qu’elle fait |
+|---|---|
+| `⇧⌘N` | Nouveau dossier |
+| `⌘D` | Dupliquer |
+| `⌘X` / `⌘C` / `⌘V` | Couper / Copier / Coller |
+| `⌘⌫` | Mettre à la corbeille |
+| `⌘Z` / `⇧⌘Z` | Annuler / Rétablir le geste sur les fichiers |
 
 ---
 
