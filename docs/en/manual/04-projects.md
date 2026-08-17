@@ -437,8 +437,8 @@ half-written file.
 ## Recording versions — the Git panel
 
 The **Git** panel tracks **your project folder**, and nothing else: your files, never the studio
-itself. A recorded version is a complete state of the folder that you can come back to — which the
-**History** panel, in the bottom band, then shows.
+itself. A recorded version is a complete state of the folder that you can then read back file by
+file — which is what the **History** panel, in the bottom band, shows.
 
 It is the safety net of long work: a lighting pass tried out before the weekend, a material you
 would rather abandon, a folder of twenty documents you want back the way it was yesterday.
@@ -614,6 +614,100 @@ before the merge started.
 > SSH key with a passphrase — is written plainly in
 > [What does not exist yet](18-limits.md#git). The tracking settings, including the author name
 > written into every version, are in [Settings ▸ Versions](14-settings.md#versions).
+
+---
+
+## Reading versions back — the History panel
+
+The **History** panel sits in the bottom band and wants **a project open**. It shows the recorded
+versions of **every branch at once**, not only the one you are on: the Git panel writes, this one
+reads back, and both are looking at the same folder.
+
+> While version tracking is not set up, the panel says so in one line and points at the Git panel,
+> which carries the screen and the button. Tracking set up but nothing recorded yet: **No version
+> recorded so far.**
+
+### What a row carries
+
+| Column | What it says |
+|---|---|
+| **The drawing** | which branch this version belongs to, and what it came from |
+| **The fingerprint** | the short name git gives the version |
+| **The badges** | the names pointing at it — see just below |
+| **The message** | what you wrote when recording it. It takes all the room that is left |
+| **The author**, **the moment** | who recorded it, and when |
+
+Three kinds of badge, **one of them alone in solid blue**:
+
+| Badge | What it is |
+|---|---|
+| **Named version** | a name somebody put on this version. The only solid blue one, because it is what you scroll a history looking for |
+| **Branch** | a branch on your computer stands here |
+| **Server branch** | the server stood here at the last **Check** |
+
+### The order is not the clock's
+
+Versions are laid out **by descent**, not by date: a version always sits above the ones it came
+from. On a project worked across several machines, two badly set clocks are enough to make the
+order of dates wrong, where descent cannot be argued with. So you may well meet an older date
+above a more recent one: that is not a display fault.
+
+### Opening a version
+
+Click a row: the **Files of this version** column opens on the right and lists what that version
+changed, in the same words as the Git panel — **Added**, **Changed**, **Deleted**, **Renamed**.
+Clicking the same row again closes the column.
+
+> A version may touch no file at all — a merge, most of the time. The panel says so rather than
+> leaving you in front of an empty column.
+
+### Comparing a file of that version
+
+Click a file in the column: the comparison opens in the **wide zone**, on the right. It is the
+same zone the Git panel uses, and that is deliberate — the narrow panel asks, the wide zone shows.
+
+| What you compare | What you see |
+|---|---|
+| **A text file** | the added lines in green, the removed ones in red, with the line numbers **of both versions** side by side, and the signed tally at the top: `+12 −3` |
+| **A picture** | both states side by side, **Before** and **After**. This is the comparison this studio exists for, and the one no list of lines can give |
+| **A file that has just appeared** | it has no before, and the column says so rather than staying blank. A deleted file has no after |
+
+**Close the comparison** gives the room back. A file git cannot compare — too large, missing from
+both sides — says so as well, rather than staying on hold.
+
+### Naming a version
+
+At the top of the files column, **Name this version** puts a name on it. It is what you put on the
+state a client saw, on the one that went to print, on the one before an idea that did not work: a
+name is found by scrolling, a fingerprint is not.
+
+The name follows the same rules as a branch name, and for the same reason — no whitespace, and
+none of the characters `~ ^ : ? * [ \`. Once it is on, it shows on the row in solid blue, and it
+stays there.
+
+### Sixty at a time
+
+The history is read in pages of sixty versions. A **Show more** button loads the next ones
+underneath; it goes away when there is nothing left to load. A two-year project holds tens of
+thousands of versions, and reading them all to draw twenty is what this paging avoids.
+
+### The panel keeps itself current
+
+Recording a version, correcting the last one, changing branch: the list reads itself again, with
+nothing to ask for. The **Refresh** button is there for the other case — what was done **outside
+the studio**, in a terminal. It reads from the first page again rather than adding to what is on
+screen, otherwise the two halves of the list would describe two different states of the folder.
+
+### What the panel does not do
+
+**It does not put the folder back to an older version.** You read a version here, compare it, name
+it; no gesture brings it back out. The two ways back the studio does offer are elsewhere and
+narrower: **Restore** on a row of the Git panel returns **one** file to the way the **last**
+recorded version has it, and changing branch swings the folder to the tip of a branch, never to a
+version in the middle.
+
+> A terminal does know how to land on a precise version. The studio then shows it without
+> flinching: the branch button reads **Off any branch**, and the history goes on being readable.
 
 ---
 

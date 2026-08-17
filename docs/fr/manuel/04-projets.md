@@ -451,8 +451,8 @@ intacte au lieu d’un fichier à moitié écrit.
 ## Enregistrer des versions — le panneau Git
 
 Le panneau **Git** suit **le dossier de votre projet**, et rien d’autre : vos fichiers, jamais le
-studio lui-même. Une version enregistrée est un état complet du dossier, auquel vous pouvez
-revenir — ce que le panneau **Historique**, dans la bande du bas, montre ensuite.
+studio lui-même. Une version enregistrée est un état complet du dossier, que vous pouvez ensuite
+relire fichier par fichier — c’est ce que montre le panneau **Historique**, dans la bande du bas.
 
 C’est le filet du travail long : une piste de lumière tentée avant le week-end, une matière qu’on
 préfère abandonner, un dossier de vingt documents dont on veut l’état d’hier.
@@ -637,6 +637,104 @@ qu’il était avant qu’elle commence.
 > demandé, une clé SSH à phrase de passe — est écrit noir sur blanc au chapitre
 > [Ce qui n’existe pas encore](18-limites.md#git). Les réglages du suivi, dont le nom d’auteur
 > inscrit dans chaque version, sont au chapitre [Réglages ▸ Versions](14-reglages.md#versions).
+
+---
+
+## Relire les versions — le panneau Historique
+
+Le panneau **Historique** occupe la bande du bas et demande **un projet ouvert**. Il montre les
+versions enregistrées de **toutes les branches à la fois**, pas seulement celle où vous êtes : le
+panneau Git écrit, celui-ci relit, et les deux regardent le même dossier.
+
+> Tant que le suivi des versions n’est pas en place, le panneau le dit en une ligne et renvoie au
+> panneau Git, qui porte l’écran et le bouton. Le suivi en place mais rien d’enregistré encore :
+> **Aucune version enregistrée pour l’instant.**
+
+### Ce que porte une ligne
+
+| Colonne | Ce qu’elle dit |
+|---|---|
+| **Le tracé** | à quelle branche cette version appartient, et de quoi elle découle |
+| **L’empreinte** | le nom court que git donne à la version |
+| **Les pastilles** | les noms qui pointent sur elle — voir juste en dessous |
+| **Le message** | ce que vous avez écrit en l’enregistrant. Il prend toute la place qui reste |
+| **L’auteur**, **le moment** | qui l’a enregistrée, et quand |
+
+Trois sortes de pastilles, dont **une seule en bleu plein** :
+
+| Pastille | Ce que c’est |
+|---|---|
+| **Version nommée** | un nom qu’on a posé sur cette version. La seule en bleu plein, parce que c’est celle qu’on cherche en faisant défiler |
+| **Branche** | une branche de votre ordinateur en est là |
+| **Branche du serveur** | le serveur en était là au dernier **Relever** |
+
+### L’ordre n’est pas celui de l’horloge
+
+Les versions sont rangées **par filiation**, pas par date : une version est toujours au-dessus de
+celles dont elle découle. Sur un projet travaillé à plusieurs machines, deux horloges mal réglées
+suffisent à rendre l’ordre des dates faux, alors que la filiation, elle, ne se discute pas. Vous
+pouvez donc croiser une date plus ancienne au-dessus d’une plus récente : ce n’est pas un défaut
+d’affichage.
+
+### Ouvrir une version
+
+Cliquez une ligne : la colonne **Fichiers de cette version** s’ouvre à droite et liste ce que
+cette version a changé, avec les mêmes mots que le panneau Git — **Ajouté**, **Modifié**,
+**Supprimé**, **Renommé**. Recliquer la même ligne referme la colonne.
+
+> Une version peut ne toucher aucun fichier — une fusion, le plus souvent. Le panneau le dit
+> plutôt que de vous laisser devant une colonne vide.
+
+### Comparer un fichier de cette version
+
+Cliquez un fichier de la colonne : la comparaison s’ouvre dans la **zone large**, à droite. C’est
+la même zone que celle du panneau Git, et c’est voulu — le panneau étroit demande, la zone large
+montre.
+
+| Ce que vous comparez | Ce que vous voyez |
+|---|---|
+| **Un fichier texte** | les lignes ajoutées en vert, les retirées en rouge, avec les numéros de ligne **des deux versions** côte à côte, et le compte signé en tête : `+12 −3` |
+| **Une image** | les deux états côte à côte, **Avant** et **Après**. C’est la comparaison pour laquelle ce studio existe, et celle qu’aucune liste de lignes ne donne |
+| **Un fichier qui vient d’apparaître** | il n’a pas d’avant, et la colonne le dit au lieu de rester vide. Un fichier supprimé n’a pas d’après |
+
+**Fermer la comparaison** rend la place. Un fichier que git ne sait pas comparer — trop lourd,
+absent des deux côtés — le dit aussi, plutôt que de rester en attente.
+
+### Nommer une version
+
+En tête de la colonne des fichiers, **Nommer cette version** pose un nom sur elle. C’est ce qu’on
+met sur l’état qu’un client a vu, sur celui qui est parti à l’impression, sur celui d’avant une
+idée qui n’a pas marché : un nom se retrouve en faisant défiler, une empreinte non.
+
+Le nom suit les mêmes règles qu’un nom de branche, et pour la même raison — pas d’espace, et aucun
+des caractères `~ ^ : ? * [ \`. Une fois posé, il apparaît sur la ligne en bleu plein, et il y
+reste.
+
+### Soixante à la fois
+
+L’historique se lit par pages de soixante versions. Un bouton **Voir plus** charge la suite en
+dessous ; il disparaît quand il n’y a plus rien à charger. Un projet de deux ans compte des
+dizaines de milliers de versions, et les lire toutes pour en dessiner vingt est ce que cette
+pagination évite.
+
+### Le panneau se tient à jour tout seul
+
+Enregistrer une version, refaire la dernière, changer de branche : la liste se relit d’elle-même,
+sans que vous ayez rien à demander. Le bouton **Actualiser** est là pour l’autre cas — ce qui a
+été fait **en dehors du studio**, dans un terminal. Il relit depuis la première page plutôt que
+d’ajouter à ce qui est affiché, sans quoi les deux moitiés de la liste décriraient deux états
+différents du dossier.
+
+### Ce que le panneau ne fait pas
+
+**Il ne ramène pas le dossier à une version ancienne.** On y lit une version, on la compare, on la
+nomme ; aucun geste ne la ressort. Les deux retours qu’offre le studio sont ailleurs et plus
+étroits : **Restaurer** sur une ligne du panneau Git rend **un** fichier tel qu’il était dans la
+**dernière** version enregistrée, et changer de branche déplace le dossier vers le bout d’une
+branche, jamais vers une version au milieu.
+
+> Un terminal, lui, sait se poser sur une version précise. Le studio l’affiche alors sans
+> broncher : le bouton de branche indique **Hors branche**, et l’historique continue de se lire.
 
 ---
 
