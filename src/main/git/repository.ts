@@ -95,6 +95,13 @@ export type RepositoryDeps = {
   credentials: (url: string) => GitCredential | null
 }
 
+/** The three git reads without a `GIT_` in front of them. Everything else it takes is prefixed. */
+const UNPREFIXED_GIT_SETTINGS: readonly string[] = ['PAGER', 'EDITOR', 'SSH_ASKPASS']
+
+function configuresGit(name: string): boolean {
+  return name.startsWith('GIT_') || UNPREFIXED_GIT_SETTINGS.includes(name)
+}
+
 export function openRepository(root: string, binary?: string, deps?: RepositoryDeps): Repository {
   const git = simpleGit({
     baseDir: root,
@@ -105,8 +112,54 @@ export function openRepository(root: string, binary?: string, deps?: RepositoryD
      * which is why the studio does not carry a second queue of its own.
      */
     maxConcurrentProcesses: 1,
+    /**
+     * simple-git refuses a handful of settings outright, and the three the studio needs are among
+     * them: it cannot tell a value written here from one an attacker slipped in. These three are
+     * CONSTANTS of this file — the credential helper is a fixed string, `GIT_ASKPASS` is empty,
+     * and the ssh command carries one flag — and nothing from a project, a URL or a user reaches
+     * any of them. Left off, every remote command fails before it spawns.
+     */
+    unsafe: {
+      allowUnsafeCredentialHelper: true,
+      allowUnsafeAskPass: true,
+      allowUnsafeSshCommand: true,
+    },
     ...(binary === undefined ? {} : { binary }),
   })
+
+  /**
+   * What every command of this repository runs in, built ONCE — `process.env` is the whole
+   * environment of the studio, and it was cloned twice per remote command, the second clone
+   * staying on an instance that lives as long as the port does. A token is laid over this, never
+   * into it.
+   *
+   * **What CONFIGURES git is dropped from it**, and only what this file writes is put back. Git
+   * takes a dozen settings from its environment, and the studio's answers are not to be argued
+   * with by whatever the app was launched from: a `GIT_DIR` pointing elsewhere, a `GIT_EDITOR`
+   * that opens a window nobody can see. Inherited, they do not merely misbehave — simple-git
+   * refuses most of them outright, and the command fails before it spawns. Everything else is
+   * kept, `HTTPS_PROXY` and `SSH_AUTH_SOCK` first among them.
+   *
+   * `GIT_TERMINAL_PROMPT=0` and an empty `GIT_ASKPASS`: a studio window has no terminal to answer
+   * a prompt in, and git left to ask would hang for ever on a command the user has no way to
+   * cancel — which is worse than the failure it is trying to avoid.
+   *
+   * `BatchMode=yes` says the same thing to ssh, and it has a cost worth stating: a key protected
+   * by a passphrase with no agent loaded fails rather than asking. The alternative is the same
+   * silent hang, and the agent is what every ssh setup already has.
+   */
+  const baseEnv: Record<string, string> = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined && !configuresGit(entry[0]),
+      ),
+    ),
+    GIT_TERMINAL_PROMPT: '0',
+    GIT_ASKPASS: '',
+    GIT_SSH_COMMAND: 'ssh -o BatchMode=yes',
+  }
+
+  git.env(baseEnv)
 
   /** One command that talks to a server at a time — see `reachOut` for why that is its own. */
   const remoteQueue = writeQueue()
@@ -246,34 +299,26 @@ export function openRepository(root: string, binary?: string, deps?: RepositoryD
    * on the INSTANCE, so two remote commands scheduled together could have the second's token in
    * place when the first spawns. One at a time keeps set, spawn and reset in one piece.
    *
-   * `GIT_TERMINAL_PROMPT=0` and an empty `GIT_ASKPASS` on every one of them. A studio window has
-   * no terminal to answer a prompt in, and git left to ask would hang for ever on a command the
-   * user would have no way to cancel — which is worse than the failure it is trying to avoid.
-   *
-   * `BatchMode=yes` says the same thing to ssh, and it has a cost worth stating: a key protected
-   * by a passphrase with no agent loaded fails here rather than asking. The alternative is the
-   * same silent hang, and the agent is what every ssh setup already has.
+   * The token is the ONLY thing laid over `baseEnv`, which every other command already runs in.
    */
   async function reachOut(args: readonly string[]): Promise<void> {
     await remoteQueue.next(async () => {
       const credential = deps?.credentials((await firstRemoteUrl(git)) ?? '') ?? null
 
-      git.env({
-        ...process.env,
-        GIT_TERMINAL_PROMPT: '0',
-        GIT_ASKPASS: '',
-        GIT_SSH_COMMAND: 'ssh -o BatchMode=yes',
-        ...(credential
-          ? { GIT_STUDIO_USER: credential.user, GIT_STUDIO_TOKEN: credential.token }
-          : {}),
-      })
+      if (credential) {
+        git.env({
+          ...baseEnv,
+          GIT_STUDIO_USER: credential.user,
+          GIT_STUDIO_TOKEN: credential.token,
+        })
+      }
 
       try {
         await git.raw([...(credential ? CREDENTIAL_ARGS : []), ...args])
       } finally {
         // The token leaves the instance the moment the command is done, so nothing that runs
         // afterwards — a status, a log — carries it into a process it has no business being in.
-        git.env({ ...process.env, GIT_TERMINAL_PROMPT: '0' })
+        if (credential) git.env(baseEnv)
       }
     })
   }

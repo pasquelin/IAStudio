@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { simpleGit } from 'simple-git'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, onTestFinished } from 'vitest'
 import type { GitStatus } from '@shared/domain/git'
 import { detectGit, gitVersionProbe } from './binary'
 import { GITIGNORE_FILE, openRepository, type Repository } from './repository'
@@ -425,6 +425,59 @@ describe('a version given a name', () => {
       kind: 'tag',
       name: 'livraison-client',
     })
+  })
+})
+
+describe('talking to a server', () => {
+  /**
+   * The whole remote path, against a bare repository on disk: as far as this module is concerned
+   * a folder IS a server, and nothing here needs a network.
+   *
+   * Worth a real repository because of what it caught: simple-git refuses a credential helper, an
+   * empty `GIT_ASKPASS` and an `ssh` command unless the instance allows them, and it refuses them
+   * BEFORE spawning git — so every fetch, pull and push failed on a message about
+   * `allowUnsafeCredentialHelper` rather than on anything git had to say. Nothing above the port
+   * could see it: the panel showed the failure the same way it shows a rejected push.
+   */
+  it('pushes to a server it holds a token for', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    const server = await mkdtemp(join(tmpdir(), 'scenario-git-server-'))
+    await simpleGit(server).init(true)
+
+    const repository = openRepository(await project(), undefined, {
+      credentials: () => ({ user: 'studio', token: 'jeton' }),
+    })
+    await repository.init()
+    await repository.stage(['notes.txt'])
+    await repository.commit('premiere version', false, AUTHOR)
+    await repository.addRemote('origin', server)
+    await repository.push(true)
+
+    expect(await simpleGit(server).raw(['log', '--oneline'])).toContain('premiere version')
+  })
+
+  /**
+   * A machine that exports `PAGER`, or an app launched from a shell that sets `GIT_EDITOR`. Both
+   * are ordinary, both are settings the studio answers itself, and both are refused by simple-git
+   * when they reach it — which would fail every command of a session on an environment the user
+   * has no idea is in play.
+   */
+  it('ignores what the machine had to say about git', async ({ skip }) => {
+    if (!hasGit) return skip()
+
+    process.env.PAGER = 'less'
+    process.env.GIT_EDITOR = 'vim'
+    onTestFinished(() => {
+      delete process.env.PAGER
+      delete process.env.GIT_EDITOR
+    })
+
+    // Opened AFTER them, which is when the environment is read.
+    const repository = openRepository(await project())
+    await repository.init()
+
+    expect(await repository.isRepository()).toBe(true)
   })
 })
 
