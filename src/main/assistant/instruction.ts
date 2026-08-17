@@ -1,5 +1,5 @@
 import {
-  ACTION_REGISTRY,
+  actionsReaching,
   type ActionField,
   type AssistantAction,
   HISTORY_MAX,
@@ -36,14 +36,18 @@ function actionBlock(action: AssistantAction): string {
 }
 
 /**
- * The catalogue, as the model sees it.
+ * The catalogue, as the model sees it — the share of the registry reaching `both` doors.
+ *
+ * Filtered rather than whole, and that is what lets the registry hold eighty actions: the whole
+ * of it would be tens of thousands of characters against an `INSTRUCTION_MAX` of ten, and the
+ * sentence the person typed is what the overflow would take off. What a program drives
+ * deliberately — file trees, layer stacks, git — it finds through `tools/list` instead.
  *
  * Rebuilt on every call rather than cached: it is a few thousand characters against a round trip
- * that takes seconds, and a cache would be one more thing to invalidate the day an action is
- * added.
+ * that takes seconds, and a cache would be one more thing to invalidate.
  */
 export function actionCatalogue(): string {
-  return ACTION_REGISTRY.map(actionBlock).join('\n')
+  return actionsReaching('both').map(actionBlock).join('\n')
 }
 
 /**

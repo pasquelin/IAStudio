@@ -1,6 +1,11 @@
-import { COMMAND_REGISTRY, type CommandId } from './command'
-import { MODEL_FAMILIES, type FieldKind } from './model'
-import { WORKSPACE_IDS } from './workspace'
+import {
+  type ActionCommitment,
+  type ActionName,
+  type AssistantAction,
+  type ActionReach,
+} from './assistantAction'
+import { type CommandId } from './command'
+import { CORE_ACTIONS } from './coreActions'
 
 /**
  * What the assistant is allowed to do on the user's behalf, and how each thing is described to
@@ -8,8 +13,11 @@ import { WORKSPACE_IDS } from './workspace'
  *
  * One table, read by two surfaces that must never disagree: the assistant inside the window,
  * which lists it to the model as the vocabulary it may use, and the MCP server, which publishes
- * it as tools to whatever client connects. An action added here appears on both sides.
+ * it as tools to whatever client connects. What each door sees is decided by `reach`, and by
+ * nothing else — see `assistantAction.ts`.
  */
+
+export * from './assistantAction'
 
 /**
  * The catalogue model the assistant thinks with. One model, whose own `model` parameter picks
@@ -48,80 +56,13 @@ export const DEFAULT_ASSISTANT_MODEL: AssistantModel = 'claude-haiku-4-5'
 export const INSTRUCTION_MAX = 10_000
 export const HISTORY_MAX = 10
 
-export type ActionName =
-  | 'command.run'
-  | 'workspace.open'
-  | 'models.search'
-  | 'models.select'
-  | 'generator.prepare'
-  | 'generator.submit'
-  | 'jobs.list'
-  | 'prompt.suggest'
-  | 'prompt.translate'
-  | 'prompt.describeStyle'
-  | 'chat.close'
-
-/**
- * What running an action leaves behind, and therefore whether it may run without being asked.
- *
- * Three values because three things really happen, measured rather than assumed:
- *
- * - `none` — undoable, and nothing outlives the window. Opening a tab, picking a model, filling
- *   a form. Asking about these would make the assistant tiresome for no gain.
- * - `asset` — uploads a picture, which becomes a permanent asset in the user's library.
- *   `prepareEdit` says so itself before it sends anything. Costs no credits, and is still worth
- *   a yes: nothing in the studio removes it afterwards.
- * - `credits` — spends real money. Confirmed, and the estimate is stated first.
- *
- * The distinction between the last two matters at the moment of asking: an upload has no figure
- * to quote, and inventing one would be worse than admitting there is none.
- */
-export type ActionCommitment = 'none' | 'asset' | 'credits'
-
-/**
- * One input of an action.
- *
- * Deliberately NOT `FieldDescriptor`: that one carries `label`, a sentence the Scenario API
- * writes and the form shows as-is. A static registry cannot hold a sentence — every word bound
- * for the screen lives in a bundle — so this carries `labelKey` instead. The `kind` union is
- * shared with it, because the two describe the same thing and a second vocabulary for
- * "this is a number between 1 and 5" would be one to keep in step forever.
- */
-export type ActionField = {
-  key: string
-  kind: FieldKind
-  labelKey: string
-  required: boolean
-  /**
-   * The values this field accepts, when it accepts a closed set. Raw identifiers rather than
-   * translated labels: these are read by a model and by an MCP client, never shown as-is.
-   */
-  options?: readonly string[]
-  min?: number
-  max?: number
-}
-
-export type AssistantAction = {
-  name: ActionName
-  titleKey: string
-  /** Never optional: an action the model cannot be told the purpose of is one it will misuse. */
-  descriptionKey: string
-  commitment: ActionCommitment
-  fields: readonly ActionField[]
-}
-
-function action(descriptor: AssistantAction): AssistantAction {
-  return descriptor
-}
-
 /**
  * The commands that upload a picture before they prepare anything.
  *
  * Not the same list as "the AI edits": `prepareEdit` prepares and stops — the form is never
  * short-circuited and nothing is billed until the user submits (invariant 5). What it does do,
  * every time, is flatten the canvas and upload it, and the code says why in as many words: "an
- * upload is a permanent asset in the user's library". That is what earns the yes here, not a
- * cost that does not exist yet.
+ * upload is a permanent asset in the user's library".
  */
 const UPLOADING_COMMANDS: readonly CommandId[] = [
   'canvas.regenerate',
@@ -145,162 +86,18 @@ export function commitmentOfCommand(id: string): ActionCommitment {
   return UPLOADING_COMMANDS.some(uploading => uploading === id) ? 'asset' : 'none'
 }
 
-export const ACTION_REGISTRY: readonly AssistantAction[] = [
-  action({
-    name: 'command.run',
-    titleKey: 'assistant.actions.commandRun.title',
-    descriptionKey: 'assistant.actions.commandRun.description',
-    // The floor, not the answer: what this call really engages comes from `commitmentOfCommand`.
-    commitment: 'none',
-    fields: [
-      {
-        key: 'command',
-        kind: 'choice',
-        labelKey: 'assistant.fields.command',
-        required: true,
-        options: COMMAND_REGISTRY.map(descriptor => descriptor.id),
-      },
-    ],
-  }),
-  action({
-    name: 'workspace.open',
-    titleKey: 'assistant.actions.workspaceOpen.title',
-    descriptionKey: 'assistant.actions.workspaceOpen.description',
-    commitment: 'none',
-    fields: [
-      {
-        key: 'workspace',
-        kind: 'choice',
-        labelKey: 'assistant.fields.workspace',
-        required: true,
-        options: WORKSPACE_IDS,
-      },
-      {
-        key: 'createDocument',
-        kind: 'boolean',
-        labelKey: 'assistant.fields.createDocument',
-        required: false,
-      },
-    ],
-  }),
-  action({
-    name: 'models.search',
-    titleKey: 'assistant.actions.modelsSearch.title',
-    descriptionKey: 'assistant.actions.modelsSearch.description',
-    commitment: 'none',
-    fields: [
-      { key: 'query', kind: 'text', labelKey: 'assistant.fields.query', required: true },
-      {
-        key: 'family',
-        kind: 'choice',
-        labelKey: 'assistant.fields.family',
-        required: false,
-        options: MODEL_FAMILIES,
-      },
-    ],
-  }),
-  action({
-    name: 'models.select',
-    titleKey: 'assistant.actions.modelsSelect.title',
-    descriptionKey: 'assistant.actions.modelsSelect.description',
-    commitment: 'none',
-    fields: [
-      {
-        key: 'family',
-        kind: 'choice',
-        labelKey: 'assistant.fields.family',
-        required: true,
-        options: MODEL_FAMILIES,
-      },
-      { key: 'modelId', kind: 'text', labelKey: 'assistant.fields.modelId', required: true },
-    ],
-  }),
-  action({
-    name: 'generator.prepare',
-    titleKey: 'assistant.actions.generatorPrepare.title',
-    descriptionKey: 'assistant.actions.generatorPrepare.description',
-    commitment: 'none',
-    fields: [
-      {
-        key: 'family',
-        kind: 'choice',
-        labelKey: 'assistant.fields.family',
-        required: true,
-        options: MODEL_FAMILIES,
-      },
-      { key: 'modelId', kind: 'text', labelKey: 'assistant.fields.modelId', required: true },
-      // `raw`, because the shape is the target model's own and is only known once
-      // `GET /models/{id}` has answered. Narrowed against that schema before it is written.
-      { key: 'parameters', kind: 'raw', labelKey: 'assistant.fields.parameters', required: true },
-    ],
-  }),
-  action({
-    name: 'generator.submit',
-    titleKey: 'assistant.actions.generatorSubmit.title',
-    descriptionKey: 'assistant.actions.generatorSubmit.description',
-    commitment: 'credits',
-    fields: [],
-  }),
-  action({
-    name: 'jobs.list',
-    titleKey: 'assistant.actions.jobsList.title',
-    descriptionKey: 'assistant.actions.jobsList.description',
-    commitment: 'none',
-    fields: [],
-  }),
-  /**
-   * The three the prompt field used to carry as buttons.
-   *
-   * All `none`, and measured rather than assumed: the three channels behind them answer in one
-   * round trip, spend nothing, and produce no job — which is why they were free to press and are
-   * free to ask for.
-   */
-  action({
-    name: 'prompt.suggest',
-    titleKey: 'assistant.actions.promptSuggest.title',
-    descriptionKey: 'assistant.actions.promptSuggest.description',
-    commitment: 'none',
-    fields: [
-      { key: 'draft', kind: 'longText', labelKey: 'assistant.fields.draft', required: true },
-    ],
-  }),
-  action({
-    name: 'prompt.translate',
-    titleKey: 'assistant.actions.promptTranslate.title',
-    descriptionKey: 'assistant.actions.promptTranslate.description',
-    commitment: 'none',
-    fields: [{ key: 'text', kind: 'longText', labelKey: 'assistant.fields.text', required: true }],
-  }),
-  action({
-    // No input: what it reads is the pictures already on the form, which is the only place
-    // references exist. Asking the model to name them would have it invent asset ids.
-    name: 'prompt.describeStyle',
-    titleKey: 'assistant.actions.promptDescribeStyle.title',
-    descriptionKey: 'assistant.actions.promptDescribeStyle.description',
-    commitment: 'none',
-    fields: [],
-  }),
-  /**
-   * The one action about the conversation rather than about the studio.
-   *
-   * It exists because the window is what one asked to be moved OUT of the way: a request whose
-   * whole point is visible on screen — a space opened, a form filled — is answered behind the very
-   * surface that answered it. The model is told to call this when what it did is now the thing to
-   * look at, and to leave it alone when the answer is the words themselves.
-   *
-   * Last in the registry on purpose: it is the last thing a plan does, and the model reads this
-   * list in order.
-   */
-  action({
-    name: 'chat.close',
-    titleKey: 'assistant.actions.chatClose.title',
-    descriptionKey: 'assistant.actions.chatClose.description',
-    commitment: 'none',
-    fields: [],
-  }),
-]
+/**
+ * Every action the studio publishes, one family after another.
+ *
+ * Order matters to one reader only — the assistant's model reads its share in this order — so
+ * the spoken vocabulary comes first and the families a program drives follow.
+ */
+export const ACTION_REGISTRY: readonly AssistantAction[] = [...CORE_ACTIONS]
 
-export const ACTION_COMMITMENTS: readonly ActionCommitment[] = ['none', 'asset', 'credits']
+/** The share of the registry one door offers. `mcp` is everything; `both` is the short list. */
+export function actionsReaching(reach: ActionReach): readonly AssistantAction[] {
+  return reach === 'mcp' ? ACTION_REGISTRY : ACTION_REGISTRY.filter(entry => entry.reach === 'both')
+}
 
 /** One thing the assistant decided to do. Checked against the registry before it is run. */
 export type AssistantCall = { action: ActionName; input: Record<string, unknown> }
@@ -329,72 +126,8 @@ export type AssistantAnswer = {
   cost: number
 }
 
-/**
- * Why an action did not run.
- *
- * Shared rather than private to the executor, because the sentence is read twice and in two
- * languages: the person watching the modal reads their own, and the model deciding what to try
- * next reads English. Both renderings come from the bundles, so the list has to be visible from
- * the main process, which does the second one.
- */
-export type ActionRefusal =
-  | 'unknownCommand'
-  | 'globalCommand'
-  | 'wrongSurface'
-  | 'generatorClosed'
-  | 'nothingPrepared'
-  | 'notSubmitted'
-  | 'badInput'
-  | 'noBridge'
-  /** Nobody was there to be asked — see `runConfirmedAction`. Never a silent yes. */
-  | 'noConfirmer'
-  | 'declined'
-  /** No window at the front to act at all. Only an action arriving from outside can meet this. */
-  | 'noWindow'
-  /** The question stood on screen and nobody answered it. Same reason, same one caller. */
-  | 'timedOut'
-  /** Nothing to read a style from: the form carries no reference picture. */
-  | 'noReference'
-  /** The form moved between the figure being quoted and the yes. What was priced is what goes. */
-  | 'formChanged'
-
-export const ACTION_REFUSALS: readonly ActionRefusal[] = [
-  'unknownCommand',
-  'globalCommand',
-  'wrongSurface',
-  'generatorClosed',
-  'nothingPrepared',
-  'notSubmitted',
-  'badInput',
-  'noBridge',
-  'noConfirmer',
-  'declined',
-  'noWindow',
-  'timedOut',
-  'noReference',
-  'formChanged',
-]
-
-/**
- * What running an action answered.
- *
- * Shared rather than the window's own, since an action asked for from outside is answered back
- * across the boundary: the MCP server hands this to its client. A refusal carries a key rather
- * than a sentence, for the reason the list above gives — it is read in two languages.
- */
-export type ActionOutcome = { ok: true; data?: unknown } | { ok: false; refusal: ActionRefusal }
-
-export function refusalKey(refusal: ActionRefusal): string {
-  return `assistant.refusals.${refusal}`
-}
-
 export function assistantAction(name: string): AssistantAction | null {
   return ACTION_REGISTRY.find(descriptor => descriptor.name === name) ?? null
-}
-
-/** Whether running this needs a yes first. `asset` and `credits` do; only `credits` quotes a figure. */
-export function needsConfirmation(commitment: ActionCommitment): boolean {
-  return commitment !== 'none'
 }
 
 /**

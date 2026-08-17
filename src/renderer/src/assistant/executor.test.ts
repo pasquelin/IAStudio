@@ -9,9 +9,9 @@ import { job as jobOf } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { registerGenerator, type GeneratorBridge } from './generatorBridge'
-import { commitmentOfCall } from '@shared/domain/assistant'
+import { ACTION_REGISTRY, commitmentOfCall } from '@shared/domain/assistant'
 import { registerConfirmer } from './confirm'
-import { runAction, runConfirmedAction } from './executor'
+import { handledActions, runAction, runConfirmedAction } from './executor'
 
 const showWorkspace = vi.hoisted(() => vi.fn())
 const createDocumentIn = vi.hoisted(() => vi.fn())
@@ -412,6 +412,53 @@ describe('asking before acting', () => {
     })
     stopGenerator()
     stopConfirmer()
+  })
+})
+
+describe('the table of handlers', () => {
+  /**
+   * Both directions, because both misses are silent. An action published with nothing behind it
+   * answers `badInput` to every client that read `tools/list` and believed the tool existed; a
+   * handler nothing publishes is code no door can reach. Neither the compiler nor the schema
+   * sees either — the table is `Partial` by construction, one family per module.
+   */
+  it('answers every action the registry publishes, and no name it does not', () => {
+    expect([...handledActions()].sort()).toEqual(ACTION_REGISTRY.map(entry => entry.name).sort())
+  })
+})
+
+describe('an input the registry would not accept', () => {
+  /**
+   * The gate is `runConfirmedAction` and nowhere else, which is what lets each handler read its
+   * input plainly. Checked through the confirmed door rather than on `validatesInput` directly:
+   * what this holds is the wiring, and the wiring is what was missing.
+   */
+  it('is refused before the action runs at all', async () => {
+    onImageDocument()
+
+    expect(await runConfirmedAction('workspace.open', { workspace: 'nowhere' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(await runConfirmedAction('workspace.open', { worksapce: '3d' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(showWorkspace).not.toHaveBeenCalled()
+  })
+
+  // A costly action with a bad input must not raise the question first: the person would be
+  // asked to approve a spend that was never going to happen.
+  it('is refused without anybody being asked', async () => {
+    const ask = vi.fn(async () => true)
+    const stop = registerConfirmer(ask)
+
+    expect(await runConfirmedAction('generator.submit', { unexpected: 1 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(ask).not.toHaveBeenCalled()
+    stop()
   })
 })
 

@@ -18,10 +18,18 @@ const succeeded = (assetIds: string[] = ['asset_reply'], cost = 0.75): Job => ({
 })
 
 describe('what the model is told', () => {
-  it('names every action of the registry', () => {
+  /**
+   * The share of the registry a spoken sentence can reach, and NOT the whole of it — the budget
+   * below is what forces the split. Both directions, because either miss is silent: an action
+   * left out is one the assistant will swear it cannot do, and one let in that reaches `mcp`
+   * alone eats the room the person's own sentence needs.
+   */
+  it('names every action reaching both doors, and none of the others', () => {
     const catalogue = actionCatalogue()
 
-    for (const action of ACTION_REGISTRY) expect(catalogue).toContain(action.name)
+    for (const action of ACTION_REGISTRY) {
+      expect(catalogue.includes(`  ${action.name} —`), action.name).toBe(action.reach === 'both')
+    }
   })
 
   // The values a field closes over are the difference between a workspace that opens and one the
