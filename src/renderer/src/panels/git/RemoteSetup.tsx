@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/design/Button'
-import { FIELD_FILL } from '@/design/styles'
+import { FIELD_FILL, PANEL_BAR } from '@/design/styles'
+import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
@@ -23,7 +24,7 @@ export function RemoteSetup() {
   const addRemote = useGit(state => state.addRemote)
 
   return (
-    <div className="border-border flex items-center gap-2 border-b p-2">
+    <div className={cn(PANEL_BAR, 'p-2')}>
       <input
         type="url"
         value={url}
