@@ -1,5 +1,6 @@
-import { Fragment } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { FOLDER_ROOT, folderTrail, nameOf } from '@shared/domain/folder'
+import { useColumnKeys } from '@/hooks/useColumnKeys'
 import { useFolderColumns } from '@/hooks/useFolderColumns'
 import { FolderPickerColumn } from './FolderPickerColumn'
 import { FolderPickerCreate } from './FolderPickerCreate'
@@ -26,6 +27,15 @@ export type FolderPickerProps = {
     folderTaken: string
     folderFailed: string
   }
+  /**
+   * What the surface around this does — the dialog's own Cancel and Create.
+   *
+   * Handed IN rather than drawn after, so the three sit on one line the way every save panel of
+   * this machine arranges them: New folder on the left, the surface's own on the right. They are
+   * withdrawn while a folder is being named, where the line already carries a field and two
+   * buttons of its own.
+   */
+  actions?: ReactNode
 }
 
 /**
@@ -38,15 +48,20 @@ export type FolderPickerProps = {
  *
  * The walk is the whole of the state: picking a folder higher up drops every column past it.
  */
-export function FolderPicker({ value, onChange, rootName, labels }: FolderPickerProps) {
+export function FolderPicker({ value, onChange, rootName, labels, actions }: FolderPickerProps) {
   const { columns, reread } = useFolderColumns(value)
+  const [naming, setNaming] = useState(false)
+  const { focused, onArrow } = useColumnKeys(columns, onChange)
   const trail = folderTrail(value)
 
   return (
     <div className="flex flex-col gap-2">
       {/* Where the document will be written, ABOVE the columns — the way the save panel puts its
-          own. The lit rows say it too, but only to whoever reads three columns at once. */}
-      <p className="text-text m-0 truncate text-xs">
+          own. The lit rows say it too, but only to whoever reads three columns at once.
+
+          Cut at the START, which is what `Row` already does for a path: the far end carries the
+          folder the document lands in, and clipping the ordinary way keeps the half nobody needs. */}
+      <p className="text-text truncate-start m-0 text-xs">
         {trail.map(folder => (folder === FOLDER_ROOT ? rootName : nameOf(folder))).join(' / ')}
       </p>
 
@@ -67,6 +82,8 @@ export function FolderPicker({ value, onChange, rootName, labels }: FolderPicker
                 // has chosen nothing, which is what leaves it with no row lit.
                 chosen={trail[index + 1]}
                 onPick={onChange}
+                onArrow={onArrow}
+                focused={focused}
                 emptyLabel={labels.empty}
                 label={column.folder === FOLDER_ROOT ? rootName : nameOf(column.folder)}
               />
@@ -80,12 +97,20 @@ export function FolderPicker({ value, onChange, rootName, labels }: FolderPicker
         </div>
       </div>
 
-      <FolderPickerCreate
-        folder={value}
-        labels={labels}
-        onCreated={onChange}
-        onReread={() => reread(value)}
-      />
+      {/* One line, the way a save panel arranges it: what makes a folder on the left, what
+          settles the dialog on the right. */}
+      <div className="flex items-center gap-2">
+        <FolderPickerCreate
+          folder={value}
+          labels={labels}
+          naming={naming}
+          onNaming={setNaming}
+          onCreated={onChange}
+          onReread={() => reread(value)}
+        />
+
+        {!naming && actions}
+      </div>
     </div>
   )
 }
