@@ -954,9 +954,11 @@ qui est au-dessus. C’est une décision de métier, pas d’esthétique.
 
 ## Internationalisation
 
-Un dossier par langue dans `src/shared/i18n/` — `fr/` et `en/`, douze sections JSON chacun
-(`inspector`, `commands`, `settings`, `usage`, `activity`, `shell`, `image`, `texture`, `scene`,
-`assets`, `models`, `common`), recomposées en un seul objet par l’index du dossier. Les deux
+Un dossier par langue dans `src/shared/i18n/` — `fr/` et `en/`, une section JSON par surface
+fonctionnelle, recomposées en un seul objet par l’index du dossier. **Leur nombre n’est écrit
+nulle part, et ce paragraphe ne l’écrit pas non plus** : `ls src/shared/i18n/fr/` fait foi, et
+`main/i18n-sections.test.ts` lit le dossier au lieu de tenir une liste. Un compte écrit ici se
+périme à la surface suivante — il annonçait douze quand le dossier en portait quinze. Les deux
 langues sont tenues en parité stricte. Elles vivent dans `shared/` parce que le menu natif est
 bâti par le processus principal et l’UI par le renderer, et que les deux doivent dire la même
 chose.
@@ -968,9 +970,9 @@ Le découpage est un choix de **stockage**, pas de contrat : l’espace de noms 
 `tsc` lit `./fr` comme le dossier, donc **le typecheck reste vert** ; Vite lit le JSON, l’export
 nommé disparaît, et `TRANSLATIONS.fr` vaut `undefined` à l’exécution — la langue entière. Ce
 n’est donc pas le compilateur qui garde ce cas, mais cette suite, et elle seule. Elle tient aussi
-la frontière entre les imports : dans `en/index.ts`, douze imports **de type** pointent vers
+la frontière entre les imports : dans `en/index.ts`, un import **de type** par section pointe vers
 `../fr/` — c’est ainsi que la forme attendue d’une section anglaise est dérivée de sa jumelle
-plutôt que recopiée — et douze imports **de valeur** pointent vers `./`. Un import de valeur qui
+plutôt que recopiée — et autant d’imports **de valeur** pointent vers `./`. Un import de valeur qui
 part vers `fr/` compile vert et rend toute une section en français.
 
 ### Une branche antérieure à la découpe entre en conflit : quoi faire
@@ -991,8 +993,8 @@ Le geste juste, dans cet ordre :
 1. relever les clés que la branche ajoutait, avant de résoudre quoi que ce soit —
    `git diff <base>...<branche> -- src/shared/i18n/fr.json` ;
 2. les réécrire dans la section de leur surface, des deux côtés (`fr/<section>.json` et
-   `en/<section>.json`) ; une racine neuve qui n’appartient à aucune des douze demande de
-   trancher entre une section existante et un treizième fichier — lequel se déclare dans les
+   `en/<section>.json`) ; une racine neuve qui n’appartient à aucune section demande de
+   trancher entre une section existante et un fichier de plus — lequel se déclare dans les
    **deux** `index.ts` ;
 3. `git rm` les deux fichiers plats seulement à ce moment-là ;
 4. rejouer `main/i18n-sections.test.ts` et le typecheck, puis vérifier que le compte de clés a

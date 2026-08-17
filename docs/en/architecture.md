@@ -917,10 +917,12 @@ everything above it. It is a domain decision, not a style one.
 
 ## Internationalisation
 
-One directory per language in `src/shared/i18n/` — `fr/` and `en/`, twelve JSON sections each
-(`inspector`, `commands`, `settings`, `usage`, `activity`, `shell`, `image`, `texture`, `scene`,
-`assets`, `models`, `common`), merged back into a single object by the directory's index. Both
-languages are kept at strict parity. They live in `shared/` because the native menu is built by
+One directory per language in `src/shared/i18n/` — `fr/` and `en/`, one JSON section per
+functional surface, merged back into a single object by the directory's index. **Their number is
+written nowhere, and this paragraph does not write it either**: `ls src/shared/i18n/fr/` is the
+authority, and `main/i18n-sections.test.ts` reads the directory instead of holding a list. A count
+written here goes stale at the next surface — it claimed twelve while the directory held fifteen.
+Both languages are kept at strict parity. They live in `shared/` because the native menu is built by
 the main process and the UI by the renderer, and the two must say the same thing.
 
 The split is a **storage** choice, not a contract one: the namespace stays single, and
@@ -930,10 +932,10 @@ The split is a **storage** choice, not a contract one: the namespace stays singl
 `./fr` as the directory, so **the typecheck stays green**; Vite reads the JSON, the named export
 is gone, and `TRANSLATIONS.fr` is undefined at run time — the whole language. So it is not the
 compiler that guards this case but that suite, and it alone. It also holds the line between the
-two kinds of import: in `en/index.ts`, twelve **type** imports point at `../fr/` — that is how an
-English section's expected shape is derived from its twin rather than copied out — and twelve
-**value** imports point at `./`. A value import straying into `fr/` compiles green and renders a
-whole section in French.
+two kinds of import: in `en/index.ts`, one **type** import per section points at `../fr/` — that is
+how an English section's expected shape is derived from its twin rather than copied out — and as
+many **value** imports point at `./`. A value import straying into `fr/` compiles green and
+renders a whole section in French.
 
 ### A branch older than the split conflicts: what to do
 
@@ -952,8 +954,8 @@ The right move, in this order:
 1. list the keys the branch was adding, before resolving anything —
    `git diff <base>...<branch> -- src/shared/i18n/fr.json`;
 2. write them into the section of their surface, on both sides (`fr/<section>.json` and
-   `en/<section>.json`); a new root belonging to none of the twelve calls for a decision between
-   an existing section and a thirteenth file, which has to be declared in **both** `index.ts`;
+   `en/<section>.json`); a new root belonging to no section calls for a decision between an
+   existing section and one more file, which has to be declared in **both** `index.ts`;
 3. `git rm` the two flat files only then;
 4. replay `main/i18n-sections.test.ts` and the typecheck, then check the key count grew by the
    number listed in step 1.

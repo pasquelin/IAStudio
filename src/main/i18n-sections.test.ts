@@ -49,8 +49,8 @@ describe('i18n sections', () => {
     const index = readFileSync(new URL(`${language}/index.ts`, I18N), 'utf8')
     const valueImports = [...index.matchAll(/^import (?!type )[^']+'([^']+\.json)'/gm)]
 
-    // `en/index.ts` carries twelve `'../fr/…'` type imports right above twelve `'./…'` value
-    // ones, and swapping a value import for its French twin compiles green and satisfies every
+    // `en/index.ts` carries one `'../fr/…'` type import per section right above its `'./…'` value
+    // one, and swapping that value import for the French file compiles green and satisfies every
     // other assertion here — the roots match, only the words change language. Measured: the whole
     // of `scene` turns French that way, 183 leaves, caught by nothing but `bundles.test.ts`.
     expect(valueImports.map(([, path]) => path)).toEqual(
