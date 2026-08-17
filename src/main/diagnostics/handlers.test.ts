@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS, MAX_LOG_MESSAGE } from '@shared/ipc'
-import { invoke, resetHandlers } from '@main/ipc/test-harness'
+import { invoke, resetHandlers } from '@main/ipc/testHarness'
 import { log } from '@main/log'
 import { registerDiagnosticsHandlers } from './handlers'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 // The real one writes nothing under test — `log.ts` goes quiet on NODE_ENV — so what it was
 // asked to write is what there is to assert on.

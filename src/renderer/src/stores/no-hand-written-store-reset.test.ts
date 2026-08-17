@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SUITE_SOURCES } from '@/design/test-harness'
+import { SUITE_SOURCES } from '@/design/testHarness'
 
 /**
  * A suite emptying a document store by hand — a `setState` handing the store an empty `states`

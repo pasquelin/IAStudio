@@ -2,7 +2,7 @@ import type { AssistantModel } from '@shared/domain/assistant'
 import type { Job } from '@shared/domain/job'
 import { log } from '@main/log'
 import type { AssistantThought } from '@shared/domain/assistant'
-import type { AssistantBrain } from './brain-port'
+import type { AssistantBrain } from './brainPort'
 import { instructionFor, recentHistory } from './instruction'
 import { parseReply } from './reply'
 

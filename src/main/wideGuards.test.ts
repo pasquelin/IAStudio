@@ -83,14 +83,14 @@ describe('finding the tests no import graph reaches', () => {
 
   /**
    * The three spellings of the renderer's own sweep, and the reason all three are named: the
-   * guards that sit BESIDE `test-harness.ts` write the bare one, those elsewhere write the
+   * guards that sit BESIDE `testHarness.ts` write the bare one, those elsewhere write the
    * folder-qualified one. A rule taught only the second caught five guards and left five others
    * out — two of them with no other way in, and the floor far too high to notice.
    */
   it('sees the three ways the renderer sweep is borrowed', () => {
-    expect(readsTheTree("import { WRITTEN_SOURCES } from './test-harness'")).toBe(true)
-    expect(readsTheTree("import { WRITTEN_SOURCES } from '../design/test-harness'")).toBe(true)
-    expect(readsTheTree("import { SUITE_SOURCES } from '@/design/test-harness'")).toBe(true)
+    expect(readsTheTree("import { WRITTEN_SOURCES } from './testHarness'")).toBe(true)
+    expect(readsTheTree("import { WRITTEN_SOURCES } from '../design/testHarness'")).toBe(true)
+    expect(readsTheTree("import { SUITE_SOURCES } from '@/design/testHarness'")).toBe(true)
     expect(GUARDED).toContain('src/renderer/src/design/spacing.test.ts')
     expect(GUARDED).toContain('src/renderer/src/stores/job-fixtures.test.ts')
   })

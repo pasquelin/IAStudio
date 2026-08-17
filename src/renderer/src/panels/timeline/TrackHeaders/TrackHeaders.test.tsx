@@ -248,7 +248,7 @@ describe('TrackHeaders', () => {
   /**
    * The rename field sits inside the header, so this row's own menu would take a press meant for
    * the native clipboard one — and `preventDefault` is what keeps Chromium from ever asking the
-   * main process for it (`main/window/context-menu.ts`).
+   * main process for it (`main/window/contextMenu.ts`).
    */
   it('leaves a right-click in the rename field to the native menu', async () => {
     headers()

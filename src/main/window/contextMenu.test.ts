@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TRANSLATIONS } from '@shared/i18n'
 import { CHANNELS } from '@shared/ipc'
 import { setWindowLanguage } from './language'
-import { registerContextMenu, registerFieldMenu } from './context-menu'
+import { registerContextMenu, registerFieldMenu } from './contextMenu'
 
 /**
- * Electron in a bottle for this file alone, rather than the shared `ipc/test-harness`: what is
+ * Electron in a bottle for this file alone, rather than the shared `ipc/testHarness`: what is
  * doubled here — a web contents that reports a right-click, a menu that pops up — is of no use to
  * the sixteen suites that harness serves, and teaching it about the spellchecker would put a
  * special case under all of them.

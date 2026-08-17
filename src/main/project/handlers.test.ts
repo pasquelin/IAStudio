@@ -9,15 +9,15 @@ import { IDLE_RESCAN } from '@shared/domain/project'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { glbFile, glbWearing } from '@main/assets/glb-fixtures'
 import { ownFileOf } from '@main/assets/protocol'
-import { createTextureExtraction } from '@main/assets/texture-extraction'
-import { invoke, openWindow, resetHandlers } from '@main/ipc/test-harness'
+import { createTextureExtraction } from '@main/assets/textureExtraction'
+import { invoke, openWindow, resetHandlers } from '@main/ipc/testHarness'
 import { pngBytes } from '@main/media/png-fixtures'
 import { memoryCatalog } from './catalog-fixtures'
 import { registerProjectHandlers, type ProjectHandlerDeps } from './handlers'
 import { ProjectOpenError, type FolderVerdict, type ProjectOpenFailure } from './store'
 import type { AsyncCatalog } from './catalogClient'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 const PROJECT = '/Users/someone/Films/Reel.scenario'
 

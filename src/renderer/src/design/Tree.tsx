@@ -771,7 +771,7 @@ export function Tree<T extends TreeNode>({
                 onDoubleClick={event => !isTyping(event.target) && onActivate?.(row.node)}
                 onContextMenu={event => {
                   // A right-click in a row's rename field belongs to the native clipboard and
-                  // spelling menu (`main/window/context-menu.ts`), which `preventDefault` would
+                  // spelling menu (`main/window/contextMenu.ts`), which `preventDefault` would
                   // keep from ever being asked.
                   if (!onContextMenu || isTyping(event.target)) return
                   event.preventDefault()

@@ -11,7 +11,7 @@ import {
 import { POSTERS_FOLDER } from '@shared/domain/project'
 import type { PbrChannel } from '@shared/domain/texture'
 import type { AsyncCatalog } from '@main/project/catalogClient'
-import { freeAssetPath } from './asset-file'
+import { freeAssetPath } from './assetFile'
 
 const FALLBACK_EXTENSION: Record<AssetType, string> = {
   image: '.png',

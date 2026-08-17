@@ -3,9 +3,9 @@ import type { Asset, AssetQuery } from '@shared/domain/asset'
 import type { ActivityReport } from '@main/project/activityLog'
 import { fillHoles, TRANSLATIONS } from '@shared/i18n'
 import { windowLanguage } from '@main/window/language'
-import { embeddedTextures, type EmbeddedTexture } from './glb-textures'
+import { embeddedTextures, type EmbeddedTexture } from './glbTextures'
 import { isPngBytes, probePng } from '@main/media/png'
-import type { WriteRequest } from './local-backend'
+import type { WriteRequest } from './localBackend'
 
 /** What each picture a model carries is written as. Anything else keeps the model's own bytes. */
 const EXTENSION_OF_MIME: Record<string, string> = {

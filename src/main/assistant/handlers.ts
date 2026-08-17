@@ -1,6 +1,6 @@
 import { CHANNELS, type AssistantActionResult } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
-import type { AssistantBrain } from './brain-port'
+import type { AssistantBrain } from './brainPort'
 import { parseActionResult, parseThought } from './validation'
 
 export type AssistantHandlerDeps = {

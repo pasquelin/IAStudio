@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandIn, scopeOfWorkspace } from '@shared/domain/command'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import { WRITTEN_SOURCES } from '@/design/test-harness'
+import { WRITTEN_SOURCES } from '@/design/testHarness'
 
 /**
  * The half of the `SCOPE_BY_WORKSPACE` trap that `shared/` cannot see.

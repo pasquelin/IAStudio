@@ -14,7 +14,7 @@ import {
   TITLE_BAR_TRIGGER,
   TOOLBAR_LABEL,
 } from './styles'
-import { WRITTEN_SOURCES } from './test-harness'
+import { WRITTEN_SOURCES } from './testHarness'
 
 /**
  * Read off the skin rather than spelled out again, so a change of shade moves the rule with it.
@@ -23,7 +23,7 @@ import { WRITTEN_SOURCES } from './test-harness'
  */
 const OWN_HOVER = TITLE_BAR_GHOST.split(' ').filter(one => one.startsWith('hover:bg-'))
 
-/** As `WRITTEN_SOURCES` keys it: the glob resolves against `test-harness.ts`, its own neighbour. */
+/** As `WRITTEN_SOURCES` keys it: the glob resolves against `testHarness.ts`, its own neighbour. */
 const GUARDED = './styles.ts'
 
 describe('the shared class strings', () => {

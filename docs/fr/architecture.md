@@ -227,11 +227,11 @@ src/main/
 │   ├── sqliteNative.ts      better-sqlite3 — production
 │   └── sqliteMemory.ts      node:sqlite — tests
 ├── assets/
-│   ├── local-backend.ts     les assets du projet, sur le disque
-│   ├── cloud-backend.ts     les mêmes, du côté de la bibliothèque
-│   ├── sync-plan.ts         ce que deux côtés devraient faire l'un de l'autre
+│   ├── localBackend.ts      les assets du projet, sur le disque
+│   ├── cloudBackend.ts      les mêmes, du côté de la bibliothèque
+│   ├── syncPlan.ts          ce que deux côtés devraient faire l'un de l'autre
 │   ├── collector.ts         ce qu'une génération dépose dans le projet
-│   ├── auto-caption.ts      nommer une image d'après ce que l’API y voit
+│   ├── autoCaption.ts       nommer une image d'après ce que l’API y voit
 │   └── protocol.ts          le protocole scenario://
 ├── dictation/               la reconnaissance vocale : permissions, modèle, découpage, handlers
 ├── assistant/               la pensée de l'assistant, derrière un port, et ce qu'on en relit
@@ -275,8 +275,8 @@ rafale de 429.
 ### Deux backends d’assets, un seul planificateur
 
 Le projet et la bibliothèque du compte sont deux stocks, servis par deux backends de même forme :
-`local-backend.ts` pour le dossier sur le disque, `cloud-backend.ts` pour l’API. Ce qui décide de
-ce qui devrait bouger entre les deux est ailleurs, et **pur** : `sync-plan.ts`.
+`localBackend.ts` pour le dossier sur le disque, `cloudBackend.ts` pour l’API. Ce qui décide de
+ce qui devrait bouger entre les deux est ailleurs, et **pur** : `syncPlan.ts`.
 
 Cette séparation porte deux promesses :
 

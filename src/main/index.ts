@@ -12,11 +12,11 @@ import { log, mirrorLogsTo } from '@main/log'
 import { createServices, createSettings } from '@main/services'
 import { createShutdown } from '@main/shutdown'
 import type { SettingsStore } from '@main/settings/store'
-import { registerFieldMenu } from '@main/window/context-menu'
+import { registerFieldMenu } from '@main/window/contextMenu'
 import { lockNavigation } from '@main/window/navigation'
 import { lockPermissions, rendererOrigin } from '@main/window/permissions'
 import { type Splash } from '@main/window/splash'
-import { openSplashWindow } from '@main/window/splash-window'
+import { openSplashWindow } from '@main/window/splashWindow'
 import { createMainWindow, showMainWindow } from '@main/window/windows'
 
 // Before anything reads `app.getPath('userData')`: that path derives from the name, and a

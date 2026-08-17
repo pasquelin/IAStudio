@@ -4,7 +4,7 @@ import { generatedAssetName } from '@shared/domain/assetName'
 import { channelFromScenarioType } from '@shared/domain/texture'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import type { AssetCollector } from '@main/scenario/jobManager'
-import type { LocalBackend } from './local-backend'
+import type { LocalBackend } from './localBackend'
 
 /**
  * `metadataType` is `metadata.type` on the API side — where a PBR channel announces itself —

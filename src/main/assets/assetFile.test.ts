@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { DUPLICATE_NAME, freeAssetPath, moveAssetFile, moveAssetFileToFree } from './asset-file'
+import { DUPLICATE_NAME, freeAssetPath, moveAssetFile, moveAssetFileToFree } from './assetFile'
 
 let root = ''
 
@@ -22,7 +22,7 @@ const put = async (relative: string): Promise<void> => {
 }
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), 'asset-file-'))
+  root = await mkdtemp(join(tmpdir(), 'assetFile-'))
   await mkdir(join(root, 'assets/img'), { recursive: true })
 })
 

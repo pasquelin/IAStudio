@@ -122,7 +122,7 @@ const cyclesIn = (graph: Map<string, string[]>): string[] => {
  * Test material — fixtures, harnesses, the fake bridge, and the suites themselves. Kept here
  * because this is where the question « who may import this » is asked.
  */
-const TEST_MATERIAL = /(\.(test|bench)\.tsx?|-fixtures\.tsx?|test-harness\.ts|fakeBridge\.ts)$/
+const TEST_MATERIAL = /(\.(test|bench)\.tsx?|-fixtures\.tsx?|testHarness\.ts|fakeBridge\.ts)$/
 
 /** A fixture, recognised where the resolver LANDED rather than where a specifier pointed. */
 const IS_FIXTURE = /-fixtures\.tsx?$/

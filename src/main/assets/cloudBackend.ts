@@ -5,7 +5,7 @@ import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { defined } from '@shared/guards'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { DownloadFormat, RemoteAssetCatalog } from '@main/scenario/assetCatalog'
-import { twinOf, type LocalBackend } from './local-backend'
+import { twinOf, type LocalBackend } from './localBackend'
 
 /**
  * Sending a file the API cannot take in one request. Everything but a small picture goes this

@@ -1,7 +1,7 @@
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { isFinished, JOB_STATUSES, type Job } from '@shared/domain/job'
-import { SUITE_SOURCES } from '@/design/test-harness'
+import { SUITE_SOURCES } from '@/design/testHarness'
 import { job } from './job-fixtures'
 
 const FINISHED = JOB_STATUSES.filter(isFinished)

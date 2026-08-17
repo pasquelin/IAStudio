@@ -2,16 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { CHANNELS } from '@shared/ipc'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
-import { invoke as invokeChannel, resetHandlers } from '@main/ipc/test-harness'
+import { invoke as invokeChannel, resetHandlers } from '@main/ipc/testHarness'
 import { recordFailuresTo } from '@main/scenario/client'
 import { createActivityLog, type ActivityLog } from '@main/project/activityLog'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
 import { registerAssetHandlers, type AssetHandlerDeps } from './handlers'
-import type { CloudBackend } from './cloud-backend'
+import type { CloudBackend } from './cloudBackend'
 
-vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
+vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
 async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
   // The harness answers `unknown`, and every caller knows the shape its own channel returns.
@@ -135,7 +135,7 @@ function setup(
     catalog: () => catalog,
     remote: () => remote,
     cloud: () => cloud,
-    // The real one is exercised in `auto-caption.test.ts`; here it must only stay out of the way.
+    // The real one is exercised in `autoCaption.test.ts`; here it must only stay out of the way.
     captionArrivals: async () => {},
     describeAssets: async assets => {
       described.push(...assets)
@@ -144,7 +144,7 @@ function setup(
     removeFile: async asset => {
       removedFiles.push(asset.id)
     },
-    // The disk itself is exercised in `asset-file.test.ts`; what this harness has to show is
+    // The disk itself is exercised in `assetFile.test.ts`; what this harness has to show is
     // that the handler moves the file BEFORE the row, and files the path it comes back with.
     renameFile:
       overrides.renameFile ??

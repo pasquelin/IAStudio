@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_ACCOUNT_NAME, ENVIRONMENT_ACCOUNT_ID } from '@shared/domain/account'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { StoredAccount } from './accounts'
-import { memoryAdapter, type MemoryAdapter } from './memory-adapter'
+import { memoryAdapter, type MemoryAdapter } from './memoryAdapter'
 import { createSettingsStore, type SettingsStore } from './store'
 
 /** Ids are generated; naming them is what lets a test assert on the stored blob. */

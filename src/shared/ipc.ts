@@ -1154,7 +1154,7 @@ export type StudioBridge = {
    * inside it, and `EMBEDDED_FONTS` names them without anyone having to ask.
    */
   fonts: {
-    /** Every installed family, sorted, one cut each — see `system-fonts`. */
+    /** Every installed family, sorted, one cut each — see `systemFonts`. */
     list: () => Promise<string[]>
     /**
      * A face's outlines, as a font file the renderer can parse. `null` when the machine no
