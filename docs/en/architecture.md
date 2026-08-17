@@ -17,12 +17,13 @@ up. Looking for how to *use* it? See [user-guide.md](user-guide.md).
 6. [Engines](#engines)
 7. [Generation, end to end](#generation-end-to-end)
 8. [Projects and the catalogue](#projects-and-the-catalogue)
-9. [The design system](#the-design-system)
-10. [Internationalisation](#internationalisation)
-11. [Configuration](#configuration)
-12. [Testing](#testing)
-13. [Adding things](#adding-things)
-14. [Shipping a version](#shipping-a-version)
+9. [Version control](#version-control)
+10. [The design system](#the-design-system)
+11. [Internationalisation](#internationalisation)
+12. [Configuration](#configuration)
+13. [Testing](#testing)
+14. [Adding things](#adding-things)
+15. [Shipping a version](#shipping-a-version)
 
 ---
 
@@ -743,6 +744,49 @@ envelope and hands it back untouched. A space that learns to save therefore need
 its own. **All six kinds can write themselves today** — image, scene, sequence, audio, skybox and
 texture, declared in one place, `IO_BY_KIND` in `app/documentIo.ts`. A kind absent from
 that table has a Save that does nothing, rather than one that writes an empty body.
+
+---
+
+## Version control
+
+The Git panel works on the open project's folder. Everything below lives in the main process
+(`main/git/`); the renderer only asks and displays.
+
+**git is a program you spawn, not a library you call.** The consequence fits in one question: the
+machine may not have it. macOS answers by offering to install the command line tools, a bare
+Windows install has no git whatsoever. So the question is asked when the project opens, never at
+the first commit — a panel that discovered it then would have let somebody prepare a commit that
+cannot happen. What the panel looks at is **a single union** of five states (`GitRepository`, in
+`shared/domain/git.ts`): no project · no binary · repository not initialised · ready · an error
+carrying git's own line, credentials stripped. A status plus three booleans would allow "no
+project open AND files changed", a shape somebody eventually renders.
+
+**Whatever CONFIGURES git is dropped from the environment before every command.** Everything
+starting with `GIT_`, plus the three settings git reads without a prefix — `PAGER`, `EDITOR`,
+`SSH_ASKPASS`. The rest is kept, `HTTPS_PROXY` and `SSH_AUTH_SOCK` first among them. The reason is
+not theoretical: an inherited `GIT_DIR` points somewhere else, an inherited `GIT_EDITOR` opens a
+window nobody can see, and simple-git refuses most of them outright — the command then fails
+before it even spawns. **Put plainly, from a user's side**: exporting these in your shell changes
+nothing in the studio, and that is deliberate.
+
+**No prompt, ever.** `GIT_TERMINAL_PROMPT=0`, an empty `GIT_ASKPASS`, and `BatchMode=yes` for ssh.
+A studio window has no terminal to answer in: git left free to ask would wait for ever, on a
+command the user has no way to cancel. **The cost is worth stating**: a key protected by a
+passphrase, with no agent loaded, fails rather than asking for it.
+
+**One git at a time, per project.** Git takes `.git/index.lock` for the duration of any command
+that writes, and a second one arriving meanwhile **dies rather than waits** — two windows
+refreshing together is enough to produce it. simple-git's own scheduler queues in order, which is
+why the studio carries no second queue of its own.
+
+**A token belongs to a HOST, never to a project or a remote.** One personal token opens every
+repository somebody has on GitHub; asking for it per project would be asking for the same string
+over and over. A company server keeps its own. The renderer can ask **whether** a host has one,
+and can set one; it can never read one back. That is invariant 1 word for word, and it is the
+shape the API key already has.
+
+**Everything coming from the renderer is validated before it reaches git** — paths, refs, messages,
+hashes, remote URLs (`main/git/validation.ts`).
 
 ---
 
