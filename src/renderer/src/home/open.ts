@@ -11,5 +11,7 @@ import { useLayouts } from '@/stores/layouts'
  */
 export function enterWorkspace(workspace: WorkspaceId): void {
   useLayouts.getState().setActiveWorkspace(workspace)
-  createDocumentIn(workspace)
+  // What it answers is for a caller waiting on the other side of the window; here the field and
+  // the tab it opens ARE the answer.
+  void createDocumentIn(workspace)
 }

@@ -11,41 +11,30 @@ import { homeIsVisible, useLayouts } from '@/stores/layouts'
 // re-renders on — and a space reaches for it from inside the panel Dockview owns.
 let current: DockviewApi | null = null
 
-/**
- * Documents asked for while the centre was not on screen.
- *
- * The home COVERS the centre — `Shell` renders one or the other — so a document opened from a
- * home panel arrives while Dockview is unmounted and its api, if one was ever handed over,
- * belongs to a torn-down instance. Added there, the panel silently never opens.
- */
-let pending: DocumentDescriptor[] = []
-
 /** A tab to bring forward once the centre reports itself — see `showWorkspace`. */
 let pendingFocus: string | null = null
 
-/** Called by `DocumentArea` once Dockview is ready — and again whenever the home gives it back. */
+/**
+ * Called by `DocumentArea` once Dockview is ready — and again whenever the home gives it back.
+ *
+ * Rebuilt from the STORE, never from a queue: the home tears Dockview down, and a queue the first
+ * instance drained left every later one — and the document waiting in it — with nothing.
+ */
 export function setDockviewApi(api: DockviewApi): void {
   current = api
 
-  const queued = pending
-  pending = []
-  for (const document of queued) addPanel(api, document)
+  const { documents, activeId } = useDocuments.getState()
+  for (const document of Object.values(documents)) ensurePanel(api, document)
 
-  const focus = pendingFocus
+  const focus = pendingFocus ?? activeId
   pendingFocus = null
-  // After the queue: a document being added is a tab of its own, and it must not steal the
-  // front from the one the section was chosen for.
   if (focus !== null) api.getPanel(focus)?.api.setActive()
 }
 
-function addPanel(api: DockviewApi, document: DocumentDescriptor): void {
-  // Already open: bring it forward rather than adding a second panel under the same id, which
-  // Dockview refuses outright.
-  const existing = api.getPanel(document.id)
-  if (existing) {
-    existing.api.setActive()
-    return
-  }
+/** Adds the tab if missing, and says nothing about the front — what rebuilding a centre needs. */
+function ensurePanel(api: DockviewApi, document: DocumentDescriptor): void {
+  // Dockview refuses a second panel under the same id outright.
+  if (api.getPanel(document.id)) return
 
   api.addPanel({
     id: document.id,
@@ -53,6 +42,13 @@ function addPanel(api: DockviewApi, document: DocumentDescriptor): void {
     title: document.title,
     params: { documentId: document.id },
   })
+}
+
+/** Adds it, or brings the tab already there forward. A new panel arrives in front on its own. */
+function showPanel(api: DockviewApi, document: DocumentDescriptor): void {
+  const existing = api.getPanel(document.id)
+  if (existing) existing.api.setActive()
+  else ensurePanel(api, document)
 }
 
 /**
@@ -63,15 +59,15 @@ function addPanel(api: DockviewApi, document: DocumentDescriptor): void {
  * "no longer open", which is what a row of the Explorer would otherwise produce.
  *
  * The section is set HERE and not left to Dockview announcing the new tab, though it does: a
- * document queued behind the home is announced a commit later, and until then the docks would be
- * those of the section the user is leaving. `setActiveWorkspace` also leaves the home, which is
- * what mounts the centre and drains that queue — so the read below happens before it.
+ * document opened behind the home is announced a commit later, and until then the docks would be
+ * those of the section the user is leaving. Behind the home only the FOCUS is carried across:
+ * `setActiveWorkspace` brings the centre back, and it rebuilds its tabs from the store.
  */
 export function openDocument(document: DocumentDescriptor): void {
   useDocuments.getState().adopt(document)
 
-  if (!homeIsVisible() && current) addPanel(current, document)
-  else pending.push(document)
+  if (!homeIsVisible() && current) showPanel(current, document)
+  else pendingFocus = document.id
 
   useLayouts.getState().setActiveWorkspace(document.workspace)
 }

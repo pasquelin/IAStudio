@@ -11,6 +11,7 @@ import { runGlobalCommand } from '@/services/globalCommands'
 import { useJobs } from '@/stores/jobs'
 import { toolSurface } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
+import { useProject } from '@/stores/project'
 import { withBridge, type ActionHandlers } from './actionHandler'
 import { boolOf, oneOf, recordOf, textOf } from './actionInputs'
 import { mountedGenerator } from './generatorBridge'
@@ -70,13 +71,23 @@ function prepareGenerator(input: Record<string, unknown>): ActionOutcome {
   return { ok: true }
 }
 
-function openWorkspace(input: Record<string, unknown>): ActionOutcome {
+// Waits for the document: the creation puts a name field on screen, and answering before it is
+// filled told a client "done" about one the person then called off.
+async function openWorkspace(input: Record<string, unknown>): Promise<ActionOutcome> {
   const workspace = oneOf(input, 'workspace', WORKSPACE_IDS)
   if (!workspace) return refused('badInput')
 
-  if (boolOf(input, 'createDocument')) createDocumentIn(workspace)
-  else showWorkspace(workspace)
-  return { ok: true }
+  if (!boolOf(input, 'createDocument')) {
+    showWorkspace(workspace)
+    return { ok: true }
+  }
+
+  // Asked here although the creation asks it too: from there it answers `null`, which is the
+  // person's own refusal — and "you turned that down" for a studio with no project open is a lie.
+  if (!useProject.getState().project) return refused('noProject')
+
+  const created = await createDocumentIn(workspace)
+  return created ? { ok: true, data: { documentId: created.id } } : refused('declined')
 }
 
 /**

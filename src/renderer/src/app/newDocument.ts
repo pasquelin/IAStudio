@@ -1,4 +1,8 @@
-import { kindForWorkspace, DOCUMENTS_FOLDER } from '@shared/domain/document'
+import {
+  kindForWorkspace,
+  DOCUMENTS_FOLDER,
+  type DocumentDescriptor,
+} from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { parentOf } from '@shared/domain/folder'
 import { takenDocumentNames, untitledDocumentName, useDocuments } from '@/stores/documents'
@@ -38,16 +42,19 @@ async function startingFolder(): Promise<string> {
  * empty canvas.
  *
  * A folder gone read-only, or removed under us, leaves the workspace empty rather than failing
- * loudly: that is the honest outcome, and the studio has nowhere to say more until it grows a
- * notification.
+ * loudly: that is the honest outcome on screen, and the studio has nowhere to say more until it
+ * grows a notification.
+ *
+ * It ANSWERS all the same — `null` for a field called off, a folder that refused, a workspace
+ * with no documents. A caller from outside the window is held on the other end of this.
  */
-export function createDocumentIn(workspace: WorkspaceId): void {
-  void named(workspace).catch(() => {})
+export function createDocumentIn(workspace: WorkspaceId): Promise<DocumentDescriptor | null> {
+  return named(workspace).catch(() => null)
 }
 
-async function named(workspace: WorkspaceId): Promise<void> {
+async function named(workspace: WorkspaceId): Promise<DocumentDescriptor | null> {
   const kind = kindForWorkspace(workspace)
-  if (kind === null || !useProject.getState().project) return
+  if (kind === null || !useProject.getState().project) return null
 
   const ask = mountedDocumentNamer()
   let of: { title: string; folder: string } | undefined
@@ -68,11 +75,12 @@ async function named(workspace: WorkspaceId): Promise<void> {
       takenIn,
     })
     // Called off. Nothing is made — no tab, no file — which is what cancelling has to mean.
-    if (place === null) return
+    if (place === null) return null
 
     of = place
   }
 
   const created = await useDocuments.getState().create(workspace, of)
   if (created) openDocument(created)
+  return created
 }

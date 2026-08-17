@@ -36,7 +36,7 @@ export function RailNewButton() {
       // project, so on the home the button is never dead.
       disabled={!home && (kindForWorkspace(workspace) === null || !project)}
       onClick={() =>
-        home ? void useProject.getState().createPicked() : createDocumentIn(workspace)
+        home ? void useProject.getState().createPicked() : void createDocumentIn(workspace)
       }
       // Filled, unlike every tool icon around it: this one acts, the others only switch what is
       // shown. A grey plus among grey glyphs is a plus nobody finds.

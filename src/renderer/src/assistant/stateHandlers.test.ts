@@ -101,6 +101,15 @@ describe('putting a document in front', () => {
     expect(useDocuments.getState().activeId).toBe('doc-b')
   })
 
+  // Naming the tab in the store alone left an image in front of a sky's panels.
+  it('takes the section and the centre with it', async () => {
+    installDocuments({ 'doc-a': '3d', 'doc-b': 'image' }, 'doc-a')
+
+    await runAction('document.activate', { documentId: 'doc-b' })
+
+    expect(openDocument).toHaveBeenCalledWith(expect.objectContaining({ id: 'doc-b' }))
+  })
+
   it('refuses an id no tab holds rather than clearing the centre', async () => {
     installDocuments({ 'doc-a': '3d' }, 'doc-a')
 
@@ -109,6 +118,7 @@ describe('putting a document in front', () => {
       refusal: 'badInput',
     })
     expect(useDocuments.getState().activeId).toBe('doc-a')
+    expect(openDocument).not.toHaveBeenCalled()
   })
 
   it('opens a document of the folder by its path', async () => {
