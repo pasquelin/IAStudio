@@ -2,6 +2,7 @@ import { net, protocol } from 'electron'
 import { isAbsolute, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { ASSET_SCHEME, hostedParts, type Asset } from '@shared/domain/asset'
+import { log } from '@main/log'
 
 /**
  * Resolves an asset's stored path inside its project, or refuses.
@@ -110,5 +111,17 @@ export async function servedPath(url: string, resolvers: AssetResolvers): Promis
   if (!Object.hasOwn(resolvers, parsed.host)) return null
 
   const resolveHost = resolvers[parsed.host]
-  return resolveHost ? resolveHost(parsed.id) : null
+  if (!resolveHost) return null
+
+  try {
+    return await resolveHost(parsed.id)
+  } catch (error: unknown) {
+    // A refusal is answered as « no file », never as a network error: the catalogue rejects on
+    // the ordinary path — a project closing while a grid still asks for its stills.
+    //
+    // It catches a genuine defect in a resolver just the same, and hands it over as a 404: the
+    // journal is then the only place it shows, and nothing here can tell the two apart.
+    log.warn('assets', `serving ${parsed.host}/${parsed.id} failed: ${String(error)}`)
+    return null
+  }
 }

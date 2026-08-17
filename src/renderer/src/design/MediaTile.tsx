@@ -74,7 +74,7 @@ export function MediaTile({
   bare = false,
   cutout = false,
 }: MediaTileProps) {
-  const { src, onError } = useLoadable(url)
+  const { src, attempt, onError } = useLoadable(url)
 
   return (
     <figure
@@ -89,6 +89,7 @@ export function MediaTile({
         // reads as placed, the way the folder beside it does, and not as filling the square.
         <div className={cn('absolute inset-0', cutout && 'bottom-4 flex items-end justify-center')}>
           <img
+            key={attempt}
             src={src}
             alt=""
             loading="lazy"

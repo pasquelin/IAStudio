@@ -27,6 +27,21 @@ describe('MediaTile', () => {
     expect(screen.getByText('Gone')).toBeInTheDocument()
   })
 
+  /**
+   * A still is served over `scenario://`, whose resolver reads a catalogue that refuses while a
+   * project closes. The tile asks once more — and asking means a NEW element: re-rendering the
+   * same `src` fetches nothing at all, which is what the `key` is for.
+   */
+  it('asks a second time for a still, with a fresh element', () => {
+    render(<MediaTile url="scenario://poster/asset_1" caption="Model" />)
+    const first = picture()
+
+    fireEvent.error(first as HTMLImageElement)
+
+    expect(picture()).not.toBeNull()
+    expect(picture()).not.toBe(first)
+  })
+
   it('shows the placeholder when there is no picture at all', () => {
     render(<MediaTile caption="Scenario LLM" />)
 
