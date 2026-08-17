@@ -31,6 +31,12 @@ export type PagesOptions = {
    * near, and a page the API narrowed away draws nothing while having a next one behind it.
    */
   fill?: true | { wanted?: number; max?: number }
+  /**
+   * Whether a run of pages bringing nothing new is the end. True for a listing paged by OFFSET,
+   * where repeats mean the walk is going nowhere; FALSE for one that legitimately repeats itself —
+   * the model registry walks the private models then the public ones, and an id can be in both.
+   */
+  endsOnRepeats?: boolean
 }
 
 export type Pages<T> = {
@@ -52,7 +58,7 @@ export type Pages<T> = {
    * What the API refused with, or `null`. A refusal and an end look alike on screen and must not
    * be said alike: one is worth trying again, the other is an answer.
    */
-  refusal: unknown
+  refusal: Error | null
   /** Asks for the next page. Safe to call again before it has answered. */
   more: () => void
   /** Reads it again from its first page — what a refusal is worth offering. */
@@ -67,14 +73,14 @@ export type Pages<T> = {
 export function usePages<T extends { id: string }>(
   key: readonly unknown[],
   read: (from: { cursor?: string }) => Promise<Page<T>> | undefined,
-  { enabled = true, once = false, fill }: PagesOptions = {},
+  { enabled = true, once = false, fill, endsOnRepeats = true }: PagesOptions = {},
 ): Pages<T> {
   const query = useInfiniteQuery<Page<T>>({
     queryKey: key,
     queryFn: ({ pageParam }) =>
       read(typeof pageParam === 'string' ? { cursor: pageParam } : {}) ?? Promise.resolve(NO_PAGE),
     getNextPageParam: (page, pages, asked) =>
-      nextCursor(page, pages, typeof asked === 'string' ? asked : undefined),
+      nextCursor(page, pages, typeof asked === 'string' ? asked : undefined, endsOnRepeats),
     initialPageParam: undefined,
     enabled,
     ...(once ? { staleTime: Number.POSITIVE_INFINITY } : {}),
@@ -113,7 +119,10 @@ export function usePages<T extends { id: string }>(
     fetching: query.isFetching,
     answered: query.data?.pages.length ?? 0,
     ask: fill && enabled && !exhausted ? more : null,
-    ...(fill === true ? {} : fill),
+    // A fill that names no ceiling takes the barren one, and the two must not drift apart: below
+    // it the surface stops pulling BEFORE the run of empty pages that is the only thing making the
+    // listing exhausted, and one with nothing drawn has no end left for a scroll to reach.
+    ...(fill === true ? { max: BARREN_MAX } : fill),
   })
 
   return {
@@ -139,10 +148,11 @@ function nextCursor<T extends { id: string }>(
   page: Page<T>,
   pages: readonly Page<T>[],
   asked: string | undefined,
+  endsOnRepeats: boolean,
 ): string | undefined {
   if (page.cursor === null || page.cursor === asked) return undefined
 
-  return barrenTail(pages) >= BARREN_MAX ? undefined : page.cursor
+  return endsOnRepeats && barrenTail(pages) >= BARREN_MAX ? undefined : page.cursor
 }
 
 /**

@@ -81,7 +81,13 @@ export function Models() {
   const catalogue = usePages(
     ['models', query],
     from => getBridge()?.scenario.searchModels({ ...query, limit: PAGE_LIMIT, ...from }),
-    { enabled: authenticated, fill: { wanted: PAGE_LIMIT, max: AUTOMATIC_PULLS } },
+    {
+      enabled: authenticated,
+      fill: { wanted: PAGE_LIMIT, max: AUTOMATIC_PULLS },
+      // The walk lists the private models then the public ones, and one can be in both: a run of
+      // pages this panel has already shown is ordinary here, and is not the end of the catalogue.
+      endsOnRepeats: false,
+    },
   )
   const items = catalogue.items
 

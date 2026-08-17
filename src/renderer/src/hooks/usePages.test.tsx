@@ -9,11 +9,16 @@ type Row = { id: string }
 function Listing({
   read,
   enabled,
+  endsOnRepeats,
 }: {
   read: (from: { cursor?: string }) => Promise<Page<Row>> | undefined
   enabled?: boolean
+  endsOnRepeats?: boolean
 }) {
-  const { items, exhausted, pending, more } = usePages(['listing'], read, { enabled })
+  const { items, exhausted, pending, more } = usePages(['listing'], read, {
+    enabled,
+    endsOnRepeats,
+  })
 
   return (
     <>
@@ -94,6 +99,27 @@ describe('a listing read page by page', () => {
 
     expect(await screen.findByText('exhausted')).toBeInTheDocument()
     expect(read.mock.calls.length).toBeLessThanOrEqual(5)
+  })
+
+  /**
+   * A walk that lists one set then another — the private models, then the public ones — repeats
+   * itself legitimately, and a run of pages it has already shown is not the end of the catalogue.
+   */
+  it('walks on through a run of repeats when the caller says its walk repeats', async () => {
+    let offset = 0
+    const read = vi.fn(() => {
+      offset += 1
+      return Promise.resolve({
+        items: offset > 4 ? [{ id: 'b' }] : [{ id: 'a' }],
+        cursor: `o:${offset}`,
+      })
+    })
+
+    render(withQueries(<Listing read={read} endsOnRepeats={false} />))
+    await screen.findByText('a')
+    for (let click = 0; click < 5; click += 1) await userEvent.click(screen.getByRole('button'))
+
+    expect(await screen.findByText('a,b')).toBeInTheDocument()
   })
 
   it('is at its end as soon as a page comes back without a cursor', async () => {
