@@ -11,6 +11,7 @@ import {
   rowSkin,
   TILE_QUIET,
   TITLE_BAR_GHOST,
+  TITLE_BAR_TRIGGER,
   TOOLBAR_LABEL,
 } from './styles'
 import { WRITTEN_SOURCES } from './test-harness'
@@ -486,5 +487,48 @@ describe('the field that takes what its line has left', () => {
     )
 
     expect(wearing.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+/**
+ * The gauge and the room a NAMED control of the title bar takes, which the assistant's entry and
+ * the account trigger had each written out. The pills beside them are not this shape and keep
+ * their own `gap-2 px-3 py-1`: a pill is as wide as the space it stands for.
+ */
+const respacesTitleBar = rewrites('TITLE_BAR_GHOST', ['h-(--sc-control)', 'px-2'])
+
+describe('the named control of a title bar', () => {
+  it('is the ghost, plus the gauge and the room around its word', () => {
+    expect(TITLE_BAR_TRIGGER.split(' ')).toEqual([
+      ...TITLE_BAR_GHOST.split(' '),
+      'text-tiny',
+      'h-(--sc-control)',
+      'gap-1.5',
+      'px-2',
+    ])
+  })
+
+  it('is worn rather than sized again at the call', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && respacesTitleBar(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone the pills, whose room is their own', () => {
+    expect(respacesTitleBar("cn(TITLE_BAR_GHOST, 'text-tiny h-(--sc-control) gap-1.5 px-2')")).toBe(
+      true,
+    )
+    expect(respacesTitleBar("cn(TITLE_BAR_GHOST, 'gap-2 px-3 py-1')")).toBe(false)
+  })
+
+  // The partner of the rule above: a constant nobody wears is a dead export.
+  it('is worn by the two controls it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('TITLE_BAR_TRIGGER'),
+    )
+
+    expect(wearing.length).toBeGreaterThanOrEqual(2)
   })
 })
