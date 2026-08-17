@@ -3,7 +3,7 @@ import type { ActivityTopic } from '@shared/domain/activity'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
 import type { ActivityLog } from '@main/project/activity-log'
-import { parseLogEntry } from './validation'
+import { parseLogEntry, parseTraceEntry } from './validation'
 
 /**
  * Which part of the journal a renderer scope belongs to. A closed union on both sides, so a new
@@ -96,5 +96,12 @@ export function registerDiagnosticsHandlers(journal: () => ActivityLog): void {
       messageKey: `activity.scope.${scope}`,
       detail: message,
     })
+  })
+
+  // The journal is deliberately not written here: what reaches this channel names no gesture and
+  // no document, so a row would raise a toast the reader can do nothing about.
+  handle(CHANNELS.diagnosticsTrace, (_event, entry) => {
+    const { scope, message } = parseTraceEntry(entry)
+    log.error(`renderer/${scope}`, message)
   })
 }

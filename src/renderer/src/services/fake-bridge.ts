@@ -5,7 +5,7 @@ import type { FileOutcome } from '@shared/domain/file-op'
 import { IDLE_RESCAN } from '@shared/domain/project'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
-import type { LogEntry, StudioBridge } from '@shared/ipc'
+import type { LogEntry, StudioBridge, TraceEntry } from '@shared/ipc'
 
 const noSubscription = (): (() => void) => () => {}
 
@@ -226,6 +226,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     diagnostics: {
       onLog: noSubscription,
       report: () => Promise.resolve(),
+      trace: () => Promise.resolve(),
       ...overrides.diagnostics,
     },
     menu: {
@@ -260,7 +261,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
  */
 export function bridgeWatchingLogs(overrides: BridgeOverrides = {}) {
   const report = vi.fn((_entry: LogEntry) => Promise.resolve())
-  installFakeBridge({ ...overrides, diagnostics: { report, ...overrides.diagnostics } })
+  const trace = vi.fn((_entry: TraceEntry) => Promise.resolve())
+  installFakeBridge({ ...overrides, diagnostics: { report, trace, ...overrides.diagnostics } })
 
-  return { report, entries: () => report.mock.calls.map(([entry]) => entry) }
+  return { report, trace, entries: () => report.mock.calls.map(([entry]) => entry) }
 }

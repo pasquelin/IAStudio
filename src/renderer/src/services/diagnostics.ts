@@ -1,5 +1,5 @@
 import { messageOf } from '@shared/guards'
-import { MAX_LOG_MESSAGE, type LogScope } from '@shared/ipc'
+import { MAX_LOG_MESSAGE, type LogScope, type TraceScope } from '@shared/ipc'
 import { getBridge } from './bridge'
 
 /**
@@ -67,13 +67,37 @@ export function reportFailure(scope: LogScope, subject: string, error: unknown):
     reported.add(said)
   }
 
-  const message = `${subject}: ${messageOf(error)}`.slice(0, MAX_LOG_MESSAGE)
-
   // The rejection is dropped on purpose: this IS the path a failure travels, and a failure to
   // report one has nowhere left to go.
   getBridge()
-    ?.diagnostics.report({ level: 'error', scope, message })
+    ?.diagnostics.report({ level: 'error', scope, message: lineFor(subject, error) })
     .catch(() => {})
+}
+
+/**
+ * A failure the terminal keeps and no surface shows.
+ *
+ * Never deduplicated, unlike `reportFailure`: nothing here is read while it happens, and a
+ * rejection firing on every detach is telling whoever reads the log precisely that.
+ *
+ * Bounded instead. A promise rejected inside an animation frame would send one message per
+ * frame, and no path of this application is allowed an unbounded burst — a hundred lines already
+ * say that something repeats.
+ */
+export function traceFailure(scope: TraceScope, subject: string, error: unknown): void {
+  if (traced >= MAX_TRACES) return
+  traced += 1
+
+  getBridge()
+    ?.diagnostics.trace({ scope, message: lineFor(subject, error) })
+    .catch(() => {})
+}
+
+const MAX_TRACES = 100
+let traced = 0
+
+function lineFor(subject: string, error: unknown): string {
+  return `${subject}: ${messageOf(error)}`.slice(0, MAX_LOG_MESSAGE)
 }
 
 /**
@@ -93,7 +117,11 @@ function blamedComponent(componentStack: string | undefined): string {
 
 const reported = new Set<string>()
 
-/** Lets a subject be reported again — the studio moved on, and a repeat would now be news. */
+/**
+ * Lets a subject be reported again — the studio moved on, and a repeat would now be news. The
+ * trace budget refills for the same reason: what filled it belonged to the project before.
+ */
 export function forgetReportedFailures(): void {
   reported.clear()
+  traced = 0
 }
