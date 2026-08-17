@@ -171,7 +171,9 @@ describe('asset collector', () => {
       backend,
       newId: () => 'asset_1',
       heldFor: async remoteAssetId =>
-        remoteAssetId === 'remote_source' ? { id: 'asset_source', type: 'image' } : null,
+        remoteAssetId === 'remote_source'
+          ? { id: 'asset_source', type: 'image', onDisk: true }
+          : null,
     })
 
     await collect(JOB, ['remote_1'])
@@ -239,12 +241,43 @@ describe('asset collector', () => {
       retrieve,
       backend,
       newId: () => 'asset_new',
-      heldFor: async () => ({ id: 'asset_already_here', jobId: JOB.id, type: 'image' }),
+      heldFor: async () => ({
+        id: 'asset_already_here',
+        jobId: JOB.id,
+        type: 'image',
+        onDisk: true,
+      }),
     })
 
     expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_already_here'] })
     expect(retrieve).not.toHaveBeenCalled()
     expect(imported).toEqual([])
+  })
+
+  /**
+   * The row is not the file. Skipping the download on the strength of a row alone put a dead id
+   * among the outputs of the job — nothing ever came back for the bytes, and the shelf offered a
+   * tile with nothing behind it.
+   */
+  it('downloads its own output again when the file it recorded has gone', async () => {
+    const { backend, imported } = backendSpy()
+    const retrieve = vi.fn(() => Promise.resolve(remote('image')))
+
+    const collect = createAssetCollector({
+      retrieve,
+      backend,
+      newId: () => 'asset_new',
+      heldFor: async () => ({
+        id: 'asset_thrown_away',
+        jobId: JOB.id,
+        type: 'image',
+        onDisk: false,
+      }),
+    })
+
+    expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_new'] })
+    expect(retrieve).toHaveBeenCalled()
+    expect(imported[0]).toMatchObject({ jobId: JOB.id })
   })
 
   it('collects its own output even when the library already holds a copy from elsewhere', async () => {
@@ -253,7 +286,7 @@ describe('asset collector', () => {
       retrieve: () => Promise.resolve(remote('image')),
       backend,
       newId: () => 'asset_generated',
-      heldFor: async () => ({ id: 'asset_pulled_from_cloud', type: 'image' }),
+      heldFor: async () => ({ id: 'asset_pulled_from_cloud', type: 'image', onDisk: true }),
     })
 
     expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_generated'] })

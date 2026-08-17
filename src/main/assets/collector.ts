@@ -25,16 +25,21 @@ export type RemoteAsset = {
   generation?: AssetGeneration
 }
 
+/**
+ * A local row an API asset became, as the collector needs to see it.
+ *
+ * `jobId` is what put it there, and the collector reads it: a row alone does not say whose
+ * output it is. `type` too, so a second pass over outputs already collected still names their
+ * shelves. `onDisk` because a row is not a file — see the two readings below.
+ */
+export type HeldAsset = Pick<Asset, 'id' | 'jobId' | 'type'> & { onDisk: boolean }
+
 export type CollectorDeps = {
   retrieve: (remoteAssetId: string) => Promise<RemoteAsset>
   backend: LocalBackend
   newId: () => string
-  /**
-   * The local asset an API one became, or `null` when it never entered the project. `jobId` is
-   * what put it there, and the collector reads it: a row alone does not say whose output it is.
-   * `type` too, so a second pass over outputs already collected still names their shelves.
-   */
-  heldFor: (remoteAssetId: string) => Promise<Pick<Asset, 'id' | 'jobId' | 'type'> | null>
+  /** The local asset an API one became, or `null` when it never entered the project. */
+  heldFor: (remoteAssetId: string) => Promise<HeldAsset | null>
 }
 
 export function createAssetCollector({
@@ -56,8 +61,11 @@ export function createAssetCollector({
       // every output and pay for the transfer twice. Scoped to the job rather than to the remote
       // id alone, or a copy the user had pulled from the account library would be adopted as the
       // output — and it carries neither the prompt behind it, nor its group, nor its label.
+      // `onDisk`, because what this branch decides is NOT to download: a row whose file the user
+      // has since thrown away would otherwise put a dead id among the outputs of the job, and
+      // nothing would ever come back for the bytes. The row is not the file.
       const held = await heldFor(remoteAssetId)
-      if (held?.jobId === job.id) {
+      if (held?.jobId === job.id && held.onDisk) {
         collected.push(held.id)
         shelves.add(workspaceOfType(held.type))
         continue
@@ -70,6 +78,11 @@ export function createAssetCollector({
 
       // What the channels of one texture hang from. Absent when the parent never entered the
       // project — an image uploaded straight to the API, or converted before it was imported.
+      //
+      // `onDisk` is NOT read here, and that is the difference between the two questions: this one
+      // only wants the id a lineage points at, and a row whose file is gone still holds the
+      // prompt, the seed and every child that hangs off it. Refusing it would cut the lineage of
+      // a texture because a picture was tidied away.
       const parent = remote.parentId ? await heldFor(remote.parentId) : null
 
       const asset = await backend.importFromUrl({

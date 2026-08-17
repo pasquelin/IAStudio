@@ -980,7 +980,16 @@ export function createServices(settings: SettingsStore): Services {
       },
       backend: assets,
       newId: newAssetId,
-      heldFor: remoteAssetId => project.catalog().findByRemoteId(remoteAssetId),
+      // The disk rather than `missing_at`, which the row does not carry out of the catalogue
+      // anyway: the date says what the last reconciliation pass saw, and this is asked at the
+      // moment the answer is acted on.
+      heldFor: async remoteAssetId => {
+        const held = await project.catalog().findByRemoteId(remoteAssetId)
+        if (!held) return null
+
+        const file = ownFileOf(project.path(), held)
+        return { ...held, onDisk: file !== null && existsSync(file) }
+      },
     })
 
   // Rebuilt only when the client is, so every job of one account shares a single graph rather
