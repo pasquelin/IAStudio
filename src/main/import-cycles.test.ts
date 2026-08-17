@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest'
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /**
- * The three import cycles this repository still carries, each written as its two files sorted.
+ * The import cycles this repository still carries, each written as its two files sorted.
  *
  * A ratchet, not a target: this list is meant to shrink and never to grow. Nothing else in
  * `pnpm validate` sees a cycle — not the compiler, not eslint, not the tests — so a cycle removed
@@ -30,7 +30,6 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const KNOWN: readonly string[] = [
   'main/scenario/job-store.ts -> main/scenario/validation.ts',
   'renderer/src/engines/canvas/CanvasEngine.ts -> renderer/src/engines/canvas/brush.ts',
-  'renderer/src/stores/layout-prune.ts -> renderer/src/stores/layouts.ts',
 ]
 
 const ALIASES: readonly [string, string][] = [
@@ -191,7 +190,7 @@ describe('what a shipped file may reach', () => {
 })
 
 describe('the import graph', () => {
-  it('carries no cycle beyond the three already there', () => {
+  it('carries no cycle beyond the ones already listed', () => {
     const files = sources(SRC)
     const graph = new Map<string, string[]>(
       files.map(file => {

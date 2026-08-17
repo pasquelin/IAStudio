@@ -1,7 +1,7 @@
 import { Orientation } from 'dockview-react'
 import { describe, expect, it } from 'vitest'
 import { withoutPanels } from './layout-prune'
-import type { SerializedLayout } from './layouts'
+import type { SerializedLayout } from './serialized-layout'
 
 type Grid = SerializedLayout['grid']
 type Node = Grid['root']
