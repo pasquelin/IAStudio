@@ -197,4 +197,27 @@ describe('createDocumentIn', () => {
     expect(asked).not.toHaveBeenCalled()
     expect(created()).toHaveLength(0)
   })
+
+  // A caller outside the window is held on the other end of this, and "done" for a field the
+  // person called off is the one answer it must never give.
+  describe('what it answers', () => {
+    it('the document, once the field is filled', async () => {
+      namedBy(() => Promise.resolve({ title: 'Niveau', folder: 'documents' }))
+
+      expect(await createDocumentIn('3d')).toMatchObject({ title: 'Niveau', kind: 'scene' })
+    })
+
+    it('nothing when the field is called off', async () => {
+      namedBy(() => Promise.resolve(null))
+
+      expect(await createDocumentIn('3d')).toBeNull()
+      expect(created()).toHaveLength(0)
+    })
+
+    it('nothing with no project open', async () => {
+      useProject.setState({ project: null })
+
+      expect(await createDocumentIn('3d')).toBeNull()
+    })
+  })
 })

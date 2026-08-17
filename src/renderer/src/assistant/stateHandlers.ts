@@ -104,9 +104,12 @@ async function openByPath(input: Record<string, unknown>): Promise<ActionOutcome
 }
 
 /** The open document a call names, or nothing — every action of this family takes one by id. */
+function namedDocument(input: Record<string, unknown>): DocumentDescriptor | null {
+  return useDocuments.getState().documents[textOf(input, 'documentId') ?? ''] ?? null
+}
+
 function named(input: Record<string, unknown>): string | null {
-  const documentId = textOf(input, 'documentId') ?? ''
-  return useDocuments.getState().documents[documentId] ? documentId : null
+  return namedDocument(input)?.id ?? null
 }
 
 async function close(input: Record<string, unknown>): Promise<ActionOutcome> {
@@ -212,11 +215,16 @@ export const STATE_HANDLERS: ActionHandlers = {
   'document.close': close,
   'document.rename': rename,
 
+  // The same gesture as opening it: naming the tab in the store alone left an image in front of
+  // a sky's panels, which no click can produce — the state this action exists to repair.
   'document.activate': input => {
-    const documentId = named(input)
-    if (documentId === null) return refused('badInput')
+    const document = namedDocument(input)
+    if (document === null) return refused('badInput')
 
-    useDocuments.getState().activate(documentId)
+    // Named here as well as opened: behind the home there is no centre to announce the tab, and
+    // the state a client reads next would still be describing the document it just left.
+    useDocuments.getState().activate(document.id)
+    openDocument(document)
     return { ok: true }
   },
 

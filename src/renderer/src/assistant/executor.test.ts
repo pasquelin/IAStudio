@@ -65,6 +65,25 @@ beforeEach(() => {
 })
 
 describe('opening a workspace', () => {
+  const stamp = '2026-08-17T10:00:00.000Z'
+  const madeDocument = {
+    id: 'doc-9',
+    kind: 'scene',
+    workspace: '3d',
+    title: 'Niveau',
+    path: 'documents/Niveau.scene',
+  }
+
+  beforeEach(() => {
+    useProject.setState({
+      project: {
+        path: '/projects/one',
+        manifest: { version: 1, name: 'One', createdAt: stamp, updatedAt: stamp },
+      },
+    })
+    createDocumentIn.mockResolvedValue(madeDocument)
+  })
+
   it('switches to it', async () => {
     expect(await runAction('workspace.open', { workspace: '3d' })).toEqual({ ok: true })
 
@@ -77,6 +96,37 @@ describe('opening a workspace', () => {
 
     expect(createDocumentIn).toHaveBeenCalledWith('3d')
     expect(showWorkspace).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The creation puts a name field on screen. Answering before it is filled told a client the
+   * document was there while the person was still deciding — and it stayed "done" when they
+   * pressed Cancel.
+   */
+  it('answers the document it made, and waits for it', async () => {
+    expect(await runAction('workspace.open', { workspace: '3d', createDocument: true })).toEqual({
+      ok: true,
+      data: { documentId: 'doc-9' },
+    })
+  })
+
+  it('refuses when the name field is called off', async () => {
+    createDocumentIn.mockResolvedValue(null)
+
+    expect(await runAction('workspace.open', { workspace: '3d', createDocument: true })).toEqual({
+      ok: false,
+      refusal: 'declined',
+    })
+  })
+
+  it('refuses to make one with no project to write it in', async () => {
+    useProject.setState({ project: null })
+
+    expect(await runAction('workspace.open', { workspace: '3d', createDocument: true })).toEqual({
+      ok: false,
+      refusal: 'noProject',
+    })
+    expect(createDocumentIn).not.toHaveBeenCalled()
   })
 
   it('refuses a workspace the studio has no panel for', async () => {

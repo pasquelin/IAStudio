@@ -166,12 +166,22 @@ describe('opening a document while the home covers the centre', () => {
     expect(arriving.addPanel).toHaveBeenCalledWith(expect.objectContaining({ id: 'doc-1' }))
   })
 
-  it('opens it once and not again on the next mount', () => {
+  it('gives the tab back to a centre that came back without it', () => {
     coverWithHome()
     openDocument(scene)
     mount()
 
     const remounted = mount()
+
+    expect(remounted.addPanel).toHaveBeenCalledWith(expect.objectContaining({ id: 'doc-1' }))
+  })
+
+  it('does not add a second tab when the centre restored it', () => {
+    coverWithHome()
+    openDocument(scene)
+    mount()
+
+    const remounted = mount('doc-1')
 
     expect(remounted.addPanel).not.toHaveBeenCalled()
   })
