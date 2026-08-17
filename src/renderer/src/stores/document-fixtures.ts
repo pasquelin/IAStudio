@@ -3,7 +3,7 @@ import {
   kindForWorkspace,
   type DocumentDescriptor,
 } from '@shared/domain/document'
-import { documentFileName } from '@shared/domain/document-name'
+import { documentFileName } from '@shared/domain/documentName'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import type { DocumentStore } from './documentStore'
 import { useDocuments } from './documents'

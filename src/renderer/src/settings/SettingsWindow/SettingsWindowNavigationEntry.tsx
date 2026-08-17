@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import type { SettingPath } from '@shared/domain/settings-path'
-import { SETTING_REGISTRY } from '@shared/domain/settings-registry'
+import type { SettingPath } from '@shared/domain/settingsPath'
+import { SETTING_REGISTRY } from '@shared/domain/settingsRegistry'
 import { cn } from '@/helpers/cn'
 import { WindowNavItem } from '@/design/WindowNav/WindowNavItem'
 import { useSettingsDraft } from '@/stores/settingsDraft'

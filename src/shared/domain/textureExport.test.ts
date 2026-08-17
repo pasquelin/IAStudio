@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 // Where `safeFileName` moved when documents came to need it too — the cases below stay here
 // because one of them carries a literal NUL byte, which no editor of this repository can retype.
-import { safeFileName } from './file-name'
+import { safeFileName } from './fileName'
 import { PBR_CHANNELS, type PbrChannel } from './texture'
 import {
   assetsOf,
@@ -14,7 +14,7 @@ import {
   type ResolvedPicture,
   type TextureExportTarget,
   writesOneFile,
-} from './texture-export'
+} from './textureExport'
 
 /** The four that write a folder — the ones every recipe-wide assertion below walks. */
 const FOLDER_TARGETS: readonly TextureExportTarget[] = ['unity', 'unreal', 'roblox', 'raw']

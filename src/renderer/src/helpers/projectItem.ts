@@ -1,6 +1,6 @@
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { natureOf, type FileDomain, type FileRole } from '@shared/domain/file-role'
+import { natureOf, type FileDomain, type FileRole } from '@shared/domain/fileRole'
 import { nameOf } from '@shared/domain/folder'
 
 /**

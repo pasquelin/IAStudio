@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import type { ContextMenuItem } from '@shared/domain/context-menu'
-import { PATH_KINDS, type PathKind } from '@shared/domain/settings-registry'
+import type { ContextMenuItem } from '@shared/domain/contextMenu'
+import { PATH_KINDS, type PathKind } from '@shared/domain/settingsRegistry'
 import { parseBase64 } from '@main/scenario/validation'
 
 // Throws rather than falling back: the value decides which native picker opens, and a renderer

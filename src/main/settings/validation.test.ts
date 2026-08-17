@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { partialFor, type SettingValue } from '@shared/domain/settings-path'
+import { partialFor, type SettingValue } from '@shared/domain/settingsPath'
 import {
   optionsOf,
   SETTING_REGISTRY,
   type SettingDescriptor,
-} from '@shared/domain/settings-registry'
+} from '@shared/domain/settingsRegistry'
 import { parsePartialSettings, salvagePartialSettings } from './validation'
 
 /** A value the descriptor itself says is acceptable — no second table of examples to maintain. */

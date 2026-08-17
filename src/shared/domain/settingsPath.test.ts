@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from './settings'
-import { defaultAt, partialFor, valueAt } from './settings-path'
+import { defaultAt, partialFor, valueAt } from './settingsPath'
 
 describe('settings paths', () => {
   it('reads a leaf through its path', () => {

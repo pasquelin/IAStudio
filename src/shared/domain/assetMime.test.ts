@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { UPLOAD_KIND_BY_TYPE, uploadMimeTypeOf } from './asset-mime'
+import { UPLOAD_KIND_BY_TYPE, uploadMimeTypeOf } from './assetMime'
 
 describe('the kind the API files an upload under', () => {
   it('sends a texture and a sky up as the pictures they are', () => {

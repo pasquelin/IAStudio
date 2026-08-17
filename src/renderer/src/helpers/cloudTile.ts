@@ -1,4 +1,4 @@
-import { cloudPreviewUrl, type CloudAsset } from '@shared/domain/cloud-asset'
+import { cloudPreviewUrl, type CloudAsset } from '@shared/domain/cloudAsset'
 import { assetIcon } from '@/helpers/workspaces'
 
 /**

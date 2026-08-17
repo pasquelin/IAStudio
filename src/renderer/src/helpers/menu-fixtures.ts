@@ -1,4 +1,4 @@
-import type { ContextMenuItem } from '@shared/domain/context-menu'
+import type { ContextMenuItem } from '@shared/domain/contextMenu'
 
 /**
  * The system's context menu, for tests — what a window asked it to draw, and which row it says

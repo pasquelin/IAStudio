@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { cloudTileFace } from './cloudTile'
 
 function cloudAsset(overrides: Partial<CloudAsset> = {}): CloudAsset {

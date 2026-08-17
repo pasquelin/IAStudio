@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ACCOUNT_NAME_MAX_LENGTH, type AccountSummary } from '@shared/domain/account'
 import { DEFAULT_SETTINGS, type AuthState, type SettingsSectionId } from '@shared/domain/settings'
-import type { SettingActionId } from '@shared/domain/settings-registry'
+import type { SettingActionId } from '@shared/domain/settingsRegistry'
 import { CHANNELS } from '@shared/ipc'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { registerSettingsHandlers } from './handlers'

@@ -5,7 +5,7 @@ import {
   type Asset,
   type AssetType,
 } from '@shared/domain/asset'
-import { workspaceOfType } from '@shared/domain/asset-kind'
+import { workspaceOfType } from '@shared/domain/assetKind'
 import type { DocumentDescriptor, DocumentKind } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { openDocument } from '@/app/dockview-api'

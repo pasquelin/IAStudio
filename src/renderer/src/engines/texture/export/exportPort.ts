@@ -9,7 +9,7 @@ import {
   type ResolvedPicture,
   type TextureExportTarget,
   writesOneFile,
-} from '@shared/domain/texture-export'
+} from '@shared/domain/textureExport'
 import type { TextureSource } from '../../scene/textureCache'
 import type { MaterialSettings } from '@shared/domain/texture'
 import type { PreviewShape } from '../textureState'

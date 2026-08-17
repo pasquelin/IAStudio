@@ -18,7 +18,7 @@ import type { Language } from './languages'
  * the worst case is the panel we already had.
  *
  * A word stays in English only where no surface and no glossary entry names it in French.
- * `KEPT_IN_ENGLISH`, in `model-text.i18n.test.ts`, holds that list and is what decides.
+ * `KEPT_IN_ENGLISH`, in `modelText.i18n.test.ts`, holds that list and is what decides.
  */
 const DICTIONARIES: Partial<Record<Language, Record<string, string>>> = { fr: frDictionary }
 

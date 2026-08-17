@@ -27,7 +27,7 @@ import {
 } from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
-import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/texture-export'
+import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
 import { FACE_SIZES } from '@shared/domain/skybox'
 import type {
   SceneAddRequest,

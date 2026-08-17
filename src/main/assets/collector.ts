@@ -1,6 +1,6 @@
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
-import { assetTypeOfRemote, workspaceOfType } from '@shared/domain/asset-kind'
-import { generatedAssetName } from '@shared/domain/asset-name'
+import { assetTypeOfRemote, workspaceOfType } from '@shared/domain/assetKind'
+import { generatedAssetName } from '@shared/domain/assetName'
 import { channelFromScenarioType } from '@shared/domain/texture'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import type { AssetCollector } from '@main/scenario/jobManager'

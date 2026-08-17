@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { touchesDocuments } from './file-op'
+import { touchesDocuments } from './fileOp'
 
 describe('whether a batch of file moves reaches the documents', () => {
   it('counts a document that WENT, which carries no destination to read', () => {

@@ -1,4 +1,4 @@
-import type { ContextMenuItem } from '@shared/domain/context-menu'
+import type { ContextMenuItem } from '@shared/domain/contextMenu'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { menuIcon } from './menuIcon'

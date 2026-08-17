@@ -5,7 +5,7 @@ import {
   PROMPT_IMAGES_MAX,
   PROMPT_INPUT_MAX,
   PROMPT_SUGGESTIONS_MAX,
-} from '@shared/domain/prompt-assist'
+} from '@shared/domain/promptAssist'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { registerScenarioHandlers, type ScenarioHandlerDeps } from './handlers'
 import type { AssetUploader } from './uploader'

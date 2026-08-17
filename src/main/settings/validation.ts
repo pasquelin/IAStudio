@@ -10,11 +10,7 @@ import {
   type PartialSettings,
   type SettingsSectionId,
 } from '@shared/domain/settings'
-import {
-  boundsOf,
-  SETTING_ACTION_IDS,
-  type SettingActionId,
-} from '@shared/domain/settings-registry'
+import { boundsOf, SETTING_ACTION_IDS, type SettingActionId } from '@shared/domain/settingsRegistry'
 import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
 import { DICTATION_MODES } from '@shared/domain/dictation'
 import { isSignature } from '@shared/domain/shortcut'

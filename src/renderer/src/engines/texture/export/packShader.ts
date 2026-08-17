@@ -3,7 +3,7 @@ import {
   assetsOf,
   type ResolvedComponent,
   type ResolvedPicture,
-} from '@shared/domain/texture-export'
+} from '@shared/domain/textureExport'
 import { QUAD_VERTEX_SHADER } from '../../gpu/passes/quad'
 import { PIXEL_PREAMBLE } from '../derive/glsl'
 import type { OffscreenPass } from '../derive/offscreen'

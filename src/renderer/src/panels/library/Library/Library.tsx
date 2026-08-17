@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { useShelf } from '@/hooks/useShelf'
 import { getBridge } from '@/services/bridge'
 import { useAssets } from '@/stores/assets'

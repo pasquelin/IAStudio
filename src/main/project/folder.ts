@@ -3,7 +3,7 @@ import { cp, mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import { exists } from '@main/persistence'
 import { isStagingName, kindForExtension } from '@shared/domain/document'
-import { extensionOf } from '@shared/domain/file-name'
+import { extensionOf } from '@shared/domain/fileName'
 import { entriesByName, isHiddenEntry, type FolderEntry } from '@shared/domain/folder'
 import { foldForSearch } from '@shared/text'
 

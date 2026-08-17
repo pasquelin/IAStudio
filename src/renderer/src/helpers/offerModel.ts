@@ -1,5 +1,5 @@
 import type { ModelFamily } from '@shared/domain/model'
-import { sectionOfFamily } from '@shared/domain/settings-registry'
+import { sectionOfFamily } from '@shared/domain/settingsRegistry'
 import { revealTool } from '@/helpers/revealPanel'
 import { familyOfSurface } from '@/helpers/workspaces'
 import { toolSurface } from '@/stores/layouts'
@@ -14,7 +14,7 @@ import { useSettings } from '@/stores/settings'
  * browses nothing at all, which lands in the same place.
  *
  * Its own file rather than beside `revealTool`, and the opening chunk is why: reaching the
- * preferences means reaching `settings-registry`, which a guard keeps out of what the splash
+ * preferences means reaching `settingsRegistry`, which a guard keeps out of what the splash
  * screen waits for (`eager-graph`). Its caller is a space, loaded on demand.
  */
 export function offerModelsOfFamily(family: ModelFamily): void {

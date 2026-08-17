@@ -2,12 +2,12 @@ import type { AccountSummary, AccountsResult } from './domain/account'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
-import type { FileHistory, FileOutcome } from './domain/file-op'
+import type { FileHistory, FileOutcome } from './domain/fileOp'
 import type { FolderEntry } from './domain/folder'
 import type { MaterialStyle } from './domain/style'
-import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloud-asset'
+import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloudAsset'
 import type { CommandId, MenuCheck } from './domain/command'
-import type { ContextMenuItem } from './domain/context-menu'
+import type { ContextMenuItem } from './domain/contextMenu'
 import type {
   ActionOutcome,
   AssistantAnswer,
@@ -33,7 +33,7 @@ import type {
   PromptSuggestion,
   PromptTranslation,
   SuggestPromptsRequest,
-} from './domain/prompt-assist'
+} from './domain/promptAssist'
 import type {
   DisplayMode,
   ExportFormat,
@@ -42,10 +42,10 @@ import type {
   ObjectKind,
   ViewDirection,
 } from './domain/scene'
-import type { TextureExportTarget } from './domain/texture-export'
+import type { TextureExportTarget } from './domain/textureExport'
 import type { Language } from './i18n/languages'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
-import type { PathKind, SettingActionId } from './domain/settings-registry'
+import type { PathKind, SettingActionId } from './domain/settingsRegistry'
 import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
 import type { PbrChannel } from './domain/texture'
 import type { ToolId, ToolSurface, ToolZone } from './domain/tool'

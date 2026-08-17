@@ -1,4 +1,4 @@
-import { natureOf } from './file-role'
+import { natureOf } from './fileRole'
 
 /**
  * What a batch of file gestures did, and what it would not do.

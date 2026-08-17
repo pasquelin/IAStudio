@@ -9,7 +9,7 @@ import {
 } from './settings'
 import type { ModelFamily } from './model'
 import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from './scene'
-import type { SettingPath, SettingValue, ValueAt } from './settings-path'
+import type { SettingPath, SettingValue, ValueAt } from './settingsPath'
 
 /**
  * How a setting is edited. The control follows from the kind alone: no screen decides for
@@ -169,7 +169,7 @@ export type SettingOption<V extends SettingValue = SettingValue> = {
   /**
    * A literal label, for the rare option whose text is the same in every bundle: a language
    * names itself in its own language, so `Français` reads `Français` on an English screen too.
-   * Exactly one of the two is set — `settings-registry.test.ts` refuses an option with neither.
+   * Exactly one of the two is set — `settingsRegistry.test.ts` refuses an option with neither.
    */
   label?: string
 }
@@ -186,7 +186,7 @@ type Descriptor<P extends SettingPath> = {
   titleKey: string
   /**
    * Never optional. A setting whose effect cannot be stated in a sentence is one nobody can
-   * use, and `settings-registry.test.ts` refuses a key missing from either bundle.
+   * use, and `settingsRegistry.test.ts` refuses a key missing from either bundle.
    */
   helpKey: string
   min?: number
@@ -196,7 +196,7 @@ type Descriptor<P extends SettingPath> = {
   placeholderKey?: string
   /**
    * Which native picker a `path` setting opens. Optional on the type and required in practice:
-   * `settings-registry.test.ts` refuses a `path` without one, the same way it refuses a numeric
+   * `settingsRegistry.test.ts` refuses a `path` without one, the same way it refuses a numeric
    * setting without bounds. Spelling it in the type would split `Descriptor` into a union and
    * cost every reader a narrowing to get at `min` or `options`.
    */
@@ -265,7 +265,7 @@ export const SETTING_REGISTRY = [
   }),
   // Beside `startup` rather than in a screen of its own: what shows when the studio opens is
   // one subject. Which sections the home draws, and in which order, is set on the home itself
-  // — see `home.sections` in `settings-path.ts`.
+  // — see `home.sections` in `settingsPath.ts`.
   setting({
     path: 'home.enabled',
     kind: 'boolean',
@@ -674,7 +674,7 @@ export type Bounds = {
 
 /**
  * Bounds a numeric setting declares, for zod as much as for the control. Unbounded when the
- * path declares nothing — `settings-registry.test.ts` is what guarantees no numeric setting
+ * path declares nothing — `settingsRegistry.test.ts` is what guarantees no numeric setting
  * ever reaches that fallback.
  */
 export function boundsOf(path: SettingPath): Bounds {

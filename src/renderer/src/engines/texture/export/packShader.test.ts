@@ -5,7 +5,7 @@ import {
   resolvePictures,
   type ExportChannels,
   type ResolvedPicture,
-} from '@shared/domain/texture-export'
+} from '@shared/domain/textureExport'
 import { createPackPass } from './packShader'
 
 /** Every channel filled, so a recipe that drops one drops it for a reason of its own. */

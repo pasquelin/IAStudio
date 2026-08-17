@@ -1,5 +1,5 @@
 import type { SettingsSectionId } from '@shared/domain/settings'
-import { actionsIn } from '@shared/domain/settings-registry'
+import { actionsIn } from '@shared/domain/settingsRegistry'
 import { SettingActionsRow } from './SettingActionsRow'
 
 export function SettingActions({ section }: { section: SettingsSectionId }) {

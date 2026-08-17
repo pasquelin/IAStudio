@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ASSET_NAME_MAX_LENGTH } from './asset'
-import { assetFileName, checkAssetName, generatedAssetName } from './asset-name'
+import { assetFileName, checkAssetName, generatedAssetName } from './assetName'
 
 describe('whether an asset may be called this', () => {
   it('accepts an ordinary name and refuses one nobody typed', () => {

@@ -7,7 +7,7 @@ import {
   mdiVolumeHigh,
 } from '@mdi/js'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
-import { workspaceOfType } from '@shared/domain/asset-kind'
+import { workspaceOfType } from '@shared/domain/assetKind'
 import { type ModelFamily } from '@shared/domain/model'
 import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
 import { WORKSPACE_IDS, workspaceOrder, type WorkspaceId } from '@shared/domain/workspace'

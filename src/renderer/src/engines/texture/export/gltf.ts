@@ -6,7 +6,7 @@ import {
   SRGBColorSpace,
   type Texture,
 } from 'three'
-import type { MaterialRole } from '@shared/domain/texture-export'
+import type { MaterialRole } from '@shared/domain/textureExport'
 import { disposeTree } from '../../scene/modelCache'
 import { exportObjects } from '../../scene/sceneExport'
 import type { TextureSource } from '../../scene/textureCache'

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EXTENSION_BY_KIND } from './document'
-import { FILE_DOMAINS, natureOf } from './file-role'
+import { FILE_DOMAINS, natureOf } from './fileRole'
 
 describe('natureOf', () => {
   /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { createCredentialsWatch } from './credentialsWatch'
 import { createOwnerScope } from './ownerScope'
 

@@ -1,4 +1,4 @@
-import type { SettingValue } from '@shared/domain/settings-path'
+import type { SettingValue } from '@shared/domain/settingsPath'
 import { useToken } from '@/hooks/useToken'
 import type { Labelled } from './controls'
 

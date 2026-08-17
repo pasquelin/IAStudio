@@ -1,6 +1,6 @@
 import { appendFile, mkdir, readFile, rm } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import type { PathChange } from '@shared/domain/file-op'
+import type { PathChange } from '@shared/domain/fileOp'
 import { PENDING_FILES_FILE } from '@shared/domain/project'
 import { isRecord } from '@shared/guards'
 import { isMissing } from '@main/persistence'

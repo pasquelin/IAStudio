@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
-import { workspaceOfType } from '@shared/domain/asset-kind'
+import { workspaceOfType } from '@shared/domain/assetKind'
 import { kindForWorkspace } from '@shared/domain/document'
 import { WORKSPACES } from './workspaces'
 import { ASSET_INTENTS, editorIntent, intentsFor } from './assetIntents'

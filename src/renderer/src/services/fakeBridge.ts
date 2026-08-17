@@ -1,7 +1,7 @@
 import { vi } from 'vitest'
 import type { CloseChoice, DocumentWrite } from '@shared/domain/document'
 import { emptyAssetCounts } from '@shared/domain/asset'
-import type { FileOutcome } from '@shared/domain/file-op'
+import type { FileOutcome } from '@shared/domain/fileOp'
 import { IDLE_RESCAN } from '@shared/domain/project'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
