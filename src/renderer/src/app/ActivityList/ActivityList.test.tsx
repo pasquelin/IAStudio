@@ -42,8 +42,8 @@ describe('the journal, drawn', () => {
 
   /**
    * The half nobody could guess: an App produces what it produces whichever space launched it,
-   * so a run started in 3D can leave a picture in the Image shelf. The line stores ids and says
-   * them in the language of the day — a name written at the time would have frozen.
+   * so a run started in Modelling can leave a picture in the Image shelf. The line stores ids
+   * and says them in the language of the day — a name written at the time would have frozen.
    */
   it('names the shelves a generation landed in, in the language of the window', () => {
     useActivity.setState({
@@ -60,7 +60,7 @@ describe('the journal, drawn', () => {
     render(<ActivityList />)
 
     // "et", not a bare comma: the word between the last two belongs to the reader's language.
-    expect(screen.getByText('2 assets générés dans Image et 3D')).toBeInTheDocument()
+    expect(screen.getByText('2 assets générés dans Image et Modélisation')).toBeInTheDocument()
   })
 
   // An id nothing names is left as it is: a shelf missing from the sentence reads as a bug,

@@ -45,7 +45,7 @@ machine, without sending them anywhere.
 | | Chapter | What you will find |
 |---|---|---|
 | 8 | [Image workspace](manual/08-image-workspace.md) | Paint, erase, crop, stack layers |
-| 9 | [3D workspace](manual/09-3d-workspace.md) | Fly through a scene, place objects and lights, adjust them |
+| 9 | [Modelling workspace](manual/09-modelling-workspace.md) | Fly through a scene, place objects and lights, adjust them |
 | 10 | [Video workspace](manual/10-video-workspace.md) | Edit a sequence, cut, adjust tracks |
 | 11 | [Audio workspace](manual/11-audio-workspace.md) | Trim a sound, fade it, normalise it |
 | 12 | [Textures workspace](manual/12-textures-workspace.md) | Judge a material on a lit object |

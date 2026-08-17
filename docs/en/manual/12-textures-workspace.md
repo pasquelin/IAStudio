@@ -72,7 +72,7 @@ round — the object stays still and the light moves.
 ## The lighting
 
 The **Environment** section of the Inspector, below the preview one. It is **exactly the one from
-the 3D workspace**: the question is the same, and the skies on offer are your project's own.
+the Modelling workspace**: the question is the same, and the skies on offer are your project's own.
 
 By default, a **neutral studio** — a soft light, with no dominant colour, as in a photographic
 studio. Nothing to download, and a readable material from the very first document. It is
@@ -209,7 +209,7 @@ These are the two words you need to understand in order to read a material.
 
 Some applications call this "glossiness" or "smoothness", which is exactly the inverse: glossiness
 0.9 = roughness 0.1. **The studio always says roughness**, everywhere — one word for one quantity,
-here as in the 3D workspace.
+here as in the Modelling workspace.
 
 This is not only vocabulary: some Scenario models answer in *glossiness*. The studio then keeps the
 pixels exactly as they arrived and flips the reading at display time. You have nothing to do, and you

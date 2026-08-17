@@ -148,11 +148,11 @@ remplace l’autre. Ce qui ne revient dans aucun des deux : l’historique d’a
 
 ---
 
-## Espace 3D
+## Espace Modélisation
 
 ### L’animation va en ligne droite, et une séquence se joue seule
 
-La timeline de l’espace 3D — voir [l’espace 3D](09-espace-3d.md) — interpole **linéairement**
+La timeline de l’espace Modélisation — voir [l’espace Modélisation](09-espace-modelisation.md) — interpole **linéairement**
 entre deux clés : pas de courbe d’accélération, donc un mouvement démarre et s’arrête net. Poser
 plus de clés est le seul moyen d’adoucir une trajectoire pour l’instant.
 
@@ -165,7 +165,7 @@ première de la scène qui rend.
 
 ### Le texte 3D n’offre qu’une graisse par famille
 
-**Ajouter ▸ Objet ▸ Texte** fonctionne — voir [l’espace 3D](09-espace-3d.md). Deux réserves.
+**Ajouter ▸ Objet ▸ Texte** fonctionne — voir [l’espace Modélisation](09-espace-modelisation.md). Deux réserves.
 
 **Une seule coupe par famille.** La liste offre le romain de chaque police et rien d’autre : pas
 de gras, pas d’italique. Une famille qui installe neuf graisses n’occupe donc qu’une ligne, ce

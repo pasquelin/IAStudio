@@ -502,7 +502,7 @@ The system menu — at the top of the screen on macOS, at the top of the window 
 | **File** | New project…, Open project…, Save, Settings… |
 | **Edit** | Undo, Redo, and the system's text commands |
 | **View** | Tool windows, Reset layout, Full screen, image zoom |
-| **Objects** | Add ▸ Mesh, Add ▸ Light — in the 3D workspace |
+| **Objects** | Add ▸ Mesh, Add ▸ Light — in the Modelling workspace |
 | **Window** | the system's window commands |
 | **Help** | About Scenario Studio, Usage…, Licences |
 

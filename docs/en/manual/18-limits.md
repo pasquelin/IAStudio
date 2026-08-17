@@ -139,11 +139,11 @@ two gestures do different jobs and neither replaces the other.
 
 ---
 
-## 3D workspace
+## Modelling workspace
 
 ### Animation runs straight, and a clip plays on its own
 
-The 3D timeline — see [the 3D workspace](09-3d-workspace.md) — interpolates **linearly** between
+The 3D timeline — see [the Modelling workspace](09-modelling-workspace.md) — interpolates **linearly** between
 two keys: no easing curves, so a move starts and stops abruptly. Laying down more keys is the only
 way to soften a path for now.
 
@@ -155,7 +155,7 @@ setting yet, and no choice between several cameras: the first one in the scene r
 
 ### The 3D text offers one weight per family
 
-**Add ▸ Object ▸ Text** works — see [the 3D workspace](09-3d-workspace.md). Two reservations.
+**Add ▸ Object ▸ Text** works — see [the Modelling workspace](09-modelling-workspace.md). Two reservations.
 
 **One cut per family.** The list offers the roman of each font and nothing else: no bold, no
 italic. A family that installs nine weights therefore takes one row, which is the right trade

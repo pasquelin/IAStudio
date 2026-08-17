@@ -1,4 +1,4 @@
-# 9. Espace 3D
+# 9. Espace Modélisation
 
 [← Espace Image](08-espace-image.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Vidéo →](10-espace-video.md)
 
@@ -580,7 +580,7 @@ rien n’avait été écrit pour lui.
 
 ## Animer la scène
 
-La bande du bas de l’espace 3D porte une **timeline**, comme en Vidéo et en Audio, sur toute la
+La bande du bas de l’espace Modélisation porte une **timeline**, comme en Vidéo et en Audio, sur toute la
 largeur de l’écran.
 
 ### Ce qu’un modèle apporte déjà
@@ -716,7 +716,7 @@ ce soit** — un rendu prend des minutes.
 
 ## Ce qui manque encore
 
-L’espace 3D a désormais tout ce que ce manuel décrit. Ce qui reste tient en deux phrases : les
+L’espace Modélisation a désormais tout ce que ce manuel décrit. Ce qui reste tient en deux phrases : les
 polices s’offrent en une seule graisse par famille, et un texte ne se plie pas le long d’une
 courbe. Côté animation, les clés s’enchaînent en ligne droite — il n’y a pas encore de courbes
 d’accélération —, et une séquence d’un modèle se joue seule, sans fondu vers une autre.

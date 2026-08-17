@@ -1,6 +1,6 @@
 # 10. Video workspace
 
-[← 3D workspace](09-3d-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Audio workspace →](11-audio-workspace.md)
+[← Modelling workspace](09-modelling-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Audio workspace →](11-audio-workspace.md)
 
 The workspace where you assemble shots one after another into a sequence.
 
@@ -416,4 +416,4 @@ file. To edit an `.exr` or a `.tif`, convert it to `.png` yourself before import
 
 ---
 
-[← 3D workspace](09-3d-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Audio workspace →](11-audio-workspace.md)
+[← Modelling workspace](09-modelling-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Audio workspace →](11-audio-workspace.md)

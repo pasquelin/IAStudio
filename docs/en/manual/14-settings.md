@@ -442,7 +442,7 @@ The grain of a shadow’s edge.
 | **Soft** | a softened edge, closer to reality |
 
 **This setting says what a shadow looks like, not who casts one.** That is decided object by
-object, in the Inspector — see [3D workspace](09-3d-workspace.md).
+object, in the Inspector — see [Modelling workspace](09-modelling-workspace.md).
 
 ### Shadow detail
 

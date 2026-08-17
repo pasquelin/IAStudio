@@ -1,4 +1,4 @@
-# 9. 3D workspace
+# 9. Modelling workspace
 
 [← Image workspace](08-image-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Video workspace →](10-video-workspace.md)
 
@@ -563,7 +563,7 @@ nothing had been written for it.
 
 ## Animating the scene
 
-The bottom strip of the 3D workspace carries a **timeline**, as Video and Audio do, across the full
+The bottom strip of the Modelling workspace carries a **timeline**, as Video and Audio do, across the full
 width of the screen.
 
 ### What a model already brings
@@ -697,7 +697,7 @@ takes minutes.
 
 ## What is still missing
 
-The 3D workspace now has everything this manual describes. What is left fits in two sentences:
+The Modelling workspace now has everything this manual describes. What is left fits in two sentences:
 fonts are offered in one weight per family, and a text does not bend along a curve. On the
 animation side, keys run straight between one another — there are no easing curves yet — and a
 model's clip plays on its own, without blending into another.

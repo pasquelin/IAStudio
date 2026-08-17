@@ -25,9 +25,9 @@ C’est le deuxième point qui compte le plus. Un ciel de coucher de soleil ne f
 le fond : il pose une lumière orange rasante sur tout ce qui est devant.
 
 > **Un ciel fabriqué ici éclaire vos scènes 3D.** Une fois enregistré dans le projet, il se
-> choisit dans l’Inspecteur de l’espace 3D, section **Environnement** : la scène s’allume, et les
+> choisit dans l’Inspecteur de l’espace Modélisation, section **Environnement** : la scène s’allume, et les
 > matières le reflètent. C’est le vrai usage d’une skybox, au-delà du décor —
-> voir [Espace 3D](09-espace-3d.md).
+> voir [Espace Modélisation](09-espace-modelisation.md).
 
 ---
 

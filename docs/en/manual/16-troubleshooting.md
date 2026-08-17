@@ -51,7 +51,7 @@ telling you what they are missing in order to fill up.
 | "Open a project to generate." | the form is waiting for a project to drop the result into |
 | "Open a project to see its assets." | the same, for the shelf |
 | "Open a scene to see what is in it." | the explorer is waiting for a 3D scene |
-| "The explorer follows a 3D scene. Open the 3D workspace to see its contents." | you are in another workspace; this panel only serves 3D |
+| "The explorer follows a 3D scene. Open the Modelling workspace to see its contents." | you are in another workspace; this panel only serves Modelling |
 | "No model chosen" / "Pick one from the list" | the Generation panel is waiting for a model to be selected |
 | "This model takes no parameters." | that is normal: some models take only a prompt |
 | "No result for this filter." | your search finds nothing; widen it |

@@ -190,7 +190,7 @@ Le type de l’asset désigne son éditeur, et rien d’autre n’entre en compt
 | une **image** | l’espace Image |
 | une **texture** | l’espace Textures |
 | un **ciel** | l’espace Skyboxes |
-| une **maille** | l’espace 3D |
+| une **maille** | l’espace Modélisation |
 | un **son** | l’espace Audio |
 | une **vidéo** | l’espace Vidéo |
 

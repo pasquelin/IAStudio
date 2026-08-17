@@ -25,9 +25,9 @@ The second point is what matters most. A sunset sky does not merely fill the bac
 raking orange light over everything in front of it.
 
 > **A sky made here lights your 3D scenes.** Once it is saved in the project, it can be chosen in
-> the 3D workspace's Inspector, under **Environment**: the scene lights up, and the materials
+> the Modelling workspace's Inspector, under **Environment**: the scene lights up, and the materials
 > reflect it. That is a skybox's real use, beyond scenery — see
-> [3D workspace](09-3d-workspace.md).
+> [Modelling workspace](09-modelling-workspace.md).
 
 ---
 

@@ -21,7 +21,7 @@ require a starting image. Some return in ten seconds, others in three minutes.
 
 It sits in the left column, in the same place in every workspace. It lists the catalogue
 **for the workspace you are in**: in the Image
-workspace, image models; in the 3D workspace, 3D models.
+workspace, image models; in the Modelling workspace, 3D models.
 
 There are no type tabs to choose: the title bar already says which workspace you are in.
 
@@ -91,7 +91,7 @@ This is the most useful filter. The vocabulary is technical but short:
 | **Image to video** | a still image starts moving |
 | **Video to video** | a video is turned into another |
 
-**In the 3D workspace**
+**In the Modelling workspace**
 
 | Capability | In plain words |
 |---|---|

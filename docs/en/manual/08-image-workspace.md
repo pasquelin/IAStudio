@@ -1,6 +1,6 @@
 # 8. Image workspace
 
-[← Assets](07-assets.md) · [Contents](../user-guide.md) · [Next chapter: 3D workspace →](09-3d-workspace.md)
+[← Assets](07-assets.md) · [Contents](../user-guide.md) · [Next chapter: Modelling workspace →](09-modelling-workspace.md)
 
 The workspace where you paint, erase, crop and stack layers.
 
@@ -213,8 +213,8 @@ The frame never leaves the picture — a crop trims, it does not grow.
 A text layer stays text: you can fix a typo in it, and it stays sharp at any zoom. The inspector
 sets its **content**, its **size** and its **font**.
 
-**The font list is the 3D workspace's list**: the three fonts the studio ships first, then your
-machine's. What [the 3D workspace](09-3d-workspace.md#the-fonts-on-offer) says about missing fonts
+**The font list is the Modelling workspace's list**: the three fonts the studio ships first, then your
+machine's. What [the Modelling workspace](09-modelling-workspace.md#the-fonts-on-offer) says about missing fonts
 holds word for word here.
 
 ### Eraser group
@@ -373,4 +373,4 @@ on the way out; rulers, guides and marching ants are not in it.
 
 ---
 
-[← Assets](07-assets.md) · [Contents](../user-guide.md) · [Next chapter: 3D workspace →](09-3d-workspace.md)
+[← Assets](07-assets.md) · [Contents](../user-guide.md) · [Next chapter: Modelling workspace →](09-modelling-workspace.md)

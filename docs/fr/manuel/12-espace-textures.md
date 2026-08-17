@@ -72,7 +72,7 @@ fait la même chose autrement — l’objet reste immobile et c’est la lumièr
 ## L’éclairage
 
 La section **Environnement** de l’Inspecteur, sous celle de l’aperçu. C’est **exactement celle de
-l’espace 3D** : la question est la même, et les ciels offerts sont ceux de votre projet.
+l’espace Modélisation** : la question est la même, et les ciels offerts sont ceux de votre projet.
 
 Par défaut, un **studio neutre** — un éclairage doux, sans couleur dominante, comme dans un studio
 photo. Aucun fichier à télécharger, et une matière lisible dès le premier document. C’est
@@ -210,7 +210,7 @@ Ce sont les deux mots qu’il faut comprendre pour lire une matière.
 
 Certains logiciels appellent cela « brillance » (*glossiness* ou *smoothness*), qui est
 exactement l’inverse : brillance 0,9 = rugosité 0,1. **Le studio dit toujours rugosité**, partout —
-un mot pour une grandeur, ici comme dans l’espace 3D.
+un mot pour une grandeur, ici comme dans l’espace Modélisation.
 
 Ce n’est pas qu’une question de vocabulaire : certains modèles Scenario répondent en *brillance*.
 Le studio garde alors les pixels tels qu’ils sont arrivés et retourne la lecture au moment de

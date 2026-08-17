@@ -45,7 +45,7 @@ Neuf contextes :
 | **Partout dans l’application** | n’importe quelle fenêtre, n’importe quel espace |
 | **Dans la barre des espaces** | la barre du haut, quand le focus est sur l’un de ses onglets |
 | **Dans l’explorateur** | le panneau du dossier de projet, dans tous les espaces et à l’accueil |
-| **Dans la vue 3D** | le viewport de l’espace 3D |
+| **Dans la vue 3D** | le viewport de l’espace Modélisation |
 | **Dans le montage** | la timeline de l’espace Vidéo et de l’espace Audio |
 | **Dans l’image** | le canvas de l’espace Image |
 | **Dans le ciel** | la vue de l’espace Skyboxes |
@@ -53,7 +53,7 @@ Neuf contextes :
 | **Dans la matière** | l’aperçu et les canaux de l’espace Textures |
 
 **Une surface peut écouter une touche sans être un contexte, et la garantie ci-dessus ne la couvre
-alors pas.** La bande d’animation de l’espace 3D en est le cas : `Suppr` et `Retour arrière` y
+alors pas.** La bande d’animation de l’espace Modélisation en est le cas : `Suppr` et `Retour arrière` y
 retirent la clé choisie, la touche étant liée à la bande et non au registre des contextes. Elle ne
 figure donc pas dans l’écran des raccourcis, et ne se change pas.
 
@@ -145,7 +145,7 @@ se change pas.
 pas au clavier non plus, et s’y arrêter donnerait un parcours qui semble bloqué.
 
 **Une ligne cochée dit ce que sa coche veut dire.** Certaines sont des alternatives — le mode
-d’un outil, le compte actif, la vue d’un quart de l’espace 3D : en cocher une décoche les
+d’un outil, le compte actif, la vue d’un quart de l’espace Modélisation : en cocher une décoche les
 autres. D’autres se règlent chacune pour soi, comme les deux cadenas d’un calque. Un lecteur
 d’écran annonce les premières comme des boutons radio et les secondes comme des cases à cocher.
 
