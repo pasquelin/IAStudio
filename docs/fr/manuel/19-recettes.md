@@ -368,7 +368,7 @@ Tout est détaillé, sans rien cacher, dans
 | un son | Audio | Modèles → Générer, puis `+` et double-clic |
 | une scène 3D | 3D | `+` → une lumière **d’abord**, puis les objets → `⌘S` |
 | éclairer une scène d’un ciel | 3D | Inspecteur → Environnement → choisir la skybox |
-| poser un modèle 3D | 3D | double-clic sur le maillage, ou le glisser sur la vue |
+| poser un modèle 3D | 3D | double-clic sur la maille, ou la glisser sur la vue |
 | monter deux plans | Vidéo | `+` → glisser les clips sur la timeline |
 | importer mes fichiers | partout | Assets → Importer un média |
 | refaire la même image | partout | Inspecteur → Régénérer |

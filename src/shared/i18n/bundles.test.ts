@@ -330,6 +330,10 @@ describe('the translation bundles', () => {
    * `champ de vision` against `angle de vue` is the fourth, and French-only — the English says
    * `Field of view` on both surfaces. The manual glossary settles it, head-word `Angle de vue`.
    *
+   * `maillage` against `maille` is the fifth, French-only again, settled by the same glossary —
+   * head-word `Maille`, and the panel is `Mailles`. Its `except` is the one reading French keeps:
+   * `sceneDisplay.wireframeHint` says `la densité du maillage`, the TESSELLATION, not the object.
+   *
    * What this does NOT catch: a form split across two lines, a THIRD synonym nobody has written
    * yet (`explorateur de fichiers`, `file explorer`), and text in NFD. And what it catches TOO
    * much, the day a bundle says it: `préférence` in the sense of a taste — "ce n'est pas une
@@ -358,6 +362,7 @@ describe('the translation bundles', () => {
       { dropped: /système de fichiers/i, kept: 'gestionnaire de fichiers' },
       { dropped: /préférences?/i, kept: 'réglages' },
       { dropped: /champ de vision/i, kept: 'angle de vue' },
+      { dropped: /maillages?/i, kept: 'maille', except: ['sceneDisplay.wireframeHint'] },
     ],
     en: [
       { dropped: /file browser/i, kept: 'file manager' },

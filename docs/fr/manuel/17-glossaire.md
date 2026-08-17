@@ -369,7 +369,8 @@ les alignements ratés d’un cheveu.
 
 **Maille** *(mesh)*
 Un objet 3D, décrit par ses points et les triangles qui les relient. C’est la forme, sans la
-matière ni la lumière.
+matière ni la lumière. Le mot *maillage* désigne son pavage — la finesse du filet de triangles —
+et non l’objet : c’est ce que montre le mode **Filaire**.
 
 **Masque**
 Ce qui décide **où** un calque se voit. Un masque de fusion cache une partie d’un calque sans
@@ -409,7 +410,7 @@ Réglable par *famille*, dans Réglages → **Génération**.
 ## N
 
 **Nœud** *(node)*
-Un élément de l’arbre d’une *scène* 3D : un maillage, une lumière, un sprite, un groupe. C’est ce
+Un élément de l’arbre d’une *scène* 3D : une *maille*, une lumière, un sprite, un groupe. C’est ce
 que l’*outliner* liste et ce que l’*inspecteur* décrit.
 
 **Normales** *(canal de texture)*

@@ -36,7 +36,7 @@ Six types d’assets :
 | **Image** | une image fixe | `Images/` |
 | **Vidéo** | un plan animé | `Video/` |
 | **Audio** | un son, une musique | `Audio/` |
-| **Maillage** | un objet en 3D | `3D/` |
+| **Maille** | un objet en 3D | `3D/` |
 | **Texture** | une matière | `Textures/` |
 | **Skybox** | un ciel à 360° | `Sky/` |
 
@@ -139,7 +139,7 @@ Le clic droit liste toutes les destinations, toujours dans le même ordre :
 | Ligne | Où elle envoie l’asset | Pour quels types |
 |---|---|---|
 | **Utiliser comme ciel** | le ciel ouvert, espace Skyboxes | images |
-| **Ajouter à la scène** | la scène 3D ouverte | maillages |
+| **Ajouter à la scène** | la scène 3D ouverte | mailles |
 | **Ouvrir dans l’éditeur audio** | le montage ouvert, espace Audio | sons |
 | **Placer comme calque** | l’image ouverte, espace Image | images |
 | **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
@@ -176,7 +176,7 @@ fois ce que cet asset peut faire, et ce qui manque pour qu’il le fasse.
 ### Le double-clic ouvre l’asset, il ne l’envoie nulle part
 
 **Un asset ouvert par double-clic a son onglet à lui**, dans l’espace qui édite son type : une
-image dans Image, un maillage dans 3D, un son dans Audio. Vous n’avez rien à ouvrir avant.
+image dans Image, une maille dans 3D, un son dans Audio. Vous n’avez rien à ouvrir avant.
 
 **Il ne regarde jamais l’onglet que vous avez devant vous** : le double-clic ouvre l’asset dans
 l’espace de son type, quoi qu’il y ait à l’écran.
@@ -194,7 +194,7 @@ Le type de l’asset désigne son éditeur, et rien d’autre n’entre en compt
 | une **image** | l’espace Image |
 | une **texture** | l’espace Textures |
 | un **ciel** | l’espace Skyboxes |
-| un **maillage** | l’espace 3D |
+| une **maille** | l’espace 3D |
 | un **son** | l’espace Audio |
 | une **vidéo** | l’espace Vidéo |
 
@@ -215,7 +215,7 @@ disque — pas d’un asset abîmé.
 | une image | l’aperçu d’une **matière** | elle devient la couleur de base |
 | une image | la vignette d’un **canal** précis | elle devient ce canal-là |
 | une image panoramique | l’aperçu d’un **ciel** | elle devient le ciel |
-| un maillage | la **vue 3D** | il entre dans la scène, à l’origine |
+| une maille | la **vue 3D** | elle entre dans la scène, à l’origine |
 | un son | l’**éditeur audio** | il s’ajoute au montage comme un clip, et c’est lui qu’on édite |
 | un asset | un **champ d’asset** d’un formulaire de génération | il devient l’entrée du champ |
 

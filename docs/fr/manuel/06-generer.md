@@ -424,7 +424,7 @@ plus souvent :
 | une **image** | la peindre dans un document **image**, la reprendre comme départ d’une autre génération, ou s’en servir comme **ciel** ou comme **couleur de base** d’une matière |
 | une **vidéo** ou un **son** | le poser sur une **timeline** (espace Vidéo), ou l’éditer (espace Audio) |
 | un **panorama** | le poser dans un document **ciel** (espace Skyboxes) |
-| un **objet 3D** | rien d’utile — le studio ne sait pas encore ouvrir un maillage |
+| un **objet 3D** | rien d’utile — le studio ne sait pas encore ouvrir une maille |
 
 **Rappel du geste**, parce qu’il déroute : le double-clic **n’ouvre pas d’onglet**, il envoie
 l’asset dans l’onglet déjà en avant. Ouvrez d’abord le document qui doit le recevoir, avec le
