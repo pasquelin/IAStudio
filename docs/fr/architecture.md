@@ -339,11 +339,25 @@ de se charger.
 ### Un registre d’actions, deux lecteurs
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) déclare ce que le studio sait faire sur demande —
-onze actions, leurs champs, et **ce que chacune engage** (`none`, `asset`, `credits`). Il a deux
-lecteurs, et **aucun des deux ne décide** :
+**quatre-vingt-sept actions en neuf familles**, une famille par module `*Actions.ts`, leurs champs,
+**ce que chacune engage** (`none`, `files`, `asset`, `credits`) et **quelle porte l’offre**
+(`reach`). Il a deux lecteurs, et **aucun des deux ne décide** :
 
-- **l’assistant**, dans la fenêtre, qui le liste à son modèle comme un vocabulaire ;
-- **`main/mcp/tools.ts`**, qui le republie en outils MCP pour un client extérieur.
+- **l’assistant**, dans la fenêtre, qui liste à son modèle la part `both` — onze actions ;
+- **`main/mcp/tools.ts`**, qui republie **tout** en outils MCP pour un client extérieur.
+
+**L’asymétrie est forcée, pas esthétique.** Le catalogue de l’assistant part dans un prompt plafonné
+par `INSTRUCTION_MAX` à dix mille caractères, dont il reste quatre mille pour la phrase de la
+personne — `brain.test.ts` tient ce plancher. Publier là les familles qu’un programme conduit
+(fichiers, calques, scène, git) mangerait cette marge, et c’est la phrase que la troncature
+emporterait. `tools/list` n’a pas de plafond.
+
+**`validatesInput` (`assistantAction.ts`) est la seule validation d’entrée du dispositif**, dérivée
+des champs et posée sur `runConfirmedAction`. Rien en amont ne la fait : l’IPC vérifie l’enveloppe,
+le parseur de réponse vérifie le NOM, et le serveur MCP passe `params.arguments` tel quel — son
+`additionalProperties: false` est une promesse au client, pas une contrainte. Elle refuse **avant**
+la question de confirmation, sinon une entrée fautive ferait demander à la personne d’autoriser une
+dépense qui n’allait pas partir.
 
 Le nom change de dialecte au passage — `command.run` devient `command_run`, parce que la grammaire
 des noms d’outils n’accepte pas le point — et `actionOfTool` fait le chemin inverse. **Une seule
@@ -359,6 +373,11 @@ parce qu’à l’autre bout il y a un client qui attendrait sinon.
 `commitmentOfCommand` est **le seul niveau dérivé plutôt que déclaré**, et le seul gardé commande
 par commande : cinq commandes du canevas aplatissent et téléversent l’image, ce qui crée un asset
 permanent. Un oubli y passerait sans que rien en aval ne le rattrape.
+
+**`files` est délibérément étroit** — détruire, déplacer, renommer, réécrire la copie de travail,
+fermer un onglet qui porte du travail non enregistré — et jamais « tout ce qui écrit » : un dossier
+neuf et un doublon n’enlèvent rien à personne, et un studio qui demanderait pour ceux-là
+apprendrait à son utilisateur à cliquer Autoriser sans lire.
 
 ### La porte du MCP, et ses quatre verrous
 

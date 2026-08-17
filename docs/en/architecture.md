@@ -330,11 +330,25 @@ load.
 ### One action registry, two readers
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) declares what the studio can be asked to do —
-eleven actions, their fields, and **what each one commits** (`none`, `asset`, `credits`). It has two
-readers, and **neither of them decides**:
+**eighty-seven actions in nine families**, one family per `*Actions.ts` module, their fields, **what
+each one commits** (`none`, `files`, `asset`, `credits`) and **which door offers it** (`reach`). It
+has two readers, and **neither of them decides**:
 
-- **the assistant**, inside the window, which lists it to its model as a vocabulary;
-- **`main/mcp/tools.ts`**, which republishes it as MCP tools for a client outside.
+- **the assistant**, inside the window, which lists the `both` share to its model — eleven actions;
+- **`main/mcp/tools.ts`**, which republishes **all** of it as MCP tools for a client outside.
+
+**The asymmetry is forced, not tasteful.** The assistant's catalogue goes out in a prompt capped by
+`INSTRUCTION_MAX` at ten thousand characters, of which four thousand are left for the person's own
+sentence — `brain.test.ts` holds that floor. Publishing the families a program drives (files, layers,
+scene, git) there would eat that margin, and the sentence is what the truncation would take off.
+`tools/list` has no cap.
+
+**`validatesInput` (`assistantAction.ts`) is the whole of the input validation**, derived from the
+fields and sitting on `runConfirmedAction`. Nothing upstream does it: the IPC boundary checks the
+envelope, the reply parser checks the NAME, and the MCP server passes `params.arguments` through
+untouched — its `additionalProperties: false` is a promise to the client, not an enforcement. It
+refuses **before** the confirmation question, or a bad input would have the person asked to approve
+a spend that was never going to happen.
 
 The name changes dialect on the way — `command.run` becomes `command_run`, because the tool-name
 grammar takes no dot — and `actionOfTool` walks it back. **One substitution, never a second column
@@ -350,6 +364,11 @@ other end there is a client that would otherwise sit there.
 `commitmentOfCommand` is **the one level derived rather than declared**, and the one guarded command
 by command: five canvas commands flatten and upload the picture, which creates a permanent asset. A
 miss there would go through with nothing downstream to catch it.
+
+**`files` is deliberately narrow** — destroying, moving, renaming, rewriting the working tree,
+closing a tab that holds unsaved work — and never "anything that writes": a new folder and a
+duplicate take nothing away from anyone, and a studio that asked about those would teach its user to
+click Allow without reading.
 
 ### The MCP door, and its four locks
 
