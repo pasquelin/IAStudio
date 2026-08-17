@@ -225,6 +225,74 @@
         "title": "Fusionner un calque vers le bas",
         "description": "Replie un calque dans celui qui est sous lui, à l’intérieur de son propre niveau de pile. Le résultat garde l’identité du calque du dessous."
       },
+      "sequenceState": {
+        "title": "Lire le montage en cours d’édition",
+        "description": "Rend le montage devant — ses réglages, sa durée, la tête de lecture et ce qui est sélectionné — puis chaque piste avec ses blocs, leurs bornes, leur entrée dans la source, leur vitesse, leurs fondus et leur niveau."
+      },
+      "sequenceSeek": {
+        "title": "Placer la tête de lecture",
+        "description": "Déplace la tête de lecture du montage devant à l’instant donné, en microsecondes. Ce n’est pas une modification, donc rien n’entre dans l’historique et l’annulation ne la ramène pas."
+      },
+      "clipAdd": {
+        "title": "Poser un bloc sur le montage",
+        "description": "Pose un asset de la bibliothèque sur une piste du montage devant, à l’instant donné ou sous la tête de lecture. Ouvre les pistes qui manquent, et lie l’image à son son quand la prise en porte un."
+      },
+      "clipRemove": {
+        "title": "Retirer un bloc du montage",
+        "description": "Enlève un bloc de sa piste, et avec lui la moitié qui lui est liée. La place qu’il occupait reste vide plutôt que de se refermer sur ses voisins."
+      },
+      "clipMove": {
+        "title": "Déplacer un bloc",
+        "description": "Porte un bloc sur une piste et à un instant donnés, en recouvrant ce qui se trouve là. Une piste verrouillée ou d’une autre nature n’accepte rien."
+      },
+      "clipTrim": {
+        "title": "Rogner un bord de bloc",
+        "description": "Tire l’entrée ou la sortie d’un bloc jusqu’à l’instant donné, sans jamais dépasser la source qui est derrière. Une image fixe n’a pas de source à dépasser et s’étire librement."
+      },
+      "clipSplit": {
+        "title": "Couper un bloc en deux",
+        "description": "Coupe un bloc à l’instant donné et laisse les deux moitiés bout à bout. Un instant hors du bloc n’a rien à couper, et se voit refusé plutôt que rapporté comme fait."
+      },
+      "clipFade": {
+        "title": "Régler un fondu de bloc",
+        "description": "Donne au fondu d’entrée ou de sortie d’un bloc la longueur demandée. Deux rampes plus longues que le bloc lui-même sont ramenées à ce qu’il peut porter."
+      },
+      "clipGain": {
+        "title": "Régler le niveau d’un bloc",
+        "description": "Change le niveau d’un bloc en décibels, zéro laissant la prise telle qu’elle a été enregistrée. La valeur est bornée à ce que la lecture sait tenir."
+      },
+      "clipSpeed": {
+        "title": "Régler la vitesse d’un bloc",
+        "description": "Change la vitesse de lecture d’un bloc, un pour la vitesse d’origine. La durée sur le montage suit, la source lue restant la même."
+      },
+      "clipUnlink": {
+        "title": "Détacher l’image de son son",
+        "description": "Sépare les deux moitiés d’une prise, de sorte que déplacer, rogner ou couper l’une n’atteigne plus l’autre. Rien ne les relie de nouveau ensuite."
+      },
+      "clipSelect": {
+        "title": "Désigner un bloc",
+        "description": "Désigne le bloc sur lequel l’inspecteur et les gestes sans cible vont porter. Ce n’est pas une modification, et l’annulation ne la reprend pas."
+      },
+      "trackAdd": {
+        "title": "Ajouter une piste",
+        "description": "Ouvre une piste image ou son sous les autres. Une piste image ne peut rien porter d’un son, et l’inverse est vrai aussi."
+      },
+      "trackRemove": {
+        "title": "Retirer une piste",
+        "description": "Enlève une piste du montage, et tous les blocs qu’elle portait avec elle. Une piste verrouillée n’est pas retirée."
+      },
+      "trackMove": {
+        "title": "Changer l’ordre des pistes",
+        "description": "Monte ou descend une piste du nombre de rangs donné, ce qui change ce qui recouvre quoi. Un rang négatif descend, un rang positif monte."
+      },
+      "trackRename": {
+        "title": "Renommer une piste",
+        "description": "Donne son nom à une piste, celui que porte la colonne des en-têtes. L’identifiant, lui, ne change jamais."
+      },
+      "trackState": {
+        "title": "Régler comment une piste se travaille",
+        "description": "Change le silence, le solo, le verrou ou la hauteur d’une piste. Ces quatre-là disent comment on travaille et non ce qu’on a fait, et n’entrent donc jamais dans l’historique."
+      },
       "sceneState": {
         "title": "Lire la scène en cours d’édition",
         "description": "Rend tous les objets du document 3D devant — identifiant, nom, type, parent, visibilité et transformation, avec la géométrie, la matière ou la lumière qu’ils portent — plus ce qui est sélectionné et ce qui éclaire la scène."
@@ -403,6 +471,20 @@
       "alsoRemote": "Retirer aussi de la bibliothèque distante",
       "layerId": "Identifiant du calque",
       "layerIds": "Identifiants des calques",
+      "clipId": "Identifiant du bloc",
+      "trackId": "Identifiant de la piste",
+      "trackKind": "Nature de la piste",
+      "clipEdge": "Bord du bloc, entrée ou sortie",
+      "time": "Instant sur le montage, en microsecondes",
+      "start": "Début sur le montage, en microsecondes",
+      "at": "Instant visé, en microsecondes",
+      "fadeLength": "Longueur du fondu, en microsecondes",
+      "gain": "Niveau, en décibels",
+      "speed": "Vitesse de lecture, 1 étant la vitesse d’origine",
+      "by": "Nombre de rangs, négatif pour descendre",
+      "muted": "Piste rendue silencieuse",
+      "solo": "Piste seule à s’entendre",
+      "locked": "Piste verrouillée",
       "layerKind": "Nature du calque",
       "adjustment": "Réglage que porte le calque",
       "parentId": "Groupe dans lequel le déplacer",

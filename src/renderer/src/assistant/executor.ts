@@ -18,6 +18,7 @@ import { mountedGenerator } from './generatorBridge'
 import { GIT_HANDLERS } from './gitHandlers'
 import { JOB_HANDLERS } from './jobHandlers'
 import { SCENE_HANDLERS } from './sceneHandlers'
+import { SEQUENCE_HANDLERS } from './sequenceHandlers'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
 import { STATE_HANDLERS } from './stateHandlers'
 
@@ -36,6 +37,7 @@ const HANDLERS: ActionHandlers = {
   ...JOB_HANDLERS,
   ...ASSET_HANDLERS,
   ...CANVAS_HANDLERS,
+  ...SEQUENCE_HANDLERS,
   ...SCENE_HANDLERS,
   ...GIT_HANDLERS,
   ...SETTINGS_HANDLERS,

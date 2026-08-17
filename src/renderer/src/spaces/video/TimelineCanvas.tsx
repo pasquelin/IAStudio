@@ -3,11 +3,12 @@ import { clamp } from '@shared/numeric'
 import { mdiContentCut, mdiDeleteOutline, mdiLinkVariantOff } from '@mdi/js'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { isTimeless, mediaDuration, posterUrl } from '@shared/domain/asset'
+import { posterUrl } from '@shared/domain/asset'
 import type { Command } from '@/engines/core/history'
 import {
   addClips,
   addClipsOnNewTracks,
+  mediaExtentOf,
   removeClip,
   splitClip,
   unlinkClip,
@@ -141,13 +142,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
 
   // A trim stops where the media does, and only the catalogue knows how far that is.
   const mediaExtents = useCallback(
-    (assetId: string): MediaExtent => {
-      const asset = byId.get(assetId) ?? null
-      const length = mediaDuration(asset)
-      if (length !== null) return length
-      // Null covers a picture and an asset nobody has probed; only the first has no source.
-      return isTimeless(asset) ? 'still' : 'unknown'
-    },
+    (assetId: string): MediaExtent => mediaExtentOf(byId.get(assetId) ?? null),
     [byId],
   )
 

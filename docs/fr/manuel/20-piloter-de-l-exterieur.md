@@ -19,10 +19,10 @@ l’ayez vu à l’écran** — d’où que vienne la demande.
 
 Elles n’en voient pas la même part, et c’est délibéré. **L’assistant en connaît onze**, celles
 d’une phrase parlée : ouvrir un espace, chercher un modèle, préparer une génération. **Le point
-d’entrée en offre quatre-vingt-sept**, tout ce qu’un programme conduit délibérément — l’arbre des
-fichiers, la pile de calques, la scène 3D, le dépôt git. La raison est prosaïque : le modèle qui
-lit vos phrases reçoit le catalogue entier avant chacune d’elles, et quatre-vingt-sept actions n’y
-laisseraient plus de place pour la phrase.
+d’entrée en offre cent quatre**, tout ce qu’un programme conduit délibérément — l’arbre des
+fichiers, la pile de calques, le montage, la scène 3D, le dépôt git. La raison est prosaïque : le
+modèle qui lit vos phrases reçoit le catalogue entier avant chacune d’elles, et cent quatre
+actions n’y laisseraient plus de place pour la phrase.
 
 ---
 
@@ -186,7 +186,7 @@ n’est parti.
 
 ## Le catalogue
 
-**Quatre-vingt-sept actions, en neuf familles.** Le tableau ci-dessous dit ce que chacune couvre
+**Cent quatre actions, en dix familles.** Le tableau ci-dessous dit ce que chacune couvre
 et ce qu’elle **engage** — c’est cette dernière colonne qui décide si le studio vous demandera
 quelque chose. La liste exacte, avec le détail de chaque paramètre, est ce que votre client
 affiche quand vous lui demandez ses outils : elle n’est pas recopiée ici, parce qu’elle bouge et
@@ -200,6 +200,7 @@ que lui la lit à la source.
 | **Générer** | lire les entrées d’un modèle, chiffrer, préparer, lancer, attendre, annuler | **des unités créatives** pour lancer, et pour lancer seulement |
 | **La bibliothèque** | chercher, lire, étiqueter et retirer des assets | **des fichiers** pour retirer |
 | **L’image** | la pile de calques : ajouter, styler, placer, grouper, fusionner, recadrer | rien |
+| **Le montage** | Vidéo et Audio : poser un bloc, le déplacer, le rogner, le couper, régler fondus, niveau et vitesse, tenir les pistes | rien |
 | **La 3D** | la scène : poser un objet, l’orienter, l’éclairer, le peindre, le rattacher | rien |
 | **Le versionnage** | lire le dépôt et l’historique, indexer, enregistrer, brancher, remiser | **des fichiers** pour ce qui réécrit la copie de travail |
 | **Les réglages** | lire et changer les réglages, lister les comptes, en activer un | rien |

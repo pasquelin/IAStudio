@@ -19,10 +19,10 @@ it on screen** — wherever the request came from.
 
 They do not see the same share of it, and that is deliberate. **The assistant knows eleven**, the
 ones a spoken sentence needs: open a workspace, find a model, prepare a generation. **The way in
-offers eighty-seven**, everything a program drives deliberately — the file tree, the layer stack,
-the 3D scene, the git repository. The reason is a plain one: the model that reads your sentences is
-given the whole catalogue before each of them, and eighty-seven actions would leave no room left
-for the sentence.
+offers a hundred and four**, everything a program drives deliberately — the file tree, the layer
+stack, the montage, the 3D scene, the git repository. The reason is a plain one: the model that
+reads your sentences is given the whole catalogue before each of them, and a hundred and four
+actions would leave no room left for the sentence.
 
 ---
 
@@ -183,7 +183,7 @@ the prepared generation** has had your yes on screen, nothing has gone out.
 
 ## The catalogue
 
-**Eighty-seven actions, in nine families.** The table below says what each family covers and what
+**A hundred and four actions, in ten families.** The table below says what each family covers and what
 it **commits** — that last column is what decides whether the studio will ask you anything. The
 exact list, with every parameter of every action, is what your client shows when you ask it for its
 tools: it is not copied out here, because it moves and because your client reads it at the source.
@@ -196,6 +196,7 @@ tools: it is not copied out here, because it moves and because your client reads
 | **Generating** | read a model's inputs, price them, prepare, start, wait, cancel | **creative units** for starting, and for starting alone |
 | **The library** | search, read, tag and remove assets | **files**, for removing |
 | **The image** | the layer stack: add, style, place, group, merge, crop | nothing |
+| **The montage** | Video and Audio: lay a clip, move it, trim it, cut it, set fades, level and speed, keep the tracks | nothing |
 | **3D** | the scene: place an object, turn it, light it, paint it, reparent it | nothing |
 | **Versions** | read the repository and its history, stage, record, branch, shelve | **files**, for whatever rewrites the working tree |
 | **Settings** | read and change the settings, list the accounts, switch to one | nothing |
