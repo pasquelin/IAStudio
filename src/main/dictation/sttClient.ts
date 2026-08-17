@@ -1,5 +1,5 @@
 import { log } from '@main/log'
-import { isReady, type SttLoad, type SttMessage, type SttResponse } from './stt-protocol'
+import { isReady, type SttLoad, type SttMessage, type SttResponse } from './sttProtocol'
 
 /**
  * The worker process, reduced to what the client needs. Injected rather than imported so the
@@ -31,7 +31,7 @@ export type SttClient = {
 
 export function createSttClient(port: SttPort, listeners: SttListeners): SttClient {
   // A dead process swallows `postMessage` without a word, so audio pushed into one would look
-  // like a microphone nobody is listening to. Same guard `peaks-client` carries, same reason.
+  // like a microphone nobody is listening to. Same guard `peaksClient` carries, same reason.
   let closed = false
   let settleLoad: { resolve: () => void; reject: (error: Error) => void } | null = null
 

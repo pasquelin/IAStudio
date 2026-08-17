@@ -57,8 +57,8 @@ const sources = (from: string): string[] => {
  * — measured, before the substitution below existed.
  *
  * What it still cannot see, and neither can madge: a worker named through `new URL('./x.js',
- * import.meta.url)` — three of them, at `project/catalogThread.ts`, `media/peaks-process.ts` and
- * `dictation/stt-process.ts`, one per worker entry of `electron.vite.config.ts`. That is a URL,
+ * import.meta.url)` — three of them, at `project/catalogThread.ts`, `media/peaksProcess.ts` and
+ * `dictation/sttProcess.ts`, one per worker entry of `electron.vite.config.ts`. That is a URL,
  * not an import, and each of those workers is a build entry point of its own.
  */
 const resolveImport = (specifier: string, fromFile: string): string | null => {

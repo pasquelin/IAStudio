@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Asset, MediaProbe } from '@shared/domain/asset'
-import { catchUpMedia, CATCH_UP_PAGE, needsDeriving, type CatchUpDeps } from './catch-up'
+import { catchUpMedia, CATCH_UP_PAGE, needsDeriving, type CatchUpDeps } from './catchUp'
 
 const probe: MediaProbe = { duration: 5_000_000, codec: 'avc1', height: 480, sampleRate: 48_000 }
 

@@ -5,7 +5,7 @@ import sherpa, { type OfflineRecognizer, type Vad } from 'sherpa-onnx-node'
 import { STT_SAMPLE_RATE, toFloat } from '@shared/domain/dictation'
 import { emptyHeld, hold, previewOf, type Held } from './segmenter'
 import { createSerial } from './serial'
-import { isAudio, isLoad, type SttLoad, type SttMessage, type SttResponse } from './stt-protocol'
+import { isAudio, isLoad, type SttLoad, type SttMessage, type SttResponse } from './sttProtocol'
 
 /**
  * The recognition engine, in a process of its own.

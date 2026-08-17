@@ -53,10 +53,10 @@ import { createMcpControl, type McpControl } from './mcp/control'
 import type { AssistantBrain } from './assistant/brain-port'
 import { createScenarioBrain } from './assistant/brain-scenario'
 import { createSession, type DictationSession } from './dictation/session'
-import { fetchModel, modelIsComplete } from './dictation/model-download'
-import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/model-store'
+import { fetchModel, modelIsComplete } from './dictation/modelDownload'
+import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/modelStore'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
-import { openSttProcess } from './dictation/stt-process'
+import { openSttProcess } from './dictation/sttProcess'
 import { linkedAsset, mediaFilters } from './media/link'
 import {
   binaryRuns,
@@ -68,9 +68,9 @@ import {
   probeSource,
   runProcess,
 } from './media/runner'
-import { openPeaksProcess } from './media/peaks-process'
-import type { PeaksClient } from './media/peaks-client'
-import { catchUpMedia } from './media/catch-up'
+import { openPeaksProcess } from './media/peaksProcess'
+import type { PeaksClient } from './media/peaksClient'
+import { catchUpMedia } from './media/catchUp'
 import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { createTextureExtraction, type TextureExtraction } from './assets/texture-extraction'

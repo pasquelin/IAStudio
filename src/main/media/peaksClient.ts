@@ -1,4 +1,4 @@
-import type { PeaksJob, PeaksMessage, PeaksResponse } from './peaks-protocol'
+import type { PeaksJob, PeaksMessage, PeaksResponse } from './peaksProtocol'
 
 /**
  * The worker process, reduced to what the client needs. Injected rather than imported so the

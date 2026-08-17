@@ -1,15 +1,15 @@
 import { utilityProcess } from 'electron'
 import { fileURLToPath } from 'node:url'
-import { createSttClient, type SttClient, type SttListeners, type SttPort } from './stt-client'
-import type { SttResponse } from './stt-protocol'
+import { createSttClient, type SttClient, type SttListeners, type SttPort } from './sttClient'
+import type { SttResponse } from './sttProtocol'
 
 /** Forks the recognition worker. Who keeps it, and for how long, is `session.ts`'s business. */
 export function openSttProcess(listeners: SttListeners): SttClient {
-  // Resolved beside the bundled main, where `stt-worker` is its own entry point — see
-  // `electron.vite.config.ts`. Through `import.meta.url`, as `peaks-process` does: the main
+  // Resolved beside the bundled main, where `sttWorker` is its own entry point — see
+  // `electron.vite.config.ts`. Through `import.meta.url`, as `peaksProcess` does: the main
   // bundle is ESM, and the `__dirname` that appears in it is a shim Vite injects for an inlined
   // dependency — a reference that would vanish the day that dependency does.
-  const child = utilityProcess.fork(fileURLToPath(new URL('./stt-worker.js', import.meta.url)))
+  const child = utilityProcess.fork(fileURLToPath(new URL('./sttWorker.js', import.meta.url)))
 
   const port: SttPort = {
     postMessage: message => child.postMessage(message),

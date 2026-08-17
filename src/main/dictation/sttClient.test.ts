@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createSttClient, type SttListeners, type SttPort } from './stt-client'
-import type { SttMessage, SttResponse } from './stt-protocol'
+import { createSttClient, type SttListeners, type SttPort } from './sttClient'
+import type { SttMessage, SttResponse } from './sttProtocol'
 
 function harness() {
   const sent: SttMessage[] = []
