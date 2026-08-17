@@ -55,7 +55,11 @@ export function mergeFeed<T extends AssetRowModel>(
     // Strictly newer, so a source stopped at a stamp keeps back the rows sharing it — a batch
     // generation writes several in the same second. A row with no readable stamp cannot be placed
     // at all and is kept rather than lost, which is also how a running generation stays on top.
-    rows: rows.filter(row => stampOfRow(row) === 0 || stampOfRow(row) > cut),
+    rows: rows.filter(row => {
+      // Read once: `stampOfRow` parses a date, and this walks the whole timeline.
+      const stamp = stampOfRow(row)
+      return stamp === 0 || stamp > cut
+    }),
     // Only the ones sitting on the cut: asking them all spends a quota on what is not missing.
     hungry: open.filter(([, source]) => reach(source) === cut).map(([name]) => name),
   }
