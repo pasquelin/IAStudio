@@ -125,6 +125,13 @@ export const TITLE_BAR_GHOST = cn(
 )
 
 /**
+ * The two of them that OPEN something rather than switch to it — the assistant's entry, the
+ * account trigger. Both carry an icon and a word at the gauge, which is what the pills beside
+ * them do not: a pill is as wide as the space it stands for and pads to match.
+ */
+export const TITLE_BAR_TRIGGER = cn(TITLE_BAR_GHOST, 'text-tiny h-(--sc-control) gap-1.5 px-2')
+
+/**
  * How loudly a picked row is filled.
  *
  * `soft` is a row PICKED inside a list — one of several a gesture can move through, and the fill

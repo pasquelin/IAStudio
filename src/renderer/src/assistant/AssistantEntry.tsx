@@ -1,8 +1,7 @@
 import { mdiChatOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { TITLE_BAR_GHOST } from '@/design/styles'
+import { TITLE_BAR_TRIGGER } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
-import { cn } from '@/helpers/cn'
 import { HINT_BOTTOM, withShortcut } from '@/helpers/tooltip'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useAssistant } from '@/stores/assistant'
@@ -17,8 +16,8 @@ import { useBinding } from '@/stores/bindings'
  * Named rather than icon-only, and that is what decides its chrome: `ToolButton` sets an
  * `aria-label` on everything it renders, and one set over a visible word REPLACES that word for a
  * screen reader (WCAG 2.5.3) — the button would then answer to a name nobody can see. So it wears
- * `TITLE_BAR_GHOST`, like the space pills and `TitleBarSelect` beside it, and explains itself with
- * a hint instead of a naming tooltip.
+ * `TITLE_BAR_TRIGGER`, the shape `TitleBarSelect` wears at the other end of the bar, and explains
+ * itself with a hint instead of a naming tooltip.
  */
 export function AssistantEntry() {
   const { t } = useTranslation()
@@ -33,7 +32,7 @@ export function AssistantEntry() {
       // guess, and spelling it out would put a second reading in a bar of one-word destinations.
       aria-keyshortcuts={binding ?? undefined}
       onClick={() => useAssistant.getState().show()}
-      className={cn(TITLE_BAR_GHOST, 'text-tiny h-(--sc-control) gap-1.5 px-2')}
+      className={TITLE_BAR_TRIGGER}
     >
       <UiIcon path={mdiChatOutline} size={14} />
       {t('assistant.title')}
