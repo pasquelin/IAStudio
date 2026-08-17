@@ -3600,11 +3600,28 @@ describe('the overlay colours the canvas falls back on', () => {
     expect(start, '`@theme {` is gone from index.css').toBeGreaterThan(-1)
     const block = live.slice(start, live.indexOf('\n}', start))
 
-    return new Map(
+    const declared = new Map(
       [...block.matchAll(/(--color-[a-z0-9-]+):\s*([^;]+);/g)].map(([, name = '', value = '']) => [
         name,
         value.trim(),
       ]),
+    )
+
+    // A token composed from another is resolved here, since a canvas cannot paint `color-mix`:
+    // the fallback has to restate it as the `rgba` the browser would have handed the painter.
+    return new Map(
+      [...declared].map(([name, value]) => {
+        const mixed = /color-mix\(in srgb, var\((--color-[a-z-]+)\) (\d{1,2})%, transparent\)/.exec(
+          value,
+        )
+        if (!mixed) return [name, value]
+
+        const [red, green, blue] = [1, 3, 5].map(at =>
+          parseInt((declared.get(mixed[1] ?? '') ?? '').substr(at, 2), 16),
+        )
+
+        return [name, `rgba(${red}, ${green}, ${blue}, ${Number(mixed[2]) / 100})`]
+      }),
     )
   }
 

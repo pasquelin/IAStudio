@@ -115,21 +115,30 @@ function palette(from: number): Record<string, string> {
   return found
 }
 
-/** Hue in degrees and saturation in points, which is what tells a shade from a second colour. */
-function hsl(hex: string): { h: number; s: number } {
-  const [r = 0, g = 0, b = 0] = [1, 3, 5].map(at => parseInt(hex.substr(at, 2), 16) / 255)
-  const [high, low] = [Math.max(r, g, b), Math.min(r, g, b)]
-  const span = high - low
-  if (span === 0) return { h: 0, s: 0 }
+/** What a translucent fill actually shows, which is the only thing a contrast can be read on. */
+function over(mix: string, surface: string): string {
+  const share = Number(/(\d+)%/.exec(mix)?.[1] ?? 0) / 100
+  const [ink, under] = [/#[0-9a-f]{6}/i.exec(mix)?.[0] ?? '', surface].map(hex =>
+    [1, 3, 5].map(at => parseInt(hex.substr(at, 2), 16)),
+  )
 
-  const h = high === r ? ((g - b) / span) % 6 : high === g ? (b - r) / span + 2 : (r - g) / span + 4
-
-  return { h: (h * 60 + 360) % 360, s: (span / (1 - Math.abs(high + low - 1))) * 100 }
+  return `#${(ink ?? [])
+    .map((band = 0, at) =>
+      Math.round(band * share + (under?.[at] ?? 0) * (1 - share))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`
 }
 
-/** Wide enough that a hand-tuned token is not refused for a rounding, narrow enough to bite. */
-const HUE_DRIFT = 6
-const SATURATION_DRIFT = 12
+/** The soft accent as DECLARED, which `palette` cannot return: it only reads hexadecimals. */
+function softFill(from: number): string {
+  return (
+    /--color-accent-soft:\s*([^;]+);/.exec(
+      stylesheet.slice(from).replace(/--color-accent:[^;]+;/, ''),
+    )?.[1] ?? ''
+  ).trim()
+}
 
 const THEMES = [
   { name: 'dark', from: stylesheet.indexOf('@theme {') },
@@ -419,37 +428,34 @@ describe('the contrast of the inks', () => {
   })
 
   /**
-   * The two accents are ONE blue at two steps, and what says so is the hue and the saturation —
-   * never the lightness, which is the whole of what separates them. Measured on a screenshot on
-   * 17 August: `accent-soft` read S 41% against the accent's 88%, and side by side in one column
-   * the eye read two colours. The light theme was already right; only the dark one had drifted.
+   * The one blue, thinned — never a second one. Two hand-picked hexadecimals were rejected on
+   * sight before this: any opaque value is a colour of its own however close the hue is, and the
+   * eye reads the drop in saturation long before the drop in lightness.
    */
-  it('keeps the soft accent a shade of the accent rather than a second blue', () => {
+  it('draws the chosen-row fill from the accent itself, in both themes', () => {
     for (const theme of THEMES) {
-      const tokens = palette(theme.from)
-      const [accent, soft] = [hsl(tokens.accent ?? ''), hsl(tokens['accent-soft'] ?? '')]
-
-      // Degrees on a circle, so 359 and 1 are two apart rather than 358.
-      expect(Math.abs(((accent.h - soft.h + 540) % 360) - 180)).toBeLessThanOrEqual(HUE_DRIFT)
-      expect(Math.abs(accent.s - soft.s)).toBeLessThanOrEqual(SATURATION_DRIFT)
+      expect(softFill(theme.from)).toMatch(
+        /^color-mix\(in srgb, var\(--color-accent\) \d{1,2}%, transparent\)$/,
+      )
     }
   })
 
   /**
-   * The two fills a list row takes, with the ink that sits on them. `muted` is NOT held here and
-   * that is the whole point of the pair: it reads 3.25:1 on `accent-soft` and 3.51 on `elevated`
-   * in the dark theme, so `Row` lifts its subtitle to `text` on exactly these two states rather
-   * than the palette moving under every list in the studio.
+   * The two fills a list row takes, with the ink that sits on them — the soft one READ THROUGH,
+   * since a translucent fill shows whatever it lies on. `muted` is not held here on purpose: it
+   * sits under 4.5 on both, so `Row` lifts its subtitle to `text` on exactly these two states.
    */
   it('carries the full ink on the two backgrounds a row takes, in both themes', () => {
     for (const theme of THEMES) {
       const tokens = palette(theme.from)
+      const fills = [
+        ...['panel', 'surface'].map(under => over(softFill(theme.from), tokens[under] ?? '')),
+        tokens.elevated ?? '',
+      ]
 
-      const failing = ['accent-soft', 'elevated'].filter(
-        fill => contrastRatio(tokens.text ?? '', tokens[fill] ?? '') < AA_NORMAL_TEXT,
+      expect(fills.filter(fill => contrastRatio(tokens.text ?? '', fill) < AA_NORMAL_TEXT)).toEqual(
+        [],
       )
-
-      expect(failing).toEqual([])
     }
   })
 
