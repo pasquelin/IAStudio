@@ -188,6 +188,46 @@ sont dedans, exactement comme dans l’explorateur de votre système.
 **Il montre aussi ce que le studio ne sait pas ouvrir.** Un `.pdf`, un `.txt`, un dossier de notes :
 c’est votre dossier, et c’est ce qui distingue un explorateur d’une liste de documents.
 
+#### Deux lectures du même dossier
+
+La tête du panneau porte trois boutons. Les deux premiers disent comment le dossier est LU, et
+l’un des deux est toujours allumé :
+
+| Lecture | Ce qu’elle montre |
+|---|---|
+| **Par dossier** | le projet tel qu’il est rangé sur le disque, en arborescence |
+| **Par domaine** | tous les fichiers du projet groupés par ce qu’ils **sont**, où qu’ils soient rangés |
+
+**Par domaine** ignore les dossiers. Il pose sept en-têtes au plus — les six types du studio, plus
+**Autre** pour ce qui n’en relève d’aucun — chacun suivi du nombre de fichiers qu’il compte. **Un
+domaine que rien ne remplit n’apparaît pas** : sept en-têtes vides sur un projet neuf ne diraient
+rien.
+
+Un en-tête nomme, il n’ouvre pas : on ne le sélectionne pas, on ne le renomme pas, et **cette
+lecture n’offre aucun glisser** — il n’y a plus de dossier à l’écran où porter un fichier.
+
+C’est ce qui répond à « où sont passées mes vidéos ? » quand elles sont réparties dans cinq
+dossiers que vous avez faits vous-même.
+
+#### Chercher, et trier
+
+Sous les boutons, une barre : un champ et un tri. **La recherche parle par-dessus les deux
+lectures** — taper un mot est une question sur le projet, pas sur la façon dont il est affiché.
+
+Elle parcourt le dossier **entier**, pas seulement ce qui est déplié, et ramène chaque
+correspondance **avec la chaîne de dossiers qui y mène** : un fichier neuf replis plus bas
+apparaît là où il est, pas hors sol. Elle attend que la frappe se pose avant de partir.
+
+Le tri range par **Nom, de A à Z** ou **Nom, de Z à A**. Il vaut pour les deux lectures ; il ne
+touche pas à l’ordre des domaines, qui est celui que le studio emploie partout ailleurs.
+
+**Le panneau distingue quatre silences**, et c’est ce qui fait qu’il ne dit jamais « vide » quand
+il veut dire « patientez » : un dossier illisible, une lecture encore en route, un projet sans
+aucun fichier, et un mot auquel rien ne répond. **Une recherche sans résultat ne fait pas
+disparaître le champ où elle a été tapée** — sinon il n’y aurait plus de chemin de retour.
+
+#### Les gestes
+
 | Geste | Effet |
 |---|---|
 | **Double-clic** sur un dossier | l’ouvre ou le referme |
@@ -197,34 +237,67 @@ c’est votre dossier, et c’est ce qui distingue un explorateur d’une liste 
 | `→` `←` | déplie, replie |
 | `↑` `↓` | la ligne précédente, la suivante |
 | `Entrée` | ouvre la ligne |
+| **⌘-clic** / `Ctrl`-clic | ajoute la ligne à la sélection, ou l’en retire |
+| **⇧-clic** | prend tout ce qui va de la dernière ligne prise à celle-ci |
 | **Glisser** une ligne sur un dossier | y déplace le fichier ou le dossier, sous le même nom |
+
+**Tout ce qui suit vaut pour la sélection entière**, pas pour la seule ligne cliquée : glisser en
+emporte plusieurs d’un coup, et le menu du clic droit s’applique à toutes. **Trois fichiers portés
+vers un dossier que l’un d’eux contient n’allument pas ce dossier** — le refus est demandé pour le
+lot, pas ligne à ligne.
 
 **Le glisser déplace, le clic droit renomme** — et les deux ne se recouvrent pas : « Renommer »
 change le nom **là où le fichier est déjà**, et ne peut pas le sortir de son dossier. Un dossier
 qui n’accepterait pas le dépôt ne s’allume pas : vous voyez avant de lâcher, pas après. Un nom
 déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et le journal le dit.
 
-**Le clic droit sur une ligne** offre trois gestes :
+#### Le clic droit : onze gestes, en quatre groupes
 
-| Geste | Ce qu’il fait |
-|---|---|
-| **Afficher dans le dossier** | ouvre le dossier dans le Finder ou l’Explorateur Windows, la ligne sélectionnée |
-| **Renommer** | change le nom sur le disque, là où il est lu |
-| **Mettre à la corbeille** | envoie le fichier à la corbeille de votre système |
+| Groupe | Geste | Ce qu’il fait |
+|---|---|---|
+| ouvrir | **Ouvrir** | ouvre le fichier dans son espace, ou déplie le dossier |
+| | **Afficher dans le dossier** | ouvre le Finder ou l’Explorateur Windows, la ligne sélectionnée |
+| presse-papiers | **Couper** · **Copier** | retiennent la sélection pour le prochain collage |
+| | **Coller** | dépose dans le dossier affiché ce que le presse-papiers retient |
+| fichiers | **Nouveau dossier** | crée un dossier vide dans le dossier affiché |
+| | **Dupliquer** | pose une copie à côté de l’original, sous un nom libre |
+| | **Renommer** | change le nom sur le disque, là où il est lu |
+| | **Mettre à la corbeille** | envoie à la corbeille de votre système |
+| revenir | **Annuler** · **Rétablir** | défont et refont le dernier lot de fichiers |
+
+**Chaque ligne porte le raccourci auquel elle répond**, et c’est celui qui est *en vigueur* :
+si vous l’avez remappé dans les réglages, c’est le vôtre qui s’affiche ici.
+
+**Aucun geste ne disparaît du menu ; ceux qui ne s’appliquent pas sont grisés.** Un menu dont la
+longueur change selon la ligne cliquée est un menu qu’on ne peut pas apprendre.
+
+**`⌘Z` ne défait les fichiers que si le focus est dans ce panneau.** Ailleurs il appartient au
+document ouvert : annuler dans le canevas ne doit pas atteindre votre disque.
 
 > **Rien n’est effacé ici.** « Mettre à la corbeille » est la corbeille du système : le fichier
 > s’y récupère.
+>
+> **C’est le seul geste que `⌘Z` ne reprend pas.** Déplacer, dupliquer, créer, renommer se défont
+> d’une frappe ; la corbeille du système n’a pas de retour portable, et l’historique du studio
+> s’arrête là. **C’est aussi pour cela qu’un lot demande confirmation** : au-delà d’un fichier, le
+> studio annonce combien partent et attend votre accord. **Un seul fichier part sans question** —
+> il est nommé sur la ligne que vous venez de cliquer, et le système offre de le remettre.
 >
 > **Une porte supprime pour de bon**, et elle le dit : **Supprimer le document…**, dans le menu
 > d’un onglet, retire le fichier du dossier sans passer par la corbeille. Son dialogue annonce
 > « Cette action est irréversible », et c’est exact.
 
 **Un refus, et il est grisé plutôt que caché.** Ce que le studio range lui-même — `assets/`, ses
-six sous-dossiers par type, `documents/`, `.index/` — ne se renomme ni ne se jette : l’index range
-chaque asset par son chemin sous `assets/`, et renommer un de ces dossiers laisserait des lignes
-que plus rien ne retrouve. **Le même refus vaut des deux côtés du glisser** : ces dossiers ne se
-prennent pas, et rien ne s’y dépose non plus — un fichier qui y atterrirait serait un fichier dont
-aucune ligne d’index ne parle.
+six sous-dossiers par type, `documents/` — ne se renomme ni ne se jette : l’index range chaque
+asset par son chemin sous `assets/`, et renommer un de ces dossiers laisserait des lignes que plus
+rien ne retrouve. **Le même refus vaut des deux côtés du glisser** : ces dossiers ne se prennent
+pas, et rien ne s’y dépose non plus.
+
+**Et il vaut aussi pour ce qu’ils CONTIENNENT, tant que le déplacement est en jeu.** Un fichier
+sous `assets/img` ne se coupe pas, ne se copie pas, ne se duplique pas et ne se glisse pas
+ailleurs : c’est encore son chemin qui dit ce qu’il est, et le sortir de là lui ferait perdre son
+type. **Deux gestes font exception, parce qu’ils ne le déplacent pas** : le **renommer** — l’index
+suit le nom — et le **mettre à la corbeille**, où l’index lâche la ligne avec le fichier.
 
 **Leur contenu, lui, se renomme.** Un asset et un document ont chacun leur propre geste, et
 l’Explorateur y mène : le nom change, et le fichier suit dans le même mouvement. Un document
@@ -238,9 +311,17 @@ n’y a **qu’un seul nom** : celui de sa ligne d’index EST celui de son fich
 > c’est le journal d’activité qui le dit.
 
 - les documents déjà à l’écran sont marqués **Ouvert** ;
-- l’icône d’un document dit de quel espace il relève, la même que dans le rail ;
-- **rien de ce dont le nom commence par un point ne s’affiche** — `.project.json` et `.index/`,
-  donc, mais aussi un dossier à vous que vous auriez nommé en commençant par un point.
+- l’icône d’un document dit de quel espace il relève, la même que dans le rail.
+
+#### Les éléments cachés
+
+**Rien de ce dont le nom commence par un point ne s’affiche par défaut** — `.project.json` et
+`.index/`, donc, mais aussi un dossier à vous que vous auriez nommé en commençant par un point.
+
+**Le troisième bouton en tête du panneau les montre**, sous l’œil que tous les explorateurs de
+fichiers emploient pour cela. Ce qu’il révèle reste **en lecture seule** : ces lignes refusent
+tous les gestes, des deux côtés — ni renommer, ni corbeille, ni glisser, ni recevoir un dépôt.
+C’est ce que le studio tient pour lui, et le voir n’est pas y toucher.
 
 **Un dossier n’est lu qu’au moment où vous l’ouvrez.** `assets/img` peut contenir des milliers de
 fichiers dans un projet ordinaire, et les lire pour les compter coûterait une attente à chaque
