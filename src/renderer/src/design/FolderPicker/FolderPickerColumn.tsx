@@ -48,7 +48,9 @@ export function FolderPickerColumn({
     <div
       role="listbox"
       aria-label={label}
-      className="w-(--sc-folder-column) shrink-0 overflow-y-auto p-1"
+      // The half-step between rows is the menu's own: names run together without it, and a
+      // column of folder names is read by scanning rather than line by line.
+      className="flex w-(--sc-folder-column) shrink-0 flex-col gap-0.5 overflow-y-auto p-1"
     >
       {column.entries.map(entry => (
         <div
@@ -61,7 +63,10 @@ export function FolderPickerColumn({
           tabIndex={0}
           onClick={() => onPick(entry.path)}
           onKeyDown={onKeyDown(entry.path)}
-          className={cn(rowSkin(entry.path === chosen), 'cursor-pointer')}
+          // The gauge, and it has to be HERE: `Row` draws itself at `h-full`, so a parent with no
+          // height of its own leaves every line as tall as its text — `Tree` gives its rows one
+          // through the virtualizer, and a list that does not is the one that reads cramped.
+          className={cn(rowSkin(entry.path === chosen), 'h-(--sc-control) cursor-pointer')}
         >
           <Row
             icon={mdiFolderOutline}

@@ -80,8 +80,13 @@ export function FolderPickerCreate({
 
   if (draft === null)
     return (
-      <div className="flex pt-2">
-        <Button onClick={() => setDraft(labels.newFolderName)} className="gap-1.5">
+      <div className="flex">
+        {/* Bordered, and that is not decoration: `Button`'s neutral fill IS `bg-surface`, which
+            is also what a dialog is painted with — the button came out as a line of text. */}
+        <Button
+          onClick={() => setDraft(labels.newFolderName)}
+          className="border-border gap-1.5 border"
+        >
           <UiIcon path={mdiFolderPlusOutline} size={14} />
           {labels.newFolderIn}
         </Button>
@@ -89,7 +94,7 @@ export function FolderPickerCreate({
     )
 
   return (
-    <div className="flex flex-col gap-1.5 pt-2">
+    <div className="flex flex-col gap-1.5">
       <label className="text-muted text-xs" htmlFor="sc-folder-picker-name">
         {labels.newFolderIn}
       </label>
