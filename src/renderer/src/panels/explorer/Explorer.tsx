@@ -213,7 +213,15 @@ export function Explorer() {
    * by an effect, which is the cascading render the linter refuses.
    */
   const asked = browsing.project === projectPath ? browsing.folder : FOLDER_ROOT
-  const browse = (folder: string): void => setBrowsing({ project: projectPath, folder })
+  /**
+   * Changing folder UNPICKS, and that is not tidiness: every gesture of this panel acts on the
+   * selection, so a file left picked in the folder one has just left is a ⌘⌫ that trashes something
+   * nobody can see. The tree cannot reach this — what is picked there is on screen by construction.
+   */
+  const browse = (folder: string): void => {
+    useSelection.getState().selectFiles([])
+    setBrowsing({ project: projectPath, folder })
+  }
   /**
    * Where the grid actually is: another window can trash the folder being browsed, and a trail
    * pointing at one that is gone shows an empty grid with no hint of why. `nodes.length === 0` holds
@@ -518,7 +526,12 @@ export function Explorer() {
             // `browsed` and not `FOLDER_ROOT`: the grid shows ONE folder, so its blank means the one
             // on screen — a folder made here belongs where the user is looking.
             onPressRoot={() => pick([])}
-            onDropRoot={paths => void getBridge()?.project.moveFiles(paths, browsed).then(settled)}
+            // The hand is emptied here too: a drop on the blank fires no card's `dragEnd`, and the
+            // batch would stay held — `Tree` clears its own on the same gesture, for the same reason.
+            onDropRoot={paths => {
+              setCarried(null)
+              void getBridge()?.project.moveFiles(paths, browsed).then(settled)
+            }}
             onContextMenuRoot={() => raiseRootMenu(browsed)}
             // A message is not a card, so `onBlank` counts it as blank and an empty folder still
             // offers the one gesture that gets you out of it.

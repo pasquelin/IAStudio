@@ -1556,6 +1556,30 @@ describe('the project explorer, as a grid', () => {
     expect(screen.queryByText(/n’a pas pu être lu/)).toBeNull()
   })
 
+  /**
+   * Every gesture of this panel acts on the SELECTION, so a file left picked in the folder one has
+   * just left is a ⌘⌫ that trashes something nobody can see. The tree cannot reach this: what is
+   * picked there is on screen by construction.
+   */
+  it('unpicks what was held when it changes folder', async () => {
+    withProject()
+    showGrid()
+    const { trashFiles } = install({
+      '': [folder('Images'), file('brief.pdf')],
+      Images: [file('a.png', 'Images')],
+    })
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('brief.pdf'))
+    await enter('Images')
+    await screen.findByText('a.png')
+
+    fireEvent.keyDown(window, { key: 'Backspace', code: 'Backspace', metaKey: true })
+
+    await waitFor(() => expect(screen.getByText('a.png')).toBeInTheDocument())
+    expect(trashFiles).not.toHaveBeenCalled()
+  })
+
   /** An empty folder with no card to aim at would otherwise be a dead end with no way to fill it. */
   it('still makes a folder from the blank of an empty one', async () => {
     withProject()
