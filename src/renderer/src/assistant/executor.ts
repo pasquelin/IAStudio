@@ -7,7 +7,9 @@ import {
   type ActionName,
   type ActionOutcome,
 } from '@shared/domain/assistant'
+import { delegated } from '@shared/domain/delegation'
 import { getBridge } from '@/services/bridge'
+import { useSettings } from '@/stores/settings'
 import type { ActionHandlers } from './actionHandler'
 import { mountedConfirmer } from './confirm'
 import { ASSET_HANDLERS } from './assetHandlers'
@@ -55,6 +57,22 @@ export function handledActions(): readonly string[] {
 }
 
 /**
+ * What this window has already spent WITHOUT asking, against the delegated budget.
+ *
+ * Its blind spot, written rather than hidden: the ledger is per WINDOW and per launch. Two windows
+ * open at once each carry the whole budget, so an armed studio with two windows may spend twice
+ * what was armed. It is here rather than in the main process because the figure it counts — the
+ * estimate — is read off the form only a window can see, and moving the count without moving the
+ * quote would put the two out of step.
+ */
+let spentUnasked = 0
+
+/** For the suite, which must not have one case's spending decide the next one's. */
+export function resetDelegatedSpendForTests(): void {
+  spentUnasked = 0
+}
+
+/**
  * Runs one action, having checked its input against the fields that declare it.
  *
  * The check lives HERE rather than one level up, and that is what lets every handler read its
@@ -96,6 +114,17 @@ export async function runConfirmedAction(
   const commitment = commitmentOfCall(name, input)
   if (!needsConfirmation(commitment)) return runAction(name, input)
 
+  // Read once, before the question and before the delegation is consulted: both read the same
+  // figure, and a form moved between the two would price one thing and send another.
+  const estimate = commitment === 'credits' ? await estimateOfSubmission() : null
+
+  if (delegated(useSettings.getState().settings.mcp, commitment, estimate, spentUnasked)) {
+    // Debited BEFORE the run and never given back: an action that failed halfway may already have
+    // spent, and a ledger that only counted successes would let a run of failures spend forever.
+    if (estimate !== null) spentUnasked += estimate
+    return runAction(name, input)
+  }
+
   const ask = mountedConfirmer()
   // No one to ask. Refusing is the only honest answer: the alternative is spending on a question
   // nobody was shown.
@@ -107,7 +136,7 @@ export async function runConfirmedAction(
   const granted = await ask({
     action: name,
     commitment,
-    ...(commitment === 'credits' ? { estimate: await estimateOfSubmission() } : {}),
+    ...(commitment === 'credits' ? { estimate } : {}),
   })
 
   if (!granted) return refused('declined')

@@ -58,6 +58,39 @@ describe('the settings', () => {
     expect(write).not.toHaveBeenCalled()
   })
 
+  /**
+   * The refusal the whole delegation rests on. `settings.write` is itself an MCP action, so a
+   * client able to write this branch would be granting itself the right not to be asked — which
+   * is no delegation at all. Only the settings window arms it.
+   */
+  it('refuses to let a client arm its own delegation', async () => {
+    const write = vi.fn(async () => DEFAULT_SETTINGS)
+    installFakeBridge({ settings: { write } })
+
+    for (const change of [
+      { delegateBudget: 500 },
+      { delegateFiles: true },
+      { delegateRemote: true },
+    ]) {
+      expect(await runAction('settings.write', { settings: { mcp: change } })).toEqual({
+        ok: false,
+        refusal: 'declined',
+      })
+    }
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  // Its neighbour in the same section is ordinary, which is what makes the refusal above narrow.
+  it('still lets the entry point itself be switched', async () => {
+    const write = vi.fn(async () => DEFAULT_SETTINGS)
+    installFakeBridge({ settings: { write } })
+
+    expect(
+      await runAction('settings.write', { settings: { mcp: { enabled: true } } }),
+    ).toMatchObject({ ok: true })
+    expect(write).toHaveBeenCalledWith({ mcp: { enabled: true } })
+  })
+
   // Writing a value that is already set is a legitimate call — a client settling a state it did
   // not read first — and refusing it would make idempotence a failure.
   it('lets a value be written to what it already is', async () => {

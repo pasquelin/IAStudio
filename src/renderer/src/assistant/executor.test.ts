@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Job } from '@shared/domain/job'
 import type { ModelSummary } from '@shared/domain/model'
+import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { useSettings } from '@/stores/settings'
 import { subscribeToCommands } from '@/services/commandBus'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -11,7 +13,12 @@ import { useProject } from '@/stores/project'
 import { registerGenerator, type GeneratorBridge } from './generatorBridge'
 import { ACTION_REGISTRY, commitmentOfCall } from '@shared/domain/assistant'
 import { registerConfirmer } from './confirm'
-import { handledActions, runAction, runConfirmedAction } from './executor'
+import {
+  handledActions,
+  resetDelegatedSpendForTests,
+  runAction,
+  runConfirmedAction,
+} from './executor'
 
 const showWorkspace = vi.hoisted(() => vi.fn())
 const createDocumentIn = vi.hoisted(() => vi.fn())
@@ -420,6 +427,74 @@ describe('asking before acting', () => {
     })
     stopGenerator()
     stopConfirmer()
+  })
+})
+
+/**
+ * Delegation is what lets a client run while nobody is at the machine, and it is the one feature
+ * of this file that can spend somebody's money unwatched. Every case here is about a refusal.
+ */
+describe('what an armed studio lets through without asking', () => {
+  const arm = (partial: Partial<Settings['mcp']>): void => {
+    useSettings.setState({
+      settings: { ...DEFAULT_SETTINGS, mcp: { ...DEFAULT_SETTINGS.mcp, ...partial } },
+    })
+  }
+
+  beforeEach(() => {
+    resetDelegatedSpendForTests()
+    useSettings.setState({ settings: DEFAULT_SETTINGS })
+  })
+
+  it('asks about everything while nothing is armed', async () => {
+    const ask = vi.fn(() => Promise.resolve(false))
+    const stop = registerConfirmer(ask)
+
+    await runConfirmedAction('command.run', { command: 'canvas.cutout' })
+
+    expect(ask).toHaveBeenCalled()
+    stop()
+  })
+
+  it('runs an armed level with nobody to ask at all', async () => {
+    arm({ delegateAsset: true })
+
+    // No confirmer registered: without the delegation this is `noConfirmer`, which is the whole
+    // of what "a client working while nobody is at the machine" used to run into.
+    expect(await runConfirmedAction('command.run', { command: 'canvas.cutout' })).not.toEqual({
+      ok: false,
+      refusal: 'noConfirmer',
+    })
+  })
+
+  it('spends up to the budget, then asks again', async () => {
+    arm({ delegateBudget: 5 })
+    installFakeBridge({ scenario: { estimateCost: () => Promise.resolve({ creativeUnits: 3 }) } })
+    const stopGenerator = registerGenerator(
+      aGenerator({ submit: () => Promise.resolve(jobOf({ id: 'job_1' })) }),
+    )
+
+    // Three of five: through. Three more is six, which is past five — so the second one asks, and
+    // with nobody registered to ask it refuses.
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({ ok: true })
+    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+      ok: false,
+      refusal: 'noConfirmer',
+    })
+    stopGenerator()
+  })
+
+  /** A ceiling cannot bound a cost nobody knows, so an unpriced spend is asked about regardless. */
+  it('asks about a spend the API declined to price, whatever the budget', async () => {
+    arm({ delegateBudget: 10_000 })
+    installFakeBridge({ scenario: { estimateCost: () => Promise.reject(new Error('no price')) } })
+    const stopGenerator = registerGenerator(aGenerator())
+
+    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+      ok: false,
+      refusal: 'noConfirmer',
+    })
+    stopGenerator()
   })
 })
 

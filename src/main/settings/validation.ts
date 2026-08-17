@@ -185,7 +185,15 @@ const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })
 // file, and the defaults are a better answer than a failing assistant.
 const assistant = z.object({ model: z.enum(ASSISTANT_MODELS).optional() })
 
-const mcp = z.object({ enabled: z.boolean().optional() })
+const mcp = z.object({
+  enabled: z.boolean().optional(),
+  delegateFiles: z.boolean().optional(),
+  delegateAsset: z.boolean().optional(),
+  delegateRemote: z.boolean().optional(),
+  // Bounded here as well as by the field: a budget arrived at through the file rather than through
+  // the window is still a budget somebody has to be able to read back.
+  delegateBudget: z.number().min(0).max(10_000).optional(),
+})
 
 const silence = boundsOf('dictation.silenceMs')
 const preview = boundsOf('dictation.previewMs')

@@ -292,6 +292,24 @@ l’assistant en tient compte pour la suite de sa demande.
 formulée reçoit un refus plutôt que d’attendre. C’est le temps de lire « cela va dépenser 12
 unités » et de décider — pas un délai réseau.
 
+### Travailler pendant que vous n’êtes pas là
+
+Tant que rien n’est armé, un client qui agit sans personne devant l’écran s’arrête à la première
+question. C’est le défaut, et il est délibéré.
+
+Les réglages avancés ouvrent quatre lignes qui changent cela, chacune sous **Piloter le studio
+depuis l’extérieur** et sans effet si celui-ci est éteint. Les trois premières laissent passer un
+niveau d’engagement sans demander — toucher aux fichiers, téléverser, publier vers un serveur. La
+quatrième est un montant en unités créatives : ce qu’un client peut dépenser dans cette fenêtre
+avant que le studio se remette à demander. À zéro, chaque dépense vous est demandée.
+
+> **Trois choses à savoir avant d’armer quoi que ce soit.** Une génération dont l’API refuse de
+> donner le prix n’est **jamais** lancée sans vous, quel que soit le montant autorisé — un coût
+> inconnu ne se plafonne pas. Le compte est tenu par fenêtre et repart de zéro à chaque
+> lancement : deux fenêtres ouvertes portent chacune le montant entier. Et **aucun client ne peut
+> armer ces quatre lignes lui-même** : elles ne s’écrivent que dans cette fenêtre de réglages,
+> parce qu’une autorisation qu’un programme se donne à lui-même n’en est pas une.
+
 ---
 
 ## Quand ça refuse

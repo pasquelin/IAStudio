@@ -27,6 +27,13 @@ function write(input: Record<string, unknown>): Promise<ActionOutcome> {
     return Promise.resolve(refused('badInput'))
   }
 
+  // The one branch this action may not touch, and the reason the delegation is worth anything: a
+  // client that could raise its own budget or tick its own boxes would be asking itself. Only the
+  // settings window arms it — `settings.open` is published, and that is the whole of the way in.
+  if (Object.keys(asked.mcp ?? {}).some(key => key.startsWith('delegate'))) {
+    return Promise.resolve(refused('declined'))
+  }
+
   return withBridge(bridge => bridge.settings.write(asked))
 }
 

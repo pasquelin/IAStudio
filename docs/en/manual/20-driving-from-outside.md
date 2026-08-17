@@ -284,6 +284,23 @@ assistant takes it into account for what follows.
 refusal rather than waiting. That is the time it takes to read "this will spend 12 units" and
 decide — not a network timeout.
 
+### Working while you are not there
+
+While nothing is armed, a client acting with nobody in front of the screen stops at the first
+question. That is the default, and it is deliberate.
+
+The advanced settings open four lines that change it, each under **Drive the studio from outside**
+and each with no effect while that is off. The first three let one level of commitment through
+without asking — touching files, uploading, publishing to a server. The fourth is an amount in
+creative units: what a client may spend in this window before the studio starts asking again. At
+zero, every spend is asked about.
+
+> **Three things to know before arming anything.** A generation the API declines to price is
+> **never** started without you, whatever the amount allows — an unknown cost cannot be capped.
+> The count is kept per window and starts again at each launch: two windows open each carry the
+> whole amount. And **no client can arm these four lines itself** — they are written only in this
+> settings window, because an authority a program grants itself is not one.
+
 ---
 
 ## When it refuses

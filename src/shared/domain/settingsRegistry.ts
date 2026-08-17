@@ -545,6 +545,46 @@ export const SETTING_REGISTRY = [
     titleKey: 'settings.mcpEnabled.title',
     helpKey: 'settings.mcpEnabled.help',
   }),
+  /**
+   * The delegation, and it lives HERE rather than anywhere a client can reach: `settings.write`
+   * refuses this branch outright, so the window is the only way in. All four hang off
+   * `mcp.enabled` — arming what a closed door may do is a question nobody asked.
+   */
+  setting({
+    path: 'mcp.delegateFiles',
+    kind: 'boolean',
+    section: 'advanced',
+    titleKey: 'settings.mcpDelegateFiles.title',
+    helpKey: 'settings.mcpDelegateFiles.help',
+    dependsOn: { path: 'mcp.enabled', equals: true },
+  }),
+  setting({
+    path: 'mcp.delegateAsset',
+    kind: 'boolean',
+    section: 'advanced',
+    titleKey: 'settings.mcpDelegateAsset.title',
+    helpKey: 'settings.mcpDelegateAsset.help',
+    dependsOn: { path: 'mcp.enabled', equals: true },
+  }),
+  setting({
+    path: 'mcp.delegateRemote',
+    kind: 'boolean',
+    section: 'advanced',
+    titleKey: 'settings.mcpDelegateRemote.title',
+    helpKey: 'settings.mcpDelegateRemote.help',
+    dependsOn: { path: 'mcp.enabled', equals: true },
+  }),
+  setting({
+    path: 'mcp.delegateBudget',
+    kind: 'number',
+    min: 0,
+    max: 10_000,
+    step: 1,
+    section: 'advanced',
+    titleKey: 'settings.mcpDelegateBudget.title',
+    helpKey: 'settings.mcpDelegateBudget.help',
+    dependsOn: { path: 'mcp.enabled', equals: true },
+  }),
   setting({
     path: 'media.ffmpegPath',
     kind: 'path',
