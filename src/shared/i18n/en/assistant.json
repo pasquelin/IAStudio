@@ -271,7 +271,7 @@
       },
       "clipSelect": {
         "title": "Point at a clip",
-        "description": "Names the clip the inspector and the gestures that name no target will act on. Not an edit, and undo does not take it back."
+        "description": "Names the clip the inspector and the gestures that aim at nothing will act on. Not an edit, and undo does not take it back."
       },
       "trackAdd": {
         "title": "Add a track",
@@ -672,10 +672,10 @@
       "edgeIntensity": "How much the edges are darkened",
       "emissive": "Emitted colour",
       "emissiveIntensity": "Strength of the emission",
-      "tilingX": "Repeats across",
-      "tilingY": "Repeats down",
-      "offsetX": "Offset across",
-      "offsetY": "Offset down",
+      "tilingX": "Repeats in width",
+      "tilingY": "Repeats in height",
+      "offsetX": "Offset in width",
+      "offsetY": "Offset in height",
       "invertNormalGreen": "Invert the green channel of the relief",
       "clipId": "Clip identifier",
       "trackId": "Track identifier",
@@ -714,8 +714,8 @@
       "nodeId": "Object identifier",
       "nodeIds": "Object identifiers",
       "nodeKind": "What to add",
-      "positionX": "Position across",
-      "positionY": "Position up",
+      "positionX": "Position in width",
+      "positionY": "Position in height",
       "positionZ": "Position towards the viewer",
       "rotationX": "Rotation about X, in radians",
       "rotationY": "Rotation about Y, in radians",
