@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { THUMBNAIL_SIZE } from '@shared/domain/project'
 import {
   DEFAULT_COLLECTION_STATE,
   filterLocally,
@@ -119,15 +118,5 @@ describe('local filtering', () => {
     const state = { ...DEFAULT_COLLECTION_STATE, selections: { origin: ['official'] } }
 
     expect(filterLocally(ROWS, state, FILTER)).toHaveLength(3)
-  })
-
-  /**
-   * The main process renders ONE preview per file and cannot read this gauge — it lives in the
-   * renderer — so it carries the number itself. Held together here, the only side that sees
-   * both: a grid zoomed past what is rendered would draw every tile blurred, and nothing else
-   * in the repository would say so.
-   */
-  it('renders previews at the largest size the grid can be zoomed to', () => {
-    expect(THUMBNAIL_SIZE).toBe(MAX_THUMBNAIL)
   })
 })

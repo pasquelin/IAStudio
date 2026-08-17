@@ -82,6 +82,7 @@ export function EntryRow({ name, icon, preview, open, waiting, onRename }: Entry
           <img
             src={src}
             alt=""
+            loading="lazy"
             draggable={false}
             onError={onError}
             className="size-3.5 shrink-0 rounded-(--radius-sc-sm) object-cover"

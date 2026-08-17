@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto'
-import { mkdir, readdir, rename, rm, stat, utimes, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, rm, stat, utimes } from 'node:fs/promises'
 import { join } from 'node:path'
 import { THUMBNAILS_FOLDER, THUMBNAILS_MAX_BYTES } from '@shared/domain/project'
 import { assetFilePath } from '@main/assets/protocol'
 import { boundedPool } from '@main/boundedPool'
+import { exists, writeAtomic } from '@main/persistence'
 
 export type ThumbnailCacheDeps = {
   projectPath: () => string | null
@@ -53,20 +54,22 @@ async function heldFiles(folder: string): Promise<{ file: string; bytes: number;
 }
 
 /**
- * Previews of the files a project holds, rendered once and kept under `.index/`.
- *
- * The freshness of an entry is its own modification time, touched on every read — so the
- * eviction below drops what nobody has looked at rather than what was made first. It is the
- * only reason a read writes anything at all.
+ * Previews of the files a project holds, rendered once and kept under `.index/`. Freshness is
+ * an entry's own modification time, touched on every read — the only reason a read writes at
+ * all, and what makes the eviction drop the unlooked-at rather than the oldest.
  */
 export function createThumbnailCache(deps: ThumbnailCacheDeps): ThumbnailCache {
   const pool = boundedPool(deps.concurrency)
   const ceiling = deps.maxBytes ?? THUMBNAILS_MAX_BYTES
   const now = deps.now ?? ((): Date => new Date())
+  /** Keys nothing could draw. Bounded by the project's files, and dropped with the process. */
+  const undrawable = new Set<string>()
 
   /** Best effort: a read-only volume costs an entry its place in the queue, never the entry. */
   const touch = async (file: string): Promise<void> => {
-    await utimes(file, now(), now()).catch(() => {})
+    // Read ONCE: the two stamps are the same instant, and an eviction reads one of them.
+    const at = now()
+    await utimes(file, at, at).catch(() => {})
   }
   /** Written since the folder was last measured — measuring it is a `stat` per entry. */
   let sinceSweep = 0
@@ -98,22 +101,28 @@ export function createThumbnailCache(deps: ThumbnailCacheDeps): ThumbnailCache {
       if (!source?.isFile()) return null
 
       const folder = join(root, THUMBNAILS_FOLDER)
-      const cached = join(folder, `${keyOf(relative, source.size, source.mtimeMs)}.png`)
+      const key = keyOf(relative, source.size, source.mtimeMs)
+      const cached = join(folder, `${key}.png`)
 
-      if (await stat(cached).catch(() => null)) {
+      if (await exists(cached)) {
         await touch(cached)
         return cached
       }
 
+      // A file nothing can draw is asked for again at every scroll, and answering costs a
+      // QuickLook attempt each time. Remembered by KEY, so the answer expires with the file.
+      if (undrawable.has(key)) return null
+
       const rendered = await pool.run(() => deps.render(absolute, relative))
-      if (!rendered) return null
+      if (!rendered) {
+        undrawable.add(key)
+        return null
+      }
 
       await mkdir(folder, { recursive: true })
       // Written aside then renamed: two windows asking for the same preview at once would
       // otherwise both write into the file the other is being served.
-      const staging = `${cached}.${process.pid}.tmp`
-      await writeFile(staging, rendered)
-      await rename(staging, cached)
+      await writeAtomic(cached, rendered, { staging: `${cached}.${process.pid}.tmp` })
       // Stamped like a read, so freshness is one notion: written IS read, for what was asked for.
       await touch(cached)
 

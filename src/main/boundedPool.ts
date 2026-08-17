@@ -7,24 +7,42 @@ export type BoundedPool = {
  * A pool, not a burst — CLAUDE.md § 6. A folder of four hundred pictures scrolled past is four
  * hundred previews asked for at once, and each of them spawns work outside this process.
  *
- * The limit is read per acquisition rather than captured: it comes from a setting the user can
- * move while the studio runs.
+ * The slot is taken when the task is DISPATCHED, never after an await: counting afterwards lets
+ * a caller arriving between a release and the waiter's resumption slip past a full pool.
  */
 export function boundedPool(limit: () => number): BoundedPool {
   const waiting: (() => void)[] = []
-  let active = 0
+  let running = 0
+
+  const pump = (): void => {
+    while (running < limit()) {
+      const start = waiting.shift()
+      if (!start) return
+
+      running += 1
+      start()
+    }
+  }
 
   return {
-    run: async task => {
-      if (active >= limit()) await new Promise<void>(resolve => waiting.push(resolve))
-      active += 1
+    run: <T>(task: () => Promise<T>): Promise<T> =>
+      new Promise<T>((resolve, reject) => {
+        waiting.push(() => {
+          void task().then(
+            value => {
+              running -= 1
+              pump()
+              resolve(value)
+            },
+            (error: unknown) => {
+              running -= 1
+              pump()
+              reject(error)
+            },
+          )
+        })
 
-      try {
-        return await task()
-      } finally {
-        active -= 1
-        waiting.shift()?.()
-      }
-    },
+        pump()
+      }),
   }
 }

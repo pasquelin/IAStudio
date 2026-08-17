@@ -51,15 +51,8 @@ async function domainOf(fileName: string, absolute: string): Promise<Asset['type
 
 /**
  * Gives a file the project already holds a row in the catalogue, so the studio can open it.
- *
- * The gesture the explorer needs and `ingest` cannot serve: `ingest` links a file from OUTSIDE
- * and writes `sourcePath`, and it DROPS the row it minted when ffprobe declines the file — a
- * picture the studio draws perfectly well would appear and vanish. This one writes `path`,
- * relative to the project, which is what lets the rescan follow the file when it moves.
- *
- * Answers `null` for everything the studio would not show, the caller then handing the file to
- * the system. Silent by design, bar one line in the journal: a dialog on every double-click is
- * the opposite of what an explorer that opens its own project is for.
+ * Writes `path` where `ingest` writes `sourcePath` — that is what lets the rescan follow the
+ * file — and answers `null` for what the studio would not show, which the caller sends outside.
  */
 export async function adoptFile(relative: string, deps: AdoptFileDeps): Promise<Asset | null> {
   const catalog = deps.catalog()
@@ -78,8 +71,12 @@ export async function adoptFile(relative: string, deps: AdoptFileDeps): Promise<
   const type = await domainOf(name, absolute)
   if (!type) return null
 
-  const probe = type === 'video' || type === 'audio' ? await deps.probeFile(absolute) : null
-  const fingerprint = await deps.hash(absolute)
+  // Together: ffprobe spawns a process and the fingerprint reads the file, and the tab the user
+  // is waiting for is behind both.
+  const [probe, fingerprint] = await Promise.all([
+    type === 'video' || type === 'audio' ? deps.probeFile(absolute) : null,
+    deps.hash(absolute),
+  ])
   const at = deps.now()
 
   const asset = await catalog.add({

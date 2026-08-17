@@ -74,6 +74,25 @@ describe('createThumbnailCache', () => {
     await expect(held()).rejects.toThrow()
   })
 
+  /**
+   * A file nothing draws is asked for again at every pass of the scroll, and each ask costs the
+   * system's previewer a full attempt. Remembered by KEY, so editing the file asks again.
+   */
+  it('asks the renderer once for a file it could not draw', async () => {
+    await put('Models/chair.glb')
+    const render = vi.fn(async () => null)
+    const thumbnails = cache({ render })
+
+    await thumbnails.of('Models/chair.glb')
+    await thumbnails.of('Models/chair.glb')
+    expect(render).toHaveBeenCalledOnce()
+
+    await put('Models/chair.glb', new Uint8Array([4, 5, 6, 7]))
+    await thumbnails.of('Models/chair.glb')
+
+    expect(render).toHaveBeenCalledTimes(2)
+  })
+
   // The path comes from a window, and this is the one host of the scheme named by a path.
   it('refuses a path that walks out of the project', async () => {
     const render = vi.fn(async () => rendered())

@@ -1646,6 +1646,23 @@ describe('the project explorer, as a grid', () => {
     expect(moveFiles).toHaveBeenCalledWith(['facade.jpg'], 'Images')
   })
 
+  /**
+   * At the FOOT of the panel, under the rows: the trail says where the listing came from, and a
+   * reader looks at it after the listing. It used to ride in the collection bar, above.
+   */
+  it('draws the trail below the rows rather than above them', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('Images')] })
+
+    render(<Explorer />)
+    const trail = await screen.findByRole('navigation', { name: 'Dossier affiché' })
+
+    expect((await tileFor('Images')).compareDocumentPosition(trail)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
+
   it('moves a tile dropped on a folder into it', async () => {
     withProject()
     showGrid()

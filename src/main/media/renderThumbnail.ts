@@ -1,15 +1,16 @@
 import { nativeImage } from 'electron'
+import { extname } from 'node:path'
 
 /**
- * A small picture of whatever the machine can preview — the file itself where it is one, and
- * what the system's own previewer draws where it is not.
- *
- * `createThumbnailFromPath` hands the work to the OS and answers a promise, which is what keeps
- * a 4K source from freezing every window for a tenth of a second (CLAUDE.md, invariant 6). It is
- * declared for macOS and Windows alone, so Linux falls back to decoding the file here — which
- * covers the pictures a browser reads and nothing else.
- *
- * A kind neither can read — a `.glb`, a sound — comes back null, and the caller draws its glyph.
+ * What `createFromPath` is worth reading. It is SYNCHRONOUS and reads the whole file, so it is
+ * asked only of the suffixes it can actually decode — offered a folder of 50 MB models it would
+ * read every one of them on the main thread and answer nothing.
+ */
+const DECODABLE = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp']
+
+/**
+ * A small picture of whatever the machine can preview, `null` for what it cannot. The OS draws
+ * it and answers a promise — macOS and Windows only, so Linux falls to the decoder above.
  */
 export async function renderThumbnail(file: string, size: number): Promise<Uint8Array | null> {
   try {
@@ -18,6 +19,8 @@ export async function renderThumbnail(file: string, size: number): Promise<Uint8
   } catch {
     // Absent on this platform, or a file it declines to read. Both are worth one attempt below.
   }
+
+  if (!DECODABLE.includes(extname(file).toLowerCase())) return null
 
   const image = nativeImage.createFromPath(file)
   if (image.isEmpty()) return null

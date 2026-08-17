@@ -437,12 +437,9 @@ export function Explorer() {
   }
 
   /**
-   * The picture an entry shows in place of its glyph, or nothing. Beside `iconFor` and for the
-   * same reason: two places answering one question is what this panel has already paid for twice.
-   *
-   * A folder has a shape of its own, and a document has the glyph of the space that edits it —
-   * neither is a file to preview. Everything else is asked for, including what the catalogue has
-   * never heard of: the main process answers with what it can render, and nothing where it cannot.
+   * The picture an entry shows in place of its glyph. Beside `iconFor` for the same reason: two
+   * places answering one question is what this panel has already paid for twice. A folder has a
+   * shape of its own and a document the glyph of its space; neither is a file to preview.
    */
   const previewFor = (node: FolderNode): string | undefined =>
     node.kind === 'file' && !documentOf(node) ? thumbnailUrl(node.path) : undefined
@@ -524,14 +521,7 @@ export function Explorer() {
       {/* Under the title row and not on it — the field measured 76 px up there. The two readings
           STAY up in it: they answer about the project, where this bar is about the list on screen.
           `display` is on now the grid exists; the zoom greys itself out on a list. */}
-      <CollectionBar
-        state={collection}
-        onChange={setCollection}
-        sorts={sorts}
-        // Only where there is somewhere to go. A search and a domain are flat answers about the
-        // whole project, and a trail over either would name a folder the rows do not come from.
-        {...(browsable ? { scope: <FolderCrumbs folder={browsed} onPick={browse} /> } : {})}
-      />
+      <CollectionBar state={collection} onChange={setCollection} sorts={sorts} />
 
       {/* Nothing at all unless a pass is running, which on a project where nothing moved is
           every time: the row appears when the studio is reading files and can be told to stop. */}
@@ -580,7 +570,7 @@ export function Explorer() {
                 // would promise a nesting that is not on screen.
                 icon={iconFor(node, false)}
                 folder={node.kind === 'folder' && !documentOf(node)}
-                {...(previewFor(node) ? { preview: previewFor(node) } : {})}
+                preview={previewFor(node)}
                 open={isOpen(documentOf(node))}
                 waiting={waiting.has(node.path)}
                 // The whole selection where this card is in one, so three carried together arrive
@@ -689,7 +679,7 @@ export function Explorer() {
                   // file still wears a uuid.
                   name={documentOf(node)?.title ?? node.name}
                   icon={iconFor(node, row.expanded)}
-                  {...(previewFor(node) ? { preview: previewFor(node) } : {})}
+                  preview={previewFor(node)}
                   open={isOpen(documentOf(node))}
                   // What a cut looks like before it is pasted: the rows are still there, still
                   // openable, and on their way out.
@@ -703,6 +693,11 @@ export function Explorer() {
           />
         )}
       </div>
+
+      {/* Under the rows rather than over them: the trail says where the listing came FROM, and a
+          reader looks at it after the listing, not before. Only where there is somewhere to go —
+          a search and a domain are flat answers about the whole project. */}
+      {browsable && <FolderCrumbs folder={browsed} onPick={browse} />}
     </div>
   )
 }

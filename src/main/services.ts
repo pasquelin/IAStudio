@@ -246,6 +246,9 @@ export type Services = {
   updates: Updates
 }
 
+/** Two cores left to the interface and to whatever else the machine is doing — CLAUDE.md § 6. */
+const spareCores = (): number => Math.max(1, availableParallelism() - 2)
+
 const timestamp = (): string => new Date().toISOString()
 const newAssetId = (): string => `${ASSET_ID_PREFIX}${randomUUID()}`
 
@@ -955,8 +958,7 @@ export function createServices(settings: SettingsStore): Services {
     onProgress: progress => broadcast(EVENTS.mediaProgress, progress),
     record: report => journal.record(report),
     projectPath: () => project.current()?.path ?? null,
-    // Two cores left to the interface and to whatever else the machine is doing.
-    concurrency: () => Math.max(1, availableParallelism() - 2),
+    concurrency: spareCores,
   })
 
   /** Whether a catch-up is already walking the project — see `catchUpProject`. */
@@ -1287,7 +1289,7 @@ export function createServices(settings: SettingsStore): Services {
     },
     // The same bound the ingest pool takes: previewing is the system's work, but a folder
     // scrolled fast asks for hundreds at once and each one leaves this process.
-    concurrency: () => Math.max(1, availableParallelism() - 2),
+    concurrency: spareCores,
   })
 
   const favorites = createFavorites(join(app.getPath('userData'), 'favorites'))

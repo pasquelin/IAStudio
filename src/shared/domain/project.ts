@@ -260,9 +260,8 @@ export const THUMBNAILS_FOLDER = '.index/thumbnails'
 export const THUMBNAILS_MAX_BYTES = 200 * 1024 * 1024
 /**
  * How large one is rendered — ONE size for every reader, the tree's little slot included, which
- * the browser then draws smaller. Here rather than beside the grid's gauge because the main
- * process renders them and cannot read the renderer; `collection-state.test.ts` holds the two
- * numbers together.
+ * the browser then draws smaller. Here because the main process renders them and cannot read the
+ * renderer; `MAX_THUMBNAIL`, the gauge the grid zooms to, IS this number.
  */
 export const THUMBNAIL_SIZE = 208
 

@@ -15,10 +15,8 @@ export type EntryCardProps = {
   /** A preview of the file, asked of the main process and rendered there. */
   preview?: string
   /**
-   * Drawn as a SHAPE filling the tile rather than as a glyph inside it. What the grid was
-   * missing: a folder and a file were the same dark square wearing a different little sign, so
-   * the one question a grid answers faster than a list — which of these is a folder — had to be
-   * read off the names.
+   * Drawn as a SHAPE filling the tile, with no frame around it. What the grid was missing: a
+   * folder and a file were the same dark square wearing a different little sign.
    */
   folder?: boolean
   /** Whether a tab is showing this file right now. Only a document can be. */
@@ -70,11 +68,10 @@ export function EntryCard({
       // what keeps a name being typed from starting a drag instead of selecting a word.
       draggable={pickable && onRename === undefined}
       onDragStart={event => {
-        // The rule is the RENAME, not the identity of the target: a name being typed must select
-        // a word rather than start a drag. It was written as `target !== currentTarget`, which
-        // holds only while the tile is empty — a picture is natively draggable, so the gesture
-        // starts on the `<img>` and every drag of a previewed file would be refused.
-        if (onRename) return event.preventDefault()
+        // Both conditions are read HERE and not left to `draggable`: a picture is natively
+        // draggable, so its `dragstart` bubbles up even from a card the attribute refuses — what
+        // the studio keeps for itself would otherwise be dragged by its preview.
+        if (onRename || !pickable) return event.preventDefault()
         rowDrag.start(event, dragIds)
         onPickUp(dragIds)
       }}
@@ -110,16 +107,13 @@ export function EntryCard({
       <MediaTile
         caption={name}
         fallbackIcon={icon}
-        {...(preview ? { url: preview } : {})}
+        url={preview}
         {...(folder
           ? {
-              // The frame belongs to FILES: it bounds a picture that may be pale or transparent,
-              // and a box around a folder silhouette reads as one more file.
+              // The frame belongs to FILES: it bounds a picture that may be pale or transparent.
               bare: true,
-              // Quiet ink rather than the accent: thirty of these fill a folder, and a shape read
-              // at a glance is a shape that does not shout. The alpha is the one `MediaTile`
-              // already draws its own fallback at — below it `tokens.test.ts` refuses the ratio
-              // a glyph that INFORMS owes (WCAG 1.4.11).
+              // The alpha `MediaTile` draws its own fallback at — below it, `tokens.test.ts`
+              // refuses the ratio a glyph that INFORMS owes (WCAG 1.4.11).
               face: <UiIcon path={mdiFolder} size="fill" className="text-muted/80" />,
             }
           : {})}
