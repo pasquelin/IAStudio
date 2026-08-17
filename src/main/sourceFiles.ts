@@ -6,7 +6,7 @@
  * inherits the same reading, and so the exclusion below is decided once. The window's guards have
  * no filesystem and borrow `renderer/src/window-sources.ts` instead — same idea, other mechanism.
  *
- * `wide-guards.ts` is the other half of this and NOT the same job: it detects which suites read
+ * `wideGuards.ts` is the other half of this and NOT the same job: it detects which suites read
  * the tree, so the short loop replays them. It never hands one the files. A guard importing this
  * module still has to read something itself for `readsTheTree` to recognise it — both callers do,
  * through `readFileSync` anchored on `import.meta.url`.

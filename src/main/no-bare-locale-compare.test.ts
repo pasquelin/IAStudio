@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import { sitesIn } from './ast-sites'
-import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './source-files'
+import { sitesIn } from './astSites'
+import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './sourceFiles'
 
 /**
  * Whether the argument that would carry the decision says anything at all.
@@ -173,7 +173,7 @@ describe('no sort hands its language to the machine', () => {
     WHOLE_PROJECT,
   )
 
-  // That the four trees were actually opened is held by `source-files.test.ts`, on the walk both
+  // That the four trees were actually opened is held by `sourceFiles.test.ts`, on the walk both
   // guards borrow — an empty result here proves nothing unless the files were read.
 
   it('reads the sort that names nothing, and lets the one with a comparator through', () => {

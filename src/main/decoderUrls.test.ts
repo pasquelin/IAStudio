@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
-import { DECODER_MODULES, UNSET_DECODER_URL, withoutDecoderUrls } from './decoder-urls'
+import { DECODER_MODULES, UNSET_DECODER_URL, withoutDecoderUrls } from './decoderUrls'
 
 // Under `src/main` rather than `src/shared`: it reads what sits beside the repository root, and
 // `src/shared` compiles for the renderer, which has no filesystem.

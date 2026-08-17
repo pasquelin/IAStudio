@@ -4,14 +4,14 @@ import { defineConfig } from 'electron-vite'
 import type { Plugin } from 'vite'
 import { execSync } from 'node:child_process'
 import { basename, resolve } from 'node:path'
-import { DECODER_MODULES, withoutDecoderUrls } from './src/main/decoder-urls'
+import { DECODER_MODULES, withoutDecoderUrls } from './src/main/decoderUrls'
 
 const partage = resolve('src/shared')
 const principal = resolve('src/main')
 
 /**
  * Strips three.js's decoder URLs so the bundler stops emitting files nothing fetches. The why,
- * and what it weighed, are in `decoder-urls.ts`.
+ * and what it weighed, are in `decoderUrls.ts`.
  *
  * Refuses rather than passing the source through: the day three.js writes those URLs differently,
  * a silent no-op puts two megabytes back into the artefact without a single test going red.

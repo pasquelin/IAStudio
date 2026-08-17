@@ -5,14 +5,14 @@
  * platforms' artefacts were merged into. That job runs no `pnpm install`, so nothing here may
  * reach outside Node.
  *
- * The rule itself is `src/main/update-manifests.ts`, where the suite can reach it — this file
+ * The rule itself is `src/main/updateManifests.ts`, where the suite can reach it — this file
  * only points it at `dist/` and turns its answer into an exit code.
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 // A `.ts` from a `.mjs`: Node 24 strips the types on the way in, and the rule the tests check is
 // then the one that runs.
-import { blockMapsExpected } from '../src/main/update-manifests.ts'
+import { blockMapsExpected } from '../src/main/updateManifests.ts'
 
 const MANIFESTS = ['latest.yml', 'latest-mac.yml', 'latest-linux.yml']
 

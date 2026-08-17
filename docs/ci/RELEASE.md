@@ -114,7 +114,7 @@ la recevoir.
    l’a vue avec l’ancien numéro.
 
    ```bash
-   pnpm test src/main/release-notes.test.ts
+   pnpm test src/main/releaseNotes.test.ts
    ```
 
 4. **Fusionner dans `main`.** C’est le seul type de merge que `main` accepte :

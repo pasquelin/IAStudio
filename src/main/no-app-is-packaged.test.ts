@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import { sitesIn } from './ast-sites'
-import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './source-files'
+import { sitesIn } from './astSites'
+import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './sourceFiles'
 
 const isElectronApp = (node: ts.Expression): boolean => ts.isIdentifier(node) && node.text === 'app'
 
