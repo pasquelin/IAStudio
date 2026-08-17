@@ -6,7 +6,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { DocumentTab } from './DocumentTab'
-import { DOCUMENT_COMPONENTS } from './documents'
+import { DOCUMENT_COMPONENTS } from './documents/documents'
 import { setDockviewApi } from './dockview-api'
 
 /**

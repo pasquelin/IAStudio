@@ -12,14 +12,14 @@ import {
   type OpenByZone,
 } from '@/stores/tools'
 import { HOME_SURFACE } from '@shared/domain/tool'
-import { withQueries } from './query-fixtures'
+import { withQueries } from '../query-fixtures'
 import { Shell } from './Shell'
 
-vi.mock('./DocumentArea', () => ({ DocumentArea: () => null }))
+vi.mock('../DocumentArea', () => ({ DocumentArea: () => null }))
 
 // The rail carries one button per panel, labelled with the same title as the panel itself. It
 // has its own test; here it would only make every query ambiguous.
-vi.mock('./Rail', () => ({ Rail: () => null }))
+vi.mock('../Rail/Rail', () => ({ Rail: () => null }))
 
 function renderShell() {
   return render(withQueries(<Shell />))

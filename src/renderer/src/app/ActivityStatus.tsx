@@ -6,7 +6,7 @@ import { UiIcon } from '@/design/UiIcon'
 import { STATUS_BUTTON } from '@/design/styles'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { failureCount, useActivity } from '@/stores/activity'
-import { ActivityList } from './ActivityList'
+import { ActivityList } from './ActivityList/ActivityList'
 
 /**
  * The journal, in the status line rather than in a panel of its own.
