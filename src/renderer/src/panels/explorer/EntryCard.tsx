@@ -1,4 +1,4 @@
-import { mdiCircleMedium } from '@mdi/js'
+import { mdiCircleMedium, mdiFolder } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { InlineRename } from '@/design/InlineRename'
@@ -10,8 +10,17 @@ import { cn } from '@/helpers/cn'
 export type EntryCardProps = {
   /** What the card is called — the document's own name where there is one, the file name else. */
   name: string
-  /** The glyph standing in for a picture. No thumbnail is fetched here: that is the catalogue's. */
+  /** The glyph drawn until the preview arrives, and instead of it where there is none. */
   icon: string
+  /** A preview of the file, asked of the main process and rendered there. */
+  preview?: string
+  /**
+   * Drawn as a SHAPE filling the tile rather than as a glyph inside it. What the grid was
+   * missing: a folder and a file were the same dark square wearing a different little sign, so
+   * the one question a grid answers faster than a list — which of these is a folder — had to be
+   * read off the names.
+   */
+  folder?: boolean
   /** Whether a tab is showing this file right now. Only a document can be. */
   open: boolean
   /** Whether this entry has been CUT and is waiting for a paste. */
@@ -40,6 +49,8 @@ export type EntryCardProps = {
 export function EntryCard({
   name,
   icon,
+  preview,
+  folder,
   open,
   waiting,
   onRename,
@@ -59,7 +70,11 @@ export function EntryCard({
       // what keeps a name being typed from starting a drag instead of selecting a word.
       draggable={pickable && onRename === undefined}
       onDragStart={event => {
-        if (event.target !== event.currentTarget) return event.preventDefault()
+        // The rule is the RENAME, not the identity of the target: a name being typed must select
+        // a word rather than start a drag. It was written as `target !== currentTarget`, which
+        // holds only while the tile is empty — a picture is natively draggable, so the gesture
+        // starts on the `<img>` and every drag of a previewed file would be refused.
+        if (onRename) return event.preventDefault()
         rowDrag.start(event, dragIds)
         onPickUp(dragIds)
       }}
@@ -95,6 +110,19 @@ export function EntryCard({
       <MediaTile
         caption={name}
         fallbackIcon={icon}
+        {...(preview ? { url: preview } : {})}
+        {...(folder
+          ? {
+              // The frame belongs to FILES: it bounds a picture that may be pale or transparent,
+              // and a box around a folder silhouette reads as one more file.
+              bare: true,
+              // Quiet ink rather than the accent: thirty of these fill a folder, and a shape read
+              // at a glance is a shape that does not shout. The alpha is the one `MediaTile`
+              // already draws its own fallback at — below it `tokens.test.ts` refuses the ratio
+              // a glyph that INFORMS owes (WCAG 1.4.11).
+              face: <UiIcon path={mdiFolder} size="fill" className="text-muted/80" />,
+            }
+          : {})}
         {...(onRename
           ? {
               captionField: (

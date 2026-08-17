@@ -523,6 +523,13 @@ export const ASSET_HOST = 'asset'
 export const POSTER_HOST = 'poster'
 
 /**
+ * The host that serves a PREVIEW of a file in the project, named by its path rather than by an
+ * id — the explorer shows files, and most of them have no catalogue row at all. What it hands
+ * back is a small picture the main process rendered and kept under `.index/thumbnails`.
+ */
+export const THUMB_HOST = 'thumb'
+
+/**
  * `scenario://<host>/<id>`. One scheme, one host per kind of thing it serves — the favourites
  * keep their stills outside any project, so they answer on a host of their own.
  */
@@ -559,6 +566,18 @@ export function hostedIdFromUrl(url: string, host: string): string | null {
  */
 export function assetUrl(assetId: string): string {
   return hostedUrl(ASSET_HOST, assetId)
+}
+
+/**
+ * What the explorer draws on the tile of a file it lists, asset or not.
+ *
+ * Keyed by the path and NOT versioned, which is the one thing to know about it: a file replaced
+ * on disk outside the studio keeps the preview the window already decoded until that window
+ * reloads. The cache on disk sees the change — it keys on the size and the stamp — but the URL
+ * it answers is the same one, and nothing here can tell the browser to ask again.
+ */
+export function thumbnailUrl(relativePath: string): string {
+  return hostedUrl(THUMB_HOST, relativePath)
 }
 
 /**

@@ -443,9 +443,15 @@ export const PANE_TOOLBAR = 'absolute top-2 left-2'
  */
 export const TOOLBAR_LABEL = 'text-muted text-tiny px-1'
 
+/**
+ * The corners a tile cuts, without the plate behind them — for a tile that draws a SHAPE rather
+ * than a picture. A folder is the case: a frame bounds a picture that may be pale or transparent,
+ * and a silhouette needs no bounding.
+ */
+export const MEDIA_SHAPE = 'overflow-hidden rounded-(--radius-sc-sm)'
+
 /** The frame every picture sits in, so a tile and a thumbnail cut their corners the same way. */
-export const MEDIA_FRAME =
-  'border-border bg-surface overflow-hidden rounded-(--radius-sc-sm) border'
+export const MEDIA_FRAME = `border-border bg-surface border ${MEDIA_SHAPE}`
 
 /**
  * The plate a mark sits on in the corner of a tile — never WHICH corner, which is each mark's

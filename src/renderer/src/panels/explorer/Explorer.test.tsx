@@ -551,6 +551,28 @@ describe('the project explorer', () => {
       expect(openFile).not.toHaveBeenCalled()
     })
 
+    /**
+     * At icon size, in the tree as in the grid — what every file browser does. A tree that shows
+     * a sheet of paper where the grid beside it shows the picture is two answers to one question.
+     */
+    it('draws a preview in the tree too, and leaves a folder its glyph', async () => {
+      withProject()
+      install({ '': [folder('Images'), file('facade.jpg')] })
+
+      render(<Explorer />)
+      const rowFor = async (name: string): Promise<HTMLElement> => {
+        const row = (await screen.findByText(name)).closest('[role="treeitem"]')
+        if (!(row instanceof HTMLElement)) throw new Error(`no row for ${name}`)
+        return row
+      }
+
+      expect((await rowFor('facade.jpg')).querySelector('img')).toHaveAttribute(
+        'src',
+        'scenario://thumb/facade.jpg',
+      )
+      expect((await rowFor('Images')).querySelector('img')).toBeNull()
+    })
+
     // The other half of the same rule, and it is deliberate: the studio has no editor for prose,
     // and pretending otherwise would be worse than opening it outside.
     it('still hands a file it has no editor for to the system', async () => {
@@ -1564,6 +1586,64 @@ describe('the project explorer, as a grid', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Projet' }))
 
     expect(await screen.findByText('brief.pdf')).toBeInTheDocument()
+  })
+
+  /**
+   * The complaint the grid answered with nothing: a folder was a dark square with a little sign
+   * in it and a `.jpg` was the same square with another sign, so neither question a grid exists
+   * to answer — folder or file, and what is this file about — could be read without the names.
+   */
+  it('draws a folder as a shape, and a file as a preview of itself', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('Images'), file('facade.jpg')] })
+
+    render(<Explorer />)
+
+    expect((await tileFor('Images')).querySelector('img')).toBeNull()
+    // The shape FILLS the tile: a glyph sized in pixels inside a box that is 64 px at one
+    // density and 208 at another is the little sign this replaces.
+    expect((await tileFor('Images')).querySelector('svg')).toHaveStyle({ width: '100%' })
+    // And it wears NO frame: the plate and the border bound a picture, and a box around a
+    // silhouette reads as one more file — which is the distinction the grid exists to draw.
+    expect((await tileFor('Images')).querySelector('figure')).not.toHaveClass('bg-surface')
+    expect((await tileFor('facade.jpg')).querySelector('figure')).toHaveClass('bg-surface')
+
+    expect((await tileFor('facade.jpg')).querySelector('img')).toHaveAttribute(
+      'src',
+      'scenario://thumb/facade.jpg',
+    )
+  })
+
+  // A document is a directory the studio writes, and its glyph names the space that edits it —
+  // asking the disk for a preview of one would answer with nothing, slowly.
+  it('leaves a document its own glyph rather than asking for a preview', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('a3f1.img')] }, [picture])
+
+    render(<Explorer />)
+
+    expect((await tileFor('Planche')).querySelector('img')).toBeNull()
+  })
+
+  /**
+   * The trap this closes, and it was signalled as latent the day before the previews existed:
+   * `EntryCard` refused any drag whose target was not the card itself, and an `<img>` is natively
+   * draggable — so every previewed file became a file that could no longer be moved.
+   */
+  it('moves a tile picked up BY ITS PICTURE, which is what the browser drags from', async () => {
+    withProject()
+    showGrid()
+    const { moveFiles } = install({ '': [folder('Images'), file('facade.jpg')] })
+
+    render(<Explorer />)
+    const picture = (await tileFor('facade.jpg')).querySelector('img')
+    const data = dragTransfer()
+    fireEvent.dragStart(picture!, { dataTransfer: data })
+    fireEvent.drop(await tileFor('Images'), { dataTransfer: data })
+
+    expect(moveFiles).toHaveBeenCalledWith(['facade.jpg'], 'Images')
   })
 
   it('moves a tile dropped on a folder into it', async () => {

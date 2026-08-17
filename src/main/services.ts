@@ -11,6 +11,7 @@ import {
   ASSET_ID_PREFIX,
   DEFAULT_ASSET_FOLDERS,
   POSTER_HOST,
+  THUMB_HOST,
   type Asset,
   type AssetType,
   type MediaProbe,
@@ -19,6 +20,7 @@ import type { MediaCapabilities } from '@shared/domain/media'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import {
   LEGACY_ASSETS_FOLDER,
+  THUMBNAIL_SIZE,
   landedInDefaultFolder,
   planProjectAccount,
   withRecentProject,
@@ -59,6 +61,8 @@ import { openMicrophoneSettings, requestMicrophone } from './dictation/permissio
 import { openSttProcess } from './dictation/stt-process'
 import { adoptFile } from './media/adoptFile'
 import { linkedAsset, mediaFilters } from './media/link'
+import { renderThumbnail } from './media/renderThumbnail'
+import { createThumbnailCache } from './project/thumbnailCache'
 import {
   binaryRuns,
   companionPath,
@@ -1266,6 +1270,26 @@ export function createServices(settings: SettingsStore): Services {
     enabled: () => settings.read().generation.captionArrivals,
   })
 
+  const thumbnails = createThumbnailCache({
+    projectPath: () => project.current()?.path ?? null,
+    render: async (file, relative) => {
+      const drawn = await renderThumbnail(file, THUMBNAIL_SIZE)
+      if (drawn) return drawn
+
+      // A `.glb` is a picture no previewer draws, and the library's own still came down beside
+      // it. Asked ONLY where the machine failed, so the ordinary tile costs no catalogue query.
+      const current = project.current()
+      if (!current) return null
+
+      const [asset] = await project.catalog().search({ path: relative, limit: 1 })
+      const poster = asset ? posterFileOf(current.path, asset) : null
+      return poster ? await readFile(poster) : null
+    },
+    // The same bound the ingest pool takes: previewing is the system's work, but a folder
+    // scrolled fast asks for hundreds at once and each one leaves this process.
+    concurrency: () => Math.max(1, availableParallelism() - 2),
+  })
+
   const favorites = createFavorites(join(app.getPath('userData'), 'favorites'))
   const styles = createStyles(() => app.getPath('userData'))
 
@@ -1285,6 +1309,10 @@ export function createServices(settings: SettingsStore): Services {
       return asset ? posterFileOf(current.path, asset) : null
     },
     [FAVORITE_HOST]: favoriteId => Promise.resolve(favorites.thumbnailPath(favoriteId)),
+    // Named by a PATH rather than by an id, alone among the four: the explorer draws files, and
+    // most of what it draws the catalogue has never heard of. `assetFilePath` refuses whatever
+    // walks out of the project, exactly as it does for a row.
+    [THUMB_HOST]: relative => thumbnails.of(relative),
   })
 
   const stored = settings.read()

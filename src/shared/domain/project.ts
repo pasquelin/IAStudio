@@ -247,6 +247,24 @@ export const FILMSTRIPS_FOLDER = '.index/filmstrips'
  * rush's — the library's when it came from there, one grabbed by ffmpeg when it came off a disk.
  */
 export const POSTERS_FOLDER = '.index/posters'
+/**
+ * What the explorer draws on its tiles, for every file it shows — asset or not. Beside the
+ * catalogue rather than beside the file: `.index/` is thrown away without breaking anything,
+ * and a project that changes machine carries its own previews.
+ */
+export const THUMBNAILS_FOLDER = '.index/thumbnails'
+/**
+ * How much of the disk those previews may take, per project, before the least recently read of
+ * them are dropped. A folder of ten thousand pictures would otherwise grow without end.
+ */
+export const THUMBNAILS_MAX_BYTES = 200 * 1024 * 1024
+/**
+ * How large one is rendered — ONE size for every reader, the tree's little slot included, which
+ * the browser then draws smaller. Here rather than beside the grid's gauge because the main
+ * process renders them and cannot read the renderer; `collection-state.test.ts` holds the two
+ * numbers together.
+ */
+export const THUMBNAIL_SIZE = 208
 
 /**
  * The machine's own, created with the project and never the user's to touch: hidden, read-only,
@@ -260,6 +278,7 @@ export const MACHINE_FOLDERS: readonly string[] = [
   PEAKS_FOLDER,
   FILMSTRIPS_FOLDER,
   POSTERS_FOLDER,
+  THUMBNAILS_FOLDER,
 ]
 
 /**

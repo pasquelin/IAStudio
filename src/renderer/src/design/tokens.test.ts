@@ -217,10 +217,12 @@ const ALPHA_FILL_ALLOWED: Record<string, string> = {
 const DECORATIVE_GLYPHS = ['/Thumbnail.tsx', '/EmptyState.tsx']
 
 /**
- * A glyph that INFORMS, held at the 3:1 of WCAG 1.4.11 rather than the 4.5 of a word. One site:
- * the type icon a media tile falls back to while its poster is being made.
+ * A glyph that INFORMS, held at the 3:1 of WCAG 1.4.11 rather than the 4.5 of a word. Two sites:
+ * the type icon a media tile falls back to while its poster is being made, and the folder shape
+ * an explorer tile is drawn as — which IS the message, the name under it saying nothing about
+ * whether the tile is a folder or a file.
  */
-const INFORMATIVE_GLYPHS = ['/MediaTile.tsx']
+const INFORMATIVE_GLYPHS = ['/MediaTile.tsx', '/EntryCard.tsx']
 
 /**
  * `opacity-70`, `hover:opacity-90`, and Tailwind's arbitrary `opacity-[0.7]` — a dimming written

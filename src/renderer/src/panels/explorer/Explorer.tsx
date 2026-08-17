@@ -7,7 +7,7 @@ import {
 } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Asset } from '@shared/domain/asset'
+import { thumbnailUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
 import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
 import { extensionOf, stemOf } from '@shared/domain/file-name'
@@ -437,6 +437,17 @@ export function Explorer() {
   }
 
   /**
+   * The picture an entry shows in place of its glyph, or nothing. Beside `iconFor` and for the
+   * same reason: two places answering one question is what this panel has already paid for twice.
+   *
+   * A folder has a shape of its own, and a document has the glyph of the space that edits it —
+   * neither is a file to preview. Everything else is asked for, including what the catalogue has
+   * never heard of: the main process answers with what it can render, and nothing where it cannot.
+   */
+  const previewFor = (node: FolderNode): string | undefined =>
+    node.kind === 'file' && !documentOf(node) ? thumbnailUrl(node.path) : undefined
+
+  /**
    * A double-click on a CARD. A folder is gone INTO rather than folded open, a grid having no
    * nesting to draw. Expanding it is not bookkeeping: children are read only once a folder has been
    * opened, so descending without it would land in a folder never fetched and show it empty.
@@ -568,6 +579,8 @@ export function Explorer() {
                 // Never the open glyph: a grid draws no children under a folder, so an open one
                 // would promise a nesting that is not on screen.
                 icon={iconFor(node, false)}
+                folder={node.kind === 'folder' && !documentOf(node)}
+                {...(previewFor(node) ? { preview: previewFor(node) } : {})}
                 open={isOpen(documentOf(node))}
                 waiting={waiting.has(node.path)}
                 // The whole selection where this card is in one, so three carried together arrive
@@ -676,6 +689,7 @@ export function Explorer() {
                   // file still wears a uuid.
                   name={documentOf(node)?.title ?? node.name}
                   icon={iconFor(node, row.expanded)}
+                  {...(previewFor(node) ? { preview: previewFor(node) } : {})}
                   open={isOpen(documentOf(node))}
                   // What a cut looks like before it is pasted: the rows are still there, still
                   // openable, and on their way out.

@@ -2,7 +2,7 @@ import { mdiImageOffOutline } from '@mdi/js'
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { useLoadable } from '@/hooks/useLoadable'
-import { MEDIA_FRAME } from './styles'
+import { MEDIA_FRAME, MEDIA_SHAPE } from './styles'
 import { UiIcon } from './UiIcon'
 
 export type MediaTileProps = {
@@ -42,6 +42,12 @@ export type MediaTileProps = {
    * forced on top of that would crop every picture that is not one.
    */
   fill?: boolean
+  /**
+   * Drops the plate and the border, keeping the corners — for a tile that draws a SHAPE rather
+   * than a picture. The frame exists to bound a picture that may be pale, dark or transparent;
+   * a folder silhouette has nothing to bound, and a box around it reads as a file.
+   */
+  bare?: boolean
 }
 
 /**
@@ -59,11 +65,18 @@ export function MediaTile({
   fallbackIcon = mdiImageOffOutline,
   face,
   fill = false,
+  bare = false,
 }: MediaTileProps) {
   const { src, onError } = useLoadable(url)
 
   return (
-    <figure className={cn(MEDIA_FRAME, 'relative m-0 w-full', fill ? 'h-full' : 'aspect-square')}>
+    <figure
+      className={cn(
+        bare ? MEDIA_SHAPE : MEDIA_FRAME,
+        'relative m-0 w-full',
+        fill ? 'h-full' : 'aspect-square',
+      )}
+    >
       {src ? (
         <img
           src={src}
