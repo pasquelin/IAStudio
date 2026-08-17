@@ -19,10 +19,10 @@ l’ayez vu à l’écran** — d’où que vienne la demande.
 
 Elles n’en voient pas la même part, et c’est délibéré. **L’assistant en connaît onze**, celles
 d’une phrase parlée : ouvrir un espace, chercher un modèle, préparer une génération. **Le point
-d’entrée en offre cent quatorze**, tout ce qu’un programme conduit délibérément — l’arbre des
+d’entrée en offre cent trente et une**, tout ce qu’un programme conduit délibérément — l’arbre des
 fichiers, la pile de calques, le montage, le ciel, la matière, la scène 3D, le dépôt git. La raison
 est prosaïque : le modèle qui lit vos phrases reçoit le catalogue entier avant chacune d’elles, et
-cent quatorze actions n’y laisseraient plus de place pour la phrase.
+cent trente et une actions n’y laisseraient plus de place pour la phrase.
 
 ---
 
@@ -186,7 +186,7 @@ n’est parti.
 
 ## Le catalogue
 
-**Cent quatorze actions, en onze familles.** Le tableau ci-dessous dit ce que chacune couvre
+**Cent trente et une actions, en douze familles.** Le tableau ci-dessous dit ce que chacune couvre
 et ce qu’elle **engage** — c’est cette dernière colonne qui décide si le studio vous demandera
 quelque chose. La liste exacte, avec le détail de chaque paramètre, est ce que votre client
 affiche quand vous lui demandez ses outils : elle n’est pas recopiée ici, parce qu’elle bouge et
@@ -205,6 +205,7 @@ que lui la lit à la source.
 | **La 3D** | la scène : poser un objet, l’orienter, l’éclairer, le peindre, le rattacher | rien |
 | **Le versionnage** | lire le dépôt et l’historique, indexer, enregistrer, brancher, remiser | **des fichiers** pour ce qui réécrit la copie de travail |
 | **Les réglages** | lire et changer les réglages, lister les comptes, en activer un | rien |
+| **Autour des documents** | la fenêtre, le compte, les mises à jour, les polices, les recettes épinglées, les styles de matière | **des fichiers** pour supprimer un style |
 
 **Ce que l’assistant en connaît, lui, tient en onze**, et ce sont celles d’une demande parlée :
 lancer une commande, ouvrir un espace, chercher et choisir un modèle, préparer une génération, la

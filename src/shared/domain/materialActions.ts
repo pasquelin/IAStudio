@@ -175,4 +175,49 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: false },
     ],
   }),
+  action({
+    name: 'styles.list',
+    titleKey: 'assistant.actions.stylesList.title',
+    descriptionKey: 'assistant.actions.stylesList.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    /**
+     * A style is a MATERIAL kept aside, so it is saved from the one in front rather than from
+     * values a client would have to restate. The name is a prefix — the studio makes it unique.
+     */
+    name: 'style.save',
+    titleKey: 'assistant.actions.styleSave.title',
+    descriptionKey: 'assistant.actions.styleSave.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [{ key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true }],
+  }),
+  action({
+    name: 'style.rename',
+    titleKey: 'assistant.actions.styleRename.title',
+    descriptionKey: 'assistant.actions.styleRename.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'styleId', kind: 'text', labelKey: 'assistant.fields.styleId', required: true },
+      { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true },
+    ],
+  }),
+  action({
+    /**
+     * `files` rather than `none`: a style lives outside every project, so nothing in the studio
+     * gives it back — not ⌘Z, not the Explorer.
+     */
+    name: 'style.remove',
+    titleKey: 'assistant.actions.styleRemove.title',
+    descriptionKey: 'assistant.actions.styleRemove.description',
+    commitment: 'files',
+    reach: 'mcp',
+    fields: [
+      { key: 'styleId', kind: 'text', labelKey: 'assistant.fields.styleId', required: true },
+    ],
+  }),
 ]

@@ -333,6 +333,74 @@
         "title": "Fill or empty a channel",
         "description": "Puts an image from the library into one of the eight channels of the material in front. With no asset named, the channel is emptied rather than filled."
       },
+      "stylesList": {
+        "title": "List the material styles",
+        "description": "Answers the saved material styles, with their identifier, their name and the values they keep. They live outside every project and follow the machine."
+      },
+      "styleSave": {
+        "title": "Save the material as a style",
+        "description": "Puts the material of the document in front aside under the given name. The name is a base, the studio making it unique when it is already taken."
+      },
+      "styleRename": {
+        "title": "Rename a material style",
+        "description": "Gives a saved style its name. Nothing else about the style moves, and its identifier stays the same."
+      },
+      "styleRemove": {
+        "title": "Delete a material style",
+        "description": "Removes a saved style. It lives outside every project, so nothing gives it back — neither undo nor the Explorer."
+      },
+      "authState": {
+        "title": "Tell whether the studio is signed in",
+        "description": "Says whether an API key is in place and which account the studio works on. Never answers the key itself, which does not leave the main process."
+      },
+      "windowState": {
+        "title": "Read the state of the window",
+        "description": "Answers the size of the window, whether it is maximised or full screen, and the language it draws in — the one the main process actually settled on."
+      },
+      "windowFullScreen": {
+        "title": "Toggle full screen",
+        "description": "Takes the window into full screen, or out of it. It is a toggle, and there is no way to ask for one of the two states."
+      },
+      "settingsOpen": {
+        "title": "Open the settings on a section",
+        "description": "Opens the settings window on the section asked for, or brings it there when it is already up. Reading and writing a setting does not need it opened."
+      },
+      "updatesState": {
+        "title": "Read where the update stands",
+        "description": "Says where the application update stands — nothing in sight, downloading, or ready to install on the next quit."
+      },
+      "mediaCapabilities": {
+        "title": "Tell what the studio can decode",
+        "description": "Says what this machine is capable of on the media side, which depends on ffmpeg being there. Without it importing still works and the interface says what it cannot do."
+      },
+      "mediaAdopt": {
+        "title": "Give a file a catalogue row",
+        "description": "Brings a file the project folder already holds into the catalogue, without copying it. It is the half of importing that raises no system dialogue."
+      },
+      "fontsList": {
+        "title": "List the installed fonts",
+        "description": "Answers the font families this machine has, one cut each. It is what a text layer can be written in."
+      },
+      "favoritesList": {
+        "title": "List the pinned recipes",
+        "description": "Answers the recipes put aside, with the model that produced them and the workspace that knows how to make them again. A recipe keeps enough to start a generation over."
+      },
+      "favoritePin": {
+        "title": "Pin what produced an asset",
+        "description": "Puts aside what produced an asset of the open project, so it can be made again. An asset nobody generated has no recipe to keep."
+      },
+      "favoriteUnpin": {
+        "title": "Remove a pinned recipe",
+        "description": "Takes a recipe off the pinned list. The asset it had produced is left alone."
+      },
+      "fileInfoOpen": {
+        "title": "Open a file’s information",
+        "description": "Opens the window describing a file of the project — its size, its kind, its history and what the catalogue knows of it."
+      },
+      "mirrorOpen": {
+        "title": "Open the video return",
+        "description": "Opens the return window, or brings it to the front when it is already there. It shows what the montage plays, and carries none of the edit."
+      },
       "sceneState": {
         "title": "Read the scene being edited",
         "description": "Returns every node of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected and what lights the scene."
@@ -511,6 +579,9 @@
       "alsoRemote": "Remove from the remote library too",
       "layerId": "Layer identifier",
       "layerIds": "Layer identifiers",
+      "styleId": "Style identifier",
+      "favoriteId": "Recipe identifier",
+      "settingsSection": "Section of the settings",
       "exposure": "Exposure, in stops",
       "contrast": "Contrast, 1 being neutral",
       "saturation": "Saturation, 1 being neutral",

@@ -145,4 +145,36 @@ describe('the material', () => {
       refusal: 'badInput',
     })
   })
+
+  /**
+   * A style is a material kept aside, so it is saved FROM the one in front rather than from
+   * values a client restates — a second way of building one is a second set of defaults.
+   */
+  it('saves the material in front as a style, and refuses with none in front', async () => {
+    const save = vi.fn(async () => [])
+    installFakeBridge({ styles: { save } })
+
+    expect(await runAction('style.save', { name: 'Pierre' })).toMatchObject({ ok: true })
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({ values: material().material, name: expect.any(String) }),
+    )
+
+    useDocuments.setState({ documents: {}, activeId: null })
+    expect(await runAction('style.save', { name: 'Pierre' })).toEqual({
+      ok: false,
+      refusal: 'wrongSurface',
+    })
+  })
+
+  it('renames and removes a style through their own channels', async () => {
+    const rename = vi.fn(async () => [])
+    const remove = vi.fn(async () => [])
+    installFakeBridge({ styles: { rename, remove } })
+
+    await runAction('style.rename', { styleId: 'style-1', name: 'Béton' })
+    await runAction('style.remove', { styleId: 'style-1' })
+
+    expect(rename).toHaveBeenCalledWith('style-1', 'Béton')
+    expect(remove).toHaveBeenCalledWith('style-1')
+  })
 })

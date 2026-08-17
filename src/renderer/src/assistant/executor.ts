@@ -21,6 +21,7 @@ import { MATERIAL_HANDLERS } from './materialHandlers'
 import { SCENE_HANDLERS } from './sceneHandlers'
 import { SEQUENCE_HANDLERS } from './sequenceHandlers'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
+import { SHELL_HANDLERS } from './shellHandlers'
 import { STATE_HANDLERS } from './stateHandlers'
 
 /**
@@ -43,6 +44,7 @@ const HANDLERS: ActionHandlers = {
   ...SCENE_HANDLERS,
   ...GIT_HANDLERS,
   ...SETTINGS_HANDLERS,
+  ...SHELL_HANDLERS,
 }
 
 /** Every name the table answers, so a test can compare it with the registry. */

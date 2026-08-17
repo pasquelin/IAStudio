@@ -19,10 +19,10 @@ it on screen** — wherever the request came from.
 
 They do not see the same share of it, and that is deliberate. **The assistant knows eleven**, the
 ones a spoken sentence needs: open a workspace, find a model, prepare a generation. **The way in
-offers a hundred and fourteen**, everything a program drives deliberately — the file tree, the
+offers a hundred and thirty-one**, everything a program drives deliberately — the file tree, the
 layer stack, the montage, the sky, the material, the 3D scene, the git repository. The reason is a
 plain one: the model that reads your sentences is given the whole catalogue before each of them,
-and a hundred and fourteen actions would leave no room left for the sentence.
+and a hundred and thirty-one actions would leave no room left for the sentence.
 
 ---
 
@@ -183,7 +183,7 @@ the prepared generation** has had your yes on screen, nothing has gone out.
 
 ## The catalogue
 
-**A hundred and fourteen actions, in eleven families.** The table below says what each family covers and what
+**A hundred and thirty-one actions, in twelve families.** The table below says what each family covers and what
 it **commits** — that last column is what decides whether the studio will ask you anything. The
 exact list, with every parameter of every action, is what your client shows when you ask it for its
 tools: it is not copied out here, because it moves and because your client reads it at the source.
@@ -201,6 +201,7 @@ tools: it is not copied out here, because it moves and because your client reads
 | **3D** | the scene: place an object, turn it, light it, paint it, reparent it | nothing |
 | **Versions** | read the repository and its history, stage, record, branch, shelve | **files**, for whatever rewrites the working tree |
 | **Settings** | read and change the settings, list the accounts, switch to one | nothing |
+| **Around the documents** | the window, the account, updates, fonts, pinned recipes, material styles | **files**, for deleting a style |
 
 **What the assistant knows comes to eleven**, and they are the ones a spoken request needs: run a
 command, open a workspace, search for and pick a model, prepare a generation, start it, list the

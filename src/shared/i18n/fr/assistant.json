@@ -333,6 +333,74 @@
         "title": "Remplir ou vider un canal",
         "description": "Met une image de la bibliothèque dans un des huit canaux de la matière devant. Sans asset nommé, le canal est vidé plutôt que rempli."
       },
+      "stylesList": {
+        "title": "Lister les styles de matière",
+        "description": "Rend les styles de matière enregistrés, avec leur identifiant, leur nom et les valeurs qu’ils gardent. Ils vivent hors de tout projet et suivent la machine."
+      },
+      "styleSave": {
+        "title": "Enregistrer la matière comme style",
+        "description": "Met de côté la matière du document devant sous le nom donné. Le nom sert de base, le studio le rendant unique s’il est déjà pris."
+      },
+      "styleRename": {
+        "title": "Renommer un style de matière",
+        "description": "Donne son nom à un style enregistré. Rien d’autre du style ne bouge, et son identifiant reste le même."
+      },
+      "styleRemove": {
+        "title": "Supprimer un style de matière",
+        "description": "Retire un style enregistré. Il vit hors de tout projet, donc rien ne le rend — ni l’annulation, ni l’Explorateur."
+      },
+      "authState": {
+        "title": "Savoir si le studio est connecté",
+        "description": "Dit si une clé API est en place et sur quel compte le studio travaille. Ne rend jamais la clé elle-même, qui ne quitte pas le processus principal."
+      },
+      "windowState": {
+        "title": "Lire l’état de la fenêtre",
+        "description": "Rend la taille de la fenêtre, si elle est agrandie ou en plein écran, et la langue dans laquelle elle dessine — celle que le processus principal a réellement retenue."
+      },
+      "windowFullScreen": {
+        "title": "Basculer le plein écran",
+        "description": "Fait entrer la fenêtre en plein écran, ou l’en fait sortir. C’est un basculement, il n’y a pas de façon de demander l’un des deux états."
+      },
+      "settingsOpen": {
+        "title": "Ouvrir les réglages sur une section",
+        "description": "Ouvre la fenêtre des réglages sur la section demandée, ou l’y amène si elle est déjà ouverte. Lire et écrire un réglage ne demande pas de l’ouvrir."
+      },
+      "updatesState": {
+        "title": "Lire l’état des mises à jour",
+        "description": "Dit où en est la mise à jour de l’application — rien en vue, en cours de téléchargement, ou prête à s’installer à la prochaine fermeture."
+      },
+      "mediaCapabilities": {
+        "title": "Savoir ce que le studio sait décoder",
+        "description": "Dit de quoi la machine est capable côté média, ce qui dépend de la présence de ffmpeg. Sans lui, l’import fonctionne mais l’interface annonce ce qu’elle ne peut pas faire."
+      },
+      "mediaAdopt": {
+        "title": "Donner une ligne de catalogue à un fichier",
+        "description": "Fait entrer dans le catalogue un fichier que le dossier du projet contient déjà, sans le copier. C’est la moitié de l’import qui n’ouvre pas de dialogue système."
+      },
+      "fontsList": {
+        "title": "Lister les polices installées",
+        "description": "Rend les familles de police que la machine a, une graisse par famille. C’est ce dans quoi un calque de texte peut être écrit."
+      },
+      "favoritesList": {
+        "title": "Lister les recettes épinglées",
+        "description": "Rend les recettes mises de côté, avec le modèle qui les a produites et l’espace qui sait les refaire. Une recette garde de quoi relancer une génération."
+      },
+      "favoritePin": {
+        "title": "Épingler la recette d’un asset",
+        "description": "Met de côté ce qui a produit un asset du projet ouvert, pour pouvoir le refaire. Un asset que personne n’a généré n’a pas de recette à garder."
+      },
+      "favoriteUnpin": {
+        "title": "Retirer une recette épinglée",
+        "description": "Enlève une recette de la liste des épinglées. L’asset qu’elle avait produit, lui, ne bouge pas."
+      },
+      "fileInfoOpen": {
+        "title": "Ouvrir les informations d’un fichier",
+        "description": "Ouvre la fenêtre qui décrit un fichier du projet — sa taille, sa nature, son historique et ce que le catalogue en sait."
+      },
+      "mirrorOpen": {
+        "title": "Ouvrir le retour vidéo",
+        "description": "Ouvre la fenêtre de retour, ou la ramène devant si elle est déjà là. Elle montre ce que le montage joue, sans rien porter du travail."
+      },
       "sceneState": {
         "title": "Lire la scène en cours d’édition",
         "description": "Rend tous les objets du document 3D devant — identifiant, nom, type, parent, visibilité et transformation, avec la géométrie, la matière ou la lumière qu’ils portent — plus ce qui est sélectionné et ce qui éclaire la scène."
@@ -511,6 +579,9 @@
       "alsoRemote": "Retirer aussi de la bibliothèque distante",
       "layerId": "Identifiant du calque",
       "layerIds": "Identifiants des calques",
+      "styleId": "Identifiant du style",
+      "favoriteId": "Identifiant de la recette",
+      "settingsSection": "Section des réglages",
       "exposure": "Exposition, en diaphragmes",
       "contrast": "Contraste, 1 étant neutre",
       "saturation": "Saturation, 1 étant neutre",

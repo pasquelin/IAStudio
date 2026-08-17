@@ -1,5 +1,7 @@
 import type { LanguagePreference } from '../i18n/languages'
-import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistant'
+// From the model module rather than from the registry: `shellActions.ts` reads this file, and the
+// registry reads it back — `import-cycles.test.ts` holds that count at zero.
+import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistantModel'
 import type { BindingOverrides } from './command'
 import type { DictationMode } from './dictation'
 import type { ApiFailure } from './failure'

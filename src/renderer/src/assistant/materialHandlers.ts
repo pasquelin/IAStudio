@@ -13,6 +13,7 @@ import { setChannel, setPreview, setTextureMaterial } from '@/engines/texture/co
 import type { TextureState } from '@/engines/texture/textureState'
 import { activeSkyboxId, activeTextureId, useDocuments } from '@/stores/documents'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import { useStyles } from '@/stores/styles'
 import { textureOf, useTextures } from '@/stores/textures'
 import { withAsset, type ActionHandlers } from './actionHandler'
 import { boolOf, numberOf, oneOf, textOf } from './actionInputs'
@@ -275,4 +276,41 @@ export const MATERIAL_HANDLERS: ActionHandlers = {
   'texture.material': material,
   'texture.preview': preview,
   'texture.channel': channel,
+
+  'styles.list': async () => {
+    await useStyles.getState().load()
+    return { ok: true, data: useStyles.getState().styles }
+  },
+
+  /**
+   * From the material in front, never from values a client restates: a style IS a material kept
+   * aside, and a second way of building one is a second set of defaults to keep in step.
+   */
+  'style.save': async input => {
+    const open = materialOpen()
+    if (!open) return refused('wrongSurface')
+
+    const name = textOf(input, 'name')
+    if (name === null) return refused('badInput')
+
+    await useStyles.getState().save(open.state.material, name)
+    return { ok: true, data: useStyles.getState().styles }
+  },
+
+  'style.rename': async input => {
+    const name = textOf(input, 'name')
+    const styleId = textOf(input, 'styleId')
+    if (name === null || styleId === null) return refused('badInput')
+
+    await useStyles.getState().rename(styleId, name)
+    return { ok: true, data: useStyles.getState().styles }
+  },
+
+  'style.remove': async input => {
+    const styleId = textOf(input, 'styleId')
+    if (styleId === null) return refused('badInput')
+
+    await useStyles.getState().remove(styleId)
+    return { ok: true, data: useStyles.getState().styles }
+  },
 }

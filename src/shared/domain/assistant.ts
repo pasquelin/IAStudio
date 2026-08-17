@@ -14,6 +14,7 @@ import { MATERIAL_ACTIONS } from './materialActions'
 import { SCENE_ACTIONS } from './sceneActions'
 import { SEQUENCE_ACTIONS } from './sequenceActions'
 import { SETTINGS_ACTIONS } from './settingsActions'
+import { SHELL_ACTIONS } from './shellActions'
 import { STATE_ACTIONS } from './stateActions'
 
 /**
@@ -27,43 +28,7 @@ import { STATE_ACTIONS } from './stateActions'
  */
 
 export * from './assistantAction'
-
-/**
- * The catalogue model the assistant thinks with. One model, whose own `model` parameter picks
- * which language model actually answers.
- *
- * It is an ordinary model of the catalogue, which is the whole reason the assistant needs no
- * second account and no second key: it goes through `ModelRegistry`, the `JobManager`, the rate
- * limiter and the cost meter that are already there.
- */
-export const ASSISTANT_MODEL_ID = 'model_scenario-llm'
-
-/**
- * Which language model answers, and what it costs.
- *
- * Measured with `dryRun` on 2026-08-15, for one short instruction: Haiku 4.5 at 0.75 creative
- * units, Gemini 3.5 Flash at 1, Opus 4.8 at 2.75. Ten blocks of history take Haiku from 0.75 to
- * 1 — so a five-turn conversation costs about what one picture does, which is why the modal
- * shows the running total rather than leaving it to be discovered on the invoice.
- *
- * The full list the API accepts is wider; these are the four worth offering. Haiku is the
- * default: routing a sentence to an action is not the work that needs the best model.
- */
-export type AssistantModel =
-  'claude-haiku-4-5' | 'claude-sonnet-4-6' | 'claude-opus-4-8' | 'gemini-3.5-flash'
-
-export const ASSISTANT_MODELS: readonly AssistantModel[] = [
-  'claude-haiku-4-5',
-  'claude-sonnet-4-6',
-  'claude-opus-4-8',
-  'gemini-3.5-flash',
-]
-
-export const DEFAULT_ASSISTANT_MODEL: AssistantModel = 'claude-haiku-4-5'
-
-/** What the API refuses beyond, measured from the model's own schema. */
-export const INSTRUCTION_MAX = 10_000
-export const HISTORY_MAX = 10
+export * from './assistantModel'
 
 export { commitmentOfCommand } from './coreActions'
 
@@ -85,6 +50,7 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
   ...SCENE_ACTIONS,
   ...GIT_ACTIONS,
   ...SETTINGS_ACTIONS,
+  ...SHELL_ACTIONS,
 ]
 
 /** The share of the registry one door offers. `mcp` is everything; `both` is the short list. */
