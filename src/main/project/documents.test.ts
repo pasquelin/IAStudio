@@ -373,6 +373,22 @@ describe('createDocumentFiles', () => {
   })
 
   /**
+   * The folder is the user's, and the studio's memory of it is filled by a listing. A file that
+   * landed since — copied in by hand, or left by a window that never listed — was invisible to a
+   * check taken from that memory, and the first save of a fresh document wrote straight over it.
+   * `file-plan` asks the folder for the same question, and now so does this.
+   */
+  it('suffixes around a file it was never told about', async () => {
+    await mkdir(join(root, 'documents'), { recursive: true })
+    await writeFile(join(root, 'documents/Niveau.scene'), 'theirs', 'utf8')
+
+    await documents.write('doc-1', 'scene', { title: 'Niveau', content: 'mine' })
+
+    expect(await readFile(join(root, 'documents/Niveau.scene'), 'utf8')).toBe('theirs')
+    expect((await documents.read('doc-1', 'scene'))?.content).toBe('mine')
+  })
+
+  /**
    * A title is a file name now, and a file name cannot hold a separator: `Brique 1/2` would
    * land on `Brique 1 2` and the document would answer to two names again.
    */

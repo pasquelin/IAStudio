@@ -242,16 +242,26 @@ export function createDocumentFiles({
   const index = new Map<string, string>()
 
   /**
-   * The documents ONE folder holds, as a name check needs to see them.
+   * What ONE folder already holds, as a name check needs to see it.
+   *
+   * Read from the DISK rather than from `index`, and there is one answer to "is this name taken"
+   * in the studio rather than two: `file-plan` asks the folder, so this asks the folder. The
+   * index is a cache `walk` fills — `rename` already says below that it decides nothing — and
+   * this question decides where a file is WRITTEN, where both `writeFile` and `fs.rename`
+   * overwrite without a word. One listing out of date is a document lost.
+   *
+   * Every entry, not only the ones that read back as documents: the disk cannot hold two things
+   * of one name, so a `Sans titre.scene` too damaged to open still takes the name it wears.
+   *
+   * Keyed by the directory entry, which is all a name check ever needs an id for — telling the
+   * document being renamed apart from its own name.
    *
    * Per folder and not across the project: two folders may each hold a `Niveau.scene` and the
    * disk is happy with both, so a check taken over the whole tree would refuse a name nothing
    * where the document sits answers to.
    */
-  const namesIn = (folder: string, except?: string): NamedDocument[] =>
-    [...index]
-      .filter(([key, path]) => key !== except && (parentOf(path) ?? '') === folder)
-      .map(([key, path]) => ({ id: key, fileName: basename(path) }))
+  const namesIn = async (folder: string): Promise<NamedDocument[]> =>
+    ((await folderNames(folder)) ?? []).map(fileName => ({ id: fileName, fileName }))
 
   /**
    * The modification time each document's file carried when the studio last read or wrote it.
@@ -589,12 +599,12 @@ export function createDocumentFiles({
    * naming a document nobody has named yet ("Sans titre 2", the title of an asset opened twice),
    * and there is no one to ask. A name the USER typed is refused instead, by `rename`.
    *
-   * Reads the index as `locate` has just left it, rather than walking the folder a second time.
+   * One `readdir` of the landing folder, which is what a first save can afford — and the only
+   * answer worth having: this path is handed straight to a write that overwrites what it lands
+   * on, and nothing else stands between the two.
    */
-  const freshFile = (kind: DocumentKind, title: string): string => {
-    // Only the file names matter here — a free name is one no entry of the folder wears — so the
-    // key is handed over as the id it stands for and nothing reads it.
-    const taken = namesIn(DOCUMENTS_FOLDER)
+  const freshFile = async (kind: DocumentKind, title: string): Promise<string> => {
+    const taken = await namesIn(DOCUMENTS_FOLDER)
     return join(defaultFolder(), documentFileName(nextFreeDocumentName(title, kind, taken), kind))
   }
 
@@ -642,7 +652,7 @@ export function createDocumentFiles({
         // gesture, not something a save does behind them.
         const located = await locate(id, kind)
         const onDisk = await exists(located)
-        const file = onDisk ? located : freshFile(kind, draft.title)
+        const file = onDisk ? located : await freshFile(kind, draft.title)
 
         // A document the studio has no clock for is one it cannot claim to have written, so it
         // is not defended — and nothing is stat'd for it either.
@@ -666,11 +676,12 @@ export function createDocumentFiles({
         // the user's back, and the folder they filed it in is the one the name has to be free in.
         const inFolder = parentOf(relativeOf(from)) ?? ''
 
-        const taken = namesIn(inFolder, keyOf(id, kind))
+        const taken = await namesIn(inFolder)
 
         // The failure travels as the message, so the window says which of the four it was rather
-        // than reporting every refusal as a name already taken.
-        const refused = checkDocumentName(title, kind, taken)
+        // than reporting every refusal as a name already taken. The document's own entry is
+        // exempted by the name it wears, which is what the folder knows it by.
+        const refused = checkDocumentName(title, kind, taken, basename(from))
         if (refused) throw new Error(refused)
 
         const entry = documentFileName(title, kind)
@@ -684,7 +695,8 @@ export function createDocumentFiles({
         /**
          * Asked before renaming, because `fs.rename` overwrites without a word on POSIX — and
          * replaces an empty directory without one either, which is what an untouched `.img` is.
-         * The index only knows what it has read; the disk is what decides.
+         * Kept even though `checkDocumentName` above now reads the same folder: that listing was
+         * taken before the envelope was rewritten, and this is the last word before the move.
          *
          * Except when it is THIS document answering: `Niveau` → `niveau` is the plainest rename
          * there is, and on APFS and NTFS the file it would land on is the one it is leaving —
