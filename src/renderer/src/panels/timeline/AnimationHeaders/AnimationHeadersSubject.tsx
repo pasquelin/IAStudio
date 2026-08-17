@@ -12,7 +12,7 @@ import { useAnimationViews } from '@/stores/animationView'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { useSceneViews, sceneViewOf } from '@/stores/sceneViews'
 import { TimelineRow } from '../TimelineRow/TimelineRow'
-import { isFlagOnAll, TRACK_FLAGS } from '../track-flags'
+import { isFlagOnAll, TRACK_FLAGS } from '../trackFlags'
 
 /** A row id back into the pair its channels are addressed by — the inverse of `subjectKey`. */
 function subjectOf(rowId: string): { nodeId: string; bone?: string } {

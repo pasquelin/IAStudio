@@ -4,7 +4,7 @@ import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { TRACK_FLAGS } from '@/panels/timeline/track-flags'
+import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
 import {
   clampTrackHeight,
   MAX_TRACK_HEIGHT,

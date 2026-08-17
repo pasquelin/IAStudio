@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { groupLayer, pixelLayer, type Layer } from '@/engines/canvas/canvasState'
 import { fakeMenu } from '@/helpers/menu-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { openLayerMenu } from './LayerMenu'
+import { openLayerMenu } from './layerMenu'
 
 let menu = fakeMenu()
 const run = vi.fn()

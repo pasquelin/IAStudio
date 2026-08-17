@@ -10,7 +10,7 @@ import { removeLayer, renameLayer, setLayerLocks } from '@/engines/canvas/comman
 import type { Command } from '@/engines/core/history'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { InlineRename } from '@/design/InlineRename'
-import { LAYER_LOCKS } from './layer-locks'
+import { LAYER_LOCKS } from './layerLocks'
 import { useCanvases } from '@/stores/canvases'
 
 /**

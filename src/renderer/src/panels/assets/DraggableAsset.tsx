@@ -4,7 +4,7 @@ import type { Asset } from '@shared/domain/asset'
 import { startAssetDrag } from '@/helpers/assetDrag'
 import { isTyping } from '@/helpers/typing'
 import { useSelection } from '@/stores/selection'
-import { openAssetMenu } from './AssetMenu'
+import { openAssetMenu } from './assetMenu'
 
 export type DraggableAssetProps = {
   asset: Asset

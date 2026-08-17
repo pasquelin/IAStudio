@@ -9,7 +9,7 @@ import { tipFor } from '@/helpers/tooltip'
 import { VIDEO_TOOLS, isVideoTool } from '@/spaces/video/videoTools'
 import { useSequences } from '@/stores/sequences'
 import { useVideoTool } from '@/stores/videoTool'
-import { TRACK_KIND_ICONS } from './track-flags'
+import { TRACK_KIND_ICONS } from './trackFlags'
 
 export type SequenceActionsProps = {
   documentId: string

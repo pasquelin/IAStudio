@@ -9,7 +9,7 @@ import {
   queryFrom,
   sortOptions,
   TAG_FACET,
-} from './model-filters'
+} from './modelFilters'
 
 const identity = (key: string): string => key
 

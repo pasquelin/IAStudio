@@ -17,7 +17,7 @@ import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { useSelection } from '@/stores/selection'
 import { useAssetFacets } from './facets'
-import { useTypeLabels } from './type-facet'
+import { useTypeLabels } from './typeFacet'
 
 /** Names the chosen pictures from what the API sees in them. Nothing happens without a click. */
 async function describeSelection(assetIds: readonly string[]): Promise<void> {
