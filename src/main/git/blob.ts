@@ -1,6 +1,6 @@
 import { execFile as execFileCallback } from 'node:child_process'
-import { readFile, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { readFile, realpath, stat } from 'node:fs/promises'
+import { isAbsolute, join, relative, sep } from 'node:path'
 import { promisify } from 'node:util'
 
 const execFile = promisify(execFileCallback)
@@ -51,17 +51,35 @@ export async function blobAt(
 }
 
 /**
+ * Where a read is allowed to land, decided by what the disk RESOLVES TO rather than by the shape
+ * of the path. `gitPath` refuses the shapes it knows — absolute, climbing, glob — and a shape is a
+ * blocklist: a versioned symbolic link names nothing suspicious and walks straight out. Both ends
+ * go through `realpath`, because a project under a linked folder is ordinary (on macOS `/var` is
+ * one, and every temporary folder a test makes lives there). `.git` is refused as well: it is
+ * inside the project, and its config file holds the token a remote was cloned with.
+ */
+async function fileInside(root: string, path: string): Promise<string | null> {
+  try {
+    const file = await realpath(join(root, path))
+    const within = relative(await realpath(root), file)
+
+    if (within.startsWith('..') || isAbsolute(within)) return null
+    return within.split(sep)[0] === '.git' ? null : file
+  } catch {
+    return null
+  }
+}
+
+/**
  * The bytes of the file as it stands on disk — the other half of a comparison, when what is
  * being compared is a change that has not been recorded yet.
  *
  * The size is asked BEFORE the read rather than after: reading a two-gigabyte take into memory
  * to then decide it is too big is the failure this ceiling exists to prevent.
- *
- * The path has already been validated as relative and unable to climb out — see `gitPath`. This
- * joins it to the project root and no other.
  */
 export async function workingBlob(root: string, path: string): Promise<Uint8Array | null> {
-  const file = join(root, path)
+  const file = await fileInside(root, path)
+  if (file === null) return null
 
   try {
     if ((await stat(file)).size > BLOB_MAX_BYTES) return null
