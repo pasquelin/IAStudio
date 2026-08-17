@@ -140,9 +140,8 @@ the text lands **at the caret** — not at the end. What you had already typed i
 This holds for every field in the studio, not only the prompt: the asset search, renaming a
 layer, naming a document.
 
-**The button, on the other hand, always writes into the field carrying it**, after whatever is
-already there: pressing it takes the caret out of the field, and the sentence has to land
-somewhere.
+**A field's own microphone follows the same rule**, which is why it keeps the caret at home:
+pressing it does not leave the field, and the sentence lands there as if you had typed it.
 
 ### What you see while it listens
 

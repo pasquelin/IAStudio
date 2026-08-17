@@ -12,13 +12,6 @@ export type DictationButtonProps = {
   variant?: 'bar' | 'header' | 'row'
   /** Tooltip factory of the host, as for any other button of a dock. */
   tooltip: TooltipFactory
-  /**
-   * A session was asked for from THIS button, as opposed to from the key or another one.
-   *
-   * What a host claiming the words needs to know: the session itself is one for the whole window,
-   * so its state cannot say which microphone opened it.
-   */
-  onStart?: () => void
 }
 
 /**
@@ -32,7 +25,7 @@ export type DictationButtonProps = {
  * Built on `ToolButton` like every other button in a dock — the accented state it already has
  * is exactly "this tool is in use", which is what a live microphone is.
  */
-export function DictationButton({ variant = 'bar', tooltip, onStart }: DictationButtonProps) {
+export function DictationButton({ variant = 'bar', tooltip }: DictationButtonProps) {
   const { t } = useTranslation()
   const label = useShortcutLabel()
   const shortcut = label(useBinding('app.dictate'))
@@ -63,12 +56,7 @@ export function DictationButton({ variant = 'bar', tooltip, onStart }: Dictation
         variant={variant}
         accented={dictation.isListening}
         disabled={dictation.state === 'loadingEngine' || dictation.state === 'downloadingModel'}
-        onClick={() => {
-          // Announced BEFORE the round trip that opens the microphone: a host that claims the
-          // words has to hold the claim before the first of them can settle.
-          if (!dictation.isListening) onStart?.()
-          void (dictation.isListening ? dictation.stop() : dictation.start())
-        }}
+        onClick={() => void (dictation.isListening ? dictation.stop() : dictation.start())}
       />
     </span>
   )

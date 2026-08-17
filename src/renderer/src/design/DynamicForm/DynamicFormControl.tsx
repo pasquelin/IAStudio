@@ -1,5 +1,5 @@
 import { mdiDiceMultipleOutline } from '@mdi/js'
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { FieldDescriptor } from '@shared/domain/model'
@@ -32,6 +32,7 @@ export function DynamicFormControl({
 }: DynamicFormControlProps) {
   const { t } = useTranslation()
   const say = useModelText()
+  const box = useRef<HTMLTextAreaElement | null>(null)
 
   switch (field.kind) {
     case 'longText':
@@ -46,11 +47,32 @@ export function DynamicFormControl({
             rows={4}
             className="min-h-0 w-full flex-1 resize-none bg-transparent px-2 py-1"
             {...registration}
+            ref={element => {
+              registration.ref(element)
+              box.current = element
+            }}
           />
 
           {accessory && (
-            // `pr-4` leaves the grip its corner: the strip ends before it rather than over it.
-            <div className="flex items-center justify-end gap-2 pr-4 pb-1 pl-1.5">{accessory}</div>
+            /**
+             * The strip HOLDS the caret in the box, and that is what makes everything it carries
+             * work: dictation writes wherever the caret is, so a button that took the focus left
+             * the sentence with no field to land in — and a form carries three boxes at times.
+             *
+             * The `focus()` is what the test measures, and it is enough on its own. The
+             * `preventDefault` spares the round trip it would otherwise repair — the box blurs,
+             * the button takes the focus, the click gives it back — which nothing here can see
+             * but a scrolled panel and a lost selection would.
+             *
+             * `pr-4` leaves the grip its corner: the strip ends before it rather than over it.
+             */
+            <div
+              className="flex items-center justify-end gap-2 pr-4 pb-1 pl-1.5"
+              onMouseDown={event => event.preventDefault()}
+              onClick={() => box.current?.focus()}
+            >
+              {accessory}
+            </div>
           )}
         </div>
       )

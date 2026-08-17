@@ -51,11 +51,11 @@ export type DynamicFormProps = {
    * spoken prompt is dictated. Called for every field so that nothing about any particular
    * feature is decided here; answering `null` leaves the field alone.
    *
-   * `append` is the only handle onto the value, and it goes one way: the accessory adds a
-   * sentence to that field and can neither read it nor replace it. The full trio — `read`,
-   * `write`, `readAll` — was here for prompt assistance, which moved to the assistant.
+   * The field alone, with no handle onto its value. It carried one — `read`, `write`, `readAll`
+   * — for prompt assistance, which rewrote the field it hung under. That moved to the assistant,
+   * which reaches the form through `GeneratorBridge` instead, and nothing was left reading it.
    */
-  accessory?: (field: FieldDescriptor, append: (text: string) => void) => ReactNode
+  accessory?: (field: FieldDescriptor) => ReactNode
 }
 
 /**
@@ -104,16 +104,6 @@ export function DynamicForm({
     return () => subscription.unsubscribe()
   }, [fields, getValues, onValuesChange, watch])
 
-  // Through the form rather than into the element: a sentence lands while the focus is on the
-  // button that opened the microphone, and the caret it left is no longer in the field.
-  const append = (key: string, text: string): void => {
-    const current = String(getValues(key) ?? '')
-    setValue(key, current === '' ? text : `${current} ${text}`, {
-      shouldValidate: true,
-      shouldDirty: true,
-    })
-  }
-
   // Watching the whole form would re-render every control on every keystroke. Only the keys
   // another field declares a dependency on can change what is on screen.
   const watched = dependencies.length > 0 ? watch(dependencies) : []
@@ -151,7 +141,7 @@ export function DynamicForm({
                 registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
                 initial={initial[field.key]}
                 onRoll={() => setValue(field.key, randomSeed())}
-                accessory={accessory?.(field, text => append(field.key, text))}
+                accessory={accessory?.(field)}
               />
 
               {field.help && <span className="text-muted text-tiny">{say(field.help)}</span>}

@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
@@ -213,28 +213,54 @@ describe('DynamicForm', () => {
     })
 
     /**
-     * The field a model asked for, not the descriptor: `append` goes through the form, so what
-     * is added is submitted and validated like anything typed. A sentence dictated while the
-     * focus sat on the microphone had nowhere else to go — the caret path refuses a `<button>`.
+     * What the whole arrangement rests on: dictation writes wherever the caret is, so a button
+     * that took the focus left the spoken sentence with no field to land in — silently, since
+     * the caret path answers `false` rather than guessing. A form carries three boxes at times,
+     * and which one receives has to stay readable from the screen.
      */
-    it('adds a sentence to the field it sits in, leaving what is already there', async () => {
-      let add: (text: string) => void = () => {}
+    it('keeps the caret in the box its strip belongs to', async () => {
       render(
         <DynamicForm
           fields={fields}
           onSubmit={vi.fn()}
           submitLabel="Générer"
-          accessory={(shown, append) => {
-            if (shown.key === 'prompt') add = append
-            return null
-          }}
+          accessory={shown =>
+            shown.key === 'prompt' && (
+              <button type="button" onClick={() => {}}>
+                Dicter
+              </button>
+            )
+          }
         />,
       )
 
-      await userEvent.type(screen.getByLabelText(/Prompt/), 'un chat')
-      act(() => add('roux'))
+      const box = screen.getByLabelText(/Prompt/)
+      box.focus()
+      await userEvent.click(screen.getByRole('button', { name: 'Dicter' }))
 
-      expect(screen.getByLabelText(/Prompt/)).toHaveValue('un chat roux')
+      expect(box).toHaveFocus()
+    })
+
+    // And gives it one it never had: a box spoken into without having been clicked in first.
+    it('gives the box the caret when the strip is pressed', async () => {
+      render(
+        <DynamicForm
+          fields={fields}
+          onSubmit={vi.fn()}
+          submitLabel="Générer"
+          accessory={shown =>
+            shown.key === 'prompt' && (
+              <button type="button" onClick={() => {}}>
+                Dicter
+              </button>
+            )
+          }
+        />,
+      )
+
+      await userEvent.click(screen.getByRole('button', { name: 'Dicter' }))
+
+      expect(screen.getByLabelText(/Prompt/)).toHaveFocus()
     })
 
     /**

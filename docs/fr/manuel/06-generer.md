@@ -146,8 +146,8 @@ tapé n'est jamais écrasé.
 Cela vaut pour tous les champs du studio, pas seulement le prompt : la recherche d'assets, le
 renommage d'un calque, un nom de document.
 
-**Le bouton, lui, écrit toujours dans le champ qui le porte**, et à la suite de ce qui s'y
-trouve : appuyer dessus sort le curseur du champ, et la phrase doit bien aller quelque part.
+**Le micro d'un champ suit la même règle**, et c'est pour cela qu'il garde le curseur chez lui :
+l'appuyer ne sort pas du champ, la phrase s'y pose comme si vous l'aviez tapée.
 
 ### Ce que vous voyez pendant
 
