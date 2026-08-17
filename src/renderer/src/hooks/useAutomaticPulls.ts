@@ -1,5 +1,8 @@
 import { useEffect, useRef } from 'react'
 
+/** How many pulls one key is worth by default. A bound, not a policy: every page costs a quota. */
+const PULLS_MAX = 3
+
 export type AutomaticPulls = {
   /** What the listing is asking. The count starts afresh whenever it changes. */
   key: string
@@ -7,32 +10,27 @@ export type AutomaticPulls = {
   drawn: number
   /** Below how many drawn rows the list keeps asking on its own. */
   wanted?: number
-  /** How many pulls one key is worth. A bound, not a policy: every page costs a search quota. */
-  max: number
+  max?: number
   /** Whether a page is already on its way: a pull spent while one is in flight is spent on nothing. */
   fetching: boolean
   /**
-   * A value that changes as an answer lands, which is what arms the next pull — a run of pages
-   * drawing nothing moves nothing else. Omitted by a caller whose `ask` already takes a new
-   * identity per answer.
+   * A value that changes as an answer lands, which is what arms the next pull: a run of pages
+   * drawing nothing moves nothing else.
    */
-  answered?: unknown
+  answered: unknown
   /** Asks for the next page, or nothing at all when there is nobody to ask. */
   ask: (() => void) | null
 }
 
 /**
- * Pulls a listing on its own while too little is drawn, up to a ceiling.
- *
- * A surface with no row has no end for a scroll to near, and a source CAN hold a list at nothing
- * while having more to give — a page the API narrowed away after answering does exactly that.
- * Past the ceiling it waits for a scroll, and the end-of-list gesture takes over.
+ * Pulls a listing on its own while too little is drawn, up to a ceiling. Past it the surface waits
+ * for a scroll, and the end-of-list gesture takes over.
  */
 export function useAutomaticPulls({
   key,
   drawn,
   wanted = 1,
-  max,
+  max = PULLS_MAX,
   fetching,
   answered,
   ask,

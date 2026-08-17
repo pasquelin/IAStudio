@@ -6,7 +6,6 @@ import { failureKeyOf } from '@/services/failureMessage'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { isFiltered } from '@/helpers/collectionState'
-import { useAutomaticPulls } from '@/hooks/useAutomaticPulls'
 import { useDebounced, SEARCH_DELAY_MS } from '@/hooks/useDebounced'
 import { useLazyPreviews } from '@/hooks/useLazyPreviews'
 import { usePages } from '@/hooks/usePages'
@@ -77,10 +76,12 @@ export function Models() {
 
   // The walk covers private models then public ones, and a model listed in both would otherwise
   // appear twice — and collide as a React key. `usePages` holds a listing to one row per id.
+  // The registry bounds how many pages one request walks, so a selective filter can answer
+  // nothing — or too little to fill the panel — while the catalogue still has more.
   const catalogue = usePages(
     ['models', query],
     from => getBridge()?.scenario.searchModels({ ...query, limit: PAGE_LIMIT, ...from }),
-    { enabled: authenticated },
+    { enabled: authenticated, fill: { wanted: PAGE_LIMIT, max: AUTOMATIC_PULLS } },
   )
   const items = catalogue.items
 
@@ -103,22 +104,7 @@ export function Models() {
     [urls],
   )
 
-  // The registry bounds how many pages one request walks, so a selective filter can answer
-  // nothing — or too little to fill the panel — while the catalogue still has more.
-  useAutomaticPulls({
-    key: JSON.stringify(query),
-    drawn: items.length,
-    wanted: PAGE_LIMIT,
-    max: AUTOMATIC_PULLS,
-    fetching: catalogue.fetching,
-    answered: catalogue.pagesRead,
-    ask: catalogue.exhausted ? null : catalogue.more,
-  })
-
-  const selected = useMemo(
-    () => items.find(model => model.id === selectedId) ?? null,
-    [items, selectedId],
-  )
+  const selected = selectedId ? (catalogue.byId.get(selectedId) ?? null) : null
 
   if (!authenticated) return <MissingCredentials icon={mdiCubeScan} />
 

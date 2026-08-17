@@ -7,6 +7,7 @@ const pulling = (over: Partial<AutomaticPulls> = {}): AutomaticPulls => ({
   drawn: 0,
   max: 3,
   fetching: false,
+  answered: 0,
   ask: () => {},
   ...over,
 })

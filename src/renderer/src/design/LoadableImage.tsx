@@ -13,10 +13,8 @@ export type LoadableImageProps = {
 
 /**
  * A picture that asks once more when it fails, and hands over to `fallback` when it will not come.
- *
- * The retry is spent by the `key` on the tag, which is why the tag is drawn here and not by each
- * caller: read off the hook and dropped, the retry buys nothing and nothing says so. Three
- * callers had to be taught that by hand.
+ * The `key` on the tag is what spends that retry, and the tag is drawn here so that no caller can
+ * drop it: read off the hook and forgotten, the retry buys nothing and nothing says so.
  */
 export function LoadableImage({
   url,

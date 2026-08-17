@@ -36,7 +36,6 @@ import {
   markOf,
   mergeRows,
   nameOfRow,
-  twinsById,
   typeOfRow,
   type AssetRenameHandle,
   type AssetRowModel,
@@ -44,12 +43,6 @@ import {
 
 /** How much of a cloud listing one page asks for. The scroll asks for the next. */
 const LIBRARY_PAGE = 60
-
-/**
- * How many pages the shelf walks on its own before it waits for a scroll. A bound, not a policy:
- * every cloud page costs a search quota, and a kind nobody has published would walk to the end.
- */
-const AUTOMATIC_PULLS = 3
 
 /** A stable empty set, so an untouched panel hands the same identity to every memo. */
 const EMPTY_IDS: ReadonlySet<string> = new Set()
@@ -279,7 +272,9 @@ export function AssetBrowser() {
     [t],
   )
 
-  const twins = useMemo(() => twinsById(remote), [remote])
+  // The library page keyed by its own ids, as `usePages` already holds it — a local row finds the
+  // twin it records there.
+  const twins = library.byId
   const rows = useMemo(
     () => mergeRows({ local: items, remote, published, jobs, scope, absent }),
     [items, remote, published, jobs, scope, absent],
@@ -391,6 +386,8 @@ export function AssetBrowser() {
   // Through its contents, because `mergeFeed` allocates a fresh list every render: handed to the
   // end-of-list effect as it comes, a keystroke would re-arm it and spend a page on each one.
   const asking = hungry.join(' ')
+  // Named apart because `exhaustive-deps` reads `library.more` as a dependency on `library`, which
+  // takes a fresh identity every render and would re-arm the effect below with it.
   const readMoreLibrary = library.more
   const readMoreFeed = feed.more
   const askForMore = useCallback(() => {
@@ -400,17 +397,11 @@ export function AssetBrowser() {
     if (wanted.includes('published')) readMoreFeed()
   }, [asking, loadMore, readMoreLibrary, readMoreFeed])
 
-  /**
-   * Asks on its own while nothing is drawn, up to a ceiling: a surface with no row has no end for
-   * `onReachEnd` to near, and a source CAN hold the list at nothing while having more to give — a
-   * page the feed's retyping emptied does exactly that. Past the ceiling, it waits for a scroll.
-   */
   // `ownerId` in the key: another account is another library, read from nothing — with the count
   // left where the previous one stopped, the shelf would sit empty with no scroll able to fill it.
   useAutomaticPulls({
     key: `${ownerId} ${search} ${scope.join()} ${publishedType}`,
     drawn: shown.length,
-    max: AUTOMATIC_PULLS,
     fetching: library.fetching || feed.fetching,
     // Three sources, so the beat is all three: a page any of them answers with nothing moves no
     // row on screen, and the shelf would stop one pull in with pages still to come.

@@ -27,7 +27,7 @@ function ratioOf(asset: CloudAsset): number | undefined {
 export function Explore() {
   const { t } = useTranslation()
   const [type, setType] = useState<AssetType>('image')
-  const { assets, exhausted, more } = useExplore(type)
+  const { items, exhausted, more } = useExplore(type)
 
   return (
     <Section
@@ -50,7 +50,7 @@ export function Explore() {
       }
     >
       <Masonry
-        items={assets}
+        items={items}
         columnWidth={COLUMN_WIDTH}
         label={t(`assetTypes.${type}`)}
         ratioOf={ratioOf}

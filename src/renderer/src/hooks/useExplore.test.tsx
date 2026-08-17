@@ -50,7 +50,7 @@ describe('one tab of the public feed', () => {
 
     const { result } = renderHook(() => useExplore('image'), { wrapper: queryHost() })
 
-    await waitFor(() => expect(result.current.assets).toHaveLength(1))
+    await waitFor(() => expect(result.current.items).toHaveLength(1))
     expect(explore).toHaveBeenCalledWith(expect.objectContaining({ type: 'image' }))
   })
 
@@ -61,10 +61,10 @@ describe('one tab of the public feed', () => {
     ])
 
     const { result } = renderHook(() => useExplore('image'), { wrapper: queryHost() })
-    await waitFor(() => expect(result.current.assets).toHaveLength(1))
+    await waitFor(() => expect(result.current.items).toHaveLength(1))
 
     act(() => result.current.more())
-    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a', 'b']))
+    await waitFor(() => expect(result.current.items.map(asset => asset.id)).toEqual(['a', 'b']))
     expect(explore).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'o:40' }))
   })
 
@@ -73,7 +73,7 @@ describe('one tab of the public feed', () => {
     const { explore } = install([{ assets: [cloudAsset('a')], cursor: 'o:40' }])
 
     const { result } = renderHook(() => useExplore('image'), { wrapper: queryHost() })
-    await waitFor(() => expect(result.current.assets).toHaveLength(1))
+    await waitFor(() => expect(result.current.items).toHaveLength(1))
 
     act(() => {
       result.current.more()
@@ -97,7 +97,7 @@ describe('one tab of the public feed', () => {
 
     const { result } = renderHook(() => useExplore('image'), { wrapper: queryHost() })
 
-    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
+    await waitFor(() => expect(result.current.items.map(asset => asset.id)).toEqual(['a']))
   })
 
   it('stops asking once the feed says there is no more', async () => {
@@ -120,13 +120,13 @@ describe('one tab of the public feed', () => {
       initialProps: { type: 'image' },
       wrapper: queryHost(),
     })
-    await waitFor(() => expect(result.current.assets).toHaveLength(1))
+    await waitFor(() => expect(result.current.items).toHaveLength(1))
 
     rerender({ type: 'video' })
     // Emptied during the render, not after it: a video tab showing pictures is a wrong answer,
     // not a slow one.
-    expect(result.current.assets).toHaveLength(0)
-    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['b']))
+    expect(result.current.items).toHaveLength(0)
+    await waitFor(() => expect(result.current.items.map(asset => asset.id)).toEqual(['b']))
   })
 
   it('reads afresh under another account, since another account is another feed', async () => {
@@ -136,10 +136,10 @@ describe('one tab of the public feed', () => {
     ])
 
     const { result } = renderHook(() => useExplore('image'), { wrapper: queryHost() })
-    await waitFor(() => expect(result.current.assets).toHaveLength(1))
+    await waitFor(() => expect(result.current.items).toHaveLength(1))
 
     act(() => useSettings.setState({ auth: { authenticated: true, ownerId: 'team_2' } }))
-    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['b']))
+    await waitFor(() => expect(result.current.items.map(asset => asset.id)).toEqual(['b']))
   })
 
   it('keeps what is on screen when the API refuses', async () => {
@@ -150,13 +150,13 @@ describe('one tab of the public feed', () => {
     installFakeBridge({ cloud: { explore } })
 
     const { result } = renderHook(() => useExplore('image'), { wrapper: queryHost() })
-    await waitFor(() => expect(result.current.assets).toHaveLength(1))
+    await waitFor(() => expect(result.current.items).toHaveLength(1))
 
     act(() => result.current.more())
     await waitFor(() => expect(explore).toHaveBeenCalledTimes(2))
 
     // A refusal is not a reason to blank a band that is already showing what was published.
-    expect(result.current.assets.map(asset => asset.id)).toEqual(['a'])
+    expect(result.current.items.map(asset => asset.id)).toEqual(['a'])
   })
 
   it('shows a tab already read without asking for it again', async () => {
@@ -171,13 +171,13 @@ describe('one tab of the public feed', () => {
       initialProps: { type: 'image' },
       wrapper: queryHost(),
     })
-    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
+    await waitFor(() => expect(result.current.items.map(asset => asset.id)).toEqual(['a']))
 
     rerender({ type: 'video' })
-    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['b']))
+    await waitFor(() => expect(result.current.items.map(asset => asset.id)).toEqual(['b']))
 
     rerender({ type: 'image' })
-    expect(result.current.assets.map(asset => asset.id)).toEqual(['a'])
+    expect(result.current.items.map(asset => asset.id)).toEqual(['a'])
     expect(explore).toHaveBeenCalledTimes(2)
   })
 
@@ -195,12 +195,12 @@ describe('one tab of the public feed', () => {
       wrapper: queryHost(),
     })
     await waitFor(() => expect(result.current.exhausted).toBe(true))
-    expect(result.current.assets).toHaveLength(0)
+    expect(result.current.items).toHaveLength(0)
 
     rerender({ type: 'video' })
     rerender({ type: 'image' })
 
-    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
+    await waitFor(() => expect(result.current.items.map(asset => asset.id)).toEqual(['a']))
   })
 
   it('keeps a tab that genuinely ran out, and does not read it again', async () => {
@@ -214,13 +214,13 @@ describe('one tab of the public feed', () => {
       initialProps: { type: 'image' },
       wrapper: queryHost(),
     })
-    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['a']))
+    await waitFor(() => expect(result.current.items.map(asset => asset.id)).toEqual(['a']))
 
     rerender({ type: 'video' })
-    await waitFor(() => expect(result.current.assets.map(asset => asset.id)).toEqual(['b']))
+    await waitFor(() => expect(result.current.items.map(asset => asset.id)).toEqual(['b']))
     rerender({ type: 'image' })
 
-    expect(result.current.assets.map(asset => asset.id)).toEqual(['a'])
+    expect(result.current.items.map(asset => asset.id)).toEqual(['a'])
     expect(explore).toHaveBeenCalledTimes(2)
   })
 
