@@ -18,8 +18,8 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/scene-views'
-import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
+import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 
 const saveDocument = vi.fn((_documentId: string) => Promise.resolve())

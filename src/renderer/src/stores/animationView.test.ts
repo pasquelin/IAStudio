@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { DEFAULT_VIEWPORT } from '@/engines/timeline/viewport'
-import { animationViewOf, keySetOf, useAnimationViews } from './animation-view'
+import { animationViewOf, keySetOf, useAnimationViews } from './animationView'
 
 const DOCUMENT = 'doc-1'
 

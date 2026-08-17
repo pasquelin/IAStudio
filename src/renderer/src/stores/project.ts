@@ -14,7 +14,7 @@ import { useSettings } from './settings'
 import { useActivity } from './activity'
 import { forgetRememberedAssets, useAssets } from './assets'
 import { useLayouts } from './layouts'
-import { useSceneClipboard } from './scene-clipboard'
+import { useSceneClipboard } from './sceneClipboard'
 
 type ProjectState = {
   project: Project | null

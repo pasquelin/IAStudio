@@ -7,7 +7,7 @@ import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
-import { sceneEngineOf } from '@/stores/scene-engines'
+import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, useScenes } from '@/stores/scenes'
 
 /** What a film is written at. One size for now, and a setting the day somebody asks for one. */

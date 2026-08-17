@@ -1,5 +1,5 @@
 import { beforeEach } from 'vitest'
-import { resetDocumentStoresForTests } from '@/stores/document-store'
+import { resetDocumentStoresForTests } from '@/stores/documentStore'
 
 /**
  * A case must not inherit a document a previous one closed. Each document store keeps the ids it

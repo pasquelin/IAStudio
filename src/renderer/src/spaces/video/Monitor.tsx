@@ -25,7 +25,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { useBinding } from '@/stores/bindings'
 import { playbackOf, usePlayback } from '@/stores/playback'
 import { useScenes } from '@/stores/scenes'
-import { useSceneViews } from '@/stores/scene-views'
+import { useSceneViews } from '@/stores/sceneViews'
 import { montageSink } from './montage-sink'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */

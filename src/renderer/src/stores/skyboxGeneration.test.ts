@@ -7,7 +7,7 @@ import { catalogueHolds, flush } from './generation-fixtures'
 import { useDocuments } from './documents'
 import { job as jobOf } from './job-fixtures'
 import { useJobs } from './jobs'
-import { claimSkyboxOnSubmit, connectSkyboxGeneration } from './skybox-generation'
+import { claimSkyboxOnSubmit, connectSkyboxGeneration } from './skyboxGeneration'
 import { skyboxOf, useSkyboxes } from './skyboxes'
 
 const panorama: Asset = {
@@ -146,7 +146,7 @@ describe('landing a generation in the sky that asked for it', () => {
   })
 
   // A generation answers a batch and a sky is one sky. The other half of `takes` is the canvas,
-  // which gives each of the same batch a layer — see `image-generation`.
+  // which gives each of the same batch a layer — see `imageGeneration`.
   it('hangs the first of a batch and leaves the rest on the shelf', async () => {
     catalogueHolds([panorama, { ...panorama, id: 'asset-dawn', name: 'dawn' }])
     submitFrom('job-1')

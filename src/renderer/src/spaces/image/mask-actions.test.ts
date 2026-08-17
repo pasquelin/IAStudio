@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { layerById } from '@/engines/canvas/canvasState'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { useCanvasViews } from '@/stores/canvas-views'
+import { useCanvasViews } from '@/stores/canvasViews'
 import { maskFromSelection } from './mask-actions'
 
 const DOCUMENT = 'doc-1'

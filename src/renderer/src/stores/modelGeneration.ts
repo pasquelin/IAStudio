@@ -1,7 +1,7 @@
-import { createGenerationLanding } from './generation-landing'
+import { createGenerationLanding } from './generationLanding'
 import { addModelTo } from './scenes'
 
-/** A 3D generation comes back into the scene it was launched from. See `generation-landing`. */
+/** A 3D generation comes back into the scene it was launched from. See `generationLanding`. */
 const landing = createGenerationLanding({
   kind: 'scene',
   accepts: asset => asset.type === 'mesh',

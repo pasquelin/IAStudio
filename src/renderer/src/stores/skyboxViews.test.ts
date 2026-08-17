@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_SKYBOX_VIEW, useSkyboxViews, skyboxViewOf } from './skybox-views'
+import { DEFAULT_SKYBOX_VIEW, useSkyboxViews, skyboxViewOf } from './skyboxViews'
 
 describe('how a sky is being looked at', () => {
   beforeEach(() => useSkyboxViews.setState({ views: {} }))

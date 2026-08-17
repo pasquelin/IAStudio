@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createDocumentStore, resetDocumentStoresForTests } from './document-store'
+import { createDocumentStore, resetDocumentStoresForTests } from './documentStore'
 import type { Command } from '@/engines/core/history'
 
 /**

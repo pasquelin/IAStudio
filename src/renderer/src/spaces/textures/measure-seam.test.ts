@@ -4,7 +4,7 @@ import { setChannel } from '@/engines/texture/commands'
 import type { SeamPort } from '@/engines/texture/derive/seamPort'
 import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { installTexture } from '@/stores/texture-fixtures'
-import { seamOf, useTextureViews } from '@/stores/texture-views'
+import { seamOf, useTextureViews } from '@/stores/textureViews'
 import { useTextures } from '@/stores/textures'
 import { measureTextureSeam } from './measure-seam'
 

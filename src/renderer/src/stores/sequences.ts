@@ -23,7 +23,7 @@ import {
   type Us,
 } from '@/engines/timeline/timelineState'
 import { sameValues } from '@/helpers/objects'
-import { createDocumentStore } from './document-store'
+import { createDocumentStore } from './documentStore'
 
 /** One sequence per document, in memory like the documents themselves. */
 const store = createDocumentStore<SequenceState>(EMPTY_SEQUENCE)

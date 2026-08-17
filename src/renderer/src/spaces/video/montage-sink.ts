@@ -1,6 +1,6 @@
 import { createStudioSink, type StudioSinkDeps } from '@/engines/timeline/sinkPort'
 import { assetsById, useAssets } from '@/stores/assets'
-import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/scene-sources'
+import { loadSceneSource, montageSceneOf, montageViewOf } from '@/stores/sceneSources'
 
 /**
  * How a montage reads the studio to draw a clip's source, for the three surfaces that open one:

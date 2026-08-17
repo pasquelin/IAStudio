@@ -1,6 +1,6 @@
 import { setLayerMask } from '@/engines/canvas/commands'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { selectionOf, useCanvasViews } from '@/stores/canvas-views'
+import { selectionOf, useCanvasViews } from '@/stores/canvasViews'
 
 /** The engine, seen from this action: it carves pixels, which never live in the state. */
 export type MaskHost = { fillMaskFromSelection: (layerId: string) => void }

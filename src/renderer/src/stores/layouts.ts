@@ -2,8 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_WORKSPACE, type WorkspaceId } from '@shared/domain/workspace'
 import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
-import { withoutPanels } from './layout-prune'
-import type { SerializedLayout } from './serialized-layout'
+import { withoutPanels } from './layoutPrune'
+import type { SerializedLayout } from './serializedLayout'
 import { useSettings } from './settings'
 
 type LayoutsState = {

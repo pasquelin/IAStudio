@@ -3,7 +3,7 @@ import { loadTexture } from '@/engines/scene/textureCache'
 import { createSeamPort, type SeamPort } from '@/engines/texture/derive/seamPort'
 import { reportFailure } from '@/services/diagnostics'
 import { textureOf, useTextures } from '@/stores/textures'
-import { useTextureViews } from '@/stores/texture-views'
+import { useTextureViews } from '@/stores/textureViews'
 
 /** The GPU port, built once. It holds nothing: a context is made and released per measurement. */
 const gpuSeam = createSeamPort({ loadTexture })

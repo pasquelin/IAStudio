@@ -1,7 +1,7 @@
 import type { Job } from '@shared/domain/job'
-import { claimImageOnSubmit } from './image-generation'
-import { claimModelOnSubmit } from './model-generation'
-import { claimSkyboxOnSubmit } from './skybox-generation'
+import { claimImageOnSubmit } from './imageGeneration'
+import { claimModelOnSubmit } from './modelGeneration'
+import { claimSkyboxOnSubmit } from './skyboxGeneration'
 
 /**
  * Every workspace that has somewhere to put a result, claimed in one call.

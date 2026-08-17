@@ -5,7 +5,7 @@ import { DEFAULT_FIELD_OF_VIEW, SKYBOX_VIEWS, type SkyboxView } from '@shared/do
  * How each sky is being LOOKED AT right now — which projection, how wide the lens, whether the
  * test objects stand in it.
  *
- * Session state, exactly as `canvas-views` is: none of it is saved with the document and ⌘Z
+ * Session state, exactly as `canvasViews` is: none of it is saved with the document and ⌘Z
  * never touches it. It lives in a store rather than in the document component because the panel
  * that offers these controls is not inside that component — a viewport has no room for a menu.
  */

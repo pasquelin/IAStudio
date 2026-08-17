@@ -10,7 +10,7 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { installTexture } from '@/stores/texture-fixtures'
-import { useTextureViews } from '@/stores/texture-views'
+import { useTextureViews } from '@/stores/textureViews'
 import { textureOf, useTextures } from '@/stores/textures'
 import { TextureDocument } from './TextureDocument'
 

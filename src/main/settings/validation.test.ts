@@ -229,7 +229,7 @@ describe('the keys a settings file remaps', () => {
   })
 
   /**
-   * The write side drops it too rather than refusing the draft. `settings-draft` clears what is
+   * The write side drops it too rather than refusing the draft. `settingsDraft` clears what is
    * pending before the write settles, so a throw here would take the theme staged in the same
    * Apply with it — and say nothing about either.
    */

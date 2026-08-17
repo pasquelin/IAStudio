@@ -1,5 +1,5 @@
 import { newTexture, type TextureState } from '@/engines/texture/textureState'
-import { createDocumentStore } from './document-store'
+import { createDocumentStore } from './documentStore'
 
 /** One texture per document, with its own history — spec § 8.3. */
 const store = createDocumentStore<TextureState>(newTexture())

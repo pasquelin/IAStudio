@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { LIST_ONLY } from '@/helpers/collectionState'
-import { useExplorerView } from '@/stores/explorer-view'
+import { useExplorerView } from '@/stores/explorerView'
 import { ExplorerActions } from './ExplorerActions'
 
 beforeEach(() => useExplorerView.setState({ collection: LIST_ONLY, hidden: false, mode: 'folder' }))

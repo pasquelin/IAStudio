@@ -23,9 +23,9 @@ import type { Size } from '@/engines/core/geometry'
 import { paintOn } from '@/engines/core/canvas2d'
 import { trackIdsOf, type AnimationRow } from '@/engines/scene/animationRows'
 import { clamp } from '@shared/numeric'
-import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animation-view'
+import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
+import { useSceneViews, sceneViewOf } from '@/stores/sceneViews'
 
 export type AnimationCanvasProps = {
   documentId: string

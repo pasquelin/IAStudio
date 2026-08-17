@@ -1,6 +1,6 @@
 import { bench, describe } from 'vitest'
 import type { Command, History } from '@/engines/core/history'
-import { createDocumentStore } from './document-store'
+import { createDocumentStore } from './documentStore'
 
 /**
  * What the modified marker costs per frame.

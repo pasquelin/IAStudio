@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
-import { useSettingsDraft, useSettingValue } from '@/stores/settings-draft'
+import { useSettingsDraft, useSettingValue } from '@/stores/settingsDraft'
 import { WINDOW_CAPTION } from '@/design/window-styles'
 
 /**

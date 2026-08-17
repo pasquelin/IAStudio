@@ -9,7 +9,7 @@ import {
 } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
-import { useSettingsDraft } from '@/stores/settings-draft'
+import { useSettingsDraft } from '@/stores/settingsDraft'
 import { SettingsWindow } from './SettingsWindow'
 
 function navigation(): HTMLElement {

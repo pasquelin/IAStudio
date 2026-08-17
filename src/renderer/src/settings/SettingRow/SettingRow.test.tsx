@@ -7,7 +7,7 @@ import { descriptorAt } from '@shared/domain/settings-registry'
 import { WINDOW_HELP } from '@/design/window-styles'
 import { TOOLTIP_ID } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'
-import { useSettingsDraft } from '@/stores/settings-draft'
+import { useSettingsDraft } from '@/stores/settingsDraft'
 import { SettingRow } from './SettingRow'
 
 function rowFor(path: SettingPath) {

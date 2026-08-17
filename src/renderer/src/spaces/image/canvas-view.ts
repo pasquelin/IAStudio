@@ -10,7 +10,7 @@ import {
 import type { Size } from '@/engines/core/geometry'
 import { clearGuides as clearGuidesCommand } from '@/engines/canvas/commands'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { hostOf, useCanvasViews, canvasViewOf, type ViewToggle } from '@/stores/canvas-views'
+import { hostOf, useCanvasViews, canvasViewOf, type ViewToggle } from '@/stores/canvasViews'
 
 /**
  * Navigating an image document, from wherever the gesture comes: the zoom bar or a key. Written

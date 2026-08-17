@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useSettings } from './settings'
-import { isSettingsDraftDirty, useSettingsDraft, valueOf } from './settings-draft'
+import { isSettingsDraftDirty, useSettingsDraft, valueOf } from './settingsDraft'
 
 const draft = () => useSettingsDraft.getState()
 

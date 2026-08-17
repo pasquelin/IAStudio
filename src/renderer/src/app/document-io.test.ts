@@ -34,11 +34,11 @@ import { EMPTY_AUDIO_EDIT, pushEdit } from '@/engines/audio/edits'
 import { addClip, removeTrack } from '@/engines/timeline/commands'
 import { EMPTY_SOUND_SEQUENCE, makeClip } from '@/engines/timeline/timelineState'
 import { setSunAngles } from '@/engines/skybox/commands'
-import { useAudioEdits } from '@/stores/audio-edits'
+import { useAudioEdits } from '@/stores/audioEdits'
 import { sequenceStore, useSequences } from '@/stores/sequences'
 import { useSkyboxes } from '@/stores/skyboxes'
 import { forgetReportedFailures } from '@/services/diagnostics'
-import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
+import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
 import {
   autosaveOpenDocuments,
   closeDocument,

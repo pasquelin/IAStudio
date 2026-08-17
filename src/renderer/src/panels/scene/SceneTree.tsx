@@ -9,7 +9,7 @@ import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { reparentNode } from '@/engines/scene/commands'
 import { openSceneNodeMenu } from '@/spaces/three/SceneNodeMenu'
 import { runSceneCommand, toggleNodeVisible } from '@/spaces/three/scene-commands'
-import { sceneEngineOf } from '@/stores/scene-engines'
+import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 
 /** The synthetic root. It is not a node: it has no transform, no visibility and no delete. */

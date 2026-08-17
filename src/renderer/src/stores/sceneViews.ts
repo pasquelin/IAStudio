@@ -56,7 +56,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
 }
 
 /**
- * How each scene document is being looked at. Session state, exactly like `canvas-views` for an
+ * How each scene document is being looked at. Session state, exactly like `canvasViews` for an
  * image: switching to an orthographic camera or to wireframe changes nothing of the scene, so it
  * is neither saved with the document nor undone by ⌘Z — which is why it is a store of its own
  * rather than a corner of `SceneState`.
