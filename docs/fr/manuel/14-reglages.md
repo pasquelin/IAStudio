@@ -626,7 +626,7 @@ rien à ce que fait le logiciel — seulement à ce qu’il en dit.
 
 **Attention à ne pas confondre ce journal avec celui de la ligne d’état.** Celui-ci est le journal
 interne du studio, écrit dans le terminal qui l’a lancé : **dans la version installée, il n’y a pas
-de terminal, donc rien à lire**. Le panneau **Activité récente**, lui, ne dépend pas de ce réglage —
+de terminal, donc rien à lire**. Le journal de la ligne d’état, lui, ne dépend pas de ce réglage —
 il reçoit ses lignes quoi qu’il arrive.
 
 ### Fichier de réglages
