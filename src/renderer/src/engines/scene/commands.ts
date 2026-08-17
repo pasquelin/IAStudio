@@ -2,6 +2,7 @@ import { composed, type Command } from '../core/history'
 import type { Rig } from '@shared/domain/rig'
 import {
   isVector3,
+  type CameraDescriptor,
   type ClipRef,
   type EnvironmentRef,
   type GeometryDescriptor,
@@ -333,6 +334,38 @@ export function setMaterialOn(
     if (node.type === 'text') return setTextMaterial(node.id, { ...node.material, ...changes })
     return null
   })
+}
+
+/** What a camera sees through: its lens, edited like any other descriptor. */
+export function setCamera(id: string, camera: CameraDescriptor): Command<SceneState> {
+  let previous: CameraDescriptor | null = null
+
+  return {
+    id: `camera:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'camera') return state
+      previous = node.camera
+      return patchPart(state, id, 'camera', { camera })
+    },
+    revert: state => (previous ? patchPart(state, id, 'camera', { camera: previous }) : state),
+  }
+}
+
+/**
+ * A lens parameter typed into the inspector, written onto every selected camera.
+ *
+ * No anchor to spread from, unlike a light's: a lens has no vector field, so the value typed is
+ * the value every camera of the selection takes.
+ */
+export function setCameraOn(
+  nodes: readonly SceneNode[],
+  name: string,
+  value: FieldValue,
+): Command<SceneState> {
+  return batch('camera', nodes, node =>
+    node.type === 'camera' ? setCamera(node.id, withField(node.camera, name, value)) : null,
+  )
 }
 
 /**

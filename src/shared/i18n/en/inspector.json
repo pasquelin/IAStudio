@@ -10,6 +10,7 @@
     "material": "Material",
     "sprite": "Sprite",
     "light": "Light",
+    "camera": "Camera",
     "name": "Name",
     "position": "Position",
     "rotation": "Rotation",
@@ -64,7 +65,10 @@
       "aoMap": "Ambient occlusion",
       "value": "Content",
       "size": "Size",
-      "curveSegments": "Curve segments"
+      "curveSegments": "Curve segments",
+      "fov": "Field of view",
+      "near": "Near plane",
+      "far": "Far plane"
     },
     "empty": "Select something to see its properties.",
     "identity": "Identity",

@@ -15,6 +15,7 @@ import {
   removeNodes,
   rootedIn,
   renameNode,
+  setCameraOn,
   setGeometry,
   setGeometryOn,
   setLight,
@@ -33,6 +34,7 @@ import {
   setTransform,
 } from './commands'
 import {
+  cameraNodeFixture as camera,
   lightNodeFixture as light,
   meshNode as mesh,
   modelNodeFixture,
@@ -340,6 +342,28 @@ describe('moveNodes', () => {
     expect(moveNodes([{ id: 'a', transform: IDENTITY_TRANSFORM }]).id).toBe(
       setTransform('a', IDENTITY_TRANSFORM).id,
     )
+  })
+})
+
+describe('setCameraOn', () => {
+  const start: SceneState = {
+    ...EMPTY_SCENE,
+    nodes: [camera('a'), camera('b', { fov: 20 }), mesh('box')],
+    selectedIds: ['a', 'b'],
+  }
+
+  it('writes the lens onto every selected camera, and undoes each one', () => {
+    const command = setCameraOn(start.nodes, 'fov', 90)
+    const applied = command.apply(start)
+
+    const lenses = applied.nodes.map(node => (node.type === 'camera' ? node.camera.fov : null))
+    expect(lenses).toEqual([90, 90, null])
+    expect(command.revert(applied)).toEqual(start)
+  })
+
+  it('leaves a node of another type alone', () => {
+    const applied = setCameraOn(start.nodes, 'fov', 90).apply(start)
+    expect(applied.nodes[2]).toBe(start.nodes[2])
   })
 })
 

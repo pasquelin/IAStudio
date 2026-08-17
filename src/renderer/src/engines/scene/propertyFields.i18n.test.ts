@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { LANGUAGES, TRANSLATIONS, type Language } from '@shared/i18n'
 import { isRecord } from '@shared/guards'
-import { TEXTURE_SLOTS } from '@shared/domain/scene'
+import { DEFAULT_CAMERA, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { LIGHT_TYPES } from './lightTypes'
 import { MESH_PRIMITIVES } from './meshPrimitives'
 import {
+  cameraFields,
   geometryFields,
   lightFields,
   materialFields,
@@ -26,6 +27,7 @@ function everyFieldName(): readonly string[] {
     ...materialFields(DEFAULT_MATERIAL, '#ffffff').map(field => field.name),
     ...spriteFields(DEFAULT_SPRITE, '#ffffff').map(field => field.name),
     ...textFields(DEFAULT_TEXT).map(field => field.name),
+    ...cameraFields(DEFAULT_CAMERA).map(field => field.name),
     ...TEXTURE_SLOTS,
   ]
 

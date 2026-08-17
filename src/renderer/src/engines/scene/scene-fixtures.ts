@@ -1,5 +1,10 @@
 import { Texture, type ColorSpace } from 'three'
-import type { LightDescriptor, TextDescriptor } from '@shared/domain/scene'
+import {
+  DEFAULT_CAMERA,
+  type CameraDescriptor,
+  type LightDescriptor,
+  type TextDescriptor,
+} from '@shared/domain/scene'
 import type { Bounds } from './rigFit'
 import type { RigState } from './rigState'
 import type { TextureCache } from './textureCache'
@@ -9,6 +14,7 @@ import {
   DEFAULT_TEXT,
   shadowDefaults,
   IDENTITY_TRANSFORM,
+  type CameraNode,
   type LightNode,
   type MeshNode,
   type ModelNode,
@@ -85,6 +91,19 @@ export function textNodeFixture(id: string, text: Partial<TextDescriptor> = {}):
     type: 'text',
     text: { ...DEFAULT_TEXT, ...text },
     material: DEFAULT_MATERIAL,
+  }
+}
+
+export function cameraNodeFixture(id: string, camera: Partial<CameraDescriptor> = {}): CameraNode {
+  return {
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'camera' }),
+    type: 'camera',
+    camera: { ...DEFAULT_CAMERA, ...camera },
   }
 }
 

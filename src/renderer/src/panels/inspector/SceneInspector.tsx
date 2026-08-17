@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  setCameraOn,
   setEnvironment,
   setGeometryOn,
   setLightOn,
@@ -9,7 +10,7 @@ import {
   setSpriteOn,
   setTextOn,
 } from '@/engines/scene/commands'
-import { geometryFields, lightFields } from '@/engines/scene/propertyFields'
+import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
 import { selectedNodes } from '@/engines/scene/sceneState'
 import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
@@ -59,10 +60,12 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const sprite = node?.type === 'sprite' ? node : null
   const text = node?.type === 'text' ? node : null
   const model = node?.type === 'model' ? node : null
+  const camera = node?.type === 'camera' ? node : null
   // The descriptors keep their identity across every edit that does not touch them, so the
   // fields of a material survive a whole drag of the position.
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
   const lit = useMemo(() => (light ? lightFields(light.light) : []), [light])
+  const lens = useMemo(() => (camera ? cameraFields(camera.camera) : []), [camera])
 
   // The environment belongs to the document rather than to a node, so it shows either way — and
   // it is what keeps the panel from being empty when nothing is selected, in place of a message.
@@ -141,6 +144,15 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
           sprite={sprite.sprite}
           fallbackColor={meshColor}
           onChange={next => edit.run(setSpriteOn(selection, changedFields(sprite.sprite, next)))}
+          gesture={edit.gesture}
+        />
+      )}
+
+      {camera && (
+        <DescriptorSection
+          title={t('inspector.camera')}
+          fields={lens}
+          onChange={(name, value) => edit.run(setCameraOn(selection, name, value))}
           gesture={edit.gesture}
         />
       )}

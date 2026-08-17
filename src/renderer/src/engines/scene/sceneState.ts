@@ -195,6 +195,7 @@ export type ModelNode = Extract<SceneNode, { type: 'model' }>
 export type SpriteNode = Extract<SceneNode, { type: 'sprite' }>
 export type TextNode = Extract<SceneNode, { type: 'text' }>
 export type GroupNode = Extract<SceneNode, { type: 'group' }>
+export type CameraNode = Extract<SceneNode, { type: 'camera' }>
 
 export function nodeById(state: SceneState, id: string): SceneNode | null {
   return state.nodes.find(node => node.id === id) ?? null
