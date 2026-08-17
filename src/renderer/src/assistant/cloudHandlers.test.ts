@@ -23,6 +23,35 @@ describe('the remote library', () => {
     expect(browse).toHaveBeenLastCalledWith({})
   })
 
+  it('carries the order a client asks its search to come back in', async () => {
+    const browse = vi.fn(async () => ({ assets: [], cursor: null }))
+    installFakeBridge({ cloud: { browse } })
+
+    await runAction('cloud.browse', { text: 'stone', order: 'relevance' })
+    expect(browse).toHaveBeenCalledWith({ text: 'stone', order: 'relevance' })
+
+    // An order nobody offers is refused rather than dropped, as a kind nobody has is: answering
+    // a search the client did not ask for is worse than telling it the word means nothing here.
+    expect(await runAction('cloud.browse', { text: 'stone', order: 'cheapest' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(browse).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses the fitting order when there is nothing to fit', async () => {
+    // Relevance over an index nobody queried is not a ranking. Answered newest-first, the client
+    // would present « what fits best » and be showing what is merely most recent.
+    const browse = vi.fn(async () => ({ assets: [], cursor: null }))
+    installFakeBridge({ cloud: { browse } })
+
+    expect(await runAction('cloud.browse', { tags: ['stone'], order: 'relevance' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(browse).not.toHaveBeenCalled()
+  })
+
   /**
    * The whole call, not the one bad item: `types` closes over the six kinds, and the registry
    * refuses a list holding anything else. Dropping it silently would have the client believe it

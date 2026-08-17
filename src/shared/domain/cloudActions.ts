@@ -1,5 +1,6 @@
 import { ASSET_TYPES } from './asset'
 import { action, type AssistantAction } from './assistantAction'
+import { CLOUD_ORDERS } from './cloudAsset'
 import { SYNC_POLICIES } from './sync'
 
 /**
@@ -53,6 +54,15 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
         labelKey: 'assistant.fields.limit',
         required: false,
         min: 1,
+      },
+      // Offered here and nowhere else in the family: this is the one read that takes words, and
+      // a caller searching by words is the one the newest-first default answers badly.
+      {
+        key: 'order',
+        kind: 'choice',
+        labelKey: 'assistant.fields.order',
+        required: false,
+        options: CLOUD_ORDERS,
       },
     ],
   }),

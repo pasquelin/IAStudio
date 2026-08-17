@@ -649,6 +649,7 @@
       "remoteUrl": "Address of the remote",
       "setUpstream": "Attach the branch to the remote",
       "cursor": "Page cursor, straight from the previous page",
+      "order": "How results come back: the most recent, or the ones that best fit — which needs words to search for",
       "syncPolicy": "Which way the synchronisation goes",
       "styleId": "Style identifier",
       "favoriteId": "Recipe identifier",

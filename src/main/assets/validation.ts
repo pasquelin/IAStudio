@@ -6,7 +6,7 @@ import {
   type ActivityQuery,
 } from '@shared/domain/activity'
 import { ASSET_NAME_MAX_LENGTH, ASSET_TYPES, type AssetChanges } from '@shared/domain/asset'
-import type { CloudQuery, ExploreQuery } from '@shared/domain/cloudAsset'
+import { CLOUD_ORDERS, type CloudQuery, type ExploreQuery } from '@shared/domain/cloudAsset'
 
 import { SYNC_POLICIES, type SyncPolicy } from '@shared/domain/sync'
 import { GET_BULK_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
@@ -58,6 +58,7 @@ const cloudQuery = z.object({
   // Opaque and produced by the API; bounded only so a hostile value cannot grow without end.
   cursor: z.string().max(2048).optional(),
   pageSize: z.number().int().min(1).max(PAGE_SIZE_MAX).optional(),
+  order: z.enum(CLOUD_ORDERS).optional(),
 })
 
 export function parseCloudQuery(value: unknown): CloudQuery {

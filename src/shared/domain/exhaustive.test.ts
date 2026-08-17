@@ -9,6 +9,7 @@ import {
   type ActivityTopic,
 } from './activity'
 import { ASSET_BADGES, ASSET_TYPES, type AssetBadge, type AssetType } from './asset'
+import { CLOUD_ORDERS, type CloudOrder } from './cloudAsset'
 import {
   ACTION_COMMITMENTS,
   ACTION_REFUSALS,
@@ -100,6 +101,14 @@ describe('the lists that stand for a union', () => {
 
     expect(sorted(MODEL_PERIODS)).toEqual(sorted(Object.keys(periods)))
     expect(sorted(MODEL_SORTS)).toEqual(sorted(Object.keys(sorts)))
+  })
+
+  // A value the type gains without the list is one the assistant is never offered, and one the
+  // validator refuses — a choice that exists in TypeScript and nowhere a caller can reach.
+  it('names every order a library search can come back in', () => {
+    const orders: Record<CloudOrder, true> = { newest: true, relevance: true }
+
+    expect(sorted(CLOUD_ORDERS)).toEqual(sorted(Object.keys(orders)))
   })
 
   it('names every level and every topic the journal files a line under', () => {
