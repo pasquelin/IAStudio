@@ -96,6 +96,8 @@ const COMMITMENT_NOTE: Record<ActionCommitment, string> = {
   none: 'Runs straight away.',
   files: 'Asks the person on screen first: it changes files in their project folder.',
   asset: 'Asks the person on screen first: it uploads an image that stays in their library.',
+  remote:
+    'Asks the person on screen first: it publishes to a server, and nothing here undoes that.',
   credits: 'Asks the person on screen first, with an estimate: it spends creative units.',
 }
 

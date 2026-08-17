@@ -19,10 +19,10 @@ it on screen** — wherever the request came from.
 
 They do not see the same share of it, and that is deliberate. **The assistant knows eleven**, the
 ones a spoken sentence needs: open a workspace, find a model, prepare a generation. **The way in
-offers a hundred and thirty-seven**, everything a program drives deliberately — the file tree, the
+offers a hundred and forty-five**, everything a program drives deliberately — the file tree, the
 layer stack, the montage, the sky, the material, the 3D scene, the git repository, the remote
 library. The reason is a plain one: the model that reads your sentences is given the whole
-catalogue before each of them, and a hundred and thirty-seven actions would leave no room left for
+catalogue before each of them, and a hundred and forty-five actions would leave no room left for
 the sentence.
 
 ---
@@ -184,7 +184,7 @@ the prepared generation** has had your yes on screen, nothing has gone out.
 
 ## The catalogue
 
-**A hundred and thirty-seven actions, in thirteen families.** The table below says what each family covers and what
+**A hundred and forty-five actions, in thirteen families.** The table below says what each family covers and what
 it **commits** — that last column is what decides whether the studio will ask you anything. The
 exact list, with every parameter of every action, is what your client shows when you ask it for its
 tools: it is not copied out here, because it moves and because your client reads it at the source.
@@ -201,7 +201,7 @@ tools: it is not copied out here, because it moves and because your client reads
 | **The montage** | Video and Audio: lay a clip, move it, trim it, cut it, set fades, level and speed, keep the tracks | nothing |
 | **Sky and material** | adjust a sky's image, place its sun, fill a material's channels and render it | nothing |
 | **3D** | the scene: place an object, turn it, light it, paint it, reparent it | nothing |
-| **Versions** | read the repository and its history, stage, record, branch, shelve | **files**, for whatever rewrites the working tree |
+| **Versions** | read the repository and its history, stage, record, branch, shelve, settle a conflict, fetch, publish | **files**, for whatever rewrites the working tree; **a server**, for publishing |
 | **Settings** | read and change the settings, list the accounts, switch to one | nothing |
 | **Around the documents** | the window, the account, updates, fonts, pinned recipes, material styles | **files**, for deleting a style |
 
@@ -264,7 +264,16 @@ about those would teach you to click **Allow** without reading.
 takes back nothing a git-tracked file had never recorded, nothing of a rewritten version, and
 nothing of an asset removed from the remote library as well.
 
-In all three cases, two buttons: **Allow** and **Don’t allow**. Declining runs nothing, and the
+**When an action is about to publish off this machine:**
+
+> *This action will publish to a server, off this machine. It costs no creative units, and nothing
+> here takes it back.*
+
+One action carries that level, and it is worth naming: **sending a branch to a remote git
+repository**. Every other one stops at the edge of the machine, fetching included — and pulling,
+which rewrites your working copy and therefore asks you on the files ground instead.
+
+In all four cases, two buttons: **Allow** and **Don’t allow**. Declining runs nothing, and the
 assistant takes it into account for what follows.
 
 > **The question cannot be walked around.** Neither `Esc` nor a click outside closes it: an action
@@ -305,9 +314,6 @@ program outside**. The assistant is in the window: there is always someone there
 
 ## What this route does not do
 
-- **It publishes nothing to a server.** Versioning stops at the edge of the machine: reading,
-  staging, recording, branching and shelving, yes; sending to a remote repository, no. That is the
-  one git move nothing local undoes.
 - **It never returns an API key or a secret.** It can say which accounts exist and which one is
   active, never what they hold, and it cannot add one. What goes to Scenario goes as usual, with
   your credentials, from your machine.

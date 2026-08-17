@@ -151,6 +151,14 @@ export type ActionName =
   | 'git.stash'
   | 'git.stashPop'
   | 'git.tag'
+  | 'git.stashDrop'
+  | 'git.resolve'
+  | 'git.abortMerge'
+  | 'git.remotes'
+  | 'git.addRemote'
+  | 'git.fetch'
+  | 'git.pull'
+  | 'git.push'
   | 'settings.read'
   | 'settings.write'
   | 'accounts.list'
@@ -164,6 +172,9 @@ export type ActionName =
  *   The Explorer can undo it, but the disk has already changed and another program may have
  *   read it since.
  * - `asset` — uploads a picture, which becomes a permanent asset in the user's library.
+ * - `remote` — publishes to a server outside this machine. Costs nothing and destroys nothing
+ *   locally, and that is exactly why the other levels do not describe it: what leaves cannot be
+ *   called back, and no undo on this machine reaches it.
  * - `credits` — spends real money. Confirmed, and the estimate is stated first.
  *
  * The distinction matters at the moment of asking: only `credits` has a figure to quote, and
@@ -173,9 +184,15 @@ export type ActionName =
  * writes". A new folder and a duplicate add something nobody loses, and a studio that asked
  * about those would teach its user to click Allow without reading.
  */
-export type ActionCommitment = 'none' | 'files' | 'asset' | 'credits'
+export type ActionCommitment = 'none' | 'files' | 'asset' | 'remote' | 'credits'
 
-export const ACTION_COMMITMENTS: readonly ActionCommitment[] = ['none', 'files', 'asset', 'credits']
+export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
+  'none',
+  'files',
+  'asset',
+  'remote',
+  'credits',
+]
 
 /**
  * Which of the two doors offers this action.

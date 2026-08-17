@@ -333,6 +333,38 @@
         "title": "Fill or empty a channel",
         "description": "Puts an image from the library into one of the eight channels of the material in front. With no asset named, the channel is emptied rather than filled."
       },
+      "gitStashDrop": {
+        "title": "Throw a shelved change away",
+        "description": "Removes a shelved change from the stack without applying it back. What it held was never recorded, so nothing gives it back."
+      },
+      "gitResolve": {
+        "title": "Settle a merge conflict",
+        "description": "Keeps one of the two sides of a conflict for the files named. What the other side held goes from the working copy."
+      },
+      "gitAbortMerge": {
+        "title": "Abandon the merge in progress",
+        "description": "Brings the repository back to where it stood before the merge, undoing what it had already written into the working copy."
+      },
+      "gitRemotes": {
+        "title": "List the remote repositories",
+        "description": "Answers the remotes declared, with their name and their address. It is where a push would go."
+      },
+      "gitAddRemote": {
+        "title": "Declare a remote repository",
+        "description": "Adds a remote under the name given. Nothing is sent or fetched by this alone, which writes to the local configuration."
+      },
+      "gitFetch": {
+        "title": "Fetch the remote references",
+        "description": "Reads where the remote repository stands, changing nothing in your working copy and publishing nothing. It is the harmless half of a pull."
+      },
+      "gitPull": {
+        "title": "Fetch and merge",
+        "description": "Fetches the remote and merges into the current branch, which rewrites the working copy. A conflict stops there and is settled afterwards."
+      },
+      "gitPush": {
+        "title": "Publish to the remote repository",
+        "description": "Sends the current branch to the remote repository. It is the only gesture of the studio that leaves this machine, and nothing here takes it back."
+      },
       "cloudBrowse": {
         "title": "Browse the remote library",
         "description": "Answers one page of the account’s library, narrowed by text, tags or kind. Paging is by cursor, and there is no total — the API gives none."
@@ -603,6 +635,10 @@
       "alsoRemote": "Remove from the remote library too",
       "layerId": "Layer identifier",
       "layerIds": "Layer identifiers",
+      "conflictSide": "Which side of the conflict to keep",
+      "remoteName": "Name of the remote",
+      "remoteUrl": "Address of the remote",
+      "setUpstream": "Attach the branch to the remote",
       "cursor": "Page cursor, straight from the previous page",
       "syncPolicy": "Which way the synchronisation goes",
       "styleId": "Style identifier",
@@ -713,6 +749,7 @@
       "unknownCost": "This action will spend creative units. The studio could not estimate how many, and does not invent a figure.",
       "files": "This action will change what your project holds — files, or the assets in its library. It costs no creative units.",
       "asset": "This action will upload an image, which then stays in your library. It costs no creative units.",
+    "remote": "This action will publish to a server, off this machine. It costs no creative units, and nothing here takes it back.",
       "yes": "Allow",
       "yesHint": "Runs the action above, and commits what it commits",
       "no": "Don’t allow",

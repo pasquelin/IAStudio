@@ -1,7 +1,7 @@
-import type { ActionOutcome } from '@shared/domain/assistant'
+import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import type { StudioBridge } from '@shared/ipc'
 import { withBridge, type ActionHandlers } from './actionHandler'
-import { boolOf, numberOf, textOf, textsOf } from './actionInputs'
+import { boolOf, numberOf, oneOf, textOf, textsOf } from './actionInputs'
 
 /**
  * The project's repository, as far as this machine.
@@ -11,6 +11,9 @@ import { boolOf, numberOf, textOf, textsOf } from './actionInputs'
  */
 
 const DEFAULT_LOG = 20
+
+/** The two sides of a conflict, spelled here and in the registry — the port takes a bare union. */
+const CONFLICT_SIDES: readonly ('ours' | 'theirs')[] = ['ours', 'theirs']
 
 /** One git call, its answer handed back whole. */
 const git = (run: (port: StudioBridge['git']) => Promise<unknown>): Promise<ActionOutcome> =>
@@ -45,4 +48,22 @@ export const GIT_HANDLERS: ActionHandlers = {
 
   'git.tag': input =>
     git(port => port.tag(textOf(input, 'name') ?? '', textOf(input, 'commit') ?? '')),
+
+  'git.stashDrop': input => git(port => port.stashDrop(numberOf(input, 'index') ?? 0)),
+  'git.abortMerge': () => git(port => port.abortMerge()),
+  'git.remotes': () => git(port => port.remotes()),
+
+  'git.addRemote': input =>
+    git(port => port.addRemote(textOf(input, 'name') ?? '', textOf(input, 'url') ?? '')),
+
+  'git.resolve': input => {
+    const side = oneOf(input, 'side', CONFLICT_SIDES)
+    return side
+      ? git(port => port.resolve(textsOf(input, 'paths'), side))
+      : Promise.resolve(refused('badInput'))
+  },
+
+  'git.fetch': () => git(port => port.fetch()),
+  'git.pull': () => git(port => port.pull()),
+  'git.push': input => git(port => port.push(boolOf(input, 'setUpstream'))),
 }

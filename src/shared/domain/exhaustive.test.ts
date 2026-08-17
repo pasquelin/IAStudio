@@ -279,6 +279,7 @@ describe('the lists that stand for a union', () => {
       none: true,
       files: true,
       asset: true,
+      remote: true,
       credits: true,
     }
 
@@ -428,6 +429,14 @@ describe('the lists that stand for a union', () => {
       'git.stash': true,
       'git.stashPop': true,
       'git.tag': true,
+      'git.stashDrop': true,
+      'git.resolve': true,
+      'git.abortMerge': true,
+      'git.remotes': true,
+      'git.addRemote': true,
+      'git.fetch': true,
+      'git.pull': true,
+      'git.push': true,
       'settings.read': true,
       'settings.write': true,
       'accounts.list': true,

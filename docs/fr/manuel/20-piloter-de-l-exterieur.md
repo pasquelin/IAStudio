@@ -19,10 +19,10 @@ l’ayez vu à l’écran** — d’où que vienne la demande.
 
 Elles n’en voient pas la même part, et c’est délibéré. **L’assistant en connaît onze**, celles
 d’une phrase parlée : ouvrir un espace, chercher un modèle, préparer une génération. **Le point
-d’entrée en offre cent trente-sept**, tout ce qu’un programme conduit délibérément — l’arbre des
+d’entrée en offre cent quarante-cinq**, tout ce qu’un programme conduit délibérément — l’arbre des
 fichiers, la pile de calques, le montage, le ciel, la matière, la scène 3D, le dépôt git, la
 bibliothèque distante. La raison est prosaïque : le modèle qui lit vos phrases reçoit le catalogue
-entier avant chacune d’elles, et cent trente-sept actions n’y laisseraient plus de place pour la
+entier avant chacune d’elles, et cent quarante-cinq actions n’y laisseraient plus de place pour la
 phrase.
 
 ---
@@ -187,7 +187,7 @@ n’est parti.
 
 ## Le catalogue
 
-**Cent trente-sept actions, en treize familles.** Le tableau ci-dessous dit ce que chacune couvre
+**Cent quarante-cinq actions, en treize familles.** Le tableau ci-dessous dit ce que chacune couvre
 et ce qu’elle **engage** — c’est cette dernière colonne qui décide si le studio vous demandera
 quelque chose. La liste exacte, avec le détail de chaque paramètre, est ce que votre client
 affiche quand vous lui demandez ses outils : elle n’est pas recopiée ici, parce qu’elle bouge et
@@ -205,7 +205,7 @@ que lui la lit à la source.
 | **Le montage** | Vidéo et Audio : poser un bloc, le déplacer, le rogner, le couper, régler fondus, niveau et vitesse, tenir les pistes | rien |
 | **Le ciel et la matière** | régler l’image d’un ciel, y placer le soleil, remplir les canaux d’une matière et la rendre | rien |
 | **La 3D** | la scène : poser un objet, l’orienter, l’éclairer, le peindre, le rattacher | rien |
-| **Le versionnage** | lire le dépôt et l’historique, indexer, enregistrer, brancher, remiser | **des fichiers** pour ce qui réécrit la copie de travail |
+| **Le versionnage** | lire le dépôt et l’historique, indexer, enregistrer, brancher, remiser, trancher un conflit, rapatrier, publier | **des fichiers** pour ce qui réécrit la copie de travail, **un serveur** pour publier |
 | **Les réglages** | lire et changer les réglages, lister les comptes, en activer un | rien |
 | **Autour des documents** | la fenêtre, le compte, les mises à jour, les polices, les recettes épinglées, les styles de matière | **des fichiers** pour supprimer un style |
 
@@ -272,7 +272,16 @@ une mise à la corbeille. Il ne reprend rien de ce qu’un fichier suivi par git
 enregistré, rien d’une version réécrite, et rien d’un asset retiré aussi de la bibliothèque
 distante.
 
-Dans les trois cas, deux boutons : **Autoriser** et **Refuser**. Refuser n’exécute rien, et
+**Quand une action va publier hors de cette machine :**
+
+> *Cette action va publier vers un serveur, hors de cette machine. Elle ne coûte aucune unité
+> créative, et rien ici ne la rattrape.*
+
+Une seule action porte ce niveau, et elle mérite d’être nommée : **envoyer une branche vers un
+dépôt git distant**. Toutes les autres restent au bord de la machine, y compris rapatrier —
+lequel réécrit votre copie de travail et vous demande donc au titre des fichiers.
+
+Dans les quatre cas, deux boutons : **Autoriser** et **Refuser**. Refuser n’exécute rien, et
 l’assistant en tient compte pour la suite de sa demande.
 
 > **La question ne se contourne pas.** Ni `Échap`, ni un clic à côté ne la referment : une action
@@ -314,9 +323,6 @@ dans la fenêtre : il y a toujours quelqu’un pour être demandé.
 
 ## Ce que ce chemin ne fait pas
 
-- **Il ne publie rien vers un serveur.** Le versionnage s’arrête au bord de la machine : lire,
-  indexer, enregistrer, brancher, remiser, oui ; envoyer vers un dépôt distant, non. C’est le seul
-  geste de git que rien de local ne défait.
 - **Il ne rend jamais une clé API ni un secret.** Il peut dire quels comptes existent et lequel est
   actif, jamais ce qu’ils contiennent, et il ne peut pas en ajouter. Ce qui part vers Scenario part
   comme d’habitude, avec vos identifiants, depuis votre machine.

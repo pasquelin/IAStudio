@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ACTION_REGISTRY, commitmentOfCall, needsConfirmation } from '@shared/domain/assistant'
 import type { GitRepository } from '@shared/domain/git'
 import type { GitDiff } from '@shared/domain/gitDiff'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -118,5 +119,57 @@ describe('changing the repository', () => {
     expect(tag).toHaveBeenCalledWith('v1', 'abc123')
     expect(stash).toHaveBeenCalledWith('en cours')
     expect(stashPop).toHaveBeenCalledWith(0)
+  })
+
+  it('settles a conflict on one side, and refuses a side that is neither', async () => {
+    const resolve = vi.fn(async () => READY)
+    installFakeBridge({ git: { resolve } })
+
+    await runAction('git.resolve', { paths: ['a.png'], side: 'theirs' })
+    expect(resolve).toHaveBeenCalledWith(['a.png'], 'theirs')
+
+    expect(await runAction('git.resolve', { paths: ['a.png'], side: 'mine' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  it('reaches the remote through its own three channels', async () => {
+    const fetch = vi.fn(async () => READY)
+    const pull = vi.fn(async () => READY)
+    const push = vi.fn(async () => READY)
+    const addRemote = vi.fn(async () => READY)
+    installFakeBridge({ git: { fetch, pull, push, addRemote } })
+
+    await runAction('git.fetch', {})
+    await runAction('git.pull', {})
+    await runAction('git.push', { setUpstream: true })
+    await runAction('git.addRemote', { name: 'origin', url: 'git@host:repo.git' })
+
+    expect(fetch).toHaveBeenCalled()
+    expect(pull).toHaveBeenCalled()
+    expect(push).toHaveBeenCalledWith(true)
+    expect(addRemote).toHaveBeenCalledWith('origin', 'git@host:repo.git')
+  })
+})
+
+/**
+ * The grading is the whole of what these three are about: `fetch` takes nothing back because it
+ * gives nothing away, `pull` rewrites the working copy exactly as `checkout` does, and `push`
+ * leaves the machine — the one level no undo here reaches.
+ */
+describe('what reaching the remote engages', () => {
+  it('asks nothing for a fetch, files for a pull, and the remote level for a push', () => {
+    expect(commitmentOfCall('git.fetch', {})).toBe('none')
+    expect(commitmentOfCall('git.pull', {})).toBe('files')
+    expect(commitmentOfCall('git.push', {})).toBe('remote')
+    expect(needsConfirmation('remote')).toBe(true)
+  })
+
+  // A secret the renderer may not read back is one an outside client may not probe either.
+  it('publishes no credential channel at all', () => {
+    const names = ACTION_REGISTRY.map(entry => entry.name)
+
+    expect(names.filter(name => name.toLowerCase().includes('credential'))).toEqual([])
   })
 })
