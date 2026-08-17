@@ -271,7 +271,7 @@
       },
       "clipSelect": {
         "title": "Point at a clip",
-        "description": "Names the clip the inspector and the aimless gestures will act on. Not an edit, and undo does not take it back."
+        "description": "Names the clip the inspector and the gestures that aim at nothing will act on. Not an edit, and undo does not take it back."
       },
       "trackAdd": {
         "title": "Add a track",
@@ -343,7 +343,7 @@
       },
       "gitResolve": {
         "title": "Settle a merge conflict",
-        "description": "Keeps one of the two sides of a conflict for the files named. What the other side held goes from the working copy."
+        "description": "Keeps one of the two sides of a conflict for the files named. What the other side held is gone from the working copy."
       },
       "gitAbortMerge": {
         "title": "Abandon the merge in progress",
@@ -439,7 +439,7 @@
       },
       "fontsList": {
         "title": "List the installed fonts",
-        "description": "Answers the font families this machine has, one cut each. It is what a text layer can be written in."
+        "description": "Answers the font families this machine has, one weight each. It is what a text layer can be written in."
       },
       "favoritesList": {
         "title": "List the pinned recipes",
@@ -575,11 +575,11 @@
       },
       "settingsWrite": {
         "title": "Change the settings",
-        "description": "Writes one or more settings, section by section. What is not named is left alone, and a change that names nothing the studio knows is refused rather than written through unread."
+        "description": "Writes one or more settings, section by section. What is not named is left alone, and a change that names nothing the studio knows is refused rather than written without being read."
       },
       "accountsList": {
         "title": "List the accounts",
-        "description": "Returns the Scenario accounts this studio holds, saying which one is active and which may be renamed or removed. No key or secret is ever answered."
+        "description": "Returns the Scenario accounts this studio holds, saying which one is active and which may be renamed or removed. No key or secret is ever returned."
       },
       "accountsActivate": {
         "title": "Switch account",
@@ -672,10 +672,10 @@
       "edgeIntensity": "How much the edges are darkened",
       "emissive": "Emitted colour",
       "emissiveIntensity": "Strength of the emission",
-      "tilingX": "Repeats across",
-      "tilingY": "Repeats down",
-      "offsetX": "Offset across",
-      "offsetY": "Offset down",
+      "tilingX": "Repeats in width",
+      "tilingY": "Repeats in height",
+      "offsetX": "Offset in width",
+      "offsetY": "Offset in height",
       "invertNormalGreen": "Invert the green channel of the relief",
       "clipId": "Clip identifier",
       "trackId": "Track identifier",
@@ -692,7 +692,7 @@
       "solo": "The only track heard",
       "locked": "Track locked",
       "layerKind": "Layer kind",
-      "adjustment": "Which dial the adjustment carries",
+      "adjustment": "Which dial the layer carries",
       "parentId": "Group to move it into",
       "index": "Place in the stack, counted from the bottom",
       "opacity": "Opacity, from 0 to 1",
@@ -702,8 +702,8 @@
       "clipped": "Clipped by the layer below",
       "x": "X, in document coordinates",
       "y": "Y, in document coordinates",
-      "scaleX": "Scale across",
-      "scaleY": "Scale down",
+      "scaleX": "Scale in width",
+      "scaleY": "Scale in height",
       "rotation": "Rotation, in degrees",
       "fontSize": "Type size",
       "colour": "Colour, as #rrggbb",
@@ -714,8 +714,8 @@
       "nodeId": "Object identifier",
       "nodeIds": "Object identifiers",
       "nodeKind": "What to add",
-      "positionX": "Position across",
-      "positionY": "Position up",
+      "positionX": "Position in width",
+      "positionY": "Position in height",
       "positionZ": "Position towards the viewer",
       "rotationX": "Rotation about X, in radians",
       "rotationY": "Rotation about Y, in radians",
