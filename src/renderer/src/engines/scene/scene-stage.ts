@@ -1,16 +1,10 @@
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { Us } from '@shared/domain/time'
+import { offScreenHost } from '@/engines/core/off-screen-host'
 import { reportFailure } from '@/services/diagnostics'
 import { SceneRenderer } from './SceneRenderer'
 import type { CameraPlacement } from './scene-view'
 import { firstCameraId, sceneWithoutSelfPlay, type SceneState } from './scene-state'
-
-/**
- * How far off screen the host sits. Off the page rather than hidden: a host with
- * `display: none` — or one inside a zero-sized box — measures zero, and the viewport would size
- * its buffer to nothing and draw an empty frame.
- */
-const OFF_SCREEN = '-20000px'
 
 /**
  * A scene rendered somewhere no one is looking, so a montage can show it.
@@ -60,14 +54,7 @@ export function createSceneStage({
   viewOf,
   createRenderer,
 }: SceneStageOptions): SceneStage {
-  const host = document.createElement('div')
-  host.style.position = 'fixed'
-  host.style.left = OFF_SCREEN
-  host.style.top = '0'
-  host.style.width = `${width}px`
-  host.style.height = `${height}px`
-  host.style.pointerEvents = 'none'
-  document.body.appendChild(host)
+  const host = offScreenHost(width, height)
 
   let renderer: SceneRenderer | null = null
   let failed = false
