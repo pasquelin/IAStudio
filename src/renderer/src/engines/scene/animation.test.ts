@@ -1,7 +1,8 @@
 import { AnimationClip, Object3D, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ANIMATION, type AnimationRef } from '@shared/domain/scene'
-import { SceneAnimations, clipNamesOf } from './animation'
+import { DEFAULT_CLIP, type ClipRef } from '@shared/domain/scene'
+import { SECOND, type Us } from '@shared/domain/time'
+import { SceneAnimations, clipAt, clipNamesOf } from './animation'
 
 /** A cube travelling one unit along X over one second, which is enough to read a mixer by. */
 function walkClip(name = 'walk', to = 1): AnimationClip {
@@ -17,9 +18,12 @@ function scene(): Object3D {
   return root
 }
 
-const ref = (extra: Partial<AnimationRef> = {}): AnimationRef => ({
-  ...DEFAULT_ANIMATION,
-  clip: 'walk',
+/** `name` picks which clip of the file the block plays, since that now lives inside its source. */
+const ref = ({ name = 'walk', ...extra }: Partial<ClipRef> & { name?: string } = {}): ClipRef => ({
+  ...DEFAULT_CLIP,
+  id: 'block-1',
+  source: { kind: 'embedded', name },
+  label: name,
   playing: true,
   ...extra,
 })
@@ -95,7 +99,7 @@ describe('SceneAnimations', () => {
 
   it('seeks where the head is put, without playing to get there', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', ref({ playing: false, time: 0.75 }))
+    animations.apply('node-1', ref({ playing: false, offset: 0.75 }))
     animations.update(0)
 
     expect(cubeOf(root).position.x).toBeCloseTo(0.75, 5)
@@ -135,7 +139,7 @@ describe('SceneAnimations', () => {
 
     animations.apply('node-1', ref())
     animations.update(0.5)
-    animations.apply('node-1', ref({ clip: 'run' }))
+    animations.apply('node-1', ref({ name: 'run' }))
 
     // Back to the start of the new clip, which for `run` means the origin.
     expect(cubeOf(root).position.x).toBe(0)
@@ -143,7 +147,7 @@ describe('SceneAnimations', () => {
 
   it('ignores a clip name the file no longer holds, rather than throwing', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', ref({ clip: 'moonwalk' }))
+    animations.apply('node-1', ref({ name: 'moonwalk' }))
     animations.update(0.5)
 
     expect(cubeOf(root).position.x).toBe(0)
@@ -178,5 +182,34 @@ describe('SceneAnimations', () => {
 
     expect(animations.has('node-1')).toBe(false)
     expect(animations.has('node-2')).toBe(false)
+  })
+})
+
+describe('which block the head stands in', () => {
+  const block = (id: string, start: Us, duration: Us): ClipRef =>
+    ref({ id, name: id, start, duration })
+
+  it('answers the one the head is inside', () => {
+    const blocks = [block('walk', 0, SECOND), block('dance', SECOND, SECOND)]
+
+    expect(clipAt(blocks, SECOND + 1)?.id).toBe('dance')
+  })
+
+  it('holds a block from its start and lets go at its end, so two neighbours never both answer', () => {
+    const blocks = [block('walk', 0, SECOND), block('dance', SECOND, SECOND)]
+
+    expect(clipAt(blocks, SECOND)?.id).toBe('dance')
+  })
+
+  // A model snapping to its rest pose while the head sits before every block would read as the
+  // animation having been lost rather than as not having started.
+  it('falls back on the first block while the head stands in none', () => {
+    const blocks = [block('walk', SECOND, SECOND)]
+
+    expect(clipAt(blocks, 0)?.id).toBe('walk')
+  })
+
+  it('answers nothing for a model that plays nothing', () => {
+    expect(clipAt([], 0)).toBeNull()
   })
 })

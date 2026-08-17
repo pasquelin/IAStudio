@@ -70,11 +70,12 @@ import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './textGeometry'
 import { createGltfSource, type GltfSource } from './gltfSource'
-import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
+import { SceneAnimations, clipAt, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
 import { drivenNodes, poseAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
 import { nearestBone, type ProjectedBone } from './bonePicking'
+import { rigStateOf, type RigState } from './rigState'
 import { evenSize, flipInto, frameTimes, type FilmRequest } from './film'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './modelCache'
@@ -131,8 +132,11 @@ export type SceneRendererOptions = {
     clips: readonly string[],
     lengths: Readonly<Record<string, number>>,
   ) => void
-  /** The bones a rigged model brought, named. Same reason as `onClips`: they live in the file. */
-  onBones?: (nodeId: string, bones: readonly string[]) => void
+  /**
+   * What a model turned out to be once its file landed — bones, humanoid roles, and which of the
+   * five states it is in. Same reason as `onClips`: none of it lives in the document.
+   */
+  onRig?: (nodeId: string, rig: RigState) => void
   /**
    * The bone a click picked while the pose mode is on, or nothing for a click in the void.
    *
@@ -227,11 +231,6 @@ const NOOP = (): void => {}
 
 /** Scratch for projecting a bone, so a click over a rig allocates nothing per bone. */
 const BONE_WORLD = new Vector3()
-
-/** three marks its bones with a flag; `instanceof` would miss one from another three instance. */
-function isBone(object: Object3D): boolean {
-  return Reflect.get(object, 'isBone') === true
-}
 
 /** Where a normalised view stands when the camera already sits on its target and has no distance. */
 const DEFAULT_VIEW_DISTANCE = 8
@@ -920,30 +919,20 @@ export class SceneRenderer {
    * trihedron — never inside the model, where the outliner would list it as part of the scene
    * and a click could pick it.
    */
-  private bindSkeleton(nodeId: string, root: Object3D): void {
+  private bindSkeleton(nodeId: string, root: Object3D, hasBones: boolean): void {
     this.unbindSkeleton(nodeId)
 
-    const bones = root.getObjectByProperty('isBone', true)
-    if (!bones) return
+    if (!hasBones) return
 
     const helper = new SkeletonHelper(root)
-    helper.visible = this.showSkeletons
+    // The pose mode counts as much as the toggle: a model landing while it is on would otherwise
+    // be pickable and invisible, which is what that mode's own note forbids.
+    helper.visible = this.showSkeletons || this.poseMode
     // Off the raycaster: the bones of a rig cross every mesh it drives, and a click would land
     // on a line rather than on the model it belongs to.
     helper.raycast = NOOP
     this.skeletons.set(nodeId, helper)
     this.viewport.scene.add(helper)
-  }
-
-  /** The bones of a rigged model, by name, for whoever offers a track on one. */
-  private bonesOf(root: Object3D): string[] {
-    const names: string[] = []
-    root.traverse(object => {
-      // Named, always: an unnamed bone cannot be addressed by a document, and a track that
-      // pointed at one would find nothing after a reload.
-      if (isBone(object) && object.name) names.push(object.name)
-    })
-    return names
   }
 
   private unbindSkeleton(nodeId: string): void {
@@ -1382,7 +1371,7 @@ export class SceneRenderer {
     // The clips of a model that is already on stage. Skipped for one still loading: `buildModel`
     // binds what the file brought the moment it lands, and applies this reference there.
     if (node.type === 'model' && this.animations.has(node.id)) {
-      this.animations.apply(node.id, node.model.animation ?? null)
+      this.animations.apply(node.id, clipAt(node.model.clips ?? [], this.playhead))
       this.viewport.requestRender()
     }
 
@@ -1573,10 +1562,15 @@ export class SceneRenderer {
       // carry them, and a clip addresses its targets by name — so the source's drive any
       // instance built from it.
       this.animations.add(node.id, holder, clipsOf(source))
-      if (applied.type === 'model') this.animations.apply(node.id, applied.model.animation ?? null)
+      if (applied.type === 'model') {
+        this.animations.apply(node.id, clipAt(applied.model.clips ?? [], this.playhead))
+      }
       this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
-      this.bindSkeleton(node.id, holder)
-      this.options.onBones?.(node.id, this.bonesOf(holder))
+      // Read once and used twice: whether this model has bones at all is the same question the
+      // helper asks, and answering it in two places is how the two came to disagree.
+      const rig = rigStateOf(holder, clipsOf(source))
+      this.bindSkeleton(node.id, holder, rig.bones.length > 0)
+      this.options.onRig?.(node.id, rig)
       // The bones arrive a tick after the sync that laid the timeline over the scene, so a track
       // on one of them would drive nothing at all until the next edit.
       this.applyPoses()

@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_ANIMATION } from '@shared/domain/scene'
+import { DEFAULT_CLIP, type ClipRef } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { animationTrack, timelineWith } from '@/engines/scene/animation-fixtures'
 import {
@@ -36,19 +36,26 @@ function press(element: Element, type: string, x: number, y: number): void {
   element.dispatchEvent(event)
 }
 
+const walkBlock: ClipRef = {
+  ...DEFAULT_CLIP,
+  id: 'c1',
+  source: { kind: 'embedded', name: 'Walk' },
+  label: 'Walk',
+  start: 1 * SECOND,
+}
+
 const modelWithClip = () => {
   const node = modelNodeFixture('perso')
-  return {
-    ...node,
-    model: { ...node.model, animation: { ...DEFAULT_ANIMATION, clip: 'Walk', start: 1 * SECOND } },
-  }
+  return { ...node, model: { ...node.model, clips: [walkBlock] } }
 }
 
 const blockRows = () =>
   animationRows(timelineWith([]), {
     nodes: [],
     expanded: new Set(),
-    clips: [{ nodeId: 'perso', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND }],
+    clips: [
+      { nodeId: 'perso', clipId: 'c1', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND },
+    ],
   })
 
 const keyRows = () =>
@@ -70,7 +77,7 @@ describe('dragging a clip block', () => {
 
   const startOf = (): number => {
     const node = sceneOf(useScenes.getState(), DOCUMENT).nodes[0]
-    return node?.type === 'model' ? (node.model.animation?.start ?? -1) : -1
+    return node?.type === 'model' ? (node.model.clips?.[0]?.start ?? -1) : -1
   }
 
   it('slides the block, keeping where inside it the pointer took hold', () => {

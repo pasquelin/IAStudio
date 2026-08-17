@@ -153,7 +153,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onTransform: moves => recordTransform(documentId, moves),
       onClips: (nodeId, clips, lengths) =>
         useModelClips.getState().report(documentId, nodeId, clips, lengths),
-      onBones: (nodeId, bones) => useModelClips.getState().reportBones(documentId, nodeId, bones),
+      onRig: (nodeId, rig) => useModelClips.getState().reportRig(documentId, nodeId, rig),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onContextMenu: nodeId => openNodeMenu(documentId, nodeId),
       onStats: (scene, selected) => setStats({ scene, selected }),

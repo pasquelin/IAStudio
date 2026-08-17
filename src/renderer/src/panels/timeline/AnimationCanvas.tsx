@@ -8,7 +8,7 @@ import {
 } from 'react'
 import { snapToFrame, type Us } from '@shared/domain/time'
 import { moveAnimationKey, unkeySubject } from '@/engines/scene/animationCommands'
-import { multi, setModelAnimation } from '@/engines/scene/commands'
+import { multi, setModelClips } from '@/engines/scene/commands'
 import type { Command } from '@/engines/core/history'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { clampPlayhead } from '@/engines/scene/animationEval'
@@ -36,7 +36,7 @@ export type AnimationCanvasProps = {
 type Grab =
   | { kind: 'scrub' }
   | { kind: 'key'; rowId: string; trackIds: readonly string[]; from: Us; at: Us }
-  | { kind: 'block'; nodeId: string; grabbedAt: Us }
+  | { kind: 'block'; nodeId: string; clipId: string; grabbedAt: Us }
 
 /**
  * The animation band: the ruler, the rows and the keys, painted.
@@ -45,13 +45,14 @@ type Grab =
  * controls. Reimplementing focus and accessible names inside a canvas would be rebuilding the
  * browser; drawing a thousand diamonds in the DOM would be a scroll that stutters.
  */
-/** Slides a clip block along the band, keeping what it plays. */
-function moveBlock(documentId: string, nodeId: string, start: Us): void {
+/** Slides one clip block along the band, keeping what it plays and leaving its neighbours put. */
+function moveBlock(documentId: string, nodeId: string, clipId: string, start: Us): void {
   const store = useScenes.getState()
   const node = sceneOf(store, documentId).nodes.find(candidate => candidate.id === nodeId)
-  if (node?.type !== 'model' || !node.model.animation) return
+  if (node?.type !== 'model' || !node.model.clips) return
 
-  store.runCommand(documentId, setModelAnimation(nodeId, { ...node.model.animation, start }))
+  const moved = node.model.clips.map(clip => (clip.id === clipId ? { ...clip, start } : clip))
+  store.runCommand(documentId, setModelClips(nodeId, moved))
 }
 
 export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
@@ -190,7 +191,12 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     }
 
     if (hit.kind === 'block') {
-      grabbed.current = { kind: 'block', nodeId: hit.nodeId, grabbedAt: hit.grabbedAt }
+      grabbed.current = {
+        kind: 'block',
+        nodeId: hit.nodeId,
+        clipId: hit.clipId,
+        grabbedAt: hit.grabbedAt,
+      }
       // Opened here and closed on release: without it every pixel of the drag is its own entry
       // in the history, and `runCoalescing` only merges while a gesture is open.
       useScenes.getState().beginGesture(documentId)
@@ -226,7 +232,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     if (grab.kind === 'block') {
       // Written straight through rather than previewed: the block IS the preview, and the whole
       // run collapses into one entry because a gesture was opened on the press.
-      moveBlock(documentId, grab.nodeId, Math.max(0, at - grab.grabbedAt))
+      moveBlock(documentId, grab.nodeId, grab.clipId, Math.max(0, at - grab.grabbedAt))
       return
     }
 

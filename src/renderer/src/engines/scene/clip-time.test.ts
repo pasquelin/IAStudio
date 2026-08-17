@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ANIMATION, type AnimationRef } from '@shared/domain/scene'
+import { DEFAULT_CLIP, type ClipRef } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { clipTimeAt } from './animation'
 
-const ref = (extra: Partial<AnimationRef> = {}): AnimationRef => ({
-  ...DEFAULT_ANIMATION,
-  clip: 'Walk',
+const ref = (extra: Partial<ClipRef> = {}): ClipRef => ({
+  ...DEFAULT_CLIP,
+  id: 'block-1',
+  source: { kind: 'embedded', name: 'Walk' },
+  label: 'Walk',
   ...extra,
 })
 

@@ -1,7 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
+import { meshNode, modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { setTimelineSettings } from '@/engines/scene/animationCommands'
 import { SECOND } from '@shared/domain/time'
@@ -112,11 +112,11 @@ describe('AnimationPanel and the bones of a rig', () => {
       selectedIds: ['perso'],
     })
     useSceneViews.setState({ views: {} })
-    useModelClips.setState({ clips: {}, bones: {} })
+    useModelClips.setState({ clips: {}, rigs: {} })
   })
 
   it('keys the model itself, on its own line', async () => {
-    useModelClips.setState({ bones: { [DOCUMENT]: { perso: ['spine', 'arm.L'] } } })
+    useModelClips.setState({ rigs: { [DOCUMENT]: { perso: rigStateFixture(['spine', 'arm.L']) } } })
     render(<AnimationPanel documentId={DOCUMENT} />)
 
     await userEvent.click(

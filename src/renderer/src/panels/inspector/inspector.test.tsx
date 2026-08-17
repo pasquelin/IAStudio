@@ -5,7 +5,12 @@ import type { Asset, AssetType } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { addNode } from '@/engines/scene/commands'
 import { createNodeOf } from '@/engines/scene/nodeFactory'
-import { lightNodeFixture, meshNode, spriteNodeFixture } from '@/engines/scene/scene-fixtures'
+import {
+  lightNodeFixture,
+  meshNode,
+  rigStateFixture,
+  spriteNodeFixture,
+} from '@/engines/scene/scene-fixtures'
 import {
   DEFAULT_MATERIAL,
   IDENTITY_TRANSFORM,
@@ -822,7 +827,10 @@ describe('the inspector on an imported model', () => {
 
   it('offers the clips the file brought', () => {
     install(modelNodeFixture('model-1'))
-    useModelClips.setState({ clips: { 'doc-1': { 'model-1': ['walk'] } } })
+    useModelClips.setState({
+      clips: { 'doc-1': { 'model-1': ['walk'] } },
+      rigs: { 'doc-1': { 'model-1': rigStateFixture([]) } },
+    })
     render(<Content />)
 
     expect(screen.getByLabelText('Clip')).toBeInTheDocument()

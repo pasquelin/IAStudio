@@ -2,7 +2,7 @@ import { MESH_ENTRIES, type GeometryDescriptor } from '@shared/domain/scene'
 import { describe, expect, it } from 'vitest'
 import { primitiveByKind } from './meshPrimitives'
 import { lightByKind } from './lightTypes'
-import { geometryFields, isVector3, lightFields, materialFields, withField } from './propertyFields'
+import { geometryFields, lightFields, materialFields, withField } from './propertyFields'
 import { DEFAULT_MATERIAL } from './sceneState'
 
 const names = (fields: { name: string }[]) => fields.map(field => field.name)
@@ -110,18 +110,5 @@ describe('withField', () => {
     withField(box, 'width', 5)
 
     expect(box.width).toBe(1)
-  })
-})
-
-describe('isVector3', () => {
-  it('recognises three numbered axes', () => {
-    expect(isVector3({ x: 1, y: 2, z: 3 })).toBe(true)
-  })
-
-  it('refuses anything else', () => {
-    expect(isVector3({ x: 1, y: 2 })).toBe(false)
-    expect(isVector3({ x: '1', y: 2, z: 3 })).toBe(false)
-    expect(isVector3(null)).toBe(false)
-    expect(isVector3(4)).toBe(false)
   })
 })

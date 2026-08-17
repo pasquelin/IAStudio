@@ -1,4 +1,4 @@
-import { DEFAULT_ANIMATION } from '@shared/domain/scene'
+import { DEFAULT_CLIP } from '@shared/domain/scene'
 import { secondsToUs } from '@shared/domain/time'
 import { createDefaultScene } from '../scene/defaultScene'
 import { modelNode } from '../scene/nodeFactory'
@@ -41,7 +41,21 @@ export function createModelScene(assetId: string, name: string): ModelScene {
         ...state,
         nodes: state.nodes.map(node =>
           node.id === model.id && node.type === 'model'
-            ? { ...node, model: { ...node.model, animation: { ...DEFAULT_ANIMATION, clip } } }
+            ? {
+                ...node,
+                model: {
+                  ...node.model,
+                  clips: [
+                    {
+                      ...DEFAULT_CLIP,
+                      id: 'dropped',
+                      source: { kind: 'embedded', name: clip },
+                      label: clip,
+                      playing: true,
+                    },
+                  ],
+                },
+              }
             : node,
         ),
       }

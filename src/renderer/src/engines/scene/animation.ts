@@ -1,5 +1,5 @@
 import { AnimationMixer, LoopOnce, LoopRepeat, type AnimationClip, type Object3D } from 'three'
-import type { AnimationRef } from '@shared/domain/scene'
+import type { ClipRef } from '@shared/domain/scene'
 import { usToSeconds, type Us } from '@shared/domain/time'
 
 /** The clips a loaded file brought, in the order it spells them. */
@@ -22,7 +22,22 @@ type Player = {
   mixer: AnimationMixer
   clips: AnimationClip[]
   /** What is bound right now, so an unchanged reference does not rebuild the action every sync. */
-  bound: AnimationRef | null
+  bound: ClipRef | null
+}
+
+/**
+ * Which of a model's blocks the head stands in, or the first one when it stands in none.
+ *
+ * One block at a time, still: playing several at once and fading between them is what the
+ * playback phase is for. Falling back on the first is what keeps a model posed rather than
+ * snapped to its rest pose while the head sits before every block.
+ */
+export function clipAt(clips: readonly ClipRef[], playhead: Us): ClipRef | null {
+  return (
+    clips.find(clip => playhead >= clip.start && playhead < clip.start + clip.duration) ??
+    clips[0] ??
+    null
+  )
 }
 
 /**
@@ -71,7 +86,7 @@ export class SceneAnimations {
    * Makes a node play what the document says. `null` puts the model back to its rest pose: with
    * no action left driving them, three restores the values the file was loaded with.
    */
-  apply(nodeId: string, ref: AnimationRef | null): void {
+  apply(nodeId: string, ref: ClipRef | null): void {
     const player = this.players.get(nodeId)
     if (!player) return
 
@@ -83,12 +98,12 @@ export class SceneAnimations {
       return
     }
 
-    const clip = player.clips.find(candidate => candidate.name === ref.clip)
+    const clip = player.clips.find(candidate => candidate.name === ref.source.name)
     if (!clip) return
 
     // A clip change is the only thing that costs a rebuild; the rest is written onto the action
     // that is already running, so changing the speed does not restart what it is playing.
-    const changed = player.bound?.clip !== ref.clip
+    const changed = player.bound?.id !== ref.id || player.bound.source.name !== ref.source.name
     if (changed) {
       player.mixer.stopAllAction()
       player.mixer.clipAction(clip).play()
@@ -105,7 +120,7 @@ export class SceneAnimations {
     // Only when the DOCUMENT moved the head, never on every apply: the reference carries where
     // the head stands, so re-applying it on a speed change would drag playback back to where it
     // was when that reference was written.
-    if (changed || ref.time !== player.bound?.time) action.time = ref.time
+    if (changed || ref.offset !== player.bound?.offset) action.time = ref.offset
 
     player.bound = ref
     // A seek has to show without waiting for a frame, and a paused player never gets one.
@@ -140,7 +155,7 @@ export class SceneAnimations {
       const ref = player.bound
       if (!ref) continue
 
-      const clip = player.clips.find(candidate => candidate.name === ref.clip)
+      const clip = player.clips.find(candidate => candidate.name === ref.source.name)
       if (!clip) continue
 
       player.mixer.clipAction(clip).time = clipTimeAt(ref, clip.duration, playhead)
@@ -155,7 +170,7 @@ export class SceneAnimations {
  * Held apart from the mixer so it can be tested without one: everything that can go wrong here —
  * a head before the block, a looping clip, a speed — is arithmetic.
  */
-export function clipTimeAt(ref: AnimationRef, duration: number, playhead: Us): number {
+export function clipTimeAt(ref: ClipRef, duration: number, playhead: Us): number {
   const into = usToSeconds(Math.max(0, playhead - ref.start)) * ref.speed
   if (duration <= 0) return 0
 

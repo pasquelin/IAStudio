@@ -101,7 +101,10 @@ describe('painting the animation band', () => {
 
   it('draws a clip as a BAR of its own length, not as a diamond', () => {
     const { rects, lines } = paintOf(
-      rowsOf([], [{ nodeId: 'perso', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND }]),
+      rowsOf(
+        [],
+        [{ nodeId: 'perso', clipId: 'c1', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND }],
+      ),
     )
 
     // One second in, two hundred pixels wide, inset inside its row — which sits under the
@@ -117,7 +120,7 @@ describe('painting the animation band', () => {
 
   it('keeps a zero-length block visible rather than drawing nothing at all', () => {
     const { rects } = paintOf(
-      rowsOf([], [{ nodeId: 'perso', name: 'Walk', start: 0, duration: 0 }]),
+      rowsOf([], [{ nodeId: 'perso', clipId: 'c1', name: 'Walk', start: 0, duration: 0 }]),
     )
     expect(rects.some(rect => rect.width === 1 && rect.height === CLIP_HEIGHT - 5)).toBe(true)
   })

@@ -10,12 +10,17 @@
  * allowed to hold a value today's bounds would refuse.
  */
 import {
+  clipFromAnimation,
   DEFAULT_CAMERA,
+  isTransform,
+  isVector3,
   readEnvironment,
+  ROOT_MOTIONS,
   TEXTURE_SLOTS,
   type EnvironmentRef,
-  type Transform,
+  type ModelRef,
 } from '@shared/domain/scene'
+import { isRig } from '@shared/domain/rig'
 import {
   DEFAULT_DURATION,
   DEFAULT_FPS,
@@ -33,7 +38,6 @@ import {
   MATERIAL_SPECS,
   SPRITE_SPECS,
   TEXT_SPECS,
-  isVector3,
   type PropertySpec,
 } from './propertyFields'
 import {
@@ -106,6 +110,9 @@ function revived(node: SceneNode): SceneNode {
   if (filled.type === 'camera') {
     return { ...filled, camera: { ...DEFAULT_CAMERA, ...filled.camera } }
   }
+  if (filled.type === 'model') {
+    return { ...filled, model: withClips(filled.model) }
+  }
   if (filled.type !== 'text') return filled
 
   return {
@@ -113,6 +120,29 @@ function revived(node: SceneNode): SceneNode {
     material: { ...DEFAULT_MATERIAL, ...filled.material },
     text: { ...DEFAULT_TEXT, ...filled.text, font: readFontRef(filled.text.font) },
   }
+}
+
+/**
+ * A model's clips, from whichever of the two forms the file spells.
+ *
+ * The singular `animation` is READ and never written again: a document saved by an earlier build
+ * holds one clip and no list, and dropping it would lose the animation of every scene ever saved
+ * without a word — a node that plays nothing looks exactly like one that never played.
+ *
+ * A file holding both is a file the plural was written into: the list wins and the leftover goes,
+ * so the next save carries one form only.
+ */
+function withClips(model: ModelRef): ModelRef {
+  if (model.clips) return withoutAnimation(model)
+  if (!model.animation) return model
+
+  return withoutAnimation({ ...model, clips: [clipFromAnimation(model.animation)] })
+}
+
+function withoutAnimation(model: ModelRef): ModelRef {
+  const rest = { ...model }
+  delete rest.animation
+  return rest
 }
 
 /** The flags, filled in where the file holds none — `null` included. */
@@ -154,6 +184,8 @@ function isSceneNode(value: unknown): value is SceneNode {
       isRecord(value.model) &&
       typeof value.model.assetId === 'string' &&
       isOptionalAnimation(value.model.animation) &&
+      isOptionalClips(value.model.clips) &&
+      isOptionalRig(value.model.rig) &&
       isOptionalTextureOverrides(value.model.textures)
     )
   // A sprite is its colour, its opacity and at most one map — the same shapes as a material's,
@@ -172,6 +204,40 @@ function isSceneNode(value: unknown): value is SceneNode {
 
 function isOptionalFlag(value: unknown): boolean {
   return value == null || typeof value === 'boolean'
+}
+
+/**
+ * Absent is legal and means "still", exactly as for the singular below: a document written before
+ * clips were plural holds none, and `revived` is what turns the one it does hold into a list.
+ */
+function isOptionalClips(value: unknown): boolean {
+  if (value == null) return true
+
+  return Array.isArray(value) && value.every(isClip)
+}
+
+function isClip(value: unknown): boolean {
+  if (!isRecord(value)) return false
+  if (typeof value.id !== 'string' || typeof value.label !== 'string') return false
+  if (!isClipSource(value.source)) return false
+  if (typeof value.loop !== 'boolean' || typeof value.playing !== 'boolean') return false
+  if (!ROOT_MOTIONS.some(motion => motion === value.rootMotion)) return false
+
+  return ['start', 'duration', 'offset', 'speed', 'fadeIn', 'fadeOut'].every(field =>
+    Number.isFinite(value[field]),
+  )
+}
+
+function isClipSource(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.name !== 'string') return false
+  if (value.kind === 'embedded') return true
+
+  return value.kind === 'asset' && typeof value.assetId === 'string' && value.assetId !== ''
+}
+
+/** The invariants live with the type: one parent per bone, no cycle, no role twice. */
+function isOptionalRig(value: unknown): boolean {
+  return value == null || isRig(value)
 }
 
 /**
@@ -249,11 +315,6 @@ function isTrack(value: unknown): value is AnimationTrack {
 
 function isKeyframe(value: unknown): value is Keyframe {
   return isRecord(value) && Number.isFinite(value.time) && isVector3(value.value)
-}
-
-function isTransform(value: unknown): value is Transform {
-  if (!isRecord(value)) return false
-  return isVector3(value.position) && isVector3(value.rotation) && isVector3(value.scale)
 }
 
 /**

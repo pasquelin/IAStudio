@@ -17,7 +17,7 @@ export type AnimationHit =
   | { kind: 'ruler'; time: Us }
   | { kind: 'key'; rowId: string; time: Us }
   /** A clip block, and how far into it the pointer landed — a drag must not snap it to the hand. */
-  | { kind: 'block'; rowId: string; nodeId: string; grabbedAt: Us }
+  | { kind: 'block'; rowId: string; nodeId: string; clipId: string; grabbedAt: Us }
   | { kind: 'row'; rowId: string; time: Us }
 
 export type HitContext = {
@@ -48,7 +48,13 @@ export function hitAnimation(context: HitContext, point: Point): AnimationHit | 
       const at = xToTime(point.x, viewport)
       if (at < row.start || at > row.start + row.duration)
         return { kind: 'row', rowId: row.id, time: at }
-      return { kind: 'block', rowId: row.id, nodeId: row.nodeId, grabbedAt: at - row.start }
+      return {
+        kind: 'block',
+        rowId: row.id,
+        nodeId: row.nodeId,
+        clipId: row.clipId,
+        grabbedAt: at - row.start,
+      }
     }
 
     const grab = reachOf(row) + GRAB_SLACK
