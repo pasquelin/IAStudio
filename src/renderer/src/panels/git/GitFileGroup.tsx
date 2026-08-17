@@ -5,6 +5,7 @@ import {
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { pathsOf, type GitFile, type GitStage } from '@shared/domain/git'
+import { PANEL_GROUP_LABEL_WIDE } from '@/design/styles'
 import { ToolButton } from '@/design/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
@@ -30,9 +31,7 @@ export function GitFileGroup({ stage, files }: { stage: GitStage; files: readonl
       {/* `px-1`, the same gutter the rows below carry inside `Row`: the heading's word and the
           rows' names start on the same column, and their two buttons end on the same one. */}
       <div className="flex items-center gap-2 px-1 py-1">
-        <h3 className="text-muted text-tiny min-w-0 flex-1 truncate font-medium tracking-wide uppercase">
-          {t(`git.stage.${stage}`)}
-        </h3>
+        <h3 className={PANEL_GROUP_LABEL_WIDE}>{t(`git.stage.${stage}`)}</h3>
         <span className="text-muted text-tiny shrink-0 tabular-nums">{files.length}</span>
         {/* The way OUT of a merge, and it belongs on the heading rather than on a row: what it
             undoes is the whole operation, not one file. Only offered while there is one to
