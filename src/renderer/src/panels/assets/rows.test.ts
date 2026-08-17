@@ -269,3 +269,78 @@ describe('reading a local row against the library page in hand', () => {
     expect(reconciled(local(), cloud())).toBeNull()
   })
 })
+
+/**
+ * What everyone else published. A line of the same PROVENANCE as a library asset — neither has a
+ * file here, both are fetched by a double-click and pulled at a drop — carrying one flag, for
+ * the one thing that differs: whose it is.
+ */
+describe('the public feed', () => {
+  it('is absent from the list until it has been asked for', () => {
+    const rows = mergeRows({ local: [local()], remote: [], jobs: [], scope: null, absent: NONE })
+
+    expect(rows.map(row => row.from)).toEqual(['local'])
+  })
+
+  it('takes its place on the same timeline, newest first', () => {
+    const rows = mergeRows({
+      local: [local({ createdAt: '2026-08-20T10:00:00.000Z' })],
+      remote: [],
+      published: [cloud({ id: 'asset_theirs', createdAt: '2026-08-25T10:00:00.000Z' })],
+      jobs: [],
+      scope: null,
+      absent: NONE,
+    })
+
+    expect(rows.map(row => row.id)).toEqual(['remote:asset_theirs', 'asset_local'])
+  })
+
+  it('wears a mark of its own, which is not the library’s', () => {
+    const rows = mergeRows({
+      local: [],
+      remote: [cloud({ id: 'asset_mine' })],
+      published: [cloud({ id: 'asset_theirs' })],
+      jobs: [],
+      scope: null,
+      absent: NONE,
+    })
+
+    expect(rows.map(row => badgeOfRow(row, null))).toEqual(
+      expect.arrayContaining(['remote-only', 'published']),
+    )
+  })
+
+  /**
+   * The one collision worth handling: an asset this account owns AND has published comes back on
+   * both pages. Two lines for one thing would offer to fetch what is already in the library.
+   */
+  it('leaves one line for an asset the library page already holds', () => {
+    const rows = mergeRows({
+      local: [],
+      remote: [cloud({ id: 'asset_both' })],
+      published: [cloud({ id: 'asset_both' })],
+      jobs: [],
+      scope: null,
+      absent: NONE,
+    })
+
+    expect(rows).toHaveLength(1)
+    expect(badgeOfRow(rows[0]!, null)).toBe('remote-only')
+  })
+
+  it('is narrowed by the scope, as every other provenance is', () => {
+    const rows = mergeRows({
+      local: [],
+      remote: [],
+      published: [
+        cloud({ id: 'asset_mesh', type: 'mesh' }),
+        cloud({ id: 'asset_img', type: 'image' }),
+      ],
+      jobs: [],
+      scope: ['mesh'],
+      absent: NONE,
+    })
+
+    expect(rows.map(row => row.id)).toEqual(['remote:asset_mesh'])
+  })
+})

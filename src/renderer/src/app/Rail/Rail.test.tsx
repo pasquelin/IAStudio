@@ -173,10 +173,13 @@ describe('Rail', () => {
     )
   }
 
-  // The left rail is what one produces with, under the button that makes a document: generation
-  // above the cut, the Explorer below it, with the band's own tools at its foot. The rail is the
+  // The left rail is the Scenario side under the button that makes a document — a model, its
+  // form, and the shelf they fill — then the cut, then what is already on disk. The rail is the
   // legend of the column, so it has to draw the same cut.
-  it('puts generation on the left rail, under the new-document button', () => {
+  //
+  // The shelf comes LAST of the three above the cut, and that is what keeps the Models in front
+  // when a space is entered: a half with nothing chosen opens on the first tool it declares.
+  it('puts the Scenario panels on the left rail, under the new-document button', () => {
     useModels.setState({ selected: { '3d': 'tripo-v3' } })
     const { container } = render(<Rail side="left" />)
 
@@ -185,6 +188,7 @@ describe('Rail', () => {
       'separator',
       'Modèles',
       'Génération',
+      'Assets',
       'separator',
       'Explorateur',
       'Git',
@@ -193,8 +197,6 @@ describe('Rail', () => {
     ])
   })
 
-  // The shelf comes last of the upper half, and it is what keeps the outliner in front when the
-  // space is entered: a half with nothing chosen opens on the first tool it declares.
   it('cuts the right rail where the column is cut: the document above, the selection below', () => {
     const { container } = render(<Rail side="right" />)
 
@@ -202,7 +204,6 @@ describe('Rail', () => {
       'Scène',
       'Lumières',
       'Mailles',
-      'Assets',
       'separator',
       'Inspecteur',
       // At the FOOT of this rail since the band was split: its right half is the one this side

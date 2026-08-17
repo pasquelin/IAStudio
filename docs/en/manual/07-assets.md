@@ -11,17 +11,16 @@ have imported.
 
 It is the equivalent of a content browser — the library of raw material you draw from.
 
-**Where it sits** depends on the workspace you are in:
+**Where it sits: in the left column, upper half, in every workspace.** Under **Models** and
+**Generate**, with which it takes turns — the three panels that answer the same question, "what
+does Scenario offer me".
 
-| Workspace | Where the shelf is |
-|---|---|
-| Image, Textures, Skyboxes | in the **bottom strip** |
-| Video, Audio, 3D | in the **right column**, upper half |
+Click its icon in the left rail to bring it forward: it is the third of the three, and the half
+opens on Models until you ask for something else.
 
-This is not a whim: in the Video, Audio and 3D workspaces the bottom strip belongs to the timeline,
-which needs the full width. Yet the shelf and the timeline have to hold the screen **together** so
-you can drag a take or a model from one to the other — so the shelf takes the upper half of the
-right column, the one holding the panels that serve the open document.
+Below the separator, in the lower half of the same column, the **Explorer**. The two therefore
+hold the screen **together**, and that is deliberate: what enters your project passes from the
+shelf to the folder, never otherwise.
 
 ---
 
@@ -47,22 +46,17 @@ follows.
 
 ## Searching and filtering
 
-**Where the controls sit depends on the room available.**
+**The controls sit on their own line, below the title.**
 
-| Zone | Where they are |
-|---|---|
-| **Bottom strip** | on the **title line**, beside the panel's name |
-| **Right column** (Video, Audio and 3D workspaces) | on their **own line**, below the title |
-
-In a strip the row is wide and mostly empty: putting the bar there saves a whole row, and the
-shelf is there to show assets, not buttons. In a narrow column, the same bar would push the close
-button out of the frame — so it drops back below the title.
+In a narrow column a bar laid on the title line would push the close button out of the frame, so
+it lives **below** it. The mechanism still exists for strips, where the row is wide and mostly
+empty, but the shelf no longer reads in one.
 
 | Control | What it does |
 |---|---|
 | **Search…** | filters on the asset's **name**, as you type |
 | **Type** | keeps only **one** kind of asset — picking one replaces the previous |
-| **Location** | keeps only assets in a given state with respect to the library |
+| **Location** | keeps only assets in a given state with respect to the library — and, on **Published by somebody else**, goes and reads what other people published |
 | **Icons** / **List** | grid of thumbnails, or dense list |
 | **Smaller thumbnails** / **Larger thumbnails** | their size |
 
@@ -262,6 +256,8 @@ A small mark says where an asset stands with respect to the library:
 | **Changed on both sides** | the two versions have diverged |
 | **The last upload failed** | the previous attempt did not go through |
 | **Belongs to another project** | the online twin answers to a different API key than the active one |
+| **In your library — not on this disk** | the asset exists online under your key, with no file here |
+| **Published by somebody else — not on this disk** | it is not yours; a double-click or a drag and drop fetches it |
 
 **The first two only ever draw in list view.** On a thumbnail, "local only" and "in sync" stay
 silent: those are the two ordinary states, and marking them would cover the grid in dots that say
@@ -280,9 +276,10 @@ again — same file, different library on the other end.
 > to another in the title bar, and it wears the badge. That is the paragraph above at work, not a
 > syncing case.
 >
-> The **Location** filter still offers only four states — *local only*, *in sync*, *to send* and
-> *failed*. "Another project" can therefore show on a thumbnail without being available to filter
-> on.
+> The **Location** filter does not offer it, though. Three badges stay out of that list, each for
+> its own reason: "another project" cannot be reached while the shelf reads one key, "fetching"
+> lasts under a second, and "file not found" is not a place an asset is. They can therefore show
+> on a thumbnail without being available to filter on.
 
 ### Sending a selection
 

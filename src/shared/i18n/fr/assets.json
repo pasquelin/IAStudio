@@ -20,6 +20,7 @@
       "error": "Le dernier envoi a échoué",
       "other-account": "Appartient à un autre projet",
       "remote-only": "Dans votre bibliothèque — pas sur ce disque",
+      "published": "Publié par quelqu’un d’autre — pas sur ce disque",
       "generating": "En cours de génération",
       "fetching": "Rapatriement en cours…",
       "missing": "Fichier introuvable sur le disque"

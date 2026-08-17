@@ -580,8 +580,8 @@ rien n’avait été écrit pour lui.
 
 ## Animer la scène
 
-La bande du bas de l’espace 3D porte une **timeline**, comme en Vidéo et en Audio — et l’étagère
-à assets monte dans la colonne de droite pour lui laisser toute la largeur.
+La bande du bas de l’espace 3D porte une **timeline**, comme en Vidéo et en Audio, sur toute la
+largeur de l’écran.
 
 ### Ce qu’un modèle apporte déjà
 

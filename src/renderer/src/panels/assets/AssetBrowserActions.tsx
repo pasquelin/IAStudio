@@ -6,13 +6,9 @@ import {
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { getBridge } from '@/services/bridge'
-import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
 import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
-import { useAssetFacets } from '@/hooks/useAssetFacets'
-import { useToolLying } from '@/hooks/useToolLying'
-import { useTypeLabels } from '@/hooks/useTypeLabels'
 import { useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { useMedia } from '@/stores/media'
@@ -24,23 +20,18 @@ async function describeSelection(assetIds: readonly string[]): Promise<void> {
   await getBridge()?.assets.describe(assetIds)
 }
 
-// The bar rides here in a band, where the row is wide and a second one would cost height the
-// zone cannot spare. Not in a column: 500 px of bar in a 320 px header pushed the close button
-// out of the frame, which is what put it under the title in the first place.
+// The bar itself is NOT here: the shelf stands in a column, where 500 px of bar in a 320 px
+// header pushed the close button out of the frame. It rode here while the shelf lay in a band —
+// that placement went on 17 August, and the branch with it.
 export function AssetBrowserActions() {
   const { t } = useTranslation()
   // What the shelf is drawing — project, library and generations in flight, filters included.
   // Its own catalogue only while no shelf is mounted, which is the one moment nothing is drawn.
   const count = useAssets(state => state.shownCount ?? state.items.length)
-  const collection = useAssets(state => state.collection)
-  const setCollection = useAssets(state => state.setCollection)
   // A file cannot be linked into a catalogue that is not open.
   const project = useProject(state => state.project)
   const importMedia = useMedia(state => state.importMedia)
   const ffmpeg = useMedia(state => state.capabilities.ffmpeg)
-  const typeLabels = useTypeLabels()
-  const facets = useAssetFacets(typeLabels)
-  const lying = useToolLying()
 
   const selection = useSelection(state => state.selection)
   const refresh = useAssets(state => state.refresh)
@@ -52,14 +43,6 @@ export function AssetBrowserActions() {
 
   return (
     <>
-      {lying && (
-        <CollectionBar
-          state={collection}
-          onChange={setCollection}
-          facets={facets}
-          layout="header"
-        />
-      )}
       {/* An icon rather than the sentence, which is 65 characters and would chase the facets out
           of the row; not a button, since nothing here can install ffmpeg. Focusable all the same:
           the tooltip is the only thing that shows the sentence, and a pointer is not the only way

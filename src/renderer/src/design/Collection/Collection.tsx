@@ -1,6 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import type { DragLike } from '@/helpers/drag'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { useGrid } from '@/hooks/useGrid'
@@ -106,6 +107,15 @@ export type CollectionProps<T extends { id: string }> = {
    * being no card standing for it to aim at. `Tree` offers the same three on its own blank.
    */
   onDropRoot?: (ids: readonly string[]) => void
+  /**
+   * A drag that did NOT start in this collection, released on that same blank — the asset
+   * shelf's, for the Explorer's grid. `Tree` takes the same object for its own blank, so the
+   * two views of one folder answer the gesture alike.
+   */
+  foreign?: {
+    carries: (event: DragLike) => boolean
+    onDrop: (event: React.DragEvent<HTMLElement>) => void
+  }
   /** A right-click on that blank. Raised after `onPressRoot`, never instead of it. */
   onContextMenuRoot?: () => void
   /**
@@ -152,6 +162,7 @@ export function Collection<T extends { id: string }>({
   footer,
   rowHeight = 'control',
   onDropRoot,
+  foreign,
   onContextMenuRoot,
   onPressRoot,
 }: CollectionProps<T>) {
@@ -264,12 +275,24 @@ export function Collection<T extends { id: string }>({
         onContextMenuRoot()
       }}
       onDragOver={event => {
-        if (!onDropRoot || !onBlank(event) || !rowDrag.carries(event)) return
+        if (!onBlank(event)) return
+        if (foreign?.carries(event)) {
+          event.preventDefault()
+          // What leaves the shelf is COPIED into the folder, never taken from it.
+          event.dataTransfer.dropEffect = 'copy'
+          return
+        }
+        if (!onDropRoot || !rowDrag.carries(event)) return
         event.preventDefault()
         event.dataTransfer.dropEffect = 'move'
       }}
       onDrop={event => {
-        if (!onDropRoot || !onBlank(event)) return
+        if (!onBlank(event)) return
+        if (foreign?.carries(event)) {
+          event.preventDefault()
+          return foreign.onDrop(event)
+        }
+        if (!onDropRoot) return
         event.preventDefault()
         const carried = rowDrag.idsFrom(event)
         if (carried.length > 0) onDropRoot(carried)

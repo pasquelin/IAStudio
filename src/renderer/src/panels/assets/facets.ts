@@ -29,5 +29,15 @@ export const FILTERABLE_BADGES: readonly AssetBadge[] = [
   'conflict',
   'error',
   'remote-only',
+  'published',
   'generating',
 ]
+
+/**
+ * The one value of that facet that changes what is READ rather than what is drawn.
+ *
+ * Every other narrows a list the panel already holds. This one asks the API for what everyone
+ * published — unbounded, and a search's worth of quota — so it is read only while it is chosen.
+ * Left in the merge by default, a project's dozen assets would sit under a thousand strangers'.
+ */
+export const PUBLISHED_BADGE: AssetBadge = 'published'

@@ -8,10 +8,12 @@ import type { FileOutcome } from '@shared/domain/fileOp'
 import { natureOf, opensInStudio } from '@shared/domain/fileRole'
 import type { FolderEntry } from '@shared/domain/folder'
 import { refreshPalette } from '@/engines/core/palette'
+import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { fakeMenu } from '@/helpers/menu-fixtures'
 import { LIST_ONLY } from '@/helpers/collectionState'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { useExplorerView } from '@/stores/explorerView'
 import { useSelection } from '@/stores/selection'
@@ -2010,5 +2012,88 @@ describe('the project explorer, as a grid', () => {
     await userEvent.type(field, 'resume.pdf{Enter}')
 
     expect(renameFile).toHaveBeenCalledWith('brief.pdf', 'resume.pdf')
+  })
+
+  /**
+   * The gesture the shelf moved next door for. The grid and the tree take the SAME object, so
+   * these two cases and the two above them are one behaviour read in two views — and the third
+   * one is what says a file is not a place.
+   */
+  describe('an asset dragged in from the shelf', () => {
+    const shelfAsset: Asset = {
+      id: 'asset_moss',
+      name: 'moss.png',
+      type: 'image',
+      location: 'local',
+      path: 'Images/moss.png',
+      tags: [],
+      createdAt: '2026-08-17T10:00:00.000Z',
+    }
+
+    const carrying = (): DataTransfer => {
+      const data = dragTransfer()
+      startAssetDrag({ dataTransfer: data }, shelfAsset)
+      return data
+    }
+
+    const rowFor = async (name: string): Promise<HTMLElement> => {
+      const row = (await screen.findByText(name)).closest('[role="treeitem"]')
+      if (!(row instanceof HTMLElement)) throw new Error(`no row for ${name}`)
+      return row
+    }
+
+    beforeEach(() => {
+      useAssets.setState({ items: [shelfAsset] })
+    })
+
+    it('lands its file in the folder tile it was dropped on', async () => {
+      withProject()
+      showGrid()
+      const { moveFiles } = install({ '': [folder('Croquis')] })
+
+      render(<Explorer />)
+      fireEvent.drop(await tileFor('Croquis'), { dataTransfer: carrying() })
+
+      await waitFor(() => expect(moveFiles).toHaveBeenCalledWith(['Images/moss.png'], 'Croquis'))
+    })
+
+    it('lands it in the folder on screen when it is dropped on the blank', async () => {
+      withProject()
+      showGrid()
+      const { moveFiles } = install({
+        '': [folder('Croquis')],
+        Croquis: [file('note.txt', 'Croquis')],
+      })
+
+      render(<Explorer />)
+      await enter('Croquis')
+      await screen.findByText('note.txt')
+
+      fireEvent.drop(blank(), { dataTransfer: carrying() })
+
+      await waitFor(() => expect(moveFiles).toHaveBeenCalledWith(['Images/moss.png'], 'Croquis'))
+    })
+
+    // An asset lands IN a place, and a file is not one — the tile takes no outline and no drop.
+    it('is refused by a file', async () => {
+      withProject()
+      showGrid()
+      const { moveFiles } = install({ '': [file('brief.pdf')] })
+
+      render(<Explorer />)
+      fireEvent.drop(await tileFor('brief.pdf'), { dataTransfer: carrying() })
+
+      await waitFor(() => expect(moveFiles).not.toHaveBeenCalled())
+    })
+
+    it('lands its file in the folder ROW it was dropped on, the list reading alike', async () => {
+      withProject()
+      const { moveFiles } = install({ '': [folder('Croquis')] })
+
+      render(<Explorer />)
+      fireEvent.drop(await rowFor('Croquis'), { dataTransfer: carrying() })
+
+      await waitFor(() => expect(moveFiles).toHaveBeenCalledWith(['Images/moss.png'], 'Croquis'))
+    })
   })
 })

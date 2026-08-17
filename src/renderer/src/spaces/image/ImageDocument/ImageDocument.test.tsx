@@ -440,7 +440,7 @@ describe('ImageDocument', () => {
   // Placing a picture arms no gesture: it is a choice, and the shelf is where one is made.
   it('brings the shelf forward instead of arming a tool that draws nothing', async () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { bottomRight: { primary: 'assets' } } }),
+      arrangements: arrangedFor('image', { open: { left: { primary: 'assets' } } }),
       focusedZone: null,
     })
     render(<ImageDocument documentId="doc-1" />)
@@ -448,7 +448,7 @@ describe('ImageDocument', () => {
     await userEvent.hover(screen.getByRole('button', { name: /^Rectangle/ }))
     await userEvent.click(await screen.findByRole('menuitemradio', { name: /^Image/ }))
 
-    expect(useTools.getState().focusedZone).toBe('bottomRight')
+    expect(useTools.getState().focusedZone).toBe('left')
     expect(setTool).not.toHaveBeenCalledWith('shape')
   })
 })

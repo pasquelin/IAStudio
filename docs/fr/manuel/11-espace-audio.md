@@ -9,10 +9,10 @@ volume — puis où on le pose à côté des autres.
 
 ## Comment l’espace est disposé
 
-Comme en Vidéo, la **bande basse appartient au montage** et l’étagère à assets prend la moitié
-haute de la **colonne de droite**, pour qu’une prise se glisse de l’une vers l’autre sans avoir à
-changer de panneau. La colonne de gauche porte les Modèles et la Génération, comme partout
-ailleurs.
+Comme en Vidéo, la **bande basse appartient au montage**. La colonne de gauche porte les Modèles,
+la Génération et l’**étagère à assets**, comme partout ailleurs : une prise se glisse donc de
+l’étagère au montage sans avoir à changer de panneau. La moitié haute de la colonne de droite est
+vide dans cet espace ; seul l’Inspecteur l’occupe, sous le trait.
 
 Au centre, **deux moniteurs empilés** — là où la Vidéo pose les siens côte à côte. Ils prennent
 toute la largeur, l’un sous l’autre :

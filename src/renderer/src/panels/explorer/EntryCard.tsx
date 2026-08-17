@@ -6,6 +6,7 @@ import { MediaTile } from '@/design/MediaTile'
 import { rowDrag } from '@/design/rowDrag'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
+import type { DragLike } from '@/helpers/drag'
 
 /**
  * What the card stands for, which decides the SHAPE it draws: a folder, a plain file, or a file
@@ -41,6 +42,18 @@ export type EntryCardProps = {
   pickable: boolean
   /** Whether what is in the hand may land IN this card — only the panel can say, see `onPickUp`. */
   accepts: boolean
+  /**
+   * A drag that did NOT start in this grid — the asset shelf's. The tree takes the same object
+   * under the same name, so one gesture reads alike in both views of the folder.
+   *
+   * `accepts` is its own here rather than the one above: that one answers about what this grid
+   * picked up, and nothing was. The panel resolves it from the same predicate the tree uses.
+   */
+  foreign?: {
+    accepts: boolean
+    carries: (event: DragLike) => boolean
+    onDrop: (event: React.DragEvent<HTMLElement>) => void
+  }
   onDropInto: (ids: readonly string[]) => void
   /** What this card just picked up, so the panel can answer `accepts` for its neighbours. */
   onPickUp: (ids: readonly string[]) => void
@@ -65,6 +78,7 @@ export function EntryCard({
   dragIds,
   pickable,
   accepts,
+  foreign,
   onDropInto,
   onPickUp,
   onRelease,
@@ -86,6 +100,13 @@ export function EntryCard({
         onPickUp(dragIds)
       }}
       onDragOver={event => {
+        if (foreign?.carries(event)) {
+          if (!foreign.accepts) return
+          event.preventDefault()
+          // What leaves the shelf is COPIED into the folder, never taken from it.
+          event.dataTransfer.dropEffect = 'copy'
+          return setOver(true)
+        }
         if (!accepts || !rowDrag.carries(event)) return
         // Without this the browser refuses the drop, and neither callback ever fires.
         event.preventDefault()
@@ -99,6 +120,12 @@ export function EntryCard({
       }}
       onDrop={event => {
         setOver(false)
+        // Before the grid's own reading, which answers about what IT picked up — nothing did.
+        if (foreign?.carries(event)) {
+          event.preventDefault()
+          if (foreign.accepts) foreign.onDrop(event)
+          return
+        }
         onRelease()
         if (!accepts) return
         event.preventDefault()

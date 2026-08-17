@@ -66,6 +66,7 @@ describe('the lists that stand for a union', () => {
       error: true,
       'other-account': true,
       'remote-only': true,
+      published: true,
       generating: true,
       fetching: true,
       missing: true,

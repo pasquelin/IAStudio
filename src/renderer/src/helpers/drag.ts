@@ -6,7 +6,13 @@
  * part is `carries`, which a drop target must ask before calling `preventDefault`, and which
  * is the difference between a drop that works and one the browser silently refuses.
  */
-type DragLike = { dataTransfer: DataTransfer | null }
+/**
+ * The one thing every reader of a drag needs, and the least a caller has to hand over. Exported
+ * so a surface that only ASKS about a drag — a list deciding whether it would take one — can name
+ * it rather than write the shape again; a `React.DragEvent` satisfies it, and so does a test's
+ * double.
+ */
+export type DragLike = { dataTransfer: DataTransfer | null }
 
 export type DragChannel = {
   start: (event: DragLike, id: string) => void

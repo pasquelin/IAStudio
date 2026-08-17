@@ -9,6 +9,7 @@ import {
   carriesAsset,
   draggedAssetType,
   droppedAsset,
+  landAssetIn,
   startAssetDrag,
   startLibraryDrag,
 } from './assetDrag'
@@ -139,5 +140,104 @@ describe('what a drop resolves to', () => {
     startAssetDrag({ dataTransfer }, { id: 'asset_local', type: 'image' })
 
     expect(dataTransfer.effectAllowed).toBe('copy')
+  })
+})
+
+/**
+ * The gesture the shelf and the Explorer were moved beside each other for: what leaves the one
+ * becomes a FILE in the other, and every editor takes it from there as a file of the project.
+ */
+describe('landing a dragged asset in a folder', () => {
+  const row: Asset = {
+    id: 'asset_local',
+    name: 'moss.png',
+    type: 'image',
+    location: 'local',
+    path: 'Images/moss.png',
+    tags: [],
+    createdAt: '2026-08-07T10:00:00.000Z',
+  }
+
+  function bridgeRecording(moves: { paths: readonly string[]; folder: string }[]) {
+    installFakeBridge({
+      project: {
+        moveFiles: (paths, folder) => {
+          moves.push({ paths, folder })
+          return Promise.resolve({ done: [], refused: [], batch: 'batch-1' })
+        },
+      },
+    })
+  }
+
+  beforeEach(() => {
+    useCloud.getState().clear()
+    useAssets.setState({ items: [] })
+  })
+
+  it('moves the file of a catalogue row into the folder it was dropped on', async () => {
+    const moves: { paths: readonly string[]; folder: string }[] = []
+    bridgeRecording(moves)
+    useAssets.setState({ items: [row] })
+
+    const dataTransfer = transfer()
+    startAssetDrag({ dataTransfer }, { id: 'asset_local', type: 'image' })
+
+    expect(await landAssetIn({ dataTransfer }, 'Croquis')).toMatchObject({ batch: 'batch-1' })
+    expect(moves).toEqual([{ paths: ['Images/moss.png'], folder: 'Croquis' }])
+  })
+
+  /**
+   * A library asset has no file until it is fetched, and `pull` writes it under the folder its
+   * KIND is written to — never the one the pointer asked for. The move is what finishes the
+   * gesture, and it is why this is one function rather than a fetch the caller then follows.
+   */
+  it('fetches a library asset first, then moves what it became', async () => {
+    const moves: { paths: readonly string[]; folder: string }[] = []
+    installFakeBridge({
+      project: {
+        moveFiles: (paths, folder) => {
+          moves.push({ paths, folder })
+          return Promise.resolve({ done: [], refused: [], batch: 'batch-1' })
+        },
+      },
+      cloud: {
+        pull: () => {
+          useAssets.setState({ items: [{ ...row, remoteAssetId: 'asset_remote' }] })
+          return Promise.resolve([{ assetId: 'asset_remote', ok: true }])
+        },
+      },
+      assets: { search: () => Promise.resolve([{ ...row, remoteAssetId: 'asset_remote' }]) },
+    })
+
+    const dataTransfer = transfer()
+    startLibraryDrag({ dataTransfer }, { id: 'asset_remote', type: 'image' })
+
+    await landAssetIn({ dataTransfer }, 'Croquis')
+    expect(moves).toEqual([{ paths: ['Images/moss.png'], folder: 'Croquis' }])
+  })
+
+  it('moves nothing for a drag that carries no asset of ours', async () => {
+    const moves: { paths: readonly string[]; folder: string }[] = []
+    bridgeRecording(moves)
+
+    expect(await landAssetIn({ dataTransfer: transfer() }, 'Croquis')).toBeNull()
+    expect(moves).toEqual([])
+  })
+
+  /**
+   * A linked medium lives where the user left it and carries no `path` of ours. Moving it is
+   * not this gesture's business — and the refusal is SILENT, which is the known cost: the kind
+   * cannot be read at hover, so the drop cannot be turned away before it happens.
+   */
+  it('moves nothing for an asset the studio holds no file of', async () => {
+    const moves: { paths: readonly string[]; folder: string }[] = []
+    bridgeRecording(moves)
+    useAssets.setState({ items: [{ ...row, path: undefined, sourcePath: '/elsewhere/moss.png' }] })
+
+    const dataTransfer = transfer()
+    startAssetDrag({ dataTransfer }, { id: 'asset_local', type: 'image' })
+
+    expect(await landAssetIn({ dataTransfer }, 'Croquis')).toBeNull()
+    expect(moves).toEqual([])
   })
 })

@@ -9,9 +9,10 @@ then lay it beside the others.
 
 ## How this workspace is laid out
 
-As in Video, the **bottom strip belongs to the edit** and the asset shelf takes the upper half of
-the **right column**, so a take can be dragged from one to the other without switching panels. The
-left column holds Models and Generate, as it does everywhere else.
+As in Video, the **bottom strip belongs to the edit**. The left column holds Models, Generate and
+the **asset shelf**, as it does everywhere else: a take is therefore dragged from the shelf to the
+edit without switching panels. The upper half of the right column is empty in this workspace; only
+the Inspector holds it, below the separator.
 
 In the middle, **two stacked monitors** — where Video puts its own side by side. They take the
 full width, one under the other:

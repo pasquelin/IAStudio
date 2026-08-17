@@ -9,8 +9,13 @@ L’espace où l’on assemble des plans les uns après les autres pour en faire
 ## Comment l’espace est disposé
 
 Comme l’espace Audio, c’est un espace où la **bande basse appartient au montage**. Une séquence se
-lit sur toute la largeur de l’écran : la **Timeline** y prend donc toute la place, et l’étagère à
-assets passe dans la moitié haute de la colonne de droite, pour rester visible en même temps.
+lit sur toute la largeur de l’écran : la **Timeline** y prend donc toute la place. L’étagère à
+assets reste où elle est partout ailleurs — moitié haute de la **colonne de gauche** — et tient
+donc l’écran en même temps que le montage, ce qui est ce qu’il faut pour glisser une prise sur une
+piste.
+
+La moitié haute de la colonne de droite est **vide** dans cet espace : la Vidéo n’y déclare aucun
+panneau. Seul l’**Inspecteur**, sous le trait, l’occupe.
 
 Au centre, deux moniteurs côte à côte — la convention de Premiere et de DaVinci :
 

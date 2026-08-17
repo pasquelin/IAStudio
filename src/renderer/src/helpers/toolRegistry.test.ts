@@ -63,9 +63,9 @@ describe('the generator', () => {
   })
 
   it('is the only panel its absence removes', () => {
-    expect(idsOf('left', 'image')).toEqual(['models', 'explorer'])
+    expect(idsOf('left', 'image')).toEqual(['models', 'assets', 'explorer'])
     useModels.setState({ selected: { image: 'flux-dev' } })
-    expect(idsOf('left', 'image')).toEqual(['models', 'generator', 'explorer'])
+    expect(idsOf('left', 'image')).toEqual(['models', 'generator', 'assets', 'explorer'])
   })
 
   /** The home is the one surface with nothing to generate at all, and it stays that way. */
@@ -124,13 +124,19 @@ describe('a half open on no panel in particular', () => {
   it('shows the one this section declares first', () => {
     expect(shownTool(null, 'right', 'primary', 'image', WITH_MODEL)).toBe('layers')
     expect(shownTool(null, 'right', 'primary', '3d', WITH_MODEL)).toBe('scene')
-    expect(shownTool(null, 'right', 'primary', 'video', WITH_MODEL)).toBe('assets')
     expect(shownTool(null, 'right', 'primary', 'skyboxes', WITH_MODEL)).toBe('skybox')
     expect(shownTool(null, 'right', 'primary', 'textures', WITH_MODEL)).toBe('channels')
   })
 
-  it('reads the band as the shelf or the montage, per section', () => {
-    expect(shownTool(null, 'bottomRight', 'primary', 'image', WITH_MODEL)).toBe('assets')
+  // Video and Audio declare NOTHING in that half since the shelf went left, so the half opens
+  // on no panel at all — the same answer as a section that fills no such half.
+  it('shows nothing in the upper right of Video and Audio', () => {
+    expect(shownTool(null, 'right', 'primary', 'video', WITH_MODEL)).toBeNull()
+    expect(shownTool(null, 'right', 'primary', 'audio', WITH_MODEL)).toBeNull()
+  })
+
+  it('reads the band as the history or the montage, per section', () => {
+    expect(shownTool(null, 'bottomRight', 'primary', 'image', WITH_MODEL)).toBe('history')
     expect(shownTool(null, 'bottomRight', 'primary', 'audio', WITH_MODEL)).toBe('timeline')
   })
 
@@ -160,16 +166,22 @@ describe('what a half of a zone shows', () => {
     expect(shownTool('inspector', 'right', 'secondary', 'image', NO_MODEL)).toBe('inspector')
   })
 
-  // What the user opened is a zone, and it stays that zone across sections: the band holds the
-  // montage in Video and the shelf everywhere else, neither reopened by hand on every switch.
+  /**
+   * What the user opened is a zone, and it stays that zone across sections: the band holds the
+   * montage in Video and the history everywhere else, neither reopened by hand on every switch.
+   *
+   * `assets` is the example on purpose — it is what a layout stored before 17 August still names
+   * in that half, and it no longer sits there in any section. The band falls back rather than
+   * standing empty, which is what keeps such a layout readable without a migration.
+   */
   it('shows what this section puts there when the tool it holds sits elsewhere', () => {
     expect(shownTool('assets', 'bottomRight', 'primary', 'video', WITH_MODEL)).toBe('timeline')
-    expect(shownTool('timeline', 'bottomRight', 'primary', 'image', WITH_MODEL)).toBe('assets')
+    expect(shownTool('assets', 'bottomRight', 'primary', 'image', WITH_MODEL)).toBe('history')
   })
 
   it('leaves a tool alone in the zone this section gives it', () => {
-    expect(shownTool('assets', 'right', 'primary', 'video', WITH_MODEL)).toBe('assets')
-    expect(shownTool('assets', 'bottomRight', 'primary', 'image', WITH_MODEL)).toBe('assets')
+    expect(shownTool('timeline', 'bottomRight', 'primary', 'video', WITH_MODEL)).toBe('timeline')
+    expect(shownTool('assets', 'left', 'primary', 'image', WITH_MODEL)).toBe('assets')
   })
 
   it('substitutes within the half, never across the separator', () => {

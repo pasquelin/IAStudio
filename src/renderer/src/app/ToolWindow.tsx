@@ -10,7 +10,6 @@ import { ToolButton } from '@/design/ToolButton'
 import { isKnownTool, toolDefinition } from './toolComponents'
 import { isHorizontal, type ToolId, type ToolZone } from '@shared/domain/tool'
 import { toolTitleKey } from '@/helpers/toolRegistry'
-import { ToolZoneProvider } from './toolZone'
 
 export type ToolWindowProps = {
   tool: ToolId
@@ -50,63 +49,59 @@ export const ToolWindow = memo(function ToolWindow({
   const { Content, Actions, fillActions } = toolDefinition(tool)
 
   return (
-    // Zone-wide, header included: a panel lays out differently in a narrow column and in a
-    // strip across the window, and its own row is part of what changes.
-    <ToolZoneProvider zone={zone}>
-      {/* The zone owns its length: a half given one keeps it, the other takes what is left. Both
-          sized here would make the pair overflow the zone the user dragged. */}
-      <Panel
-        aria-label={title}
-        onPointerDownCapture={onFocus}
-        // `shrink` overrides `Panel`'s own `shrink-0`: a half given a length must still give
-        // ground when the zone is shorter than the two halves ask for, or it overflows the column.
-        className={length === undefined ? 'flex-1 basis-0' : 'shrink'}
-        style={length === undefined ? undefined : { flexBasis: length }}
+    // The zone owns its length: a half given one keeps it, the other takes what is left. Both
+    // sized here would make the pair overflow the zone the user dragged.
+    <Panel
+      aria-label={title}
+      onPointerDownCapture={onFocus}
+      // `shrink` overrides `Panel`'s own `shrink-0`: a half given a length must still give
+      // ground when the zone is shorter than the two halves ask for, or it overflows the column.
+      className={length === undefined ? 'flex-1 basis-0' : 'shrink'}
+      style={length === undefined ? undefined : { flexBasis: length }}
+    >
+      <PanelHeader
+        title={title}
+        fillActions={fillActions === true && isHorizontal(zone)}
+        trailing={
+          <>
+            {Actions !== undefined && <Separator />}
+            <ToolButton
+              icon={mdiClose}
+              label={t('actions.removeTool')}
+              tooltip={TIP_BOTTOM}
+              variant="header"
+              onClick={onClose}
+            />
+          </>
+        }
       >
-        <PanelHeader
-          title={title}
-          fillActions={fillActions === true && isHorizontal(zone)}
-          trailing={
-            <>
-              {Actions !== undefined && <Separator />}
-              <ToolButton
-                icon={mdiClose}
-                label={t('actions.removeTool')}
-                tooltip={TIP_BOTTOM}
-                variant="header"
-                onClick={onClose}
-              />
-            </>
-          }
-        >
-          {/* Its own boundary, and an empty one: actions that throw must not take the close
+        {/* Its own boundary, and an empty one: actions that throw must not take the close
               button with them, and a failure notice does not fit on a header row. */}
-          {Actions !== undefined && (
-            <ErrorBoundary key={tool} fallback={() => null}>
-              {/* A chunk that never arrives is a failure like any other — React rejects rather
+        {Actions !== undefined && (
+          <ErrorBoundary key={tool} fallback={() => null}>
+            {/* A chunk that never arrives is a failure like any other — React rejects rather
                   than suspending forever, and the boundary above catches it either way round.
                   Nested as `documents.tsx` nests them, for one shape across the studio. */}
-              <Suspense fallback={null}>
-                <Actions />
-              </Suspense>
-            </ErrorBoundary>
-          )}
-        </PanelHeader>
-        {/* A COLUMN, not a plain box: a panel that scrolls its own body sizes it `flex-1`
+            <Suspense fallback={null}>
+              <Actions />
+            </Suspense>
+          </ErrorBoundary>
+        )}
+      </PanelHeader>
+      {/* A COLUMN, not a plain box: a panel that scrolls its own body sizes it `flex-1`
             (`PANEL_SCROLL`), and `flex-1` against a non-flex parent does nothing at all — the
             body took the height of its CONTENT instead of the height of the panel, so the
             scroller stopped short and the empty space below it belonged to nobody. */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-          {/* Inside the panel, not around it: a tool that throws keeps its header, so it can
+      <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+        {/* Inside the panel, not around it: a tool that throws keeps its header, so it can
               still be closed. Keyed by the tool — the rail swaps `tool` on this same element,
               and a boundary left standing would hand its failure to the tool that replaced it. */}
-          <ErrorBoundary key={tool}>
-            <Suspense fallback={null}>
-              <Content />
-            </Suspense>
-          </ErrorBoundary>
-        </div>
-      </Panel>
-    </ToolZoneProvider>
+        <ErrorBoundary key={tool}>
+          <Suspense fallback={null}>
+            <Content />
+          </Suspense>
+        </ErrorBoundary>
+      </div>
+    </Panel>
   )
 })

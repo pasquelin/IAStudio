@@ -12,18 +12,16 @@ que vous avez importé.
 C’est l’équivalent d’un navigateur de contenu — la bibliothèque de matière première dans
 laquelle vous piochez.
 
-**Où il se trouve** dépend de l’espace où vous êtes :
+**Où il se trouve : dans la colonne de gauche, moitié haute, dans tous les espaces.** Sous les
+**Modèles** et la **Génération**, avec lesquels il se relaie — les trois panneaux qui répondent à
+la même question, « qu’est-ce que Scenario me propose ».
 
-| Espace | Où se trouve l’étagère |
-|---|---|
-| Image, Textures, Skyboxes | dans la **bande basse** |
-| Vidéo, Audio, 3D | dans la **colonne de droite**, moitié haute |
+Cliquez son icône dans le rail de gauche pour l’amener devant : c’est le troisième des trois, et
+la moitié s’ouvre sur les Modèles tant que vous n’avez rien demandé.
 
-Ce n’est pas un caprice : dans les espaces Vidéo, Audio et 3D, la bande basse appartient à la
-timeline, qui a besoin de toute la largeur. Il faut pourtant que l’étagère et la timeline tiennent
-l’écran **ensemble** pour qu’on puisse glisser une prise ou un modèle de l’une vers l’autre —
-l’étagère prend donc la moitié haute de la colonne de droite, celle des panneaux qui servent le
-document ouvert.
+Sous le trait, dans la moitié basse de la même colonne, l’**Explorateur**. Les deux tiennent donc
+l’écran **ensemble**, et c’est délibéré : ce qui entre dans votre projet passe de l’étagère au
+dossier, jamais autrement.
 
 ---
 
@@ -48,23 +46,17 @@ fichier EST ne dépend pas de l’endroit où il est — le studio le retrouve, 
 
 ## Chercher et filtrer
 
-**Où sont les contrôles dépend de la place.**
+**Les contrôles sont sur leur propre ligne, sous le titre.**
 
-| Zone | Où ils sont |
-|---|---|
-| **Bande basse** | sur la **ligne de titre**, à côté du nom du panneau |
-| **Colonne de droite** (espaces Vidéo, Audio et 3D) | sur leur **propre ligne**, sous le titre |
-
-Dans une bande, la ligne est large et presque vide : y loger la barre épargne une rangée
-entière, et l’étagère est là pour montrer des assets, pas des boutons. Dans une colonne étroite,
-la même barre pousserait le bouton de fermeture hors du cadre — elle redescend donc sous le
-titre.
+Dans une colonne étroite, une barre posée sur la ligne de titre pousserait le bouton de fermeture
+hors du cadre : elle vit donc **sous** le titre. Le mécanisme existe encore pour les bandes, où la
+ligne est large et presque vide, mais l’étagère n’y lit plus.
 
 | Contrôle | Ce qu’il fait |
 |---|---|
 | **Rechercher…** | filtre sur le **nom** de l’asset, à la frappe |
 | **Type** | ne garde qu’**une seule** sorte d’assets — en choisir une remplace la précédente |
-| **Emplacement** | ne garde que les assets dans un certain état vis-à-vis de la bibliothèque |
+| **Emplacement** | ne garde que les assets dans un certain état vis-à-vis de la bibliothèque — et, sur **Publié par quelqu’un d’autre**, va chercher ce que les autres ont publié |
 | **Icônes** / **Liste** | grille de vignettes, ou liste dense |
 | **Réduire les vignettes** / **Agrandir les vignettes** | leur taille |
 
@@ -270,6 +262,8 @@ Une petite marque dit où en est un asset vis-à-vis de la bibliothèque :
 | **Modifié des deux côtés** | les deux versions ont divergé |
 | **Le dernier envoi a échoué** | la tentative précédente n’est pas passée |
 | **Appartient à un autre projet** | le jumeau en ligne relève d’une autre clé API que celle qui est active |
+| **Dans votre bibliothèque — pas sur ce disque** | l’asset existe en ligne sous votre clé, aucun fichier ici |
+| **Publié par quelqu’un d’autre — pas sur ce disque** | il ne vous appartient pas ; un double-clic ou un glisser-déposer le rapatrie |
 
 **Les deux premiers ne se dessinent qu’en vue liste.** Sur une vignette, « local seulement » et
 « synchronisé » restent muets : ce sont les deux états ordinaires, et les marquer couvrirait la
@@ -289,9 +283,11 @@ relisent — c’est le même fichier, c’est la bibliothèque d’en face qui 
 > avec une clé, basculez sur une autre dans la barre de titre, et il porte le badge. C’est le
 > paragraphe ci-dessus à l’œuvre, pas un cas de synchronisation.
 >
-> Le filtre **Emplacement** ne propose pourtant que quatre états — *local seulement*,
-> *synchronisé*, *à envoyer* et *échec*. « Autre projet » peut donc s’afficher sur une vignette
-> sans qu’on puisse s’en servir pour filtrer.
+> Le filtre **Emplacement** ne le propose pourtant pas. Trois badges restent hors de la liste, et
+> chacun pour sa raison : « autre projet » ne s’atteint pas tant que l’étagère ne lit qu’une clé,
+> « rapatriement en cours » dure moins d’une seconde, et « fichier introuvable » n’est pas un
+> endroit où un asset se trouve. Ils peuvent donc s’afficher sur une vignette sans qu’on puisse
+> s’en servir pour filtrer.
 
 ### Envoyer une sélection
 

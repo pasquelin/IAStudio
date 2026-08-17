@@ -510,9 +510,11 @@ That is why the tool registry lives in `shared/` and not in the renderer: the ma
 `{ id, zone, slot, workspaces }` in order to offer only what the section can open, and duplicating
 it would degrade `ToolId` to `string`.
 
-A tool may declare **more than one placement**, for disjoint sets of workspaces — the shelf sits in
-the bottom strip nearly everywhere, and in the right column in Video, Audio and 3D, where a
-timeline owns the strip. `tool.test.ts` locks the two invariants that keep this legible: the workspaces of two
+A tool may declare **more than one placement**, for disjoint sets of workspaces — the Explorer
+holds the same half in every workspace and on the home, but only the home's asks for an open
+project. **No tool declares two workspace halves since 17 August**, the shelf having given up its
+second one when it moved into the left column.
+`tool.test.ts` locks the two invariants that keep this legible: the workspaces of two
 placements never overlap, and the placements of one tool share a slot — a tool that changed half as
 well as zone would land in a different row of the rail depending on where you came from.
 

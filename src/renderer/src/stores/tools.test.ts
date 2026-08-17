@@ -333,13 +333,33 @@ describe('migrating to the split arrangement', () => {
     const migrated = migrateTools(
       {
         arrangements: {
+          workspaces: { open: { bottom: { primary: 'timeline' } }, sizes: { bottom: 400 } },
+        },
+      },
+      14,
+    )
+
+    expect(migrated?.arrangements.workspaces.open.bottomRight).toEqual({ primary: 'timeline' })
+    expect(migrated?.lengths.sizes.bottomRight).toBe(400)
+  })
+
+  /**
+   * The montage above, and the shelf here, because the two answer differently now: a version 14
+   * band holding the SHELF comes back with the half open and empty, the shelf having moved to
+   * the left column on 17 August. The height is kept all the same — the zone is still there.
+   */
+  it('empties a version 14 band that held the shelf, keeping the half and its height', () => {
+    const migrated = migrateTools(
+      {
+        arrangements: {
           workspaces: { open: { bottom: { primary: 'assets' } }, sizes: { bottom: 400 } },
         },
       },
       14,
     )
 
-    expect(migrated?.arrangements.workspaces.open.bottomRight).toEqual({ primary: 'assets' })
+    expect(migrated?.arrangements.workspaces.open.bottomRight).toEqual({})
+    expect(migrated?.arrangements.workspaces.open.left).toEqual({ primary: 'assets' })
     expect(migrated?.lengths.sizes.bottomRight).toBe(400)
   })
 })
@@ -379,9 +399,17 @@ describe('the default layout', () => {
       bottom: { primary: 'assets' },
     })
 
+    // The band comes back with no half at all: the shelf it named moved to the left column on
+    // 17 August, and a zone emptied that way takes no room rather than standing blank.
+    //
+    // The Explorer stored in the upper right does not reach the left column, and that is
+    // `slotsFrom` rather than this: two panels stored in one zone that both declare the SAME
+    // half leave one of them behind, the last read winning. Unchanged by the move, and written
+    // down here because the expectation looks like a loss and is not a new one.
     expect(unchosen(stored)).toEqual({
-      right: { primary: null, secondary: null },
-      bottomRight: { primary: null },
+      left: { primary: null },
+      right: { secondary: null },
+      bottomRight: {},
     })
   })
 
@@ -395,13 +423,16 @@ describe('openFrom', () => {
     expect(openFrom({ right: 'inspector' })).toEqual({ right: { secondary: 'inspector' } })
   })
 
-  it('opens a tool in every zone it sits in, so changing workspace never hides it', () => {
-    // The shelf lies in the bottom band nearly everywhere and stands in the right column in
-    // Video and Audio. Stored in one, it has to be open in the other, or the workspace that
-    // reads it elsewhere shows nothing where it belongs.
+  /**
+   * The shelf stood in the right column of Video and Audio until 17 August, and lay in the band
+   * everywhere else. It declares one half now — the upper left — so a layout stored under either
+   * of the old two comes back under the new one. This is the migration every existing install
+   * runs, which is why it is written out rather than left to the generic case below.
+   */
+  it('brings a shelf stored in the right column back to the left', () => {
     expect(openFrom({ right: { primary: 'assets' } })).toEqual({
-      right: { primary: 'assets' },
-      bottomRight: { primary: 'assets' },
+      right: {},
+      left: { primary: 'assets' },
     })
   })
 
@@ -412,23 +443,26 @@ describe('openFrom', () => {
     expect(open.left?.primary).toBe('generator')
   })
 
-  // The layout a version 6 install actually holds. Every half it named still draws a panel
-  // afterwards: a migration that left one empty would look like a broken window on the first
-  // launch after an update.
-  it('rebuilds a whole version 6 layout without emptying a half', () => {
+  /**
+   * The layout a version 6 install actually holds. Nothing it named is LOST — every panel comes
+   * back in the half it declares today — but two zones do come back empty, and that is the
+   * shelf moving to the left column: it was what filled the band, and what the upper right held
+   * in Video and Audio. An emptied zone takes no room, so what the reader sees is a window with
+   * one column fewer, not a blank rectangle.
+   */
+  it('rebuilds a whole version 6 layout, losing no panel', () => {
     const open = openFrom({
       left: { primary: 'assets', secondary: 'explorer' },
       right: { primary: 'models', secondary: 'inspector' },
       bottom: { primary: 'assets' },
     })
 
-    // The Explorer keeps the lower left it was stored in — it is where it lives now too.
-    expect(open.left).toEqual({ primary: 'models', secondary: 'explorer' })
-    // The shelf takes the upper right the Explorer used to win: it declares that half in Video
-    // and Audio, and nothing is left there to outrank it.
-    expect(open.right).toEqual({ primary: 'assets', secondary: 'inspector' })
-    // The band it was stored in is the band's RIGHT half today, which is where it lands.
-    expect(open.bottomRight).toEqual({ primary: 'assets' })
+    // The shelf holds the upper left it was stored in, and the models lose it: `??=` leaves the
+    // first claim standing, and the left column is read before the right.
+    expect(open.left).toEqual({ primary: 'assets', secondary: 'explorer' })
+    expect(open.right).toEqual({ secondary: 'inspector' })
+    // The band it was stored in is the band's RIGHT half today, and it comes back empty.
+    expect(open.bottomRight).toEqual({})
   })
 
   /**
@@ -462,12 +496,12 @@ describe('openFrom', () => {
     expect(open.right).toEqual({ secondary: 'inspector' })
   })
 
-  // The shelf claims the upper right and the band both; the column was only left on its default.
-  // An explicit choice outranks a default, whichever of the two the rebuild reads first.
+  // The upper left was only left on its default; the shelf stored in the band claims it. An
+  // explicit choice outranks a default, whichever of the two the rebuild reads first.
   it('lets a named panel win a half left on its default', () => {
-    expect(openFrom({ right: { primary: null }, bottom: { primary: 'assets' } })).toEqual({
-      right: { primary: 'assets' },
-      bottomRight: { primary: 'assets' },
+    expect(openFrom({ left: { primary: null }, bottom: { primary: 'assets' } })).toEqual({
+      left: { primary: 'assets' },
+      bottomRight: {},
     })
   })
 
@@ -478,8 +512,8 @@ describe('openFrom', () => {
   })
 
   it('drops the jobs panel, which is no longer a tool window', () => {
-    expect(openFrom({ bottom: { primary: 'assets', secondary: 'jobs' } }).bottomRight).toEqual({
-      primary: 'assets',
+    expect(openFrom({ bottom: { primary: 'history', secondary: 'jobs' } }).bottomRight).toEqual({
+      primary: 'history',
     })
   })
 

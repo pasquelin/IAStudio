@@ -282,12 +282,12 @@ export function openFrom(persisted: unknown): OpenByZone {
 /**
  * Re-hangs every stored tool on the placements it declares today, and nowhere else.
  *
- * Two things ride on this. A tool open in one of its zones must be open in all of them: the
- * shelf lies in the bottom band nearly everywhere and stands in the right column in Video and
- * Audio, while what is open is stored per zone — a layout written in one workspace would
- * otherwise leave it invisible in the others. And a tool must leave the zones it no longer
- * declares: the generation panels held the upper right until version 6, and own the left
- * column now.
+ * Two things ride on this. A tool open in one of its zones must be open in all of them, since
+ * what is open is stored per zone — **no tool declares two workspace halves today**, the shelf
+ * having given up its second on 17 August, so this half of the job currently has no instance;
+ * it is kept because the registry still allows one and nothing here would notice. And a tool
+ * must leave the zones it no longer declares: the generation panels held the upper right until
+ * version 6, and the shelf held the band and the right column until 17 August.
  *
  * Rebuilding from the placements rather than filtering the stored map is what makes the second
  * one free, and what keeps a horizontal band whole — no placement cuts one.

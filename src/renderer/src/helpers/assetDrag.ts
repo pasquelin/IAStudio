@@ -1,4 +1,6 @@
 import { isAssetType, type Asset, type AssetType } from '@shared/domain/asset'
+import type { FileOutcome } from '@shared/domain/fileOp'
+import { getBridge } from '@/services/bridge'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { dragChannel } from './drag'
@@ -114,4 +116,29 @@ export async function droppedAsset(event: {
   if (held || !fromLibrary) return held
 
   return await useCloud.getState().fetchOne(id)
+}
+
+/**
+ * Landing a dragged asset in a folder of the project: the FILE moves there.
+ *
+ * The whole point of the gesture, and the sentence the studio now tells in one voice — what
+ * leaves the shelf becomes a file of the project, and every editor takes it as one. A library
+ * asset is fetched first (`droppedAsset` does it) and lands in the folder its kind is written
+ * to, so the move is what puts it where the pointer asked.
+ *
+ * `null` when nothing moved, and two ways to get there: a drag carrying no asset of ours, and
+ * an asset the studio holds no file OF — a linked medium lives where the user left it, and
+ * moving it is not this gesture's business. **The second is silent**, which is the known cost:
+ * the kind cannot be read at hover, so the drop cannot be refused before it happens.
+ *
+ * Reads the event synchronously, as `droppedAsset` requires.
+ */
+export async function landAssetIn(
+  event: { dataTransfer: DataTransfer | null },
+  folder: string,
+): Promise<FileOutcome | null> {
+  const asset = await droppedAsset(event)
+  if (!asset?.path) return null
+
+  return (await getBridge()?.project.moveFiles([asset.path], folder)) ?? null
 }
