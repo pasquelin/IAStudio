@@ -731,12 +731,12 @@ body,
 }
 
 /*
- * A picture cut to the DOCUMENT silhouette — `mdiFile` MINUS its fold, written here because CSS
- * cannot read `@mdi/js`. A mask SUBTRACTS a second subpath instead of drawing it, and the fold
- * came out as a black triangle of panel through the corner of every thumbnail.
+ * A picture cut to a PAGE — a portrait rectangle on `mdiFile`'s own gauge, no dog-ear. The
+ * proportion is what says « file »; the folded corner said it too, but a mask SUBTRACTS the
+ * second subpath a fold is made of, so it came out as a black triangle of panel.
  */
 @utility document-cutout {
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6,2C4.89,2 4,2.89 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='2' width='16' height='20' rx='2'/%3E%3C/svg%3E");
   mask-size: contain;
   mask-position: center;
   mask-repeat: no-repeat;
