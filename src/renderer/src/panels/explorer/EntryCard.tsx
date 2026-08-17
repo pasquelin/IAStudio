@@ -1,4 +1,4 @@
-import { mdiCircleMedium, mdiFolder } from '@mdi/js'
+import { mdiCircleMedium, mdiFile, mdiFolder } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { InlineRename } from '@/design/InlineRename'
@@ -7,18 +7,28 @@ import { rowDrag } from '@/design/rowDrag'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 
+/**
+ * What the card stands for, which decides the SHAPE it draws: a folder, a plain file, or a file
+ * the studio opens as a document and which keeps the glyph of its own space.
+ */
+export type EntryKind = 'folder' | 'file' | 'document'
+
+/** The tile draws a filled silhouette where the tree draws an outline. */
+const SOLID: Record<Exclude<EntryKind, 'document'>, string> = { folder: mdiFolder, file: mdiFile }
+
 export type EntryCardProps = {
   /** What the card is called — the document's own name where there is one, the file name else. */
   name: string
-  /** The glyph drawn until the preview arrives, and instead of it where there is none. */
+  /** The glyph of a document's space, drawn in place of the file silhouette. */
   icon: string
   /** A preview of the file, asked of the main process and rendered there. */
   preview?: string
   /**
-   * Drawn as a SHAPE filling the tile, with no frame around it. What the grid was missing: a
-   * folder and a file were the same dark square wearing a different little sign.
+   * Drawn as a SHAPE filling the tile, with no frame around it — a folder, a file and a document
+   * alike. What the grid was missing: a folder and a file were the same dark square wearing a
+   * different little sign.
    */
-  folder?: boolean
+  kind: EntryKind
   /** Whether a tab is showing this file right now. Only a document can be. */
   open: boolean
   /** Whether this entry has been CUT and is waiting for a paste. */
@@ -48,7 +58,7 @@ export function EntryCard({
   name,
   icon,
   preview,
-  folder,
+  kind,
   open,
   waiting,
   onRename,
@@ -106,17 +116,20 @@ export function EntryCard({
     >
       <MediaTile
         caption={name}
-        fallbackIcon={icon}
         url={preview}
-        {...(folder
-          ? {
-              // The frame belongs to FILES: it bounds a picture that may be pale or transparent.
-              bare: true,
-              // The alpha `MediaTile` draws its own fallback at — below it, `tokens.test.ts`
-              // refuses the ratio a glyph that INFORMS owes (WCAG 1.4.11).
-              face: <UiIcon path={mdiFolder} size="fill" className="text-muted/80" />,
-            }
-          : {})}
+        bare
+        // A thumbnail is cut to the file silhouette rather than framed: the tile then says what
+        // the entry IS as plainly as the folder next to it, without hiding what it holds.
+        cutout={kind === 'file'}
+        // The alpha `MediaTile` draws its own fallback at — below it, `tokens.test.ts`
+        // refuses the ratio a glyph that INFORMS owes (WCAG 1.4.11).
+        face={
+          <UiIcon
+            path={kind === 'document' ? icon : SOLID[kind]}
+            size="fill"
+            className="text-muted/80"
+          />
+        }
         {...(onRename
           ? {
               captionField: (

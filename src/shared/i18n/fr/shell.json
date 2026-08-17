@@ -103,6 +103,12 @@
     "crumbs": "Dossier affiché",
     "projectFolder": "Projet",
     "crumbHint": "Remonte à ce dossier",
+    "back": "Précédent",
+    "backHint": "Revient au dossier affiché juste avant",
+    "forward": "Suivant",
+    "forwardHint": "Retourne au dossier quitté par le bouton précédent",
+    "up": "Dossier parent",
+    "upHint": "Remonte d’un niveau dans le projet",
     "enterFolder": "Ouvrir ce dossier dans la grille",
     "sort": {
       "name": "Nom, de A à Z",

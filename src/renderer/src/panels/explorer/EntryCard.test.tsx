@@ -10,6 +10,7 @@ const card = (props: Partial<Parameters<typeof EntryCard>[0]> = {}) => {
     <EntryCard
       name="facade.jpg"
       icon={mdiFileOutline}
+      kind="file"
       open={false}
       dragIds={['Images/facade.jpg']}
       pickable
@@ -47,6 +48,16 @@ describe('EntryCard', () => {
     fireEvent.dragStart(tile.querySelector('img')!, { dataTransfer: dragTransfer() })
 
     expect(onPickUp).toHaveBeenCalledWith(['Images/facade.jpg'])
+  })
+
+  /**
+   * One tile has to say both what the entry is and what it holds: neither the framed square the
+   * grid drew before, nor a silhouette that hides the picture.
+   */
+  it('cuts the thumbnail of a file to the document silhouette', () => {
+    const { tile } = card({ preview: 'scenario://thumb/x' })
+
+    expect(tile.querySelector('img')?.className).toContain('document-cutout')
   })
 
   it('refuses a drag while the name is being typed', () => {

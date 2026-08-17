@@ -48,6 +48,12 @@ export type MediaTileProps = {
    * a folder silhouette has nothing to bound, and a box around it reads as a file.
    */
   bare?: boolean
+  /**
+   * Cuts the picture to the document silhouette and gives it the shape's box, so one tile says
+   * both what the entry is and what it holds. Goes with `bare`: the frame it drops is the very
+   * square this replaces.
+   */
+  cutout?: boolean
 }
 
 /**
@@ -66,6 +72,7 @@ export function MediaTile({
   face,
   fill = false,
   bare = false,
+  cutout = false,
 }: MediaTileProps) {
   const { src, onError } = useLoadable(url)
 
@@ -78,13 +85,20 @@ export function MediaTile({
       )}
     >
       {src ? (
-        <img
-          src={src}
-          alt=""
-          loading="lazy"
-          onError={onError}
-          className="absolute inset-0 size-full object-cover"
-        />
+        // A cut picture takes the SHAPE's box, held clear of the caption: cut to a silhouette it
+        // reads as placed, the way the folder beside it does, and not as filling the square.
+        <div className={cn('absolute inset-0', cutout && 'bottom-4 flex items-end justify-center')}>
+          <img
+            src={src}
+            alt=""
+            loading="lazy"
+            onError={onError}
+            className={cn(
+              'object-cover',
+              cutout ? 'document-cutout aspect-square h-full' : 'size-full',
+            )}
+          />
+        </div>
       ) : face ? (
         // Held clear of the caption and centred when there is no picture: a shape reads as placed
         // where a picture reads as filling, and the two want opposite boxes.
