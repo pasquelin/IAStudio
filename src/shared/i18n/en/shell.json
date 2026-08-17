@@ -103,6 +103,12 @@
     "crumbs": "Folder shown",
     "projectFolder": "Project",
     "crumbHint": "Goes back up to this folder",
+    "back": "Back",
+    "backHint": "Goes back to the folder shown just before",
+    "forward": "Forward",
+    "forwardHint": "Returns to the folder the back button left",
+    "up": "Parent folder",
+    "upHint": "Goes up one level in the project",
     "enterFolder": "Open this folder in the grid",
     "sort": {
       "name": "Name: A to Z",

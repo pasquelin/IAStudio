@@ -1629,6 +1629,41 @@ describe('the project explorer, as a grid', () => {
   })
 
   /**
+   * The crumbs name the way UP, which is not the way BACK: they sit at the foot of the panel and
+   * were read as a caption rather than as a control.
+   */
+  it('walks back out of a folder, and forward into it again', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('Images'), file('brief.pdf')], Images: [file('a.png', 'Images')] })
+
+    render(<Explorer />)
+    await enter('Images')
+    await screen.findByText('a.png')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Précédent' }))
+    expect(await screen.findByText('brief.pdf')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Suivant' }))
+    expect(await screen.findByText('a.png')).toBeInTheDocument()
+  })
+
+  it('goes up a level, and offers no way up from the project folder', async () => {
+    withProject()
+    showGrid()
+    install({ '': [folder('Images'), file('brief.pdf')], Images: [file('a.png', 'Images')] })
+
+    render(<Explorer />)
+    await enter('Images')
+    await screen.findByText('a.png')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Dossier parent' }))
+
+    expect(await screen.findByText('brief.pdf')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Dossier parent' })).toBeDisabled()
+  })
+
+  /**
    * The complaint the grid answered with nothing: a folder was a dark square with a little sign
    * in it and a `.jpg` was the same square with another sign, so neither question a grid exists
    * to answer — folder or file, and what is this file about — could be read without the names.
@@ -1644,10 +1679,10 @@ describe('the project explorer, as a grid', () => {
     // The shape FILLS the tile: a glyph sized in pixels inside a box that is 64 px at one
     // density and 208 at another is the little sign this replaces.
     expect((await tileFor('Images')).querySelector('svg')).toHaveStyle({ width: '100%' })
-    // And it wears NO frame: the plate and the border bound a picture, and a box around a
-    // silhouette reads as one more file — which is the distinction the grid exists to draw.
+    // NEITHER wears a frame: the plate and the border bound a picture that fills a square, and
+    // a file now draws a silhouette of its own — the thumbnail is cut to it, not framed by it.
     expect((await tileFor('Images')).querySelector('figure')).not.toHaveClass('bg-surface')
-    expect((await tileFor('facade.jpg')).querySelector('figure')).toHaveClass('bg-surface')
+    expect((await tileFor('facade.jpg')).querySelector('figure')).not.toHaveClass('bg-surface')
 
     expect((await tileFor('facade.jpg')).querySelector('img')).toHaveAttribute(
       'src',

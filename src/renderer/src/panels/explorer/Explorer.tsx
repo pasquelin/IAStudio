@@ -40,9 +40,18 @@ import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { NoProject } from '@/panels/shared/NoProject'
 import { openEntryMenu, openRootMenu } from './entryMenu'
 import { DomainRow } from './DomainRow'
-import { EntryCard } from './EntryCard'
+import { EntryCard, type EntryKind } from './EntryCard'
 import { EntryRow } from './EntryRow'
 import { FolderCrumbs } from './FolderCrumbs'
+import { FolderNav } from './FolderNav'
+import {
+  canWalkBy,
+  FOLDER_WALK_START,
+  walkedBy,
+  walkedTo,
+  walkInto,
+  type FolderWalk,
+} from './folderWalk'
 import { RescanBar } from './RescanBar'
 
 /** Nothing held, nothing to take back — the state the panel starts in and falls back to. */
@@ -113,9 +122,9 @@ export function Explorer() {
    * which is persisted and shared by every window: a path means nothing outside its own project,
    * and reopening a studio deep inside a folder nobody navigated to reads as one gone missing.
    */
-  const [browsing, setBrowsing] = useState<{ project: string | null; folder: string }>({
+  const [browsing, setBrowsing] = useState<{ project: string | null; walk: FolderWalk }>({
     project: projectPath,
-    folder: FOLDER_ROOT,
+    walk: FOLDER_WALK_START,
   })
   /**
    * The batch in the hand. Held because `getData` answers nothing until the drop, by design of the
@@ -199,16 +208,24 @@ export function Explorer() {
    * The folder asked for, forgotten the moment another project is opened. Derived rather than reset
    * by an effect, which is the cascading render the linter refuses.
    */
-  const asked = browsing.project === projectPath ? browsing.folder : FOLDER_ROOT
+  const walk = browsing.project === projectPath ? browsing.walk : FOLDER_WALK_START
+  const asked = walkedTo(walk)
   /**
    * Changing folder UNPICKS, and that is not tidiness: every gesture of this panel acts on the
    * selection, so a file left picked in the folder one has just left is a ⌘⌫ that trashes something
    * nobody can see. The tree cannot reach this — what is picked there is on screen by construction.
+   *
+   * It also OPENS the folder in the tree: children are read only once a folder has been opened, so
+   * a walk into one that was folded away since would land somewhere shown empty.
    */
-  const browse = (folder: string): void => {
+  const goTo = (next: FolderWalk): void => {
+    const folder = walkedTo(next)
     useSelection.getState().selectFiles([])
-    setBrowsing({ project: projectPath, folder })
+    if (folder !== FOLDER_ROOT && !expandedIds.has(folder)) toggle(folder)
+    setBrowsing({ project: projectPath, walk: next })
   }
+
+  const browse = (folder: string): void => goTo(walkInto(walk, folder))
   /**
    * Whether the folder asked for is still one this panel can show: still on the disk, and still
    * OPEN in the tree — the grid reads the same nodes, and a reload keeps only the root and what is
@@ -431,6 +448,13 @@ export function Explorer() {
   }
 
   /**
+   * What a CARD stands for, which decides the silhouette it draws. Asked in the same order as
+   * `iconFor`, and for the same reason: an image document is a directory on the disk.
+   */
+  const kindOf = (node: FolderNode): EntryKind =>
+    documentOf(node) ? 'document' : node.kind === 'folder' ? 'folder' : 'file'
+
+  /**
    * The picture an entry shows in place of its glyph. Beside `iconFor` for the same reason: two
    * places answering one question is what this panel has already paid for twice. A folder has a
    * shape of its own and a document the glyph of its space; neither is a file to preview.
@@ -442,12 +466,10 @@ export function Explorer() {
 
   /**
    * A double-click on a CARD. A folder is gone INTO rather than folded open, a grid having no
-   * nesting to draw. Expanding it is not bookkeeping: children are read only once a folder has been
-   * opened, so descending without it would land in a folder never fetched and show it empty.
+   * nesting to draw — `browse` is what opens it in the tree, and says why.
    */
   const enter = (node: FolderNode): void => {
     if (documentOf(node) || node.kind !== 'folder') return void activate(node)
-    if (!expandedIds.has(node.id)) toggle(node.id)
     browse(node.path)
   }
 
@@ -514,6 +536,19 @@ export function Explorer() {
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
     >
+      {/* Only where there is a walk to read: a search and a domain answer about the whole
+          project, and three greyed buttons over either say the panel has lost its way. */}
+      {browsable && (
+        <FolderNav
+          canBack={canWalkBy(walk, -1)}
+          canForward={canWalkBy(walk, 1)}
+          canUp={browsed !== FOLDER_ROOT}
+          onBack={() => goTo(walkedBy(walk, -1))}
+          onForward={() => goTo(walkedBy(walk, 1))}
+          onUp={() => browse(parentOf(browsed) ?? FOLDER_ROOT)}
+        />
+      )}
+
       {/* Under the title row and not on it — the field measured 76 px up there. The two readings
           STAY up in it: they answer about the project, where this bar is about the list on screen.
           `display` is on now the grid exists; the zoom greys itself out on a list. */}
@@ -565,7 +600,7 @@ export function Explorer() {
                 // Never the open glyph: a grid draws no children under a folder, so an open one
                 // would promise a nesting that is not on screen.
                 icon={iconFor(node, false)}
-                folder={node.kind === 'folder' && !documentOf(node)}
+                kind={kindOf(node)}
                 preview={previewFor(node)}
                 open={isOpen(documentOf(node))}
                 waiting={waiting.has(node.path)}
