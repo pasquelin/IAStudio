@@ -343,6 +343,39 @@ touché. Voir [Les assets](07-assets.md).
 
 ---
 
+## Git
+
+Le panneau Git n’est pas un client git complet, et quatre de ses limites se remarquent tout de
+suite. Elles découlent toutes du même choix : **une fenêtre de studio n’a pas de terminal**.
+
+### git doit déjà être installé sur la machine
+
+Le studio ne l’embarque pas, il lance celui du système. macOS répond souvent en proposant
+d’installer les outils de développement en ligne de commande ; une installation Windows neuve n’a
+pas de git du tout. **La question est posée à l’ouverture du projet**, et le panneau le dit alors —
+plutôt que de vous laisser préparer un enregistrement qui ne pourrait pas aboutir.
+
+### Le studio ne demande jamais de mot de passe
+
+Aucune fenêtre de mot de passe, jamais : c’est un choix, pas un oubli. Une commande qui attend une
+réponse dans un terminal inexistant resterait bloquée sans que rien ne puisse l’interrompre.
+
+Pour un serveur qui en réclame un, le jeton se renseigne **dans le panneau, une fois par serveur** —
+pas par projet. Un même jeton personnel ouvre tous vos dépôts chez le même hébergeur.
+
+### Une clé SSH à phrase de passe échoue au lieu de la réclamer
+
+C’est la conséquence directe du point précédent, et **la limite la plus susceptible de vous
+surprendre** : l’envoi échoue, sans rien demander. Le remède est celui que tout poste déjà
+configuré pour ssh possède — charger la clé dans un agent avant d’ouvrir le studio.
+
+### Ce que votre terminal exporte n’a aucun effet ici
+
+Si vous avez l’habitude de régler git par des variables d’environnement — `GIT_EDITOR`, `PAGER`,
+et tout ce qui commence par `GIT_` — sachez qu’elles sont **écartées** avant chaque commande. Le
+studio impose ses propres réponses plutôt que de discuter avec celles du shell qui l’a lancé. Votre
+proxy et votre agent ssh, eux, sont conservés.
+
 ## Réglages et raccourcis
 
 ### Deux familles n’ont pas de modèle par défaut

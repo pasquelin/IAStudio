@@ -332,6 +332,39 @@ disk for nothing.
 
 ---
 
+## Git
+
+The Git panel is not a full git client, and four of its limits show up immediately. They all
+follow from the same choice: **a studio window has no terminal**.
+
+### git has to be installed on the machine already
+
+The studio does not ship it, it runs the system's own. macOS often answers by offering to install
+the command line developer tools; a fresh Windows install has no git whatsoever. **The question is
+asked when the project opens**, and the panel says so then — rather than letting you prepare a
+recorded version that could never go through.
+
+### The studio never asks for a password
+
+No password window, ever: that is a choice, not an oversight. A command waiting for an answer in a
+terminal that does not exist would sit there with nothing able to interrupt it.
+
+For a server that requires one, the token is entered **in the panel, once per server** — not per
+project. One personal token opens every repository you have with the same host.
+
+### An SSH key with a passphrase fails rather than asking for it
+
+This follows directly from the point above, and it is **the limit most likely to catch you out**:
+the push fails, asking for nothing. The remedy is the one any machine already set up for ssh has —
+load the key into an agent before opening the studio.
+
+### What your terminal exports has no effect here
+
+If you are used to configuring git through environment variables — `GIT_EDITOR`, `PAGER`, and
+anything starting with `GIT_` — they are **dropped** before every command. The studio imposes its
+own answers rather than arguing with the shell it happened to be launched from. Your proxy and your
+ssh agent are kept.
+
 ## Settings and shortcuts
 
 ### Two families have no default model
