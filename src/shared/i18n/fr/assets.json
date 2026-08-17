@@ -9,6 +9,8 @@
     "count_other": "{{count, number}} assets",
     "countHint": "Tout ce que cette liste montre — le projet, votre bibliothèque et les générations en cours, filtres compris",
     "openProject": "Ouvrez un projet pour voir ses assets.",
+    "libraryRefused": "Votre bibliothèque n’a pas répondu. Ce que ce projet contient reste visible.",
+    "libraryRefusedHint": "Redemande la bibliothèque à Scenario, sans toucher au projet",
     "import": "Importer un média",
     "importHint": "Lier un fichier vidéo, audio ou image — il reste où il est",
     "badge": {

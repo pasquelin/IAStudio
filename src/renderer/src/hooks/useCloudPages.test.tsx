@@ -79,6 +79,37 @@ describe('a cloud listing read page by page', () => {
     expect(await screen.findByText('a,b,c')).toBeInTheDocument()
   })
 
+  /**
+   * The offset stops advancing at its ceiling and the API answers the same page for ever. Read as
+   * « there is more », that is an unbounded loop of identical searches, each one billed.
+   */
+  it('is at its end when the cursor stops advancing', async () => {
+    const read = vi.fn(() => Promise.resolve({ assets: [cloudAsset('a')], cursor: 'o:10000' }))
+
+    render(withQueries(<Listing read={read} />))
+    await screen.findByText('a')
+    await userEvent.click(screen.getByRole('button'))
+    await screen.findByText('exhausted')
+
+    // The first page, then the one that came back on the same cursor. Never a third.
+    expect(read).toHaveBeenCalledTimes(2)
+  })
+
+  it('is at its end after a run of pages bringing nothing new', async () => {
+    let offset = 0
+    const read = vi.fn(() => {
+      offset += 1
+      return Promise.resolve({ assets: [cloudAsset('a')], cursor: `o:${offset}` })
+    })
+
+    render(withQueries(<Listing read={read} />))
+    await screen.findByText('a')
+    for (let click = 0; click < 5; click += 1) await userEvent.click(screen.getByRole('button'))
+
+    expect(await screen.findByText('exhausted')).toBeInTheDocument()
+    expect(read.mock.calls.length).toBeLessThanOrEqual(5)
+  })
+
   it('is at its end as soon as a page comes back without a cursor', async () => {
     render(
       withQueries(

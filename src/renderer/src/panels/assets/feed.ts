@@ -7,11 +7,17 @@ import { stampOfIso, stampOfRow, type AssetRowModel } from './rows'
  */
 export type FeedSourceName = 'local' | 'library' | 'published'
 
-/** How far one source of the timeline has been read. */
+/**
+ * How far one source of the timeline has been read.
+ *
+ * A source is listed once it has ANSWERED, and never before: what is absent from the record is a
+ * source still being read, which the caller must leave out rather than describe.
+ */
 export type FeedSource = {
   /**
    * The stamp of its last row — every source answers newest first, so nothing it has left can be
-   * newer. Absent is not « holds nothing »: an unread source may hold the newest row of all.
+   * newer. Absent means it answered without a row to show, and therefore holds nothing back: its
+   * newest page is behind it. A whole page can end up empty, the API narrowing after it answers.
    */
   readTo?: string
   /** A source at its end can no longer hold anything back. */
@@ -38,15 +44,18 @@ export function mergeFeed<T extends AssetRowModel>(
   // Handed back as it came, so a shelf with nothing left to read does not re-allocate per render.
   if (open.length === 0) return { rows: [...rows], hungry: [] }
 
+  // A source that answered with nothing reaches the far past: it cannot come before anything, and
+  // it is the one to ask again — being the lowest, it always sits on the cut.
   const reach = (source: FeedSource): number =>
-    source.readTo === undefined ? Number.POSITIVE_INFINITY : stampOfIso(source.readTo)
+    source.readTo === undefined ? Number.NEGATIVE_INFINITY : stampOfIso(source.readTo)
 
   const cut = Math.min(...open.map(([, source]) => reach(source)))
 
   return {
     // Strictly newer, so a source stopped at a stamp keeps back the rows sharing it — a batch
-    // generation writes several in the same second. A job carries no stamp and is what is awaited.
-    rows: rows.filter(row => row.from === 'job' || stampOfRow(row) > cut),
+    // generation writes several in the same second. A row with no readable stamp cannot be placed
+    // at all and is kept rather than lost, which is also how a running generation stays on top.
+    rows: rows.filter(row => stampOfRow(row) === 0 || stampOfRow(row) > cut),
     // Only the ones sitting on the cut: asking them all spends a quota on what is not missing.
     hungry: open.filter(([, source]) => reach(source) === cut).map(([name]) => name),
   }

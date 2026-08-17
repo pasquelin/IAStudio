@@ -450,22 +450,26 @@ export function AssetBrowser() {
     atSpaceDefault ? setFacetValue(collection, TYPE_FACET, null) : collection,
   )
   /**
-   * And a fifth, between the first and the rest: a shelf with a project open and a source still
-   * reading does not KNOW that it is empty, and « this project has no asset » is an answer to a
-   * question nobody has been able to ask yet.
+   * And two more, between the first and the rest. A shelf with a project open and a source still
+   * reading does not KNOW that it is empty; one whose library was refused knows even less — the
+   * question was asked and nothing came back, so blaming the project for it is a lie with a
+   * network behind it.
    */
-  // The same question `sources` asks, read off its answer: a source that has not answered is not
-  // in the record, and the two must not drift apart.
+  // Read off `sources` rather than asked again: a source that has not answered is not in the
+  // record, and two spellings of that question would drift apart.
   const reading = !('library' in sources) || (publishedType !== null && !('published' in sources))
+  const refused = library.refused || feed.refused
   const emptyMessage = !project
     ? t('assets.openProject')
     : reading
       ? t('collection.loading')
-      : narrowedByHand
-        ? t('collection.noMatch')
-        : atSpaceDefault
-          ? t('assets.noneOfKind')
-          : t('assets.none')
+      : refused
+        ? t('assets.libraryRefused')
+        : narrowedByHand
+          ? t('collection.noMatch')
+          : atSpaceDefault
+            ? t('assets.noneOfKind')
+            : t('assets.none')
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -515,7 +519,26 @@ export function AssetBrowser() {
             {...(renameOf(row) ?? {})}
           />
         )}
-        empty={<EmptyState icon={mdiImageMultipleOutline} message={emptyMessage} />}
+        empty={
+          <EmptyState
+            icon={mdiImageMultipleOutline}
+            message={emptyMessage}
+            // The one emptiness with a way out: the others are answers, this one is a question
+            // that came back unanswered.
+            {...(refused
+              ? {
+                  action: {
+                    label: t('actions.retry'),
+                    hint: t('assets.libraryRefusedHint'),
+                    onClick: () => {
+                      library.retry()
+                      feed.retry()
+                    },
+                  },
+                }
+              : {})}
+          />
+        }
       />
     </div>
   )

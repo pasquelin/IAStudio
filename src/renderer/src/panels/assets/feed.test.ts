@@ -57,14 +57,28 @@ describe('what the merged timeline may publish', () => {
     expect(idsOf(merged.rows)).not.toContain('july')
   })
 
-  it('publishes nothing while a source that has answered nothing is still open', () => {
+  /**
+   * A whole page can come back empty — the main process narrows the API's answer after it lands.
+   * Read as « this source could still hold anything », that page hid the project's own catalogue
+   * behind a library of another kind, with no scroll able to bring it back.
+   */
+  it('publishes the rest when a source answered with nothing, and asks that one again', () => {
     const merged = mergeFeed(ROWS, {
       local: { readTo: '2026-06-01T00:00:00.000Z', exhausted: true },
       library: { exhausted: false },
     })
 
-    expect(merged.rows).toEqual([])
+    expect(idsOf(merged.rows)).toEqual(['august', 'july', 'june'])
     expect(merged.hungry).toEqual(['library'])
+  })
+
+  // Sorted last is what `stampOfRow` promises for an unreadable stamp — not dropped from the list.
+  it('keeps a row whose stamp cannot be read', () => {
+    const merged = mergeFeed([...ROWS, row('undated', 'not a date')], {
+      library: { readTo: '2026-07-01T00:00:00.000Z', exhausted: false },
+    })
+
+    expect(idsOf(merged.rows)).toContain('undated')
   })
 
   it('names the source sitting on the cut, and only it', () => {
@@ -107,7 +121,11 @@ describe('what the merged timeline may publish', () => {
       type: null,
     }
 
-    const merged = mergeFeed([running, ...ROWS], { library: { exhausted: false } })
+    const merged = mergeFeed([running, ...ROWS], {
+      library: { readTo: '2026-09-01T00:00:00.000Z', exhausted: false },
+    })
+
+    // The cut is newer than every row here, so only the generation is left.
     expect(idsOf(merged.rows)).toEqual(['job:1'])
   })
 

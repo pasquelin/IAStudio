@@ -516,6 +516,23 @@ describe('the three provenances, as the panel draws them', () => {
     expect(screen.getByText('A library picture')).toBeInTheDocument()
   })
 
+  /**
+   * The main process narrows the API's page AFTER it lands, so a full library page holding
+   * nothing of the kind on screen comes back empty with its cursor still alive. Read as « this
+   * source could still hold anything newer », it hid the project's own catalogue behind it — and
+   * an empty grid has no end for a scroll to reach, so nothing brought it back.
+   */
+  it('keeps drawing the project when the library answers a page of another kind', async () => {
+    installFakeBridge({
+      cloud: { browse: () => Promise.resolve({ assets: [], cursor: 't:page-2' }) },
+    })
+    useAssets.setState({ items: [asset('asset_1')] })
+
+    render(shelf())
+
+    expect(await screen.findByText('Asset asset_1')).toBeInTheDocument()
+  })
+
   // The whole point of the merged list: the thing being made is on it before it exists.
   it('draws a generation that is still running', () => {
     installFakeBridge({})

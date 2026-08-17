@@ -122,6 +122,11 @@ function pageOf(scope: readonly AssetType[] | null, offset: number): AssetQuery 
   return { ...(scope ? { types: [...scope] } : {}), limit: LOCAL_PAGE, offset }
 }
 
+function withoutHeld(held: readonly Asset[], page: readonly Asset[]): Asset[] {
+  const known = new Set(held.map(asset => asset.id))
+  return page.filter(asset => !known.has(asset.id))
+}
+
 /** Two scopes that ask for the same kinds, so a re-render does not re-read the catalogue. */
 function sameScope(
   current: readonly AssetType[] | null,
@@ -258,8 +263,11 @@ export const useAssets = create<AssetsState>()(
               if (!sameScope(get().scope, scope)) return
 
               pagesRead += 1
+              // Against what is held, because the offset is `items.length` and a row can leave
+              // the list between two pages — `retype` drops one the scope no longer takes, and
+              // the page then starts one row short of where it was meant to.
               set(state => ({
-                items: [...state.items, ...page],
+                items: [...state.items, ...withoutHeld(state.items, page)],
                 hasMore: page.length === LOCAL_PAGE,
               }))
             } catch {
@@ -291,13 +299,14 @@ export const useAssets = create<AssetsState>()(
 
             try {
               const found: Asset[] = []
-              const held = pagesRead
               let pages = 0
               let more = false
 
               // In sequence, and not as one wide query: `limit` refuses past 500, and each call is
               // a synchronous SQLite query on the process every window shares.
-              for (let page = 0; page < held; page += 1) {
+              // Read afresh each turn, not captured: a `loadMore` landing mid-refresh grows the
+              // shelf, and a bound taken before it would hand back less than what is on screen.
+              for (let page = 0; page < pagesRead; page += 1) {
                 const rows = await bridge.assets.search(pageOf(scope, page * LOCAL_PAGE))
                 found.push(...rows)
                 pages += 1
