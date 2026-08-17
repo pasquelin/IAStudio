@@ -51,6 +51,88 @@ export type EntryMenuProps = {
 }
 
 /**
+ * A row that runs a command, showing the key that command answers to.
+ *
+ * The words are handed in already translated rather than derived from the command id: a menu row
+ * and a shortcut list are read in different places and say different things — « Coller » beside a
+ * name, a sentence about the clipboard in a settings list. Composing the key from the id would
+ * also put both of them out of reach of `known-keys.i18n.test.ts`.
+ *
+ * Shared by the two menus of this panel, so a gesture reached from a row and the same gesture
+ * reached from the blank show the same key and run the same command.
+ */
+function commandRows(bindings: BindingOverrides, run: (command: CommandId) => void) {
+  return (
+    id: CommandId,
+    words: { label: string; tooltip: string; icon: string; disabled: boolean },
+  ): ContextMenuRow => {
+    const accelerator = acceleratorOf(bindingOf(id, bindings))
+    return {
+      ...words,
+      onSelect: () => run(id),
+      // Left out where a command answers to no key, rather than sent as an empty string.
+      ...(accelerator ? { accelerator } : {}),
+    }
+  }
+}
+
+export type RootMenuProps = {
+  /** How many paths the clipboard is holding, so Coller greys itself when it holds none. */
+  clipboard: number
+  history: FileHistory
+  bindings: BindingOverrides
+  t: TFunction
+  /** Runs the command against the PROJECT FOLDER, whatever the selection was a moment ago. */
+  run: (command: CommandId) => void
+}
+
+/**
+ * What can be done with the project folder itself, from the blank below the rows.
+ *
+ * Four gestures, and every one of them is one of the twelve below — same command, same key, same
+ * words. The other eight are missing rather than greyed because they are about a FILE: the
+ * project folder is not opened, renamed, duplicated or thrown away, and the blank is the only
+ * place in this panel that aims at it.
+ *
+ * It exists because `assets/` and `documents/` were the studio's own until the reconciliation
+ * pass let them go: a project whose every row is a folder could aim at the root by clicking the
+ * blank, but nothing there raised a menu — so a brand new project offered no way at all to make
+ * a folder in it.
+ */
+export function openRootMenu({ clipboard, history, bindings, t, run }: RootMenuProps): void {
+  const row = commandRows(bindings, run)
+
+  void showContextMenu([
+    row('explorer.paste', {
+      label: t('explorer.paste'),
+      tooltip: t('explorer.pasteHint'),
+      icon: mdiContentPaste,
+      disabled: clipboard === 0,
+    }),
+    { separator: true },
+    row('explorer.newFolder', {
+      label: t('explorer.newFolder'),
+      tooltip: t('explorer.newFolderHint'),
+      icon: mdiFolderPlusOutline,
+      disabled: false,
+    }),
+    { separator: true },
+    row('explorer.undo', {
+      label: t('explorer.undo'),
+      tooltip: t('explorer.undoHint'),
+      icon: mdiUndo,
+      disabled: !history.undo,
+    }),
+    row('explorer.redo', {
+      label: t('explorer.redo'),
+      tooltip: t('explorer.redoHint'),
+      icon: mdiRedo,
+      disabled: !history.redo,
+    }),
+  ])
+}
+
+/**
  * What can be done with the project folder, from one of its rows.
  *
  * Twelve gestures in four groups, and every one of them also answers to a key — the rows show
@@ -99,26 +181,7 @@ export function openEntryMenu({
    */
   const owned = selection.some(path => isPrivatePath(path))
 
-  /**
-   * A row that runs a command, showing the key that command answers to.
-   *
-   * The words are handed in already translated rather than derived from the command id: a menu
-   * row and a shortcut list are read in different places and say different things — « Coller »
-   * beside a name, a sentence about the clipboard in a settings list. Composing the key from the
-   * id would also put both of them out of reach of `known-keys.i18n.test.ts`.
-   */
-  const row = (
-    id: CommandId,
-    words: { label: string; tooltip: string; icon: string; disabled: boolean },
-  ): ContextMenuRow => {
-    const accelerator = acceleratorOf(bindingOf(id, bindings))
-    return {
-      ...words,
-      onSelect: () => run(id),
-      // Left out where a command answers to no key, rather than sent as an empty string.
-      ...(accelerator ? { accelerator } : {}),
-    }
-  }
+  const row = commandRows(bindings, run)
 
   void showContextMenu([
     {

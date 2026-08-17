@@ -971,6 +971,25 @@ describe('the explorer commands', () => {
     await waitFor(() => expect(newFolder).toHaveBeenCalledWith('notes', 'dossier'))
   })
 
+  /**
+   * The blank raises a menu of its own now, and it aims at the project folder — so the right-click
+   * has to unpick what was picked, exactly as a press there does. Reported from use: in a project
+   * whose rows are all folders, a right-click in the empty space offered nothing at all, and there
+   * was no way to make a folder at the root.
+   */
+  it('aims at the project folder when the blank is right-clicked, whatever was picked', async () => {
+    withProject()
+    const { newFolder } = install({ '': [folder('notes')] })
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('notes'))
+
+    fireEvent.contextMenu(screen.getByRole('tree').parentElement!)
+    fireEvent.keyDown(window, { key: 'N', code: 'KeyN', metaKey: true, shiftKey: true })
+
+    await waitFor(() => expect(newFolder).toHaveBeenCalledWith('', 'dossier'))
+  })
+
   // Heard by the panel and nowhere else: the stack lives in the main process, and the scope is
   // what keeps a ⌘Z aimed at a canvas from reaching the disk.
   it('asks the main process to take the last batch back', async () => {
