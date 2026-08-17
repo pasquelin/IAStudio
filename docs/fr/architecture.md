@@ -1271,8 +1271,8 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d’é
 ## Les tests
 
 **Plus de 9 000 tests, sur près de 700 fichiers**, exécutés par Vitest — le chiffre exact bouge à
-chaque fusion, `pnpm test` le dit (9 315 sur 686 le 17/08). Les tests unitaires sont colocalisés (`*.test.ts` à côté du
-code) et écrits dans le même mouvement que le code, jamais après.
+chaque fusion, `pnpm test` le dit (9 315 sur 686 le 17/08). Les tests unitaires sont colocalisés
+(`*.test.ts` à côté du code) et écrits dans le même mouvement que le code, jamais après.
 
 `pnpm validate` doit être vert avant tout commit. Il enchaîne les maillons que `package.json`
 déclare, et c'est là qu'ils se lisent : les réécrire ici ferait une seconde liste, qui se

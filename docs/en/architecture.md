@@ -1209,8 +1209,8 @@ opaquely.
 ## Testing
 
 **Over 9,000 tests across nearly 700 files**, run by Vitest — the exact figure moves with every
-merge, and `pnpm test` states it (9,315 across 686 on 2026-08-17). Unit tests are colocated (`*.test.ts` next to the code) and
-written in the same movement as the code, never after.
+merge, and `pnpm test` states it (9,315 across 686 on 2026-08-17). Unit tests are colocated
+(`*.test.ts` next to the code) and written in the same movement as the code, never after.
 
 `pnpm validate` must be green before any commit. It chains the links `package.json` declares, and
 that is where they are read: spelling them out here would make a second list, and a second list
