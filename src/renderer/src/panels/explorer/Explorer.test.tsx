@@ -963,6 +963,25 @@ describe('the explorer menu', () => {
   })
 
   /**
+   * What the dot toggle made reachable: `.project.json` sits under no folder of the studio, so
+   * every gesture was offered on it and every one refused afterwards by the main process. The
+   * panel greys out exactly what the disk will refuse, or it promises something it cannot do.
+   */
+  it('greys every gesture out on what the studio keeps under a dot', async () => {
+    withProject()
+    useExplorerView.setState({ hidden: true })
+    install({ '': [file('.project.json')] })
+
+    render(<Explorer />)
+    await open('.project.json')
+
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
+    expect(menu.offers('Mettre à la corbeille')).toBe(false)
+    expect(menu.offers('Dupliquer')).toBe(false)
+    expect(menu.offers('Couper')).toBe(false)
+  })
+
+  /**
    * The one gesture the old identity forbade: a document's file name WAS its id, so renaming an
    * open one orphaned its tab and the next save wrote the old name back beside the new file. The
    * id lives in the envelope now and stays put, so a tab can hold a document being renamed.

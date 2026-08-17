@@ -289,10 +289,16 @@ export const useAssets = create<AssetsState>()(
             })
           if (!written) return
 
-          // Into the shelf on the spot, as a rename is: `assets:update` broadcasts nothing, and
-          // a facet narrowed to pictures must let go of a file that has just stopped being one.
+          // Into the shelf on the spot, as a rename is — `assets:update` broadcasts nothing, so
+          // nothing else would tell it. Told apart from a rename by what a TYPE decides: the
+          // shelf reads a scope, and a picture that has just become a texture is no longer a row
+          // this one asked for. Written in place it stayed on screen, under its old shelf, with
+          // its new name for what it is — until something unrelated happened to re-read.
           set(state => ({
-            items: state.items.map(item => (item.id === assetId ? written : item)),
+            items: state.items.flatMap(item => {
+              if (item.id !== assetId) return [item]
+              return state.scope && !state.scope.includes(written.type) ? [] : [written]
+            }),
           }))
         },
 

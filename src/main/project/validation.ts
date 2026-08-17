@@ -1,6 +1,7 @@
 import { isAbsolute } from 'node:path'
 import { z } from 'zod'
 import {
+  ASSET_PATHS_MAX,
   ASSET_TYPES,
   isAssetType,
   isSyncStatus,
@@ -109,9 +110,10 @@ const assetQuery = z.object({
   text: z.string().max(200).optional(),
   // The same shape the explorer's own channel is held to: it is the surface that asks this.
   path: folderPath.optional(),
-  // A whole listing at once. Bounded well above what a folder of rushes holds and far below
-  // what SQLite would take: the paths travel in one IPC message, one placeholder each.
-  paths: z.array(folderPath).max(2000).optional(),
+  // A whole listing at once, one placeholder each in the statement built from it. The bound is
+  // shared with the caller, which cuts its question into batches of it — read on one side only,
+  // a project past it lost every answer rather than one batch.
+  paths: z.array(folderPath).max(ASSET_PATHS_MAX).optional(),
   location: z.enum(['local', 'cloud']).optional(),
   syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
   groupId: z.string().trim().min(1).optional(),

@@ -17,8 +17,18 @@ const listing: readonly FolderEntry[] = [
 ]
 
 describe('the order the explorer draws', () => {
-  it('leaves the listing alone in the order the disk answered', () => {
-    expect(entriesSorted(listing, null, 'fr')).toBe(listing)
+  /**
+   * Sorted here even by default, because the whole-folder readers walk several folders at once:
+   * what they hand back is ordered within each level and interleaved between them, in whatever
+   * order the reads came home. Trusting the disk drew a project differently on every launch.
+   */
+  it('orders the rows itself rather than trusting the order it was handed', () => {
+    const scrambled = [entry('notes.txt', 'file'), entry('Repérages', 'folder')]
+
+    expect(entriesSorted(scrambled, null, 'fr').map(one => one.name)).toEqual([
+      'Repérages',
+      'notes.txt',
+    ])
   })
 
   // Folders stay first the other way round too: reversing that is a different browser.

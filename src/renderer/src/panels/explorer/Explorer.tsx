@@ -12,7 +12,7 @@ import type { CommandId } from '@shared/domain/command'
 import { FOLDER_KINDS, kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
 import { extensionOf, stemOf } from '@shared/domain/file-name'
 import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/file-op'
-import { canMoveInto, FOLDER_ROOT, isStudioOwned, parentOf } from '@shared/domain/folder'
+import { canMoveInto, FOLDER_ROOT, isPrivatePath, parentOf } from '@shared/domain/folder'
 import { CollectionBar } from '@/design/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
@@ -399,7 +399,7 @@ export function Explorer() {
             // Read from `shared/` so the main process refuses the same things — and read on BOTH
             // sides of the gesture, what moves and what receives. A domain view offers no drag at
             // all: there is no folder on screen to carry a file INTO, and a heading is not a place.
-            draggable={node => !isDomainHeading(node) && !isStudioOwned(node.path)}
+            draggable={node => !isDomainHeading(node) && !isPrivatePath(node.path)}
             dragMultiple
             // A scene row is dragged for two different reasons, and both are legitimate: into another
             // folder, or onto a montage. The tree's own channel carries the first, this one the
