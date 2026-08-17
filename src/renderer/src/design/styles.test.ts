@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   BUTTON_NEUTRAL,
   CONTROL,
+  FIELD,
+  FIELD_FILL,
   NATIVE_SELECT,
   OVERLAY_BUTTON,
   ROW_INK,
@@ -431,6 +433,57 @@ describe('the OS list wearing the control language', () => {
   it('is worn by the four pickers it was extracted from', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && source.includes('NATIVE_SELECT'),
+    )
+
+    expect(wearing.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+/**
+ * The way a field was made to fill its line before it had a constant, read at the CALL for the
+ * same reason as `CONTROL` above: `min-w-0 flex-1` is the studio's commonest pair of layout
+ * classes, worn by thirty-odd elements that are not fields at all.
+ *
+ * Both words together, never one: `flex-1` alone on a field is a caller dividing its own row,
+ * and `min-w-0` alone is a caller stopping an overflow it can see.
+ *
+ * **What it cannot see**: `cn(FIELD, someVariable)`, or the pair split over two arguments —
+ * `cn(FIELD, 'min-w-0', 'flex-1')`. Both are ways of writing it again on purpose; this catches
+ * the shape the habit produces.
+ */
+const REFILLS_FIELD = /cn\(\s*FIELD\s*,\s*['"`]([^'"`\n]*)['"`]/g
+
+const refillsField = (source: string): boolean =>
+  [...source.matchAll(REFILLS_FIELD)].some(match => {
+    const words = (match[1] ?? '').split(/\s+/)
+    return words.includes('min-w-0') && words.includes('flex-1')
+  })
+
+describe('the field that takes what its line has left', () => {
+  it('is the field, plus the room it claims and nothing more', () => {
+    expect(FIELD_FILL.split(' ')).toEqual([...FIELD.split(' '), 'min-w-0', 'flex-1'])
+  })
+
+  it('is worn rather than spread again at the call', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && refillsField(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone the callers whose own width is not this one', () => {
+    // The rename dialog's field, held to the width of the box rather than to a share of a row,
+    // and the colour swatch of a generation form, which is square.
+    expect(refillsField("cn(FIELD, 'text-tiny min-w-0 flex-1')")).toBe(true)
+    expect(refillsField("cn(FIELD, 'w-full text-xs')")).toBe(false)
+    expect(refillsField("cn(FIELD, 'px-1')")).toBe(false)
+  })
+
+  // The partner of the rule above: a constant nobody wears is a dead export.
+  it('is worn by the four fields it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('FIELD_FILL'),
     )
 
     expect(wearing.length).toBeGreaterThanOrEqual(4)

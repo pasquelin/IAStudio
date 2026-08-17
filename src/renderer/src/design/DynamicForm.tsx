@@ -19,7 +19,7 @@ import { buildSchema } from '@/helpers/dynamic-form-schema'
 import { useModelText } from '@/hooks/useModelText'
 import { Button } from './Button'
 import { AssetDropField } from './AssetDropField'
-import { FIELD } from './styles'
+import { FIELD, FIELD_FILL } from './styles'
 import { ToolButton } from './ToolButton'
 import { HINT_TOP, TIP_LEFT } from '@/helpers/tooltip'
 
@@ -100,7 +100,7 @@ function Control({
     case 'seed':
       return (
         <div className="flex items-center gap-2">
-          <input type="number" className={cn(FIELD, 'min-w-0 flex-1')} {...registration} />
+          <input type="number" className={FIELD_FILL} {...registration} />
           <ToolButton
             icon={mdiDiceMultipleOutline}
             label={t('generation.randomSeed')}
