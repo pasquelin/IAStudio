@@ -1,3 +1,4 @@
+import { offScreenHost } from '@/engines/core/off-screen-host'
 import { frameTimes } from '@/engines/scene/film'
 import { sequenceDuration, type SequenceState } from '@/engines/timeline/timeline-state'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
@@ -5,12 +6,6 @@ import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { montageSink } from './montage-sink'
 import { silentSound } from './silent-sound'
-
-/**
- * Off the page, exactly as a scene stage is: an export renders at the sequence's own resolution,
- * which has nothing to do with the size of the panel someone happens to be watching.
- */
-const OFF_SCREEN = '-20000px'
 
 /**
  * How many decoders and pictures an export may hold. The same ceilings a monitor lives under —
@@ -59,14 +54,7 @@ export async function exportSequence({
   const id = await bridge.render.start({ name: title, fps })
   if (!id) return null
 
-  const host = document.createElement('div')
-  host.style.position = 'fixed'
-  host.style.left = OFF_SCREEN
-  host.style.top = '0'
-  host.style.width = `${width}px`
-  host.style.height = `${height}px`
-  host.style.pointerEvents = 'none'
-  document.body.appendChild(host)
+  const host = offScreenHost(width, height)
 
   const engine = new TimelineEngine({
     openSink: montageSink(() => ({ width, height })),
