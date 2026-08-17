@@ -37,7 +37,7 @@ import {
   rotateImage,
 } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
-import { useDocumentTitle } from '@/app/useDocumentTitle'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { canvasOf, isCanvasDirty, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, canvasViewOf } from '@/stores/canvas-views'
 import { useDocuments } from '@/stores/documents'

@@ -16,7 +16,7 @@ import {
   type SequenceState,
 } from '@/engines/timeline/timeline-state'
 import { assetsById, useAssets } from '@/stores/assets'
-import { useSequenceEdit } from './useSequenceEdit'
+import { useSequenceEdit } from '@/hooks/useSequenceEdit'
 
 export type ClipInspectorProps = { documentId: string; sequence: SequenceState; clip: Clip }
 

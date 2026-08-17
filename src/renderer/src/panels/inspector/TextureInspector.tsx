@@ -21,7 +21,7 @@ import { MATERIAL_BOUNDS, seamVerdict, type SeamVerdict } from '@shared/domain/t
 import { textureOf, useTextures } from '@/stores/textures'
 import { seamOf, useTextureViews } from '@/stores/texture-views'
 import { EnvironmentSection } from './EnvironmentSection'
-import { useDocumentEdit } from './useDocumentEdit'
+import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 import { HINT_LEFT } from '@/helpers/tooltip'
 
 export type TextureInspectorProps = { documentId: string }

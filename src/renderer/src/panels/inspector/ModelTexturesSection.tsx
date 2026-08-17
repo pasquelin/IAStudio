@@ -16,7 +16,7 @@ import {
   type ChannelTexture,
 } from '@/spaces/textures/open-model-material'
 
-import { useDerivedTextures } from './useDerivedTextures'
+import { useDerivedTextures } from '@/hooks/useDerivedTextures'
 
 export type ModelTexturesSectionProps = {
   /** The model's own asset — what the pictures on show were taken out of. */

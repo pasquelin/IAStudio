@@ -29,7 +29,7 @@ import { cn } from '@/helpers/cn'
 import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
 import { useCanvases } from '@/stores/canvases'
 import { FontField } from './FontField'
-import { useDocumentEdit } from './useDocumentEdit'
+import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 
 export type LayerInspectorProps = { documentId: string; layer: Layer }
 

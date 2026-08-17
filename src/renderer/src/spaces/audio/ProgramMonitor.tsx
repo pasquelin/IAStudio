@@ -29,7 +29,7 @@ import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { usePeaks } from '@/stores/peaks'
 import { OutputMeter } from './OutputMeter'
 import { SpectrumBand } from './SpectrumBand'
-import type { SoundTransport } from './useSoundTransport'
+import type { SoundTransport } from '@/hooks/useSoundTransport'
 
 export type ProgramMonitorProps = {
   sequence: SequenceState

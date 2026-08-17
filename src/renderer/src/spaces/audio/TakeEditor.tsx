@@ -36,8 +36,8 @@ import {
 import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
 import { decodeAsset } from '@/helpers/audio-decode'
 import { loadTake } from './load-take'
-import { useAudioRenderer } from './useAudioRenderer'
-import { useWaveSurfer } from './useWaveSurfer'
+import { useAudioRenderer } from '@/hooks/useAudioRenderer'
+import { useWaveSurfer } from '@/hooks/useWaveSurfer'
 
 export type TakeEditorProps = { documentId: string }
 

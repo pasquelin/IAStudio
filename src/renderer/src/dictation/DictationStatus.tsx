@@ -8,7 +8,7 @@ import { formatBytes } from '@/helpers/format'
 import { useAssistant } from '@/stores/assistant'
 import { Heard } from './Heard'
 import { LevelMeter } from './LevelMeter'
-import { useDictation } from './useDictation'
+import { useDictation } from '@/hooks/useDictation'
 import { HINT_TOP } from '@/helpers/tooltip'
 
 /**

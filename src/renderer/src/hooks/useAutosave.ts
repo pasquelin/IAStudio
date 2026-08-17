@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useSettings } from '@/stores/settings'
-import { autosaveOpenDocuments } from './document-io'
+import { autosaveOpenDocuments } from '@/app/document-io'
 
 /** The gap between two passes — and the most work a crash can cost, which the help text names. */
 export const AUTOSAVE_INTERVAL_MS = 30_000

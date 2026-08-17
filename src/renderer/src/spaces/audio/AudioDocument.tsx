@@ -5,14 +5,14 @@ import { canRedo, canUndo } from '@/engines/core/history'
 import type { Us } from '@/engines/timeline/timeline-state'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useSoundTransport } from '@/hooks/useSoundTransport'
 import { useSplitPair } from '@/hooks/useSplitPair'
-import { useDocumentTitle } from '@/app/useDocumentTitle'
 import { audioHistoryOf, isAudioEditDirty, useAudioEdits } from '@/stores/audio-edits'
 import { useDocuments } from '@/stores/documents'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { ProgramMonitor } from './ProgramMonitor'
 import { TakeEditor } from './TakeEditor'
-import { useSoundTransport } from './useSoundTransport'
 
 export type AudioDocumentProps = { documentId: string }
 

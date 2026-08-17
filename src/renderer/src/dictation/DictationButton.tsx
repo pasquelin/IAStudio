@@ -2,10 +2,10 @@ import { mdiMicrophone, mdiMicrophoneOff } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import type { TooltipFactory } from '@/helpers/tooltip'
+import { useDictation } from '@/hooks/useDictation'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useBinding } from '@/stores/bindings'
 import { LevelMeter } from './LevelMeter'
-import { useDictation } from './useDictation'
 
 export type DictationButtonProps = {
   /** `header` is the smaller gauge, for a bar of panel actions. */
