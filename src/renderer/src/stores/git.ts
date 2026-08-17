@@ -110,6 +110,8 @@ type GitState = {
  */
 export const useGit = create<GitState>()((set, get) => {
   let running = 0
+  /** The status read that is out, shared by every panel that asks while it is. */
+  let reading: Promise<GitRepository> | null = null
 
   const run = async (answer: Promise<GitRepository> | undefined): Promise<void> => {
     if (!answer) return
@@ -117,7 +119,14 @@ export const useGit = create<GitState>()((set, get) => {
     running += 1
     set({ busy: true })
     try {
-      set({ repository: await answer })
+      const read = await answer
+
+      // Published only when it says something new. Every answer is a fresh object — the IPC clone
+      // rebuilds it — so an unconditional `set` re-renders both panels on every refresh, which is
+      // several a minute on a folder the studio itself writes to. Stringified rather than compared
+      // field by field: one side builds all of these, so the key order is its own, and a signature
+      // written by hand is a field forgotten the day one is added.
+      if (JSON.stringify(get().repository) !== JSON.stringify(read)) set({ repository: read })
     } catch {
       // The main process answers a union for every git failure, so a rejection here means the
       // channel itself failed. What was on screen is the last thing known to be true about the
@@ -143,7 +152,20 @@ export const useGit = create<GitState>()((set, get) => {
     compared: null,
     diff: null,
 
-    refresh: () => run(getBridge()?.git.read()),
+    refresh: async () => {
+      // One `git status` for however many panels ask. Both mount `useGitStatus` and both are woken
+      // by the same event, and dockview keeps the one behind mounted — so without this, every
+      // signal starts two git processes to read the same folder twice.
+      if (!reading) {
+        const answer = getBridge()?.git.read()
+        if (!answer) return
+        reading = answer.finally(() => {
+          reading = null
+        })
+      }
+
+      await run(reading)
+    },
     initRepository: () => run(getBridge()?.git.init()),
     stage: paths => run(getBridge()?.git.stage(paths)),
     unstage: paths => run(getBridge()?.git.unstage(paths)),

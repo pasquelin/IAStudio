@@ -16,8 +16,8 @@ import { useGit } from '@/stores/git'
  * files under `chokidar` is precisely the work invariant 6 keeps off this process, and it would
  * be the second watch over the same folder.
  *
- * Safe to mount from more than one panel — the store holds one answer, and the main process runs
- * one git at a time whatever asks.
+ * Safe to mount from more than one panel — the store holds one answer, and a read that is already
+ * out is shared rather than started again, so two panels woken by one event still run one git.
  */
 export function useGitStatus(): GitRepository {
   const repository = useGit(state => state.repository)
@@ -27,16 +27,22 @@ export function useGitStatus(): GitRepository {
   useEffect(() => {
     const ask = (): void => {
       void refresh()
-      // Read on the same three signals rather than on its own: a remote is added far less often
-      // than a file changes, but a project opened is a different repository entirely — and the
-      // one it replaced may well have talked to a different server.
+    }
+
+    // The server is read on the project alone. A remote is added by hand, from this panel or from
+    // a terminal, where a file changes several times a minute — and a project opened IS a
+    // different repository, which may well talk to a different server. Reading it on all three
+    // was one git process per file written, for an answer that had not changed since the project
+    // was opened.
+    const askAll = (): void => {
+      ask()
       void readRemotes()
     }
 
-    ask()
+    askAll()
 
     const bridge = getBridge()
-    const offProject = bridge?.project.onChange(ask)
+    const offProject = bridge?.project.onChange(askAll)
     const offFolder = bridge?.project.onFolderChanged(ask)
     window.addEventListener('focus', ask)
 

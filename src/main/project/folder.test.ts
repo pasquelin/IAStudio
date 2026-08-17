@@ -228,6 +228,19 @@ describe('following the project folder', () => {
   const deaf = (): FSWatcher =>
     ({ close: () => undefined, on: () => undefined }) as unknown as FSWatcher
 
+  // An opener whose events this file decides. What the platform really emits is the first case's
+  // business; everything below is about what the watcher DOES with an event.
+  const driving = (): { open: WatchOpener; emit: (filename: string | null) => void } => {
+    let listener: (event: string, filename: string | null) => void = () => undefined
+    return {
+      open: (_path, _options, given) => {
+        listener = given
+        return deaf()
+      },
+      emit: filename => listener('change', filename),
+    }
+  }
+
   const watches: { stop: () => void }[] = []
   afterEach(() => {
     for (const watch of watches) watch.stop()
@@ -285,17 +298,57 @@ describe('following the project folder', () => {
       vi.useRealTimers()
     })
     const announce = vi.fn()
-    let emit = (): void => undefined
-    const driven: WatchOpener = (_path, _options, listener) => {
-      emit = listener
-      return deaf()
-    }
-    watches.push(watchProjectFolder('/projects/demo', announce, driven))
+    const { open, emit } = driving()
+    watches.push(watchProjectFolder('/projects/demo', announce, open))
 
-    emit()
-    emit()
+    emit('one.txt')
+    emit('two.txt')
     // Well past the debounce, whatever it is set to: what is asserted is the collapse, not its
     // duration — a test that pinned the delay would fail on every tuning of it.
+    vi.advanceTimersByTime(5000)
+
+    expect(announce).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * The reason this filter exists: every git command writes half a dozen files into `.git/`, and
+   * the studio rewrites `.index/` on its own account. Announced, each of them makes the panel
+   * re-read the folder — and the git panel run git again, which writes into `.git/`.
+   *
+   * The rule is `isPrivatePath`, the one the explorer already reads: a dot on any segment.
+   */
+  it('says nothing about what the studio keeps under a dot', () => {
+    vi.useFakeTimers()
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const announce = vi.fn()
+    const { open, emit } = driving()
+    watches.push(watchProjectFolder('/projects/demo', announce, open))
+
+    emit('.git/index')
+    emit('.index/catalog.db')
+    emit('Repérages/.project.json')
+    vi.advanceTimersByTime(5000)
+
+    expect(announce).not.toHaveBeenCalled()
+  })
+
+  /**
+   * `fs.watch` hands the listener a name on some platforms and `null` on others, and a network
+   * volume can name nothing at all. Not knowing what moved is not a reason to stop following the
+   * folder: the panel re-reads what it has open either way.
+   */
+  it('announces when the platform names nothing', () => {
+    vi.useFakeTimers()
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const announce = vi.fn()
+    const { open, emit } = driving()
+    watches.push(watchProjectFolder('/projects/demo', announce, open))
+
+    emit(null)
     vi.advanceTimersByTime(5000)
 
     expect(announce).toHaveBeenCalledTimes(1)
