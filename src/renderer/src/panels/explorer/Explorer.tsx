@@ -48,25 +48,11 @@ import { RescanBar } from './RescanBar'
 const NO_HISTORY: FileHistory = { undo: false, redo: false }
 
 /**
- * The project folder, as a tree.
- *
- * It shows the folder the user owns — `assets/`, `documents/`, and whatever they dropped in
- * there themselves — rather than the list of documents the studio knows how to open. That
- * difference is the whole point: a panel called Explorer that lists six documents flat is a list
- * of recent documents wearing a file browser's name.
- *
- * What it keeps from that list, and must never lose: a document closed while no layout held it
- * is unreachable by the tabs, and this is where it is found again.
- *
- * **Every gesture that writes goes through one channel per gesture and one orchestrator behind
- * them**, which is what let this panel grow from three rows to twelve: the main process decides
- * what may be written, against a reading of the folders taken before anything moves, and answers
- * what it actually did. The panel shows the result; it settles nothing.
- *
- * A file the studio cannot open goes to the system. That is the one place the studio launches a
- * third-party application, and it is why the channel lives in the main process — but « cannot
- * open » is asked of the catalogue too, not of the extension alone: a `.png` under `assets/` is
- * an asset this studio edits, and handing it to a picture viewer was the whole complaint.
+ * The project folder as a tree — the folder the user owns, never the list of documents the studio
+ * knows how to open. Every gesture that writes goes through the main process, which decides
+ * against a reading taken before anything moves and answers what it did: the panel shows a
+ * result, it settles nothing. A file the studio cannot open goes to the system, and « cannot
+ * open » is asked of the CATALOGUE, not of the extension — a `.png` under `assets/` is an asset.
  */
 export function Explorer() {
   const { t, i18n } = useTranslation()

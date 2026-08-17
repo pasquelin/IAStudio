@@ -128,25 +128,12 @@ export function openRepository(root: string, binary?: string, deps?: RepositoryD
   })
 
   /**
-   * What every command of this repository runs in, built ONCE — `process.env` is the whole
-   * environment of the studio, and it was cloned twice per remote command, the second clone
-   * staying on an instance that lives as long as the port does. A token is laid over this, never
-   * into it.
-   *
-   * **What CONFIGURES git is dropped from it**, and only what this file writes is put back. Git
-   * takes a dozen settings from its environment, and the studio's answers are not to be argued
-   * with by whatever the app was launched from: a `GIT_DIR` pointing elsewhere, a `GIT_EDITOR`
-   * that opens a window nobody can see. Inherited, they do not merely misbehave — simple-git
-   * refuses most of them outright, and the command fails before it spawns. Everything else is
-   * kept, `HTTPS_PROXY` and `SSH_AUTH_SOCK` first among them.
-   *
-   * `GIT_TERMINAL_PROMPT=0` and an empty `GIT_ASKPASS`: a studio window has no terminal to answer
-   * a prompt in, and git left to ask would hang for ever on a command the user has no way to
-   * cancel — which is worse than the failure it is trying to avoid.
-   *
-   * `BatchMode=yes` says the same thing to ssh, and it has a cost worth stating: a key protected
-   * by a passphrase with no agent loaded fails rather than asking. The alternative is the same
-   * silent hang, and the agent is what every ssh setup already has.
+   * What every command runs in, built ONCE, and a token is laid OVER it rather than into it.
+   * Everything that CONFIGURES git is dropped — an inherited `GIT_DIR` or `GIT_EDITOR` is refused
+   * outright by simple-git, so the command fails before it spawns — while `HTTPS_PROXY` and
+   * `SSH_AUTH_SOCK` are kept. No prompt is ever answerable from a studio window, hence
+   * `GIT_TERMINAL_PROMPT=0`, an empty `GIT_ASKPASS`, and ssh in `BatchMode`: the stated cost is
+   * that a passphrase-protected key with no agent loaded fails instead of hanging for ever.
    */
   const baseEnv: Record<string, string> = {
     ...Object.fromEntries(

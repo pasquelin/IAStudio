@@ -68,31 +68,12 @@ export type RescanReport = {
 const BATCH = 128
 
 /**
- * Puts the catalogue and the disk back in agreement, one pass.
- *
- * **It never deletes a row.** A file that is not where the catalogue says is looked for by its
- * fingerprint among the files no row claims; found, the row is refiled at the new path (`repath`,
- * so the ids do not change and every scene keeps pointing at its texture); not found, the row is
- * DATED. The prompt, the seed and the lineage are not on the disk, and losing them because a
- * file was moved into a folder the studio could not follow is the failure this exists to prevent.
- * `forgetUnder` is what actually drops rows, and it is a gesture the user makes.
- *
- * **Two passes give the same state.** Everything it writes is derived from what it read, and a
- * row already dated is not dated again — which is what lets this run on every open and every
- * return to the window without saying the same thing twice.
- *
- * **Ambiguity does nothing.** Two files sharing a fingerprint — the same picture copied — cannot
- * say which of them a row meant, so the row is left dated and the files are left alone. Guessing
- * would rewrite the path of a row nobody asked to move, which is the one failure a reconciliation
- * pass must not have. A later pass picks it up if the doubt lifts.
- *
- * **Nothing is fingerprinted when nothing is lost.** The ordinary pass is one walk and one
- * SELECT; the reads only start once a row's file has gone THIS pass. A row already dated does not
- * bring them back — otherwise one file deleted for good would re-read every uncatalogued file of
- * the project on every return to the window, for ever.
- *
- * **What the walk does not show is not gone.** The walk is a reader's view; the disk is asked
- * directly about every row it did not show, and only what the disk says is absent is dated.
+ * Puts the catalogue and the disk back in agreement, one pass, and it NEVER deletes a row: a file
+ * that moved is refiled by fingerprint, one that is gone is only DATED — the prompt, the seed and
+ * the lineage are not on the disk. Two passes give the same state. Ambiguity does nothing, two
+ * files of one fingerprint leaving the row dated rather than guessed at. Fingerprinting only
+ * starts once a row's file has gone THIS pass, or one deletion would re-read the whole project on
+ * every return. And what the walk does not show is not gone: the disk is asked about it directly.
  */
 export async function rescanProject(
   catalog: RescanCatalog,

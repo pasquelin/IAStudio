@@ -26,24 +26,12 @@ function standingTwinOf(asset: Asset, activeOwnerId: string | null): string | un
 }
 
 /**
- * Rewrites the local asset ids a form carries into the ids Scenario knows them by, sending what
- * has never gone up.
- *
- * The two vocabularies look alike and are not: the collector stamps a row with a fresh
- * `asset_<uuid>` and files the API's own id under `remoteAssetId`, so what a drop target hands
- * to a form is an identifier the API has never heard of. Left alone, a generation with a
- * reference picture is submitted, paid for, and answers as though no reference had been given.
- *
- * Two doors, one translator, because the callers hold two shapes and only one of them can be
- * walked blind: a generation body is of the model's own shape and nothing says which of its keys
- * is a picture, whereas prompt assistance holds a bare list and knows every entry is one. They
- * share the in-flight map below — a generation and an assistance naming the same never-sent
- * picture would otherwise both find no twin and both send the file, billed twice.
- *
- * What deliberately does NOT come through here: a cost estimate, which is asked on every
- * keystroke and must not send a file up for a figure nobody is waiting on. The estimate of a
- * form holding a picture is therefore made without it, and `referenceImages` is priced
- * (`cost_impact: true`) — so it can read low. Known, and not closed.
+ * Rewrites the local asset ids a form carries into the ids Scenario knows them by. The two
+ * vocabularies look alike and are not — a local `asset_<uuid>` means nothing to the API, and a
+ * generation submitted with one is paid for and answers as though no reference had been given.
+ * The two doors share the in-flight map below, or the same never-sent picture goes up twice.
+ * A cost estimate deliberately does NOT come through: it is asked on every keystroke, so the
+ * figure of a form holding a picture reads low. Known, and not closed.
  */
 export type AssetInputResolver = {
   /** A generation body, whose picture keys are the model's own and cannot be named in advance. */
