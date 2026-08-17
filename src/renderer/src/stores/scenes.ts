@@ -34,25 +34,11 @@ export function writeAnimationTrack(
 }
 
 /**
- * What is picked in a scene, wherever the gesture came from — the outliner, the two node panels
- * or the viewport.
- *
- * Selection stays out of the history, so it writes the whole scene back — and the scene has to
- * be read at call time, not from the render that drew the row: a copy taken before whatever
- * command ran in between would undo it.
- *
- * It points the studio's selection at the scene too, and keeps doing so even though
- * `connectSceneSelection` watches every write of the document in front: a click on the row that
- * is ALREADY selected changes no ids, so it writes no state and wakes no subscriber — and it is
- * exactly the gesture someone makes to bring the panel back onto a node after clicking an asset
- * in the browser. It points at whichever document it is given, where the connector answers only
- * for the one in front; the three callers all render the front tab, so the two never disagree.
- *
- * The scene holds what the viewport highlights, `useSelection` holds which FACE the inspector
- * shows. `canvases` does the same pairing at its call site rather than here; four callers against
- * one is the whole of the difference.
- *
- * Which nodes is deliberately NOT copied over — `pointAtNodes` says why.
+ * What is picked in a scene, wherever the gesture came from. The scene is read at CALL time, not
+ * from the render that drew the row: a copy taken before whatever command ran in between would
+ * undo it. It points the studio's selection too, and must keep doing so despite
+ * `connectSceneSelection` — re-clicking an already selected row changes no ids, so it wakes no
+ * subscriber, and that is exactly the gesture that brings the panel back onto a node.
  */
 export function selectIn(
   documentId: string,

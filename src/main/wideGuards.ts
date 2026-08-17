@@ -52,34 +52,11 @@ function readsAnchoredFile(code: string): boolean {
 }
 
 /**
- * A suite that borrows a sweep instead of writing one.
- *
- * TWO modules hold one, one per side of the wall. `sourceFiles.ts` walks the disk for the guards
- * of the main process; `renderer/src/windowSources.ts` holds the `import.meta.glob` for those of
- * the window, which have no filesystem to walk. Either way the borrower is left with no
- * `readdirSync`, no `import.meta.url` and no glob of its own to recognise.
- *
- * A third family joined them: a **collector under `scripts/`**. Those are filesystem tools by
- * construction — `collect-manual.ts` reads all of `docs/` — so a suite importing one reads the
- * tree without a single `readdirSync` of its own. Found by an adversarial review the day
- * `manual.test.ts` was written, which sat outside the net while comparing the shipped manual to
- * thirty-eight markdown files.
- *
- * Measured the day the first module was extracted: the detector found 36 guards and
- * `no-bare-locale-compare.test.ts` was not among them — a guard silently outside the short loop,
- * which is the exact failure the ways below exist to prevent. **Extracting shared reading is a
- * good move that MUST come with a line here**, and the count is the only proof: the three window
- * guards that gave up their own glob were counted before and after, 41 both times.
- *
- * `design/testHarness` joined on 2026-08-16, and it had been missing since the day it was
- * written: 49 guards before, 53 after. Found by an adversarial review, not by the floor, which a
- * silent drop of four never reaches.
- *
- * **That fix was half of one, and the count is what hid it.** It taught the rule the qualified
- * spelling only, so it caught the five consumers that live elsewhere and none of the five that
- * sit beside the module — the count went up, which reads as success. A second review found them
- * the next day: 53 before, 55 after, `styles.test.ts` and `spacing.test.ts` having had no other
- * way in. *A count that rises says a rule caught something, never that it caught everything.*
+ * A suite that borrows a sweep instead of writing one — `sourceFiles.ts` for the main process,
+ * `renderer/src/windowSources.ts` for the window, a collector under `scripts/` for either.
+ * Extracting shared reading MUST come with a line here, or the borrower leaves the short loop in
+ * silence. A count that rises says a rule caught something, never that it caught everything: the
+ * qualified spelling alone once missed the five consumers sitting beside the module.
  */
 function borrowsTheSweep(code: string): boolean {
   // Any depth of `../`, not just the sibling: a guard one folder down imports `'../sourceFiles'`

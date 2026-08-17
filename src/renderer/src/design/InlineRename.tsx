@@ -76,25 +76,11 @@ export function InlineRename({ value, label, onCommit, gauge = 'control' }: Inli
     node?.select()
 
     /**
-     * The row this field sits in stops being a drag handle while it is being typed in.
-     *
-     * `draggable` on an ancestor swallows the pointer: Chromium starts a native drag as soon as
-     * the pointer moves with a button down, so selecting a word inside the field — the most
-     * ordinary gesture there is when correcting a name — dragged the row instead of selecting
-     * anything. `onPointerDown` stopping propagation does not help: the drag is begun by the
-     * browser on the element carrying the attribute, not by a handler this side can intercept.
-     *
-     * Done here rather than in each host, and the list is why: the explorer's tree, the document
-     * rows, the asset shelf, and whatever gains a rename next. A host would have to remember.
-     *
-     * What it found is kept in a ref rather than read again at each mount, and StrictMode is the
-     * reason: its replay runs mount → cleanup → mount, the cleanup returns early on a field that
-     * never left, and the second mount would then look at a row this very effect has already set
-     * to `false` — finding nothing to give back, and leaving the row undraggable for good.
-     *
-     * Set imperatively and put back on the way out. React only writes the attribute when its own
-     * prop CHANGES, so it leaves this alone in between — and a host that does change it while a
-     * field is open wins, which is the right way round.
+     * The row stops being a drag handle while the field is typed in: Chromium begins a native
+     * drag on the element carrying `draggable`, so selecting a word dragged the row instead, and
+     * no `onPointerDown` this side can intercept that. The ancestor is kept in a ref rather than
+     * looked up at each mount — StrictMode replays mount → cleanup → mount, and the second mount
+     * would find the row this effect has already set to `false`, leaving it undraggable for good.
      */
     held.current ??= node?.closest<HTMLElement>('[draggable]') ?? null
     if (held.current?.draggable) {
