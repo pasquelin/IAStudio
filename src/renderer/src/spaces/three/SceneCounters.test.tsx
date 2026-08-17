@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
+import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
 import { SceneCounters } from './SceneCounters'
 
 const scene: SceneStats = {

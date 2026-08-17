@@ -1,5 +1,5 @@
 import { isLocalPicture, type Asset } from '@shared/domain/asset'
-import { DEFAULT_CANVAS, pixelLayer, type CanvasState } from '@/engines/canvas/canvas-state'
+import { DEFAULT_CANVAS, pixelLayer, type CanvasState } from '@/engines/canvas/canvasState'
 import { addLayer } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
 import { reportFailure } from '@/services/diagnostics'

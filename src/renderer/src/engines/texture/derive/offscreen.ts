@@ -1,7 +1,7 @@
 import { LinearFilter, NoColorSpace, WebGLRenderer, type ShaderMaterial, type Texture } from 'three'
 import { isRecord, readNumber } from '@shared/guards'
-import { createGpuPipeline, type GpuPipeline } from '../../gpu/GpuPipeline'
-import type { TextureSource } from '../../scene/texture-cache'
+import { createGpuPipeline, type GpuPipeline } from '../../gpu/gpuPipeline'
+import type { TextureSource } from '../../scene/textureCache'
 
 /**
  * The plumbing every off-screen pass over a channel shares: take the pixels, open a context,

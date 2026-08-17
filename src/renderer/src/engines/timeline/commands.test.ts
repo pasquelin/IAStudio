@@ -15,7 +15,7 @@ import {
   unlinkClip,
 } from './commands'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
-import { reindexTracks, type Clip, type SequenceState } from './timeline-state'
+import { reindexTracks, type Clip, type SequenceState } from './timelineState'
 
 const clip = clipFixture
 

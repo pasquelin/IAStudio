@@ -1,4 +1,4 @@
-import type { SequenceState } from '@/engines/timeline/timeline-state'
+import type { SequenceState } from '@/engines/timeline/timelineState'
 import { useSequences } from '@/stores/sequences'
 import { useDocumentEdit, type DocumentEdit } from './useDocumentEdit'
 

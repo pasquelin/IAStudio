@@ -1,5 +1,5 @@
 import { clamp } from '@shared/numeric'
-import type { CanvasTool } from './canvas-tool'
+import type { CanvasTool } from './canvasTool'
 
 /**
  * What the brush, the eraser and the shape stroke are set to. Session state, not document

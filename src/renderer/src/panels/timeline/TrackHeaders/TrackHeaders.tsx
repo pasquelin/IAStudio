@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Viewport } from '@/engines/timeline/timeline-geometry'
+import type { Viewport } from '@/engines/timeline/timelineGeometry'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
 import { TimelineHeaderColumn } from '../TimelineHeaderColumn'

@@ -4,7 +4,7 @@ import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import { TextureRenderer } from './TextureRenderer'
-import { newTexture, slotFor, type ChannelMap, type TextureState } from './texture-state'
+import { newTexture, slotFor, type ChannelMap, type TextureState } from './textureState'
 
 const MAP: Omit<ChannelMap, 'assetId'> = { origin: 'generated', width: 512, height: 512 }
 

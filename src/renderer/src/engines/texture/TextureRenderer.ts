@@ -10,9 +10,9 @@ import {
 } from 'three'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { reportFailure } from '@/services/diagnostics'
-import { createTextureBinding, type TextureBinding } from '../scene/texture-binding'
-import { createTextureCache, type TextureCache, type TextureSource } from '../scene/texture-cache'
-import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
+import { createTextureBinding, type TextureBinding } from '../scene/textureBinding'
+import { createTextureCache, type TextureCache, type TextureSource } from '../scene/textureCache'
+import { createSkyBinding, type SkyBinding } from '../viewport/skyBinding'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import {
@@ -22,8 +22,8 @@ import {
   materialFrameOf,
   patchFragment,
   syncEdgeTransform,
-} from './material-shader'
-import { previewGeometry } from './preview-geometry'
+} from './materialShader'
+import { previewGeometry } from './previewGeometry'
 import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/texture'
 import {
   contentOf,
@@ -31,7 +31,7 @@ import {
   slotFor,
   type PreviewShape,
   type TextureState,
-} from './texture-state'
+} from './textureState'
 
 export type TextureRendererOptions = {
   /** Injected: jsdom decodes no image, and the engine is built the same way in both. */

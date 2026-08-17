@@ -1,7 +1,7 @@
 import { act, render } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RenderedAudio } from '@/engines/audio/audio-render'
+import type { RenderedAudio } from '@/engines/audio/audioRender'
 import { refreshPalette } from '@/engines/core/palette'
 import { useWaveSurfer } from './useWaveSurfer'
 

@@ -7,7 +7,7 @@ import { useDocuments } from '@/stores/documents'
 import { useSelection } from '@/stores/selection'
 import { useStyles } from '@/stores/styles'
 import { useTextures } from '@/stores/textures'
-import { newTexture } from '@/engines/texture/texture-state'
+import { newTexture } from '@/engines/texture/textureState'
 import { InspectorActions } from './InspectorActions'
 
 const SAVE = 'Enregistrer comme style'

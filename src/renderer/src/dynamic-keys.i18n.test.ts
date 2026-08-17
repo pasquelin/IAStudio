@@ -8,11 +8,11 @@ import {
   BLEND_MODES,
   LAYER_KINDS,
   type LayerKind,
-} from '@/engines/canvas/canvas-state'
-import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timeline-state'
+} from '@/engines/canvas/canvasState'
+import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timelineState'
 import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
-import { ADD_ENTRIES } from '@/engines/scene/node-kinds'
+import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
 import { ASSET_INTENTS } from '@/helpers/asset-intents'
 import { FOLDER_SORTS } from '@/panels/explorer/folder-sort'
 import { TRACK_FLAGS } from '@/panels/timeline/track-flags'

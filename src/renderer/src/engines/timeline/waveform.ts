@@ -1,7 +1,7 @@
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
 import { clamp } from '@shared/numeric'
-import { timeToX, xToTime, type Viewport } from './timeline-geometry'
-import { clipEnd, type Clip } from './timeline-state'
+import { timeToX, xToTime, type Viewport } from './timelineGeometry'
+import { clipEnd, type Clip } from './timelineState'
 
 /** One pixel column of a waveform, as the two extremes the ear would have heard there. */
 export type WaveColumn = { x: number; min: number; max: number }

@@ -5,7 +5,7 @@ import {
   handleRequest,
   type AudioWorkerRequest,
   type AudioWorkerState,
-} from '@/engines/audio/audio-render'
+} from '@/engines/audio/audioRender'
 import { initI18n } from '@/i18n'
 import { forgetRememberedAssets, useAssets } from '@/stores/assets'
 // The rule that needs no browser, shared with the `renderer-node` project — it says why there.

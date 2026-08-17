@@ -7,7 +7,7 @@ import {
   pixelLayer,
   textLayer,
   type Layer,
-} from '@/engines/canvas/canvas-state'
+} from '@/engines/canvas/canvasState'
 import { addLayer } from '@/engines/canvas/commands'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { canvasOf, useCanvases } from '@/stores/canvases'

@@ -1,6 +1,6 @@
-import { offScreenHost } from '@/engines/core/off-screen-host'
+import { offScreenHost } from '@/engines/core/offScreenHost'
 import { frameTimes } from '@/engines/scene/film'
-import { sequenceDuration, type SequenceState } from '@/engines/timeline/timeline-state'
+import { sequenceDuration, type SequenceState } from '@/engines/timeline/timelineState'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { paintOn } from '@/engines/core/canvas-2d'
+import { paintOn } from '@/engines/core/canvas2d'
 import { rootColour } from '@/engines/core/palette'
 import { paintWaveform } from '@/engines/timeline/painter'
 import { tileColumns } from '@/engines/timeline/waveform'

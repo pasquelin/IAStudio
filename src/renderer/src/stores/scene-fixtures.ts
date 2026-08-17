@@ -1,5 +1,5 @@
-import { createDefaultScene } from '@/engines/scene/default-scene'
-import { nodeById, type SceneNode, type SceneState } from '@/engines/scene/scene-state'
+import { createDefaultScene } from '@/engines/scene/defaultScene'
+import { nodeById, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import type { DocumentStoreState } from './document-store'
 import { installIn } from './document-fixtures'
 import { sceneOf, sceneStore, useScenes } from './scenes'

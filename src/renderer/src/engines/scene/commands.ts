@@ -13,9 +13,9 @@ import type {
 import { isRecord } from '@shared/guards'
 import { changedFields } from '@/helpers/objects'
 import { applySelection, type SelectionMode } from '@/helpers/selection'
-import { isVector3, withField, type FieldValue } from './property-fields'
+import { isVector3, withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
-import { groupNode } from './node-factory'
+import { groupNode } from './nodeFactory'
 import {
   canCastShadow,
   canReceiveShadow,
@@ -30,7 +30,7 @@ import {
   type NodeMove,
   type SceneNode,
   type SceneState,
-} from './scene-state'
+} from './sceneState'
 
 /**
  * Scene edits, reimplemented in TypeScript from `mrdoob/three.js/editor/js/commands/` (MIT).

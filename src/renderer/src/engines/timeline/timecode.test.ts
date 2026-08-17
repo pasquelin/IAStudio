@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { formatTimecode } from './timecode'
-import { DEFAULT_SETTINGS } from './timeline-state'
+import { DEFAULT_SETTINGS } from './timelineState'
 
 describe('timecode', () => {
   it('starts at zero', () => {

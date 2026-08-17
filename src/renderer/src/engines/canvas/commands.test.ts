@@ -42,7 +42,7 @@ import {
   pixelLayer,
   textLayer,
   type CanvasState,
-} from './canvas-state'
+} from './canvasState'
 
 const second = layerFixture()
 

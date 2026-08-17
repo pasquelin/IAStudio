@@ -9,7 +9,7 @@ import {
 } from '@mdi/js'
 import type { TFunction } from 'i18next'
 import { commandDescriptor, type CommandId } from '@shared/domain/command'
-import type { SceneNode } from '@/engines/scene/scene-state'
+import type { SceneNode } from '@/engines/scene/sceneState'
 import { showContextMenu, type ContextMenuRow } from '@/helpers/context-menu'
 
 export type SceneNodeMenuProps = {

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SpriteDescriptor } from '@shared/domain/scene'
 import type { GestureProps } from '@/design/styles'
-import { spriteFields, withField } from '@/engines/scene/property-fields'
+import { spriteFields, withField } from '@/engines/scene/propertyFields'
 import { PictureField } from './PictureField'
 import { DescriptorSection } from './DescriptorSection'
 

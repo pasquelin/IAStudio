@@ -7,10 +7,10 @@ import {
   addAnimationTrack,
   setAnimationKey,
   setTimelineSettings,
-} from '@/engines/scene/animation-commands'
-import { animationRows } from '@/engines/scene/animation-rows'
+} from '@/engines/scene/animationCommands'
+import { animationRows } from '@/engines/scene/animationRows'
 import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
-import { EMPTY_SCENE } from '@/engines/scene/scene-state'
+import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { useAnimationViews } from '@/stores/animation-view'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'

@@ -20,7 +20,7 @@ import {
   type Rect,
   type TextLayer,
   type Transform,
-} from './canvas-state'
+} from './canvasState'
 
 /**
  * Layer edits, on the same Command model as the scene ones. `engines/core/history` runs them —

@@ -26,7 +26,7 @@ import {
   type ToolZone,
 } from '@shared/domain/tool'
 import { modelForFamily, useModelForFamily } from '@/helpers/model-for-family'
-import { NODE_KINDS } from '@/engines/scene/node-kinds'
+import { NODE_KINDS } from '@/engines/scene/nodeKinds'
 import { useProject } from '@/stores/project'
 import { familyOfSurface } from './workspaces'
 

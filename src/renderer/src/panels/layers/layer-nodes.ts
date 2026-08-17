@@ -1,4 +1,4 @@
-import { isGroup, layerById, type CanvasState, type Layer } from '@/engines/canvas/canvas-state'
+import { isGroup, layerById, type CanvasState, type Layer } from '@/engines/canvas/canvasState'
 
 /** A layer as the tree walks it: `Tree` reads `id` and `parentId`, the row reads the layer. */
 export type LayerNode = {

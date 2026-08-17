@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SETTINGS } from '@/engines/timeline/timeline-state'
+import { DEFAULT_SETTINGS } from '@/engines/timeline/timelineState'
 import { Timecode } from './Timecode'
 
 describe('Timecode', () => {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { renameLayer } from '@/engines/canvas/commands'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
-import { DEFAULT_CANVAS, type CanvasState } from '@/engines/canvas/canvas-state'
+import { DEFAULT_CANVAS, type CanvasState } from '@/engines/canvas/canvasState'
 import { installCanvas, layerNow } from './canvas-fixtures'
 import { useCanvases } from './canvases'
 

@@ -1,4 +1,4 @@
-import type { SoundPort } from '@/engines/timeline/sound-schedule'
+import type { SoundPort } from '@/engines/timeline/soundSchedule'
 
 /**
  * A sound port that opens no output.

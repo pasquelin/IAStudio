@@ -1,5 +1,5 @@
 import type { FieldDescriptor, ModelFamily } from '@shared/domain/model'
-import { layerById } from '@/engines/canvas/canvas-state'
+import { layerById } from '@/engines/canvas/canvasState'
 import { modelForFamily } from '@/helpers/model-for-family'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useModels } from '@/stores/models'

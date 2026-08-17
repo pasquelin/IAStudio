@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react'
 import { scrollBy, zoomAt, ZOOM_STEP } from '@/engines/timeline/viewport'
-import type { Viewport } from '@/engines/timeline/timeline-geometry'
+import type { Viewport } from '@/engines/timeline/timelineGeometry'
 
 /**
  * The wheel over a time band: zoom under the pointer with a modifier, scroll otherwise.

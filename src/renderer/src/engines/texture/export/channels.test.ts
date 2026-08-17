@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { newTexture, type TextureState } from '../texture-state'
+import { newTexture, type TextureState } from '../textureState'
 import { exportChannelsOf } from './channels'
 
 function textureWith(changes: Partial<TextureState> = {}): TextureState {

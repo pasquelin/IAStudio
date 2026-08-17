@@ -7,7 +7,7 @@ import {
   mdiVolumeHigh,
   mdiVolumeOff,
 } from '@mdi/js'
-import type { TrackKind } from '@/engines/timeline/timeline-state'
+import type { TrackKind } from '@/engines/timeline/timelineState'
 
 /** What the add buttons wear. Keyed by kind so a third kind cannot be added without a glyph. */
 export const TRACK_KIND_ICONS: Record<TrackKind, string> = {

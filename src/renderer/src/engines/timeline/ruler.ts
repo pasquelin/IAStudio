@@ -8,7 +8,7 @@
  */
 import { frameDuration, SECOND, type Us } from '@shared/domain/time'
 import { memoPalette, rootColour, rootFont } from '@/engines/core/palette'
-import { RULER_HEIGHT, timeToX, visibleRange, type Viewport } from './timeline-geometry'
+import { RULER_HEIGHT, timeToX, visibleRange, type Viewport } from './timelineGeometry'
 import { formatTimecode } from './timecode'
 
 /** What a ruler needs of a palette, and nothing more. */

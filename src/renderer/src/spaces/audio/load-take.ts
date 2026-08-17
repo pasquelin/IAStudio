@@ -1,5 +1,5 @@
 import type { Asset } from '@shared/domain/asset'
-import { clipById } from '@/engines/timeline/timeline-state'
+import { clipById } from '@/engines/timeline/timelineState'
 import { useSelection } from '@/stores/selection'
 import { addTakeToSequence, sequenceOf, useSequences } from '@/stores/sequences'
 

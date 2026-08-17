@@ -23,7 +23,7 @@ import {
   mdiVectorSquare,
 } from '@mdi/js'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
-import { type PaneView } from '@/engines/scene/scene-view'
+import { type PaneView } from '@/engines/scene/sceneView'
 import { DISPLAY_MODES, type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 
 /** Arrows read as the direction the camera looks from, which is what the row promises. */

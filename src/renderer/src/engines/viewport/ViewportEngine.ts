@@ -10,8 +10,8 @@ import {
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { token } from '../core/palette'
-import { frameDelta } from './frame-clock'
-import { emptyGpuStats, recordFrame, type GpuStats } from './gpu-stats'
+import { frameDelta } from './frameClock'
+import { emptyGpuStats, recordFrame, type GpuStats } from './gpuStats'
 import { glRect, paneAt, paneCount, paneRects, type PaneLayout, type PaneRect } from './panes'
 import { pointerNdc, type PointerPosition } from './pointer'
 

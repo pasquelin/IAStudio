@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { PropertySection } from '@/design/PropertySection'
 import { ToggleField } from '@/design/ToggleField'
 import { setShadowOn } from '@/engines/scene/commands'
-import { canCastShadow, canReceiveShadow, type SceneNode } from '@/engines/scene/scene-state'
+import { canCastShadow, canReceiveShadow, type SceneNode } from '@/engines/scene/sceneState'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
 
 export type ShadowSectionProps = {

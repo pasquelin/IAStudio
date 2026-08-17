@@ -1,7 +1,7 @@
 import i18next from 'i18next'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { meshNode } from '@/engines/scene/scene-fixtures'
-import type { SceneNode } from '@/engines/scene/scene-state'
+import type { SceneNode } from '@/engines/scene/sceneState'
 import { fakeMenu } from '@/helpers/menu-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { openSceneNodeMenu } from './SceneNodeMenu'

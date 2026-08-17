@@ -10,7 +10,7 @@ import {
   playsThrough,
   type SequenceState,
   type Track,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { clamp } from '@shared/numeric'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { isTyping } from '@/helpers/typing'

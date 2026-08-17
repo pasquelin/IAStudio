@@ -1,5 +1,5 @@
 import { collapseLayer, selectLayer } from '@/engines/canvas/commands'
-import { DEFAULT_CANVAS, type CanvasState } from '@/engines/canvas/canvas-state'
+import { DEFAULT_CANVAS, type CanvasState } from '@/engines/canvas/canvasState'
 import { createDocumentStore } from './document-store'
 
 /**

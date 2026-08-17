@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { clamp } from '@shared/numeric'
 import { maxScrollTopFor } from '@/engines/timeline/band'
-import { edgeScroll } from '@/engines/timeline/edge-scroll'
-import { RULER_HEIGHT, type Viewport } from '@/engines/timeline/timeline-geometry'
+import { edgeScroll } from '@/engines/timeline/edgeScroll'
+import { RULER_HEIGHT, type Viewport } from '@/engines/timeline/timelineGeometry'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import { BandScrollContext, type BandScroll } from './bandScroll'
 

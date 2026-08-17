@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { assetUrl } from '@shared/domain/asset'
 import { setChannel } from '@/engines/texture/commands'
-import type { SeamPort } from '@/engines/texture/derive/seam-port'
+import type { SeamPort } from '@/engines/texture/derive/seamPort'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { installTexture } from '@/stores/texture-fixtures'
 import { seamOf, useTextureViews } from '@/stores/texture-views'

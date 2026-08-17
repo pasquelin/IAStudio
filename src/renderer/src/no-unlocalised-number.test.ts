@@ -19,7 +19,7 @@ const SOURCES = WINDOW_SOURCES
  * comma in a `vec3` is a second component. Adding a name here is the moment to ask whether the
  * number really is not about to be read.
  */
-const NOT_FOR_READING = new Set(['./engines/skybox/projection-shader.ts'])
+const NOT_FOR_READING = new Set(['./engines/skybox/projectionShader.ts'])
 
 /**
  * `toFixed` returns a string, and the string is always English: `0.52` where a French reader

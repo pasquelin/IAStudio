@@ -9,7 +9,7 @@ import {
   TIMELESS_DURATION,
 } from './insert'
 import { sequenceWith, trackFixture } from './timeline-fixtures'
-import { DEFAULT_SETTINGS } from './timeline-state'
+import { DEFAULT_SETTINGS } from './timelineState'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { CanvasSelection } from '@/engines/canvas/canvas-selection'
+import type { CanvasSelection } from '@/engines/canvas/canvasSelection'
 import {
   DEFAULT_VIEW,
   sameViewport,

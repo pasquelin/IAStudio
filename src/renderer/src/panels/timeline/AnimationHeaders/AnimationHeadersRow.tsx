@@ -1,4 +1,4 @@
-import type { AnimationRow } from '@/engines/scene/animation-rows'
+import type { AnimationRow } from '@/engines/scene/animationRows'
 import { AnimationHeadersChannel } from './AnimationHeadersChannel'
 import { AnimationHeadersClip } from './AnimationHeadersClip'
 import { AnimationHeadersSubject } from './AnimationHeadersSubject'

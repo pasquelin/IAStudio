@@ -11,7 +11,7 @@ import {
   trackOfClip,
   type SequenceState,
   type Us,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { clamp } from '@shared/numeric'
 import { useDocuments } from '@/stores/documents'
 import { playbackOf, usePlayback } from '@/stores/playback'

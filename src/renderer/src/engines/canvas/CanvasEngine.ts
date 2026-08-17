@@ -19,8 +19,8 @@ import { isTyping } from '@/helpers/typing'
 import { reportFailure } from '@/services/diagnostics'
 import { mountApplication } from '../core/mount'
 import { onPaletteChange, token, tokenAsFont } from '../core/palette'
-import { createAdjustFilter, type AdjustFilter } from './adjust-filter'
-import { captionsSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvas-fonts'
+import { createAdjustFilter, type AdjustFilter } from './adjustFilter'
+import { captionsSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvasFonts'
 import {
   allLayers,
   IDENTITY,
@@ -35,7 +35,7 @@ import {
   type TextLayer,
   type Transform,
   WHITE,
-} from './canvas-state'
+} from './canvasState'
 import {
   dragSelection,
   extendLasso,
@@ -43,9 +43,9 @@ import {
   selectionOutline,
   type CanvasSelection,
   type SelectionShape,
-} from './canvas-selection'
+} from './canvasSelection'
 import { composite, maskKey, placement, type CompositeNode } from './compositor'
-import { compose, invert, layerMatrix, mapRect, type Affine } from './layer-space'
+import { compose, invert, layerMatrix, mapRect, type Affine } from './layerSpace'
 import {
   centerOf,
   cornersOfRect,
@@ -80,10 +80,10 @@ import {
   shapeGeometry,
   type ShapeGeometry,
   type ShapeKind,
-} from './shape-geometry'
+} from './shapeGeometry'
 import type { Point, Size } from '../core/geometry'
 import { blurRadius, DEFAULT_BRUSH, readsBrushSetting, type BrushSettings } from './brush'
-import type { CanvasTool } from './canvas-tool'
+import type { CanvasTool } from './canvasTool'
 import { brushRect, grownBy } from './tiles'
 import {
   containIn,

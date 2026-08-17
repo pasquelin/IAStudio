@@ -7,9 +7,9 @@ import {
   restedFrom,
   type MeterState,
 } from '@/engines/audio/level'
-import { paintMeter, readMeterPalette } from '@/engines/audio/meter-painter'
-import { paintOn } from '@/engines/core/canvas-2d'
-import type { AudioTap } from '@/engines/timeline/sound-schedule'
+import { paintMeter, readMeterPalette } from '@/engines/audio/meterPainter'
+import { paintOn } from '@/engines/core/canvas2d'
+import type { AudioTap } from '@/engines/timeline/soundSchedule'
 import { useFrameLoop } from '@/hooks/useFrameLoop'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 

@@ -6,7 +6,7 @@ import {
   updateTrack,
   type Clip,
   type SequenceState,
-} from '@/engines/timeline/timeline-state'
+} from '@/engines/timeline/timelineState'
 import { useSelection } from '@/stores/selection'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { loadTake } from './load-take'

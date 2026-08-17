@@ -6,7 +6,7 @@ import { MenuRow } from '@/design/MenuRow'
 import { CANVAS_TRIGGER } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { HINT_RIGHT, HINT_TOP } from '@/helpers/tooltip'
-import { PANE_VIEWS, type PaneView } from '@/engines/scene/scene-view'
+import { PANE_VIEWS, type PaneView } from '@/engines/scene/sceneView'
 import { PANE_VIEW_ICONS } from '../scene-tools'
 
 export function ScenePaneGridMenu({

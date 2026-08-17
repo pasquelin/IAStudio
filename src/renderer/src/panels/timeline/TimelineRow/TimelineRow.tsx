@@ -1,5 +1,5 @@
 import { useState, type HTMLAttributes, type ReactNode } from 'react'
-import { ROW_PADDING } from '@/engines/timeline/timeline-geometry'
+import { ROW_PADDING } from '@/engines/timeline/timelineGeometry'
 import { cn } from '@/helpers/cn'
 import type { RowReorder } from './rowReorder'
 import { TimelineRowGrip } from './TimelineRowGrip'

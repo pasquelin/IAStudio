@@ -7,8 +7,8 @@ import { EmptyState } from '@/design/EmptyState'
 import { MonitorFrame } from '@/design/MonitorFrame'
 import { TOOLBAR_LABEL } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
-import { durationOf } from '@/engines/audio/audio-data'
-import type { RenderedAudio } from '@/engines/audio/audio-render'
+import { durationOf } from '@/engines/audio/audioData'
+import type { RenderedAudio } from '@/engines/audio/audioRender'
 import {
   chainOf,
   clampRegion,
@@ -21,7 +21,7 @@ import {
   type Region,
 } from '@/engines/audio/edits'
 import { formatDuration } from '@/engines/timeline/timecode'
-import { SECOND, trackOfClip, type Us } from '@/engines/timeline/timeline-state'
+import { SECOND, trackOfClip, type Us } from '@/engines/timeline/timelineState'
 import { cn } from '@/helpers/cn'
 import { getBridge } from '@/services/bridge'
 import { assetsById, useAssets } from '@/stores/assets'

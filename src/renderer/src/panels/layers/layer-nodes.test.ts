@@ -5,7 +5,7 @@ import {
   pixelLayer,
   type CanvasState,
   type Layer,
-} from '@/engines/canvas/canvas-state'
+} from '@/engines/canvas/canvasState'
 import { layerNodes, stackIndex } from './layer-nodes'
 
 const canvasOf = (layers: readonly Layer[]): CanvasState => ({

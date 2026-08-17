@@ -16,7 +16,7 @@ import { MediaTile } from '@/design/MediaTile'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
 import { UiIcon } from '@/design/UiIcon'
-import type { ChannelMap, ChannelOrigin } from '@/engines/texture/texture-state'
+import type { ChannelMap, ChannelOrigin } from '@/engines/texture/textureState'
 
 /**
  * Where a derivation stands, as one value rather than three booleans that could contradict one

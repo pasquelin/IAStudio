@@ -1,4 +1,4 @@
-import type { ClipRow } from '@/engines/scene/animation-rows'
+import type { ClipRow } from '@/engines/scene/animationRows'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { TimelineRow } from '../TimelineRow/TimelineRow'
 
