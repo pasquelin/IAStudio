@@ -156,6 +156,15 @@ export type TreeProps<T extends TreeNode> = {
    */
   onDropRoot?: (ids: readonly string[]) => void
   /**
+   * A right-click on that same blank, which aims at the same place a drop there does: the project
+   * folder itself. Absent leaves the browser's own menu.
+   *
+   * Its own prop rather than `onContextMenu(null)`, because the two menus are not the same menu
+   * shortened — the root cannot be opened, renamed, copied or thrown away, and a row that stands
+   * for nothing would have to be guarded at every one of them.
+   */
+  onContextMenuRoot?: () => void
+  /**
    * A row has just been picked up, so its owner may announce the drag on a channel of its own —
    * a scene document laid on a montage, say. The tree has already announced its own by then,
    * and neither channel knows about the other.
@@ -223,6 +232,7 @@ export function Tree<T extends TreeNode>({
   draggable,
   dragMultiple = false,
   onDropRoot,
+  onContextMenuRoot,
   onDragStart,
   droppable,
   onActivate,
@@ -560,6 +570,15 @@ export function Tree<T extends TreeNode>({
        */
       onPointerDown={event => {
         if (event.target === event.currentTarget) onSelect([], 'replace')
+      }}
+      // Same blank, same aim as the drop below. The selection is cleared first for the same
+      // reason the press above clears it: what the menu offers lands on what is picked, and the
+      // blank means nothing is.
+      onContextMenu={event => {
+        if (!onContextMenuRoot || event.target !== event.currentTarget) return
+        event.preventDefault()
+        onSelect([], 'replace')
+        onContextMenuRoot()
       }}
       // Only the blank BELOW the rows: the list is as tall as its rows, so anything over one of
       // them has the row as its target and is that row's business. Without this test the whole

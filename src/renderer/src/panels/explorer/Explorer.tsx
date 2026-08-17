@@ -33,7 +33,7 @@ import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { NoProject } from '@/panels/shared/NoProject'
 import { isDomainHeading, type ExplorerNode } from './domain-nodes'
 import { entriesSorted, FOLDER_SORTS } from './folder-sort'
-import { openEntryMenu } from './EntryMenu'
+import { openEntryMenu, openRootMenu } from './EntryMenu'
 import { DomainRow } from './DomainRow'
 import { EntryRow } from './EntryRow'
 import { RescanBar } from './RescanBar'
@@ -232,7 +232,13 @@ export function Explorer() {
    * owns — from another window having done something.
    */
   const run = useCallback(
-    (command: CommandId): void => {
+    /**
+     * `into` names where a paste or a new folder lands. It defaults to the anchor the selection
+     * gives, which is what the keyboard and the row menu want — and is passed outright by the
+     * menu raised on the blank: that click clears the selection, and a callback built before the
+     * clearing would still be aiming at the row the user had picked a moment ago.
+     */
+    (command: CommandId, into: string = target): void => {
       const bridge = getBridge()?.project
       if (!bridge) return
 
@@ -249,14 +255,14 @@ export function Explorer() {
       }
       if (command === 'explorer.paste') {
         if (held.paths.length === 0) return
-        answer(bridge.pasteFiles(held.paths, target, held.cut))
+        answer(bridge.pasteFiles(held.paths, into, held.cut))
         // A cut is spent by the paste that carried it out; a copy stays, so pasting into three
         // folders in a row is three copies rather than one and two silences.
         if (held.cut) held.clear()
         return
       }
       if (command === 'explorer.newFolder') {
-        return void bridge.newFolder(target, folderName).then(outcome => {
+        return void bridge.newFolder(into, folderName).then(outcome => {
           settled(outcome)
           // The field opens on the folder that was just made, so the name it is born with is a
           // placeholder rather than something to go and correct. Set before the row exists: the
@@ -427,6 +433,17 @@ export function Explorer() {
             // folder, there being no row standing for the root to aim at.
             onDropRoot={paths =>
               void getBridge()?.project.moveFiles(paths, FOLDER_ROOT).then(settled)
+            }
+            // The blank aims at the project folder, as the drop above does. No round trip to the
+            // catalogue first: the four gestures it offers are about a place, not about a file.
+            onContextMenuRoot={() =>
+              openRootMenu({
+                clipboard: clipboard.length,
+                history,
+                bindings: currentOverrides(),
+                t,
+                run: command => run(command, FOLDER_ROOT),
+              })
             }
             onActivate={node => void (isDomainHeading(node) ? toggle(node.id) : activate(node))}
             // Asked BEFORE the menu is drawn, and that round trip is the point: only the catalogue

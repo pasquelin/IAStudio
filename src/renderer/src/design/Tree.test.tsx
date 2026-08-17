@@ -164,6 +164,55 @@ describe('Tree', () => {
     expect(onSelect).toHaveBeenCalledWith([], 'replace')
   })
 
+  /**
+   * The blank already took a DROP aimed at the project folder; it raised no menu, so the one
+   * gesture that makes a folder at the root had nowhere to be reached from — a brand new project,
+   * whose rows are all folders one may not write into, offered no way to make one at all.
+   */
+  it('raises the root menu on a right-click in that same blank, having picked nothing', () => {
+    const onSelect = vi.fn()
+    const onContextMenuRoot = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={['scene']}
+        expandedIds={new Set(['scene'])}
+        onSelect={onSelect}
+        onToggle={() => {}}
+        onContextMenuRoot={onContextMenuRoot}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    fireEvent.contextMenu(screen.getByRole('tree').parentElement!)
+
+    expect(onSelect).toHaveBeenCalledWith([], 'replace')
+    expect(onContextMenuRoot).toHaveBeenCalledOnce()
+  })
+
+  // A right-click over a ROW is that row's business: answering for it here would raise the menu
+  // of the project folder on top of the one the row raises.
+  it('leaves a right-click on a row to the row', () => {
+    const onContextMenuRoot = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onContextMenuRoot={onContextMenuRoot}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    fireEvent.contextMenu(screen.getByRole('tree'))
+
+    expect(onContextMenuRoot).not.toHaveBeenCalled()
+  })
+
   it('toggles the clicked node when the command key is held', async () => {
     const onSelect = vi.fn()
     // One session for the whole gesture: the direct API opens a new one per call, and the held
