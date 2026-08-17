@@ -4,7 +4,7 @@ import { Masonry, type MasonryProps } from './Masonry'
 
 type Picture = { id: string; name: string; ratio?: number }
 
-/** The width the layout polyfill reports for anything observed — see `test-setup.ts`. */
+/** The width the layout polyfill reports for anything observed — see `testSetup.ts`. */
 const VIEWPORT_WIDTH = 640
 const COLUMN_WIDTH = 200
 /** What the three columns 640 px yields actually measure, gutters taken out. */

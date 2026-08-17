@@ -10,7 +10,7 @@ import { initI18n } from '@/i18n'
 import { forgetRememberedAssets, useAssets } from '@/stores/assets'
 // The rule that needs no browser, shared with the `renderer-node` project — it says why there.
 // Its `beforeEach` registers on import, so it runs before the hooks written below.
-import './test-setup-stores'
+import './testSetupStores'
 
 /**
  * jsdom renders `<dialog>` but implements none of its modal API. Chromium does, and it is

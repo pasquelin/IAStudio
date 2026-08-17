@@ -30,7 +30,7 @@ describe('Flyout', () => {
 
   /**
    * The anchor's box, which jsdom reports as zeros. `offsetWidth` comes from the layout polyfill
-   * in `test-setup`, which answers 640 for every element — so the menu is 640 wide here.
+   * in `testSetup`, which answers 640 for every element — so the menu is 640 wide here.
    */
   function anchorAt(left: number, right: number): HTMLElement {
     const anchor = document.createElement('div')

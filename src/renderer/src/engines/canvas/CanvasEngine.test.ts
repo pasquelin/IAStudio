@@ -458,7 +458,7 @@ function press(host: HTMLElement, x: number, y: number, button = 0): void {
 /**
  * What the overlay put on screen, in order: the rectangles it filled — the grips — and the
  * circles it traced — the brush ring. The overlay paints only when its canvas hands out a 2D
- * context, and `test-setup` denies one to the whole renderer, so lending it a recorder for the
+ * context, and `testSetup` denies one to the whole renderer, so lending it a recorder for the
  * length of one test is the only outlet this chrome has.
  */
 function overlayRecorder(): { fills: number[][]; rings: number[][] } {
@@ -492,7 +492,7 @@ function overlayRecorder(): { fills: number[][]; rings: number[][] } {
   }
 
   const previous = HTMLCanvasElement.prototype.getContext
-  // Same cast as `test-setup` makes to deny it: the overloads of `getContext` cannot be
+  // Same cast as `testSetup` makes to deny it: the overloads of `getContext` cannot be
   // satisfied by one function, and the overlay asks for its context in its constructor.
   HTMLCanvasElement.prototype.getContext = (() =>
     context) as unknown as HTMLCanvasElement['getContext']

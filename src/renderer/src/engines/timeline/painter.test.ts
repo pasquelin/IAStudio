@@ -43,7 +43,7 @@ function spyContext() {
   const images: Rect[] = []
 
   // The glyphs drawn from an `@mdi/js` path, with where and in what ink. `Path2D` is a holder
-  // under jsdom (`test-setup`), so what comes back is the `d` string the painter chose.
+  // under jsdom (`testSetup`), so what comes back is the `d` string the painter chose.
   const glyphs: { d: string; x: number; y: number; ink: string }[] = []
   let origin: Point = { x: 0, y: 0 }
 

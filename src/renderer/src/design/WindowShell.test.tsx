@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { WINDOW_SOURCES } from '@/window-sources'
+import { WINDOW_SOURCES } from '@/windowSources'
 import { WindowShell } from './WindowShell'
 
 describe('WindowShell', () => {

@@ -85,7 +85,7 @@ type AssetsState = {
    *
    * It exists for the test harness, and says so rather than pretending to a product need: the
    * timer `invalidate` arms lives at module scope, so a case that leaves one behind has it fire
-   * inside a LATER case and refresh that one's catalogue under it. `test-setup` calls this after
+   * inside a LATER case and refresh that one's catalogue under it. `testSetup` calls this after
    * every case — see the comment there for the failure it produces.
    *
    * The alternative was to leave production untouched and swap `globalThis.setTimeout` in the

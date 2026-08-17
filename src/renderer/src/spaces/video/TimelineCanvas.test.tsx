@@ -54,7 +54,7 @@ const viewOf = (): Viewport => viewportOf(useTimelineView.getState(), 'doc-1')
 
 /**
  * A canvas that can paint, which is the only condition under which the strip ever learns its
- * own width — `test-setup` sizes every element but hands back a null 2D context, so `paint`
+ * own width — `testSetup` sizes every element but hands back a null 2D context, so `paint`
  * returns before measuring anything.
  *
  * Every drawing call is a no-op: nothing is asserted on what was drawn, only on what the
