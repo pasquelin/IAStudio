@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { shortHash } from '@shared/domain/git'
 import type { GitLaneRow } from '@shared/domain/gitGraph'
-import { rowSkin } from '@/design/styles'
+import { ROW_SUBJECT, rowSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { formatMoment } from '@/helpers/format'
 import { useGit } from '@/stores/git'
@@ -49,7 +49,7 @@ export const HistoryRow = memo(function HistoryRow({ row, width, picked }: Histo
       {commit.refs.map(reference => (
         <RefBadge key={`${reference.kind}/${reference.name}`} reference={reference} />
       ))}
-      <span className="text-text min-w-0 flex-1 truncate text-xs">{commit.message}</span>
+      <span className={ROW_SUBJECT}>{commit.message}</span>
       <span className="text-muted w-32 shrink-0 truncate text-xs">{commit.author}</span>
       <span className="text-muted shrink-0 text-xs tabular-nums">
         {formatMoment(commit.at, i18n.language, 'local')}

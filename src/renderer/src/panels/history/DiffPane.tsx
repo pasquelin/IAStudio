@@ -4,7 +4,7 @@ import { diffTally } from '@shared/domain/gitDiff'
 import { QuietNote } from '@/design/QuietNote'
 import { Spinner } from '@/design/Spinner'
 import { ToolButton } from '@/design/ToolButton'
-import { PANEL_SCROLL } from '@/design/styles'
+import { PANEL_SCROLL, ROW_SUBJECT } from '@/design/styles'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
 import { DiffImages } from './DiffImages'
@@ -30,7 +30,7 @@ export function DiffPane() {
   return (
     <div className="border-border flex min-h-0 flex-1 flex-col border-l">
       <div className="border-border flex items-center gap-2 border-b px-2 py-1">
-        <span className="text-text min-w-0 flex-1 truncate text-xs" title={compared.path}>
+        <span className={ROW_SUBJECT} title={compared.path}>
           {compared.path}
         </span>
 

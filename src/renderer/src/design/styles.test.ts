@@ -4,13 +4,16 @@ import {
   CONTROL,
   FIELD,
   FIELD_FILL,
+  FIELD_LABEL_WIDE,
   NATIVE_SELECT,
   OVERLAY_BUTTON,
   PANEL_GROUP_LABEL,
   PANEL_GROUP_LABEL_WIDE,
+  PANEL_HEAD,
   ROW_INK,
   ROW_LINE,
   ROW_QUIET,
+  ROW_SUBJECT,
   rowSkin,
   TILE_QUIET,
   TITLE_BAR_GHOST,
@@ -554,6 +557,71 @@ describe('the word that names a group in a panel', () => {
       '../panels/history/CommitFiles.tsx',
       '../panels/history/DiffImages.tsx',
       './DynamicForm/DynamicForm.tsx',
+    ])
+  })
+})
+
+/**
+ * All five words or none: `FIELD_LABEL_WIDE` is the same shape one ink away, three of these words
+ * plus `text-muted`, and a field label told off by this rule would be told off wrongly.
+ */
+const spellsOutSubject = spellsOut(ROW_SUBJECT.split(' '))
+
+describe('what a line names', () => {
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutSubject(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves the muted label of a field alone, which shares three of the five', () => {
+    expect(spellsOutSubject(`'${FIELD_LABEL_WIDE}'`)).toBe(false)
+  })
+
+  // Named rather than counted: a count stays green when one site drops the constant and another
+  // picks it up. **Blind**: raw text, so a comment naming the constant would count as wearing it.
+  it('is worn by the two it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && /\bROW_SUBJECT\b/.test(source),
+    ).map(([path]) => path)
+
+    expect(wearing.sort()).toEqual([
+      '../panels/history/DiffPane.tsx',
+      '../panels/history/HistoryRow.tsx',
+    ])
+  })
+})
+
+/**
+ * The whole set: the two windows that stack a column the same way rule it off in DaisyUI ink
+ * (`border-base-300`), which is the other side of a border this file has no say over.
+ */
+const spellsOutPanelHead = spellsOut(PANEL_HEAD.split(' '))
+
+describe('the box a panel puts above what it acts on', () => {
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && spellsOutPanelHead(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone a column ruled off in the other vocabulary', () => {
+    expect(spellsOutPanelHead("'border-base-300 flex flex-col gap-2 border-b p-2'")).toBe(false)
+  })
+
+  // Named rather than counted. **Blind**: raw text, as above.
+  it('is worn by the two it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && /\bPANEL_HEAD\b/.test(source),
+    ).map(([path]) => path)
+
+    expect(wearing.sort()).toEqual([
+      '../panels/git/CommitBox.tsx',
+      './CollectionBar/CollectionBar.tsx',
     ])
   })
 })
