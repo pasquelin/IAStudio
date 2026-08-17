@@ -1,10 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { mdiDiceMultipleOutline } from '@mdi/js'
 import { Fragment, useEffect, useMemo, type ReactNode } from 'react'
-import { useForm, type UseFormRegisterReturn } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import type { FieldDescriptor } from '@shared/domain/model'
-import { cn } from '@/helpers/cn'
 import {
   buildBody,
   defaultValues,
@@ -18,10 +16,8 @@ import {
 import { buildSchema } from '@/helpers/dynamic-form-schema'
 import { useModelText } from '@/hooks/useModelText'
 import { Button } from '../Button'
-import { AssetDropField } from '../AssetDropField'
-import { FIELD, FIELD_FILL } from '../styles'
-import { ToolButton } from '../ToolButton'
-import { HINT_TOP, TIP_LEFT } from '@/helpers/tooltip'
+import { DynamicFormControl } from './DynamicFormControl'
+import { HINT_TOP } from '@/helpers/tooltip'
 
 export type DynamicFormProps = {
   fields: readonly FieldDescriptor[]
@@ -58,85 +54,6 @@ export type DynamicFormProps = {
    * which reaches the form through `GeneratorBridge` instead, and nothing was left reading it.
    */
   accessory?: (field: FieldDescriptor) => ReactNode
-}
-
-function Control({
-  field,
-  registration,
-  initial,
-  onRoll,
-}: {
-  field: FieldDescriptor
-  registration: UseFormRegisterReturn
-  /** What the form opens on for this field — the preset when there is one, the default if not. */
-  initial: unknown
-  onRoll: () => void
-}) {
-  const { t } = useTranslation()
-  const say = useModelText()
-
-  switch (field.kind) {
-    case 'longText':
-      return <textarea rows={4} className={cn(FIELD, 'h-auto py-1')} {...registration} />
-
-    case 'boolean':
-      return <input type="checkbox" className="size-4 self-start" {...registration} />
-
-    case 'choice':
-      return (
-        <select className={FIELD} {...registration}>
-          {!field.required && <option value="" />}
-          {field.options?.map(option => (
-            <option key={option.value} value={option.value}>
-              {say(option.label)}
-            </option>
-          ))}
-        </select>
-      )
-
-    case 'color':
-      return <input type="color" className={cn(FIELD, 'px-1')} {...registration} />
-
-    case 'seed':
-      return (
-        <div className="flex items-center gap-2">
-          <input type="number" className={FIELD_FILL} {...registration} />
-          <ToolButton
-            icon={mdiDiceMultipleOutline}
-            label={t('generation.randomSeed')}
-            tooltip={TIP_LEFT}
-            onClick={onRoll}
-          />
-        </div>
-      )
-
-    case 'number':
-    case 'integer':
-      return (
-        <input
-          type="number"
-          step={field.step ?? (field.kind === 'integer' ? 1 : 'any')}
-          min={field.min}
-          max={field.max}
-          className={FIELD}
-          {...registration}
-        />
-      )
-
-    case 'image':
-      return (
-        <AssetDropField
-          registration={registration}
-          initial={typeof initial === 'string' && initial ? initial : undefined}
-          placeholder={t('generation.dropPicture')}
-        />
-      )
-
-    // An unknown kind renders as a plain input rather than making the form disappear —
-    // CLAUDE.md, invariant 5.
-    default:
-      return <input type="text" className={FIELD} {...registration} />
-  }
 }
 
 /**
@@ -218,7 +135,7 @@ export function DynamicForm({
                   {field.required && <span aria-hidden> *</span>}
                 </span>
 
-                <Control
+                <DynamicFormControl
                   field={field}
                   registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
                   initial={initial[field.key]}
