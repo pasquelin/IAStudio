@@ -1,5 +1,3 @@
-import { PROJECT_FOLDERS } from './project'
-
 /**
  * The project folder as the explorer walks it — one level at a time, never the whole tree.
  *
@@ -31,21 +29,6 @@ export const FOLDER_ROOT = ''
  */
 export function isHiddenEntry(name: string): boolean {
   return name.startsWith('.')
-}
-
-/**
- * Whether anything on the way to `path` is hidden — which makes it READ-ONLY, not invisible.
- *
- * The two are told apart on purpose: the explorer offers to show these rows, and a row that can
- * be seen is a row a menu can be raised on. `.index/` is a catalogue the studio rebuilds and
- * `.project.json` is what says the folder is a project at all — renaming either from the tree
- * breaks the project for the sake of a name nobody reads.
- *
- * Every segment, not just the last: `.index/catalog.db` is the studio's own as surely as the
- * folder holding it.
- */
-export function isHiddenPath(path: string): boolean {
-  return path.split('/').some(isHiddenEntry)
 }
 
 /**
@@ -102,49 +85,39 @@ export function nameOf(path: string): string {
 }
 
 /**
- * Whether the studio owns this folder rather than the user.
+ * Whether the studio holds `path` for itself — the ONE spelling of that question, and the whole
+ * of what a project folder is not the user's to arrange.
  *
- * `assets/`, `documents/` and what they contain are the project's own layout: the catalogue
- * stores every asset by a path under them, so renaming one orphans rows nobody can find again,
- * and trashing one takes the work with it. They are shown — hiding them would be lying about
- * what is on disk — and they refuse to be moved.
+ * A leading dot on ANY segment, rather than a list of the folders the studio writes: `.index/`
+ * and its four caches, `.project.json`, `.scenario/`. A list is what gets a sixth entry added
+ * without this predicate hearing about it, and the failure that follows is a user renaming the
+ * file that says the folder is a project at all. The dot is a rule the writer cannot forget,
+ * because it is the same rule that hides the file.
  *
- * Everything the user put there is theirs, and is renamed and trashed like any other file.
+ * READ-ONLY, not invisible: the explorer offers to reveal these rows, and a row that can be seen
+ * is a row a menu can be raised on — every gesture over them is refused rather than absent.
+ *
+ * `assets/` and `documents/` used to be here too, and that is what this phase removes: nothing
+ * reads a file's role off the folder it sits in any more, so nothing is lost by letting a
+ * picture leave `assets/img`. What kept the catalogue in step was the ban; what keeps it in step
+ * now is `repath` and the rescan.
  */
-export function isStudioFolder(path: string): boolean {
-  return path === FOLDER_ROOT || PROJECT_FOLDERS.includes(path)
+export function isStudioPrivate(path: string): boolean {
+  return path.split('/').some(isHiddenEntry)
 }
 
 /**
- * Whether the studio owns what sits at `path` — the folders above, and everything under them.
+ * Whether `path` is the studio's rather than the user's to act on — read on BOTH sides, as
+ * `canMoveInto` is: the panel greys the gesture out and the main process refuses it regardless,
+ * a window not being what decides what gets written.
  *
- * What `isStudioFolder` says of the folders themselves, said of their contents, which is what
- * its own comment has always claimed and only this makes true: the catalogue stores every asset
- * by its path, so renaming `assets/img/asset_2604….png` behind its back leaves a row pointing
- * at nothing, and a document renamed as a file lands where its own channel is meant to take it.
- *
- * Read on both sides, as `canMoveInto` is: the panel greys the gesture out and the main process
- * refuses it regardless, a window not being what decides what gets written.
- */
-export function isStudioOwned(path: string): boolean {
-  return PROJECT_FOLDERS.some(folder => path === folder || path.startsWith(`${folder}/`))
-}
-
-/**
- * Whether the studio holds `path` for itself — the ONE spelling of that question.
- *
- * Two things make a path private, and they are not the same thing: the folders the catalogue
- * files assets under (`isStudioOwned`), and what a leading dot hides (`isHiddenPath`). Written
- * apart at each site, a third answer arriving tomorrow would have to be added to five of them,
- * and one could be forgotten without a test saying so.
- *
- * `contents` is the difference the trash draws: what a studio folder HOLDS may be thrown away —
- * the catalogue lets go of the rows underneath — where the folder itself is the layout the
- * project is read by. Nothing under a dot may go either way.
+ * `contents` is the difference the trash draws, and after this phase it comes down to the
+ * project folder itself: it RECEIVES, so it is not private to a drop, but throwing it away
+ * would throw away the project. Nothing under a dot may go either way.
  */
 export function isPrivatePath(path: string, contents: 'own' | 'shown' = 'own'): boolean {
-  const studio = contents === 'own' ? isStudioOwned(path) : isStudioFolder(path)
-  return studio || isHiddenPath(path)
+  if (contents === 'shown' && path === FOLDER_ROOT) return true
+  return isStudioPrivate(path)
 }
 
 /**
@@ -156,14 +129,14 @@ export function isPrivatePath(path: string, contents: 'own' | 'shown' = 'own'): 
  * why — 297 moved, 3 turned away, each with its sentence. Written twice, the two would be two
  * rules the day one of them is edited.
  *
- * The studio's own folders refuse on BOTH sides, and so does everything UNDER them: `assets/`
- * is still where a file's role is read from, so a picture dragged out of `assets/img` would
- * stop being a picture — the reconciliation pass is what lifts that, and it is not written yet.
+ * What the studio holds for itself refuses on BOTH sides — as a source and as a destination.
+ * `assets/` and `documents/` are no longer among them: a picture dragged out of `assets/img` is
+ * still a picture, its role being read off its extension and its catalogue row, and the row
+ * follows the file through `repath`.
  *
- * **The root receives**, which it did not: dropping on the blank below the tree means "to the
- * project folder", and a file that could enter a folder the user made but never leave it was a
- * browser missing one of its two ordinary gestures. No row of the catalogue stands for the root
- * either way — nothing under it is one of the studio's own paths.
+ * **The root receives**: dropping on the blank below the tree means "to the project folder", and
+ * a file that could enter a folder the user made but never leave it was a browser missing one of
+ * its two ordinary gestures.
  *
  * What it cannot answer is what only the disk knows: whether `folder` IS a folder, whether
  * either of them is still there, and whether the name is taken where it lands. The panel reads

@@ -19,7 +19,7 @@ export type FolderReader = {
    * One level of the project folder. `''` is the project root.
    *
    * `hidden` shows what a leading dot hides — the studio's own bookkeeping, which the explorer
-   * offers to reveal. Shown, never written to: `isHiddenPath` refuses every gesture over them.
+   * offers to reveal. Shown, never written to: `isStudioPrivate` refuses every gesture over them.
    * Left out, nothing under a dot comes back, which is what a reader sees by default.
    */
   list: (relative: string, hidden?: boolean) => Promise<FolderEntry[]>

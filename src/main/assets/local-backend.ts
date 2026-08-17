@@ -1,7 +1,7 @@
 import { rm, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import {
-  ASSET_FOLDERS,
+  DEFAULT_ASSET_FOLDERS,
   wantsPoster,
   type Asset,
   type AssetGeneration,
@@ -235,7 +235,7 @@ export function createLocalBackend({
 
     const relativePath = existing?.path
       ? withExtension(existing.path, extension)
-      : await freeAssetPath(projectPath(), ASSET_FOLDERS[request.type], name, extension)
+      : await freeAssetPath(projectPath(), DEFAULT_ASSET_FOLDERS[request.type], name, extension)
 
     // The probe spawns ffprobe, so it runs beside the still rather than after it.
     const written = writeFile(join(projectPath(), relativePath), bytes)
@@ -333,7 +333,7 @@ export function createLocalBackend({
         ? withExtension(existing.path, safeExtension(extension, existing.type))
         : await freeAssetPath(
             projectPath(),
-            ASSET_FOLDERS[existing.type],
+            DEFAULT_ASSET_FOLDERS[existing.type],
             existing.name,
             safeExtension(extension, existing.type),
           )

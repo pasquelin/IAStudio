@@ -82,19 +82,20 @@ export function openEntryMenu({
    * where it sits.
    *
    * A document has its own channel, an asset has the catalogue's, and both move the file with
-   * the name. What has neither is greyed, and this is why the catalogue is asked before the menu
-   * is drawn: a picture the user dropped into `assets/img` themselves is no row of ours, and
-   * `renameFile` refuses it as private while no other channel claims it.
+   * the name; a plain file has `renameFile`. Only the machine's own bookkeeping has none of the
+   * three, which is what the last term answers — and the catalogue is still asked before the
+   * menu is drawn, because WHICH channel carries the gesture is what its answer decides.
    */
   const renamable = document !== null || asset !== null || !isPrivatePath(node.path)
 
   /**
-   * What the studio still holds for itself, until the reconciliation pass lets it go.
+   * What the studio holds for itself — the machine's bookkeeping, and nothing else since the
+   * reconciliation pass let `assets/` and `documents/` go.
    *
-   * `isPrivatePath` and not `isStudioOwned` alone, which is what the dot toggle made visible:
-   * `.project.json` is not under any of the studio's folders, so the menu offered every gesture
-   * on it — each one refused by the main process afterwards. The panel greys out exactly what
-   * the disk will refuse, or it is promising something it cannot do.
+   * Read from the same predicate the main process reads, which is what the dot toggle made
+   * necessary: the menu once offered every gesture on `.project.json`, each one refused
+   * afterwards. The panel greys out exactly what the disk will refuse, or it is promising
+   * something it cannot do.
    */
   const owned = selection.some(path => isPrivatePath(path))
 

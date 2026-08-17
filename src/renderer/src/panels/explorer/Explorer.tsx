@@ -311,10 +311,9 @@ export function Explorer() {
    * Three names for three things, and the row cannot tell them apart by looking.
    *
    * A document is renamed through its own channel, which moves the file AND rewrites its
-   * envelope. An asset through the catalogue's, which moves the file AND rewrites its row — both
-   * refused as plain files by the main process, `isStudioOwned`, because renaming either behind
-   * the studio's back leaves it pointing at a path that is gone. Everything else the user put in
-   * the folder is a plain file and is renamed as one.
+   * envelope. An asset through the catalogue's, which moves the file AND rewrites its row —
+   * renaming either as a plain file would leave the row and the envelope pointing at a path that
+   * is gone. Everything else the user put in the folder is a plain file and is renamed as one.
    *
    * WHICH of the three this row is was settled when the menu opened — the catalogue was asked
    * then, and the answer is what decided whether the gesture was offered at all.

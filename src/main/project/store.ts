@@ -8,7 +8,8 @@ import {
   MANIFEST_FILE,
   MANIFEST_VERSION,
   LEGACY_MANIFEST_FILE,
-  PROJECT_FOLDERS,
+  MACHINE_FOLDERS,
+  STARTER_FOLDERS,
   type Manifest,
   type Project,
 } from '@shared/domain/project'
@@ -138,9 +139,25 @@ async function writeManifest({ path, manifest }: Project): Promise<void> {
   await writeAtomic(join(path, MANIFEST_FILE), JSON.stringify(manifest, null, 2))
 }
 
-async function ensureFolders(root: string): Promise<void> {
-  await Promise.all(PROJECT_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
+/**
+ * The machine's own, put back on every open: they hold a rebuildable cache, and a project whose
+ * `.index/peaks` was deleted between two sessions must still open.
+ */
+async function ensureMachineFolders(root: string): Promise<void> {
+  await Promise.all(MACHINE_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
   await hideFromExplorer(join(root, '.index'))
+}
+
+/**
+ * The folders a project STARTS with — laid down once, at creation, and never put back.
+ *
+ * That is the whole of what makes them ordinary: a user who threw `Images/` away meant to, and a
+ * folder that came back at the next open would be the old layout wearing a new name. An import
+ * with nowhere else to go recreates the one it needs (`freeAssetPath`), which is a different
+ * thing — it happens because something is being written, not because a project was opened.
+ */
+async function createStarterFolders(root: string): Promise<void> {
+  await Promise.all(STARTER_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
 }
 
 /**
@@ -367,7 +384,8 @@ export function createProjectStore({
 
   return {
     create: async (path, name) => {
-      await ensureFolders(path)
+      await ensureMachineFolders(path)
+      await createStarterFolders(path)
 
       const timestamp = now()
       const made: Project = {
@@ -422,9 +440,8 @@ export function createProjectStore({
     open: async path => {
       const manifest = await loadManifest(path)
 
-      // Repairs a project whose subfolders were deleted between two sessions — the folder is
-      // the user's, and a missing `assets/vid` must not stop it from opening.
-      await ensureFolders(path)
+      // The caches only. What the user arranged is theirs, deletions included.
+      await ensureMachineFolders(path)
 
       return await activate({ path, manifest })
     },

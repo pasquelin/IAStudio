@@ -18,18 +18,27 @@ export function isAssetType(value: unknown): value is AssetType {
 }
 
 /**
- * Where each kind lands inside a project. One table rather than two: the folders are created
- * from the project side and written to from the asset side, and a rename on one side alone
- * would have the writer land in a folder nobody created — an ENOENT at the exact moment a job
- * succeeds. `Record<AssetType, string>` also makes a new kind a compile error, not a surprise.
+ * Where each kind lands when nothing says otherwise — a DEFAULT, no longer a law.
+ *
+ * It used to be both: the folder a file sat in is what said what the file was, so leaving one
+ * meant ceasing to be a picture. Nothing reads a role off a folder any more (`natureOf` reads
+ * the extension, the catalogue overrules it), so these are ordinary folders the user may rename,
+ * fill with something else, or throw away — and the writer recreates the one it needs rather
+ * than failing, which is the whole difference between a default and a law.
+ *
+ * The names are English and fixed, never translated: a folder whose name followed the interface
+ * language would be renamed on disk at every language change, and every catalogue row under it
+ * would point beside the file.
+ *
+ * `Record<AssetType, string>` still makes a new kind a compile error rather than a surprise.
  */
-export const ASSET_FOLDERS: Record<AssetType, string> = {
-  image: 'assets/img',
-  video: 'assets/vid',
-  audio: 'assets/aud',
-  mesh: 'assets/3d',
-  texture: 'assets/tex',
-  skybox: 'assets/sky',
+export const DEFAULT_ASSET_FOLDERS: Record<AssetType, string> = {
+  image: 'Images',
+  video: 'Video',
+  audio: 'Audio',
+  mesh: '3D',
+  texture: 'Textures',
+  skybox: 'Sky',
 }
 
 /**

@@ -658,24 +658,26 @@ describe('dragging a row of the explorer', () => {
     expect(moveFiles).toHaveBeenCalledWith(['notes/brief.pdf'], 'refs')
   })
 
-  // The catalogue stores every asset by a path under `assets/`, and the studio's own folders
-  // refuse on both sides of the gesture — as what moves, and as what receives.
-  it('will not pick up a studio folder', async () => {
+  // What the machine keeps refuses on both sides of the gesture — as what moves, and as what
+  // receives. The folders the user was given are picked up like any other.
+  it('will not pick up what the machine keeps for itself', async () => {
     withProject()
-    install({ '': [folder('assets'), folder('notes')] })
+    useExplorerView.setState({ hidden: true })
+    install({ '': [file('.project.json'), folder('assets')] })
 
     render(<Explorer />)
 
-    expect(await rowFor('assets')).not.toHaveAttribute('draggable', 'true')
-    expect(await rowFor('notes')).toHaveAttribute('draggable', 'true')
+    expect(await rowFor('.project.json')).not.toHaveAttribute('draggable', 'true')
+    expect(await rowFor('assets')).toHaveAttribute('draggable', 'true')
   })
 
-  it('drops nothing into a studio folder', async () => {
+  it('drops nothing into what the machine keeps for itself', async () => {
     withProject()
-    const { moveFiles } = install({ '': [folder('assets'), file('brief.pdf')] })
+    useExplorerView.setState({ hidden: true })
+    const { moveFiles } = install({ '': [folder('.index'), file('brief.pdf')] })
 
     render(<Explorer />)
-    await drag('brief.pdf', 'assets')
+    await drag('brief.pdf', '.index')
 
     expect(moveFiles).not.toHaveBeenCalled()
   })
@@ -946,20 +948,19 @@ describe('the explorer menu', () => {
   })
 
   /**
-   * The catalogue stores every asset by a path under `assets/`, so moving one orphans rows
-   * nobody can find again. Greyed rather than dropped: a menu that changes length is a menu one
-   * cannot learn.
+   * The folder a project was once laid out by is now a folder like any other — that is the whole
+   * of the phase, read from the surface it changes. What the catalogue points at follows through
+   * `repath`, so nothing is orphaned by the gesture the menu now offers.
    */
-  it('refuses to move the studio own folders, and says so before the click', async () => {
+  it('offers every gesture on the folders a project used to be laid out by', async () => {
     withProject()
     install({ '': [folder('assets')] })
 
     render(<Explorer />)
     await open('assets')
 
-    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
-    expect(menu.offers('Mettre à la corbeille')).toBe(false)
-    expect(menu.offers('Afficher dans le dossier')).toBe(true)
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(true))
+    expect(menu.offers('Mettre à la corbeille')).toBe(true)
   })
 
   /**
@@ -1083,12 +1084,12 @@ describe('the explorer menu', () => {
   })
 
   /**
-   * A picture the user dropped into `assets/` themselves is no row of ours: `renameFile` refuses
-   * everything under there, and no other channel claims it. Offering the gesture opened a field
-   * that closed on a failure only the journal mentioned — worse than the grey it replaced, which
-   * is why the catalogue is asked BEFORE the menu is drawn.
+   * A picture the user dropped into `assets/` themselves is no row of ours, and no longer needs
+   * to be one: `renameFile` carries it as the plain file it is. The catalogue is still asked
+   * before the menu is drawn — not to decide WHETHER the gesture is offered, but which of the
+   * three channels carries it.
    */
-  it('greys it out for a file under assets the catalogue never heard of', async () => {
+  it('renames a file the catalogue never heard of, wherever it sits', async () => {
     withProject()
     install({ '': [folder('assets')], assets: [file('dropped.png', 'assets')] })
 
@@ -1096,9 +1097,8 @@ describe('the explorer menu', () => {
     await userEvent.dblClick(await screen.findByText('assets'))
     await open('dropped.png')
 
-    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
-    // Not a refusal of the row itself: showing it in the folder is what still works.
-    expect(menu.offers('Afficher dans le dossier')).toBe(true)
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(true))
+    expect(menu.offers('Mettre à la corbeille')).toBe(true)
   })
 
   it('renames where the name is read', async () => {
