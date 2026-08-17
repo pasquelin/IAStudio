@@ -8,6 +8,7 @@ import { bindingOf } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { cn } from '@/helpers/cn'
 import { WindowShell } from '@/design/WindowShell'
+import { WindowNav, WindowNavItem } from '@/design/WindowNav'
 import { HINT_RIGHT, HINT_TOP } from '@/helpers/tooltip'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
@@ -17,7 +18,7 @@ import { isSettingsDraftDirty, useSettingsDraft } from '@/stores/settings-draft'
 import { SettingActions } from './SettingActions'
 import { SettingList } from './SettingList'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
-import { windowControl, WINDOW_CAPTION, WINDOW_HELP } from '@/design/window-styles'
+import { WINDOW_CAPTION, WINDOW_HELP } from '@/design/window-styles'
 
 /** Whether anything under a section is staged — its own settings, or a sub-section's. */
 function sectionIsStaged(touched: ReadonlySet<SettingPath>, section: SettingsSection): boolean {
@@ -45,41 +46,39 @@ function NavigationEntry({
   const staged = useSettingsDraft(state => sectionIsStaged(state.touched, section))
 
   return (
-    <li>
-      <button
-        type="button"
-        aria-current={active ? 'page' : undefined}
-        {...HINT_RIGHT(t(staged ? 'settings.sectionStagedHint' : 'settings.sectionHint'))}
-        onClick={() => onSelect(section.id)}
-        style={{ paddingLeft: `calc(var(--sc-indent) * ${depth + 1})` }}
-        className={cn(windowControl(active), 'w-full gap-1.5 pr-3 text-left')}
-      >
-        {t(section.labelKey)}
-        {staged && (
-          <span
-            title={t('settings.modified')}
-            className={cn(
-              'size-1.5 shrink-0 rounded-full',
-              active ? 'bg-primary-content' : 'bg-primary',
-            )}
-          />
-        )}
-      </button>
-
-      {section.children.length > 0 && (
-        <ul className="m-0 list-none p-0">
-          {section.children.map(child => (
-            <NavigationEntry
-              key={child.id}
-              section={child}
-              depth={depth + 1}
-              selected={selected}
-              onSelect={onSelect}
-            />
-          ))}
-        </ul>
+    <WindowNavItem
+      active={active}
+      hint={t(staged ? 'settings.sectionStagedHint' : 'settings.sectionHint')}
+      onSelect={() => onSelect(section.id)}
+      depth={depth}
+      className="gap-1.5 pr-3"
+      nested={
+        section.children.length > 0 && (
+          <ul className="m-0 list-none p-0">
+            {section.children.map(child => (
+              <NavigationEntry
+                key={child.id}
+                section={child}
+                depth={depth + 1}
+                selected={selected}
+                onSelect={onSelect}
+              />
+            ))}
+          </ul>
+        )
+      }
+    >
+      {t(section.labelKey)}
+      {staged && (
+        <span
+          title={t('settings.modified')}
+          className={cn(
+            'size-1.5 shrink-0 rounded-full',
+            active ? 'bg-primary-content' : 'bg-primary',
+          )}
+        />
       )}
-    </li>
+    </WindowNavItem>
   )
 }
 
@@ -238,7 +237,7 @@ export function SettingsWindow() {
             onChange={event => setQuery(event.target.value)}
           />
 
-          <ul className="m-0 flex min-h-0 flex-1 list-none flex-col gap-0.5 overflow-auto p-0">
+          <WindowNav>
             {SETTINGS_SECTIONS.map(entry => (
               <NavigationEntry
                 key={entry.id}
@@ -251,7 +250,7 @@ export function SettingsWindow() {
                 }}
               />
             ))}
-          </ul>
+          </WindowNav>
         </>
       }
     >

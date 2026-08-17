@@ -12,8 +12,8 @@ import { isSupportedLanguage, UNKNOWN_SYSTEM_LANGUAGE } from '@shared/i18n'
 import manual from '@shared/manual.json'
 import { foldForSearch } from '@shared/text'
 import { WindowShell } from '@/design/WindowShell'
-import { windowControl, WINDOW_CAPTION } from '@/design/window-styles'
-import { cn } from '@/helpers/cn'
+import { WINDOW_CAPTION } from '@/design/window-styles'
+import { WindowNav, WindowNavItem } from '@/design/WindowNav'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 
@@ -97,27 +97,22 @@ export function ManualWindow() {
             onChange={event => setQuery(event.target.value)}
           />
 
-          <ul className="m-0 flex min-h-0 flex-1 list-none flex-col gap-0.5 overflow-auto p-0">
+          <WindowNav>
             {chapters.map(entry => (
-              <li key={entry.slug}>
-                <button
-                  type="button"
-                  aria-current={!searching && entry.slug === chapter?.slug ? 'page' : undefined}
-                  {...HINT_RIGHT(t('manual.chapterHint'))}
-                  onClick={() => open(entry.slug)}
-                  className={cn(
-                    windowControl(!searching && entry.slug === chapter?.slug),
-                    'w-full gap-2 px-3 text-left',
-                  )}
-                >
-                  {/* The token, not an opacity: a number dimmed by `opacity-N` is a word the
-                      contrast guard cannot reason about, and this window has a caption ink. */}
-                  <span className={WINDOW_CAPTION}>{entry.number}</span>
-                  <span className="truncate">{entry.title}</span>
-                </button>
-              </li>
+              <WindowNavItem
+                key={entry.slug}
+                active={!searching && entry.slug === chapter?.slug}
+                hint={t('manual.chapterHint')}
+                onSelect={() => open(entry.slug)}
+                className="gap-2 px-3"
+              >
+                {/* The token, not an opacity: a number dimmed by `opacity-N` is a word the
+                    contrast guard cannot reason about, and this window has a caption ink. */}
+                <span className={WINDOW_CAPTION}>{entry.number}</span>
+                <span className="truncate">{entry.title}</span>
+              </WindowNavItem>
             ))}
-          </ul>
+          </WindowNav>
         </>
       }
     >
