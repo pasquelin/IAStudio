@@ -4,7 +4,6 @@ import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { rowDrag } from '../rowDrag'
-import type { RowTone } from '../styles'
 import { CollectionCell } from './CollectionCell'
 import {
   columnsIn,
@@ -107,12 +106,6 @@ export type CollectionProps<T extends { id: string }> = {
    */
   rowHeight?: RowHeight
   /**
-   * How loudly a picked row is filled. `strong` is for a list whose selection says WHERE ONE IS
-   * rather than which rows a gesture has gathered — see `RowTone`. Left at `soft` by every list
-   * that picks, which is all of them but the projects.
-   */
-  selectionTone?: RowTone
-  /**
    * A batch released on the blank BESIDE the cards — the place the collection is showing, there
    * being no card standing for it to aim at. `Tree` offers the same three on its own blank.
    */
@@ -207,7 +200,6 @@ export function Collection<T extends { id: string }>({
   empty,
   footer,
   rowHeight = 'control',
-  selectionTone = 'soft',
   onDropRoot,
   onContextMenuRoot,
   onPressRoot,
@@ -370,7 +362,6 @@ export function Collection<T extends { id: string }>({
                       key={item.id}
                       index={index}
                       selected={selected.has(item.id)}
-                      tone={selectionTone}
                       disabled={isDisabled?.(item) === true}
                       tabbable={index === tabStop}
                       // A list row spans the collection; a card is sized by its grid column, and

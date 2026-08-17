@@ -115,6 +115,22 @@ function palette(from: number): Record<string, string> {
   return found
 }
 
+/** Hue in degrees and saturation in points, which is what tells a shade from a second colour. */
+function hsl(hex: string): { h: number; s: number } {
+  const [r = 0, g = 0, b = 0] = [1, 3, 5].map(at => parseInt(hex.substr(at, 2), 16) / 255)
+  const [high, low] = [Math.max(r, g, b), Math.min(r, g, b)]
+  const span = high - low
+  if (span === 0) return { h: 0, s: 0 }
+
+  const h = high === r ? ((g - b) / span) % 6 : high === g ? (b - r) / span + 2 : (r - g) / span + 4
+
+  return { h: (h * 60 + 360) % 360, s: (span / (1 - Math.abs(high + low - 1))) * 100 }
+}
+
+/** Wide enough that a hand-tuned token is not refused for a rounding, narrow enough to bite. */
+const HUE_DRIFT = 6
+const SATURATION_DRIFT = 12
+
 const THEMES = [
   { name: 'dark', from: stylesheet.indexOf('@theme {') },
   { name: 'light', from: stylesheet.indexOf(`name: '${THEME_ATTRIBUTE.light}'`) },
@@ -399,6 +415,23 @@ describe('the contrast of the inks', () => {
       // Read as a colour first, so two missing names cannot agree with each other.
       expect(tokens.danger).toMatch(/^#[0-9a-f]{6}$/)
       expect(tokens.error).toBe(tokens.danger)
+    }
+  })
+
+  /**
+   * The two accents are ONE blue at two steps, and what says so is the hue and the saturation —
+   * never the lightness, which is the whole of what separates them. Measured on a screenshot on
+   * 17 August: `accent-soft` read S 41% against the accent's 88%, and side by side in one column
+   * the eye read two colours. The light theme was already right; only the dark one had drifted.
+   */
+  it('keeps the soft accent a shade of the accent rather than a second blue', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+      const [accent, soft] = [hsl(tokens.accent ?? ''), hsl(tokens['accent-soft'] ?? '')]
+
+      // Degrees on a circle, so 359 and 1 are two apart rather than 358.
+      expect(Math.abs(((accent.h - soft.h + 540) % 360) - 180)).toBeLessThanOrEqual(HUE_DRIFT)
+      expect(Math.abs(accent.s - soft.s)).toBeLessThanOrEqual(SATURATION_DRIFT)
     }
   })
 

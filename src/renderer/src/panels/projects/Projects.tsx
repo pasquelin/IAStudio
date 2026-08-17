@@ -61,14 +61,12 @@ export function Projects() {
     <Collection
       label={t('panels.projects')}
       items={items}
-      // `filled` goes with the `strong` tone below and is only ever right beside it: the tone is
-      // what paints a fill that stands there, and the height is the room that fill takes off the
-      // two steps of text. Every other stacked list paints one only under a pointer.
+      // Two steps of text on every line, which is what asks for the room — not the fill.
       rowHeight="filled"
       // The open project, which is at most one — an array because that is the shape a collection
-      // takes, not because two could ever be in it.
+      // takes, not because two could ever be in it. Here selecting IS opening: there is no state
+      // beside it for a second colour to stand for.
       selectedIds={open === undefined ? [] : [open]}
-      selectionTone="strong"
       // A folder gone from the disk drops out on its own: the store forgets it wherever an
       // opening fails, not only where it was clicked.
       onOpen={project => void useProject.getState().open(project.path)}
