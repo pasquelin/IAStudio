@@ -330,7 +330,7 @@ load.
 ### One action registry, two readers
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) declares what the studio can be asked to do —
-**a hundred and thirty-one actions in twelve families**, one family per `*Actions.ts` module, their fields, **what
+**a hundred and thirty-seven actions in thirteen families**, one family per `*Actions.ts` module, their fields, **what
 each one commits** (`none`, `files`, `asset`, `credits`) and **which door offers it** (`reach`). It
 has two readers, and **neither of them decides**:
 

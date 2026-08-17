@@ -333,6 +333,30 @@
         "title": "Remplir ou vider un canal",
         "description": "Met une image de la bibliothèque dans un des huit canaux de la matière devant. Sans asset nommé, le canal est vidé plutôt que rempli."
       },
+      "cloudBrowse": {
+        "title": "Parcourir la bibliothèque distante",
+        "description": "Rend une page de la bibliothèque du compte, filtrée par texte, tags ou nature. La pagination se fait par curseur, et il n’y a pas de total — l’API n’en donne aucun."
+      },
+      "cloudExplore": {
+        "title": "Parcourir ce que tout le monde a publié",
+        "description": "Rend une page du flux public d’une nature donnée, du plus récent au plus ancien. Ces assets ne sont pas les vôtres, et les regarder n’en rapatrie aucun."
+      },
+      "cloudSimilar": {
+        "title": "Chercher ce qui ressemble à un asset",
+        "description": "Rend les assets publiés qui ressemblent à celui nommé, celui-ci étant retiré de ses propres résultats. La référence est au choix de l’appelant."
+      },
+      "cloudPlan": {
+        "title": "Prévoir ce qu’une synchronisation ferait",
+        "description": "Dit ce qu’un envoi ou un rapatriement ferait de chaque asset nommé, avant que cela ne coûte la moindre requête. Rien n’est envoyé ni rapatrié."
+      },
+      "cloudPull": {
+        "title": "Rapatrier des assets distants",
+        "description": "Fait entrer des assets dans le projet, octets compris, et dit ce que chacun a donné. Un téléchargement interrompu garde ce qu’il avait déjà écrit."
+      },
+      "cloudPush": {
+        "title": "Envoyer des assets vers le compte",
+        "description": "Envoie des assets locaux vers la bibliothèque du compte, où ils restent. C’est le seul geste de cette famille qui laisse quelque chose derrière lui."
+      },
       "stylesList": {
         "title": "Lister les styles de matière",
         "description": "Rend les styles de matière enregistrés, avec leur identifiant, leur nom et les valeurs qu’ils gardent. Ils vivent hors de tout projet et suivent la machine."
@@ -579,6 +603,8 @@
       "alsoRemote": "Retirer aussi de la bibliothèque distante",
       "layerId": "Identifiant du calque",
       "layerIds": "Identifiants des calques",
+      "cursor": "Curseur de page, rendu par la page précédente",
+      "syncPolicy": "Sens de la synchronisation",
       "styleId": "Identifiant du style",
       "favoriteId": "Identifiant de la recette",
       "settingsSection": "Section des réglages",

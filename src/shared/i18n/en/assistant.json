@@ -333,6 +333,30 @@
         "title": "Fill or empty a channel",
         "description": "Puts an image from the library into one of the eight channels of the material in front. With no asset named, the channel is emptied rather than filled."
       },
+      "cloudBrowse": {
+        "title": "Browse the remote library",
+        "description": "Answers one page of the account’s library, narrowed by text, tags or kind. Paging is by cursor, and there is no total — the API gives none."
+      },
+      "cloudExplore": {
+        "title": "Browse what everyone published",
+        "description": "Answers one page of the public feed of a given kind, newest first. These assets are not yours, and looking at them fetches none of them."
+      },
+      "cloudSimilar": {
+        "title": "Find what resembles an asset",
+        "description": "Answers published assets that resemble the one named, that one taken out of its own results. The reference is the caller’s to choose."
+      },
+      "cloudPlan": {
+        "title": "See what a synchronisation would do",
+        "description": "Says what a push or a pull would do to each asset named, before it costs a single request. Nothing is sent and nothing is fetched."
+      },
+      "cloudPull": {
+        "title": "Fetch remote assets",
+        "description": "Brings assets into the project, bytes and all, and says what each one did. A download that stops halfway keeps what it had already written."
+      },
+      "cloudPush": {
+        "title": "Send assets to the account",
+        "description": "Sends local assets up to the account’s library, where they stay. It is the only gesture of this family that leaves something behind."
+      },
       "stylesList": {
         "title": "List the material styles",
         "description": "Answers the saved material styles, with their identifier, their name and the values they keep. They live outside every project and follow the machine."
@@ -579,6 +603,8 @@
       "alsoRemote": "Remove from the remote library too",
       "layerId": "Layer identifier",
       "layerIds": "Layer identifiers",
+      "cursor": "Page cursor, straight from the previous page",
+      "syncPolicy": "Which way the synchronisation goes",
       "styleId": "Style identifier",
       "favoriteId": "Recipe identifier",
       "settingsSection": "Section of the settings",

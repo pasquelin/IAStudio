@@ -6,6 +6,7 @@ import {
 } from './assistantAction'
 import { ASSET_ACTIONS } from './assetActions'
 import { CANVAS_ACTIONS } from './canvasActions'
+import { CLOUD_ACTIONS } from './cloudActions'
 import { CORE_ACTIONS } from './coreActions'
 import { FILE_ACTIONS } from './fileActions'
 import { GIT_ACTIONS } from './gitActions'
@@ -44,6 +45,7 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = [
   ...FILE_ACTIONS,
   ...JOB_ACTIONS,
   ...ASSET_ACTIONS,
+  ...CLOUD_ACTIONS,
   ...CANVAS_ACTIONS,
   ...SEQUENCE_ACTIONS,
   ...MATERIAL_ACTIONS,
