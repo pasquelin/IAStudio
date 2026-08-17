@@ -19,6 +19,7 @@ export function AssistantOverlayQuestion({ request }: { request: ConfirmRequest 
   const answer = useAssistant(state => state.answer)
 
   const reason = (): string => {
+    if (request.commitment === 'files') return t('assistant.confirm.files')
     if (request.commitment === 'asset') return t('assistant.confirm.asset')
     if (typeof request.estimate !== 'number') return t('assistant.confirm.unknownCost')
 

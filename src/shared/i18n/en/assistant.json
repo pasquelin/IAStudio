@@ -44,6 +44,78 @@
       "promptDescribeStyle": {
         "title": "Describe the style of the references",
         "description": "Reads the reference images sitting on the Generator’s form and returns a description usable as a prompt. Spends nothing."
+      },
+      "studioState": {
+        "title": "Read the studio’s state",
+        "description": "Returns the open project, the active workspace and surface, every open document with the one in front marked, the model armed per family, and whether the studio is signed in. Ask this before firing a command: a command only reaches the surface that is active."
+      },
+      "documentsList": {
+        "title": "List the project’s documents",
+        "description": "Returns every document the project folder holds, open in a tab or not, with its path, kind and workspace. Changes nothing on screen."
+      },
+      "documentOpen": {
+        "title": "Open a document",
+        "description": "Opens a document of the project folder by its path and brings it to the front, switching workspace as needed. The path is the one a listing gave."
+      },
+      "documentActivate": {
+        "title": "Bring a document to the front",
+        "description": "Makes an already open document the active tab, so that commands aimed at its surface reach it. This is the answer to a command refused for being on the wrong surface."
+      },
+      "documentClose": {
+        "title": "Close a document",
+        "description": "Closes an open document’s tab. Work that never reached the disk is lost with it, which is why this asks first."
+      },
+      "documentRename": {
+        "title": "Rename a document",
+        "description": "Calls a document something else, on disk and on screen at once. The document keeps its identity, so an open tab renames without closing."
+      },
+      "activityRecent": {
+        "title": "Read the recent activity",
+        "description": "Returns what the studio has recorded lately — generations, file operations, failures — newest first. This is how to find out what an action actually did."
+      },
+      "projectOpen": {
+        "title": "Open a project folder",
+        "description": "Opens a project from an absolute path on this machine, without raising the system dialogue a person would use. Answers whether the folder was a project."
+      },
+      "projectCreate": {
+        "title": "Create a project folder",
+        "description": "Makes a new project at an absolute path on this machine and opens it, without raising the system dialogue a person would use."
+      },
+      "filesList": {
+        "title": "List a folder",
+        "description": "Returns the entries of one folder of the open project, files and folders alike, with the path each is known by. Give no folder to list the project root."
+      },
+      "filesSearch": {
+        "title": "Search the project’s files",
+        "description": "Searches the whole open project by name and returns the matching entries with their paths. Changes nothing on screen."
+      },
+      "filesMove": {
+        "title": "Move files",
+        "description": "Moves files and folders of the project into another folder of it. The disk changes, so this asks first — the Explorer can still undo it afterwards."
+      },
+      "filesCopy": {
+        "title": "Copy files",
+        "description": "Copies files and folders of the project into another folder of it, leaving the originals where they are."
+      },
+      "filesDuplicate": {
+        "title": "Duplicate files",
+        "description": "Makes a copy of each named file or folder beside it, under a name the studio picks so nothing is overwritten."
+      },
+      "filesTrash": {
+        "title": "Move files to the bin",
+        "description": "Sends files and folders of the project to the system bin. This asks first, and what it took is listed in the recent activity."
+      },
+      "fileRename": {
+        "title": "Rename a file",
+        "description": "Gives one file or folder of the project another name, in the folder it already sits in. This asks first: another program may already know it by the old one."
+      },
+      "fileFacts": {
+        "title": "Read a file’s facts",
+        "description": "Returns what the filesystem records about one entry — its kind, its size in bytes, when it was created and last changed. Changes nothing on screen."
+      },
+      "folderNew": {
+        "title": "Create a folder",
+        "description": "Makes a new folder inside a folder of the open project. Answers with the path it was given, which may differ if the name was taken."
       }
     },
     "refusals": {
@@ -77,7 +149,15 @@
       "modelId": "Model identifier",
       "parameters": "Model parameters",
       "draft": "Sentence to rework",
-      "text": "Text to translate"
+      "text": "Text to translate",
+      "documentId": "Document identifier",
+      "title": "Title",
+      "name": "Name",
+      "limit": "How many entries at most",
+      "filePath": "Path inside the project, with / between segments",
+      "filePaths": "Paths inside the project, with / between segments",
+      "folderPath": "Folder path",
+      "hidden": "Include hidden entries"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",
@@ -99,6 +179,7 @@
     "confirm": {
       "credits": "This action will spend {{cost}}.",
       "unknownCost": "This action will spend creative units. The studio could not estimate how many, and does not invent a figure.",
+      "files": "This action will change files in your project folder. It costs no creative units, and the Explorer can undo it.",
       "asset": "This action will upload an image, which then stays in your library. It costs no creative units.",
       "yes": "Allow",
       "yesHint": "Runs the action above, and commits what it commits",

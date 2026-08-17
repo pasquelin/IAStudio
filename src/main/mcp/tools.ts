@@ -94,6 +94,7 @@ export function schemaOfFields(fields: readonly ActionField[]): JsonSchema {
  */
 const COMMITMENT_NOTE: Record<ActionCommitment, string> = {
   none: 'Runs straight away.',
+  files: 'Asks the person on screen first: it changes files in their project folder.',
   asset: 'Asks the person on screen first: it uploads an image that stays in their library.',
   credits: 'Asks the person on screen first, with an estimate: it spends creative units.',
 }

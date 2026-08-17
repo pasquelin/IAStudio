@@ -28,20 +28,45 @@ export type ActionName =
   | 'prompt.translate'
   | 'prompt.describeStyle'
   | 'chat.close'
+  | 'studio.state'
+  | 'documents.list'
+  | 'document.open'
+  | 'document.activate'
+  | 'document.close'
+  | 'document.rename'
+  | 'activity.recent'
+  | 'project.open'
+  | 'project.create'
+  | 'files.list'
+  | 'files.search'
+  | 'files.move'
+  | 'files.copy'
+  | 'files.duplicate'
+  | 'files.trash'
+  | 'file.rename'
+  | 'file.facts'
+  | 'folder.new'
 
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.
  *
  * - `none` — undoable, and nothing outlives the window.
+ * - `files` — moves, renames or bins something in the project folder, or drops unsaved work.
+ *   The Explorer can undo it, but the disk has already changed and another program may have
+ *   read it since.
  * - `asset` — uploads a picture, which becomes a permanent asset in the user's library.
  * - `credits` — spends real money. Confirmed, and the estimate is stated first.
  *
- * The distinction between the last two matters at the moment of asking: an upload has no figure
- * to quote, and inventing one would be worse than admitting there is none.
+ * The distinction matters at the moment of asking: only `credits` has a figure to quote, and
+ * inventing one for the others would be worse than admitting there is none.
+ *
+ * `files` is deliberately narrow — destroying, moving or renaming — and NOT "anything that
+ * writes". A new folder and a duplicate add something nobody loses, and a studio that asked
+ * about those would teach its user to click Allow without reading.
  */
-export type ActionCommitment = 'none' | 'asset' | 'credits'
+export type ActionCommitment = 'none' | 'files' | 'asset' | 'credits'
 
-export const ACTION_COMMITMENTS: readonly ActionCommitment[] = ['none', 'asset', 'credits']
+export const ACTION_COMMITMENTS: readonly ActionCommitment[] = ['none', 'files', 'asset', 'credits']
 
 /**
  * Which of the two doors offers this action.

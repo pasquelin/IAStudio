@@ -11,7 +11,9 @@ import { getBridge } from '@/services/bridge'
 import type { ActionHandlers } from './actionHandler'
 import { mountedConfirmer } from './confirm'
 import { CORE_HANDLERS } from './coreHandlers'
+import { FILE_HANDLERS } from './fileHandlers'
 import { mountedGenerator } from './generatorBridge'
+import { STATE_HANDLERS } from './stateHandlers'
 
 /**
  * One action in, one outcome out — for both doors.
@@ -23,6 +25,8 @@ import { mountedGenerator } from './generatorBridge'
  */
 const HANDLERS: ActionHandlers = {
   ...CORE_HANDLERS,
+  ...STATE_HANDLERS,
+  ...FILE_HANDLERS,
 }
 
 const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })

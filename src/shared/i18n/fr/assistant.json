@@ -44,6 +44,78 @@
       "promptDescribeStyle": {
         "title": "Décrire le style des références",
         "description": "Lit les images de référence posées sur le formulaire du Générateur et en rend une description utilisable comme prompt. Ne consomme rien."
+      },
+      "studioState": {
+        "title": "Lire l’état du studio",
+        "description": "Rend le projet ouvert, l’espace et la surface actifs, tous les documents ouverts avec celui qui est devant, le modèle armé par famille, et si le studio est connecté. À demander avant de lancer une commande, car une commande n’atteint que la surface active."
+      },
+      "documentsList": {
+        "title": "Lister les documents du projet",
+        "description": "Rend tous les documents que porte le dossier du projet, ouverts dans un onglet ou non, avec leur chemin, leur nature et leur espace. Ne change rien à l’écran."
+      },
+      "documentOpen": {
+        "title": "Ouvrir un document",
+        "description": "Ouvre un document du dossier du projet par son chemin et le met devant, en basculant d’espace si besoin. Le chemin est celui qu’un listage a rendu."
+      },
+      "documentActivate": {
+        "title": "Mettre un document devant",
+        "description": "Fait d’un document déjà ouvert l’onglet actif, pour que les commandes de sa surface l’atteignent. C’est la réponse à une commande refusée parce qu’elle s’adressait à une autre surface."
+      },
+      "documentClose": {
+        "title": "Fermer un document",
+        "description": "Ferme l’onglet d’un document ouvert. Ce qui n’a jamais atteint le disque est perdu avec lui, et c’est pour cela que cette action demande d’abord."
+      },
+      "documentRename": {
+        "title": "Renommer un document",
+        "description": "Appelle un document autrement, sur le disque et à l’écran d’un même geste. Le document garde son identité, et un onglet ouvert se renomme sans se fermer."
+      },
+      "activityRecent": {
+        "title": "Lire l’activité récente",
+        "description": "Rend ce que le studio a consigné dernièrement — générations, opérations sur les fichiers, échecs — du plus récent au plus ancien. C’est ainsi qu’on apprend ce qu’une action a réellement fait."
+      },
+      "projectOpen": {
+        "title": "Ouvrir un dossier de projet",
+        "description": "Ouvre un projet depuis un chemin absolu de cette machine, sans lever le dialogue système qu’une personne utiliserait. Répond si le dossier était bien un projet."
+      },
+      "projectCreate": {
+        "title": "Créer un dossier de projet",
+        "description": "Crée un projet à un chemin absolu de cette machine et l’ouvre, sans lever le dialogue système qu’une personne utiliserait."
+      },
+      "filesList": {
+        "title": "Lister un dossier",
+        "description": "Rend les entrées d’un dossier du projet ouvert, fichiers comme dossiers, avec le chemin sous lequel chacune est connue. Sans dossier donné, liste la racine du projet."
+      },
+      "filesSearch": {
+        "title": "Chercher dans les fichiers du projet",
+        "description": "Cherche dans tout le projet ouvert par le nom et rend les entrées trouvées avec leur chemin. Ne change rien à l’écran."
+      },
+      "filesMove": {
+        "title": "Déplacer des fichiers",
+        "description": "Déplace des fichiers et des dossiers du projet vers un autre de ses dossiers. Le disque change, donc cette action demande d’abord — l’Explorateur peut encore l’annuler ensuite."
+      },
+      "filesCopy": {
+        "title": "Copier des fichiers",
+        "description": "Copie des fichiers et des dossiers du projet vers un autre de ses dossiers, en laissant les originaux où ils sont."
+      },
+      "filesDuplicate": {
+        "title": "Dupliquer des fichiers",
+        "description": "Crée une copie de chaque fichier ou dossier nommé, à côté de lui, sous un nom que le studio choisit pour n’écraser personne."
+      },
+      "filesTrash": {
+        "title": "Mettre des fichiers à la corbeille",
+        "description": "Envoie des fichiers et des dossiers du projet à la corbeille du système. Cette action demande d’abord, et ce qu’elle a emporté figure dans l’activité récente."
+      },
+      "fileRename": {
+        "title": "Renommer un fichier",
+        "description": "Donne un autre nom à un fichier ou un dossier du projet, dans le dossier où il se trouve déjà. Cette action demande d’abord, car un autre programme le connaît peut-être sous l’ancien."
+      },
+      "fileFacts": {
+        "title": "Lire les faits d’un fichier",
+        "description": "Rend ce que le disque consigne d’une entrée — sa nature, sa taille en octets, sa création et sa dernière modification. Ne change rien à l’écran."
+      },
+      "folderNew": {
+        "title": "Créer un dossier",
+        "description": "Crée un dossier dans un dossier du projet ouvert. Répond avec le chemin qui lui a été donné, qui peut différer si le nom était pris."
       }
     },
     "refusals": {
@@ -77,7 +149,15 @@
       "modelId": "Identifiant du modèle",
       "parameters": "Paramètres du modèle",
       "draft": "Phrase à retravailler",
-      "text": "Texte à traduire"
+      "text": "Texte à traduire",
+      "documentId": "Identifiant du document",
+      "title": "Titre",
+      "name": "Nom",
+      "limit": "Nombre d’entrées au maximum",
+      "filePath": "Chemin dans le projet, avec / entre les segments",
+      "filePaths": "Chemins dans le projet, avec / entre les segments",
+      "folderPath": "Chemin du dossier",
+      "hidden": "Inclure les entrées masquées"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",
@@ -99,6 +179,7 @@
     "confirm": {
       "credits": "Cette action va dépenser {{cost}}.",
       "unknownCost": "Cette action va dépenser des unités créatives. Le studio n’a pas pu en estimer le montant, et n’en invente pas.",
+      "files": "Cette action va modifier des fichiers de votre dossier de projet. Elle ne coûte aucune unité créative, et l’Explorateur peut l’annuler.",
       "asset": "Cette action va téléverser une image, qui restera dans votre bibliothèque. Elle ne coûte aucune unité créative.",
       "yes": "Autoriser",
       "yesHint": "Lance l’action décrite au-dessus, et engage ce qu’elle engage",

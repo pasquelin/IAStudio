@@ -750,7 +750,7 @@ export async function rehydrateDocument(documentId: string): Promise<void> {
 }
 
 /** Whether closing would throw work away. A tab that never filled, or was never touched, has none. */
-function documentIsDirty(documentId: string): boolean {
+export function documentIsDirty(documentId: string): boolean {
   const io = ioOf(documentId)
   return io !== undefined && io.holds(documentId) && io.dirty(documentId)
 }

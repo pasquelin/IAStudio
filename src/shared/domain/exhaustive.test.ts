@@ -272,7 +272,12 @@ describe('the lists that stand for a union', () => {
   })
 
   it('names every level of commitment an action can carry', () => {
-    const all: Record<ActionCommitment, true> = { none: true, asset: true, credits: true }
+    const all: Record<ActionCommitment, true> = {
+      none: true,
+      files: true,
+      asset: true,
+      credits: true,
+    }
 
     expect(sorted(ACTION_COMMITMENTS)).toEqual(sorted(Object.keys(all)))
   })

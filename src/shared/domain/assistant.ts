@@ -6,6 +6,8 @@ import {
 } from './assistantAction'
 import { type CommandId } from './command'
 import { CORE_ACTIONS } from './coreActions'
+import { FILE_ACTIONS } from './fileActions'
+import { STATE_ACTIONS } from './stateActions'
 
 /**
  * What the assistant is allowed to do on the user's behalf, and how each thing is described to
@@ -92,7 +94,11 @@ export function commitmentOfCommand(id: string): ActionCommitment {
  * Order matters to one reader only — the assistant's model reads its share in this order — so
  * the spoken vocabulary comes first and the families a program drives follow.
  */
-export const ACTION_REGISTRY: readonly AssistantAction[] = [...CORE_ACTIONS]
+export const ACTION_REGISTRY: readonly AssistantAction[] = [
+  ...CORE_ACTIONS,
+  ...STATE_ACTIONS,
+  ...FILE_ACTIONS,
+]
 
 /** The share of the registry one door offers. `mcp` is everything; `both` is the short list. */
 export function actionsReaching(reach: ActionReach): readonly AssistantAction[] {
