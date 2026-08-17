@@ -7,17 +7,13 @@ import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
 import {
-  ASSET_HOST,
   ASSET_ID_PREFIX,
   DEFAULT_ASSET_FOLDERS,
-  POSTER_HOST,
-  THUMB_HOST,
   type Asset,
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
-import { FAVORITE_HOST } from '@shared/domain/favorite'
 import {
   LEGACY_ASSETS_FOLDER,
   THUMBNAIL_SIZE,
@@ -38,13 +34,8 @@ import { isDevelopment } from '@main/environment'
 import { createUpdates, type Updates } from '@main/updater'
 import { createAssetCollector } from './assets/collector'
 import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/autoCaption'
-import {
-  assetFilePath,
-  ownFileOf,
-  posterFileOf,
-  serveAssets,
-  servedFileOf,
-} from './assets/protocol'
+import { assetFilePath, ownFileOf, posterFileOf, serveAssets } from './assets/protocol'
+import { createAssetResolvers } from './assets/assetResolvers'
 import { createFavorites, type FavoritesStore } from './favorites/store'
 import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
@@ -101,7 +92,12 @@ import {
   type FolderReader,
   type FolderWatch,
 } from './project/folder'
-import { createProjectStore, openFailureKey, type ProjectStore } from './project/store'
+import {
+  createProjectStore,
+  isCatalogueGone,
+  openFailureKey,
+  type ProjectStore,
+} from './project/store'
 import { createReconciler, type Reconciler } from './project/reconcile'
 import { createActivityLog, type ActivityLog } from './project/activityLog'
 import { openCatalogThread } from './project/catalogThread'
@@ -1285,9 +1281,18 @@ export function createServices(settings: SettingsStore): Services {
       const current = project.current()
       if (!current) return null
 
-      const [asset] = await project.catalog().search({ path: relative, limit: 1 })
+      // Both refusals are answered « no preview » rather than thrown, because both are ordinary
+      // and `servedPath` now reads a rejection as a defect: the catalogue is closing under this
+      // request, or the row names a still the folder no longer holds — what a rescan repairs.
+      const [asset] = await project
+        .catalog()
+        .search({ path: relative, limit: 1 })
+        .catch((error: unknown) => {
+          if (isCatalogueGone(error)) return []
+          throw error
+        })
       const poster = asset ? posterFileOf(current.path, asset) : null
-      return poster ? await readFile(poster) : null
+      return poster ? await readFile(poster).catch(() => null) : null
     },
     // The same bound the ingest pool takes: previewing is the system's work, but a folder
     // scrolled fast asks for hundreds at once and each one leaves this process.
@@ -1297,27 +1302,14 @@ export function createServices(settings: SettingsStore): Services {
   const favorites = createFavorites(join(app.getPath('userData'), 'favorites'))
   const styles = createStyles(() => app.getPath('userData'))
 
-  serveAssets({
-    [ASSET_HOST]: async assetId => {
-      const current = project.current()
-      if (!current) return null
-
-      const asset = await project.catalog().find(assetId)
-      return asset ? servedFileOf(current.path, asset) : null
-    },
-    [POSTER_HOST]: async assetId => {
-      const current = project.current()
-      if (!current) return null
-
-      const asset = await project.catalog().find(assetId)
-      return asset ? posterFileOf(current.path, asset) : null
-    },
-    [FAVORITE_HOST]: favoriteId => Promise.resolve(favorites.thumbnailPath(favoriteId)),
-    // Named by a PATH rather than by an id, alone among the four: the explorer draws files, and
-    // most of what it draws the catalogue has never heard of. `assetFilePath` refuses whatever
-    // walks out of the project, exactly as it does for a row.
-    [THUMB_HOST]: relative => thumbnails.of(relative),
-  })
+  serveAssets(
+    createAssetResolvers({
+      projectPath: () => project.current()?.path ?? null,
+      findAsset: assetId => project.catalog().find(assetId),
+      favouriteThumbnail: favoriteId => favorites.thumbnailPath(favoriteId),
+      thumbnailOf: relative => thumbnails.of(relative),
+    }),
+  )
 
   const stored = settings.read()
   const lastProject = stored.general.startup === 'lastProject' ? stored.storage.lastProject : null

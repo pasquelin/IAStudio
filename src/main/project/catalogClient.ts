@@ -89,14 +89,17 @@ type PendingRescan = {
   onProgress: ((progress: RescanProgress) => void) | undefined
 }
 
+/**
+ * What a request rejects with once the catalogue was closed under it — a project being left, not
+ * a failure. Exported for the same reason as `ABANDONED`: a caller must tell it from a defect.
+ */
+export const CATALOGUE_CLOSED = 'catalogue is closed'
+
 export function createCatalogClient(port: CatalogPort): AsyncCatalog {
   const pending = new Map<number, Pending>()
   const rescans = new Map<number, PendingRescan>()
   let nextId = 1
   let closed = false
-
-  /** Named once: the close and the death of the thread are the same news to a caller. */
-  const CLOSED = 'catalogue is closed'
 
   /** Rejects everything still waiting. A dead thread answers nothing, ever. */
   const abandon = (reason: string): void => {
@@ -152,7 +155,7 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
   ): Promise<CatalogResults[Op]> =>
     new Promise((resolve, reject) => {
       if (closed) {
-        reject(new Error(CLOSED))
+        reject(new Error(CATALOGUE_CLOSED))
         return
       }
 
@@ -218,7 +221,7 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     rescan: (root, { signal, onProgress } = {}) =>
       new Promise<RescanReport>((resolve, reject) => {
         if (closed) {
-          reject(new Error(CLOSED))
+          reject(new Error(CATALOGUE_CLOSED))
           return
         }
         if (signal?.aborted) {
@@ -260,8 +263,10 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
 
     close: async () => {
       closed = true
-      // Whoever is still waiting is waiting on a thread that is about to stop answering.
-      abandon(CLOSED)
+      // Whoever is still waiting is waiting on a thread that is about to stop answering — and
+      // this runs BEFORE the terminate, which makes the thread exit non-zero and fires
+      // `onFailure`. An `await` slipped in above would name a leaving project a thread failure.
+      abandon(CATALOGUE_CLOSED)
       await port.terminate()
     },
   }

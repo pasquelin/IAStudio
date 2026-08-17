@@ -18,7 +18,7 @@ import { isHiddenEntry } from '@shared/domain/folder'
 import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
 import { exists, isMissing, writeAtomic, writeQueue } from '@main/persistence'
-import type { AsyncCatalog } from './catalogClient'
+import { CATALOGUE_CLOSED, type AsyncCatalog } from './catalogClient'
 import { applyJournal } from './fileJournal'
 import { parseManifest } from './validation'
 
@@ -28,6 +28,19 @@ export class NoProjectError extends Error {
     super('no-project')
     this.name = 'NoProjectError'
   }
+}
+
+/**
+ * Whether a refusal means the project has GONE rather than that something broke. A thread that
+ * DIED is deliberately not one of them — it rejects with its own reason, and that is news.
+ *
+ * `NoProjectError` is an assurance, not a live branch: `project` and `catalog` are assigned in
+ * one tick, so no caller reading both without an `await` between them can meet it. It stays
+ * because `catalog()` throws it, and a caller that DOES await between the two would.
+ */
+export function isCatalogueGone(error: unknown): boolean {
+  if (error instanceof NoProjectError) return true
+  return error instanceof Error && error.message === CATALOGUE_CLOSED
 }
 
 /**

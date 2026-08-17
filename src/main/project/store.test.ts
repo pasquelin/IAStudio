@@ -10,7 +10,14 @@ import {
   STARTER_FOLDERS,
 } from '@shared/domain/project'
 import { isRecord } from '@shared/guards'
-import { createProjectStore, NoProjectError, ProjectOpenError, type ProjectStore } from './store'
+import {
+  createProjectStore,
+  isCatalogueGone,
+  NoProjectError,
+  ProjectOpenError,
+  type ProjectStore,
+} from './store'
+import { CATALOGUE_CLOSED } from './catalogClient'
 import { memoryCatalog } from './catalog-fixtures'
 
 type ExecDone = (error: Error | null, stdout: string, stderr: string) => void
@@ -655,5 +662,24 @@ describe('renaming a project', () => {
   // reported as anything other than what opening it would report.
   it('refuses a folder that is not a project', async () => {
     await expect(store.rename(join(root, 'nowhere'), 'Name')).rejects.toThrow(ProjectOpenError)
+  })
+})
+
+/**
+ * What the asset scheme reads to know whether a refusal is « the project has gone » or a defect.
+ * Told apart nowhere else: both arrive as a rejected promise on the same call.
+ */
+describe('telling a project that has gone from something that broke', () => {
+  it('recognises no project open, and a catalogue closed under a request in flight', () => {
+    expect(isCatalogueGone(new NoProjectError())).toBe(true)
+    expect(isCatalogueGone(new Error(CATALOGUE_CLOSED))).toBe(true)
+  })
+
+  // The whole point: a resolver that throws for its own reasons must keep travelling, so that
+  // `servedPath` journals it as the defect it is instead of serving it as a quiet 404.
+  it('does not recognise a defect, however it is spelled', () => {
+    expect(isCatalogueGone(new TypeError('find is not a function'))).toBe(false)
+    expect(isCatalogueGone(new Error('catalogue thread failed: out of memory'))).toBe(false)
+    expect(isCatalogueGone('catalogue is closed')).toBe(false)
   })
 })
