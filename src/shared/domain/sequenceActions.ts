@@ -255,9 +255,9 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
      * Mute, solo, lock and height are how one WORKS, not what one made: they stay off the undo
      * stack, exactly as the header column writes them.
      */
-    name: 'track.state',
-    titleKey: 'assistant.actions.trackState.title',
-    descriptionKey: 'assistant.actions.trackState.description',
+    name: 'track.adjust',
+    titleKey: 'assistant.actions.trackAdjust.title',
+    descriptionKey: 'assistant.actions.trackAdjust.description',
     commitment: 'none',
     reach: 'mcp',
     fields: [

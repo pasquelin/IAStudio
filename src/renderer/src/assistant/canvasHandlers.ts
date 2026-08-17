@@ -92,7 +92,7 @@ function editLayer(
   if (!open) return refused('wrongSurface')
 
   const layer = layerById(open.state, textOf(input, 'layerId'))
-  return layer ? run(open.documentId, build(layer, open.state)) : refused('badInput')
+  return layer ? run(open.documentId, build(layer, open.state)) : refused('notFound')
 }
 
 function readState(): ActionOutcome {
@@ -231,7 +231,7 @@ function group(input: Record<string, unknown>): ActionOutcome {
   // Top level only, which is all `groupLayers` gathers: an id that names nothing, or one that sits
   // INSIDE a group, would otherwise be dropped in silence and the group answered for regardless.
   const top = new Set(open.state.layers.map(layer => layer.id))
-  if (layerIds.some(id => !top.has(id))) return refused('badInput')
+  if (layerIds.some(id => !top.has(id))) return refused('notFound')
 
   const groupId = newId()
   const outcome = run(open.documentId, [groupLayers(layerIds, groupId, name)])
@@ -243,7 +243,7 @@ function select(input: Record<string, unknown>): ActionOutcome {
   if (!open) return refused('wrongSurface')
 
   const layer = layerById(open.state, textOf(input, 'layerId'))
-  if (!layer) return refused('badInput')
+  if (!layer) return refused('notFound')
 
   // Not a command: arming a layer is a way of looking at the stack, not an edit of it.
   selectLayerIn(open.documentId, layer.id)

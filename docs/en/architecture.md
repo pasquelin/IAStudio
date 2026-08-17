@@ -361,9 +361,12 @@ composes the round trip the IPC does not have in that direction: `invoke` goes u
 back, a `callId` sews the halves together, and **every way of failing answers**, because at the
 other end there is a client that would otherwise sit there.
 
-`commitmentOfCommand` is **the one level derived rather than declared**, and the one guarded command
-by command: five canvas commands flatten and upload the picture, which creates a permanent asset. A
-miss there would go through with nothing downstream to catch it.
+**The declared level is only a floor.** `raises` lifts it from the call's own input —
+`commitmentOfCommand` for `command.run`, an `amend` for `git.commit` — and `asksItself` marks the
+action whose handler raises its OWN question, which is why its level stays at the floor.
+`commitmentOfCommand` is the one guarded command by command: five canvas commands flatten and
+upload the picture, which creates a permanent asset. A miss there would go through with nothing
+downstream to catch it.
 
 **`files` is deliberately narrow** — destroying, moving, renaming, rewriting the working tree,
 closing a tab that holds unsaved work — and never "anything that writes": a new folder and a

@@ -11,11 +11,13 @@ import {
 import { ASSET_BADGES, ASSET_TYPES, type AssetBadge, type AssetType } from './asset'
 import {
   ACTION_COMMITMENTS,
+  ACTION_REACHES,
   ACTION_REFUSALS,
   ACTION_REGISTRY,
   ASSISTANT_MODELS,
   type ActionCommitment,
   type ActionName,
+  type ActionReach,
   type ActionRefusal,
   type AssistantModel,
 } from './assistant'
@@ -259,6 +261,10 @@ describe('the lists that stand for a union', () => {
       timedOut: true,
       noReference: true,
       formChanged: true,
+      notFound: true,
+      notAllowed: true,
+      notRenderable: true,
+      failed: true,
     }
 
     expect(sorted(ACTION_REFUSALS)).toEqual(sorted(Object.keys(all)))
@@ -285,6 +291,21 @@ describe('the lists that stand for a union', () => {
     }
 
     expect(sorted(ACTION_COMMITMENTS)).toEqual(sorted(Object.keys(all)))
+  })
+
+  /**
+   * The one union of this family that had no entry here, and the omission had teeth: publishing
+   * the whole registry was `actionsReaching`'s fallback, so a third reach would have gone out on
+   * the MCP wire by default. What holds the wire now is the `switch` there, which the COMPILER
+   * tends; this list — like `ACTION_COMMITMENTS` above it — only keeps the constant in step.
+   */
+  it('names every door the registry reaches', () => {
+    const all: Record<ActionReach, true> = {
+      both: true,
+      mcp: true,
+    }
+
+    expect(sorted(ACTION_REACHES)).toEqual(sorted(Object.keys(all)))
   })
 
   /**
@@ -370,7 +391,7 @@ describe('the lists that stand for a union', () => {
       'track.remove': true,
       'track.move': true,
       'track.rename': true,
-      'track.state': true,
+      'track.adjust': true,
       'skybox.state': true,
       'skybox.adjust': true,
       'skybox.resetAdjustments': true,

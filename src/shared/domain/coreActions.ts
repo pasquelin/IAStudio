@@ -60,6 +60,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.workspaceOpen.title',
     descriptionKey: 'assistant.actions.workspaceOpen.description',
     commitment: 'none',
+    asksItself: true,
     reach: 'both',
     fields: [
       {

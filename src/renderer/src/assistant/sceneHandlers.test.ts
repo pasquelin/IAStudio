@@ -184,7 +184,7 @@ describe('hierarchy and selection', () => {
 
     expect(await runAction('node.reparent', { nodeId, parentId: 'node-z' })).toEqual({
       ok: false,
-      refusal: 'badInput',
+      refusal: 'notFound',
     })
   })
 
@@ -219,7 +219,7 @@ describe('hierarchy and selection', () => {
 
     expect(await runAction('node.select', { nodeIds: [nodeId, 'node-z'] })).toEqual({
       ok: false,
-      refusal: 'badInput',
+      refusal: 'notFound',
     })
   })
 })

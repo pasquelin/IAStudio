@@ -97,7 +97,7 @@ async function openByPath(input: Record<string, unknown>): Promise<ActionOutcome
   if (!documentAt(path)) await useDocuments.getState().relist('own-write')
 
   const document = documentAt(path)
-  if (!document) return refused('badInput')
+  if (!document) return refused('notFound')
 
   openDocument(document)
   return { ok: true, data: { documentId: document.id } }
@@ -114,7 +114,7 @@ function named(input: Record<string, unknown>): string | null {
 
 async function close(input: Record<string, unknown>): Promise<ActionOutcome> {
   const documentId = named(input)
-  if (documentId === null) return refused('badInput')
+  if (documentId === null) return refused('notFound')
 
   /**
    * The same path the tab's cross takes, question about unsaved work included — and the reason
@@ -127,7 +127,7 @@ async function close(input: Record<string, unknown>): Promise<ActionOutcome> {
 async function rename(input: Record<string, unknown>): Promise<ActionOutcome> {
   const documentId = named(input)
   const title = textOf(input, 'title') ?? ''
-  if (documentId === null) return refused('badInput')
+  if (documentId === null) return refused('notFound')
 
   const failure = await useDocuments.getState().rename(documentId, title)
   if (failure) {
@@ -185,26 +185,30 @@ async function exportOf(
  * Writes the document in front into the project, in a folder of its own.
  *
  * Every rendering throws rather than answering half an export — a sky with no picture, a material
- * with no channel, an engine that is not mounted — so a refusal here is the honest answer to all
- * three, and the journal keeps the sentence.
+ * with no channel, an engine that is not mounted. `notRenderable` names all three; this used to
+ * answer `badInput`, which sent a client back to check parameters that were never the cause.
+ *
+ * The `try` covers the RENDERING alone. It wrapped the write too, so a `folder` the main process
+ * refuses — it takes one path segment — came back named as a rendering that never happened.
  */
 async function exportDocument(input: Record<string, unknown>): Promise<ActionOutcome> {
   const documents = useDocuments.getState()
   const document = documents.activeId ? documents.documents[documents.activeId] : undefined
   if (!document) return refused('wrongSurface')
 
+  let request
   try {
-    const request = await exportOf(document, input)
-    if (!request) return refused('wrongSurface')
-
-    const folder = textOf(input, 'folder')
-    return withBridge(bridge =>
-      bridge.project.exportInto(folder === null ? request : { ...request, folder }),
-    )
+    request = await exportOf(document, input)
   } catch (error) {
     reportFailure('document.export', document.id, error)
-    return refused('badInput')
+    return refused('notRenderable')
   }
+  if (!request) return refused('wrongSurface')
+
+  const folder = textOf(input, 'folder')
+  return withBridge(bridge =>
+    bridge.project.exportInto(folder === null ? request : { ...request, folder }),
+  )
 }
 
 export const STATE_HANDLERS: ActionHandlers = {
@@ -219,7 +223,7 @@ export const STATE_HANDLERS: ActionHandlers = {
   // a sky's panels, which no click can produce — the state this action exists to repair.
   'document.activate': input => {
     const document = namedDocument(input)
-    if (document === null) return refused('badInput')
+    if (document === null) return refused('notFound')
 
     // Named here as well as opened: behind the home there is no centre to announce the tab, and
     // the state a client reads next would still be describing the document it just left.

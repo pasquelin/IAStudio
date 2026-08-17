@@ -81,6 +81,6 @@ describe('an action asked for from outside the window', () => {
     push({ callId: 'call_3', call: { action: 'jobs.list', input: {} } })
     await vi.waitFor(() => expect(answers).toHaveLength(1))
 
-    expect(answers[0]?.outcome).toEqual({ ok: false, refusal: 'badInput' })
+    expect(answers[0]?.outcome).toEqual({ ok: false, refusal: 'failed' })
   })
 })

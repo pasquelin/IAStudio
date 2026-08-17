@@ -7,7 +7,7 @@
       },
       "workspaceOpen": {
         "title": "Ouvrir un espace",
-        "description": "Bascule vers un espace de travail, et y crée un document si on le demande. C’est ce qui répond à « ouvre un nouveau fichier 3D »."
+        "description": "Bascule vers un espace de travail, et y crée un document si on le demande. Sans titre, la création pose un champ de nom à l’écran et l’appel l’attend. C’est ce qui répond à « ouvre un nouveau fichier 3D »."
       },
       "modelsSearch": {
         "title": "Chercher un modèle",
@@ -63,7 +63,7 @@
       },
       "documentClose": {
         "title": "Fermer un document",
-        "description": "Ferme l’onglet d’un document ouvert. Ce qui n’a jamais atteint le disque est perdu avec lui, et c’est pour cela que cette action demande d’abord."
+        "description": "Ferme l’onglet d’un document ouvert. Ce qui n’a jamais atteint le disque est perdu avec lui."
       },
       "documentRename": {
         "title": "Renommer un document",
@@ -91,7 +91,7 @@
       },
       "filesMove": {
         "title": "Déplacer des fichiers",
-        "description": "Déplace des fichiers et des dossiers du projet vers un autre de ses dossiers. Le disque change, donc cette action demande d’abord — l’Explorateur peut encore l’annuler ensuite."
+        "description": "Déplace des fichiers et des dossiers du projet vers un autre de ses dossiers. Le disque change, mais l’Explorateur peut encore l’annuler ensuite."
       },
       "filesCopy": {
         "title": "Copier des fichiers",
@@ -103,11 +103,11 @@
       },
       "filesTrash": {
         "title": "Mettre des fichiers à la corbeille",
-        "description": "Envoie des fichiers et des dossiers du projet à la corbeille du système. Cette action demande d’abord, et ce qu’elle a emporté figure dans l’activité récente."
+        "description": "Envoie des fichiers et des dossiers du projet à la corbeille du système. Ce qui a été emporté figure dans l’activité récente."
       },
       "fileRename": {
         "title": "Renommer un fichier",
-        "description": "Donne un autre nom à un fichier ou un dossier du projet, dans le dossier où il se trouve déjà. Cette action demande d’abord, car un autre programme le connaît peut-être sous l’ancien."
+        "description": "Donne un autre nom à un fichier ou un dossier du projet, dans le dossier où il se trouve déjà. Un autre programme le connaît peut-être sous l’ancien."
       },
       "fileFacts": {
         "title": "Lire les faits d’un fichier",
@@ -123,7 +123,7 @@
       },
       "costEstimate": {
         "title": "Estimer ce que coûterait une génération",
-        "description": "Chiffre un modèle et un jeu de paramètres sans rien lancer. Ne répond aucun montant là où l’API refuse de chiffrer ce modèle, plutôt que d’inventer un nombre."
+        "description": "Chiffre un modèle et un jeu de paramètres sans rien lancer. Ses paramètres prennent la forme que rend model_schema. Ne répond aucun montant là où l’API refuse de chiffrer ce modèle, plutôt que d’inventer un nombre."
       },
       "jobGet": {
         "title": "Lire une tâche",
@@ -159,7 +159,7 @@
       },
       "assetsRemove": {
         "title": "Retirer des assets",
-        "description": "Sort des assets de la bibliothèque du projet, et de la bibliothèque distante quand on le demande. Cette action demande d’abord, et ce qu’elle a retiré figure dans l’activité récente."
+        "description": "Sort des assets de la bibliothèque du projet, et de la bibliothèque distante quand on le demande. Ce qui a été retiré figure dans l’activité récente."
       },
       "canvasState": {
         "title": "Lire l’image en cours d’édition",
@@ -289,7 +289,7 @@
         "title": "Renommer une piste",
         "description": "Donne son nom à une piste, celui que porte la colonne des en-têtes. L’identifiant, lui, ne change jamais."
       },
-      "trackState": {
+      "trackAdjust": {
         "title": "Régler comment une piste se travaille",
         "description": "Change le silence, le solo, le verrou ou la hauteur d’une piste. Ces quatre-là disent comment on travaille et non ce qu’on a fait, et n’entrent donc jamais dans l’historique."
       },
@@ -543,7 +543,7 @@
       },
       "gitRestore": {
         "title": "Abandonner les modifications de fichiers",
-        "description": "Remet des fichiers tels que la dernière version enregistrée les porte. Cette action demande d’abord, car ce qui n’a jamais été enregistré est perdu et aucune annulation du studio ne l’atteint."
+        "description": "Remet des fichiers tels que la dernière version enregistrée les porte. Ce qui n’a jamais été enregistré est perdu, et aucune annulation du studio ne l’atteint."
       },
       "gitCommit": {
         "title": "Enregistrer une version",
@@ -555,15 +555,15 @@
       },
       "gitCheckout": {
         "title": "Changer de branche",
-        "description": "Bascule sur une autre branche en réécrivant la copie de travail. Cette action demande d’abord, car un document ouvert dans un onglet devient alors un document dont le fichier a changé sous lui."
+        "description": "Bascule sur une autre branche en réécrivant la copie de travail. Un document ouvert dans un onglet devient alors un document dont le fichier a changé sous lui."
       },
       "gitStash": {
         "title": "Remiser les modifications en cours",
-        "description": "Met de côté les modifications de la copie de travail et la ramène à la dernière version enregistrée. Cette action demande d’abord, car elle retire les modifications du disque."
+        "description": "Met de côté les modifications de la copie de travail et la ramène à la dernière version enregistrée. Les modifications quittent alors le disque."
       },
       "gitStashPop": {
         "title": "Reprendre une remise",
-        "description": "Remet un jeu de modifications remisées dans la copie de travail et le retire de la pile. Cette action demande d’abord, car elle réécrit des fichiers."
+        "description": "Remet un jeu de modifications remisées dans la copie de travail et le retire de la pile. Des fichiers sont donc réécrits."
       },
       "gitTag": {
         "title": "Étiqueter une version",
@@ -601,7 +601,11 @@
       "noWindow": "Aucune fenêtre du studio n’était au premier plan pour exécuter cette action.",
       "timedOut": "La demande est restée à l’écran sans réponse, et a été abandonnée.",
       "noReference": "Le formulaire ne porte aucune image de référence dont lire le style.",
-      "formChanged": "Le formulaire a changé depuis l’annonce du coût. Rien n’a été envoyé — redemandez pour obtenir un nouveau chiffre."
+      "formChanged": "Le formulaire a changé depuis l’annonce du coût. Rien n’a été envoyé — redemandez pour obtenir un nouveau chiffre.",
+      "notFound": "Rien de ce nom n’est là pour recevoir cette action. L’appel, lui, était bien formé.",
+      "notAllowed": "Le studio ne laisse pas un appel venu de l’extérieur changer cela. Seule sa propre fenêtre le fait.",
+      "notRenderable": "Le document au premier plan n’a rien que ceci puisse rendre — un ciel vide, une matière sans canal, ou un moteur qui n’est pas monté.",
+      "failed": "Le studio a essayé et cela n’est pas passé. La raison est dans son journal, et ce ne sont pas les paramètres."
     },
     "models": {
       "claude-haiku-4-5": "Haiku 4.5 — le plus rapide et le moins cher",
@@ -758,7 +762,7 @@
       "unknownCost": "Cette action va dépenser des unités créatives. Le studio n’a pas pu en estimer le montant, et n’en invente pas.",
       "files": "Cette action va modifier ce que porte votre projet — des fichiers, ou les assets de sa bibliothèque. Elle ne coûte aucune unité créative.",
       "asset": "Cette action va téléverser une image, qui restera dans votre bibliothèque. Elle ne coûte aucune unité créative.",
-    "remote": "Cette action va publier vers un serveur, hors de cette machine. Elle ne coûte aucune unité créative, et rien ici ne la rattrape.",
+      "remote": "Cette action va publier vers un serveur, hors de cette machine. Elle ne coûte aucune unité créative, et rien ici ne la rattrape.",
       "yes": "Autoriser",
       "yesHint": "Lance l’action décrite au-dessus, et engage ce qu’elle engage",
       "no": "Refuser",

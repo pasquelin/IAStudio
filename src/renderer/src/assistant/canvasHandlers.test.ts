@@ -115,7 +115,7 @@ describe('building a stack', () => {
   it('refuses a layer the stack does not hold rather than reporting a no-op as done', async () => {
     expect(await runAction('layer.rename', { layerId: 'layer-z', name: 'Rien' })).toEqual({
       ok: false,
-      refusal: 'badInput',
+      refusal: 'notFound',
     })
   })
 
@@ -143,7 +143,7 @@ describe('building a stack', () => {
   it('refuses to group an id that is not a layer of the top level', async () => {
     expect(await runAction('layer.group', { layerIds: ['layer-z'], name: 'Décor' })).toEqual({
       ok: false,
-      refusal: 'badInput',
+      refusal: 'notFound',
     })
     expect(canvas().layers.map(one => one.kind)).toEqual(['pixel', 'pixel'])
   })

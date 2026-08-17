@@ -60,7 +60,7 @@ describe('walking the project folder', () => {
     withProject({ project: { fileFacts: vi.fn(async () => null) } })
     expect(await runAction('file.facts', { path: 'Plans/gone.png' })).toEqual({
       ok: false,
-      refusal: 'badInput',
+      refusal: 'notFound',
     })
   })
 

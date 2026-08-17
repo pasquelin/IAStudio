@@ -14,6 +14,8 @@ export type FieldKind =
   | 'color'
   | 'seed'
   | 'raw'
+  /** An object whose top-level keys are known. `raw` is the one whose shape is NOT. */
+  | 'record'
 
 export type FieldOption = {
   value: string

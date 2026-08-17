@@ -56,9 +56,9 @@ async function facts(input: Record<string, unknown>): Promise<ActionOutcome> {
     bridge.project.fileFacts(textOf(input, 'path') ?? FOLDER_ROOT),
   )
 
-  // `null` is the channel's answer for an entry that is not there; a refusal says so rather than
-  // handing back a null a client would have to interpret.
-  return outcome.ok && outcome.data === null ? refused('badInput') : outcome
+  // `null` is the channel's answer for an entry that is not there. `notFound` rather than
+  // `badInput`: the path was a well-formed string, and a client told otherwise retries the call.
+  return outcome.ok && outcome.data === null ? refused('notFound') : outcome
 }
 
 async function openProject(input: Record<string, unknown>): Promise<ActionOutcome> {

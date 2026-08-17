@@ -42,7 +42,8 @@ async function runFor(action: string, input: Record<string, unknown>): Promise<A
     return await runConfirmedAction(known.name, input)
   } catch {
     // Nothing may leave this window unanswered: the client on the other end waits two minutes
-    // for a reply it would otherwise never get.
-    return { ok: false, refusal: 'badInput' }
+    // for a reply it would otherwise never get. `failed` rather than `badInput`, which named a
+    // full disk, a refused path and a dropped connection as the caller's own parameters.
+    return { ok: false, refusal: 'failed' }
   }
 }

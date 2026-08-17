@@ -91,7 +91,7 @@ export type ActionName =
   | 'track.remove'
   | 'track.move'
   | 'track.rename'
-  | 'track.state'
+  | 'track.adjust'
   | 'skybox.state'
   | 'skybox.adjust'
   | 'skybox.resetAdjustments'
@@ -208,6 +208,8 @@ export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
  */
 export type ActionReach = 'both' | 'mcp'
 
+export const ACTION_REACHES: readonly ActionReach[] = ['both', 'mcp']
+
 /**
  * One input of an action.
  *
@@ -246,6 +248,12 @@ export type AssistantAction = {
    * one action by name, and the two others that needed it silently did not get it.
    */
   raises?: (input: Record<string, unknown>) => ActionCommitment
+  /**
+   * The handler may put its own question on screen and wait for a person — whether it does is the
+   * handler's own business (a dirty document, a missing title). `commitment` stays at the floor so
+   * no SECOND question is raised, which is what made the tool announce "Runs straight away".
+   */
+  asksItself?: true
   reach: ActionReach
   fields: readonly ActionField[]
 }
@@ -284,6 +292,14 @@ export type ActionRefusal =
   | 'noReference'
   /** The form moved between the figure being quoted and the yes. What was priced is what goes. */
   | 'formChanged'
+  /** Well formed, and its target is not there. A client told `badInput` retries the parameters. */
+  | 'notFound'
+  /** A call from outside may not do this at all. Never a person's refusal — that is `declined`. */
+  | 'notAllowed'
+  /** The document in front carries nothing to render. Three causes, one honest answer. */
+  | 'notRenderable'
+  /** It was tried and it did not go through. The journal holds the reason; the input was not it. */
+  | 'failed'
 
 export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'unknownCommand',
@@ -301,6 +317,10 @@ export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'timedOut',
   'noReference',
   'formChanged',
+  'notFound',
+  'notAllowed',
+  'notRenderable',
+  'failed',
 ]
 
 /**
@@ -368,6 +388,15 @@ function fits(field: ActionField, value: unknown): boolean {
       return typeof value === 'boolean'
     case 'raw':
       return value !== undefined
+    // `Object.keys` rather than `in`, which answers true for `__proto__`, `toString` and
+    // `constructor` — names that reached a merge, vanished in it, and were answered `ok`.
+    case 'record':
+      return (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value) &&
+        Object.keys(value).every(key => field.options?.includes(key) ?? true)
+      )
   }
 }
 

@@ -155,7 +155,7 @@ describe('laying clips down', () => {
 
     expect(await runAction('clip.add', { assetId: 'asset-z' })).toEqual({
       ok: false,
-      refusal: 'badInput',
+      refusal: 'notFound',
     })
     expect(clipIds()).toEqual(['clip-a'])
   })
@@ -187,7 +187,7 @@ describe('editing a clip', () => {
   it('refuses a clip the montage does not hold rather than reporting a no-op as done', async () => {
     expect(await runAction('clip.gain', { clipId: 'clip-z', gain: -6 })).toEqual({
       ok: false,
-      refusal: 'badInput',
+      refusal: 'notFound',
     })
   })
 
@@ -232,7 +232,7 @@ describe('the tracks', () => {
    * `writeTrack` and never enter the history — exactly as the header column writes them.
    */
   it('sets the four dials of a row without touching the undo stack', async () => {
-    await runAction('track.state', { trackId: 'track-video', muted: true, height: 120 })
+    await runAction('track.adjust', { trackId: 'track-video', muted: true, height: 120 })
 
     expect(sequence().tracks[0]).toMatchObject({ muted: true, height: 120 })
     expect(sequenceHistoryOf(useSequences.getState(), DOCUMENT).past).toEqual([])
@@ -254,7 +254,7 @@ describe('the playhead and the selection', () => {
 
     expect(await runAction('clip.select', { clipId: 'clip-z' })).toEqual({
       ok: false,
-      refusal: 'badInput',
+      refusal: 'notFound',
     })
   })
 })

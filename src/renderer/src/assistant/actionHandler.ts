@@ -50,5 +50,5 @@ export async function withAsset(
   if (!found.ok) return found
 
   const asset = Array.isArray(found.data) ? found.data[0] : undefined
-  return asset ? run(asset) : refused('badInput')
+  return asset ? run(asset) : refused('notFound')
 }

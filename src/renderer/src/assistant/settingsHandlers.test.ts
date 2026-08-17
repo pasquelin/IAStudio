@@ -30,6 +30,9 @@ describe('the settings', () => {
    * `write` merges branch by branch, so a branch the studio does not know is carried through
    * unread. Refusing a change that moves nothing is what keeps a misspelt section from being
    * reported as done.
+   *
+   * The section names now live on the `record` field of the registry and are checked by
+   * `validatesInput`, not by the handler: these two cases are the only thing tying the two ends.
    */
   it('refuses a change that names nothing the studio knows', async () => {
     const write = vi.fn(async () => DEFAULT_SETTINGS)
@@ -42,8 +45,9 @@ describe('the settings', () => {
   })
 
   /**
-   * `in` answers true for what `Object.prototype` carries, and `JSON.parse` hands `__proto__`
-   * over as an OWN key — so these reached the merge, vanished in it, and were answered `ok`.
+   * `Object.keys` rather than a membership test, in `fits`: `Object.prototype` answers to these
+   * names, and `JSON.parse` hands `__proto__` over as an OWN key — so they reached the merge,
+   * vanished in it, and were answered `ok`.
    */
   it('refuses a section that only the prototype answers to', async () => {
     const write = vi.fn(async () => DEFAULT_SETTINGS)
@@ -74,7 +78,7 @@ describe('the settings', () => {
     ]) {
       expect(await runAction('settings.write', { settings: { mcp: change } })).toEqual({
         ok: false,
-        refusal: 'declined',
+        refusal: 'notAllowed',
       })
     }
     expect(write).not.toHaveBeenCalled()
@@ -120,7 +124,7 @@ describe('the accounts', () => {
 
     expect(await runAction('accounts.activate', { accountId: 'acc-9' })).toEqual({
       ok: false,
-      refusal: 'badInput',
+      refusal: 'notFound',
     })
   })
 })

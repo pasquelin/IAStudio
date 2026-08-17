@@ -26,9 +26,11 @@ export type JsonSchema = {
 }
 
 type ScalarSchema = {
-  type?: 'string' | 'number' | 'integer' | 'boolean'
+  type?: 'string' | 'number' | 'integer' | 'boolean' | 'object'
   description: string
   enum?: string[]
+  /** The keys a `record` accepts. `enum` would close the VALUE, which is not what is known. */
+  propertyNames?: { enum: string[] }
   minimum?: number
   maximum?: number
 }
@@ -41,6 +43,7 @@ type FieldSchema = ScalarSchema | { type: 'array'; description: string; items: S
  * `raw` is the one with no type at all, and deliberately: it carries a generation model's own
  * parameters, whose shape is only known once `GET /models/{id}` has answered. Announcing it as
  * an object would be a promise the registry cannot keep — it may legitimately be a string.
+ * `record` is the case that was wrongly wearing `raw`: an object whose keys this repository knows.
  */
 const JSON_TYPE: Record<FieldKind, ScalarSchema['type']> = {
   text: 'string',
@@ -53,15 +56,24 @@ const JSON_TYPE: Record<FieldKind, ScalarSchema['type']> = {
   seed: 'integer',
   boolean: 'boolean',
   raw: undefined,
+  record: 'object',
 }
 
 function scalarSchema(field: ActionField): ScalarSchema {
   const type = JSON_TYPE[field.kind]
 
+  // A `record`'s options name its KEYS, not the values it may hold — the same list, read on the
+  // other side of the colon.
+  const closed = field.options
+    ? field.kind === 'record'
+      ? { propertyNames: { enum: [...field.options] } }
+      : { enum: [...field.options] }
+    : {}
+
   return {
     ...(type ? { type } : {}),
     description: englishText(field.labelKey),
-    ...(field.options ? { enum: [...field.options] } : {}),
+    ...closed,
     ...(field.min === undefined ? {} : { minimum: field.min }),
     ...(field.max === undefined ? {} : { maximum: field.max }),
   }
@@ -101,6 +113,22 @@ const COMMITMENT_NOTE: Record<ActionCommitment, string> = {
   credits: 'Asks the person on screen first, with an estimate: it spends creative units.',
 }
 
+// The two ways `commitment` alone lies. `raises` lifts the floor from the input; `asksItself`
+// marks a handler that raises the studio's own question, which is WHY its commitment is `none`.
+// Read alone, `commitment` sent both out as "Runs straight away".
+const OVERRIDE_NOTE = {
+  asksItself:
+    'Some calls wait on the person at the screen: the studio raises its own question rather than a confirmation.',
+  raises: 'What one call engages depends on what is given: it may ask the person on screen first.',
+}
+
+function noteOf(action: AssistantAction): string {
+  if (action.asksItself) return OVERRIDE_NOTE.asksItself
+  if (action.raises) return OVERRIDE_NOTE.raises
+
+  return COMMITMENT_NOTE[action.commitment]
+}
+
 export type McpTool = {
   name: string
   title: string
@@ -127,7 +155,7 @@ function toolOf(action: AssistantAction): McpTool {
   return {
     name: toolName(action.name),
     title: englishText(action.titleKey),
-    description: `${englishText(action.descriptionKey)} ${COMMITMENT_NOTE[action.commitment]}`,
+    description: `${englishText(action.descriptionKey)} ${noteOf(action)}`,
     inputSchema: schemaOfFields(action.fields),
   }
 }

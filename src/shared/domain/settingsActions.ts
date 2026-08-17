@@ -1,4 +1,5 @@
 import { action, type AssistantAction } from './assistantAction'
+import { DEFAULT_SETTINGS } from './settings'
 
 /**
  * The studio's own settings, and which account it works through.
@@ -19,8 +20,10 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
-     * `raw`, and the shape is `PartialSettings` — a section, then the keys of it to change. The
-     * main process merges branch by branch, so what is not named is not touched.
+     * `record` rather than `raw`, which published no type at all: `PartialSettings` is a static
+     * union of this repository, not a shape discovered at runtime, so a client can be told both
+     * that it is an object and which sections it may name. The main process merges branch by
+     * branch, so what is not named is not touched.
      */
     name: 'settings.write',
     titleKey: 'assistant.actions.settingsWrite.title',
@@ -28,7 +31,13 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     reach: 'mcp',
     fields: [
-      { key: 'settings', kind: 'raw', labelKey: 'assistant.fields.settings', required: true },
+      {
+        key: 'settings',
+        kind: 'record',
+        labelKey: 'assistant.fields.settings',
+        required: true,
+        options: Object.keys(DEFAULT_SETTINGS),
+      },
     ],
   }),
   action({
