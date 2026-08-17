@@ -177,11 +177,11 @@
       "help": "Sépare les deux clips d’une même prise. Tant qu’ils sont liés, déplacer, couper ou supprimer l’un fait la même chose à l’autre."
     },
     "sequenceZoomIn": {
-      "title": "Zoomer",
+      "title": "Zoom avant",
       "help": "Étale le montage pour voir le détail : les clips deviennent plus larges et on vise plus précisément."
     },
     "sequenceZoomOut": {
-      "title": "Dézoomer",
+      "title": "Zoom arrière",
       "help": "Resserre le montage pour en voir davantage d’un coup, quitte à perdre le détail."
     },
     "sequenceFit": {

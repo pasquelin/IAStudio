@@ -318,8 +318,8 @@ jamais à l’écoute en même temps.
 
 | Action | Touche | Ce qu’elle fait |
 |---|---|---|
-| **Zoomer** | `⌘=` | étale le montage pour voir le détail |
-| **Dézoomer** | `⌘−` | resserre pour en voir davantage d’un coup |
+| **Zoom avant** | `⌘=` | étale le montage pour voir le détail |
+| **Zoom arrière** | `⌘−` | resserre pour en voir davantage d’un coup |
 | **Tout afficher** | `⇧Z` | ajuste pour que le montage entier tienne à l’écran |
 
 ### Annuler et rétablir
@@ -341,7 +341,7 @@ Chaque outil de la barre est une commande : sa touche l’arme, et se remappe co
 |---|---|---|---|---|
 | `V` | Déplacement | | `R` | Rectangle |
 | `H` | Main | | `⇧R` | Trait |
-| `K` | Mise à l’échelle | | `A` | Flèche |
+| `K` | Échelle | | `A` | Flèche |
 | `F` | Recadrage | | `O` | Ellipse |
 | `M` | Sélection rectangulaire | | `P` | Pinceau |
 | `L` | Lasso | | `⇧P` | Crayon |
@@ -649,8 +649,8 @@ laisserait croire que `⌘D` ou `⌘Z` y font ce qu’ils font dans l’espace d
 | `⇧` gauche |  |  | Accélérer |  |  |  |  |  |
 | `Espace` |  |  |  | Lire / Pause |  |  |  |  |
 | `Début` / `Fin` |  |  |  | Début / Fin du montage |  |  |  |  |
-| `⌘=` |  |  |  | Zoomer | Zoom avant |  |  |  |
-| `⌘−` |  |  |  | Dézoomer | Zoom arrière |  |  |  |
+| `⌘=` |  |  |  | Zoom avant | Zoom avant |  |  |  |
+| `⌘−` |  |  |  | Zoom arrière | Zoom arrière |  |  |  |
 | `⇧Z` |  |  |  | Tout afficher |  |  |  |  |
 | `⌘L` |  |  |  | Délier l’image et le son |  |  |  |  |
 | `⌘0` |  |  |  |  | Ajuster à la fenêtre |  |  |  |
