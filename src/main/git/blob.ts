@@ -12,7 +12,7 @@ const execFile = promisify(execFileCallback)
  * blob, and a project holds video. Thirty-two megabytes covers any still a studio compares and
  * refuses the take that would freeze the window it was meant to be shown in.
  */
-export const BLOB_MAX_BYTES = 32 * 1024 * 1024
+const BLOB_MAX_BYTES = 32 * 1024 * 1024
 
 /**
  * The bytes of one file as one recorded version holds it.
