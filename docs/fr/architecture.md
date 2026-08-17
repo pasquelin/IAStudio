@@ -17,12 +17,13 @@ cherchez plutôt comment *s’en servir* ? Voir [guide-utilisateur.md](guide-uti
 6. [Les moteurs](#les-moteurs)
 7. [Une génération, de bout en bout](#une-génération-de-bout-en-bout)
 8. [Projets et catalogue](#projets-et-catalogue)
-9. [Le design system](#le-design-system)
-10. [Internationalisation](#internationalisation)
-11. [La configuration](#la-configuration)
-12. [Les tests](#les-tests)
-13. [Ajouter quelque chose](#ajouter-quelque-chose)
-14. [Livrer une version](#livrer-une-version)
+9. [Le contrôle de version](#le-contrôle-de-version)
+10. [Le design system](#le-design-system)
+11. [Internationalisation](#internationalisation)
+12. [La configuration](#la-configuration)
+13. [Les tests](#les-tests)
+14. [Ajouter quelque chose](#ajouter-quelque-chose)
+15. [Livrer une version](#livrer-une-version)
 
 ---
 
@@ -772,6 +773,51 @@ l’estampille et le rend tel quel. Un espace qui apprend à s’enregistrer n�
 lui. **Les six genres savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et
 matière, déclarés en un seul endroit, `IO_BY_KIND` dans `app/documentIo.ts`. Un genre absent de
 cette table a un Enregistrer qui ne fait rien, plutôt qu’un qui écrit un corps vide.
+
+---
+
+## Le contrôle de version
+
+Le panneau Git travaille sur le dossier du projet ouvert. Tout ce qui suit vit dans le processus
+principal (`main/git/`) ; le rendu ne fait que demander et afficher.
+
+**git est un programme qu’on lance, pas une bibliothèque qu’on appelle.** La conséquence tient en
+une question : la machine peut ne pas l’avoir. macOS répond en proposant d’installer les outils de
+ligne de commande, une installation Windows nue n’a pas de git du tout. La question est donc posée
+à l’ouverture du projet, jamais au premier commit — un panneau qui découvrirait le problème à ce
+moment-là aurait laissé préparer un commit impossible. Ce que le panneau regarde est **une seule
+union** de cinq états (`GitRepository`, dans `shared/domain/git.ts`) : pas de projet · pas de
+binaire · dépôt non initialisé · prêt · une erreur, portant la ligne de git elle-même,
+identifiants retirés. Un statut accompagné de trois booléens autoriserait « aucun projet ouvert ET
+des fichiers modifiés », une forme que quelqu’un finit par afficher.
+
+**Ce qui CONFIGURE git est retiré de l’environnement avant chaque commande.** Tout ce qui commence
+par `GIT_`, plus les trois réglages que git lit sans préfixe — `PAGER`, `EDITOR`, `SSH_ASKPASS`.
+Le reste est conservé, `HTTPS_PROXY` et `SSH_AUTH_SOCK` en premier. La raison n’est pas
+théorique : un `GIT_DIR` hérité pointe ailleurs, un `GIT_EDITOR` hérité ouvre une fenêtre que
+personne ne voit, et simple-git en refuse la plupart d’emblée — la commande échoue alors avant même
+d’être lancée. **Côté utilisateur, cela se dit simplement** : exporter ces variables dans son shell
+ne change rien au studio, et c’est voulu.
+
+**Aucune invite, jamais.** `GIT_TERMINAL_PROMPT=0`, un `GIT_ASKPASS` vide, et `BatchMode=yes` pour
+ssh. Une fenêtre de studio n’a pas de terminal où répondre : git laissé libre de demander
+attendrait indéfiniment, sur une commande que l’utilisateur n’a aucun moyen d’annuler. **Le coût
+se dit franchement** : une clé protégée par une phrase de passe, sans agent chargé, échoue au lieu
+de la réclamer.
+
+**Un git à la fois par projet.** Git prend `.git/index.lock` pour la durée de toute commande qui
+écrit, et une seconde commande qui arrive pendant ce temps **meurt au lieu d’attendre** — deux
+fenêtres qui se rafraîchissent ensemble suffisent à le produire. L’ordonnanceur de simple-git met
+en file dans l’ordre, et c’est pourquoi le studio ne porte pas de seconde file à lui.
+
+**Un jeton appartient à un HÔTE, jamais à un projet ni à un remote.** Un jeton personnel ouvre
+tous les dépôts que quelqu’un possède sur GitHub ; le redemander par projet serait redemander la
+même chaîne indéfiniment. Un serveur d’entreprise garde le sien. Le rendu peut demander **si** un
+hôte en a un, et peut en poser un ; il ne peut jamais en relire un. C’est l’invariant 1 mot pour
+mot, et c’est la forme qu’a déjà la clé API.
+
+**Tout ce qui vient du rendu est validé avant d’atteindre git** — chemins, références, messages,
+hachages, URL de remote (`main/git/validation.ts`).
 
 ---
 
