@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
@@ -750,12 +750,27 @@ export function createServices(settings: SettingsStore): Services {
     )
 
   /**
-   * The project this was last said for. The price of hanging a once-per-project observation on a
-   * per-file event — which is where it belongs all the same: an old project only wears two trees
-   * from the moment an import lands beside the old folder, and saying it at the next opening
-   * instead would leave the folder appearing on its own, unexplained, until then.
+   * Whether the project holds the folder every asset used to be filed under — that exact entry,
+   * and a directory. `existsSync` would answer for a `Assets/` the user made themselves, the case
+   * being folded by APFS and NTFS alike, and for a FILE of that name.
    */
-  let toldOfLegacyLayout: string | undefined
+  const holdsLegacyAssetsFolder = (root: string): boolean => {
+    try {
+      return readdirSync(root, { withFileTypes: true }).some(
+        entry => entry.name === LEGACY_ASSETS_FOLDER && entry.isDirectory(),
+      )
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * The projects whose two-tree question has been answered, by folder — answered, not told: a
+   * project that turns out to wear ONE tree is settled just as much, and settling it is what
+   * keeps a modern project from reading its folder on every import for ever. A set rather than
+   * one root, because the answer is per project and the user comes back to the one they left.
+   */
+  const legacyLayoutSettled = new Set<string>()
 
   /**
    * A project made before the tree became the user's keeps its files under `assets/`, and nothing
@@ -763,18 +778,24 @@ export function createServices(settings: SettingsStore): Services {
    * follows creates `Images/` beside it, and until this line nothing in the app said why one
    * project suddenly wore two trees.
    *
-   * The free half of the question first: a modern project answers `false` without touching the
-   * disk, which is every import of every project made since.
+   * The free half of the question first, then ONE reading of the folder per project. Read rather
+   * than `existsSync(join(root, 'assets'))`, which answers `true` for a folder the user made and
+   * called `Assets` — APFS and NTFS both fold the case — and `true` for a file of that name: the
+   * studio would be stating something false about their project and inviting them to tidy it.
    */
   const noteLegacyLayout = (asset: Asset): void => {
-    const root = project.path()
+    // `current()` and not `path()`, which THROWS when no project is open. This is the first thing
+    // `onImported` does, and `announce` swallows what that listener raises: a project closed while
+    // the catalogue was answering would have cost a mesh its textures, silently.
+    const root = project.current()?.path
     const folder = DEFAULT_ASSET_FOLDERS[asset.type]
 
-    if (!root || root === toldOfLegacyLayout) return
+    if (!root || legacyLayoutSettled.has(root)) return
     if (!landedInDefaultFolder(asset.path, folder)) return
-    if (!existsSync(join(root, LEGACY_ASSETS_FOLDER))) return
 
-    toldOfLegacyLayout = root
+    legacyLayoutSettled.add(root)
+    if (!holdsLegacyAssetsFolder(root)) return
+
     journal.record({
       level: 'info',
       topic: 'project',

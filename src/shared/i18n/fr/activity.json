@@ -36,7 +36,7 @@
     "projectNotCreated": "Le projet n’a pas pu être créé dans ce dossier",
     "projectNested": "Ce dossier est déjà à l’intérieur d’un projet : choisissez-en un en dehors",
     "projectHoldsProjects": "Ce dossier contient déjà des projets — ouvrez celui que vous voulez, ou choisissez un dossier neuf à côté",
-    "projectLegacyAssetsFolder": "Ce projet garde un dossier {{legacy}} d’une version précédente. Les fichiers qui y sont n’ont pas bougé, les nouveaux sont rangés dans {{folder}}. Vous pouvez les rassembler vous-même.",
+    "projectLegacyAssetsFolder": "Ce projet garde un dossier {{legacy}} d’une version précédente. Les fichiers qui y sont n’ont pas bougé. Celui qui vient d’arriver est rangé dans {{folder}}, et les suivants iront dans le dossier de leur type. Vous pouvez tout rassembler vous-même.",
     "projectNotRenamed": "Le projet n’a pas pu être renommé : son dossier est introuvable ou illisible",
     "projectNotRevealed": "Le dossier du projet est introuvable",
     "projectAccountRestored": "Projet rouvert sur le compte « {{name}} »",

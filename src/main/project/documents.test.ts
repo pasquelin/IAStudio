@@ -561,6 +561,29 @@ describe('createDocumentFiles', () => {
     })
 
     /**
+     * The same rename, on a file the volume stores DECOMPOSED — how `Été.scene` arrives from a
+     * zip made by Archive Utility, a share, or a restore off HFS+. The name check exempts the
+     * document being renamed by plain equality, so a listing left as the disk spells it would
+     * refuse the user their own document: the composed name it was known by no longer matches
+     * the decomposed entry beside it.
+     */
+    it('lets a name change its case on a file the disk spells decomposed', async () => {
+      await mkdir(join(root, 'documents'), { recursive: true })
+      const envelope = `${JSON.stringify({
+        version: DOCUMENT_VERSION,
+        kind: 'scene',
+        title: 'Été',
+        updatedAt: NOW,
+        id: 'doc-1',
+      })}\n{}`
+      await writeFile(join(root, 'documents', 'Été.scene'.normalize('NFD')), envelope, 'utf8')
+
+      await expect(documents.rename('doc-1', 'scene', 'ÉTÉ')).resolves.toMatchObject({
+        title: 'ÉTÉ',
+      })
+    })
+
+    /**
      * The parts are the folder's own entries, and naming them twice would let the two disagree.
      * Left in the envelope, the manifest's first line carried the base64 of every layer — past
      * `ENVELOPE_LIMIT`, so `headOf` found no newline and read the whole thing back per listing.

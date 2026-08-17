@@ -37,12 +37,21 @@ describe('what still has to be derived', () => {
   })
 
   /**
-   * `hash` is written by both ways in, so it is what says the pipeline has already run. Reading
+   * The probe is what ffprobe answers, so it is what says the tool has read this file. Reading
    * the waveform instead would never settle: a silent rush has none by right, and it would be
    * picked up again on every project opened.
    */
-  it('leaves a take the pipeline has already run on, waveform or not', () => {
-    expect(needsDeriving(asset({ hash: 'abc123' }))).toBe(false)
+  it('leaves a take the tool has already read, waveform or not', () => {
+    expect(needsDeriving(asset({ probe }))).toBe(false)
+  })
+
+  /**
+   * The fingerprint says nothing about the pipeline since an import started writing one: it is
+   * plain `node:fs`, so a rush generated on a studio with no ffmpeg carries one and has still
+   * never been read. Marking it as done would skip it for good once the tool arrived.
+   */
+  it('takes a rush that carries a fingerprint but was never read', () => {
+    expect(needsDeriving(asset({ hash: 'abc123' }))).toBe(true)
   })
 
   it('leaves what has no timeline of its own, and what is not on this disk', () => {
@@ -83,14 +92,21 @@ describe('catching up a project that was opened after the fix', () => {
     expect(injected.derive).toHaveBeenCalledWith(expect.objectContaining({ poster: false }))
   })
 
-  it('spends no probe on a take that was already read', async () => {
+  /**
+   * The probe is the marker now, so a take that carries one is a take the tool has read — and the
+   * pass that read it is the one that derived from it. Narrower than the fingerprint it replaces:
+   * a derive that crashed AFTER a good probe is no longer retried on the next opening. That case
+   * needs ffprobe to answer and ffmpeg to fail on the same file, where the fingerprint could no
+   * longer tell a studio without ffmpeg from one that had been through the whole pipeline.
+   */
+  it('leaves alone a take the tool has already read', async () => {
     const injected = deps({ list: async () => [asset({ probe })] })
 
     await catchUpMedia(injected)
 
     expect(injected.probeFile).not.toHaveBeenCalled()
     expect(injected.save).not.toHaveBeenCalled()
-    expect(injected.derive).toHaveBeenCalledOnce()
+    expect(injected.derive).not.toHaveBeenCalled()
   })
 
   // Without a length there is no bucket count for a waveform and no offset for a still. The row

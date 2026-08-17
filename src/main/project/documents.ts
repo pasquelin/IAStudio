@@ -261,7 +261,15 @@ export function createDocumentFiles({
    * where the document sits answers to.
    */
   const namesIn = async (folder: string): Promise<NamedDocument[]> =>
-    ((await folderNames(folder)) ?? []).map(fileName => ({ id: fileName, fileName }))
+    ((await folderNames(folder)) ?? []).map(entry => {
+      // NFC, because `readdir` answers the bytes the volume stores and the studio composes its
+      // own: APFS keeps `Été.scene` decomposed when that is how it arrived. `checkDocumentName`
+      // folds what it COMPARES but exempts the document being renamed by plain equality, so an
+      // entry left decomposed would refuse the user their own name — `Été` → `ÉTÉ` answering
+      // "already taken", pointing at the very file being renamed.
+      const fileName = entry.normalize('NFC')
+      return { id: fileName, fileName }
+    })
 
   /**
    * The modification time each document's file carried when the studio last read or wrote it.
@@ -681,7 +689,10 @@ export function createDocumentFiles({
         // The failure travels as the message, so the window says which of the four it was rather
         // than reporting every refusal as a name already taken. The document's own entry is
         // exempted by the name it wears, which is what the folder knows it by.
-        const refused = checkDocumentName(title, kind, taken, basename(from))
+        // Composed on this side too: `from` is built from the index, and the folder listing above
+        // is composed on the way in — the exemption is an equality, so the two have to be spelt
+        // the same way.
+        const refused = checkDocumentName(title, kind, taken, basename(from).normalize('NFC'))
         if (refused) throw new Error(refused)
 
         const entry = documentFileName(title, kind)
