@@ -1,7 +1,7 @@
 import { mdiImageOffOutline } from '@mdi/js'
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { useLoadable } from '@/hooks/useLoadable'
+import { LoadableImage } from './LoadableImage'
 import { MEDIA_FRAME, MEDIA_SHAPE } from './styles'
 import { UiIcon } from './UiIcon'
 
@@ -74,8 +74,6 @@ export function MediaTile({
   bare = false,
   cutout = false,
 }: MediaTileProps) {
-  const { src, attempt, onError } = useLoadable(url)
-
   return (
     <figure
       className={cn(
@@ -84,31 +82,33 @@ export function MediaTile({
         fill ? 'h-full' : 'aspect-square',
       )}
     >
-      {src ? (
+      <LoadableImage
+        url={url}
         // A cut picture takes the SHAPE's box, held clear of the caption: cut to a silhouette it
         // reads as placed, the way the folder beside it does, and not as filling the square.
-        <div className={cn('absolute inset-0', cutout && 'bottom-4 flex items-end justify-center')}>
-          <img
-            key={attempt}
-            src={src}
-            alt=""
-            loading="lazy"
-            onError={onError}
-            className={cn(
-              'object-cover',
-              cutout ? 'document-cutout aspect-square h-full' : 'size-full',
-            )}
-          />
-        </div>
-      ) : face ? (
-        // Held clear of the caption and centred when there is no picture: a shape reads as placed
-        // where a picture reads as filling, and the two want opposite boxes.
-        <div className={cn('absolute inset-0', bare && 'bottom-4 flex items-end justify-center')}>
-          {face}
-        </div>
-      ) : (
-        <UiIcon path={fallbackIcon} size={20} className="text-muted/80 absolute inset-0 m-auto" />
-      )}
+        box={cn('absolute inset-0', cutout && 'bottom-4 flex items-end justify-center')}
+        className={cn(
+          'object-cover',
+          cutout ? 'document-cutout aspect-square h-full' : 'size-full',
+        )}
+        fallback={
+          face ? (
+            // Held clear of the caption and centred when there is no picture: a shape reads as
+            // placed where a picture reads as filling, and the two want opposite boxes.
+            <div
+              className={cn('absolute inset-0', bare && 'bottom-4 flex items-end justify-center')}
+            >
+              {face}
+            </div>
+          ) : (
+            <UiIcon
+              path={fallbackIcon}
+              size={20}
+              className="text-muted/80 absolute inset-0 m-auto"
+            />
+          )
+        }
+      />
 
       {badge}
 

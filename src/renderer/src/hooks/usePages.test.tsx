@@ -1,37 +1,23 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import type { CloudAsset, CloudPage } from '@shared/domain/cloudAsset'
 import { withQueries } from '@/app/query-fixtures'
-import { useCloudPages } from './useCloudPages'
+import { usePages, type Page } from './usePages'
 
-function cloudAsset(id: string): CloudAsset {
-  return {
-    id,
-    name: id,
-    type: 'image',
-    remoteType: 'txt2img',
-    ownerId: 'proj_1',
-    createdAt: '2026-08-12T11:00:00.000Z',
-    updatedAt: '2026-08-12T11:00:00.000Z',
-    privacy: 'private',
-    tags: [],
-    collectionIds: [],
-  }
-}
+type Row = { id: string }
 
 function Listing({
   read,
   enabled,
 }: {
-  read: (from: { cursor?: string }) => Promise<CloudPage> | undefined
+  read: (from: { cursor?: string }) => Promise<Page<Row>> | undefined
   enabled?: boolean
 }) {
-  const { assets, exhausted, pending, more } = useCloudPages(['listing'], read, enabled)
+  const { items, exhausted, pending, more } = usePages(['listing'], read, { enabled })
 
   return (
     <>
-      <span data-testid="ids">{assets.map(asset => asset.id).join(',')}</span>
+      <span data-testid="ids">{items.map(item => item.id).join(',')}</span>
       <span data-testid="state">{pending ? 'pending' : exhausted ? 'exhausted' : 'open'}</span>
       <button type="button" onClick={more}>
         more
@@ -42,13 +28,13 @@ function Listing({
 
 const idsOf = (): string => screen.getByTestId('ids').textContent ?? ''
 
-describe('a cloud listing read page by page', () => {
+describe('a listing read page by page', () => {
   it('appends the next page to the ones already read', async () => {
     const read = ({ cursor }: { cursor?: string }) =>
       Promise.resolve(
         cursor
-          ? { assets: [cloudAsset('c')], cursor: null }
-          : { assets: [cloudAsset('a'), cloudAsset('b')], cursor: 'o:2' },
+          ? { items: [{ id: 'c' }], cursor: null }
+          : { items: [{ id: 'a' }, { id: 'b' }], cursor: 'o:2' },
       )
 
     render(withQueries(<Listing read={read} />))
@@ -60,15 +46,15 @@ describe('a cloud listing read page by page', () => {
   })
 
   /**
-   * These listings page by offset over something that keeps growing: an asset created between
-   * two requests shifts everything down one, and the tile at the boundary comes back.
+   * These listings page by offset over something that keeps growing: an item created between two
+   * requests shifts everything down one, and the row at the boundary comes back.
    */
-  it('shows an asset once, however many pages repeat it', async () => {
+  it('shows an item once, however many pages repeat it', async () => {
     const read = ({ cursor }: { cursor?: string }) =>
       Promise.resolve(
         cursor
-          ? { assets: [cloudAsset('b'), cloudAsset('c')], cursor: null }
-          : { assets: [cloudAsset('a'), cloudAsset('b')], cursor: 'o:2' },
+          ? { items: [{ id: 'b' }, { id: 'c' }], cursor: null }
+          : { items: [{ id: 'a' }, { id: 'b' }], cursor: 'o:2' },
       )
 
     render(withQueries(<Listing read={read} />))
@@ -84,7 +70,7 @@ describe('a cloud listing read page by page', () => {
    * « there is more », that is an unbounded loop of identical searches, each one billed.
    */
   it('is at its end when the cursor stops advancing', async () => {
-    const read = vi.fn(() => Promise.resolve({ assets: [cloudAsset('a')], cursor: 'o:10000' }))
+    const read = vi.fn(() => Promise.resolve({ items: [{ id: 'a' }], cursor: 'o:10000' }))
 
     render(withQueries(<Listing read={read} />))
     await screen.findByText('a')
@@ -99,7 +85,7 @@ describe('a cloud listing read page by page', () => {
     let offset = 0
     const read = vi.fn(() => {
       offset += 1
-      return Promise.resolve({ assets: [cloudAsset('a')], cursor: `o:${offset}` })
+      return Promise.resolve({ items: [{ id: 'a' }], cursor: `o:${offset}` })
     })
 
     render(withQueries(<Listing read={read} />))
@@ -112,9 +98,7 @@ describe('a cloud listing read page by page', () => {
 
   it('is at its end as soon as a page comes back without a cursor', async () => {
     render(
-      withQueries(
-        <Listing read={() => Promise.resolve({ assets: [cloudAsset('a')], cursor: null })} />,
-      ),
+      withQueries(<Listing read={() => Promise.resolve({ items: [{ id: 'a' }], cursor: null })} />),
     )
 
     expect(await screen.findByText('exhausted')).toBeInTheDocument()
@@ -129,7 +113,7 @@ describe('a cloud listing read page by page', () => {
   })
 
   it('reads nothing at all while it is not enabled', () => {
-    const read = vi.fn(() => Promise.resolve({ assets: [], cursor: null }))
+    const read = vi.fn(() => Promise.resolve({ items: [], cursor: null }))
 
     render(withQueries(<Listing read={read} enabled={false} />))
 

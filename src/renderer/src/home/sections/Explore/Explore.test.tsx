@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
+import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
 import { settleHome } from '../../home-fixtures'
@@ -41,7 +42,7 @@ beforeEach(() => {
 describe('the explore band', () => {
   it('offers one tab per kind the studio knows', () => {
     install()
-    render(<Explore />)
+    render(withQueries(<Explore />))
 
     expect(screen.getAllByRole('tab')).toHaveLength(6)
     expect(screen.getByRole('tab', { name: 'Image' })).toHaveAttribute('aria-selected', 'true')
@@ -49,7 +50,7 @@ describe('the explore band', () => {
 
   it('opens on pictures, and asks the feed for those', async () => {
     const { explore } = install()
-    render(<Explore />)
+    render(withQueries(<Explore />))
 
     await waitFor(() =>
       expect(explore).toHaveBeenCalledWith(expect.objectContaining({ type: 'image' })),
@@ -58,7 +59,7 @@ describe('the explore band', () => {
 
   it('asks for another kind when its tab is chosen', async () => {
     const { explore } = install()
-    render(<Explore />)
+    render(withQueries(<Explore />))
     await waitFor(() => expect(explore).toHaveBeenCalled())
 
     await userEvent.click(screen.getByRole('tab', { name: 'Vidéo' }))
@@ -74,7 +75,7 @@ describe('the explore band', () => {
    */
   it('captions each tile with what the asset is called', async () => {
     install()
-    render(<Explore />)
+    render(withQueries(<Explore />))
 
     expect(await screen.findByText('boulder.png')).toBeInTheDocument()
   })
@@ -83,7 +84,7 @@ describe('the explore band', () => {
     // The column is 220 CSS pixels and jsdom reports a density of 1. On a Retina display the
     // same tile asks for 440 — the number follows the screen rather than a factor written here.
     install()
-    const { container } = render(<Explore />)
+    const { container } = render(withQueries(<Explore />))
 
     await waitFor(() =>
       expect(container.querySelector('img')?.getAttribute('src')).toBe(
@@ -94,7 +95,7 @@ describe('the explore band', () => {
 
   it('says it is reading rather than announcing an empty feed it has not seen', () => {
     install([])
-    render(<Explore />)
+    render(withQueries(<Explore />))
 
     // An initial state is not an answer: the round trip has not come back yet.
     expect(screen.getByText('Chargement du fil…')).toBeInTheDocument()
@@ -102,7 +103,7 @@ describe('the explore band', () => {
 
   it('says the category is empty once the feed has actually answered', async () => {
     install([])
-    render(<Explore />)
+    render(withQueries(<Explore />))
 
     expect(
       await screen.findByText('Rien de publié dans cette catégorie pour le moment.'),

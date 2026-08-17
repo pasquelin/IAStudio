@@ -6,15 +6,17 @@ import { typeOfWorkspace } from '@shared/domain/assetKind'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
+import { cloudPage } from '@/helpers/cloudPage'
 import { filterLocally, isFiltered, setFacetValue } from '@/helpers/collectionState'
 import { applySelection } from '@/helpers/selection'
 import { openAsset } from '@/helpers/openAsset'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { assetTypesOf } from '@/helpers/workspaces'
 import { useAssetFacets } from '@/hooks/useAssetFacets'
+import { useAutomaticPulls } from '@/hooks/useAutomaticPulls'
 import { useBadgeLabels } from '@/hooks/useBadgeLabels'
-import { useCloudPages } from '@/hooks/useCloudPages'
-import { useDebounced } from '@/hooks/useDebounced'
+import { useDebounced, SEARCH_DELAY_MS } from '@/hooks/useDebounced'
+import { usePages } from '@/hooks/usePages'
 import { useTypeLabels } from '@/hooks/useTypeLabels'
 import { getBridge } from '@/services/bridge'
 import { renameAsset } from '@/helpers/rename'
@@ -42,12 +44,6 @@ import {
 
 /** How much of a cloud listing one page asks for. The scroll asks for the next. */
 const LIBRARY_PAGE = 60
-
-/**
- * How long the typing must stop before the word travels. The panel that already searches the API
- * as one types waits the same — `panels/models`.
- */
-const SEARCH_DELAY_MS = 250
 
 /**
  * How many pages the shelf walks on its own before it waits for a scroll. A bound, not a policy:
@@ -131,15 +127,17 @@ export function AssetBrowser() {
   const search = useDebounced(collection.search.trim(), SEARCH_DELAY_MS)
 
   // Keyed on the account, on what is asked for and on the word: another key is another library.
-  const library = useCloudPages(['assets', 'library', ownerId, scope, search], from =>
-    getBridge()?.cloud.browse({
-      pageSize: LIBRARY_PAGE,
-      types: scope,
-      ...(search ? { text: search } : {}),
-      ...from,
-    }),
+  const library = usePages(['assets', 'library', ownerId, scope, search], from =>
+    getBridge()
+      ?.cloud.browse({
+        pageSize: LIBRARY_PAGE,
+        types: scope,
+        ...(search ? { text: search } : {}),
+        ...from,
+      })
+      .then(cloudPage),
   )
-  const remote = library.assets
+  const remote = library.items
 
   /**
    * What everyone else published, read only while the Location facet asks for it — see
@@ -150,21 +148,23 @@ export function AssetBrowser() {
    */
   const wantsPublished = (collection.selections[LOCATION_FACET] ?? []).includes(PUBLISHED_BADGE)
   const publishedType = wantsPublished ? (scope[0] ?? null) : null
-  const feed = useCloudPages(
+  const feed = usePages(
     ['assets', 'published', publishedType, search],
     from =>
       publishedType === null
         ? undefined
-        : getBridge()?.cloud.explore({
-            type: publishedType,
-            pageSize: LIBRARY_PAGE,
-            ...(search ? { text: search } : {}),
-            ...from,
-          }),
+        : getBridge()
+            ?.cloud.explore({
+              type: publishedType,
+              pageSize: LIBRARY_PAGE,
+              ...(search ? { text: search } : {}),
+              ...from,
+            })
+            .then(cloudPage),
     // Never read while nobody asks for it: the feed is unbounded, and reading it costs a search.
-    publishedType !== null,
+    { enabled: publishedType !== null },
   )
-  const published = feed.assets
+  const published = feed.items
 
   /**
    * The rows whose file the disk no longer has.
@@ -405,19 +405,19 @@ export function AssetBrowser() {
    * `onReachEnd` to near, and a source CAN hold the list at nothing while having more to give — a
    * page the feed's retyping emptied does exactly that. Past the ceiling, it waits for a scroll.
    */
-  const pulls = useRef(0)
-  // `ownerId` among them: another account is another library, read from nothing — with the count
+  // `ownerId` in the key: another account is another library, read from nothing — with the count
   // left where the previous one stopped, the shelf would sit empty with no scroll able to fill it.
-  useEffect(() => {
-    pulls.current = 0
-  }, [ownerId, search, scope, publishedType])
-
-  useEffect(() => {
-    if (shown.length > 0 || asking === '' || pulls.current >= AUTOMATIC_PULLS) return
-
-    pulls.current += 1
-    askForMore()
-  }, [shown.length, asking, askForMore])
+  useAutomaticPulls({
+    key: `${ownerId} ${search} ${scope.join()} ${publishedType}`,
+    drawn: shown.length,
+    max: AUTOMATIC_PULLS,
+    fetching: library.fetching || feed.fetching,
+    // Three sources, so the beat is all three: a page any of them answers with nothing moves no
+    // row on screen, and the shelf would stop one pull in with pages still to come.
+    answered: `${items.length} ${library.pagesRead} ${feed.pagesRead}`,
+    // Nobody to ask is not a pull worth spending: no source is holding the list back.
+    ask: asking === '' ? null : askForMore,
+  })
 
   /**
    * The count in the title row says what this list holds, not what the catalogue does — the
@@ -458,7 +458,7 @@ export function AssetBrowser() {
   // Read off `sources` rather than asked again: a source that has not answered is not in the
   // record, and two spellings of that question would drift apart.
   const reading = !('library' in sources) || (publishedType !== null && !('published' in sources))
-  const refused = library.refused || feed.refused
+  const refused = library.refusal !== null || feed.refusal !== null
   const emptyMessage = !project
     ? t('assets.openProject')
     : reading

@@ -237,17 +237,21 @@ export function mergeRows({
    * every project row — including one imported a year before. Running generations stay on top
    * whatever their stamp: they are what the user is waiting on.
    */
-  return [...running, ...[...locals, ...remotes, ...publics].sort(newestFirst)]
+  return [...running, ...newestFirst([...locals, ...remotes, ...publics])]
 }
 
 /**
- * Newest first, on the one stamp both provenances carry.
+ * Newest first, on the one stamp both provenances carry — read once per ROW and not once per
+ * comparison: a catalogue of eight hundred lines is some fifteen thousand `Date.parse` a sort.
  *
- * A job never reaches here — running generations are placed above the sort — so the comparison
- * only ever sees the two shapes that have a `createdAt`.
+ * A job never reaches here — running generations are placed above the sort — so this only ever
+ * sees the two shapes that have a `createdAt`.
  */
-function newestFirst(one: AssetRowModel, other: AssetRowModel): number {
-  return stampOfRow(other) - stampOfRow(one)
+function newestFirst(rows: readonly AssetRowModel[]): AssetRowModel[] {
+  return rows
+    .map(row => ({ row, stamp: stampOfRow(row) }))
+    .sort((one, other) => other.stamp - one.stamp)
+    .map(({ row }) => row)
 }
 
 /**

@@ -1,14 +1,15 @@
 import { mdiCubeScan } from '@mdi/js'
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ModelPage, ModelSummary } from '@shared/domain/model'
+import type { ModelSummary } from '@shared/domain/model'
 import { failureKeyOf } from '@/services/failureMessage'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { isFiltered } from '@/helpers/collectionState'
-import { useDebounced } from '@/hooks/useDebounced'
+import { useAutomaticPulls } from '@/hooks/useAutomaticPulls'
+import { useDebounced, SEARCH_DELAY_MS } from '@/hooks/useDebounced'
 import { useLazyPreviews } from '@/hooks/useLazyPreviews'
+import { usePages } from '@/hooks/usePages'
 import { useModelForFamily } from '@/hooks/useModelForFamily'
 import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { usePlanRefusal } from '@/hooks/usePlanRefusal'
@@ -24,7 +25,6 @@ import { ModelsCard } from './ModelsCard'
 import { ModelsRow } from './ModelsRow'
 import { ModelsSelected } from './ModelsSelected'
 
-const SEARCH_DELAY_MS = 250
 const PAGE_LIMIT = 24
 /** A thumbnail, a name and what the model does: two lines beside a 32 px picture. */
 const ROW_HEIGHT = 40
@@ -75,33 +75,14 @@ export function Models() {
   const facets = useMemo(() => facetsFor(family, t), [family, t])
   const sorts = useMemo(() => sortOptions(t), [t])
 
-  const catalogue = useInfiniteQuery<ModelPage>({
-    queryKey: ['models', query],
-    queryFn: ({ pageParam }) =>
-      getBridge()?.scenario.searchModels({
-        ...query,
-        limit: PAGE_LIMIT,
-        ...(typeof pageParam === 'string' ? { cursor: pageParam } : {}),
-      }) ?? Promise.resolve({ items: [], cursor: null }),
-    getNextPageParam: page => page.cursor ?? undefined,
-    initialPageParam: undefined,
-    enabled: authenticated,
-  })
-
-  /**
-   * Keyed by id: the walk covers private models then public ones, and a model listed in both
-   * would otherwise appear twice — and collide as a React key. The map is kept rather than
-   * discarded, so looking the selected model up stays a lookup.
-   */
-  const byId = useMemo(() => {
-    const unique = new Map<string, ModelSummary>()
-    for (const page of catalogue.data?.pages ?? []) {
-      for (const model of page.items) if (!unique.has(model.id)) unique.set(model.id, model)
-    }
-    return unique
-  }, [catalogue.data])
-
-  const items = useMemo(() => [...byId.values()], [byId])
+  // The walk covers private models then public ones, and a model listed in both would otherwise
+  // appear twice — and collide as a React key. `usePages` holds a listing to one row per id.
+  const catalogue = usePages(
+    ['models', query],
+    from => getBridge()?.scenario.searchModels({ ...query, limit: PAGE_LIMIT, ...from }),
+    { enabled: authenticated },
+  )
+  const items = catalogue.items
 
   const { urls, resolve } = useLazyPreviews()
 
@@ -122,40 +103,28 @@ export function Models() {
     [urls],
   )
 
-  // Depending on the query object itself would rebuild this on every render — react-query
-  // hands back a fresh proxy each time — and re-arm the collection's end-of-list effect with it.
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = catalogue
-  const loadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) void fetchNextPage()
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+  // The registry bounds how many pages one request walks, so a selective filter can answer
+  // nothing — or too little to fill the panel — while the catalogue still has more.
+  useAutomaticPulls({
+    key: JSON.stringify(query),
+    drawn: items.length,
+    wanted: PAGE_LIMIT,
+    max: AUTOMATIC_PULLS,
+    fetching: catalogue.fetching,
+    answered: catalogue.pagesRead,
+    ask: catalogue.exhausted ? null : catalogue.more,
+  })
 
-  /**
-   * The registry bounds how many pages one request walks, so a selective filter can answer
-   * nothing — or too little to fill the panel — while the catalogue still has more. Nothing
-   * scrolls in either case, so the panel asks on its own, up to a ceiling. Past it, the list
-   * waits for a scroll, and `onReachEnd` takes over.
-   */
-  const pulls = useRef(0)
-  const queryKey = JSON.stringify(query)
-  useEffect(() => {
-    pulls.current = 0
-  }, [queryKey])
-
-  useEffect(() => {
-    if (items.length >= PAGE_LIMIT || !hasNextPage || isFetchingNextPage) return
-    if (pulls.current >= AUTOMATIC_PULLS) return
-
-    pulls.current += 1
-    void fetchNextPage()
-  }, [items.length, hasNextPage, isFetchingNextPage, fetchNextPage])
-
-  const selected = selectedId ? (byId.get(selectedId) ?? null) : null
+  const selected = useMemo(
+    () => items.find(model => model.id === selectedId) ?? null,
+    [items, selectedId],
+  )
 
   if (!authenticated) return <MissingCredentials icon={mdiCubeScan} />
 
   // Without this the panel sits on "loading" forever when the API refuses the request.
-  if (catalogue.isError) {
-    return <EmptyState icon={mdiCubeScan} message={t(failureKeyOf(catalogue.error))} />
+  if (catalogue.refusal !== null) {
+    return <EmptyState icon={mdiCubeScan} message={t(failureKeyOf(catalogue.refusal))} />
   }
 
   return (
@@ -176,7 +145,7 @@ export function Models() {
           state={collection}
           selectedIds={selectedId ? [selectedId] : []}
           onSelect={model => select(model.family, model.id)}
-          onReachEnd={loadMore}
+          onReachEnd={catalogue.more}
           onVisible={onVisible}
           // The same answer greys the cell and explains it, so a row cannot end up dimmed with
           // nothing to say why.
@@ -200,7 +169,7 @@ export function Models() {
             <EmptyState
               icon={mdiCubeScan}
               message={
-                catalogue.isFetching
+                catalogue.fetching
                   ? t('collection.loading')
                   : // The debounced search, not the typed one: for the 250 ms in between, the
                     // filter blamed for the empty panel has not been applied yet.
@@ -214,7 +183,7 @@ export function Models() {
             />
           }
           footer={
-            catalogue.isFetchingNextPage ? (
+            catalogue.fetchingMore ? (
               <p className="text-muted text-tiny py-2 text-center">{t('collection.loading')}</p>
             ) : null
           }

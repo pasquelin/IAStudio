@@ -8,6 +8,7 @@ import {
   homeSectionOf,
   type HomeSectionId,
 } from '@shared/domain/home'
+import { queryHost } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -64,7 +65,7 @@ beforeEach(() => {
 
 describe('the home', () => {
   it('says something on a studio with no key, no project and no history', () => {
-    render(<HomeView />)
+    render(<HomeView />, { wrapper: queryHost() })
 
     // The one thing left to do — never a blank page. The ways in are the rails' now, and the
     // spotlight is what the centre still opens on.
@@ -73,13 +74,13 @@ describe('the home', () => {
 
   it('still fills the page when the user hid everything they are allowed to', () => {
     setSettings(DEFAULT_HOME_SECTIONS.map(section => ({ ...section, visible: false })))
-    render(<HomeView />)
+    render(<HomeView />, { wrapper: queryHost() })
 
     expect(screen.getByText('Connecter une clé API')).toBeInTheDocument()
   })
 
   it('drops what needs a key rather than drawing it empty', () => {
-    render(<HomeView />)
+    render(<HomeView />, { wrapper: queryHost() })
 
     expect(screen.queryByText('Explorer')).not.toBeInTheDocument()
   })
@@ -91,7 +92,7 @@ describe('the home', () => {
       stored: [POSTER_DOCUMENT],
       activeId: 'a',
     })
-    render(<HomeView />)
+    render(<HomeView />, { wrapper: queryHost() })
 
     expect(screen.getByText('Reprendre où vous en étiez')).toBeInTheDocument()
   })
@@ -104,7 +105,7 @@ describe('the home', () => {
   it('still opens on a band when a key is connected and the project is empty', () => {
     setSettings(DEFAULT_HOME_SECTIONS, true)
     useProject.setState({ project: PROJECT, known: true })
-    render(<HomeView />)
+    render(<HomeView />, { wrapper: queryHost() })
 
     expect(screen.getByText('Tout est prêt')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Créer une image' })).toBeInTheDocument()
@@ -122,7 +123,7 @@ describe('the home', () => {
     setSettings(DEFAULT_HOME_SECTIONS, true)
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
-    render(<HomeView />)
+    render(<HomeView />, { wrapper: queryHost() })
 
     for (const title of [
       'Vos projets',
@@ -149,7 +150,7 @@ describe('the home', () => {
    */
   it('draws nothing at all until it knows what it is drawing', () => {
     useProject.setState({ project: null, known: false })
-    const { container, rerender } = render(<HomeView />)
+    const { container, rerender } = render(<HomeView />, { wrapper: queryHost() })
     expect(container.textContent).toBe('')
 
     useProject.setState({ known: true })
@@ -163,7 +164,7 @@ describe('the home', () => {
   })
 
   it('ends on a way forward rather than on the last shelf', () => {
-    render(<HomeView />)
+    render(<HomeView />, { wrapper: queryHost() })
 
     expect(screen.getByText('Créer ou explorer. Un clic vers la suite.')).toBeInTheDocument()
   })
@@ -184,7 +185,7 @@ describe('customising the home', () => {
     setSettings(DEFAULT_HOME_SECTIONS, true)
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
-    const { container } = render(<HomeView />)
+    const { container } = render(<HomeView />, { wrapper: queryHost() })
 
     // Read off what is actually drawn, not off the registry: a section whose shelf is empty takes
     // itself off the page, and it must take its heading and its button with it.
@@ -208,7 +209,7 @@ describe('customising the home', () => {
     )
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
-    render(<HomeView />)
+    render(<HomeView />, { wrapper: queryHost() })
 
     expect(screen.queryByText('Explorer')).not.toBeInTheDocument()
     expect(screen.getByText('1 section masquée')).toBeInTheDocument()
