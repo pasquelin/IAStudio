@@ -447,23 +447,16 @@ sans avoir exécuté `pnpm ffmpeg:fetch`.
 
 ## Où sont vraiment vos fichiers
 
-Tout est dans le dossier du projet, à un endroit précis et lisible :
+**Là où vous les avez mis.** Un asset généré atterrit dans l’un des six dossiers de départ — voir
+[Ce qu’on y trouve](#ce-quon-y-trouve) — et rien ne l’y retient : déplacez-le, rangez-le dans une
+arborescence à vous, l’étagère continue de le montrer et sa fiche le suit. La disposition du
+dossier de projet est décrite au chapitre [Les projets](04-projets.md#ce-quil-y-a-dedans).
 
-```
-Mon projet/
-└── assets/
-    ├── img/     les images
-    ├── vid/     les vidéos
-    ├── aud/     les sons
-    ├── 3d/      les objets 3D
-    ├── tex/     les textures
-    └── sky/     les ciels
-```
-
-Ce sont de vrais fichiers, dans de vrais formats. Vous pouvez les ouvrir avec n’importe quel
+Ce sont de **vrais fichiers, dans de vrais formats**. Vous pouvez les ouvrir avec n’importe quel
 autre logiciel, les copier, les envoyer.
 
-**Sauf les médias importés**, qui restent là où ils étaient — c’est tout l’intérêt du lien.
+**Sauf les médias importés**, qui restent là où ils étaient — c’est tout l’intérêt du lien. Jusqu’à
+ce que vous les éditiez : la version enregistrée, elle, est écrite dans le projet.
 
 ---
 
