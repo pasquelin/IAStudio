@@ -199,7 +199,7 @@ const ALPHA_FILL = new RegExp(
  * else already states, which is the same reading `DECORATIVE_GLYPHS` takes of a placeholder.
  */
 const ALPHA_FILL_ALLOWED: Record<string, string> = {
-  '/Spotlight.tsx': 'a tint on a state its own icon states at full `create`',
+  '/SpotlightCard.tsx': 'a tint on a state its own icon states at full `create`',
 }
 
 /**

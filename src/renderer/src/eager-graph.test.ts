@@ -148,7 +148,7 @@ describe('the opening chunk', () => {
     // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
     // point and past the shell, or every negative assertion below passes on an empty graph.
     expect(files).toContain('./app/Shell/Shell.tsx')
-    expect(files).toContain('./home/HomeView.tsx')
+    expect(files).toContain('./home/HomeView/HomeView.tsx')
   })
 
   // Deferred by `Generator.tsx` on 8 August: −219,38 kB, three quarters of it zod.

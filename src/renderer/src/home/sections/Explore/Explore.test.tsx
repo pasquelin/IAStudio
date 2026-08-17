@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useSettings } from '@/stores/settings'
-import { settleHome } from '../home-fixtures'
+import { settleHome } from '../../home-fixtures'
 import { Explore } from './Explore'
 
 function cloudAsset(overrides: Partial<CloudAsset> = {}): CloudAsset {

@@ -3,36 +3,20 @@ import { useTranslation } from 'react-i18next'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { isFinished } from '@shared/domain/job'
 import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
-import { Button } from '@/design/Button'
 import { Carousel } from '@/design/Carousel/Carousel'
-import { UiIcon } from '@/design/UiIcon'
-import { cn } from '@/helpers/cn'
 import { getBridge } from '@/services/bridge'
 import { useDocuments, type DocumentsSlice } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { openDocument } from '@/app/dockview-api'
-import { enterWorkspace } from '../open'
-import { HINT_TOP } from '@/helpers/tooltip'
+import { enterWorkspace } from '../../open'
+import { SpotlightCard, type Slide } from './SpotlightCard'
+import { SpotlightWaiting } from './SpotlightWaiting'
 
 /** Banner-sized, like the reference: two of them fill the band, three make it a shelf. */
 const CARD_WIDTH = 560
 const CARD_HEIGHT = 168
-
-/** What a laid-down banner measures — held so its empty stand-in reserves the same room. */
-const BANNER_HEIGHT = 76
-
-type Slide = {
-  id: string
-  icon: string
-  title: string
-  body: string
-  /** Absent on a card that only reports — the section under it is already the way there. */
-  action?: { label: string; hint: string; onClick: () => void }
-  /** The one card the eye should land on first. Set once, on the first card that acts. */
-  leading?: boolean
-}
 
 /**
  * The document "Resume" means. The tab in front when the studio was last on a workspace, and
@@ -114,7 +98,7 @@ export function Spotlight() {
     // Except at launch, where "nothing is true" and "nothing is known yet" look the same from
     // here. Naming a state now would name the wrong one and take it back a moment later — which
     // is what made this band flicker through three readings while the window was still opening.
-    if (!authKnown || !projectKnown) return <Waiting />
+    if (!authKnown || !projectKnown) return <SpotlightWaiting />
 
     slides.push({
       id: 'ready',
@@ -137,7 +121,7 @@ export function Spotlight() {
   // A lone banner has no rail to be scrolled along, and a 560 px card marooned in a 1400 px band
   // reads as a leftover rather than as the top of the page. It takes the width instead, and lies
   // down: a full-width card as tall as a stacked one is mostly empty.
-  if (slides.length === 1 && slides[0]) return <Card slide={slides[0]} layout="banner" />
+  if (slides.length === 1 && slides[0]) return <SpotlightCard slide={slides[0]} layout="banner" />
 
   return (
     <Carousel
@@ -145,77 +129,7 @@ export function Spotlight() {
       itemWidth={CARD_WIDTH}
       itemHeight={CARD_HEIGHT}
       label={t('home.sections.spotlight')}
-      renderCard={slide => <Card slide={slide} layout="stacked" />}
+      renderCard={slide => <SpotlightCard slide={slide} layout="stacked" />}
     />
-  )
-}
-
-/**
- * The band before it knows what it holds. Silent, and exactly the height of the banner that
- * replaces it: a message appearing at the top of the page would push everything under it down,
- * which is the other half of what made the opening feel unsettled.
- */
-function Waiting() {
-  return (
-    <div
-      aria-hidden
-      className="bg-surface rounded-(--radius-sc-lg)"
-      style={{ height: BANNER_HEIGHT }}
-    />
-  )
-}
-
-/**
- * One card of the band. Laid on its side when it is alone and takes the width, stacked when it
- * shares a rail — the same four things either way, which is why it is one component.
- *
- * The leading card carries the studio's create colour, and nothing else on the home does: one
- * accent, on the one thing worth doing first.
- */
-function Card({ slide, layout }: { slide: Slide; layout: 'banner' | 'stacked' }) {
-  const banner = layout === 'banner'
-
-  return (
-    <article
-      className={cn(
-        'flex overflow-hidden rounded-(--radius-sc-lg) p-4',
-        banner ? 'items-center gap-4' : 'size-full flex-col items-start gap-2',
-        slide.leading ? 'bg-create/15 border-create/40 border' : 'bg-surface',
-      )}
-    >
-      <UiIcon
-        path={slide.icon}
-        size={banner ? 20 : 16}
-        className={cn('shrink-0', slide.leading ? 'text-create' : 'text-muted')}
-      />
-
-      {/* `contents` rather than a second flex column when stacked: the heading and the body are
-          then the card's own children, spaced by its gap like the button under them. */}
-      <span className={banner ? 'flex min-w-0 flex-1 flex-col gap-2' : 'contents'}>
-        <h3 className="text-text text-body m-0 font-semibold">{slide.title}</h3>
-        {/* Bounded, and the button is not: a body long enough to push the action out of the
-            card would leave the one thing to click off screen. */}
-        <p
-          className={cn(
-            'text-muted text-tiny m-0 overflow-hidden leading-relaxed',
-            banner ? 'max-w-[80ch]' : 'max-w-[64ch] flex-1',
-          )}
-        >
-          {slide.body}
-        </p>
-      </span>
-
-      {slide.action && (
-        <span className="shrink-0">
-          <Button
-            variant={slide.leading ? 'primary' : 'neutral'}
-            {...HINT_TOP(slide.action.hint)}
-            onClick={slide.action.onClick}
-          >
-            {slide.action.label}
-          </Button>
-        </span>
-      )}
-    </article>
   )
 }

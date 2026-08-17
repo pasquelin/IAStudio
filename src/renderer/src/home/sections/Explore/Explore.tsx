@@ -3,22 +3,18 @@ import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { Masonry } from '@/design/Masonry'
-import { MediaTile } from '@/design/MediaTile'
-import { chipSkin } from '@/design/styles'
-import { cloudTileFace } from '@/helpers/cloud-tile'
-import { Section } from '../Section'
+import { Section } from '../../Section'
 import { QuietNote } from '@/design/QuietNote'
-import { useExplore } from '../use-explore'
-import { HINT_BOTTOM } from '@/helpers/tooltip'
+import { useExplore } from '../../use-explore'
+import { ExploreTab } from './ExploreTab'
+import { COLUMN_WIDTH, ExploreTile } from './ExploreTile'
 
-/**
- * What one column aims for. Wider than a shelf tile: this is the band people browse.
- *
- * Also what a tile asks the CDN to resize to, once the display's density is applied — hence one
- * constant here where there used to be two, the second holding a doubling `cloudTileFace` now
- * works out from the screen it is actually drawn on.
- */
-const COLUMN_WIDTH = 220
+/** The shape a tile reserves, from what the API stated. `undefined` when it stated nothing. */
+function ratioOf(asset: CloudAsset): number | undefined {
+  return asset.width !== undefined && asset.height !== undefined
+    ? asset.width / asset.height
+    : undefined
+}
 
 /**
  * What everyone published, by kind — the one band of the home that is not about this account.
@@ -43,7 +39,7 @@ export function Explore() {
       actions={
         <div role="tablist" aria-label={t('home.sections.explore')} className="flex gap-2">
           {ASSET_TYPES.map(candidate => (
-            <Tab
+            <ExploreTab
               key={candidate}
               type={candidate}
               current={candidate === type}
@@ -67,47 +63,8 @@ export function Explore() {
             {t(exhausted ? 'home.explore.none' : 'home.explore.loading')}
           </QuietNote>
         }
-        renderCard={asset => <Tile asset={asset} />}
+        renderCard={asset => <ExploreTile asset={asset} />}
       />
     </Section>
   )
-}
-
-/** The shape a tile reserves, from what the API stated. `undefined` when it stated nothing. */
-function ratioOf(asset: CloudAsset): number | undefined {
-  return asset.width !== undefined && asset.height !== undefined
-    ? asset.width / asset.height
-    : undefined
-}
-
-type TabProps = {
-  type: AssetType
-  current: boolean
-  onSelect: () => void
-}
-
-function Tab({ type, current, onSelect }: TabProps) {
-  const { t } = useTranslation()
-
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={current}
-      {...HINT_BOTTOM(t('home.exploreTabHint'))}
-      onClick={onSelect}
-      className={chipSkin(current)}
-    >
-      {t(`assetTypes.${type}`)}
-    </button>
-  )
-}
-
-/**
- * One published asset. Inert on purpose: it belongs to somebody else, and the studio has no
- * measured way to bring one in — `cloud.pull` is the library's errand, over assets this key
- * owns. Showing a fetch button that may refuse is worse than showing none.
- */
-function Tile({ asset }: { asset: CloudAsset }) {
-  return <MediaTile fill {...cloudTileFace(asset, COLUMN_WIDTH)} />
 }

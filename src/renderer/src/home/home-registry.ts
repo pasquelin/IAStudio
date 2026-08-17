@@ -1,8 +1,8 @@
 import type { FC } from 'react'
 import type { HomeSectionId } from '@shared/domain/home'
-import { Explore } from './sections/Explore'
-import { Spotlight } from './sections/Spotlight'
-import { Tools } from './sections/Tools'
+import { Explore } from './sections/Explore/Explore'
+import { Spotlight } from './sections/Spotlight/Spotlight'
+import { Tools } from './sections/Tools/Tools'
 
 /**
  * What draws each section. A `Record` rather than a list, so a section added to the shared
