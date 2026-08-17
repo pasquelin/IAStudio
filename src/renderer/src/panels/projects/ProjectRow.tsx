@@ -8,6 +8,7 @@ import { Row } from '@/design/Row'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { timeAgo } from '@/helpers/relativeTime'
 import { InlineRename } from '@/design/InlineRename'
+import { ROW_LINE } from '@/design/styles'
 import { ProjectMenu } from './ProjectMenu/ProjectMenu'
 import { ProjectMenuRows, PROJECT_MENU_ROWS } from './ProjectMenu/ProjectMenuRows'
 
@@ -76,7 +77,7 @@ export const ProjectRow = memo(function ProjectRow({
       // pointer press on its own; the click is what it cannot know it has to stop, since the lists
       // it was written for only SELECT on one.
       <span
-        className="flex h-full items-center px-1"
+        className={ROW_LINE}
         onPointerDown={event => event.stopPropagation()}
         onClick={event => event.stopPropagation()}
         onDoubleClick={event => event.stopPropagation()}
