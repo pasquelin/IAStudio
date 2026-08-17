@@ -749,6 +749,10 @@ export function createServices(settings: SettingsStore): Services {
     projectPath: () => project.path(),
     catalog: () => project.catalog(),
     now: timestamp,
+    // The same function the rescan hashes with (`project-disk`), which is what makes the two
+    // comparable: a fingerprint recorded here is what lets a generated file be followed after
+    // the user files it away themselves.
+    hash: path => hashSource(path).catch(() => null),
     // The API states no duration and no track list beside the bytes it hands over, so a
     // generated take reached the timeline as an untimed clip: five arbitrary seconds, and no
     // way to tell whether it carries a sound. ffprobe reads the file that just landed.
