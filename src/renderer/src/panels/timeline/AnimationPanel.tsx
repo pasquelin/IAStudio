@@ -1,10 +1,11 @@
 import { mdiRhombus } from '@mdi/js'
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { secondsToUs, type Us } from '@shared/domain/time'
+import { secondsToUs } from '@shared/domain/time'
 import { EmptyState } from '@/design/EmptyState'
-import { clampPlayhead } from '@/engines/scene/animationEval'
 import { animationRows, type ClipBlock } from '@/engines/scene/animationRows'
+import { useAnimationPlayback } from '@/hooks/useAnimationPlayback'
+import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
 import { useModelClips } from '@/stores/modelClips'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -33,7 +34,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const expandedList = useAnimationViews(state => animationViewOf(state, documentId).expanded)
   const order = useAnimationViews(state => animationViewOf(state, documentId).order)
 
-  usePlayback(documentId, view.playing, timeline.duration)
+  useAnimationPlayback(documentId, view.playing, timeline.duration)
   useHeadInsideBand(documentId, view.playhead, timeline.duration)
 
   // Both memos are keyed on identities zustand keeps stable; building either inside a selector
@@ -77,52 +78,4 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
       )}
     </div>
   )
-}
-
-/**
- * Runs the head forward while it plays. A `requestAnimationFrame` rather than the engine's own
- * loop: the head is session state React owns, and the engine is told where it stands — never the
- * other way round, which is invariant 4.
- */
-function usePlayback(documentId: string, playing: boolean, duration: Us): void {
-  useEffect(() => {
-    if (!playing) return
-
-    let frame = 0
-    let last = performance.now()
-
-    const step = (now: number): void => {
-      // Read from the store rather than from a prop: the effect must not restart on the very
-      // frames it causes, and a ref written during render is not allowed either.
-      const views = useSceneViews.getState()
-      // `performance.now()` counts milliseconds; the head counts microseconds.
-      const next = sceneViewOf(views, documentId).playhead + (now - last) * 1000
-      last = now
-
-      if (next >= duration) {
-        views.setPlayhead(documentId, duration)
-        views.setPlaying(documentId, false)
-        return
-      }
-      views.setPlayhead(documentId, clampPlayhead(next, duration))
-      frame = requestAnimationFrame(step)
-    }
-
-    frame = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(frame)
-  }, [documentId, playing, duration])
-}
-
-/**
- * Pulls the head back inside the band when the band is shortened under it.
- *
- * Nothing else would: shortening is an edit of the document, the head is session state, and the
- * two never meet. Left outside, the head sits where no key can stand, and Play stops on the frame
- * it starts on — the very defect the rewind was added to close.
- */
-function useHeadInsideBand(documentId: string, playhead: Us, duration: Us): void {
-  useEffect(() => {
-    if (playhead <= duration) return
-    useSceneViews.getState().setPlayhead(documentId, duration)
-  }, [documentId, playhead, duration])
 }

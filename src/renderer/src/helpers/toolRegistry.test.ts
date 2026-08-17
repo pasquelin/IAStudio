@@ -7,14 +7,8 @@ import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
 import { preferModels } from '@/stores/settings-fixtures'
 import { useProject } from '@/stores/project'
-import {
-  shownTool,
-  toolIcon,
-  toolStateOf,
-  TOOLS,
-  useAvailableTools,
-  type ToolState,
-} from './toolRegistry'
+import { useAvailableTools } from '@/hooks/useAvailableTools'
+import { shownTool, toolIcon, toolStateOf, TOOLS, type ToolState } from './toolRegistry'
 
 /** What a workspace answers to: a project is always open in one, by definition. */
 const WITH_MODEL: ToolState = { hasModel: true, hasProject: true }

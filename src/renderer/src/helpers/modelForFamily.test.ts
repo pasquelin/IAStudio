@@ -2,7 +2,8 @@ import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useModels } from '@/stores/models'
 import { preferModels } from '@/stores/settings-fixtures'
-import { modelForFamily, useModelForFamily } from './modelForFamily'
+import { useModelForFamily } from '@/hooks/useModelForFamily'
+import { modelForFamily } from './modelForFamily'
 
 beforeEach(() => {
   preferModels()

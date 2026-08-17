@@ -2,8 +2,10 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { clamp } from '@shared/numeric'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { scrollOffsetWithin, scrollParentOf } from '@/helpers/scrollParent'
-import { useScrollHost } from './scrollHost'
-import { columnsIn, GAP, PREFETCH_ROWS, useReachEnd, useRemeasure } from './virtual'
+import { useReachEnd } from '@/hooks/useReachEnd'
+import { useRemeasure } from '@/hooks/useRemeasure'
+import { useScrollHost } from '@/hooks/useScrollHost'
+import { columnsIn, GAP, PREFETCH_ROWS } from './virtual'
 
 /** A picture whose shape nobody stated. Square is the least wrong guess, and never distorts. */
 const FALLBACK_RATIO = 1

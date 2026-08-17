@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useCallback, useEffect, useState } from 'react'
 import type { PlanAccess } from '@shared/domain/plan'
-import { isBeyondPlan } from '@shared/domain/plan'
 import { getBridge } from '@/services/bridge'
-import { useAccountChange } from '@/hooks/useAccountChange'
 import { useSettings } from '@/stores/settings'
+import { useAccountChange } from './useAccountChange'
+import { useReloadKey } from './useReloadKey'
 
 /**
  * The account's plan, or `null` while it is unknown — unread, unauthenticated, or refused.
@@ -18,7 +17,7 @@ import { useSettings } from '@/stores/settings'
  */
 export function usePlanAccess(): PlanAccess | null {
   const [access, setAccess] = useState<PlanAccess | null>(null)
-  const [attempt, setAttempt] = useState(0)
+  const [attempt, again] = useReloadKey()
   const authenticated = useSettings(state => state.auth.authenticated)
 
   /**
@@ -34,56 +33,28 @@ export function usePlanAccess(): PlanAccess | null {
   useAccountChange(
     useCallback(() => {
       setAccess(null)
-      setAttempt(count => count + 1)
-    }, []),
+      again()
+    }, [again]),
   )
 
   useEffect(() => {
     if (!authenticated) return
 
-    let current = true
+    let live = true
     void getBridge()
       ?.scenario.plan()
       .then(plan => {
-        if (current) setAccess(plan)
+        if (live) setAccess(plan)
       })
       .catch(() => {
         // An unreadable plan refuses nothing. The main process already logged why.
-        if (current) setAccess(null)
+        if (live) setAccess(null)
       })
 
     return () => {
-      current = false
+      live = false
     }
   }, [authenticated, attempt])
 
   return access
-}
-
-/**
- * Why a model is out of reach, or `undefined` when it is not.
- *
- * A sentence exactly when `isBeyondPlan` is true, which is what lets a caller read `!== undefined`
- * as the predicate itself — the model panel greys a cell on that answer and explains it with the
- * same one, so no cell can end up dimmed with nothing to say why. The three cases of
- * `planAccess.test.ts` are what keeps the two halves of that in step.
- *
- * The plan is passed in rather than read here because `usePlanAccess` is state per caller, not a
- * cache: a surface holding the plan for something else would end up with two copies of it, and
- * `ModelFamilySettings` — which greys its `<option>`s from one and would take its sentence from
- * the other — is that surface today.
- *
- * The sentence names the plan, not the model, so `useMemo` interpolates it once per plan instead
- * of once per render. Same bracket as `facetsFor` in the model panel, memoised for the same
- * reason: that panel re-renders on every keystroke and every scroll frame.
- */
-export function usePlanRefusal(
-  plan: PlanAccess | null,
-): (requiredLevel: number | undefined) => string | undefined {
-  const { t } = useTranslation()
-
-  return useMemo(() => {
-    const sentence = plan ? t('models.planLockedHint', { plan: plan.name }) : undefined
-    return requiredLevel => (isBeyondPlan(requiredLevel, plan) ? sentence : undefined)
-  }, [plan, t])
 }

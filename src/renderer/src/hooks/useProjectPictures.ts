@@ -1,10 +1,8 @@
 import { useCallback, useMemo } from 'react'
 import { isLocalPicture, posterUrl, type Asset, type AssetType } from '@shared/domain/asset'
 import type { TextureOption } from '@/design/TextureField/TextureField'
-import { useCatalogueAssets } from '@/hooks/useCatalogueAssets'
 import { getBridge } from '@/services/bridge'
-
-const NOTHING: readonly Asset[] = []
+import { NO_ASSETS, useCatalogueAssets } from './useCatalogueAssets'
 
 /**
  * Reads in flight, per question. A mesh's material stacks five slots and the model overrides five
@@ -44,7 +42,8 @@ export function useProjectPictures(types: readonly AssetType[]): readonly Textur
     () =>
       askOnce(
         types.join(),
-        () => getBridge()?.assets.search({ types, location: 'local' }) ?? Promise.resolve(NOTHING),
+        () =>
+          getBridge()?.assets.search({ types, location: 'local' }) ?? Promise.resolve(NO_ASSETS),
       ),
     [types],
   )

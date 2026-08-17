@@ -34,6 +34,8 @@ const GAUGE = {
 export function InlineRename({ value, label, onCommit, gauge = 'control' }: InlineRenameProps) {
   const [draft, setDraft] = useState(value)
   // Read by the unmount cleanup, which must not re-run on every keystroke to see the last one.
+  // NOT `useLatest`: `done` writes the abandoned draft back into it, so this ref is owned here
+  // rather than mirrored — and a hook that overwrote it on the next render would fight for it.
   const latest = useRef({ draft, onCommit, value })
   /**
    * Whether a commit already happened. Without it, Enter commits and then the unmount fires a

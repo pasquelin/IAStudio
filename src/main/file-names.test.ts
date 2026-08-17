@@ -17,9 +17,9 @@ import { PROJECT_TREES, SOURCE_ROOT, WHOLE_PROJECT, sourceFiles } from './source
  * among its functions: **an error class is a detail of a module, never what names a file.**
  * Requiring the name to MATCH is what tells the two apart, and it dropped six false findings.
  *
- * A hook lives under `hooks/`, wherever its caller does. And a `.tsx` holds ONE component: a
- * second one that grows there is a file waiting to be written, and its parent's folder is where
- * it goes.
+ * A hook lives in `hooks/useItsOwnName.ts`, wherever its caller does. And a `.tsx` holds ONE
+ * component: a second one that grows there is a file waiting to be written, and its parent's
+ * folder is where it goes.
  */
 const RULE = 'a capital is earned by exporting a component or a class of that name'
 
@@ -64,6 +64,37 @@ function handsOut(code: string, name: string): boolean {
   ).test(code)
 }
 
+/**
+ * Every `use…` a file declares, exported or not, deduplicated — a private one is still a hook a
+ * reader goes to `hooks/` to find, and `useAppliedSettings` had one.
+ */
+function hooksIn(code: string): Set<string> {
+  const declared = [...code.matchAll(/(?:^|\n)(?:export )?(?:function|const) (use[A-Z]\w*)/g)]
+
+  // `?? ''`: the group is filled whenever the pattern matched, which the type cannot know.
+  return new Set(declared.map(match => match[1] ?? ''))
+}
+
+/** Whether the file IS `hooks/<name>.ts` — the promise the name of a hook file makes. */
+function isFileOf(path: string, name: string): boolean {
+  return (
+    path.endsWith(`${sep}hooks${sep}${name}.ts`) || path.endsWith(`${sep}hooks${sep}${name}.tsx`)
+  )
+}
+
+/**
+ * A store is exempt, and it is the only thing that is.
+ *
+ * `useProject` is not a hook, it is the store itself — `create()` hands back something a component
+ * subscribes to, and forty of them would have to move into `hooks/` under names nobody looks for
+ * them by. The selectors written beside one are exempt for the same reason: `useHomeVisible` is
+ * `homeIsVisible` subscribed, and the two halves of one answer belong in one file.
+ *
+ * The angle blind here, in clear: a real hook written under `stores/` is not reported. Decided
+ * 2026-08-17 — it is the price of not splitting every store from its own selectors.
+ */
+const isStore = (path: string): boolean => path.includes(`${sep}stores${sep}`)
+
 const projectSources = PROJECT_TREES.flatMap(tree => sourceFiles(tree)).filter(
   path => !isDeclaration(path),
 )
@@ -91,19 +122,31 @@ describe(`file names — ${RULE}`, () => {
   )
 
   /**
-   * A hook is found by its name, wherever it was written. `hooks/` is the one place a reader
-   * looks for one, and twelve of them were somewhere else the day this guard was written — five
-   * under `panels/inspector`, three under `spaces/audio`. They moved the lot after, so this reads
-   * as the rule rather than as a budget, and the next stray one fails on sight.
+   * A hook lives in `hooks/useItsOwnName.ts`, and nowhere else. `hooks/` is the one place a
+   * reader looks for one, and twelve of them were somewhere else the day this rule landed — five
+   * under `panels/inspector`, three under `spaces/audio`.
+   *
+   * Read on the file's NAME alone, that rule was blind on both sides, and both were paid for.
+   * Twenty-one hooks were declared in files named for something else — three in `design/virtual`,
+   * two in `helpers/planAccess`, five under `panels/assets` — and a reader had no way to find
+   * them. And two files under `hooks/` carried a second hook whose name was not theirs, so
+   * `useHeldCommand` was imported from `useShortcuts` and `useUsageEvents` from `useUsageReport`.
+   *
+   * So it reads the DECLARATIONS. Every `use[A-Z]` a project file declares must sit under
+   * `hooks/`, in the file of its own name — one hook, one file, found by the name it is called by.
    */
   it(
-    'keeps every hook under a hooks folder',
+    'gives every hook a file of its own name under hooks',
     () => {
-      const strayed = projectSources.filter(
-        path => /^use[A-Z]/.test(stem(path)) && !path.includes(`${sep}hooks${sep}`),
-      )
+      const misplaced = projectSources
+        .filter(path => !isStore(path))
+        .flatMap(path =>
+          [...hooksIn(readFileSync(path, 'utf8'))]
+            .filter(name => !isFileOf(path, name))
+            .map(name => `${reported(path)} declares ${name}`),
+        )
 
-      expect(strayed.map(reported).sort()).toEqual([])
+      expect(misplaced.sort()).toEqual([])
     },
     WHOLE_PROJECT,
   )

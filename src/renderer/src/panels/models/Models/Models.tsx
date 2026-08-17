@@ -1,15 +1,17 @@
 import { mdiCubeScan } from '@mdi/js'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MODEL_IDS_BATCH_LIMIT, type ModelPage, type ModelSummary } from '@shared/domain/model'
+import type { ModelPage, ModelSummary } from '@shared/domain/model'
 import { failureKeyOf } from '@/services/failureMessage'
-import { usePlanAccess, usePlanRefusal } from '@/helpers/planAccess'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { isFiltered } from '@/helpers/collectionState'
-import { useModelForFamily } from '@/helpers/modelForFamily'
 import { useDebounced } from '@/hooks/useDebounced'
+import { useLazyPreviews } from '@/hooks/useLazyPreviews'
+import { useModelForFamily } from '@/hooks/useModelForFamily'
+import { usePlanAccess } from '@/hooks/usePlanAccess'
+import { usePlanRefusal } from '@/hooks/usePlanRefusal'
 import { getBridge } from '@/services/bridge'
 import { useLayouts } from '@/stores/layouts'
 import { modelCollectionOf, useModels } from '@/stores/models'
@@ -27,67 +29,12 @@ const PAGE_LIMIT = 24
 /** A thumbnail, a name and what the model does: two lines beside a 32 px picture. */
 const ROW_HEIGHT = 40
 
-/** Long enough to gather a flick of the scrollbar, short enough to feel immediate. */
-const THUMBNAIL_GATHER_MS = 120
-
 /**
  * How many pages the panel pulls on its own before it waits for the user. Not just the empty
  * ones: a filter that matches a handful never fills the viewport either, so the end stays in
  * sight and the list would keep asking until the catalogue ran dry — on open, untouched.
  */
 const AUTOMATIC_PULLS = 6
-
-/**
- * Pictures resolved only for the cards that reached the screen. 482 of the 642 public models
- * carry no `thumbnail` and are pictured by one of their example assets instead, whose URL is
- * signed and short-lived — so it is fetched when seen, never with the listing.
- *
- * The ids are gathered before being asked for: scrolling crosses one row at a time, and
- * requesting per row would fire a burst of tiny calls at a single endpoint — the rate-limit
- * trap. One request per pause, and never twice for the same asset.
- */
-function useLazyPreviews() {
-  const [urls, setUrls] = useState<Record<string, string>>({})
-  const asked = useRef(new Set<string>())
-  const pending = useRef(new Set<string>())
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current)
-    },
-    [],
-  )
-
-  const resolve = useCallback((assetIds: readonly string[]) => {
-    for (const id of assetIds) {
-      if (!asked.current.has(id)) {
-        asked.current.add(id)
-        pending.current.add(id)
-      }
-    }
-
-    if (!pending.current.size || timer.current) return
-
-    timer.current = setTimeout(() => {
-      timer.current = null
-      // Capped to what the channel accepts; the rest stays pending for the next window.
-      const batch = [...pending.current].slice(0, MODEL_IDS_BATCH_LIMIT)
-      for (const id of batch) pending.current.delete(id)
-
-      void getBridge()
-        ?.scenario.modelPreviews(batch)
-        .then(found => setUrls(current => ({ ...current, ...found })))
-        .catch(() => {
-          // Forgotten, not remembered as done: a batch lost to a dropped connection would
-          // otherwise leave those cards on their placeholder until the panel is closed.
-          for (const id of batch) asked.current.delete(id)
-        })
-    }, THUMBNAIL_GATHER_MS)
-  }, [])
-
-  return { urls, resolve }
-}
 
 /**
  * The model browser. It follows the active workspace — Image shows image models, 3D shows 3D

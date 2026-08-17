@@ -6,13 +6,9 @@ import { ToolButton } from '@/design/ToolButton'
 import { useToolSurface } from '@/stores/layouts'
 import { arrangementOf, useTools } from '@/stores/tools'
 import { TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
-import {
-  shownTool,
-  toolTitleKey,
-  useAvailableTools,
-  useToolState,
-  type Tool,
-} from '@/helpers/toolRegistry'
+import { shownTool, toolTitleKey, type Tool } from '@/helpers/toolRegistry'
+import { useAvailableTools } from '@/hooks/useAvailableTools'
+import { useToolState } from '@/hooks/useToolState'
 
 /** The zone's populated halves, in order. Empty ones never reach the rail. */
 function halvesOf(tools: Tool[]): [ToolSlot, Tool[]][] {

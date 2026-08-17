@@ -4,10 +4,11 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { isTyping } from '@/helpers/typing'
+import { useRemeasure } from '@/hooks/useRemeasure'
+import { useRowHeight } from '@/hooks/useRowHeight'
 import { rowDrag } from './rowDrag'
 import { ROW_LINE, rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
-import { useRemeasure, useRowHeight } from './virtual'
 
 export type TreeNode = { id: string; parentId: string | null }
 

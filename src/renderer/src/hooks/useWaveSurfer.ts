@@ -5,7 +5,8 @@ import TimelinePlugin, { type TimelinePluginOptions } from 'wavesurfer.js/dist/p
 import { clamp } from '@shared/numeric'
 import { playbackToken } from '@/engines/timeline/playback'
 import { MAX_SCALE, ZOOM_STEP } from '@/engines/timeline/viewport'
-import { useToken } from '@/hooks/useToken'
+import { useLatest } from './useLatest'
+import { useToken } from './useToken'
 import { durationOf } from '@/engines/audio/audioData'
 import type { RenderedAudio } from '@/engines/audio/audioRender'
 import type { Region } from '@/engines/audio/edits'
@@ -108,10 +109,7 @@ export function useWaveSurfer({
 
   // Kept in a ref so the listeners below never have to be re-subscribed when the callback
   // identity changes — a re-subscription mid-drag drops the region being drawn.
-  const notify = useRef(onRegionChange)
-  useEffect(() => {
-    notify.current = onRegionChange
-  }, [onRegionChange])
+  const notify = useLatest(onRegionChange)
 
   // Created once per container. Kept out of the data effect below on purpose: rebuilding the
   // instance on every edit would destroy the very region the pointer is dragging.
@@ -154,7 +152,7 @@ export function useWaveSurfer({
       regions.current = null
       setPlaying(false)
     }
-  }, [container, owner])
+  }, [container, owner, notify])
 
   /**
    * The palette, laid on the instance rather than handed to its constructor — which is what lets

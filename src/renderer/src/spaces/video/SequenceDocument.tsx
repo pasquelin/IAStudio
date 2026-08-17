@@ -17,6 +17,7 @@ import { useDocuments } from '@/stores/documents'
 import { playbackOf, usePlayback } from '@/stores/playback'
 import { mirrorMessageOf, openMirrorChannel } from './mirrorChannel'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useLatest } from '@/hooks/useLatest'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
@@ -100,14 +101,11 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   const running = usePlayback(state => playbackOf(state, programOwner(documentId)))
   // Written from an effect and not during the render, which React forbids: what it holds is where
   // playback starts FROM, so that pressing play does not make this fire on every frame after.
-  const playhead = useRef(sequence.playhead)
-  useEffect(() => {
-    playhead.current = sequence.playhead
-  }, [sequence.playhead])
+  const playhead = useLatest(sequence.playhead)
 
   useEffect(() => {
     channel.current?.postMessage({ kind: 'playing', playing: running, playhead: playhead.current })
-  }, [running])
+  }, [running, playhead])
 
   // Found through its track, not by id alone: the montage's own answer to "is this a sound?" is
   // the track the clip sits on, and the inspector and the program monitor both read it there.

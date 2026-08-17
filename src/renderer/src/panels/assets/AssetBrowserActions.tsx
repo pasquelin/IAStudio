@@ -5,19 +5,19 @@ import {
   mdiTextBoxOutline,
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { useToolLying } from '@/app/toolZone'
 import { getBridge } from '@/services/bridge'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
 import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
+import { useAssetFacets } from '@/hooks/useAssetFacets'
+import { useToolLying } from '@/hooks/useToolLying'
+import { useTypeLabels } from '@/hooks/useTypeLabels'
 import { useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
 import { useSelection } from '@/stores/selection'
-import { useAssetFacets } from './facets'
-import { useTypeLabels } from './typeFacet'
 
 /** Names the chosen pictures from what the API sees in them. Nothing happens without a click. */
 async function describeSelection(assetIds: readonly string[]): Promise<void> {

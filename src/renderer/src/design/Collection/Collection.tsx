@@ -1,19 +1,15 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
+import { useGrid } from '@/hooks/useGrid'
+import { useReachEnd } from '@/hooks/useReachEnd'
+import { useRemeasure } from '@/hooks/useRemeasure'
+import { useRowHeight, type RowHeight } from '@/hooks/useRowHeight'
 import { rowDrag } from '../rowDrag'
 import { CollectionCell } from './CollectionCell'
-import {
-  columnsIn,
-  GAP,
-  PREFETCH_ROWS,
-  useReachEnd,
-  useRemeasure,
-  useRowHeight,
-  type RowHeight,
-} from '../virtual'
+import { GAP, PREFETCH_ROWS } from '../virtual'
 
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
 const ROW_GAP = 4
@@ -130,51 +126,6 @@ function rolesFor(pickable: boolean, openable: boolean): CollectionRoles {
   if (openable) return { list: 'list', cell: 'listitem' }
 
   return {}
-}
-
-type Grid = {
-  columns: number
-  /**
-   * What one column actually measures. Cards are square and fill their column, so this — not
-   * the requested thumbnail size — is their height, and estimating a row from the request
-   * instead makes every row shorter than its content and the grid overlaps itself.
-   */
-  columnWidth: number
-}
-
-/**
- * How the cards divide the available width. `observe` reports the current size straight away,
- * so no separate first measurement is needed; until it fires, one column is the honest answer
- * rather than a guess.
- */
-function useGrid(host: { current: HTMLElement | null }, cardWidth: number, enabled: boolean): Grid {
-  const [grid, setGrid] = useState<Grid>({ columns: 1, columnWidth: cardWidth })
-
-  useEffect(() => {
-    const element = host.current
-    // A list-only collection never reads this, and `columnWidth` is a float that changes with
-    // every pixel of a splitter drag — the observer would re-render the window twice a frame.
-    if (!element || !enabled) return
-
-    const observer = new ResizeObserver(entries => {
-      const width = entries[0]?.contentRect.width
-      if (width === undefined) return
-
-      const { columns, columnWidth } = columnsIn(width, cardWidth)
-
-      // Same values, same object: a resize that changes neither must not re-render the grid.
-      setGrid(current =>
-        current.columns === columns && current.columnWidth === columnWidth
-          ? current
-          : { columns, columnWidth },
-      )
-    })
-
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [host, cardWidth, enabled])
-
-  return grid
 }
 
 /**

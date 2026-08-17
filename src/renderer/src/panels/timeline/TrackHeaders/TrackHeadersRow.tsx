@@ -1,6 +1,6 @@
 import { mdiDotsHorizontal } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { useContextMenu } from '@/design/ContextMenu'
+import { useContextMenu } from '@/hooks/useContextMenu'
 import { MenuButton } from '@/design/MenuButton'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { ToolButton } from '@/design/ToolButton'

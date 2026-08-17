@@ -6,7 +6,7 @@ import { UsageTableHeadCell } from './UsageTable/UsageTableHeadCell'
 import { UsageTableRow } from './UsageTable/UsageTableRow'
 import { formatMoment } from '@/helpers/format'
 import { formatUnits } from './format'
-import { useUsageEvents } from '@/hooks/useUsageReport'
+import { useUsageEvents } from '@/hooks/useUsageEvents'
 import { WINDOW_CAPTION } from '@/design/windowStyles'
 
 /**

@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { activeAccount, useAccounts } from '@/stores/accounts'
+import { useLatest } from './useLatest'
 
 /**
  * Runs `purge` whenever the active account changes. The window's counterpart to the main
@@ -7,14 +8,10 @@ import { activeAccount, useAccounts } from '@/stores/accounts'
  * to a list somewhere else.
  */
 export function useAccountChange(purge: () => void): void {
-  const latest = useRef(purge)
-
-  // Kept in an effect rather than assigned while rendering, as `useShortcuts` does: a caller
-  // passing a fresh closure would otherwise re-subscribe below, which resets the baseline and
-  // swallows the very switch this exists to catch.
-  useEffect(() => {
-    latest.current = purge
-  }, [purge])
+  // Read at event time and never subscribed to: a caller passing a fresh closure would otherwise
+  // re-subscribe below, which resets the baseline and swallows the very switch this exists to
+  // catch.
+  const latest = useLatest(purge)
 
   useEffect(() => {
     /*
@@ -33,5 +30,5 @@ export function useAccountChange(purge: () => void): void {
       active = next
       if (switched) latest.current()
     })
-  }, [])
+  }, [latest])
 }

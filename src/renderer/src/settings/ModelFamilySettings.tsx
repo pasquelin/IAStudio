@@ -1,48 +1,11 @@
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ModelFamily, ModelSummary } from '@shared/domain/model'
+import type { ModelFamily } from '@shared/domain/model'
 import { ModelOptions, type PickableModel } from '@/design/ModelOptions'
-import { getBridge } from '@/services/bridge'
-import { usePlanAccess, usePlanRefusal } from '@/helpers/planAccess'
+import { useFamilyModels } from '@/hooks/useFamilyModels'
+import { usePlanAccess } from '@/hooks/usePlanAccess'
+import { usePlanRefusal } from '@/hooks/usePlanRefusal'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settingsDraft'
-
-/**
- * A `<select>` is not a browser: past a hundred entries it stops being usable long before it
- * stops being complete. This picker deliberately shows only the head of the catalogue — the
- * order is the API's own relevance score, so the most used models are the ones it holds.
- */
-const PICKER_LIMIT = 100
-
-/**
- * The models of one family, fetched here rather than through a store: this list is read by
- * one screen, it is already cached by the registry in the main process, and the settings
- * window has no reason to hold a second replica of the catalogue.
- */
-function useFamilyModels(family: ModelFamily): ModelSummary[] {
-  const [models, setModels] = useState<ModelSummary[]>([])
-
-  useEffect(() => {
-    let current = true
-    const bridge = getBridge()
-
-    void bridge?.scenario
-      .searchModels({ family, limit: PICKER_LIMIT })
-      .then(page => {
-        if (current) setModels(page.items)
-      })
-      .catch(() => {
-        // Not authenticated, or offline: an empty picker says so on its own.
-        if (current) setModels([])
-      })
-
-    return () => {
-      current = false
-    }
-  }, [family])
-
-  return models
-}
 
 /**
  * The stored default kept among the options whatever the page holds, so the screen never shows
