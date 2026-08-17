@@ -44,7 +44,7 @@ Neuf contextes :
 |---|---|
 | **Partout dans l’application** | n’importe quelle fenêtre, n’importe quel espace |
 | **Dans la barre des espaces** | la barre du haut, quand le focus est sur l’un de ses onglets |
-| **Dans l’Explorateur** | le panneau du dossier de projet, dans tous les espaces et à l’accueil |
+| **Dans l’explorateur** | le panneau du dossier de projet, dans tous les espaces et à l’accueil |
 | **Dans la vue 3D** | le viewport de l’espace 3D |
 | **Dans le montage** | la timeline de l’espace Vidéo et de l’espace Audio |
 | **Dans l’image** | le canvas de l’espace Image |
@@ -165,10 +165,11 @@ l’écran des raccourcis.
 
 ---
 
-## Dans l’Explorateur
+## Dans l’explorateur
 
 Le seul contexte qui ne soit pas un espace : c’est le panneau du dossier de projet, et il écoute
-partout où ce panneau est ouvert — dans les six espaces comme à l’accueil.
+partout où ce panneau est ouvert — dans les six espaces comme à l’accueil. L’écran des raccourcis
+le nomme exactement comme ce titre.
 
 **Il n’écoute que si le focus est dedans.** Cliquez une ligne, ou entrez-y au `Tab` : tant que
 vous êtes ailleurs, ces touches appartiennent au document ouvert. C’est ce qui permet à `⌘Z`,
@@ -664,7 +665,7 @@ laisserait croire que `⌘D` ou `⌘Z` y font ce qu’ils font dans l’espace d
 | `⌥←` |  | Déplacer à gauche |  |  |  |  |  |  |
 | `⌥→` |  | Déplacer à droite |  |  |  |  |  |  |
 
-**Dans l’Explorateur** — quand le focus est dans le panneau, et là seulement :
+**Dans l’explorateur** — quand le focus est dans le panneau, et là seulement :
 
 | Touche | Ce qu’elle fait |
 |---|---|
