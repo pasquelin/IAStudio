@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
 import { formatDecimal, parseDecimal } from '@/helpers/format'
 import { bound, type NumericBounds } from '@shared/numeric'
-import { FIELD, FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
+import { FIELD_FILL, FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
 export type NumberFieldProps = NumericBounds &
   GestureProps & {
@@ -158,7 +158,7 @@ export function NumberField({
           setTyped(null)
           onGestureEnd?.()
         }}
-        className={cn(FIELD, 'text-tiny min-w-0 flex-1')}
+        className={FIELD_FILL}
       />
     </div>
   )

@@ -4,7 +4,7 @@ import type { UseFormRegisterReturn } from 'react-hook-form'
 import { ASSET_TYPES, assetUrl, posterUrl, type Asset } from '@shared/domain/asset'
 import { cn } from '@/helpers/cn'
 import { AssetDropTarget } from './AssetDropTarget'
-import { FIELD, FIELD_THUMBNAIL } from './styles'
+import { FIELD_FILL, FIELD_THUMBNAIL } from './styles'
 import { Thumbnail } from './Thumbnail'
 import { UiIcon } from './UiIcon'
 
@@ -71,7 +71,7 @@ export function AssetDropField({ registration, initial, placeholder }: AssetDrop
       <input
         type="text"
         placeholder={placeholder}
-        className={cn(FIELD, 'min-w-0 flex-1')}
+        className={FIELD_FILL}
         {...registration}
         value={assetId}
         onChange={event => {

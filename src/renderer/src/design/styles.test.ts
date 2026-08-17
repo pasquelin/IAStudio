@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   BUTTON_NEUTRAL,
   CONTROL,
+  FIELD,
+  FIELD_FILL,
   NATIVE_SELECT,
   OVERLAY_BUTTON,
   ROW_INK,
@@ -390,19 +392,28 @@ describe('the word a bar sets beside its buttons', () => {
 })
 
 /**
- * The padding written back on top of `CONTROL`, which is the shape the four native pickers had
- * before they were given a constant. Read at the CALL, not over the whole file: a component is
- * free to wear `CONTROL` and to have `px-1` somewhere else entirely on another element, and a
- * rule by file would call that a violation.
+ * A caller writing back, at the call, what the constant it wears already carries. Read at the
+ * CALL and not over the whole file: a component is free to wear `CONTROL` and to have `px-1`
+ * somewhere else entirely on another element, and a rule by file would call that a violation.
  *
- * **What it cannot see**: `cn(CONTROL, someVariable)`, or a padding reached through a second
+ * All the words or none — a constant is only rewritten when everything it added comes back.
+ *
+ * **What it cannot see**: `cn(CONTROL, someVariable)`, or words reached through a second
  * argument — `cn(CONTROL, 'w-full', 'px-1')`. Both are ways of writing it again on purpose;
  * this catches the shape the habit produces.
  */
-const REPADS_CONTROL = /cn\(\s*CONTROL\s*,\s*['"`]([^'"`\n]*)['"`]/g
+const rewrites = (constant: string, words: readonly string[]) => {
+  const call = new RegExp('cn\\(\\s*' + constant + '\\s*,\\s*[\'"`]([^\'"`\\n]*)[\'"`]', 'g')
 
-const repadsControl = (source: string): boolean =>
-  [...source.matchAll(REPADS_CONTROL)].some(match => (match[1] ?? '').split(/\s+/).includes('px-1'))
+  return (source: string): boolean =>
+    [...source.matchAll(call)].some(match => {
+      const written = (match[1] ?? '').split(/\s+/)
+      return words.every(one => written.includes(one))
+    })
+}
+
+/** The shape the four native pickers had before they were given a constant. */
+const repadsControl = rewrites('CONTROL', ['px-1'])
 
 describe('the OS list wearing the control language', () => {
   it('is the control, plus the room around its text and nothing more', () => {
@@ -431,6 +442,47 @@ describe('the OS list wearing the control language', () => {
   it('is worn by the four pickers it was extracted from', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && source.includes('NATIVE_SELECT'),
+    )
+
+    expect(wearing.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+/**
+ * The way a field was made to fill its line before it had a constant. Both words together and
+ * never one, which is what `rewrites` gives: `min-w-0 flex-1` is the studio's commonest pair of
+ * layout classes, worn by thirty-odd elements that are not fields at all, and either half on its
+ * own is a caller dividing its own row rather than reaching for this shape.
+ */
+const refillsField = rewrites('FIELD', ['min-w-0', 'flex-1'])
+
+describe('the field that takes what its line has left', () => {
+  it('is the field, plus the room it claims and nothing more', () => {
+    expect(FIELD_FILL.split(' ')).toEqual([...FIELD.split(' '), 'min-w-0', 'flex-1'])
+  })
+
+  it('is worn rather than spread again at the call', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && refillsField(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('leaves alone the callers whose own width is not this one', () => {
+    // The shape the four fields had before the constant, then the rename dialog's field — held
+    // to the width of its box rather than to a share of a row — and a colour swatch, which is
+    // square. Last, one half of the pair: a caller stopping an overflow it can see.
+    expect(refillsField("cn(FIELD, 'text-tiny min-w-0 flex-1')")).toBe(true)
+    expect(refillsField("cn(FIELD, 'w-full text-xs')")).toBe(false)
+    expect(refillsField("cn(FIELD, 'px-1')")).toBe(false)
+    expect(refillsField("cn(FIELD, 'min-w-0 truncate')")).toBe(false)
+  })
+
+  // The partner of the rule above: a constant nobody wears is a dead export.
+  it('is worn by the four fields it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('FIELD_FILL'),
     )
 
     expect(wearing.length).toBeGreaterThanOrEqual(4)
