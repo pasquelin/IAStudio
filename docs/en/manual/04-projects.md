@@ -178,6 +178,45 @@ system's own file browser.
 **It shows what the studio cannot open, too.** A `.pdf`, a `.txt`, a folder of notes: it is your
 folder, and that is what tells an explorer apart from a list of documents.
 
+#### Two readings of the same folder
+
+The head of the panel carries three buttons. The first two say how the folder is READ, and one of
+the two is always lit:
+
+| Reading | What it shows |
+|---|---|
+| **By folder** | the project as it is filed on disk, as a tree |
+| **By domain** | every file in the project grouped by what it **is**, wherever it is filed |
+
+**By domain** ignores folders. It lays down at most seven headings — the studio's six kinds, plus
+**Other** for what belongs to none — each followed by how many files it counts. **A domain nothing
+fills does not appear**: seven empty headings over a new project would say nothing at all.
+
+A heading names, it does not open: it cannot be selected, it cannot be renamed, and **this reading
+offers no drag at all** — there is no folder on screen left to carry a file into.
+
+It is what answers "where did my videos go?" when they are spread across five folders you made
+yourself.
+
+#### Searching, and sorting
+
+Under the buttons, a bar: a field and a sort. **A search speaks over either reading** — typing a
+word is a question about the project, not about the way it is being shown.
+
+It walks the **whole** folder, not only what is unfolded, and brings back each match **with the
+chain of folders leading to it**: a file nine folds down appears where it lives, not adrift. It
+waits for your typing to settle before it goes.
+
+The sort files by **Name: A to Z** or **Name: Z to A**. It holds for both readings; it does not
+touch the order of the domains, which is the one the studio uses everywhere else.
+
+**The panel tells four silences apart**, and that is the whole of it: a folder that would not be
+read, a walk still running, a project holding no file at all, and a word nothing answers to — so
+it never says "empty" where it means "wait". **A search that matches nothing does not take the
+field it was typed in off the screen**, or there would be no way back.
+
+#### The gestures
+
 | Gesture | Effect |
 |---|---|
 | **Double-click** a folder | opens or closes it |
@@ -187,34 +226,67 @@ folder, and that is what tells an explorer apart from a list of documents.
 | `→` `←` | unfolds, folds |
 | `↑` `↓` | the previous row, the next one |
 | `Enter` | opens the row |
+| **⌘-click** / `Ctrl`-click | adds the row to the selection, or takes it out |
+| **⇧-click** | takes everything from the last row picked to this one |
 | **Drag** a row onto a folder | moves the file or folder into it, under the same name |
+
+**Everything below holds for the whole selection**, not for the clicked row alone: a drag carries
+several at once, and the right-click menu applies to all of them. **Three files carried into a
+folder one of them holds do not light that folder up** — the refusal is asked of the batch, not
+row by row.
 
 **Dragging moves, right-clicking renames** — and the two do not overlap: "Rename" changes the
 name **where the file already is**, and cannot take it out of its folder. A folder that would
 not accept the drop never lights up, so you see before you let go rather than after. A name
 already taken in the destination is refused rather than overwritten, and the journal says so.
 
-**Right-clicking a row** offers three gestures:
+#### Right-clicking: eleven gestures, in four groups
 
-| Gesture | What it does |
-|---|---|
-| **Show in folder** | opens the folder in Finder or Windows Explorer, with the row selected |
-| **Rename** | changes the name on disk, where it is read |
-| **Move to trash** | sends the file to your system's trash |
+| Group | Gesture | What it does |
+|---|---|---|
+| open | **Open** | opens the file in its workspace, or unfolds the folder |
+| | **Show in folder** | opens Finder or Windows Explorer, with the row selected |
+| clipboard | **Cut** · **Copy** | hold the selection for the next paste |
+| | **Paste** | drops what the clipboard holds into the folder shown |
+| files | **New folder** | creates an empty folder in the folder shown |
+| | **Duplicate** | lays a copy beside the original, under a free name |
+| | **Rename** | changes the name on disk, where it is read |
+| | **Move to trash** | sends it to your system's trash |
+| going back | **Undo** · **Redo** | undo and redo the last batch of files |
+
+**Every row shows the shortcut it answers to**, and it is the one *in force*: if you remapped it
+in the settings, yours is what appears here.
+
+**No gesture ever leaves the menu; the ones that do not apply are greyed.** A menu whose length
+changes with the row you clicked is a menu one cannot learn.
+
+**`⌘Z` only undoes files while the focus is inside this panel.** Elsewhere it belongs to the open
+document: undoing on the canvas must not reach your disk.
 
 > **Nothing is deleted here.** "Move to trash" is the system's own trash: the file can be got
 > back from it.
+>
+> **It is the one gesture `⌘Z` does not take back.** Moving, duplicating, creating, renaming are
+> one keystroke from being undone; the system trash has no portable way back, and the studio's
+> history stops there. **That is also why a batch asks first**: past one file, the studio says how
+> many are going and waits for your word. **A single file goes without a question** — it is named
+> on the row you just clicked, and the system offers to put it back.
 >
 > **One door of the studio does delete for good**, and it says so: **Delete document…**, in a tab's
 > menu, takes the file out of the folder without going through the trash. Its dialogue announces
 > "This cannot be undone.", and it means it.
 
 **One refusal, greyed rather than hidden.** What the studio files itself — `assets/`, its six
-per-kind subfolders, `documents/`, `.index/` — cannot be renamed or trashed: the index files every
-asset by its path under `assets/`, and renaming one of those folders would leave rows nothing can
-find again. **The same refusal holds on both sides of a drag**: those folders cannot be picked up,
-and nothing can be dropped into them either — a file landing there would be a file no index row
-speaks of.
+per-kind subfolders, `documents/` — cannot be renamed or trashed: the index files every asset by
+its path under `assets/`, and renaming one of those folders would leave rows nothing can find
+again. **The same refusal holds on both sides of a drag**: those folders cannot be picked up, and
+nothing can be dropped into them either.
+
+**And it holds for what they CONTAIN, as far as moving goes.** A file under `assets/img` cannot be
+cut, copied, duplicated or dragged elsewhere: its path is still what says what it is, and taking
+it out of there would cost it its kind. **Two gestures are the exception, because they do not move
+it**: **renaming** it — the index follows the name — and **moving it to the trash**, where the
+index lets the row go with the file.
 
 **Their contents can be renamed.** An asset and a document each have a gesture of their own, and
 the Explorer leads to it: the name changes, and the file follows in the same move. A document
@@ -227,9 +299,17 @@ is only **one name**: its index row's name IS its file's name.
 > file. The field has closed by the time the answer comes: the activity journal is what says so.
 
 - documents already on screen are marked **Open**;
-- a document's icon says which workspace it belongs to, the same one the rail uses;
-- **nothing whose name starts with a dot is shown** — so `.project.json` and `.index/`, but also
-  a folder of your own whose name you began with a dot.
+- a document's icon says which workspace it belongs to, the same one the rail uses.
+
+#### Hidden items
+
+**Nothing whose name starts with a dot is shown by default** — so `.project.json` and `.index/`,
+but also a folder of your own whose name you began with a dot.
+
+**The third button at the head of the panel shows them**, under the eye every file browser draws
+for this. What it reveals stays **read-only**: those rows refuse every gesture, on both sides —
+no rename, no trash, no drag, and nothing dropped into them. It is what the studio holds for
+itself, and seeing it is not touching it.
 
 **A folder is only read once you open it.** `assets/img` can hold thousands of files in an ordinary
 project, and reading them to count them would cost a wait on every project opening.
