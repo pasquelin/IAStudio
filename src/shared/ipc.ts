@@ -1106,12 +1106,17 @@ export type StudioBridge = {
      *
      * Answers `stale` and writes NOTHING when the file changed underneath — see `DocumentWrite`.
      * Ask with `confirmOverwrite`, then write again with `force`.
+     *
+     * `folder` is where a document written for the FIRST time lands — the folder its author
+     * picked when they made it. It is read for a document with no file yet and ignored for one
+     * that has: a save never moves what is already filed somewhere.
      */
     write: (
       id: string,
       kind: DocumentKind,
       draft: DocumentDraft,
       force?: boolean,
+      folder?: string,
     ) => Promise<DocumentWrite>
     /**
      * Gives a document another name — which, the file being named after the document, moves it.

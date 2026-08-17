@@ -18,6 +18,21 @@ export type FolderTree = {
   reload: () => void
 }
 
+/**
+ * The tree plus the one gesture only a live reading can offer.
+ *
+ * Kept OUT of `FolderTree`, which is the shape the Explorer swaps its three sources through —
+ * a search and a domain listing have no folder to unfold, and requiring it of them would make
+ * the shape mean less than it does.
+ */
+export type UnfoldableFolderTree = FolderTree & {
+  /**
+   * Opens a folder that may already be open, and reads it either way. What a surface showing a
+   * chosen folder needs: `toggle` would close the very row it was asked to reveal.
+   */
+  unfold: (path: string) => void
+}
+
 const nodeOf = (entry: FolderEntry): FolderNode => ({
   ...entry,
   id: entry.path,
@@ -54,7 +69,7 @@ async function listing(folders: readonly string[], hidden: boolean): Promise<Lis
  * why a folder that has never been opened cannot say whether it has children, and why the tree
  * is told which nodes are expandable rather than deriving it.
  */
-export function useFolderTree(hidden: boolean): FolderTree {
+export function useFolderTree(hidden: boolean): UnfoldableFolderTree {
   const projectPath = useProject(state => state.project?.path ?? null)
   const [nodes, setNodes] = useState<readonly FolderNode[]>([])
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set())
@@ -109,21 +124,33 @@ export function useFolderTree(hidden: boolean): FolderTree {
     }
   }, [reload])
 
-  const toggle = useCallback(
-    (path: string) => {
-      setExpandedIds(current => {
-        const next = new Set(current)
-        if (next.delete(path)) return next
-
-        next.add(path)
-        // Read on the way open, every time rather than once: a folder opened again after an
-        // hour would otherwise show what it held the first time.
-        void listing([path], hidden).then(absorb)
-        return next
-      })
+  // Read on the way open, every time rather than once: a folder opened again after an hour
+  // would otherwise show what it held the first time.
+  const opening = useCallback(
+    (current: ReadonlySet<string>, path: string): ReadonlySet<string> => {
+      void listing([path], hidden).then(absorb)
+      return current.has(path) ? current : new Set(current).add(path)
     },
     [absorb, hidden],
   )
 
-  return { nodes, expandedIds, toggle, reload }
+  const unfold = useCallback(
+    (path: string) => setExpandedIds(current => opening(current, path)),
+    [opening],
+  )
+
+  const toggle = useCallback(
+    (path: string) => {
+      setExpandedIds(current => {
+        if (!current.has(path)) return opening(current, path)
+
+        const next = new Set(current)
+        next.delete(path)
+        return next
+      })
+    },
+    [opening],
+  )
+
+  return { nodes, expandedIds, toggle, unfold, reload }
 }

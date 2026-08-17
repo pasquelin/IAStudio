@@ -7,6 +7,7 @@ import {
   type DocumentKind,
   type DocumentPart,
 } from '@shared/domain/document'
+import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import { chainsOnMontage, parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { scenePayload, sceneFromPayload } from '@/engines/scene/sceneDocument'
@@ -502,9 +503,15 @@ export async function saveDocument(documentId: string, byHand = true): Promise<b
 
   // Nothing is captured a second time on the way through: the draft above is the state the user
   // pressed ⌘S on, and re-capturing after a dialog would save whatever was typed during it.
-  if ((await bridge.documents.write(document.id, document.kind, payload)) === 'stale') {
+  // The folder the descriptor names, which for a document never saved is the one its author
+  // picked. The writer reads it only when there is no file yet, so a save never moves anything.
+  const folder = parentOf(document.path) ?? FOLDER_ROOT
+
+  if (
+    (await bridge.documents.write(document.id, document.kind, payload, false, folder)) === 'stale'
+  ) {
     if (!byHand || !(await bridge.documents.confirmOverwrite(document.title))) return false
-    await bridge.documents.write(document.id, document.kind, payload, true)
+    await bridge.documents.write(document.id, document.kind, payload, true, folder)
   }
   commit()
 
@@ -622,13 +629,20 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
       return false
     }
 
-    await bridge.documents.write(created.id, created.kind, {
-      ...draft,
-      title: name,
-      // The link, written like `saveDocument` writes it — without it the copy would come back
-      // from disk knowing nothing of the asset it was made for.
-      sourceAssetId: copy.id,
-    })
+    await bridge.documents.write(
+      created.id,
+      created.kind,
+      {
+        ...draft,
+        title: name,
+        // The link, written like `saveDocument` writes it — without it the copy would come back
+        // from disk knowing nothing of the asset it was made for.
+        sourceAssetId: copy.id,
+      },
+      false,
+      // Beside the document it copies, which is where `create` already put the descriptor.
+      parentOf(created.path) ?? FOLDER_ROOT,
+    )
 
     // NOT installed here, and `commit` is not called either. `install` would replace the state
     // before the copy's panel exists, so `IMAGE_IO` would find no engine to hand the pixels to

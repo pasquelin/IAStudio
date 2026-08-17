@@ -16,6 +16,7 @@ import {
   type DocumentEnvelope,
   type DocumentKind,
 } from '@shared/domain/document'
+import { isPrivatePath } from '@shared/domain/folder'
 import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
 import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
 import type { SaveAudioRequest, SavePictureRequest, SaveTextureRequest } from '@shared/ipc'
@@ -207,6 +208,21 @@ const forceWrite = z.boolean().optional()
 /** Absent reads as no: a payload that lost this field must not read as consent to overwrite. */
 export function parseForceWrite(value: unknown): boolean {
   return forceWrite.parse(value) ?? false
+}
+
+/**
+ * The studio's own folders are refused on top of the shape, which no other path channel needs
+ * to say: the field offering these never lists a hidden folder, so nothing a user can click
+ * reaches here — and a document written into `.index/` would be swept by the next rescan.
+ */
+const landingFolder = folderPath.refine(path => !isPrivatePath(path)).optional()
+
+/**
+ * Where a first save lands, held to the same rule as every other path a window names — absent
+ * for a caller that has none to offer, which leaves the writer its own default.
+ */
+export function parseLandingFolder(value: unknown): string | undefined {
+  return landingFolder.parse(value)
 }
 
 const title = z.string().max(200)

@@ -28,7 +28,7 @@ import {
   type NamedDocument,
 } from '@shared/domain/documentName'
 import { extensionOf, foldForFileName } from '@shared/domain/fileName'
-import { parentOf, type FolderEntry } from '@shared/domain/folder'
+import { parentOf, pathIn, type FolderEntry } from '@shared/domain/folder'
 import { isRecord } from '@shared/guards'
 import { exists, isMissing, writeAtomic } from '@main/persistence'
 import { parseDocumentEnvelope } from './validation'
@@ -42,12 +42,16 @@ export type DocumentFiles = {
   list: () => Promise<DocumentDescriptor[]>
   /** `null` when the document has never been saved — an open tab that holds nothing yet. */
   read: (id: string, kind: DocumentKind) => Promise<DocumentFile | null>
-  /** `force` is the caller saying the user was asked about an outside change and said yes. */
+  /**
+   * `force` is the caller saying the user was asked about an outside change and said yes.
+   * `folder` is where a FIRST save lands; a document that already has a file ignores it.
+   */
   write: (
     id: string,
     kind: DocumentKind,
     draft: DocumentDraft,
     force?: boolean,
+    folder?: string,
   ) => Promise<DocumentWrite>
   remove: (id: string, kind: DocumentKind) => Promise<void>
   /**
@@ -288,14 +292,6 @@ export function createDocumentFiles({
   const keyOf = (id: string, kind: DocumentKind): string => `${kind}:${id}`
 
   const stampKey = (id: string, kind: DocumentKind): string => `${projectPath()}|${keyOf(id, kind)}`
-
-  /**
-   * Where a document nobody has placed goes — a DEFAULT, not where documents live.
-   *
-   * They live wherever the user put them, which is what `walkFiles` finds; this is only the
-   * folder a first save lands in, and it is created on the way like any other.
-   */
-  const defaultFolder = (): string => join(projectPath(), DOCUMENTS_FOLDER)
 
   /** An absolute path back to the spelling every boundary of the studio uses. */
   const relativeOf = (file: string): string => relative(projectPath(), file).split(sep).join('/')
@@ -541,9 +537,7 @@ export function createDocumentFiles({
     const staged = await Promise.all(
       [...folders].map(async folder => {
         const names = (await folderNames(folder)) ?? []
-        return names
-          .map(name => (folder === '' ? name : `${folder}/${name}`))
-          .filter(path => isStagingCopy(path, staging))
+        return names.map(name => pathIn(folder, name)).filter(path => isStagingCopy(path, staging))
       }),
     )
 
@@ -601,7 +595,10 @@ export function createDocumentFiles({
   }
 
   /**
-   * Where a document written for the first time goes: under its own name.
+   * Where a document written for the first time goes: under its own name, in the folder its
+   * author picked. `DOCUMENTS_FOLDER` is the fallback for a caller that names none — a default,
+   * not where documents live: they live wherever the user put them, which is what `walkFiles`
+   * finds.
    *
    * Suffixed rather than refused when the folder already holds that name — this is the studio
    * naming a document nobody has named yet ("Sans titre 2", the title of an asset opened twice),
@@ -611,9 +608,16 @@ export function createDocumentFiles({
    * answer worth having: this path is handed straight to a write that overwrites what it lands
    * on, and nothing else stands between the two.
    */
-  const freshFile = async (kind: DocumentKind, title: string): Promise<string> => {
-    const taken = await namesIn(DOCUMENTS_FOLDER)
-    return join(defaultFolder(), documentFileName(nextFreeDocumentName(title, kind, taken), kind))
+  const freshFile = async (
+    kind: DocumentKind,
+    title: string,
+    folder = DOCUMENTS_FOLDER,
+  ): Promise<string> => {
+    const taken = await namesIn(folder)
+    return join(
+      absoluteOf(folder),
+      documentFileName(nextFreeDocumentName(title, kind, taken), kind),
+    )
   }
 
   /**
@@ -653,14 +657,15 @@ export function createDocumentFiles({
 
     read: (id, kind) => queued(id, () => readOne(id, kind)),
 
-    write: (id, kind, draft, force = false) =>
+    write: (id, kind, draft, force = false, folder) =>
       queued(id, async () => {
         // A document already on disk keeps the file it is in — including one written before
         // version 3, still under the uuid it was named after. Renaming those is the user's
-        // gesture, not something a save does behind them.
+        // gesture, not something a save does behind them. `folder` is read here and nowhere
+        // else, which is what makes a chosen folder a placement rather than a move.
         const located = await locate(id, kind)
         const onDisk = await exists(located)
-        const file = onDisk ? located : await freshFile(kind, draft.title)
+        const file = onDisk ? located : await freshFile(kind, draft.title, folder)
 
         // A document the studio has no clock for is one it cannot claim to have written, so it
         // is not defended — and nothing is stat'd for it either.

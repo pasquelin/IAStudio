@@ -1,21 +1,25 @@
 import { memo, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { checkDocumentName } from '@shared/domain/documentName'
+import { FOLDER_ROOT } from '@shared/domain/folder'
 import { Button } from '@/design/Button'
+import { FolderField } from '@/design/FolderField/FolderField'
 import { FIELD } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
+import { useProject } from '@/stores/project'
 import {
   DOCUMENT_NAME_REFUSALS,
   registerDocumentNamer,
   type DocumentNameRequest,
   type DocumentNamer,
+  type NamedDocumentPlace,
 } from './documentName'
 
-type Asked = { request: DocumentNameRequest; answer: (name: string | null) => void }
+type Asked = { request: DocumentNameRequest; answer: (place: NamedDocumentPlace | null) => void }
 
 /**
- * What a document is called, asked before it is made.
+ * What a document is called and where it goes, asked before it is made.
  *
  * The studio used to name them itself — « Sans titre 3 » — and a project of six documents read
  * as a list of numbers. The field opens on that same name, selected: Enter takes it as it stands,
@@ -23,12 +27,15 @@ type Asked = { request: DocumentNameRequest; answer: (name: string | null) => vo
  *
  * Refused where it is typed rather than at the disk. A name the folder already holds would be
  * quietly suffixed by the first save, and a document called something its author did not write
- * is the one outcome worth a dialog.
+ * is the one outcome worth a dialog. The refusal follows the FOLDER: a name taken in one is free
+ * in the next.
  */
 export const DocumentNameDialog = memo(function DocumentNameDialog() {
   const { t } = useTranslation()
   const [asked, setAsked] = useState<Asked | null>(null)
   const [draft, setDraft] = useState('')
+  const [folder, setFolder] = useState(FOLDER_ROOT)
+  const projectName = useProject(state => state.project?.manifest.name ?? '')
   const field = useRef<HTMLInputElement>(null)
   /**
    * Whether a question is already up, for `namer` — a closure fixed at mount, which cannot see
@@ -36,6 +43,8 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
    */
   const pending = useRef<Asked | null>(null)
   const titleId = useId()
+  const nameId = useId()
+  const folderId = useId()
   const refusalId = useId()
 
   const namer = useCallback<DocumentNamer>(
@@ -52,6 +61,7 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
         pending.current = question
         setAsked(question)
         setDraft(request.suggested)
+        setFolder(request.folder)
       }),
     [],
   )
@@ -68,14 +78,14 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
 
   if (!asked) return null
 
-  // Reached from the field alone, which the early return above puts behind a live question.
-  const settle = (name: string | null): void => {
+  // Reached from the fields alone, which the early return above puts behind a live question.
+  const settle = (place: NamedDocumentPlace | null): void => {
     pending.current = null
     setAsked(null)
-    asked.answer(name)
+    asked.answer(place)
   }
 
-  const refusal = checkDocumentName(draft, asked.request.kind, asked.request.taken)
+  const refusal = checkDocumentName(draft, asked.request.kind, asked.request.takenIn(folder))
 
   /**
    * Escape here rather than through `useDismiss`, which the floating surfaces use: it also
@@ -110,23 +120,51 @@ export const DocumentNameDialog = memo(function DocumentNameDialog() {
           onKeyDown={onKeyDown}
           onSubmit={event => {
             event.preventDefault()
-            if (!refusal) settle(draft.trim())
+            if (!refusal) settle({ title: draft.trim(), folder })
           }}
         >
-          <input
-            ref={field}
-            aria-label={t('documents.renameLabel')}
-            aria-describedby={refusal ? refusalId : undefined}
-            value={draft}
-            className={cn(FIELD, 'w-full text-xs')}
-            onChange={event => setDraft(event.target.value)}
-          />
+          {/* Labelled where it shows, not by an `aria-label`: two bare fields under one heading
+              leave nothing to tell them apart, for a reader of either kind. */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={nameId} className="text-muted text-xs">
+              {t('documents.nameField')}
+            </label>
+            <input
+              ref={field}
+              id={nameId}
+              aria-describedby={refusal ? refusalId : undefined}
+              value={draft}
+              className={cn(FIELD, 'w-full text-xs')}
+              onChange={event => setDraft(event.target.value)}
+            />
+          </div>
 
           {refusal && (
             <p id={refusalId} role="alert" className="text-warning m-0 text-xs">
               {t(DOCUMENT_NAME_REFUSALS[refusal])}
             </p>
           )}
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={folderId} className="text-muted text-xs">
+              {t('documents.folderField')}
+            </label>
+            <FolderField
+              id={folderId}
+              value={folder}
+              onChange={setFolder}
+              rootName={projectName}
+              labels={{
+                tree: t('documents.folderTree'),
+                hint: t('documents.folderHint'),
+                newFolder: t('documents.newFolder'),
+                newFolderName: t('documents.newFolderName'),
+                newFolderLabel: t('documents.newFolderLabel'),
+                folderTaken: t('documents.folderTaken'),
+                folderFailed: t('documents.folderFailed'),
+              }}
+            />
+          </div>
 
           <div className="flex justify-end gap-2">
             <Button onClick={() => settle(null)}>{t('documents.cancel')}</Button>

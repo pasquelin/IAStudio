@@ -12,7 +12,7 @@ import {
   type NamedDocument,
 } from '@shared/domain/documentName'
 import { foldForFileName, nameFailureOf } from '@shared/domain/fileName'
-import { nameOf, parentOf } from '@shared/domain/folder'
+import { nameOf, parentOf, pathIn } from '@shared/domain/folder'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
 import i18next from 'i18next'
@@ -75,10 +75,12 @@ type DocumentsState = {
    * be a title that lies — and stays out when the name was TYPED, which is what the dialog the
    * plus button raises hands over. Without `of` the document is numbered, for a caller with
    * nobody to ask.
+   *
+   * `folder` is where its author filed it — `DOCUMENTS_FOLDER` for a caller who did not ask.
    */
   create: (
     workspace: WorkspaceId,
-    of?: { title: string; sourceAssetId?: string },
+    of?: { title: string; sourceAssetId?: string; folder?: string },
   ) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
   /**
@@ -324,11 +326,12 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       kind,
       workspace,
       title,
-      // Where it WOULD go, nothing having been written yet — the default folder, which is where
-      // a first save lands. Not a second answer disagreeing with the disk (there is no file to
-      // disagree with), and the first save answers for good: it may land on a suffixed name if
-      // the folder meanwhile took this one, and `relist` reads back what the folder holds.
-      path: `${DOCUMENTS_FOLDER}/${documentFileName(title, kind)}`,
+      // Where it WOULD go, nothing having been written yet — the folder its author picked, and
+      // what `saveDocument` hands the writer. Not a second answer disagreeing with the disk
+      // (there is no file to disagree with), and the first save answers for good: it may land on
+      // a suffixed name if the folder meanwhile took this one, and `relist` reads back what the
+      // folder holds.
+      path: pathIn(of?.folder ?? DOCUMENTS_FOLDER, documentFileName(title, kind)),
       ...(of?.sourceAssetId ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 

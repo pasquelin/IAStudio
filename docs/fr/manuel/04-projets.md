@@ -192,7 +192,13 @@ que vous désignez et cherche ce fichier dedans.
 Un document est un travail en cours : une image avec ses calques, une scène 3D avec ses objets,
 un montage avec ses pistes.
 
-Il est enregistré avec `⌘S` / `Ctrl+S` — dans `documents/` la première fois, faute de mieux, et
+Le bouton **+** en haut du rail gauche en crée un, et demande deux choses : son **nom**, et son
+**emplacement**. Le champ Emplacement ouvre l’arborescence du projet — et rien d’autre : un
+document reste dans son projet. Il s’ouvre sur le dossier que l’Explorateur montre, ou sur
+`documents/` si rien n’y est sélectionné, et la ligne **Nouveau dossier…** en crée un sans quitter
+la fenêtre.
+
+Il est enregistré avec `⌘S` / `Ctrl+S` — dans le dossier que vous avez choisi en le créant, et
 ensuite là où vous l’avez rangé — sous une extension qui dit ce qu’il est :
 
 | Type de document | Extension | Espace |

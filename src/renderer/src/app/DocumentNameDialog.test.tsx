@@ -2,7 +2,11 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { DocumentNameDialog } from './DocumentNameDialog'
-import { mountedDocumentNamer, type DocumentNameRequest } from './documentName'
+import {
+  mountedDocumentNamer,
+  type DocumentNameRequest,
+  type NamedDocumentPlace,
+} from './documentName'
 
 const HELD = [{ id: 'held', fileName: 'Niveau.scene' }]
 
@@ -11,25 +15,29 @@ const HELD = [{ id: 'held', fileName: 'Niveau.scene' }]
  * prop, because that is the whole point of the arrangement: the rail has no reference to this
  * component.
  */
-function askFor(over?: Partial<DocumentNameRequest>): Promise<string | null> {
+function askFor(over?: Partial<DocumentNameRequest>): Promise<NamedDocumentPlace | null> {
   const namer = mountedDocumentNamer()
   if (!namer) throw new Error('the dialog registered no namer')
 
   const request: DocumentNameRequest = {
     kind: 'scene',
     suggested: 'Sans titre 2',
-    taken: HELD,
+    folder: 'documents',
+    takenIn: () => HELD,
     ...over,
   }
 
-  let answered: Promise<string | null> = Promise.resolve(null)
+  let answered: Promise<NamedDocumentPlace | null> = Promise.resolve(null)
   act(() => {
     answered = namer(request)
   })
   return answered
 }
 
-const field = (): HTMLElement => screen.getByRole('textbox', { name: 'Nom du document' })
+const field = (): HTMLElement => screen.getByRole('textbox', { name: 'Nom' })
+
+/** What the dialog answers for a name taken as it stands, in the folder it opened on. */
+const placed = (title: string, folder = 'documents'): NamedDocumentPlace => ({ title, folder })
 
 describe('DocumentNameDialog', () => {
   it('shows nothing until a document is being made', () => {
@@ -55,7 +63,7 @@ describe('DocumentNameDialog', () => {
 
     await userEvent.keyboard('{Enter}')
 
-    await expect(answered).resolves.toBe('Sans titre 2')
+    await expect(answered).resolves.toEqual(placed('Sans titre 2'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
@@ -66,7 +74,7 @@ describe('DocumentNameDialog', () => {
     await userEvent.clear(field())
     await userEvent.type(field(), '  Niveau 2  {Enter}')
 
-    await expect(answered).resolves.toBe('Niveau 2')
+    await expect(answered).resolves.toEqual(placed('Niveau 2'))
   })
 
   /**
@@ -107,7 +115,28 @@ describe('DocumentNameDialog', () => {
     await userEvent.clear(field())
     await userEvent.type(field(), 'Niveau{Enter}')
 
-    await expect(answered).resolves.toBe('Niveau')
+    await expect(answered).resolves.toEqual(placed('Niveau'))
+  })
+
+  // The folder is asked as the choice moves, never once: a name taken in `documents/` is free in
+  // `Images/`, and a refusal computed at the opening would answer for the wrong folder.
+  it('refuses a name against the folder that is chosen', async () => {
+    render(<DocumentNameDialog />)
+    void askFor({ takenIn: folder => (folder === 'documents' ? HELD : []) })
+
+    await userEvent.clear(field())
+    await userEvent.type(field(), 'Niveau')
+
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+  })
+
+  it('answers with the folder the field opened on', async () => {
+    render(<DocumentNameDialog />)
+    const answered = askFor({ folder: 'Images/Croquis' })
+
+    await userEvent.keyboard('{Enter}')
+
+    await expect(answered).resolves.toEqual(placed('Sans titre 2', 'Images/Croquis'))
   })
 
   it('makes nothing when the dialog is dismissed', async () => {
@@ -142,7 +171,7 @@ describe('DocumentNameDialog', () => {
     expect(field()).toHaveValue('Sans titre 2')
 
     await userEvent.keyboard('{Enter}')
-    await expect(first).resolves.toBe('Sans titre 2')
+    await expect(first).resolves.toEqual(placed('Sans titre 2'))
   })
 
   // The surfaces behind bind bare letters: typing a name must not arm a tool or split a clip.

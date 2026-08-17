@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { exists } from '@main/persistence'
 import { isStagingName, kindForExtension } from '@shared/domain/document'
 import { extensionOf } from '@shared/domain/fileName'
-import { entriesByName, isHiddenEntry, type FolderEntry } from '@shared/domain/folder'
+import { entriesByName, isHiddenEntry, pathIn, type FolderEntry } from '@shared/domain/folder'
 import { isUnwatchedByGit } from '@shared/domain/git'
 import { foldForSearch } from '@shared/text'
 
@@ -87,7 +87,7 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
         // rescan would have recognised, the asset an inspector would have found.
         const name = entry.name.normalize('NFC')
         return {
-          path: relative === '' ? name : `${relative}/${name}`,
+          path: pathIn(relative, name),
           name,
           kind: entry.isDirectory() ? 'folder' : 'file',
         }

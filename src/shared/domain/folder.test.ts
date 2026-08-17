@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   canMoveInto,
   entriesByName,
+  folderTrail,
+  FOLDER_ROOT,
   isHiddenEntry,
   isUnder,
   parentOf,
+  pathIn,
   type FolderEntry,
 } from './folder'
 
@@ -154,5 +157,31 @@ describe('the folder an entry sits in', () => {
 
   it('is nothing at the root, which is what the tree calls a root node', () => {
     expect(parentOf('assets')).toBeNull()
+  })
+})
+
+describe('the path an entry has inside a folder', () => {
+  it('joins the folder and the name', () => {
+    expect(pathIn('Images/Croquis', 'etude.jpg')).toBe('Images/Croquis/etude.jpg')
+  })
+
+  // The root is the whole reason this is a function: joining on `/` there would yield `/Notes`,
+  // an absolute path every boundary of the studio refuses.
+  it('is the name alone at the root', () => {
+    expect(pathIn(FOLDER_ROOT, 'Notes')).toBe('Notes')
+  })
+})
+
+describe('the folders leading to one', () => {
+  it('leads from the project folder down to the one being browsed', () => {
+    expect(folderTrail('Images/Rendus')).toEqual([FOLDER_ROOT, 'Images', 'Images/Rendus'])
+  })
+
+  /**
+   * The project folder is a crumb like any other, and the only one shown at the top: a trail that
+   * were empty there would leave the grid with no way back once it had gone down a level.
+   */
+  it('is the project folder alone at the top', () => {
+    expect(folderTrail(FOLDER_ROOT)).toEqual([FOLDER_ROOT])
   })
 })

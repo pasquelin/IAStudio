@@ -37,6 +37,7 @@ import {
   parseFolderPaths,
   parseForceWrite,
   parseHiddenShown,
+  parseLandingFolder,
   parseProjectName,
   parseProjectPath,
   parseProjectTitle,
@@ -496,12 +497,13 @@ export function registerProjectHandlers({
     documents.read(parseDocumentId(id), parseDocumentKind(kind)),
   )
 
-  handle(CHANNELS.documentWrite, async (_event, id, kind, draft, force) => {
+  handle(CHANNELS.documentWrite, async (_event, id, kind, draft, force, folder) => {
     const written = await documents.write(
       parseDocumentId(id),
       parseDocumentKind(kind),
       parseDocumentDraft(draft),
       parseForceWrite(force),
+      parseLandingFolder(folder),
     )
     // After the save, never before: a manifest stamped for a document the disk refused would
     // say the project worked when nothing was written. A refused overwrite is that same case.

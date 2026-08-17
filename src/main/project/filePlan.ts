@@ -1,6 +1,6 @@
 import type { PathChange, Refusal } from '@shared/domain/fileOp'
 import { extensionOf, foldForFileName, stemForSuffix, stemOf } from '@shared/domain/fileName'
-import { isPrivatePath, moveRefusal, nameOf, parentOf } from '@shared/domain/folder'
+import { isPrivatePath, moveRefusal, nameOf, parentOf, pathIn } from '@shared/domain/folder'
 
 /**
  * One thing the disk is asked to do. The planner speaks these; `fileOps` carries them out.
@@ -136,7 +136,7 @@ export function planFiles(request: FileRequest, folders: FolderSnapshot): FilePl
     if (isPrivatePath(path)) refused.push({ path, reason: 'private' })
     else if (!present(folders, path)) refused.push({ path, reason: 'missing' })
     else {
-      const target = parent === '' ? name : `${parent}/${name}`
+      const target = pathIn(parent, name)
       const taken = foldedNames(folders, parent)
       // Case alone is not a collision: it is this very file, respelled.
       taken.delete(foldForFileName(nameOf(path)))
@@ -212,7 +212,7 @@ export function planFiles(request: FileRequest, folders: FolderSnapshot): FilePl
       }
 
       held.add(foldForFileName(name))
-      acts.push({ act: 'move', from: path, to: folder === '' ? name : `${folder}/${name}` })
+      acts.push({ act: 'move', from: path, to: pathIn(folder, name) })
       continue
     }
 

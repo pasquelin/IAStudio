@@ -127,14 +127,21 @@ describe('saveDocument', () => {
     const documentId = await openScene()
     await saveDocument(documentId)
 
-    expect(write).toHaveBeenCalledWith(documentId, 'scene', {
-      title: expect.any(String),
-      content: JSON.stringify({
-        nodes: [box],
-        environment: { kind: 'studio' },
-        animation: EMPTY_TIMELINE,
-      }),
-    })
+    expect(write).toHaveBeenCalledWith(
+      documentId,
+      'scene',
+      {
+        title: expect.any(String),
+        content: JSON.stringify({
+          nodes: [box],
+          environment: { kind: 'studio' },
+          animation: EMPTY_TIMELINE,
+        }),
+      },
+      false,
+      // Where the descriptor says it goes, which a first save reads and a later one ignores.
+      'documents',
+    )
   })
 
   it('marks the document clean once it is written', async () => {
@@ -180,8 +187,9 @@ describe('saveDocument', () => {
     const documentId = await openScene()
     await expect(saveDocument(documentId)).resolves.toBe(true)
 
-    // The second call is the whole point: the first asked, the second insisted.
-    expect(forced).toEqual([undefined, true])
+    // The second call is the whole point: the first asked, the second insisted. Spelt out on
+    // both, the landing folder following it in the same call.
+    expect(forced).toEqual([false, true])
   })
 
   describe('autosave', () => {
@@ -1106,6 +1114,8 @@ describe('an image document', () => {
           { name: 'm_layer-1.png', data: PIXELS },
         ],
       }),
+      false,
+      'documents',
     )
   })
 
