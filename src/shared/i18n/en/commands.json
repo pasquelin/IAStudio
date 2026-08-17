@@ -62,7 +62,7 @@
     },
     "explorerPaste": {
       "title": "Paste",
-      "help": "Drops what the clipboard holds into the folder on screen. A name already taken refuses that one item, and the rest go through."
+      "help": "Drops what the clipboard holds into the folder on screen. An item whose name is already taken is refused, and the rest go through."
     },
     "explorerTrash": {
       "title": "Move to trash",
@@ -70,11 +70,11 @@
     },
     "explorerUndo": {
       "title": "Undo the last file gesture",
-      "help": "Puts the last batch moved, renamed, duplicated or created back where it was. The stack belongs to the project rather than to a window, and the trash never enters it."
+      "help": "Puts the last batch moved, renamed, duplicated or created back where it was. The stack belongs to the project rather than to a window, and the trash gesture never enters it."
     },
     "explorerRedo": {
       "title": "Redo the file gesture",
-      "help": "Does the batch of files that was just undone again, exactly as it was."
+      "help": "Redoes the batch of files that was just undone, exactly as it was."
     },
     "sceneSelect": {
       "title": "Select",
