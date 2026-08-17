@@ -1,9 +1,9 @@
 import { mdiArrowLeft, mdiArrowRight, mdiHomeOutline } from '@mdi/js'
 import { useState, type DragEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CLICKABLE, DRAGGABLE } from '@/helpers/app-region'
+import { CLICKABLE, DRAGGABLE } from '@/helpers/appRegion'
 import { cn } from '@/helpers/cn'
-import { showContextMenu } from '@/helpers/context-menu'
+import { showContextMenu } from '@/helpers/contextMenu'
 import { useWindowState } from '@/hooks/useWindowState'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
 import {

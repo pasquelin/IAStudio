@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ACTIVITY_WINDOW, type ActivityEntry } from '@shared/domain/activity'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { failureCount, useActivity, visibleActivity } from './activity'
 
 const entry = (overrides: Partial<ActivityEntry> = {}): ActivityEntry => ({

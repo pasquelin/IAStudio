@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
+import { DEFAULT_COLLECTION_STATE } from '@/helpers/collectionState'
 import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'

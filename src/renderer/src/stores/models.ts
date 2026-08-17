@@ -1,13 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { MODEL_FAMILIES, type ModelFamily } from '@shared/domain/model'
-import type { FormValues } from '@/helpers/dynamic-form'
+import type { FormValues } from '@/helpers/dynamicForm'
 import {
   COLLECTION_PERSIST_VERSION,
   DEFAULT_COLLECTION_STATE,
   withoutSearch,
   type CollectionState,
-} from '@/helpers/collection-state'
+} from '@/helpers/collectionState'
 
 type Collections = Partial<Record<ModelFamily, CollectionState>>
 

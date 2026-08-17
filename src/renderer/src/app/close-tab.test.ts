@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { bridgeWatchingLogs } from '@/services/fake-bridge'
+import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { closeTab } from './close-tab'
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MAX_LOG_MESSAGE, type LogScope } from '@shared/ipc'
-import { bridgeWatchingLogs } from './fake-bridge'
+import { bridgeWatchingLogs } from './fakeBridge'
 import { forgetReportedFailures, reportFailure, reportRenderFailure } from './diagnostics'
 
 /** The two halves of the rule, spelled out so a scope that changes side has to be moved here. */

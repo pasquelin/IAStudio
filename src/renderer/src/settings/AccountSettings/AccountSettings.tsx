@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { failureMessageKey } from '@/services/failure-message'
+import { failureMessageKey } from '@/services/failureMessage'
 import { useAccounts } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
 import { WINDOW_CAPTION } from '@/design/window-styles'

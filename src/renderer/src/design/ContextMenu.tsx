@@ -94,7 +94,7 @@ export function ContextMenu({ at, onClose, children }: ContextMenuProps) {
  * one had written the same `useState`, the same `preventDefault` and the same pair of client
  * coordinates. They are the three the studio deliberately did NOT hand to the system, because a
  * `⋯` button renders their rows too; the rest go through `showContextMenu` in
- * `helpers/context-menu.ts`, which holds no state at all. **This hook belongs to the DRAWN menu**,
+ * `helpers/contextMenu.ts`, which holds no state at all. **This hook belongs to the DRAWN menu**,
  * and lives beside it rather than beside that helper so the two paths cannot be reached for by
  * mistake.
  *

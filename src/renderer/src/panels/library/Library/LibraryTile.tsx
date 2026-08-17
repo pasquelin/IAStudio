@@ -2,11 +2,11 @@ import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
-import { cloudTileFace } from '@/helpers/cloud-tile'
+import { cloudTileFace } from '@/helpers/cloudTile'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
-import { openAsset } from '@/helpers/open-asset'
+import { openAsset } from '@/helpers/openAsset'
 import { ShelfTile } from '@/design/ShelfTile'
 
 /** The CDN resizes; a 4K down the wire to draw a small tile does not. Same width a pin keeps. */

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { Project } from '@shared/domain/project'
-import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'

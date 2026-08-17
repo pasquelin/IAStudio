@@ -9,7 +9,7 @@ import type { TFunction } from 'i18next'
 import { isGroup, type CanvasState, type Layer } from '@/engines/canvas/canvasState'
 import { duplicateLayer, groupLayers, removeLayer, ungroupLayer } from '@/engines/canvas/commands'
 import type { Command } from '@/engines/core/history'
-import { showContextMenu } from '@/helpers/context-menu'
+import { showContextMenu } from '@/helpers/contextMenu'
 import { newId } from '@/helpers/ids'
 
 export type LayerMenuProps = {

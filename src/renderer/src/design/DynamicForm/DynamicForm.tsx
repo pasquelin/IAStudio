@@ -12,8 +12,8 @@ import {
   randomSeed,
   visibleFields,
   type FormValues,
-} from '@/helpers/dynamic-form'
-import { buildSchema } from '@/helpers/dynamic-form-schema'
+} from '@/helpers/dynamicForm'
+import { buildSchema } from '@/helpers/dynamicFormSchema'
 import { useModelText } from '@/hooks/useModelText'
 import { Button } from '../Button'
 import { DynamicFormControl } from './DynamicFormControl'

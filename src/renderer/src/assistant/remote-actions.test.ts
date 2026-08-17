@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ActionName, ActionOutcome } from '@shared/domain/assistant'
 import type { AssistantActionRequest, AssistantActionResult } from '@shared/ipc'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { connectRemoteActions } from './remote-actions'
 
 /**

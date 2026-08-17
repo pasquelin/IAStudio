@@ -8,8 +8,8 @@ import type { FolderEntry } from '@shared/domain/folder'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { fakeMenu } from '@/helpers/menu-fixtures'
-import { LIST_ONLY } from '@/helpers/collection-state'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { LIST_ONLY } from '@/helpers/collectionState'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useExplorerView } from '@/stores/explorer-view'
 import { useSelection } from '@/stores/selection'
@@ -23,7 +23,7 @@ vi.mock('@/app/dockview-api', () => ({
 }))
 
 const openAsset = vi.hoisted(() => vi.fn<(asset: Asset) => Promise<void>>(() => Promise.resolve()))
-vi.mock('@/helpers/open-asset', () => ({ openAsset }))
+vi.mock('@/helpers/openAsset', () => ({ openAsset }))
 
 const scene: DocumentDescriptor = {
   id: 'a3f1',

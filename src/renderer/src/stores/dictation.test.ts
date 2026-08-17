@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SttEvent, SttState } from '@shared/domain/dictation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { MicrophoneRefused, NoInputDevice } from '@/dictation/capture'
 import { registerDictationTarget } from '@/dictation/destination'
 import { useDictation } from './dictation'

@@ -5,7 +5,7 @@ import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import type { Project } from '@shared/domain/project'
 import { ToolZoneProvider } from '@/app/tool-zone'
-import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
+import { DEFAULT_COLLECTION_STATE } from '@/helpers/collectionState'
 import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
 import { useLayouts } from '@/stores/layouts'
@@ -14,12 +14,12 @@ import { useSelection } from '@/stores/selection'
 import { useSettings } from '@/stores/settings'
 import { useCloud } from '@/stores/cloud'
 import { useJobs } from '@/stores/jobs'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { job } from '@/stores/job-fixtures'
 import { AssetBrowser } from './AssetBrowser'
 
 const openAsset = vi.fn()
-vi.mock('@/helpers/open-asset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
+vi.mock('@/helpers/openAsset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
 
 const PROJECT: Project = {
   path: '/tmp/project',

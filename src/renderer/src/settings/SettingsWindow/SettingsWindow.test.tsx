@@ -7,7 +7,7 @@ import {
   type Settings,
   type SettingsSectionId,
 } from '@shared/domain/settings'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
 import { SettingsWindow } from './SettingsWindow'

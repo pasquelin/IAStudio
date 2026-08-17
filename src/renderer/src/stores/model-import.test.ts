@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset, AssetType } from '@shared/domain/asset'
-import { openAsset } from '@/helpers/open-asset'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { openAsset } from '@/helpers/openAsset'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from './documents'
 import { useProject } from './project'
 import { clearScenes } from './scene-fixtures'
@@ -76,7 +76,7 @@ describe('addModelTo', () => {
 })
 
 // The first of the three doors: a double-click in the asset browser. What it settles here is
-// which scene receives the model — `open-asset.test.ts` holds the gesture itself.
+// which scene receives the model — `openAsset.test.ts` holds the gesture itself.
 describe('opening a model asset', () => {
   beforeEach(() => {
     installFakeBridge()

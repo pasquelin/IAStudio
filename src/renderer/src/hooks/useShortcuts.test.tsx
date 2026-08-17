@@ -4,7 +4,7 @@ import { fireEvent, renderHook, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import { publishCommand } from '@/services/command-bus'
+import { publishCommand } from '@/services/commandBus'
 import { useHeldCommand, useShortcuts } from './useShortcuts'
 
 /** The hook listens on `window`; the field is here so a test can move focus into one. */

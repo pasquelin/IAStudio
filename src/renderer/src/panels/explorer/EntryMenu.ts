@@ -18,7 +18,7 @@ import type { DocumentDescriptor } from '@shared/domain/document'
 import type { FileHistory } from '@shared/domain/file-op'
 import { isPrivatePath } from '@shared/domain/folder'
 import { acceleratorOf } from '@shared/domain/shortcut'
-import { showContextMenu, type ContextMenuRow } from '@/helpers/context-menu'
+import { showContextMenu, type ContextMenuRow } from '@/helpers/contextMenu'
 import { getBridge } from '@/services/bridge'
 import type { FolderNode } from './use-folder-tree'
 

@@ -1,5 +1,5 @@
 import type { ActionCommitment, ActionName } from '@shared/domain/assistant'
-import { createMountedHost } from '@/helpers/host-registry'
+import { createMountedHost } from '@/helpers/hostRegistry'
 
 /**
  * The question asked before the assistant does anything that outlives the window.

@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AssetType } from '@shared/domain/asset'
 import type { CloudAsset, CloudPage } from '@shared/domain/cloud-asset'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
 import { useExplore } from './use-explore'
 

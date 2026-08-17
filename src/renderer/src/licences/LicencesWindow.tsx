@@ -4,7 +4,7 @@ import { TooltipHost } from '@/design/TooltipHost'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
 import type { Licence } from '@shared/domain/licence'
 import licences from '@shared/licences.json'
-import { DRAGGABLE } from '@/helpers/app-region'
+import { DRAGGABLE } from '@/helpers/appRegion'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 
 /**

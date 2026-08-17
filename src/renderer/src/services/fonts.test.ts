@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { FontRef } from '@shared/domain/font'
-import { installFakeBridge } from './fake-bridge'
+import { installFakeBridge } from './fakeBridge'
 import { bridgeFonts, studioFonts } from './fonts'
 
 const lato: FontRef = { source: 'embedded', family: 'Lato' }

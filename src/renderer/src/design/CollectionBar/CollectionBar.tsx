@@ -10,7 +10,7 @@ import {
   type CollectionState,
   type FacetDescriptor,
   type FacetOption,
-} from '@/helpers/collection-state'
+} from '@/helpers/collectionState'
 import { HINT_TOP, TIP_BOTTOM } from '@/helpers/tooltip'
 import { CONTROL } from '../styles'
 import { ToolButton } from '../ToolButton'

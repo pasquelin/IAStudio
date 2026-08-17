@@ -539,7 +539,7 @@ défaut ci-dessous — un test l’épingle espace par espace.
 
 **Deux règles échappent au registre**, et deux seulement, parce qu’elles dépendent de l’état ou de
 l’espace, quand `shared/` n’a aucune dépendance runtime. D’où une couche au-dessus, dans
-`helpers/tool-registry.ts`, plutôt qu’à l’intérieur :
+`helpers/toolRegistry.ts`, plutôt qu’à l’intérieur :
 
 - le générateur n’est offert que là où un modèle est choisi ou préféré ;
 - une moitié que personne n’a choisie affiche le **premier panneau que l’espace y déclare**. Elle
@@ -715,7 +715,7 @@ falaise — tapé plus lentement que son délai, chaque frappe part en requête.
 n’est pas achetée deux fois, et elle ne se réessaie pas.
 
 **`DynamicForm` est chargé paresseusement**, et les trois fonctions qui appellent zod vivent dans
-`helpers/dynamic-form-schema` séparément de `helpers/dynamic-form`. Les deux moitiés vont
+`helpers/dynamicFormSchema` séparément de `helpers/dynamicForm`. Les deux moitiés vont
 ensemble : sans la seconde, `referencePictures` retenait zod dans le graphe eager. zod,
 `react-hook-form` et `@hookform/resolvers` sont à **zéro** dans le chunk initial, qui passe de
 2 030,50 à 1 810,88 kB — mesuré par décodage VLQ des sourcemaps, et verrouillé par des tests qui

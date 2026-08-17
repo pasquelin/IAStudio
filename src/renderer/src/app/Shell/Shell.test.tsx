@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
 import { arrangedFor } from '@/stores/tool-fixtures'

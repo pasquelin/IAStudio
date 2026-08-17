@@ -1,5 +1,5 @@
 import { CLIP_DB, FLOOR_DB } from '@/engines/audio/level'
-import { fetchAsset } from '@/helpers/asset-fetch'
+import { fetchAsset } from '@/helpers/assetFetch'
 import type { AudioTap, LoadedSound, SoundCue, SoundPort } from './soundSchedule'
 
 /** What the port needs of an output, which is far less than an `AudioContext` offers. */

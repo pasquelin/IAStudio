@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_FONT, type FontRef } from '@shared/domain/font'
 import type { TextDescriptor } from '@shared/domain/scene'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { TextSection } from './TextSection'
 
 const text: TextDescriptor = {

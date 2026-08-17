@@ -6,7 +6,7 @@ import type { TextureExportCommand, FolderExportRequest } from '@shared/ipc'
 import type { TextureExportTarget } from '@shared/domain/texture-export'
 import { setChannel } from '@/engines/texture/commands'
 import { reportFailure } from '@/services/diagnostics'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { installTexture } from '@/stores/texture-fixtures'
@@ -28,7 +28,7 @@ vi.mock('@/engines/texture/TextureRenderer', () => ({
 }))
 
 const openAsset = vi.fn()
-vi.mock('@/helpers/open-asset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
+vi.mock('@/helpers/openAsset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
 
 const DOCUMENT = 'tex-1'
 

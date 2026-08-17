@@ -143,16 +143,16 @@ const DOM_BOUND = [
   // The stage it stands in for hands back a canvas, and a canvas is what the sink wraps.
   'src/renderer/src/engines/timeline/sceneSink.test.ts',
   'src/renderer/src/engines/viewport/ViewportEngine.test.ts',
-  'src/renderer/src/helpers/menu-icon.test.ts',
+  'src/renderer/src/helpers/menuIcon.test.ts',
   // Not for a DOM of their own: they read the labels a menu is raised with, and `i18next` is only
   // initialised by the renderer setup — `initI18n` reads `localStorage`, which node has not.
   'src/renderer/src/panels/assets/AssetMenu.test.ts',
   'src/renderer/src/panels/layers/LayerMenu.test.ts',
   'src/renderer/src/spaces/three/SceneNodeMenu.test.ts',
-  'src/renderer/src/helpers/model-for-family.test.ts',
-  'src/renderer/src/helpers/plan-access.test.ts',
-  'src/renderer/src/helpers/scroll-parent.test.ts',
-  'src/renderer/src/helpers/tool-registry.test.ts',
+  'src/renderer/src/helpers/modelForFamily.test.ts',
+  'src/renderer/src/helpers/planAccess.test.ts',
+  'src/renderer/src/helpers/scrollParent.test.ts',
+  'src/renderer/src/helpers/toolRegistry.test.ts',
   'src/renderer/src/helpers/typing.test.ts',
   'src/renderer/src/home/use-explore.test.ts',
   'src/renderer/src/hooks/useCostEstimate.test.ts',

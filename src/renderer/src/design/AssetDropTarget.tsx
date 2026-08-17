@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { Asset, AssetType } from '@shared/domain/asset'
-import { carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/asset-drag'
+import { carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { cn } from '@/helpers/cn'
 
 export type AssetDropTargetProps = {

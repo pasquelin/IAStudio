@@ -17,7 +17,7 @@ import { setDockviewApi } from './dockview-api'
  * hand has let go.
  */
 const openDropped = (asset: Asset): void => {
-  void import('@/helpers/open-asset').then(module => module.openAsset(asset))
+  void import('@/helpers/openAsset').then(module => module.openAsset(asset))
 }
 
 /**

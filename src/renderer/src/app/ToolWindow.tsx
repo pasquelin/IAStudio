@@ -9,7 +9,7 @@ import { Separator } from '@/design/Separator'
 import { ToolButton } from '@/design/ToolButton'
 import { isKnownTool, toolDefinition } from './tool-components'
 import { isHorizontal, type ToolId, type ToolZone } from '@shared/domain/tool'
-import { toolTitleKey } from '@/helpers/tool-registry'
+import { toolTitleKey } from '@/helpers/toolRegistry'
 import { ToolZoneProvider } from './tool-zone'
 
 export type ToolWindowProps = {

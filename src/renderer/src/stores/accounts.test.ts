@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { AccountsResult, AccountSummary } from '@shared/domain/account'
 import type { AuthState } from '@shared/domain/settings'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { activeAccount, useAccounts } from './accounts'
 import { useSettings } from './settings'
 

@@ -13,7 +13,7 @@ import {
   visibleRange,
   type Viewport,
 } from './timelineGeometry'
-import { MDI_VIEWBOX, mdiPath } from '@/helpers/mdi-canvas'
+import { MDI_VIEWBOX, mdiPath } from '@/helpers/mdiCanvas'
 import { paintBandEnd } from './bandEnd'
 import { paintRuler as paintBandRuler, readRulerStyle } from './ruler'
 import {

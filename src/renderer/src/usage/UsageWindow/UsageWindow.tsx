@@ -5,7 +5,7 @@ import { DEFAULT_USAGE_PERIOD, USAGE_PERIODS, type UsagePeriod } from '@shared/d
 import { UiIcon } from '@/design/UiIcon'
 import { WindowChip } from '@/design/WindowChip'
 import { WindowShell } from '@/design/WindowShell'
-import { CLICKABLE } from '@/helpers/app-region'
+import { CLICKABLE } from '@/helpers/appRegion'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'

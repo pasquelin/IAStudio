@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Collection, type CollectionProps } from './Collection'
 import { refreshPalette } from '@/engines/core/palette'
-import { DEFAULT_COLLECTION_STATE, type CollectionState } from '@/helpers/collection-state'
+import { DEFAULT_COLLECTION_STATE, type CollectionState } from '@/helpers/collectionState'
 
 type Row = { id: string; name: string }
 

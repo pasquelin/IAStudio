@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Project, RecentProject } from '@shared/domain/project'
-import { installFakeBridge } from '@/services/fake-bridge'
+import { installFakeBridge } from '@/services/fakeBridge'
 import type { ActivityEntry } from '@shared/domain/activity'
 import type { FileOutcome } from '@shared/domain/file-op'
 import { useActivity } from './activity'

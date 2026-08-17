@@ -4,7 +4,7 @@ import { createSoundPort, playFrom, type SoundOutput } from './soundPort'
 import type { SoundCue } from './soundSchedule'
 
 const fetchAsset = vi.hoisted(() => vi.fn(async () => new Response(new ArrayBuffer(8))))
-vi.mock('@/helpers/asset-fetch', () => ({ fetchAsset }))
+vi.mock('@/helpers/assetFetch', () => ({ fetchAsset }))
 
 /** A node graph the suite can read back: jsdom has no Web Audio at all. */
 const outputWith = () => {

@@ -10,10 +10,10 @@ import type {
 import { installScene } from '@/stores/scene-fixtures'
 import type { CommandId } from '@shared/domain/command'
 import type { ToolId, ToolSurface } from '@shared/domain/tool'
-import type * as ToolRegistryModule from '@/helpers/tool-registry'
+import type * as ToolRegistryModule from '@/helpers/toolRegistry'
 
 type ToolRegistry = typeof ToolRegistryModule
-import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -37,7 +37,7 @@ vi.mock('@/app/document-io', () => ({
  */
 const listedTools = vi.fn()
 
-vi.mock('@/helpers/tool-registry', async importOriginal => {
+vi.mock('@/helpers/toolRegistry', async importOriginal => {
   const actual = await importOriginal<ToolRegistry>()
   return {
     ...actual,
