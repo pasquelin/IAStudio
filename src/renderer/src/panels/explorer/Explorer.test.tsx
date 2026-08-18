@@ -1935,6 +1935,33 @@ describe('the project explorer, as a grid', () => {
     await waitFor(() => expect(menu.labels()).toContain('Renommer'))
   })
 
+  /**
+   * The file stack belongs to the PANEL, not to a row: the menu raised on the blank and the one
+   * raised on a tile end on the same two gestures, greyed alike while there is nothing to take
+   * back. Read from BOTH here, which is what lets the two lists share one helper.
+   */
+  it('ends both menus on the file stack, greyed while it holds nothing', async () => {
+    withProject()
+    showGrid()
+    install({ '': [file('brief.pdf')] })
+
+    render(<Explorer />)
+    const tile = await tileFor('brief.pdf')
+    fireEvent.contextMenu(blank())
+
+    await waitFor(() => expect(menu.labels()).toContain('Annuler'))
+    expect(menu.labels()).toContain('Rétablir')
+    expect(menu.offers('Annuler')).toBe(false)
+    expect(menu.offers('Rétablir')).toBe(false)
+
+    fireEvent.contextMenu(tile)
+
+    await waitFor(() => expect(menu.labels()).toContain('Annuler'))
+    expect(menu.labels()).toContain('Rétablir')
+    expect(menu.offers('Annuler')).toBe(false)
+    expect(menu.offers('Rétablir')).toBe(false)
+  })
+
   /** Three tiles carried together have to arrive together, as three rows do. */
   it('carries the whole selection when one of its tiles is dragged', async () => {
     withProject()
