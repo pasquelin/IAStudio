@@ -257,9 +257,16 @@ function sceneDocument(body: string): DocumentFile {
  * indenting a scene of 5 000 nodes takes it from 2 396 Ko to 6 840 Ko — measured 18/08.
  *
  * The mark is written into the FIRST bytes of the file, and that is not a nicety: `readHead`
- * looks for it inside `ENVELOPE_LIMIT`, and behind the default scene's list of root nodes it fell
- * outside — a scene of about 1 900 objects at the root stopped being listed at all, measured
- * 18/08. The order of an object's members means nothing to a glTF reader, so it is ours to pick.
+ * looks for it inside `ENVELOPE_LIMIT` and turns away a file that has none. Behind the default
+ * scene's list of root nodes it fell outside — a scene of about 1 900 objects at the root stopped
+ * being listed at all, measured 18/08 — and hoisting the scene's own `extras` was not enough: a
+ * file whose default scene is not the first one puts every scene BEFORE it in the way, which is
+ * 47 886 bytes on three scenes of 5 000 nodes. So the mark rides on `asset`, which nothing can
+ * push down: the order of an object's members means nothing to a glTF reader, and `asset` is the
+ * one member the format requires.
+ *
+ * The kind rather than a flag, because it is what `descriptorOf` crosses with the extension —
+ * and it can never disagree with the stamp below: both are read off the same `document`.
  */
 function gltfBody(parsed: Record<string, unknown>, document: DocumentFile): string {
   const scenes: unknown[] = Array.isArray(parsed.scenes) ? parsed.scenes : []
@@ -268,29 +275,53 @@ function gltfBody(parsed: Record<string, unknown>, document: DocumentFile): stri
   if (!isRecord(held)) return JSON.stringify(parsed)
 
   const { extras: heldExtras, ...restOfScene } = held
-  const extras: Record<string, unknown> = {
-    [STUDIO_METADATA_KEY]: studioStamp(gltfStudioMetadata(parsed), document),
+
+  const body: Record<string, unknown> = {
+    asset: markedAsset(parsed.asset, document),
+    scene: parsed.scene,
+    scenes: scenes.map((other, index) =>
+      index === at
+        ? {
+            extras: sceneExtras(heldExtras, studioStamp(gltfStudioMetadata(parsed), document)),
+            ...restOfScene,
+            ...(document.title ? { name: document.title } : {}),
+          }
+        : other,
+    ),
   }
-  // Whatever another application left there, kept beside ours rather than under it — and added
-  // after, so its own `scenario` cannot put back the stamp this just wrote.
+  // `Object.hasOwn` rather than `in`: the latter walks the prototype chain, so a root member
+  // named `constructor` or `toString` would be dropped instead of carried through.
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!Object.hasOwn(body, key)) body[key] = value
+  }
+
+  return JSON.stringify(body)
+}
+
+/** The `asset` member, carrying the mark that says the file is a document of the studio. */
+function markedAsset(held: unknown, document: DocumentFile): Record<string, unknown> {
+  const extras: Record<string, unknown> = { [STUDIO_METADATA_KEY]: { kind: document.kind } }
+  const heldExtras = isRecord(held) ? held.extras : undefined
+
   for (const [key, value] of Object.entries(isRecord(heldExtras) ? heldExtras : {})) {
     if (key !== STUDIO_METADATA_KEY) extras[key] = value
   }
 
-  const body: Record<string, unknown> = {
-    asset: parsed.asset,
-    scene: parsed.scene,
-    scenes: scenes.map((other, index) =>
-      index === at
-        ? { extras, ...restOfScene, ...(document.title ? { name: document.title } : {}) }
-        : other,
-    ),
-  }
-  for (const [key, value] of Object.entries(parsed)) {
-    if (!(key in body)) body[key] = value
+  return { ...(isRecord(held) ? held : {}), extras }
+}
+
+/**
+ * The default scene's extras: the studio's stamp first, then whatever another application left
+ * there — added after, so its own `scenario` cannot put back the stamp this just wrote.
+ */
+function sceneExtras(held: unknown, stamp: Record<string, unknown>): Record<string, unknown> {
+  const extras: Record<string, unknown> = { [STUDIO_METADATA_KEY]: stamp }
+
+  for (const [key, value] of Object.entries(isRecord(held) ? held : {})) {
+    if (key !== STUDIO_METADATA_KEY) extras[key] = value
   }
 
-  return JSON.stringify(body)
+  return extras
 }
 
 /** A montage as OpenTimelineIO holds it, `.otio` serving two kinds and the file saying which. */

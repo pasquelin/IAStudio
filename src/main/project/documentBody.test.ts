@@ -139,6 +139,89 @@ describe('a scene held as glTF', () => {
     expect(written.indexOf(`"${STUDIO_METADATA_KEY}"`)).toBeLessThan(ENVELOPE_LIMIT)
   })
 
+  /**
+   * And however many scenes stand BEFORE the default one. Hoisting the default scene's own extras
+   * was not enough: a file whose `scene` is not 0 puts every earlier scene in the way, measured
+   * at 47 886 bytes on three scenes of 5 000 nodes — a document present in the folder, absent
+   * from every list. This is why the mark rides on `asset`.
+   */
+  it('writes the mark ahead of the scenes that come before the default one', () => {
+    const crowded = JSON.stringify({
+      asset: { version: '2.0' },
+      scene: 2,
+      scenes: [
+        { nodes: Array.from({ length: 5_000 }, (_unused, at) => at), extras: {} },
+        { nodes: Array.from({ length: 5_000 }, (_unused, at) => at), extras: {} },
+        { nodes: [0], extras: {} },
+      ],
+      nodes: [{ name: 'Rig' }],
+    })
+
+    const written = scene.write({
+      version: DOCUMENT_VERSION,
+      kind: 'scene',
+      title: 'Trois scènes',
+      updatedAt: '',
+      content: crowded,
+    })
+
+    expect(written.indexOf(`"${STUDIO_METADATA_KEY}"`)).toBeLessThan(ENVELOPE_LIMIT)
+    // The default scene is still the third one: reordering `scenes` would move indices a JSON
+    // pointer of `KHR_animation_pointer` is allowed to name.
+    expect(JSON.parse(written).scene).toBe(2)
+    expect(scene.read(written).kind).toBe('scene')
+  })
+
+  /**
+   * The mark on `asset` says the kind; the stamp on the scene says everything. Both are read off
+   * the same `document`, so they cannot come to disagree — and the mark keeps whatever another
+   * application left in `asset.extras`.
+   */
+  it('marks the asset without dropping the extras it already carried', () => {
+    const held = JSON.stringify({
+      asset: { version: '2.0', generator: 'Blender', extras: { blender: { flavour: 'cycles' } } },
+      scene: 0,
+      scenes: [{ nodes: [], extras: {} }],
+      nodes: [],
+    })
+
+    const written = scene.write({
+      version: DOCUMENT_VERSION,
+      kind: 'scene',
+      title: '',
+      updatedAt: '',
+      content: held,
+    })
+    const asset = JSON.parse(written).asset
+
+    expect(asset.extras[STUDIO_METADATA_KEY]).toEqual({ kind: 'scene' })
+    expect(asset.extras.blender).toEqual({ flavour: 'cycles' })
+    expect(asset.generator).toBe('Blender')
+  })
+
+  // `in` walks the prototype chain, so a root member with one of those names was dropped.
+  it('carries a root member that happens to be named like something on Object.prototype', () => {
+    const odd = JSON.stringify({
+      asset: { version: '2.0' },
+      scene: 0,
+      scenes: [{ nodes: [], extras: {} }],
+      nodes: [],
+      constructor: { kept: true },
+      toString: 'kept',
+    })
+
+    const written = scene.write({
+      version: DOCUMENT_VERSION,
+      kind: 'scene',
+      title: '',
+      updatedAt: '',
+      content: odd,
+    })
+
+    expect(JSON.parse(written).constructor).toEqual({ kept: true })
+    expect(JSON.parse(written).toString).toBe('kept')
+  })
+
   // The mark moved to the front of the scene object; the title still has to win over the name
   // the file arrived with, which is what a rename writes.
   it('still stamps the title over a name the file already had', () => {

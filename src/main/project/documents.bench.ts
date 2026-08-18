@@ -14,7 +14,7 @@ import { GLTF_SCENE_STATE } from '@shared/domain/gltf'
 // syscall shape `list()` takes, and a second implementation beside it would drift from the one
 // being measured. It did — `headOf` was copied here without its envelope parse, so the pool was
 // timed against a lighter read than the one it runs.
-import { headOf, pooledHeads } from './documents'
+import { forgetHeads, headOf, pooledHeads } from './documents'
 import { bodyFormatOf } from './documentBody'
 
 /**
@@ -127,14 +127,13 @@ describe('reading a document: the whole main-thread cost of one open', () => {
  * Written on a temporary folder rather than mocked: what is being compared is syscall shape, and
  * a mock would compare nothing.
  *
- * **Measured 2026-08-17** (macOS, APFS, Node 24): 117 ms one at a time, 35 ms over a pool of 16,
- * 19 ms when every head is cached.
+ * **Measured 2026-08-18** (macOS, APFS, Node 24): 151 ms one at a time, 55 ms over a pool of 16,
+ * 20 ms when every head is answered from the cache.
  *
- * **The conclusion drawn from those three was wrong, and it is the fixture that made it wrong**:
- * these files carry an enveloped head followed by four thousand `x`, so a head costs an `open`
- * and 8 Ko. A scene the studio writes is a glTF, whose head is the WHOLE FILE parsed — the group
- * below measures that. `headOf` keeps what it read since 18/08; what it saves here is half, and
- * what it saves on a project of scenes is all of it.
+ * **The conclusion once drawn from these three — that a cache does not pay — was wrong twice
+ * over.** It saves 35 ms of the 55 even here, and here is the CHEAP case: these files carry an
+ * enveloped head followed by four thousand `x`, where a scene the studio writes is a glTF whose
+ * head is the whole file parsed. The group below measures that one.
  */
 const DOCUMENT_COUNT = 2_000
 const FOLDER_COUNT = 200
@@ -190,13 +189,18 @@ describe('listing a project of 2 000 documents in 200 folders', () => {
     if (laid) await rm(await laid, { recursive: true, force: true })
   })
 
+  // Forgotten before each round, or the second sample onwards would time the `stat` `headOf`
+  // answers from — which is the third bench below, and would make these two measure it twice.
   bench('one head at a time', async () => {
     const found = await candidates()
+    forgetHeads()
     for (const file of found) await headOf(file)
   })
 
   bench(`${POOL} heads in flight`, async () => {
-    await pooledHeads(await candidates(), headOf)
+    const found = await candidates()
+    forgetHeads()
+    await pooledHeads(found, headOf)
   })
 
   // The cache as it would be: a `stat` says nothing moved, and the head is not opened at all.
@@ -252,6 +256,8 @@ describe('reading the head of a scene: what one glTF costs a listing, and a save
   // The same head through `headOf`, which is what `locate` and the walk actually call: it keeps
   // what it read against the file's modification time, so everything past the first ask is one
   // `stat`. That first ask is in here too — it is one sample out of hundreds.
+  // Nothing forgotten here, deliberately: what this times is the SECOND ask and every one after,
+  // which is what `locate` does at each save once the file has been listed.
   for (const count of HEAD_SIZES) {
     bench(`${count} nodes, through headOf`, async () => {
       const file = (await (scenes ??= laySceneFiles())).get(count)
