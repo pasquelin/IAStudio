@@ -84,6 +84,33 @@ export function withPointAfter(path: PathDescriptor, index: number): PathDescrip
   return { ...path, points }
 }
 
+/**
+ * A control point posed at the END of a rail, which is all a panel with nothing to aim at can
+ * offer. An open rail is EXTENDED, half its last span further along it — `withPointAfter` on the
+ * last point would fold back to the first and lay the point in the MIDDLE of the line instead.
+ * A closed rail has no end, so the span that comes back to its first point takes the insertion.
+ */
+export function withPointAtEnd(path: PathDescriptor): PathDescriptor {
+  const last = path.points.length - 1
+  if (path.closed) return withPointAfter(path, last)
+
+  const from = path.points[last - 1]
+  const to = path.points[last]
+  if (!from || !to) return path
+
+  return {
+    ...path,
+    points: [
+      ...path.points,
+      {
+        x: to.x + (to.x - from.x) / 2,
+        y: to.y + (to.y - from.y) / 2,
+        z: to.z + (to.z - from.z) / 2,
+      },
+    ],
+  }
+}
+
 /** One control point taken away. A rail never drops below two: one point is not a line. */
 export function withoutPoint(path: PathDescriptor, index: number): PathDescriptor {
   if (path.points.length <= 2 || index < 0 || index >= path.points.length) return path

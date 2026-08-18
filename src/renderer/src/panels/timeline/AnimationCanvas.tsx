@@ -12,12 +12,8 @@ import {
 import { useTranslation } from 'react-i18next'
 import { showContextMenu } from '@/helpers/contextMenu'
 import { frameDuration, snapToFrame, type Us } from '@shared/domain/time'
-import {
-  editCameraShot,
-  moveAnimationKey,
-  removeCameraShot,
-  unkeySubject,
-} from '@/engines/scene/animationCommands'
+import { editCameraShot, moveAnimationKey, unkeySubject } from '@/engines/scene/animationCommands'
+import { removePickedShot } from '@/spaces/three/sceneCommands'
 import { draggedShot } from '@/engines/scene/cameraShots'
 import { assetClip, bundledClip, clipKeyOf, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
@@ -279,16 +275,12 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
 
     if (event.key !== 'Delete' && event.key !== 'Backspace') return
 
-    const current = latest.current
-    // A shot answers to its own id in the same set the keys use, so what is picked is read once.
-    const shot = current.timeline.shots.find(held => current.selected.has(held.id))
-    if (shot) {
-      event.preventDefault()
-      useScenes.getState().runCommand(documentId, removeCameraShot(shot.id))
-      useAnimationViews.getState().setSelected(documentId, [])
-      return
-    }
+    // The door the native Édition menu already takes, rather than a second reading of the same
+    // pick: `Delete` is an accelerator and never reaches here, so only `Backspace` ever does —
+    // and a shot taken away by one key and not the other would be nobody's intent.
+    if (removePickedShot(documentId)) return event.preventDefault()
 
+    const current = latest.current
     const picked = [...current.selected]
     if (picked.length === 0) return
 

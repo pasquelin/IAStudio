@@ -229,9 +229,11 @@ Three gestures, in the scene:
 | **⌥ + click on the curve** | puts a new point in the stretch clicked, and picks it straight away |
 | **Delete**, or right-click a knob | takes the picked point away. A path always keeps its last two points |
 
-The Inspector, section **Placement**, holds **Tension** — from sharp corners to a round curve —
-and **Closed**, which loops it back onto the first point. The **+** on the **Points** row adds a
-point at the end, without aiming in the view.
+The Inspector, section **Path**, holds **Tension** — from sharp corners to a round curve — and
+**Closed**, which loops it back onto the first point. The **+** on the **Points** row adds a
+point at the end, without aiming in the view: the path carries on in the direction it was
+taking. On a **closed** path, which has no end, the point lands in the stretch that comes back
+to the first one.
 
 ### The available lights
 
