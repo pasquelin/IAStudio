@@ -77,6 +77,32 @@ function commandRows(bindings: BindingOverrides, run: (command: CommandId) => vo
   }
 }
 
+/**
+ * The two rows both menus end on, rule included. The file stack belongs to the PANEL rather than
+ * to a row, so the blank and a row take a batch back the same way and show the same key.
+ */
+function historyRows(
+  row: ReturnType<typeof commandRows>,
+  t: TFunction,
+  history: FileHistory,
+): ContextMenuRow[] {
+  return [
+    { separator: true },
+    row('explorer.undo', {
+      label: t('explorer.undo'),
+      tooltip: t('explorer.undoHint'),
+      icon: mdiUndo,
+      disabled: !history.undo,
+    }),
+    row('explorer.redo', {
+      label: t('explorer.redo'),
+      tooltip: t('explorer.redoHint'),
+      icon: mdiRedo,
+      disabled: !history.redo,
+    }),
+  ]
+}
+
 export type RootMenuProps = {
   /** How many paths the clipboard is holding, so Coller greys itself when it holds none. */
   clipboard: number
@@ -117,19 +143,7 @@ export function openRootMenu({ clipboard, history, bindings, t, run }: RootMenuP
       icon: mdiFolderPlusOutline,
       disabled: false,
     }),
-    { separator: true },
-    row('explorer.undo', {
-      label: t('explorer.undo'),
-      tooltip: t('explorer.undoHint'),
-      icon: mdiUndo,
-      disabled: !history.undo,
-    }),
-    row('explorer.redo', {
-      label: t('explorer.redo'),
-      tooltip: t('explorer.redoHint'),
-      icon: mdiRedo,
-      disabled: !history.redo,
-    }),
+    ...historyRows(row, t, history),
   ])
 }
 
@@ -260,18 +274,6 @@ export function openEntryMenu({
       // apart from `owned` above. Nothing under a dot goes either way.
       disabled: selection.some(path => isPrivatePath(path, 'shown')),
     }),
-    { separator: true },
-    row('explorer.undo', {
-      label: t('explorer.undo'),
-      tooltip: t('explorer.undoHint'),
-      icon: mdiUndo,
-      disabled: !history.undo,
-    }),
-    row('explorer.redo', {
-      label: t('explorer.redo'),
-      tooltip: t('explorer.redoHint'),
-      icon: mdiRedo,
-      disabled: !history.redo,
-    }),
+    ...historyRows(row, t, history),
   ])
 }
