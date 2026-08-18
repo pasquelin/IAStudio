@@ -174,6 +174,20 @@ describe('AnimationSection', () => {
     expect(clips.find(clip => clip.id === 'c1')?.speed).toBe(1)
   })
 
+  // Two blocks driving the whole body average each other out; this control is the only place
+  // that says otherwise, and a block edited elsewhere must keep what it was given.
+  it('writes which half of the body the chosen block drives', async () => {
+    withTwoBlocks()
+    useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c2')
+    show()
+
+    await userEvent.selectOptions(screen.getByLabelText('Pilote'), 'upper')
+
+    const clips = nodeOf()?.model.lanes?.[0]?.clips ?? []
+    expect(clips.find(clip => clip.id === 'c2')?.part).toBe('upper')
+    expect(clips.find(clip => clip.id === 'c1')?.part).toBeUndefined()
+  })
+
   it('watches the chosen block when play is pressed, and no other', async () => {
     withTwoBlocks()
     useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c2')

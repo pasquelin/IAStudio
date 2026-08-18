@@ -7,6 +7,7 @@
  * from them instead of restated, so a geometry added without a menu entry fails to compile.
  */
 import type { FontRef } from './font'
+import type { BodyPart } from './humanoid'
 import type { Rig } from './rig'
 import type { Us } from './time'
 import type { Vector3 } from './transform'
@@ -220,6 +221,14 @@ export type ClipRef = {
   fadeOut: Us
   /** `auto` lets the studio decide from what the clip actually holds. */
   rootMotion: RootMotion
+  /**
+   * Which bones this block drives. Absent is the whole body — what every document written before
+   * this field says, and what a lone block wants anyway.
+   *
+   * It is what makes « walking AND raising the arms » something other than the average of the
+   * two: blocks driving different halves stop sharing the pose out between them.
+   */
+  part?: BodyPart
 }
 
 /**

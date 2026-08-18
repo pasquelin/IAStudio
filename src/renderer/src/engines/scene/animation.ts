@@ -1,6 +1,8 @@
 import { AnimationMixer, LoopOnce, LoopRepeat, type AnimationClip, type Object3D } from 'three'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { clipKeyOf, type ClipLane, type ClipRef } from '@shared/domain/scene'
+import { WHOLE_BODY, type BodyPart } from '@shared/domain/humanoid'
+import { bonesDrivenBy } from './boneRoles'
 import type { Us } from '@shared/domain/time'
 import { clipBlendAt, type ClipWeight } from './clipBlend'
 import { skeletonBonesOf, type SkeletonBone } from './rigState'
@@ -44,6 +46,8 @@ type Bound = {
   travel: boolean
   /** Which entry of `clips` it was built from, so a block pointed elsewhere is rebuilt. */
   key: string
+  /** Which bones that object was cut down to, so a block given another half is rebuilt too. */
+  part: BodyPart
   clip: AnimationClip
 }
 
@@ -203,17 +207,23 @@ export class SceneAnimations {
 
       kept.add(ref.id)
       const travel = travelsWith(ref.rootMotion, onBand)
+      const part = ref.part ?? WHOLE_BODY
       const held = player.bound.get(ref.id)
-      // Rebuilt only when the travel decision flips; a speed, a fade or a move is written onto
-      // the action further down without touching the clip.
-      if (held && held.travel === travel && held.key === key) {
+      // Rebuilt only when what the clip HOLDS changes — the travel, the bones it drives, the clip
+      // itself. A speed, a fade or a move is written onto the action further down instead.
+      if (held && held.travel === travel && held.key === key && held.part === part) {
         held.ref = ref
         continue
       }
 
       if (held) player.mixer.uncacheClip(held.clip)
-      const clip = blockClip(source, player.rootTracks.get(key) ?? null, travel)
-      player.bound.set(ref.id, { ref, travel, key, clip })
+      const clip = blockClip(
+        source,
+        player.rootTracks.get(key) ?? null,
+        travel,
+        bonesDrivenBy(player.bones, part),
+      )
+      player.bound.set(ref.id, { ref, travel, key, part, clip })
     }
 
     for (const [id, held] of player.bound) {
