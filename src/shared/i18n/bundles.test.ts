@@ -25,7 +25,7 @@ import {
 import { INGEST_STAGES } from '../domain/media'
 import { JOB_STATUSES } from '../domain/job'
 import { LOG_SCOPES } from '../ipc'
-import { PBR_CHANNELS } from '../domain/texture'
+import { PBR_CHANNELS, type PbrChannel } from '../domain/texture'
 import { WORKSPACE_IDS } from '../domain/workspace'
 import { USAGE_ACTIONS, USAGE_ASSET_KINDS, USAGE_EVENT_ACTIONS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
@@ -744,7 +744,8 @@ describe('the translation bundles', () => {
    * right, English being the poorer in flexions". Usually is not always: of the twenty-three
    * splits these bundles hold, twenty-one are that flexion and two were drift — `Asset kind`
    * read `Type d'asset` in the usage window against four sites writing `Nature`, and `Metalness`
-   * reads two ways still, arbitration pending at `TWO_WAYS.metalness`.
+   * reads two ways still, settled as a product call at `NAMED_TWICE.metalness` below — where the
+   * three channels this table could never see are settled with it.
    *
    * The morphological shortcut that would spare most of this table was tried and dropped:
    * skipping a pair when one form starts the other swallows `métal` / `métallicité`, the very
@@ -828,6 +829,69 @@ describe('the translation bundles', () => {
 
   it('drops a French exemption once the label stops reading both ways', () => {
     expect(staleIn(FRENCH_FORMS, TWO_WAYS)).toEqual([])
+  })
+
+  /**
+   * The blind spot of both tables above, and it took a manual sentence to see it: `formsOf`
+   * groups by the SOURCE term, so a label shortened on BOTH sides at once lands in no group and
+   * neither table can reach it. `docs/fr/manuel/12-espace-textures.md` says the panel shortens
+   * THREE channel names; only `metalness` ever surfaced, its English having stayed put.
+   *
+   * So the channels are read by KEY instead: `texture.channel.<c>` against the 3D inspector's
+   * name for the same channel, every language. Four of the five comparable ones diverge.
+   */
+  const INSPECTOR_FIELD: Record<PbrChannel, string | null> = {
+    baseColor: 'map',
+    normal: 'normalMap',
+    // The scalars, not `roughnessMap`/`metalnessMap`: those two wear `Carte de` to part the map
+    // from the slider of the same name beside them, which `normalMap` and `aoMap` never needed.
+    roughness: 'roughness',
+    metalness: 'metalness',
+    ao: 'aoMap',
+    // No material field of their own in the 3D inspector — `inspector.fields.height` is the box
+    // dimension, next to `Segments en hauteur`, and rhyming with it would be the false pair.
+    height: null,
+    emissive: null,
+    edge: null,
+  }
+
+  /**
+   * Channels the two surfaces name differently on purpose — each entry saying why, and leaving
+   * the day both agree again. A channel absent here and divergent is drift, in either language.
+   */
+  const NAMED_TWICE: Partial<Record<PbrChannel, string>> = {
+    baseColor: "`Texture` is three.js' own name for `map`; the tile names the channel instead",
+    normal: 'the inspector counts them, as the trade writes the map; the tile names one channel',
+    metalness: 'the trade word beside `Rugosité`, and the short one that fits a tile',
+    ao: 'the full name beside the other maps, and the short one that fits a tile',
+  }
+
+  /** Empty for a channel the inspector has no field for: nothing to diverge, nothing to exempt. */
+  const namesOf = (channel: PbrChannel) => {
+    const field = INSPECTOR_FIELD[channel]
+
+    return field === null
+      ? []
+      : CODES.map(code => [
+          BUNDLES[code].get(`texture.channel.${channel}`),
+          BUNDLES[code].get(`inspector.fields.${field}`),
+        ])
+  }
+
+  it('names a PBR channel the same way on the tile and in the 3D inspector', () => {
+    const drifted = PBR_CHANNELS.filter(channel => NAMED_TWICE[channel] === undefined).filter(
+      channel => namesOf(channel).some(([tile, field]) => tile !== field),
+    )
+
+    expect(drifted).toEqual([])
+  })
+
+  it('drops a channel exemption once both surfaces say the same word', () => {
+    const settled = PBR_CHANNELS.filter(channel => NAMED_TWICE[channel] !== undefined).filter(
+      channel => namesOf(channel).every(([tile, field]) => tile === field),
+    )
+
+    expect(settled).toEqual([])
   })
 
   /**
