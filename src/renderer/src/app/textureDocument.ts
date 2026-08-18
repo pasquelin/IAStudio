@@ -1,14 +1,13 @@
-import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import { isMtlxDocument, type MtlxDocument } from '@shared/domain/materialX'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import i18next from 'i18next'
+import { documentFolder } from '@/app/documentFolder'
 import { channelOfInput, materialFromMtlx, mtlxMaterialOf } from '@/engines/texture/mtlxMaterial'
 import { newTexture, type TextureState } from '@/engines/texture/textureState'
 import { mediaLinkFrom, mediaLinkOf } from '@/engines/timeline/mediaLink'
 import { assetIdForLink } from '@/helpers/assetIndex'
 import { reportNotice } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
-import { useDocuments } from '@/stores/documents'
 
 /**
  * A material on its way to and from its file, which is a MaterialX one and nothing else.
@@ -17,13 +16,6 @@ import { useDocuments } from '@/stores/documents'
  * is resolved against, and the file names its pictures by PATH — an id would name nothing to any
  * other application, and nothing at all in another project.
  */
-
-/** The folder a document's links are relative to — its own, so a project stays movable. */
-function heldIn(documentId: string): readonly string[] {
-  const path = useDocuments.getState().documents[documentId]?.path ?? FOLDER_ROOT
-  const folder = parentOf(path) ?? FOLDER_ROOT
-  return folder === FOLDER_ROOT ? [] : folder.split('/')
-}
 
 /**
  * What the last read found in the file and this editor cannot compose back — the path of each
@@ -44,7 +36,7 @@ export const materialRefusesToSave = (documentId: string): string | null =>
 
 /** Where each channel's picture sits, relative to the document's folder. */
 function filesFor(state: TextureState, documentId: string): Partial<Record<PbrChannel, string>> {
-  const folder = heldIn(documentId)
+  const folder = documentFolder(documentId)
   const byId = assetsById(useAssets.getState())
   const held = carried.get(documentId) ?? {}
   const files: Partial<Record<PbrChannel, string>> = {}
@@ -70,7 +62,7 @@ export function textureFromPayload(payload: unknown, documentId: string): Textur
   incomplete.delete(documentId)
   if (!isMtlxDocument(payload)) return newTexture()
 
-  const folder = heldIn(documentId)
+  const folder = documentFolder(documentId)
   const state = materialFromMtlx(payload, file => assetIdForLink(mediaLinkFrom(file), folder))
 
   const paths: Partial<Record<PbrChannel, string>> = {}
