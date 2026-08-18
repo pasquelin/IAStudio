@@ -593,19 +593,29 @@ offre la section **Animation** :
 | Contrôle | Ce qu’il fait |
 |---|---|
 | **Clip** | choisit lequel jouer, parmi ceux que le fichier porte |
-| **▶ / ⏸** | lance ou arrête la lecture |
+| **▶ / ⏸** | montre le bloc dans la vue, sur une horloge à lui |
 | **Vitesse** | un multiplicateur, de 0,1 à 4 |
 | **En boucle** | recommence à la fin, ou s’arrête sur la dernière pose |
 
-**La pose est enregistrée avec le document.** Rouvrir la scène la retrouve là où vous l’avez
-laissée, pas au début.
+**Ces quatre contrôles portent sur LE BLOC CHOISI sur la bande** : appuyez sur un bloc pour le
+choisir, et la section bascule dessus — tant que vous n’en avez choisi aucun, c’est le premier.
+Un modèle qui porte plusieurs blocs se règle donc bloc par bloc : la vitesse et la boucle
+s’écrivent dans celui que vous regardez, et les autres ne bougent pas.
+
+> **Le ▶ de l’Inspecteur ne déplace pas la tête de lecture.** Regarder une animation est un coup
+> d’œil sur un bloc, pas un déplacement de l’horloge de la scène : le bloc tourne dans la vue, la
+> bande reste où vous l’avez laissée. **Les deux ne marchent jamais ensemble** — lancer la
+> timeline coupe l’aperçu, déplacer la tête aussi, et lancer l’aperçu met la timeline en pause.
+
+**La position de la tête n’est pas enregistrée** : rouvrir la scène la remet au début. Ce qui est
+enregistré, ce sont les blocs — leur place sur la bande, leur vitesse et leur boucle.
 
 **Un modèle sans séquence garde la section**, qui dit alors ce qui lui manque — qu’il ne porte pas
 encore de squelette, ou qu’il en porte un que le studio ne reconnaît pas. Le menu, lui, ne
 s’affiche que s’il y a quelque chose à choisir.
 
-**La séquence choisie se voit aussi sur la bande du bas**, posée en bloc à sa longueur réelle, sur
-une ligne à elle qui porte **le nom du clip**. Les blocs sont groupés **sous** les lignes de clés,
+**Une séquence se voit aussi sur la bande du bas**, posée en bloc à sa longueur réelle, sur une
+ligne à elle qui porte **le nom du clip**. Les blocs sont groupés **sous** les lignes de clés,
 jamais mêlés à elles.
 
 ### Voir le squelette
