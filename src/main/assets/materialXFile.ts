@@ -122,12 +122,15 @@ export function writeMaterialX(document: MtlxDocument, envelope = ''): string {
       : []),
   ].join(' ')
 
+  // No graph at all when nothing is textured, rather than an empty one: a material of uniform
+  // values is the shape a new document has, and an empty `<nodegraph>` is noise every other
+  // reader has to step over. Seen in a file the app wrote, not deduced.
   const lines = [
     '<?xml version="1.0"?>',
     `<materialx ${attributes}>`,
-    `  <nodegraph name="${GRAPH}">`,
-    ...document.images.flatMap(chainOf),
-    '  </nodegraph>',
+    ...(document.images.length > 0
+      ? [`  <nodegraph name="${GRAPH}">`, ...document.images.flatMap(chainOf), '  </nodegraph>']
+      : []),
   ]
 
   if (height) {

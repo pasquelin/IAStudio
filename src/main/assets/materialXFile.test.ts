@@ -80,6 +80,18 @@ describe('a material written as MaterialX', () => {
     expect(mtlxHeadIn(written)).toEqual({ version: '1.39', envelope: '{"documentId":"m1"}' })
   })
 
+  /**
+   * The shape a NEW material has, and the one the app writes first — seen on screen before it was
+   * written here. An empty `<nodegraph>` is noise every other reader steps over.
+   */
+  it('writes no graph at all when no channel carries a picture', () => {
+    const written = writeMaterialX(document({ images: [] }))
+
+    expect(written).not.toContain('<nodegraph')
+    expect(written).toContain('<standard_surface name="SR_scenario" type="surfaceshader">')
+    expect(readMaterialX(written).images).toEqual([])
+  })
+
   it('answers no version for a file that only wears the extension', () => {
     expect(mtlxHeadIn('<html><body>not a material</body></html>')).toEqual({
       version: '',
