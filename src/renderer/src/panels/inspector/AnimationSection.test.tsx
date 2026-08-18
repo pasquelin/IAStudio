@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { clipLane, embeddedClip } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type ModelNode } from '@/engines/scene/sceneState'
+import { useAnimationViews } from '@/stores/animationView'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene, sceneNodeIn, sceneNodeNow } from '@/stores/scene-fixtures'
 import { useSceneViews } from '@/stores/sceneViews'
@@ -24,7 +25,10 @@ const heldOf = () => nodeOf()?.model.lanes?.[0]?.clips
 const playedOf = () => heldOf()?.[0]
 
 /** Whether the scene's head is running — the one clock, written by this button too. */
-const runningNow = () => useSceneViews.getState().views[DOCUMENT]?.playing ?? false
+/** The block being watched on its own clock, which is what the play button drives now. */
+const watchedNow = () => useSceneViews.getState().views[DOCUMENT]?.preview ?? null
+
+const runningNow = () => watchedNow() !== null
 
 /**
  * The section takes its node and its edit subscribed, so a write reaches the screen the way it
@@ -53,6 +57,7 @@ describe('AnimationSection', () => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] })
     useModelClips.setState({ clips: {}, rigs: {} })
     useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({ views: {} })
   })
 
   it('says nothing at all while the file has not landed, having nothing to say about it yet', () => {
@@ -113,9 +118,89 @@ describe('AnimationSection', () => {
     expect(runningNow()).toBe(true)
   })
 
-  // The head is the only clock: pressing play on a block the head has already left would run the
-  // scene on and show nothing at all.
-  it('rewinds the head to the block before playing it', async () => {
+  /** A model holding two blocks in one lane, the second of which is chosen on the band. */
+  const withTwoBlocks = (): void => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [
+        {
+          ...modelNodeFixture('a'),
+          model: {
+            assetId: 'asset-1',
+            lanes: [
+              clipLane('main', [
+                embeddedClip('c1', 'walk', { speed: 1 }),
+                embeddedClip('c2', 'run', { speed: 3, loop: false }),
+              ]),
+            ],
+          },
+        },
+      ],
+    })
+  }
+
+  // A model may hold several blocks: a section that always described the first could not speak
+  // of the others, and changing a speed would have moved the wrong one.
+  it('describes the block chosen on the band, not the first one', () => {
+    withTwoBlocks()
+    useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c2')
+    show()
+
+    expect(screen.getByLabelText('Clip')).toHaveValue('run')
+    expect(screen.getByLabelText('En boucle')).not.toBeChecked()
+  })
+
+  it('follows the choice when another block is picked', () => {
+    withTwoBlocks()
+    useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c2')
+    show()
+    expect(screen.getByLabelText('Clip')).toHaveValue('run')
+
+    act(() => useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c1'))
+
+    expect(screen.getByLabelText('Clip')).toHaveValue('walk')
+  })
+
+  it('edits the chosen block and leaves the other alone', async () => {
+    withTwoBlocks()
+    useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c2')
+    show()
+
+    await userEvent.click(screen.getByLabelText('En boucle'))
+
+    const clips = nodeOf()?.model.lanes?.[0]?.clips ?? []
+    expect(clips.find(clip => clip.id === 'c2')?.loop).toBe(true)
+    expect(clips.find(clip => clip.id === 'c1')?.loop).toBe(true)
+    expect(clips.find(clip => clip.id === 'c1')?.speed).toBe(1)
+  })
+
+  // Two blocks driving the whole body average each other out; this control is the only place
+  // that says otherwise, and a block edited elsewhere must keep what it was given.
+  it('writes which half of the body the chosen block drives', async () => {
+    withTwoBlocks()
+    useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c2')
+    show()
+
+    await userEvent.selectOptions(screen.getByLabelText('Pilote'), 'upper')
+
+    const clips = nodeOf()?.model.lanes?.[0]?.clips ?? []
+    expect(clips.find(clip => clip.id === 'c2')?.part).toBe('upper')
+    expect(clips.find(clip => clip.id === 'c1')?.part).toBeUndefined()
+  })
+
+  it('watches the chosen block when play is pressed, and no other', async () => {
+    withTwoBlocks()
+    useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c2')
+    show()
+
+    await userEvent.click(screen.getByRole('button', { name: /Jouer le clip/ }))
+
+    expect(watchedNow()).toEqual({ nodeId: 'a', clipId: 'c2' })
+  })
+
+  // Watching one animation is a look at a block, not a move of the scene's clock: wherever the
+  // head stands, it is left there.
+  it('leaves the head exactly where it stands, wherever that is', async () => {
     useModelClips.setState({ lengths: { [DOCUMENT]: { a: { walk: 2 } } } })
     show()
     await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
@@ -124,19 +209,18 @@ describe('AnimationSection', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Jouer le clip/ }))
 
-    expect(useSceneViews.getState().views[DOCUMENT]?.playhead).toBe(0)
+    expect(useSceneViews.getState().views[DOCUMENT]?.playhead).toBe(30 * SECOND)
   })
 
-  it('leaves the head alone when it already stands inside the block', async () => {
-    useModelClips.setState({ lengths: { [DOCUMENT]: { a: { walk: 2 } } } })
+  // Two clocks driving one model is what makes a render disagree with the screen.
+  it('gives the model back to the head as soon as the head is moved', async () => {
     show()
     await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
-    await userEvent.click(screen.getByRole('button', { name: /Mettre en pause/ }))
+    expect(watchedNow()).not.toBeNull()
+
     useSceneViews.getState().setPlayhead(DOCUMENT, SECOND)
 
-    await userEvent.click(screen.getByRole('button', { name: /Jouer le clip/ }))
-
-    expect(useSceneViews.getState().views[DOCUMENT]?.playhead).toBe(SECOND)
+    expect(watchedNow()).toBeNull()
   })
 
   it('clears the reference when the choice goes back to none', async () => {

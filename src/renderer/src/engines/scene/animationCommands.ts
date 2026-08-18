@@ -1,6 +1,9 @@
 import {
+  POSE_PROPERTIES,
   TRACK_PROPERTIES,
   type AnimationTrack,
+  type CameraMotion,
+  type CameraShot,
   type Keyframe,
   type TrackProperty,
   type TrackTarget,
@@ -8,9 +11,11 @@ import {
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import type { Command } from '../core/history'
-import { moveNodes, multi } from './commands'
+import { addNode, moveNodes, multi } from './commands'
+import { pathNode } from './nodeFactory'
 import { deltaOf, valueAt, withKey, withoutKey } from './animationEval'
-import { nodeById, type NodeMove, type SceneState } from './sceneState'
+import { shotsWith } from './cameraShots'
+import { nodeById, type CameraNode, type NodeMove, type SceneState } from './sceneState'
 
 /**
  * Edits of the timeline, on the pattern of the sequence's own track commands: what a command
@@ -173,14 +178,24 @@ export function removeAnimationKey(trackId: string, time: number): Command<Scene
 }
 
 /**
- * Keys an object that may hold no channel yet, creating the ones it lacks.
+ * What a subject can be keyed on: the three of a pose, plus the lens when it is a camera and the
+ * subject is the node itself.
  *
- * This is `I → LocRotScale`: an object of a scene ALREADY EXISTS, so asking a person to create a
- * "track" before they can key it is asking them to build the thing they are looking at. The old
- * panel did exactly that, and read as empty with a cube standing in the viewport.
- *
- * Ids are minted here rather than inside `apply`, for the reason `addAnimationTrack` carries: a
- * redo must name the same channels the undo took away.
+ * Read off the node rather than fixed, so keying a cube never opens a channel that drives
+ * nothing — and a bone, which lives inside a file, has no lens of its own to open.
+ */
+export function keyableProperties(
+  state: SceneState,
+  subject: { nodeId: string; bone?: string },
+): readonly TrackProperty[] {
+  const camera = !subject.bone && nodeById(state, subject.nodeId)?.type === 'camera'
+  return camera ? TRACK_PROPERTIES : POSE_PROPERTIES
+}
+
+/**
+ * Keys an object that may hold no channel yet, creating the ones it lacks — demanding a "track"
+ * first would ask for the thing already standing in the viewport. Ids are minted here rather than
+ * inside `apply`: a redo must name the same channels the undo took away.
  */
 export function keyNode(
   state: SceneState,
@@ -190,7 +205,7 @@ export function keyNode(
   mintId: (property: TrackProperty) => string,
 ): Command<SceneState> | null {
   const held = recordingTracksFor(state, subject.nodeId, subject.bone)
-  const missing = TRACK_PROPERTIES.filter(
+  const missing = keyableProperties(state, subject).filter(
     property => !held.some(track => track.target.property === property),
   )
 
@@ -299,6 +314,147 @@ export function moveAnimationKey(trackId: string, from: Us, to: Us): Command<Sce
   })
 }
 
+const writeShots = (
+  state: SceneState,
+  change: (shots: readonly CameraShot[]) => readonly CameraShot[],
+): SceneState => ({
+  ...state,
+  animation: { ...state.animation, shots: change(state.animation.shots) },
+})
+
+/**
+ * Puts a camera on air for a stretch of time. The shot arrives built, id included, for the same
+ * reason a track does: a redo must name the shot the undo took away.
+ */
+export function addCameraShot(shot: CameraShot): Command<SceneState> {
+  return {
+    id: `shot:add:${shot.id}`,
+    apply: state => writeShots(state, shots => shotsWith(shots, shot)),
+    revert: state => writeShots(state, shots => shots.filter(held => held.id !== shot.id)),
+  }
+}
+
+export function removeCameraShot(shotId: string): Command<SceneState> {
+  let before: { position: number; shot: CameraShot } | null = null
+
+  return {
+    id: `shot:remove:${shotId}`,
+    apply: state => {
+      const position = state.animation.shots.findIndex(shot => shot.id === shotId)
+      const shot = state.animation.shots[position]
+      if (!shot) return state
+
+      before = { position, shot }
+      return writeShots(state, shots => shots.filter(held => held.id !== shotId))
+    },
+    revert: state => {
+      const origin = before
+      if (!origin) return state
+      // Put back where it stood: two shots of one layer starting together are settled by their
+      // order, so a shot restored at the end would come back on top of what it was under.
+      return writeShots(state, shots => {
+        const restored = [...shots]
+        restored.splice(origin.position, 0, origin.shot)
+        return restored
+      })
+    },
+  }
+}
+
+/**
+ * A shot moved, trimmed or sent to another layer — the three are one command because they are
+ * one thing: the same shot with other bounds. Whichever fields are given are the ones written.
+ */
+export function editCameraShot(
+  shotId: string,
+  changes: Partial<Omit<CameraShot, 'id' | 'cameraId'>>,
+): Command<SceneState> {
+  let previous: CameraShot | null = null
+
+  return {
+    id: `shot:edit:${shotId}`,
+    apply: state => {
+      previous = state.animation.shots.find(shot => shot.id === shotId) ?? null
+      return previous === null
+        ? state
+        : writeShots(state, shots =>
+            shots.map(shot => (shot.id === shotId ? { ...shot, ...changes } : shot)),
+          )
+    },
+    revert: state => {
+      const origin = previous
+      return origin === null
+        ? state
+        : writeShots(state, shots => shots.map(shot => (shot.id === shotId ? origin : shot)))
+    },
+  }
+}
+
+/**
+ * One camera's line moved up or down the stack, which is what dragging its grip does.
+ *
+ * An edit of the DOCUMENT, unlike the sheet's own arrangement: this order is the law an overlap
+ * is settled by, so moving a line changes what the film looks through.
+ *
+ * The whole list arrives written rather than a number of notches, and `coalesce` is why: a drag
+ * merges into ONE entry that keeps the LAST apply, so a step would replay a three-notch gesture
+ * as one. `cameraId` names the line only so two drags of two lines stay two entries.
+ */
+export function reorderCameraShots(
+  cameraId: string,
+  shots: readonly CameraShot[],
+): Command<SceneState> {
+  let previous: readonly CameraShot[] | null = null
+
+  return {
+    id: `shot:camera:${cameraId}`,
+    apply: state => {
+      previous = state.animation.shots
+      return writeShots(state, () => shots)
+    },
+    revert: state => {
+      const origin = previous
+      return origin === null ? state : writeShots(state, () => origin)
+    },
+  }
+}
+
+/** What a rail takes when it is first bound: the whole of it, forwards, at a steady speed. */
+const WHOLE_RAIL: Omit<CameraMotion, 'pathId'> = { from: 0, to: 1, easing: 'linear' }
+
+/**
+ * A rail laid where a camera stands, aimed down its line of sight, and bound to its shot.
+ *
+ * One command for the two edits, so a single ⌘Z takes back the whole gesture rather than leaving
+ * a rail nothing runs on.
+ */
+export function railForShot(camera: CameraNode, shot: CameraShot): Command<SceneState> {
+  const rail = { ...pathNode(), transform: camera.transform }
+
+  return multi(`shot:rail:${shot.id}`, [
+    addNode(rail),
+    editCameraShot(shot.id, { motion: { ...WHOLE_RAIL, pathId: rail.id } }),
+  ])
+}
+
+/**
+ * A rail on a camera the head covers no shot of: the shot is opened by the same gesture.
+ *
+ * A rail drives nothing without a shot to run it, so asking for one is asking for both — and
+ * asking for both by hand meant finding a button in another panel first, with nothing saying so.
+ */
+export function railOnNewShot(camera: CameraNode, shot: CameraShot): Command<SceneState> {
+  return multi(`shot:rail:new:${shot.id}`, [addCameraShot(shot), railForShot(camera, shot)])
+}
+
+/** Another rail on a shot that already exists, or none at all. */
+export function bindRailToShot(shot: CameraShot, pathId: string): Command<SceneState> {
+  const motion: CameraMotion | undefined =
+    pathId === '' ? undefined : { ...WHOLE_RAIL, ...shot.motion, pathId }
+
+  return editCameraShot(shot.id, { motion })
+}
+
 /** How long the whole thing runs, and how finely it is cut. */
 export function setTimelineSettings(
   settings: Partial<{ duration: Us; fps: number }>,
@@ -345,8 +501,12 @@ export function recordMove(
   time: Us,
   tracks: readonly AnimationTrack[],
 ): Command<SceneState>[] {
-  return tracks.map(track =>
-    setAnimationKey(track.id, time, deltaOf(rest, pose, track.target.property)),
+  return tracks.flatMap(track =>
+    // A lens is not a pose: a drag says nothing about a field of view, and `deltaOf` would hand
+    // this channel the rotation delta of the very same gesture.
+    track.target.property === 'fov'
+      ? []
+      : setAnimationKey(track.id, time, deltaOf(rest, pose, track.target.property)),
   )
 }
 

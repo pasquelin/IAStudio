@@ -494,7 +494,7 @@ les ennuis de branchement.
 **La cause la plus fréquente : la ligne date d’un lancement précédent.** Le port et le jeton
 changent à chaque démarrage du studio. Celle d’hier désigne un port où plus rien n’écoute.
 
-**Quoi faire.** Réglages ▸ Avancé ▸ **Commande de connexion ▸ Copier**, et recollez la ligne dans
+**Quoi faire.** **Réglages ▸ Avancé ▸ Commande de connexion ▸ Copier**, et recollez la ligne dans
 votre terminal. Un client déjà enregistré sous le même nom est remplacé, il n’y a rien à supprimer
 avant.
 

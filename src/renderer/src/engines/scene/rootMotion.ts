@@ -85,12 +85,15 @@ export function blockClip(
   clip: AnimationClip,
   rootTrack: string | null,
   travel: boolean,
+  driven: ReadonlySet<string> | null = null,
 ): AnimationClip {
   // The tracks are SHARED, never copied: an action only ever reads them, and a rig's clip weighs
   // near a megabyte. Only the one channel this rewrites is rebuilt.
-  const tracks = clip.tracks.map(track =>
-    travel || track.name !== rootTrack ? track : heldInPlace(track),
-  )
+  const tracks = clip.tracks
+    // A bone this block does not drive is a bone it says NOTHING about, which is what lets
+    // another block have it: silence, never a value at a lower weight.
+    .filter(track => !driven || driven.has(PropertyBinding.parseTrackName(track.name).nodeName))
+    .map(track => (travel || track.name !== rootTrack ? track : heldInPlace(track)))
 
   return new AnimationClip(clip.name, clip.duration, tracks)
 }

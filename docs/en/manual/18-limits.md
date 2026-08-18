@@ -38,7 +38,7 @@ All six types write into the project folder and open back exactly as they were.
 | Edited sound | `.otio` | **yes** |
 | Sky | `.gltf` | **yes** |
 
-### Two of these extensions announce a format they do not hold yet
+### One of these extensions announces a format it does not hold yet
 
 An `.otio` edit really **is** OpenTimelineIO: Resolve and Premiere read it. An `.ora` picture
 really **is** OpenRaster: an archive holding one PNG per layer, the stack in `stack.xml` and the
@@ -50,12 +50,16 @@ A `.gltf` sky really **is** glTF 2.0: the sun is a real directional light
 `.exr` file **referenced beside it** rather than copied inside. A glTF reader opens the file and
 finds the light, its colour and its intensity.
 
-The other two are not. A **3D scene** `.gltf` or a **material** `.mtlx` wears the name of the open
-format but still holds the studio's own internal shape — **no other application opens it**. The
-extension says where these documents are going, not what they are today.
+A `.gltf` 3D scene is one too: the tree, the placements, the cameras and the punctual lights are
+the standard's own, and what glTF has no field for travels in the `extras` the specification
+reserves for applications.
 
-Until then, to take a scene or a material to another application, the **exports** are what count:
-File ▸ Export.
+The last one is not. A **material** `.mtlx` wears the name of the open format but still holds the
+studio's own internal shape — **no other application opens it**. The extension says where that
+document is going, not what it is today.
+
+Until then, to take a material to another application, the **exports** are what count —
+**File ▸ Export scene** and its neighbours.
 
 What the sky keeps beyond the standard — the exposure, contrast and temperature dials, the blur,
 the environment's intensity — travels inside the file at a place glTF reserves for applications.

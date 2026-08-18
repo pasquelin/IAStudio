@@ -1,7 +1,9 @@
 import type { AssetType } from '@shared/domain/asset'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
-import type { ExportFormat } from '@shared/domain/scene'
+import type { ExportFormat, PathDescriptor } from '@shared/domain/scene'
+import { withMovedPoint, withPointAfter } from '@/engines/scene/cameraPath'
+import { setPath, setTransform } from '@/engines/scene/commands'
 import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PANE_TOOLBAR } from '@/design/styles'
@@ -32,9 +34,11 @@ import { displayOfPane, useSceneViews, sceneViewOf } from '@/stores/sceneViews'
 import { nextDisplayMode } from '@/engines/scene/sceneView'
 import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
+import { CameraPreview } from './CameraPreview/CameraPreview'
 import { SceneCounters } from './SceneCounters'
 import { openSceneNodeMenu } from './sceneNodeMenu'
-import { runSceneCommand, toggleNodeVisible } from './sceneCommands'
+import { openPathPointMenu } from './pathPointMenu'
+import { removePickedPathPoint, runSceneCommand, toggleNodeVisible } from './sceneCommands'
 import { ScenePaneGrid } from './ScenePaneGrid/ScenePaneGrid'
 import { SCENE_TOOLS } from './sceneTools'
 import { sceneExportFiles } from './sceneExportFiles'
@@ -81,6 +85,33 @@ function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
 
   const command = movesToCommand(state, moves, at, recording)
   if (command) store.runCommand(documentId, command)
+}
+
+/**
+ * A rail rewritten by the edit it is handed, and nothing written for a node that is not one.
+ *
+ * Once per gesture, like every other gizmo move: the engine reports on release, so a whole drag
+ * costs one entry in the history without a gesture having to be opened around it.
+ */
+function editPath(
+  documentId: string,
+  nodeId: string,
+  edit: (path: PathDescriptor) => PathDescriptor,
+): void {
+  const store = useScenes.getState()
+  const node = nodeById(sceneOf(store, documentId), nodeId)
+  if (node?.type !== 'path') return
+
+  store.runCommand(documentId, setPath(nodeId, edit(node.path)))
+}
+
+/**
+ * A control point posed in the stretch that was clicked, and picked on the way: the gizmo lands
+ * on it straight away, so the point one just made is the point one drags.
+ */
+function addPathPoint(documentId: string, nodeId: string, index: number): void {
+  editPath(documentId, nodeId, path => withPointAfter(path, index))
+  useSceneViews.getState().setPickedPathPoint(documentId, { nodeId, index: index + 1 })
 }
 
 /**
@@ -158,7 +189,21 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onRigProgress: (nodeId, progress) =>
         useModelClips.getState().reportRigProgress(documentId, nodeId, progress),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
+      onSelectPathPoint: picked => useSceneViews.getState().setPickedPathPoint(documentId, picked),
+      onPathPoint: (nodeId, index, point) =>
+        editPath(documentId, nodeId, path => withMovedPoint(path, index, point)),
+      onAddPathPoint: (nodeId, index) => addPathPoint(documentId, nodeId, index),
+      // Orbiting a pane locked onto a camera MOVES that camera: an edit of the document, so it
+      // lands as a command — one per gesture, since the engine reports on release.
+      onCameraMoved: (nodeId, transform) =>
+        useScenes.getState().runCommand(documentId, setTransform(nodeId, transform)),
       onContextMenu: nodeId => openNodeMenu(documentId, nodeId),
+      // `i18next.t` rather than the hook's, for the reason `openNodeMenu` reads it that way.
+      onPathPointMenu: () =>
+        openPathPointMenu({
+          t: i18next.t,
+          onRemove: () => removePickedPathPoint(documentId),
+        }),
       onStats: (scene, selected) => setStats({ scene, selected }),
       // Published so a montage can look through this very view: a scene with no camera of its
       // own has no other framing anybody chose. Once per orbit, never per frame of one.
@@ -219,6 +264,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     engine.current?.setPickedBone(view.pickedBone)
   }, [view.pickedBone])
 
+  useEffect(() => {
+    engine.current?.setPickedPathPoint(view.pickedPathPoint)
+  }, [view.pickedPathPoint])
+
   // Session state, pushed like the rest: the engine is rebuilt from it after a remount, which is
   // what keeps an orthographic view orthographic when a panel is detached.
   useEffect(() => {
@@ -245,6 +294,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.setPlayhead(view.playhead)
   }, [view.playhead])
+
+  // The block being watched, on the engine's own clock — the head stays where it was left.
+  useEffect(() => {
+    engine.current?.setPreview(view.preview)
+  }, [view.preview])
 
   // Here rather than in the timeline panel, which is a tool window one may close: the head is the
   // scene's ONE clock, and closing a panel must not stop a character walking in the viewport.
@@ -395,9 +449,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
       <div ref={host} className="absolute inset-0" />
       <SceneCounters scene={stats.scene} selected={stats.selected} />
+      <CameraPreview documentId={documentId} />
       {view.quad && (
         <ScenePaneGrid
           views={view.panes}
+          cameras={scene.nodes.filter(node => node.type === 'camera')}
           onView={(pane, chosen) => useSceneViews.getState().setPaneView(documentId, pane, chosen)}
         />
       )}

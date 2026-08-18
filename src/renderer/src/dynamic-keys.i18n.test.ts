@@ -3,6 +3,7 @@ import { isRecord } from '@shared/guards'
 import { LANGUAGES, TRANSLATIONS, type Language } from '@shared/i18n'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
+import { BODY_PARTS } from '@shared/domain/humanoid'
 import {
   ADJUSTMENT_KINDS,
   BLEND_MODES,
@@ -58,6 +59,9 @@ const COMPOSED_KEYS: readonly string[] = [
   // Why a mesh cannot take a skeleton. Composed the same way, and it stands in for the button
   // itself: a fault with no sentence would leave the user a raw key where the offer used to be.
   ...RIG_FIT_FAULTS.map(fault => `inspector.rigFault_${fault}`),
+  // Which half of a body a block drives. A part with no sentence would read as a raw key inside
+  // the one control that makes two animations stack rather than average.
+  ...BODY_PARTS.map(part => `inspector.clipPart_${part}`),
   ...TRACK_KINDS.map(kind => `inspector.kind_${kind}`),
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),

@@ -14,6 +14,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import { decompress } from 'three/addons/utils/WebGLTextureUtils.js'
 import type { ExportFormat } from '@shared/domain/scene'
 import { OVERLAY_NAME } from './sceneView'
+import { MARKER_NAME } from './threeFactory'
 
 /**
  * A scene on its way out of the studio.
@@ -198,11 +199,16 @@ function rename(root: Object3D, nameOf: (id: string) => string | undefined): voi
   })
 }
 
+/**
+ * The wireframe overlay, and the bodies a camera and a lamp are drawn as. Both are workshop
+ * furniture hung under the very nodes being handed over: left in, a file would carry a camera
+ * shaped like a camera and a bulb where a lamp is.
+ */
 function dropOverlays(object: Object3D): void {
   // Collected first: removing a child mid-walk would skip the one that takes its place.
   const overlays: Object3D[] = []
   object.traverse(child => {
-    if (child.name === OVERLAY_NAME) overlays.push(child)
+    if (child.name === OVERLAY_NAME || child.name === MARKER_NAME) overlays.push(child)
   })
 
   for (const overlay of overlays) overlay.removeFromParent()

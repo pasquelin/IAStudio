@@ -1,4 +1,5 @@
 import type { AccountSummary, AccountsResult } from './domain/account'
+import type { BundledAnimation } from './domain/animationLibrary'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
@@ -235,6 +236,8 @@ export type Channels = {
   fontsList: 'fonts:list'
   fontsRead: 'fonts:read'
 
+  animationsList: 'animations:list'
+
   diagnosticsReport: 'diagnostics:report'
   diagnosticsTrace: 'diagnostics:trace'
 
@@ -414,6 +417,8 @@ export const CHANNELS: Channels = {
   fontsList: 'fonts:list',
   fontsRead: 'fonts:read',
 
+  animationsList: 'animations:list',
+
   diagnosticsReport: 'diagnostics:report',
   diagnosticsTrace: 'diagnostics:trace',
 
@@ -565,6 +570,9 @@ export type LogScope =
   | 'scene.model'
   | 'scene.bvh'
   | 'scene.texture'
+  // Apart from `scene.model`, though both read a `.glb`: a scope says a subject once, so an
+  // animation that will not load would otherwise silence what the MODEL had to say.
+  | 'scene.animation'
   | 'scene.export'
   | 'scene.render'
   | 'sequence.export'
@@ -638,6 +646,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
   'scene.bvh',
   'scene.texture',
+  'scene.animation',
   'scene.export',
   'scene.render',
   'sequence.export',
@@ -1425,6 +1434,13 @@ export type StudioBridge = {
      * longer has that family, which is the missing-font hole a shared document opens.
      */
     read: (family: string) => Promise<Uint8Array | null>
+  }
+  /**
+   * The animations shipped with the app — one folder per animation under `resources/animations`,
+   * common to every project and read-only. Empty while none has been installed.
+   */
+  animations: {
+    list: () => Promise<BundledAnimation[]>
   }
   media: {
     /**

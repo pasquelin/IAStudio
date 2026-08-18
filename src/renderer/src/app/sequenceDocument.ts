@@ -1,7 +1,7 @@
 import type { Asset } from '@shared/domain/asset'
-import type { DocumentDescriptor } from '@shared/domain/document'
+import { DOCUMENT_ID_KEY, type DocumentDescriptor } from '@shared/domain/document'
 import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
-import { otioStudioMetadata, OTIO_DOCUMENT_ID } from '@shared/domain/otio'
+import { otioStudioMetadata } from '@shared/domain/otio'
 import i18next from 'i18next'
 import { mediaLinkFrom, mediaLinkOf, mediaNameOf } from '@/engines/timeline/mediaLink'
 import { otioTimelineOf, sequenceFromOtio, type OtioSource } from '@/engines/timeline/otioTimeline'
@@ -121,7 +121,7 @@ export function serializeSequencePayload(payload: unknown): string {
 const carried = new Map<string, Record<string, unknown>>()
 
 const COMPOSED = new Set([
-  OTIO_DOCUMENT_ID,
+  DOCUMENT_ID_KEY,
   'width',
   'height',
   'sampleRate',

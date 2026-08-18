@@ -11,8 +11,9 @@ export type AnimationHeadersProps = {
   rows: readonly AnimationRow[]
 }
 
+/** A camera on air is out: its rank is the document's law, not an arrangement of the sheet. */
 function shownSubjects(rows: readonly AnimationRow[]): string[] {
-  return rows.filter(row => row.kind === 'subject').map(row => row.id)
+  return rows.filter(row => row.kind === 'subject' && !row.bars).map(row => row.id)
 }
 
 /**

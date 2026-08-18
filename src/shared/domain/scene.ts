@@ -7,6 +7,7 @@
  * from them instead of restated, so a geometry added without a menu entry fails to compile.
  */
 import type { FontRef } from './font'
+import type { BodyPart } from './humanoid'
 import type { Rig } from './rig'
 import type { Us } from './time'
 import type { Vector3 } from './transform'
@@ -63,6 +64,35 @@ export type CameraDescriptor = {
 }
 
 export const DEFAULT_CAMERA: CameraDescriptor = Object.freeze({ fov: 50, near: 0.1, far: 1000 })
+
+/**
+ * A rail: the line a camera runs along during a shot.
+ *
+ * A node of the scene like any other, so it inherits the outliner row, the selection, the gizmo,
+ * the rename, the visibility, undo, copy and paste — everything `SceneNode` already gives.
+ *
+ * `kind` is an open union: a Bézier one would be another value here, and no document written
+ * before it would have to be migrated.
+ */
+export type PathDescriptor = {
+  kind: 'catmullrom'
+  /** In the node's OWN frame, so moving the rail moves the trajectory. Two at the very least. */
+  points: readonly Vector3[]
+  closed: boolean
+  /** Catmull-Rom tension: 0 is angular, 0.5 is three.js's own default. */
+  tension: number
+}
+
+export const DEFAULT_PATH: PathDescriptor = Object.freeze({
+  kind: 'catmullrom',
+  // Five units apart along Z, which is the axis a camera born from the Add menu looks down.
+  points: Object.freeze([
+    Object.freeze({ x: 0, y: 0, z: 0 }),
+    Object.freeze({ x: 0, y: 0, z: -5 }),
+  ]),
+  closed: false,
+  tension: 0.5,
+})
 
 /**
  * An imported model, for the same reason and in the same shape as a texture: what a document
@@ -138,12 +168,28 @@ export type AnimationRef = {
 /**
  * Where a clip's frames come from.
  *
- * `embedded` is the file the model itself is: the name is the one the GLB spells. `asset` is a
- * clip of the project's own library, reusable by any character — which is the whole reason this
- * is a union rather than a string.
+ * `embedded` is the file the model itself is: the name is the one the GLB spells. `bundled` is a
+ * folder shipped beside the app, named by that FOLDER — never by what its clip spells, which is
+ * `NlaTrack` on a Tripo rig and nothing at all on Uthana's. `asset` is a clip of the project's
+ * own library, reusable by any character.
  */
 export type ClipSource =
-  { kind: 'embedded'; name: string } | { kind: 'asset'; assetId: string; name: string }
+  | { kind: 'embedded'; name: string }
+  | { kind: 'bundled'; name: string }
+  | { kind: 'asset'; assetId: string; name: string }
+
+/**
+ * What a block's clip is filed under, wherever a player or a length is kept by name.
+ *
+ * The kind is part of it, and that is the whole point: an animation shipped as `walk` and a clip
+ * the model's own file spells `walk` are two different things, and a bare name would play one
+ * for the other.
+ */
+export function clipKeyOf(source: ClipSource): string {
+  if (source.kind === 'embedded') return source.name
+  // The id and not the name: two library clips may well be called the same thing.
+  return source.kind === 'asset' ? `asset:${source.assetId}` : `bundled:${source.name}`
+}
 
 /**
  * One block of animation on a model's band.
@@ -175,6 +221,14 @@ export type ClipRef = {
   fadeOut: Us
   /** `auto` lets the studio decide from what the clip actually holds. */
   rootMotion: RootMotion
+  /**
+   * Which bones this block drives. Absent is the whole body — what every document written before
+   * this field says, and what a lone block wants anyway.
+   *
+   * It is what makes « walking AND raising the arms » something other than the average of the
+   * two: blocks driving different halves stop sharing the pose out between them.
+   */
+  part?: BodyPart
 }
 
 /**
@@ -224,6 +278,11 @@ export const DEFAULT_CLIP: Omit<ClipRef, 'id' | 'source' | 'label'> = Object.fre
  */
 export function embeddedClip(id: string, name: string, extra: Partial<ClipRef> = {}): ClipRef {
   return { ...DEFAULT_CLIP, ...extra, id, source: { kind: 'embedded', name }, label: name }
+}
+
+/** A block on an animation shipped with the app, named — and labelled — by its folder. */
+export function bundledClip(id: string, name: string, extra: Partial<ClipRef> = {}): ClipRef {
+  return { ...DEFAULT_CLIP, ...extra, id, source: { kind: 'bundled', name }, label: name }
 }
 
 /**
@@ -411,12 +470,13 @@ export const EXPORT_EXTENSIONS: Record<ExportFormat, string> = {
 }
 
 /** What is picked from the Add menu without being a mesh or a light. */
-export type ObjectKind = 'sprite' | 'text' | 'camera'
+export type ObjectKind = 'sprite' | 'text' | 'camera' | 'path'
 
 export const OBJECT_ENTRIES: readonly SceneEntry<ObjectKind>[] = [
   { kind: 'sprite' },
   { kind: 'text' },
   { kind: 'camera' },
+  { kind: 'path' },
 ]
 
 export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [

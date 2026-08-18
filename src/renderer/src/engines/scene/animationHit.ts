@@ -30,6 +30,8 @@ export type AnimationHit =
   | ({ kind: 'block'; grabbedAt: Us } & BlockAt)
   /** One end of a block: the same zone the montage grabs a trim by, and the same arithmetic. */
   | ({ kind: 'blockEdge'; edge: ClipEdge } & BlockAt)
+  /** A shot: its body slides, its two edges trim. `grabbedAt` is how far into it the hand landed. */
+  | { kind: 'shot'; rowId: string; shotId: string; edge: 'start' | 'end' | null; grabbedAt: Us }
   | { kind: 'row'; rowId: string; time: Us }
 
 export type HitContext = {
@@ -43,6 +45,19 @@ export type HitContext = {
  * few pixels across, and asking a hand to land inside one is asking too much.
  */
 const GRAB_SLACK = 2
+
+/**
+ * Which edge of a bar the hand landed on, through the montage's own `edgeGrab`: handles are
+ * measured in PIXELS, and they shrink on a narrow bar so its body stays draggable.
+ */
+function edgeOf(start: Us, duration: Us, x: number, viewport: Viewport): 'start' | 'end' | null {
+  const left = timeToX(start, viewport)
+  const right = timeToX(start + duration, viewport)
+  const grab = edgeGrab(right - left)
+
+  if (Math.abs(left - x) <= grab) return 'start'
+  return Math.abs(right - x) <= grab ? 'end' : null
+}
 
 export function hitAnimation(context: HitContext, point: Point): AnimationHit | null {
   const { rows, viewport, fps } = context
@@ -65,6 +80,25 @@ export function hitAnimation(context: HitContext, point: Point): AnimationHit | 
         return { kind: 'key', rowId: row.id, time }
       }
     }
+
+    // The bars come after the diamonds because they are painted UNDER them: on a camera's line a
+    // key is what the pointer meets first, and the shot it stands on is what is left.
+    if (row.kind === 'subject' && row.bars) {
+      const on = xToTime(point.x, viewport)
+      const bar = row.bars.find(
+        held => on >= held.shot.start && on <= held.shot.start + held.shot.duration,
+      )
+      if (bar) {
+        return {
+          kind: 'shot',
+          rowId: row.id,
+          shotId: bar.shot.id,
+          edge: edgeOf(bar.shot.start, bar.shot.duration, point.x, viewport),
+          grabbedAt: on - bar.shot.start,
+        }
+      }
+    }
+
     return { kind: 'row', rowId: row.id, time: at }
   }
 
@@ -101,5 +135,7 @@ function hitLane(row: LaneRow, viewport: Viewport, x: number): AnimationHit | nu
  * animation band said nothing, which is what made a press on an edge read as a move that failed.
  */
 export function animationCursorAt(context: HitContext, point: Point): string {
-  return hitAnimation(context, point)?.kind === 'blockEdge' ? 'ew-resize' : ''
+  const hit = hitAnimation(context, point)
+  if (hit?.kind === 'blockEdge') return 'ew-resize'
+  return hit?.kind === 'shot' && hit.edge ? 'ew-resize' : ''
 }

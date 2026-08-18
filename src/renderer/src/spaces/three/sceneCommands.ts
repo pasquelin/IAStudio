@@ -6,11 +6,14 @@ import {
   removeNodes,
   rootedIn,
   setNodeVisible,
+  setPath,
 } from '@/engines/scene/commands'
+import { withoutPoint } from '@/engines/scene/cameraPath'
 import { nodeById, selectedNodes } from '@/engines/scene/sceneState'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 
 /**
  * The commands that act on what a scene has selected, and on nothing else — no mode, no view
@@ -39,6 +42,38 @@ export function toggleNodeVisible(documentId: string, nodeId: string): void {
   if (node) store.runCommand(documentId, setNodeVisible(node.id, !node.visible))
 }
 
+/**
+ * The picked control point of a rail, taken away. Answers whether there was one, so a caller can
+ * go on to what it would otherwise have deleted.
+ *
+ * Only while its rail is still the SELECTION, and that is what stops Delete from being hijacked:
+ * a point is picked by a click in the viewport and let go of by another one, where the tree
+ * selects through `selectIn`, which knows nothing of this. A point left over from a rail worked
+ * on earlier would eat the Delete meant for the object just picked in the tree — and on a rail
+ * already down to its last two points, it would swallow every Delete and do nothing at all.
+ *
+ * Two points is the floor `withoutPoint` holds — one point is not a line — and that refusal still
+ * counts as handled: falling through would delete the rail the hand is working on.
+ */
+export function removePickedPathPoint(documentId: string): boolean {
+  const picked = sceneViewOf(useSceneViews.getState(), documentId).pickedPathPoint
+  if (!picked) return false
+
+  const store = useScenes.getState()
+  const scene = sceneOf(store, documentId)
+  if (!scene.selectedIds.includes(picked.nodeId)) return false
+
+  const node = nodeById(scene, picked.nodeId)
+  if (node?.type !== 'path') return false
+
+  const path = withoutPoint(node.path, picked.index)
+  if (path === node.path) return true
+
+  store.runCommand(documentId, setPath(picked.nodeId, path))
+  useSceneViews.getState().setPickedPathPoint(documentId, null)
+  return true
+}
+
 export function runSceneCommand(documentId: string, command: CommandId): boolean {
   const store = useScenes.getState()
   const { nodes, selectedIds } = sceneOf(store, documentId)
@@ -50,6 +85,9 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
       return true
 
     case 'scene.delete':
+      // A picked control point is taken first: point and rail are one selection seen at two
+      // depths, and Delete on a point that took the whole rail would be a rail nobody meant.
+      if (removePickedPathPoint(documentId)) return true
       if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(nodes, selectedIds))
       return true
 

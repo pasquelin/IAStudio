@@ -12,14 +12,12 @@
  * `extras` property "MAY be defined on any glTF object" and that clients ignore what they do not
  * understand.
  */
+import { STUDIO_METADATA_KEY } from './document'
 import { isRecord } from '../guards'
 
 export const GLTF_VERSION = '2.0'
 
 export const GLTF_GENERATOR = 'Scenario Studio'
-
-/** The studio's own key inside an `extras`, as `metadata.scenario` is inside an OTIO object. */
-export const GLTF_STUDIO_KEY = 'scenario'
 
 /** The one extension the studio writes today, and the one three.js reads on both sides. */
 export const KHR_LIGHTS_PUNCTUAL = 'KHR_lights_punctual'
@@ -81,7 +79,7 @@ export function isGltfDocument(value: unknown): value is Record<string, unknown>
 /** What rides under the studio's own key of an `extras`, or nothing — never a partial object. */
 export function gltfStudioExtras(extras: unknown): Record<string, unknown> {
   if (!isRecord(extras)) return {}
-  const studio = extras[GLTF_STUDIO_KEY]
+  const studio = extras[STUDIO_METADATA_KEY]
   return isRecord(studio) ? studio : {}
 }
 
@@ -151,6 +149,33 @@ export function quaternionAboutY(radians: number): GltfQuaternion {
 export function angleAboutY(rotation: readonly number[]): number {
   const angle = 2 * Math.atan2(rotation[1] ?? 0, rotation[3] ?? 1)
   return angle < 0 ? angle + Math.PI * 2 : angle
+}
+
+/**
+ * What the studio holds that the standard has no field for, under `STUDIO_METADATA_KEY` in the
+ * `extras` of the SCENE — not of the document. A scene's extras are what three carries in
+ * `Scene.userData`, so they survive a trip through a loader and an exporter.
+ */
+export const GLTF_SCENE_STATE = 'scene'
+
+/**
+ * Which scene a document opens on. Asked here rather than answered where it is needed: the studio
+ * data is read off one scene and the title is stamped onto another the day two answers disagree.
+ */
+export function defaultSceneIndex(document: unknown): number {
+  const at = isRecord(document) ? document.scene : undefined
+  return typeof at === 'number' ? at : 0
+}
+
+/** What rides under the studio's own domain, on the default scene, or nothing. */
+export function gltfStudioMetadata(value: unknown): Record<string, unknown> {
+  if (!isRecord(value)) return {}
+
+  const scenes = value.scenes
+  const scene = Array.isArray(scenes) ? scenes[defaultSceneIndex(value)] : undefined
+  const extras = isRecord(scene) ? scene.extras : undefined
+  const studio = isRecord(extras) ? extras[STUDIO_METADATA_KEY] : undefined
+  return isRecord(studio) ? studio : {}
 }
 
 /**

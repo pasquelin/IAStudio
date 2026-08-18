@@ -34,7 +34,8 @@
     "styles": "Styles",
     "view": "Vue",
     "projects": "Vos projets",
-    "library": "Votre bibliothèque"
+    "library": "Votre bibliothèque",
+    "animations": "Animations"
   },
   "view": {
     "empty": "Ouvrez une skybox pour régler la façon dont elle est affichée.",

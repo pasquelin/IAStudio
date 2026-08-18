@@ -133,9 +133,9 @@ function claimsDocument(path: string): boolean {
   return extension === '' || isDocumentExtension(extension)
 }
 
-/** How many heads are read at once. Measured in `documents.bench.ts`: 2 000 documents across
- * 200 folders take 279 ms one at a time and 143 ms over this pool, on the machine of 2026-08-18.
- * The cache under it — `headCache.ts` — takes the same listing to 45 ms. */
+/** How many heads are read at once, `documents.bench.ts` being what says whether it still pays:
+ * a listing reads one head per document, and the cache under it — `headCache.ts` — is what makes
+ * the SECOND listing of an unchanged folder cost nothing at all. */
 const HEAD_POOL = 16
 
 /** Runs `read` over `items` with at most `HEAD_POOL` in flight, ANSWERING IN ORDER.
@@ -163,6 +163,11 @@ export async function pooledHeads<T>(
 /**
  * What a listing needs of a file, read the cheapest way the format allows — a project of heavy
  * scenes would otherwise be read whole every time it is opened.
+ *
+ * "Cheapest" is not cheap for an open format: a glTF and an `.otio` carry no head of ours to read
+ * short, so one is read and parsed WHOLE — 10,1 ms at 5 000 nodes and 31,3 at 15 000, measured
+ * 18/08 by the bench beside this. That is what `headCache.ts` sits over, and what makes the
+ * second listing of an unchanged folder cost a `stat` and nothing else.
  *
  * Exported for the bench beside it rather than for callers — like `pooledHeads`, and for the same
  * reason: timing a copy of it would time something else.
@@ -329,6 +334,7 @@ export function createDocumentFiles({
       // Durability across a power cut would want `fsync`; it has none.
       const body = bodyFormatOf(extensionOf(basename(file))).write(document)
       await writeAtomic(file, body, { staging: copy })
+      heads.forget(file)
     } finally {
       staging.delete(basename(copy))
     }

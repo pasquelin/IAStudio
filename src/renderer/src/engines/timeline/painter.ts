@@ -296,6 +296,38 @@ function paintEdgeBars(
  */
 type ClipPaint = { palette: Palette; options: PaintOptions; linkable: boolean }
 
+/**
+ * One clip, for a band that is not the montage — the dope sheet's camera shots.
+ *
+ * The montage's own palette and nothing else: a shot and a rush are the same object to a hand,
+ * and two tables of tokens is how two bands stop looking alike without anyone deciding it.
+ */
+export function paintClipOn(
+  context: CanvasRenderingContext2D,
+  clip: Clip,
+  label: string,
+  viewport: Viewport,
+  top: number,
+  height: number,
+  selected: boolean,
+): void {
+  const left = timeToX(clip.start, viewport)
+  // Never nothing: a clip shorter than a pixel still has to be visible enough to grab.
+  const right = Math.max(left + 1, timeToX(clipEnd(clip), viewport))
+  const palette = readPalette()
+
+  // Posed here, where `paintTimeline` poses them for the strip: a band that draws its own text
+  // some other way leaves its baseline behind, and the name rides out of the top of the bar.
+  context.font = palette.clipFont
+  context.textBaseline = 'top'
+
+  paintClip(context, clip, label, viewport, left, right, top, height, selected, 'video', {
+    palette,
+    options: {},
+    linkable: false,
+  })
+}
+
 function paintClip(
   context: CanvasRenderingContext2D,
   clip: Clip,

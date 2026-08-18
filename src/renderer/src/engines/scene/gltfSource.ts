@@ -26,6 +26,12 @@ const KTX2_PATH = '/decoders/basis/'
  */
 export type GltfSource = {
   load: ModelSource
+  /**
+   * A file read for the ANIMATION it carries rather than for its shape, and read whatever format
+   * it is in: the studio takes `.glb`, `.gltf` and `.fbx`, and a shipped animation is named by
+   * its FOLDER — so nothing says which of the three it is before the bytes arrive.
+   */
+  loadAnimation: ModelSource
   dispose: () => void
 }
 
@@ -74,12 +80,37 @@ export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSo
 
       return gltf.scene
     },
+
+    loadAnimation: async url => {
+      const answer = await fetch(url)
+      if (!answer.ok) throw new Error(`${url} answered ${answer.status}`)
+
+      const bytes = await answer.arrayBuffer()
+      // Routed by the BYTES, never by the name: `scenario://animation/walk` spells no extension,
+      // and three's two loaders parse entirely different things.
+      if (readsAsGltf(bytes)) {
+        const gltf = await loader.parseAsync(bytes, url)
+        gltf.scene.animations = gltf.animations
+        return gltf.scene
+      }
+
+      // Loaded only when something is actually in FBX: it is 108 Ko of parser, and every other
+      // file the studio reads goes through the loader above.
+      const { FBXLoader } = await import('three/addons/loaders/FBXLoader.js')
+      return new FBXLoader().parse(bytes, url)
+    },
     // `KTX2Loader` counts live instances: an undisposed one makes the next engine warn about itself.
     dispose: () => {
       draco.dispose()
       ktx2.dispose()
     },
   }
+}
+
+/** A glTF says so in its first four bytes, binary or not; anything else is left to `FBXLoader`. */
+function readsAsGltf(bytes: ArrayBuffer): boolean {
+  const head = new TextDecoder().decode(new Uint8Array(bytes, 0, Math.min(64, bytes.byteLength)))
+  return head.startsWith('glTF') || head.trimStart().startsWith('{')
 }
 
 /**

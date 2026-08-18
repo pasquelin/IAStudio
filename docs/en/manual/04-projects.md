@@ -21,8 +21,8 @@ is a project you lose the day that software stops opening.
 
 | Action | Shortcut | Menu |
 |---|---|---|
-| **New project** | `⌘N` / `Ctrl+N` | File ▸ New project… |
-| **Open project** | `⌘O` / `Ctrl+O` | File ▸ Open project… |
+| **New project** | `⌘N` / `Ctrl+N` | **File ▸ New project…** |
+| **Open project** | `⌘O` / `Ctrl+O` | **File ▸ Open project…** |
 
 **Both gestures are in the Explorer panel too**, whenever no project is open: it then shows
 **Open project** and **New project**, in its usual place in the left column. It is there so that
@@ -536,10 +536,9 @@ The left-hand button carries the name of the branch that is out — or **Off any
 have landed on a precise version rather than on a branch. It opens the list of branches, with a
 tick on the one that is out, and a **New branch** row.
 
-> **That list is read less often than the rest of the panel**: when you change branch, when a
-> version is recorded, and when you come back to the panel. A branch created in a terminal
-> **without switching to it** therefore only appears after leaving the panel and returning — the
-> **Refresh** button reads the files, not the branches.
+> **That list is read again on every open**: a branch created in a terminal **without switching to
+> it** is already there. The **Refresh** button is still the one for files — it does not read the
+> branches, and does not have to.
 
 A branch is how you try something else without losing anything: two artistic directions on the same
 project, each with its own.

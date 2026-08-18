@@ -12,8 +12,17 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { token } from '../core/palette'
 import { frameDelta } from './frameClock'
 import { emptyGpuStats, recordFrame, type GpuStats } from './gpuStats'
-import { glRect, paneAt, paneCount, paneRects, type PaneLayout, type PaneRect } from './panes'
+import {
+  glRect,
+  inRect,
+  paneAt,
+  paneCount,
+  paneRects,
+  type PaneLayout,
+  type PaneRect,
+} from './panes'
 import { pointerNdc, type PointerPosition } from './pointer'
+import { frustumHeight } from './screenScale'
 
 /** Where an unmounted viewport orbits, having no controls to hold a target. Never written to. */
 const ORIGIN = new Vector3()
@@ -43,6 +52,14 @@ export type ViewportEngineOptions = {
    */
   onPane?: (index: number, camera: ViewportCamera) => void
   /**
+   * Called around the inset pass, and it hands back the call that undoes whatever it did.
+   *
+   * The seam a preview needs and `onPane` cannot give: a preview shows what the camera FILMS, so
+   * the grid and the helpers have to be hidden for that pass and put back for the next — and
+   * `onPane` has no symmetrical call after a pane is drawn.
+   */
+  onInset?: () => () => void
+  /**
    * Filmic tone mapping. Off by default because it changes how every existing colour lands,
    * and the scene editor was built and reviewed without it; a viewport that judges an HDR
    * environment turns it on.
@@ -66,7 +83,7 @@ export type ViewportEngineOptions = {
    * listens publishes where the view now stands, and a store written sixty times a second
    * would repaint everything reading it for a drag that is not over.
    */
-  onCameraSettled?: () => void
+  onCameraSettled?: (pane: number) => void
   fieldOfView?: number
   near?: number
   far?: number
@@ -99,6 +116,19 @@ export type ProjectionKind = 'perspective' | 'orthographic'
 
 export type ViewportCamera = PerspectiveCamera | OrthographicCamera
 
+/** A camera drawn over the panes, in a rectangle of its own — the camera preview. */
+export type InsetPane = {
+  camera: PerspectiveCamera
+  /** In CSS pixels, origin top-left, like every other pane rect. */
+  rect: PaneRect
+  /**
+   * What the preview is cleared to before it draws. A scene with no background of its own is
+   * TRANSPARENT, and the panes underneath then showed straight through the picture — a preview
+   * one reads the viewport through is not a preview.
+   */
+  backdrop: Color
+}
+
 /**
  * One of the views beside the main one. It carries both cameras, exactly as the main one does:
  * a quarter set to a side is flat — converging edges are the one thing a side view rules out —
@@ -109,6 +139,8 @@ type ExtraPane = {
   orthographic: OrthographicCamera
   projection: ProjectionKind
   controls: OrbitControls | null
+  /** A camera of the SCENE this pane draws through instead of its own — see `setPaneCamera`. */
+  borrowed: PerspectiveCamera | null
 }
 
 /**
@@ -117,8 +149,13 @@ type ExtraPane = {
  */
 const EXTRA_PANE_HEIGHT = 6
 
-/** The camera an added view is currently drawing through. */
+/** How far ahead of a borrowed camera its orbit turns. Reused, so lending allocates nothing. */
+const BORROWED_PIVOT = 5
+const borrowedAim = new Vector3()
+
+/** The camera an added view is currently drawing through — a borrowed one wins over both. */
 function cameraOf(pane: ExtraPane): ViewportCamera {
+  if (pane.borrowed) return pane.borrowed
   return pane.projection === 'perspective' ? pane.perspective : pane.orthographic
 }
 
@@ -144,6 +181,8 @@ export class ViewportEngine {
   private readonly extras: ExtraPane[] = []
   /** Where each pane sits, in CSS pixels. One entry in a single layout, four in a quad. */
   private rects: PaneRect[] = []
+  /** What the camera preview shows, or `null` when it is closed. */
+  private inset: InsetPane | null = null
   /** How tall the added views see, in world units. Set by whoever knows what the scene holds. */
   private extraHeight = EXTRA_PANE_HEIGHT
   private frame: number | null = null
@@ -237,7 +276,7 @@ export class ViewportEngine {
     const camera = this.camera
     const target = this.controls?.target
     const distance = target ? camera.position.distanceTo(target) : camera.position.length()
-    const height = 2 * distance * Math.tan((this.perspective.fov * Math.PI) / 360)
+    const height = frustumHeight(this.perspective.fov, distance)
     const width = height * aspect
 
     this.orthographic.top = height / 2
@@ -312,7 +351,37 @@ export class ViewportEngine {
     if (!canvas) return null
 
     const bounds = canvas.getBoundingClientRect()
-    return paneAt(this.rects, pointer.clientX - bounds.left, pointer.clientY - bounds.top)
+    const x = pointer.clientX - bounds.left
+    const y = pointer.clientY - bounds.top
+
+    // The inset first, and it answers for nobody: it covers a pane rather than dividing the
+    // surface, so without this a drag inside the preview would orbit the view underneath it.
+    if (this.insetHasPointer(pointer)) return null
+    return paneAt(this.rects, x, y)
+  }
+
+  /**
+   * Whether a pointer landed in the camera preview. What a picker asks before casting a ray: the
+   * preview draws through a camera of its own, so a ray cast from the pane underneath would meet
+   * whatever stands behind the picture rather than what is in it.
+   */
+  insetHasPointer(pointer: PointerPosition): boolean {
+    const canvas = this.renderer?.domElement
+    if (!canvas || !this.inset) return false
+
+    const bounds = canvas.getBoundingClientRect()
+    return inRect(this.inset.rect, pointer.clientX - bounds.left, pointer.clientY - bounds.top)
+  }
+
+  /**
+   * What the preview shows, and where — `null` closes it.
+   *
+   * The rect comes from the caller because the DOM chrome around the preview has to land on the
+   * very same pixels: one rectangle, decided once, rather than two that agree until they drift.
+   */
+  setInsetPane(pane: InsetPane | null): void {
+    this.inset = pane
+    this.requestRender()
   }
 
   private createExtra(): ExtraPane {
@@ -328,6 +397,7 @@ export class ViewportEngine {
       orthographic,
       projection: 'orthographic',
       controls: null,
+      borrowed: null,
     }
 
     const canvas = this.renderer?.domElement
@@ -340,8 +410,43 @@ export class ViewportEngine {
     // one canvas would each answer the same drag, and the three off-screen ones would answer it
     // invisibly.
     controls.enabled = false
+    // The index is read at the moment of the event rather than captured: panes are pushed after
+    // this returns, so nothing here knows yet which one this will be.
+    controls.addEventListener('end', () =>
+      this.options.onCameraSettled?.(this.extras.indexOf(pane) + 1),
+    )
     pane.controls = controls
     return pane
+  }
+
+  /**
+   * Draws a pane through a camera of the SCENE rather than through its own.
+   *
+   * The orbit follows: left on the camera nobody is drawing, a drag would turn something
+   * invisible. Handing it the borrowed camera is what makes orbiting in that pane MOVE the
+   * camera of the scene — which is the whole point, and why `onCameraSettled` carries the pane.
+   */
+  setPaneCamera(index: number, camera: PerspectiveCamera | null): void {
+    // Pane 0 draws with the viewport's own camera and reads `extras[-1]`, which is nobody.
+    const pane = this.extras[index - 1]
+    if (!pane || pane.borrowed === camera) return
+
+    pane.borrowed = camera
+    const drawn = cameraOf(pane)
+    if (pane.controls) {
+      pane.controls.object = drawn
+      // The target is put in FRONT of the borrowed camera before anything updates: `update()`
+      // ends on `object.lookAt(target)`, so a target left where the pane last orbited would
+      // swing that camera round the moment it is lent — and again on every frame the pointer
+      // merely hovers the pane, with no gesture to report it.
+      if (camera) {
+        camera.getWorldDirection(borrowedAim)
+        pane.controls.target.copy(camera.position).addScaledVector(borrowedAim, BORROWED_PIVOT)
+      }
+      pane.controls.update()
+    }
+    this.layOutPanes()
+    this.requestRender()
   }
 
   /**
@@ -414,6 +519,13 @@ export class ViewportEngine {
       pane.orthographic.updateProjectionMatrix()
       pane.perspective.aspect = aspect
       pane.perspective.updateProjectionMatrix()
+
+      // A borrowed camera too: one of the scene is built square, and a 1:1 frustum drawn into a
+      // quarter of a wide canvas stretches everything it shows.
+      if (pane.borrowed) {
+        pane.borrowed.aspect = aspect
+        pane.borrowed.updateProjectionMatrix()
+      }
     }
 
     return this.rects[0] ?? { x: 0, y: 0, width, height }
@@ -459,9 +571,8 @@ export class ViewportEngine {
       // On `end` rather than on `change`: the latter fires per frame of an orbit, and whoever
       // listens here publishes into a store. Once the hand lets go is when the framing is a
       // decision rather than a gesture in progress.
-      if (this.options.onCameraSettled) {
-        this.controls.addEventListener('end', this.options.onCameraSettled)
-      }
+      const settled = this.options.onCameraSettled
+      if (settled) this.controls.addEventListener('end', () => settled(0))
     }
 
     canvas.addEventListener('pointerdown', this.armPaneUnderPointer)
@@ -621,6 +732,59 @@ export class ViewportEngine {
     }
   }
 
+  /** Whether the preview leaves nothing of the panes to see — its grown state, in practice. */
+  private insetCoversAll(renderer: WebGLRenderer): boolean {
+    const rect = this.inset?.rect
+    if (!rect) return false
+
+    const canvas = renderer.domElement
+    return (
+      rect.x <= 0 &&
+      rect.y <= 0 &&
+      rect.width >= canvas.clientWidth &&
+      rect.height >= canvas.clientHeight
+    )
+  }
+
+  /**
+   * The camera preview, drawn over the panes in its own scissored rectangle.
+   *
+   * A pass rather than a fifth pane, and rather than a second context: it covers what is already
+   * drawn instead of dividing the surface, and a context per preview is what `scene-stage` pays
+   * elsewhere and says why.
+   */
+  private renderInset(renderer: WebGLRenderer): void {
+    const inset = this.inset
+    if (!inset) return
+
+    const height = renderer.domElement.clientHeight
+    const gl = glRect(inset.rect, height)
+    const restore = this.options.onInset?.()
+
+    const held = renderer.getClearColor(new Color())
+    const heldAlpha = renderer.getClearAlpha()
+
+    renderer.setScissorTest(true)
+    try {
+      renderer.setViewport(gl.x, gl.y, gl.width, gl.height)
+      renderer.setScissor(gl.x, gl.y, gl.width, gl.height)
+      // Cleared to an opaque colour before anything is drawn: `clear` obeys the scissor, so this
+      // paints the preview's rectangle and nothing else.
+      renderer.setClearColor(inset.backdrop, 1)
+      renderer.clear(true, true, false)
+      inset.camera.aspect = inset.rect.width / inset.rect.height
+      inset.camera.updateProjectionMatrix()
+      renderer.render(this.scene, inset.camera)
+    } finally {
+      renderer.setClearColor(held, heldAlpha)
+      // Every one of them in a `finally`, as `renderPanes` does: a throw here would otherwise
+      // leave the workshop hidden and every later frame clipped to this corner.
+      restore?.()
+      renderer.setScissorTest(false)
+      renderer.setViewport(0, 0, renderer.domElement.clientWidth, height)
+    }
+  }
+
   /**
    * On demand, not on a permanent loop: a studio whose viewport burns a frame at rest heats the
    * machine for nothing. The loop keeps going only while something is actually moving.
@@ -651,7 +815,12 @@ export class ViewportEngine {
       if (pane.controls?.enabled === true && pane.controls.update()) settling = true
     }
 
-    this.renderPanes(renderer)
+    // The panes are skipped when the preview covers them whole: drawing a scene twice over to
+    // throw the first one away is the most expensive thing a frame can do.
+    if (!this.insetCoversAll(renderer)) this.renderPanes(renderer)
+    // After the panes and before the overlay: the preview covers the view it sits on, and the
+    // trihedron stays on top of both.
+    this.renderInset(renderer)
 
     const overlay = this.options.onOverlay
     if (overlay) {

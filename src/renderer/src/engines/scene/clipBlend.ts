@@ -4,7 +4,8 @@
  * Never `crossFadeTo`: that runs the fade on the mixer's clock, so the pose would depend on how
  * playback reached the instant, and a scrub or a frame-by-frame render would not match it.
  */
-import { clipLane, type ClipLane, type ClipRef } from '@shared/domain/scene'
+import { clipKeyOf, clipLane, type ClipLane, type ClipRef } from '@shared/domain/scene'
+import { WHOLE_BODY, type BodyPart } from '@shared/domain/humanoid'
 import { secondsToUs, usToSeconds, type Us } from '@shared/domain/time'
 import { clamp } from '@shared/numeric'
 import type { ClipEdge } from '../timeline/timelineGeometry'
@@ -41,9 +42,9 @@ type Block = { ref: ClipRef; span: Us; length: number }
  * guessed width.
  *
  * Each lane is resolved on its own — the hold that keeps a lone clip standing belongs to the lane
- * it stands in — and the lanes are then AVERAGED, which is what two whole-body moves layered on
- * top of one another can honestly give. Making the upper lane drive a few bones only is the body
- * mask this deliberately leaves for later.
+ * it stands in — and the lanes are then averaged WITHIN a body part: two whole-body moves layered
+ * on one another can honestly give no more than their mean, while two halves of a body do not
+ * have to give anything up at all.
  */
 export function clipBlendAt(
   lanes: readonly ClipLane[],
@@ -72,23 +73,31 @@ export function clipBlendAt(
     for (const [block, weight] of heard) sounding.set(block, weight)
   }
 
-  const total = [...sounding.values()].reduce((sum, weight) => sum + weight, 0)
-  const scale = total > 1 ? 1 / total : 1
+  // Shared out WITHIN a body part and not across all of them: two blocks driving different
+  // halves are not competing for the same bones, and halving both is what made « walk AND wave »
+  // come out as neither.
+  const totals = new Map<BodyPart, number>()
+  for (const [block, weight] of sounding) {
+    totals.set(partOf(block), (totals.get(partOf(block)) ?? 0) + weight)
+  }
 
   return [...sounding].map(([block, weight]) => ({
     clipId: block.ref.id,
     name: block.ref.source.name,
     time: clipTimeAt(block.ref, block.length, Math.min(playhead, block.ref.start + block.span)),
-    weight: weight * scale,
+    weight: weight / Math.max(1, totals.get(partOf(block)) ?? 1),
   }))
 }
+
+/** Which half of a body a block drives. Absent is the whole of it — see `ClipRef.part`. */
+const partOf = (block: Block): BodyPart => block.ref.part ?? WHOLE_BODY
 
 /** The blocks that can be drawn at all, earliest first — the order the hold below reads. */
 function placed(clips: readonly ClipRef[], lengths: Readonly<Record<string, number>>): Block[] {
   const blocks: Block[] = []
 
   for (const ref of clips) {
-    const length = lengths[ref.source.name]
+    const length = lengths[clipKeyOf(ref.source)]
     if (length === undefined) continue
 
     const span = clipSpanOf(ref, length)

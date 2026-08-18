@@ -188,7 +188,7 @@ Un *sprite* n’est pas une maille : c’est une image plate qui se tourne toujo
 que soit l’angle de la vue. C’est ce qu’on emploie pour une étincelle, une lueur, un repère, une
 étiquette au-dessus d’un objet — tout ce qui doit rester lisible d’où qu’on regarde.
 
-**Ajouter ▸ Sprite** en pose un à l’origine. Il arrive sans image : choisissez-la dans
+**Ajouter ▸ Objet ▸ Sprite** en pose un à l’origine. Il arrive sans image : choisissez-la dans
 l’Inspecteur, section **Sprite**, parmi les images du projet — les mêmes que celles qu’une
 matière accepte en texture.
 
@@ -217,6 +217,28 @@ Quatre choses à savoir :
   lui montre donc aucune section Ombres.
 - **Il n’est pas éclairé.** Sa couleur est celle qu’on lui donne, pas celle que les lumières de la
   scène en font.
+
+### Le chemin — le rail d’une caméra
+
+Un *chemin* est une courbe posée dans la scène. Il ne se voit pas dans une image rendue : c’est
+un rail, le long duquel une caméra peut courir pendant un plan.
+
+**Ajouter ▸ Objet ▸ Chemin** en pose un à l’origine, avec deux points. Ses **poignées** — une
+bille par point — n’apparaissent que lorsqu’on travaille dessus : chemin sélectionné, ou caméra
+sélectionnée qui l’emprunte pendant un plan. Elles gardent leur taille à l’écran, où que soit la
+vue.
+
+Trois gestes, dans la scène :
+
+| Geste | Ce qu’il fait |
+|---|---|
+| **Cliquer une poignée**, chemin sélectionné | la choisit : les flèches de déplacement s’y accrochent, et on la déplace comme un objet |
+| **⌥ + clic sur la courbe** | pose un nouveau point dans la portion cliquée, et le choisit aussitôt |
+| **Suppr**, ou clic droit sur une poignée | retire le point choisi. Un chemin garde toujours ses deux derniers points |
+
+L’Inspecteur, section **Emplacement**, règle la **Tension** — de l’angle vif à la courbe ronde —
+et **Fermé**, qui referme la boucle sur le premier point. Le **+** de la ligne **Points** ajoute
+un point au bout, sans viser dans la vue.
 
 ### Les lumières disponibles
 
@@ -534,8 +556,9 @@ Cachez-la pour juger une image sans rien autour.
 
 ## Sortir une scène du studio
 
-**Fichier ▸ Exporter la scène** écrit tout ce que le document contient. **Fichier ▸ Exporter la
-sélection** n’écrit que les objets choisis — un groupe emmène ce qui pend dessous.
+**Fichier ▸ Exporter la scène** écrit tout ce que le document contient.
+**Fichier ▸ Exporter la sélection** n’écrit que les objets choisis — un groupe emmène ce qui pend
+dessous.
 
 | Format | Ce que c’est | Quand l’employer |
 |---|---|---|
@@ -567,6 +590,13 @@ est dans la scène, pas là où il est dans son groupe.
 
 **Les scènes 3D savent s’enregistrer**, comme les six autres types de documents.
 
+**Le fichier écrit est un `.gltf`, et c’est un vrai glTF** : un autre logiciel l’ouvre et y trouve
+l’arbre de la scène, le nom et la place de chaque objet, les caméras et les lumières
+directionnelles, ponctuelles et coniques. Ce que le standard ne porte pas — la forme des
+primitives, les matières, les rails, les plans de caméra, l’animation — voyage dans le même
+fichier mais **n’est lu que par Scenario**. Rien ne se perd d’un enregistrement à l’autre ; ce qui
+s’ouvre ailleurs est plus pauvre que ce que vous voyez ici.
+
 Un onglet dont le travail n’est pas encore écrit porte **un point** (`•`) à côté de son nom. Le
 point disparaît à l’enregistrement et revient à la modification suivante.
 
@@ -592,19 +622,29 @@ offre la section **Animation** :
 | Contrôle | Ce qu’il fait |
 |---|---|
 | **Clip** | choisit lequel jouer, parmi ceux que le fichier porte |
-| **▶ / ⏸** | lance ou arrête la lecture |
+| **▶ / ⏸** | montre le bloc dans la vue, sur une horloge à lui |
 | **Vitesse** | un multiplicateur, de 0,1 à 4 |
 | **En boucle** | recommence à la fin, ou s’arrête sur la dernière pose |
 
-**La pose est enregistrée avec le document.** Rouvrir la scène la retrouve là où vous l’avez
-laissée, pas au début.
+**Ces quatre contrôles portent sur LE BLOC CHOISI sur la bande** : appuyez sur un bloc pour le
+choisir, et la section bascule dessus — tant que vous n’en avez choisi aucun, c’est le premier.
+Un modèle qui porte plusieurs blocs se règle donc bloc par bloc : la vitesse et la boucle
+s’écrivent dans celui que vous regardez, et les autres ne bougent pas.
+
+> **Le ▶ de l’Inspecteur ne déplace pas la tête de lecture.** Regarder une animation est un coup
+> d’œil sur un bloc, pas un déplacement de l’horloge de la scène : le bloc tourne dans la vue, la
+> bande reste où vous l’avez laissée. **Les deux ne marchent jamais ensemble** — lancer la
+> timeline coupe l’aperçu, déplacer la tête aussi, et lancer l’aperçu met la timeline en pause.
+
+**La position de la tête n’est pas enregistrée** : rouvrir la scène la remet au début. Ce qui est
+enregistré, ce sont les blocs — leur place sur la bande, leur vitesse et leur boucle.
 
 **Un modèle sans séquence garde la section**, qui dit alors ce qui lui manque — qu’il ne porte pas
 encore de squelette, ou qu’il en porte un que le studio ne reconnaît pas. Le menu, lui, ne
 s’affiche que s’il y a quelque chose à choisir.
 
-**La séquence choisie se voit aussi sur la bande du bas**, posée en bloc à sa longueur réelle, sur
-une ligne à elle qui porte **le nom du clip**. Les blocs sont groupés **sous** les lignes de clés,
+**Une séquence se voit aussi sur la bande du bas**, posée en bloc à sa longueur réelle, sur une
+ligne à elle qui porte **le nom du clip**. Les blocs sont groupés **sous** les lignes de clés,
 jamais mêlés à elles.
 
 ### Voir le squelette
@@ -708,9 +748,26 @@ Ajoutez une **caméra** à la scène (menu Ajouter → Objet → Caméra). C’e
 elle se déplace au gizmo, elle s’anime comme n’importe quel objet, et un export glTF l’emporte
 avec lui.
 
-Le bouton **Rendre en vidéo** de la timeline écrit un fichier `.mp4` de ce que voit cette caméra,
-sur toute la durée de la timeline. Le studio demande **où enregistrer avant de calculer quoi que
-ce soit** — un rendu prend des minutes.
+**Une scène peut en porter plusieurs et changer de caméra en cours de route.** C’est le rôle des
+**plans**, posés sur la bande du bas :
+
+1. **choisissez la caméra** dans la scène ou dans l’arbre ;
+2. **placez la tête de lecture** là où le plan doit commencer ;
+3. **Mettre cette caméra à l’antenne**, dans la barre de la timeline. Le plan s’ouvre à partir de
+   la tête, sur **trois secondes** — ou ce qui reste de la bande, si c’est moins.
+
+Un plan se **glisse** et se **rogne** ensuite comme un clip de montage. Chaque caméra a **sa
+ligne**, et **l’ordre de ces lignes fait la loi** : là où deux plans se recouvrent, c’est la ligne
+la plus haute qui passe à l’antenne. Glissez un en-tête de ligne pour la changer de rang — cela
+modifie le document, et `⌘Z` le rend.
+
+> **Sans aucun plan, rien n’est perdu** : c’est la première caméra de la scène qui filme, sur toute
+> la durée. Et **supprimer une caméra ne troue pas le film** — ses plans sont sautés plutôt que
+> rendus en noir, et annuler la suppression les ramène entiers.
+
+Le bouton **Rendre en vidéo** de la timeline écrit un fichier `.mp4` sur toute la durée, chaque
+image prise par la caméra que le montage désigne à cet instant. Le studio demande **où enregistrer
+avant de calculer quoi que ce soit** — un rendu prend des minutes.
 
 **Sans caméra dans la scène, le bouton est grisé** : il n’y a rien à travers quoi regarder.
 

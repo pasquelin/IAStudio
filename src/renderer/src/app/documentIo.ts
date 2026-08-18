@@ -1,21 +1,22 @@
 import type { Asset } from '@shared/domain/asset'
-import type {
-  CloseChoice,
-  DocumentDescriptor,
-  DocumentDraft,
-  DocumentKind,
+import {
+  DOCUMENT_KIND_KEY,
+  type CloseChoice,
+  type DocumentDescriptor,
+  type DocumentDraft,
+  type DocumentKind,
 } from '@shared/domain/document'
 import { ORA_MERGED_PATH, type OraSurface } from '@shared/domain/openRaster'
 import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import { chainsOnMontage, parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
-import { scenePayload, sceneFromPayload } from '@/engines/scene/sceneDocument'
+import { gltfDocumentOf, sceneFromGltf } from '@/engines/scene/gltfDocument'
 import {
   EMPTY_SEQUENCE,
   EMPTY_SOUND_SEQUENCE,
   type SequenceState,
 } from '@/engines/timeline/timelineState'
-import { otioStudioMetadata, OTIO_DOCUMENT_KIND } from '@shared/domain/otio'
+import { otioStudioMetadata } from '@shared/domain/otio'
 import {
   formatOfFile,
   lossesFor,
@@ -313,7 +314,7 @@ const AUDIO_IO: DocumentIo = {
       draft: {
         content: serializeSequencePayload(
           sequencePayload(written, documentId, {
-            [OTIO_DOCUMENT_KIND]: 'audio',
+            [DOCUMENT_KIND_KEY]: 'audio',
             // Pruned on the way to the file and nowhere else — see `chainsOnMontage`: the store
             // keeps every chain so that ⌘Z of a deleted block gives its settings back.
             [OTIO_AUDIO_EDITS]: chainsOnMontage(audioEditStore.stateOf(edits, documentId), written),
@@ -538,8 +539,8 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   // No `writeAsset`, and the reason is the kind itself: a scene is not a mesh — the asset it was
   // opened from is one node of it.
   scene: textDocumentIo(sceneStore, {
-    toPayload: scenePayload,
-    fromPayload: sceneFromPayload,
+    toPayload: (state, documentId) => gltfDocumentOf(state, { documentId, documentKind: 'scene' }),
+    fromPayload: sceneFromGltf,
     createDefault: createDefaultScene,
   }),
   // Nor here: rendering a montage is minutes of work, which has no business on a keystroke.

@@ -1,10 +1,10 @@
 import { mdiCubeOutline } from '@mdi/js'
 import type { LightDescriptor, Vector3 } from '@shared/domain/scene'
-import { DEFAULT_CAMERA } from '@shared/domain/scene'
+import { DEFAULT_CAMERA, DEFAULT_PATH } from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
 import { lightByKind } from './lightTypes'
 import { primitiveByKind } from './meshPrimitives'
-import { CAMERA_ICON, GROUP_ICON, MODEL_ICON, SPRITE_ICON, TEXT_ICON } from './nodeKinds'
+import { CAMERA_ICON, GROUP_ICON, MODEL_ICON, PATH_ICON, SPRITE_ICON, TEXT_ICON } from './nodeKinds'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
@@ -70,6 +70,20 @@ export function cameraNode(): SceneNode {
   }
 }
 
+/** A rail. Born with two points, since a curve through one is a point with a name. */
+export function pathNode(): SceneNode {
+  return {
+    id: newId(),
+    parentId: null,
+    name: 'Path',
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'path' }),
+    type: 'path',
+    path: DEFAULT_PATH,
+  }
+}
+
 /**
  * A picture that always faces the camera. Built mapless: the picture is picked in the inspector
  * from the project's assets, and a sprite that demanded one before it could exist would be a
@@ -128,6 +142,7 @@ export function iconOf(node: SceneNode): string {
   if (node.type === 'sprite') return SPRITE_ICON
   if (node.type === 'text') return TEXT_ICON
   if (node.type === 'camera') return CAMERA_ICON
+  if (node.type === 'path') return PATH_ICON
 
   const kind = node.type === 'light' ? node.light.kind : node.geometry.kind
   return (primitiveByKind(kind) ?? lightByKind(kind))?.icon ?? mdiCubeOutline
@@ -160,6 +175,7 @@ export function createNodeOf(kind: string): SceneNode | null {
   if (kind === 'camera') return cameraNode()
   if (kind === 'sprite') return spriteNode()
   if (kind === 'text') return textNode()
+  if (kind === 'path') return pathNode()
 
   const light = lightByKind(kind)
   return light ? lightNode(light.create(), IDENTITY_TRANSFORM.position) : null

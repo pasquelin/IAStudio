@@ -39,7 +39,7 @@ Les six types s’écrivent dans le dossier du projet et se rouvrent tels quels.
 | Son édité | `.otio` | **oui** |
 | Ciel | `.gltf` | **oui** |
 
-### Deux de ces extensions annoncent un format qu’elles ne contiennent pas encore
+### Une de ces extensions annonce un format qu’elle ne contient pas encore
 
 Un montage `.otio` est **réellement** de l’OpenTimelineIO : Resolve et Premiere le lisent. Une
 image `.ora` est **réellement** de l’OpenRaster : c’est une archive, avec un PNG par calque, la
@@ -52,12 +52,16 @@ Un ciel `.gltf` est **réellement** du glTF 2.0 : le soleil y est une vraie lumi
 fichier `.hdr` ou `.exr` **référencé à côté** plutôt que recopié dedans. Un lecteur glTF ouvre le
 fichier et retrouve la lumière, sa couleur et son intensité.
 
-Les deux autres, non. Un `.gltf` de **scène 3D** ou un `.mtlx` de **matière** porte le nom du
-format ouvert mais contient encore la forme interne du studio — **aucune autre application ne
-l’ouvre**. L’extension dit vers quoi ces documents vont, pas ce qu’ils sont aujourd’hui.
+Une scène 3D `.gltf` en est aussi : l’arbre, les placements, les caméras et les lumières
+ponctuelles sont ceux du standard, et ce que glTF n’a pas de champ pour voyage dans les `extras`
+que la spécification réserve aux applications.
 
-En attendant, pour sortir une scène ou une matière vers un autre logiciel, ce sont les **exports**
-qui font foi : Fichier ▸ Exporter.
+La dernière, non. Un `.mtlx` de **matière** porte le nom du format ouvert mais contient encore la
+forme interne du studio — **aucune autre application ne l’ouvre**. L’extension dit vers quoi ce
+document va, pas ce qu’il est aujourd’hui.
+
+En attendant, pour sortir une matière vers un autre logiciel, ce sont les **exports** qui font
+foi — **Fichier ▸ Exporter la scène** et ses voisines.
 
 Ce que le ciel garde en plus du standard — les réglages d’exposition, de contraste, de
 température, le flou, l’intensité de l’environnement — voyage dans le fichier à un endroit que

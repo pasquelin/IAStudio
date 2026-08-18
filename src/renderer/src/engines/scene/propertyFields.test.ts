@@ -1,8 +1,14 @@
-import { MESH_ENTRIES, type GeometryDescriptor } from '@shared/domain/scene'
+import { DEFAULT_CAMERA, MESH_ENTRIES, type GeometryDescriptor } from '@shared/domain/scene'
 import { describe, expect, it } from 'vitest'
 import { primitiveByKind } from './meshPrimitives'
 import { lightByKind } from './lightTypes'
-import { geometryFields, lightFields, materialFields, withField } from './propertyFields'
+import {
+  cameraFields,
+  geometryFields,
+  lightFields,
+  materialFields,
+  withField,
+} from './propertyFields'
 import { DEFAULT_MATERIAL } from './sceneState'
 
 const names = (fields: { name: string }[]) => fields.map(field => field.name)
@@ -39,6 +45,24 @@ describe('geometryFields', () => {
     expect(fields.find(field => field.name === 'widthSegments')?.spec).toMatchObject({
       control: 'number',
       step: 1,
+    })
+  })
+})
+
+describe('cameraFields', () => {
+  it('describes the whole lens, and never its kind', () => {
+    const fields = cameraFields(DEFAULT_CAMERA)
+
+    expect(names(fields)).toEqual(['fov', 'near', 'far'])
+    for (const field of fields) expect(field.spec).toBeDefined()
+  })
+
+  // The one field whose range a person judges by eye: how open the lens is, between two ends.
+  it('gives the field of view both its ends', () => {
+    expect(cameraFields(DEFAULT_CAMERA).find(field => field.name === 'fov')?.spec).toMatchObject({
+      control: 'slider',
+      min: 1,
+      max: 170,
     })
   })
 })

@@ -1,4 +1,8 @@
 {
+  "animations": {
+    "empty": "No animation yet. Select a character, or install animations in the application folder.",
+    "dragHint": "Drag onto a sub-track"
+  },
   "meshes": {
     "box": "Box",
     "capsule": "Capsule",
@@ -59,6 +63,9 @@
   },
   "scene": {
     "root": "Scene",
+    "onAir": "On air",
+    "previewFull": "Grow the preview to the whole view",
+    "previewInset": "Put the preview back in its corner",
     "visible": "Show or hide",
     "noDocument": "Open a scene to see its contents.",
     "rename": "Rename object",
@@ -66,15 +73,19 @@
     "show": "Show object",
     "showHint": "Brings the object back into view. Hiding it never took it out of the scene, this is not a delete",
     "hide": "Hide object",
-    "hideHint": "Takes the object out of the view without taking it out of the scene, to clear what it covers"
+    "hideHint": "Takes the object out of the view without taking it out of the scene, to clear what it covers",
+    "removePathPoint": "Remove this point",
+    "removePathPointHint": "Takes the point off the path. A path always keeps its last two points"
   },
   "objects": {
     "sprite": "Sprite",
     "text": "Text",
     "camera": "Camera",
+    "path": "Path",
     "spriteHint": "A flat image that always faces the camera",
     "textHint": "Text set into the scene, with depth",
-    "cameraHint": "A stored point of view, beside the one being flown"
+    "cameraHint": "A stored point of view, beside the one being flown",
+    "pathHint": "A rail a camera can run along during a shot"
   },
   "transport": {
     "play": "Play",
@@ -154,7 +165,8 @@
     "free": "Perspective",
     "freeHint": "The view being flown: the only one that turns",
     "pane": "{{view}} — view {{number, number}}",
-    "paneHint": "Chooses what this quarter shows — a perspective, or an axis that does not turn",
+    "paneHint": "Chooses what this quarter shows — a perspective, an axis that does not turn, or a camera of the scene",
+    "throughCameraHint": "Looks through this camera; orbiting then moves the camera itself",
     "front": "Front",
     "back": "Back",
     "left": "Left",
@@ -196,6 +208,7 @@
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Scale",
+    "fov": "Field of view",
     "addTrack": "Add a {{property}} track",
     "removeTrack": "Remove track {{name}}",
     "arm": "Arm track {{name}} for writing",
@@ -220,6 +233,9 @@
     "unkeySubjectHint": "Removes the key standing here, on every property of this object",
     "reorderRow": "Move the {{name}} line",
     "rowList": "Animation rows",
+    "addShot": "Put this camera on air",
+    "addShotHint": "Opens a shot for the chosen camera, from the playhead onwards",
+    "addShotNeedsCamera": "Choose a camera of the scene to open a shot for it",
     "lane": "Anim. {{index}}",
     "addLane": "Add a sub-track",
     "addLaneHint": "One more animation, played at the same time as the ones above",

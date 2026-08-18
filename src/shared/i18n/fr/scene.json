@@ -1,4 +1,8 @@
 {
+  "animations": {
+    "empty": "Aucune animation. Sélectionnez un personnage, ou installez des animations dans le dossier de l’application.",
+    "dragHint": "Glissez sur une sous-piste"
+  },
   "meshes": {
     "box": "Cube",
     "capsule": "Capsule",
@@ -59,6 +63,9 @@
   },
   "scene": {
     "root": "Scène",
+    "onAir": "À l’antenne",
+    "previewFull": "Agrandir l’aperçu à toute la vue",
+    "previewInset": "Remettre l’aperçu dans son coin",
     "visible": "Afficher ou masquer",
     "noDocument": "Ouvrez une scène pour voir son contenu.",
     "rename": "Renommer l’objet",
@@ -66,15 +73,19 @@
     "show": "Afficher l’objet",
     "showHint": "Remet l’objet dans la vue. Le masquer ne l’avait pas sorti de la scène, ce n’est pas une suppression",
     "hide": "Masquer l’objet",
-    "hideHint": "Retire l’objet de la vue sans le sortir de la scène, pour dégager ce qu’il cache"
+    "hideHint": "Retire l’objet de la vue sans le sortir de la scène, pour dégager ce qu’il cache",
+    "removePathPoint": "Retirer ce point",
+    "removePathPointHint": "Retire le point du chemin. Un chemin garde toujours ses deux derniers points"
   },
   "objects": {
     "sprite": "Sprite",
     "text": "Texte",
     "camera": "Caméra",
+    "path": "Chemin",
     "spriteHint": "Une image plane qui fait toujours face à la caméra",
     "textHint": "Du texte posé dans la scène, en volume",
-    "cameraHint": "Un point de vue enregistré, en plus de celui qu’on manœuvre"
+    "cameraHint": "Un point de vue enregistré, en plus de celui qu’on manœuvre",
+    "pathHint": "Un rail le long duquel une caméra peut courir pendant un plan"
   },
   "transport": {
     "play": "Lire",
@@ -154,7 +165,8 @@
     "free": "Perspective",
     "freeHint": "La vue qu’on pilote : c’est la seule qui tourne",
     "pane": "{{view}} — vue {{number, number}}",
-    "paneHint": "Choisit ce que ce quart montre — une perspective, ou un axe qui ne tourne pas",
+    "paneHint": "Choisit ce que ce quart montre — une perspective, un axe qui ne tourne pas, ou une caméra de la scène",
+    "throughCameraHint": "Regarde à travers cette caméra, et l’orbite déplace alors la caméra elle-même",
     "front": "De face",
     "back": "De dos",
     "left": "De gauche",
@@ -196,6 +208,7 @@
     "position": "Position",
     "rotation": "Rotation",
     "scale": "Échelle",
+    "fov": "Angle de vue",
     "addTrack": "Ajouter une piste {{property}}",
     "removeTrack": "Supprimer la piste {{name}}",
     "arm": "Armer la piste {{name}} en écriture",
@@ -220,6 +233,9 @@
     "unkeySubjectHint": "Retire la clé posée ici, sur toutes les propriétés de cet objet",
     "reorderRow": "Déplacer la ligne {{name}}",
     "rowList": "Lignes de l’animation",
+    "addShot": "Mettre cette caméra à l’antenne",
+    "addShotHint": "Ouvre un plan pour la caméra choisie, à partir de la tête",
+    "addShotNeedsCamera": "Choisissez une caméra de la scène pour lui ouvrir un plan",
     "lane": "Anim. {{index}}",
     "addLane": "Ajouter une sous-piste",
     "addLaneHint": "Une animation de plus, jouée en même temps que celles du dessus",

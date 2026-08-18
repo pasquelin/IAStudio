@@ -1,25 +1,18 @@
 import { open, readFile } from 'node:fs/promises'
 import {
+  DOCUMENT_ID_KEY,
+  DOCUMENT_KIND_KEY,
   DOCUMENT_VERSION,
   ENVELOPE_LIMIT,
   EXTENSIONS_BY_KIND,
   isDocumentKind,
+  STUDIO_METADATA_KEY,
   type DocumentEnvelope,
   type DocumentFile,
+  type DocumentKind,
 } from '@shared/domain/document'
-import {
-  isOtioTimeline,
-  otioStudioMetadata,
-  OTIO_DOCUMENT_ID,
-  OTIO_DOCUMENT_KIND,
-  OTIO_STUDIO_KEY,
-} from '@shared/domain/otio'
-import {
-  gltfStudioExtras,
-  isGltfDocument,
-  GLTF_HEAD_LIMIT,
-  GLTF_STUDIO_KEY,
-} from '@shared/domain/gltf'
+import { defaultSceneIndex, gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
+import { isOtioTimeline, otioStudioMetadata } from '@shared/domain/otio'
 import { ORA_HEAD_LIMIT, ORA_MIMETYPE } from '@shared/domain/openRaster'
 import { isRecord, readString } from '@shared/guards'
 import {
@@ -62,6 +55,13 @@ export type DocumentHead = DocumentEnvelope & { content?: string }
  * `write` spreads the draft first, so the line begins `{"title":`.
  */
 const ENVELOPE_MARK = '"kind":"'
+
+/**
+ * The same question for an open format that has no envelope: is any of this OURS? The studio
+ * writes its scene metadata into the first object of the file, so it lands within the same bounded
+ * head — and a glTF exported into the project as a mesh carries nothing of the sort.
+ */
+const STUDIO_MARK = `"${STUDIO_METADATA_KEY}"`
 
 /** The head of a file and no more of it — what keeps a listing from reading a project whole. */
 async function firstBytes(file: string, limit: number): Promise<Buffer> {
@@ -171,119 +171,45 @@ function envelopeOf({
 }
 
 /**
- * A `.gltf`, which two kinds share — the 3D scene and the sky. Only the sky is written as real
- * glTF today, so this format carries BOTH and lets the file say which it is: a body that opens on
- * `asset` is glTF, and anything else is a document of ours still spelt the studio's own way.
- *
- * The migration shim is the whole point, and it goes when the scene follows: a `.gltf` written
- * yesterday must open today, and a `.gltf` written today must open in Blender.
+ * The container the 3D scene and the sky share, and both write it as real glTF now. What tells
+ * the two apart is the file's own studio metadata and never the extension — and a `.gltf` a
+ * project held before the switch still opens, its envelope on a first line of ours.
  */
-const OPEN_GLTF: DocumentBodyFormat = {
-  read: body => (looksGltf(body) ? gltfDocument(body.toString('utf8')) : ENVELOPED.read(body)),
-  write: document =>
-    isGltfDocument(safeParse(document.content)) ? gltfBody(document) : ENVELOPED.write(document),
+const OPEN_SCENE: DocumentBodyFormat = {
+  read: body => sceneDocument(body.toString('utf8')),
+  // Parsed ONCE: the parse is the price of stamping the title into the standard, and a document
+  // still written the studio's own way falls back rather than paying it at all.
+  write: document => {
+    const parsed = jsonOrNull(document.content)
+    return isGltfDocument(parsed) ? gltfBody(parsed, document) : ENVELOPED.write(document)
+  },
+  // Decided on the bounded head, never by catching a failure: a glTF is one JSON object and has no
+  // first line, where an envelope of ours has one. And a glTF with nothing of OURS in its head is
+  // a mesh somebody exported into the project — `.gltf` is an asset extension too — so it is
+  // turned away rather than read whole at every listing, which is the rule `ENVELOPE_MARK` states.
   readHead: async file => {
-    const head = (await firstBytes(file, GLTF_HEAD_LIMIT)).toString('utf8')
-    const envelope = gltfEnvelopeIn(head)
-    if (envelope) return envelope
+    const head = (await firstBytes(file, ENVELOPE_LIMIT)).toString('utf8')
+    const cut = head.indexOf('\n')
+    // A first line that PARSES as an envelope, never a first line at all: an indented glTF has
+    // one too — it reads `{` — and taking that as an envelope dropped every scene written before
+    // the file went compact. Seen on screen, not deduced.
+    const first = cut === -1 ? null : jsonOrNull(head.slice(0, cut))
+    if (isRecord(first) && !isGltfDocument(first)) return parseDocumentEnvelope(first)
 
-    // Not one of ours as glTF: either a document still written the old way, or a `.gltf` from
-    // somewhere else whose head says nothing. `ENVELOPED` answers the first and refuses the second.
-    return await ENVELOPED.readHead(file)
+    // Either mark: a version 1 document is one object too, and refusing it on the glTF mark alone
+    // made every large legacy scene vanish from the listing — present in the folder, unopenable.
+    if (!head.includes(STUDIO_MARK) && !head.includes(ENVELOPE_MARK)) {
+      throw new Error('Nothing of the studio where this file begins')
+    }
+    return sceneDocument(await readFile(file, 'utf8'))
   },
 }
 
-/** `{` then optional space then `"asset"` — the shape this writer always puts first. */
-const looksGltf = (body: Buffer): boolean =>
-  /^\s*\{\s*"asset"\s*:/.test(body.subarray(0, 64).toString('utf8'))
-
-function safeParse(text: string): unknown {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return null
-  }
-}
-
-/**
- * The envelope out of the head of a `.gltf`, or `null` when the head is not one of ours.
- *
- * `asset` is written FIRST and on a line of its own, so the first line plus a closing brace is a
- * whole JSON object — the same trick as an enveloped document's first line, in the one place glTF
- * allows it. Whitespace is free in JSON, so the file stays valid for every other reader.
- */
-function gltfEnvelopeIn(head: string): DocumentEnvelope | null {
-  const cut = head.indexOf('\n')
-  if (cut === -1) return null
-
-  const line = head.slice(0, cut).replace(/,\s*$/, '')
-  const parsed = safeParse(`${line}}`)
-  if (!isGltfDocument(parsed)) return null
-
-  const held = gltfStudioExtras(isRecord(parsed.asset) ? parsed.asset.extras : null)
-  return Object.keys(held).length > 0 ? parseDocumentEnvelope(held) : null
-}
-
-/**
- * What a `.gltf` says about itself — the same two answers a container gives.
- *
- * A file written elsewhere carries no envelope of ours and is a document all the same, known by
- * its file name. It takes the first kind the extension names, which is the scene: a `.gltf`
- * somebody dropped into a project is a model far more often than a sky.
- */
-function gltfEnvelope(parsed: Record<string, unknown>): DocumentEnvelope {
-  const held = gltfStudioExtras(isRecord(parsed.asset) ? parsed.asset.extras : null)
-  if (Object.keys(held).length === 0) {
-    return { version: DOCUMENT_VERSION, kind: 'scene', title: '', updatedAt: '' }
-  }
-  return parseDocumentEnvelope(held)
-}
-
-/**
- * The standard file, with the studio's identity in the one place a listing can reach without
- * inflating the rest — checked rather than written verbatim, exactly as a montage is.
- *
- * The name is stamped from the title so a RENAME reaches the field another application shows.
- */
-function gltfBody(document: DocumentFile): string {
-  const parsed: unknown = JSON.parse(document.content)
-  if (!isGltfDocument(parsed)) throw new Error('Refusing to write a sky that is not glTF')
-
-  const { asset, ...rest } = parsed
-  const stamped = {
-    ...(isRecord(asset) ? asset : {}),
-    extras: {
-      ...(isRecord(asset) && isRecord(asset.extras) ? asset.extras : {}),
-      [GLTF_STUDIO_KEY]: envelopeOf(document),
-    },
-  }
-
-  const body = JSON.stringify(rest, null, 2)
-  const head = `{"asset":${JSON.stringify(stamped)}`
-  // A glTF with nothing but its `asset` is not one this studio writes, but a hand-edited file is
-  // still a file: `body.slice(1)` on `{}` would leave a trailing comma and an unreadable document.
-  return body === '{}' ? `${head}}\n` : `${head},${body.slice(1)}\n`
-}
-
-/**
- * A `.gltf` read back, content untouched.
- *
- * The clock comes back with it, unlike a montage's — the envelope is IN this file, and a rename
- * rewrites the body from what a read answered. Dropped here, `updatedAt` came back empty and the
- * envelope the rename wrote was one the head reader then refused: the document vanished from every
- * listing while sitting on disk, and nothing said so.
- */
-function gltfDocument(body: string): DocumentFile {
-  const parsed: unknown = JSON.parse(body)
-  if (!isGltfDocument(parsed)) throw new Error('Not a glTF document')
-
-  return { ...gltfEnvelope(parsed), content: body }
-}
-
+// `.gltf` twice over — the scene and the sky wear the same extension, so one entry serves both.
 const FORMAT_BY_EXTENSION: Record<string, DocumentBodyFormat> = {
   [EXTENSIONS_BY_KIND.sequence]: OPEN_TIMELINE,
   [EXTENSIONS_BY_KIND.image]: OPEN_RASTER,
-  [EXTENSIONS_BY_KIND.skybox]: OPEN_GLTF,
+  [EXTENSIONS_BY_KIND.scene]: OPEN_SCENE,
 }
 
 /** How a file of this extension is spelt — the studio's own envelope for anything unlisted. */
@@ -338,11 +264,7 @@ function otioBody(document: DocumentFile): string {
       ...(document.title ? { name: document.title } : {}),
       metadata: {
         ...metadata,
-        [OTIO_STUDIO_KEY]: {
-          ...otioStudioMetadata(parsed),
-          ...(document.id ? { [OTIO_DOCUMENT_ID]: document.id } : {}),
-          [OTIO_DOCUMENT_KIND]: document.kind,
-        },
+        [STUDIO_METADATA_KEY]: studioStamp(otioStudioMetadata(parsed), document),
       },
     },
     null,
@@ -351,27 +273,155 @@ function otioBody(document: DocumentFile): string {
 }
 
 /**
- * A montage as OpenTimelineIO holds it. Title and clock are left empty on purpose: the file NAME
- * is the title, as it is for every document, and the disk's own modification time is the only
- * true clock — one written inside a file can never match the write that finished it.
- *
- * The kind comes from the file, `.otio` serving two of them. A timeline from another application
- * says nothing, and takes the first kind the extension names — `descriptorOf` is what refuses one
- * this extension could never be.
+ * What the studio writes into a file it does not own the shape of: which document it is, and which
+ * kind. A file from elsewhere carries neither, so it was known by its file NAME alone — renaming
+ * it made it a different document, and every tab, layout slot and recent entry pointed at nothing.
  */
-function otioDocument(body: string): DocumentFile {
-  const parsed: unknown = JSON.parse(body)
-  if (!isOtioTimeline(parsed)) throw new Error('Not an OpenTimelineIO timeline')
+function studioStamp(
+  held: Record<string, unknown>,
+  document: DocumentFile,
+): Record<string, unknown> {
+  return {
+    ...held,
+    ...(document.id ? { [DOCUMENT_ID_KEY]: document.id } : {}),
+    [DOCUMENT_KIND_KEY]: document.kind,
+  }
+}
 
-  const studio = otioStudioMetadata(parsed)
-  const id = readString(studio, OTIO_DOCUMENT_ID, '')
-  const claimed = readString(studio, OTIO_DOCUMENT_KIND, '')
+/** A parse that answers `null` rather than throwing — asked of a body of unknown spelling. */
+function jsonOrNull(body: string): unknown {
+  try {
+    return JSON.parse(body)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * A document held in an open format: the file IS the document, so what an envelope would carry is
+ * read out of the standard's own metadata. Title and clock stay empty — the file NAME is the title
+ * and the disk's own time is the only true clock, one written inside a file never matching it.
+ *
+ * `defaultKind` is what a file from another application takes, saying nothing of ours;
+ * `descriptorOf` is what refuses one this extension could never be.
+ */
+function openDocument(
+  body: string,
+  parsed: unknown,
+  studioMetadata: (value: unknown) => Record<string, unknown>,
+  defaultKind: DocumentKind,
+): DocumentFile {
+  const studio = studioMetadata(parsed)
+  const id = readString(studio, DOCUMENT_ID_KEY, '')
+  const claimed = readString(studio, DOCUMENT_KIND_KEY, '')
   return {
     version: DOCUMENT_VERSION,
-    kind: isDocumentKind(claimed) ? claimed : 'sequence',
+    kind: isDocumentKind(claimed) ? claimed : defaultKind,
     title: '',
     updatedAt: '',
     ...(id ? { id } : {}),
     content: body,
   }
+}
+
+/**
+ * A scene document, in whichever of the two spellings its file holds. The glTF is what the studio
+ * writes now; the envelope is what a sky still writes, and what a scene written before the switch
+ * holds — refusing it would drop those from every listing.
+ */
+function sceneDocument(body: string): DocumentFile {
+  const parsed = jsonOrNull(body)
+  if (!isGltfDocument(parsed)) return envelopedDocument(body)
+
+  return openDocument(body, parsed, gltfStudioMetadata, 'scene')
+}
+
+/**
+ * The standard file and nothing else, its default scene renamed from the title and stamped with
+ * the identity `otioBody` stamps, for the same reason. Compact where a montage is indented:
+ * indenting a scene of 5 000 nodes takes it from 2 396 Ko to 6 840 Ko — measured 18/08.
+ *
+ * The mark is written into the FIRST bytes of the file, and that is not a nicety: `readHead`
+ * looks for it inside `ENVELOPE_LIMIT` and turns away a file that has none. Behind the default
+ * scene's list of root nodes it fell outside — a scene of about 1 900 objects at the root stopped
+ * being listed at all, measured 18/08 — and hoisting the scene's own `extras` was not enough: a
+ * file whose default scene is not the first one puts every scene BEFORE it in the way, which is
+ * 47 886 bytes on three scenes of 5 000 nodes. So the mark rides on `asset`, which nothing can
+ * push down: the order of an object's members means nothing to a glTF reader, and `asset` is the
+ * one member the format requires.
+ *
+ * The kind rather than a flag, because it is what `descriptorOf` crosses with the extension —
+ * and it can never disagree with the stamp below: both are read off the same `document`.
+ */
+function gltfBody(parsed: Record<string, unknown>, document: DocumentFile): string {
+  const scenes: unknown[] = Array.isArray(parsed.scenes) ? parsed.scenes : []
+  const at = defaultSceneIndex(parsed)
+  const held = scenes[at]
+  if (!isRecord(held)) return JSON.stringify(parsed)
+
+  const { extras: heldExtras, ...restOfScene } = held
+
+  const body: Record<string, unknown> = {
+    asset: markedAsset(parsed.asset, document),
+    scene: parsed.scene,
+    scenes: scenes.map((other, index) =>
+      index === at
+        ? {
+            extras: studioExtrasFirst(
+              heldExtras,
+              studioStamp(gltfStudioMetadata(parsed), document),
+            ),
+            ...restOfScene,
+            ...(document.title ? { name: document.title } : {}),
+          }
+        : other,
+    ),
+  }
+  // `Object.hasOwn` rather than `in`: the latter walks the prototype chain, so a root member
+  // named `constructor` or `toString` would be dropped instead of carried through.
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!Object.hasOwn(body, key)) body[key] = value
+  }
+
+  return JSON.stringify(body)
+}
+
+/**
+ * Extras with the studio's own FIRST, and whatever another application left there after.
+ *
+ * The order is the whole point: `readHead` looks for the mark inside the first bytes of the file,
+ * so ours has to open the object. And the copy skips a `scenario` the file arrived with, or the
+ * spread would put back the very stamp this was called to write.
+ */
+function studioExtrasFirst(held: unknown, studio: unknown): Record<string, unknown> {
+  const extras: Record<string, unknown> = { [STUDIO_METADATA_KEY]: studio }
+
+  for (const [key, value] of Object.entries(isRecord(held) ? held : {})) {
+    if (key !== STUDIO_METADATA_KEY) extras[key] = value
+  }
+
+  return extras
+}
+
+/**
+ * The `asset` member, carrying the mark that says the file is a document of the studio.
+ *
+ * `DOCUMENT_KIND_KEY` rather than a spelling of its own: the same invariant written twice is free
+ * to drift, and nothing reads THIS copy — so nothing would go red the day the two disagree.
+ */
+function markedAsset(held: unknown, document: DocumentFile): Record<string, unknown> {
+  return {
+    ...(isRecord(held) ? held : {}),
+    extras: studioExtrasFirst(isRecord(held) ? held.extras : undefined, {
+      [DOCUMENT_KIND_KEY]: document.kind,
+    }),
+  }
+}
+
+/** A montage as OpenTimelineIO holds it, `.otio` serving two kinds and the file saying which. */
+function otioDocument(body: string): DocumentFile {
+  const parsed: unknown = JSON.parse(body)
+  if (!isOtioTimeline(parsed)) throw new Error('Not an OpenTimelineIO timeline')
+
+  return openDocument(body, parsed, otioStudioMetadata, 'sequence')
 }

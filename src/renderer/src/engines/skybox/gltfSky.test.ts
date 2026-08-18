@@ -1,7 +1,8 @@
 import { DirectionalLight, Quaternion, Vector3, type Object3D } from 'three'
 import { describe, expect, it } from 'vitest'
 import { anglesFromDirection, directionFromAngles, toRadians } from '@shared/domain/angles'
-import { directionOfQuaternion, GLTF_STUDIO_KEY, KHR_LIGHTS_PUNCTUAL } from '@shared/domain/gltf'
+import { STUDIO_METADATA_KEY } from '@shared/domain/document'
+import { directionOfQuaternion, KHR_LIGHTS_PUNCTUAL } from '@shared/domain/gltf'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import { isRecord } from '@shared/guards'
 import { gltfSkyOf, skyFromGltf } from './gltfSky'
@@ -87,7 +88,7 @@ describe('a sky written as glTF', () => {
 
     expect(file).not.toHaveProperty('images')
     expect(nodeNamed(file, 'Horizon')?.extras).toEqual({
-      [GLTF_STUDIO_KEY]: { source: '../Assets/dusk.hdr' },
+      [STUDIO_METADATA_KEY]: { source: '../Assets/dusk.hdr' },
     })
   })
 
@@ -98,7 +99,7 @@ describe('a sky written as glTF', () => {
   it('carries the whole studio state where glTF reserves room for it', () => {
     const content = sky()
 
-    expect(written(content)).toMatchObject({ extras: { [GLTF_STUDIO_KEY]: content } })
+    expect(written(content)).toMatchObject({ extras: { [STUDIO_METADATA_KEY]: content } })
   })
 })
 

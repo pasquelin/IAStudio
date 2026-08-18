@@ -39,7 +39,8 @@ import { createAssetResolvers } from './assets/assetResolvers'
 import { createFavorites, type FavoritesStore } from './favorites/store'
 import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
-import { bundledFfmpeg, bundledVad, resourcesRoot } from './resources'
+import { bundledAnimations, bundledFfmpeg, bundledVad, resourcesRoot } from './resources'
+import { bundledAnimationFile } from './animations'
 import { createAssetText } from './assistant/assetText'
 import { createRemoteActions, type RemoteActions } from './mcp/asking'
 import { createMcpControl, type McpControl } from './mcp/control'
@@ -1296,6 +1297,7 @@ export function createServices(settings: SettingsStore): Services {
       findAsset: assetId => project.catalog().find(assetId),
       favouriteThumbnail: favoriteId => favorites.thumbnailPath(favoriteId),
       thumbnailOf: relative => thumbnails.of(relative),
+      bundledAnimation: id => bundledAnimationFile(bundledAnimations(resourcesRoot()), id),
     }),
   )
 

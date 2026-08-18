@@ -13,6 +13,7 @@ import {
   clipFromAnimation,
   clipLane,
   DEFAULT_CAMERA,
+  DEFAULT_PATH,
   MAIN_LANE_ID,
   isTransform,
   isVector3,
@@ -22,14 +23,17 @@ import {
   type EnvironmentRef,
   type ModelRef,
 } from '@shared/domain/scene'
+import { BODY_PARTS } from '@shared/domain/humanoid'
 import { isRig } from '@shared/domain/rig'
 import {
   DEFAULT_DURATION,
   DEFAULT_FPS,
+  EASINGS,
   EMPTY_TIMELINE,
   TRACK_PROPERTIES,
   type AnimationTimeline,
   type AnimationTrack,
+  type CameraShot,
   type Keyframe,
 } from '@shared/domain/animation'
 import { readFontRef } from '@shared/domain/font'
@@ -115,6 +119,9 @@ function revived(node: SceneNode): SceneNode {
   if (filled.type === 'model') {
     return { ...filled, model: withLanes(filled.model) }
   }
+  if (filled.type === 'path') {
+    return { ...filled, path: { ...DEFAULT_PATH, ...filled.path } }
+  }
   if (filled.type !== 'text') return filled
 
   return {
@@ -195,12 +202,23 @@ function isSceneNode(value: unknown): value is SceneNode {
   // Three numbers, and a file that holds none of them keeps its node: the defaults are what a
   // camera is without them, and `revived` lays them under whatever the file did say.
   if (value.type === 'camera') return value.camera === undefined || isRecord(value.camera)
+  // A rail is its points, and a curve through fewer than two is a point with a name — refused
+  // like a model with no asset, so the rest of the scene still opens.
+  if (value.type === 'path') return isPath(value.path)
 
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
 }
 
 function isOptionalFlag(value: unknown): boolean {
   return value == null || typeof value === 'boolean'
+}
+
+/** Its points and its shape. `closed` and `tension` absent mean the defaults `revived` lays in. */
+function isPath(value: unknown): boolean {
+  if (!isRecord(value) || !Array.isArray(value.points)) return false
+  if (value.points.length < 2 || !value.points.every(isVector3)) return false
+
+  return isOptionalFlag(value.closed) && (value.tension == null || Number.isFinite(value.tension))
 }
 
 /**
@@ -237,6 +255,8 @@ function isClip(value: unknown): boolean {
   // passing: it is session state now, so an extra boolean in the file is simply ignored.
   if (typeof value.loop !== 'boolean') return false
   if (!ROOT_MOTIONS.some(motion => motion === value.rootMotion)) return false
+  // Absent is legal and means the whole body: every document written before the halves existed.
+  if (value.part != null && !BODY_PARTS.some(part => part === value.part)) return false
 
   return ['start', 'duration', 'offset', 'speed', 'fadeIn', 'fadeOut'].every(field =>
     Number.isFinite(value[field]),
@@ -245,7 +265,7 @@ function isClip(value: unknown): boolean {
 
 function isClipSource(value: unknown): boolean {
   if (!isRecord(value) || typeof value.name !== 'string') return false
-  if (value.kind === 'embedded') return true
+  if (value.kind === 'embedded' || value.kind === 'bundled') return true
 
   return value.kind === 'asset' && typeof value.assetId === 'string' && value.assetId !== ''
 }
@@ -302,6 +322,7 @@ function readTimeline(value: unknown): AnimationTimeline {
   if (!isRecord(value)) return EMPTY_TIMELINE
 
   const tracks = Array.isArray(value.tracks) ? value.tracks.filter(isTrack) : []
+  const shots = shotsInOrder(Array.isArray(value.shots) ? value.shots.filter(isShot) : [])
   // `readNumber` gives the fallback for anything that is not a finite number; zero and below are
   // finite and still meaningless here, so the positive test stays.
   const duration = readNumber(value, 'duration', DEFAULT_DURATION)
@@ -311,7 +332,66 @@ function readTimeline(value: unknown): AnimationTimeline {
     duration: duration > 0 ? duration : DEFAULT_DURATION,
     fps: fps > 0 ? fps : DEFAULT_FPS,
     tracks,
+    shots,
   }
+}
+
+/**
+ * The shots in the order that settles an overlap, which is the list's own — see `activeShotAt`.
+ *
+ * A document written while `layer` existed is sorted by it ONCE, here, highest first and equal
+ * layers by start, which is exactly the law those numbers used to spell. Read any later and the
+ * field would have to survive for good; the shots go back out without it.
+ */
+function shotsInOrder(shots: readonly CameraShot[]): CameraShot[] {
+  // Widened rather than kept in `CameraShot`: the field is on disk, and declaring it would make
+  // every writer go on filling a number nothing reads.
+  const written = shots as readonly (CameraShot & { layer?: number })[]
+
+  // Only a file that HELD layers is re-sorted. Without this the comparator would fall through to
+  // `start` on every document written since, undoing on each read the stack the user arranged.
+  if (!written.some(shot => typeof shot.layer === 'number')) return [...written]
+
+  return [...written]
+    .sort((left, right) => (right.layer ?? 0) - (left.layer ?? 0) || left.start - right.start)
+    .map(({ layer: _, ...kept }) => kept)
+}
+
+/**
+ * Whether a shot is one. Its shape only: whether the camera it names still exists is a question
+ * about the scene at an instant, and `activeShotAt` is the one place that asks it.
+ */
+function isShot(value: unknown): value is CameraShot {
+  if (!isRecord(value)) return false
+  if (typeof value.id !== 'string' || value.id === '') return false
+  if (typeof value.cameraId !== 'string' || value.cameraId === '') return false
+  if (!Number.isFinite(value.start)) return false
+  if (!isOptionalMotion(value.motion) || !isOptionalTarget(value.target)) return false
+  // A shot of no length covers no instant at all, so it could only ever be a hole in the band.
+  return typeof value.duration === 'number' && value.duration > 0
+}
+
+/** Absent means a shot that does not move. A rail it names but the scene has lost is skipped
+ * by `railCamera` rather than refused here — the same rule shots follow for their camera. */
+function isOptionalMotion(value: unknown): boolean {
+  if (value == null) return true
+  if (!isRecord(value)) return false
+
+  return (
+    typeof value.pathId === 'string' &&
+    EASINGS.some(easing => easing === value.easing) &&
+    Number.isFinite(value.from) &&
+    Number.isFinite(value.to)
+  )
+}
+
+/** Absent means FREE: the camera is aimed by its own rotation and nothing else. */
+function isOptionalTarget(value: unknown): boolean {
+  if (value == null) return true
+  if (!isRecord(value)) return false
+
+  if (value.kind === 'point') return isVector3(value.at)
+  return value.kind === 'node' && typeof value.nodeId === 'string'
 }
 
 function isTrack(value: unknown): value is AnimationTrack {

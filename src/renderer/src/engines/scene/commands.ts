@@ -2,12 +2,14 @@ import { composed, type Command } from '../core/history'
 import type { Rig } from '@shared/domain/rig'
 import {
   isVector3,
+  type CameraDescriptor,
   type ClipLane,
   type EnvironmentRef,
   type GeometryDescriptor,
   type LightDescriptor,
   type MaterialDescriptor,
   type ModelRef,
+  type PathDescriptor,
   type SpriteDescriptor,
   type TextDescriptor,
   type Transform,
@@ -333,6 +335,57 @@ export function setMaterialOn(
     if (node.type === 'text') return setTextMaterial(node.id, { ...node.material, ...changes })
     return null
   })
+}
+
+/**
+ * A rail rewritten. The three gestures a rail offers — move a point, add one, drop one — all
+ * land here, because each of them is the same node holding another list of points.
+ */
+export function setPath(id: string, path: PathDescriptor): Command<SceneState> {
+  let previous: PathDescriptor | null = null
+
+  return {
+    id: `path:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'path') return state
+      previous = node.path
+      return patchPart(state, id, 'path', { path })
+    },
+    revert: state => (previous ? patchPart(state, id, 'path', { path: previous }) : state),
+  }
+}
+
+/** What a camera sees through: its lens, edited like any other descriptor. */
+export function setCamera(id: string, camera: CameraDescriptor): Command<SceneState> {
+  let previous: CameraDescriptor | null = null
+
+  return {
+    id: `camera:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'camera') return state
+      previous = node.camera
+      return patchPart(state, id, 'camera', { camera })
+    },
+    revert: state => (previous ? patchPart(state, id, 'camera', { camera: previous }) : state),
+  }
+}
+
+/**
+ * A lens parameter typed into the inspector, written onto every selected camera.
+ *
+ * No anchor to spread from, unlike a light's: a lens has no vector field, so the value typed is
+ * the value every camera of the selection takes.
+ */
+export function setCameraOn(
+  nodes: readonly SceneNode[],
+  name: string,
+  value: FieldValue,
+): Command<SceneState> {
+  return batch('camera', nodes, node =>
+    node.type === 'camera' ? setCamera(node.id, withField(node.camera, name, value)) : null,
+  )
 }
 
 /**

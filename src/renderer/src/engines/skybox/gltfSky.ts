@@ -8,12 +8,12 @@ import {
   quaternionAboutY,
   quaternionTowards,
   GLTF_GENERATOR,
-  GLTF_STUDIO_KEY,
   GLTF_VERSION,
   KHR_LIGHTS_PUNCTUAL,
   type GltfDocument,
   type GltfNode,
 } from '@shared/domain/gltf'
+import { STUDIO_METADATA_KEY } from '@shared/domain/document'
 import { isRecord, readNumber, readString } from '@shared/guards'
 import { createSkyboxContent, DEFAULT_SUN, type SkyboxContent } from '@shared/domain/skybox'
 import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
@@ -61,7 +61,7 @@ export function gltfSkyOf(
     {
       name: HORIZON_NODE,
       rotation: quaternionAboutY(content.adjustments.rotationY),
-      ...(sourceUri ? { extras: { [GLTF_STUDIO_KEY]: { source: sourceUri } } } : {}),
+      ...(sourceUri ? { extras: { [STUDIO_METADATA_KEY]: { source: sourceUri } } } : {}),
     },
     {
       name: SUN_NODE,
@@ -95,7 +95,7 @@ export function gltfSkyOf(
         ],
       },
     },
-    extras: { [GLTF_STUDIO_KEY]: content },
+    extras: { [STUDIO_METADATA_KEY]: content },
   }
 }
 

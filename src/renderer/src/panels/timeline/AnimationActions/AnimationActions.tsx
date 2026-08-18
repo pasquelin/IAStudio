@@ -16,6 +16,7 @@ import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { TimelineTransport } from '../TimelineTransport'
 import { AnimationActionsKeyButton } from './AnimationActionsKeyButton'
 import { AnimationActionsRenderButton } from './AnimationActionsRenderButton'
+import { AnimationActionsShotButton } from './AnimationActionsShotButton'
 
 export type AnimationActionsProps = { documentId: string }
 
@@ -89,6 +90,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
         onClick={() => useAnimationViews.getState().setAutoKey(documentId, !autoKey)}
       />
       <AnimationActionsKeyButton documentId={documentId} />
+      <AnimationActionsShotButton documentId={documentId} />
 
       <div className="flex-1" />
 

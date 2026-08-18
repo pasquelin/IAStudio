@@ -13,6 +13,7 @@ import {
   type LightDescriptor,
   type MaterialDescriptor,
   type ModelRef,
+  type PathDescriptor,
   type SpriteDescriptor,
   type TextDescriptor,
   type Transform,
@@ -47,6 +48,8 @@ export type SceneNode = SceneNodeBase &
     // What a render looks through. Not the viewport's camera: that one is how the scene is being
     // WATCHED, and this one is part of what the scene IS.
     | { type: 'camera'; camera: CameraDescriptor }
+    // A rail. Its points live in its own frame, so moving the node moves the whole trajectory.
+    | { type: 'path'; path: PathDescriptor }
   )
 
 /** Derived, never restated: a member added to the union above is a member here on the spot. */
@@ -195,6 +198,8 @@ export type ModelNode = Extract<SceneNode, { type: 'model' }>
 export type SpriteNode = Extract<SceneNode, { type: 'sprite' }>
 export type TextNode = Extract<SceneNode, { type: 'text' }>
 export type GroupNode = Extract<SceneNode, { type: 'group' }>
+export type CameraNode = Extract<SceneNode, { type: 'camera' }>
+export type PathNode = Extract<SceneNode, { type: 'path' }>
 
 export function nodeById(state: SceneState, id: string): SceneNode | null {
   return state.nodes.find(node => node.id === id) ?? null

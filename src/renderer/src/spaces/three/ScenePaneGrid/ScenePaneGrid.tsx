@@ -1,8 +1,10 @@
 import type { PaneView } from '@/engines/scene/sceneView'
-import { ScenePaneGridMenu } from './ScenePaneGridMenu'
+import { ScenePaneGridMenu, type SceneCamera } from './ScenePaneGridMenu'
 
 export type ScenePaneGridProps = {
   views: readonly PaneView[]
+  /** The cameras of the scene, so a pane can be locked onto one. */
+  cameras: readonly SceneCamera[]
   onView: (pane: number, view: PaneView) => void
 }
 
@@ -18,7 +20,7 @@ export type ScenePaneGridProps = {
  * rectangles: an editor that cannot say which one is the top view — nor let one say so — is an
  * editor one has to turn a camera in to find out.
  */
-export function ScenePaneGrid({ views, onView }: ScenePaneGridProps) {
+export function ScenePaneGrid({ views, cameras, onView }: ScenePaneGridProps) {
   return (
     <div className="pointer-events-none absolute inset-0">
       {/* The two gutters, at the width the shell uses between its own panels. */}
@@ -34,6 +36,7 @@ export function ScenePaneGrid({ views, onView }: ScenePaneGridProps) {
           <div key={pane} className="flex min-w-0 items-start justify-end p-1.5">
             <ScenePaneGridMenu
               view={views[pane] ?? 'free'}
+              cameras={cameras}
               onView={chosen => onView(pane, chosen)}
               pane={pane}
             />

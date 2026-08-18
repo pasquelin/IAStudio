@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
-import { animationTrack, timelineWith } from '@/engines/scene/animation-fixtures'
+import { animationTrack, cameraShot, timelineWith } from '@/engines/scene/animation-fixtures'
 import {
   addAnimationTrack,
   setAnimationKey,
@@ -10,8 +10,9 @@ import {
 } from '@/engines/scene/animationCommands'
 import { animationRows, CHANNEL_HEIGHT, SUBJECT_HEIGHT } from '@/engines/scene/animationRows'
 import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
-import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
+import { cameraNodeFixture, meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
+import { ANIMATION_DRAG_TYPE } from '@/panels/animations/dragged'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene } from '@/stores/scene-fixtures'
@@ -89,10 +90,12 @@ describe('dragging a clip block', () => {
     })
   })
 
-  const blockOf = (): ClipRef | null => {
+  const laneOf = () => {
     const node = sceneOf(useScenes.getState(), DOCUMENT).nodes[0]
-    return node?.type === 'model' ? (node.model.lanes?.[0]?.clips[0] ?? null) : null
+    return node?.type === 'model' ? (node.model.lanes?.[0] ?? null) : null
   }
+
+  const blockOf = (): ClipRef | null => laneOf()?.clips[0] ?? null
 
   const startOf = (): number => blockOf()?.start ?? -1
 
@@ -130,6 +133,74 @@ describe('dragging a clip block', () => {
     press(canvas(), 'pointerup', 500, LANE_Y)
 
     expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 2)
+  })
+
+  /** Dropping an animation from the panel, as the browser hands it over. */
+  function drop(element: Element, payload: unknown, x: number, y: number): void {
+    const event = new MouseEvent('drop', {
+      bubbles: true,
+      clientX: x,
+      clientY: y,
+      cancelable: true,
+    })
+    Object.defineProperty(event, 'dataTransfer', {
+      value: {
+        getData: (type: string) => (type === ANIMATION_DRAG_TYPE ? JSON.stringify(payload) : ''),
+      },
+    })
+    element.dispatchEvent(event)
+  }
+
+  // The only gesture that puts a SECOND block on a lane: without it a model could hold one clip
+  // and neither "one after another" nor "both at once" was reachable.
+  it('lays a block where an animation is dropped, on the lane it lands on', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    drop(canvas(), { kind: 'embedded', clip: 'Walk' }, 400, LANE_Y)
+
+    const clips = laneOf()?.clips ?? []
+    expect(clips).toHaveLength(2)
+    expect(clips[1]?.start).toBe(4 * SECOND)
+    expect(clips[1]?.source.name).toBe('Walk')
+  })
+
+  // The panel offers both kinds and only the drop tells them apart: a shipped animation is
+  // written into the document as a NAME, and read off disk on the other side of the frontier.
+  it('lays a shipped animation as a block of its own kind, labelled by its folder', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    drop(canvas(), { kind: 'bundled', name: 'Capoeira' }, 400, LANE_Y)
+
+    const laid = laneOf()?.clips[1]
+    expect(laid?.source).toEqual({ kind: 'bundled', name: 'Capoeira' })
+    expect(laid?.label).toBe('Capoeira')
+  })
+
+  // A `dataTransfer` carries text, and this one used to be read by looking for a `clip` field:
+  // anything else laid a block naming `undefined`, which nothing could ever play.
+  it('lays nothing for a payload that is neither of the two shapes', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    drop(canvas(), { kind: 'bundled', path: '/somewhere/walk.glb' }, 400, LANE_Y)
+
+    expect(laneOf()?.clips).toHaveLength(1)
+  })
+
+  it('makes the block one just dropped the chosen one', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    drop(canvas(), { kind: 'embedded', clip: 'Walk' }, 400, LANE_Y)
+
+    const laid = laneOf()?.clips[1]
+    expect(animationViewOf(useAnimationViews.getState(), DOCUMENT).pickedBlock).toBe(laid?.id)
+  })
+
+  it('lays nothing when the drop lands on a channel or on the ruler', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    drop(canvas(), { kind: 'embedded', clip: 'Walk' }, 400, 4)
+
+    expect(laneOf()?.clips).toHaveLength(1)
   })
 
   it('shows the block one presses as the chosen one, and drops the picked keys', () => {
@@ -382,5 +453,115 @@ describe('removing a picked key with the keyboard', () => {
     act(() => press(canvas(), 'Delete'))
 
     expect(keys()).toHaveLength(2)
+  })
+})
+
+describe('dragging a shot', () => {
+  const SHOT = cameraShot('s1', { cameraId: 'cam-a', start: 1 * SECOND, duration: 2 * SECOND })
+
+  /** The vertical middle of the shot line, which the sheet draws above every subject. */
+  const SHOT_MIDDLE = RULER_HEIGHT + SUBJECT_HEIGHT / 2
+
+  beforeEach(() => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [cameraNodeFixture('cam-a')],
+      animation: { ...EMPTY_SCENE.animation, shots: [SHOT] },
+    })
+    useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({
+      views: {
+        [DOCUMENT]: {
+          viewport: VIEWPORT,
+          expanded: [],
+          selected: [],
+          pickedBlock: null,
+          autoKey: false,
+          order: [],
+        },
+      },
+    })
+  })
+
+  const shotRows = () =>
+    animationRows(sceneOf(useScenes.getState(), DOCUMENT).animation, {
+      nodes: [{ id: 'cam-a', name: 'Camera A' }],
+      expanded: new Set(),
+    })
+
+  const shotNow = () => sceneOf(useScenes.getState(), DOCUMENT).animation.shots[0]
+
+  it('slides the bar, keeping where inside it the pointer took hold', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    // Grabbed half a second into a shot that starts at one second, dropped at three.
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 300, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 300, SHOT_MIDDLE))
+
+    expect(shotNow()).toMatchObject({ start: 2.5 * SECOND, duration: 2 * SECOND })
+  })
+
+  it('trims the tail by its edge, leaving the head where it stands', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    act(() => press(canvas(), 'pointerdown', 300, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 500, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 500, SHOT_MIDDLE))
+
+    expect(shotNow()).toMatchObject({ start: 1 * SECOND, duration: 4 * SECOND })
+  })
+
+  /**
+   * One set for everything the band holds picked, keys and shots alike — a shot answers to its
+   * own id. A second store for the same question is how two selections stop agreeing.
+   */
+  it('picks a shot into the very set the keys are picked in', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 150, SHOT_MIDDLE))
+
+    expect(useAnimationViews.getState().views[DOCUMENT]?.selected).toEqual(['s1'])
+  })
+
+  /**
+   * The promise the montage makes over a clip's edge, made here too: a bar that trims and never
+   * says so is a bar nobody tries to trim.
+   */
+  it('promises a trim over an edge, and nothing over the body', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    act(() => press(canvas(), 'pointermove', 300, SHOT_MIDDLE))
+    expect(canvas().style.cursor).toBe('ew-resize')
+
+    act(() => press(canvas(), 'pointermove', 200, SHOT_MIDDLE))
+    expect(canvas().style.cursor).toBe('')
+  })
+
+  // One entry however far the bar travelled: a drag that cost thirty ⌘Z would be unusable.
+  it('costs one entry in the history', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
+
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 200, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointermove', 300, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 300, SHOT_MIDDLE))
+
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length).toBe(before + 1)
+  })
+
+  it('takes the picked shot away on Delete, and lets the pick go with it', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 150, SHOT_MIDDLE))
+
+    act(() =>
+      canvas().dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })),
+    )
+
+    expect(sceneOf(useScenes.getState(), DOCUMENT).animation.shots).toEqual([])
+    expect(useAnimationViews.getState().views[DOCUMENT]?.selected).toEqual([])
   })
 })

@@ -6,11 +6,10 @@
  * a gain — and it is ignored the moment it disagrees with the frame the standard holds. Trusting
  * it blindly would silently undo a trim made in Resolve.
  */
+import { DOCUMENT_ID_KEY, STUDIO_METADATA_KEY } from '@shared/domain/document'
 import {
   isOtioTimeline,
   otioStudioMetadata,
-  OTIO_DOCUMENT_ID,
-  OTIO_STUDIO_KEY,
   type OtioClip,
   type OtioGap,
   type OtioLinearTimeWarp,
@@ -129,7 +128,7 @@ function clipOf(clip: Clip, fps: number, sourceOf: OtioWriteOptions['sourceOf'])
     OTIO_SCHEMA: 'Clip.1',
     name: source.name,
     metadata: {
-      [OTIO_STUDIO_KEY]: {
+      [STUDIO_METADATA_KEY]: {
         id: clip.id,
         assetId: clip.assetId,
         ...(clip.sceneId ? { sceneId: clip.sceneId } : {}),
@@ -168,7 +167,7 @@ function trackOf(
     OTIO_SCHEMA: 'Track.1',
     name: track.name,
     metadata: {
-      [OTIO_STUDIO_KEY]: {
+      [STUDIO_METADATA_KEY]: {
         id: track.id,
         height: track.height,
         muted: track.muted,
@@ -202,9 +201,9 @@ export function otioTimelineOf(
     OTIO_SCHEMA: 'Timeline.1',
     name,
     metadata: {
-      [OTIO_STUDIO_KEY]: {
+      [STUDIO_METADATA_KEY]: {
         ...studio,
-        ...(documentId ? { [OTIO_DOCUMENT_ID]: documentId } : {}),
+        ...(documentId ? { [DOCUMENT_ID_KEY]: documentId } : {}),
         width,
         height,
         sampleRate,

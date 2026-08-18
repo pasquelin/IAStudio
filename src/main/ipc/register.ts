@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { registerAssetHandlers } from '@main/assets/handlers'
 import { registerDiagnosticsHandlers } from '@main/diagnostics/handlers'
 import { createInstalledFonts } from '@main/fonts/disk'
+import { registerAnimationHandlers } from '@main/animations'
 import { registerFontHandlers } from '@main/fonts/handlers'
 import { registerFavoriteHandlers } from '@main/favorites/handlers'
 import { registerStyleHandlers } from '@main/styles/handlers'
@@ -114,4 +115,5 @@ export function registerIpc(services: Services): void {
   // Built here rather than held by `Services`: the index reads nothing until a picker asks, so
   // it costs a closure at startup and a folder walk the first time someone opens the list.
   registerFontHandlers(createInstalledFonts())
+  registerAnimationHandlers()
 }

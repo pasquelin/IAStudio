@@ -186,7 +186,7 @@ A *sprite* is not a mesh: it is a flat picture that always turns towards you, wh
 does. It is what you use for a spark, a glow, a marker, a label above an object — anything that
 has to stay readable from wherever you look.
 
-**Add ▸ Sprite** puts one at the origin. It arrives with no picture: choose one in the Inspector,
+**Add ▸ Object ▸ Sprite** puts one at the origin. It arrives with no picture: choose one in the Inspector,
 under **Sprite**, from the project's own images — the same ones a material takes as a texture.
 
 | Setting | What it does |
@@ -211,6 +211,27 @@ Four things to know:
 - **It has nothing to do with shadows.** It throws none and catches none; the Inspector therefore
   shows it no Shadows section at all.
 - **It is not lit.** Its colour is the one you give it, not the one the scene's lights make of it.
+
+### The path — a camera's rail
+
+A *path* is a curve laid into the scene. It never shows up in a rendered picture: it is a rail, and
+a camera can run along it during a shot.
+
+**Add ▸ Object ▸ Path** puts one at the origin, with two points. Its **knobs** — one bead per
+point — only appear while it is being worked on: the path selected, or a selected camera that
+rides it during a shot. They keep their size on screen, wherever the view stands.
+
+Three gestures, in the scene:
+
+| Gesture | What it does |
+|---|---|
+| **Click a knob**, path selected | picks it: the move handles attach to it, and it is dragged like an object |
+| **⌥ + click on the curve** | puts a new point in the stretch clicked, and picks it straight away |
+| **Delete**, or right-click a knob | takes the picked point away. A path always keeps its last two points |
+
+The Inspector, section **Placement**, holds **Tension** — from sharp corners to a round curve —
+and **Closed**, which loops it back onto the first point. The **+** on the **Points** row adds a
+point at the end, without aiming in the view.
 
 ### The available lights
 
@@ -550,6 +571,13 @@ stands in the scene, not where it stands inside its group.
 
 **3D scenes can save**, as do the six other document kinds.
 
+**The file written is a `.gltf`, and it is a real glTF**: another application opens it and finds
+the scene tree, the name and place of every object, the cameras, and the directional, point and
+spot lights. What the standard does not carry — the shape of the primitives, the materials, the
+rails, the camera shots, the animation — travels inside the same file but **is read by Scenario
+alone**. Nothing is lost from one save to the next; what opens elsewhere is poorer than what you
+see here.
+
 A tab whose work is not yet written carries **a dot** (`•`) beside its name. The dot disappears on
 save and comes back on the next change.
 
@@ -575,20 +603,29 @@ section:
 | Control | What it does |
 |---|---|
 | **Clip** | picks which one plays, among those the file carries |
-| **▶ / ⏸** | starts or stops playback |
+| **▶ / ⏸** | shows the block in the view, on a clock of its own |
 | **Speed** | a multiplier, from 0.1 to 4 |
 | **Loop** | starts over at the end, or holds the last pose |
 
-**The pose is saved with the document.** Reopening the scene finds it where you left it, not back
-at the start.
+**All four controls act on THE BLOCK YOU CHOSE on the band**: press a block to choose it, and the
+section switches over to it — while you have chosen none, it is the first. A model carrying several
+blocks is therefore set block by block: speed and loop are written into the one you are watching,
+and the others do not move.
+
+> **The Inspector's ▶ does not move the playhead.** Watching an animation is a glance at one block,
+> not a move of the scene's clock: the block runs in the view and the band stays where you left it.
+> **The two never run together** — starting the timeline drops the preview, so does moving the
+> head, and starting the preview pauses the timeline.
+
+**The playhead position is not saved**: reopening the scene puts it back at the start. What is
+saved are the blocks — where they sit on the band, their speed and their loop.
 
 **A model with no clip keeps the section**, which then says what it is missing — that it carries no
 skeleton yet, or one the studio does not recognise. The picker itself only appears when there is
 something to choose.
 
-**The chosen clip also shows on the band below**, laid as a block at its real length, on a line of
-its own bearing **the clip's name**. Blocks are grouped **under** the key lines, never mixed into
-them.
+**A clip also shows on the band below**, laid as a block at its real length, on a line of its own
+bearing **the clip's name**. Blocks are grouped **under** the key lines, never mixed into them.
 
 ### Seeing the skeleton
 
@@ -689,9 +726,25 @@ and pose mode rather than through these three steps.
 Add a **camera** to the scene (Add menu → Object → Camera). It is an object like any other: it
 moves with the gizmo, it animates like any other object, and a glTF export carries it along.
 
-The timeline's **Render to video** button writes an `.mp4` of what that camera sees, over the whole
-length of the timeline. The studio asks **where to save before computing anything** — a render
-takes minutes.
+**A scene may hold several, and change camera part way through.** That is what **shots** are for,
+laid on the band below:
+
+1. **choose the camera**, in the scene or in the tree;
+2. **place the playhead** where the shot is to start;
+3. **Put this camera on air**, in the timeline's bar. The shot opens from the head onwards, over
+   **three seconds** — or whatever is left of the band, if that is less.
+
+A shot then **slides** and **trims** like a clip in an edit. Each camera has **its own line**, and
+**the order of those lines is the law**: where two shots overlap, the highest line is the one on
+air. Drag a line's header to change its rank — that edits the document, and `⌘Z` gives it back.
+
+> **With no shot at all, nothing is lost**: the scene's first camera films, over the whole length.
+> And **deleting a camera does not punch a hole in the film** — its shots are skipped rather than
+> rendered black, and undoing the delete brings them back whole.
+
+The timeline's **Render to video** button writes an `.mp4` over the whole length, each frame taken
+through the camera the montage names at that instant. The studio asks **where to save before
+computing anything** — a render takes minutes.
 
 **With no camera in the scene the button is greyed out**: there is nothing to look through.
 

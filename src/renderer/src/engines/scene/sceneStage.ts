@@ -4,7 +4,8 @@ import { offScreenHost } from '@/engines/core/offScreenHost'
 import { reportFailure } from '@/services/diagnostics'
 import { SceneRenderer } from './SceneRenderer'
 import type { CameraPlacement } from './sceneView'
-import { firstCameraId, type SceneState } from './sceneState'
+import { activeCameraAt } from './cameraShots'
+import type { SceneState } from './sceneState'
 
 /**
  * A scene rendered somewhere no one is looking, so a montage can show it.
@@ -120,7 +121,7 @@ export function createSceneStage({
       const active = engine()
       if (!active) return null
 
-      const camera = shown ? firstCameraId(shown.nodes) : null
+      const camera = shown ? activeCameraAt(shown.animation, shown.nodes, time) : null
 
       // The ANGLE its author is working in, never their distance: a scene with no camera of its
       // own has no other direction anybody actually chose, but a working view sits well back to

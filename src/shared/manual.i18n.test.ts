@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { LANGUAGES, type Language } from './i18n/languages'
 import { deadManualLinks, type ManualChapter } from './domain/manual'
 import { americanVerbs, americanWords, proseOf } from './i18n/spelling-fixtures'
+import { asRead, menuPathsOf, screenLabels } from './i18n/menuPath-fixtures'
 import { TRANSLATIONS } from './i18n'
-import { isRecord } from './guards'
 import manual from './manual.json'
 
 /**
@@ -20,31 +20,6 @@ const languages = LANGUAGES.map(language => language.code)
 
 /** Per language, never merged: `07-assets` is the slug of a chapter in BOTH — see `ManualChapter`. */
 const chaptersOf = (language: (typeof languages)[number]): ManualChapter[] => manual[language]
-
-/**
- * Both separators the chapters write, and they are not interchangeable to a regexp: `▸` carries
- * 70 paths in French and 71 in English, `›` four each. Reading one alone missed two false
- * citations, measured.
- *
- * Bounded and newline-free because `**` pairs greedily across a paragraph: an unbounded reading
- * returned whole sentences as menu paths, which is a relevé nobody can act on.
- */
-const MENU_PATH = /\*\*([^*\n]{1,90}[▸›][^*\n]{1,90})\*\*/g
-
-/** As a reader compares a quote to a menu: trailing ellipsis dropped, holes dropped, folded. */
-const asRead = (text: string): string =>
-  text
-    .replace(/\{\{[^}]*\}\}/g, '')
-    .replace(/[….]+$/, '')
-    .trim()
-    .toLowerCase()
-
-const labelsOf = (bundle: unknown, into = new Set<string>()): Set<string> => {
-  if (typeof bundle === 'string') into.add(asRead(bundle))
-  else if (isRecord(bundle)) for (const held of Object.values(bundle)) labelsOf(held, into)
-
-  return into
-}
 
 /**
  * Segments that follow the shape of a path without naming a menu entry. One each, and both are
@@ -143,6 +118,21 @@ describe('the manual the application carries', () => {
   })
 
   /**
+   * Every assertion below is a list expected EMPTY, so a reading that recognises nothing keeps
+   * them all green. These samples are what `menuPathsOf` is worth: the middle one is the table
+   * row that a first, edge-free crossing returned as a menu path.
+   */
+  it('reads a path across one line break of the page, and no further', () => {
+    expect(menuPathsOf('**Fichier ▸ Exporter la\nsélection** écrit tout')).toEqual([
+      'Fichier ▸ Exporter la sélection',
+    ])
+    expect(
+      menuPathsOf('| la pastille est **verte** en haut |\n| [Premiers pas ▸ étape 3] |'),
+    ).toEqual([])
+    expect(menuPathsOf('**Aide ▸\n\nJournal**')).toEqual([])
+  })
+
+  /**
    * A chapter sending its reader to **Help ▸ Journal** was sending them to a menu entry no
    * language carries, and the manual being read INSIDE the window, a wrong path reads as the
    * software being broken. The French chapters were right to the last of their 66 paths; the
@@ -154,21 +144,17 @@ describe('the manual the application carries', () => {
    * path. `**Enlarge**` alone sat in three more chapters and no reading here would have found it.
    */
   it.each(languages)('quotes no menu path the screen does not carry, in %s', language => {
-    const labels = labelsOf(TRANSLATIONS[language])
+    const labels = screenLabels(TRANSLATIONS[language])
     const invented = chaptersOf(language).flatMap(chapter =>
-      [...chapter.markdown.matchAll(MENU_PATH)]
-        // The group always matches — `flatMap` drops the `[]` the type demands.
-        .flatMap(match => match[1] ?? [])
-        .flatMap(path =>
-          path
-            .split(/[▸›]/)
-            .map(asRead)
-            .filter(
-              segment =>
-                segment && !labels.has(segment) && !NOT_A_MENU_ENTRY[language].has(segment),
-            )
-            .map(segment => `${chapter.slug} — "${segment}" in ${path.trim()}`),
-        ),
+      menuPathsOf(chapter.markdown).flatMap(path =>
+        path
+          .split(/[▸›]/)
+          .map(asRead)
+          .filter(
+            segment => segment && !labels.has(segment) && !NOT_A_MENU_ENTRY[language].has(segment),
+          )
+          .map(segment => `${chapter.slug} — "${segment}" in ${path.trim()}`),
+      ),
     )
 
     expect(invented).toEqual([])
@@ -181,9 +167,7 @@ describe('the manual the application carries', () => {
   it.each(languages)('drops a gesture exemption once no path writes it, in %s', language => {
     const written = new Set(
       chaptersOf(language).flatMap(chapter =>
-        [...chapter.markdown.matchAll(MENU_PATH)]
-          .flatMap(match => match[1] ?? [])
-          .flatMap(path => path.split(/[▸›]/).map(asRead)),
+        menuPathsOf(chapter.markdown).flatMap(path => path.split(/[▸›]/).map(asRead)),
       ),
     )
 

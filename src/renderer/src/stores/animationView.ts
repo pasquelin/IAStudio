@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { movedWithin } from '@/engines/scene/animationRows'
+import { movedWithin } from '@shared/domain/order'
 import type { Viewport } from '@/engines/timeline/timelineGeometry'
 import { DEFAULT_VIEWPORT } from '@/engines/timeline/viewport'
 
@@ -16,7 +16,7 @@ export type AnimationView = {
   viewport: Viewport
   /** Subjects whose channels are unfolded, by `subjectKey`. Absent means folded. */
   expanded: readonly string[]
-  /** Picked keys, as `keyId(rowId, time)`. */
+  /** What the band holds picked: a key as `keyId(rowId, time)`, a shot as its own id. */
   selected: readonly string[]
   /**
    * The block the band shows as chosen, by its own id. Choosing is not editing, so it lives here

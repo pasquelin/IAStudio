@@ -4,11 +4,16 @@ import { SECOND } from '@shared/domain/time'
 import { poseAt } from './animationEval'
 import {
   addAnimationTrack,
+  addCameraShot,
+  editCameraShot,
   recordingTracksFor,
+  removeCameraShot,
   keyNode,
   keySubject,
   moveAnimationKey,
   movesToCommand,
+  reorderCameraShots,
+  railOnNewShot,
   recordMove,
   removeAnimationKey,
   removeAnimationTrack,
@@ -16,7 +21,9 @@ import {
   setTimelineSettings,
   updateAnimationTrack,
 } from './animationCommands'
-import { EMPTY_SCENE, type SceneNode, type SceneState } from './sceneState'
+import { cameraShot } from './animation-fixtures'
+import { cameraNodeFixture } from './scene-fixtures'
+import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneNode, type SceneState } from './sceneState'
 
 const target = (nodeId: string, property: TrackTarget['property'] = 'position'): TrackTarget => ({
   nodeId,
@@ -409,7 +416,12 @@ describe('keying an object that was moved by hand', () => {
     return command.apply(state)
   }
 
-  const NAMES = { position: 'Cube · Position', rotation: 'Cube · Rotation', scale: 'Cube · Scale' }
+  const NAMES = {
+    position: 'Cube · Position',
+    rotation: 'Cube · Rotation',
+    scale: 'Cube · Scale',
+    fov: 'Cube · Lens',
+  }
 
   it('holds the movement made since the channel opened, not zero', () => {
     const first = keyAt(cubeAt(0), 0)
@@ -476,7 +488,12 @@ describe('dragging an object that is already keyed', () => {
     type: 'group',
   })
 
-  const NAMES = { position: 'Cube · Position', rotation: 'Cube · Rotation', scale: 'Cube · Scale' }
+  const NAMES = {
+    position: 'Cube · Position',
+    rotation: 'Cube · Rotation',
+    scale: 'Cube · Scale',
+    fov: 'Cube · Lens',
+  }
 
   /** A cube keyed at zero and again at two seconds, four units along. */
   function animated(): SceneState {
@@ -544,5 +561,119 @@ describe('dragging an object that is already keyed', () => {
     expect(
       movesToCommand(opened, move, 0, true)!.apply(opened).nodes[0]?.transform.position.x,
     ).toBe(0)
+  })
+})
+
+describe('the shots of a sequence', () => {
+  const shot = cameraShot('s1', { start: 1 * SECOND, duration: 2 * SECOND })
+  const other = cameraShot('s2', { cameraId: 'cam-b', start: 4 * SECOND })
+  const start: SceneState = {
+    ...EMPTY_SCENE,
+    animation: { ...EMPTY_SCENE.animation, shots: [shot, other] },
+  }
+
+  // The shot joins the end of its camera's own run, so the line the user dragged keeps its rank.
+  it('puts a camera on air, and takes it back off on undo', () => {
+    const command = addCameraShot(cameraShot('s3'))
+    const applied = command.apply(start)
+
+    expect(applied.animation.shots.map(held => held.id)).toEqual(['s1', 's3', 's2'])
+    expect(command.revert(applied)).toEqual(start)
+  })
+
+  // A shot laid down only to be hidden by what was already there reads as a button doing nothing.
+  it('opens the stack with a camera the band did not show yet', () => {
+    const applied = addCameraShot(cameraShot('s3', { cameraId: 'cam-c' })).apply(start)
+
+    expect(applied.animation.shots.map(held => held.id)).toEqual(['s3', 's1', 's2'])
+  })
+
+  // Two shots of one layer starting together are settled by their order, so a shot restored at
+  // the end would come back on top of what it was under.
+  it('puts a removed shot back where it stood', () => {
+    const command = removeCameraShot('s1')
+    const applied = command.apply(start)
+
+    expect(applied.animation.shots.map(held => held.id)).toEqual(['s2'])
+    expect(command.revert(applied).animation.shots.map(held => held.id)).toEqual(['s1', 's2'])
+  })
+
+  it('moves and trims through one command, and reverts the whole shot', () => {
+    const edit = editCameraShot('s1', { start: 5 * SECOND, duration: 1 * SECOND })
+    const moved = edit.apply(start)
+
+    expect(moved.animation.shots[0]).toMatchObject({ start: 5 * SECOND, duration: 1 * SECOND })
+    expect(edit.revert(moved)).toEqual(start)
+  })
+
+  it('leaves the state alone when the shot named is gone', () => {
+    expect(editCameraShot('nowhere', { start: 9 * SECOND }).apply(start)).toBe(start)
+    expect(removeCameraShot('nowhere').apply(start)).toBe(start)
+  })
+
+  /**
+   * The order of the lines is the montage's law, so dragging one is an edit of the document —
+   * unlike the sheet's own arrangement, which no history holds.
+   */
+  it('writes the order it is given, and gives back the one that stood before', () => {
+    const command = reorderCameraShots('cam-a', [other, shot])
+    const applied = command.apply(start)
+
+    expect(applied.animation.shots.map(held => held.id)).toEqual(['s2', 's1'])
+    expect(command.revert(applied)).toEqual(start)
+  })
+
+  it('replays a whole drag rather than its last notch, once the steps have coalesced', () => {
+    const third = cameraShot('s3', { cameraId: 'cam-c' })
+    const from: SceneState = {
+      ...start,
+      animation: { ...start.animation, shots: [shot, other, third] },
+    }
+
+    const first = reorderCameraShots('cam-a', [other, shot, third])
+    const last = reorderCameraShots('cam-a', [other, third, shot])
+
+    // `coalesce` keeps the FIRST revert and the LAST apply, so the last apply has to describe the
+    // drag from where it STARTED — a command holding a step would redo one notch of the two.
+    first.apply(from)
+    const replayed = last.apply(from)
+
+    expect(replayed.animation.shots.map(held => held.id)).toEqual(['s2', 's3', 's1'])
+    expect(first.revert(replayed)).toEqual(from)
+  })
+
+  /**
+   * A rail drives nothing without a shot to run it, so asking for one asks for both — and the
+   * button was unreachable until a shot had been posed from another panel, with nothing saying so.
+   */
+  it('opens a shot and lays its rail in one gesture, and takes back both', () => {
+    const camera = cameraNodeFixture('cam-c')
+    const fresh = cameraShot('s3', { cameraId: 'cam-c' })
+    const command = railOnNewShot(camera, fresh)
+    const applied = command.apply({ ...start, nodes: [camera] })
+
+    const laid = applied.animation.shots.find(held => held.id === 's3')
+    expect(applied.nodes.filter(node => node.type === 'path')).toHaveLength(1)
+    expect(laid?.motion?.pathId).toBe(applied.nodes.find(node => node.type === 'path')?.id)
+
+    expect(command.revert(applied)).toEqual({ ...start, nodes: [camera] })
+  })
+
+  // Where the camera stands, so the rail starts under it rather than at the world's origin.
+  it('lays the rail on the camera it belongs to', () => {
+    const camera = {
+      ...cameraNodeFixture('cam-c'),
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 3, y: 1, z: -2 } },
+    }
+    const applied = railOnNewShot(camera, cameraShot('s3', { cameraId: 'cam-c' })).apply({
+      ...start,
+      nodes: [camera],
+    })
+
+    expect(applied.nodes.find(node => node.type === 'path')?.transform.position).toEqual({
+      x: 3,
+      y: 1,
+      z: -2,
+    })
   })
 })

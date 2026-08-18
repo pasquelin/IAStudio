@@ -1,5 +1,6 @@
 import {
   isVector3,
+  type CameraDescriptor,
   type GeometryDescriptor,
   type LightDescriptor,
   type MaterialDescriptor,
@@ -151,6 +152,21 @@ export const TEXT_SPECS: TextSpecs = {
   depth: { control: 'number', min: 0, step: 0.05 },
   // Above a dozen the difference stops showing and the vertex count keeps climbing.
   curveSegments: { control: 'number', min: 1, max: 32, step: 1 },
+}
+
+/** Exhaustive like the others: a lens parameter gained without a control fails to compile. */
+type CameraSpecs = { [F in keyof CameraDescriptor]: PropertySpec }
+
+export const CAMERA_SPECS: CameraSpecs = {
+  // Vertical, in degrees. Past 170 the projection stretches into what no lens shows.
+  fov: { control: 'slider', min: 1, max: 170, step: 1 },
+  // Never zero: a near plane at the eye leaves the depth buffer no range to sort with.
+  near: { control: 'number', min: 0.001, step: 0.01 },
+  far: { control: 'number', min: 0.002, step: 10 },
+}
+
+export function cameraFields(descriptor: CameraDescriptor): PropertyField[] {
+  return listFields(descriptor, CAMERA_SPECS)
 }
 
 /** The caption and the face are left out: each has a control of its own in the inspector. */
