@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-// Where `safeFileName` moved when documents came to need it too — the cases below stay here
-// because one of them carries a literal NUL byte, which no editor of this repository can retype.
+// Where `safeFileName` moved when documents came to need it too — the cases below stayed with the
+// target that had written them.
 import { safeFileName } from './fileName'
 import { PBR_CHANNELS, type PbrChannel } from './texture'
 import {
@@ -399,7 +399,7 @@ describe('the name a folder takes', () => {
 
   it('replaces a control character rather than carrying it to disk', () => {
     expect(safeFileName('tab\there')).toBe('tab here')
-    expect(safeFileName('null byte')).toBe('null byte')
+    expect(safeFileName('null\x00byte')).toBe('null byte')
   })
 
   it('falls back when a title holds nothing a name can keep', () => {
