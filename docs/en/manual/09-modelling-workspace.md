@@ -660,8 +660,8 @@ then **Speed** and **Loop** — the same two settings as the section, written in
 just laid. Like the ▶ of the Inspector, this preview runs on a clock of its own and does not move
 the playhead.
 
-**The panel then says whether the motion fits the skeleton**, in one line: "Animation compatible.",
-or that it is not a perfect fit. **No bone name is shown up front** — *See the joints concerned*
+**The panel then says whether the motion fits the skeleton**, in one line: "The character can play
+all of this motion.", or that it is not a perfect fit. **No bone name is shown up front** — *See the joints concerned*
 opens the list, and those are **roles**, never bone names: that vocabulary is the only one two
 skeletons share. Each row says what happens to the joint — "stays at rest" for a joint of your
 character the motion does not animate, "not carried over" for a joint of the motion your character
