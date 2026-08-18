@@ -17,14 +17,14 @@ const scene: DocumentDescriptor = {
   kind: 'scene',
   title: 'Niveau',
   workspace: '3d',
-  path: 'documents/Niveau.scene',
+  path: 'documents/Niveau.gltf',
 }
 const sequence: DocumentDescriptor = {
   id: 'doc-2',
   kind: 'sequence',
   title: 'Bande annonce',
   workspace: 'video',
-  path: 'documents/Bande annonce.seq',
+  path: 'documents/Bande annonce.otio',
 }
 
 type Panel = {

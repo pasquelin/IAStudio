@@ -19,7 +19,7 @@ const scene: DocumentDescriptor = {
   kind: 'scene',
   title: 'Niveau',
   workspace: '3d',
-  path: 'a3f1.scene',
+  path: 'a3f1.gltf',
 }
 
 describe('what the project holds, as one shape', () => {
@@ -48,7 +48,7 @@ describe('what the project holds, as one shape', () => {
 
   // What the explorer's rows show too: a document is called by its title, not by its file.
   it('calls a document by its title', () => {
-    expect(itemOfPath('documents/a3f1.scene', { document: scene })).toMatchObject({
+    expect(itemOfPath('documents/a3f1.gltf', { document: scene })).toMatchObject({
       name: 'Niveau',
       domain: 'mesh',
       role: 'edit',

@@ -32,12 +32,12 @@ Les six types s’écrivent dans le dossier du projet et se rouvrent tels quels.
 
 | Document | Extension | S’enregistre ? |
 |---|---|---|
-| Scène 3D | `.scene` | **oui** |
-| Matière | `.tex` | **oui** |
-| Image en calques | `.img` | **oui** |
-| Séquence vidéo | `.seq` | **oui** |
-| Son édité | `.aud` | **oui** |
-| Ciel | `.sky` | **oui** |
+| Scène 3D | `.gltf` | **oui** |
+| Matière | `.mtlx` | **oui** |
+| Image en calques | `.ora` | **oui** |
+| Séquence vidéo | `.otio` | **oui** |
+| Son édité | `.otio` | **oui** |
+| Ciel | `.gltf` | **oui** |
 
 **Ce qui ne s’enregistre pas :**
 
@@ -146,7 +146,7 @@ disparaissent définitivement.
 `⇧⌘E` écrit le document **aplati** en `.png` où vous voulez : une seule image, les calques fondus
 ensemble. Ce n’est pas une sauvegarde — c’est une sortie.
 
-Pour garder la pile de calques, c’est `⌘S` : le document s’écrit en dossier `.img`, masques
+Pour garder la pile de calques, c’est `⌘S` : le document s’écrit en dossier `.ora`, masques
 compris, et se rouvre tel quel. Les deux gestes ne servent pas à la même chose et aucun ne
 remplace l’autre. Ce qui ne revient dans aucun des deux : l’historique d’annulation.
 
@@ -203,17 +203,13 @@ raccourcis, et le bouton **Chercher par touche** ne les trouve pas.
 
 ### L’export vidéo sort sans le son
 
-Une séquence s’enregistre désormais en `.seq` et se rouvre telle quelle.
+Une séquence s’enregistre en `.otio` et se rouvre telle quelle.
 
 **Fichier › Exporter la vidéo** écrit bien un fichier final, image par image, scènes 3D comprises.
 **Mais il sort muet** : les pistes de son du montage ne sont pas encore encodées dedans. C’est la
 limite la plus lourde de cet espace, parce qu’elle oblige à remonter le son ailleurs.
 
-### Un montage neuf s’enregistre encore en `.seq`
-
-Un `.otio` **s’ouvre** maintenant : un double-clic dans l’Explorateur ouvre le montage, qu’il ait
-été écrit ici ou par un autre logiciel, et `⌘S` le réenregistre dans son propre fichier. Ce qui
-reste, c’est le point de départ — une séquence créée dans le studio part toujours en `.seq`.
+### Un montage étranger ne retrouve que les médias déjà vus
 
 Un montage venu d’ailleurs nomme ses médias par un chemin. Le studio les cherche dans le projet
 par ce chemin, puis par le nom du fichier — **parmi les assets que cette fenêtre a déjà vus**. Un
@@ -269,7 +265,7 @@ faire entrer et sortir proprement. C’est exactement ce que fait cet espace, et
 
 ### Le document audio ne garde pas l’écoute A/B
 
-Le fichier `.aud` existe et se rouvre — c’est le tableau du haut de ce chapitre qui fait foi. Ce
+Le fichier `.otio` existe et se rouvre — c’est le tableau du haut de ce chapitre qui fait foi. Ce
 qu’il tient est **la chaîne d’édition**, pas le son : les coupes, les fondus, le gain, rejoués sur
 l’asset d’origine — **et le montage multipiste de la bande basse**. Ce qu’il ne garde pas, c’est
 l’**écoute A/B** : un document rouvert écoute la chaîne, jamais la source.
@@ -320,7 +316,7 @@ revient au même en trois gestes de plus.
 
 ### L’export sort en PNG, donc sans les hautes lumières
 
-Un ciel s’enregistre désormais en `.sky` — l’exposition, la rotation de l’horizon et la position
+Un ciel s’enregistre désormais en `.gltf` — l’exposition, la rotation de l’horizon et la position
 du soleil se rouvrent telles quelles. Ce que le document ne garde pas : la vue et le champ de
 vision, qui disent comment on le regardait et non ce qu’il est.
 

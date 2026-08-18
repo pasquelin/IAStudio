@@ -9,7 +9,7 @@ import {
   FOLDER_KINDS,
   isPartName,
   isStagingName,
-  kindForExtension,
+  kindsForExtension,
   STAGING_SUFFIX,
   workspaceForKind,
   type DocumentDescriptor,
@@ -131,7 +131,7 @@ function claimsDocument(path: string): boolean {
   // extension", and it exists because three sites had quietly disagreed about `.gitignore`.
   // Over the NAME, since it reads back to the last dot and a folder may hold one.
   const extension = extensionOf(basename(path))
-  return extension === '' || kindForExtension(extension) !== null
+  return extension === '' || kindsForExtension(extension).length > 0
 }
 
 /** How many heads are read at once. Measured in `documents.bench.ts`: 2 000 documents across
@@ -218,19 +218,19 @@ export function createDocumentFiles({
    * overwrite without a word. One listing out of date is a document lost.
    *
    * Every entry, not only the ones that read back as documents: the disk cannot hold two things
-   * of one name, so a `Sans titre.scene` too damaged to open still takes the name it wears.
+   * of one name, so a `Sans titre.gltf` too damaged to open still takes the name it wears.
    *
    * Keyed by the directory entry, which is all a name check ever needs an id for — telling the
    * document being renamed apart from its own name.
    *
-   * Per folder and not across the project: two folders may each hold a `Niveau.scene` and the
+   * Per folder and not across the project: two folders may each hold a `Niveau.gltf` and the
    * disk is happy with both, so a check taken over the whole tree would refuse a name nothing
    * where the document sits answers to.
    */
   const namesIn = async (folder: string): Promise<NamedDocument[]> =>
     ((await folderNames(folder)) ?? []).map(entry => {
       // NFC, because `readdir` answers the bytes the volume stores and the studio composes its
-      // own: APFS keeps `Été.scene` decomposed when that is how it arrived. `checkDocumentName`
+      // own: APFS keeps `Été.gltf` decomposed when that is how it arrived. `checkDocumentName`
       // folds what it COMPARES but exempts the document being renamed by plain equality, so an
       // entry left decomposed would refuse the user their own name — `Été` → `ÉTÉ` answering
       // "already taken", pointing at the very file being renamed.
@@ -247,7 +247,7 @@ export function createDocumentFiles({
    *
    * Keyed by PROJECT as well as by document. This reader is built once for the life of the
    * process and follows whichever project is open, and a document written before version 3 is
-   * called after its file — so two projects each holding an old `Level.scene` share the id
+   * called after its file — so two projects each holding an old `Level.gltf` share the id
    * `Level`, and one would answer for the other's clock.
    */
   const seen = new Map<string, number>()
@@ -265,7 +265,7 @@ export function createDocumentFiles({
    * The file that actually holds a document's bytes.
    *
    * A folder document answers for its MANIFEST rather than the folder: a directory's own time
-   * moves when any entry inside it does, so `.img` would read as changed every time a layer was
+   * moves when any entry inside it does, so `.ora` would read as changed every time a layer was
    * rewritten by the studio itself.
    */
   const bodyFileOf = (file: string, kind: DocumentKind): string =>
@@ -410,25 +410,25 @@ export function createDocumentFiles({
   const descriptorOf = async (path: string): Promise<DocumentDescriptor | null> => {
     const entry = basename(path)
     const extension = extensionOf(entry)
-    const claimed = kindForExtension(extension)
+    const claimed = kindsForExtension(extension)
     // An entry with no extension at all claims nothing, so there is nothing for the envelope to
     // contradict — and one that lost its extension is a document the studio would otherwise stop
     // seeing altogether: present in the folder, absent from every list, and unopenable. Reading
     // a head it does not have costs one bounded read, which is what `claimsDocument` bounds.
-    if (!claimed && extension !== '') return null
+    if (claimed.length === 0 && extension !== '') return null
 
     try {
       const file = absoluteOf(path)
+      const first = claimed[0]
       const envelope = await headOf(
-        claimed && FOLDER_KINDS.has(claimed) ? join(file, DOCUMENT_MANIFEST) : file,
+        first && FOLDER_KINDS.has(first) ? join(file, DOCUMENT_MANIFEST) : file,
       )
-      // The folder's word beats the file's, exactly as `read` has it: an extension changed by
-      // hand must not send a document to an editor that cannot open it. With no extension there
-      // is no word to beat, so the envelope's own kind is taken.
-      if (claimed && envelope.kind !== claimed) return null
+      // The file says which kind it is, BOUNDED by what its extension could name: a container
+      // serving two editors cannot be told apart by its name, and trusting the head outright
+      // would send a `.gltf` whose envelope reads `texture` to the material editor.
+      if (claimed.length > 0 && !claimed.includes(envelope.kind)) return null
 
-      const kind = claimed ?? envelope.kind
-      const workspace = workspaceForKind(kind)
+      const workspace = workspaceForKind(envelope.kind)
       if (!workspace) return null
 
       const stem = basename(entry, extension)
@@ -437,7 +437,7 @@ export function createDocumentFiles({
         // Before version 3 the file name WAS the id, so that is what such a document is still
         // called — its tabs, its place in the layout and its recent entry all say so.
         id: envelope.id ?? stem,
-        kind,
+        kind: envelope.kind,
         // The file name is the title, and has been since documents came to be named by hand.
         // Falling back on it rather than refusing an envelope that lost its own: a document
         // with no title would drop out of every listing while sitting in the folder.
@@ -599,8 +599,8 @@ export function createDocumentFiles({
       throw error
     }
 
-    // The folder's word beats the file's. A document copied to another extension by hand would
-    // otherwise open in the wrong editor, with the wrong content.
+    // The file must still be what the caller was listed: a document copied to another extension
+    // by hand would otherwise open in the wrong editor, with the wrong content.
     if (document.kind !== kind) {
       throw new Error(`Document ${id} holds a ${document.kind}, not a ${kind}`)
     }
@@ -655,9 +655,7 @@ export function createDocumentFiles({
         const refused = checkDocumentName(title, kind, taken, basename(from).normalize('NFC'))
         if (refused) throw new Error(refused)
 
-        // The extension it already wears, so a montage held as `.otio` is renamed rather than
-        // duplicated under the spelling a brand new one would take.
-        const entry = documentFileName(title, kind, extensionOf(basename(from)))
+        const entry = documentFileName(title, kind)
         const path = inFolder === '' ? entry : `${inFolder}/${entry}`
         const to = absoluteOf(path)
 
@@ -667,7 +665,7 @@ export function createDocumentFiles({
 
         /**
          * Asked before renaming, because `fs.rename` overwrites without a word on POSIX — and
-         * replaces an empty directory without one either, which is what an untouched `.img` is.
+         * replaces an empty directory without one either, which is what an untouched `.ora` is.
          * `checkDocumentName` above asks the same folder the same thing, and this is kept anyway:
          * it is the answer nearest the syscall that overwrites, and one `stat` is a cheap price
          * for the window between a listing and a rename.

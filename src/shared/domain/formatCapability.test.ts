@@ -24,9 +24,8 @@ describe('what a format would drop for good', () => {
     expect(lossesFor([], 'png')).toEqual([])
   })
 
-  it('drops nothing into a format that carries the studio own data', () => {
+  it('drops nothing into the open format that carries a stack', () => {
     expect(lossesFor(STACKED, 'ora')).toEqual([])
-    expect(lossesFor(STACKED, 'img')).toEqual([])
   })
 
   // « No answer » must never read as « nothing to lose »: an `.otio` has no field for a layer.

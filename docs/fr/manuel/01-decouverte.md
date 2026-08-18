@@ -82,12 +82,12 @@ Il y a sept sortes de documents, une par espace :
 
 | Espace | Document | Extension du fichier |
 |---|---|---|
-| Image | une image en calques | `.img` |
-| 3D | une scène | `.scene` |
-| Vidéo | une séquence | `.seq` |
-| Audio | un son en cours d’édition | `.aud` |
-| Skyboxes | un ciel | `.sky` |
-| Textures | une matière | `.tex` |
+| Image | une image en calques | `.ora` |
+| 3D | une scène | `.gltf` |
+| Vidéo | une séquence | `.otio` |
+| Audio | un son en cours d’édition | `.otio` |
+| Skyboxes | un ciel | `.gltf` |
+| Textures | une matière | `.mtlx` |
 
 ### 4. Un **modèle**
 

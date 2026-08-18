@@ -13,14 +13,14 @@ const SAVED: DocumentDescriptor = {
   kind: 'image',
   workspace: 'image',
   title: 'On disk',
-  path: 'documents/On disk.img',
+  path: 'documents/On disk.ora',
 }
 const FRESH: DocumentDescriptor = {
   id: 'fresh',
   kind: 'image',
   workspace: 'image',
   title: 'Untitled 1',
-  path: 'documents/Untitled 1.img',
+  path: 'documents/Untitled 1.ora',
 }
 
 function panelsLeft(): string[] {

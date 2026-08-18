@@ -1,5 +1,5 @@
 /**
- * A sky, on its way to a `.sky` file and back. The shape is `SkyboxContent`, which already
+ * A sky, on its way to a `.gltf` file and back. The shape is `SkyboxContent`, which already
  * states what belongs on disk; this pair is only the crossing, and the read half is where a
  * file stops being trusted.
  */

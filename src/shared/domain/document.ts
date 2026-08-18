@@ -1,4 +1,3 @@
-import { OTIO_EXTENSION } from './otio'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
 /**
@@ -33,11 +32,11 @@ export type DocumentDescriptor = {
   workspace: WorkspaceId
   /**
    * Where this document was read from, relative to the project folder, extension included —
-   * `Repérages/Niveau.scene`. The same spelling every other path on this boundary uses, `/` on
+   * `Repérages/Niveau.gltf`. The same spelling every other path on this boundary uses, `/` on
    * every platform.
    *
    * The whole path and not the entry alone, since a document may sit anywhere in the project:
-   * two folders may each hold a `Niveau.scene`, and a listing joined on the name would hand the
+   * two folders may each hold a `Niveau.gltf`, and a listing joined on the name would hand the
    * explorer one document's descriptor for the other one's row.
    *
    * Carried because the id no longer spells it: whoever joins a folder listing to a document has
@@ -92,28 +91,28 @@ export const DOCUMENT_VERSION = 3
 export const DOCUMENTS_FOLDER = 'documents'
 
 /**
- * Every extension a kind READS, the one it WRITES first. A project folder is meant to be read by
- * eye and repaired by hand, and `a3f1.json` beside `b204.json` says nothing about what either is.
+ * The extension each kind reads and writes. A project folder is meant to be read by eye and
+ * repaired by hand, and `a3f1.json` beside `b204.json` says nothing about what either is.
  *
- * A kind wears two spellings while its format is being replaced by an open one — the studio's own
- * extensions are on their way out, and the files a project already holds have to keep opening.
+ * No spelling of the studio's own is left: every kind names the open format it belongs in. **Only
+ * the two montages have the BYTES to match** — the other four still hold the studio's envelope
+ * under an open name, so no other application opens one of them yet.
  *
  * Exported so a test can hold it against `DOCUMENT_KINDS`: the compiler makes this table
  * complete, but nothing makes that list complete, and a kind missing from it would be refused
  * at the IPC boundary without a word.
  */
-export const EXTENSIONS_BY_KIND: Record<DocumentKind, readonly [string, ...string[]]> = {
-  image: ['.img'],
-  scene: ['.scene'],
-  sequence: ['.seq', OTIO_EXTENSION],
-  audio: ['.aud'],
-  skybox: ['.sky'],
-  texture: ['.tex'],
-}
-
-/** The one a document nobody has named yet is written to. */
-export function extensionForKind(kind: DocumentKind): string {
-  return EXTENSIONS_BY_KIND[kind][0]
+export const EXTENSIONS_BY_KIND: Record<DocumentKind, string> = {
+  image: '.ora',
+  scene: '.gltf',
+  sequence: '.otio',
+  // The same montage as a sequence, so the same standard file. Which workspace wrote it is read
+  // out of the file's own studio metadata — see `documentBody.ts`, the extension cannot say.
+  audio: '.otio',
+  // Held in the same container as the scene, for the same reason: a sky is an environment, and
+  // glTF is what carries one. The file says which of the two it is.
+  skybox: '.gltf',
+  texture: '.mtlx',
 }
 
 /**
@@ -126,7 +125,7 @@ export function extensionForKind(kind: DocumentKind): string {
  * the folder a first save falls back to.
  */
 export function documentPath(id: string, kind: DocumentKind): string {
-  return `${DOCUMENTS_FOLDER}/${id}${extensionForKind(kind)}`
+  return `${DOCUMENTS_FOLDER}/${id}${EXTENSIONS_BY_KIND[kind]}`
 }
 
 /**
@@ -136,12 +135,27 @@ export function documentPath(id: string, kind: DocumentKind): string {
  *
  * `null` for anything else in there — a stray note, an export, a staging copy.
  *
+ * **Two pairs share a spelling** — the two montages under `.otio`, the scene and the sky under
+ * `.gltf` — so this answers the first of each and the FILE settles it: the format declares
+ * `kindFromHead`, and `documentBody.ts` reads which kind out of what the file itself carries.
+ *
  * Case-sensitive on purpose: `documentPath` writes the extension in lower case, so a `.IMG`
  * accepted here would be listed under a name that `read` then fails to find on a case-sensitive
  * volume — an empty document, and a second file beside the first at the next save.
  */
 export function kindForExtension(extension: string): DocumentKind | null {
-  return DOCUMENT_KINDS.find(kind => EXTENSIONS_BY_KIND[kind].includes(extension)) ?? null
+  return kindsForExtension(extension)[0] ?? null
+}
+
+/**
+ * EVERY kind this extension could name — one for most, two where a container serves two editors.
+ * What a file's own head is allowed to claim: `.gltf` may say scene or sky, and nothing else.
+ *
+ * Reading the head is what settles it, and this is what bounds that reading. Trusting the head
+ * outright would let an envelope reading `texture` open a `.gltf` in the material editor.
+ */
+export function kindsForExtension(extension: string): readonly DocumentKind[] {
+  return DOCUMENT_KINDS.filter(kind => EXTENSIONS_BY_KIND[kind] === extension)
 }
 
 /**

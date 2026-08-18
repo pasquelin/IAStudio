@@ -6,7 +6,7 @@ import type { PbrChannel } from '@shared/domain/texture'
  *
  * Session state, and a store of its own for the reason `useCanvasViews` gives: how one is looking
  * at a document is not something one made of it. Inspecting a normal map flat must not travel in
- * the `.tex`, and ⌘Z must not give the sphere back.
+ * the `.mtlx`, and ⌘Z must not give the sphere back.
  */
 /**
  * A ratio, and the picture it was read off. The asset is half the reading: replace the base
@@ -19,7 +19,7 @@ export type TextureViewsState = {
   /**
    * The last seam reading of each texture, or absent when none was asked for. Session state and
    * not a document field on purpose: it describes the base colour as it is right now, and one
-   * saved into the `.tex` would be a measurement of pixels the file no longer points at.
+   * saved into the `.mtlx` would be a measurement of pixels the file no longer points at.
    */
   seams: Record<string, SeamReading>
   inspect: (documentId: string, channel: PbrChannel | null) => void

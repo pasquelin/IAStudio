@@ -15,10 +15,9 @@ import { parseSkybox } from '@/engines/skybox/skyboxState'
 import {
   EMPTY_SEQUENCE,
   EMPTY_SOUND_SEQUENCE,
-  parseSequence,
   type SequenceState,
 } from '@/engines/timeline/timelineState'
-import { isRecord } from '@shared/guards'
+import { otioStudioMetadata, OTIO_DOCUMENT_KIND } from '@shared/domain/otio'
 import {
   formatOfFile,
   lossesFor,
@@ -235,16 +234,11 @@ function textDocumentIo<S>(
 const asIs = <S>(state: S): unknown => state
 
 /**
- * What a take's file holds: the chain of edits over its sample, and the sound montage under it.
+ * The key the chain of effects travels under, inside the studio domain of a take's timeline. No
+ * standard carries a non-destructive chain, so it rides beside the montage rather than in it —
+ * invisible to another application, which is what `formatCapability` calls extended.
  */
-type AudioPayload = { edits: unknown; montage: unknown }
-
-/** An older file holds the chain alone, and reopens with an empty montage rather than refusing. */
-function audioPayloadOf(content: unknown): AudioPayload {
-  return isRecord(content) && 'montage' in content
-    ? { edits: content.edits, montage: content.montage }
-    : { edits: content, montage: null }
-}
+const OTIO_AUDIO_EDITS = 'audioEdits'
 
 /**
  * Whether either half of a take holds work nobody has written yet. Read from a snapshot rather
@@ -265,15 +259,11 @@ function audioHasUnsavedWork(
 /**
  * A montage read back for a take, kept to sound alone.
  *
- * Two guards rather than a plain `parseSequence`, and both close the same door. `parseSequence`
- * answers `EMPTY_SEQUENCE` — which carries a PICTURE track — for anything it cannot read, and a
- * montage whose last track was removed serialises as exactly that. Either way the Audio workspace
- * would reopen holding a row it has no monitor to play.
+ * Identity, not emptiness: the reader hands back `EMPTY_SEQUENCE` — which carries a PICTURE
+ * track — both for a file it could not read and for a montage whose last track was removed, and
+ * either way the Audio workspace would reopen holding a row it has no monitor to play.
  */
-function soundMontageFrom(payload: unknown): SequenceState {
-  const parsed = payload ? parseSequence(payload) : EMPTY_SEQUENCE
-  // Identity, not emptiness: `parseSequence` hands back this very constant for a file it cannot
-  // read AND for a montage whose last track was removed — and it carries a picture track.
+function soundMontageOf(parsed: SequenceState): SequenceState {
   if (parsed === EMPTY_SEQUENCE) return EMPTY_SOUND_SEQUENCE
 
   const tracks = parsed.tracks.filter(track => track.kind === 'audio')
@@ -298,12 +288,14 @@ const AUDIO_IO: DocumentIo = {
 
     return Promise.resolve({
       draft: {
-        content: JSON.stringify({
-          // Pruned on the way to the file and nowhere else — see `chainsOnMontage`: the store
-          // keeps every chain so that ⌘Z of a deleted block gives its settings back.
-          edits: chainsOnMontage(audioEditStore.stateOf(edits, documentId), written),
-          montage: written,
-        }),
+        content: serializeSequencePayload(
+          sequencePayload(written, documentId, {
+            [OTIO_DOCUMENT_KIND]: 'audio',
+            // Pruned on the way to the file and nowhere else — see `chainsOnMontage`: the store
+            // keeps every chain so that ⌘Z of a deleted block gives its settings back.
+            [OTIO_AUDIO_EDITS]: chainsOnMontage(audioEditStore.stateOf(edits, documentId), written),
+          }),
+        ),
       },
       commit: () => {
         audioEditStore.use.getState().markSaved(documentId, editMark)
@@ -315,11 +307,15 @@ const AUDIO_IO: DocumentIo = {
   },
 
   install: (documentId, content) => {
-    const payload = audioPayloadOf(JSON.parse(content))
+    const payload: unknown = JSON.parse(content)
 
     // `replace`, not a command: loading a document is not something ⌘Z gives back.
-    audioEditStore.use.getState().replace(documentId, parseAudioEdits(payload.edits))
-    sequenceStore.use.getState().replace(documentId, soundMontageFrom(payload.montage))
+    audioEditStore.use
+      .getState()
+      .replace(documentId, parseAudioEdits(otioStudioMetadata(payload)[OTIO_AUDIO_EDITS]))
+    sequenceStore.use
+      .getState()
+      .replace(documentId, soundMontageOf(sequenceFromPayload(payload, documentId)))
 
     const edits = audioEditStore.use.getState()
     edits.markSaved(documentId, audioEditStore.markOf(edits, documentId))
@@ -337,6 +333,10 @@ const AUDIO_IO: DocumentIo = {
   holds: documentId => audioEditStore.hasState(audioEditStore.use.getState(), documentId),
 
   dirty: audioHasUnsavedWork,
+
+  // The same reader as the video montage, so the same refusal: a take whose media the project has
+  // none of opens shorter than its file, and writing it back would delete those clips for good.
+  incomplete: montageIsIncomplete,
 
   forget: documentId => {
     audioEditStore.use.getState().drop(documentId)

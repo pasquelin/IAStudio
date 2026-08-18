@@ -219,7 +219,7 @@ describe('parseTexture', () => {
     expect(parseTexture(JSON.parse(JSON.stringify(written)))).toEqual(written)
   })
 
-  // A `.tex` written before a setting existed must open, not be refused: the missing value is
+  // A `.mtlx` written before a setting existed must open, not be refused: the missing value is
   // what the studio would have used anyway.
   it('fills in what an older build never wrote', () => {
     const parsed = parseTexture({ channels: {}, material: { roughness: 0.25 } })

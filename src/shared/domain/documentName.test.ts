@@ -8,19 +8,14 @@ const named = (fileName: string, id = fileName): { id: string; fileName: string 
 
 describe('the file a document lands on', () => {
   it('names the file after the document, extension by kind', () => {
-    expect(documentFileName('Niveau', 'scene')).toBe('Niveau.scene')
-    expect(documentFileName('Planche', 'image')).toBe('Planche.img')
+    expect(documentFileName('Niveau', 'scene')).toBe('Niveau.gltf')
+    expect(documentFileName('Planche', 'image')).toBe('Planche.ora')
   })
 
-  // Renaming must not turn one document into two: a montage held as OpenTimelineIO stays that
-  // file, where the spelling a NEW one takes would leave the old file sitting beside it.
-  it('keeps the spelling a document already wears', () => {
-    expect(documentFileName('Bande', 'sequence')).toBe('Bande.seq')
-    expect(documentFileName('Bande', 'sequence', '.otio')).toBe('Bande.otio')
-  })
-
-  it('ignores a spelling that is not this kind’s', () => {
-    expect(documentFileName('Bande', 'sequence', '.img')).toBe('Bande.seq')
+  // One kind, one spelling: the montage IS its OpenTimelineIO file, so a rename cannot leave a
+  // second file beside the first under a spelling only this studio would have written.
+  it('gives a montage the open format, and no other spelling', () => {
+    expect(documentFileName('Bande', 'sequence')).toBe('Bande.otio')
   })
 })
 
@@ -48,21 +43,21 @@ describe('whether a document may be called this', () => {
   })
 
   it('refuses a name the folder already holds', () => {
-    expect(checkDocumentName('Niveau', 'scene', [named('Niveau.scene')])).toBe('duplicate')
+    expect(checkDocumentName('Niveau', 'scene', [named('Niveau.gltf')])).toBe('duplicate')
   })
 
   /** Case alone does not make two files on APFS or NTFS, so it does not make two documents. */
   it('reads a name that differs only in case as the same name', () => {
-    expect(checkDocumentName('NIVEAU', 'scene', [named('Niveau.scene')])).toBe('duplicate')
+    expect(checkDocumentName('NIVEAU', 'scene', [named('Niveau.gltf')])).toBe('duplicate')
   })
 
   /** Two kinds, two extensions, two files — and the space glyph tells them apart on screen. */
   it('lets two kinds share a name, as the disk does', () => {
-    expect(checkDocumentName('Niveau', 'image', [named('Niveau.scene')])).toBeNull()
+    expect(checkDocumentName('Niveau', 'image', [named('Niveau.gltf')])).toBeNull()
   })
 
   it('lets a document keep the name it already has', () => {
-    expect(checkDocumentName('Niveau', 'scene', [named('Niveau.scene', 'a3f1')], 'a3f1')).toBeNull()
+    expect(checkDocumentName('Niveau', 'scene', [named('Niveau.gltf', 'a3f1')], 'a3f1')).toBeNull()
   })
 })
 
@@ -72,7 +67,7 @@ describe('the name the studio gives when there is nobody to ask', () => {
   })
 
   it('counts up to the first name the folder does not hold', () => {
-    const folder = [named('Sans titre.scene'), named('Sans titre 2.scene')]
+    const folder = [named('Sans titre.gltf'), named('Sans titre 2.gltf')]
 
     expect(nextFreeDocumentName('Sans titre', 'scene', folder)).toBe('Sans titre 3')
   })
@@ -84,7 +79,7 @@ describe('the name the studio gives when there is nobody to ask', () => {
    */
   it('ends on a name too long to take a suffix, rather than looking for ever', () => {
     const long = 'a'.repeat(80)
-    const folder = [named(`${long}.scene`)]
+    const folder = [named(`${long}.gltf`)]
 
     expect(nextFreeDocumentName(long, 'scene', folder)).not.toBe(long)
   })
@@ -94,7 +89,7 @@ describe('the name the studio gives when there is nobody to ask', () => {
    * deleted used to answer with the name of a file still sitting in the folder.
    */
   it('fills a gap left by a document that was removed', () => {
-    const folder = [named('Sans titre.scene'), named('Sans titre 3.scene')]
+    const folder = [named('Sans titre.gltf'), named('Sans titre 3.gltf')]
 
     expect(nextFreeDocumentName('Sans titre', 'scene', folder)).toBe('Sans titre 2')
   })

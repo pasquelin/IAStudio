@@ -26,7 +26,7 @@ export type FileNature = { domain: FileDomain; role: FileRole }
  * what it held. With the tree open, nothing about a path can say what a file is any more.
  *
  * **No SOURCE extension reaches `texture` or `skybox`, and that is deliberate.** There is no such
- * thing as a texture file: there are PNGs, and a `.tex` document that gives some of them a part
+ * thing as a texture file: there are PNGs, and a material document that gives some of them a part
  * to play — that document is an edit, and it is what carries those two domains. Guessing from a
  * suffix or a folder name would be right often and wrong silently: a normal map and an albedo
  * are both PNGs. A source takes those domains by being referenced, or by the user saying so; the
@@ -46,7 +46,7 @@ const DOMAIN_BY_EXTENSION: Record<string, AssetType> = {
   '.tif': 'image',
   '.tiff': 'image',
   '.heic': 'image',
-  // Both are pictures until something says otherwise, high dynamic range or not — the `.sky`
+  // Both are pictures until something says otherwise, high dynamic range or not — the sky
   // document is what turns one into an environment.
   '.exr': 'image',
   '.hdr': 'image',
@@ -75,8 +75,8 @@ const DOMAIN_BY_EXTENSION: Record<string, AssetType> = {
 /**
  * What a file is, from its name and nothing else.
  *
- * A document — `.scene`, `.img`, `.seq` — is an EDIT, and its domain is the one its editor works
- * in: a `.scene` belongs beside the meshes, a `.img` beside the pictures. That link is not
+ * A document — `.gltf`, `.ora`, `.otio` — is an EDIT, and its domain is the one its editor works
+ * in: a scene belongs beside the meshes, a picture beside the pictures. That link is not
  * spelled again here; it is read from the two tables that already carry it, so a kind that
  * changes space changes it in one place.
  *
@@ -134,6 +134,11 @@ const OPENABLE_EXTENSIONS: readonly string[] = [
  *
  * A document always does — it is the studio's own. A source does when something here can draw
  * it; everything else, `.txt` and `.pdf` included, is the system's to open.
+ *
+ * **The blind spot, written rather than hidden**: a document is now held in the SAME file type as
+ * an asset — `.ora`, `.gltf`, `.otio` — and this reads the name alone, so a plain glTF mesh
+ * dropped in a project answers `edit` and is handed to the scene editor. Telling the two apart
+ * needs the file's own content, which no caller of this has.
  */
 export function opensInStudio(fileName: string): boolean {
   if (natureOf(fileName).role === 'edit') return true

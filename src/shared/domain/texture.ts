@@ -164,7 +164,7 @@ export const DEFAULT_TEXTURE_MATERIAL: MaterialSettings = {
 Object.freeze(DEFAULT_TEXTURE_MATERIAL)
 
 /**
- * Read like every other value, then held inside what the value means. A hand-edited `.tex` is
+ * Read like every other value, then held inside what the value means. A hand-edited `.mtlx` is
  * user territory, and a roughness of -1 reaches the GGX term as a negative alpha: black or white
  * pixels depending on the driver, with nothing on the way to say where it came from.
  */
@@ -206,7 +206,7 @@ function readVector(source: Record<string, unknown>, key: string, fallback: Vect
 }
 
 /**
- * A material read back from anything at all — a `.tex` the user edited, a styles file restored
+ * A material read back from anything at all — a `.mtlx` the user edited, a styles file restored
  * from a backup. Total: what reads as nothing opens on the defaults rather than throwing.
  */
 export function readMaterial(value: unknown): MaterialSettings {

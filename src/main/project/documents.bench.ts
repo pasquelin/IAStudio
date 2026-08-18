@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { deserialize, serialize } from 'node:v8'
 import { afterAll, bench, describe } from 'vitest'
-import { DOCUMENT_VERSION, type DocumentFile } from '@shared/domain/document'
+import { DOCUMENT_VERSION, EXTENSIONS_BY_KIND, type DocumentFile } from '@shared/domain/document'
 // The production read and the production pool, not copies of them: this bench measures the exact
 // syscall shape `list()` takes, and a second implementation beside it would drift from the one
 // being measured. It did — `headOf` was copied here without its envelope parse, so the pool was
@@ -62,8 +62,8 @@ function sceneOf(count: number): DocumentFile {
   }
 }
 
-const SCENE = bodyFormatOf('.scene')
-const OTIO = bodyFormatOf('.otio')
+const SCENE = bodyFormatOf(EXTENSIONS_BY_KIND.scene)
+const OTIO = bodyFormatOf(EXTENSIONS_BY_KIND.sequence)
 
 const SIZES: readonly number[] = [50, 500, 5_000, 10_000, 15_000, 50_000]
 
@@ -145,7 +145,7 @@ async function layDown(): Promise<string> {
     await mkdir(path, { recursive: true })
     await Promise.all(
       Array.from({ length: perFolder }, async (_unused, file) => {
-        await writeFile(join(path, `document ${file}.scene`), HEAD, 'utf8')
+        await writeFile(join(path, `document ${file}${EXTENSIONS_BY_KIND.scene}`), HEAD, 'utf8')
         // Half the folder is something else, which is what filtering before any open is for.
         await writeFile(join(path, `still ${file}.png`), 'not a document', 'utf8')
       }),
@@ -155,12 +155,12 @@ async function layDown(): Promise<string> {
   return root
 }
 
-/** Every `.scene` under the root, found by one recursive `readdir` — what all three then read. */
+/** Every scene under the root, found by one recursive `readdir` — what all three then read. */
 async function candidates(): Promise<string[]> {
   const root = await (laid ??= layDown())
   const entries = await readdir(root, { recursive: true, withFileTypes: true })
   return entries
-    .filter(entry => entry.isFile() && entry.name.endsWith('.scene'))
+    .filter(entry => entry.isFile() && entry.name.endsWith(EXTENSIONS_BY_KIND.scene))
     .map(entry => join(entry.parentPath, entry.name))
 }
 
@@ -196,7 +196,7 @@ const CLIP_COUNTS: readonly number[] = [50, 500, 5_000]
  * would not, and `list()` runs on the thread that owns every window.
  *
  * **And one gesture pays it more than once**: `locate` verifies through `descriptorOf`, so an
- * open costs two of these and a rename four. Cheap for a `.scene` head, not for this — the fix
+ * open costs two of these and a rename four. Cheap for an enveloped head, not for this — the fix
  * is `locate` answering with what it already read, and it is not written yet.
  */
 describe('reading a montage: the head that has to be the whole file', () => {

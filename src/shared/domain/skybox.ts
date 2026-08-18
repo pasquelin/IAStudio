@@ -130,7 +130,7 @@ export type SkyboxEnvironment = {
 export const DEFAULT_ENVIRONMENT: SkyboxEnvironment = { intensity: 1, showBackground: true }
 
 /**
- * What a `.sky` holds on disk. The view mode, the field of view and the test objects are
+ * What a `.gltf` holds on disk. The view mode, the field of view and the test objects are
  * deliberately absent: they are how the document is being looked at right now, not what it is,
  * and persisting them would make a reopened document argue with the window it opens in.
  */

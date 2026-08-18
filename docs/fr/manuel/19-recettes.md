@@ -215,9 +215,9 @@ lettre). `E` monte, `Q` descend, `⇧` gauche accélère.
 **Pour couper :** placez la tête de lecture, appuyez sur `S`. Pour supprimer un clip :
 sélectionnez-le, `Suppr`.
 
-**Pour garder le montage :** `⌘S`. La séquence s’écrit en `.seq` dans le projet et se rouvre
-telle quelle — pistes, clips, fondus et gains. Ce qui ne revient pas, c’est l’historique
-d’annulation.
+**Pour garder le montage :** `⌘S`. La séquence s’écrit en `.otio` — un format que Resolve et
+Premiere lisent déjà — dans le projet, et se rouvre telle quelle : pistes, clips, fondus et
+gains. Ce qui ne revient pas, c’est l’historique d’annulation.
 
 **Ce qui manque toujours :** l’**export**. Le studio ne peut pas encore écrire un fichier vidéo
 final.

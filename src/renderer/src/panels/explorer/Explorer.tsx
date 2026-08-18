@@ -142,7 +142,7 @@ export function Explorer() {
 
   // Keyed by the PATH the descriptor was read from, which is the tree's own id for a row. It
   // used to be the id, which worked only for as long as the id WAS the file name; then the file
-  // name, which worked only for as long as every document sat in one folder — two `Niveau.scene`
+  // name, which worked only for as long as every document sat in one folder — two `Niveau.gltf`
   // in two folders handed one document's descriptor to the other one's row.
   const documentsByFile = useMemo(() => {
     const found = new Map<string, DocumentDescriptor>()

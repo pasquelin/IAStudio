@@ -17,7 +17,7 @@ describe('the name a file takes', () => {
   })
 
   /**
-   * Device names, not files: a project holding `CON.scene` cannot be opened on Windows at all,
+   * Device names, not files: a project holding `CON.gltf` cannot be opened on Windows at all,
    * so a title typed on a Mac would travel to a machine that cannot read the document.
    */
   it('keeps a reserved device name from becoming a file name', () => {

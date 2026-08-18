@@ -1,8 +1,6 @@
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { extensionOf } from '@shared/domain/fileName'
 import { FOLDER_ROOT, nameOf, parentOf } from '@shared/domain/folder'
-import { isOtioTimeline, OTIO_EXTENSION } from '@shared/domain/otio'
 import i18next from 'i18next'
 import {
   mediaLinkFrom,
@@ -13,14 +11,14 @@ import {
   type MediaLink,
 } from '@/engines/timeline/mediaLink'
 import { otioTimelineOf, sequenceFromOtio, type OtioSource } from '@/engines/timeline/otioTimeline'
-import { parseSequence, type Clip, type SequenceState } from '@/engines/timeline/timelineState'
+import type { Clip, SequenceState } from '@/engines/timeline/timelineState'
 import { reportNotice } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 
 /**
- * A montage on its way to and from its file. Which spelling it is WRITTEN in is the file's, not
- * the kind's: a project holds montages saved before the studio spoke OpenTimelineIO.
+ * A montage on its way to and from its file, which is an OpenTimelineIO one and nothing else:
+ * the open format IS the document, not an export laid beside a spelling of the studio's own.
  */
 
 /** Everything a clip is named and pointed at from, read once for a whole montage. */
@@ -52,7 +50,15 @@ function sourceOf(clip: Clip, { assets, documents, linkOf }: Catalogue): OtioSou
 export function otioTimelineFor(
   state: SequenceState,
   documentId: string,
-  { linkOf, identifies = false }: { linkOf: (assetPath: string) => string; identifies?: boolean },
+  {
+    linkOf,
+    identifies = false,
+    studio,
+  }: {
+    linkOf: (assetPath: string) => string
+    identifies?: boolean
+    studio?: Record<string, unknown>
+  },
 ): unknown {
   const { documents } = useDocuments.getState()
   const catalogue: Catalogue = { assets: assetsById(useAssets.getState()), documents, linkOf }
@@ -60,27 +66,31 @@ export function otioTimelineFor(
   return otioTimelineOf(state, {
     name: documents[documentId]?.title ?? documentId,
     ...(identifies ? { documentId } : {}),
+    studio,
     sourceOf: clip => sourceOf(clip, catalogue),
   })
 }
 
-/** The file a document is held in, split into the folder its media links are relative to. */
-function heldIn(documentId: string): { otio: boolean; folder: readonly string[] } {
+/** The folder a document's media links are relative to — its own, so a project stays movable. */
+function heldIn(documentId: string): readonly string[] {
   const path = useDocuments.getState().documents[documentId]?.path ?? FOLDER_ROOT
   const folder = parentOf(path) ?? FOLDER_ROOT
-  return {
-    otio: extensionOf(nameOf(path)) === OTIO_EXTENSION,
-    folder: folder === FOLDER_ROOT ? [] : folder.split('/'),
-  }
+  return folder === FOLDER_ROOT ? [] : folder.split('/')
 }
 
-export function sequencePayload(state: SequenceState, documentId: string): unknown {
-  const { otio, folder } = heldIn(documentId)
-  if (!otio) return state
+/** `studio` is what the WORKSPACE adds under the studio domain — see `OtioWriteOptions`. */
+export function sequencePayload(
+  state: SequenceState,
+  documentId: string,
+  studio?: Record<string, unknown>,
+): unknown {
+  // Read once, not once per clip: `linkOf` is called for every clip that draws from a file.
+  const folder = heldIn(documentId)
 
   return otioTimelineFor(state, documentId, {
     linkOf: path => mediaLinkOf(path, folder),
     identifies: true,
+    studio,
   })
 }
 
@@ -96,21 +106,21 @@ const incomplete = new Set<string>()
 
 export const montageIsIncomplete = (documentId: string): boolean => incomplete.has(documentId)
 
-/** Indented for the open format alone: a `.otio` is read by hand and by other tools. */
+/** Indented: a montage IS its `.otio`, and that file is read by hand and by other tools. */
 export function serializeSequencePayload(payload: unknown): string {
-  return isOtioTimeline(payload) ? JSON.stringify(payload, null, 2) : JSON.stringify(payload)
+  return JSON.stringify(payload, null, 2)
 }
 
 /**
- * A montage read back, whichever of the two spellings its file holds — decided by the payload
- * rather than by the extension, so a file renamed by hand opens as what it is.
+ * A montage read back off its file. `sequenceFromOtio` answers the empty sequence on anything
+ * that is not a timeline, so a file the studio cannot make sense of opens on nothing rather than
+ * failing — and `documentIo` refuses to write over one that did.
  */
 export function sequenceFromPayload(payload: unknown, documentId: string): SequenceState {
   incomplete.delete(documentId)
-  if (!isOtioTimeline(payload)) return parseSequence(payload)
 
   const unlinked: string[] = []
-  const relink = assetIdRelinker(heldIn(documentId).folder)
+  const relink = assetIdRelinker(heldIn(documentId))
   const state = sequenceFromOtio(payload, url => {
     const link = mediaLinkFrom(url)
     const found = relink(link)
@@ -146,16 +156,7 @@ export function sequenceFromPayload(payload: unknown, documentId: string): Seque
  * catalogue by path (`helpers/assetAt`) is a round trip, and `DocumentIo.install` is synchronous.
  */
 function assetIdRelinker(documentFolder: readonly string[]): (link: MediaLink) => string {
-  const byPath = new Map<string, string>()
-  const byName = new Map<string, string>()
-
-  for (const asset of assetsById(useAssets.getState()).values()) {
-    if (!asset.path) continue
-    byPath.set(asset.path, asset.id)
-    // First in wins: two folders may hold a `rush.mp4`, and answering the last read would make
-    // the link depend on the order the catalogue happened to come back in.
-    if (!byName.has(nameOf(asset.path))) byName.set(nameOf(asset.path), asset.id)
-  }
+  const { byPath, byName } = assetIndex()
 
   return link => {
     const path = mediaPathOf(link, documentFolder)
@@ -166,4 +167,34 @@ function assetIdRelinker(documentFolder: readonly string[]): (link: MediaLink) =
       ''
     )
   }
+}
+
+type AssetIndex = { byPath: ReadonlyMap<string, string>; byName: ReadonlyMap<string, string> }
+
+let indexed: { of: ReadonlyMap<string, Asset>; index: AssetIndex } | null = null
+
+/**
+ * The catalogue turned the two ways a link resolves, built once per catalogue rather than once
+ * per document opened: every montage opened in a session walked every asset the window had been
+ * shown, and that set only grows.
+ *
+ * Keyed on the map's identity, which `assetsById` already memoises on the asset list — so this
+ * rebuilds exactly when the catalogue changes, and never otherwise.
+ */
+function assetIndex(): AssetIndex {
+  const assets = assetsById(useAssets.getState())
+  if (indexed?.of === assets) return indexed.index
+
+  const byPath = new Map<string, string>()
+  const byName = new Map<string, string>()
+  for (const asset of assets.values()) {
+    if (!asset.path) continue
+    byPath.set(asset.path, asset.id)
+    // First in wins: two folders may hold a `rush.mp4`, and answering the last read would make
+    // the link depend on the order the catalogue happened to come back in.
+    if (!byName.has(nameOf(asset.path))) byName.set(nameOf(asset.path), asset.id)
+  }
+
+  indexed = { of: assets, index: { byPath, byName } }
+  return indexed.index
 }

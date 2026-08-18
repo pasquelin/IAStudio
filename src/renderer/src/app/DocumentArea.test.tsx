@@ -122,7 +122,7 @@ describe('DocumentArea', () => {
           kind: 'image',
           title: 'Affiche',
           workspace: 'image',
-          path: 'documents/Affiche.img',
+          path: 'documents/Affiche.ora',
         },
       },
     })
@@ -156,7 +156,7 @@ describe('DocumentArea', () => {
           kind: 'image',
           title: 'Affiche',
           workspace: 'image',
-          path: 'documents/Affiche.img',
+          path: 'documents/Affiche.ora',
         },
       },
     })

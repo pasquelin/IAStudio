@@ -66,7 +66,7 @@ function laid(state: SequenceState, extra: Record<string, DocumentDescriptor> = 
         kind: 'sequence',
         workspace: 'video',
         title: 'Bande',
-        path: 'documents/Bande.seq',
+        path: 'documents/Bande.otio',
       },
       ...extra,
     },
@@ -159,7 +159,7 @@ describe('exportOtio', () => {
           kind: 'scene',
           workspace: '3d',
           title: 'Niveau 3',
-          path: 'documents/Niveau 3.scene',
+          path: 'documents/Niveau 3.gltf',
         },
       },
     )

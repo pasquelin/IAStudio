@@ -26,7 +26,7 @@ import type { AccountBook, Credentials } from './accounts'
 const scale = boundsOf('appearance.fontScale')
 
 // The shape itself is shared with the document readers — the reason it is six digits lives with
-// it, and a setting must not accept what a `.sky` refuses.
+// it, and a setting must not accept what a a sky document refuses.
 const hexColor = z.string().regex(HEX_COLOR)
 
 const appearance = z.object({

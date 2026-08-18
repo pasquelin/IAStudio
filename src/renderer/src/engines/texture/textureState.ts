@@ -1,6 +1,6 @@
 /**
  * A texture, as plain data. It holds no three.js object and no image: an engine is rebuilt from
- * its serialized state, and what a `.tex` stores has to be something a reload can resolve again.
+ * its serialized state, and what a `.mtlx` stores has to be something a reload can resolve again.
  *
  * The channels themselves are assets of the project, referenced by id. The renderer has no
  * `fs`, and a file path written into a document would stop the project folder from being moved.
@@ -185,7 +185,7 @@ export const DEFAULT_PREVIEW: PreviewSettings = {
 
 Object.freeze(DEFAULT_PREVIEW)
 
-/** What a `.tex` holds. */
+/** What a `.mtlx` holds. */
 export type TextureState = {
   channels: ChannelSet
   material: MaterialSettings
@@ -284,7 +284,7 @@ function readPreview(value: unknown): PreviewSettings {
 }
 
 /**
- * The content of a `.tex`, read back. It takes what the file layer already handed over — a
+ * The content of a `.mtlx`, read back. It takes what the file layer already handed over — a
  * truncated file never reaches here, `main/project/documents.ts` refuses the envelope first —
  * so there is no `JSON.parse` to guard, only a value of any shape at all.
  *

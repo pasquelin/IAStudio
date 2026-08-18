@@ -91,11 +91,11 @@ describe('reading the project folder', () => {
   // The path is the tree's id as well as the path, and it is what the next read is asked for.
   it('names each entry relative to the project root', async () => {
     const root = await project()
-    await writeFile(join(root, 'documents', 'a3f1.scene'), '{}')
+    await writeFile(join(root, 'documents', 'a3f1.gltf'), '{}')
 
     const entries = await createFolderReader(() => root, inFrench).list('documents')
 
-    expect(entries[0]?.path).toBe('documents/a3f1.scene')
+    expect(entries[0]?.path).toBe('documents/a3f1.gltf')
   })
 
   it('reads the folder of whatever project is open at call time', async () => {
@@ -172,16 +172,16 @@ describe('searching the project folder', () => {
   })
 
   /**
-   * An image document IS a folder — `<id>.img/` holding its manifest and its parts. What it
+   * An image document IS a folder — `<id>.ora/` holding its manifest and its parts. What it
    * holds is the studio's own writing, and offering those parts as results would hand the reader
    * files no space can open in place of the document they belong to.
    */
   it('does not walk into a document that happens to be a folder', async () => {
     const root = await project()
-    await mkdir(join(root, 'ruelle.img'))
-    await writeFile(join(root, 'ruelle.img', 'ruelle-part.png'), '')
+    await mkdir(join(root, 'ruelle.ora'))
+    await writeFile(join(root, 'ruelle.ora', 'ruelle-part.png'), '')
 
-    expect(await namesFound(root, 'ruelle')).toEqual(['ruelle.img'])
+    expect(await namesFound(root, 'ruelle')).toEqual(['ruelle.ora'])
   })
 
   it('answers nothing at all for an empty term', async () => {
@@ -203,13 +203,13 @@ describe('walking the project folder for what it holds', () => {
     const root = await project()
     await mkdir(join(root, 'Repérages', 'Ruelles'), { recursive: true })
     await writeFile(join(root, 'Repérages', 'Ruelles', 'ruelle.png'), '')
-    await mkdir(join(root, 'planche.img'))
-    await writeFile(join(root, 'planche.img', 'document.json'), '{}')
+    await mkdir(join(root, 'planche.ora'))
+    await writeFile(join(root, 'planche.ora', 'document.json'), '{}')
 
     expect((await walked(root)).sort()).toEqual([
       'Repérages/Ruelles/ruelle.png',
       'notes.txt',
-      'planche.img',
+      'planche.ora',
     ])
   })
 

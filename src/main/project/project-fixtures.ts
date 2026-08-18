@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { onTestFinished } from 'vitest'
+import type { DocumentKind } from '@shared/domain/document'
 import type { Project } from '@shared/domain/project'
 import type { AsyncCatalog } from './catalogClient'
 import { memoryCatalog } from './catalog-fixtures'
@@ -85,14 +86,14 @@ export async function withTempProject(
  */
 export type DocumentSnapshot = {
   path: string
-  kind: string
+  kind: DocumentKind
   title: string
   content: string
   /**
    * The files beside the content — one PNG per layer of an image document.
    *
    * Without them this tool would miss the very loss it exists to catch: a migration that dropped
-   * every layer of an `.img` while keeping its manifest would leave `content` untouched and the
+   * every layer of an `.ora` while keeping its manifest would leave `content` untouched and the
    * snapshot identical.
    */
   parts: readonly { name: string; data: string }[]

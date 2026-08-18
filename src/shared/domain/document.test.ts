@@ -6,9 +6,9 @@ import {
   FOLDER_KINDS,
   isPartName,
   EXTENSIONS_BY_KIND,
-  extensionForKind,
   isDocumentKind,
   kindForExtension,
+  kindsForExtension,
   kindForWorkspace,
   workspaceForKind,
 } from './document'
@@ -71,19 +71,30 @@ describe('workspaceForKind', () => {
 })
 
 describe('kindForExtension', () => {
-  it('reads back every extension a kind is held under, not only the one it writes', () => {
-    for (const kind of DOCUMENT_KINDS) {
-      for (const extension of EXTENSIONS_BY_KIND[kind]) {
-        expect(kindForExtension(extension)).toBe(kind)
-      }
-    }
+  // Where two kinds share a spelling this answers the first of them, and the FILE settles it —
+  // `documentBody.ts` reads which kind out of what the file itself carries.
+  it('answers the first kind of a spelling two of them share', () => {
+    expect(kindForExtension('.otio')).toBe('sequence')
+    expect(kindForExtension('.gltf')).toBe('scene')
   })
 
-  // The half a montage held as OpenTimelineIO turns on: the studio's own spelling is what a NEW
-  // document takes, and the standard one is read all the same.
-  it('writes a montage under the studio spelling and reads the standard one too', () => {
-    expect(extensionForKind('sequence')).toBe('.seq')
-    expect(kindForExtension('.otio')).toBe('sequence')
+  /**
+   * Every kind is held in a format other applications already read. The studio's own spellings
+   * are not written any more, and they are not READ any more either: one left in a folder is not
+   * a document of this build.
+   */
+  it('holds every kind in an open format, and reads no spelling of the studio’s own', () => {
+    expect([...DOCUMENT_KINDS].map(kind => EXTENSIONS_BY_KIND[kind])).toEqual([
+      '.ora',
+      '.gltf',
+      '.otio',
+      '.otio',
+      '.gltf',
+      '.mtlx',
+    ])
+    for (const gone of ['.img', '.scene', '.seq', '.aud', '.sky', '.tex']) {
+      expect(kindForExtension(gone)).toBeNull()
+    }
   })
 
   // A project folder is the user's own: it holds notes, exports, and whatever else was dropped
@@ -120,14 +131,9 @@ describe('isDocumentKind', () => {
 describe('documentPath', () => {
   // Relative, and under the folder the project creates: a project folder can be moved.
   it('names the file after the kind, so a project folder reads by eye', () => {
-    expect(documentPath('a3f1', 'scene')).toBe('documents/a3f1.scene')
-    expect(documentPath('a3f1', 'image')).toBe('documents/a3f1.img')
-    expect(documentPath('a3f1', 'sequence')).toBe('documents/a3f1.seq')
-  })
-
-  it('gives every kind an extension of its own', () => {
-    const paths = DOCUMENT_KINDS.map(kind => documentPath('id', kind))
-    expect(new Set(paths).size).toBe(DOCUMENT_KINDS.length)
+    expect(documentPath('a3f1', 'scene')).toBe('documents/a3f1.gltf')
+    expect(documentPath('a3f1', 'image')).toBe('documents/a3f1.ora')
+    expect(documentPath('a3f1', 'sequence')).toBe('documents/a3f1.otio')
   })
 
   // The compiler keeps `EXTENSIONS_BY_KIND` complete; nothing keeps `DOCUMENT_KINDS` complete,
@@ -136,11 +142,13 @@ describe('documentPath', () => {
     expect([...DOCUMENT_KINDS].sort()).toEqual(Object.keys(EXTENSIONS_BY_KIND).sort())
   })
 
-  // Two kinds sharing a spelling would send one to the other's editor, and `kindForExtension`
-  // answers whichever came first in the list without a word.
-  it('gives no extension to two kinds', () => {
-    const spellings = DOCUMENT_KINDS.flatMap(kind => [...EXTENSIONS_BY_KIND[kind]])
-    expect(new Set(spellings).size).toBe(spellings.length)
+  // What a file's own head is allowed to claim. A pair here is a container serving two editors;
+  // a THIRD kind joining one would let a file open in an editor nothing meant it for.
+  it('bounds a shared spelling to the two kinds that container serves', () => {
+    expect(kindsForExtension('.otio')).toEqual(['sequence', 'audio'])
+    expect(kindsForExtension('.gltf')).toEqual(['scene', 'skybox'])
+    expect(kindsForExtension('.ora')).toEqual(['image'])
+    expect(kindsForExtension('.txt')).toEqual([])
   })
 })
 

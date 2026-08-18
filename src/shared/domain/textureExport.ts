@@ -301,7 +301,7 @@ export type ExportChannel = {
    * Read on green alone — the other two components mean the same thing either way round.
    *
    * That it lives on the material at all is debt this branch documents rather than moves: the
-   * fact is a property of the map, like `inverted` beside it, and `.tex` files already written
+   * fact is a property of the map, like `inverted` beside it, and `.mtlx` files already written
    * hold it under the material.
    */
   greenFlipped?: true

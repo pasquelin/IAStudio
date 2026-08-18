@@ -84,7 +84,7 @@ describe('reading what the studio is', () => {
   // listed: it cannot open what it was never told about.
   it('lists what the folder holds as well as what is open, saying which is which', async () => {
     installDocuments({ 'doc-open': '3d' }, 'doc-open')
-    useDocuments.setState({ stored: [stored('doc-shut', 'Repérages/Niveau.scene')] })
+    useDocuments.setState({ stored: [stored('doc-shut', 'Repérages/Niveau.gltf')] })
 
     const outcome = await runAction('documents.list', {})
     const listed = outcome.ok ? (outcome.data as { id: string; open: boolean }[]) : []
@@ -124,9 +124,9 @@ describe('putting a document in front', () => {
 
   it('opens a document of the folder by its path', async () => {
     installDocuments({}, '')
-    useDocuments.setState({ stored: [stored('doc-shut', 'Repérages/Niveau.scene')] })
+    useDocuments.setState({ stored: [stored('doc-shut', 'Repérages/Niveau.gltf')] })
 
-    expect(await runAction('document.open', { path: 'Repérages/Niveau.scene' })).toEqual({
+    expect(await runAction('document.open', { path: 'Repérages/Niveau.gltf' })).toEqual({
       ok: true,
       data: { documentId: 'doc-shut' },
     })
@@ -141,11 +141,11 @@ describe('putting a document in front', () => {
   it('re-reads the folder before refusing a path it has not heard of', async () => {
     installDocuments({}, '')
     const relist = vi.fn(async () => {
-      useDocuments.setState({ stored: [stored('doc-new', 'Sorties/Rendu.scene')] })
+      useDocuments.setState({ stored: [stored('doc-new', 'Sorties/Rendu.gltf')] })
     })
     useDocuments.setState({ relist })
 
-    expect(await runAction('document.open', { path: 'Sorties/Rendu.scene' })).toMatchObject({
+    expect(await runAction('document.open', { path: 'Sorties/Rendu.gltf' })).toMatchObject({
       ok: true,
     })
     expect(relist).toHaveBeenCalled()
@@ -156,7 +156,7 @@ describe('putting a document in front', () => {
   it('says the document is not there rather than blaming the parameters', async () => {
     installDocuments({}, '')
 
-    expect(await runAction('document.open', { path: 'Nowhere/Absent.img' })).toEqual({
+    expect(await runAction('document.open', { path: 'Nowhere/Absent.ora' })).toEqual({
       ok: false,
       refusal: 'notFound',
     })

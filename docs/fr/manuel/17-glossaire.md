@@ -194,8 +194,8 @@ La différence avec un *asset* est celle qui sépare la matière de l’ouvrage 
 un asset ; l’image que vous êtes en train de peindre, avec ses *calques* et son historique, est un
 document.
 
-Six sortes, une par *espace de travail* : `.img` (image), `.scene` (scène 3D), `.seq` (séquence),
-`.aud` (audio), `.tex` (matière), `.sky` (ciel).
+Six sortes, une par *espace de travail*, toutes dans un format que d’autres logiciels lisent :
+`.ora` (image), `.gltf` (scène 3D et ciel), `.otio` (séquence et audio), `.mtlx` (matière).
 
 ---
 

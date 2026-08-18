@@ -183,7 +183,7 @@ export function moveRefusal(path: string, folder: string): 'private' | 'into-its
   /**
    * A document written as a folder is a DOCUMENT, whatever the disk calls it.
    *
-   * `<name>.img` is a real directory holding a manifest and one PNG per layer, so every reader
+   * `<name>.ora` is a real directory holding a manifest and one PNG per layer, so every reader
    * that asks the disk what it is gets "folder" — and would let a file be dropped into it. The
    * next ⌘S rebuilds that folder from the document's own parts and renames the old one away: a
    * file dropped in there is deleted by the save, and its catalogue row left pointing at nothing.
@@ -199,7 +199,7 @@ export function moveRefusal(path: string, folder: string): 'private' | 'into-its
   return null
 }
 
-/** Whether this path names a document the studio writes as a directory — `Planche.img`. */
+/** Whether this path names a document the studio writes as a directory — `Planche.ora`. */
 export function isDocumentFolder(path: string): boolean {
   const kind = kindForExtension(extensionOf(nameOf(path)))
   return kind !== null && FOLDER_KINDS.has(kind)

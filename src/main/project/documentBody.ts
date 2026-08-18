@@ -2,6 +2,8 @@ import { open, readFile } from 'node:fs/promises'
 import {
   DOCUMENT_VERSION,
   ENVELOPE_LIMIT,
+  EXTENSIONS_BY_KIND,
+  isDocumentKind,
   type DocumentEnvelope,
   type DocumentFile,
 } from '@shared/domain/document'
@@ -9,7 +11,7 @@ import {
   isOtioTimeline,
   otioStudioMetadata,
   OTIO_DOCUMENT_ID,
-  OTIO_EXTENSION,
+  OTIO_DOCUMENT_KIND,
 } from '@shared/domain/otio'
 import { isRecord, readString } from '@shared/guards'
 import { parseDocumentEnvelope } from './validation'
@@ -59,7 +61,7 @@ const OPEN_TIMELINE: DocumentBodyFormat = {
 }
 
 const FORMAT_BY_EXTENSION: Record<string, DocumentBodyFormat> = {
-  [OTIO_EXTENSION]: OPEN_TIMELINE,
+  [EXTENSIONS_BY_KIND.sequence]: OPEN_TIMELINE,
 }
 
 /** How a file of this extension is spelt — the studio's own envelope for anything unlisted. */
@@ -108,15 +110,21 @@ function otioBody(document: DocumentFile): string {
  * A montage as OpenTimelineIO holds it. Title and clock are left empty on purpose: the file NAME
  * is the title, as it is for every document, and the disk's own modification time is the only
  * true clock — one written inside a file can never match the write that finished it.
+ *
+ * The kind comes from the file, `.otio` serving two of them. A timeline from another application
+ * says nothing, and takes the first kind the extension names — `descriptorOf` is what refuses one
+ * this extension could never be.
  */
 function otioDocument(body: string): DocumentFile {
   const parsed: unknown = JSON.parse(body)
   if (!isOtioTimeline(parsed)) throw new Error('Not an OpenTimelineIO timeline')
 
-  const id = readString(otioStudioMetadata(parsed), OTIO_DOCUMENT_ID, '')
+  const studio = otioStudioMetadata(parsed)
+  const id = readString(studio, OTIO_DOCUMENT_ID, '')
+  const claimed = readString(studio, OTIO_DOCUMENT_KIND, '')
   return {
     version: DOCUMENT_VERSION,
-    kind: 'sequence',
+    kind: isDocumentKind(claimed) ? claimed : 'sequence',
     title: '',
     updatedAt: '',
     ...(id ? { id } : {}),

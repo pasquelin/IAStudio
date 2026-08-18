@@ -23,7 +23,7 @@ const FOLDERS: Record<string, readonly FolderEntry[]> = {
     { path: 'Images', name: 'Images', kind: 'folder' },
     { path: 'lisezmoi.txt', name: 'lisezmoi.txt', kind: 'file' },
     // A layered image is written AS a folder, and the listing answers it as one.
-    { path: 'TOTO.img', name: 'TOTO.img', kind: 'folder' },
+    { path: 'TOTO.ora', name: 'TOTO.ora', kind: 'folder' },
   ],
   Images: [
     { path: 'Images/Croquis', name: 'Croquis', kind: 'folder' },

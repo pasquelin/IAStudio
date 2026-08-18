@@ -12,7 +12,7 @@ const entry = (name: string, kind: FolderEntry['kind']): FolderEntry => ({
 const listing: readonly FolderEntry[] = [
   entry('Assets', 'folder'),
   entry('Repérages', 'folder'),
-  entry('a3f1.scene', 'file'),
+  entry('a3f1.gltf', 'file'),
   entry('notes.txt', 'file'),
 ]
 
@@ -37,7 +37,7 @@ describe('the order the explorer draws', () => {
       'Repérages',
       'Assets',
       'notes.txt',
-      'a3f1.scene',
+      'a3f1.gltf',
     ])
   })
 })

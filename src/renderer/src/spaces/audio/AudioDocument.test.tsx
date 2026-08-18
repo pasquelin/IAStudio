@@ -116,7 +116,7 @@ describe('AudioDocument', () => {
 
   /**
    * The same montage as the Video space, so the same export. Nothing else here writes the cut
-   * out, and a montage that exists only in a `.aud` is the loss this whole chantier is against.
+   * out, and a montage that exists only in a take's own file is the loss this whole chantier is against.
    */
   it('writes its montage out as a cut, on the command the Video space shares', async () => {
     await openTake()

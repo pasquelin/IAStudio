@@ -62,7 +62,7 @@ describe('a document tab', () => {
   /**
    * One tab strip now holds six sections, where the title alone says nothing about which editor
    * a tab opens. Held against the rail's own table rather than against a glyph named here: a
-   * `.scene` wearing two different pictures in two lists is two vocabularies.
+   * `.gltf` wearing two different pictures in two lists is two vocabularies.
    */
   it('wears the glyph of its section, and names it', () => {
     useDocuments.setState({
@@ -72,7 +72,7 @@ describe('a document tab', () => {
           kind: 'scene',
           title: 'Niveau',
           workspace: '3d',
-          path: 'documents/Niveau.scene',
+          path: 'documents/Niveau.gltf',
         },
       },
     })
@@ -144,7 +144,7 @@ describe('a document tab', () => {
       kind: 'scene',
       title: 'Niveau',
       workspace: '3d',
-      path: 'documents/Niveau.scene',
+      path: 'documents/Niveau.gltf',
     }
     useDocuments.setState({ documents: { 'doc-1': document }, stored: [document] })
 
