@@ -8,7 +8,7 @@
  * Pure, like `bonePicking.ts`: three runs under jsdom without a GPU, and every question here is
  * about the shape of a tree.
  */
-import { Box3, type AnimationClip, type Object3D } from 'three'
+import { Box3, Matrix4, Mesh, Vector3, type AnimationClip, type Object3D } from 'three'
 import { isHumanoidRole, type HumanoidRole } from '@shared/domain/humanoid'
 import type { Bounds } from './rigFit'
 
@@ -110,14 +110,33 @@ export function rigStateOf(root: Object3D, clips: readonly AnimationClip[] = [])
 }
 
 /**
- * Measured for a bare mesh alone, which is the only kind anything fits a skeleton to.
+ * What a bare mesh measures, in the space of the model that holds it.
  *
- * Not for the others, and that is not an optimisation: `Box3.setFromObject` walks a `SkinnedMesh`
- * through its bones, and one whose geometry carries no skin attributes — a malformed export, or a
- * fixture — throws inside three rather than answering a box.
+ * IN ITS OWN SPACE, and that is the whole of it: `Box3.setFromObject` answers a world box, while
+ * the bones a fit produces are hung under this very object. Reading the world one would place the
+ * skeleton wherever the model happens to stand in the scene, and scale it by whatever scale the
+ * node wears.
+ *
+ * A bare mesh alone, and that is not an optimisation: `setFromObject` walks a `SkinnedMesh`
+ * through its bones, and one whose geometry carries no skin attributes throws inside three.
  */
 function boundsOf(root: Object3D): Bounds {
-  const box = new Box3().setFromObject(root)
+  const box = new Box3()
+  const point = new Vector3()
+
+  root.updateWorldMatrix(false, true)
+  const intoRoot = new Matrix4().copy(root.matrixWorld).invert()
+
+  root.traverse(object => {
+    if (!(object instanceof Mesh)) return
+
+    const position = object.geometry.getAttribute('position')
+    const toRoot = new Matrix4().multiplyMatrices(intoRoot, object.matrixWorld)
+    for (let vertex = 0; vertex < position.count; vertex += 1) {
+      box.expandByPoint(point.fromBufferAttribute(position, vertex).applyMatrix4(toRoot))
+    }
+  })
+
   // `Box3` starts inverted: a model with nothing to measure never narrows it, and those numbers
   // would place bones at the ends of the world.
   return box.isEmpty() ? EMPTY_BOUNDS : { min: { ...box.min }, max: { ...box.max } }

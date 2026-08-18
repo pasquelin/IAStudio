@@ -110,30 +110,51 @@ function writeInfluences(
   skinWeight: Float32Array,
 ): void {
   const region = request.regions[nearest] ?? TRUNK
-  const chosen: number[] = []
+  // Four slots kept in order by insertion, and nothing allocated: a sort per bone per vertex is
+  // twenty-six million calls on a real character, for a list that never exceeds four.
+  const bones = CHOSEN_BONES
+  const near = CHOSEN_DISTANCES
+  let held = 0
 
   for (let bone = 0; bone < distances.length; bone += 1) {
-    if (!agrees(region, request.regions[bone] ?? TRUNK)) continue
+    if (!mayDrive(region, request.regions[bone] ?? TRUNK)) continue
 
-    chosen.push(bone)
-    // Kept sorted by distance as they arrive: four is small enough that a full sort would cost
-    // more than the walk it saves.
-    chosen.sort((left, right) => (distances[left] ?? 0) - (distances[right] ?? 0))
-    if (chosen.length > INFLUENCES) chosen.pop()
+    const distance = distances[bone] ?? 0
+    if (held === INFLUENCES && distance >= (near[INFLUENCES - 1] ?? 0)) continue
+
+    let slot = Math.min(held, INFLUENCES - 1)
+    while (slot > 0 && (near[slot - 1] ?? 0) > distance) {
+      bones[slot] = bones[slot - 1] ?? 0
+      near[slot] = near[slot - 1] ?? 0
+      slot -= 1
+    }
+    bones[slot] = bone
+    near[slot] = distance
+    if (held < INFLUENCES) held += 1
   }
 
   let total = 0
-  for (const bone of chosen) total += 1 / ((distances[bone] ?? 0) + EPSILON)
+  for (let slot = 0; slot < held; slot += 1) total += 1 / ((near[slot] ?? 0) + EPSILON)
 
-  chosen.forEach((bone, slot) => {
-    skinIndex[vertex * INFLUENCES + slot] = bone
-    skinWeight[vertex * INFLUENCES + slot] = 1 / ((distances[bone] ?? 0) + EPSILON) / total
-  })
+  for (let slot = 0; slot < held; slot += 1) {
+    skinIndex[vertex * INFLUENCES + slot] = bones[slot] ?? 0
+    skinWeight[vertex * INFLUENCES + slot] = 1 / ((near[slot] ?? 0) + EPSILON) / total
+  }
 }
 
-/** Two regions agree when they are the same, or when either is the trunk everything hangs off. */
-function agrees(left: number, right: number): boolean {
-  return left === right || left === TRUNK || right === TRUNK
+/** Scratch for the four slots above. Module-level because the walk runs once, in one worker. */
+const CHOSEN_BONES = new Uint16Array(INFLUENCES)
+const CHOSEN_DISTANCES = new Float64Array(INFLUENCES)
+
+/**
+ * Whether a bone may drive a vertex of this region. ASYMMETRIC on purpose, and that asymmetry is
+ * the whole guard: a trunk bone reaches anywhere, a limb bone reaches only its own limb.
+ *
+ * Read the other way round it protected nothing — a hip vertex is nearest the hips, so its region
+ * is the trunk, and a trunk that agreed with everything let the hand bone straight back in.
+ */
+function mayDrive(vertexRegion: number, boneRegion: number): boolean {
+  return boneRegion === vertexRegion || boneRegion === TRUNK
 }
 
 /** Distance from a point to a bone's segment, clamped to its ends so a limb has no reach beyond itself. */

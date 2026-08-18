@@ -26,15 +26,22 @@ describe('what a mesh can be fitted with', () => {
     expect(rigFitFaultOf(STANDING)).toBeNull()
   })
 
-  it('refuses a mesh with no height to speak of, rather than dividing by it', () => {
-    const flat: Bounds = { min: { x: -1, y: 0, z: -1 }, max: { x: 1, y: 0, z: 1 } }
+  /**
+   * A T-pose spans about as wide as it stands, and it is the commonest bind pose there is:
+   * requiring height to win would refuse half the characters there are, and tell their author
+   * they had laid one down.
+   */
+  it('fits a figure in a T-pose, whose arms span its own height', () => {
+    const tPose: Bounds = { min: { x: -0.95, y: 0, z: -0.2 }, max: { x: 0.95, y: 1.8, z: 0.2 } }
 
-    expect(rigFitFaultOf(flat)).toBe('noGeometry')
+    expect(rigFitFaultOf(tPose)).toBeNull()
   })
 
-  it('refuses a mesh with no depth or no width', () => {
+  it('refuses a mesh with nothing to measure — no height, no width or no depth', () => {
+    const flat: Bounds = { min: { x: -1, y: 0, z: -1 }, max: { x: 1, y: 0, z: 1 } }
     const plane: Bounds = { min: { x: -1, y: 0, z: 0 }, max: { x: 1, y: 2, z: 0 } }
 
+    expect(rigFitFaultOf(flat)).toBe('noGeometry')
     expect(rigFitFaultOf(plane)).toBe('noGeometry')
   })
 

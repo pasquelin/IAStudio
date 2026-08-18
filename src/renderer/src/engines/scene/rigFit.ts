@@ -68,14 +68,22 @@ const LIMB: readonly { part: string; parent: LimbParent; y: number; x: number; z
   { part: 'Toes', parent: { sided: 'Foot' }, y: 0.01, x: 0.07, z: 0.06 },
 ]
 
+/**
+ * How much wider than tall a figure may be before it is taken for one lying down.
+ *
+ * A T-pose — the commonest bind pose there is — spans about as wide as it stands, so requiring
+ * height to WIN would refuse half the characters there are and blame the user for it. A figure
+ * actually on its side is several times wider than tall, so the two do not overlap.
+ */
+const LYING_RATIO = 1.6
+
 export function rigFitFaultOf(bounds: Bounds): RigFitFault | null {
   const size = sizeOf(bounds)
   if (size.y < MIN_HEIGHT || size.x <= 0 || size.z <= 0) return 'noGeometry'
 
-  // Proportions read off the height, so a mesh lying on its side would place every bone across
-  // its body rather than along it. Reported rather than guessed at: turning it upright is the
-  // user's call, and a rig built sideways looks like the fit simply failed.
-  return size.y >= size.x && size.y >= size.z ? null : 'lyingDown'
+  // Proportions are read off the height, so a mesh on its side would lay every bone ACROSS the
+  // body. Reported rather than guessed at: standing it up is the user's call.
+  return Math.max(size.x, size.z) > size.y * LYING_RATIO ? 'lyingDown' : null
 }
 
 /**

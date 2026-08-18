@@ -122,6 +122,21 @@ describe('keeping a limb from catching another limb', () => {
     expect(influences(binding).map(influence => influence.bone)).not.toContain(1)
   })
 
+  /**
+   * The case the whole guard exists for, and the one a symmetric rule let through: a hip vertex
+   * is nearest the HIPS, so its region is the trunk — and a trunk that agreed with everything put
+   * the hand straight back among its influences. Raising the arm then tore the hip open.
+   */
+  it('leaves a vertex nearest a trunk bone to the trunk alone', () => {
+    const armAtTheHip: Bone[] = [
+      { head: [0, 1, 0], tail: [0, 1.2, 0], region: 'trunk' },
+      { head: [0.1, 0.95, 0], tail: [0.1, 0.95, 0], region: 'armLeft' },
+    ]
+    const binding = bind([[0.02, 1, 0]], armAtTheHip)
+
+    expect(influences(binding).map(influence => influence.bone)).toEqual([0])
+  })
+
   it('still lets the trunk reach into a limb, since everything hangs off it', () => {
     const binding = bind([[0.2, 1.1, 0]], ARM_BESIDE_HIP)
 

@@ -42,12 +42,14 @@ export function positionsIn(mesh: Mesh, holder: Object3D): Float32Array {
   holder.updateWorldMatrix(true, true)
   const into = new Matrix4().copy(holder.matrixWorld).invert().multiply(mesh.matrixWorld)
 
-  // One scratch vector for the whole walk: half a million allocations is half a million reasons
-  // for the collector to interrupt a bind.
+  // One scratch vector and three writes: half a million allocations — one per `set` of a fresh
+  // array literal — is half a million reasons for the collector to interrupt a bind.
   const point = new Vector3()
   for (let vertex = 0; vertex < attribute.count; vertex += 1) {
     point.fromBufferAttribute(attribute, vertex).applyMatrix4(into)
-    positions.set([point.x, point.y, point.z], vertex * 3)
+    positions[vertex * 3] = point.x
+    positions[vertex * 3 + 1] = point.y
+    positions[vertex * 3 + 2] = point.z
   }
 
   return positions
@@ -87,35 +89,40 @@ export function bonesOfRig(rig: Rig): { bones: Bone[]; roots: Bone[] } {
  * Replaced rather than mutated because `SkinnedMesh` is a different class — three decides what to
  * do with a geometry by what holds it, and a `Mesh` wearing skin attributes is simply ignored.
  */
-export function applyRig(holder: Object3D, rig: Rig, bindings: readonly SkinBinding[]): void {
-  const meshes = skinnableMeshesOf(holder)
-  if (meshes.length === 0) return
+export function applyRig(
+  holder: Object3D,
+  rig: Rig,
+  bound: readonly { mesh: Mesh; binding: SkinBinding }[],
+): void {
+  if (bound.length === 0) return
 
   const { bones, roots } = bonesOfRig(rig)
-  const skeleton = new Skeleton(bones)
   for (const root of roots) holder.add(root)
+  // BEFORE the skeleton is built: it takes each bone's inverse from that bone's `matrixWorld`
+  // there and then, and a bone just created carries the identity. Without this every inverse is
+  // wrong and the character bursts apart on the first frame it is drawn.
+  holder.updateWorldMatrix(false, true)
+  const skeleton = new Skeleton(bones)
 
-  meshes.forEach((mesh, index) => {
-    const binding = bindings[index]
-    if (!binding) return
+  for (const { mesh, binding } of bound) {
+    // The geometry is CLONED. `SkeletonUtils.clone` shares it with the cached source on purpose,
+    // so writing skin attributes onto it would hand every other node built from the same file
+    // this model's weights — and the last rig posed would silently drive all of them.
+    const geometry = mesh.geometry.clone()
+    geometry.setAttribute('skinIndex', new Uint16BufferAttribute(binding.skinIndex, INFLUENCES))
+    geometry.setAttribute('skinWeight', new BufferAttribute(binding.skinWeight, INFLUENCES))
 
-    const skinned = new SkinnedMesh(mesh.geometry, mesh.material)
+    const skinned = new SkinnedMesh(geometry, mesh.material)
     skinned.name = mesh.name
     skinned.position.copy(mesh.position)
     skinned.quaternion.copy(mesh.quaternion)
     skinned.scale.copy(mesh.scale)
 
-    skinned.geometry.setAttribute(
-      'skinIndex',
-      new Uint16BufferAttribute(binding.skinIndex, INFLUENCES),
-    )
-    skinned.geometry.setAttribute('skinWeight', new BufferAttribute(binding.skinWeight, INFLUENCES))
-
     const parent = mesh.parent ?? holder
     mesh.removeFromParent()
     parent.add(skinned)
     skinned.bind(skeleton)
-  })
+  }
 }
 
 function isBone(bone: Bone | undefined): bone is Bone {

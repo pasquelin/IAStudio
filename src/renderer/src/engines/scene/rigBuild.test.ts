@@ -92,7 +92,7 @@ describe('putting a rig on a model', () => {
     const mesh = plainMesh()
     const holder = modelWith(mesh)
 
-    applyRig(holder, RIG, [bindingFor(mesh)])
+    applyRig(holder, RIG, [{ mesh, binding: bindingFor(mesh) }])
 
     const skinned = skinnedIn(holder)
     expect(skinned).not.toBeNull()
@@ -103,7 +103,7 @@ describe('putting a rig on a model', () => {
     const mesh = plainMesh()
     const holder = modelWith(mesh)
 
-    applyRig(holder, RIG, [bindingFor(mesh)])
+    applyRig(holder, RIG, [{ mesh, binding: bindingFor(mesh) }])
 
     expect(holder.children.some(child => child.name === 'Hips')).toBe(true)
   })
@@ -113,7 +113,7 @@ describe('putting a rig on a model', () => {
     const holder = modelWith(mesh)
     const count = mesh.geometry.getAttribute('position').count
 
-    applyRig(holder, RIG, [bindingFor(mesh)])
+    applyRig(holder, RIG, [{ mesh, binding: bindingFor(mesh) }])
 
     const skinned = skinnedIn(holder)
     expect(skinned?.geometry.getAttribute('skinIndex').count).toBe(count)
@@ -126,11 +126,43 @@ describe('putting a rig on a model', () => {
     mesh.position.set(1, 2, 3)
 
     const holder = modelWith(mesh)
-    applyRig(holder, RIG, [bindingFor(mesh)])
+    applyRig(holder, RIG, [{ mesh, binding: bindingFor(mesh) }])
 
     const skinned = skinnedIn(holder)
     expect(skinned?.name).toBe('body')
     expect(skinned?.position.toArray()).toEqual([1, 2, 3])
+  })
+
+  /**
+   * `Skeleton` takes each bone's inverse from its `matrixWorld` the moment it is built. Bones just
+   * created carry the identity, so binding before the graph is updated leaves every inverse wrong
+   * — and the character bursts apart on the first frame, at rest, with nothing to say why.
+   */
+  it('takes the bone inverses from where the bones actually stand', () => {
+    const mesh = plainMesh()
+    const holder = modelWith(mesh)
+
+    applyRig(holder, RIG, [{ mesh, binding: bindingFor(mesh) }])
+
+    const inverse = skinnedIn(holder)?.skeleton.boneInverses[0]
+    // Hips rest a metre up, so its inverse takes a metre back off.
+    expect(inverse?.elements[13]).toBeCloseTo(-1, 6)
+  })
+
+  /**
+   * `SkeletonUtils.clone` shares geometries with the cached source on purpose. Writing skin
+   * attributes onto one would hand them to every other node built from the same file, and the
+   * last rig posed would silently drive all of them.
+   */
+  it('leaves the shared geometry of the model cache alone', () => {
+    const mesh = plainMesh()
+    const shared = mesh.geometry
+    const holder = modelWith(mesh)
+
+    applyRig(holder, RIG, [{ mesh, binding: bindingFor(mesh) }])
+
+    expect(shared.getAttribute('skinIndex')).toBeUndefined()
+    expect(skinnedIn(holder)?.geometry.getAttribute('skinIndex')).toBeDefined()
   })
 
   it('leaves a model with nothing to bind untouched', () => {

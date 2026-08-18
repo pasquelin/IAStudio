@@ -950,6 +950,8 @@ export class SceneRenderer {
    * is twenty-six million distances, and the window has to stay answerable throughout.
    */
   private async skinModel(nodeId: string, holder: Object3D, rig: Rig): Promise<void> {
+    // Captured once: `applyRig` is told which meshes these weights belong to rather than walking
+    // the holder again after the awaits, when it may hold others.
     const meshes = skinnableMeshesOf(holder)
     if (meshes.length === 0) return
 
@@ -957,25 +959,34 @@ export class SceneRenderer {
     const stop = new AbortController()
     this.skinning.set(nodeId, stop)
 
-    const bindings: SkinBinding[] = []
-    for (const [index, mesh] of meshes.entries()) {
-      const bound = await this.skin.bind(positionsIn(mesh, holder), rig, {
-        signal: stop.signal,
-        onProgress: progress =>
-          this.options.onRigProgress?.(nodeId, (index + progress) / meshes.length),
-      })
-      // Taken back, or the port let go — either way this model is no longer being skinned.
-      if (!bound) return
-      bindings.push(bound)
+    try {
+      const bound: { mesh: Mesh; binding: SkinBinding }[] = []
+      for (const [index, mesh] of meshes.entries()) {
+        const binding = await this.skin.bind(positionsIn(mesh, holder), rig, {
+          signal: stop.signal,
+          onProgress: progress =>
+            this.options.onRigProgress?.(nodeId, (index + progress) / meshes.length),
+        })
+        // Taken back, or the port let go — either way this model is no longer being skinned.
+        if (!binding) return
+        bound.push({ mesh, binding })
+      }
+
+      // The model may have been released while the weights were out.
+      if (this.objects.get(nodeId) !== holder) return
+
+      applyRig(holder, rig, bound)
+      // The bones exist only now: the helper was bound before them, when the holder carried none,
+      // and without this a locally rigged character has a skeleton nothing can show or pick.
+      this.bindSkeleton(nodeId, holder, true)
+      this.options.onRig?.(nodeId, rigStateOf(holder, this.animations.clipsOf(nodeId)))
+      this.viewport.requestRender()
+    } finally {
+      this.skinning.delete(nodeId)
+      // In every exit, cancellation included: what says "binding" is the progress being there,
+      // so leaving it behind would hide both buttons of the inspector for good.
+      this.options.onRigProgress?.(nodeId, 1)
     }
-
-    this.skinning.delete(nodeId)
-    // The model may have been released while the weights were out.
-    if (this.objects.get(nodeId) !== holder) return
-
-    applyRig(holder, rig, bindings)
-    this.options.onRigProgress?.(nodeId, 1)
-    this.viewport.requestRender()
   }
 
   /** Twenty-six million distances are not worth finishing for a model nobody will see again. */
