@@ -1,5 +1,6 @@
 import {
   mdiCloudOutline,
+  mdiRunFast,
   mdiCreationOutline,
   mdiCubeScan,
   mdiFileTreeOutline,
@@ -63,6 +64,7 @@ const ICONS: Record<ToolId, string> = {
   // generator's: a rail where two glyphs mean two things is a rail one reads twice.
   projects: mdiFolderMultipleOutline,
   library: mdiCloudOutline,
+  animations: mdiRunFast,
 }
 
 /**

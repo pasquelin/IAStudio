@@ -401,6 +401,9 @@ export class SceneRenderer {
   /** The tracks of the document, and where the head stands over them. */
   private timeline: AnimationTimeline = EMPTY_TIMELINE
   private playhead = 0
+
+  /** The frame of the preview loop, so switching block or stopping cancels the one running. */
+  private previewFrame = 0
   /** Where each driven bone rested when it arrived, keyed `<nodeId>/<bone>`. See `applyBonePoses`. */
   private readonly boneRests = new Map<string, Transform>()
   private readonly held = new Set<MotionId>()
@@ -669,6 +672,33 @@ export class SceneRenderer {
   }
 
   /**
+   * Watches one block on a clock of its own, leaving the head where it stands. `null` gives the
+   * model back to the head. A loop of its own rather than the head's: this is a look at a block,
+   * not a move of the scene's clock.
+   */
+  setPreview(target: { nodeId: string; clipId: string } | null): void {
+    cancelAnimationFrame(this.previewFrame)
+    this.previewFrame = 0
+
+    if (!target) {
+      this.animations.seek(this.playhead)
+      this.viewport.requestRender()
+      return
+    }
+
+    const from = performance.now()
+    const step = (now: number): void => {
+      const seconds = (now - from) / 1000
+      const length = this.animations.preview(target.nodeId, target.clipId, seconds)
+      this.viewport.requestRender()
+      // A block that does not loop holds its last pose rather than asking for frames for ever.
+      if (length > 0 || seconds < 1) this.previewFrame = requestAnimationFrame(step)
+    }
+
+    this.previewFrame = requestAnimationFrame(step)
+  }
+
+  /**
    * Where the shots put their cameras at the instant the head stands on: along a rail, aimed at
    * a target, or both.
    *
@@ -739,6 +769,10 @@ export class SceneRenderer {
     if (watched) object.lookAt(watched.getWorldPosition(aimed))
   }
 
+  /**
+   * Lays the timeline over the rest poses. Only the nodes it drives are touched, and a scene
+   * with no track at all leaves before building anything.
+   */
   private applyPoses(): void {
     const timeline = this.timeline
     if (timeline.tracks.length === 0) return

@@ -129,6 +129,52 @@ describe('SceneAnimations', () => {
     expect(cubeOf(root).position.x).toBeCloseTo(1, 5)
   })
 
+  // Watching one animation is a look at a block, not a move of the scene's clock: the head is
+  // left exactly where it stands, and the model follows a clock of its own.
+  it('poses a model from its own clock, leaving the head where it was', () => {
+    const { animations, root } = withWalk()
+    applyTo(animations, [ref()])
+    animations.seek(0)
+
+    animations.preview('node-1', 'block-1', 0.5)
+
+    expect(cubeOf(root).position.x).toBeCloseTo(0.5, 5)
+  })
+
+  it('answers how long the clip runs, so a caller knows when a pass is over', () => {
+    const { animations } = withWalk()
+    applyTo(animations, [ref()])
+
+    expect(animations.preview('node-1', 'block-1', 0)).toBe(1)
+  })
+
+  it('gives the model back to the head when nothing is being watched', () => {
+    const { animations, root } = withWalk()
+    applyTo(animations, [ref()])
+    animations.seek(0.25 * SECOND)
+    animations.preview('node-1', 'block-1', 0.9)
+
+    animations.preview('node-1', null, 0)
+
+    expect(cubeOf(root).position.x).toBeCloseTo(0.25, 5)
+  })
+
+  // The watched block alone drives the model: the others would blend their own pose into it.
+  it('lets no other block weigh in while one is being watched', () => {
+    const animations = new SceneAnimations()
+    const root = scene()
+    animations.add('node-1', root, [walkClip('walk', 1), walkClip('slide', 3)])
+    animations.apply('node-1', [
+      clipLane('a', [ref()]),
+      clipLane('b', [ref({ id: 'block-2', name: 'slide' })]),
+    ])
+
+    animations.preview('node-1', 'block-1', 0.5)
+
+    // The walk alone: shared with the slide it would have read 1.
+    expect(cubeOf(root).position.x).toBeCloseTo(0.5, 5)
+  })
+
   it('drives nothing once a node is removed', () => {
     const { animations, root } = withWalk()
     applyTo(animations, [ref()])

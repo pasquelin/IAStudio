@@ -8,8 +8,8 @@ import { SliderField } from '@/design/SliderField'
 import { NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
-import { clipSpanOf } from '@/engines/scene/clipBlend'
 import { setModelLanes } from '@/engines/scene/commands'
+import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import type { ModelNode } from '@/engines/scene/sceneState'
 import { cn } from '@/helpers/cn'
 import { newId } from '@/helpers/ids'
@@ -38,40 +38,55 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   const { t } = useTranslation()
   const clips = useModelClips(state => clipsOfNode(state, documentId, node.id))
   const rig = useModelClips(state => rigOfNode(state, documentId, node.id))
-  const running = useSceneViews(state => sceneViewOf(state, documentId).playing)
-  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
-  const lengths = useModelClips(state => state.lengths[documentId]?.[node.id])
+  const preview = useSceneViews(state => sceneViewOf(state, documentId).preview)
+  const picked = useAnimationViews(state => animationViewOf(state, documentId).pickedBlock)
 
   // Nothing has landed yet: a section explaining a model the studio has not read would be wrong
   // rather than empty.
   if (!rig) return null
 
-  // The first block of the FIRST lane: this section drives one clip, and the band is where the
-  // layering is read and edited.
   const lanes = node.model.lanes ?? []
-  const held = lanes[0]?.clips ?? []
-  const played = held[0] ?? null
+  // THE BLOCK ONE CHOSE on the band, and the first one only while nothing is chosen: a model may
+  // hold several, and a section that always described the first could not speak of the others.
+  const played =
+    lanes.flatMap(lane => lane.clips).find(clip => clip.id === picked) ?? lanes[0]?.clips[0] ?? null
+
+  const running = preview?.clipId === played?.id && played !== null
 
   /**
-   * Runs the scene's HEAD, which is the only clock a scene has: what plays in the viewport and
-   * what the band draws can then never disagree. The head is rewound to the block first when it
-   * stands outside it, or pressing play on a clip already behind would show nothing at all.
+   * Watches the chosen block on a clock of its OWN, in the viewport, leaving the band where it
+   * was left. Looking at one animation is not moving the scene's clock.
    */
   const play = (clip: ClipRef | null): void => {
-    const views = useSceneViews.getState()
-    const span = clip ? clipSpanOf(clip, lengths?.[clip.source.name] ?? null) : 0
-    if (clip && (playhead < clip.start || playhead >= clip.start + span)) {
-      views.setPlayhead(documentId, clip.start)
-    }
-    views.setPlaying(documentId, clip !== null)
+    useSceneViews
+      .getState()
+      .setPreview(documentId, clip ? { nodeId: node.id, clipId: clip.id } : null)
   }
 
-  // The played block is replaced WITHIN its lane, and the other lanes are carried over untouched:
+  // The chosen block is replaced INSIDE its own lane, every other lane carried over untouched:
   // rewriting the whole field from one control would drop every block this section does not show.
   const write = (next: ClipRef | null): void => {
-    const kept = held.filter(clip => clip.id !== played?.id)
-    const first = clipLane(lanes[0]?.id ?? MAIN_LANE_ID, next ? [next, ...kept] : kept)
-    edit.run(setModelLanes(node.id, [first, ...lanes.slice(1)]))
+    const holding = lanes.find(lane => lane.clips.some(clip => clip.id === played?.id)) ?? lanes[0]
+    const clips = holding?.clips ?? []
+    // Rewritten IN PLACE: a block moved to the front of its lane because a speed changed would
+    // reorder what the band draws.
+    const rewritten = clipLane(
+      holding?.id ?? MAIN_LANE_ID,
+      next === null
+        ? clips.filter(clip => clip.id !== played?.id)
+        : played
+          ? clips.map(clip => (clip.id === played.id ? next : clip))
+          : [...clips, next],
+    )
+
+    edit.run(
+      setModelLanes(
+        node.id,
+        lanes.length > 0
+          ? lanes.map(lane => (lane.id === rewritten.id ? rewritten : lane))
+          : [rewritten],
+      ),
+    )
   }
 
   // Picking a clip on a model that had none starts from the defaults rather than from nothing,

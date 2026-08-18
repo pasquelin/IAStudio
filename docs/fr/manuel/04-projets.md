@@ -556,10 +556,9 @@ Le bouton de gauche porte le nom de la branche sortie — ou **Hors branche**, s
 posé sur une version précise plutôt que sur une branche. Il ouvre la liste des branches, avec une
 coche sur celle qui est sortie, et une ligne **Nouvelle branche**.
 
-> **Cette liste-là se relit moins souvent que le reste du panneau** : quand vous changez de
-> branche, quand une version est enregistrée, et quand vous revenez sur le panneau. Une branche
-> créée dans un terminal **sans y basculer** n’y apparaît donc qu’après un aller-retour sur le
-> panneau — le bouton **Actualiser** relit les fichiers, pas les branches.
+> **Cette liste se relit à chaque ouverture** : une branche créée dans un terminal **sans y
+> basculer** y est déjà. Le bouton **Actualiser** reste celui des fichiers — il ne lit pas les
+> branches, et n’a pas à le faire.
 
 Une branche est la façon d’essayer autre chose sans rien perdre : deux directions artistiques sur
 le même projet, chacune la sienne.

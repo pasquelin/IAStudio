@@ -294,6 +294,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     engine.current?.setPlayhead(view.playhead)
   }, [view.playhead])
 
+  // The block being watched, on the engine's own clock — the head stays where it was left.
+  useEffect(() => {
+    engine.current?.setPreview(view.preview)
+  }, [view.preview])
+
   // Here rather than in the timeline panel, which is a tool window one may close: the head is the
   // scene's ONE clock, and closing a panel must not stop a character walking in the viewport.
   useAnimationPlayback(documentId, view.playing, scene.animation.duration)

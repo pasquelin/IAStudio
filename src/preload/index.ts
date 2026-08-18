@@ -214,6 +214,9 @@ const bridge: StudioBridge = {
     list: () => ipcRenderer.invoke(CHANNELS.fontsList),
     read: family => ipcRenderer.invoke(CHANNELS.fontsRead, family),
   },
+  animations: {
+    list: () => ipcRenderer.invoke(CHANNELS.animationsList),
+  },
   media: {
     adopt: relative => ipcRenderer.invoke(CHANNELS.mediaAdopt, relative),
     ingest: () => ipcRenderer.invoke(CHANNELS.mediaIngest),
