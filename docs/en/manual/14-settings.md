@@ -340,7 +340,7 @@ At **0**, it never tries twice.
 Seven sub-sections: **Image**, **Video**, **3D**, **Audio**, **Upscaling**,
 **Background removal**, **Vectorisation**.
 
-The last three have no workspace of their own: they are the families the canvas edits — Enlarge,
+The last three have no workspace of their own: they are the families the canvas edits — Upscale,
 Cut out, Vectorise — reach for. The **Models** panel only shows the open workspace's family, so
 **this is where, and only where, their model is chosen**.
 
@@ -359,7 +359,7 @@ workspace.
 Set it once you have found the model you work with most: it saves a click every session.
 
 > **For Upscaling, Background removal and Vectorisation, this setting is not a convenience.** It is what
-> decides whether the matching edit can leave at all: with no model set, **Enlarge** opens this
+> decides whether the matching edit can leave at all: with no model set, **Upscale** opens this
 > screen instead of sending the picture.
 
 ---

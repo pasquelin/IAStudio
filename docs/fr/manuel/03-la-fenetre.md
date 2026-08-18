@@ -521,7 +521,7 @@ Le menu du système — en haut de l’écran sur macOS, en haut de la fenêtre 
 
 Les raccourcis affichés dans les menus sont **ceux que vous avez réglés**.
 
-**Affichage ▸ Modules ne liste que ce que l’espace peut ouvrir**, comme le rail.
+**Affichage ▸ Modules** ne liste que ce que l’espace peut ouvrir, comme le rail.
 
 ### La fenêtre de consommation
 

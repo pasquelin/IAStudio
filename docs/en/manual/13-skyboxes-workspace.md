@@ -186,7 +186,7 @@ place. Two ways to carry on:
 
 ## Taking the sky out: the six faces
 
-**File › Export the sky**, then a size: 512, 1024 or 2048 pixels a side. The studio asks for a
+**File › Export sky**, then a size: 512, 1024 or 2048 pixels a side. The studio asks for a
 folder, creates one named after the document inside it, and writes six PNGs:
 
 | File | Face |
