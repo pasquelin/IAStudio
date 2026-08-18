@@ -222,7 +222,7 @@ parcourant une liste.
 | **Magnétisme** | `M` | fait avancer les poignées par pas réguliers. Les pas se règlent dans les réglages |
 | **Repère local** | `L` | aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde |
 | **Projection** | `O` | bascule entre perspective et projection orthographique |
-| **Mode de rendu** | `Z` | fait défiler les sept façons de dessiner |
+| **Mode de rendu** | `Z` | fait défiler les neuf façons de dessiner |
 | **Quatre vues** | `⇧Q` | partage le viewport en quatre : la vue en cours, dessus, face, profil |
 | **Arêtes en quads** | `⇧W` | en filaire, efface les diagonales que la triangulation a ajoutées |
 | **Afficher les squelettes** | `B` | dessine les os de chaque modèle à squelette par-dessus la scène |
