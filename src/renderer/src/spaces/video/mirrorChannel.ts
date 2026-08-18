@@ -70,6 +70,8 @@ export function mirrorMessageOf(data: unknown): MirrorMessage | null {
 /** The shape the engine needs, checked at the depth it is read at — tracks and settings. */
 function isSequence(value: unknown): value is SequenceState {
   if (typeof value !== 'object' || value === null) return false
+  // The cast asserts NOTHING: it names the three fields as `unknown` so they can be read, and
+  // every one of them is tested below before this answers true.
   const candidate = value as { tracks?: unknown; settings?: unknown; playhead?: unknown }
   return (
     Array.isArray(candidate.tracks) &&
