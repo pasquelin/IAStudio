@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { deserialize, serialize } from 'node:v8'
@@ -10,6 +10,7 @@ import { DOCUMENT_VERSION, EXTENSIONS_BY_KIND, type DocumentFile } from '@shared
 // timed against a lighter read than the one it runs.
 import { headOf, pooledHeads } from './documents'
 import { bodyFormatOf } from './documentBody'
+import { createHeadCache } from './headCache'
 
 /**
  * What one save and one open cost the main process.
@@ -107,13 +108,13 @@ describe('reading a document: the whole main-thread cost of one open', () => {
  * Written on a temporary folder rather than mocked: what is being compared is syscall shape, and
  * a mock would compare nothing.
  *
- * **Measured 2026-08-17** (macOS, APFS, Node 24): 117 ms one at a time, 35 ms over a pool of 16,
- * 19 ms when every head is cached. The pool alone is what `list()` does — a cache saving 16 ms
- * of the 35 does not pay for a map to keep in step, nor for the file rewritten within the same
- * millisecond at the same size that it would answer stale for.
+ * **Measured 2026-08-18** (macOS, APFS, Node 24, a busy machine): 279 ms one at a time, 143 ms
+ * over a pool of 16, 45 ms when every head is cached. The 2026-08-17 run of the same three read
+ * 117 / 35 / 19 — three times faster across the board and the same shape, which is what a
+ * measure taken beside four other sessions is worth.
  *
- * Those three predate the import of the real `headOf` above, and the shape held when it landed —
- * the ratio moved by a few percent, not the conclusion. To be retaken on a quiet machine.
+ * The cache is written now, and the montages below are why: an enveloped head is a bounded read
+ * this saves a third of, where an `.otio` has no head at all and is parsed whole every time.
  */
 const DOCUMENT_COUNT = 2_000
 const FOLDER_COUNT = 200
@@ -178,10 +179,58 @@ describe('listing a project of 2 000 documents in 200 folders', () => {
     await pooledHeads(await candidates(), headOf)
   })
 
-  // The cache as it would be: a `stat` says nothing moved, and the head is not opened at all.
-  // It replaces one `open`/`read`/`close` with one `stat`, and that is the whole trade.
+  // The cache itself, not a stand-in for it — this used to be a bare `stat`, which timed the
+  // syscall and none of the map around it. Warm from the first iteration onwards, which is the
+  // state a second listing of a project finds it in.
+  const warm = createHeadCache(headOf)
   bench(`${POOL} heads in flight, all of them cached`, async () => {
-    await pooledHeads(await candidates(), file => stat(file))
+    await pooledHeads(await candidates(), file => warm.read(file))
+  })
+})
+
+/**
+ * The same listing over MONTAGES, which is where the cache stops being a third and becomes the
+ * difference between a listing and a freeze: an `.otio` carries no head of ours, so the pool
+ * parses every one of them whole.
+ *
+ * 200 rather than 2 000: a project holds far fewer cuts than stills, and 2 000 montages of 500
+ * clips would be 58 MB of JSON laid down for every run of the bench.
+ *
+ * **Measured 2026-08-18**: 201 ms over the pool, 1.48 ms through the cache. Read as a RATIO and
+ * not as two absolute numbers — the same three benches above moved by three between two runs
+ * twenty minutes apart on this machine, four other sessions being what changed.
+ */
+const MONTAGE_COUNT = 200
+let laidMontages: Promise<string> | null = null
+
+async function layMontages(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), 'scenario-otio-bench-'))
+  const body = otioOf(500)
+  await Promise.all(
+    Array.from({ length: MONTAGE_COUNT }, (_unused, index) =>
+      writeFile(join(root, `Bande ${index}${EXTENSIONS_BY_KIND.sequence}`), body, 'utf8'),
+    ),
+  )
+  return root
+}
+
+async function montages(): Promise<string[]> {
+  const root = await (laidMontages ??= layMontages())
+  return (await readdir(root)).map(name => join(root, name))
+}
+
+describe(`listing ${MONTAGE_COUNT} montages of 500 clips`, () => {
+  afterAll(async () => {
+    if (laidMontages) await rm(await laidMontages, { recursive: true, force: true })
+  })
+
+  bench(`${POOL} heads in flight`, async () => {
+    await pooledHeads(await montages(), headOf)
+  })
+
+  const warm = createHeadCache(headOf)
+  bench(`${POOL} heads in flight, all of them cached`, async () => {
+    await pooledHeads(await montages(), file => warm.read(file))
   })
 })
 
@@ -191,13 +240,13 @@ const CLIP_COUNTS: readonly number[] = [50, 500, 5_000]
  * The price of the format BEING the document: an `.otio` carries no head of ours, so listing one
  * reads and parses the whole file — the very parse a scene is kept from paying.
  *
- * **Measured 2026-08-18** (macOS, Node 24): 0.09 ms at 50 clips, 0.92 ms at 500, 9.4 ms at 5 000.
+ * **Measured 2026-08-18** (macOS, Node 24): 0.13 ms at 50 clips, 1.66 ms at 500, 17.3 ms at 5 000.
  * A project of a few ordinary montages stays under the 16 ms a frame has; several of the largest
  * would not, and `list()` runs on the thread that owns every window.
  *
- * **And one gesture pays it more than once**: `locate` verifies through `descriptorOf`, so an
- * open costs two of these and a rename four. Cheap for an enveloped head, not for this — the fix
- * is `locate` answering with what it already read, and it is not written yet.
+ * **One gesture used to pay it more than once**: `locate` verified through `descriptorOf`, so an
+ * open cost two of these and a rename four. `documents.reads.test.ts` counts them, and both are
+ * one now — `locate` hands back what it read instead of dropping it.
  */
 describe('reading a montage: the head that has to be the whole file', () => {
   for (const count of CLIP_COUNTS) {

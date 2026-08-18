@@ -26,8 +26,19 @@ export type DocumentBodyFormat = {
   read: (body: string) => DocumentFile
   write: (document: DocumentFile) => string
   /** What a listing needs, without reading the document under it when the format allows that. */
-  readHead: (file: string) => Promise<DocumentEnvelope>
+  readHead: (file: string) => Promise<DocumentHead>
 }
+
+/**
+ * What a head read answers with: the envelope, plus the body when the format has no short head
+ * and the whole file had to be read to find one.
+ *
+ * `content` is carried rather than dropped so that the caller who wanted the document — an open,
+ * a rename — reads the file once instead of twice. An `.otio` of 5 000 clips parses in 17 ms on
+ * the thread that owns every window; doing it a second time to answer the same question is the
+ * whole of what this field exists to stop.
+ */
+export type DocumentHead = DocumentEnvelope & { content?: string }
 
 /**
  * The field every envelope of the studio carries and no foreign JSON does — `documentEnvelope`
@@ -76,7 +87,8 @@ const OPEN_TIMELINE: DocumentBodyFormat = {
   read: otioDocument,
   write: otioBody,
   // No head of ours to read short: what an envelope carries is spread through the file, so the
-  // whole of it is read and parsed. `documents.bench.ts` is what says at which size that hurts.
+  // whole of it is read and parsed — and handed back whole, `DocumentHead.content` being what
+  // keeps an open from paying for that parse a second time.
   readHead: async file => otioDocument(await readFile(file, 'utf8')),
 }
 

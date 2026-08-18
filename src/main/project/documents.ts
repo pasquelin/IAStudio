@@ -15,7 +15,6 @@ import {
   workspaceForKind,
   type DocumentDescriptor,
   type DocumentDraft,
-  type DocumentEnvelope,
   type DocumentFile,
   type DocumentKind,
   type DocumentPart,
@@ -30,7 +29,8 @@ import {
 import { extensionOf, foldForFileName } from '@shared/domain/fileName'
 import { parentOf, pathIn, type FolderEntry } from '@shared/domain/folder'
 import { exists, isMissing, writeAtomic } from '@main/persistence'
-import { bodyFormatOf, ENVELOPED } from './documentBody'
+import { bodyFormatOf, ENVELOPED, type DocumentHead } from './documentBody'
+import { createHeadCache } from './headCache'
 
 export type DocumentFiles = {
   /**
@@ -138,8 +138,8 @@ function claimsDocument(path: string): boolean {
 }
 
 /** How many heads are read at once. Measured in `documents.bench.ts`: 2 000 documents across
- * 200 folders take 117 ms one at a time and 35 ms over this pool. A cache of `mtime`/`size`
- * would take it to 19 ms and was not written — 16 ms does not pay for a map to keep in step. */
+ * 200 folders take 279 ms one at a time and 143 ms over this pool, on the machine of 2026-08-18.
+ * The cache under it — `headCache.ts` — takes the same listing to 45 ms. */
 const HEAD_POOL = 16
 
 /** Runs `read` over `items` with at most `HEAD_POOL` in flight, ANSWERING IN ORDER.
@@ -171,8 +171,22 @@ export async function pooledHeads<T>(
  * Exported for the bench beside it rather than for callers — like `pooledHeads`, and for the same
  * reason: timing a copy of it would time something else.
  */
-export async function headOf(file: string): Promise<DocumentEnvelope> {
+export async function headOf(file: string): Promise<DocumentHead> {
   return await bodyFormatOf(extensionOf(basename(file))).readHead(file)
+}
+
+/**
+ * A document as its own file answers for it, and everything reading that answer produced.
+ *
+ * The three fields are what a caller would otherwise go back to the disk for: `descriptor` is
+ * what a listing shows, `body` is the document itself when the format's head IS the whole file,
+ * and `time` is the clock taken BEFORE any of it was read — which is the one a save has to be
+ * defended by.
+ */
+type FoundDocument = {
+  descriptor: DocumentDescriptor
+  body: DocumentFile | null
+  time: number
 }
 
 /**
@@ -254,6 +268,13 @@ export function createDocumentFiles({
    * `Level`, and one would answer for the other's clock.
    */
   const seen = new Map<string, number>()
+
+  /**
+   * Every head this reader has looked at, kept until its file changes — see `headCache.ts` for
+   * what that costs and what it cannot see. Held here so it follows the reader rather than the
+   * process: one per project reader, cleared with it.
+   */
+  const heads = createHeadCache(headOf)
 
   const keyOf = (id: string, kind: DocumentKind): string => `${kind}:${id}`
 
@@ -409,8 +430,14 @@ export function createDocumentFiles({
     )
   }
 
-  /** A document read off its path, or nothing. */
-  const descriptorOf = async (path: string): Promise<DocumentDescriptor | null> => {
+  /**
+   * A document read off its path, or nothing — with everything that read produced along the way.
+   *
+   * `body` and `time` are the reason this is not just a descriptor. A montage carries no head of
+   * ours, so finding out what it IS reads and parses the whole of it; handing that back is what
+   * keeps an open from paying for the same parse twice, and a rename four times.
+   */
+  const foundAt = async (path: string): Promise<FoundDocument | null> => {
     const entry = basename(path)
     const extension = extensionOf(entry)
     const claimed = kindsForExtension(extension)
@@ -423,7 +450,7 @@ export function createDocumentFiles({
     try {
       const file = absoluteOf(path)
       const first = claimed[0]
-      const envelope = await headOf(
+      const { envelope, body, time } = await heads.read(
         first && FOLDER_KINDS.has(first) ? join(file, DOCUMENT_MANIFEST) : file,
       )
       // The file says which kind it is, BOUNDED by what its extension could name: a container
@@ -437,23 +464,30 @@ export function createDocumentFiles({
       const stem = basename(entry, extension)
 
       return {
-        // Before version 3 the file name WAS the id, so that is what such a document is still
-        // called — its tabs, its place in the layout and its recent entry all say so.
-        id: envelope.id ?? stem,
-        kind: envelope.kind,
-        // The file name is the title, and has been since documents came to be named by hand.
-        // Falling back on it rather than refusing an envelope that lost its own: a document
-        // with no title would drop out of every listing while sitting in the folder.
-        title: envelope.title || stem,
-        workspace,
-        path,
-        ...(envelope.sourceAssetId ? { sourceAssetId: envelope.sourceAssetId } : {}),
+        descriptor: {
+          // Before version 3 the file name WAS the id, so that is what such a document is still
+          // called — its tabs, its place in the layout and its recent entry all say so.
+          id: envelope.id ?? stem,
+          kind: envelope.kind,
+          // The file name is the title, and has been since documents came to be named by hand.
+          // Falling back on it rather than refusing an envelope that lost its own: a document
+          // with no title would drop out of every listing while sitting in the folder.
+          title: envelope.title || stem,
+          workspace,
+          path,
+          ...(envelope.sourceAssetId ? { sourceAssetId: envelope.sourceAssetId } : {}),
+        },
+        body,
+        time,
       }
     } catch {
       // One unreadable document must not cost the user the listing of all the others.
       return null
     }
   }
+
+  const descriptorOf = async (path: string): Promise<DocumentDescriptor | null> =>
+    (await foundAt(path))?.descriptor ?? null
 
   /**
    * The PROJECT, read once: every document it holds, wherever the user put it.
@@ -520,20 +554,32 @@ export function createDocumentFiles({
   }
 
   /**
-   * The entry a document is written to, or the address it would have had.
+   * The entry a document is written to, or the address it would have had — TOGETHER with what
+   * checking that entry read out of it.
    *
    * The cached answer is checked rather than trusted: the folder is the user's, and a document
    * renamed in the Finder would otherwise be written to a path that is no longer there — which
    * `writeFile` answers by creating it, leaving two files where the user made one.
+   *
+   * That check is a full read for a format with no head of ours, so its result is HANDED BACK
+   * rather than dropped: an open used to verify the file and then read it again, and a rename
+   * did it four times over. `found` is `null` for the fallback address alone — nothing sits
+   * there, so there was nothing to read.
    */
-  const locate = async (id: string, kind: DocumentKind): Promise<string> => {
-    const holds = async (path: string): Promise<boolean> => {
-      const descriptor = await descriptorOf(path)
-      return descriptor?.id === id && descriptor.kind === kind
+  const locate = async (
+    id: string,
+    kind: DocumentKind,
+  ): Promise<{ file: string; found: FoundDocument | null }> => {
+    const holding = async (path: string): Promise<FoundDocument | null> => {
+      const found = await foundAt(path)
+      return found?.descriptor.id === id && found.descriptor.kind === kind ? found : null
     }
 
     const cached = index.get(keyOf(id, kind))
-    if (cached && (await holds(cached))) return absoluteOf(cached)
+    if (cached) {
+      const found = await holding(cached)
+      if (found) return { file: absoluteOf(cached), found }
+    }
 
     // A folder that cannot be read answers "not found" rather than throwing: whatever is wrong
     // with it, the caller is about to touch it and will fail with its OWN error, which is the
@@ -541,15 +587,18 @@ export function createDocumentFiles({
     try {
       await walk()
     } catch {
-      return fileOf(id, kind)
+      return { file: fileOf(id, kind), found: null }
     }
 
-    const found = index.get(keyOf(id, kind))
-    if (found && (await holds(found))) return absoluteOf(found)
+    const listed = index.get(keyOf(id, kind))
+    if (listed) {
+      const found = await holding(listed)
+      if (found) return { file: absoluteOf(listed), found }
+    }
 
     // Never listed, so never written: a document saved for the first time is named after itself
     // by `write`, and this is only what `read` and `remove` ask about before that happens.
-    return fileOf(id, kind)
+    return { file: fileOf(id, kind), found: null }
   }
 
   /**
@@ -579,19 +628,15 @@ export function createDocumentFiles({
   }
 
   /**
-   * Read behind whatever is writing the same path. A folder document is swapped in three moves,
-   * and a read landing between two of them would see nothing there — the tab would take the
-   * default, and the next ⌘S would write that over the document being saved.
+   * The bytes under a file, put back into a document — or nothing, for a file that is not there.
+   * A folder document is swapped in three moves, and a read landing between two of them sees
+   * nothing: the tab takes the default, and the next ⌘S writes that over the document.
    */
-  async function readOne(id: string, kind: DocumentKind): Promise<DocumentFile | null> {
-    const file = await locate(id, kind)
-
-    // BEFORE the read, never after. A file rewritten while it is being read would otherwise be
-    // remembered by the time of a write whose bytes never reached this state — and the next ⌘S
-    // would find the times agreeing and overwrite it. Taken first, the error leans the safe way:
-    // the studio believes the file older than it is, and asks.
-    await remember(id, kind, file)
-
+  const bodyAt = async (
+    file: string,
+    kind: DocumentKind,
+    id: string,
+  ): Promise<DocumentFile | null> => {
     let document: DocumentFile
     try {
       document = FOLDER_KINDS.has(kind)
@@ -610,6 +655,29 @@ export function createDocumentFiles({
     return document
   }
 
+  /**
+   * A folder document's head is its MANIFEST, so the body a head read hands back holds none of
+   * the parts. Reusing it would give the editor a stack with every layer's pixels missing, and
+   * the next ⌘S would write that back — so a folder kind always goes to the folder.
+   */
+  const reusableBody = (kind: DocumentKind, found: FoundDocument | null): DocumentFile | null =>
+    found && !FOLDER_KINDS.has(kind) ? found.body : null
+
+  async function readOne(id: string, kind: DocumentKind): Promise<DocumentFile | null> {
+    const { file, found } = await locate(id, kind)
+
+    // BEFORE the read, never after. A file rewritten while it is being read would otherwise be
+    // remembered by the time of a write whose bytes never reached this state — and the next ⌘S
+    // would find the times agreeing and overwrite it. Taken first, the error leans the safe way:
+    // the studio believes the file older than it is, and asks.
+    //
+    // `found.time` was taken before its own head read, so it is that same instant or earlier.
+    if (found) seen.set(stampKey(id, kind), found.time)
+    else await remember(id, kind, file)
+
+    return reusableBody(kind, found) ?? (await bodyAt(file, kind, id))
+  }
+
   return {
     list: walk,
 
@@ -621,7 +689,7 @@ export function createDocumentFiles({
         // version 3, still under the uuid it was named after. Renaming those is the user's
         // gesture, not something a save does behind them. `folder` is read here and nowhere
         // else, which is what makes a chosen folder a placement rather than a move.
-        const located = await locate(id, kind)
+        const { file: located } = await locate(id, kind)
         const onDisk = await exists(located)
         const file = onDisk ? located : await freshFile(kind, draft.title, folder)
 
@@ -635,6 +703,11 @@ export function createDocumentFiles({
         const document = { ...draft, version: DOCUMENT_VERSION, kind, updatedAt: now(), id }
 
         await (FOLDER_KINDS.has(kind) ? storeFolder(file, document) : store(file, document))
+        // The head kept for this file is now a description of bytes that are gone. Dropped
+        // rather than left to the clock: a save landing in the same millisecond at the same
+        // size is the one case `mtimeMs` cannot tell apart, and it is the studio's own writes
+        // that come that fast.
+        heads.forget(bodyFileOf(file, kind))
         index.set(keyOf(id, kind), relativeOf(file))
         await remember(id, kind, file)
         return 'written'
@@ -642,7 +715,7 @@ export function createDocumentFiles({
 
     rename: (id, kind, title) =>
       queued(id, async () => {
-        const from = await locate(id, kind)
+        const { file: from, found } = await locate(id, kind)
         // A rename stays where the document IS. Landing it in `documents/` would move it behind
         // the user's back, and the folder they filed it in is the one the name has to be free in.
         const inFolder = parentOf(relativeOf(from)) ?? ''
@@ -662,8 +735,10 @@ export function createDocumentFiles({
         const path = inFolder === '' ? entry : `${inFolder}/${entry}`
         const to = absoluteOf(path)
 
-        const descriptor = await descriptorOf(relativeOf(from))
-        if (!descriptor) throw new Error(`Document ${id} is not there to rename`)
+        // What `locate` already read, rather than a second look at the same file: this was the
+        // second of four reads a rename cost a montage.
+        if (!found) throw new Error(`Document ${id} is not there to rename`)
+        const descriptor = found.descriptor
         if (to === from) return { ...descriptor, title, path }
 
         /**
@@ -685,7 +760,7 @@ export function createDocumentFiles({
         // reads the document correctly and only its file lags, which renaming again repairs. The
         // other order leaves a file whose name says one thing and whose envelope says another:
         // the two names this whole change exists to collapse into one.
-        const held = await readOne(id, kind)
+        const held = reusableBody(kind, found) ?? (await bodyAt(from, kind, id))
         if (!held) throw new Error(`Document ${id} is not there to rename`)
 
         // Spelt out rather than spread, so that `parts` cannot come along: they are the folder's
@@ -721,6 +796,10 @@ export function createDocumentFiles({
 
           await rename(from, to)
         }
+        // Both names, for the same reason `write` drops one: the file under `from` is gone and
+        // the one under `to` was written by the studio a moment ago.
+        heads.forget(bodyFileOf(from, kind))
+        heads.forget(bodyFileOf(to, kind))
         index.set(keyOf(id, kind), path)
         // The envelope was just rewritten and the file just moved, both by the studio. Without
         // this, the next ⌘S would read a time it does not recognise and accuse the user of
@@ -733,7 +812,7 @@ export function createDocumentFiles({
     // `force`: closing a document that was never saved must not fail on a file that is absent.
     remove: async (id, kind) => {
       await queued(id, async () => {
-        const file = await locate(id, kind)
+        const { file, found } = await locate(id, kind)
         // Refused only for a file that demonstrably belongs to something ELSE. `locate` falls
         // back on the address a document WOULD have had, and two kinds share an extension — so
         // that address is the same for both, and an id that happens to be another document's
@@ -743,10 +822,14 @@ export function createDocumentFiles({
         // always been. **The blind spot is `locate`, not this**: a document whose envelope
         // stopped reading cannot be found at all, so removal lands on the address it would have
         // had and the real file stays — invisible in every list and undeletable from the studio.
-        const sitting = await descriptorOf(relativeOf(file))
+        //
+        // `found` is that same answer when `locate` had one, which is every case but the
+        // fallback address — where nothing was read and the entry has to be looked at.
+        const sitting = found?.descriptor ?? (await descriptorOf(relativeOf(file)))
         if (!sitting || (sitting.id === id && sitting.kind === kind)) {
           await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
         }
+        heads.forget(bodyFileOf(file, kind))
         index.delete(keyOf(id, kind))
         seen.delete(stampKey(id, kind))
       })
