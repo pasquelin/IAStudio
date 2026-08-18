@@ -29,25 +29,23 @@ function nulSitesIn(path: string, bytes: Buffer): string[] {
 /**
  * A literal NUL makes git call the file BINARY, and a binary file is one nobody reviews.
  *
- * `git diff` answers « Binary file … differs », `git grep` skips it, and a reviewer asked to judge
- * it reports being unable to read it — which happened on 2026-08-18. The byte is legitimate as a
- * VALUE (a separator inside a key, an input a cleaner must refuse); what costs is spelling it as
- * the raw byte instead of the escape, which compiles to the very same string.
+ * The byte is legitimate as a VALUE; what costs is spelling it raw instead of escaped, which
+ * compiles to the very same string. Refused wherever it sits and not only in the first 8 000 bytes
+ * git actually reads: the second file that carried one sat past that window, and would have
+ * flipped the day a line was added above it.
  *
- * **Refused wherever it sits, not only in the first 8 000 bytes git actually reads.** Both files
- * that carried it were identical in intent and only one was binary — the other sat past that
- * window and would have flipped the day a line was added above it. A rule hanging on a byte
- * offset holds until an unrelated edit.
- *
- * **Blind spot, written rather than discovered**: only the TypeScript of the four trees is swept.
- * `.ttf` and `.wasm` ship under `src/` and carry the byte legitimately, so widening this to every
- * file needs an exemption list — a different lot, and one that has to be argued.
+ * **TWO blind spots, written rather than discovered.** The sweep stops at the four trees of
+ * `src/`, so the TypeScript tracked at the root and under `scripts/` is out — an octet landing
+ * there produces the identical symptom. And it reads TypeScript only, so the JSON, CSS and HTML
+ * of `src/` are out as well. What blocks a sweep of EVERY tracked file is narrower than it looks:
+ * five files, the `.ttf` and `.wasm` that carry the byte legitimately. Closing either half means
+ * an exemption list, and that is a lot of its own.
  */
 describe('no source spells the NUL byte as the byte itself', () => {
   const sourcesOf = (): string[] => PROJECT_TREES.flatMap(tree => testFilesUnder(tree, /\.tsx?$/))
 
   it(
-    'holds every TypeScript source of the project, suites and fixtures included',
+    'holds every TypeScript source of the four trees, suites and fixtures included',
     () => {
       expect(
         sourcesOf().flatMap(path => nulSitesIn(relative(SOURCE_ROOT, path), readFileSync(path))),
