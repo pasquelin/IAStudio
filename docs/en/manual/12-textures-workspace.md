@@ -296,7 +296,7 @@ lists them all.
 **Double-click a style** — or press Enter on it — to apply it to the open material. It is a
 single undo: `⌘Z` puts back exactly what was set before.
 
-**Right-click → Rename**, IDE-style. The name is edited where it is read. Right-click → Delete
+**Right-click ▸ Rename**, IDE-style. The name is edited where it is read. Right-click ▸ Delete
 removes the style.
 
 ### What a style carries, and what it does not
@@ -332,7 +332,7 @@ is still waiting to be written.
 
 ## Exporting the material
 
-Menu **File → Export the texture**, then the row of the engine that will receive it. The menu only
+Menu **File ▸ Export texture**, then the row of the engine that will receive it. The menu only
 appears in the Textures workspace, and it speaks to the **tab in front**: two open materials do
 not both answer one click.
 
