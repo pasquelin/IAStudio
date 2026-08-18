@@ -42,6 +42,20 @@ export function installDocument(documentId: string, workspace: WorkspaceId): voi
 }
 
 /**
+ * A title as a person typed it, for the cases that ask what a document is EXPORTED as. The
+ * fixtures title a document by its own id, which no separator ever reaches.
+ */
+export function retitleDocument(documentId: string, title: string): void {
+  const { documents, activeId } = useDocuments.getState()
+  const document = documents[documentId]
+  if (!document) throw new Error(`no document "${documentId}" to retitle`)
+  useDocuments.setState({
+    documents: { ...documents, [documentId]: { ...document, title } },
+    activeId,
+  })
+}
+
+/**
  * Several tabs at once, one of them in front — what a gesture that crosses workspaces needs to
  * be tested against, and what a single-document fixture cannot describe.
  */
