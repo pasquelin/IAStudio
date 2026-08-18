@@ -726,9 +726,25 @@ and pose mode rather than through these three steps.
 Add a **camera** to the scene (Add menu → Object → Camera). It is an object like any other: it
 moves with the gizmo, it animates like any other object, and a glTF export carries it along.
 
-The timeline's **Render to video** button writes an `.mp4` of what that camera sees, over the whole
-length of the timeline. The studio asks **where to save before computing anything** — a render
-takes minutes.
+**A scene may hold several, and change camera part way through.** That is what **shots** are for,
+laid on the band below:
+
+1. **choose the camera**, in the scene or in the tree;
+2. **place the playhead** where the shot is to start;
+3. **Put this camera on air**, in the timeline's bar. The shot opens from the head onwards, over
+   **three seconds** — or whatever is left of the band, if that is less.
+
+A shot then **slides** and **trims** like a clip in an edit. Each camera has **its own line**, and
+**the order of those lines is the law**: where two shots overlap, the highest line is the one on
+air. Drag a line's header to change its rank — that edits the document, and `⌘Z` gives it back.
+
+> **With no shot at all, nothing is lost**: the scene's first camera films, over the whole length.
+> And **deleting a camera does not punch a hole in the film** — its shots are skipped rather than
+> rendered black, and undoing the delete brings them back whole.
+
+The timeline's **Render to video** button writes an `.mp4` over the whole length, each frame taken
+through the camera the montage names at that instant. The studio asks **where to save before
+computing anything** — a render takes minutes.
 
 **With no camera in the scene the button is greyed out**: there is nothing to look through.
 

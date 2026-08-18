@@ -748,9 +748,26 @@ Ajoutez une **caméra** à la scène (menu Ajouter → Objet → Caméra). C’e
 elle se déplace au gizmo, elle s’anime comme n’importe quel objet, et un export glTF l’emporte
 avec lui.
 
-Le bouton **Rendre en vidéo** de la timeline écrit un fichier `.mp4` de ce que voit cette caméra,
-sur toute la durée de la timeline. Le studio demande **où enregistrer avant de calculer quoi que
-ce soit** — un rendu prend des minutes.
+**Une scène peut en porter plusieurs et changer de caméra en cours de route.** C’est le rôle des
+**plans**, posés sur la bande du bas :
+
+1. **choisissez la caméra** dans la scène ou dans l’arbre ;
+2. **placez la tête de lecture** là où le plan doit commencer ;
+3. **Mettre cette caméra à l’antenne**, dans la barre de la timeline. Le plan s’ouvre à partir de
+   la tête, sur **trois secondes** — ou ce qui reste de la bande, si c’est moins.
+
+Un plan se **glisse** et se **rogne** ensuite comme un clip de montage. Chaque caméra a **sa
+ligne**, et **l’ordre de ces lignes fait la loi** : là où deux plans se recouvrent, c’est la ligne
+la plus haute qui passe à l’antenne. Glissez un en-tête de ligne pour la changer de rang — cela
+modifie le document, et `⌘Z` le rend.
+
+> **Sans aucun plan, rien n’est perdu** : c’est la première caméra de la scène qui filme, sur toute
+> la durée. Et **supprimer une caméra ne troue pas le film** — ses plans sont sautés plutôt que
+> rendus en noir, et annuler la suppression les ramène entiers.
+
+Le bouton **Rendre en vidéo** de la timeline écrit un fichier `.mp4` sur toute la durée, chaque
+image prise par la caméra que le montage désigne à cet instant. Le studio demande **où enregistrer
+avant de calculer quoi que ce soit** — un rendu prend des minutes.
 
 **Sans caméra dans la scène, le bouton est grisé** : il n’y a rien à travers quoi regarder.
 
