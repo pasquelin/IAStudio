@@ -91,6 +91,10 @@ describe('the camera preview', () => {
       )?.[1] ?? ''
 
     expect(contrastRatio(tokenOf(token), tokenOf('viewport'))).toBeGreaterThanOrEqual(AA_NON_TEXT)
+    // A WIDTH as well as a colour, and this half was learnt the hard way: `ring-muted` alone
+    // draws nothing at all — Tailwind needs `ring-1` for a ring to exist — and this very guard
+    // read the colour, found it contrasted, and passed on a frame that had no ring on screen.
+    expect(source).toMatch(/ring-\d/)
   })
 
   it('grows to the whole view and comes back to its corner', async () => {

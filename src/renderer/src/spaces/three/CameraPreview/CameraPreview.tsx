@@ -177,9 +177,9 @@ export function CameraPreview({ documentId }: { documentId: string }) {
              * The same at every moment, on air included: what says a camera is live is the badge
              * that says so in words, and a second signal in colour says it twice.
              */
-            'border-panel ring-muted pointer-events-auto absolute border-2',
+            'border-panel ring-muted pointer-events-auto absolute border-2 ring-1 ring-inset',
             full ? '' : 'rounded-(--radius-sc-sm) shadow-(--sc-shadow-furniture)',
-            full ? '' : 'active:cursor-grabbing',
+            full ? '' : 'cursor-grab active:cursor-grabbing',
           )}
           style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
           // The WHOLE preview is the handle — a title bar would be the one place a hand does not

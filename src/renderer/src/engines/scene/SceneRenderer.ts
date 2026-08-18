@@ -1799,15 +1799,19 @@ export class SceneRenderer {
   /**
    * A camera of the scene: the body one sees and clicks, and the frustum selection adds to it.
    *
-   * Both hang UNDER the camera rather than beside it, unlike a light's helper: they have to
-   * follow the object they draw through every move, and a camera is aimed far more often than a
-   * lamp. The body carries no name of its own, so a click on it walks up to the camera's id.
+   * The body hangs UNDER the camera, so it follows every move; the frustum hangs BESIDE it, in
+   * the scene, like a light's helper — and that is not a preference. `CameraHelper` sets
+   * `this.matrix = camera.matrixWorld` with `matrixAutoUpdate` off, so it places itself ON the
+   * camera: made a child of it, that matrix applied TWICE and the outline was drawn at double
+   * the camera's placement. A camera at (0, 2, 6) had its frustum floating at (0, 4, 12), which
+   * is what a selection looked like until Alban pointed at it.
+   *
+   * The body carries no name of its own, so a click on it walks up to the camera's id.
    */
   private buildCamera(node: SceneNode & { type: 'camera' }): Object3D {
     const camera = new PerspectiveCamera(node.camera.fov, 1, node.camera.near, node.camera.far)
     const helper = new CameraHelper(camera)
-    // The helper reads the camera's world matrix, which is only right once three has updated it.
-    camera.add(helper)
+    this.viewport.scene.add(helper)
     const body = cameraBody(this.markerColor, this.markerEdge)
     camera.add(body)
     // Kept beside the light helpers, and for the same reason: the preview hides all of them on
@@ -2107,13 +2111,17 @@ export class SceneRenderer {
       this.helpers.delete(id)
     }
 
-    // The frustum hangs under its camera, so removing the node takes it off screen — but the
-    // map would keep it alive, and the preview would go on hiding an object nobody draws.
+    // The frustum stands in the SCENE, beside its camera rather than under it — see `buildCamera`
+    // — so removing the node leaves it drawn over nothing until it is taken out by hand.
     const frustum = this.frustums.get(id)
     if (frustum) {
+      this.viewport.scene.remove(frustum)
       frustum.dispose()
       this.frustums.delete(id)
     }
+
+    // The body hangs under the node, so it goes with it; the map is what would keep it alive.
+    this.markers.delete(id)
   }
 
   private selectedObjects(): Object3D[] {
