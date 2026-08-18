@@ -258,6 +258,27 @@ describe('parseFolderPath', () => {
     expect(() => parseFolderPath(path)).toThrow()
   })
 
+  // Both rows, so the bound is pinned at one number rather than anywhere inside an interval.
+  it('refuses a path past its own bound and keeps the last one under it', () => {
+    expect(parseFolderPath('a'.repeat(1024))).toBe('a'.repeat(1024))
+    expect(() => parseFolderPath('a'.repeat(1025))).toThrow()
+  })
+
+  // Code points, not UTF-16 units: an astral path is half as long as `length` reads it.
+  it('counts the bound in code points, so an astral path is not halved', () => {
+    const astral = String.fromCodePoint(0x1f3ac).repeat(1024)
+    expect(parseFolderPath(astral)).toBe(astral)
+  })
+
+  // Measured, not assumed: APFS takes a control character in a name and `readdir` hands it back,
+  // so refusing here would lose a folder that exists. Built rather than typed — a literal one
+  // makes this file binary to `git grep`.
+  it('takes the control character a folder on disk may really carry', () => {
+    expect(parseFolderPath(`assets/${String.fromCodePoint(0x85)}img`)).toBe(
+      `assets/${String.fromCodePoint(0x85)}img`,
+    )
+  })
+
   it('refuses what is not a string at all', () => {
     expect(() => parseFolderPath(null)).toThrow()
   })
