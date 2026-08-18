@@ -753,6 +753,31 @@ lever les bras devient les deux à la fois, au lieu d’un demi-pas les bras à 
 > un modèle dont la section annonce **un squelette dont aucune articulation n’est reconnue**, ne
 > comptez pas sur les moitiés et laissez les blocs sur **Tout le corps**.
 
+### Modifier un bloc posé
+
+**Un bloc choisi répond à trois gestes**, et le clic droit sur le bloc les porte tous les trois —
+sans ce menu, aucun ne se découvrirait.
+
+| Geste | Touche | Ce qu’il fait |
+|---|---|---|
+| **Dupliquer** | `⌘D` | pose une copie du bloc **juste après lui**, bout à bout |
+| **Couper le bloc** | `S` | coupe le bloc en deux là où se trouve la tête de lecture |
+| **Supprimer** | `Suppr` | retire le bloc de la bande. **L’animation elle-même n’est pas touchée** |
+
+**La coupe ne pose aucun fondu au joint**, exactement comme celle du montage : les deux moitiés se
+lisent comme un seul mouvement, et une rampe au milieu ferait fondre la pose là où il ne se passe
+rien. La seconde moitié reprend le mouvement là où la première s’arrête.
+
+**Couper reste grisé tant que la tête de lecture n’est pas STRICTEMENT à l’intérieur du bloc** :
+posée sur l’un de ses deux bords, elle ne le couperait en rien. Le menu garde l’entrée grisée
+plutôt que de la retirer — une liste dont la longueur suit la tête de lecture ne s’apprend pas.
+
+> **Ces trois touches n’appartiennent à aucun contexte de l’écran des raccourcis**, et ne s’y
+> changent donc pas : elles sont liées à la bande, qui doit avoir le focus. **Les deux mêmes
+> touches font autre chose dans la vue 3D** — `S` y redimensionne, `⌘D` y duplique l’objet
+> sélectionné — et c’est la surface qui a le focus qui tranche. Le clic droit reste le chemin sûr.
+> Voir [Les raccourcis clavier](15-raccourcis.md).
+
 ### Voir le squelette
 
 Un modèle à squelette porte des **os**. La touche **B**, ou **Affichage ▸ Afficher les squelettes**,
