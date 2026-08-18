@@ -10,7 +10,12 @@ import { ORA_MERGED_PATH, type OraSurface } from '@shared/domain/openRaster'
 import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import { chainsOnMontage, parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
-import { gltfDocumentOf, sceneFromGltf } from '@/engines/scene/gltfDocument'
+import {
+  forgetCarriedScene,
+  sceneFromPayloadFile,
+  scenePayloadOf,
+  sceneRefusesToSave,
+} from './sceneDocument'
 import {
   EMPTY_SEQUENCE,
   EMPTY_SOUND_SEQUENCE,
@@ -541,11 +546,21 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   image: IMAGE_IO,
   // No `writeAsset`, and the reason is the kind itself: a scene is not a mesh — the asset it was
   // opened from is one node of it.
-  scene: textDocumentIo(sceneStore, {
-    toPayload: (state, documentId) => gltfDocumentOf(state, { documentId, documentKind: 'scene' }),
-    fromPayload: sceneFromGltf,
-    createDefault: createDefaultScene,
-  }),
+  scene: {
+    ...textDocumentIo(sceneStore, {
+      toPayload: scenePayloadOf,
+      fromPayload: sceneFromPayloadFile,
+      createDefault: createDefaultScene,
+    }),
+    // A scene the studio wrote and Blender then enriched still LISTS — its extras are ours — and
+    // a save recomposes the whole document from the state. glTF links by INDEX, so the meshes and
+    // buffers it gained cannot be carried across half way. Refused rather than silently dropped.
+    incomplete: sceneRefusesToSave,
+    forget: documentId => {
+      sceneStore.use.getState().drop(documentId)
+      forgetCarriedScene(documentId)
+    },
+  },
   // Nor here: rendering a montage is minutes of work, which has no business on a keystroke.
   sequence: {
     ...textDocumentIo(sequenceStore, {
