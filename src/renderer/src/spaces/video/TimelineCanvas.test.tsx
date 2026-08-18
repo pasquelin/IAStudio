@@ -19,6 +19,8 @@ import { exportOtio } from '@/app/otioExport'
 import { publishCommand } from '@/services/commandBus'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
+import { installDocuments, retitleDocument } from '@/stores/document-fixtures'
+import { exportSequence } from './sequenceExport'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { TIMELESS_DURATION } from '@/engines/timeline/insert'
@@ -26,6 +28,7 @@ import { TimelineCanvas } from './TimelineCanvas'
 import type { VideoToolId } from './videoTools'
 
 vi.mock('@/app/otioExport', () => ({ exportOtio: vi.fn(() => Promise.resolve('Bande.otio')) }))
+vi.mock('./sequenceExport', () => ({ exportSequence: vi.fn(() => Promise.resolve('Bande.mp4')) }))
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
@@ -225,6 +228,19 @@ describe('TimelineCanvas', () => {
     act(() => publishCommand('sequence.exportCut'))
 
     expect(exportOtio).toHaveBeenCalledWith('doc-1')
+  })
+
+  // The film's door, where the cut's door beside it has cleaned its title since the day it was
+  // written — same tab, same title, and only one of the two came back refused.
+  it('cleans the title down to a file name before the render dialog is asked', () => {
+    installDocuments({ 'doc-1': 'video' }, 'doc-1')
+    retitleDocument('doc-1', 'Brique 1/2')
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    paint()
+
+    act(() => publishCommand('sequence.export'))
+
+    expect(exportSequence).toHaveBeenCalledWith(expect.objectContaining({ title: 'Brique 1 2' }))
   })
 
   it('deletes the selected clip on Delete', () => {

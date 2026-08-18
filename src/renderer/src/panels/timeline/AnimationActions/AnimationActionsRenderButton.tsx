@@ -6,7 +6,7 @@ import { firstCameraId } from '@/engines/scene/sceneState'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
-import { useDocuments } from '@/stores/documents'
+import { documentExportName, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, useScenes } from '@/stores/scenes'
 
@@ -32,10 +32,10 @@ export function AnimationActionsRenderButton({ documentId }: { documentId: strin
     if (!engine || !bridge || !camera) return
 
     const { animation } = sceneOf(useScenes.getState(), documentId)
-    const title = useDocuments.getState().documents[documentId]?.title ?? 'render'
+    const name = documentExportName(useDocuments.getState(), documentId, 'render')
 
     setBusy(true)
-    const id = await bridge.render.start({ name: title, fps: animation.fps })
+    const id = await bridge.render.start({ name, fps: animation.fps })
     if (!id) {
       setBusy(false)
       return
@@ -55,7 +55,7 @@ export function AnimationActionsRenderButton({ documentId }: { documentId: strin
       await bridge.render.finish(id)
     } catch (error) {
       await bridge.render.cancel(id)
-      reportFailure('scene.render', title, error)
+      reportFailure('scene.render', name, error)
     } finally {
       setBusy(false)
     }

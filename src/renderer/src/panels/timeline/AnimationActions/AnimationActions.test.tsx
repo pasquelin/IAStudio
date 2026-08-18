@@ -7,6 +7,7 @@ import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
+import { retitleDocument } from '@/stores/document-fixtures'
 import { useModelClips } from '@/stores/modelClips'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { installScene } from '@/stores/scene-fixtures'
@@ -169,6 +170,19 @@ describe('writing the film', () => {
     expect(start).toHaveBeenCalledWith({ name: expect.any(String), fps: timelineOf().fps })
     expect(renderFilm).toHaveBeenCalled()
     expect(finish).toHaveBeenCalledWith('render_1')
+  })
+
+  it('cleans the title down to a file name before the save dialog is asked', async () => {
+    withCamera()
+    retitleDocument(DOCUMENT, 'Brique 1/2')
+    installEngine()
+    const start = vi.fn(() => Promise.resolve('render_1'))
+    installFakeBridge({ render: { start, finish: () => Promise.resolve('brique.mp4') } })
+
+    bar()
+    await userEvent.click(screen.getByRole('button', { name: /Rendre en vidéo/ }))
+
+    expect(start).toHaveBeenCalledWith({ name: 'Brique 1 2', fps: timelineOf().fps })
   })
 
   it('draws nothing at all when the save dialog is dismissed', async () => {

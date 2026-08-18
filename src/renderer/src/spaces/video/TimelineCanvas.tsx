@@ -51,7 +51,7 @@ import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import { assetsById, useAssets } from '@/stores/assets'
-import { useDocuments } from '@/stores/documents'
+import { documentExportName, useDocuments } from '@/stores/documents'
 import { usePeaks } from '@/stores/peaks'
 import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { useSelection } from '@/stores/selection'
@@ -74,10 +74,6 @@ export type TimelineCanvasProps = {
    */
   history?: boolean
 }
-
-/** What an exported file is named after: the tab, falling back to the id nothing else shows. */
-const titleOf = (documentId: string): string =>
-  useDocuments.getState().documents[documentId]?.title ?? documentId
 
 export function TimelineCanvas({ documentId, tool, history = true }: TimelineCanvasProps) {
   const { t } = useTranslation()
@@ -237,7 +233,10 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
         // Both exports name their file after the tab: one writes a film of the montage, the
         // other the montage itself.
         case 'sequence.export':
-          void exportSequence({ sequence: state, title: titleOf(documentId) })
+          void exportSequence({
+            sequence: state,
+            title: documentExportName(useDocuments.getState(), documentId, documentId),
+          })
           return
         case 'sequence.exportCut':
           void exportOtio(documentId)
