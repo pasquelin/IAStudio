@@ -93,7 +93,7 @@ export const HUMANOID_BODY_ROLES: readonly HumanoidBodyRole[] = [
 ]
 
 /** Annotated rather than asserted: the return type is what makes the template a role and not a string. */
-function fingerRole(
+export function fingerRole(
   side: HumanoidSide,
   finger: HumanoidFinger,
   joint: HumanoidFingerJoint,

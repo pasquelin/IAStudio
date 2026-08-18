@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { rigFaultOf } from '@shared/domain/rig'
 import { HUMANOID_BODY_ROLES } from '@shared/domain/humanoid'
-import { rigFit, rigFitFaultOf, type Bounds } from './rigFit'
+import { rigFit, rigFitFaultOf, rigHandBones, type Bounds } from './rigFit'
 
 /** A metre-eighty character standing on the ground, centred on the origin. */
 const STANDING: Bounds = { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } }
@@ -123,5 +123,44 @@ describe('the rig a fit produces', () => {
 
     expect(worldY(raised, 'Hips')).toBeCloseTo(5.954, 3)
     expect(rigFit(raised).bones[0]?.rest.position.x).toBeCloseTo(10, 6)
+  })
+})
+
+describe('adding the hands', () => {
+  const HANDS = rigHandBones(rigFit(STANDING).bones) ?? []
+
+  it('lays the thirty of the standard, and only those', () => {
+    expect(HANDS).toHaveLength(30)
+    expect(new Set(HANDS.map(bone => bone.role)).size).toBe(30)
+  })
+
+  it('hangs each finger off its hand, then joint after joint', () => {
+    const index = HANDS.filter(bone => bone.name.startsWith('LeftIndex'))
+
+    expect(index.map(bone => bone.parent)).toEqual(['LeftHand', 'LeftIndex1', 'LeftIndex2'])
+  })
+
+  // A left hand's fingers point left and a right hand's right: the arm's own direction, since a
+  // bounding box says nothing more than that.
+  it('points the fingers of each side the way that arm already points', () => {
+    const left = HANDS.find(bone => bone.name === 'LeftIndex1')
+    const right = HANDS.find(bone => bone.name === 'RightIndex1')
+
+    expect(Math.sign(left?.rest.position.x ?? 0)).toBe(-Math.sign(right?.rest.position.x ?? 0))
+  })
+
+  it('makes a rig that holds, which is what lets the command write it', () => {
+    expect(rigFaultOf([...rigFit(STANDING).bones, ...HANDS])).toBeNull()
+  })
+
+  it('lays no second set on a hand that already has fingers', () => {
+    expect(rigHandBones([...rigFit(STANDING).bones, ...HANDS])).toBeNull()
+  })
+
+  it('lays nothing at all on a rig naming no hand', () => {
+    const [hips] = rigFit(STANDING).bones
+    if (!hips) throw new Error('the fit places a bone at the hips')
+
+    expect(rigHandBones([hips])).toBeNull()
   })
 })

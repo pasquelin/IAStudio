@@ -232,6 +232,8 @@ describe('what a mode paints with', () => {
       'none',
       'matcap',
       'density',
+      'ghost',
+      'hidden',
     ])
   })
 

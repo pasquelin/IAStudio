@@ -9,13 +9,7 @@ import {
 } from 'three'
 import type { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import {
-  assetClip,
-  bundledClip,
-  clipLane,
-  embeddedClip,
-  type ClipRef,
-} from '@shared/domain/scene'
+import { assetClip, bundledClip, clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { bundledAnimationUrl } from '@shared/domain/animationLibrary'
 import { assetUrl } from '@shared/domain/asset'
 import { SceneRenderer } from './SceneRenderer'

@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest'
 import type { ModelSummary } from './model'
 import { rigProvidersOf, rigRefusalOf, type RigProvider } from './rigProvider'
 
-function model(id: string, tags: readonly string[], extra: Partial<ModelSummary> = {}): ModelSummary {
+function model(
+  id: string,
+  tags: readonly string[],
+  extra: Partial<ModelSummary> = {},
+): ModelSummary {
   return {
     id,
     name: id,
@@ -73,7 +77,9 @@ describe('saying why a service cannot run', () => {
   })
 
   it('accepts a mesh exactly at the limit', () => {
-    expect(rigRefusalOf({ modelId: 'a', name: 'A' }, basic, { bytes: 100, maxSize: 100 })).toBeNull()
+    expect(
+      rigRefusalOf({ modelId: 'a', name: 'A' }, basic, { bytes: 100, maxSize: 100 }),
+    ).toBeNull()
   })
 
   it('refuses nothing on a model that names no limit', () => {
