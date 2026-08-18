@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SECOND } from '@shared/domain/time'
-import { RULER_HEIGHT, type Viewport } from '../timeline/timelineGeometry'
+import { EDGE_BAR_WIDTH, RULER_HEIGHT, type Viewport } from '../timeline/timelineGeometry'
 import { animationTrack, cameraShot, timelineWith } from './animation-fixtures'
 import { keyId, keyParts, paintAnimation } from './animationPainter'
 import { refreshPalette } from '../core/palette'
@@ -245,5 +245,15 @@ describe('painting a shot', () => {
   it('outlines the shot that is on air, and only it', () => {
     expect(paintShotOf('s1').outlines).toHaveLength(1)
     expect(paintShotOf(null).outlines).toEqual([])
+  })
+
+  /**
+   * The grips a clip of the montage wears, on the shot too — through the same `paintClipFrame`.
+   * A bar that can be trimmed and shows nothing to grab is a bar nobody tries to trim.
+   */
+  it('wears the two edge grips the montage draws on a clip', () => {
+    const grips = paintShotOf(null).rects.filter(rect => rect.width === EDGE_BAR_WIDTH)
+
+    expect(grips.map(grip => grip.x)).toEqual([100, 300 - EDGE_BAR_WIDTH])
   })
 })

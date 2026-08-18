@@ -9,6 +9,7 @@
 import type { Us } from '@shared/domain/time'
 import { placeRows } from '../timeline/band'
 import { paintBandEnd } from '../timeline/bandEnd'
+import { clipBoxOf, paintClipFill, paintClipFrame } from '../timeline/clipShell'
 import { paintRuler, readRulerStyle } from '../timeline/ruler'
 import { RULER_HEIGHT, timeToX, type Viewport } from '../timeline/timelineGeometry'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
@@ -23,9 +24,6 @@ const CHANNEL_REACH = 3
 
 /** How far a block sits inside its row, so two stacked blocks do not read as one. */
 const BLOCK_INSET = 2
-
-/** How far the name of a shot sits from the left edge of its bar. */
-const BAR_PADDING = 4
 
 type Palette = {
   ruler: string
@@ -255,27 +253,26 @@ function paintShot(
   paint: AnimationPaint,
   palette: Palette,
 ): void {
-  const box = barRect(bar.shot.start, bar.shot.duration, top, height, paint.viewport)
+  const left = timeToX(bar.shot.start, paint.viewport)
+  // Never nothing: a shot shorter than a pixel still has to be visible enough to grab.
+  const right = Math.max(left + 1, timeToX(bar.shot.start + bar.shot.duration, paint.viewport))
+  const box = clipBoxOf(top, height)
+  const picked = bar.shot.id === paint.selectedShotId
 
-  context.fillStyle = bar.shot.id === paint.selectedShotId ? palette.rowAlt : palette.block
-  context.fillRect(box.x, box.y, box.width, box.height)
+  paintClipFill(context, left, right, box, picked ? palette.rowAlt : palette.block)
 
   if (bar.shot.id === paint.activeShotId) {
     context.strokeStyle = palette.playhead
     context.lineWidth = 1
-    context.strokeRect(box.x + 0.5, box.y + 0.5, box.width - 1, box.height - 1)
+    context.strokeRect(left + 0.5, box.top + 0.5, right - left - 1, box.height - 1)
   }
 
-  // Clipped to the bar: a name running past its end would read as belonging to the next shot.
-  context.save()
-  context.beginPath()
-  context.rect(box.x, box.y, box.width, box.height)
-  context.clip()
-  context.font = palette.font
-  context.textBaseline = 'middle'
-  context.fillStyle = palette.text
-  context.fillText(bar.name, box.x + BAR_PADDING, box.y + box.height / 2)
-  context.restore()
+  paintClipFrame(context, left, right, box, bar.name, {
+    ink: palette.text,
+    border: palette.border,
+    grip: picked ? palette.text : palette.muted,
+    font: palette.font,
+  })
 }
 
 function paintHead(

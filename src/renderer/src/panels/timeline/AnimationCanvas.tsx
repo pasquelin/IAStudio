@@ -265,7 +265,13 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>): void => {
     const grab = grabbed.current
-    if (!grab) return
+    // What the pointer promises before it presses, as the montage does over a clip's edge: a
+    // bar that can be trimmed and never says so is a bar nobody tries to trim.
+    if (!grab) {
+      const hit = hitAt(event)
+      event.currentTarget.style.cursor = hit?.kind === 'shot' && hit.edge ? 'ew-resize' : ''
+      return
+    }
 
     const bounds = event.currentTarget.getBoundingClientRect()
     const current = latest.current
@@ -331,6 +337,8 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
+      // Or a pointer that leaves mid-hover writes the resize cursor on the element for good.
+      onPointerLeave={event => (event.currentTarget.style.cursor = '')}
       onPointerUp={onPointerUp}
     />
   )

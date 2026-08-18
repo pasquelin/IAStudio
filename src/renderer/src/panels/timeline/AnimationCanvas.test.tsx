@@ -376,6 +376,20 @@ describe('dragging a shot', () => {
     expect(shotNow()).toMatchObject({ start: 1 * SECOND, duration: 4 * SECOND })
   })
 
+  /**
+   * The promise the montage makes over a clip's edge, made here too: a bar that trims and never
+   * says so is a bar nobody tries to trim.
+   */
+  it('promises a trim over an edge, and nothing over the body', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    act(() => press(canvas(), 'pointermove', 300, SHOT_MIDDLE))
+    expect(canvas().style.cursor).toBe('ew-resize')
+
+    act(() => press(canvas(), 'pointermove', 200, SHOT_MIDDLE))
+    expect(canvas().style.cursor).toBe('')
+  })
+
   // One entry however far the bar travelled: a drag that cost thirty ⌘Z would be unusable.
   it('costs one entry in the history', () => {
     render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
