@@ -132,6 +132,8 @@ function readNodes(xml: string, pngOf: (src: string) => string): OraNode[] {
   const open: OraGroup[] = []
   const push = (node: OraNode): void => {
     const parent = open[open.length - 1]
+    // `children` is published readonly and filled while the file is walked: the tree is built
+    // once here, and nothing outside this function ever holds a node before it is finished.
     if (parent) (parent.children as OraNode[]).push(node)
     else roots.push(node)
   }
