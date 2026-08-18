@@ -1,4 +1,5 @@
 import type { Asset } from '@shared/domain/asset'
+import type { DocumentDescriptor } from '@shared/domain/document'
 import { safeFileName } from '@shared/domain/fileName'
 import { OTIO_EXTENSION } from '@shared/domain/otio'
 import type { FolderExportRequest } from '@shared/ipc'
@@ -14,11 +15,11 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 /**
  * An absolute path as a URL another application resolves.
  *
- * Absolute rather than relative to the file being written: the montage lands wherever the save
- * dialog goes, which is rarely the project folder — and a relative link from there would resolve
- * to nothing. The cost is that moving the project breaks the links, which no encoding avoids.
+ * Absolute because one encoding serves two doors that land the file in different places — a save
+ * dialog anywhere on the disk, or a folder of the project — and only an absolute link resolves
+ * from both. The cost is that moving the project breaks it, which no encoding avoids.
  */
-export function fileUrlOf(projectPath: string, relative: string): string {
+function fileUrlOf(projectPath: string, relative: string): string {
   const joined = `${projectPath.replaceAll('\\', '/').replace(/\/$/, '')}/${relative}`
   const url = new URL('file:///')
   // Through the parser rather than `encodeURIComponent`, which escapes the `:` of a Windows
@@ -27,12 +28,18 @@ export function fileUrlOf(projectPath: string, relative: string): string {
   return url.href
 }
 
-function sourceOf(clip: Clip, projectPath: string, assets: ReadonlyMap<string, Asset>): OtioSource {
+/** Everything a clip is named and pointed at from, read once for a whole montage. */
+type Catalogue = {
+  projectPath: string
+  assets: ReadonlyMap<string, Asset>
+  documents: Record<string, DocumentDescriptor>
+}
+
+function sourceOf(clip: Clip, { projectPath, assets, documents }: Catalogue): OtioSource {
   if (clip.sceneId) {
-    const scene = useDocuments.getState().documents[clip.sceneId]
     // No url whatever we answer — a scene is rendered, not read — but the NAME is what another
     // application shows in place of the missing picture.
-    return { name: scene?.title ?? clip.sceneId, url: null }
+    return { name: documents[clip.sceneId]?.title ?? clip.sceneId, url: null }
   }
 
   const asset = assets.get(clip.assetId)
@@ -56,18 +63,20 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
   const projectPath = useProject.getState().project?.path
   if (!projectPath) throw new Error('no project is open to resolve the media against')
 
-  const title = useDocuments.getState().documents[documentId]?.title ?? documentId
-  const assets = assetsById(useAssets.getState())
+  const { documents } = useDocuments.getState()
+  const catalogue: Catalogue = { projectPath, documents, assets: assetsById(useAssets.getState()) }
+  const title = documents[documentId]?.title ?? documentId
   const timeline = otioTimelineOf(sequenceOf(useSequences.getState(), documentId), {
     name: title,
-    sourceOf: clip => sourceOf(clip, projectPath, assets),
+    sourceOf: clip => sourceOf(clip, catalogue),
   })
 
+  const name = safeFileName(title)
   return {
-    folder: safeFileName(title),
+    folder: name,
     files: [
       {
-        name: safeFileName(title),
+        name,
         extension: OTIO_EXTENSION,
         bytes: new TextEncoder().encode(JSON.stringify(timeline, null, 2)),
       },
