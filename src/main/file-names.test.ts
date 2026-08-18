@@ -1,7 +1,8 @@
-import { readdirSync, readFileSync } from 'node:fs'
-import { basename, join, relative, sep } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { basename, relative, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { PROJECT_TREES, SOURCE_ROOT, WHOLE_PROJECT, sourceFiles } from './sourceFiles'
+import { testFilesUnder } from './wideGuards'
 
 /**
  * How a source file is named, and where it sits. Decided 2026-08-17; nothing held it before, and
@@ -105,19 +106,15 @@ const projectSources = PROJECT_TREES.flatMap(tree => sourceFiles(tree)).filter(
  * single guard noticing. A bench is production code that happens to be timed: it names a module
  * of the tree and follows the same rule.
  *
- * **Suites and fixtures stay out, and that is a decision rather than an oversight**: 46 suites
- * and 35 fixtures are off-convention today, and most of them are named for a RULE rather than for
- * a module — `no-hardcoded-text.test.ts`, `text-scale.test.ts`. Renaming them would also break
- * every `vi.mock('./x')` resolved from the file that moves, which this repository has already
- * paid for twice. It is a lot to be arbitrated, not a line to slip into this guard.
+ * **Suites and fixtures stay out, and that is a decision rather than an oversight.** On the
+ * LENIENT reading — camelCase or PascalCase accepted, only kebab and snake refused — 46 suites and
+ * 35 fixtures are off-convention today; the strict rule below would refuse far more, and it has no
+ * business judging a test, which never hands out what it tests. Most of them are named for a RULE
+ * rather than for a module (`no-hardcoded-text.test.ts`), and renaming them would break every
+ * `vi.mock('./x')` resolved from the file that moves — paid for twice here. A lot to be arbitrated,
+ * not a line to slip into this guard.
  */
-function benchFilesUnder(folder: string): string[] {
-  return readdirSync(folder, { withFileTypes: true }).flatMap(entry => {
-    const path = join(folder, entry.name)
-    if (entry.isDirectory()) return benchFilesUnder(path)
-    return /\.bench\.tsx?$/.test(entry.name) ? [path] : []
-  })
-}
+const benchFilesUnder = (tree: string): string[] => testFilesUnder(tree, /\.bench\.tsx?$/)
 
 const reported = (path: string): string => relative(SOURCE_ROOT, path)
 
