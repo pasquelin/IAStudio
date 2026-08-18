@@ -1062,6 +1062,18 @@ describe('createDocumentFiles', () => {
       expect((await documents.list())[0]?.id).toBe('doc-3')
     })
 
+    /**
+     * Seen on screen, not deduced: a scene written before the file went compact is indented, so
+     * its first line is `{`. Read as an envelope, it dropped out of the listing — the file sat in
+     * the folder wearing its extension, and nothing opened it.
+     */
+    it('lists one written indented, whose first line is not an envelope', async () => {
+      const indented = JSON.stringify(JSON.parse(gltf({ documentId: 'doc-3' })), null, 2)
+      await writeFile(join(root, 'Repérage.gltf'), indented, 'utf8')
+
+      expect((await documents.list())[0]).toMatchObject({ id: 'doc-3', kind: 'scene' })
+    })
+
     // The defect this change exists to close: a save writing our envelope back would leave a
     // file no other application can read, and the studio would be its only reader again.
     it('writes the scene back with nothing of ours in front of it', async () => {

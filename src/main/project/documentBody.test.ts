@@ -100,6 +100,14 @@ describe('a scene held as glTF', () => {
   it('takes no id from a glTF that carries none', () => {
     expect(scene.read(gltf()).id).toBeUndefined()
   })
+
+  // Seen on screen: a scene written before the file went compact is indented, so its first line
+  // is `{` — read as an envelope, it dropped out of the listing altogether.
+  it('reads an indented one, whose first line is not an envelope', () => {
+    const indented = JSON.stringify(JSON.parse(gltf({ documentId: 'doc-3' })), null, 2)
+
+    expect(scene.read(indented)).toMatchObject({ kind: 'scene', id: 'doc-3' })
+  })
 })
 
 describe('a montage held as OpenTimelineIO', () => {

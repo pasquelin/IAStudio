@@ -107,7 +107,11 @@ const OPEN_SCENE: DocumentBodyFormat = {
   readHead: async file => {
     const head = await firstBytes(file)
     const cut = head.indexOf('\n')
-    if (cut !== -1) return parseDocumentEnvelope(JSON.parse(head.slice(0, cut)))
+    // A first line that PARSES as an envelope, never a first line at all: an indented glTF has
+    // one too — it reads `{` — and taking that as an envelope dropped every scene written before
+    // the file went compact. Seen on screen, not deduced.
+    const first = cut === -1 ? null : jsonOrNull(head.slice(0, cut))
+    if (isRecord(first) && !isGltfDocument(first)) return parseDocumentEnvelope(first)
 
     // Either mark: a version 1 document is one object too, and refusing it on the glTF mark alone
     // made every large legacy scene vanish from the listing — present in the folder, unopenable.
