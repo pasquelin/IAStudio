@@ -464,12 +464,13 @@ The Skyboxes workspace answers the keyboard like the others.
 
 ## In the take editor
 
-The seventh context: the audio editor listens for undo alone.
+The seventh context: the audio editor listens for undo, and for the space bar.
 
 | Action | Key | What it does |
 |---|---|---|
 | **Undo** | `⌘Z` | drops the last step off the chain — a fade, a normalise, a crop |
 | **Redo** | `⇧⌘Z` | |
+| **Play / Pause** | `Space` | the bottom monitor, the one carrying the chain — see [The Audio workspace](11-audio-workspace.md) |
 
 > **Nothing is written until you apply.** Every tool appends a step to a chain replayed over the
 > decoded take, which is what makes undo free and A/B instant. See
