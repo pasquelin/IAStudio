@@ -530,7 +530,7 @@ export function removeModelClip(id: string, clipId: string): Command<SceneState>
 }
 
 /** What a handle bone is called, after the joint that reaches for it. */
-export const IK_HANDLE = '.handle'
+const IK_HANDLE = '.handle'
 
 /**
  * A handle a joint reaches for: one bone added ON the joint, and the chain that follows it.

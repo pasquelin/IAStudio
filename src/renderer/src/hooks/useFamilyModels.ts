@@ -18,14 +18,13 @@ export function useFamilyModels(family: ModelFamily | null): ModelSummary[] {
   const [models, setModels] = useState<ModelSummary[]>([])
 
   useEffect(() => {
-    let live = true
-    const bridge = getBridge()
     // `null` is « do not ask », not « ask for everything »: a surface that will draw nothing must
     // not send a listing per selection — measured on screen, the inspector did exactly that.
     if (!family) return
 
-    void bridge?.scenario
-      .searchModels({ family, limit: PICKER_LIMIT })
+    let live = true
+    void getBridge()
+      ?.scenario.searchModels({ family, limit: PICKER_LIMIT })
       .then(page => {
         if (live) setModels(page.items)
       })

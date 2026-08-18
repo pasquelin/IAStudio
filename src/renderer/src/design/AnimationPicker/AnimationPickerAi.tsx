@@ -1,7 +1,8 @@
 import { mdiRobotOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { motionProvidersOf, rigRefusalOf } from '@shared/domain/rigProvider'
+import { motionProvidersOf } from '@shared/domain/rigProvider'
 import { Row } from '../Row'
+import { rigServiceNote } from '@/helpers/rigServiceNote'
 import { useFamilyModels } from '@/hooks/useFamilyModels'
 import { usePlanAccess } from '@/hooks/usePlanAccess'
 
@@ -28,11 +29,7 @@ export function AnimationPickerAi() {
           <Row
             icon={mdiRobotOutline}
             title={provider.name}
-            subtitle={
-              rigRefusalOf(provider, plan, { bytes: 0 })
-                ? t('inspector.animationAiLocked', { plan: plan?.name ?? '' })
-                : t('inspector.animationAiSoon')
-            }
+            subtitle={rigServiceNote(provider, plan, { bytes: 0 }, t)}
           />
         </li>
       ))}

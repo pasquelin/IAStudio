@@ -2,7 +2,7 @@ import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { ClipLane } from '@shared/domain/scene'
 import { setModelLanes } from '@/engines/scene/commands'
-import { lanesWith } from '@/engines/scene/clipBlend'
+import { lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
 import { SliderField } from '../SliderField'
 import { ToggleField } from '../ToggleField'
 import { ToolButton } from '../ToolButton'
@@ -15,10 +15,6 @@ export type AnimationPickerPreviewProps = {
   nodeId: string
   clipId: string
 }
-
-/** How fast a clip may be asked to run — the same bounds the inspector holds it to. */
-const MIN_SPEED = 0.1
-const MAX_SPEED = 4
 
 /** One identity for « this model plays nothing », so the subscription can settle. */
 const NO_LANES: readonly ClipLane[] = []

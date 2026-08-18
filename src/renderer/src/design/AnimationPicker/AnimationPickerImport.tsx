@@ -11,12 +11,9 @@ export type AnimationPickerImportProps = {
 }
 
 /**
- * A motion brought in from disk — Mixamo exports FBX and Collada and no glTF at all, which is
- * why the accepted set is wider than the studio's own.
- *
- * The file is LINKED rather than copied, exactly as every other import is: `media.ingest` leaves
- * the bytes where they are and writes a catalogue row. What is chosen is then an ordinary asset,
- * so nothing downstream has to know it came from outside.
+ * A motion brought in from disk — Mixamo exports FBX and Collada and no glTF at all, which is why
+ * the accepted set is wider than the studio's own. LINKED rather than copied, as every import is,
+ * so what is chosen downstream is an ordinary asset.
  */
 export function AnimationPickerImport({ onChoose }: AnimationPickerImportProps) {
   const { t } = useTranslation()

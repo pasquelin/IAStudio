@@ -236,30 +236,34 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     )
 
   /** Cut where the head stands, which is the montage's own gesture and the only mark on screen. */
-  const splitBlock = (where: BlockRef): void =>
-    editLane(documentId, where, clips =>
-      clipsSplit(
-        clips,
-        where.clipId,
-        latest.current.playhead,
-        newId(),
-        clipLengthOf(documentId, where),
-      ),
+  const splitAt = (clips: readonly ClipRef[], where: BlockRef): readonly ClipRef[] | null =>
+    clipsSplit(
+      clips,
+      where.clipId,
+      latest.current.playhead,
+      newId(),
+      clipLengthOf(documentId, where),
     )
+
+  const splitBlock = (where: BlockRef): void =>
+    editLane(documentId, where, clips => splitAt(clips, where))
 
   /** The three gestures a block answers to, or `false` when the key meant something else. */
   const blockKey = (event: ReactKeyboardEvent<HTMLCanvasElement>, where: BlockRef): boolean => {
-    const gesture =
-      event.key === 'Delete' || event.key === 'Backspace'
-        ? dropBlock
-        : event.code === 'KeyD' && (event.metaKey || event.ctrlKey)
-          ? duplicateBlock
-          : event.code === 'KeyS' && !event.metaKey && !event.ctrlKey
-            ? splitBlock
-            : null
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      dropBlock(where)
+      return true
+    }
+    if (event.code === 'KeyD' && (event.metaKey || event.ctrlKey)) {
+      duplicateBlock(where)
+      return true
+    }
+    if (event.code === 'KeyS' && !event.metaKey && !event.ctrlKey) {
+      splitBlock(where)
+      return true
+    }
 
-    if (gesture) gesture(where)
-    return gesture !== null
+    return false
   }
 
   /**
@@ -337,16 +341,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
    */
   const cuttable = (where: BlockRef): boolean => {
     const clips = laneClipsOf(documentId, where)
-    const cut =
-      clips &&
-      clipsSplit(
-        clips,
-        where.clipId,
-        latest.current.playhead,
-        newId(),
-        clipLengthOf(documentId, where),
-      )
-    return cut !== null
+    return clips !== null && splitAt(clips, where) !== null
   }
 
   /** The three block gestures, where a key alone would leave them undiscoverable. */

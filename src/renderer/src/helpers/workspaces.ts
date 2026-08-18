@@ -38,12 +38,21 @@ const ICONS: Record<WorkspaceId, string> = {
 export { workspaceOfType }
 
 /**
- * A kind whose workspace no longer tells it apart, and which therefore keeps a glyph of its own.
+ * A glyph of its own, or `null` to keep the one its workspace draws.
  *
- * The moment two kinds share a space the workspace table stops being enough: a motion and a
- * character both live in 3D, and one cube drawn for both says nothing at all on a shelf.
+ * Total on purpose: the moment two kinds share a space the workspace table stops telling them
+ * apart — a motion and a character both live in 3D — so a new kind has to answer the question
+ * rather than silently inherit a neighbour's cube.
  */
-const OWN_ICON: Partial<Record<AssetType, string>> = { animation: mdiRun }
+const OWN_ICON: Record<AssetType, string | null> = {
+  image: null,
+  video: null,
+  audio: null,
+  mesh: null,
+  texture: null,
+  skybox: null,
+  animation: mdiRun,
+}
 
 /**
  * What stands for an asset when there is no picture to show it by. Read off the workspace table

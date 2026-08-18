@@ -156,7 +156,7 @@ export function isRig(value: unknown): value is Rig {
  * built, and a chain naming one that has gone is DROPPED rather than taking the model with it —
  * the same rule a track addressing a removed bone lives under.
  */
-export function isIkChain(value: unknown): value is IkChain {
+function isIkChain(value: unknown): value is IkChain {
   if (!isRecord(value)) return false
   if (typeof value.id !== 'string' || value.id === '') return false
   if (typeof value.effector !== 'string' || typeof value.target !== 'string') return false

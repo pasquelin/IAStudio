@@ -15,12 +15,8 @@ export type AnimationPickerMappingProps = {
 /**
  * Whether the motion fits, and — only when asked — which joints it does not reach.
  *
- * Never a list of bones up front: the issue is explicit about that, and the plain answer is one
- * line. What opens is a list of ROLES and not of bone names, because that is the only vocabulary
- * two skeletons share — `mixamorigLeftHand` and `L_Hand` are the same joint and no string says so.
- *
- * Putting one right is the bone editor's business, on the character's own rig, which is where a
- * click in the viewport already names a bone.
+ * ROLES rather than bone names, because that is the only vocabulary two skeletons share:
+ * `mixamorigLeftHand` and `L_Hand` are the same joint and no string says so.
  */
 export function AnimationPickerMapping({
   documentId,

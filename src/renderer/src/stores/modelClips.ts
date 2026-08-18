@@ -44,10 +44,8 @@ type ModelClipsState = {
 /**
  * What clips each imported model brought, as its file reported them.
  *
- * Engine state rather than document state, and that is why it is not in `useScenes`: the names
- * live inside the GLB, so they are only known once the file has landed and are gone the moment
- * the viewport is thrown away. A document holds the name of the clip it plays — never the list
- * of the ones it could.
+ * Engine state and not document state: the names live inside the GLB, so a document holds the
+ * name of the clip it plays — never the list of the ones it could.
  */
 export const useModelClips = create<ModelClipsState>()(set => ({
   clips: {},

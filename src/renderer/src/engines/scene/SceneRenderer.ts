@@ -1389,15 +1389,11 @@ export class SceneRenderer {
     this.iks.delete(nodeId)
     if (!rig.ik?.length) return
 
-    let skinned: SkinnedMesh | null = null
-    holder.traverse(child => {
-      if (!skinned && child instanceof SkinnedMesh) skinned = child
-    })
-    if (!skinned) return
+    const skinned = holder.getObjectByProperty('isSkinnedMesh', true)
+    if (!(skinned instanceof SkinnedMesh)) return
 
-    const bound: SkinnedMesh = skinned
-    const names = bound.skeleton.bones.map(one => one.name)
-    const binding = createIkBinding(bound, ikSpecsOf(names, rig.ik))
+    const names = skinned.skeleton.bones.map(one => one.name)
+    const binding = createIkBinding(skinned, ikSpecsOf(names, rig.ik))
     if (binding) this.iks.set(nodeId, binding)
   }
 

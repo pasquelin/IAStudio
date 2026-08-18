@@ -25,41 +25,14 @@ import type { RigBone } from '@shared/domain/rig'
 import { IDENTITY_TRANSFORM, type ModelNode } from '@/engines/scene/sceneState'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
-import type { PlanAccess } from '@shared/domain/plan'
-import {
-  rigProvidersOf,
-  rigRefusalOf,
-  type RigProvider,
-  type RigRefusal,
-} from '@shared/domain/rigProvider'
+import { providersRefusalOf, rigProvidersOf } from '@shared/domain/rigProvider'
 import { formatBytes } from '@/helpers/format'
+import { rigServiceNote } from '@/helpers/rigServiceNote'
 import { useFamilyModels } from '@/hooks/useFamilyModels'
 import { useMeshSizeLimit } from '@/hooks/useMeshSizeLimit'
 import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { assetsById, useAssets } from '@/stores/assets'
 import { rigOfNode, rigProgressOfNode, useModelClips } from '@/stores/modelClips'
-
-/**
- * Why no Scenario service can rig this, or nothing at all when one of them could.
- *
- * The mesh is WEIGHED — that is what lets the answer be « too big for the limit » rather than
- * always the subscription: a plan that allows a rigger still refuses a file above its `maxSize`,
- * and hearing it after minutes of upload is the failure this exists to avoid.
- *
- * `null` for « one is within reach », and equally for a catalogue that answered nothing at all:
- * offline is not a subscription being short.
- */
-function rigServicesRefusalOf(
-  providers: readonly RigProvider[],
-  plan: PlanAccess | null,
-  mesh: { bytes: number; maxSize?: number },
-): RigRefusal | null {
-  if (providers.length === 0) return null
-
-  const refusals = providers.map(provider => rigRefusalOf(provider, plan, mesh))
-  // The first one, since they all refuse: one sentence rather than a list nobody reads.
-  return refusals.every(refusal => refusal !== null) ? (refusals[0] ?? null) : null
-}
 
 /** What is being made animatable. The studio's own rigger only knows the first two. */
 export type CharacterKind = 'auto' | 'human' | 'animal' | 'other'
@@ -100,7 +73,7 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
   // one only: asking every model's schema to draw one line would be a call per row.
   const maxSize = useMeshSizeLimit(services[0]?.modelId ?? null)
   const bytes = useAssets(state => assetsById(state).get(node.model.assetId)?.bytes ?? 0)
-  const refusal = rigServicesRefusalOf(services, plan, { bytes, maxSize })
+  const refusal = providersRefusalOf(services, plan, { bytes, maxSize })
   // The bone the pose mode picked, and only when it belongs to THIS model: the inspector shows
   // one node, and editing a bone of another from here would be silent nonsense.
   const held = useSceneViews(state => sceneViewOf(state, documentId).pickedBone)
@@ -175,11 +148,7 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
                     <option value="">{t('inspector.rigServiceLocal')}</option>
                     {services.map(service => (
                       <option key={service.modelId} value={service.modelId} disabled>
-                        {`${service.name} — ${
-                          rigRefusalOf(service, plan, { bytes, maxSize })
-                            ? t('inspector.animationAiLocked', { plan: plan?.name ?? '' })
-                            : t('inspector.animationAiSoon')
-                        }`}
+                        {`${service.name} — ${rigServiceNote(service, plan, { bytes, maxSize }, t)}`}
                       </option>
                     ))}
                   </select>

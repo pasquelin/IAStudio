@@ -1,11 +1,10 @@
 import { mdiRhombus } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { snapToFrame } from '@shared/domain/time'
 import { ToolButton } from '@/design/ToolButton'
 import { keySubject } from '@/engines/scene/animationCommands'
+import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 
 /**
  * One key on every channel of every animated subject, at the head — Blender's `LocRotScale`.
@@ -16,7 +15,6 @@ import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 export function AnimationActionsKeyButton({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const tracks = useScenes(state => sceneOf(state, documentId).animation.tracks)
-  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
 
   return (
     <ToolButton
@@ -27,14 +25,13 @@ export function AnimationActionsKeyButton({ documentId }: { documentId: string }
       variant="header"
       disabled={tracks.length === 0}
       onClick={() => {
-        const store = useScenes.getState()
-        const state = sceneOf(store, documentId)
+        const { state, at } = sceneKeyingAt(documentId)
         const command = keySubject(
           state,
           tracks.map(track => track.id),
-          snapToFrame(playhead, state.animation.fps),
+          at,
         )
-        if (command) store.runCommand(documentId, command)
+        if (command) useScenes.getState().runCommand(documentId, command)
       }}
     />
   )
