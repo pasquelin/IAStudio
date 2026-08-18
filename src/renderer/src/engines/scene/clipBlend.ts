@@ -1,24 +1,19 @@
 /**
  * Which clips of a model are alive at a given head, at what time inside them, and at what weight.
  *
- * A PURE FUNCTION OF THE HEAD, and that is the whole design: three's own `crossFadeTo` runs a
- * fade on the mixer's clock, so the pose at a given instant would depend on how playback reached
- * it — a scrub backwards, or a frame-by-frame render, would not match what was played. Working
- * the weights out from the head alone makes `seek` deterministic by construction rather than by
- * chasing it afterwards.
+ * Never `crossFadeTo`: that runs the fade on the mixer's clock, so the pose would depend on how
+ * playback reached the instant, and a scrub or a frame-by-frame render would not match it.
  */
 import type { ClipRef } from '@shared/domain/scene'
 import { secondsToUs, usToSeconds, type Us } from '@shared/domain/time'
+import { clamp } from '@shared/numeric'
 
 /** A speed of zero would make a block infinitely long; no control in the studio offers less. */
 const MIN_SPEED = 0.1
 
 /**
- * How much band a block takes.
- *
- * What the document says when it says anything, and otherwise what the file measures at the speed
- * it plays. `0` while the file has not landed: its length lives in the GLB, and a block of no
- * width is one nothing can be read off yet.
+ * How much band a block takes: what the document says, else the file's length at the speed it
+ * plays. `0` while the file has not landed — its length lives in the GLB.
  */
 export function clipSpanOf(ref: ClipRef, length: number | null): Us {
   if (ref.duration > 0) return ref.duration
@@ -40,11 +35,7 @@ export type ClipWeight = {
 
 type Block = { ref: ClipRef; span: Us; length: number }
 
-/**
- * What plays at `playhead`, blocks in the order the document holds them.
- *
- * Empty for a model whose file has not landed — never a pose taken from a width nobody measured.
- */
+/** What plays at `playhead`. Empty while the file has not landed, never a guessed width. */
 export function clipBlendAt(
   clips: readonly ClipRef[],
   lengths: Readonly<Record<string, number>>,
@@ -56,7 +47,7 @@ export function clipBlendAt(
   const live = blocks.filter(block => covers(block, playhead))
   const sounding =
     live.length > 0
-      ? live.map(block => ({ block, weight: fadeAt(block, playhead) }))
+      ? live.map(block => ({ block, weight: weightAt(block, playhead) }))
       : [{ block: holdingAt(blocks, playhead), weight: 1 }]
 
   // Scaled down only when they exceed one whole pose: a single block fading in has to rise FROM
@@ -68,7 +59,11 @@ export function clipBlendAt(
   return sounding.map(({ block, weight }) => ({
     clipId: block.ref.id,
     name: block.ref.source.name,
-    time: clipTimeAt(block.ref, block.length, insideBlock(block, playhead)),
+    time: clipTimeAt(
+      block.ref,
+      block.length,
+      clamp(playhead, block.ref.start, block.ref.start + block.span),
+    ),
     weight: weight * scale,
   }))
 }
@@ -95,38 +90,30 @@ function covers(block: Block, playhead: Us): boolean {
 
 /**
  * Which block answers where none covers the head: the last one to have started, or the first of
- * all before any has.
- *
- * A block HOLDS its edge pose outside itself, as an NLA strip does by default — it is what makes
- * a lone clip stand at its first frame before its block and at its last one after, which is what
- * a single-clip document has always done.
+ * all before any has. A block HOLDS its edge pose outside itself, as an NLA strip does — that is
+ * what keeps a lone clip standing at its first frame before its block and its last one after.
  */
 function holdingAt(blocks: readonly Block[], playhead: Us): Block {
   return blocks.reduce((held, block) => (block.ref.start <= playhead ? block : held))
 }
 
-function insideBlock(block: Block, playhead: Us): Us {
-  return Math.min(Math.max(playhead, block.ref.start), block.ref.start + block.span)
-}
-
-/** Rising over `fadeIn` from the start, falling over `fadeOut` into the end, and one between. */
-function fadeAt(block: Block, playhead: Us): number {
+/**
+ * Rising over `fadeIn` from the start, falling over `fadeOut` into the end, and one between.
+ * Deliberately not `timeline/audio`'s `fadeAt`, which is the same five lines for a different job:
+ * an ear's fade may go equal-power one day, while these weights have to keep summing to one.
+ */
+function weightAt(block: Block, playhead: Us): number {
   const { start, fadeIn, fadeOut } = block.ref
   const rising = fadeIn > 0 ? (playhead - start) / fadeIn : 1
   const falling = fadeOut > 0 ? (start + block.span - playhead) / fadeOut : 1
 
-  return Math.max(0, Math.min(1, rising, falling))
+  return clamp(Math.min(rising, falling), 0, 1)
 }
 
-/**
- * Where inside a clip the head stands, in the seconds three counts in.
- *
- * Held apart from the mixer so it can be tested without one: everything that can go wrong here —
- * a head before the block, a looping clip, a speed — is arithmetic.
- */
+/** Where inside a clip the head stands, in the seconds three counts in. */
 export function clipTimeAt(ref: ClipRef, length: number, playhead: Us): number {
-  // `offset` shifts where the block bites into the clip: a walk cut to start mid-stride begins
-  // at its own first frame on the band and a third of the way through the clip.
+  // `offset` shifts where the block BITES into the clip: a walk cut to start mid-stride begins at
+  // its own first frame on the band and a third of the way through the clip.
   const into = usToSeconds(Math.max(0, playhead - ref.start)) * ref.speed + ref.offset
   if (length <= 0) return 0
 

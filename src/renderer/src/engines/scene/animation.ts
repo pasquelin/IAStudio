@@ -17,17 +17,20 @@ export function clipNamesOf(source: Object3D): string[] {
 
 /** How long each clip runs, by name — what a block on the band needs to be drawn its own width. */
 export function clipLengthsOf(source: Object3D): Record<string, number> {
+  return lengthsOf(clipsOf(source))
+}
+
+/** One place decides the shape of this record: the band and the mixer must read the same one. */
+function lengthsOf(clips: readonly AnimationClip[]): Record<string, number> {
   const lengths: Record<string, number> = {}
-  for (const clip of clipsOf(source)) lengths[clip.name] = clip.duration
+  for (const clip of clips) lengths[clip.name] = clip.duration
   return lengths
 }
 
 /**
- * Which block runs on real time rather than on the head, when the inspector asked for one.
- *
- * Session state, and that is why it is a pair rather than a flag on the block: playing a clip to
- * look at it is not an edit of the document, and one on a block would put an undo entry behind a
- * play button — which `setPlayhead` refuses by name for the very same reason.
+ * Which block runs on real time rather than on the head, when the inspector asked for one. A pair
+ * rather than a flag on the block: watching a clip is not an edit, and a flag would put an undo
+ * entry behind a play button — which `setPlayhead` refuses by name for the same reason.
  */
 export type SelfPlay = { nodeId: string; clipId: string }
 
@@ -71,21 +74,17 @@ export class SceneAnimations {
   private selfPlay: SelfPlay | null = null
 
   /**
-   * Binds a node to the instance the file produced. The clips come from the cached source rather
-   * than the clone: `Object3D.copy` does not carry them, and a clip addresses its targets by
-   * name, so the source's clips drive any instance built from it.
+   * Binds a node to the instance the file produced. The clips come from the cached SOURCE rather
+   * than the clone: `Object3D.copy` does not carry them, and a clip addresses its targets by name.
    */
   add(nodeId: string, root: Object3D, clips: AnimationClip[]): void {
     if (clips.length === 0) return
 
     this.remove(nodeId)
-    const lengths: Record<string, number> = {}
-    for (const clip of clips) lengths[clip.name] = clip.duration
-
     this.players.set(nodeId, {
       mixer: new AnimationMixer(root),
       clips,
-      lengths,
+      lengths: lengthsOf(clips),
       bones: skeletonBonesOf(root),
       bound: new Map(),
     })
@@ -116,10 +115,9 @@ export class SceneAnimations {
   }
 
   /**
-   * What the band drives, which is what an `auto` block yields to.
-   *
-   * Held here rather than passed at each call: keying a trajectory changes no model node at all,
-   * so nothing else would tell these blocks to stop travelling on their own.
+   * What the band drives, which is what an `auto` block yields to. Held here rather than passed
+   * at each call: keying a trajectory changes no model node, so nothing else would tell these
+   * blocks to stop travelling on their own.
    */
   setTimeline(timeline: AnimationTimeline): void {
     if (timeline === this.timeline) return
@@ -139,9 +137,8 @@ export class SceneAnimations {
   }
 
   /**
-   * Makes a node play the blocks the document holds. An empty list puts the model back to its
-   * rest pose: with no action left driving them, three restores the values the file was loaded
-   * with.
+   * Makes a node play the blocks the document holds. An empty list puts the model back to its rest
+   * pose: with no action driving them, three restores the values the file was loaded with.
    */
   apply(nodeId: string, refs: readonly ClipRef[]): void {
     const player = this.players.get(nodeId)
@@ -182,11 +179,9 @@ export class SceneAnimations {
   }
 
   /**
-   * Advances the one block a play button is holding, and answers whether anything moved — which
-   * is what keeps the viewport's frame loop awake, and lets it fall asleep when nothing does.
-   *
-   * Everything else stands wherever the head put it: a mixer running against the wall clock is
-   * what made two monitors of one scene show two different frames of the same instant.
+   * Advances the one block a play button holds, and answers whether anything moved — what keeps
+   * the frame loop awake. Everything else stands where the head put it: a mixer on the wall clock
+   * is what made two monitors of one scene show two different frames of the same instant.
    */
   update(delta: number): boolean {
     const running = this.selfPlay
@@ -201,12 +196,9 @@ export class SceneAnimations {
   }
 
   /**
-   * Puts every block where the scene's HEAD says, rather than where real time left it.
-   *
-   * This is what makes a clip a block on the band: outside its own span a block holds its edge
-   * pose, and a render — which never advances real time at all — walks the clip frame by frame
-   * instead of writing the same pose a thousand times. A film of a walking character came out
-   * frozen for exactly that reason.
+   * Puts every block where the scene's HEAD says, rather than where real time left it. A render
+   * never advances real time at all: without this it writes the same pose a thousand times, and
+   * a film of a walking character came out frozen for exactly that reason.
    */
   seek(playhead: Us): void {
     this.playhead = playhead

@@ -1,8 +1,6 @@
 /**
  * Whether a clip carries its character across the floor, and what to do when the band already does.
- *
- * Pure, like `rigState.ts`: everything here is the shape of a track list, so it is read without a
- * GPU and without a mixer.
+ * Pure, like `rigState.ts`: all of it is the shape of a track list, read without a GPU or a mixer.
  */
 import { AnimationClip, PropertyBinding } from 'three'
 import type { AnimationTimeline } from '@shared/domain/animation'
@@ -10,12 +8,9 @@ import type { RootMotion } from '@shared/domain/scene'
 import type { SkeletonBone } from './rigState'
 
 /**
- * The track that carries a clip's travel: the position channel of the bone nearest the top of
- * the rig that holds one.
- *
- * Nearest the top rather than the root itself, because the two are often not the same bone — a
- * Tripo rig holds a static `Root` above the `Hip` that actually moves, and reading only the root
- * would find a track that never changes and neutralise nothing.
+ * The track that carries a clip's travel: the position channel of the bone NEAREST THE TOP of the
+ * rig that holds one — never the root itself, since a Tripo rig holds a static `Root` above the
+ * `Hip` that moves, and reading the root would neutralise a track that never changes.
  */
 export function rootTrackOf(clip: AnimationClip, bones: readonly SkeletonBone[]): string | null {
   const depths = depthsOf(bones)
@@ -42,8 +37,9 @@ function depthsOf(bones: readonly SkeletonBone[]): Map<string, number> {
   for (const bone of bones) {
     let depth = 0
     let above = bone.parent
-    // Bounded by the rig itself: `skeletonBonesOf` reads parents off a tree, so there is no cycle.
-    while (above) {
+    // Bounded rather than trusted: a rig read off a tree cannot loop, but one edited in a document
+    // can, and a hung walk here would freeze the window rather than draw a wrong pose.
+    while (above && depth <= bones.length) {
       depth += 1
       above = parents.get(above) ?? null
     }
@@ -54,11 +50,9 @@ function depthsOf(bones: readonly SkeletonBone[]): Map<string, number> {
 }
 
 /**
- * Whether the node itself is driven along the band, which is what `auto` yields to.
- *
- * Two keys at least: one key holds a constant offset rather than a trajectory. A muted track
- * still counts — muting a trajectory is meant to stop the node moving, not to hand the travel
- * back to the clip and have the character walk off on its own.
+ * Whether the node itself is driven along the band, which is what `auto` yields to. Two keys at
+ * least — one holds an offset, not a trajectory. A MUTED track counts: muting a trajectory stops
+ * the node, it does not hand the travel back to the clip and send the character off on its own.
  */
 export function nodeTravelsOnBand(timeline: AnimationTimeline, nodeId: string): boolean {
   return timeline.tracks.some(
@@ -71,11 +65,9 @@ export function nodeTravelsOnBand(timeline: AnimationTimeline, nodeId: string): 
 }
 
 /**
- * Whether a block's own travel is used.
- *
- * `auto` is what stops the double displacement, and it is the central case of the whole feature:
- * a walk cycle played along a trajectory from A to B must walk ON THE SPOT, or the character
- * covers the ground twice and arrives past B.
+ * Whether a block's own travel is used. `auto` is what stops the double displacement: a walk
+ * played along a trajectory from A to B must walk ON THE SPOT, or the character covers the ground
+ * twice and arrives past B.
  */
 export function travelsWith(motion: RootMotion, onBand: boolean): boolean {
   if (motion === 'inPlace') return false
@@ -85,12 +77,9 @@ export function travelsWith(motion: RootMotion, onBand: boolean): boolean {
 }
 
 /**
- * The clip one block plays: a COPY of the file's, without its travel when the block stays in place.
- *
- * A copy in both cases, and for two reasons that meet here. The file's clip is shared by every
- * instance built from it, so stripping it in place would take the travel from every other node
- * playing it; and a mixer keys its actions by clip, so two blocks of the same clip need two
- * clips or they would share one head and one weight.
+ * The clip one block plays: a COPY of the file's, without its travel when the block stays in
+ * place. A copy in both cases — the file's clip is shared by every instance built from it, and a
+ * mixer keys its actions by clip, so two blocks of one clip would share a head and a weight.
  */
 export function blockClip(
   clip: AnimationClip,
