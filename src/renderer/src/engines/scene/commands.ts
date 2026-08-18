@@ -3,7 +3,7 @@ import type { Rig } from '@shared/domain/rig'
 import {
   isVector3,
   type CameraDescriptor,
-  type ClipRef,
+  type ClipLane,
   type EnvironmentRef,
   type GeometryDescriptor,
   type LightDescriptor,
@@ -408,18 +408,21 @@ export function setSprite(id: string, sprite: SpriteDescriptor): Command<SceneSt
 }
 
 /**
- * What an imported model plays, in the order the band draws it. An empty list puts it back to its
- * rest pose.
+ * What an imported model plays: one lane per layer, and the blocks inside each. No lane at all
+ * puts it back to its rest pose.
  *
- * The whole list is written rather than one block patched, for the reason `setModelTextures`
- * states: what the inspector holds IS the list, and a partial write would leave the revert unable
- * to say which blocks it was answering for.
+ * The whole set is written rather than one lane patched, for the reason `setModelTextures` states:
+ * what the band holds IS the set, and a partial write would leave the revert unable to say which
+ * lanes it was answering for.
  */
-export function setModelClips(id: string, clips: readonly ClipRef[]): Command<SceneState> {
+export function setModelLanes(id: string, lanes: readonly ClipLane[]): Command<SceneState> {
   return editModel(id, 'clips', model => {
     const rest = { ...model }
-    delete rest.clips
-    return clips.length > 0 ? { ...rest, clips } : rest
+    delete rest.lanes
+    // A single empty lane is exactly what the band shows a model that has never played anything,
+    // so writing one says nothing the default does not — and a rest pose stays a document that
+    // holds no animation at all.
+    return lanes.length > 1 || lanes.some(lane => lane.clips.length > 0) ? { ...rest, lanes } : rest
   })
 }
 

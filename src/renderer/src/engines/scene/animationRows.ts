@@ -48,22 +48,23 @@ export type ChannelRow = {
 }
 
 /**
- * A clip a model brought, as a block on the band — Blender's NLA rather than its dope sheet.
+ * One lane of a subject's track, and the blocks laid along it — Blender's NLA rather than its
+ * dope sheet.
  *
- * It has a LENGTH, unlike a key, which is why it is a row of its own rather than a channel: what
- * it draws is a bar one drags, not a diamond.
+ * A lane holds SEVERAL blocks, each with a length, which is why it is a row of its own rather
+ * than a channel: what it draws is bars one drags, not diamonds. Lanes stack, and two of them
+ * play at once.
  */
-export type ClipRow = {
-  kind: 'clip'
+export type LaneRow = {
+  kind: 'lane'
   id: string
   name: string
   height: number
   nodeId: string
-  /** Which of the model's blocks this line draws — a node may hold several. */
-  clipId: string
-  start: Us
-  /** How long the block runs on the band, at the speed it plays. */
-  duration: Us
+  laneId: string
+  /** The last lane of its object offers to add one after it, and it alone: adding is one action. */
+  last: boolean
+  blocks: readonly ClipBlock[]
 }
 
 /** One shot on the band, with the name of the camera it puts on air. */
@@ -72,10 +73,7 @@ export type ShotBar = {
   name: string
 }
 
-export type AnimationRow = SubjectRow | ChannelRow | ClipRow
-
-/** A block is a bar hung under its subject, so it wants the room a bar reads in and no more. */
-export const CLIP_HEIGHT = 24
+export type AnimationRow = SubjectRow | ChannelRow | LaneRow
 
 /**
  * Row heights, in pixels, and they are DERIVED from what the header column must hold rather
@@ -115,11 +113,19 @@ export function mergedKeys(tracks: readonly AnimationTrack[]): Us[] {
 
 /** A model playing a clip, as the document holds it and the engine measured it. */
 export type ClipBlock = {
-  nodeId: string
   clipId: string
   name: string
   start: Us
+  /** How long the block runs on the band, at the speed it plays. */
   duration: Us
+}
+
+/** One lane of one model, as the panel hands it over: the document's layering, measured. */
+export type SheetLane = {
+  nodeId: string
+  laneId: string
+  name: string
+  blocks: readonly ClipBlock[]
 }
 
 /** An object of the scene, as the sheet needs to name a line for it. */
@@ -163,10 +169,10 @@ export type RowsOptions = {
   /** Which subjects are unfolded. Absent from the set means folded, so a new one arrives folded. */
   expanded: ReadonlySet<string>
   /**
-   * The clips on stage. They come from the ENGINE, not the timeline: a clip's length lives in the
-   * GLB, so nothing that reads only the document can know how long a block runs.
+   * The lanes on stage. Their blocks come from the ENGINE, not the timeline: a clip's length
+   * lives in the GLB, so nothing that reads only the document can know how long a block runs.
    */
-  clips?: readonly ClipBlock[]
+  lanes?: readonly SheetLane[]
   /** How the user has arranged the lines. Empty leaves the scene's own order — see `orderedSubjects`. */
   order?: readonly string[]
 }
@@ -191,7 +197,14 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
 
   const named = new Map(options.nodes.map(node => [node.id, node.name]))
 
-  /** One line and its channels, appended in place — the shape a subject reads in, wherever it stands. */
+  const lanesOfNode = new Map<string, SheetLane[]>()
+  for (const lane of options.lanes ?? []) {
+    const found = lanesOfNode.get(lane.nodeId)
+    if (found) found.push(lane)
+    else lanesOfNode.set(lane.nodeId, [lane])
+  }
+
+  /** One line, its channels and its lanes, appended in place — wherever the subject stands. */
   const push = (key: string, bars?: readonly ShotBar[]): void => {
     const tracks = grouped.get(key) ?? []
     const bone = tracks[0]?.target.bone
@@ -221,6 +234,23 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
         track,
       })
     }
+
+    // The lanes of the object come under its channels, INSIDE the same unfolded track: what a
+    // subject moves and what it plays belong to one thing, and a run of lanes at the foot of the
+    // sheet said the opposite. A bone subject has none — a lane plays a whole rig at once.
+    const lanes = lanesOfNode.get(key) ?? []
+    for (const [rank, lane] of lanes.entries()) {
+      rows.push({
+        kind: 'lane',
+        id: laneKey(lane.nodeId, lane.laneId),
+        name: lane.name,
+        height: CHANNEL_HEIGHT,
+        nodeId: lane.nodeId,
+        laneId: lane.laneId,
+        last: rank === lanes.length - 1,
+        blocks: lane.blocks,
+      })
+    }
   }
 
   // A shot whose camera the scene has lost is left out, as `activeShotAt` leaves it out of the
@@ -240,21 +270,6 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
 
   for (const key of orderedSubjects(natural, options.order ?? [])) push(key)
 
-  // Clips come after the keyed subjects, in one run: a block is a different kind of thing from a
-  // key, and interleaving the two would make the sheet read as though a clip had channels.
-  for (const clip of options.clips ?? []) {
-    rows.push({
-      kind: 'clip',
-      id: `clip:${clip.nodeId}:${clip.clipId}`,
-      name: clip.name,
-      height: CLIP_HEIGHT,
-      nodeId: clip.nodeId,
-      clipId: clip.clipId,
-      start: clip.start,
-      duration: clip.duration,
-    })
-  }
-
   return rows
 }
 
@@ -268,10 +283,15 @@ function barsOf(
   return timeline.shots.flatMap(shot => (shot.cameraId === cameraId ? { shot, name } : []))
 }
 
+/** How a lane row is named, and what a hit test hands back — one spelling for both. */
+export function laneKey(nodeId: string, laneId: string): string {
+  return `lane:${nodeId}:${laneId}`
+}
+
 /** The row a click lands on, folded or not, so a caller never walks the list a second time. */
 export function trackIdsOf(row: AnimationRow): string[] {
   if (row.kind === 'subject') return row.tracks.map(track => track.id)
   if (row.kind === 'channel') return [row.track.id]
-  // A block drives no channel: it plays a clip the file brought.
+  // A lane drives no channel: it plays clips the file brought.
   return []
 }

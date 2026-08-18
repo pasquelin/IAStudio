@@ -229,6 +229,10 @@
     "rowList": "Lignes de l’animation",
     "addShot": "Mettre cette caméra à l’antenne",
     "addShotHint": "Ouvre un plan pour la caméra choisie, à partir de la tête",
-    "addShotNeedsCamera": "Choisissez une caméra de la scène pour lui ouvrir un plan"
+    "addShotNeedsCamera": "Choisissez une caméra de la scène pour lui ouvrir un plan",
+    "lane": "Anim. {{index}}",
+    "addLane": "Ajouter une sous-piste",
+    "addLaneHint": "Une animation de plus, jouée en même temps que celles du dessus",
+    "removeLane": "Supprimer la sous-piste {{name}}"
   }
 }

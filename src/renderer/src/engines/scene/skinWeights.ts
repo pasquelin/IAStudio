@@ -73,20 +73,38 @@ export function createSkinWeights(spawn: () => Worker): SkinWeights {
         // Posted before it is recorded, so a payload the structured clone cannot carry throws
         // with no slot left behind — `bvhInflight` says why this order is safe.
         running.postMessage(request, [request.position.buffer, request.segments.buffer])
-        waiting.set(id, { resolve, reject, onProgress: watch?.onProgress })
 
         const give = (): void => {
           if (!waiting.delete(id)) return
+          watch?.signal?.removeEventListener('abort', give)
           running.postMessage({ id, cancel: true })
           resolve(null)
         }
 
-        watch?.signal?.addEventListener('abort', give)
+        // Wrapped rather than dropped at each exit: a request leaves the register by four paths,
+        // and one that forgot its listener would leak with nothing to say so.
+        const settled =
+          <T>(hand: (value: T) => void) =>
+          (value: T): void => {
+            watch?.signal?.removeEventListener('abort', give)
+            hand(value)
+          }
 
-        // An `abort` already fired has already been delivered, so the listener above never runs:
-        // without this the worker walks every vertex against every bone for a caller that gave
-        // up before it asked, and answers it weights it will apply.
-        if (watch?.signal?.aborted) give()
+        waiting.set(id, {
+          resolve: settled(resolve),
+          reject: settled(reject),
+          onProgress: watch?.onProgress,
+        })
+
+        // Abandoned before it was even asked: an `abort` already delivered never calls the
+        // listener below, which would outlive the request on a signal one caller keeps for a
+        // whole model. A port contract — `scene-models.test.ts` measures why nothing reaches it.
+        if (watch?.signal?.aborted) {
+          give()
+          return
+        }
+
+        watch?.signal?.addEventListener('abort', give)
       }),
 
     dispose: () => {

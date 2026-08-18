@@ -1,6 +1,6 @@
 import { AnimationMixer, LoopOnce, LoopRepeat, type AnimationClip, type Object3D } from 'three'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
-import type { ClipRef } from '@shared/domain/scene'
+import type { ClipLane, ClipRef } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import { clipBlendAt, type ClipWeight } from './clipBlend'
 import { skeletonBonesOf } from './rigState'
@@ -47,6 +47,8 @@ type Player = {
   lengths: Record<string, number>
   /** The travel channel of each clip, worked out once — it depends on the file and the rig alone. */
   rootTracks: Map<string, string | null>
+  /** The layering as the document holds it. `bound` alone would lose which lane a block lies in. */
+  lanes: readonly ClipLane[]
   /** One entry per block the document holds, keyed by block id. */
   bound: Map<string, Bound>
 }
@@ -91,6 +93,7 @@ export class SceneAnimations {
       clips: byName,
       lengths: lengthsOf([...byName.values()]),
       rootTracks,
+      lanes: [],
       bound: new Map(),
     })
   }
@@ -128,21 +131,23 @@ export class SceneAnimations {
     if (timeline === this.timeline) return
 
     this.timeline = timeline
-    for (const [nodeId, player] of this.players) this.apply(nodeId, refsOf(player))
+    for (const [nodeId, player] of this.players) this.apply(nodeId, player.lanes)
   }
 
   /**
-   * Makes a node play the blocks the document holds. An empty list puts the model back to its rest
-   * pose: with no action driving them, three restores the values the file was loaded with.
+   * Makes a node play the blocks the document holds, lane by lane. No lane at all puts the model
+   * back to its rest pose: with no action driving them, three restores the values the file was
+   * loaded with.
    */
-  apply(nodeId: string, refs: readonly ClipRef[]): void {
+  apply(nodeId: string, lanes: readonly ClipLane[]): void {
     const player = this.players.get(nodeId)
     if (!player) return
 
+    player.lanes = lanes
     const onBand = nodeTravelsOnBand(this.timeline, nodeId)
     const kept = new Set<string>()
 
-    for (const ref of refs) {
+    for (const ref of lanes.flatMap(lane => lane.clips)) {
       const source = player.clips.get(ref.source.name)
       // A block naming a clip the file no longer spells plays nothing, rather than costing the
       // whole model its animation.
@@ -189,10 +194,9 @@ export class SceneAnimations {
 
   private place(player: Player): void {
     const sounding = new Map<string, ClipWeight>()
-    for (const heard of clipBlendAt(refsOf(player), player.lengths, this.playhead)) {
+    for (const heard of clipBlendAt(player.lanes, player.lengths, this.playhead)) {
       sounding.set(heard.clipId, heard)
     }
-
     for (const [id, held] of player.bound) {
       const action = player.mixer.clipAction(held.clip)
       action.loop = held.ref.loop ? LoopRepeat : LoopOnce
@@ -210,8 +214,4 @@ export class SceneAnimations {
     // A pose has to show without waiting for a frame, and nothing here ever gets one.
     player.mixer.update(0)
   }
-}
-
-function refsOf(player: Player): ClipRef[] {
-  return [...player.bound.values()].map(held => held.ref)
 }

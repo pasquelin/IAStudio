@@ -9,6 +9,7 @@ import {
   mergedKeys,
   subjectKey,
   trackIdsOf,
+  type SheetLane,
 } from './animationRows'
 
 const CUBE = [{ id: 'cube', name: 'Circle' }]
@@ -133,7 +134,7 @@ describe('laying out the sheet', () => {
 
   it('names the object plainly, not with the composed name its tracks carry', () => {
     const rows = rowsOf([animationTrack('a', 'position', [], { name: 'Circle · Position' })])
-    expect(rows[0]).toMatchObject({ name: 'Circle' })
+    expect(rows[0]?.kind === 'subject' && rows[0].name).toBe('Circle')
   })
 
   it('folds the channels away until the subject is unfolded', () => {
@@ -171,7 +172,7 @@ describe('laying out the sheet', () => {
     ])
 
     expect(rows).toHaveLength(2)
-    expect(rows[1]).toMatchObject({ name: 'Circle · Hips' })
+    expect(rows[1]?.kind === 'subject' && rows[1].name).toBe('Circle · Hips')
   })
 
   it('keeps the objects in the order the scene holds them, so rows never jump', () => {
@@ -211,6 +212,72 @@ describe('arranging the lines', () => {
   // under the neighbours it already has.
   it('puts an object the arrangement never saw back beside its neighbours', () => {
     expect(arranged(['c', 'b'])).toEqual(['a', 'c', 'b'])
+  })
+})
+
+describe('the lanes of an object', () => {
+  const block = (clipId: string, start = 0) => ({
+    clipId,
+    name: clipId,
+    start,
+    duration: 2 * SECOND,
+  })
+
+  const sheetLane = (laneId: string, blocks: SheetLane['blocks'] = []): SheetLane => ({
+    nodeId: 'cube',
+    laneId,
+    name: laneId,
+    blocks,
+  })
+
+  const withLanes = (lanes: SheetLane[], expanded: string[] = ['cube']) =>
+    animationRows(timelineWith([]), { nodes: CUBE, expanded: new Set(expanded), lanes })
+
+  it('stays folded inside the track of its object, never at the foot of the sheet', () => {
+    const rows = withLanes([sheetLane('main', [block('walk')])], [])
+
+    expect(rows.map(row => row.kind)).toEqual(['subject'])
+  })
+
+  it('comes under the channels of its object once the track is unfolded', () => {
+    const rows = withLanes([sheetLane('main', [block('walk')])])
+
+    expect(rows.map(row => row.kind)).toEqual(['subject', 'lane'])
+    expect(rows[1]).toMatchObject({ nodeId: 'cube', laneId: 'main' })
+  })
+
+  it('holds every block of the lane on one line, which is what laying them end to end is', () => {
+    const rows = withLanes([sheetLane('main', [block('walk'), block('run', 4 * SECOND)])])
+
+    expect(rows).toHaveLength(2)
+    expect(rows[1]?.kind === 'lane' && rows[1].blocks.map(one => one.clipId)).toEqual([
+      'walk',
+      'run',
+    ])
+  })
+
+  it('stacks the lanes of one object in the order the document holds them', () => {
+    const rows = withLanes([sheetLane('first'), sheetLane('second')])
+
+    expect(rows.map(row => row.kind === 'lane' && row.laneId)).toEqual([false, 'first', 'second'])
+  })
+
+  // A lane plays a whole rig at once, so it belongs to the object and never to one of its bones.
+  it('gives no lane to a bone subject', () => {
+    const rows = animationRows(
+      timelineWith([
+        animationTrack('a', 'rotation', [], {
+          target: { nodeId: 'cube', bone: 'Hips', property: 'rotation' },
+        }),
+      ]),
+      {
+        nodes: CUBE,
+        expanded: new Set(['cube', 'cube/Hips']),
+        lanes: [sheetLane('main')],
+      },
+    )
+
+    expect(rows.filter(row => row.kind === 'lane')).toHaveLength(1)
   })
 })
 

@@ -300,7 +300,7 @@ Canaux, les liste tous.
 **Double-cliquez un style** — ou pressez Entrée dessus — pour l’appliquer à la matière ouverte.
 C’est une seule annulation : `⌘Z` remet exactement ce qui était réglé avant.
 
-**Clic droit → Renommer**, comme dans un IDE. Le nom s’édite là où il se lit. Clic droit →
+**Clic droit ▸ Renommer**, comme dans un IDE. Le nom s’édite là où il se lit. Clic droit ▸
 Supprimer retire le style.
 
 ### Ce qu’un style emporte, et ce qu’il n’emporte pas
@@ -337,7 +337,7 @@ puce sur l’onglet dit ce qui attend encore d’être écrit.
 
 ## Exporter la matière
 
-Menu **Fichier → Exporter la matière**, puis la ligne du moteur qui va la recevoir. Le menu
+Menu **Fichier ▸ Exporter la matière**, puis la ligne du moteur qui va la recevoir. Le menu
 n'apparaît que dans l'espace Textures, et il s'adresse à **l'onglet au premier plan** : deux
 matières ouvertes ne répondent pas ensemble au même clic.
 

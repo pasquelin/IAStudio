@@ -93,6 +93,30 @@ describe('rate limiter', () => {
     expect(waited).toEqual([1000])
   })
 
+  /**
+   * The refusal `wait` still owes. Every caller abandoned BEFORE asking is now turned away by
+   * `acquire`, so a signal that dies once the window is being waited out is the only one left
+   * that reaches the check inside the loop — and that check is what keeps it off the free slot.
+   */
+  it('spends no slot on a caller that gave up while it waited for one', async () => {
+    const { deps, waited } = clock()
+    const giving = new AbortController()
+    const limiter = createRateLimiter({
+      ...deps,
+      limit: 1,
+      windowMs: 1000,
+      onSaturated: () => giving.abort(),
+    })
+
+    await limiter.acquire()
+    await expect(limiter.acquire(giving.signal)).rejects.toThrow()
+    await fill(limiter, 1)
+
+    // One window waited, by the abandoned caller. Had it taken the slot its wait freed, the one
+    // behind it would have had to wait a second.
+    expect(waited).toEqual([1000])
+  })
+
   // One refusal used to leave the chain rejected, and every later caller waited on it for ever.
   it('serves the callers behind an abandoned one', async () => {
     const { deps } = clock()
@@ -114,8 +138,14 @@ describe('rate limiter', () => {
    */
   it('lets go of a caller that gives up while still queued, without waiting for its turn', async () => {
     const { deps } = clock()
-    // A delay that never resolves: the caller ahead holds the chain for the whole test.
-    const limiter = createRateLimiter({ ...deps, limit: 1, delay: () => new Promise(() => {}) })
+    // A delay that never resolves, and a window short enough to be waited on rather than
+    // refused outright: without both, the caller ahead lets go and the queue drains at once.
+    const limiter = createRateLimiter({
+      ...deps,
+      limit: 1,
+      windowMs: 1000,
+      delay: () => new Promise(() => {}),
+    })
     const giving = new AbortController()
 
     await limiter.acquire()
@@ -124,6 +154,25 @@ describe('rate limiter', () => {
     giving.abort()
 
     await expect(queued).rejects.toThrow()
+  })
+
+  // The same caller, one step earlier: an `abort` already delivered calls no listener, so the
+  // one above cannot catch it and the queue is what the caller would have waited on.
+  it('lets go of a caller that had already given up before it asked', async () => {
+    const { deps } = clock()
+    const limiter = createRateLimiter({
+      ...deps,
+      limit: 1,
+      windowMs: 1000,
+      delay: () => new Promise(() => {}),
+    })
+    const abandoned = new AbortController()
+    abandoned.abort()
+
+    await limiter.acquire()
+    void limiter.acquire()
+
+    await expect(limiter.acquire(abandoned.signal)).rejects.toThrow()
   })
 
   it('serves waiting callers in the order they asked', async () => {

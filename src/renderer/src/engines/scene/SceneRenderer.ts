@@ -1682,7 +1682,7 @@ export class SceneRenderer {
     // The clips of a model that is already on stage. Skipped for one still loading: `buildModel`
     // binds what the file brought the moment it lands, and applies this reference there.
     if (node.type === 'model' && this.animations.has(node.id)) {
-      this.animations.apply(node.id, node.model.clips ?? [])
+      this.animations.apply(node.id, node.model.lanes ?? [])
       this.viewport.requestRender()
     }
 
@@ -1898,7 +1898,7 @@ export class SceneRenderer {
       // carry them, and a clip addresses its targets by name — so the source's drive any
       // instance built from it.
       this.animations.add(node.id, holder, clipsOf(source))
-      if (applied.type === 'model') this.animations.apply(node.id, applied.model.clips ?? [])
+      if (applied.type === 'model') this.animations.apply(node.id, applied.model.lanes ?? [])
       this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
 
       // The document's own rig, put back on. Its weights are NOT saved with it — they are derived

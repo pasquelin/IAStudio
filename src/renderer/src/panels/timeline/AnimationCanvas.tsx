@@ -14,14 +14,28 @@ import {
   unkeySubject,
 } from '@/engines/scene/animationCommands'
 import { draggedShot } from '@/engines/scene/cameraShots'
-import { multi, setModelClips } from '@/engines/scene/commands'
+import type { ClipRef } from '@shared/domain/scene'
+import { multi, setModelLanes } from '@/engines/scene/commands'
+import { clipsMoved, clipsTrimmed, lanesWith } from '@/engines/scene/clipBlend'
+import { useModelClips } from '@/stores/modelClips'
 import type { Command } from '@/engines/core/history'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { clampPlayhead } from '@/engines/scene/animationEval'
-import { hitAnimation, type AnimationHit } from '@/engines/scene/animationHit'
+import {
+  animationCursorAt,
+  hitAnimation,
+  type AnimationHit,
+  type HitContext,
+} from '@/engines/scene/animationHit'
+import type { Point } from '@/engines/core/geometry'
 import { paintAnimation, keyId, keyParts } from '@/engines/scene/animationPainter'
 import { rowsHeight, maxOffsetFor, maxScrollTopFor } from '@/engines/timeline/band'
-import { RULER_HEIGHT, xToTime, type Viewport } from '@/engines/timeline/timelineGeometry'
+import {
+  RULER_HEIGHT,
+  xToTime,
+  type ClipEdge,
+  type Viewport,
+} from '@/engines/timeline/timelineGeometry'
 import { clampScale } from '@/engines/timeline/viewport'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
@@ -38,21 +52,52 @@ export type AnimationCanvasProps = {
   rows: readonly AnimationRow[]
 }
 
+/** Which block of which lane a gesture is editing. */
+type BlockRef = { nodeId: string; laneId: string; clipId: string }
+
+function blockRefOf(hit: { nodeId: string; laneId: string; clipId: string }): BlockRef {
+  return { nodeId: hit.nodeId, laneId: hit.laneId, clipId: hit.clipId }
+}
+
 /** What a press took hold of, so the move and the release know what they are continuing. */
 type Grab =
   | { kind: 'scrub' }
   | { kind: 'key'; rowId: string; trackIds: readonly string[]; from: Us; at: Us }
-  | { kind: 'block'; nodeId: string; clipId: string; grabbedAt: Us }
+  | ({ kind: 'block'; grabbedAt: Us } & BlockRef)
+  | ({ kind: 'blockEdge'; edge: ClipEdge } & BlockRef)
   | { kind: 'shot'; shotId: string; edge: 'start' | 'end' | null; grabbedAt: Us }
 
-/** Slides one clip block along the band, keeping what it plays and leaving its neighbours put. */
-function moveBlock(documentId: string, nodeId: string, clipId: string, start: Us): void {
+/**
+ * Rewrites one lane of one model, and banks nothing when the edit is refused: `runCommand` takes
+ * whatever it is handed, so a drag that changes nothing would still cost an entry in the history.
+ */
+function editLane(
+  documentId: string,
+  where: BlockRef,
+  change: (clips: readonly ClipRef[]) => readonly ClipRef[] | null,
+): void {
   const store = useScenes.getState()
-  const node = sceneOf(store, documentId).nodes.find(candidate => candidate.id === nodeId)
-  if (node?.type !== 'model' || !node.model.clips) return
+  const node = sceneOf(store, documentId).nodes.find(candidate => candidate.id === where.nodeId)
+  if (node?.type !== 'model' || !node.model.lanes) return
 
-  const moved = node.model.clips.map(clip => (clip.id === clipId ? { ...clip, start } : clip))
-  store.runCommand(documentId, setModelClips(nodeId, moved))
+  const lanes = lanesWith(node.model.lanes, where.laneId, change)
+  if (lanes) store.runCommand(documentId, setModelLanes(where.nodeId, lanes))
+}
+
+/** How long the clip a block plays runs in the file, which is what a trim is measured against. */
+function clipLengthOf(documentId: string, where: BlockRef): number | null {
+  const node = sceneOf(useScenes.getState(), documentId).nodes.find(
+    candidate => candidate.id === where.nodeId,
+  )
+  if (node?.type !== 'model') return null
+
+  const clip = node.model.lanes
+    ?.find(lane => lane.id === where.laneId)
+    ?.clips.find(candidate => candidate.id === where.clipId)
+
+  return clip
+    ? (useModelClips.getState().lengths[documentId]?.[where.nodeId]?.[clip.source.name] ?? null)
+    : null
 }
 
 /**
@@ -82,6 +127,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     timeline,
     playhead,
     selected,
+    picked: view.pickedBlock,
   }
 
   const latest = useRef(snapshot)
@@ -101,6 +147,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
           duration: current.timeline.duration,
           playhead: current.playhead,
           selected: current.selected,
+          picked: current.picked,
         },
         box,
       )
@@ -179,14 +226,18 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     useAnimationViews.getState().setSelected(documentId, [])
   }
 
-  const hitAt = (event: PointerEvent<HTMLCanvasElement>): AnimationHit | null => {
-    const bounds = event.currentTarget.getBoundingClientRect()
+  const hitContext = (): HitContext => {
     const current = latest.current
-    return hitAnimation(
-      { rows: current.rows, viewport: current.viewport, fps: current.timeline.fps },
-      { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
-    )
+    return { rows: current.rows, viewport: current.viewport, fps: current.timeline.fps }
   }
+
+  const pointIn = (event: PointerEvent<HTMLCanvasElement>): Point => {
+    const bounds = event.currentTarget.getBoundingClientRect()
+    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
+  }
+
+  const hitAt = (event: PointerEvent<HTMLCanvasElement>): AnimationHit | null =>
+    hitAnimation(hitContext(), pointIn(event))
 
   const seek = (time: Us): void => {
     const { timeline: held } = latest.current
@@ -217,17 +268,15 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       return
     }
 
-    if (hit.kind === 'block') {
-      grabbed.current = {
-        kind: 'block',
-        nodeId: hit.nodeId,
-        clipId: hit.clipId,
-        grabbedAt: hit.grabbedAt,
-      }
+    if (hit.kind === 'block' || hit.kind === 'blockEdge') {
+      grabbed.current =
+        hit.kind === 'block'
+          ? { kind: 'block', ...blockRefOf(hit), grabbedAt: hit.grabbedAt }
+          : { kind: 'blockEdge', ...blockRefOf(hit), edge: hit.edge }
       // Opened here and closed on release: without it every pixel of the drag is its own entry
       // in the history, and `runCoalescing` only merges while a gesture is open.
       useScenes.getState().beginGesture(documentId)
-      useAnimationViews.getState().setSelected(documentId, [])
+      useAnimationViews.getState().setPickedBlock(documentId, hit.clipId)
       return
     }
 
@@ -260,24 +309,38 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     // What the pointer promises before it presses, as the montage does over a clip's edge: a
     // bar that can be trimmed and never says so is a bar nobody tries to trim.
     if (!grab) {
-      const hit = hitAt(event)
-      event.currentTarget.style.cursor = hit?.kind === 'shot' && hit.edge ? 'ew-resize' : ''
+      event.currentTarget.style.cursor = animationCursorAt(hitContext(), pointIn(event))
       return
     }
 
+    // A pointerup lost off the window would otherwise leave the gesture open, and every later
+    // edit of the same node would coalesce into it — one ⌘Z undoing two.
+    if (event.buttons === 0) return closeGesture(event)
+
     const bounds = event.currentTarget.getBoundingClientRect()
     const current = latest.current
-    const at = snapToFrame(
-      xToTime(event.clientX - bounds.left, current.viewport),
-      current.timeline.fps,
+    // Held inside the band the way the head is: dragged past the end, a block would sit where the
+    // head never goes and show a pose nothing can reach.
+    const at = clampPlayhead(
+      snapToFrame(xToTime(event.clientX - bounds.left, current.viewport), current.timeline.fps),
+      current.timeline.duration,
     )
 
     if (grab.kind === 'scrub') return seek(at)
 
+    // Written straight through rather than previewed: the block IS the preview, and the whole run
+    // collapses into one entry because a gesture was opened on the press.
     if (grab.kind === 'block') {
-      // Written straight through rather than previewed: the block IS the preview, and the whole
-      // run collapses into one entry because a gesture was opened on the press.
-      moveBlock(documentId, grab.nodeId, grab.clipId, Math.max(0, at - grab.grabbedAt))
+      editLane(documentId, grab, clips =>
+        clipsMoved(clips, grab.clipId, Math.max(0, at - grab.grabbedAt)),
+      )
+      return
+    }
+
+    if (grab.kind === 'blockEdge') {
+      editLane(documentId, grab, clips =>
+        clipsTrimmed(clips, grab.clipId, grab.edge, at, clipLengthOf(documentId, grab)),
+      )
       return
     }
 
@@ -296,14 +359,20 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     useAnimationViews.getState().setSelected(documentId, [keyId(grab.rowId, grab.at)])
   }
 
-  const onPointerUp = (event: PointerEvent<HTMLCanvasElement>): void => {
+  /**
+   * Closes whatever was open. Called from the release AND from a cancel — a gesture left open
+   * makes the next edit of the same node coalesce into it.
+   */
+  const closeGesture = (event: PointerEvent<HTMLCanvasElement>): void => {
     const grab = grabbed.current
     grabbed.current = null
     if (!grab) return
 
-    event.currentTarget.releasePointerCapture(event.pointerId)
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
 
-    if (grab.kind === 'block' || grab.kind === 'shot') {
+    if (grab.kind === 'block' || grab.kind === 'blockEdge' || grab.kind === 'shot') {
       useScenes.getState().endGesture(documentId)
       return
     }
@@ -331,7 +400,9 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       onPointerMove={onPointerMove}
       // Or a pointer that leaves mid-hover writes the resize cursor on the element for good.
       onPointerLeave={event => (event.currentTarget.style.cursor = '')}
-      onPointerUp={onPointerUp}
+      onPointerUp={closeGesture}
+      onPointerCancel={closeGesture}
+      onLostPointerCapture={closeGesture}
     />
   )
 }

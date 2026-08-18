@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { animationTrack, cameraShot, timelineWith } from '@/engines/scene/animation-fixtures'
 import {
@@ -8,11 +8,12 @@ import {
   setAnimationKey,
   setTimelineSettings,
 } from '@/engines/scene/animationCommands'
-import { animationRows, SUBJECT_HEIGHT } from '@/engines/scene/animationRows'
+import { animationRows, CHANNEL_HEIGHT, SUBJECT_HEIGHT } from '@/engines/scene/animationRows'
 import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
 import { cameraNodeFixture, meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
-import { useAnimationViews } from '@/stores/animationView'
+import { animationViewOf, useAnimationViews } from '@/stores/animationView'
+import { useModelClips } from '@/stores/modelClips'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
@@ -31,8 +32,8 @@ const canvas = () => screen.getByTestId('animation-canvas')
  * A pointer event on the canvas. jsdom lays nothing out, so the bounding box is all zeros and a
  * client coordinate IS the canvas coordinate — which is what makes the arithmetic readable here.
  */
-function press(element: Element, type: string, x: number, y: number): void {
-  const event = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y })
+function press(element: Element, type: string, x: number, y: number, buttons = 1): void {
+  const event = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, buttons })
   Object.defineProperty(event, 'pointerId', { value: 1 })
   element.dispatchEvent(event)
 }
@@ -41,17 +42,25 @@ const walkBlock: ClipRef = embeddedClip('c1', 'Walk', { start: 1 * SECOND })
 
 const modelWithClip = () => {
   const node = modelNodeFixture('perso')
-  return { ...node, model: { ...node.model, clips: [walkBlock] } }
+  return { ...node, model: { ...node.model, lanes: [clipLane('main', [walkBlock])] } }
 }
 
 const blockRows = () =>
   animationRows(timelineWith([]), {
-    nodes: [],
-    expanded: new Set(),
-    clips: [
-      { nodeId: 'perso', clipId: 'c1', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND },
+    nodes: [{ id: 'perso', name: 'Perso' }],
+    expanded: new Set(['perso']),
+    lanes: [
+      {
+        nodeId: 'perso',
+        laneId: 'main',
+        name: 'Animation 1',
+        blocks: [{ clipId: 'c1', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND }],
+      },
     ],
   })
+
+/** The vertical middle of the lane row, which sits under the object's own line. */
+const LANE_Y = RULER_HEIGHT + SUBJECT_HEIGHT + CHANNEL_HEIGHT / 2
 
 const keyRows = () =>
   animationRows(timelineWith([animationTrack('a', 'position', [key(1)])]), {
@@ -62,6 +71,9 @@ const keyRows = () =>
 describe('dragging a clip block', () => {
   beforeEach(() => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelWithClip()] })
+    // How long the clip runs in the file, which only the engine knows and a trim is measured
+    // against: without it a block has no width and every trim is refused.
+    useModelClips.getState().report(DOCUMENT, 'perso', ['Walk'], { Walk: 2 })
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({
       views: {
@@ -69,6 +81,7 @@ describe('dragging a clip block', () => {
           viewport: VIEWPORT,
           expanded: [],
           selected: [],
+          pickedBlock: null,
           autoKey: false,
           order: [],
         },
@@ -76,17 +89,19 @@ describe('dragging a clip block', () => {
     })
   })
 
-  const startOf = (): number => {
+  const blockOf = (): ClipRef | null => {
     const node = sceneOf(useScenes.getState(), DOCUMENT).nodes[0]
-    return node?.type === 'model' ? (node.model.clips?.[0]?.start ?? -1) : -1
+    return node?.type === 'model' ? (node.model.lanes?.[0]?.clips[0] ?? null) : null
   }
+
+  const startOf = (): number => blockOf()?.start ?? -1
 
   it('slides the block, keeping where inside it the pointer took hold', () => {
     render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
 
     // Grabbed half a second into a block that starts at one second, dropped at three.
-    press(canvas(), 'pointerdown', 150, 30)
-    press(canvas(), 'pointermove', 300, 30)
+    press(canvas(), 'pointerdown', 150, LANE_Y)
+    press(canvas(), 'pointermove', 300, LANE_Y)
 
     expect(startOf()).toBe(2.5 * SECOND)
   })
@@ -95,9 +110,9 @@ describe('dragging a clip block', () => {
     render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
     const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
 
-    press(canvas(), 'pointerdown', 150, 30)
-    for (const x of [200, 250, 300, 350, 400]) press(canvas(), 'pointermove', x, 30)
-    press(canvas(), 'pointerup', 400, 30)
+    press(canvas(), 'pointerdown', 150, LANE_Y)
+    for (const x of [200, 250, 300, 350, 400]) press(canvas(), 'pointermove', x, LANE_Y)
+    press(canvas(), 'pointerup', 400, LANE_Y)
 
     expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
   })
@@ -106,24 +121,75 @@ describe('dragging a clip block', () => {
     render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
     const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
 
-    press(canvas(), 'pointerdown', 150, 30)
-    press(canvas(), 'pointermove', 300, 30)
-    press(canvas(), 'pointerup', 300, 30)
+    press(canvas(), 'pointerdown', 150, LANE_Y)
+    press(canvas(), 'pointermove', 300, LANE_Y)
+    press(canvas(), 'pointerup', 300, LANE_Y)
 
-    press(canvas(), 'pointerdown', 300, 30)
-    press(canvas(), 'pointermove', 500, 30)
-    press(canvas(), 'pointerup', 500, 30)
+    press(canvas(), 'pointerdown', 300, LANE_Y)
+    press(canvas(), 'pointermove', 500, LANE_Y)
+    press(canvas(), 'pointerup', 500, LANE_Y)
 
     expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 2)
+  })
+
+  it('shows the block one presses as the chosen one, and drops the picked keys', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+    useAnimationViews.getState().setSelected(DOCUMENT, ['a@0'])
+
+    press(canvas(), 'pointerdown', 150, LANE_Y)
+
+    const view = animationViewOf(useAnimationViews.getState(), DOCUMENT)
+    expect(view.pickedBlock).toBe('c1')
+    expect(view.selected).toEqual([])
+  })
+
+  // Dragged past the end, a block would sit where the head never goes: the head is clamped to the
+  // duration, so its last frames could show a pose nothing can reach.
+  it('never slides a block past the end of the band', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    press(canvas(), 'pointerdown', 150, LANE_Y)
+    press(canvas(), 'pointermove', 9000, LANE_Y)
+
+    expect(startOf()).toBeLessThanOrEqual(5 * SECOND)
   })
 
   it('never slides a block before the start of the band', () => {
     render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
 
-    press(canvas(), 'pointerdown', 150, 30)
-    press(canvas(), 'pointermove', -900, 30)
+    press(canvas(), 'pointerdown', 150, LANE_Y)
+    press(canvas(), 'pointermove', -900, LANE_Y)
 
     expect(startOf()).toBe(0)
+  })
+
+  // Pressed at the block's own end rather than in its body: this is the gesture that read as a
+  // move that did not work, because nothing said the pointer was over a trim zone.
+  it('lengthens the block by its end rather than sliding it', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    press(canvas(), 'pointerdown', 299, LANE_Y)
+    press(canvas(), 'pointermove', 400, LANE_Y)
+
+    expect(startOf()).toBe(1 * SECOND)
+    expect(blockOf()?.duration).toBe(3 * SECOND)
+  })
+
+  // A pointerup lost off the window used to leave the gesture open, and the next edit of the same
+  // node coalesced into it: one ⌘Z undid two drags.
+  it('closes the gesture on a move with no button held', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
+
+    press(canvas(), 'pointerdown', 150, LANE_Y)
+    press(canvas(), 'pointermove', 300, LANE_Y)
+    press(canvas(), 'pointermove', 300, LANE_Y, 0)
+
+    press(canvas(), 'pointerdown', 300, LANE_Y)
+    press(canvas(), 'pointermove', 500, LANE_Y)
+    press(canvas(), 'pointerup', 500, LANE_Y)
+
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 2)
   })
 })
 
@@ -137,6 +203,7 @@ describe('scrubbing and picking on the band', () => {
           viewport: VIEWPORT,
           expanded: [],
           selected: [],
+          pickedBlock: null,
           autoKey: false,
           order: [],
         },
@@ -200,6 +267,7 @@ describe('following a duration that changes', () => {
           viewport: VIEWPORT,
           expanded: [],
           selected: [],
+          pickedBlock: null,
           autoKey: false,
           order: [],
         },
@@ -253,6 +321,7 @@ describe('removing a picked key with the keyboard', () => {
           viewport: VIEWPORT,
           expanded: [],
           selected: [],
+          pickedBlock: null,
           autoKey: false,
           order: [],
         },
@@ -335,6 +404,7 @@ describe('dragging a shot', () => {
           viewport: VIEWPORT,
           expanded: [],
           selected: [],
+          pickedBlock: null,
           autoKey: false,
           order: [],
         },

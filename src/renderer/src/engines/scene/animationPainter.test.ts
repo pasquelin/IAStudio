@@ -5,7 +5,7 @@ import { animationTrack, cameraShot, timelineWith } from './animation-fixtures'
 import { keyId, keyParts, paintAnimation } from './animationPainter'
 import { refreshPalette } from '../core/palette'
 import type { Point } from '../core/geometry'
-import { CLIP_HEIGHT, SUBJECT_HEIGHT, animationRows } from './animationRows'
+import { CHANNEL_HEIGHT, SUBJECT_HEIGHT, animationRows, type ClipBlock } from './animationRows'
 
 /** One pixel per 10 ms, so a second is a hundred pixels across. */
 const viewport: Viewport = { scale: 100 / SECOND, offset: 0, scrollTop: 0 }
@@ -34,8 +34,8 @@ function spyContext() {
     fill: vi.fn(),
     save: vi.fn(),
     restore: vi.fn(),
-    clip: vi.fn(),
     rect: vi.fn(),
+    clip: vi.fn(),
     moveTo: vi.fn((x: number, y: number) => void lines.push({ x, y })),
     lineTo: vi.fn((x: number, y: number) => void lines.push({ x, y })),
     fillText: vi.fn((text: string) => void labels.push(text)),
@@ -81,14 +81,12 @@ const paintOf = (rows: Parameters<typeof paintAnimation>[1]['rows'], playhead = 
   return spy
 }
 
-const rowsOf = (
-  tracks: Parameters<typeof timelineWith>[0],
-  clips?: Parameters<typeof animationRows>[1]['clips'],
-) =>
+const rowsOf = (tracks: Parameters<typeof timelineWith>[0], blocks?: readonly ClipBlock[]) =>
   animationRows(timelineWith(tracks), {
     nodes: [{ id: 'cube', name: 'Circle' }],
-    expanded: new Set(),
-    clips,
+    // A lane shows inside its object's track, so the cube has to be unfolded for one to be drawn.
+    expanded: new Set(blocks ? ['cube'] : []),
+    lanes: blocks ? [{ nodeId: 'cube', laneId: 'main', name: 'Animation 1', blocks }] : undefined,
   })
 
 describe('painting the animation band', () => {
@@ -125,10 +123,7 @@ describe('painting the animation band', () => {
 
   it('draws a clip as a BAR of its own length, not as a diamond', () => {
     const { rects, lines } = paintOf(
-      rowsOf(
-        [],
-        [{ nodeId: 'perso', clipId: 'c1', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND }],
-      ),
+      rowsOf([], [{ clipId: 'c1', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND }]),
     )
 
     // One second in, two hundred pixels wide, inset inside its row — which sits under the
@@ -137,16 +132,30 @@ describe('painting the animation band', () => {
       x: 100,
       y: RULER_HEIGHT + SUBJECT_HEIGHT + 2,
       width: 200,
-      height: CLIP_HEIGHT - 5,
+      height: CHANNEL_HEIGHT - 5,
     })
     expect(lines).toHaveLength(0)
   })
 
-  it('keeps a zero-length block visible rather than drawing nothing at all', () => {
+  it('draws every block of one lane on the same line', () => {
     const { rects } = paintOf(
-      rowsOf([], [{ nodeId: 'perso', clipId: 'c1', name: 'Walk', start: 0, duration: 0 }]),
+      rowsOf(
+        [],
+        [
+          { clipId: 'c1', name: 'Walk', start: 0, duration: 1 * SECOND },
+          { clipId: 'c2', name: 'Run', start: 2 * SECOND, duration: 1 * SECOND },
+        ],
+      ),
     )
-    expect(rects.some(rect => rect.width === 1 && rect.height === CLIP_HEIGHT - 5)).toBe(true)
+
+    const bars = rects.filter(rect => rect.width === 100)
+    expect(bars.map(rect => rect.x)).toEqual([0, 200])
+    expect(new Set(bars.map(rect => rect.y)).size).toBe(1)
+  })
+
+  it('keeps a zero-length block visible rather than drawing nothing at all', () => {
+    const { rects } = paintOf(rowsOf([], [{ clipId: 'c1', name: 'Walk', start: 0, duration: 0 }]))
+    expect(rects.some(rect => rect.width === 1 && rect.height === CHANNEL_HEIGHT - 5)).toBe(true)
   })
 
   it('paints an empty band without throwing, which is what an untouched scene shows', () => {

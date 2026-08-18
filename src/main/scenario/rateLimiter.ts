@@ -166,6 +166,11 @@ export function createRateLimiter({
 
   return {
     acquire: (signal, priority = 'ordinary') => {
+      // Before the turn is taken, since `abortable` cannot hear an `abort` already delivered: a
+      // caller that gave up before asking would otherwise learn nothing until the queue reached
+      // it, which is however long everyone ahead of it waits.
+      if (signal?.aborted) return Promise.reject(signal.reason)
+
       // Stamped on arrival, not when the turn comes round: measured from the turn, each waiter
       // would get a fresh budget as the one before it was served, and the ceiling would bound
       // the last hop of the wait instead of the wait.

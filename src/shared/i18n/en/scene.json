@@ -229,6 +229,10 @@
     "rowList": "Animation rows",
     "addShot": "Put this camera on air",
     "addShotHint": "Opens a shot for the chosen camera, from the playhead onwards",
-    "addShotNeedsCamera": "Choose a camera of the scene to open a shot for it"
+    "addShotNeedsCamera": "Choose a camera of the scene to open a shot for it",
+    "lane": "Anim. {{index}}",
+    "addLane": "Add a sub-track",
+    "addLaneHint": "One more animation, played at the same time as the ones above",
+    "removeLane": "Remove sub-track {{name}}"
   }
 }

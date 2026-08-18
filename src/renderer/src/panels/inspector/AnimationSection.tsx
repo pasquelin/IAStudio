@@ -1,6 +1,6 @@
 import { mdiPause, mdiPlay } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { clipLane, embeddedClip, MAIN_LANE_ID, type ClipRef } from '@shared/domain/scene'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { QuietNote } from '@/design/QuietNote'
@@ -9,7 +9,7 @@ import { NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
-import { setModelClips } from '@/engines/scene/commands'
+import { setModelLanes } from '@/engines/scene/commands'
 import type { ModelNode } from '@/engines/scene/sceneState'
 import { cn } from '@/helpers/cn'
 import { newId } from '@/helpers/ids'
@@ -46,7 +46,10 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   // rather than empty.
   if (!rig) return null
 
-  const held = node.model.clips ?? []
+  // The first block of the FIRST lane: this section drives one clip, and the band is where the
+  // layering is read and edited.
+  const lanes = node.model.lanes ?? []
+  const held = lanes[0]?.clips ?? []
   const played = held[0] ?? null
 
   /**
@@ -63,12 +66,12 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
     views.setPlaying(documentId, clip !== null)
   }
 
-  // The played block is replaced WITHIN the list, never made into the list: a document may hold
-  // several — the reader accepts them and the band draws them — and rewriting the whole field
-  // from one control would drop every block this section does not show.
+  // The played block is replaced WITHIN its lane, and the other lanes are carried over untouched:
+  // rewriting the whole field from one control would drop every block this section does not show.
   const write = (next: ClipRef | null): void => {
     const kept = held.filter(clip => clip.id !== played?.id)
-    edit.run(setModelClips(node.id, next ? [next, ...kept] : kept))
+    const first = clipLane(lanes[0]?.id ?? MAIN_LANE_ID, next ? [next, ...kept] : kept)
+    edit.run(setModelLanes(node.id, [first, ...lanes.slice(1)]))
   }
 
   // Picking a clip on a model that had none starts from the defaults rather than from nothing,
