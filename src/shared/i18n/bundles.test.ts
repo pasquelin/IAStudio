@@ -389,19 +389,17 @@ describe('the translation bundles', () => {
        * the status line, against `log` ×12 for the internal one, and `16-troubleshooting.md:642`
        * warns the reader not to confuse them. The screen said `log` for both.
        *
-       * The four exemptions are the readings the manual KEPT as `log`: the two settings that
-       * govern what the studio writes about itself, and the usage window, whose sections no
-       * chapter describes — untouched rather than renamed on a guess.
+       * THREE surfaces, not two, and the third cost a batch to find: the usage window has a
+       * `Journal` section of its own, which `03-the-window.md` names in a table — a chapter whose
+       * title says nothing about usage, so a search by chapter name missed it and the batch
+       * before this one wrote that no chapter described those sections.
+       *
+       * The two exemptions left are the internal log, the one thing the manual keeps as `log`.
        */
       {
         dropped: /\blogs?\b/i,
         kept: 'activity journal',
-        except: [
-          'settings.logLevel.title',
-          'settings.openDevtools.help',
-          'usage.sections.journal',
-          'usage.loadMoreHint',
-        ],
+        except: ['settings.logLevel.title', 'settings.openDevtools.help'],
       },
     ],
   }
