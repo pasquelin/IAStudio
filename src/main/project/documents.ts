@@ -208,7 +208,7 @@ export async function headOf(file: string): Promise<DocumentEnvelope> {
 }
 
 /** What the studio just wrote, moved or removed. A path it no longer holds is one to read again. */
-export function forgetHead(file: string): void {
+function forgetHead(file: string): void {
   heads.delete(file)
 }
 
