@@ -14,12 +14,15 @@ const PICKER_LIMIT = 100
  * one screen, it is already cached by the registry in the main process, and the settings
  * window has no reason to hold a second replica of the catalogue.
  */
-export function useFamilyModels(family: ModelFamily): ModelSummary[] {
+export function useFamilyModels(family: ModelFamily | null): ModelSummary[] {
   const [models, setModels] = useState<ModelSummary[]>([])
 
   useEffect(() => {
     let live = true
     const bridge = getBridge()
+    // `null` is « do not ask », not « ask for everything »: a surface that will draw nothing must
+    // not send a listing per selection — measured on screen, the inspector did exactly that.
+    if (!family) return
 
     void bridge?.scenario
       .searchModels({ family, limit: PICKER_LIMIT })

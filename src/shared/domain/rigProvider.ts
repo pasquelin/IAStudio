@@ -48,9 +48,11 @@ export function rigProvidersOf(models: readonly ModelSummary[]): RigProvider[] {
 /**
  * The models that MAKE a motion, as opposed to putting a skeleton in a mesh.
  *
- * MEASURED on 2026-08-18: five of them carry `Motion` or `Animation` and no `Rigging` — the two
- * Uthana, the two Cartwheel, and Meshy's animator. The `Rigging` half of the test is what keeps
- * `model_tripo-rigging-v2-5` out, which carries `Animation` as well and rigs.
+ * MEASURED on 2026-08-18, and counted ON SCREEN rather than from the catalogue dump — which is
+ * how the count was WRONG first: SIX carry `Motion` or `Animation` and no `Rigging`. Three
+ * Uthana and not two, the deprecated `text-to-motion-bucmd` being still listed, plus the two
+ * Cartwheel and Meshy's animator. The `Rigging` half of the test keeps `tripo-rigging-v2-5`
+ * out, which carries `Animation` as well and rigs.
  *
  * The capability is deliberately NOT read: these span `txt23d`, `video23d` and `3d23d`, and a
  * list built on it would be either three quarters wrong or a list of everything.

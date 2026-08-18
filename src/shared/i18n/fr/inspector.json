@@ -232,6 +232,7 @@
     "animationJointAtRest": "reste au repos",
     "animationJointDropped": "non reprise",
     "rigServicesLocked": "Des services Scenario savent aussi le faire, mais l’abonnement {{plan}} ne les autorise pas. Le studio le fait lui-même, gratuitement.",
+    "rigServicesTooLarge": "Ce modèle dépasse la limite de {{limit}} des services Scenario. Le studio n’a pas cette limite.",
     "rigFault_noGeometry": "Ce modèle est trop plat pour recevoir un squelette.",
     "rigFault_lyingDown": "Ce modèle est couché. Redressez-le avant de le rendre animable.",
     "rigStatus_staticMesh": "Ce modèle n’est pas encore animable.",
