@@ -467,6 +467,45 @@ describe('SceneRenderer and a camera on a rail', () => {
     engine.dispose()
   })
 
+  /**
+   * What ties a rail to its camera on screen: the line does start at the camera and follow its
+   * axis, but unmarked it reads as somebody else's.
+   */
+  it('shows a rail its knobs when the camera riding it is the one selected', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    const scene = {
+      ...EMPTY_SCENE,
+      nodes: [
+        cameraNodeFixture('cam-a'),
+        pathNodeFixture('rail', {
+          points: [
+            { x: 0, y: 0, z: 0 },
+            { x: 10, y: 0, z: 0 },
+          ],
+        }),
+      ],
+      animation: {
+        ...EMPTY_TIMELINE,
+        shots: [
+          cameraShot('shot-1', {
+            motion: { pathId: 'rail', easing: 'linear', from: 0, to: 1 },
+          }),
+        ],
+      },
+    }
+    const knobs = (): boolean[] =>
+      (objectOf(engine, 'rail')?.children ?? [])
+        .filter(child => child.name.startsWith('path-knob-'))
+        .map(knob => knob.visible)
+
+    engine.apply(scene)
+    expect(knobs()).toEqual([false, false])
+
+    engine.apply({ ...scene, selectedIds: ['cam-a'] })
+    expect(knobs()).toEqual([true, true])
+    engine.dispose()
+  })
+
   it('leaves a camera with no shot exactly where its transform puts it', () => {
     const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
     engine.apply({ ...EMPTY_SCENE, nodes: [cameraNodeFixture('cam')] })

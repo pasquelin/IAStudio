@@ -6,11 +6,14 @@ import {
   removeNodes,
   rootedIn,
   setNodeVisible,
+  setPath,
 } from '@/engines/scene/commands'
+import { withoutPoint } from '@/engines/scene/cameraPath'
 import { nodeById, selectedNodes } from '@/engines/scene/sceneState'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 
 /**
  * The commands that act on what a scene has selected, and on nothing else — no mode, no view
@@ -39,6 +42,29 @@ export function toggleNodeVisible(documentId: string, nodeId: string): void {
   if (node) store.runCommand(documentId, setNodeVisible(node.id, !node.visible))
 }
 
+/**
+ * The picked control point of a rail, taken away. Answers whether there was one, so a caller can
+ * go on to what it would otherwise have deleted.
+ *
+ * Two points is the floor `withoutPoint` holds — one point is not a line — and the refusal still
+ * counts as handled: falling through would delete the rail itself.
+ */
+export function removePickedPathPoint(documentId: string): boolean {
+  const picked = sceneViewOf(useSceneViews.getState(), documentId).pickedPathPoint
+  if (!picked) return false
+
+  const store = useScenes.getState()
+  const node = nodeById(sceneOf(store, documentId), picked.nodeId)
+  if (node?.type !== 'path') return false
+
+  const path = withoutPoint(node.path, picked.index)
+  if (path === node.path) return true
+
+  store.runCommand(documentId, setPath(picked.nodeId, path))
+  useSceneViews.getState().setPickedPathPoint(documentId, null)
+  return true
+}
+
 export function runSceneCommand(documentId: string, command: CommandId): boolean {
   const store = useScenes.getState()
   const { nodes, selectedIds } = sceneOf(store, documentId)
@@ -50,6 +76,9 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
       return true
 
     case 'scene.delete':
+      // A picked control point is taken first: point and rail are one selection seen at two
+      // depths, and Delete on a point that took the whole rail would be a rail nobody meant.
+      if (removePickedPathPoint(documentId)) return true
       if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(nodes, selectedIds))
       return true
 

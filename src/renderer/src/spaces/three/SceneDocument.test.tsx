@@ -8,7 +8,7 @@ import { forgetReportedFailures } from '@/services/diagnostics'
 import { fakeMenu } from '@/helpers/menu-fixtures'
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import { addNode } from '@/engines/scene/commands'
-import { meshNode, rigStateFixture } from '@/engines/scene/scene-fixtures'
+import { meshNode, pathNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
@@ -668,5 +668,57 @@ describe('SceneDocument and the pose mode', () => {
 
     expect(sceneViewOf(useSceneViews.getState(), 'doc-1').pickedBone).toBeNull()
     expect(setPickedBone).toHaveBeenLastCalledWith(null)
+  })
+})
+
+describe('SceneDocument and a point posed on a rail', () => {
+  const at = (x: number) => ({ x, y: 0, z: 0 })
+
+  const pointsOf = (): number[] => {
+    const node = nodesOf('doc-1').find(candidate => candidate.id === 'rail')
+    return node?.type === 'path' ? node.path.points.map(point => point.x) : []
+  }
+
+  const installRail = (): void => {
+    act(() =>
+      useScenes
+        .getState()
+        .runCommand('doc-1', addNode(pathNodeFixture('rail', { points: [at(0), at(10), at(20)] }))),
+    )
+  }
+
+  it('poses the point in the stretch the viewport names, and nowhere else', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAddPathPoint?.('rail', 0))
+
+    expect(pointsOf()).toEqual([0, 5, 10, 20])
+  })
+
+  /**
+   * Picked on the way, so the point one just made is the point one drags: nothing on screen says
+   * the gesture is in two steps, and a knob posed and left unheld would be that second step.
+   */
+  it('picks the point it just posed', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAddPathPoint?.('rail', 0))
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').pickedPathPoint).toEqual({
+      nodeId: 'rail',
+      index: 1,
+    })
+  })
+
+  it('costs one undo entry, which puts the rail back as it was', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onAddPathPoint?.('rail', 0))
+    act(() => useScenes.getState().undo('doc-1'))
+
+    expect(pointsOf()).toEqual([0, 10, 20])
   })
 })

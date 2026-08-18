@@ -2,7 +2,7 @@ import type { AssetType } from '@shared/domain/asset'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { ExportFormat, Vector3 } from '@shared/domain/scene'
-import { withMovedPoint } from '@/engines/scene/cameraPath'
+import { withMovedPoint, withPointAfter } from '@/engines/scene/cameraPath'
 import { setPath, setTransform } from '@/engines/scene/commands'
 import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -37,7 +37,8 @@ import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
 import { CameraPreview } from './CameraPreview/CameraPreview'
 import { SceneCounters } from './SceneCounters'
 import { openSceneNodeMenu } from './sceneNodeMenu'
-import { runSceneCommand, toggleNodeVisible } from './sceneCommands'
+import { openPathPointMenu } from './pathPointMenu'
+import { removePickedPathPoint, runSceneCommand, toggleNodeVisible } from './sceneCommands'
 import { ScenePaneGrid } from './ScenePaneGrid/ScenePaneGrid'
 import { SCENE_TOOLS } from './sceneTools'
 import { sceneExportFiles } from './sceneExportFiles'
@@ -98,6 +99,19 @@ function movePathPoint(documentId: string, nodeId: string, index: number, point:
   if (node?.type !== 'path') return
 
   store.runCommand(documentId, setPath(nodeId, withMovedPoint(node.path, index, point)))
+}
+
+/**
+ * A control point posed in the stretch that was clicked, and picked on the way: the gizmo lands
+ * on it straight away, so the point one just made is the point one drags.
+ */
+function addPathPoint(documentId: string, nodeId: string, index: number): void {
+  const store = useScenes.getState()
+  const node = sceneOf(store, documentId).nodes.find(candidate => candidate.id === nodeId)
+  if (node?.type !== 'path') return
+
+  store.runCommand(documentId, setPath(nodeId, withPointAfter(node.path, index)))
+  useSceneViews.getState().setPickedPathPoint(documentId, { nodeId, index: index + 1 })
 }
 
 /**
@@ -177,11 +191,18 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onSelectPathPoint: picked => useSceneViews.getState().setPickedPathPoint(documentId, picked),
       onPathPoint: (nodeId, index, point) => movePathPoint(documentId, nodeId, index, point),
+      onAddPathPoint: (nodeId, index) => addPathPoint(documentId, nodeId, index),
       // Orbiting a pane locked onto a camera MOVES that camera: an edit of the document, so it
       // lands as a command — one per gesture, since the engine reports on release.
       onCameraMoved: (nodeId, transform) =>
         useScenes.getState().runCommand(documentId, setTransform(nodeId, transform)),
       onContextMenu: nodeId => openNodeMenu(documentId, nodeId),
+      // `i18next.t` rather than the hook's, for the reason `openNodeMenu` reads it that way.
+      onPathPointMenu: () =>
+        openPathPointMenu({
+          t: i18next.t,
+          onRemove: () => removePickedPathPoint(documentId),
+        }),
       onStats: (scene, selected) => setStats({ scene, selected }),
       // Published so a montage can look through this very view: a scene with no camera of its
       // own has no other framing anybody chose. Once per orbit, never per frame of one.

@@ -1,5 +1,6 @@
 import { CatmullRomCurve3, Vector3 } from 'three'
 import type { PathDescriptor, Vector3 as PlainVector3 } from '@shared/domain/scene'
+import { clamp } from '@shared/numeric'
 
 /**
  * The curve a rail describes, and the cache that keeps it from being rebuilt every frame.
@@ -33,6 +34,24 @@ export function curveOf(path: PathDescriptor): CatmullRomCurve3 {
 /** The line to draw, sampled by arc length so the points sit evenly along it. */
 export function pathPoints(path: PathDescriptor, samples: number = PATH_SAMPLES): Vector3[] {
   return curveOf(path).getSpacedPoints(samples)
+}
+
+/**
+ * Which stretch between two control points an abscissa falls in — what a click on the line names.
+ *
+ * The abscissa is measured by ARC LENGTH, as `pathPoints` samples it, and the segments are not:
+ * `getUtoTmapping` is what converts one into the other, and skipping it puts the point in the
+ * wrong stretch as soon as two segments differ in length.
+ */
+export function segmentAt(path: PathDescriptor, u: number): number {
+  const spans = path.closed ? path.points.length : path.points.length - 1
+  if (spans <= 0) return 0
+
+  const curve = curveOf(path)
+  // The distance is passed rather than left out: three defaults it to `u × total length`, which
+  // is the same number, but its types declare the parameter required.
+  const t = curve.getUtoTmapping(clamp(u, 0, 1), clamp(u, 0, 1) * curve.getLength())
+  return clamp(Math.floor(t * spans), 0, spans - 1)
 }
 
 /** One control point moved. The same descriptor back when the index names none. */

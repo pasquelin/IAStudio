@@ -69,7 +69,9 @@
     "show": "Show object",
     "showHint": "Brings the object back into view. Hiding it never took it out of the scene, this is not a delete",
     "hide": "Hide object",
-    "hideHint": "Takes the object out of the view without taking it out of the scene, to clear what it covers"
+    "hideHint": "Takes the object out of the view without taking it out of the scene, to clear what it covers",
+    "removePathPoint": "Remove this point",
+    "removePathPointHint": "Takes the point off the rail. A rail always keeps its last two points"
   },
   "objects": {
     "sprite": "Sprite",

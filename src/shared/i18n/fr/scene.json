@@ -69,7 +69,9 @@
     "show": "Afficher l’objet",
     "showHint": "Remet l’objet dans la vue. Le masquer ne l’avait pas sorti de la scène, ce n’est pas une suppression",
     "hide": "Masquer l’objet",
-    "hideHint": "Retire l’objet de la vue sans le sortir de la scène, pour dégager ce qu’il cache"
+    "hideHint": "Retire l’objet de la vue sans le sortir de la scène, pour dégager ce qu’il cache",
+    "removePathPoint": "Retirer ce point",
+    "removePathPointHint": "Retire le point du rail. Un rail garde toujours ses deux derniers points"
   },
   "objects": {
     "sprite": "Sprite",

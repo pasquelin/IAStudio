@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PATH, type PathDescriptor } from '@shared/domain/scene'
-import { curveOf, pathPoints, withMovedPoint, withPointAfter, withoutPoint } from './cameraPath'
+import {
+  curveOf,
+  pathPoints,
+  segmentAt,
+  withMovedPoint,
+  withPointAfter,
+  withoutPoint,
+} from './cameraPath'
 
 const pathOf = (points: PathDescriptor['points']): PathDescriptor => ({ ...DEFAULT_PATH, points })
 
@@ -23,6 +30,34 @@ describe('the curve of a rail', () => {
     expect(drawn).toHaveLength(5)
     expect(drawn[0]?.x).toBeCloseTo(0, 3)
     expect(drawn.at(-1)?.x).toBeCloseTo(10, 3)
+  })
+})
+
+describe('the stretch of rail an abscissa falls in', () => {
+  // Three points, two stretches, the second one three times as long as the first: measured by
+  // arc length, the middle point stands a quarter of the way along and not halfway.
+  const uneven = pathOf([at(0), at(10), at(40)])
+
+  it('names the stretch before the middle point for an abscissa short of it', () => {
+    expect(segmentAt(uneven, 0.1)).toBe(0)
+  })
+
+  it('names the stretch after it for an abscissa past it', () => {
+    expect(segmentAt(uneven, 0.5)).toBe(1)
+  })
+
+  // The straight-line reading would answer 1 here — half of the rail's extent is past the middle
+  // point — and pose the new point in the wrong stretch.
+  it('reads the abscissa by arc length rather than by extent', () => {
+    expect(segmentAt(uneven, 0.24)).toBe(0)
+  })
+
+  it('holds the last stretch for the very end of the rail', () => {
+    expect(segmentAt(uneven, 1)).toBe(1)
+  })
+
+  it('gives a closed rail one stretch more, the one that comes back to the first point', () => {
+    expect(segmentAt({ ...uneven, closed: true }, 0.99)).toBe(2)
   })
 })
 

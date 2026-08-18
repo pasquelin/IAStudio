@@ -6,6 +6,7 @@ import {
   type AnimationClip,
   DirectionalLight,
   GridHelper,
+  type Intersection,
   Light,
   LineBasicMaterial,
   Mesh,
@@ -52,7 +53,7 @@ import {
 } from './sceneState'
 import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
 import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
-import { curveOf } from './cameraPath'
+import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
 import { clampUnit, progressAt } from './cameraMotion'
 import { shotOfCameraAt } from './cameraShots'
 import {
@@ -63,6 +64,7 @@ import {
   knobIndexOf,
   knobName,
   lightBulb,
+  PATH_CURVE_NAME,
   tuneViewHelper,
   type LightHelper,
 } from './threeFactory'
@@ -177,6 +179,10 @@ export type SceneRendererOptions = {
   onSelectPathPoint?: (picked: { nodeId: string; index: number } | null) => void
   /** Where a picked control point was dragged to, in the frame of the rail that holds it. */
   onPathPoint?: (nodeId: string, index: number, point: PlainVector3) => void
+  /** A point is to be posed on that rail, right after the stretch of it that was clicked. */
+  onAddPathPoint?: (nodeId: string, index: number) => void
+  /** A control point was right-clicked, for whoever raises its menu — this side draws none. */
+  onPathPointMenu?: (nodeId: string, index: number) => void
   /**
    * A camera of the scene was moved by orbiting the pane locked onto it — an EDIT of the
    * document, unlike moving the view, and reported once per gesture rather than per frame.
@@ -612,11 +618,39 @@ export class SceneRenderer {
 
     for (const [id, helper] of this.helpers) helper.visible = selected.has(id)
 
+    const rails = this.workedRailIds()
     for (const [id, node] of this.applied) {
       if (node.type !== 'path') continue
       const rail = this.objects.get(id)
-      if (rail) showPathKnobs(rail, selected.has(id))
+      if (rail) showPathKnobs(rail, rails.has(id))
     }
+  }
+
+  /**
+   * The rails being worked on: those selected, and those a selected camera rides during a shot.
+   *
+   * The second half is what ties a rail to its camera on screen. Nothing else did: a rail does
+   * start at its camera and follow its axis, but with the camera selected and the rail not, the
+   * line lay there unmarked and read as somebody else's.
+   */
+  private workedRailIds(): Set<string> {
+    const ids = new Set<string>()
+
+    for (const id of this.selectedIds) {
+      if (this.applied.get(id)?.type === 'path') ids.add(id)
+      for (const shot of this.timeline.shots) {
+        if (shot.cameraId === id && shot.motion) ids.add(shot.motion.pathId)
+      }
+    }
+
+    return ids
+  }
+
+  /** The objects of those rails — what a click may reach a control point of. */
+  private workedRails(): Object3D[] {
+    return [...this.workedRailIds()].flatMap(id =>
+      this.applied.get(id)?.type === 'path' ? (this.objects.get(id) ?? []) : [],
+    )
   }
 
   /**
@@ -2342,6 +2376,15 @@ export class SceneRenderer {
       // Never in pose mode: there a click names a bone, and a bone is not a node the menu could
       // act on.
       if (still && !this.poseMode) {
+        // A knob raises the menu of its POINT, and picks it on the way: what the menu acts on is
+        // then what the gizmo holds, rather than two different things under one pointer.
+        const knob = this.pathPointAt(event)
+        if (knob) {
+          this.options.onSelectPathPoint?.(knob)
+          this.options.onPathPointMenu?.(knob.nodeId, knob.index)
+          return
+        }
+
         const id = this.nodeAt(event)
         if (id) this.options.onContextMenu?.(id)
       }
@@ -2378,6 +2421,16 @@ export class SceneRenderer {
       return
     }
 
+    // Alt on the LINE of a selected rail poses a point in the stretch it was clicked on. Alt
+    // rather than a plain click, which still has to be able to pick what stands behind the rail.
+    if (event.altKey) {
+      const spot = this.pathSegmentAt(event)
+      if (spot) {
+        this.options.onAddPathPoint?.(spot.nodeId, spot.index)
+        return
+      }
+    }
+
     // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
     const extending = event.shiftKey || event.metaKey || event.ctrlKey
     const id = this.nodeAt(event)
@@ -2387,28 +2440,45 @@ export class SceneRenderer {
   }
 
   /**
-   * The control point the pointer is over, on a rail that is already SELECTED — otherwise the
-   * knobs of every rail would take clicks meant for what stands behind them.
+   * The control point the pointer is over, on a rail being WORKED ON — otherwise the knobs of
+   * every rail would take clicks meant for what stands behind them.
    */
   private pathPointAt(event: PointerEvent): { nodeId: string; index: number } | null {
-    const ndc = this.viewport.pointerNdcOf(event)
-    if (!ndc) return null
-
-    this.pointer.set(ndc.x, ndc.y)
-    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
-
-    const rails = this.selectedIds.flatMap(id =>
-      this.applied.get(id)?.type === 'path' ? (this.objects.get(id) ?? []) : [],
-    )
     // The nearest KNOB, not the nearest thing on the rail: the curve is an object of the same
     // subtree and it lies right across its own control points, so taking the first intersection
     // meant a press landing on the line between two knobs answered « no point here ».
-    const hit = this.raycaster
-      .intersectObjects(rails, true)
-      .find(candidate => knobIndexOf(candidate.object.name) !== null)
+    const hit = this.railHits(event).find(candidate => knobIndexOf(candidate.object.name) !== null)
     const index = hit ? knobIndexOf(hit.object.name) : null
 
     return index === null ? null : { nodeId: hit?.object.parent?.name ?? '', index }
+  }
+
+  /**
+   * The stretch of rail the pointer is over, as an index into its control points: the point a
+   * click poses goes right after it.
+   *
+   * The line is sampled by arc length, so the vertex three hands back IS an abscissa — which is
+   * what `segmentAt` converts back into a stretch.
+   */
+  private pathSegmentAt(event: PointerEvent): { nodeId: string; index: number } | null {
+    const hit = this.railHits(event).find(
+      candidate => candidate.object.name === PATH_CURVE_NAME && candidate.index !== undefined,
+    )
+    const nodeId = hit?.object.parent?.name
+    const node = nodeId ? this.applied.get(nodeId) : null
+    if (!hit || hit.index === undefined || !nodeId || node?.type !== 'path') return null
+
+    return { nodeId, index: segmentAt(node.path, hit.index / PATH_SAMPLES) }
+  }
+
+  /** What the pointer meets on the rails being worked on, nearest first. */
+  private railHits(event: PointerEvent): Intersection[] {
+    const ndc = this.viewport.pointerNdcOf(event)
+    if (!ndc) return []
+
+    this.pointer.set(ndc.x, ndc.y)
+    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
+    return this.raycaster.intersectObjects(this.workedRails(), true)
   }
 
   /** The node the pointer is over, or nothing for a ray that met only the void. */
