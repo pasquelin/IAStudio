@@ -78,17 +78,19 @@ export function clipBlendAt(
   // come out as neither.
   const totals = new Map<BodyPart, number>()
   for (const [block, weight] of sounding) {
-    const part = block.ref.part ?? WHOLE_BODY
-    totals.set(part, (totals.get(part) ?? 0) + weight)
+    totals.set(partOf(block), (totals.get(partOf(block)) ?? 0) + weight)
   }
 
   return [...sounding].map(([block, weight]) => ({
     clipId: block.ref.id,
     name: block.ref.source.name,
     time: clipTimeAt(block.ref, block.length, Math.min(playhead, block.ref.start + block.span)),
-    weight: weight / Math.max(1, totals.get(block.ref.part ?? WHOLE_BODY) ?? 1),
+    weight: weight / Math.max(1, totals.get(partOf(block)) ?? 1),
   }))
 }
+
+/** Which half of a body a block drives. Absent is the whole of it — see `ClipRef.part`. */
+const partOf = (block: Block): BodyPart => block.ref.part ?? WHOLE_BODY
 
 /** The blocks that can be drawn at all, earliest first — the order the hold below reads. */
 function placed(clips: readonly ClipRef[], lengths: Readonly<Record<string, number>>): Block[] {

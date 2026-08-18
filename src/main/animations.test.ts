@@ -63,9 +63,7 @@ describe('the file the animation host hands over', () => {
   it('answers the very file when the name goes deeper, which is how a thumbnail is asked for', async () => {
     await animation('walk', ['animation.glb', 'thumb.png'])
 
-    expect(await bundledAnimationFile(root, 'walk/thumb.png')).toBe(
-      join(root, 'walk', 'thumb.png'),
-    )
+    expect(await bundledAnimationFile(root, 'walk/thumb.png')).toBe(join(root, 'walk', 'thumb.png'))
   })
 
   it('answers nothing for a folder holding no clip, and for one that is not there', async () => {

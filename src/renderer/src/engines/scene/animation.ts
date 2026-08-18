@@ -32,6 +32,12 @@ export function bundledNamesOf(lanes: readonly ClipLane[]): string[] {
   return [...names]
 }
 
+/** The bones a half of this body covers, read once per half — the roles walk every bone. */
+function drivenIn(player: Player, part: BodyPart): ReadonlySet<string> | null {
+  if (!player.driven.has(part)) player.driven.set(part, bonesDrivenBy(player.bones, part))
+  return player.driven.get(part) ?? null
+}
+
 /** One place decides the shape of this record: the band and the mixer must read the same one. */
 function lengthsOf(clips: readonly AnimationClip[]): Record<string, number> {
   const lengths: Record<string, number> = {}
@@ -63,6 +69,11 @@ type Player = {
   fileNames: readonly string[]
   /** The bones the clips play on, kept so a clip arriving later can be read against them. */
   bones: readonly SkeletonBone[]
+  /**
+   * Which bones each half of this body covers, worked out at most once per half: reading the
+   * roles walks all fifty-two, and it depends on the skeleton alone.
+   */
+  driven: Map<BodyPart, ReadonlySet<string> | null>
   /** How long each clip runs, which is what a block's width is derived from. */
   lengths: Record<string, number>
   /** The travel channel of each clip, worked out once — it depends on the file and the rig alone. */
@@ -113,6 +124,7 @@ export class SceneAnimations {
       clips: byName,
       fileNames: [...byName.keys()],
       bones,
+      driven: new Map(),
       lengths: lengthsOf([...byName.values()]),
       rootTracks,
       lanes: [],
@@ -221,7 +233,7 @@ export class SceneAnimations {
         source,
         player.rootTracks.get(key) ?? null,
         travel,
-        bonesDrivenBy(player.bones, part),
+        drivenIn(player, part),
       )
       player.bound.set(ref.id, { ref, travel, key, part, clip })
     }

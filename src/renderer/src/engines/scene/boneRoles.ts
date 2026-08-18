@@ -80,7 +80,7 @@ function partOfBone(
     const role = roles[walked.name]
     if (role) return bodyPartOfRole(role)
 
-    walked = walked.parent === null ? undefined : byName.get(walked.parent)
+    walked = boneAbove(walked, byName)
   }
   return 'lower'
 }
