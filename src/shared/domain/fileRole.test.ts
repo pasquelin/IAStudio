@@ -86,6 +86,13 @@ describe('opensInStudio', () => {
     }
   })
 
+  // The studio WRITES this one and cannot read it back yet — the same disagreement, from the
+  // other side. Filed with the videos so an exported montage is not buried among the notes.
+  it('files an exported cut under video, and still leaves it to the system', () => {
+    expect(natureOf('Bande.otio')).toEqual({ domain: 'video', role: 'source' })
+    expect(opensInStudio('Bande.otio')).toBe(false)
+  })
+
   it('takes the one mesh a loader here reads, and no other', () => {
     expect(opensInStudio('chair.obj')).toBe(false)
     expect(opensInStudio('chair.gltf')).toBe(false)

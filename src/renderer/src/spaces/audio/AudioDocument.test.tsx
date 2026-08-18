@@ -10,7 +10,9 @@ import {
   withChain,
   type TakeChain,
 } from '@/engines/audio/edits'
+import { exportOtio } from '@/app/otioExport'
 import { startAssetDrag } from '@/helpers/assetDrag'
+import { publishCommand } from '@/services/commandBus'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { SECOND } from '@shared/domain/time'
 import { addClip } from '@/engines/timeline/commands'
@@ -41,6 +43,8 @@ vi.mock('./useWaveSurfer', () => ({
 vi.mock('@/services/bridge', () => ({
   getBridge: () => ({ assets: { saveAudio } }),
 }))
+
+vi.mock('@/app/otioExport', () => ({ exportOtio: vi.fn(() => Promise.resolve('Bande.otio')) }))
 
 const asset: Asset = {
   id: 'asset-1',
@@ -108,6 +112,21 @@ describe('AudioDocument', () => {
     saveAudio.mockClear()
     useAssets.setState({ items: [asset] })
     useSequences.setState({ states: { 'doc-1': EMPTY_SOUND_SEQUENCE }, histories: {} })
+  })
+
+  /**
+   * The same montage as the Video space, so the same export. Nothing else here writes the cut
+   * out, and a montage that exists only in a `.aud` is the loss this whole chantier is against.
+   */
+  it('writes its montage out as a cut, on the command the Video space shares', async () => {
+    await openTake()
+
+    publishCommand('sequence.exportCut')
+
+    expect(exportOtio).toHaveBeenCalledWith(
+      sequenceOf(useSequences.getState(), 'doc-1'),
+      expect.any(String),
+    )
   })
 
   it('says what its tools act on: the gesture while there is nothing, the range once there is', async () => {
