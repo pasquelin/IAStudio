@@ -11,6 +11,7 @@ import { movesToCommand } from '@/engines/scene/animationCommands'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { snapToFrame } from '@shared/domain/time'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
+import { useAnimationPlayback } from '@/hooks/useAnimationPlayback'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
@@ -245,9 +246,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     engine.current?.setPlayhead(view.playhead)
   }, [view.playhead])
 
-  useEffect(() => {
-    engine.current?.setSelfPlay(view.selfPlay)
-  }, [view.selfPlay])
+  // Here rather than in the timeline panel, which is a tool window one may close: the head is the
+  // scene's ONE clock, and closing a panel must not stop a character walking in the viewport.
+  useAnimationPlayback(documentId, view.playing, scene.animation.duration)
 
   // Subscribed here rather than in `useNativeMenu`: an export reads the three.js objects, and
   // this component is the only thing that holds them. Only while this tab is in front, or two

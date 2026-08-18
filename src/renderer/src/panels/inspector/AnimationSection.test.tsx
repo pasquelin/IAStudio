@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { embeddedClip } from '@shared/domain/scene'
+import { SECOND } from '@shared/domain/time'
 import { modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type ModelNode } from '@/engines/scene/sceneState'
 import { useModelClips } from '@/stores/modelClips'
@@ -20,8 +21,8 @@ const nodeOf = (): ModelNode | undefined => {
 
 const playedOf = () => nodeOf()?.model.clips?.[0]
 
-/** Which block the play button is holding — session state now, so it lives outside the document. */
-const heldOf = () => useSceneViews.getState().views[DOCUMENT]?.selfPlay ?? null
+/** Whether the scene's head is running — the one clock, written by this button too. */
+const runningNow = () => useSceneViews.getState().views[DOCUMENT]?.playing ?? false
 
 /**
  * The section takes its node and its edit subscribed, so a write reaches the screen the way it
@@ -92,7 +93,7 @@ describe('AnimationSection', () => {
     await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
 
     expect(playedOf()).toMatchObject({ source: { kind: 'embedded', name: 'walk' }, offset: 0 })
-    expect(heldOf()).toEqual({ nodeId: 'a', clipId: playedOf()?.id })
+    expect(runningNow()).toBe(true)
   })
 
   it('pauses and resumes without losing the clip, and without touching the document', async () => {
@@ -101,13 +102,39 @@ describe('AnimationSection', () => {
     const chosen = playedOf()
     await userEvent.click(screen.getByRole('button', { name: /Mettre en pause/ }))
 
-    expect(heldOf()).toBeNull()
+    expect(runningNow()).toBe(false)
     // The same object, not merely an equal one: pausing writes nothing into the scene, so ⌘Z
     // never gives a play button back.
     expect(playedOf()).toBe(chosen)
 
     await userEvent.click(screen.getByRole('button', { name: /Jouer le clip/ }))
-    expect(heldOf()).toEqual({ nodeId: 'a', clipId: chosen?.id })
+    expect(runningNow()).toBe(true)
+  })
+
+  // The head is the only clock: pressing play on a block the head has already left would run the
+  // scene on and show nothing at all.
+  it('rewinds the head to the block before playing it', async () => {
+    useModelClips.setState({ lengths: { [DOCUMENT]: { a: { walk: 2 } } } })
+    show()
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
+    await userEvent.click(screen.getByRole('button', { name: /Mettre en pause/ }))
+    useSceneViews.getState().setPlayhead(DOCUMENT, 30 * SECOND)
+
+    await userEvent.click(screen.getByRole('button', { name: /Jouer le clip/ }))
+
+    expect(useSceneViews.getState().views[DOCUMENT]?.playhead).toBe(0)
+  })
+
+  it('leaves the head alone when it already stands inside the block', async () => {
+    useModelClips.setState({ lengths: { [DOCUMENT]: { a: { walk: 2 } } } })
+    show()
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
+    await userEvent.click(screen.getByRole('button', { name: /Mettre en pause/ }))
+    useSceneViews.getState().setPlayhead(DOCUMENT, SECOND)
+
+    await userEvent.click(screen.getByRole('button', { name: /Jouer le clip/ }))
+
+    expect(useSceneViews.getState().views[DOCUMENT]?.playhead).toBe(SECOND)
   })
 
   it('clears the reference when the choice goes back to none', async () => {

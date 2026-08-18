@@ -9,7 +9,7 @@ const ref = (extra: Partial<ClipRef> = {}): ClipRef => embeddedClip('block-1', '
 const DURATION = 2
 
 describe('where inside a clip the head stands', () => {
-  it('is the start of the clip while the head is before the block', () => {
+  it('is the start of the clip while the head is before the block, however far before', () => {
     expect(clipTimeAt(ref({ start: 3 * SECOND }), DURATION, 0)).toBe(0)
     expect(clipTimeAt(ref({ start: 3 * SECOND }), DURATION, 1 * SECOND)).toBe(0)
   })
@@ -38,11 +38,6 @@ describe('where inside a clip the head stands', () => {
 
   it('answers the start for a clip with no length rather than dividing by nothing', () => {
     expect(clipTimeAt(ref(), 0, 5 * SECOND)).toBe(0)
-    expect(Number.isNaN(clipTimeAt(ref(), 0, 5 * SECOND))).toBe(false)
-  })
-
-  it('never runs backwards, however far behind the block the head is', () => {
-    expect(clipTimeAt(ref({ start: 10 * SECOND }), DURATION, 0)).toBe(0)
   })
 
   it('bites into the clip where the offset says, from the first frame of the block', () => {
@@ -77,15 +72,12 @@ describe('what plays at a given head', () => {
   })
 
   it('plays the block the head is inside, and it alone', () => {
-    const blend = clipBlendAt([walk(), dance({ start: 4 * SECOND })], lengths, 1 * SECOND)
-
-    expect(blend).toEqual([{ clipId: 'walk', name: 'Walk', time: 1, weight: 1 }])
-  })
-
-  it('picks the second block once the head has reached it', () => {
-    const blend = clipBlendAt([walk(), dance({ start: 2 * SECOND })], lengths, 3 * SECOND)
-
-    expect(blend).toEqual([{ clipId: 'dance', name: 'Dance', time: 1, weight: 1 }])
+    expect(clipBlendAt([walk(), dance({ start: 4 * SECOND })], lengths, SECOND)).toEqual([
+      { clipId: 'walk', name: 'Walk', time: 1, weight: 1 },
+    ])
+    expect(clipBlendAt([walk(), dance({ start: 2 * SECOND })], lengths, 3 * SECOND)).toEqual([
+      { clipId: 'dance', name: 'Dance', time: 1, weight: 1 },
+    ])
   })
 
   it('holds the last frame of the block behind it while nothing covers the head', () => {
@@ -119,23 +111,27 @@ describe('what plays at a given head', () => {
     expect(blend.map(entry => entry.weight)).toEqual([0.5, 0.5])
   })
 
-  it('lets a lone block fade in from the rest pose rather than scaling it back to one', () => {
+  // What a fade must never look like: a character melting towards its bind pose. With nothing to
+  // cross into, a lone fade has nothing to do — the block simply holds.
+  it('never fades towards the rest pose when a block has no neighbour to cross into', () => {
     const blend = clipBlendAt([walk({ duration: 4 * SECOND, fadeIn: 2 * SECOND })], lengths, SECOND)
 
-    expect(blend).toEqual([{ clipId: 'walk', name: 'Walk', time: 1, weight: 0.5 }])
+    expect(blend).toEqual([{ clipId: 'walk', name: 'Walk', time: 1, weight: 1 }])
   })
 
-  it('answers the same thing however the head got there', () => {
-    const clips = [
-      walk({ duration: 4 * SECOND, fadeOut: 2 * SECOND }),
-      dance({ start: 2 * SECOND, duration: 4 * SECOND, fadeIn: 2 * SECOND }),
-    ]
-
-    // The whole point of taking the pose from the head alone: a scrub backwards, a render frame
-    // by frame and playing forwards all land here.
-    expect(clipBlendAt(clips, lengths, 2.5 * SECOND)).toEqual(
-      clipBlendAt(clips, lengths, 2.5 * SECOND),
+  it('never lets the weights fall short of one pose at the junction of two blocks', () => {
+    // Laid end to end with fades that do not overlap: the sum used to drop to nothing here, and
+    // the character flashed through its bind pose.
+    const blend = clipBlendAt(
+      [
+        walk({ duration: 2 * SECOND, fadeOut: SECOND }),
+        dance({ start: 2 * SECOND, duration: 2 * SECOND, fadeIn: SECOND }),
+      ],
+      lengths,
+      1.9 * SECOND,
     )
+
+    expect(blend.reduce((sum, entry) => sum + entry.weight, 0)).toBe(1)
   })
 
   it('never lets two blocks laid end to end both answer for the instant they share', () => {

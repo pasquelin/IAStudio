@@ -44,26 +44,25 @@ export function clipBlendAt(
   const blocks = placed(clips, lengths)
   if (blocks.length === 0) return []
 
-  const live = blocks.filter(block => covers(block, playhead))
-  const sounding =
-    live.length > 0
-      ? live.map(block => ({ block, weight: weightAt(block, playhead) }))
-      : [{ block: holdingAt(blocks, playhead), weight: 1 }]
+  const sounding = new Map<Block, number>()
+  for (const block of blocks) {
+    if (covers(block, playhead)) sounding.set(block, weightAt(block, playhead))
+  }
 
-  // Scaled down only when they exceed one whole pose: a single block fading in has to rise FROM
-  // the rest pose, while two that overlap have to add up to exactly one or the character shrinks
-  // towards its rest for the length of the fade.
-  const total = sounding.reduce((sum, entry) => sum + entry.weight, 0)
+  const total = [...sounding.values()].reduce((sum, weight) => sum + weight, 0)
+  // Whatever the fades leave goes to the block that HOLDS here, never to the rest pose: a
+  // character melting towards its bind pose is the one thing a fade must never look like. Two
+  // blocks that overlap already sum to one and take nothing; two laid end to end simply cut.
+  if (total < 1) {
+    const holder = holdingAt(blocks, playhead)
+    sounding.set(holder, (sounding.get(holder) ?? 0) + 1 - total)
+  }
   const scale = total > 1 ? 1 / total : 1
 
-  return sounding.map(({ block, weight }) => ({
+  return [...sounding].map(([block, weight]) => ({
     clipId: block.ref.id,
     name: block.ref.source.name,
-    time: clipTimeAt(
-      block.ref,
-      block.length,
-      clamp(playhead, block.ref.start, block.ref.start + block.span),
-    ),
+    time: clipTimeAt(block.ref, block.length, Math.min(playhead, block.ref.start + block.span)),
     weight: weight * scale,
   }))
 }

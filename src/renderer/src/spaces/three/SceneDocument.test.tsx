@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
@@ -44,7 +44,6 @@ const setPickedBone = vi.fn()
 const setQuadView = vi.fn()
 const setPaneViews = vi.fn()
 const setPlayhead = vi.fn()
-const setSelfPlay = vi.fn()
 const refreshTextures = vi.fn()
 /** Every engine built, so a test can fire the callbacks the real one would. */
 const built = vi.hoisted((): SceneRendererOptions[] => [])
@@ -79,7 +78,6 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setQuadView = setQuadView
     setPaneViews = setPaneViews
     setPlayhead = setPlayhead
-    setSelfPlay = setSelfPlay
     refreshTextures = refreshTextures
     viewFrom = viewFrom
     frameSelection = frameSelection
@@ -536,6 +534,21 @@ describe('SceneDocument and the timeline over the scene', () => {
     act(() => useSceneViews.getState().setPlayhead('doc-1', 1.5))
 
     expect(setPlayhead).toHaveBeenLastCalledWith(1.5)
+  })
+
+  /**
+   * The transport lives HERE rather than in the timeline panel, which is a tool window one may
+   * close: a character has to keep walking in the viewport with no band on screen. Nothing else
+   * asserts it — remove the hook and every other test of the studio stays green.
+   */
+  it('runs the head itself, so closing the timeline panel never stops playback', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    act(() => useSceneViews.getState().setPlaying('doc-1', true))
+
+    await waitFor(() =>
+      expect(sceneViewOf(useSceneViews.getState(), 'doc-1').playhead).toBeGreaterThan(0),
+    )
+    act(() => useSceneViews.getState().setPlaying('doc-1', false))
   })
 
   it('reports the bones a model brought, so a track can name one', () => {

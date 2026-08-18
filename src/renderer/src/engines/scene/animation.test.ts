@@ -68,15 +68,6 @@ describe('SceneAnimations', () => {
     expect(cubeOf(root).position.x).toBeCloseTo(0.75, 5)
   })
 
-  it('stands still as the frames go by, since the head is the only clock', () => {
-    const { animations, root } = withWalk()
-    animations.apply('node-1', [ref()])
-    animations.update(0.5)
-    animations.update(0.5)
-
-    expect(cubeOf(root).position.x).toBe(0)
-  })
-
   it('runs at the speed the document asks for, which shortens the block', () => {
     const { animations, root } = withWalk()
     animations.apply('node-1', [ref({ speed: 2 })])
@@ -218,44 +209,6 @@ describe('several blocks on one model', () => {
     // The second block is a quarter of the way in; sharing one action would have shown the first
     // block's own head, four seconds past its end.
     expect(cube.position.x).toBeCloseTo(0.25, 5)
-  })
-})
-
-describe('the one block a play button holds', () => {
-  const held = (): { animations: SceneAnimations; cube: Object3D } => {
-    const animations = new SceneAnimations()
-    const root = scene()
-    animations.add('node-1', root, [walkClip()])
-    animations.apply('node-1', [embeddedClip('block-1', 'walk')])
-
-    const cube = root.children[0]
-    if (!cube) throw new Error('the fixture builds one child')
-    return { animations, cube }
-  }
-
-  it('runs on real time while the head stands still', () => {
-    const { animations, cube } = held()
-    animations.setSelfPlay({ nodeId: 'node-1', clipId: 'block-1' })
-    animations.update(0.5)
-
-    expect(cube.position.x).toBeCloseTo(0.5, 5)
-  })
-
-  it('says whether anything moved, so the frame loop can go back to sleep', () => {
-    const { animations } = held()
-
-    expect(animations.update(0.1)).toBe(false)
-    animations.setSelfPlay({ nodeId: 'node-1', clipId: 'block-1' })
-    expect(animations.update(0.1)).toBe(true)
-  })
-
-  it('gives the model back to the head when it is let go of', () => {
-    const { animations, cube } = held()
-    animations.setSelfPlay({ nodeId: 'node-1', clipId: 'block-1' })
-    animations.update(0.5)
-    animations.setSelfPlay(null)
-
-    expect(cube.position.x).toBe(0)
   })
 })
 

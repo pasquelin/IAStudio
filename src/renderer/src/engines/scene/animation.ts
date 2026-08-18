@@ -3,7 +3,7 @@ import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation
 import type { ClipRef } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import { clipBlendAt, type ClipWeight } from './clipBlend'
-import { skeletonBonesOf, type SkeletonBone } from './rigState'
+import { skeletonBonesOf } from './rigState'
 import { blockClip, nodeTravelsOnBand, rootTrackOf, travelsWith } from './rootMotion'
 
 /** The clips a loaded file brought, in the order it spells them. */
@@ -27,30 +27,26 @@ function lengthsOf(clips: readonly AnimationClip[]): Record<string, number> {
   return lengths
 }
 
-/**
- * Which block runs on real time rather than on the head, when the inspector asked for one. A pair
- * rather than a flag on the block: watching a clip is not an edit, and a flag would put an undo
- * entry behind a play button — which `setPlayhead` refuses by name for the same reason.
- */
-export type SelfPlay = { nodeId: string; clipId: string }
-
-/** One block of the document, and the clip copy it plays. */
+/** One block of the document, and the clip object it plays. */
 type Bound = {
   ref: ClipRef
-  /** The file's own clip this block was cut from, so an unchanged one is not copied again. */
-  source: AnimationClip
-  /** Whether the copy kept the travel, so a decision that flips rebuilds it. */
+  /** Whether that object kept the travel, so a decision that flips rebuilds it. */
   travel: boolean
   clip: AnimationClip
 }
 
 type Player = {
   mixer: AnimationMixer
-  clips: AnimationClip[]
+  /**
+   * The file's clips, by name. FIRST WINS on a name held twice, and so does `lengths`: a Mixamo
+   * export calls every clip `mixamo.com`, and two answers here would play one clip at another's
+   * width.
+   */
+  clips: Map<string, AnimationClip>
   /** How long each clip of the file runs, which is what a block's width is derived from. */
   lengths: Record<string, number>
-  /** The rig, for the track a clip's travel rides on. Empty for a model carrying no bones. */
-  bones: SkeletonBone[]
+  /** The travel channel of each clip, worked out once — it depends on the file and the rig alone. */
+  rootTracks: Map<string, string | null>
   /** One entry per block the document holds, keyed by block id. */
   bound: Map<string, Bound>
 }
@@ -63,15 +59,14 @@ type Player = {
  * apart is what lets a viewport be thrown away and rebuilt in another window — and it is what
  * makes any of this testable, since a mixer needs no GPU at all.
  *
- * The head is the ONLY clock here, save for the one block self-play runs: weights and times come
- * out of `clipBlendAt`, so scrubbing backwards and rendering frame by frame both land on the
+ * The head is the ONLY clock here: nothing in this class advances on real time, weights and times
+ * come out of `clipBlendAt`, and scrubbing backwards or rendering frame by frame both land on the
  * pose playing forwards would have shown.
  */
 export class SceneAnimations {
   private readonly players = new Map<string, Player>()
   private timeline: AnimationTimeline = EMPTY_TIMELINE
   private playhead: Us = 0
-  private selfPlay: SelfPlay | null = null
 
   /**
    * Binds a node to the instance the file produced. The clips come from the cached SOURCE rather
@@ -81,11 +76,21 @@ export class SceneAnimations {
     if (clips.length === 0) return
 
     this.remove(nodeId)
+    const bones = skeletonBonesOf(root)
+    const byName = new Map<string, AnimationClip>()
+    const rootTracks = new Map<string, string | null>()
+    for (const clip of clips) {
+      if (byName.has(clip.name)) continue
+
+      byName.set(clip.name, clip)
+      rootTracks.set(clip.name, rootTrackOf(clip, bones))
+    }
+
     this.players.set(nodeId, {
       mixer: new AnimationMixer(root),
-      clips,
-      lengths: lengthsOf(clips),
-      bones: skeletonBonesOf(root),
+      clips: byName,
+      lengths: lengthsOf([...byName.values()]),
+      rootTracks,
       bound: new Map(),
     })
   }
@@ -111,7 +116,7 @@ export class SceneAnimations {
 
   /** What a node's file brought, for whoever has to say again what that model IS. */
   clipsOf(nodeId: string): AnimationClip[] {
-    return this.players.get(nodeId)?.clips ?? []
+    return [...(this.players.get(nodeId)?.clips.values() ?? [])]
   }
 
   /**
@@ -126,16 +131,6 @@ export class SceneAnimations {
     for (const [nodeId, player] of this.players) this.apply(nodeId, refsOf(player))
   }
 
-  /** The one block a play button is holding, or nothing at all — see `SelfPlay`. */
-  setSelfPlay(selfPlay: SelfPlay | null): void {
-    if (selfPlay?.nodeId === this.selfPlay?.nodeId && selfPlay?.clipId === this.selfPlay?.clipId) {
-      return
-    }
-
-    this.selfPlay = selfPlay
-    this.placeAll()
-  }
-
   /**
    * Makes a node play the blocks the document holds. An empty list puts the model back to its rest
    * pose: with no action driving them, three restores the values the file was loaded with.
@@ -148,7 +143,7 @@ export class SceneAnimations {
     const kept = new Set<string>()
 
     for (const ref of refs) {
-      const source = player.clips.find(candidate => candidate.name === ref.source.name)
+      const source = player.clips.get(ref.source.name)
       // A block naming a clip the file no longer spells plays nothing, rather than costing the
       // whole model its animation.
       if (!source) continue
@@ -156,16 +151,16 @@ export class SceneAnimations {
       kept.add(ref.id)
       const travel = travelsWith(ref.rootMotion, onBand)
       const held = player.bound.get(ref.id)
-      // The copy is what costs, so it is remade only when what it holds would differ; a speed or
-      // a fade is written onto the action further down without rebuilding anything.
-      if (held && held.source === source && held.travel === travel) {
+      // Rebuilt only when the travel decision flips; a speed, a fade or a move is written onto
+      // the action further down without touching the clip. `player.clips` never changes.
+      if (held && held.travel === travel && held.clip.name === ref.source.name) {
         held.ref = ref
         continue
       }
 
       if (held) player.mixer.uncacheClip(held.clip)
-      const clip = blockClip(source, rootTrackOf(source, player.bones), travel)
-      player.bound.set(ref.id, { ref, source, travel, clip })
+      const clip = blockClip(source, player.rootTracks.get(ref.source.name) ?? null, travel)
+      player.bound.set(ref.id, { ref, travel, clip })
     }
 
     for (const [id, held] of player.bound) {
@@ -175,24 +170,7 @@ export class SceneAnimations {
       player.bound.delete(id)
     }
 
-    this.place(nodeId, player)
-  }
-
-  /**
-   * Advances the one block a play button holds, and answers whether anything moved — what keeps
-   * the frame loop awake. Everything else stands where the head put it: a mixer on the wall clock
-   * is what made two monitors of one scene show two different frames of the same instant.
-   */
-  update(delta: number): boolean {
-    const running = this.selfPlay
-    const player = running ? this.players.get(running.nodeId) : null
-    const held = running && player ? player.bound.get(running.clipId) : null
-    if (!player || !held) return false
-
-    player.mixer.update(delta)
-    // A clip that does not loop holds its last pose once it is over, and nothing moving is a
-    // frame loop with no reason to stay awake.
-    return !player.mixer.clipAction(held.clip).paused
+    this.place(player)
   }
 
   /**
@@ -206,36 +184,22 @@ export class SceneAnimations {
   }
 
   private placeAll(): void {
-    for (const [nodeId, player] of this.players) this.place(nodeId, player)
+    for (const player of this.players.values()) this.place(player)
   }
 
-  private place(nodeId: string, player: Player): void {
-    const running = this.selfPlay?.nodeId === nodeId ? this.selfPlay.clipId : null
+  private place(player: Player): void {
     const sounding = new Map<string, ClipWeight>()
-    if (!running) {
-      for (const heard of clipBlendAt(refsOf(player), player.lengths, this.playhead)) {
-        sounding.set(heard.clipId, heard)
-      }
+    for (const heard of clipBlendAt(refsOf(player), player.lengths, this.playhead)) {
+      sounding.set(heard.clipId, heard)
     }
 
     for (const [id, held] of player.bound) {
       const action = player.mixer.clipAction(held.clip)
       action.loop = held.ref.loop ? LoopRepeat : LoopOnce
-      // Without it a clip played once snaps back to its first frame the instant it ends, which
-      // reads as the model teleporting rather than as an animation finishing.
-      action.clampWhenFinished = !held.ref.loop
-      action.timeScale = held.ref.speed
       action.play()
 
-      if (running) {
-        action.enabled = id === running
-        action.paused = id !== running
-        action.weight = id === running ? 1 : 0
-        continue
-      }
-
-      // Paused, every one of them: the head is the only clock in this mode, and the time below
-      // is written straight in rather than reached by letting the mixer run to it.
+      // Paused, every one of them: the head is the only clock, and the time below is written
+      // straight in rather than reached by letting the mixer run to it.
       const heard = sounding.get(id)
       action.paused = true
       action.enabled = heard !== undefined
@@ -243,7 +207,7 @@ export class SceneAnimations {
       if (heard) action.time = heard.time
     }
 
-    // A seek has to show without waiting for a frame, and a paused player never gets one.
+    // A pose has to show without waiting for a frame, and nothing here ever gets one.
     player.mixer.update(0)
   }
 }

@@ -70,7 +70,7 @@ import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './textGeometry'
 import { createGltfSource, type GltfSource } from './gltfSource'
-import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf, type SelfPlay } from './animation'
+import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
 import { drivenNodes, poseAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
@@ -537,15 +537,6 @@ export class SceneRenderer {
     // The clips of every imported model follow the head too, which is what puts them on the band
     // rather than on real time — and what stops a render from writing a frozen character.
     this.animations.seek(time)
-    this.viewport.requestRender()
-  }
-
-  /**
-   * Which block runs on real time, as the inspector's play button asks. Session state, arriving
-   * by a call of its own for the same reason the head does.
-   */
-  setSelfPlay(selfPlay: SelfPlay | null): void {
-    this.animations.setSelfPlay(selfPlay)
     this.viewport.requestRender()
   }
 
@@ -2126,8 +2117,9 @@ export class SceneRenderer {
       this.flew = true
       this.fly(delta)
     }
-    // Both, never short-circuited: a clip has to keep running while the camera flies over it.
-    return this.animations.update(delta) || moving
+    // The clips do not appear here: they stand where the head put them, and the head is advanced
+    // by `useAnimationPlayback`, which calls `setPlayhead` and asks for a frame of its own.
+    return moving
   }
 
   private fly(delta: number): void {

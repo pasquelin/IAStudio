@@ -2,7 +2,7 @@
  * Whether a clip carries its character across the floor, and what to do when the band already does.
  * Pure, like `rigState.ts`: all of it is the shape of a track list, read without a GPU or a mixer.
  */
-import { AnimationClip, PropertyBinding } from 'three'
+import { AnimationClip, PropertyBinding, VectorKeyframeTrack, type KeyframeTrack } from 'three'
 import type { AnimationTimeline } from '@shared/domain/animation'
 import type { RootMotion } from '@shared/domain/scene'
 import type { SkeletonBone } from './rigState'
@@ -77,21 +77,38 @@ export function travelsWith(motion: RootMotion, onBand: boolean): boolean {
 }
 
 /**
- * The clip one block plays: a COPY of the file's, without its travel when the block stays in
- * place. A copy in both cases — the file's clip is shared by every instance built from it, and a
- * mixer keys its actions by clip, so two blocks of one clip would share a head and a weight.
+ * The clip one block plays: a clip OBJECT of its own, held in place when the block does not
+ * travel. Its own object in both cases — a mixer keys its actions by clip, so two blocks of one
+ * clip would otherwise share a head and a weight.
  */
 export function blockClip(
   clip: AnimationClip,
   rootTrack: string | null,
   travel: boolean,
 ): AnimationClip {
-  const kept =
-    travel || !rootTrack ? clip.tracks : clip.tracks.filter(track => track.name !== rootTrack)
-
-  return new AnimationClip(
-    clip.name,
-    clip.duration,
-    kept.map(track => track.clone()),
+  // The tracks are SHARED, never copied: an action only ever reads them, and a rig's clip weighs
+  // near a megabyte. Only the one channel this rewrites is rebuilt.
+  const tracks = clip.tracks.map(track =>
+    travel || track.name !== rootTrack ? track : heldInPlace(track),
   )
+
+  return new AnimationClip(clip.name, clip.duration, tracks)
+}
+
+/**
+ * The same channel with only its HORIZONTAL travel taken out. The height and its bounce stay: a
+ * walk whose hips sit at 1 m over a bind pose that puts them at 0.9 would sink into the floor,
+ * and a walk with no bounce reads as a character sliding rather than stepping.
+ */
+function heldInPlace(track: KeyframeTrack): KeyframeTrack {
+  const values = Array.from(track.values)
+  const x = values[0] ?? 0
+  const z = values[2] ?? 0
+
+  for (let key = 0; key < values.length; key += 3) {
+    values[key] = x
+    values[key + 2] = z
+  }
+
+  return new VectorKeyframeTrack(track.name, Array.from(track.times), values)
 }

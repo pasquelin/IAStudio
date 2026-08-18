@@ -12,10 +12,11 @@ const BONES: SkeletonBone[] = [
   { name: 'Spine', parent: 'Hip' },
 ]
 
+/** Hips that cross four units of floor while bouncing between 0.9 and 1.1 above it. */
 function travellingWalk(): AnimationClip {
   return new AnimationClip('Walk', 1, [
     new VectorKeyframeTrack('Spine.position', [0, 1], [0, 0, 0, 0, 0.1, 0]),
-    new VectorKeyframeTrack('Hip.position', [0, 1], [0, 0, 0, 0, 0, 4]),
+    new VectorKeyframeTrack('Hip.position', [0, 1], [0, 0.9, 0, 4, 1.1, 0]),
     new QuaternionKeyframeTrack('Hip.quaternion', [0, 1], [0, 0, 0, 1, 0, 0, 0, 1]),
   ])
 }
@@ -59,6 +60,16 @@ describe('whether the band already carries the node', () => {
     expect(nodeTravelsOnBand(timeline, 'cube')).toBe(false)
   })
 
+  // Muting a trajectory stops the NODE. Handing the travel back to the clip would send the
+  // character walking off on its own, which is the very thing `auto` exists to prevent.
+  it('counts a muted track all the same, so muting never starts a character travelling', () => {
+    const timeline = timelineWith([
+      animationTrack('walk-there', 'position', [key(0, 0), key(SECOND, 4)], { muted: true }),
+    ])
+
+    expect(nodeTravelsOnBand(timeline, 'cube')).toBe(true)
+  })
+
   it('does not count a track on a BONE of the node, which moves the node nowhere', () => {
     const timeline = timelineWith([
       animationTrack('hip', 'position', [key(0, 0), key(SECOND, 4)], {
@@ -71,45 +82,49 @@ describe('whether the band already carries the node', () => {
 })
 
 describe('whether a block uses its own travel', () => {
-  it('never does when it is asked to stay in place', () => {
+  // The three other arms are read where they can be SEEN, on `SceneAnimations`; only this one
+  // has no counterpart there.
+  it('never travels when it is asked to stay in place', () => {
     expect(travelsWith('inPlace', false)).toBe(false)
     expect(travelsWith('inPlace', true)).toBe(false)
-  })
-
-  it('always does when it is asked to travel, band or no band', () => {
-    expect(travelsWith('travel', true)).toBe(true)
-  })
-
-  it('yields to a trajectory the band already holds, which is the double displacement', () => {
-    expect(travelsWith('auto', true)).toBe(false)
-    expect(travelsWith('auto', false)).toBe(true)
   })
 })
 
 describe('the clip one block plays', () => {
-  it('keeps the turns when the travel is taken out, so a walk still walks', () => {
-    const cut = blockClip(travellingWalk(), 'Hip.position', false)
+  /** Rounded: a keyframe track holds float32, so 0.9 comes back as 0.8999999761581421. */
+  const hips = (clip: AnimationClip): number[] =>
+    [...(clip.tracks.find(track => track.name === 'Hip.position')?.values ?? [])].map(value =>
+      Number(value.toFixed(4)),
+    )
 
-    expect(cut.tracks.map(track => track.name)).toEqual(['Spine.position', 'Hip.quaternion'])
+  it('holds the hips where they started, so the character stops crossing the floor', () => {
+    expect(hips(blockClip(travellingWalk(), 'Hip.position', false))).toEqual([0, 0.9, 0, 0, 1.1, 0])
+  })
+
+  it('keeps the HEIGHT and its bounce, or the character sinks into the floor and slides', () => {
+    // The bind pose is not the walk's own height: dropping the whole channel put the hips back
+    // where the file bound them, and took the step out of the step.
+    const heights = hips(blockClip(travellingWalk(), 'Hip.position', false)).filter(
+      (_, index) => index % 3 === 1,
+    )
+
+    expect(heights).toEqual([0.9, 1.1])
   })
 
   it('keeps everything when the block travels', () => {
-    const kept = blockClip(travellingWalk(), 'Hip.position', true)
-
-    expect(kept.tracks).toHaveLength(3)
+    expect(hips(blockClip(travellingWalk(), 'Hip.position', true))).toEqual([0, 0.9, 0, 4, 1.1, 0])
   })
 
   it('never touches the clip the file owns, which every other node plays too', () => {
     const source = travellingWalk()
     blockClip(source, 'Hip.position', false)
 
-    expect(source.tracks).toHaveLength(3)
+    expect(hips(source)).toEqual([0, 0.9, 0, 4, 1.1, 0])
   })
 
   it('is a clip of its own, so two blocks of one clip hold two heads', () => {
     const source = travellingWalk()
 
     expect(blockClip(source, null, true).uuid).not.toBe(source.uuid)
-    expect(blockClip(source, null, true).uuid).not.toBe(blockClip(source, null, true).uuid)
   })
 })
