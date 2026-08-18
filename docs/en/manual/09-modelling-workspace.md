@@ -481,6 +481,39 @@ occlusion** — take images from the project. The **Choose a texture** button op
 | **Target** | what it points at |
 | **Sky colour** / **Ground colour** | hemisphere only |
 
+### For a camera
+
+A camera has **its lens**, and, as soon as a shot covers it, **what that shot has it do**.
+
+| Field | What it sets |
+|---|---|
+| **Field of view** | how much the camera takes in, in degrees. This is the zoom: a small angle is a telephoto, a large one a wide angle |
+| **Near distance** | nearer than this, nothing is drawn. Never zero — depth sorting would have no range left |
+| **Far distance** | further than this, nothing is drawn |
+
+The **Put this camera where the view is looking** button gives it the place and the direction of
+the current view: frame it with the mouse, click, and the camera is there.
+
+#### Camera shot
+
+This section carries **the shot covering the playhead**: what **moves** the camera during that
+shot, and what it **looks at**. While no shot covers the head, it shows nothing but the **Create a
+path for this camera** button — which then opens the shot and lays the rail in one gesture.
+
+| Field | What it does |
+|---|---|
+| **Path** | the rail the camera rides during this shot. **None** leaves it wherever its placement and its keys put it |
+| **Create a path for this camera** | lays a path in front of the camera, down its line of sight, and binds it to this shot. **One `⌘Z` undoes both** — and where no shot covers the head, the button opens one in the same gesture |
+| **Speed curve** | **Steady**, **Soft start**, **Soft finish**, **Soft start and finish**. Without one, a travelling starts and stops dead |
+| **Start on the path** / **End on the path** | from 0 to 1, the stretch of rail actually taken. **A start greater than the end runs the rail backwards** |
+| **Target** | **Free** — the camera looks where its own rotation turns it · **A point** — it aims at coordinates, set by **Aim point** · **an object's name** — it follows that object, even one that is itself animated |
+
+**The speed is steady along the rail**, whatever the distances between its points: halfway
+through the shot the camera has covered half the **length** of the path, not half its segments.
+
+**These settings live on the SHOT, not on the camera.** The same camera can therefore travel in
+one shot and stand still in the next, watch the statue here and the door there.
+
 ### Shadows
 
 Two switches, on every object that can have them:
@@ -856,6 +889,24 @@ and pose mode rather than through these three steps.
 Add a **camera** to the scene (Add menu → Object → Camera). It is an object like any other: it
 moves with the gizmo, it animates like any other object, and a glTF export carries it along.
 
+#### The preview — seeing what the camera films
+
+**Select a camera, and an inset opens at the top right of the view**: what it sees, at the instant
+the playhead stands on, at the shape of a video. Its name sits at the top. Deselecting the camera
+closes it.
+
+This is not a working view but a **rendered picture**: no grid, no handles, no skeletons, no light
+or camera markers — exactly what the video file will hold.
+
+| Gesture | What it does |
+|---|---|
+| **Drag the inset** | moves it around the view, if it is in the way |
+| **Grow the preview to the whole view** | the inset takes the whole surface. The same button, now **Put the preview back in its corner**, sends it home |
+
+**The "On air" badge** lights up when the selected camera is also the one the montage names at
+that instant. That is the one thing telling the two apart: **the preview follows what you have
+selected**, while the montage and the render follow what the shots decide — see below.
+
 **A scene may hold several, and change camera part way through.** That is what **shots** are for,
 laid on the band below:
 
@@ -891,8 +942,9 @@ computing anything** — a render takes minutes.
 
 The Modelling workspace now has everything this manual describes. What is left fits in two sentences:
 fonts are offered in one weight per family, and a text does not bend along a curve. On the
-animation side, keys run straight between one another — there are no easing curves yet — and a
-model's clip plays on its own, without blending into another.
+animation side, **keys** run straight between one another — there are no easing curves for them
+yet, a camera shot's **Speed curve** being the studio's only one — and a model's clip plays on its
+own, without blending into another.
 
 The detail is in [What does not exist yet](18-limits.md).
 
