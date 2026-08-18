@@ -240,7 +240,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
           void exportSequence({ sequence: state, title: titleOf(documentId) })
           return
         case 'sequence.exportCut':
-          void exportOtio(state, titleOf(documentId))
+          void exportOtio(documentId)
           return
         case 'sequence.unlink': {
           // Asked here rather than left to the command: every command run lands on the undo

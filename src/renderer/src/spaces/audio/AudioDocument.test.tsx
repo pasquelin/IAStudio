@@ -123,10 +123,7 @@ describe('AudioDocument', () => {
 
     publishCommand('sequence.exportCut')
 
-    expect(exportOtio).toHaveBeenCalledWith(
-      sequenceOf(useSequences.getState(), 'doc-1'),
-      expect.any(String),
-    )
+    expect(exportOtio).toHaveBeenCalledWith('doc-1')
   })
 
   it('says what its tools act on: the gesture while there is nothing, the range once there is', async () => {

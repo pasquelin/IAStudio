@@ -83,8 +83,9 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
      * `files` rather than `none`: it writes into the project folder, and a folder that was already
      * there is written over.
      *
-     * The montage is not here. A film is rendered frame by frame through a session the viewport
-     * drives, not encoded in one call like the other four, and a client cannot hold that session.
+     * A montage answers with its CUT — an `.otio` another editing application opens — and not
+     * with a film of it: the film is rendered frame by frame through a session the viewport
+     * drives, which no outside client can hold. Both montage kinds answer, Video and Audio.
      */
     name: 'document.export',
     titleKey: 'assistant.actions.documentExport.title',

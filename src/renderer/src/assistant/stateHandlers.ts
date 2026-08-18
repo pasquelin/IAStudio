@@ -143,15 +143,19 @@ async function rename(input: Record<string, unknown>): Promise<ActionOutcome> {
  *
  * Loaded on the call rather than imported at the top: this table is evaluated by the first screen,
  * and `eager-graph.test.ts` holds that chunk to reaching no third module out of an editor's
- * folder. Each of the four is the SAME rendering the native menu goes through.
+ * folder. Each of them is the SAME rendering the native menu goes through.
  *
- * `null` for a kind that has no single-call export — a sequence, which is rendered frame by frame
- * through a session the viewport drives, and a take, which is not a picture at all.
+ * A montage answers with its CUT rather than a film of it: the film is rendered frame by frame
+ * through a session the viewport drives and no outside client can hold, while the `.otio` is one
+ * encoding of plain data. The two audio-and-video kinds share it — they share the montage.
+ *
+ * **All six kinds answer now, so there is no `default`** — the compiler is what keeps a seventh
+ * from being forgotten, where a fallback would have silently refused it.
  */
 async function exportOf(
   document: DocumentDescriptor,
   input: Record<string, unknown>,
-): Promise<FolderExportRequest | null> {
+): Promise<FolderExportRequest> {
   switch (document.kind) {
     case 'image': {
       const { imageExportFiles } = await import('@/spaces/image/imageExportFiles')
@@ -176,8 +180,11 @@ async function exportOf(
         oneOf(input, 'target', TEXTURE_EXPORT_TARGETS) ?? 'raw',
       )
     }
-    default:
-      return null
+    case 'sequence':
+    case 'audio': {
+      const { otioExportFiles } = await import('@/app/otioExport')
+      return otioExportFiles(document.id)
+    }
   }
 }
 
@@ -185,8 +192,9 @@ async function exportOf(
  * Writes the document in front into the project, in a folder of its own.
  *
  * Every rendering throws rather than answering half an export — a sky with no picture, a material
- * with no channel, an engine that is not mounted. `notRenderable` names all three; this used to
- * answer `badInput`, which sent a client back to check parameters that were never the cause.
+ * with no channel, an engine that is not mounted, a montage with no project to resolve its media
+ * against. `notRenderable` names them; this used to answer `badInput`, which sent a client back
+ * to check parameters that were never the cause.
  *
  * The `try` covers the RENDERING alone. It wrapped the write too, so a `folder` the main process
  * refuses — it takes one path segment — came back named as a rendering that never happened.
@@ -203,7 +211,6 @@ async function exportDocument(input: Record<string, unknown>): Promise<ActionOut
     reportFailure('document.export', document.id, error)
     return refused('notRenderable')
   }
-  if (!request) return refused('wrongSurface')
 
   const folder = textOf(input, 'folder')
   return withBridge(bridge =>

@@ -13,9 +13,10 @@ import { pathSegment } from '@main/validation'
  *
  * The three 3D ones are `EXPORT_EXTENSIONS` — spelled out rather than derived, zod's enum wanting
  * a literal tuple and this project banning `as const`. They joined the list when a scene became
- * exportable through this writer as well as through its own channel.
+ * exportable through this writer as well as through its own channel, and `.otio` when a montage
+ * did: an outside client asks for the CUT, the film needing a session it cannot hold.
  */
-const extension = z.enum(['.png', '.glb', '.gltf', '.usdz'])
+const extension = z.enum(['.png', '.glb', '.gltf', '.usdz', '.otio'])
 
 /**
  * What one export may weigh, all of its files together.

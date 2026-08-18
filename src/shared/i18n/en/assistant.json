@@ -335,7 +335,7 @@
       },
       "documentExport": {
         "title": "Export the document in front into the project",
-        "description": "Writes the image, scene, sky or material in front into a folder of the project, named after its title when none is given. The destination cannot leave the project."
+        "description": "Writes the document in front — image, scene, sky, material or edit — into a folder of the project, named after its title when none is given. An edit comes out as OpenTimelineIO, the cut rather than a film, the frame-by-frame render needing a session nothing outside can hold. The destination cannot leave the project."
       },
       "gitStashDrop": {
         "title": "Throw a shelved change away",

@@ -102,12 +102,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
       if (command === 'sequence.playPause') return transport.toggle()
       // The chain of an edited take is NOT in it, and that is not a loss of the export: the
       // programme monitor does not hear it either — it becomes real when the take is applied.
-      if (command === 'sequence.exportCut') {
-        void exportOtio(
-          sequenceOf(useSequences.getState(), documentId),
-          useDocuments.getState().documents[documentId]?.title ?? documentId,
-        )
-      }
+      if (command === 'sequence.exportCut') void exportOtio(documentId)
     },
     [documentId, transport],
   )

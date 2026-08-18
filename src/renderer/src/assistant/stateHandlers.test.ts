@@ -257,15 +257,36 @@ describe('exporting the document in front', () => {
   })
 
   /**
-   * A sequence is rendered frame by frame through a session the viewport drives, not encoded in
-   * one call like the other four — so there is nothing here for a client to hold.
+   * A montage answers with its CUT, not with a film: the film needs a session the viewport
+   * drives and a client cannot hold, while the `.otio` is one encoding of plain data. This case
+   * asserted the refusal until the montage got that encoding.
    */
-  it('refuses a kind that has no single-call export', async () => {
-    installDocuments({ 'doc-v': 'video' }, 'doc-v')
+  it.each(['video', 'audio'] as const)('writes the cut of a %s montage', async workspace => {
+    installDocuments({ 'doc-m': workspace }, 'doc-m')
+    const exportInto = vi.fn(async () => 'doc-m')
+    installFakeBridge({ project: { exportInto } })
+
+    expect(await runAction('document.export', {})).toEqual({ ok: true, data: 'doc-m' })
+    expect(exportInto).toHaveBeenCalledWith(
+      expect.objectContaining({
+        folder: 'doc-m',
+        files: [expect.objectContaining({ extension: '.otio' })],
+      }),
+    )
+  })
+
+  // The one way a montage cannot be encoded: its clips point at catalogue rows, and without a
+  // project there is no path to resolve them to.
+  it('refuses a montage when no project is open', async () => {
+    installDocuments({ 'doc-m': 'video' }, 'doc-m')
+    useProject.setState({ project: null, known: true })
     const exportInto = vi.fn(async () => null)
     installFakeBridge({ project: { exportInto } })
 
-    expect(await runAction('document.export', {})).toEqual({ ok: false, refusal: 'wrongSurface' })
+    expect(await runAction('document.export', {})).toEqual({
+      ok: false,
+      refusal: 'notRenderable',
+    })
     expect(exportInto).not.toHaveBeenCalled()
   })
 
