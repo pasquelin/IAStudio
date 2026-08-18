@@ -385,6 +385,23 @@ describe('the translation bundles', () => {
        * refusing a distinction the trade makes.
        */
       { dropped: /(?<!\p{L})(?:rigu[ée]e?s?|rigs?)(?!\p{L})/iu, kept: 'squelette' },
+      /**
+       * `plan` was a third French word for the thing on a track, written under keys NAMED
+       * `unlinkedClips`. The manual glossary settles it, head-word `Clip`.
+       *
+       * The lookbehinds carry the three senses that stay: `premier plan`, `arrière-plan`, and
+       * `{{plan}}`, the subscription tier — a variable name, not screen text. `plane` and
+       * `plantage` are held by the trailing `\p{L}`: `\b` is ASCII and would read neither.
+       *
+       * `except` is the geometric plane. This does NOT settle `bloc` against `clip` — 22 French
+       * values say `bloc`, every one of them `assistant.*`, against 25 saying `clip`, and the
+       * glossary has no head-word for `bloc` to settle it either way.
+       */
+      {
+        dropped: /(?<!premier |arrière-|\{\{)(?<!\p{L})plans?(?!\p{L})/iu,
+        kept: 'clip',
+        except: ['meshes.plane', 'texture.shapePlane'],
+      },
     ],
     en: [
       { dropped: /\bfile browsers?\b/i, kept: 'file manager' },
@@ -477,8 +494,22 @@ describe('the translation bundles', () => {
     const says = (word: string) => SETTLED_WORDS.fr.some(({ dropped }) => dropped.test(word))
 
     // The canary of an assertion on an empty list: a reading that stopped matching would pass it.
-    expect(['rigué', 'riguées', 'un rig', 'des rigs'].filter(word => !says(word))).toEqual([])
-    expect(['intrigue', 'intriguée', 'rigueur', 'garrigue'].filter(says)).toEqual([])
+    expect(
+      ['rigué', 'riguées', 'un rig', 'des rigs', 'plan', 'plans'].filter(word => !says(word)),
+    ).toEqual([])
+    expect(
+      [
+        'intrigue',
+        'intriguée',
+        'rigueur',
+        'garrigue',
+        'plane',
+        'plantage',
+        'premier plan',
+        'arrière-plan',
+        'abonnement {{plan}}',
+      ].filter(says),
+    ).toEqual([])
   })
 
   /**
