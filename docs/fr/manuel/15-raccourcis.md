@@ -473,12 +473,13 @@ L’espace Skyboxes répond au clavier comme les autres.
 
 ## Dans l’éditeur audio
 
-Le septième contexte : l’éditeur de prises n’écoute que l’annulation.
+Le septième contexte : l’éditeur de prises écoute l’annulation, et la barre d’espace.
 
 | Action | Touche | Ce qu’elle fait |
 |---|---|---|
 | **Annuler** | `⌘Z` | retire la dernière étape de la chaîne — un fondu, une normalisation, un rognage |
 | **Rétablir** | `⇧⌘Z` | |
+| **Lire / Pause** | `Espace` | le moniteur du bas, celui de la chaîne — voir [L’espace Audio](11-espace-audio.md) |
 
 > **Rien n’est écrit tant que vous n’avez pas appliqué.** Chaque outil ajoute une étape à une
 > chaîne rejouée sur la prise décodée, ce qui rend l’annulation gratuite et l’A/B instantané.
