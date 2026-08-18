@@ -207,6 +207,8 @@
     "addBone": "Ajouter un os enfant",
     "removeBone": "Retirer cet os",
     "addHands": "Ajouter les mains",
+    "addHandle": "Ajouter une poignée à suivre",
+    "removeHandle": "Retirer la poignée",
     "rigServicesLocked": "Des services Scenario savent aussi le faire, mais l’abonnement {{plan}} ne les autorise pas. Le studio le fait lui-même, gratuitement.",
     "rigFault_noGeometry": "Ce modèle est trop plat pour recevoir un squelette.",
     "rigFault_lyingDown": "Ce modèle est couché. Redressez-le avant de le rendre animable.",

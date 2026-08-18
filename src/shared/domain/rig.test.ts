@@ -82,6 +82,22 @@ describe('reading a rig off a document', () => {
   it('refuses one with no origin at all', () => {
     expect(isRig({ bones: SPINE })).toBe(false)
   })
+
+  const CHAIN = { id: 'ik-1', effector: 'Spine', target: 'Hips', links: ['Hips'] }
+
+  it('accepts a rig that reaches for something', () => {
+    expect(isRig({ bones: SPINE, origin: 'local', ik: [CHAIN] })).toBe(true)
+  })
+
+  it('refuses a chain with no links, which no reader could turn', () => {
+    expect(isRig({ bones: SPINE, origin: 'local', ik: [{ ...CHAIN, links: 'Hips' }] })).toBe(false)
+  })
+
+  // Structural only, and deliberately: a bone can leave while a chain still names it, and the
+  // solver drops the chain rather than the model — the rule a track lives under too.
+  it('accepts a chain naming a bone the rig no longer holds', () => {
+    expect(isRig({ bones: SPINE, origin: 'local', ik: [{ ...CHAIN, target: 'Gone' }] })).toBe(true)
+  })
 })
 
 describe('editing the hierarchy by hand', () => {

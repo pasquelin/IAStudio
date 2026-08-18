@@ -223,6 +223,17 @@ describe('RigSection', () => {
     expect(nodeOf()?.model.rig?.bones.some(bone => bone.name === 'Spine')).toBe(false)
   })
 
+  it('gives a joint a handle to reach for, and takes it back with its bone', async () => {
+    rigged('LeftHand')
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter une poignée à suivre' }))
+
+    expect(nodeOf()?.model.rig?.ik?.[0]).toMatchObject({ effector: 'LeftHand' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer la poignée' }))
+    expect(nodeOf()?.model.rig?.ik).toEqual([])
+    expect(nodeOf()?.model.rig?.bones.map(bone => bone.name)).not.toContain('LeftHand.handle')
+  })
+
   it('never tells a model it cannot be rigged once it has been', () => {
     const node = modelNodeFixture('a')
     installScene(DOCUMENT, {

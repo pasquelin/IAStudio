@@ -1,0 +1,75 @@
+import { Bone, Object3D } from 'three'
+import { describe, expect, it } from 'vitest'
+import { createBoneJoints } from './boneJoints'
+
+/** Two bones, one under the other, so a world position is not the local one. */
+function chain(): Bone[] {
+  const hips = new Bone()
+  hips.name = 'Hips'
+  hips.position.set(0, 1, 0)
+
+  const spine = new Bone()
+  spine.name = 'Spine'
+  spine.position.set(0, 0.4, 0)
+  hips.add(spine)
+
+  const root = new Object3D()
+  root.add(hips)
+  root.updateWorldMatrix(false, true)
+  return [hips, spine]
+}
+
+/** Rounded, because the buffer is Float32 and 1.4 comes back as 1.399999976158142. */
+const pointsOf = (attribute: { array: ArrayLike<number> }): number[] =>
+  Array.from(attribute.array, value => Math.round(value * 1e5) / 1e5)
+
+describe('marking where two bones meet', () => {
+  // The helper draws the bones as segments; a joint is what a click and a gizmo are aimed at,
+  // and until now nothing drew one.
+  it('lays one point per bone, at the bone itself', () => {
+    const bones = chain()
+    const joints = createBoneJoints(bones)
+
+    const position = joints.points.geometry.getAttribute('position')
+    expect(position.count).toBe(2)
+    expect(pointsOf(position)).toEqual([0, 1, 0, 0, 1.4, 0])
+    joints.dispose()
+  })
+
+  it('reads them in WORLD space, since it hangs beside the scene rather than in the model', () => {
+    const bones = chain()
+    const hips = bones[0]
+    if (!hips) throw new Error('the fixture builds two bones')
+    const joints = createBoneJoints(bones)
+
+    hips.position.set(3, 1, 0)
+    hips.parent?.updateWorldMatrix(false, true)
+    joints.refresh()
+
+    expect(pointsOf(joints.points.geometry.getAttribute('position'))).toEqual([3, 1, 0, 3, 1.4, 0])
+    joints.dispose()
+  })
+
+  // A joint inside a shoulder is exactly the one someone is hunting for; hidden by the mesh it
+  // cannot be aimed at at all.
+  it('draws through whatever stands in front of it', () => {
+    const joints = createBoneJoints(chain())
+    const material = joints.points.material
+
+    expect(Array.isArray(material) ? material[0] : material).toMatchObject({
+      depthTest: false,
+      sizeAttenuation: false,
+    })
+    joints.dispose()
+  })
+
+  it('is never what a click lands on — the model is', () => {
+    const joints = createBoneJoints(chain())
+    const hits: unknown[] = []
+
+    joints.points.raycast({} as never, hits as never)
+
+    expect(hits).toEqual([])
+    joints.dispose()
+  })
+})

@@ -8,8 +8,10 @@ import { NATIVE_SELECT } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { rigFit, rigFitFaultOf, rigHandBones } from '@/engines/scene/rigFit'
 import {
+  addIkChain,
   addRigBone,
   addRigHands,
+  removeIkChain,
   removeRigBone,
   setModelRig,
   setRigBoneRole,
@@ -66,6 +68,7 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
   // one node, and editing a bone of another from here would be silent nonsense.
   const held = useSceneViews(state => sceneViewOf(state, documentId).pickedBone)
   const picked = held?.nodeId === node.id ? held.bone : null
+  const reaching = node.model.rig?.ik?.find(chain => chain.effector === picked)
 
   // Only where the studio has something to offer: a model that already carries a skeleton of its
   // own is never offered another, and one still loading has nothing to measure.
@@ -125,6 +128,18 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
               <Button onClick={() => edit.run(removeRigBone(node.id, picked))}>
                 {t('inspector.removeBone')}
               </Button>
+
+              {/* A handle the joint reaches for: the two bones above it turn to follow, which is
+                  what puts a foot on the ground and a hand on a grip. */}
+              {reaching ? (
+                <Button onClick={() => edit.run(removeIkChain(node.id, reaching.id))}>
+                  {t('inspector.removeHandle')}
+                </Button>
+              ) : (
+                <Button onClick={() => edit.run(addIkChain(node.id, picked))}>
+                  {t('inspector.addHandle')}
+                </Button>
+              )}
             </>
           )}
 

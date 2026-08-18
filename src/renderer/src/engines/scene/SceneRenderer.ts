@@ -16,6 +16,7 @@ import {
   Raycaster,
   type Camera,
   SkeletonHelper,
+  SkinnedMesh,
   SpotLight,
   Sprite,
   SpriteMaterial,
@@ -151,6 +152,8 @@ import SkinWorker from './skinWeights.worker?worker'
 import RetargetWorker from './retarget.worker?worker'
 import { createRetarget, type Retarget } from './retarget'
 import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
+import { createIkBinding, ikSpecsOf, type IkBinding } from './ik'
+import { createBoneJoints, type BoneJoints } from './boneJoints'
 import { createSkinWeights, type SkinWeights } from './skinWeights'
 import type { SkinBinding } from './skinVertices'
 import type { Rig } from '@shared/domain/rig'
@@ -518,6 +521,10 @@ export class SceneRenderer {
   private readonly clipSources: RefCache<Object3D>
   /** The binds still running, so a model that leaves the stage takes its own off the worker. */
   private readonly skinning = new Map<string, AbortController>()
+  /** One solver per model that reaches for something. Absent is the common case and costs nothing. */
+  private readonly iks = new Map<string, IkBinding>()
+  /** The joints of each drawn skeleton, refreshed with the pose. Beside the helper they double. */
+  private readonly joints = new Map<string, BoneJoints>()
   private readonly fonts: FontLibrary
   private stopPaletteWatch: (() => void) | null = null
   /** Set by `prepareOffscreen`: what stops the backdrop being painted over a montage. */
@@ -1235,6 +1242,7 @@ export class SceneRenderer {
 
   private refreshSkeletons(): void {
     for (const helper of this.skeletons.values()) helper.visible = this.skeletonsVisible()
+    for (const joints of this.joints.values()) joints.points.visible = this.skeletonsVisible()
     this.viewport.requestRender()
   }
 
@@ -1308,6 +1316,7 @@ export class SceneRenderer {
       if (this.objects.get(nodeId) !== holder) return
 
       applyRig(holder, rig, bound)
+      this.bindIk(nodeId, holder, rig)
       // The bones exist only now: the helper was bound before them, when the holder carried none,
       // and without this a locally rigged character has a skeleton nothing can show or pick.
       this.bindSkeleton(nodeId, holder, true)
@@ -1319,6 +1328,28 @@ export class SceneRenderer {
       // so leaving it behind would hide both buttons of the inspector for good.
       this.options.onRigProgress?.(nodeId, 1)
     }
+  }
+
+  /**
+   * The chains this model reaches with, if any — solved once a frame in `advance`.
+   *
+   * Built from the skeleton the rig just made rather than from the document: the solver holds
+   * bone INDICES, so it only means anything against the bones actually bound.
+   */
+  private bindIk(nodeId: string, holder: Object3D, rig: Rig): void {
+    this.iks.delete(nodeId)
+    if (!rig.ik?.length) return
+
+    let skinned: SkinnedMesh | null = null
+    holder.traverse(child => {
+      if (!skinned && child instanceof SkinnedMesh) skinned = child
+    })
+    if (!skinned) return
+
+    const bound: SkinnedMesh = skinned
+    const names = bound.skeleton.bones.map(one => one.name)
+    const binding = createIkBinding(bound, ikSpecsOf(names, rig.ik))
+    if (binding) this.iks.set(nodeId, binding)
   }
 
   /** Twenty-six million distances are not worth finishing for a model nobody will see again. */
@@ -1344,9 +1375,23 @@ export class SceneRenderer {
     helper.raycast = NOOP
     this.skeletons.set(nodeId, helper)
     this.viewport.scene.add(helper)
+
+    // The joints beside the segments: the helper draws the bones and nothing marks where two of
+    // them MEET, which is the thing a click and a gizmo are actually aimed at.
+    const joints = createBoneJoints(helper.bones)
+    joints.points.visible = helper.visible
+    this.joints.set(nodeId, joints)
+    this.viewport.scene.add(joints.points)
   }
 
   private unbindSkeleton(nodeId: string): void {
+    const joints = this.joints.get(nodeId)
+    if (joints) {
+      joints.points.removeFromParent()
+      joints.dispose()
+      this.joints.delete(nodeId)
+    }
+
     const helper = this.skeletons.get(nodeId)
     if (!helper) return
 
@@ -1505,6 +1550,7 @@ export class SceneRenderer {
 
     for (const helper of this.helpers.values()) hide(helper)
     for (const skeleton of this.skeletons.values()) hide(skeleton)
+    for (const joints of this.joints.values()) hide(joints.points)
     for (const frustum of this.frustums.values()) hide(frustum)
     // A body and a bulb are workshop furniture too: they stand where the thing they draw stands,
     // so a camera aimed at a lamp would otherwise film the bulb somebody drew to find it by.
@@ -1646,6 +1692,7 @@ export class SceneRenderer {
     this.retarget.dispose()
     this.clipSources.dispose()
     this.bundled.clear()
+    this.iks.clear()
 
     this.grid?.dispose()
     this.grid = null
@@ -2303,6 +2350,7 @@ export class SceneRenderer {
     for (const url of this.bundled.get(id)?.values() ?? []) this.clipSources.release(url)
     this.bundled.delete(id)
     this.unbindSkeleton(id)
+    this.iks.delete(id)
     this.stopSkinning(id)
 
     this.applied.delete(id)
@@ -2806,6 +2854,14 @@ export class SceneRenderer {
 
   /** Reports whether the camera is still flying, which is what keeps the loop alive. */
   private advance(delta: number): boolean {
+    // Before the panes are drawn and after everything that writes a pose — the head, a clip, a
+    // gizmo on the handle: whatever moved, the chain reaches for where the target stands NOW.
+    for (const chain of this.iks.values()) chain.update()
+    // After the chains, never before: the joints have to show where the bones ENDED UP.
+    for (const joints of this.joints.values()) {
+      if (joints.points.visible) joints.refresh()
+    }
+
     const moving = this.flying && this.held.size > 0
     if (moving) {
       // Remembered rather than read back at the release: the keys are let go of first, and the

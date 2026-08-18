@@ -207,6 +207,8 @@
     "addBone": "Add a child bone",
     "removeBone": "Remove this bone",
     "addHands": "Add the hands",
+    "addHandle": "Add a handle to follow",
+    "removeHandle": "Remove the handle",
     "rigServicesLocked": "Scenario services can do this too; the {{plan}} subscription does not allow them. The studio does it itself, for free.",
     "rigFault_noGeometry": "This model is too flat to take a skeleton.",
     "rigFault_lyingDown": "This model is lying down. Stand it up before making it animatable.",
