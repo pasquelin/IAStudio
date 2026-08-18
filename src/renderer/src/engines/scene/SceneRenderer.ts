@@ -56,7 +56,7 @@ import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
 import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
 import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
 import { clampUnit, progressAt } from './cameraMotion'
-import { shotOfCameraAt } from './cameraShots'
+import { railsInUse, shotOfCameraAt } from './cameraShots'
 import {
   buildPath,
   cameraBody,
@@ -647,30 +647,23 @@ export class SceneRenderer {
   }
 
   /**
-   * The rails being worked on: those selected, and those a selected camera rides during a shot.
-   *
-   * The second half is what ties a rail to its camera on screen. Nothing else did: a rail does
-   * start at its camera and follow its axis, but with the camera selected and the rail not, the
-   * line lay there unmarked and read as somebody else's.
+   * The rails being worked on — `railsInUse` holds the rule, so this side and the selection
+   * connector cannot come to disagree. Only the ids that ARE rails: everything selected goes in
+   * there, and a camera is not a rail.
    */
   private workedRailIds(): Set<string> {
-    const ids = new Set<string>()
+    const rails = new Set<string>()
 
-    for (const id of this.selectedIds) {
-      if (this.applied.get(id)?.type === 'path') ids.add(id)
-      for (const shot of this.timeline.shots) {
-        if (shot.cameraId === id && shot.motion) ids.add(shot.motion.pathId)
-      }
+    for (const id of railsInUse(this.selectedIds, this.timeline.shots)) {
+      if (this.applied.get(id)?.type === 'path') rails.add(id)
     }
 
-    return ids
+    return rails
   }
 
   /** The objects of those rails — what a click may reach a control point of. */
   private workedRails(): Object3D[] {
-    return [...this.workedRailIds()].flatMap(id =>
-      this.applied.get(id)?.type === 'path' ? (this.objects.get(id) ?? []) : [],
-    )
+    return [...this.workedRailIds()].flatMap(id => this.objects.get(id) ?? [])
   }
 
   /**
@@ -744,12 +737,6 @@ export class SceneRenderer {
       }
     }
 
-    // Only when something is about to READ a world position, and only then: `force` recomposes
-    // the matrix of every object of the scene, bones included, on the frame path.
-    if (driven.some(({ shot }) => shot.motion || shot.target?.kind === 'node')) {
-      this.viewport.scene.updateMatrixWorld(true)
-    }
-
     for (const { object, shot } of driven) {
       if (shot.motion) this.railCamera(object, shot, shot.motion)
       if (shot.target) this.aimCamera(object, shot.target)
@@ -761,6 +748,13 @@ export class SceneRenderer {
     const rail = this.applied.get(motion.pathId)
     const railObject = this.objects.get(motion.pathId)
     if (rail?.type !== 'path' || !railObject) return
+
+    // The two chains this reads, and nothing else. `scene.updateMatrixWorld(true)` stood here
+    // and recomposed EVERY object of the scene, bones included, once per frame of playback —
+    // some 15 000 compose-and-multiply pairs on a large scene, against the six below. `aimCamera`
+    // needs none: `getWorldPosition` refreshes its own chain.
+    railObject.updateWorldMatrix(true, false)
+    object.parent?.updateWorldMatrix(true, false)
 
     // `getPointAt`, never `getPoint`: the second is parameterised per segment, so a camera
     // speeds up through the short ones — the very defect a rail exists to avoid. Into a scratch
@@ -2544,56 +2538,49 @@ export class SceneRenderer {
    * click poses goes right after it.
    *
    * The line is sampled by arc length, so the vertex three hands back IS an abscissa — which is
-   * what `segmentAt` converts back into a stretch.
+   * what `segmentAt` converts back into a stretch. Knobs are picked on the screen instead, so a
+   * ray is now cast for the CURVE alone.
+   *
+   * The grab around that curve is set per rail and never left at three's own: its default is one
+   * WORLD UNIT, which on a rail five units long is a tube wide enough to swallow clicks meant for
+   * whatever stands beside it — and ⌥ writes a point into the document. Put back afterwards, the
+   * raycaster being the one every other pick goes through: a light is picked by the LINES of its
+   * helper. Measured from the rail's own origin rather than from where the ray lands, the point
+   * not being known before the hit.
    */
   private pathSegmentAt(event: PointerEvent): { nodeId: string; index: number } | null {
-    const hit = this.railHits(event).find(
-      candidate => candidate.object.name === PATH_CURVE_NAME && candidate.index !== undefined,
-    )
-    const nodeId = hit?.object.parent?.name
-    const node = nodeId ? this.applied.get(nodeId) : null
-    if (!hit || hit.index === undefined || !nodeId || node?.type !== 'path') return null
-
-    // The MIDDLE of the sample three hands back: `index` names where the segment starts, so
-    // reading it straight puts a click in the last sixty-fourth before a control point into the
-    // stretch before it.
-    return { nodeId, index: segmentAt(node.path, (hit.index + 0.5) / PATH_SAMPLES) }
-  }
-
-  /**
-   * What the pointer meets on the rails being worked on, nearest first.
-   *
-   * The grab around a LINE is set per rail and never left at three's own: its default is one
-   * WORLD UNIT, which on a rail five units long is a tube wide enough to swallow clicks meant for
-   * whatever stands beside it. It cost nothing while only knobs were read out of these hits; ⌥
-   * now writes a point into the document, so it costs an edit nobody asked for. Put back
-   * afterwards, the raycaster being the one every other pick goes through — a light is picked by
-   * the LINES of its helper.
-   *
-   * Measured from the rail's own origin rather than from where the ray lands: the point is not
-   * known before the hit, and a rail is small enough that the two agree to within its length.
-   */
-  private railHits(event: PointerEvent): Intersection[] {
     const ndc = this.viewport.pointerNdcOf(event)
-    if (!ndc) return []
+    if (!ndc) return null
 
     this.pointer.set(ndc.x, ndc.y)
     const camera = this.cameraInHand()
     this.raycaster.setFromCamera(this.pointer, camera)
 
     const held = this.raycaster.params.Line.threshold
-    const hits: Intersection[] = []
+    let nearest: Intersection | null = null
+
     for (const rail of this.workedRails()) {
       this.raycaster.params.Line.threshold = screenScale(
         camera,
         rail.getWorldPosition(RAIL_SPOT),
         LINE_GRAB,
       )
-      hits.push(...this.raycaster.intersectObject(rail, true))
+      for (const hit of this.raycaster.intersectObject(rail, true)) {
+        if (hit.object.name !== PATH_CURVE_NAME || hit.index === undefined) continue
+        if (!nearest || hit.distance < nearest.distance) nearest = hit
+      }
     }
     this.raycaster.params.Line.threshold = held
+    if (!nearest || nearest.index === undefined) return null
 
-    return hits.sort((left, right) => left.distance - right.distance)
+    const nodeId = nearest.object.parent?.name
+    const node = nodeId ? this.applied.get(nodeId) : null
+    if (!nodeId || node?.type !== 'path') return null
+
+    // The MIDDLE of the sample three hands back: `index` names where the segment starts, so
+    // reading it straight puts a click in the last sixty-fourth before a control point into the
+    // stretch before it.
+    return { nodeId, index: segmentAt(node.path, (nearest.index + 0.5) / PATH_SAMPLES) }
   }
 
   /** The node the pointer is over, or nothing for a ray that met only the void. */

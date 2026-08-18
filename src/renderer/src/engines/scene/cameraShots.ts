@@ -17,6 +17,32 @@ export function shotCameras(shots: readonly CameraShot[]): string[] {
 }
 
 /**
+ * The rails a selection is working on: those selected outright, and those a selected camera
+ * rides during a shot.
+ *
+ * The second half is what ties a rail to its camera on screen — a rail does start at its camera
+ * and follow its axis, but with the camera picked and the rail not, the line lay there unmarked.
+ *
+ * Here rather than in the engine because two sides need the SAME answer: the engine shows the
+ * knobs of these rails, and the selection connector lets go of a picked control point as soon as
+ * its rail leaves the set. Written twice, a rail worked through its camera would keep its knobs
+ * and lose the point one had just grabbed on them.
+ */
+export function railsInUse(
+  selectedIds: readonly string[],
+  shots: readonly CameraShot[],
+): Set<string> {
+  const selected = new Set(selectedIds)
+  const rails = new Set(selectedIds)
+
+  for (const shot of shots) {
+    if (shot.motion && selected.has(shot.cameraId)) rails.add(shot.motion.pathId)
+  }
+
+  return rails
+}
+
+/**
  * Which shot is on air at an instant, or `null` when none is.
  *
  * Three rules, in order: the shot has to cover the instant, the camera whose line is highest
@@ -37,6 +63,24 @@ export function activeShotAt(
 }
 
 /**
+ * Where each camera's line stands, cached on the identity of the list — the same reason
+ * `cameraPath` caches a curve: an edit replaces the array, so the same array is the same ranks.
+ *
+ * `bestShot` runs once per camera and per frame of playback, and rebuilt this from scratch every
+ * time although nothing in it depends on the camera being asked about.
+ */
+const ranks = new WeakMap<readonly CameraShot[], Map<string, number>>()
+
+function cameraRanks(shots: readonly CameraShot[]): Map<string, number> {
+  const held = ranks.get(shots)
+  if (held) return held
+
+  const rank = new Map(shotCameras(shots).map((cameraId, at) => [cameraId, at]))
+  ranks.set(shots, rank)
+  return rank
+}
+
+/**
  * The montage's law, written once. What differs between its two callers is only which shots they
  * let compete.
  */
@@ -45,7 +89,7 @@ function bestShot(
   time: Us,
   competes: (shot: CameraShot) => boolean,
 ): CameraShot | null {
-  const rank = new Map(shotCameras(timeline.shots).map((cameraId, at) => [cameraId, at]))
+  const rank = cameraRanks(timeline.shots)
   let best: { shot: CameraShot; rank: number; at: number } | null = null
 
   for (const [at, shot] of timeline.shots.entries()) {

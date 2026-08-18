@@ -1,7 +1,7 @@
 import type { AssetType } from '@shared/domain/asset'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
-import type { ExportFormat, Vector3 } from '@shared/domain/scene'
+import type { ExportFormat, PathDescriptor } from '@shared/domain/scene'
 import { withMovedPoint, withPointAfter } from '@/engines/scene/cameraPath'
 import { setPath, setTransform } from '@/engines/scene/commands'
 import i18next from 'i18next'
@@ -88,17 +88,21 @@ function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
 }
 
 /**
- * One control point of a rail, dropped where the gizmo left it.
+ * A rail rewritten by the edit it is handed, and nothing written for a node that is not one.
  *
- * Once per drag, like every other gizmo move: the engine reports on release, so the whole
- * gesture costs one entry in the history without a gesture having to be opened around it.
+ * Once per gesture, like every other gizmo move: the engine reports on release, so a whole drag
+ * costs one entry in the history without a gesture having to be opened around it.
  */
-function movePathPoint(documentId: string, nodeId: string, index: number, point: Vector3): void {
+function editPath(
+  documentId: string,
+  nodeId: string,
+  edit: (path: PathDescriptor) => PathDescriptor,
+): void {
   const store = useScenes.getState()
-  const node = sceneOf(store, documentId).nodes.find(candidate => candidate.id === nodeId)
+  const node = nodeById(sceneOf(store, documentId), nodeId)
   if (node?.type !== 'path') return
 
-  store.runCommand(documentId, setPath(nodeId, withMovedPoint(node.path, index, point)))
+  store.runCommand(documentId, setPath(nodeId, edit(node.path)))
 }
 
 /**
@@ -106,11 +110,7 @@ function movePathPoint(documentId: string, nodeId: string, index: number, point:
  * on it straight away, so the point one just made is the point one drags.
  */
 function addPathPoint(documentId: string, nodeId: string, index: number): void {
-  const store = useScenes.getState()
-  const node = sceneOf(store, documentId).nodes.find(candidate => candidate.id === nodeId)
-  if (node?.type !== 'path') return
-
-  store.runCommand(documentId, setPath(nodeId, withPointAfter(node.path, index)))
+  editPath(documentId, nodeId, path => withPointAfter(path, index))
   useSceneViews.getState().setPickedPathPoint(documentId, { nodeId, index: index + 1 })
 }
 
@@ -190,7 +190,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         useModelClips.getState().reportRigProgress(documentId, nodeId, progress),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onSelectPathPoint: picked => useSceneViews.getState().setPickedPathPoint(documentId, picked),
-      onPathPoint: (nodeId, index, point) => movePathPoint(documentId, nodeId, index, point),
+      onPathPoint: (nodeId, index, point) =>
+        editPath(documentId, nodeId, path => withMovedPoint(path, index, point)),
       onAddPathPoint: (nodeId, index) => addPathPoint(documentId, nodeId, index),
       // Orbiting a pane locked onto a camera MOVES that camera: an edit of the document, so it
       // lands as a command — one per gesture, since the engine reports on release.

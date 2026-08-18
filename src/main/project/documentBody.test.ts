@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DOCUMENT_KIND_KEY,
   DOCUMENT_VERSION,
   ENVELOPE_LIMIT,
   STUDIO_METADATA_KEY,
@@ -194,7 +195,9 @@ describe('a scene held as glTF', () => {
     })
     const asset = JSON.parse(written).asset
 
-    expect(asset.extras[STUDIO_METADATA_KEY]).toEqual({ kind: 'scene' })
+    // The key the rest of the studio spells a kind with, never one of its own: two spellings of
+    // one invariant are free to drift, and nothing reads this copy.
+    expect(asset.extras[STUDIO_METADATA_KEY]).toEqual({ [DOCUMENT_KIND_KEY]: 'scene' })
     expect(asset.extras.blender).toEqual({ flavour: 'cycles' })
     expect(asset.generator).toBe('Blender')
   })

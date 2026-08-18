@@ -248,12 +248,21 @@ function shadedFaces(geometry: BufferGeometry, fill: string): MeshBasicMaterial[
   return [shade(1)]
 }
 
-/** The same hue, at a share of its lightness — a shade of the marker, never a second colour. */
-function dimmed(colour: string, amount: number): Color {
+/**
+ * The same hue and the same saturation, its LIGHTNESS put through `shade` — a shade of the
+ * marker, never a second colour. What tells two faces of one helper apart, and what keeps a bulb
+ * visible on a dark viewport.
+ */
+function relit(colour: string, shade: (lightness: number) => number): Color {
   const hsl = { h: 0, s: 0, l: 0 }
   const held = new Color(colour)
   held.getHSL(hsl)
-  return held.setHSL(hsl.h, hsl.s, Math.min(1, hsl.l * amount))
+  return held.setHSL(hsl.h, hsl.s, shade(hsl.l))
+}
+
+/** A share of the lightness, for the relief of a helper painted by face orientation. */
+function dimmed(colour: string, amount: number): Color {
+  return relit(colour, lightness => Math.min(1, lightness * amount))
 }
 
 /**
@@ -285,10 +294,7 @@ export function lightBulb(colour: string, fill: string, edge: string): Object3D 
  * this is, the lightness only says that there is one.
  */
 function lit(colour: string): Color {
-  const hsl = { h: 0, s: 0, l: 0 }
-  const held = new Color(colour)
-  held.getHSL(hsl)
-  return held.setHSL(hsl.h, hsl.s, Math.max(hsl.l, 0.62))
+  return relit(colour, lightness => Math.max(lightness, 0.62))
 }
 
 /** How big a control point is built, in scene units. What it ends up drawn at is `KNOB_SHARE`. */
