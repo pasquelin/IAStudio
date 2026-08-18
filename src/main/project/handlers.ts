@@ -413,8 +413,8 @@ export function registerProjectHandlers({
     // Checked against the CATALOGUE, not against what was sent. `sourceAssetId` is read back
     // off a JSON envelope inside the project folder — user territory, like the manifest — and
     // `replaceBytes` builds its path from the row's own type: an id naming a take would write
-    // `audio/<id>.png` and `rm` the `.wav` beside it, destroying a recording from a save on
-    // another document entirely.
+    // `audio/<id>` under whichever extension landed here and `rm` the `.wav` beside it,
+    // destroying a recording from a save on another document entirely.
     if (request.replaces) {
       const replaced = await project.catalog().find(request.replaces)
       if (!replaced || !PICTURES.includes(replaced.type)) {
