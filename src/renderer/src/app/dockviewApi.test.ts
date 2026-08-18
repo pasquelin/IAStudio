@@ -24,7 +24,7 @@ const sequence: DocumentDescriptor = {
   kind: 'sequence',
   title: 'Bande annonce',
   workspace: 'video',
-  path: 'documents/Bande annonce.seq',
+  path: 'documents/Bande annonce.otio',
 }
 
 type Panel = {

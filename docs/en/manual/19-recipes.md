@@ -211,8 +211,9 @@ goes up, `Q` goes down, left `⇧` speeds up.
 
 **To cut:** place the playhead, press `S`. To delete a clip: select it, `Del`.
 
-**To keep the edit:** `⌘S`. The sequence writes as `.seq` into the project and opens back as it
-was — tracks, clips, fades and gains. What does not come back is the undo history.
+**To keep the edit:** `⌘S`. The sequence writes as `.otio` — a format Resolve and Premiere already
+read — into the project, and opens back as it was: tracks, clips, fades and gains. What does not
+come back is the undo history.
 
 **What is still missing:** the **export**. The studio cannot yet write a final video file.
 

@@ -655,9 +655,7 @@ export function createDocumentFiles({
         const refused = checkDocumentName(title, kind, taken, basename(from).normalize('NFC'))
         if (refused) throw new Error(refused)
 
-        // The extension it already wears, so a montage held as `.otio` is renamed rather than
-        // duplicated under the spelling a brand new one would take.
-        const entry = documentFileName(title, kind, extensionOf(basename(from)))
+        const entry = documentFileName(title, kind)
         const path = inFolder === '' ? entry : `${inFolder}/${entry}`
         const to = absoluteOf(path)
 

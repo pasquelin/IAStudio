@@ -204,7 +204,7 @@ wherever you filed it — under an extension that says what it is:
 |---|---|---|
 | layered image | `.img` | Image |
 | 3D scene | `.scene` | 3D |
-| video sequence | `.seq` | Video |
+| video sequence | `.otio` | Video |
 | sound being edited | `.aud` | Audio |
 | sky | `.sky` | Skyboxes |
 | material | `.tex` | Textures |

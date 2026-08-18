@@ -6,7 +6,6 @@ import {
   FOLDER_KINDS,
   isPartName,
   EXTENSIONS_BY_KIND,
-  extensionForKind,
   isDocumentKind,
   kindForExtension,
   kindForWorkspace,
@@ -71,19 +70,18 @@ describe('workspaceForKind', () => {
 })
 
 describe('kindForExtension', () => {
-  it('reads back every extension a kind is held under, not only the one it writes', () => {
+  it('reads back the extension every kind is held under', () => {
     for (const kind of DOCUMENT_KINDS) {
-      for (const extension of EXTENSIONS_BY_KIND[kind]) {
-        expect(kindForExtension(extension)).toBe(kind)
-      }
+      expect(kindForExtension(EXTENSIONS_BY_KIND[kind])).toBe(kind)
     }
   })
 
-  // The half a montage held as OpenTimelineIO turns on: the studio's own spelling is what a NEW
-  // document takes, and the standard one is read all the same.
-  it('writes a montage under the studio spelling and reads the standard one too', () => {
-    expect(extensionForKind('sequence')).toBe('.seq')
+  // A montage IS its OpenTimelineIO file: the studio's own spelling is not written any more, and
+  // it is not READ any more either — a `.seq` left in a folder is not a document of this build.
+  it('holds a montage in the open format, and in nothing else', () => {
+    expect(EXTENSIONS_BY_KIND.sequence).toBe('.otio')
     expect(kindForExtension('.otio')).toBe('sequence')
+    expect(kindForExtension('.seq')).toBeNull()
   })
 
   // A project folder is the user's own: it holds notes, exports, and whatever else was dropped
@@ -122,7 +120,7 @@ describe('documentPath', () => {
   it('names the file after the kind, so a project folder reads by eye', () => {
     expect(documentPath('a3f1', 'scene')).toBe('documents/a3f1.scene')
     expect(documentPath('a3f1', 'image')).toBe('documents/a3f1.img')
-    expect(documentPath('a3f1', 'sequence')).toBe('documents/a3f1.seq')
+    expect(documentPath('a3f1', 'sequence')).toBe('documents/a3f1.otio')
   })
 
   it('gives every kind an extension of its own', () => {
@@ -139,7 +137,7 @@ describe('documentPath', () => {
   // Two kinds sharing a spelling would send one to the other's editor, and `kindForExtension`
   // answers whichever came first in the list without a word.
   it('gives no extension to two kinds', () => {
-    const spellings = DOCUMENT_KINDS.flatMap(kind => [...EXTENSIONS_BY_KIND[kind]])
+    const spellings = DOCUMENT_KINDS.map(kind => EXTENSIONS_BY_KIND[kind])
     expect(new Set(spellings).size).toBe(spellings.length)
   })
 })

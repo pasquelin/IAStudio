@@ -409,7 +409,7 @@ file. To edit an `.exr` or a `.tif`, convert it to `.png` yourself before import
 
 ## What is still missing
 
-> **A sequence saves** as `.seq` with `⌘S`, and opens back as it was: tracks, clips, fades and
+> **A sequence saves** as `.otio` with `⌘S`, and opens back as it was: tracks, clips, fades and
 > gains. What does not come back is the undo history.
 >
 > **Two exports exist**, both on the File menu. *Export video* writes a final file, frame by

@@ -4,8 +4,8 @@
  * The open format for a cut: plain JSON, every object naming its own schema, read by Resolve and
  * Premiere through adapters. It carries the STRUCTURE of a montage — tracks, their order, where
  * each clip sits, how long it lasts, where it starts inside its source, how fast it plays and
- * what file it draws from. That is the whole of what a `.seq` loses today by existing nowhere
- * else.
+ * what file it draws from. It IS the montage document of this studio, not an export beside one:
+ * a cut written here is a file other applications already open.
  *
  * What the standard has no field for rides under `OTIO_STUDIO_KEY` in `metadata`, which the core
  * of OTIO carries verbatim and never reads. `formatCapability.ts` says which traits fall on which

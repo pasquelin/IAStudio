@@ -915,9 +915,7 @@ describe('createDocumentFiles', () => {
       expect(written.startsWith('{')).toBe(true)
     })
 
-    // A rename that took the spelling a NEW document gets would leave the `.otio` sitting beside
-    // a `.seq` holding the same cut — two files for one document, which is the whole defect.
-    it('keeps the spelling it wears when it is renamed', async () => {
+    it('stays one file when it is renamed', async () => {
       await writeFile(join(root, 'Rushes.otio'), otio({ documentId: 'doc-7' }), 'utf8')
       await documents.list()
 

@@ -21,7 +21,7 @@ describe('natureOf', () => {
   it('files a document as an edit, in the domain its editor works in', () => {
     expect(natureOf('Level.scene')).toEqual({ domain: 'mesh', role: 'edit' })
     expect(natureOf('Cover.img')).toEqual({ domain: 'image', role: 'edit' })
-    expect(natureOf('Montage.seq')).toEqual({ domain: 'video', role: 'edit' })
+    expect(natureOf('Montage.otio')).toEqual({ domain: 'video', role: 'edit' })
     expect(natureOf('Brick.tex')).toEqual({ domain: 'texture', role: 'edit' })
     expect(natureOf('Dusk.sky')).toEqual({ domain: 'skybox', role: 'edit' })
   })
@@ -46,10 +46,8 @@ describe('natureOf', () => {
   // The compiler cannot see this one: `EXTENSIONS_BY_KIND` is complete by its type, but nothing
   // makes `natureOf` agree with it, and a kind that fell through would be filed as `other`.
   it('knows every document extension the studio reads', () => {
-    for (const extensions of Object.values(EXTENSIONS_BY_KIND)) {
-      for (const extension of extensions) {
-        expect(natureOf(`Untitled${extension}`).role).toBe('edit')
-      }
+    for (const extension of Object.values(EXTENSIONS_BY_KIND)) {
+      expect(natureOf(`Untitled${extension}`).role).toBe('edit')
     }
   })
 

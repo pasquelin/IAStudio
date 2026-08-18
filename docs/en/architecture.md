@@ -754,7 +754,7 @@ image is served to the renderer as `scenario://<id>`.
 **Documents** are JSON files filed wherever the user wants them — `documents/` is only where a
 first save lands, and `documents.list()` walks the whole project to find them. One per document,
 **named after the document** —
-`Niveau.scene`, `Bande annonce.seq`. Its id lives in the envelope (format version 3) rather than
+`Niveau.scene`, `Bande annonce.otio`. Its id lives in the envelope (format version 3) rather than
 in the file name: that is what lets a document be renamed, open or not, without becoming a
 different document — the layout, the recent list and every tab are keyed by that id. A file
 written before that version wears its id as its name (`<id>.scene`) and is read exactly as

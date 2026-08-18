@@ -42,7 +42,7 @@ const firstReference = (payload: unknown): { target_url?: string; name: string }
   return reference
 }
 
-/** Which file `doc-1` is held in — the one thing that decides what a save writes. */
+/** Which file `doc-1` is held in — the folder its media links are written relative to. */
 function heldIn(path: string): void {
   useDocuments.setState({
     documents: {
@@ -76,12 +76,6 @@ beforeEach(() => {
 })
 
 describe('what a save writes for a montage', () => {
-  it('leaves a document of the studio’s own spelling exactly as it was', () => {
-    heldIn('documents/Bande.seq')
-
-    expect(sequencePayload(ONE_CLIP, 'doc-1')).toBe(ONE_CLIP)
-  })
-
   /**
    * The whole point of the open format BEING the document: a `.otio` holds a standard timeline,
    * its media pointed at from the montage's OWN folder — which is what lets the project be
@@ -104,9 +98,20 @@ describe('what a save writes for a montage', () => {
     expect(written(sequencePayload(ONE_CLIP, 'doc-1')).metadata.scenario.documentId).toBe('doc-1')
   })
 
-  it('indents the open format and not the studio’s own', () => {
+  it('indents, the file being one another application and a hand both read', () => {
     expect(serializeSequencePayload({ OTIO_SCHEMA: 'Timeline.1' })).toContain('\n')
-    expect(serializeSequencePayload({ tracks: [] })).not.toContain('\n')
+  })
+
+  /**
+   * The refusal in `otioBody` is what a save meets if this ever answers a raw montage state, and
+   * the loss it guards is total: nothing else in the studio would hold the cut. A document whose
+   * descriptor has not landed yet — a first save, whose file the folder has still to name — is
+   * the one moment this could have happened.
+   */
+  it('writes a standard timeline for a document no descriptor names yet', () => {
+    useDocuments.setState({ documents: {}, activeId: null })
+
+    expect(sequencePayload(ONE_CLIP, 'doc-1')).toMatchObject({ OTIO_SCHEMA: 'Timeline.1' })
   })
 })
 
@@ -115,15 +120,6 @@ describe('what an open reads back', () => {
     heldIn('Cinematics/Bande.otio')
 
     expect(sequenceFromPayload(sequencePayload(ONE_CLIP, 'doc-1'), 'doc-1')).toEqual(ONE_CLIP)
-  })
-
-  // The payload decides, not the extension: a montage renamed by hand must open as what it holds.
-  it('reads a standard timeline out of a file whose name does not claim to be one', () => {
-    heldIn('Cinematics/Bande.otio')
-    const timeline = sequencePayload(ONE_CLIP, 'doc-1')
-    heldIn('Cinematics/Bande.seq')
-
-    expect(sequenceFromPayload(timeline, 'doc-1')).toEqual(ONE_CLIP)
   })
 
   /**

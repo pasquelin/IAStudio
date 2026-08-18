@@ -75,7 +75,7 @@ const DOMAIN_BY_EXTENSION: Record<string, AssetType> = {
 /**
  * What a file is, from its name and nothing else.
  *
- * A document — `.scene`, `.img`, `.seq` — is an EDIT, and its domain is the one its editor works
+ * A document — `.scene`, `.img`, `.otio` — is an EDIT, and its domain is the one its editor works
  * in: a `.scene` belongs beside the meshes, a `.img` beside the pictures. That link is not
  * spelled again here; it is read from the two tables that already carry it, so a kind that
  * changes space changes it in one place.

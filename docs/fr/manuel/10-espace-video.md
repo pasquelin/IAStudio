@@ -422,7 +422,7 @@ l’importer.
 
 ## Ce qui manque encore
 
-> **Une séquence s’enregistre** en `.seq` par `⌘S`, et se rouvre telle quelle : pistes, clips,
+> **Une séquence s’enregistre** en `.otio` par `⌘S`, et se rouvre telle quelle : pistes, clips,
 > fondus et gains. Ce qui ne revient pas, c’est l’historique d’annulation.
 >
 > **Deux exports existent**, tous deux dans le menu Fichier. *Exporter la vidéo* écrit un fichier

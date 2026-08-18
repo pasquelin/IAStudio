@@ -1,10 +1,28 @@
 import { readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { DOCUMENT_KINDS } from '@shared/domain/document'
+import { DOCUMENT_KINDS, type DocumentKind } from '@shared/domain/document'
 import { documentFilesAt, snapshotDocuments, withTempProject } from './project-fixtures'
 
 const NOW = '2026-08-16T10:00:00.000Z'
+
+/**
+ * A body of the shape its kind's file accepts. A montage IS its OpenTimelineIO file, so anything
+ * else is refused at the write — written here already indented and already named after the title,
+ * which is what the format's own writer would make of it.
+ */
+const bodyOf = (kind: DocumentKind): string =>
+  kind === 'sequence'
+    ? JSON.stringify(
+        {
+          OTIO_SCHEMA: 'Timeline.1',
+          name: kind,
+          tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
+        },
+        null,
+        2,
+      )
+    : `{"of":"${kind}"}`
 
 /**
  * The measuring tool has to be measured too: a snapshot that missed a document, or that differed
@@ -22,14 +40,14 @@ describe('the project fixture', () => {
     const { documents } = await withTempProject()
 
     for (const kind of DOCUMENT_KINDS) {
-      await documents.write(`doc-${kind}`, kind, { title: kind, content: `{"of":"${kind}"}` })
+      await documents.write(`doc-${kind}`, kind, { title: kind, content: bodyOf(kind) })
     }
 
     const taken = await snapshotDocuments(documents)
 
     expect(taken).toHaveLength(DOCUMENT_KINDS.length)
     expect(taken.map(one => one.kind).sort()).toEqual([...DOCUMENT_KINDS].sort())
-    expect(taken.every(one => one.content === `{"of":"${one.kind}"}`)).toBe(true)
+    expect(taken.every(one => one.content === bodyOf(one.kind))).toBe(true)
   })
 
   // The loss this tool exists to catch, and the one a file count cannot see: the manifest is

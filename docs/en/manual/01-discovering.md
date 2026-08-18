@@ -80,7 +80,7 @@ There are seven kinds of document, one per workspace:
 |---|---|---|
 | Image | a layered image | `.img` |
 | 3D | a scene | `.scene` |
-| Video | a sequence | `.seq` |
+| Video | a sequence | `.otio` |
 | Audio | a sound being edited | `.aud` |
 | Skyboxes | a sky | `.sky` |
 | Textures | a material | `.tex` |

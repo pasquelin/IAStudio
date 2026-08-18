@@ -212,7 +212,7 @@ ensuite là où vous l’avez rangé — sous une extension qui dit ce qu’il e
 |---|---|---|
 | image en calques | `.img` | Image |
 | scène 3D | `.scene` | 3D |
-| séquence vidéo | `.seq` | Vidéo |
+| séquence vidéo | `.otio` | Vidéo |
 | son en cours d’édition | `.aud` | Audio |
 | ciel | `.sky` | Skyboxes |
 | matière | `.tex` | Textures |

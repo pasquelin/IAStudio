@@ -84,7 +84,7 @@ Il y a sept sortes de documents, une par espace :
 |---|---|---|
 | Image | une image en calques | `.img` |
 | 3D | une scène | `.scene` |
-| Vidéo | une séquence | `.seq` |
+| Vidéo | une séquence | `.otio` |
 | Audio | un son en cours d’édition | `.aud` |
 | Skyboxes | un ciel | `.sky` |
 | Textures | une matière | `.tex` |

@@ -34,7 +34,7 @@ All six types write into the project folder and open back exactly as they were.
 | 3D scene | `.scene` | **yes** |
 | Material | `.tex` | **yes** |
 | Layered image | `.img` | **yes** |
-| Video sequence | `.seq` | **yes** |
+| Video sequence | `.otio` | **yes** |
 | Edited sound | `.aud` | **yes** |
 | Sky | `.sky` | **yes** |
 
@@ -193,17 +193,13 @@ by key** button does not find them.
 
 ### The video export comes out silent
 
-A sequence is now written into a `.seq` file and reopens exactly as it was.
+A sequence is written into an `.otio` file and reopens exactly as it was.
 
 **File › Export video** does write a final file, frame by frame, 3D scenes included. **But it
 comes out mute**: the edit's sound tracks are not encoded into it yet. This is the heaviest limit
 of this workspace, because it makes you rebuild the sound elsewhere.
 
-### A new edit is still written into a `.seq`
-
-An `.otio` **does open** now: double-click one in the Explorer and the edit opens, whether it was
-written here or by another application, and `⌘S` writes it back into its own file. What is left is
-the starting point — a sequence created in the studio still begins as a `.seq`.
+### A foreign edit only finds the media already seen
 
 An edit from elsewhere names its media by path. The studio looks for them in the project by that
 path, then by file name — **among the assets this window has already been shown**. A project just

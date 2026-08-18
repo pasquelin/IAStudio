@@ -38,7 +38,7 @@ describe('Breadcrumb', () => {
           kind: 'sequence',
           title: 'Sans titre 1',
           workspace: 'video',
-          path: 'documents/Sans titre 1.seq',
+          path: 'documents/Sans titre 1.otio',
         },
       },
     })

@@ -12,15 +12,10 @@ describe('the file a document lands on', () => {
     expect(documentFileName('Planche', 'image')).toBe('Planche.img')
   })
 
-  // Renaming must not turn one document into two: a montage held as OpenTimelineIO stays that
-  // file, where the spelling a NEW one takes would leave the old file sitting beside it.
-  it('keeps the spelling a document already wears', () => {
-    expect(documentFileName('Bande', 'sequence')).toBe('Bande.seq')
-    expect(documentFileName('Bande', 'sequence', '.otio')).toBe('Bande.otio')
-  })
-
-  it('ignores a spelling that is not this kind’s', () => {
-    expect(documentFileName('Bande', 'sequence', '.img')).toBe('Bande.seq')
+  // One kind, one spelling: the montage IS its OpenTimelineIO file, so a rename cannot leave a
+  // second file beside the first under a spelling only this studio would have written.
+  it('gives a montage the open format, and no other spelling', () => {
+    expect(documentFileName('Bande', 'sequence')).toBe('Bande.otio')
   })
 })
 

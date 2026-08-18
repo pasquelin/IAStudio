@@ -66,7 +66,7 @@ function laid(state: SequenceState, extra: Record<string, DocumentDescriptor> = 
         kind: 'sequence',
         workspace: 'video',
         title: 'Bande',
-        path: 'documents/Bande.seq',
+        path: 'documents/Bande.otio',
       },
       ...extra,
     },

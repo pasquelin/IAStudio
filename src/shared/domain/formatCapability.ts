@@ -103,7 +103,7 @@ export const TRAITS_OF_DOMAIN: Record<CapabilityDomain, readonly CapabilityTrait
 }
 
 /** A format the studio can write an edited document to. */
-export type WritableFormat = 'png' | 'jpeg' | 'webp' | 'ora' | 'img' | 'otio' | 'seq'
+export type WritableFormat = 'png' | 'jpeg' | 'webp' | 'ora' | 'img' | 'otio'
 
 export const WRITABLE_FORMATS: readonly WritableFormat[] = [
   'png',
@@ -112,7 +112,6 @@ export const WRITABLE_FORMATS: readonly WritableFormat[] = [
   'ora',
   'img',
   'otio',
-  'seq',
 ]
 
 /**
@@ -173,9 +172,9 @@ const studioOwn = (domain: CapabilityDomain): FormatCapability => ({
 })
 
 /**
- * OpenTimelineIO holds the STRUCTURE of a cut — which is the whole of what a `.seq` loses today
- * by existing nowhere else. Everything past that rides under the `scenario` domain of the
- * metadata, which the core of OTIO carries and never reads.
+ * OpenTimelineIO holds the STRUCTURE of a cut, and it IS the montage document — there is no
+ * spelling of the studio's own left beside it. Everything past that structure rides under the
+ * `scenario` domain of the metadata, which the core of OTIO carries and never reads.
  *
  * `clipFade` is extended rather than standard, and it is the one interchange loss worth naming:
  * OTIO's `Transition` sits BETWEEN two items and consumes media from both, which a fade held by
@@ -216,7 +215,6 @@ const CAPABILITY_BY_FORMAT: Record<WritableFormat, FormatCapability> = {
   ora: OPEN_RASTER,
   img: studioOwn('picture'),
   otio: OPEN_TIMELINE,
-  seq: studioOwn('montage'),
 }
 
 export const capabilityOf = (format: WritableFormat): FormatCapability =>
@@ -230,7 +228,6 @@ const FORMAT_BY_EXTENSION: Record<string, WritableFormat> = {
   '.ora': 'ora',
   '.img': 'img',
   '.otio': 'otio',
-  '.seq': 'seq',
 }
 
 /**

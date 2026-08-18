@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { onTestFinished } from 'vitest'
+import type { DocumentKind } from '@shared/domain/document'
 import type { Project } from '@shared/domain/project'
 import type { AsyncCatalog } from './catalogClient'
 import { memoryCatalog } from './catalog-fixtures'
@@ -85,7 +86,7 @@ export async function withTempProject(
  */
 export type DocumentSnapshot = {
   path: string
-  kind: string
+  kind: DocumentKind
   title: string
   content: string
   /**

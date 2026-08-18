@@ -35,7 +35,7 @@ Les six types s’écrivent dans le dossier du projet et se rouvrent tels quels.
 | Scène 3D | `.scene` | **oui** |
 | Matière | `.tex` | **oui** |
 | Image en calques | `.img` | **oui** |
-| Séquence vidéo | `.seq` | **oui** |
+| Séquence vidéo | `.otio` | **oui** |
 | Son édité | `.aud` | **oui** |
 | Ciel | `.sky` | **oui** |
 
@@ -203,17 +203,13 @@ raccourcis, et le bouton **Chercher par touche** ne les trouve pas.
 
 ### L’export vidéo sort sans le son
 
-Une séquence s’enregistre désormais en `.seq` et se rouvre telle quelle.
+Une séquence s’enregistre en `.otio` et se rouvre telle quelle.
 
 **Fichier › Exporter la vidéo** écrit bien un fichier final, image par image, scènes 3D comprises.
 **Mais il sort muet** : les pistes de son du montage ne sont pas encore encodées dedans. C’est la
 limite la plus lourde de cet espace, parce qu’elle oblige à remonter le son ailleurs.
 
-### Un montage neuf s’enregistre encore en `.seq`
-
-Un `.otio` **s’ouvre** maintenant : un double-clic dans l’Explorateur ouvre le montage, qu’il ait
-été écrit ici ou par un autre logiciel, et `⌘S` le réenregistre dans son propre fichier. Ce qui
-reste, c’est le point de départ — une séquence créée dans le studio part toujours en `.seq`.
+### Un montage étranger ne retrouve que les médias déjà vus
 
 Un montage venu d’ailleurs nomme ses médias par un chemin. Le studio les cherche dans le projet
 par ce chemin, puis par le nom du fichier — **parmi les assets que cette fenêtre a déjà vus**. Un
