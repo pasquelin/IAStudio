@@ -224,7 +224,7 @@ describe('TimelineCanvas', () => {
 
     act(() => publishCommand('sequence.exportCut'))
 
-    expect(exportOtio).toHaveBeenCalledWith(sequenceOf(useSequences.getState(), 'doc-1'), 'doc-1')
+    expect(exportOtio).toHaveBeenCalledWith('doc-1')
   })
 
   it('deletes the selected clip on Delete', () => {

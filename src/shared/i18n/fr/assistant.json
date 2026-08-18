@@ -335,7 +335,7 @@
       },
       "documentExport": {
         "title": "Exporter le document devant dans le projet",
-        "description": "Écrit l’image, la scène, le ciel ou la matière devant dans un dossier du projet, portant son titre à défaut d’un nom donné. La destination ne peut pas sortir du projet."
+        "description": "Écrit le document devant — image, scène, ciel, matière ou montage — dans un dossier du projet, portant son titre à défaut d’un nom donné. Un montage sort en OpenTimelineIO, c’est-à-dire la coupe et non un film — le rendu image par image demande une session que rien d’extérieur ne peut tenir. La destination ne peut pas sortir du projet."
       },
       "gitStashDrop": {
         "title": "Jeter une remise",

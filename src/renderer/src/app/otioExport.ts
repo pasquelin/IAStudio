@@ -1,11 +1,15 @@
 import type { Asset } from '@shared/domain/asset'
+import { safeFileName } from '@shared/domain/fileName'
+import { OTIO_EXTENSION } from '@shared/domain/otio'
+import type { FolderExportRequest } from '@shared/ipc'
 import { otioTimelineOf, type OtioSource } from '@/engines/timeline/otioTimeline'
-import type { Clip, SequenceState } from '@/engines/timeline/timelineState'
+import type { Clip } from '@/engines/timeline/timelineState'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
+import { sequenceOf, useSequences } from '@/stores/sequences'
 
 /**
  * An absolute path as a URL another application resolves.
@@ -39,32 +43,53 @@ function sourceOf(clip: Clip, projectPath: string, assets: ReadonlyMap<string, A
 }
 
 /**
- * Writes the montage out as an OpenTimelineIO file — the cut, not a film of it.
+ * The montage, encoded to one file — the half of an export that has nothing to do with where it
+ * lands. Shared by the File menu and by the outside door, exactly as a scene's is.
  *
- * Composed by the WINDOW, like every other export here: only this side holds the catalogue a
- * clip's media is resolved against, and the main process would have nothing to turn an asset id
- * into a path with.
+ * Composed by the WINDOW: only this side holds the catalogue a clip's media is resolved against,
+ * and the main process would have nothing to turn an asset id into a path with.
+ *
+ * A folder for a single file, like every other door onto the folder writer. Throws when no
+ * project is open — there is then no path to point a clip's media at.
+ */
+export function otioExportFiles(documentId: string): FolderExportRequest {
+  const projectPath = useProject.getState().project?.path
+  if (!projectPath) throw new Error('no project is open to resolve the media against')
+
+  const title = useDocuments.getState().documents[documentId]?.title ?? documentId
+  const assets = assetsById(useAssets.getState())
+  const timeline = otioTimelineOf(sequenceOf(useSequences.getState(), documentId), {
+    name: title,
+    sourceOf: clip => sourceOf(clip, projectPath, assets),
+  })
+
+  return {
+    folder: safeFileName(title),
+    files: [
+      {
+        name: safeFileName(title),
+        extension: OTIO_EXTENSION,
+        bytes: new TextEncoder().encode(JSON.stringify(timeline, null, 2)),
+      },
+    ],
+  }
+}
+
+/**
+ * The File menu's half: the same encoding, written wherever the save dialog lands.
  *
  * Answers the file name, or `null` when the dialog was dismissed or nothing could be written.
  */
-export async function exportOtio(sequence: SequenceState, title: string): Promise<string | null> {
+export async function exportOtio(documentId: string): Promise<string | null> {
   const bridge = getBridge()
-  const projectPath = useProject.getState().project?.path
-  if (!bridge || !projectPath) return null
+  if (!bridge) return null
 
   try {
-    const assets = assetsById(useAssets.getState())
-    const timeline = otioTimelineOf(sequence, {
-      name: title,
-      sourceOf: clip => sourceOf(clip, projectPath, assets),
-    })
-
-    return await bridge.montage.export({
-      name: title,
-      data: new TextEncoder().encode(JSON.stringify(timeline, null, 2)),
-    })
+    const { folder, files } = otioExportFiles(documentId)
+    const encoded = files[0]
+    return encoded ? await bridge.montage.export({ name: folder, data: encoded.bytes }) : null
   } catch (error) {
-    reportFailure('sequence.export', title, error)
+    reportFailure('sequence.export', documentId, error)
     return null
   }
 }
