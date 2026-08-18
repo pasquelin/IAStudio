@@ -93,6 +93,30 @@ describe('rate limiter', () => {
     expect(waited).toEqual([1000])
   })
 
+  /**
+   * The refusal `wait` still owes. Every caller abandoned BEFORE asking is now turned away by
+   * `acquire`, so a signal that dies once the window is being waited out is the only one left
+   * that reaches the check inside the loop — and that check is what keeps it off the free slot.
+   */
+  it('spends no slot on a caller that gave up while it waited for one', async () => {
+    const { deps, waited } = clock()
+    const giving = new AbortController()
+    const limiter = createRateLimiter({
+      ...deps,
+      limit: 1,
+      windowMs: 1000,
+      onSaturated: () => giving.abort(),
+    })
+
+    await limiter.acquire()
+    await expect(limiter.acquire(giving.signal)).rejects.toThrow()
+    await fill(limiter, 1)
+
+    // One window waited, by the abandoned caller. Had it taken the slot its wait freed, the one
+    // behind it would have had to wait a second.
+    expect(waited).toEqual([1000])
+  })
+
   // One refusal used to leave the chain rejected, and every later caller waited on it for ever.
   it('serves the callers behind an abandoned one', async () => {
     const { deps } = clock()
