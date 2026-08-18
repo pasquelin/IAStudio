@@ -13,7 +13,7 @@ import { extensionOf } from './fileName'
  * of its own domain: an `.otio` carries no layer, and the answer for one is « everything lost »
  * rather than « nothing to lose ».
  */
-export type CapabilityDomain = 'picture' | 'montage'
+export type CapabilityDomain = 'picture' | 'montage' | 'scene'
 
 /** A property of an edited picture that a format either carries or loses. */
 export type PictureTrait =
@@ -93,19 +93,69 @@ export const MONTAGE_TRAITS: readonly MontageTrait[] = [
   'editorState',
 ]
 
-export type CapabilityTrait = PictureTrait | MontageTrait
+/**
+ * The same question for a 3D scene. Read off what `gltfDocument.ts` actually writes, trait by
+ * trait, rather than off the standard: the tree, the names, the placements, the perspective
+ * cameras and the punctual lights are glTF fields, and everything else rides in the `extras` of
+ * the scene — which the format says a reader may ignore.
+ *
+ * `ambientLight` is the one that surprises: `KHR_lights_punctual` has no spelling for an ambient
+ * or a hemisphere light, so those two travel as studio data while the other three do not.
+ */
+export type SceneTrait =
+  | 'sceneTree'
+  | 'nodeName'
+  | 'nodePlacement'
+  | 'cameraLens'
+  | 'punctualLight'
+  | 'ambientLight'
+  | 'primitiveShape'
+  | 'material'
+  | 'cameraPath'
+  | 'cameraShot'
+  | 'sceneAnimation'
+  | 'sceneEnvironment'
 
-export const CAPABILITY_TRAITS: readonly CapabilityTrait[] = [...PICTURE_TRAITS, ...MONTAGE_TRAITS]
+export const SCENE_TRAITS: readonly SceneTrait[] = [
+  'sceneTree',
+  'nodeName',
+  'nodePlacement',
+  'cameraLens',
+  'punctualLight',
+  'ambientLight',
+  'primitiveShape',
+  'material',
+  'cameraPath',
+  'cameraShot',
+  'sceneAnimation',
+  'sceneEnvironment',
+]
+
+export type CapabilityTrait = PictureTrait | MontageTrait | SceneTrait
+
+export const CAPABILITY_TRAITS: readonly CapabilityTrait[] = [
+  ...PICTURE_TRAITS,
+  ...MONTAGE_TRAITS,
+  ...SCENE_TRAITS,
+]
 
 export const TRAITS_OF_DOMAIN: Record<CapabilityDomain, readonly CapabilityTrait[]> = {
   picture: PICTURE_TRAITS,
   montage: MONTAGE_TRAITS,
+  scene: SCENE_TRAITS,
 }
 
 /** A format the studio can write an edited document to. */
-export type WritableFormat = 'png' | 'jpeg' | 'webp' | 'ora' | 'otio'
+export type WritableFormat = 'png' | 'jpeg' | 'webp' | 'ora' | 'otio' | 'gltf'
 
-export const WRITABLE_FORMATS: readonly WritableFormat[] = ['png', 'jpeg', 'webp', 'ora', 'otio']
+export const WRITABLE_FORMATS: readonly WritableFormat[] = [
+  'png',
+  'jpeg',
+  'webp',
+  'ora',
+  'otio',
+  'gltf',
+]
 
 /**
  * Where each trait lands in a given format. The three lists PARTITION the traits — a guard holds
@@ -193,12 +243,35 @@ const OPEN_TIMELINE: FormatCapability = {
   dropped: [],
 }
 
+/**
+ * glTF IS the scene document, and nothing of it is lost: what the standard has no field for
+ * rides in the scene's `extras` under the studio's own key.
+ *
+ * The split is what the manual promises — a scene opened elsewhere shows its tree, its cameras
+ * and its lights, and is poorer than what this studio draws.
+ */
+const GLTF_SCENE: FormatCapability = {
+  domain: 'scene',
+  interchange: ['sceneTree', 'nodeName', 'nodePlacement', 'cameraLens', 'punctualLight'],
+  extended: [
+    'ambientLight',
+    'primitiveShape',
+    'material',
+    'cameraPath',
+    'cameraShot',
+    'sceneAnimation',
+    'sceneEnvironment',
+  ],
+  dropped: [],
+}
+
 const CAPABILITY_BY_FORMAT: Record<WritableFormat, FormatCapability> = {
   png: FLAT,
   jpeg: FLAT,
   webp: FLAT,
   ora: OPEN_RASTER,
   otio: OPEN_TIMELINE,
+  gltf: GLTF_SCENE,
 }
 
 export const capabilityOf = (format: WritableFormat): FormatCapability =>
@@ -211,6 +284,9 @@ const FORMAT_BY_EXTENSION: Record<string, WritableFormat> = {
   '.webp': 'webp',
   '.ora': 'ora',
   '.otio': 'otio',
+  // `.gltf` only: a `.glb` is what **Exporter** writes of a selection, never a document the
+  // studio saves back over.
+  '.gltf': 'gltf',
 }
 
 /**
