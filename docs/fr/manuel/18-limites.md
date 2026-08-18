@@ -39,17 +39,25 @@ Les six types s’écrivent dans le dossier du projet et se rouvrent tels quels.
 | Son édité | `.otio` | **oui** |
 | Ciel | `.gltf` | **oui** |
 
-### Quatre de ces extensions annoncent un format qu’elles ne contiennent pas encore
+### Deux de ces extensions annoncent un format qu’elles ne contiennent pas encore
 
-Un montage `.otio` est **réellement** de l’OpenTimelineIO : Resolve et Premiere le lisent.
+Un montage `.otio` est **réellement** de l’OpenTimelineIO : Resolve et Premiere le lisent. Une
+image `.ora` est **réellement** de l’OpenRaster : c’est une archive, avec un PNG par calque, la
+pile dans `stack.xml` et l’aplat que la spécification exige — GIMP l’ouvre, calque par calque,
+avec les noms, les opacités, les modes de fusion et les groupes. Mesuré dans les deux sens avec
+GIMP 3.2.4.
 
-Les quatre autres, non. Un `.ora`, un `.gltf` ou un `.mtlx` écrit par le studio porte le nom du
-format ouvert mais contient encore la forme interne du studio — **aucune autre application ne
-l’ouvre**. L’extension dit vers quoi ces documents vont, pas ce qu’ils sont aujourd’hui. C’est le
-chantier en cours, et c’est la limite la plus lourde de cette liste.
+Les deux autres, non. Un `.gltf` ou un `.mtlx` écrit par le studio porte le nom du format ouvert
+mais contient encore la forme interne du studio — **aucune autre application ne l’ouvre**.
+L’extension dit vers quoi ces documents vont, pas ce qu’ils sont aujourd’hui. Cela concerne la
+**scène 3D**, le **ciel** et la **matière**.
 
-En attendant, pour sortir une image ou une scène vers un autre logiciel, ce sont les **exports**
+En attendant, pour sortir une scène ou une matière vers un autre logiciel, ce sont les **exports**
 qui font foi : Fichier ▸ Exporter.
+
+Ce qu’un `.ora` du studio garde en plus du standard — les calques de réglage, le texte encore
+modifiable, les repères — voyage dans le conteneur sous un nom que les autres logiciels ignorent.
+Ils ne le perdent pas : ils ne le voient pas.
 
 **Ce qui ne s’enregistre pas :**
 

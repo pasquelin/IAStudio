@@ -38,17 +38,24 @@ All six types write into the project folder and open back exactly as they were.
 | Edited sound | `.otio` | **yes** |
 | Sky | `.gltf` | **yes** |
 
-### Four of these extensions announce a format they do not hold yet
+### Two of these extensions announce a format they do not hold yet
 
-An `.otio` edit really **is** OpenTimelineIO: Resolve and Premiere read it.
+An `.otio` edit really **is** OpenTimelineIO: Resolve and Premiere read it. An `.ora` picture
+really **is** OpenRaster: an archive holding one PNG per layer, the stack in `stack.xml` and the
+flattened picture the specification requires — GIMP opens it layer by layer, with the names, the
+opacities, the blend modes and the groups. Measured both ways with GIMP 3.2.4.
 
-The other four are not. An `.ora`, a `.gltf` or an `.mtlx` written by the studio wears the name of
-the open format but still holds the studio's own internal shape — **no other application opens
-it**. The extension says where these documents are going, not what they are today. That is the
-work in progress, and it is the heaviest limit on this page.
+The other two are not. A `.gltf` or an `.mtlx` written by the studio wears the name of the open
+format but still holds the studio's own internal shape — **no other application opens it**. The
+extension says where these documents are going, not what they are today. This covers the **3D
+scene**, the **sky** and the **material**.
 
-Until then, to take an image or a scene to another application, the **exports** are what count:
+Until then, to take a scene or a material to another application, the **exports** are what count:
 File ▸ Export.
+
+What an `.ora` from this studio keeps beyond the standard — adjustment layers, still-editable
+text, guides — travels inside the container under a name other applications ignore. They do not
+lose it: they do not see it.
 
 **What does not save:**
 

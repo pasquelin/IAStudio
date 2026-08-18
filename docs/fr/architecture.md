@@ -779,7 +779,7 @@ en ressort.
 Un asset est soit `local` (un fichier du projet), soit `cloud` (encore uniquement chez Scenario).
 Une image locale est servie au renderer sous la forme `scenario://<id>`.
 
-Les **documents** sont des fichiers JSON rangés où l’utilisateur veut — `documents/` n’est que le
+Les **documents** sont des fichiers rangés où l’utilisateur veut — `documents/` n’est que le
 dossier où atterrit une première sauvegarde, et `documents.list()` parcourt le projet entier pour
 les trouver. Un par document, **nommé d’après le
 document** — `Niveau.gltf`, `Bande annonce.otio`. Son identifiant vit dans l’enveloppe (version 3
@@ -793,14 +793,39 @@ passe par un fichier de transit puis un `rename`, atomique dans un même dossier
 coupure en cours d’écriture ne laisse jamais un document tronqué là où était le travail.
 
 Le corps du fichier appartient à l’espace qui l’a écrit, et une table par extension
-(`main/project/documentBody.ts`) dit comment il est épelé. Pour cinq genres c’est l’**enveloppe**
-du studio — une ligne d’en-tête, le contenu dessous — et le processus principal ne lit pas ce
-contenu : il estampille et rend tel quel. Pour le montage, le fichier **EST** le format ouvert :
-il n’y a pas d’enveloppe où loger l’en-tête, donc le principal parse l’OpenTimelineIO à la lecture
-comme à l’écriture, et refuse d’écrire un corps qui n’est pas un montage. Un espace qui apprend à
-s’enregistrer n’a dans les deux cas pas de canal à lui. **Les six genres savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et
-matière, déclarés en un seul endroit, `IO_BY_KIND` dans `app/documentIo.ts`. Un genre absent de
-cette table a un Enregistrer qui ne fait rien, plutôt qu’un qui écrit un corps vide.
+(`main/project/documentBody.ts`) dit comment il est épelé. **Trois épellations, pas une.**
+
+Pour la scène, le ciel et la matière c’est l’**enveloppe** du studio — une ligne d’en-tête, le
+contenu dessous — et le processus principal ne lit pas ce contenu : il estampille et rend tel
+quel. Ces trois-là portent le nom d’un format ouvert et pas encore ses octets.
+
+Pour le **montage**, le fichier EST le format ouvert : il n’y a pas d’enveloppe où loger
+l’en-tête, donc le principal parse l’OpenTimelineIO à la lecture comme à l’écriture, et refuse
+d’écrire un corps qui n’est pas un montage.
+
+Pour l’**image**, le fichier est une archive OpenRaster — un ZIP, et non plus un dossier. Le
+principal l’empaquette et la dépaquette : `mimetype` en premier et stocké, `stack.xml`,
+`mergedimage.png` que la spécification exige, un PNG par surface sous `data/`, et l’état du studio
+sous `scenario/`. La fenêtre produit la pile (le `content` du document EST cette pile, en JSON) et
+les surfaces à côté, en octets ; le principal écrit la syntaxe. **Un listing ne lit que les
+premiers kilooctets du conteneur** — l’enveloppe du studio y est écrite deuxième et non
+compressée, sans quoi lister un projet ouvrirait cent mégaoctets par document.
+
+Un espace qui apprend à s’enregistrer n’a dans les trois cas pas de canal à lui. **Les six genres
+savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et matière, déclarés en un seul
+endroit, `IO_BY_KIND` dans `app/documentIo.ts`. Un genre absent de cette table a un Enregistrer
+qui ne fait rien, plutôt qu’un qui écrit un corps vide.
+
+**Aucun genre n’est plus écrit comme un DOSSIER.** L’image l’a été, `Planche.ora/` portant un
+manifeste et un PNG par calque ; un dossier qui porte aujourd’hui l’extension d’un document est la
+matière de l’utilisateur, et le walk y entre.
+
+**Les pixels ne traversent plus la frontière en base64.** Une pile 4K de dix calques faisait des
+centaines de mégaoctets de texte, détenus au même instant par la fenêtre qui encode et le
+processus qui décode. `LayerPixels`, `OraSurface` et les parts d’un document portent des
+`Uint8Array` ; le moteur extrait par un canvas et un blob, et restitue par une URL d’objet qu’il
+révoque — une data URL de calque restait sinon dans le cache du chargeur pour toute la session,
+la clé de ce cache ÉTANT la chaîne entière.
 
 ---
 
