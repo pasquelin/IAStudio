@@ -387,7 +387,7 @@ describe('the translation bundles', () => {
       { dropped: /(?<!\p{L})(?:rigu[ée]e?s?|rigs?)(?!\p{L})/iu, kept: 'squelette' },
     ],
     en: [
-      { dropped: /file browser/i, kept: 'file manager' },
+      { dropped: /\bfile browsers?\b/i, kept: 'file manager' },
       { dropped: /\bpreferences?\b/i, kept: 'settings' },
       {
         dropped: /\bpictures?\b/i,
@@ -427,6 +427,14 @@ describe('the translation bundles', () => {
    */
   const ENGLISH_SAMPLES = ['file browser', 'preference', 'picture', 'log', 'montage']
 
+  /**
+   * The negative half. Each word matches its reading once the boundary is dropped, which is what
+   * makes it worth asserting — a sample no reading could ever touch is green by construction.
+   * `preferences?` has none: no English word carries `preference` inside a longer one. Which is
+   * the blind spot — a reading added tomorrow without a near miss of its own stays green.
+   */
+  const ENGLISH_NEAR_MISSES = ['profile browser', 'catalogue', 'pictured', 'remontage']
+
   it.each(CODES)('says one thing one way in %s', code => {
     const drifted = [...BUNDLES[code]].flatMap(([key, text]) =>
       SETTLED_WORDS[code]
@@ -461,8 +469,9 @@ describe('the translation bundles', () => {
    * GREEN, and only because no bundle value happened to say any of them — the manual says
    * `intrigue`. Hence the lookarounds on `\p{L}`, and hence this.
    *
-   * French only: the English readings are bounded by `\b` and their words are ASCII, so nothing
-   * there can slip the same way. The day an accented English reading is added, it belongs here.
+   * French only, the English words being ASCII. That their readings are BOUNDED is not a property
+   * of being ASCII and is kept by `ENGLISH_NEAR_MISSES` below — `/file browser/i` carried no
+   * boundary and read `profile browser`. An accented English reading would belong here.
    */
   it('reads a settled French word whole, never inside a longer one', () => {
     const says = (word: string) => SETTLED_WORDS.fr.some(({ dropped }) => dropped.test(word))
@@ -474,19 +483,24 @@ describe('the translation bundles', () => {
 
   /**
    * The same canary for the English readings, which had none: `drifted` runs against a bundle
-   * that no longer says any of these, so a typo — `/\bmontagess?\b/` — would ship green. The
-   * second assertion keeps the sample from outliving the entry it was written for.
+   * that no longer says any of these, so a typo — `/\bmontagess?\b/` — would ship green.
+   * `orphans` keeps a sample from outliving the entry it was written for, `swallowed` is the
+   * negative half a reading needs to prove it reads its word whole.
    */
-  it('reads every settled English word, none of the readings dead', () => {
+  it('reads every settled English word whole, none of the readings dead', () => {
     const dead = SETTLED_WORDS.en.filter(
       ({ dropped }) => !ENGLISH_SAMPLES.some(word => dropped.test(word)),
     )
     const orphans = ENGLISH_SAMPLES.filter(
       word => !SETTLED_WORDS.en.some(({ dropped }) => dropped.test(word)),
     )
+    const swallowed = ENGLISH_NEAR_MISSES.filter(word =>
+      SETTLED_WORDS.en.some(({ dropped }) => dropped.test(word)),
+    )
 
     expect(dead.map(({ kept }) => kept)).toEqual([])
     expect(orphans).toEqual([])
+    expect(swallowed).toEqual([])
   })
 
   /**
