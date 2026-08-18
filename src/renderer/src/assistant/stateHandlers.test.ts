@@ -289,6 +289,19 @@ describe('exporting the document in front', () => {
     )
   })
 
+  // Same question as the picture above, on the last door that still left the fallback to
+  // `safeFileName`: a montage with no usable title came out named after the texture space.
+  it('names a montage with no usable title after its own space', async () => {
+    installDocuments({ 'doc-m': 'video' }, 'doc-m')
+    retitleDocument('doc-m', '...')
+    const exportInto = vi.fn(async () => 'edit')
+    installFakeBridge({ project: { exportInto } })
+
+    await runAction('document.export', {})
+
+    expect(exportInto).toHaveBeenCalledWith(expect.objectContaining({ folder: 'edit' }))
+  })
+
   // The one way a montage cannot be encoded: its clips point at catalogue rows, and without a
   // project there is no path to resolve them to.
   it('refuses a montage when no project is open', async () => {
