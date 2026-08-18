@@ -418,7 +418,6 @@ export class CanvasEngine {
   private readonly clips = new Map<string, ClipProxy>()
   /** Built on the first isolated group, and only then: most documents never hold one. */
   private isolation: AlphaFilter | null = null
-  /** The stencil of the last clipped pass, kept only so the next one can free it. */
   /**
    * The stencil pass in flight, and the stencil it owns. Held as the pair because they are not
    * the same thing to free: the holder's other children are borrowed — the brush's stamp lives

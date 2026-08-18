@@ -123,8 +123,10 @@ export type TreeProps<T extends TreeNode> = {
    * what an outliner wants: there is nothing to open, only something to select.
    */
   onActivate?: (node: T) => void
-  /** A right-click on a row, with where the pointer was. Absent leaves the browser's own menu. */
-  /** Takes no coordinates: the system pops the menu where the pointer already is. */
+  /**
+   * A right-click on a row. Absent leaves the browser's own menu. Takes no coordinates: the
+   * system pops the menu where the pointer already is.
+   */
   onContextMenu?: (node: T) => void
   /**
    * Rows were dropped onto another. Absent leaves the tree undraggable — a tree with nothing to
@@ -204,8 +206,7 @@ export type TreeProps<T extends TreeNode> = {
    * nothing until the drop itself, so a target asked at hover has no other way to know what is
    * coming. It is also what tells a drag that began in ANOTHER tree — the channel is shared —
    * from one of this tree's own rows.
-   */
-  /**
+   *
    * Asked about the WHOLE batch at once rather than once per member: a caller refusing three
    * files where one of them is the destination's own ancestor has to see all three, and a
    * per-member answer would outline a row the drop then refuses.

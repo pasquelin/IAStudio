@@ -222,10 +222,6 @@ describe('a band that comes to the pointer', () => {
   })
 
   /**
-   * Reading a stack meant carrying the pointer off the very rows one was reading: the strip has
-   * always answered the wheel, the column of names never did.
-   */
-  /**
    * Nothing said these lines belonged together: the column is a stack of bare divs, so a reader
    * met as many unnamed boxes as there are tracks, with no count to place any of them.
    *
@@ -239,6 +235,10 @@ describe('a band that comes to the pointer', () => {
     expect(within(list).getAllByRole('listitem')).toHaveLength(ROWS)
   })
 
+  /**
+   * Reading a stack meant carrying the pointer off the very rows one was reading: the strip has
+   * always answered the wheel, the column of names never did.
+   */
   it('answers the wheel over the names, and stops where the stack ends', () => {
     const view = render(<TrackHeaders documentId="doc-1" />, { wrapper: StrictMode })
     layout(view, CONTENT)
