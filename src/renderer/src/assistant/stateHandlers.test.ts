@@ -4,7 +4,7 @@ import type { DocumentNameFailure } from '@shared/domain/documentName'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { holdCanvas } from '@/spaces/image/canvasHosts'
-import { installDocuments } from '@/stores/document-fixtures'
+import { installDocuments, retitleDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
@@ -246,6 +246,19 @@ describe('exporting the document in front', () => {
         files: [expect.objectContaining({ extension: '.png' })],
       }),
     )
+  })
+
+  // Each door used to leave the fallback to `safeFileName`, whose own default is `texture`: a
+  // title made of separators is cleaned down to nothing, and the picture came out named `texture`.
+  it('names a picture with no usable title after its own space', async () => {
+    withImage()
+    retitleDocument('doc-b', '///')
+    const exportInto = vi.fn(async () => 'image')
+    installFakeBridge({ project: { exportInto } })
+
+    await runAction('document.export', {})
+
+    expect(exportInto).toHaveBeenCalledWith(expect.objectContaining({ folder: 'image' }))
   })
 
   it('writes into the folder it was given rather than the title', async () => {

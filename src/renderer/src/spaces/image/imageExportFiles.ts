@@ -1,6 +1,5 @@
-import { safeFileName } from '@shared/domain/fileName'
 import type { FolderExportRequest } from '@shared/ipc'
-import { useDocuments } from '@/stores/documents'
+import { documentExportName, useDocuments } from '@/stores/documents'
 import { canvasHost } from './canvasHosts'
 
 /**
@@ -19,7 +18,7 @@ export async function imageExportFiles(documentId: string): Promise<FolderExport
   if (!image) throw new Error('this image has nothing to export yet')
 
   // The tab's own title, so the file is findable afterwards — an opaque id is not.
-  const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'image')
+  const name = documentExportName(useDocuments.getState(), documentId, 'image')
   return { folder: name, files: [{ name, extension: '.png', bytes: bytesOfDataUrl(image) }] }
 }
 

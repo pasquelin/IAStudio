@@ -1,7 +1,6 @@
-import { safeFileName } from '@shared/domain/fileName'
 import { EXPORT_EXTENSIONS, type ExportFormat } from '@shared/domain/scene'
 import type { FolderExportRequest } from '@shared/ipc'
-import { useDocuments } from '@/stores/documents'
+import { documentExportName, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 
 /**
@@ -23,7 +22,7 @@ export async function sceneExportFiles(
   const engine = sceneEngineOf(documentId)
   if (!engine) throw new Error('this scene has no viewport mounted to export from')
 
-  const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'scene')
+  const name = documentExportName(useDocuments.getState(), documentId, 'scene')
   return {
     folder: name,
     files: [

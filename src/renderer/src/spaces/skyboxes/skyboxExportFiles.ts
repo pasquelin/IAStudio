@@ -1,8 +1,7 @@
-import { safeFileName } from '@shared/domain/fileName'
 import type { FolderExportRequest } from '@shared/ipc'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { assetVersionOf } from '@/stores/assets'
-import { useDocuments } from '@/stores/documents'
+import { documentExportName, useDocuments } from '@/stores/documents'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 
 /**
@@ -23,8 +22,7 @@ export async function skyboxExportFiles(
   const sky = skyboxOf(useSkyboxes.getState(), documentId)
   if (!sky.source) throw new Error('this sky has no source to export')
 
-  // Cleaned before it is either a folder or a file name: a document is titled by hand.
-  const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'skybox')
+  const name = documentExportName(useDocuments.getState(), documentId, 'skybox')
 
   const { createSkyboxExportPort } = await import('@/engines/skybox/exportPort')
   const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })({

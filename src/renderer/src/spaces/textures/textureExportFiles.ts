@@ -1,9 +1,8 @@
-import { safeFileName } from '@shared/domain/fileName'
 import type { TextureExportTarget } from '@shared/domain/textureExport'
 import type { FolderExportRequest } from '@shared/ipc'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { exportChannelsOf } from '@/engines/texture/export/channels'
-import { useDocuments } from '@/stores/documents'
+import { documentExportName, useDocuments } from '@/stores/documents'
 import { textureOf, useTextures } from '@/stores/textures'
 
 /**
@@ -19,8 +18,7 @@ export async function textureExportFiles(
   target: TextureExportTarget,
 ): Promise<FolderExportRequest> {
   const texture = textureOf(useTextures.getState(), documentId)
-  // Cleaned before it is either a folder or a file name: a document is titled by hand.
-  const name = safeFileName(useDocuments.getState().documents[documentId]?.title ?? 'texture')
+  const name = documentExportName(useDocuments.getState(), documentId, 'texture')
 
   const { createTextureExportPort } = await import('@/engines/texture/export/exportPort')
   const files = await createTextureExportPort({ loadTexture })({
