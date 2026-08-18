@@ -1024,6 +1024,67 @@ describe('createDocumentFiles', () => {
       expect(await documents.list()).toEqual([])
     })
   })
+
+  /**
+   * The same for the 3D scene, with one difference that is the whole difficulty: `.gltf` serves
+   * the scene AND the sky, and the sky still writes the studio's envelope — so this container
+   * holds two spellings at once, and the FILE is what tells them apart.
+   */
+  describe('a scene held as glTF', () => {
+    const gltf = (studio: Record<string, unknown> = {}): string =>
+      JSON.stringify({
+        asset: { version: '2.0' },
+        scene: 0,
+        scenes: [{ nodes: [], extras: { scenario: studio } }],
+        nodes: [],
+      })
+
+    it('lists a file another application wrote, named after its file', async () => {
+      await writeFile(join(root, 'Repérage.gltf'), gltf(), 'utf8')
+
+      expect(await documents.list()).toEqual([
+        {
+          id: 'Repérage',
+          kind: 'scene',
+          title: 'Repérage',
+          workspace: '3d',
+          path: 'Repérage.gltf',
+        },
+      ])
+    })
+
+    it('remembers which document one of its own is, whatever the file is called', async () => {
+      await writeFile(join(root, 'Repérage.gltf'), gltf({ documentId: 'doc-3' }), 'utf8')
+
+      expect((await documents.list())[0]?.id).toBe('doc-3')
+    })
+
+    // The defect this change exists to close: a save writing our envelope back would leave a
+    // file no other application can read, and the studio would be its only reader again.
+    it('writes the scene back with nothing of ours in front of it', async () => {
+      const content = gltf({ documentId: 'doc-3', documentKind: 'scene' })
+      await writeFile(join(root, 'Repérage.gltf'), content, 'utf8')
+      await documents.list()
+
+      expect(await documents.write('doc-3', 'scene', { title: 'Repérage', content })).toBe(
+        'written',
+      )
+
+      const written = await readFile(join(root, 'Repérage.gltf'), 'utf8')
+      expect(JSON.parse(written)).toMatchObject({ asset: { version: '2.0' } })
+      expect(JSON.parse(written).scenes[0].name).toBe('Repérage')
+    })
+
+    // The sky shares this extension and is NOT glTF yet. Listing it as a scene would open it in
+    // the wrong editor, and writing it as one would throw away everything it holds.
+    it('still lists a sky written the studio’s own way, under the same extension', async () => {
+      await documents.write('sky-1', 'skybox', { title: 'Ciel', content: '{"adjustments":{}}' })
+
+      expect((await documents.list()).map(({ kind, title }) => ({ kind, title }))).toEqual([
+        { kind: 'skybox', title: 'Ciel' },
+      ])
+    })
+  })
 })
 
 describe('orphanStagingCopies', () => {

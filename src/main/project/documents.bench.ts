@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { deserialize, serialize } from 'node:v8'
 import { afterAll, bench, describe } from 'vitest'
 import { DOCUMENT_VERSION, EXTENSIONS_BY_KIND, type DocumentFile } from '@shared/domain/document'
+import { GLTF_SCENE_STATE, GLTF_STUDIO_KEY } from '@shared/domain/gltf'
 // The production read and the production pool, not copies of them: this bench measures the exact
 // syscall shape `list()` takes, and a second implementation beside it would drift from the one
 // being measured. It did — `headOf` was copied here without its envelope parse, so the pool was
@@ -14,9 +15,10 @@ import { bodyFormatOf } from './documentBody'
 /**
  * What one save and one open cost the main process.
  *
- * One cost per save now, not two: the content arrives already serialized, so all the main
- * thread does is decode the structured clone `ipcMain` hands it and concatenate two strings.
- * The `JSON.stringify` of the document itself happens in the window that owns it.
+ * The scene stopped being free the day it became glTF: writing one PARSES the whole body and
+ * writes it back indented, to stamp the title into the field a reader shows. Measured 18/08 —
+ * 19 ms at 5 000 nodes and 190 ms at 50 000, against 9 and 88 for the envelope it replaced. The
+ * montage pays the same price for the same reason, on a body an order of magnitude smaller.
  *
  * The comparison is the point of keeping this: `stringify` of the whole file is measured beside
  * it, and it is what the main thread used to pay per save. A main thread busy for more than
@@ -57,8 +59,21 @@ function sceneOf(count: number): DocumentFile {
     kind: 'scene',
     title: 'Bench',
     updatedAt: '2026-08-07T10:00:00.000Z',
-    // Already a string when it crosses the boundary — that is the whole point of the format.
-    content: JSON.stringify({ nodes }),
+    // The spelling the window actually sends since the scene became glTF, and the reason this
+    // bench is worth rerunning: writing one PARSES it, to stamp the title into the standard.
+    // Written out rather than imported — `gltfDocumentOf` lives in the window, which this side
+    // of the boundary cannot reach.
+    content: JSON.stringify({
+      asset: { version: '2.0', generator: 'Bench' },
+      scene: 0,
+      scenes: [
+        {
+          nodes: nodes.map((_unused, index) => index),
+          extras: { [GLTF_STUDIO_KEY]: { [GLTF_SCENE_STATE]: { nodes } } },
+        },
+      ],
+      nodes: nodes.map(node => ({ name: node.name })),
+    }),
   }
 }
 

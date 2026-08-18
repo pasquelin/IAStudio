@@ -93,8 +93,13 @@ const OPEN_TIMELINE: DocumentBodyFormat = {
  */
 const OPEN_SCENE: DocumentBodyFormat = {
   read: sceneDocument,
-  write: document =>
-    isGltfDocument(jsonOrNull(document.content)) ? gltfBody(document) : ENVELOPED.write(document),
+  // Parsed ONCE, and only for the kind that writes glTF: the parse is the price of stamping the
+  // title into the standard, and a sky would otherwise pay a whole one to learn it writes an
+  // envelope. `documents.bench.ts` is what says what that costs at fifty thousand nodes.
+  write: document => {
+    const parsed = document.kind === 'scene' ? jsonOrNull(document.content) : null
+    return isGltfDocument(parsed) ? gltfBody(parsed, document.title) : ENVELOPED.write(document)
+  },
   // Read whole, the studio's metadata sitting inside the file rather than on a line of its own.
   // The envelope is tried first all the same: a sky is still written that way, and its head is
   // the bounded read it has always been.
@@ -214,11 +219,8 @@ function sceneDocument(body: string): DocumentFile {
  * The scene's name is stamped from the title so a RENAME reaches the field a reader shows. It sits
  * on the default scene, which is the one the studio's own data hangs from.
  */
-function gltfBody(document: DocumentFile): string {
-  const parsed = jsonOrNull(document.content)
-  if (!isGltfDocument(parsed)) throw new Error('Refusing to write a scene that is not glTF')
-
-  return JSON.stringify(named(parsed, document.title), null, 2)
+function gltfBody(document: Record<string, unknown>, title: string): string {
+  return JSON.stringify(named(document, title), null, 2)
 }
 
 /** The document with its default scene renamed, or as it stands when it has no title to give. */
