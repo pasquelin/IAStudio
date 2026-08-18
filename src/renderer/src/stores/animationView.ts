@@ -18,6 +18,12 @@ export type AnimationView = {
   expanded: readonly string[]
   /** Picked keys, as `keyId(rowId, time)`. */
   selected: readonly string[]
+  /**
+   * The block the band shows as chosen, by its own id. Choosing is not editing, so it lives here
+   * and never in the document — and it empties the key selection, since Delete must have one
+   * answer and the eye one thing to read.
+   */
+  pickedBlock: string | null
   /** Whether moving an object writes a key rather than its rest pose. */
   autoKey: boolean
   /**
@@ -33,6 +39,7 @@ const DEFAULT_ANIMATION_VIEW: AnimationView = {
   viewport: DEFAULT_VIEWPORT,
   expanded: [],
   selected: [],
+  pickedBlock: null,
   autoKey: false,
   order: [],
 }
@@ -42,6 +49,7 @@ export type AnimationViewState = {
   setViewport: (documentId: string, viewport: Viewport) => void
   toggleExpanded: (documentId: string, subjectId: string) => void
   setSelected: (documentId: string, selected: readonly string[]) => void
+  setPickedBlock: (documentId: string, pickedBlock: string | null) => void
   setAutoKey: (documentId: string, autoKey: boolean) => void
   /**
    * Moves one line in the sheet's own arrangement, and answers how many places it ACTUALLY
@@ -73,8 +81,13 @@ export const useAnimationViews = create<AnimationViewState>()(set => ({
       })),
     ),
 
+  // Picking a key drops the picked block, and the other way round: with both held, Delete would
+  // have two answers and the eye no way of knowing which.
   setSelected: (documentId, selected) =>
-    set(state => write(state, documentId, view => ({ ...view, selected }))),
+    set(state => write(state, documentId, view => ({ ...view, selected, pickedBlock: null }))),
+
+  setPickedBlock: (documentId, pickedBlock) =>
+    set(state => write(state, documentId, view => ({ ...view, pickedBlock, selected: [] }))),
 
   setAutoKey: (documentId, autoKey) =>
     set(state => write(state, documentId, view => ({ ...view, autoKey }))),

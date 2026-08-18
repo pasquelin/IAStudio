@@ -2,7 +2,8 @@ import { mdiRhombus } from '@mdi/js'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
-import { animationRows, type ClipBlock } from '@/engines/scene/animationRows'
+import { clipLane, MAIN_LANE_ID } from '@shared/domain/scene'
+import { animationRows, type ClipBlock, type SheetLane } from '@/engines/scene/animationRows'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
 import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
@@ -41,30 +42,44 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
 
     // A block's width comes from the ENGINE: the length of a clip lives in the GLB, and a model
     // still loading has none — it simply has no block yet rather than a block of no width.
-    const clips: ClipBlock[] = []
+    const sheetLanes: SheetLane[] = []
     for (const node of byId.values()) {
       if (node.type !== 'model') continue
 
-      for (const ref of node.model.clips ?? []) {
-        const seconds = lengths?.[node.id]?.[ref.source.name] ?? null
-        if (seconds === null) continue
+      // A model always shows a lane, empty or not: an object's track is where an animation is
+      // dropped, and one that appears only once something plays has nowhere to receive the first.
+      const lanes = node.model.lanes ?? [clipLane(MAIN_LANE_ID)]
 
-        clips.push({
+      for (const [rank, lane] of lanes.entries()) {
+        const blocks: ClipBlock[] = []
+
+        for (const ref of lane.clips) {
+          const seconds = lengths?.[node.id]?.[ref.source.name] ?? null
+          if (seconds === null) continue
+
+          blocks.push({
+            clipId: ref.id,
+            // The label the studio owns, never the name the file spells — a Tripo rig would put
+            // `NlaTrack` on the band.
+            name: ref.label,
+            start: ref.start,
+            // The same arithmetic the mixer plays by, and it has to be: a bar drawn wider than
+            // what is heard is a bar whose end shows a pose nothing holds.
+            duration: clipSpanOf(ref, seconds),
+          })
+        }
+
+        sheetLanes.push({
           nodeId: node.id,
-          clipId: ref.id,
-          // The label the studio owns, never the name the file spells — a Tripo rig would put
-          // `NlaTrack` on the band.
-          name: ref.label,
-          start: ref.start,
-          // The same arithmetic the mixer plays by, and it has to be: a bar drawn wider than
-          // what is heard is a bar whose end shows a pose nothing holds.
-          duration: clipSpanOf(ref, seconds),
+          laneId: lane.id,
+          name: t('animation.lane', { index: rank + 1 }),
+          blocks,
         })
       }
     }
 
-    return animationRows(timeline, { nodes, expanded, clips, order })
-  }, [timeline, nodes, expanded, lengths, order])
+    return animationRows(timeline, { nodes, expanded, lanes: sheetLanes, order })
+  }, [timeline, nodes, expanded, lengths, order, t])
 
   return (
     <div className="flex h-full min-h-0 flex-col">

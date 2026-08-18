@@ -15,9 +15,23 @@ describe('how a scene band is being looked at', () => {
       viewport: DEFAULT_VIEWPORT,
       expanded: [],
       selected: [],
+      pickedBlock: null,
       autoKey: false,
       order: [],
     })
+  })
+
+  // With both held, Delete would have two answers and the eye no way of knowing which.
+  it('empties the picked keys when a block is chosen, and the other way round', () => {
+    const store = useAnimationViews.getState()
+    store.setSelected(DOCUMENT, ['row@0'])
+    store.setPickedBlock(DOCUMENT, 'c1')
+
+    expect(viewOf().selected).toEqual([])
+    expect(viewOf().pickedBlock).toBe('c1')
+
+    useAnimationViews.getState().setSelected(DOCUMENT, ['row@0'])
+    expect(viewOf().pickedBlock).toBeNull()
   })
 
   it('holds a viewport per document, so two scenes are two points of view', () => {

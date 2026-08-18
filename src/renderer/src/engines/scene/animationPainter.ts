@@ -10,10 +10,11 @@ import type { Us } from '@shared/domain/time'
 import { placeRows } from '../timeline/band'
 import { paintBandEnd } from '../timeline/bandEnd'
 import { paintRuler, readRulerStyle } from '../timeline/ruler'
+import { paintBarGrips } from '../timeline/painter'
 import { RULER_HEIGHT, timeToX, type Viewport } from '../timeline/timelineGeometry'
-import { memoPalette, rootColour } from '../core/palette'
+import { memoPalette, rootColour, rootFont } from '../core/palette'
 import type { Size } from '../core/geometry'
-import type { AnimationRow } from './animationRows'
+import type { AnimationRow, ClipBlock } from './animationRows'
 
 /** Half the diagonal of a key, in pixels. A diamond reads at this size and crowds beyond it. */
 const KEY_REACH = 4
@@ -24,6 +25,16 @@ const CHANNEL_REACH = 3
 /** How far a block sits inside its row, so two stacked blocks do not read as one. */
 const BLOCK_INSET = 2
 
+/** Below this a name is one clipped letter, which says less than the bar's own colour does. */
+const BLOCK_LABEL_MIN = 28
+
+/** Enough to clear the grip at the block's own edge. */
+const BLOCK_LABEL_PAD = 6
+
+const BLOCK_FAMILY = 'ui-sans-serif, system-ui'
+
+const BLOCK_SIZE = '11px'
+
 type Palette = {
   ruler: string
   row: string
@@ -32,6 +43,10 @@ type Palette = {
   key: string
   keySelected: string
   block: string
+  blockPicked: string
+  blockEdge: string
+  blockLabel: string
+  blockFont: string
   playhead: string
   muted: string
 }
@@ -44,6 +59,11 @@ const readPalette = memoPalette((): Palette => ({
   key: rootColour('--color-muted'),
   keySelected: rootColour('--color-accent'),
   block: rootColour('--color-elevated'),
+  // What is CHOSEN, and a block is a content rather than a control — see the accent rule.
+  blockPicked: rootColour('--color-accent-soft'),
+  blockEdge: rootColour('--color-muted'),
+  blockLabel: rootColour('--color-text'),
+  blockFont: rootFont('--text-tiny', BLOCK_SIZE, BLOCK_FAMILY),
   playhead: rootColour('--color-accent'),
   muted: rootColour('--color-muted'),
 }))
@@ -56,6 +76,8 @@ export type AnimationPaint = {
   playhead: Us
   /** The keys under a selection, as `<rowId>@<time>`, so a channel and its subject agree. */
   selected: ReadonlySet<string>
+  /** The block shown as chosen, by its own id. */
+  picked?: string | null
 }
 
 /** How a key is named in the selection set, and in a hit test. */
@@ -104,13 +126,13 @@ function paintKey(
 export function keysOf(row: AnimationRow): readonly Us[] {
   if (row.kind === 'subject') return row.keys
   if (row.kind === 'channel') return row.track.keys.map(key => key.time)
-  // A block holds no key: it is drawn as a bar — see `paintBlock`.
+  // A lane holds no key: its blocks are drawn as bars — see `paintBlock`.
   return []
 }
 
 /**
  * Half a diamond's diagonal on that row, which a hit test needs as much as the paint does. A
- * block draws no diamond at all, so nothing on its row can be grabbed by one.
+ * lane draws no diamond at all, so nothing on its row can be grabbed by one.
  */
 export function reachOf(row: AnimationRow): number {
   if (row.kind === 'subject') return KEY_REACH
@@ -162,8 +184,11 @@ function paintRows(
     context.fillStyle = palette.border
     context.fillRect(0, top + row.height - 1, size.width, 1)
 
-    if (row.kind === 'clip') {
-      paintBlock(context, row.start, row.duration, top, row.height, paint.viewport, palette)
+    if (row.kind === 'lane') {
+      for (const block of row.blocks) {
+        const chosen = block.clipId === paint.picked
+        paintBlock(context, block, top, row.height, paint.viewport, palette, chosen)
+      }
       continue
     }
 
@@ -180,21 +205,39 @@ function paintRows(
   }
 }
 
-/** A clip, as the bar it is: it has a length, which is the whole difference from a key. */
+/**
+ * A clip, as the bar it is: it has a length, which is the whole difference from a key. Its own
+ * name is written on it — several blocks share a lane row now, so the header column beside them
+ * can no longer say which is which.
+ */
 function paintBlock(
   context: CanvasRenderingContext2D,
-  start: Us,
-  duration: Us,
+  block: ClipBlock,
   top: number,
   height: number,
   viewport: Viewport,
   palette: Palette,
+  chosen: boolean,
 ): void {
-  const left = timeToX(start, viewport)
-  const right = timeToX(start + duration, viewport)
+  const left = timeToX(block.start, viewport)
+  const right = timeToX(block.start + block.duration, viewport)
+  const box = { top: top + BLOCK_INSET, height: height - BLOCK_INSET * 2 - 1 }
 
-  context.fillStyle = palette.block
-  context.fillRect(left, top + BLOCK_INSET, Math.max(1, right - left), height - BLOCK_INSET * 2 - 1)
+  context.fillStyle = chosen ? palette.blockPicked : palette.block
+  context.fillRect(left, box.top, Math.max(1, right - left), box.height)
+  paintBarGrips(context, left, right, box.top, box.height, palette.blockEdge)
+
+  if (right - left < BLOCK_LABEL_MIN) return
+
+  context.save()
+  context.beginPath()
+  context.rect(left + BLOCK_LABEL_PAD, box.top, right - left - BLOCK_LABEL_PAD * 2, box.height)
+  context.clip()
+  context.fillStyle = palette.blockLabel
+  context.font = palette.blockFont
+  context.textBaseline = 'middle'
+  context.fillText(block.name, left + BLOCK_LABEL_PAD, box.top + box.height / 2)
+  context.restore()
 }
 
 function paintHead(

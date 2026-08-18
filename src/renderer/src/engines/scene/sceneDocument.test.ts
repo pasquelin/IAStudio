@@ -143,7 +143,7 @@ describe('sceneFromPayload', () => {
 
     const clipsOf = (animation: unknown) => {
       const node = sceneFromPayload({ nodes: [legacy(animation)] }).nodes[0]
-      return node?.type === 'model' ? node.model.clips : undefined
+      return node?.type === 'model' ? node.model.lanes?.[0]?.clips : undefined
     }
 
     it('opens with its clip turned into a block that plays the same', () => {
@@ -215,7 +215,30 @@ describe('sceneFromPayload', () => {
       ]
       const node = sceneFromPayload({ nodes }).nodes[0]
 
-      expect(node?.type === 'model' && node.model.clips?.[0]?.source.name).toBe('Run')
+      expect(node?.type === 'model' && node.model.lanes?.[0]?.clips[0]?.source.name).toBe('Run')
+    })
+
+    // The form written between the plural and the lanes: its blocks belong to the lane a model
+    // has by default, and a document that lost them would have lost its animation in silence.
+    it('folds a flat list of blocks into the one lane a model starts with', () => {
+      const nodes: unknown[] = [
+        { ...modelNodeFixture('m'), model: { assetId: 'a', clips: [clip] } },
+      ]
+      const node = sceneFromPayload({ nodes }).nodes[0]
+
+      expect(node?.type === 'model' && node.model.lanes).toEqual([{ id: 'main', clips: [clip] }])
+      expect(node?.type === 'model' && 'clips' in node.model).toBe(false)
+    })
+
+    it('leaves the lanes a file already spells exactly as they stand', () => {
+      const lanes = [
+        { id: 'main', clips: [clip] },
+        { id: 'second', clips: [] },
+      ]
+      const nodes: unknown[] = [{ ...modelNodeFixture('m'), model: { assetId: 'a', lanes } }]
+      const node = sceneFromPayload({ nodes }).nodes[0]
+
+      expect(node?.type === 'model' && node.model.lanes).toEqual(lanes)
     })
 
     it('keeps the list when a file holds both forms, and drops the leftover', () => {
@@ -231,7 +254,7 @@ describe('sceneFromPayload', () => {
       ]
       const node = sceneFromPayload({ nodes }).nodes[0]
 
-      expect(node?.type === 'model' && node.model.clips).toEqual([clip])
+      expect(node?.type === 'model' && node.model.lanes?.[0]?.clips).toEqual([clip])
       expect(node?.type === 'model' && 'animation' in node.model).toBe(false)
     })
 

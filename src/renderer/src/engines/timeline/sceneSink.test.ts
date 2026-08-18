@@ -45,7 +45,9 @@ describe('createModelScene', () => {
     scene.useClips(model?.id ?? '', ['Walk', 'Idle'])
 
     const played = scene.read().nodes.find(node => node.type === 'model')
-    expect(played?.type === 'model' ? played.model.clips?.[0]?.source.name : null).toBe('Walk')
+    expect(played?.type === 'model' ? played.model.lanes?.[0]?.clips[0]?.source.name : null).toBe(
+      'Walk',
+    )
   })
 
   it('hands back a new state object, so a stage comparing references sees the change', () => {

@@ -1,6 +1,6 @@
 import { AnimationClip, Bone, Object3D, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
-import { embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { animationTrack, timelineWith } from './animation-fixtures'
 import { SceneAnimations, clipNamesOf } from './animation'
@@ -39,6 +39,10 @@ describe('the clips a model brought', () => {
   })
 })
 
+/** These blocks in one lane, which is the shape a node's track has when nothing is stacked. */
+const applyTo = (animations: SceneAnimations, clips: readonly ClipRef[]): void =>
+  animations.apply('node-1', [clipLane('main', clips)])
+
 describe('SceneAnimations', () => {
   const withWalk = (): { animations: SceneAnimations; root: Object3D } => {
     const animations = new SceneAnimations()
@@ -62,7 +66,7 @@ describe('SceneAnimations', () => {
 
   it('places the model where the head says, without playing to get there', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', [ref()])
+    applyTo(animations, [ref()])
     animations.seek(0.75 * SECOND)
 
     expect(cubeOf(root).position.x).toBeCloseTo(0.75, 5)
@@ -70,7 +74,7 @@ describe('SceneAnimations', () => {
 
   it('runs at the speed the document asks for, which shortens the block', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', [ref({ speed: 2 })])
+    applyTo(animations, [ref({ speed: 2 })])
     animations.seek(0.25 * SECOND)
 
     expect(cubeOf(root).position.x).toBeCloseTo(0.5, 5)
@@ -78,7 +82,7 @@ describe('SceneAnimations', () => {
 
   it('wraps a looping block rather than running off its end', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', [ref({ loop: true, duration: 3 * SECOND })])
+    applyTo(animations, [ref({ loop: true, duration: 3 * SECOND })])
     animations.seek(1.25 * SECOND)
 
     expect(cubeOf(root).position.x).toBeCloseTo(0.25, 5)
@@ -86,7 +90,7 @@ describe('SceneAnimations', () => {
 
   it('holds the last pose of a block that does not loop, rather than snapping back', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', [ref({ loop: false })])
+    applyTo(animations, [ref({ loop: false })])
     animations.seek(5 * SECOND)
 
     expect(cubeOf(root).position.x).toBeCloseTo(1, 5)
@@ -94,7 +98,7 @@ describe('SceneAnimations', () => {
 
   it('ignores a clip name the file no longer holds, rather than throwing', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', [ref({ name: 'moonwalk' })])
+    applyTo(animations, [ref({ name: 'moonwalk' })])
     animations.seek(0.5 * SECOND)
 
     expect(cubeOf(root).position.x).toBe(0)
@@ -102,18 +106,32 @@ describe('SceneAnimations', () => {
 
   it('puts the model back to its rest pose when the last block is taken off', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', [ref()])
+    applyTo(animations, [ref()])
     animations.seek(0.5 * SECOND)
-    animations.apply('node-1', [])
+    applyTo(animations, [])
 
     // Without an action driving them, three restores the values the file was loaded with — and
     // it has to reach the objects on the spot, since nothing will advance afterwards.
     expect(cubeOf(root).position.x).toBe(0)
   })
 
+  it('drives the model from the blocks of every lane at once', () => {
+    const animations = new SceneAnimations()
+    const root = scene()
+    animations.add('node-1', root, [walkClip('walk', 1), walkClip('slide', 3)])
+    animations.apply('node-1', [
+      clipLane('a', [ref()]),
+      clipLane('b', [ref({ id: 'block-2', name: 'slide' })]),
+    ])
+    animations.seek(0.5 * SECOND)
+
+    // Halfway through each: 0.5 and 1.5, shared evenly.
+    expect(cubeOf(root).position.x).toBeCloseTo(1, 5)
+  })
+
   it('drives nothing once a node is removed', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', [ref()])
+    applyTo(animations, [ref()])
     animations.remove('node-1')
     animations.seek(0.5 * SECOND)
 
@@ -148,7 +166,7 @@ describe('several blocks on one model', () => {
 
   it('plays the block the head is inside, and no other', () => {
     const { animations, cube } = twoClips()
-    animations.apply('node-1', [walk(), run({ start: SECOND })])
+    applyTo(animations, [walk(), run({ start: SECOND })])
 
     animations.seek(0.5 * SECOND)
     expect(cube.position.x).toBeCloseTo(0.5, 5)
@@ -162,15 +180,15 @@ describe('several blocks on one model', () => {
     const { animations, cube } = twoClips()
     const spans = { duration: 2 * SECOND }
 
-    animations.apply('node-1', [walk(spans)])
+    applyTo(animations, [walk(spans)])
     animations.seek(1.5 * SECOND)
     const walkAlone = cube.position.x
 
-    animations.apply('node-1', [run({ ...spans, start: SECOND })])
+    applyTo(animations, [run({ ...spans, start: SECOND })])
     animations.seek(1.5 * SECOND)
     const runAlone = cube.position.x
 
-    animations.apply('node-1', [
+    applyTo(animations, [
       walk({ ...spans, fadeOut: SECOND }),
       run({ ...spans, start: SECOND, fadeIn: SECOND }),
     ])
@@ -183,7 +201,7 @@ describe('several blocks on one model', () => {
 
   it('answers the same pose for one head however the head got there', () => {
     const { animations, cube } = twoClips()
-    animations.apply('node-1', [
+    applyTo(animations, [
       walk({ duration: 2 * SECOND, fadeOut: SECOND }),
       run({ start: SECOND, duration: 2 * SECOND, fadeIn: SECOND }),
     ])
@@ -199,7 +217,7 @@ describe('several blocks on one model', () => {
 
   it('gives two blocks of the SAME clip two heads of their own', () => {
     const { animations, cube } = twoClips()
-    animations.apply('node-1', [
+    applyTo(animations, [
       embeddedClip('first', 'walk'),
       embeddedClip('second', 'walk', { start: 4 * SECOND }),
     ])
@@ -246,7 +264,7 @@ describe('a block that carries its character across the floor', () => {
 
   it('travels on its own when the band drives the node nowhere', () => {
     const { animations, hip } = rigged()
-    animations.apply('node-1', [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
+    applyTo(animations, [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
     animations.seek(0.5 * SECOND)
 
     expect(hip.position.x).toBeCloseTo(2, 5)
@@ -255,7 +273,7 @@ describe('a block that carries its character across the floor', () => {
   it('walks on the spot as soon as the band carries the node, so nothing moves twice', () => {
     const { animations, hip } = rigged()
     animations.setTimeline(trajectory())
-    animations.apply('node-1', [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
+    applyTo(animations, [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
     animations.seek(SECOND)
 
     expect(hip.position.x).toBe(0)
@@ -264,7 +282,7 @@ describe('a block that carries its character across the floor', () => {
   it('keeps everything the travel is not, so a neutralised walk still walks', () => {
     const { animations, hip } = rigged()
     animations.setTimeline(trajectory())
-    animations.apply('node-1', [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
+    applyTo(animations, [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
     animations.seek(0.5 * SECOND)
 
     const spine = hip.children[0]
@@ -273,7 +291,7 @@ describe('a block that carries its character across the floor', () => {
 
   it('stops travelling the moment a trajectory is keyed under it', () => {
     const { animations, hip } = rigged()
-    animations.apply('node-1', [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
+    applyTo(animations, [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
     animations.seek(0.5 * SECOND)
     expect(hip.position.x).toBeCloseTo(2, 5)
 
@@ -287,7 +305,7 @@ describe('a block that carries its character across the floor', () => {
   it('travels anyway when the document says so plainly', () => {
     const { animations, hip } = rigged()
     animations.setTimeline(trajectory())
-    animations.apply('node-1', [embeddedClip('block-1', 'walk', { rootMotion: 'travel' })])
+    applyTo(animations, [embeddedClip('block-1', 'walk', { rootMotion: 'travel' })])
     animations.seek(0.5 * SECOND)
 
     expect(hip.position.x).toBeCloseTo(2, 5)
