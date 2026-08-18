@@ -939,11 +939,6 @@ export class SceneRenderer {
   }
 
   /**
-   * A helper is built from the instance and hung beside the nodes, like the grid and the
-   * trihedron — never inside the model, where the outliner would list it as part of the scene
-   * and a click could pick it.
-   */
-  /**
    * Weights every mesh of a model against the rig its document holds, then binds them.
    *
    * Off the UI thread and reporting as it goes: half a million vertices against fifty-two bones
@@ -995,6 +990,11 @@ export class SceneRenderer {
     this.skinning.delete(nodeId)
   }
 
+  /**
+   * A helper is built from the instance and hung beside the nodes, like the grid and the
+   * trihedron — never inside the model, where the outliner would list it as part of the scene
+   * and a click could pick it.
+   */
   private bindSkeleton(nodeId: string, root: Object3D, hasBones: boolean): void {
     this.unbindSkeleton(nodeId)
 

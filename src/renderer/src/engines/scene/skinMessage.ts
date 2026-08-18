@@ -1,19 +1,13 @@
 /**
- * What crosses to the skinning worker and back. Its own file so both sides read the same
- * contract, on `bvhMessage`'s pattern — and it EXTENDS that pattern on two points the BVH build
- * never needed:
+ * What crosses to the skinning worker and back, on `bvhMessage`'s pattern — extended on two
+ * points that build never needed: a request answers MANY times, and a caller may take one back.
  *
- * - a request answers MANY times, `done` telling a progress report from the last word;
- * - a caller may take a request back, which is what makes a minute-long bind interruptible.
- *
- * Numbers only, never a three object: a geometry is not structured-cloneable, and a region is an
- * index here rather than a humanoid role so this side knows nothing of the standard.
+ * Numbers only, never a three object: a geometry is not structured-cloneable.
  */
 
 /**
- * Which part of a body a bone drives. Weighting is restricted to bones whose region agrees with
- * the vertex's, which is what keeps a hip vertex off the hand bone when the arm hangs beside it —
- * the failure this whole worker was designed around.
+ * Which part of a body a bone drives. A limb bone weights only vertices of its own limb, which is
+ * what keeps a hip vertex off the hand bone when the arm hangs beside it.
  */
 export type SkinRegion = 'trunk' | 'head' | 'armLeft' | 'armRight' | 'legLeft' | 'legRight'
 
