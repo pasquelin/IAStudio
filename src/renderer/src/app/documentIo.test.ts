@@ -110,7 +110,7 @@ function fakeCanvas(overrides: Omit<Partial<CanvasHost>, 'snapshot'> = {}): Canv
   const host = {
     pixelSnapshots: () => Promise.resolve([]),
     restoreSnapshot: () => Promise.resolve(),
-    flatten: () => Promise.resolve<Uint8Array | null>(FLATTEN),
+    flatten: () => Promise.resolve<Uint8Array<ArrayBuffer> | null>(FLATTEN),
     forgetPicture: () => Promise.resolve(),
     ...overrides,
   }
@@ -131,9 +131,9 @@ function fakeCanvas(overrides: Omit<Partial<CanvasHost>, 'snapshot'> = {}): Canv
 }
 
 /** The pixels a fake engine hands over: bytes, as `LayerPixels` and `OraSurface` now carry them. */
-const PIXELS = Uint8Array.from([137, 80, 78, 71])
+const PIXELS = new Uint8Array([137, 80, 78, 71])
 /** The flatten `mergedimage.png` holds — the container has no document without one. */
-const FLATTEN = Uint8Array.from([137, 80, 78, 71, 13, 10])
+const FLATTEN = new Uint8Array([137, 80, 78, 71, 13, 10])
 
 /** An image document's content: the OpenRaster stack, as JSON, with the studio state inside it. */
 const oraContent = (studio: string): string =>

@@ -192,6 +192,7 @@ describe('the lists that stand for a union', () => {
       'canvas.layer': true,
       'canvas.size': true,
       'canvas.flatten': true,
+      'canvas.edit': true,
       'image.export': true,
       'document.load': true,
       'document.save': true,

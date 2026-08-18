@@ -20,7 +20,7 @@ export const layerPixelPath = (pixels: Pick<LayerPixels, 'layerId' | 'mask'>): s
  * A surface a foreign application named — `data/003.png` — answers `null` here and is placed by
  * the STACK instead, which is what says which layer it belongs to.
  */
-export function layerPixelsNamed(path: string, data: Uint8Array): LayerPixels | null {
+export function layerPixelsNamed(path: string, data: Uint8Array<ArrayBuffer>): LayerPixels | null {
   const match = /^data\/([pm])_(.+)\.png$/.exec(path)
   return match?.[2] ? { layerId: match[2], mask: match[1] === 'm', data } : null
 }

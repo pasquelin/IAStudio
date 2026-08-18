@@ -106,7 +106,12 @@ export type OraStack = {
 export type OraSurface = {
   /** Where it sits in the container. `isOraSurfacePath` is what it is held to. */
   path: string
-  png: Uint8Array
+  /**
+   * Over an `ArrayBuffer` rather than an `ArrayBufferLike`, which is what a `Blob` and a
+   * `structuredClone` both take: spelt loosely, every reader that needed one copied the whole
+   * surface to narrow the type — megabytes per 4K layer, for nothing.
+   */
+  png: Uint8Array<ArrayBuffer>
 }
 
 export type OraDocument = {

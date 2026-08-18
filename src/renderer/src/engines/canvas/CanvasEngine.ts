@@ -226,7 +226,11 @@ export type LayerPixels = {
   layerId: string
   /** A layer keeps two surfaces: the picture, and the mask painted over it. */
   mask: boolean
-  data: Uint8Array
+  /**
+   * Over an `ArrayBuffer` and not an `ArrayBufferLike`, which is what makes it a `BlobPart`:
+   * spelt loosely, restoring a 4K layer copied the whole of it only to narrow the type.
+   */
+  data: Uint8Array<ArrayBuffer>
 }
 
 /**
@@ -450,7 +454,7 @@ export class CanvasEngine {
    * the store, and the engine only hears about it a React commit later — so a picture read off the
    * disk almost always arrives before the layer it fills.
    */
-  private readonly pendingSnapshots = new Map<string, Uint8Array>()
+  private readonly pendingSnapshots = new Map<string, Uint8Array<ArrayBuffer>>()
   private readonly stamp = new Graphics()
   /**
    * What softens the edge of a dab. One instance, tuned when the brush changes and never per
@@ -1296,7 +1300,7 @@ export class CanvasEngine {
    * Extracted rather than composited by hand: the world IS the composited tree, and the GPU has
    * it. Through a canvas and a blob rather than a data URL, so the bytes are never a string.
    */
-  async flatten(region?: Rect): Promise<Uint8Array | null> {
+  async flatten(region?: Rect): Promise<Uint8Array<ArrayBuffer> | null> {
     const frame = region ?? this.documentRect()
     if (!frame || !this.state) return null
 
@@ -1318,7 +1322,10 @@ export class CanvasEngine {
    * `resolution: 1` and never the renderer's, which is the display scale: the same document
    * would otherwise be extracted at 1024² from one screen and 2048² from another.
    */
-  private async pngOf(target: Container | Texture, frame?: Rectangle): Promise<Uint8Array | null> {
+  private async pngOf(
+    target: Container | Texture,
+    frame?: Rectangle,
+  ): Promise<Uint8Array<ArrayBuffer> | null> {
     const renderer = this.app?.renderer
     // `null` for an engine that is not up yet, which every caller already treats as "not ready".
     if (!renderer) return null
@@ -1418,16 +1425,15 @@ export class CanvasEngine {
    *
    * The cache is keyed on the WHOLE source string, so a data URL of a 4K layer would be held for
    * the life of the window — the very megabytes this stopped putting in a string. `unload` and
-   * `revokeObjectURL` give both back.
+   * `revokeObjectURL` give the BYTES back; Pixi's resolver keeps its own entry per URL string,
+   * which nothing public clears — a few hundred bytes per surface restored, for the session.
    *
    * Cleared, unlike a placed picture: the surface was born filled — white, for the base layer —
    * and compositing over that would bring a hole the user erased back as white rather than as
    * the transparency the file holds.
    */
-  private async loadPixelsInto(key: string, png: Uint8Array): Promise<void> {
-    // `slice()`, as two other call sites of `createObjectURL` already do: a `Uint8Array` over an
-    // `ArrayBufferLike` is not a `BlobPart`, and the copy is what narrows it.
-    const url = URL.createObjectURL(new Blob([png.slice()], { type: 'image/png' }))
+  private async loadPixelsInto(key: string, png: Uint8Array<ArrayBuffer>): Promise<void> {
+    const url = URL.createObjectURL(new Blob([png], { type: 'image/png' }))
     try {
       await this.loadInto(key, url, true)
     } finally {

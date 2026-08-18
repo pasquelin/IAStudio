@@ -63,8 +63,10 @@ export async function prepareEdit(
     return false
   }
 
+  // THROWS rather than answering `false`: the other two refusals above each show something — the
+  // model picker, the generator — and this one had nothing to show and said nothing either.
   const image = await host.snapshot()
-  if (!image) return false
+  if (!image) throw new Error('this image has no picture to send yet')
 
   const canvas = canvasOf(useCanvases.getState(), documentId)
   const layer = layerById(canvas, canvas.activeLayerId)

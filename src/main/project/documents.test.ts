@@ -12,13 +12,14 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DOCUMENT_VERSION, type DocumentDescriptor } from '@shared/domain/document'
+import type { OraSurface } from '@shared/domain/openRaster'
 import { orphanStagingCopies, type DocumentFiles } from './documents'
 import { documentFilesAt } from './project-fixtures'
 
 const NOW = '2026-08-07T10:00:00.000Z'
 
 /** One transparent pixel, which is all any of this needs to be real PNG bytes. */
-const PIXELS = Uint8Array.from(
+const PIXELS = new Uint8Array(
   Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
     'base64',
@@ -47,7 +48,7 @@ const oraContent = (srcs: readonly string[] = [], studio = '{"layers":[]}'): str
   })
 
 /** The surfaces beside it: the flatten the spec demands, and one per layer. */
-const oraParts = (srcs: readonly string[] = []): { path: string; png: Uint8Array }[] => [
+const oraParts = (srcs: readonly string[] = []): OraSurface[] => [
   { path: 'mergedimage.png', png: PIXELS },
   ...srcs.map(path => ({ path, png: PIXELS })),
 ]

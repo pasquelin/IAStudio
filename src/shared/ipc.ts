@@ -586,6 +586,9 @@ export type LogScope =
   | 'canvas.size'
   /** A save that refused to flatten a document over a source file whose format cannot hold it. */
   | 'canvas.flatten'
+  // An edit sent to a model, whose picture the editor could not produce. Its own scope because
+  // `canvas.flatten` already carries a sentence about a SAVE, and nothing was being saved here.
+  | 'canvas.edit'
   | 'image.export'
   | 'document.load'
   | 'document.save'
@@ -649,6 +652,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'canvas.layer',
   'canvas.size',
   'canvas.flatten',
+  'canvas.edit',
   'image.export',
   'document.load',
   'document.save',

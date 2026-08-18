@@ -268,9 +268,11 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           if (!host || !edit || !bridge) return
 
           // Prepared, never submitted: the form opens filled and the user is the one who runs it.
-          // The failure is swallowed here rather than left unhandled — the shortcut has nowhere
-          // to report to, and the panel it opens is what says whether anything was prepared.
-          void prepareEdit(documentId, edit, host, bridge.scenario).catch(() => undefined)
+          // Reported rather than swallowed — the panel opening is what says something WAS prepared,
+          // and nothing at all was what a refusal looked like.
+          void prepareEdit(documentId, edit, host, bridge.scenario).catch(error =>
+            reportFailure('canvas.edit', documentId, error),
+          )
           return
         }
         case 'canvas.mergeDown': {

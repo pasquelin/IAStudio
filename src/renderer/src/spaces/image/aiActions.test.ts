@@ -86,6 +86,18 @@ describe('preparing an edit', () => {
     expect(uploaded).toEqual([])
   })
 
+  /**
+   * REJECTS rather than answering `false`, and the difference is a line in the journal: the two
+   * refusals above each bring something forward — the models panel, the settings screen — and this
+   * one has nothing to show. Answering `false`, the menu item did nothing and said nothing.
+   */
+  it('says so, rather than nothing, when the editor has no picture to send', async () => {
+    const booting = { ...host, snapshot: () => Promise.resolve(null) }
+
+    await expect(prepareEdit(DOCUMENT, 'regenerate', booting, bridge)).rejects.toThrow()
+    expect(uploaded).toEqual([])
+  })
+
   // The mask one paints is the mask one regenerates — but only where the layer carries one.
   it('sends the mask along when the armed layer has one', async () => {
     useCanvases

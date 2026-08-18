@@ -9,7 +9,7 @@ export type CanvasHost = {
    * The stack composited into one picture, as bytes — `mergedimage.png`, which the container
    * requires and every other application draws of a `.ora`.
    */
-  flatten: () => Promise<Uint8Array | null>
+  flatten: () => Promise<Uint8Array<ArrayBuffer> | null>
   /**
    * The same picture, base64 — what a PNG asset and the API take.
    *
