@@ -118,13 +118,13 @@ function paintKey(
 export function keysOf(row: AnimationRow): readonly Us[] {
   if (row.kind === 'subject') return row.keys
   if (row.kind === 'channel') return row.track.keys.map(key => key.time)
-  // Neither a block nor a shot holds a key: both are drawn as bars.
+  // A block holds no key: it is drawn as a bar.
   return []
 }
 
 /**
- * Half a diamond's diagonal on that row, which a hit test needs as much as the paint does. A bar
- * row draws no diamond at all, so nothing on it can be grabbed by one.
+ * Half a diamond's diagonal on that row, which a hit test needs as much as the paint does. A
+ * block row draws no diamond at all, so nothing on it can be grabbed by one.
  */
 export function reachOf(row: AnimationRow): number {
   if (row.kind === 'subject') return KEY_REACH
@@ -181,9 +181,10 @@ function paintRows(
       continue
     }
 
-    if (row.kind === 'shot') {
+    // The bars first, the diamonds over them: a camera on air is a run of shots AND a subject
+    // whose lens can be keyed, and its line has to show both — folding it away loses neither.
+    if (row.kind === 'subject' && row.bars) {
       for (const bar of row.bars) paintShot(context, bar, top, row.height, paint)
-      continue
     }
 
     const middle = top + row.height / 2

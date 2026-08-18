@@ -168,7 +168,7 @@ describe('pointing at a shot', () => {
   it('finds the shot, and says how far into it the pointer landed', () => {
     expect(hitAnimation(withShot(), { x: 200, y: middle })).toEqual({
       kind: 'shot',
-      rowId: 'shots:0',
+      rowId: 'cam-a',
       shotId: 's1',
       edge: null,
       grabbedAt: 1 * SECOND,

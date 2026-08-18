@@ -1,14 +1,27 @@
 import type { AnimationTimeline, CameraShot } from '@shared/domain/animation'
 import { frameDuration, SECOND, snapToFrame, type Us } from '@shared/domain/time'
 import { clamp } from '@shared/numeric'
+import { movedWithin } from '@shared/domain/order'
 import { firstCameraId, type SceneNode } from './sceneState'
+
+/**
+ * The cameras the band stacks, top first: one line per camera, ranked by where its first shot
+ * stands in the list.
+ *
+ * This IS the montage's law — the order of the lines — and it lives in the document's own list
+ * rather than in a number on each shot. A number said the same thing twice: two shots of one
+ * camera could hold different layers, and the line drawn for them then had no rank at all.
+ */
+export function shotCameras(shots: readonly CameraShot[]): string[] {
+  return [...new Set(shots.map(shot => shot.cameraId))]
+}
 
 /**
  * Which shot is on air at an instant, or `null` when none is.
  *
- * Three rules, in order: the shot has to cover the instant, the highest layer wins, and at equal
- * layers the one laid down latest wins — the montage's law, since a shot hides what is under it
- * where a track would add to it.
+ * Three rules, in order: the shot has to cover the instant, the camera whose line is highest
+ * wins, and between two shots of ONE camera the one laid down latest wins — the montage's law,
+ * since a shot hides what is under it where a track would add to it.
  *
  * A shot whose camera the scene no longer holds is skipped rather than answered: deleting a
  * camera would otherwise leave a black picture in the middle of a sequence. The shot itself is
@@ -24,28 +37,28 @@ export function activeShotAt(
 }
 
 /**
- * The montage's law, written once: the highest layer wins, and at equal layers the shot laid
- * down latest. What differs between its two callers is only which shots they let compete.
+ * The montage's law, written once. What differs between its two callers is only which shots they
+ * let compete.
  */
 function bestShot(
   timeline: AnimationTimeline,
   time: Us,
   competes: (shot: CameraShot) => boolean,
 ): CameraShot | null {
-  let best: CameraShot | null = null
+  const rank = new Map(shotCameras(timeline.shots).map((cameraId, at) => [cameraId, at]))
+  let best: { shot: CameraShot; rank: number; at: number } | null = null
 
-  for (const shot of timeline.shots) {
+  for (const [at, shot] of timeline.shots.entries()) {
     if (time < shot.start || time >= shot.start + shot.duration) continue
     if (!competes(shot)) continue
-    if (
-      !best ||
-      shot.layer > best.layer ||
-      (shot.layer === best.layer && shot.start > best.start)
-    ) {
-      best = shot
+
+    const own = rank.get(shot.cameraId) ?? 0
+    if (!best || own < best.rank || (own === best.rank && at > best.at)) {
+      best = { shot, rank: own, at }
     }
   }
-  return best
+
+  return best?.shot ?? null
 }
 
 /**
@@ -67,11 +80,8 @@ export function shotOfCameraAt(
 const DEFAULT_SHOT: Us = 3 * SECOND
 
 /**
- * The shot a camera opens at the head: on the layer above every other, from the head onwards.
- *
- * Above, because a shot laid down only to be hidden by what was already on the band reads as a
- * button that did nothing. At least one frame long, so a shot opened on the last frame still has
- * a bar to grab it back by.
+ * The shot a camera opens at the head, from the head onwards. At least one frame long, so a shot
+ * opened on the last frame still has a bar to grab it back by.
  */
 export function newShotAt(
   timeline: AnimationTimeline,
@@ -80,12 +90,10 @@ export function newShotAt(
   time: Us,
 ): CameraShot {
   const start = snapToFrame(clamp(time, 0, timeline.duration), timeline.fps)
-  const layers = timeline.shots.map(shot => shot.layer)
 
   return {
     id,
     cameraId,
-    layer: layers.length === 0 ? 0 : Math.max(...layers) + 1,
     start,
     duration: Math.max(
       frameDuration(timeline.fps),
@@ -95,28 +103,43 @@ export function newShotAt(
 }
 
 /**
- * Where a layer lands when its whole line is dragged, as the two layers it swaps with.
+ * Where a shot goes in the list, which is what decides its camera's place in the stack.
  *
- * The stack the sheet shows, never the numbers: layers 0 and 5 are neighbours on screen, so a
- * line dragged one notch takes the place of the line drawn against it — not of layer 1, which
- * no row shows. `null` when the line is already at that end.
+ * A camera the band does not show yet arrives on TOP — a shot laid down only to be hidden by
+ * what was already there reads as a button that did nothing. A camera already on the band keeps
+ * its line, the shot joining the end of its own run so the runs stay whole.
  */
-export function layersSwapped(
-  timeline: AnimationTimeline,
-  layer: number,
+export function shotsWith(shots: readonly CameraShot[], shot: CameraShot): readonly CameraShot[] {
+  const last = shots.findLastIndex(held => held.cameraId === shot.cameraId)
+  if (last === -1) return [shot, ...shots]
+
+  const next = [...shots]
+  next.splice(last + 1, 0, shot)
+  return next
+}
+
+/**
+ * The list rewritten with one camera's line moved that many notches down the stack, or `null`
+ * when it is already at that end.
+ *
+ * The whole run of a camera travels, because a line IS a camera: moving one bar out of the run
+ * it shares with the others would leave the stack exactly as it was.
+ */
+export function shotsWithCameraMoved(
+  shots: readonly CameraShot[],
+  cameraId: string,
   by: number,
-): { from: number; to: number; steps: number } | null {
-  // Highest first, as `shotRows` stacks them: a step DOWN the screen is a step down the pile.
-  const stack = [...new Set(timeline.shots.map(shot => shot.layer))].sort((a, b) => b - a)
-  const at = stack.indexOf(layer)
-  if (at === -1) return null
+): { shots: readonly CameraShot[]; steps: number } | null {
+  const cameras = shotCameras(shots)
+  // `movedWithin` clamps at both ends and hands the SAME array back when nothing moved, which is
+  // exactly the "already at that end" the grip must be told about.
+  const moved = movedWithin(cameras, cameraId, by)
+  if (moved === cameras) return null
 
-  // Clamped rather than refused: a drag that asks for two notches with one left must take that
-  // one, or the grip banks a step it never made and the line lags behind the pointer.
-  const target = Math.min(Math.max(at - by, 0), stack.length - 1)
-  const to = stack[target]
-
-  return target === at || to === undefined ? null : { from: layer, to, steps: at - target }
+  return {
+    shots: moved.flatMap(id => shots.filter(shot => shot.cameraId === id)),
+    steps: moved.indexOf(cameraId) - cameras.indexOf(cameraId),
+  }
 }
 
 /**

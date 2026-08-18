@@ -78,28 +78,31 @@ export function hitAnimation(context: HitContext, point: Point): AnimationHit | 
       }
     }
 
-    if (row.kind === 'shot') {
-      const at = xToTime(point.x, viewport)
-      const bar = row.bars.find(
-        held => at >= held.shot.start && at <= held.shot.start + held.shot.duration,
-      )
-      if (!bar) return { kind: 'row', rowId: row.id, time: at }
-
-      return {
-        kind: 'shot',
-        rowId: row.id,
-        shotId: bar.shot.id,
-        edge: edgeOf(bar.shot.start, bar.shot.duration, point.x, viewport),
-        grabbedAt: at - bar.shot.start,
-      }
-    }
-
     const grab = reachOf(row) + GRAB_SLACK
     for (const time of keysOf(row)) {
       if (Math.abs(timeToX(time, viewport) - point.x) <= grab) {
         return { kind: 'key', rowId: row.id, time }
       }
     }
+
+    // The bars come after the diamonds because they are painted UNDER them: on a camera's line a
+    // key is what the pointer meets first, and the shot it stands on is what is left.
+    if (row.kind === 'subject' && row.bars) {
+      const on = xToTime(point.x, viewport)
+      const bar = row.bars.find(
+        held => on >= held.shot.start && on <= held.shot.start + held.shot.duration,
+      )
+      if (bar) {
+        return {
+          kind: 'shot',
+          rowId: row.id,
+          shotId: bar.shot.id,
+          edge: edgeOf(bar.shot.start, bar.shot.duration, point.x, viewport),
+          grabbedAt: on - bar.shot.start,
+        }
+      }
+    }
+
     return { kind: 'row', rowId: row.id, time: at }
   }
 

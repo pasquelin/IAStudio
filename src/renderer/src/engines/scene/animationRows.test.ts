@@ -7,7 +7,6 @@ import {
   SUBJECT_HEIGHT,
   animationRows,
   mergedKeys,
-  movedWithin,
   subjectKey,
   trackIdsOf,
 } from './animationRows'
@@ -22,7 +21,7 @@ const rowsOf = (
   nodes = CUBE,
 ) => animationRows(timelineWith(tracks), { nodes, expanded: new Set(expanded) })
 
-describe('the shot lines', () => {
+describe('the camera lines', () => {
   const CAMERAS = [
     { id: 'cam-a', name: 'Camera A' },
     { id: 'cam-b', name: 'Camera B' },
@@ -31,29 +30,28 @@ describe('the shot lines', () => {
   const shotRowsOf = (...shots: CameraShot[]) =>
     animationRows(timelineWith([], { shots }), { nodes: CAMERAS, expanded: new Set() })
 
-  it('draws one line per layer, highest first, above the subjects', () => {
+  // One line per camera, named by the camera, in the order the DOCUMENT lays its shots down —
+  // that order is what settles an overlap, so the picture and `activeShotAt` cannot disagree.
+  it('opens the sheet with the cameras on air, in the order the shots are held', () => {
     const rows = shotRowsOf(
-      cameraShot('low', { cameraId: 'cam-a' }),
-      cameraShot('high', { cameraId: 'cam-b', layer: 3 }),
+      cameraShot('b1', { cameraId: 'cam-b' }),
+      cameraShot('a1', { cameraId: 'cam-a' }),
     )
 
-    expect(rows.map(row => row.kind)).toEqual(['shot', 'shot', 'subject', 'subject'])
-    // A track of the band, at the height its neighbours stand: half as tall reads as a strip
-    // stuck above the sheet rather than as one of its tracks.
-    expect(rows[0]).toMatchObject({ layer: 3, height: SUBJECT_HEIGHT })
-    expect(rows[1]).toMatchObject({ layer: 0 })
+    expect(rows.map(row => row.name)).toEqual(['Camera B', 'Camera A'])
+    expect(rows[0]).toMatchObject({ kind: 'subject', id: 'cam-b', height: SUBJECT_HEIGHT })
   })
 
-  it('puts two shots of one layer on one line, and names the camera each shows', () => {
+  it('carries every shot of one camera on that camera’s own line', () => {
     const rows = shotRowsOf(
       cameraShot('first', { cameraId: 'cam-a' }),
-      cameraShot('second', { cameraId: 'cam-b', start: 5 * SECOND }),
+      cameraShot('second', { cameraId: 'cam-a', start: 5 * SECOND }),
     )
 
     const line = rows[0]
-    expect(line?.kind === 'shot' && line.bars.map(bar => bar.name)).toEqual([
-      'Camera A',
-      'Camera B',
+    expect(line?.kind === 'subject' && line.bars?.map(bar => bar.shot.id)).toEqual([
+      'first',
+      'second',
     ])
   })
 
@@ -61,12 +59,24 @@ describe('the shot lines', () => {
   // and never see on screen.
   it('leaves out a shot whose camera the scene no longer holds', () => {
     const rows = shotRowsOf(cameraShot('gone', { cameraId: 'cam-gone' }))
-    expect(rows.some(row => row.kind === 'shot')).toBe(false)
+    expect(rows.every(row => row.kind === 'subject' && row.bars === undefined)).toBe(true)
   })
 
-  it('drives no channel, so nothing on it is dragged as a key', () => {
-    const line = shotRowsOf(cameraShot('s1', { cameraId: 'cam-a' }))[0]
-    expect(line && trackIdsOf(line)).toEqual([])
+  // The line is the camera's own, so folding it away has to give back its channels — which is
+  // what tells a camera on air from a strip stuck at the top of the sheet.
+  it('is the camera’s subject line, channels and all', () => {
+    const rows = animationRows(
+      timelineWith(
+        [animationTrack('t1', 'fov', [key(1)], { target: { nodeId: 'cam-a', property: 'fov' } })],
+        {
+          shots: [cameraShot('a1', { cameraId: 'cam-a' })],
+        },
+      ),
+      { nodes: CAMERAS, expanded: new Set(['cam-a']) },
+    )
+
+    expect(rows.map(row => row.kind)).toEqual(['subject', 'channel', 'subject'])
+    expect(rows[0] && trackIdsOf(rows[0])).toEqual(['t1'])
   })
 })
 
@@ -201,16 +211,6 @@ describe('arranging the lines', () => {
   // under the neighbours it already has.
   it('puts an object the arrangement never saw back beside its neighbours', () => {
     expect(arranged(['c', 'b'])).toEqual(['a', 'c', 'b'])
-  })
-
-  it('moves one line and leaves the others in place', () => {
-    expect(movedWithin(['a', 'b', 'c'], 'c', -1)).toEqual(['a', 'c', 'b'])
-    expect(movedWithin(['a', 'b', 'c'], 'a', 2)).toEqual(['b', 'c', 'a'])
-  })
-
-  it('stops at the ends rather than wrapping, so a line dragged up has arrived', () => {
-    expect(movedWithin(['a', 'b', 'c'], 'a', -3)).toEqual(['a', 'b', 'c'])
-    expect(movedWithin(['a', 'b', 'c'], 'c', 5)).toEqual(['a', 'b', 'c'])
   })
 })
 

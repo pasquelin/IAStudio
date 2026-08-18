@@ -621,10 +621,33 @@ describe('the timeline a file holds', () => {
   })
 
   it('reads the shots back whole, and gives none to a file written before they existed', () => {
-    const shot = { id: 'shot-1', cameraId: 'cam-a', layer: 2, start: 0, duration: 5 }
+    const shot = { id: 'shot-1', cameraId: 'cam-a', start: 0, duration: 5 }
 
     expect(read({ tracks: [], shots: [shot] }).shots).toEqual([shot])
     expect(read({ tracks: [trackPayload] }).shots).toEqual([])
+  })
+
+  /**
+   * `layer` is gone from the shot: the list's own order is what settles an overlap now. A file
+   * written while the number existed is sorted by it ONCE, here — highest first, equal layers by
+   * start, which is exactly the law those numbers used to spell — and comes back without it.
+   */
+  it('sorts a file written with layers by them, once, and drops the number', () => {
+    const held = (id: string, layer: number, start: number) => ({
+      id,
+      cameraId: `cam-${id}`,
+      layer,
+      start,
+      duration: 5,
+    })
+
+    const shots = read({
+      tracks: [],
+      shots: [held('low', 0, 0), held('high', 4, 0), held('mid', 2, 0)],
+    }).shots
+
+    expect(shots.map(shot => shot.id)).toEqual(['high', 'mid', 'low'])
+    expect(shots[0]).not.toHaveProperty('layer')
   })
 
   // A shot of no length covers no instant, so it can only ever be a hole in the band.

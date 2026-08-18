@@ -14,6 +14,7 @@ import type { Command } from '../core/history'
 import { addNode, moveNodes, multi } from './commands'
 import { pathNode } from './nodeFactory'
 import { deltaOf, valueAt, withKey, withoutKey } from './animationEval'
+import { shotsWith, shotsWithCameraMoved } from './cameraShots'
 import { nodeById, type CameraNode, type NodeMove, type SceneState } from './sceneState'
 
 /**
@@ -328,7 +329,7 @@ const writeShots = (
 export function addCameraShot(shot: CameraShot): Command<SceneState> {
   return {
     id: `shot:add:${shot.id}`,
-    apply: state => writeShots(state, shots => [...shots, shot]),
+    apply: state => writeShots(state, shots => shotsWith(shots, shot)),
     revert: state => writeShots(state, shots => shots.filter(held => held.id !== shot.id)),
   }
 }
@@ -390,22 +391,27 @@ export function editCameraShot(
 }
 
 /**
- * Two layers trading places, which is what dragging a line of the sheet does.
+ * One camera's line moved up or down the stack, which is what dragging its grip does.
  *
- * A swap and not a shift: the sheet draws one line per layer USED, so the numbers between two
- * lines belong to nobody and moving into them would leave the stack looking untouched.
+ * An edit of the DOCUMENT, unlike the sheet's own arrangement: this order is the law an overlap
+ * is settled by, so moving a line changes what the film looks through.
  */
-export function swapShotLayers(from: number, to: number): Command<SceneState> {
-  const swap = (shots: readonly CameraShot[]): readonly CameraShot[] =>
-    shots.map(shot => {
-      if (shot.layer === from) return { ...shot, layer: to }
-      return shot.layer === to ? { ...shot, layer: from } : shot
-    })
+export function moveShotCamera(cameraId: string, by: number): Command<SceneState> {
+  let previous: readonly CameraShot[] | null = null
 
   return {
-    id: `shot:layers:${from}:${to}`,
-    apply: state => writeShots(state, swap),
-    revert: state => writeShots(state, swap),
+    id: `shot:camera:${cameraId}`,
+    apply: state => {
+      const moved = shotsWithCameraMoved(state.animation.shots, cameraId, by)
+      if (!moved) return state
+
+      previous = state.animation.shots
+      return writeShots(state, () => moved.shots)
+    },
+    revert: state => {
+      const origin = previous
+      return origin === null ? state : writeShots(state, () => origin)
+    },
   }
 }
 

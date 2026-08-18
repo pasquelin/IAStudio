@@ -1,7 +1,6 @@
 import type { AnimationRow } from '@/engines/scene/animationRows'
 import { AnimationHeadersChannel } from './AnimationHeadersChannel'
 import { AnimationHeadersClip } from './AnimationHeadersClip'
-import { AnimationHeadersShot } from './AnimationHeadersShot'
 import { AnimationHeadersSubject } from './AnimationHeadersSubject'
 
 export function AnimationHeadersRow({
@@ -16,6 +15,5 @@ export function AnimationHeadersRow({
   if (row.kind === 'subject')
     return <AnimationHeadersSubject documentId={documentId} row={row} shown={shown} />
   if (row.kind === 'channel') return <AnimationHeadersChannel documentId={documentId} row={row} />
-  if (row.kind === 'shot') return <AnimationHeadersShot documentId={documentId} row={row} />
   return <AnimationHeadersClip row={row} />
 }

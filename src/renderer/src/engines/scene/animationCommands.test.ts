@@ -11,6 +11,7 @@ import {
   keyNode,
   keySubject,
   moveAnimationKey,
+  moveShotCamera,
   movesToCommand,
   railOnNewShot,
   recordMove,
@@ -571,12 +572,20 @@ describe('the shots of a sequence', () => {
     animation: { ...EMPTY_SCENE.animation, shots: [shot, other] },
   }
 
+  // The shot joins the end of its camera's own run, so the line the user dragged keeps its rank.
   it('puts a camera on air, and takes it back off on undo', () => {
     const command = addCameraShot(cameraShot('s3'))
     const applied = command.apply(start)
 
-    expect(applied.animation.shots.map(held => held.id)).toEqual(['s1', 's2', 's3'])
+    expect(applied.animation.shots.map(held => held.id)).toEqual(['s1', 's3', 's2'])
     expect(command.revert(applied)).toEqual(start)
+  })
+
+  // A shot laid down only to be hidden by what was already there reads as a button doing nothing.
+  it('opens the stack with a camera the band did not show yet', () => {
+    const applied = addCameraShot(cameraShot('s3', { cameraId: 'cam-c' })).apply(start)
+
+    expect(applied.animation.shots.map(held => held.id)).toEqual(['s3', 's1', 's2'])
   })
 
   // Two shots of one layer starting together are settled by their order, so a shot restored at
@@ -589,17 +598,35 @@ describe('the shots of a sequence', () => {
     expect(command.revert(applied).animation.shots.map(held => held.id)).toEqual(['s1', 's2'])
   })
 
-  it('moves, trims and re-layers through one command, and reverts the whole shot', () => {
-    const moved = editCameraShot('s1', { start: 5 * SECOND, duration: 1 * SECOND }).apply(start)
-    expect(moved.animation.shots[0]).toMatchObject({ start: 5 * SECOND, duration: 1 * SECOND })
+  it('moves and trims through one command, and reverts the whole shot', () => {
+    const edit = editCameraShot('s1', { start: 5 * SECOND, duration: 1 * SECOND })
+    const moved = edit.apply(start)
 
-    const raised = editCameraShot('s1', { layer: 3 })
-    expect(raised.revert(raised.apply(start))).toEqual(start)
+    expect(moved.animation.shots[0]).toMatchObject({ start: 5 * SECOND, duration: 1 * SECOND })
+    expect(edit.revert(moved)).toEqual(start)
   })
 
   it('leaves the state alone when the shot named is gone', () => {
-    expect(editCameraShot('nowhere', { layer: 9 }).apply(start)).toBe(start)
+    expect(editCameraShot('nowhere', { start: 9 * SECOND }).apply(start)).toBe(start)
     expect(removeCameraShot('nowhere').apply(start)).toBe(start)
+  })
+
+  /**
+   * The order of the lines is the montage's law, so dragging one is an edit of the document —
+   * unlike the sheet's own arrangement, which no history holds.
+   */
+  it('moves a camera’s line down the stack, its shots travelling whole', () => {
+    const command = moveShotCamera('cam-a', 1)
+    const applied = command.apply(start)
+
+    expect(applied.animation.shots.map(held => held.cameraId)).toEqual(['cam-b', 'cam-a'])
+    expect(command.revert(applied)).toEqual(start)
+  })
+
+  it('leaves the state alone at the end of the stack, so undo has nothing to give back', () => {
+    const command = moveShotCamera('cam-b', 1)
+    expect(command.apply(start)).toBe(start)
+    expect(command.revert(start)).toBe(start)
   })
 
   /**

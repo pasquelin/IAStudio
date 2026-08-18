@@ -93,13 +93,12 @@ export type CameraTarget = { kind: 'point'; at: Vector3 } | { kind: 'node'; node
  *
  * A list of its own rather than a track, and the difference is the whole reason: tracks ADD up
  * (see `AnimationTrack.index`), where at most one camera can be on air at an instant. The rule
- * that settles an overlap is a montage's — the highest layer wins — and it lives in
- * `activeShotAt`.
+ * that settles an overlap is a montage's — the line drawn highest wins, and a line is a camera —
+ * and it is read off THIS list's order by `activeShotAt`.
  */
 export type CameraShot = {
   id: string
   cameraId: string
-  layer: number
   start: Us
   duration: Us
   /** Absent leaves the camera wherever its transform and its tracks put it. */

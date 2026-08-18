@@ -33,3 +33,24 @@ export function reconcileOrder<T, K>(
 
   return order
 }
+
+/**
+ * The same list with one entry moved by that many places. Clamped at both ends rather than
+ * wrapping: a row dragged past the top has arrived, it has not gone to the bottom.
+ *
+ * The SAME array back when nothing moved, which is how a caller tells "already at that end" from
+ * "it travelled" — a line dragged against the top is asked to move on every step of the gesture,
+ * and a fresh array each time rebuilds whatever reads it for nothing.
+ */
+export function movedWithin(ids: readonly string[], id: string, by: number): readonly string[] {
+  const from = ids.indexOf(id)
+  if (from === -1 || by === 0) return ids
+
+  const to = Math.min(Math.max(from + by, 0), ids.length - 1)
+  if (to === from) return ids
+
+  const moved = [...ids]
+  moved.splice(from, 1)
+  moved.splice(to, 0, id)
+  return moved
+}

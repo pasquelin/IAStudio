@@ -28,7 +28,7 @@ export function animationTrack(
 }
 
 export function cameraShot(id: string, extra: Partial<CameraShot> = {}): CameraShot {
-  return { id, cameraId: 'cam-a', layer: 0, start: 0, duration: SECOND, ...extra }
+  return { id, cameraId: 'cam-a', start: 0, duration: SECOND, ...extra }
 }
 
 export function timelineWith(

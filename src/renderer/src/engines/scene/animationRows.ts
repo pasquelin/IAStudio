@@ -10,6 +10,7 @@ import type { AnimationTimeline, AnimationTrack, CameraShot } from '@shared/doma
 import { reconcileOrder } from '@shared/domain/order'
 import type { Us } from '@shared/domain/time'
 import { ROW_PADDING } from '../timeline/timelineGeometry'
+import { shotCameras } from './cameraShots'
 
 /** One object, or one bone of one object. Its channels are the tracks that drive it. */
 export type Subject = {
@@ -27,6 +28,15 @@ export type SubjectRow = {
   /** Every key of every channel, merged and deduplicated: what the folded line shows. */
   keys: readonly Us[]
   tracks: readonly AnimationTrack[]
+  /**
+   * The shots this camera is on air for, when the subject IS a camera the band stacks — absent
+   * on every other line, which is what tells the two apart.
+   *
+   * On the subject's own line rather than a row of its own, because a camera and its shots are
+   * one thing to a hand: the line carries the camera's NAME, its bars, and its channels folded
+   * underneath. Two rows put the shot at the top of the sheet and the lens halfway down it.
+   */
+  bars?: readonly ShotBar[]
 }
 
 export type ChannelRow = {
@@ -62,22 +72,7 @@ export type ShotBar = {
   name: string
 }
 
-/**
- * One LAYER of shots, top to bottom, highest first — the stack `activeShotAt` reads.
- *
- * A row per layer rather than per shot, because the layer is what settles an overlap: two bars on
- * one line are two shots of equal standing, and a bar on the line above wins over both. Shown
- * that way, the rule is visible instead of being something one has to remember.
- */
-export type ShotRow = {
-  kind: 'shot'
-  id: string
-  height: number
-  layer: number
-  bars: readonly ShotBar[]
-}
-
-export type AnimationRow = SubjectRow | ChannelRow | ClipRow | ShotRow
+export type AnimationRow = SubjectRow | ChannelRow | ClipRow
 
 /** A block is a bar hung under its subject, so it wants the room a bar reads in and no more. */
 export const CLIP_HEIGHT = 24
@@ -157,25 +152,6 @@ export function orderedSubjects(
   )
 }
 
-/**
- * The same list with one entry moved by that many places. Clamped at both ends rather than
- * wrapping: a row dragged past the top has arrived, it has not gone to the bottom.
- */
-export function movedWithin(ids: readonly string[], id: string, by: number): readonly string[] {
-  const from = ids.indexOf(id)
-  if (from === -1 || by === 0) return ids
-
-  const to = Math.min(Math.max(from + by, 0), ids.length - 1)
-  // The SAME array back when nothing moved — a line dragged against the top is asked to move on
-  // every step of the gesture, and a fresh array each time rebuilds the whole sheet for nothing.
-  if (to === from) return ids
-
-  const moved = [...ids]
-  moved.splice(from, 1)
-  moved.splice(to, 0, id)
-  return moved
-}
-
 export type RowsOptions = {
   /**
    * The objects on stage, in outliner order. EVERY one gets a line, keyed or not: a scene's
@@ -203,7 +179,7 @@ export type RowsOptions = {
  * the moment an object is renamed.
  */
 export function animationRows(timeline: AnimationTimeline, options: RowsOptions): AnimationRow[] {
-  const rows: AnimationRow[] = [...shotRows(timeline, options.nodes)]
+  const rows: AnimationRow[] = []
   const grouped = new Map<string, AnimationTrack[]>()
 
   for (const track of timeline.tracks) {
@@ -215,14 +191,8 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
 
   const named = new Map(options.nodes.map(node => [node.id, node.name]))
 
-  /** The objects first, in the order the scene holds them, then the bones keyed inside them. */
-  const natural = [
-    ...options.nodes.map(node => node.id),
-    ...[...grouped.keys()].filter(key => !named.has(key)),
-  ]
-  const order = orderedSubjects(natural, options.order ?? [])
-
-  for (const key of order) {
+  /** One line and its channels, appended in place — the shape a subject reads in, wherever it stands. */
+  const push = (key: string, bars?: readonly ShotBar[]): void => {
     const tracks = grouped.get(key) ?? []
     const bone = tracks[0]?.target.bone
     const plain = named.get(bone ? (tracks[0]?.target.nodeId ?? key) : key) ?? key
@@ -237,9 +207,10 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
       expanded,
       keys: mergedKeys(tracks),
       tracks,
+      bars,
     })
 
-    if (!expanded) continue
+    if (!expanded) return
 
     for (const track of tracks) {
       rows.push({
@@ -251,6 +222,24 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
       })
     }
   }
+
+  // A shot whose camera the scene has lost is left out, as `activeShotAt` leaves it out of the
+  // answer: a bar naming nothing would be a line one could drag and never see on screen.
+  const onAir = shotCameras(timeline.shots).filter(cameraId => named.has(cameraId))
+
+  // The cameras on air open the sheet, in the order the DOCUMENT holds their shots — that order
+  // IS the montage's law, so what the eye reads and what `activeShotAt` answers cannot disagree.
+  // They are left out of the arrangement below for the same reason: a line whose rank is the law
+  // must not be rearrangeable on screen alone.
+  for (const cameraId of onAir) push(cameraId, barsOf(timeline, cameraId, named))
+
+  /** The objects first, in the order the scene holds them, then the bones keyed inside them. */
+  const natural = [
+    ...options.nodes.map(node => node.id).filter(id => !onAir.includes(id)),
+    ...[...grouped.keys()].filter(key => !named.has(key)),
+  ]
+
+  for (const key of orderedSubjects(natural, options.order ?? [])) push(key)
 
   // Clips come after the keyed subjects, in one run: a block is a different kind of thing from a
   // key, and interleaving the two would make the sheet read as though a clip had channels.
@@ -270,48 +259,20 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
   return rows
 }
 
-/**
- * The shot lines, highest layer first — the order `activeShotAt` settles an overlap in, drawn
- * top to bottom so the picture and the rule agree.
- *
- * Above the subjects, and in one run: a shot is a different kind of thing from a key, and it is
- * what the whole sequence is read from.
- */
-function shotRows(timeline: AnimationTimeline, nodes: readonly SheetNode[]): ShotRow[] {
-  if (timeline.shots.length === 0) return []
-
-  const named = new Map(nodes.map(node => [node.id, node.name]))
-  const layers = new Map<number, ShotBar[]>()
-
-  for (const shot of timeline.shots) {
-    // A shot whose camera is gone is left out, as `activeShotAt` leaves it out of the answer:
-    // a bar naming nothing would be a line one could drag and never see on screen.
-    const name = named.get(shot.cameraId)
-    if (name === undefined) continue
-
-    const bars = layers.get(shot.layer)
-    if (bars) bars.push({ shot, name })
-    else layers.set(shot.layer, [{ shot, name }])
-  }
-
-  return [...layers.entries()]
-    .sort(([left], [right]) => right - left)
-    .map(([layer, bars]) => ({
-      kind: 'shot',
-      id: `shots:${layer}`,
-      // A track of the band, at the height the others stand: a line half as tall as the ones
-      // under it reads as a strip stuck above the sheet rather than as one of its tracks.
-      height: SUBJECT_HEIGHT,
-      layer,
-      bars,
-    }))
+/** The bars one camera's line carries, in the order the document lays its shots down. */
+function barsOf(
+  timeline: AnimationTimeline,
+  cameraId: string,
+  named: ReadonlyMap<string, string>,
+): ShotBar[] {
+  const name = named.get(cameraId) ?? cameraId
+  return timeline.shots.flatMap(shot => (shot.cameraId === cameraId ? { shot, name } : []))
 }
 
 /** The row a click lands on, folded or not, so a caller never walks the list a second time. */
 export function trackIdsOf(row: AnimationRow): string[] {
   if (row.kind === 'subject') return row.tracks.map(track => track.id)
   if (row.kind === 'channel') return [row.track.id]
-  // Neither a block nor a shot drives a channel: one plays a clip the file brought, the other
-  // says which camera is on air.
+  // A block drives no channel: it plays a clip the file brought.
   return []
 }

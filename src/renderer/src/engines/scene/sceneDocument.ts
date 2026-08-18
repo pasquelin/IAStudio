@@ -296,7 +296,7 @@ function readTimeline(value: unknown): AnimationTimeline {
   if (!isRecord(value)) return EMPTY_TIMELINE
 
   const tracks = Array.isArray(value.tracks) ? value.tracks.filter(isTrack) : []
-  const shots = Array.isArray(value.shots) ? value.shots.filter(isShot) : []
+  const shots = shotsInOrder(Array.isArray(value.shots) ? value.shots.filter(isShot) : [])
   // `readNumber` gives the fallback for anything that is not a finite number; zero and below are
   // finite and still meaningless here, so the positive test stays.
   const duration = readNumber(value, 'duration', DEFAULT_DURATION)
@@ -311,6 +311,23 @@ function readTimeline(value: unknown): AnimationTimeline {
 }
 
 /**
+ * The shots in the order that settles an overlap, which is the list's own — see `activeShotAt`.
+ *
+ * A document written while `layer` existed is sorted by it ONCE, here, highest first and equal
+ * layers by start, which is exactly the law those numbers used to spell. Read any later and the
+ * field would have to survive for good; the shots go back out without it.
+ */
+function shotsInOrder(shots: readonly CameraShot[]): CameraShot[] {
+  // Widened rather than kept in `CameraShot`: the field is on disk, and declaring it would make
+  // every writer go on filling a number nothing reads.
+  const written = shots as readonly (CameraShot & { layer?: number })[]
+
+  return [...written]
+    .sort((left, right) => (right.layer ?? 0) - (left.layer ?? 0) || left.start - right.start)
+    .map(({ layer: _, ...kept }) => kept)
+}
+
+/**
  * Whether a shot is one. Its shape only: whether the camera it names still exists is a question
  * about the scene at an instant, and `activeShotAt` is the one place that asks it.
  */
@@ -318,7 +335,7 @@ function isShot(value: unknown): value is CameraShot {
   if (!isRecord(value)) return false
   if (typeof value.id !== 'string' || value.id === '') return false
   if (typeof value.cameraId !== 'string' || value.cameraId === '') return false
-  if (!Number.isFinite(value.layer) || !Number.isFinite(value.start)) return false
+  if (!Number.isFinite(value.start)) return false
   if (!isOptionalMotion(value.motion) || !isOptionalTarget(value.target)) return false
   // A shot of no length covers no instant at all, so it could only ever be a hole in the band.
   return typeof value.duration === 'number' && value.duration > 0

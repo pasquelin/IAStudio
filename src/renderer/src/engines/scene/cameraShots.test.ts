@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_TIMELINE, type AnimationTimeline, type CameraShot } from '@shared/domain/animation'
 import { SECOND } from '@shared/domain/time'
-import { activeCameraAt, activeShotAt, draggedShot, layersSwapped, newShotAt } from './cameraShots'
+import {
+  activeCameraAt,
+  activeShotAt,
+  draggedShot,
+  newShotAt,
+  shotCameras,
+  shotsWith,
+  shotsWithCameraMoved,
+} from './cameraShots'
 import { cameraShot } from './animation-fixtures'
 import { cameraNodeFixture, meshNode } from './scene-fixtures'
 
@@ -13,7 +21,7 @@ describe('activeCameraAt', () => {
   it('gives each shot its own stretch of time, and never two cameras at once', () => {
     const timeline = timelineOf(
       cameraShot('s1', { cameraId: 'cam-a', duration: 7 * SECOND }),
-      cameraShot('s2', { cameraId: 'cam-b', start: 7 * SECOND, duration: 8 * SECOND, layer: 1 }),
+      cameraShot('s2', { cameraId: 'cam-b', start: 7 * SECOND, duration: 8 * SECOND }),
     )
 
     expect(activeCameraAt(timeline, CAMERAS, 0)).toBe('cam-a')
@@ -22,24 +30,23 @@ describe('activeCameraAt', () => {
     expect(activeCameraAt(timeline, CAMERAS, 14.9 * SECOND)).toBe('cam-b')
   })
 
-  it('gives the higher layer the instant both shots cover', () => {
-    const timeline = timelineOf(
-      cameraShot('under', { cameraId: 'cam-a', duration: 10 * SECOND }),
-      cameraShot('over', {
-        cameraId: 'cam-b',
-        start: 5 * SECOND,
-        duration: 10 * SECOND,
-        layer: 2,
-      }),
-    )
+  // The law the band draws: the camera whose line stands highest wins the instant, and its line
+  // stands where its first shot does in the list.
+  it('gives the instant both shots cover to the camera whose line is highest', () => {
+    const shots = [
+      cameraShot('over', { cameraId: 'cam-b', duration: 10 * SECOND }),
+      cameraShot('under', { cameraId: 'cam-a', start: 5 * SECOND, duration: 10 * SECOND }),
+    ]
 
-    expect(activeShotAt(timeline, CAMERAS, 6 * SECOND)?.id).toBe('over')
+    expect(activeShotAt(timelineOf(...shots), CAMERAS, 6 * SECOND)?.id).toBe('over')
+    // The same two shots, the lines the other way up: what changed is the order, and only that.
+    expect(activeShotAt(timelineOf(...shots.reverse()), CAMERAS, 6 * SECOND)?.id).toBe('under')
   })
 
-  it('gives the later shot the instant, when both sit on the same layer', () => {
+  it('gives the later shot the instant, when both belong to one camera', () => {
     const timeline = timelineOf(
       cameraShot('first', { cameraId: 'cam-a', duration: 10 * SECOND }),
-      cameraShot('second', { cameraId: 'cam-b', start: 5 * SECOND, duration: 10 * SECOND }),
+      cameraShot('second', { cameraId: 'cam-a', start: 5 * SECOND, duration: 10 * SECOND }),
     )
 
     expect(activeShotAt(timeline, CAMERAS, 6 * SECOND)?.id).toBe('second')
@@ -61,7 +68,7 @@ describe('activeCameraAt', () => {
   // A deleted camera leaves its shots behind: answering with a dead id would black out the film.
   it('skips a shot whose camera the scene no longer holds', () => {
     const timeline = timelineOf(
-      cameraShot('gone', { cameraId: 'cam-gone', duration: 10 * SECOND, layer: 5 }),
+      cameraShot('gone', { cameraId: 'cam-gone', duration: 10 * SECOND }),
       cameraShot('kept', { cameraId: 'cam-a', duration: 10 * SECOND }),
     )
 
@@ -70,17 +77,10 @@ describe('activeCameraAt', () => {
 })
 
 describe('newShotAt', () => {
-  const timeline = timelineOf(cameraShot('under', { layer: 2 }))
+  it('opens at the head, for the camera it names', () => {
+    const shot = newShotAt(EMPTY_TIMELINE, 'cam-a', 'fresh', 1 * SECOND)
 
-  // A shot laid down only to be hidden by what was already there reads as a button doing nothing.
-  it('opens on the layer above every other, from the head onwards', () => {
-    const shot = newShotAt(timeline, 'cam-a', 'fresh', 1 * SECOND)
-
-    expect(shot).toMatchObject({ id: 'fresh', cameraId: 'cam-a', layer: 3, start: 1 * SECOND })
-  })
-
-  it('opens on the ground floor when the band holds no shot at all', () => {
-    expect(newShotAt(EMPTY_TIMELINE, 'cam-a', 'fresh', 0).layer).toBe(0)
+    expect(shot).toMatchObject({ id: 'fresh', cameraId: 'cam-a', start: 1 * SECOND })
   })
 
   it('never opens one of no length, however late the head stands', () => {
@@ -91,25 +91,53 @@ describe('newShotAt', () => {
   })
 })
 
-describe('layersSwapped', () => {
-  /** Layers 0 and 5, which the sheet draws against each other however far apart they number. */
-  const gapped: AnimationTimeline = {
-    ...EMPTY_TIMELINE,
-    shots: [cameraShot('s1', { layer: 0 }), cameraShot('s2', { layer: 5 })],
-  }
+describe('shotsWith', () => {
+  const held = [
+    cameraShot('a1', { cameraId: 'cam-a' }),
+    cameraShot('b1', { cameraId: 'cam-b' }),
+    cameraShot('a2', { cameraId: 'cam-a' }),
+  ]
 
-  it('trades a line with the one drawn against it, whatever the numbers between', () => {
-    expect(layersSwapped(gapped, 0, 1)).toEqual({ from: 0, to: 5, steps: 1 })
-    expect(layersSwapped(gapped, 5, -1)).toEqual({ from: 5, to: 0, steps: -1 })
+  // A shot laid down only to be hidden by what was already there reads as a button doing nothing.
+  it('puts a camera the band does not show yet on top of the stack', () => {
+    const shots = shotsWith(held, cameraShot('c1', { cameraId: 'cam-c' }))
+
+    expect(shotCameras(shots)).toEqual(['cam-c', 'cam-a', 'cam-b'])
+  })
+
+  // The line must not jump: a camera already on the band keeps the rank it was dragged to.
+  it('joins the end of its own run for a camera already on the band', () => {
+    const shots = shotsWith(held, cameraShot('a3', { cameraId: 'cam-a' }))
+
+    expect(shots.map(shot => shot.id)).toEqual(['a1', 'b1', 'a2', 'a3'])
+    expect(shotCameras(shots)).toEqual(['cam-a', 'cam-b'])
+  })
+})
+
+describe('shotsWithCameraMoved', () => {
+  const held = [
+    cameraShot('a1', { cameraId: 'cam-a' }),
+    cameraShot('b1', { cameraId: 'cam-b' }),
+    cameraShot('a2', { cameraId: 'cam-a' }),
+    cameraShot('c1', { cameraId: 'cam-c' }),
+  ]
+
+  // The whole run travels, because a line IS a camera: moving one bar out of the run it shares
+  // with the others would leave the stack exactly as it was.
+  it('moves a camera line down the stack, its shots travelling whole', () => {
+    const moved = shotsWithCameraMoved(held, 'cam-a', 1)
+
+    expect(moved?.steps).toBe(1)
+    expect(moved?.shots.map(shot => shot.id)).toEqual(['b1', 'a1', 'a2', 'c1'])
   })
 
   it('takes the notches it can when asked for more, so the grip banks no step it never made', () => {
-    expect(layersSwapped(gapped, 0, 4)).toEqual({ from: 0, to: 5, steps: 1 })
+    expect(shotsWithCameraMoved(held, 'cam-a', 9)?.steps).toBe(2)
   })
 
-  it('answers nothing at the end of the stack, and for a layer no line shows', () => {
-    expect(layersSwapped(gapped, 5, 1)).toBeNull()
-    expect(layersSwapped(gapped, 3, 1)).toBeNull()
+  it('answers nothing at the end of the stack, and for a camera no line shows', () => {
+    expect(shotsWithCameraMoved(held, 'cam-c', 1)).toBeNull()
+    expect(shotsWithCameraMoved(held, 'cam-gone', -1)).toBeNull()
   })
 })
 

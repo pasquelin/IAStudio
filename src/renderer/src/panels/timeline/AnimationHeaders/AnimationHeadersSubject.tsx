@@ -4,14 +4,16 @@ import type { TrackProperty } from '@shared/domain/animation'
 import { snapToFrame } from '@shared/domain/time'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
-import { keyNode, unkeySubject } from '@/engines/scene/animationCommands'
+import { keyNode, moveShotCamera, unkeySubject } from '@/engines/scene/animationCommands'
 import { trackIdsOf, type SubjectRow } from '@/engines/scene/animationRows'
+import { shotsWithCameraMoved } from '@/engines/scene/cameraShots'
 import { newId } from '@/helpers/ids'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { useAnimationViews } from '@/stores/animationView'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { useSceneViews, sceneViewOf } from '@/stores/sceneViews'
 import { TimelineRow } from '../TimelineRow/TimelineRow'
+import type { RowReorder } from '../TimelineRow/rowReorder'
 import { isFlagOnAll, TRACK_FLAGS } from '../trackFlags'
 
 /** A row id back into the pair its channels are addressed by — the inverse of `subjectKey`. */
@@ -61,17 +63,37 @@ export function AnimationHeadersSubject({
     if (command) store.runCommand(documentId, command)
   }
 
-  return (
-    <TimelineRow
-      height={row.height}
-      reorder={{
-        label: t('animation.reorderRow', { name: row.name }),
+  const label = t('animation.reorderRow', { name: row.name })
+
+  /**
+   * A camera's line is the montage's law itself, so dragging it EDITS the document — where a
+   * plain subject's line is only rearranged on screen, which no history holds.
+   */
+  const reorder: RowReorder = row.bars
+    ? {
+        label,
+        move: by => {
+          const store = useScenes.getState()
+          const shots = sceneOf(store, documentId).animation.shots
+          const moved = shotsWithCameraMoved(shots, row.id, by)
+          if (!moved) return 0
+
+          store.runCommand(documentId, moveShotCamera(row.id, by))
+          return moved.steps
+        },
+        // A drag across three places is one thing the user did: without the gesture, `runCommand`
+        // pushes an entry per step and ⌘Z gives the stack back a line at a time.
+        begin: () => useScenes.getState().beginGesture(documentId),
+        end: () => useScenes.getState().endGesture(documentId),
+      }
+    : {
+        label,
         // The sheet's own arrangement, never the scene: the outliner keeps the hierarchy it has.
-        // No gesture around it either — an arrangement is a way of looking, and no history holds it.
         move: by => useAnimationViews.getState().moveRow(documentId, shown, row.id, by),
-      }}
-      data-testid={`anim-subject-${row.id}`}
-    >
+      }
+
+  return (
+    <TimelineRow height={row.height} reorder={reorder} data-testid={`anim-subject-${row.id}`}>
       <button
         type="button"
         {...HINT_RIGHT(t('animation.foldHint'))}
