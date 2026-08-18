@@ -1,7 +1,7 @@
-import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import type { SkyboxContent } from '@shared/domain/skybox'
 import { isRecord } from '@shared/guards'
 import i18next from 'i18next'
+import { documentFolder } from '@/app/documentFolder'
 import { gltfSkyOf, skyFromGltf, skySourceUri } from '@/engines/skybox/gltfSky'
 import { mediaLinkFrom, mediaLinkOf } from '@/engines/timeline/mediaLink'
 import { assetIdForLink } from '@/helpers/assetIndex'
@@ -17,13 +17,6 @@ import { useDocuments } from '@/stores/documents'
  * nothing to any other application, and nothing at all in another project.
  */
 
-/** The folder a document's links are relative to — its own, so a project stays movable. */
-function heldIn(documentId: string): readonly string[] {
-  const path = useDocuments.getState().documents[documentId]?.path ?? FOLDER_ROOT
-  const folder = parentOf(path) ?? FOLDER_ROOT
-  return folder === FOLDER_ROOT ? [] : folder.split('/')
-}
-
 /**
  * What the last read found in the file and this editor does not compose back — the link to the
  * picture, so a sky whose asset row this window has not been shown does not lose it.
@@ -38,7 +31,7 @@ export const forgetCarriedSky = (documentId: string): void => {
 }
 
 export function skyboxPayload(content: SkyboxContent, documentId: string): unknown {
-  const folder = heldIn(documentId)
+  const folder = documentFolder(documentId)
   const asset = content.source ? assetsById(useAssets.getState()).get(content.source.assetId) : null
 
   return gltfSkyOf(content, {
@@ -100,6 +93,6 @@ export function skyboxFromPayload(payload: unknown, documentId: string): SkyboxC
     reportNotice('document.load', i18next.t('documents.skyHoldsMore', { parts: extra.join(', ') }))
   }
 
-  const folder = heldIn(documentId)
+  const folder = documentFolder(documentId)
   return skyFromGltf(payload, link => assetIdForLink(mediaLinkFrom(link), folder))
 }

@@ -1,8 +1,8 @@
 import type { Asset } from '@shared/domain/asset'
 import { DOCUMENT_ID_KEY, type DocumentDescriptor } from '@shared/domain/document'
-import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import { otioStudioMetadata } from '@shared/domain/otio'
 import i18next from 'i18next'
+import { documentFolder } from '@/app/documentFolder'
 import { mediaLinkFrom, mediaLinkOf, mediaNameOf } from '@/engines/timeline/mediaLink'
 import { otioTimelineOf, sequenceFromOtio, type OtioSource } from '@/engines/timeline/otioTimeline'
 import type { Clip, SequenceState } from '@/engines/timeline/timelineState'
@@ -66,13 +66,6 @@ export function otioTimelineFor(
   })
 }
 
-/** The folder a document's media links are relative to — its own, so a project stays movable. */
-function heldIn(documentId: string): readonly string[] {
-  const path = useDocuments.getState().documents[documentId]?.path ?? FOLDER_ROOT
-  const folder = parentOf(path) ?? FOLDER_ROOT
-  return folder === FOLDER_ROOT ? [] : folder.split('/')
-}
-
 /** `studio` is what the WORKSPACE adds under the studio domain — see `OtioWriteOptions`. */
 export function sequencePayload(
   state: SequenceState,
@@ -80,7 +73,7 @@ export function sequencePayload(
   studio?: Record<string, unknown>,
 ): unknown {
   // Read once, not once per clip: `linkOf` is called for every clip that draws from a file.
-  const folder = heldIn(documentId)
+  const folder = documentFolder(documentId)
 
   return otioTimelineFor(state, documentId, {
     linkOf: path => mediaLinkOf(path, folder),
@@ -150,7 +143,7 @@ export function sequenceFromPayload(payload: unknown, documentId: string): Seque
   remember(payload, documentId)
 
   const unlinked: string[] = []
-  const folder = heldIn(documentId)
+  const folder = documentFolder(documentId)
   const state = sequenceFromOtio(payload, url => {
     const link = mediaLinkFrom(url)
     const found = assetIdForLink(link, folder)
