@@ -662,9 +662,11 @@ offre la section **Animation** :
 | **▶ / ⏸** | montre le bloc dans la vue, sur une horloge à lui |
 | **Vitesse** | un multiplicateur, de 0,1 à 4 |
 | **En boucle** | recommence à la fin, ou s’arrête sur la dernière pose |
+| **Transition** | la durée du fondu **aux deux bouts** du bloc, jusqu’à une seconde |
+| **Déplacement du personnage** | si ce mouvement emmène le personnage, ou le fait marcher sur place — **Automatique**, **Sur place**, **Celui de l’animation** |
 | **Pilote** | quelle moitié du corps ce bloc anime — **Tout le corps**, **Le haut du corps**, **Le bas du corps** |
 
-**Ces cinq contrôles portent sur LE BLOC CHOISI sur la bande** : appuyez sur un bloc pour le
+**Ces sept contrôles portent sur LE BLOC CHOISI sur la bande** : appuyez sur un bloc pour le
 choisir, et la section bascule dessus — tant que vous n’en avez choisi aucun, c’est le premier.
 Un modèle qui porte plusieurs blocs se règle donc bloc par bloc : la vitesse et la boucle
 s’écrivent dans celui que vous regardez, et les autres ne bougent pas.
@@ -675,8 +677,35 @@ s’écrivent dans celui que vous regardez, et les autres ne bougent pas.
 > timeline coupe l’aperçu, déplacer la tête aussi, et lancer l’aperçu met la timeline en pause.
 
 **La position de la tête n’est pas enregistrée** : rouvrir la scène la remet au début. Ce qui est
-enregistré, ce sont les blocs — leur place sur la bande, leur vitesse, leur boucle et ce qu’ils
-pilotent.
+enregistré, ce sont les blocs — leur place sur la bande, leur vitesse, leur boucle, leur transition,
+leur déplacement et ce qu’ils pilotent.
+
+**Un seul curseur pour les deux bouts, et c’est délibéré** : ce que *Transition* règle est la façon
+dont ce mouvement **rejoint ses voisins**, et un bloc dont les deux bouts fondraient sur des durées
+différentes ne décrirait rien de tel. Le fondu vaut zéro par défaut, et une seconde au maximum.
+
+**Le *Déplacement du personnage* règle une seule question : ce mouvement fait-il avancer le
+personnage sur le sol ?** Une marche enregistrée le fait ; posée telle quelle sur un objet que la
+bande emmène déjà d’un point à un autre, le personnage couvre le terrain **deux fois** et arrive
+au-delà.
+
+| Valeur | Ce qu’elle fait |
+|---|---|
+| **Automatique** | le bloc emmène le personnage, **sauf** si une trajectoire de la bande le déplace déjà. C’est le réglage qui évite le double déplacement, et le défaut |
+| **Sur place** | le mouvement n’avance jamais : il est joué sur place |
+| **Celui de l’animation** | le déplacement du fichier est toujours utilisé, trajectoire ou pas |
+
+> **« Sur place » ne cloue pas le personnage au sol** : seul le déplacement **horizontal** est
+> retiré. La hauteur des hanches et leur rebond restent, sans quoi une marche s’enfoncerait dans le
+> sol ou glisserait au lieu de marcher.
+
+> **Ce qui compte comme trajectoire, ce sont DEUX clés de position au moins** sur l’objet lui-même.
+> Une clé isolée place le personnage, elle ne le déplace pas, et *Automatique* laisse alors le
+> mouvement l’emmener.
+
+> **Une trajectoire rendue muette compte quand même.** *Automatique* regarde si ces clés
+> **existent**, pas si elles jouent : rendre une trajectoire muette arrête le personnage, ça ne
+> rend pas la main au mouvement pour l’envoyer marcher tout seul.
 
 **Un modèle sans séquence garde la section**, qui dit alors ce qui lui manque — qu’il ne porte pas
 encore de squelette, ou qu’il en porte un que le studio ne reconnaît pas. Le menu, lui, ne

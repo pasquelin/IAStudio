@@ -641,9 +641,11 @@ section:
 | **▶ / ⏸** | shows the block in the view, on a clock of its own |
 | **Speed** | a multiplier, from 0.1 to 4 |
 | **Loop** | starts over at the end, or holds the last pose |
+| **Transition** | how long the fade lasts at **both ends** of the block, up to one second |
+| **Character movement** | whether this motion carries the character along, or walks it on the spot — **Automatic**, **In place**, **The animation’s own** |
 | **Drives** | which half of the body this block animates — **The whole body**, **The upper body**, **The lower body** |
 
-**All five controls act on THE BLOCK YOU CHOSE on the band**: press a block to choose it, and the
+**All seven controls act on THE BLOCK YOU CHOSE on the band**: press a block to choose it, and the
 section switches over to it — while you have chosen none, it is the first. A model carrying several
 blocks is therefore set block by block: speed and loop are written into the one you are watching,
 and the others do not move.
@@ -654,7 +656,33 @@ and the others do not move.
 > head, and starting the preview pauses the timeline.
 
 **The playhead position is not saved**: reopening the scene puts it back at the start. What is
-saved are the blocks — where they sit on the band, their speed, their loop and what they drive.
+saved are the blocks — where they sit on the band, their speed, their loop, their transition, their
+movement and what they drive.
+
+**One slider for both ends, and that is deliberate**: what *Transition* sets is the way this motion
+**joins its neighbours**, and a block whose two ends faded over different lengths would describe no
+such thing. The fade is zero by default, and one second at most.
+
+***Character movement* settles one question only: does this motion carry the character across the
+floor?** A recorded walk does; laid as it is on an object the band already takes from one point to
+another, the character covers the ground **twice** and arrives past the mark.
+
+| Value | What it does |
+|---|---|
+| **Automatic** | the block carries the character, **unless** a trajectory on the band already moves it. This is what stops the double displacement, and it is the default |
+| **In place** | the motion never travels: it is played on the spot |
+| **The animation’s own** | the file’s own travel is always used, trajectory or not |
+
+> **"In place" does not nail the character to the floor**: only the **horizontal** travel is taken
+> out. The height of the hips and their bounce stay, without which a walk would sink into the floor
+> or slide instead of stepping.
+
+> **What counts as a trajectory is TWO position keys at least**, on the object itself. A single key
+> places the character, it does not move it, and *Automatic* then lets the motion carry it.
+
+> **A trajectory muted still counts.** *Automatic* looks at whether those keys **exist**, not at
+> whether they play: muting a trajectory stops the character, it does not hand the travel back to
+> the motion and send it walking off on its own.
 
 **A model with no clip keeps the section**, which then says what it is missing — that it carries no
 skeleton yet, or one the studio does not recognise. The picker itself only appears when there is
