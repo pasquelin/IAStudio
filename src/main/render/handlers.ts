@@ -2,6 +2,7 @@ import { basename } from 'node:path'
 import { z } from 'zod'
 import { CHANNELS, type RenderFrameRequest, type RenderStartRequest } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import { pathSegment } from '@main/validation'
 import { startRender, type RenderDeps, type RenderSession } from './session'
 
 /**
@@ -11,12 +12,7 @@ import { startRender, type RenderDeps, type RenderSession } from './session'
 const MAX_FRAME_BYTES = 64 * 1024 * 1024
 
 const startSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1)
-    .max(200)
-    .refine(value => !/[/\\]/.test(value)),
+  name: pathSegment,
   // A film of one frame per hour is not a film, and one of a thousand per second is a mistake.
   fps: z.number().int().min(1).max(240),
 })
