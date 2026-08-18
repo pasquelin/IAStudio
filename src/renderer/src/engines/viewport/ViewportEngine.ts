@@ -725,14 +725,6 @@ export class ViewportEngine {
     }
   }
 
-  /**
-   * The camera preview, drawn over the panes in its own scissored rectangle.
-   *
-   * A pass rather than a fifth pane, and a pass rather than a second context: it covers what is
-   * already drawn instead of dividing the surface, and a context per preview is what
-   * `scene-stage` pays elsewhere and says why. The cost is one more `render` per frame, on a
-   * rectangle a quarter as wide — and the loop still sleeps when nothing moves.
-   */
   /** Whether the preview leaves nothing of the panes to see — its grown state, in practice. */
   private insetCoversAll(renderer: WebGLRenderer): boolean {
     const rect = this.inset?.rect
@@ -747,6 +739,13 @@ export class ViewportEngine {
     )
   }
 
+  /**
+   * The camera preview, drawn over the panes in its own scissored rectangle.
+   *
+   * A pass rather than a fifth pane, and rather than a second context: it covers what is already
+   * drawn instead of dividing the surface, and a context per preview is what `scene-stage` pays
+   * elsewhere and says why.
+   */
   private renderInset(renderer: WebGLRenderer): void {
     const inset = this.inset
     if (!inset) return
