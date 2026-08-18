@@ -295,14 +295,16 @@ function lit(colour: string): Color {
 export const PATH_KNOB_RADIUS = 0.14
 
 /**
- * How much of the visible height a knob covers, whatever the distance — the share 0,14 units
- * happened to cover on a rail five units long seen whole, which is the framing the size was
- * arbitrated on.
+ * How much of the visible height a knob covers, whatever the distance: a hundred-and-twenty-eighth
+ * of it, so about 14 px across on a viewport 900 px tall — the size a control point is drawn at in
+ * the drawing tools a hand already knows.
  *
- * A fixed size in the SCENE was the defect: the same knob covered five pixels once the view
- * stepped back, and a target of five pixels is one nobody hits.
+ * Seen on screen before it was settled. Deriving it from the 0,14 scene units arbitrated on
+ * 18/08 gave 0,14/5, and that was a supposition rather than a measure — the framing it was
+ * arbitrated on shows far more than five units of height, and the knobs came out the size of
+ * coins.
  */
-const KNOB_SHARE = 0.14 / 5
+const KNOB_SHARE = 1 / 128
 
 /** Reused rather than minted per knob per frame: this runs inside the render loop. */
 const KNOB_SPOT = new Vector3()
