@@ -9,7 +9,8 @@
  * about the shape of a tree.
  */
 import { Box3, Matrix4, Mesh, Vector3, type AnimationClip, type Object3D } from 'three'
-import { isHumanoidRole, type HumanoidRole } from '@shared/domain/humanoid'
+import type { HumanoidRole } from '@shared/domain/humanoid'
+import { boneRolesOf } from './boneRoles'
 import type { Bounds } from './rigFit'
 
 export type RigStatus =
@@ -67,7 +68,7 @@ export type RigState = {
 }
 
 /** three marks its bones with a flag; `instanceof` would miss one from another three instance. */
-function isBone(object: Object3D): boolean {
+export function isBoneObject(object: Object3D): boolean {
   return Reflect.get(object, 'isBone') === true
 }
 
@@ -82,19 +83,31 @@ export function skeletonBonesOf(root: Object3D): SkeletonBone[] {
   return walkBones(root).bones
 }
 
-/** One pass, two answers: what can be addressed, and what is merely there. */
+/**
+ * One pass, two answers: what can be addressed, and what is merely there.
+ *
+ * The roles are read from the whole skeleton at once rather than name by name, because two of the
+ * rules need the tree: a contested role goes to the higher bone, and a neck that no name spells
+ * is found between the trunk and the head.
+ */
 function walkBones(root: Object3D): { bones: SkeletonBone[]; boneCount: number } {
-  const bones: SkeletonBone[] = []
+  const found: { name: string; parent: string | null }[] = []
   const seen = new Set<string>()
   let boneCount = 0
 
   root.traverse(object => {
-    if (!isBone(object)) return
+    if (!isBoneObject(object)) return
     boneCount += 1
     if (!object.name || seen.has(object.name)) return
 
     seen.add(object.name)
-    bones.push({ name: object.name, parent: nearestBoneAbove(object), ...roleOf(object.name) })
+    found.push({ name: object.name, parent: nearestBoneAbove(object) })
+  })
+
+  const roles = boneRolesOf(found)
+  const bones = found.map(bone => {
+    const role = roles[bone.name]
+    return role ? { ...bone, role } : bone
   })
 
   return { bones, boneCount }
@@ -164,17 +177,8 @@ function statusOf(
 function nearestBoneAbove(bone: Object3D): string | null {
   let above = bone.parent
   while (above) {
-    if (isBone(above) && above.name) return above.name
+    if (isBoneObject(above) && above.name) return above.name
     above = above.parent
   }
   return null
-}
-
-/**
- * The role a bone name spells, if it spells one exactly. Only the studio's own spelling, prefix
- * stripped — reading the provider conventions is `boneRoles.ts`, a phase of its own.
- */
-function roleOf(name: string): { role?: HumanoidRole } {
-  const bare = name.slice(name.lastIndexOf(':') + 1)
-  return isHumanoidRole(bare) ? { role: bare } : {}
 }
