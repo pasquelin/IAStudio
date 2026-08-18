@@ -28,10 +28,11 @@ function extensionOfMime(mimeType: string): string {
  * name, which is a fact about the file rather than a phrase anyone has to translate.
  */
 function extractedTextureName(modelName: string, texture: EmbeddedTexture): string {
-  const t = TRANSLATIONS[windowLanguage()].texture
+  const language = windowLanguage()
+  const t = TRANSLATIONS[language].texture
   const role = texture.channel ? t.channel[texture.channel] : texture.slot
 
-  return fillHoles(t.derivedName, { name: modelName, channel: role })
+  return fillHoles(t.derivedName, { name: modelName, channel: role }, language)
 }
 
 export type TextureExtractionDeps = {

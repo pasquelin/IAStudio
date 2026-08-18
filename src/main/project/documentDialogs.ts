@@ -29,10 +29,11 @@ export type AskUser = (options: {
  * gesture here that throws work away, so an Escape must never be read as consent.
  */
 export async function askCloseChoice(ask: AskUser, title: string): Promise<CloseChoice> {
-  const t = TRANSLATIONS[windowLanguage()].documents
+  const language = windowLanguage()
+  const t = TRANSLATIONS[language].documents
 
   const chosen = await ask({
-    message: fillHoles(t.saveTitle, { title }),
+    message: fillHoles(t.saveTitle, { title }, language),
     detail: t.saveBody,
     // Save first: it is the platform order on macOS and the answer that loses nothing.
     buttons: [t.save, t.dontSave, t.cancel],
@@ -74,10 +75,11 @@ export async function askConfirm(
  * user never saw. Cancel is the default and the dismissal for that reason.
  */
 export async function askOverwriteDocument(ask: AskUser, title: string): Promise<boolean> {
-  const t = TRANSLATIONS[windowLanguage()].documents
+  const language = windowLanguage()
+  const t = TRANSLATIONS[language].documents
 
   return await askConfirm(ask, {
-    message: fillHoles(t.overwriteTitle, { title }),
+    message: fillHoles(t.overwriteTitle, { title }, language),
     detail: t.overwriteBody,
     confirm: t.overwriteConfirm,
     cancel: t.cancel,
@@ -86,10 +88,11 @@ export async function askOverwriteDocument(ask: AskUser, title: string): Promise
 
 /** Whether the file really goes. Irreversible, so Cancel is both the default and the dismissal. */
 export async function askDeleteDocument(ask: AskUser, title: string): Promise<boolean> {
-  const t = TRANSLATIONS[windowLanguage()].documents
+  const language = windowLanguage()
+  const t = TRANSLATIONS[language].documents
 
   return await askConfirm(ask, {
-    message: fillHoles(t.deleteTitle, { title }),
+    message: fillHoles(t.deleteTitle, { title }, language),
     detail: t.deleteBody,
     confirm: t.deleteConfirm,
     cancel: t.cancel,

@@ -11,10 +11,11 @@ import { askConfirm, type AskUser } from './documentDialogs'
  * reads as the application having made a mess.
  */
 export async function askUseOccupiedFolder(ask: AskUser, folder: string): Promise<boolean> {
-  const t = TRANSLATIONS[windowLanguage()].project
+  const language = windowLanguage()
+  const t = TRANSLATIONS[language].project
 
   return await askConfirm(ask, {
-    message: fillHoles(t.occupiedTitle, { folder }),
+    message: fillHoles(t.occupiedTitle, { folder }, language),
     detail: t.occupiedBody,
     confirm: t.occupiedConfirm,
     cancel: t.occupiedCancel,
@@ -34,10 +35,11 @@ export async function askUseOccupiedFolder(ask: AskUser, folder: string): Promis
  * somewhere the system offers to put back. A selection of thirty is a number nobody re-reads.
  */
 export async function askTrashFiles(ask: AskUser, count: number): Promise<boolean> {
-  const t = TRANSLATIONS[windowLanguage()].explorer
+  const language = windowLanguage()
+  const t = TRANSLATIONS[language].explorer
 
   return await askConfirm(ask, {
-    message: fillHoles(t.trashTitle, { count: String(count) }),
+    message: fillHoles(t.trashTitle, { count }, language),
     detail: t.trashBody,
     confirm: t.trashConfirm,
     cancel: t.trashCancel,
