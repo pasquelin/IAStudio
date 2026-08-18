@@ -110,6 +110,32 @@ describe('waiting on the skinning worker', () => {
   })
 })
 
+/**
+ * An `AbortController` counting what stays hooked on its signal, the way `DictationSettings` and
+ * `useAppearance` count theirs: a listener nobody takes off outlives every request that added it.
+ */
+function countedSignal() {
+  const stop = new AbortController()
+  const add = stop.signal.addEventListener.bind(stop.signal)
+  const remove = stop.signal.removeEventListener.bind(stop.signal)
+  let live = 0
+
+  let added = 0
+
+  stop.signal.addEventListener = (...args: Parameters<typeof add>) => {
+    added += 1
+    live += 1
+    add(...args)
+  }
+  // Counted where one was hooked, since taking off what was never on is a no-op the DOM allows.
+  stop.signal.removeEventListener = (...args: Parameters<typeof remove>) => {
+    if (live > 0) live -= 1
+    remove(...args)
+  }
+
+  return { stop, added: () => added, live: () => live }
+}
+
 describe('taking a bind back', () => {
   it('tells the worker to stop, and answers nothing', async () => {
     const fake = scriptedWorker()
@@ -123,8 +149,6 @@ describe('taking a bind back', () => {
     expect(fake.sent.at(-1)).toEqual({ id: 1, cancel: true })
   })
 
-  // The listener cannot catch an abort already delivered: without its own guard the worker walks
-  // every vertex against every bone for a caller that gave up before it asked.
   it('answers nothing for a bind whose signal was taken back before it was asked', async () => {
     const fake = scriptedWorker()
     const port = createSkinWeights(fake.spawn)
@@ -135,8 +159,6 @@ describe('taking a bind back', () => {
     expect(fake.sent.at(-1)).toEqual({ id: 1, cancel: true })
   })
 
-  // A caller keeping one controller for a whole model aborts it long after the early meshes are
-  // bound: an answered request must not be taken back a second time.
   it('says nothing to the worker when the signal is taken back after the answer', async () => {
     const fake = scriptedWorker()
     const port = createSkinWeights(fake.spawn)
@@ -148,6 +170,31 @@ describe('taking a bind back', () => {
     stop.abort()
 
     expect(fake.sent).toHaveLength(1)
+  })
+
+  it('hooks nothing onto a signal that was already taken back', async () => {
+    const fake = scriptedWorker()
+    const port = createSkinWeights(fake.spawn)
+    const signal = countedSignal()
+    signal.stop.abort()
+
+    await port.bind(POSITIONS(), RIG, { signal: signal.stop.signal })
+
+    expect(signal.added()).toBe(0)
+  })
+
+  // One controller serves every mesh of a model, so a listener left behind by each bind piles up
+  // for the whole binding — each one holding the worker and this request's `resolve`.
+  it('takes its listener off the signal once the bind is answered', async () => {
+    const fake = scriptedWorker()
+    const port = createSkinWeights(fake.spawn)
+    const signal = countedSignal()
+
+    const bound = port.bind(POSITIONS(), RIG, { signal: signal.stop.signal })
+    fake.answer(bindingFor(1))
+    await bound
+
+    expect(signal.live()).toBe(0)
   })
 
   it('ignores an answer that was already on its way', async () => {
