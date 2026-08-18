@@ -460,7 +460,7 @@ de relancer, ce qui est la façon la plus rapide d’explorer une piste.
 
 | Message | Cause | Quoi faire |
 |---|---|---|
-| **Aucun identifiant enregistré.** | aucune clé API | Réglages ▸ Compte |
+| **Aucun identifiant enregistré.** | aucune clé API | **Réglages ▸ Compte** |
 | **Clé ou secret API invalide.** | une des deux chaînes est fausse | vérifier, souvent un espace en trop |
 | **Cette clé API n’a pas les droits requis.** | la clé existe mais ne peut pas faire cela | vérifier votre plan sur app.scenario.com |
 | **Trop de requêtes. Nouvelle tentative en cours…** | vous avez dépassé le débit autorisé | rien, le studio réessaie tout seul |
