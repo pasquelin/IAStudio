@@ -87,8 +87,31 @@ un fichier à demi réécrit ne s’ouvrirait nulle part. Le même refus protèg
 une scène entière, et une matière `.mtlx` qui porte plus que ce que le studio compose — un second
 matériau, ou simplement un réglage de surface que l’éditeur de matières n’a pas, comme un vernis.
 
-Pour sortir malgré tout ce que vous avez modifié, passez par **Fichier ▸ Exporter la scène** :
-l’export écrit à côté, sans toucher au fichier d’origine.
+**Un montage est protégé de la même façon**, et pour deux raisons distinctes. Un `.otio` qui porte
+un marqueur, un effet ou une transition que le studio ne compose pas s’ouvre en lecture seule ; et
+un montage dont les médias sont introuvables s’ouvre **sans les clips concernés**, l’enregistrer
+les effacerait du fichier. Dans ce second cas, importez les médias dans le projet, puis rouvrez le
+montage : le refus tombe de lui-même.
+
+**Le refus se dit deux fois, et jamais entre les deux.** À l’ouverture, le studio annonce ce qu’il
+ne sait pas réécrire et le document arrive en lecture seule. Puis c’est `⌘S` qui répond, avec la
+raison complète. **L’enregistrement automatique, lui, ne dit RIEN** : il passe, se heurte au même
+refus, et se tait — répéter la phrase toutes les trente secondes serait pire que le silence. Un
+document refusé n’est donc jamais écrit sur le disque tant que vous n’avez pas tenté `⌘S` vous-même.
+
+Pour sortir malgré tout ce que vous avez modifié, passez par l’**export** de ce document —
+**Fichier ▸ Exporter la scène**, **Exporter le ciel**, **Exporter la matière**, ou
+**Exporter le montage (OTIO)…** : l’écriture va dans un fichier NEUF, sans toucher à l’original.
+
+> **N’attendez pas d’*Enregistrer sous…* qu’il contourne le refus** : les deux gestes
+> d’enregistrement passent par la même porte, et la copie est refusée pour la même raison que
+> l’original. C’est l’export, et lui seul, qui sort le travail d’un document en lecture seule.
+
+> **L’image est la seule des six sans refus, et c’est délibéré.** Un `.ora` est lui aussi
+> recomposé en entier à l’enregistrement, mais il s’écrit sans rien vous demander : ce qu’un autre
+> logiciel y a mis et que le studio ne compose pas est perdu à la première écriture — et
+> **renommer le fichier suffit** à déclencher cette réécriture. Si un `.ora` vous vient d’ailleurs
+> et que vous tenez à ce qu’il porte, travaillez sur une copie.
 
 **Ce qui ne s’enregistre pas :**
 
