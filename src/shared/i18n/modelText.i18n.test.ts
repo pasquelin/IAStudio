@@ -108,7 +108,7 @@ describe('the French of the model texts', () => {
    */
   it('binds what French does not break', () => {
     const breakable = entries.flatMap(([source, french]) =>
-      breakableSpots(french).map(spot => `${source} — ${spot}`),
+      breakableSpots(french, 'fr').map(spot => `${source} — ${spot}`),
     )
 
     expect(breakable).toEqual([])

@@ -289,10 +289,13 @@ describe('the translation bundles', () => {
    * `{{units}} UC` is the readout the studio draws most, and every pattern written here looked for
    * a DIGIT — which an interpolation is not. `breakableSpots` reads all five spots, and it lives
    * in `typography.ts` because `model-text.fr.json` is guarded against exactly the same ones.
+   *
+   * The figure half is not French — English breaks `{{units}} CU` the same way — and this read
+   * `fr` alone while the English bundle held ZERO no-break spaces over 2556 values.
    */
-  it('binds what French does not break, in French', () => {
-    const breakable = [...BUNDLES.fr].flatMap(([key, text]) =>
-      breakableSpots(text).map(spot => `${key} — ${spot}`),
+  it.each(CODES)('binds what %s does not break', code => {
+    const breakable = [...BUNDLES[code]].flatMap(([key, text]) =>
+      breakableSpots(text, code).map(spot => `${key} — ${spot}`),
     )
 
     expect(breakable).toEqual([])

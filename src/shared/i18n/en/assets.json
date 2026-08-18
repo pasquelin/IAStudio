@@ -157,7 +157,7 @@
     "fadeOut": "Fade out",
     "fadeOutHint": "Fall to silence across the selection",
     "normalize": "Normalise",
-    "normalizeHint": "Bring the level to −14 LUFS",
+    "normalizeHint": "Bring the level to −14 LUFS",
     "trimSilence": "Trim silence",
     "trimSilenceHint": "Pull the clip in to what is not silence",
     "compare": "A/B",

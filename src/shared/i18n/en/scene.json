@@ -186,7 +186,7 @@
     "vertices": "Vertices",
     "draws": "Draw calls",
     "textures": "Textures",
-    "megabytes": "{{value, number(maximumFractionDigits: 1)}} MB"
+    "megabytes": "{{value, number(maximumFractionDigits: 1)}} MB"
   },
   "sceneDisplay": {
     "shaded": "Shaded",

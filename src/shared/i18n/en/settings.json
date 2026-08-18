@@ -88,7 +88,7 @@
     },
     "dictationIdleUnload": {
       "title": "Free the memory after",
-      "help": "Minutes without dictating before the model is unloaded, returning around 700 MB of memory. It loads itself again on the next dictation, which takes a few seconds. Set it to 0 to keep it resident."
+      "help": "Minutes without dictating before the model is unloaded, returning around 700 MB of memory. It loads itself again on the next dictation, which takes a few seconds. Set it to 0 to keep it resident."
     },
     "dictationModelFolder": {
       "title": "Model folder",
