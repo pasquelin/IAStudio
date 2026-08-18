@@ -113,7 +113,7 @@ export function directionOf(offset: Vector3): ViewDirection | null {
  * A table rather than a chain of comparisons: the renderer asks it once per pass, and a mode
  * added without an answer here would silently draw as the real materials.
  */
-export type Substitute = 'none' | 'solid' | 'matcap' | 'density' | 'hidden'
+export type Substitute = 'none' | 'solid' | 'matcap' | 'density' | 'hidden' | 'ghost'
 
 const SUBSTITUTES: Record<DisplayMode, Substitute> = {
   shaded: 'none',
@@ -123,6 +123,10 @@ const SUBSTITUTES: Record<DisplayMode, Substitute> = {
   material: 'none',
   matcap: 'matcap',
   density: 'density',
+  ghost: 'ghost',
+  // The same invisible material the quad wireframe hides its surfaces behind: what is left on
+  // screen is the skeleton helper, which hangs beside the scene rather than inside it.
+  skeleton: 'hidden',
 }
 
 export function substituteOf(mode: DisplayMode): Substitute {

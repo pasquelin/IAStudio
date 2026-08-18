@@ -240,7 +240,8 @@ zone's cut: the icons above it open in the first half, those below in the second
 ### The right rail
 
 The right column's icons — Skybox, View, Layers, Channels, Styles, Scene, Lights, Meshes,
-whichever the workspace declares, in that order — then, below the separator, Inspector.
+Animations, whichever the workspace declares, in that order — then, below the separator,
+Inspector.
 
 In **Video** and **Audio** the upper half of that column is empty: neither workspace declares
 anything there, and the rail then carries the Inspector alone.
@@ -310,6 +311,7 @@ close button never goes**, and the panel's name keeps its size.
 | **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |
 | **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
+| **Animations** | right | 1st | 3D | what a character can be made to play: the sequences its file brought, and those shipped with the studio |
 | **Explorer** | left | 2nd | everywhere | the project folder, folders and files |
 | **Git** | left | 2nd | everywhere *(with a project open)* | what has changed in the project folder since the last recorded version |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |

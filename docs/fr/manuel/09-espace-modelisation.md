@@ -650,7 +650,34 @@ s’affiche que s’il y a quelque chose à choisir.
 **Anim. 1**, **Anim. 2**, et ainsi de suite. Les sous-pistes sont groupées **sous** les lignes de
 clés, jamais mêlées à elles.
 
-#### Superposer deux animations
+### La bibliothèque d’animations
+
+Le panneau **Animations**, dans la colonne de droite, liste **ce qu’un personnage peut jouer** :
+d’abord les séquences que le fichier du modèle sélectionné porte, puis celles livrées avec le
+studio. Les deux sources se suivent dans une seule liste, et se glissent de la même façon.
+
+**Une ligne se glisse sur une sous-piste de la bande, et c’est ce qui y pose un bloc.** Il commence
+là où vous lâchez, cadré sur l’image la plus proche, et prend la longueur réelle du fichier. Il est
+choisi aussitôt : l’Inspecteur décrit alors ce que vous venez de poser.
+
+> **Seule une sous-piste accepte un dépôt.** Une ligne de clés porte des clés, la ligne d’un objet
+> est l’objet lui-même, et la règle du haut n’est pas une piste : lâcher sur l’une des trois ne
+> fait rien.
+
+**Une animation livrée est rejouée sur le squelette de VOTRE personnage** — elle a été montée pour
+un autre, et le studio la transpose. Le personnage qui la portait n’entre pas dans la scène.
+
+**Une animation livrée porte le nom de son DOSSIER**, jamais celui écrit dans le fichier — un
+export Tripo appelle son unique séquence `NlaTrack`, un export Uthana n’en nomme aucune. Une
+vignette s’affiche si le dossier en porte une, sinon une marque générique. Un dossier vaut **une**
+animation : si son fichier en épelle plusieurs, c’est la première qui est jouée.
+
+**Le studio peut être livré sans aucune animation.** Quand ni le modèle sélectionné ni le dossier
+livré n’ont rien à offrir, le panneau le dit : « Aucune animation. Sélectionnez un personnage, ou
+installez des animations dans le dossier de l’application. » Ce dossier est commun à tous les
+projets, et il se met à jour en mettant le studio à jour.
+
+### Superposer deux animations
 
 **Deux blocs ne se superposent pas sur une même sous-piste.** Là où ils se chevauchent, ils se
 partagent le personnage à parts égales, et la pose obtenue est leur moyenne — c’est-à-dire ni

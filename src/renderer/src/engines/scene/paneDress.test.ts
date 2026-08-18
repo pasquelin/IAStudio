@@ -154,6 +154,40 @@ describe('dressing a view before it is drawn', () => {
     expect(second.layers.isEnabled(EDGE_LAYER)).toBe(true)
   })
 
+  // The two modes phase 8 wants: the skeleton lives beside the scene rather than inside it, so
+  // taking the surfaces away — or thinning them — is what makes the bones readable.
+  it('thins the surfaces without hiding them, and lets what is behind show through', () => {
+    const mesh = cube()
+
+    dressForPane([mesh], 'ghost', false, materials, memory, eye())
+
+    const worn = mesh.material
+    expect(Array.isArray(worn) ? worn[0] : worn).toMatchObject({
+      transparent: true,
+      visible: true,
+      depthWrite: false,
+    })
+  })
+
+  it('takes the surfaces away entirely for the skeleton view', () => {
+    const mesh = cube()
+
+    dressForPane([mesh], 'skeleton', false, materials, memory, eye())
+
+    const worn = mesh.material
+    expect(Array.isArray(worn) ? worn[0] : worn).toMatchObject({ visible: false })
+  })
+
+  it('gives a mesh its own material back when the view leaves those modes', () => {
+    const mesh = cube()
+    const own = mesh.material
+
+    dressForPane([mesh], 'skeleton', false, materials, memory, eye())
+    dressForPane([mesh], 'shaded', false, materials, memory, eye())
+
+    expect(mesh.material).toBe(own)
+  })
+
   it('walks a model, which arrives as a tree rather than a mesh', () => {
     const model = new Object3D()
     const inside = cube()

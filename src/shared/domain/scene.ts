@@ -286,6 +286,21 @@ export function bundledClip(id: string, name: string, extra: Partial<ClipRef> = 
 }
 
 /**
+ * A block on an animation the PROJECT holds: a file of its own, played on another character.
+ *
+ * The name is the asset's, which is a file's stem rather than anything the clip inside spells —
+ * `NlaTrack` and `animation_0` are what those spell, and neither may reach the screen.
+ */
+export function assetClip(
+  id: string,
+  assetId: string,
+  name: string,
+  extra: Partial<ClipRef> = {},
+): ClipRef {
+  return { ...DEFAULT_CLIP, ...extra, id, source: { kind: 'asset', assetId, name }, label: name }
+}
+
+/**
  * The block a document written before clips were plural describes.
  *
  * The id is fixed rather than minted so that reopening a file twice gives the same document; that
@@ -520,7 +535,17 @@ export function isViewDirection(value: string): value is ViewDirection {
  * scene's own lights, which is how a texture is judged without a light flattering it.
  */
 export type DisplayMode =
-  'shaded' | 'wireframe' | 'both' | 'solid' | 'material' | 'matcap' | 'density'
+  | 'shaded'
+  | 'wireframe'
+  | 'both'
+  | 'solid'
+  | 'material'
+  | 'matcap'
+  | 'density'
+  /** Surfaces barely there, so the skeleton inside is what reads. */
+  | 'ghost'
+  /** No surface at all. What is left is the skeleton, which is drawn outside the scene graph. */
+  | 'skeleton'
 
 export const DISPLAY_MODES: readonly DisplayMode[] = [
   'shaded',
@@ -530,6 +555,8 @@ export const DISPLAY_MODES: readonly DisplayMode[] = [
   'material',
   'matcap',
   'density',
+  'ghost',
+  'skeleton',
 ]
 
 export function isDisplayMode(value: string): value is DisplayMode {

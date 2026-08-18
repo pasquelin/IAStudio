@@ -202,7 +202,11 @@
     "matcap": "Matcap",
     "matcapHint": "Lighting captured on a sphere: it is the relief that reads, not the colour",
     "density": "Density",
-    "densityHint": "Green to red by triangles per unit of surface: what is red is what to optimise"
+    "densityHint": "Green to red by triangles per unit of surface: what is red is what to optimise",
+    "ghost": "Translucent",
+    "ghostHint": "Surfaces barely there, so the joints inside can be seen",
+    "skeleton": "Skeleton only",
+    "skeletonHint": "No surface at all: the bones are all that is left, to be put right without guessing"
   },
   "animation": {
     "position": "Position",

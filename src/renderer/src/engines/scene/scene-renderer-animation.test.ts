@@ -9,8 +9,9 @@ import {
 } from 'three'
 import type { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import { bundledClip, clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { assetClip, bundledClip, clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { bundledAnimationUrl } from '@shared/domain/animationLibrary'
+import { assetUrl } from '@shared/domain/asset'
 import { SceneRenderer } from './SceneRenderer'
 import type { BvhBuilder } from './bvhBuilder'
 import type { Retarget } from './retarget'
@@ -567,14 +568,20 @@ describe('SceneRenderer and a track on one bone', () => {
 
 describe('SceneRenderer and the animations the app ships with', () => {
   /** What the retargeting port is asked, and what it hands back — here, the clips unchanged. */
-  const straightThrough = (): Retarget & { asked: { target: Object3D; clips: string[] }[] } => {
+  const straightThrough = (): Retarget & {
+    asked: { target: Object3D; clips: string[] }[]
+    learnt: { bones: readonly string[]; roles: Readonly<Record<string, string>> }[]
+  } => {
     const asked: { target: Object3D; clips: string[] }[] = []
+    const learnt: { bones: readonly string[]; roles: Readonly<Record<string, string>> }[] = []
     return {
       asked,
+      learnt,
       adapt: (target, _source, clips) => {
         asked.push({ target, clips: clips.map(clip => clip.name) })
         return Promise.resolve([...clips])
       },
+      learn: (bones, roles) => learnt.push({ bones, roles }),
       dispose: () => {},
     }
   }
@@ -651,6 +658,101 @@ describe('SceneRenderer and the animations the app ships with', () => {
     engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(bundledClip('block-2', 'Capoeira'))] })
 
     expect(asked).toEqual([bundledAnimationUrl('Capoeira')])
+    engine.dispose()
+  })
+
+  /** Two characters on the same asset, each with its own block on the same shipped animation. */
+  const twoDancers = (clip: ClipRef) => [
+    { ...modelNode(clip), id: 'a' },
+    { ...modelNode({ ...clip, id: 'block-2' }), id: 'b' },
+  ]
+
+  // Case 18 of the issue: the file itself is read once, not once per character.
+  it('reads one animation file however many characters play it', async () => {
+    const retarget = straightThrough()
+    const { engine, asked } = withShipped(
+      animatedModel([]),
+      animatedModel([walk('NlaTrack')]),
+      retarget,
+    )
+
+    engine.apply({ ...EMPTY_SCENE, nodes: twoDancers(shippedBlock()) })
+
+    // Both characters were posed from it, and only one read paid for the two.
+    await vi.waitFor(() => expect(retarget.asked).toHaveLength(2))
+    expect(asked).toEqual([bundledAnimationUrl('Capoeira')])
+    engine.dispose()
+  })
+
+  // Held while a block still names it, and no longer: what the second dancer saved is only worth
+  // having if the file goes when the last block does.
+  it('reads it again once no block names it any more', async () => {
+    const { engine, asked } = withShipped(
+      animatedModel([]),
+      animatedModel([walk('NlaTrack')]),
+      straightThrough(),
+    )
+
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(shippedBlock())] })
+    await vi.waitFor(() => expect(asked).toHaveLength(1))
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(shippedBlock())] })
+
+    await vi.waitFor(() => expect(asked).toHaveLength(2))
+    engine.dispose()
+  })
+
+  // Case 6 of the issue: a project file dropped for its motion. It carries a whole character, and
+  // the scene must show none of it — only the model already standing there, moving.
+  it('plays a project asset without ever letting its mesh into the scene', async () => {
+    const loaded = animatedModel([])
+    const source = animatedModel([walk('NlaTrack')])
+    const { engine, asked } = withShipped(loaded, source, straightThrough())
+
+    engine.apply({
+      ...EMPTY_SCENE,
+      nodes: [modelNode(assetClip('block-1', 'asset-9', 'jig', { offset: 0.5 }))],
+    })
+
+    await vi.waitFor(() => expect(cubeOf(loaded).position.x).toBeCloseTo(0.5, 5))
+    expect(asked).toEqual([assetUrl('asset-9')])
+    expect(source.parent).toBeNull()
+    engine.dispose()
+  })
+
+  // Case 19 of the issue: a role put right by hand lives in the document, and until now nothing
+  // read it — the port went on deriving roles from names, which is what had been corrected.
+  it('tells the port what the document says this skeleton means', async () => {
+    const retarget = straightThrough()
+    const { engine } = withShipped(animatedModel([]), animatedModel([walk('NlaTrack')]), retarget)
+    const rest = {
+      position: { x: 0, y: 1, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    }
+    const node = modelNode(shippedBlock())
+
+    engine.apply({
+      ...EMPTY_SCENE,
+      nodes: [
+        {
+          ...node,
+          model: {
+            ...node.model,
+            rig: {
+              origin: 'local',
+              bones: [
+                { name: 'b0', parent: null, rest, role: 'Hips' },
+                { name: 'b1', parent: 'b0', rest },
+              ],
+            },
+          },
+        },
+      ],
+    })
+
+    await vi.waitFor(() => expect(retarget.learnt).toHaveLength(1))
+    expect(retarget.learnt[0]).toEqual({ bones: ['b0', 'b1'], roles: { b0: 'Hips' } })
     engine.dispose()
   })
 

@@ -8,6 +8,11 @@ import { useModelClips } from '@/stores/modelClips'
 import { installScene, sceneNodeIn, sceneNodeNow } from '@/stores/scene-fixtures'
 import { useScenes } from '@/stores/scenes'
 import { useSceneEdit } from '@/hooks/useSceneEdit'
+import { installFakeBridge } from '@/services/fakeBridge'
+import { useSettings } from '@/stores/settings'
+import { useSceneViews } from '@/stores/sceneViews'
+import type { ModelSummary } from '@shared/domain/model'
+import type { PlanAccess } from '@shared/domain/plan'
 import { RigSection } from './RigSection'
 
 const DOCUMENT = 'doc-1'
@@ -37,6 +42,8 @@ describe('RigSection', () => {
   beforeEach(() => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] })
     useModelClips.setState({ rigs: {}, rigProgress: {} })
+    // Or a bone picked by one case decides what the next one draws, whatever it installs.
+    useSceneViews.setState({ views: {} })
   })
 
   it('says nothing while the file has not landed', () => {
@@ -111,6 +118,109 @@ describe('RigSection', () => {
     render(<Host />)
 
     expect(screen.queryByText('Squelette')).not.toBeInTheDocument()
+  })
+
+  /** The catalogue as it answers, and the plan a `cu-basic` account is on. */
+  const RIGGER: ModelSummary = {
+    id: 'model_x',
+    name: 'X',
+    family: '3d',
+    source: 'other',
+    origin: 'official',
+    featured: false,
+    capabilities: ['3d23d'],
+    tags: ['Rigging'],
+  }
+
+  function withCatalogue(models: readonly Partial<ModelSummary>[], plan: PlanAccess | null): void {
+    installFakeBridge({
+      scenario: {
+        searchModels: () =>
+          Promise.resolve({
+            items: models.map(model => ({ ...RIGGER, ...model })),
+            cursor: null,
+          }),
+        plan: () => Promise.resolve(plan),
+      },
+    })
+    useSettings.setState({ auth: { authenticated: true } })
+  }
+
+  // The refusal is said BEFORE any click, never discovered as a 403 — and it names the plan,
+  // because « unavailable » without a reason is what sends someone hunting through settings.
+  it('says why Scenario cannot rig this, without a click and without an attempt', async () => {
+    withCatalogue([{ requiredPlanLevel: 50 }], { name: 'cu-basic', level: 25 })
+    show()
+
+    expect(await screen.findByText(/cu-basic/)).toBeInTheDocument()
+  })
+
+  it('says nothing when a service is within reach — the local rigger is the default anyway', async () => {
+    withCatalogue([{ requiredPlanLevel: 50 }, { id: 'model_y' }], { name: 'cu-max', level: 100 })
+    show()
+
+    await screen.findByRole('button', { name: 'Rendre animable' })
+    expect(screen.queryByText(/abonnement/)).not.toBeInTheDocument()
+  })
+
+  // Offline, or not authenticated: an empty catalogue is not a subscription being short.
+  it('says nothing when the catalogue answered no service at all', async () => {
+    withCatalogue([{ tags: ['Remeshing'] }], { name: 'cu-basic', level: 25 })
+    show()
+
+    await screen.findByRole('button', { name: 'Rendre animable' })
+    expect(screen.queryByText(/abonnement/)).not.toBeInTheDocument()
+  })
+
+  /** A model already rigged by the studio, with one of its bones picked in pose mode. */
+  function rigged(bone?: string): void {
+    const node = modelNodeFixture('a')
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [{ ...node, model: { ...node.model, rig: rigFit(STANDING_BOUNDS) } }],
+    })
+    useModelClips.setState({ rigs: { [DOCUMENT]: { a: rigStateFixture(['Hips', 'Spine']) } } })
+    if (bone) useSceneViews.getState().setPickedBone(DOCUMENT, { nodeId: 'a', bone })
+    render(<Host />)
+  }
+
+  it('lays the thirty finger bones on a rig that has none', async () => {
+    rigged()
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter les mains' }))
+
+    expect(nodeOf()?.model.rig?.bones).toHaveLength(22 + 30)
+  })
+
+  it('stops offering the hands once they are there', async () => {
+    rigged()
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter les mains' }))
+
+    expect(screen.queryByRole('button', { name: 'Ajouter les mains' })).not.toBeInTheDocument()
+  })
+
+  // The bone editing follows the pose mode's own pick: an inspector showing one node must not
+  // edit the skeleton of another.
+  it('offers nothing on a bone until one is picked', () => {
+    rigged()
+
+    expect(screen.queryByRole('button', { name: 'Retirer cet os' })).not.toBeInTheDocument()
+  })
+
+  it('gives the picked bone a role of the standard', async () => {
+    rigged('Spine')
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Articulation' }), 'Chest')
+
+    const spine = nodeOf()?.model.rig?.bones.find(bone => bone.name === 'Spine')
+    expect(spine?.role).toBe('Chest')
+  })
+
+  it('hangs a child under the picked bone, and takes a bone out', async () => {
+    rigged('Spine')
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter un os enfant' }))
+    expect(nodeOf()?.model.rig?.bones.some(bone => bone.parent === 'Spine')).toBe(true)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer cet os' }))
+    expect(nodeOf()?.model.rig?.bones.some(bone => bone.name === 'Spine')).toBe(false)
   })
 
   it('never tells a model it cannot be rigged once it has been', () => {

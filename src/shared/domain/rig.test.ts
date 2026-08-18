@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { isRig, rigFaultOf, type RigBone } from './rig'
+import {
+  isRig,
+  rigFaultOf,
+  rigRenamed,
+  rigWithBones,
+  rigWithoutBone,
+  rigWithRole,
+  type RigBone,
+} from './rig'
 
 const REST = {
   position: { x: 0, y: 0, z: 0 },
@@ -73,5 +81,62 @@ describe('reading a rig off a document', () => {
 
   it('refuses one with no origin at all', () => {
     expect(isRig({ bones: SPINE })).toBe(false)
+  })
+})
+
+describe('editing the hierarchy by hand', () => {
+  const ARM: RigBone[] = [
+    bone('Hips', null, 'Hips'),
+    bone('Elbow', 'Hips', 'LeftLowerArm'),
+    bone('Wrist', 'Elbow'),
+  ]
+
+  it('hangs a new bone where it was asked to', () => {
+    expect(rigWithBones(ARM, [bone('Thumb', 'Wrist')])?.at(-1)?.parent).toBe('Wrist')
+  })
+
+  it('refuses a bone hung on a parent nobody answers to', () => {
+    expect(rigWithBones(ARM, [bone('Thumb', 'Nowhere')])).toBeNull()
+  })
+
+  it('refuses a bone taking a role another already fills', () => {
+    expect(rigWithBones(ARM, [bone('Other', 'Hips', 'LeftLowerArm')])).toBeNull()
+  })
+
+  // Taking an elbow out must not take the hand and every finger with it.
+  it('hangs the children of a removed bone where it hung', () => {
+    const next = rigWithoutBone(ARM, 'Elbow')
+
+    expect(next.map(one => one.name)).toEqual(['Hips', 'Wrist'])
+    expect(next[1]?.parent).toBe('Hips')
+  })
+
+  it('leaves the rig alone when the bone is not one of its own', () => {
+    expect(rigWithoutBone(ARM, 'Nowhere')).toEqual(ARM)
+  })
+
+  it('carries the children over when a bone is renamed', () => {
+    const next = rigRenamed(ARM, 'Elbow', 'LeftLowerArm')
+
+    expect(next?.map(one => one.parent)).toEqual([null, 'Hips', 'LeftLowerArm'])
+  })
+
+  it('refuses a rename onto a name another bone already wears', () => {
+    expect(rigRenamed(ARM, 'Wrist', 'Elbow')).toBeNull()
+  })
+
+  // A role lands on one bone: a rig holding one twice is a fault the document reader drops whole.
+  it('takes a role off whatever bone was filling it', () => {
+    const next = rigWithRole(ARM, 'Wrist', 'LeftLowerArm')
+
+    expect(next.map(one => one.role)).toEqual(['Hips', undefined, 'LeftLowerArm'])
+  })
+
+  it('clears a role a bone should never have had', () => {
+    expect(rigWithRole(ARM, 'Elbow', null).map(one => one.role)).toEqual([
+      'Hips',
+      undefined,
+      undefined,
+    ])
   })
 })

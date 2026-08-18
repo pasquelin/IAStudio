@@ -1,6 +1,7 @@
 import { AnimationClip, Bone, Object3D, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
 import {
+  assetClip,
   bundledClip,
   clipLane,
   embeddedClip,
@@ -8,8 +9,10 @@ import {
   type ClipRef,
 } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
+import { assetUrl } from '@shared/domain/asset'
+import { bundledAnimationUrl } from '@shared/domain/animationLibrary'
 import { animationTrack, timelineWith } from './animation-fixtures'
-import { SceneAnimations, clipNamesOf } from './animation'
+import { SceneAnimations, clipNamesOf, foreignClipsOf } from './animation'
 
 /** A cube travelling `to` units along X over one second, which is enough to read a mixer by. */
 function walkClip(name = 'walk', to = 1): AnimationClip {
@@ -472,5 +475,30 @@ describe('two blocks stacked on a body', () => {
 
     expect(limbOf(root, 'LeftUpperLeg').position.x).toBeCloseTo(0.75, 5)
     expect(limbOf(root, 'LeftUpperArm').position.x).toBeCloseTo(0.75, 5)
+  })
+})
+
+describe('the clips a model has to be given', () => {
+  it('names every file to read, and only the ones the model did not bring', () => {
+    const lanes = [
+      clipLane('a', [embeddedClip('block-1', 'walk'), bundledClip('block-2', 'Capoeira')]),
+      clipLane('b', [assetClip('block-3', 'asset-7', 'jig')]),
+    ]
+
+    expect(foreignClipsOf(lanes)).toEqual([
+      { key: 'bundled:Capoeira', url: bundledAnimationUrl('Capoeira'), label: 'Capoeira' },
+      { key: 'asset:asset-7', url: assetUrl('asset-7'), label: 'jig' },
+    ])
+  })
+
+  // Four blocks of one walk are one file to read, and the kind is what stops a shipped `walk`
+  // and a project asset of the same name being taken for one another.
+  it('asks for one file per source, however many blocks play it', () => {
+    const lanes = [
+      clipLane('a', [bundledClip('block-1', 'walk'), bundledClip('block-2', 'walk')]),
+      clipLane('b', [assetClip('block-3', 'asset-7', 'walk')]),
+    ]
+
+    expect(foreignClipsOf(lanes).map(clip => clip.key)).toEqual(['bundled:walk', 'asset:asset-7'])
   })
 })

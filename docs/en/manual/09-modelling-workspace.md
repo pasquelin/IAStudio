@@ -629,7 +629,33 @@ something to choose.
 block** that bears the clip's name. The line holding it is a **sub-track**, called **Anim. 1**,
 **Anim. 2**, and so on. Sub-tracks are grouped **under** the key lines, never mixed into them.
 
-#### Layering two animations
+### The animation library
+
+The **Animations** panel, in the right column, lists **what a character can be made to play**:
+first the sequences the selected model's own file brought, then the ones shipped with the studio.
+The two sources follow one another in a single list, and are dragged the same way.
+
+**A row is dragged onto a sub-track of the band, and that is what puts a block there.** It starts
+where you let go, snapped to the nearest frame, and takes the file's real length. It is chosen
+straight away: the Inspector then describes what you have just laid down.
+
+> **Only a sub-track accepts a drop.** A key line holds keys, an object's own line is the object
+> itself, and the ruler at the top is not a track: dropping on any of the three does nothing.
+
+**A shipped animation is replayed on YOUR character's skeleton** — it was authored for another
+one, and the studio transposes it. The character that carried it does not enter the scene.
+
+**A shipped animation bears its FOLDER's name**, never the one written inside the file — a Tripo
+export calls its only sequence `NlaTrack`, an Uthana export names none at all. A thumbnail shows
+if the folder holds one, otherwise a generic mark. One folder is **one** animation: if its file
+spells several, the first is the one played.
+
+**The studio may ship with no animation at all.** When neither the selected model nor the shipped
+folder has anything to offer, the panel says so: "No animation yet. Select a character, or install
+animations in the application folder." That folder is common to every project, and it is updated
+by updating the studio.
+
+### Layering two animations
 
 **Two blocks do not layer on one sub-track.** Where they overlap they share the character in equal
 parts, and the pose you get is their mean — that is, neither of them. Lay them **end to end** to
