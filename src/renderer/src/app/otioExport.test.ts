@@ -11,6 +11,7 @@ import {
 } from '@/engines/timeline/timelineState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
+import { retitleDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { useSequences } from '@/stores/sequences'
@@ -74,6 +75,18 @@ function laid(state: SequenceState, extra: Record<string, DocumentDescriptor> = 
 }
 
 describe('otioExportFiles', () => {
+  // The two halves of one title, and they only part company when it cannot be a file name: the
+  // timeline keeps what a person typed, since another editing application shows THAT.
+  it('keeps the typed title inside the file and cleans only the name it is written under', () => {
+    laid(sequenceWith(reindexTracks([trackFixture('V1', 'video', [clipFixture('a', 0, SECOND)])])))
+    retitleDocument('doc-1', '...')
+
+    const { folder, files } = otioExportFiles('doc-1')
+
+    expect(folder).toBe('edit')
+    expect(JSON.parse(new TextDecoder().decode(files[0]?.bytes)).name).toBe('...')
+  })
+
   it('points a clip at the file its asset holds, wherever the project sits', () => {
     laid(sequenceWith(reindexTracks([trackFixture('V1', 'video', [clipFixture('a', 0, SECOND)])])))
 

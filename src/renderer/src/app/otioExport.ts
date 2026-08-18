@@ -1,6 +1,5 @@
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { safeFileName } from '@shared/domain/fileName'
 import { OTIO_EXTENSION } from '@shared/domain/otio'
 import type { FolderExportRequest } from '@shared/ipc'
 import { otioTimelineOf, type OtioSource } from '@/engines/timeline/otioTimeline'
@@ -8,7 +7,7 @@ import type { Clip } from '@/engines/timeline/timelineState'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
-import { useDocuments } from '@/stores/documents'
+import { documentExportName, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 
@@ -63,15 +62,20 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
   const projectPath = useProject.getState().project?.path
   if (!projectPath) throw new Error('no project is open to resolve the media against')
 
-  const { documents } = useDocuments.getState()
-  const catalogue: Catalogue = { projectPath, documents, assets: assetsById(useAssets.getState()) }
-  const title = documents[documentId]?.title ?? documentId
+  const tabs = useDocuments.getState()
+  const catalogue: Catalogue = {
+    projectPath,
+    documents: tabs.documents,
+    assets: assetsById(useAssets.getState()),
+  }
+  // The RAW title, which names the timeline inside the file — that is not a file name, and the
+  // two are read apart: one by another editing application, the other by a file system.
   const timeline = otioTimelineOf(sequenceOf(useSequences.getState(), documentId), {
-    name: title,
+    name: tabs.documents[documentId]?.title ?? documentId,
     sourceOf: clip => sourceOf(clip, catalogue),
   })
 
-  const name = safeFileName(title)
+  const name = documentExportName(tabs, documentId, 'edit')
   return {
     folder: name,
     files: [
