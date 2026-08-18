@@ -16,6 +16,7 @@ import {
   type DocumentKind,
 } from '@shared/domain/document'
 import { GLTF_SCENE_STATE, gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
+import { isRecord } from '@shared/guards'
 import type { LightDescriptor, Transform } from '@shared/domain/scene'
 import { scenePayload, sceneFromPayload } from './sceneDocument'
 import type { SceneState } from './sceneState'
@@ -164,6 +165,9 @@ const COMPOSED = new Set([
   'extras',
 ])
 
+/** The `asset` fields a save writes back. A `copyright` another application set is not one. */
+const COMPOSED_ASSET = new Set(['version', 'generator', 'extras'])
+
 /**
  * What a file holds beyond what a save would write back.
  *
@@ -172,10 +176,35 @@ const COMPOSED = new Set([
  * recomposes the whole document from the state, so the next ⌘S would drop every one of them
  * without a word. glTF is linked BY INDEX: carrying them across half way is not a thing that can
  * be done, so the honest answer is to refuse and leave the file as its author left it.
+ *
+ * **A composed member is not a REPRODUCED member, and reading only the root was the hole** — the
+ * same one MaterialX had one layer down. `scenes` is composed, and a save writes exactly ONE
+ * scene: a file holding three came back holding one, silently. So the three members that are
+ * rewritten from something narrower than themselves are looked into.
  */
 export function sceneHoldsMore(document: unknown): string[] {
   if (!isGltfDocument(document)) return []
-  return Object.keys(document).filter(key => !COMPOSED.has(key))
+  const held = Object.keys(document).filter(key => !COMPOSED.has(key))
+
+  const scenes = document.scenes
+  if (Array.isArray(scenes) && scenes.length > 1) held.push('scenes')
+
+  const asset = document.asset
+  if (isRecord(asset)) {
+    held.push(
+      ...Object.keys(asset)
+        .filter(key => !COMPOSED_ASSET.has(key))
+        .map(key => `asset.${key}`),
+    )
+  }
+
+  // The extension block is overwritten whole, so anything but the lights one would be lost.
+  const used = document.extensionsUsed
+  if (Array.isArray(used)) {
+    held.push(...used.filter(name => name !== LIGHTS_EXTENSION).map(name => String(name)))
+  }
+
+  return held
 }
 
 /** Fields at their default are left out. The rotation is Euler here, a quaternion there. */
