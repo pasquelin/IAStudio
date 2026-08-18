@@ -123,6 +123,33 @@ describe('taking a bind back', () => {
     expect(fake.sent.at(-1)).toEqual({ id: 1, cancel: true })
   })
 
+  // The listener cannot catch an abort already delivered: without its own guard the worker walks
+  // every vertex against every bone for a caller that gave up before it asked.
+  it('answers nothing for a bind whose signal was taken back before it was asked', async () => {
+    const fake = scriptedWorker()
+    const port = createSkinWeights(fake.spawn)
+    const stop = new AbortController()
+    stop.abort()
+
+    expect(await port.bind(POSITIONS(), RIG, { signal: stop.signal })).toBeNull()
+    expect(fake.sent.at(-1)).toEqual({ id: 1, cancel: true })
+  })
+
+  // A caller keeping one controller for a whole model aborts it long after the early meshes are
+  // bound: an answered request must not be taken back a second time.
+  it('says nothing to the worker when the signal is taken back after the answer', async () => {
+    const fake = scriptedWorker()
+    const port = createSkinWeights(fake.spawn)
+    const stop = new AbortController()
+
+    const bound = port.bind(POSITIONS(), RIG, { signal: stop.signal })
+    fake.answer(bindingFor(1))
+    await bound
+    stop.abort()
+
+    expect(fake.sent).toHaveLength(1)
+  })
+
   it('ignores an answer that was already on its way', async () => {
     const fake = scriptedWorker()
     const port = createSkinWeights(fake.spawn)
