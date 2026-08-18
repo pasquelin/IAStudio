@@ -220,8 +220,8 @@ parcourant une liste.
 | **Mode de rendu** | `Z` | fait défiler les sept façons de dessiner |
 | **Quatre vues** | `⇧Q` | partage le viewport en quatre : la vue en cours, dessus, face, profil |
 | **Arêtes en quads** | `⇧W` | en filaire, efface les diagonales que la triangulation a ajoutées |
-| **Afficher les squelettes** | `B` | dessine les os de chaque modèle rigué par-dessus la scène |
-| **Mode pose** | `P` | le clic choisit alors les **os** d’un rig au lieu des objets |
+| **Afficher les squelettes** | `B` | dessine les os de chaque modèle à squelette par-dessus la scène |
+| **Mode pose** | `P` | le clic choisit alors les **os** d’un squelette au lieu des objets |
 | **Cadrer la sélection** | `F` | rapproche la caméra pour que l’objet remplisse la vue |
 | **Supprimer** | `Suppr` | retire tout ce qui est sélectionné. `⌘Z` le fait revenir |
 

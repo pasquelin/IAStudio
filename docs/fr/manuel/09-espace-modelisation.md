@@ -609,7 +609,7 @@ jamais mêlés à elles.
 
 ### Voir le squelette
 
-Un modèle rigué porte des **os**. La touche **B**, ou **Affichage ▸ Afficher les squelettes**,
+Un modèle à squelette porte des **os**. La touche **B**, ou **Affichage ▸ Afficher les squelettes**,
 les dessine par-dessus la scène. La ligne est cochée tant qu'ils sont visibles.
 
 **Pour en attraper un, passez en mode pose** — touche **P**, ou **Affichage ▸ Mode pose**. Le clic
@@ -625,7 +625,7 @@ créer, et aucun bouton pour cela.
 
 Placez la tête de lecture, puis **posez une clé sur la ligne de l’objet**. Les trois propriétés
 animées — Position, Rotation, Échelle — naissent à ce moment-là, ensemble, et en **une seule
-annulation**. Si l’objet est un modèle rigué, le menu **Os** apparaît dans la barre : il s’ouvre
+annulation**. Si l’objet est un modèle à squelette, le menu **Os** apparaît dans la barre : il s’ouvre
 sur **Le modèle entier**, et choisir un os fait porter les clés sur lui seul, ce qui est la façon
 de corriger un bras sans déplacer tout le personnage.
 
@@ -640,7 +640,7 @@ change que ce qui est montré.
 | **Lire** / **Mettre en pause** | joue la timeline |
 | **Enregistrement automatique** | bouger un objet **pose une clé** au lieu de déplacer sa pose de repos |
 | **Durée** et **Images/s** | la longueur de la timeline, et sa cadence |
-| **Os** | sur un modèle rigué : l’os que la prochaine clé animera, ou **Le modèle entier**. Un os **cliqué dans la vue** en mode pose l’emporte sur ce choix |
+| **Os** | sur un modèle à squelette : l’os que la prochaine clé animera, ou **Le modèle entier**. Un os **cliqué dans la vue** en mode pose l’emporte sur ce choix |
 | **Poser une clé sur tout ce qui est animé** | le même geste, sur tout ce qui est **déjà** animé — grisé tant que rien ne l’est |
 | **Rendre en vidéo** | voir plus bas — grisé tant qu’aucune caméra n’est dans la scène |
 
