@@ -361,7 +361,10 @@ async function layeredAsset(
   const surfaces = oraSurfacesOf(await host.pixelSnapshots(), merged)
   return await bridge.assets.saveLayered({
     ...target,
-    document: { stack: oraStackOf(canvasOf(useCanvases.getState(), documentId), surfaces), surfaces },
+    document: {
+      stack: oraStackOf(canvasOf(useCanvases.getState(), documentId), surfaces),
+      surfaces,
+    },
   })
 }
 
@@ -406,7 +409,8 @@ const IMAGE_IO: DocumentIo = {
     // Refused for the same reason as the engine: a container without one opens as nothing, with
     // the layers inside it intact and unreachable.
     const merged = await host.flatten()
-    if (!merged) throw new Error(`No flatten for ${documentId}: the container would open as nothing`)
+    if (!merged)
+      throw new Error(`No flatten for ${documentId}: the container would open as nothing`)
 
     const parts = oraSurfacesOf(await host.pixelSnapshots(), merged)
 

@@ -1,12 +1,4 @@
-import {
-  strFromU8,
-  strToU8,
-  Unzip,
-  UnzipInflate,
-  unzipSync,
-  zipSync,
-  type Zippable,
-} from 'fflate'
+import { strFromU8, strToU8, Unzip, UnzipInflate, unzipSync, zipSync, type Zippable } from 'fflate'
 import {
   isOraGroup,
   isOraSurfacePath,

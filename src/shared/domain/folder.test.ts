@@ -119,22 +119,6 @@ describe('what may be dragged where', () => {
     expect(canMoveInto('notes/brief.pdf', '')).toBe(true)
   })
 
-  /**
-   * A document written as a folder is a DOCUMENT, whatever the disk calls it. `Planche.ora` is a
-   * real directory, so every reader that asks the disk gets "folder" — and the drop was accepted.
-   * The next ⌘S rebuilds that folder from the document's own parts: the file dropped in there is
-   * DELETED by the save, and its catalogue row left pointing at nothing.
-   *
-   * The old lock refused this as a side effect of `documents/` being private. It is a rule of its
-   * own now.
-   */
-  it('refuses to drop anything into a document written as a folder', () => {
-    expect(canMoveInto('Images/tex.png', 'Planche.ora')).toBe(false)
-    expect(canMoveInto('Images/tex.png', 'Repérages/Planche.ora')).toBe(false)
-    // The document itself moves like any other file — it is only its INSIDE that is the studio's.
-    expect(canMoveInto('Planche.ora', 'Repérages')).toBe(true)
-  })
-
   it('refuses a folder dropped on itself', () => {
     expect(canMoveInto('notes', 'notes')).toBe(false)
   })

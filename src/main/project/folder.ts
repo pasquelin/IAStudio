@@ -3,12 +3,7 @@ import { cp, mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import { exists } from '@main/persistence'
 import { isStagingName } from '@shared/domain/document'
-import {
-  entriesByName,
-  isHiddenEntry,
-  pathIn,
-  type FolderEntry,
-} from '@shared/domain/folder'
+import { entriesByName, isHiddenEntry, pathIn, type FolderEntry } from '@shared/domain/folder'
 import { isUnwatchedByGit } from '@shared/domain/git'
 import { foldForSearch } from '@shared/text'
 

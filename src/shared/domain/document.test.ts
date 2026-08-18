@@ -148,4 +148,3 @@ describe('documentPath', () => {
     expect(kindsForExtension('.txt')).toEqual([])
   })
 })
-

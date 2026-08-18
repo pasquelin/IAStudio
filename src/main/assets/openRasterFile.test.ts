@@ -128,7 +128,9 @@ describe('writing an OpenRaster container', () => {
   })
 
   it('carries the studio state no standard field could hold', () => {
-    const entries = entriesOf(packOpenRaster(document({ stack: stack({ studio: '{"guides":[1]}' }) })))
+    const entries = entriesOf(
+      packOpenRaster(document({ stack: stack({ studio: '{"guides":[1]}' }) })),
+    )
 
     expect(entries['scenario/document.json']).toBe('{"guides":[1]}')
   })
@@ -146,9 +148,7 @@ describe('writing an OpenRaster container', () => {
    */
   it('drops a surface whose path it would never have written', () => {
     const entries = entriesOf(
-      packOpenRaster(
-        document({ surfaces: surfaces([{ path: '../../escape.png', png: PNG }]) }),
-      ),
+      packOpenRaster(document({ surfaces: surfaces([{ path: '../../escape.png', png: PNG }]) })),
     )
 
     expect(Object.keys(entries)).not.toContain('../../escape.png')

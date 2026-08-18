@@ -145,9 +145,22 @@ function oraEnvelope({ mimetype, envelope }: OraHead): DocumentEnvelope {
   return parseDocumentEnvelope(JSON.parse(envelope))
 }
 
-function oraEnvelopeOf(document: DocumentFile): DocumentEnvelope {
-  const { content, parts, ...envelope } = document
-  return envelope
+function oraEnvelopeOf({
+  version,
+  kind,
+  title,
+  updatedAt,
+  id,
+  sourceAssetId,
+}: DocumentFile): DocumentEnvelope {
+  return {
+    version,
+    kind,
+    title,
+    updatedAt,
+    ...(id ? { id } : {}),
+    ...(sourceAssetId ? { sourceAssetId } : {}),
+  }
 }
 
 const FORMAT_BY_EXTENSION: Record<string, DocumentBodyFormat> = {

@@ -77,10 +77,7 @@ function nodesOf(layers: readonly Layer[], held: ReadonlySet<string>): OraNode[]
  * Held to `isOraSurfacePath` here rather than at the boundary that would refuse the whole save:
  * one odd layer id must cost that layer's pixels, never the document.
  */
-export function oraSurfacesOf(
-  pixels: readonly LayerPixels[],
-  merged: Uint8Array,
-): OraSurface[] {
+export function oraSurfacesOf(pixels: readonly LayerPixels[], merged: Uint8Array): OraSurface[] {
   const surfaces: OraSurface[] = [{ path: ORA_MERGED_PATH, png: merged }]
   for (const one of pixels) {
     const path = layerPixelPath(one)

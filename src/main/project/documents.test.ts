@@ -664,9 +664,7 @@ describe('createDocumentFiles', () => {
       await documents.rename('doc-1', 'image', 'Affiche')
 
       expect(await readdir(join(root, 'documents'))).toEqual(['Affiche.ora'])
-      expect((await documents.read('doc-1', 'image'))?.parts).toEqual(
-        oraParts(['data/p_a.png']),
-      )
+      expect((await documents.read('doc-1', 'image'))?.parts).toEqual(oraParts(['data/p_a.png']))
     })
 
     /**

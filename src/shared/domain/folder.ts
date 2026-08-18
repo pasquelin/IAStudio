@@ -1,4 +1,3 @@
-
 /**
  * The project folder as the explorer walks it — one level at a time, never the whole tree.
  *

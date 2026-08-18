@@ -10,9 +10,9 @@ import {
   RenderTexture,
   Sprite,
   Text,
-  Texture,
   type BLEND_MODES,
   type ICanvas,
+  type Texture,
 } from 'pixi.js'
 import { assetUrl } from '@shared/domain/asset'
 import { fontKey } from '@shared/domain/font'
@@ -254,12 +254,6 @@ function surfaceTransform(layer: Layer, mask: boolean): Transform {
  */
 function strokeWidth(brushSize: number): number {
   return Math.max(1, brushSize / 4)
-}
-
-/** A data URL down to what it carries: the API takes the payload, never the prefix. */
-function payloadOf(url: string): string {
-  const at = url.indexOf(',')
-  return at >= 0 ? url.slice(at + 1) : url
 }
 
 /**
@@ -1317,10 +1311,7 @@ export class CanvasEngine {
     const frame = region ?? this.documentRect()
     if (!frame || !this.state) return null
 
-    return await this.pngOf(
-      this.world,
-      new Rectangle(frame.x, frame.y, frame.width, frame.height),
-    )
+    return await this.pngOf(this.world, new Rectangle(frame.x, frame.y, frame.width, frame.height))
   }
 
   /**
@@ -1356,19 +1347,17 @@ export class CanvasEngine {
    * texture the brush writes into — the mask one paints is the mask one regenerates.
    */
   async maskSnapshot(layerId: string): Promise<string | null> {
-    const renderer = this.app?.renderer
     const mask = this.surfaces.get(maskKey(layerId))
     const frame = this.documentRect()
-    if (!renderer || !mask || !frame) return null
+    if (!mask || !frame) return null
 
     // Framed on the document like the picture it masks: extracting the sprite bare would drop
     // the transform `place` put on it, and the mask would arrive offset from what it masks.
-    const url = await renderer.extract.base64({
-      target: mask.sprite,
-      frame: new Rectangle(frame.x, frame.y, frame.width, frame.height),
-      resolution: 1,
-    })
-    return payloadOf(url)
+    const png = await this.pngOf(
+      mask.sprite,
+      new Rectangle(frame.x, frame.y, frame.width, frame.height),
+    )
+    return png && bytesToBase64(png)
   }
 
   /**
