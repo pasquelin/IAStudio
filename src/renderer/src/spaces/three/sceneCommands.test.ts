@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { meshNode, pathNodeFixture } from '@/engines/scene/scene-fixtures'
+import { cameraShot, timelineWith } from '@/engines/scene/animation-fixtures'
+import { cameraNodeFixture, meshNode, pathNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
+import { useAnimationViews } from '@/stores/animationView'
 import { clearScenes, installScene, sceneNodeNow } from '@/stores/scene-fixtures'
+import { sceneOf, useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
 import { runSceneCommand } from './sceneCommands'
 
@@ -19,7 +22,42 @@ const pointsNow = (): number[] => {
 beforeEach(() => {
   clearScenes()
   useSceneViews.setState({ views: {} })
+  useAnimationViews.setState({ views: {} })
   installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [rail()], selectedIds: ['rail'] })
+})
+
+/**
+ * Delete is an accelerator of the native Édition menu, so it never reaches the band's own
+ * `onKeyDown`: clicking a shot while its camera stood selected deleted THE CAMERA. Seen on
+ * screen on 18/08, and green in the whole suite.
+ */
+describe('deleting while a shot is chosen in the band', () => {
+  beforeEach(() => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [cameraNodeFixture('cam-a')],
+      selectedIds: ['cam-a'],
+      animation: timelineWith([], { shots: [cameraShot('shot-1')] }),
+    })
+  })
+
+  it('takes the shot away and leaves the camera standing', () => {
+    useAnimationViews.getState().setSelected(DOCUMENT, ['shot-1'])
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(sceneOf(useScenes.getState(), DOCUMENT).animation.shots).toEqual([])
+    expect(sceneNodeNow(DOCUMENT, 'cam-a')).not.toBeNull()
+  })
+
+  // A key of the band answers to the same set as a shot, and it is the band that takes those.
+  it('lets Delete through to the selection when the band holds no shot', () => {
+    useAnimationViews.getState().setSelected(DOCUMENT, ['row-1@0'])
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(sceneNodeNow(DOCUMENT, 'cam-a')).toBeNull()
+  })
 })
 
 describe('deleting while a control point is held', () => {

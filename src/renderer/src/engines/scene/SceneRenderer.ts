@@ -972,7 +972,14 @@ export class SceneRenderer {
       // that camera, which is what `onCameraSettled` writes back to the document.
       const locked = isCameraView(view) ? this.cameraObject(view.nodeId) : null
       this.viewport.setPaneCamera(index, locked)
-      if (isCameraView(view)) continue
+      if (isCameraView(view)) {
+        // Rotation given back explicitly: a pane offering a camera is one of panes 1–3, and
+        // those START on a side view, where turning is locked. Left alone, the orbit that is
+        // supposed to MOVE the camera did nothing at all — seen on screen, green in the suite.
+        const orbit = this.viewport.paneOrbits[index]
+        if (orbit) orbit.enableRotate = true
+        continue
+      }
 
       this.viewport.setPaneProjection(index, view === 'free' ? 'perspective' : 'orthographic')
 
