@@ -718,6 +718,43 @@ s’affiche que s’il y a quelque chose à choisir.
 **Anim. 1**, **Anim. 2**, et ainsi de suite. Les sous-pistes sont groupées **sous** les lignes de
 clés, jamais mêlées à elles.
 
+### Rendre un modèle animable
+
+Un modèle importé n’a le plus souvent aucun squelette : c’est une **maille**, et rien ne peut
+l’animer. **La section Animation est là quand même**, et c’est elle qui le dit — « Ce modèle n’est
+pas encore animable. » Une seconde section, **Squelette**, porte alors le bouton **Rendre
+animable**.
+
+**Cette seconde section ne s’affiche pas toujours, et c’est voulu** : un modèle qui arrive avec son
+propre squelette n’en reçoit pas un second, et un modèle encore en cours de chargement n’a rien à
+mesurer.
+
+**Deux formes sont refusées avant tout clic**, parce que le studio pose son squelette d’après
+l’encombrement du modèle : « Ce modèle est trop plat pour recevoir un squelette. » et « Ce modèle
+est couché. Redressez-le avant de le rendre animable. » Dans le second cas, redressez-le et le
+bouton revient.
+
+Le bouton ouvre un petit volet, à côté de lui, avec deux réglages.
+
+| Réglage | Ce qu’il propose |
+|---|---|
+| **Type de personnage** | **Automatique**, **Humain**, **Animal**, **Autre** |
+| **Service** | **Automatique — le studio**, puis les services Scenario qui savent le faire |
+
+**Le studio ne pose qu’un squelette HUMANOÏDE** — hanches, colonne, deux bras, deux jambes. Choisir
+**Animal** ou **Autre** affiche la raison et **grise Créer le squelette** : mieux vaut le dire que
+poser des hanches sur un cheval et vous laisser le découvrir.
+
+> **Les services Scenario sont listés, et aucun n’est choisissable aujourd’hui.** Chacun porte la
+> raison qui l’en empêche — l’abonnement qui manque, la taille du modèle, ou qu’il n’est **pas
+> encore branché**. Le studio, lui, le fait **lui-même et gratuitement**, sans limite de taille :
+> c’est le sens d’« Automatique — le studio », et c’est ce que **Créer le squelette** lance.
+
+**Ce que ça change, une fois créé** : une barre **Préparation du personnage** pendant le calcul,
+puis « Ce modèle a reçu un squelette. » La section Animation cesse de dire qu’il n’est pas
+animable — « Ce personnage est prêt à être animé. » — et le **mode pose** attrape enfin ses os, qui
+n’existaient pas avant.
+
 ### Ajouter une animation
 
 La section **Animation** ouvre elle-même de quoi en choisir une : le lien **Ajouter une animation**

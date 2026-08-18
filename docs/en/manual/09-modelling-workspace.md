@@ -694,6 +694,40 @@ something to choose.
 block** that bears the clip's name. The line holding it is a **sub-track**, called **Anim. 1**,
 **Anim. 2**, and so on. Sub-tracks are grouped **under** the key lines, never mixed into them.
 
+### Making a model animatable
+
+An imported model most often carries no skeleton at all: it is a **mesh**, and nothing can animate
+it. **The Animation section is there all the same**, and it is the one that says so — "This model
+cannot be animated yet." A second section, **Skeleton**, then holds the **Make animatable** button.
+
+**That second section is not always there, and that is deliberate**: a model arriving with a
+skeleton of its own is never offered another, and a model still loading has nothing to measure.
+
+**Two shapes are refused before any click**, because the studio lays its skeleton from the model's
+bounding box: "This model is too flat to take a skeleton." and "This model is lying down. Stand it
+up before making it animatable." In the second case, stand it up and the button comes back.
+
+The button opens a small panel beside it, with two settings.
+
+| Setting | What it offers |
+|---|---|
+| **Character type** | **Automatic**, **Human**, **Animal**, **Other** |
+| **Service** | **Automatic — the studio**, then the Scenario services that can do it |
+
+**The studio only lays a HUMANOID skeleton** — hips, spine, two arms, two legs. Choosing **Animal**
+or **Other** shows the reason and **greys out Create the skeleton**: better said than laying hips
+on a horse and letting you find out.
+
+> **The Scenario services are listed, and none can be chosen today.** Each carries the reason that
+> stops it — the missing subscription, the size of the model, or that it is **not wired up yet**.
+> The studio does it **itself and for free**, with no size limit: that is what "Automatic — the
+> studio" means, and what **Create the skeleton** runs.
+
+**What changes once created**: a **Preparing the character** bar while it computes, then "This
+model has been given a skeleton." The Animation section stops saying it cannot be animated — "This
+character is ready to animate." — and **pose mode** finally grabs its bones, which did not exist
+before.
+
 ### Adding an animation
 
 The **Animation** section holds the way in itself: the **Add an animation** link drops a panel
