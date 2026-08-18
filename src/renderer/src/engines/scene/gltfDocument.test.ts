@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { DOCUMENT_ID_KEY, DOCUMENT_KIND_KEY, STUDIO_METADATA_KEY } from '@shared/domain/document'
 import { gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
-import { gltfDocumentOf, sceneFromGltf, type GltfDocumentOptions } from './gltfDocument'
+import {
+  gltfDocumentOf,
+  sceneFromGltf,
+  sceneHoldsMore,
+  type GltfDocumentOptions,
+} from './gltfDocument'
 import { cameraNodeFixture, lightNodeFixture, meshNode } from './scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from './sceneState'
 
@@ -131,5 +136,79 @@ describe('sceneFromGltf', () => {
         scenes: [{ name: 'other', extras: { [STUDIO_METADATA_KEY]: {} } }, held],
       }).nodes,
     ).toHaveLength(1)
+  })
+})
+
+/**
+ * Each case asserts WHICH member was found, never that something was.
+ *
+ * The suite next door asserted only that the refusal existed, and its fixture REPLACED `scenes` —
+ * which drops the extras carrying the state, so the node count fired instead. Disarming the scene
+ * check therefore left every case green, measured 18/08 on the whole 10 326.
+ */
+describe('sceneHoldsMore', () => {
+  const written = (): Record<string, unknown> => write({ ...EMPTY_SCENE, nodes: [meshNode('a')] })
+
+  const enriched = (over: Record<string, unknown>): Record<string, unknown> => ({
+    ...written(),
+    ...over,
+  })
+
+  it('finds nothing in a file it wrote itself', () => {
+    expect(sceneHoldsMore(written())).toEqual([])
+  })
+
+  /** The case the suite next door could not see: the studio's own scenes KEPT, plus one. */
+  it('names the second scene of a file holding two', () => {
+    const scenes = written().scenes
+    const two = enriched({
+      scenes: [...(Array.isArray(scenes) ? scenes : []), { name: 'Plan large', nodes: [] }],
+    })
+
+    expect(sceneHoldsMore(two)).toEqual(['scenes'])
+  })
+
+  it('names the node a file gained beside the ones the state holds', () => {
+    const nodes = written().nodes
+    const more = enriched({ nodes: [...(Array.isArray(nodes) ? nodes : []), { name: 'Empty' }] })
+
+    expect(sceneHoldsMore(more)).toEqual(['nodes'])
+  })
+
+  it('names an asset field beyond the ones a save writes back', () => {
+    expect(sceneHoldsMore(enriched({ asset: { version: '2.0', copyright: 'Atelier' } }))).toEqual([
+      'asset.copyright',
+    ])
+  })
+
+  it('names an extension the file declares beside the lights one', () => {
+    const variants = enriched({
+      extensionsUsed: ['KHR_lights_punctual', 'KHR_materials_variants'],
+    })
+
+    expect(sceneHoldsMore(variants)).toEqual(['KHR_materials_variants'])
+  })
+
+  it('names a root member this studio never writes', () => {
+    expect(
+      sceneHoldsMore(enriched({ extensionsRequired: ['KHR_draco_mesh_compression'] })),
+    ).toEqual(['extensionsRequired'])
+    expect(sceneHoldsMore(enriched({ meshes: [{ primitives: [] }] }))).toEqual(['meshes'])
+  })
+
+  /** The default scene's extras are recomposed whole, exactly as the sky's are. */
+  it('names a key another application left in the default scene extras', () => {
+    const scenes = written().scenes
+    const first = Array.isArray(scenes) && isRecord(scenes[0]) ? scenes[0] : {}
+    const marked = enriched({
+      scenes: [{ ...first, extras: { ...(first.extras as object), blender: { collection: 'A' } } }],
+    })
+
+    expect(sceneHoldsMore(marked)).toEqual(['scene.extras.blender'])
+  })
+
+  /** A scene written before the studio wrote glTF is not one, so there is nothing to measure. */
+  it('answers nothing at all for a payload that is not a glTF document', () => {
+    expect(sceneHoldsMore({ nodes: [], selection: [] })).toEqual([])
   })
 })

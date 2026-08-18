@@ -3,8 +3,13 @@ import { colourFromLinearRgb, linearRgbOf } from '@shared/domain/color'
 import {
   angleAboutY,
   directionOfQuaternion,
+  gltfDefaultScene,
+  gltfForeignAsset,
+  gltfForeignExtensions,
+  gltfForeignExtras,
   gltfPunctualLights,
   gltfStudioExtras,
+  isGltfDocument,
   quaternionAboutY,
   quaternionTowards,
   GLTF_GENERATOR,
@@ -98,6 +103,52 @@ export function gltfSkyOf(
     extras: { [STUDIO_METADATA_KEY]: content },
   }
 }
+
+/**
+ * The root members `gltfSkyOf` composes. `extensionsRequired` is deliberately NOT one: this editor
+ * never writes it, so a file declaring one is a file it would silently strip.
+ */
+const COMPOSED = new Set([
+  'asset',
+  'scene',
+  'scenes',
+  'nodes',
+  'extensionsUsed',
+  'extensions',
+  'extras',
+])
+
+/**
+ * What a sky's file holds beyond what a save would write back.
+ *
+ * The scene's guard learnt this and the sky did not, which cost four silent losses on one ⌘S,
+ * measured 18/08. **A composed member is not a REPRODUCED member**: `gltfSkyOf` writes exactly one
+ * scene, two nodes and one directional light, whatever the file held.
+ */
+export function skyHoldsMore(document: unknown): string[] {
+  if (!isGltfDocument(document)) return []
+  const held = Object.keys(document).filter(key => !COMPOSED.has(key))
+
+  if (countOf(document.scenes) > 1) held.push('scenes')
+  if (countOf(document.nodes) > 2) held.push('nodes')
+  // A light ADDED elsewhere brings no new root key: it is one more entry under the extension this
+  // editor already declares, and one more node — which the count above catches only when the file
+  // hangs it off its own node. Read from the extension too, so a light sharing a node still shows.
+  if (gltfPunctualLights(document).length > 1) held.push('lights')
+
+  // Both `extras` a sky carries: the root one holds its state, and the default scene's holds the
+  // identity the file layer stamps. Each is rewritten whole, so a foreign key in either is lost.
+  held.push(...gltfForeignExtras(document.extras).map(key => `extras.${key}`))
+  held.push(
+    ...gltfForeignExtras(gltfDefaultScene(document)?.extras).map(key => `scene.extras.${key}`),
+  )
+  held.push(...gltfForeignAsset(document))
+  held.push(...gltfForeignExtensions(document, KHR_LIGHTS_PUNCTUAL))
+
+  return held
+}
+
+const countOf = (value: unknown): number => (Array.isArray(value) ? value.length : 0)
 
 /** The uri the file points its picture at, or `''` — what a foreign sky is relinked from. */
 export function skySourceUri(payload: unknown): string {

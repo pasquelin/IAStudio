@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { STUDIO_METADATA_KEY } from '@shared/domain/document'
 import { type OtioClip, type OtioTimeline, type OtioTrackItem } from '@shared/domain/otio'
-import { otioTimelineOf, sequenceFromOtio, type OtioSource } from './otioTimeline'
+import { montageHoldsMore, otioTimelineOf, sequenceFromOtio, type OtioSource } from './otioTimeline'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import {
   DEFAULT_SETTINGS,
@@ -138,30 +138,28 @@ describe('otioTimelineOf', () => {
   })
 })
 
-describe('sequenceFromOtio', () => {
-  const montage: SequenceState = {
-    settings: { width: 1280, height: 720, fps: 30, sampleRate: 44_100 },
-    tracks: reindexTracks([
-      trackFixture(
-        'V1',
-        'video',
-        [
-          clipFixture('a', 0, 2 * SECOND, { fadeIn: 200_000, linkId: 'take-1' }),
-          clipFixture('b', 3 * SECOND, SECOND, { inPoint: 5 * SECOND, speed: 0.5 }),
-        ],
-        { name: 'Plans', height: 90, locked: true },
-      ),
-      trackFixture(
-        'A1',
-        'audio',
-        [clipFixture('c', 0, 2 * SECOND, { gain: -6, linkId: 'take-1' })],
-        { muted: true },
-      ),
-    ]),
-    selectedId: 'b',
-    playhead: 1_500_000,
-  }
+/** Two tracks, a fade, a speed change and a link — read back by one suite, guarded by the other. */
+const montage: SequenceState = {
+  settings: { width: 1280, height: 720, fps: 30, sampleRate: 44_100 },
+  tracks: reindexTracks([
+    trackFixture(
+      'V1',
+      'video',
+      [
+        clipFixture('a', 0, 2 * SECOND, { fadeIn: 200_000, linkId: 'take-1' }),
+        clipFixture('b', 3 * SECOND, SECOND, { inPoint: 5 * SECOND, speed: 0.5 }),
+      ],
+      { name: 'Plans', height: 90, locked: true },
+    ),
+    trackFixture('A1', 'audio', [clipFixture('c', 0, 2 * SECOND, { gain: -6, linkId: 'take-1' })], {
+      muted: true,
+    }),
+  ]),
+  selectedId: 'b',
+  playhead: 1_500_000,
+}
 
+describe('sequenceFromOtio', () => {
   it('reads back everything the studio put in, standard or extended', () => {
     expect(sequenceFromOtio(write(montage))).toEqual(montage)
   })
@@ -316,5 +314,143 @@ describe('sequenceFromOtio', () => {
   it('opens an empty sequence on anything that is not an OTIO timeline', () => {
     expect(sequenceFromOtio({ tracks: [] }).tracks).toHaveLength(2)
     expect(sequenceFromOtio('not json at all').tracks).toHaveLength(2)
+  })
+})
+
+/** Each case asserts WHICH member was found — `gltfDocument.test.ts` says what that costs. */
+describe('montageHoldsMore', () => {
+  const written = (): Record<string, unknown> =>
+    JSON.parse(JSON.stringify(write(montage))) as Record<string, unknown>
+
+  const stackWith = (over: Record<string, unknown>): Record<string, unknown> => ({
+    ...written(),
+    tracks: { ...(written().tracks as Record<string, unknown>), ...over },
+  })
+
+  /** The first track of the file, replaced by one holding whatever the case is about. */
+  function trackWith(over: Record<string, unknown>): Record<string, unknown> {
+    const stack = written().tracks as Record<string, unknown>
+    const tracks = stack.children as Record<string, unknown>[]
+    return stackWith({ children: [{ ...tracks[0], ...over }, ...tracks.slice(1)] })
+  }
+
+  const marker = { OTIO_SCHEMA: 'Marker.2', name: 'Repère', color: 'RED' }
+
+  it('finds nothing in a montage the studio wrote itself', () => {
+    expect(montageHoldsMore(written())).toEqual([])
+  })
+
+  it('names a root member no save writes back', () => {
+    expect(montageHoldsMore({ ...written(), tracks_v2: [] })).toEqual(['tracks_v2'])
+  })
+
+  it('names the domain another application put beside the studio own', () => {
+    const held = written()
+    const foreign = {
+      ...held,
+      metadata: { ...(held.metadata as object), resolve: { projectId: '42' } },
+    }
+
+    expect(montageHoldsMore(foreign)).toEqual(['metadata.resolve'])
+  })
+
+  it('names the markers a stack holds', () => {
+    expect(montageHoldsMore(stackWith({ markers: [marker] }))).toEqual(['markers'])
+  })
+
+  it('names the effects a stack holds', () => {
+    const graded = stackWith({ effects: [{ OTIO_SCHEMA: 'Effect.1', effect_name: 'ocio' }] })
+
+    expect(montageHoldsMore(graded)).toEqual(['effects'])
+  })
+
+  it('names the markers a track holds', () => {
+    expect(montageHoldsMore(trackWith({ markers: [marker] }))).toEqual(['markers'])
+  })
+
+  /** A TRACK's `enabled` is composed — it is the result of its mute and its solo, written back. */
+  it('says nothing about a track a mute has disabled', () => {
+    expect(montageHoldsMore(trackWith({ enabled: false }))).toEqual([])
+  })
+
+  it('names a clip another application turned off', () => {
+    const stack = written().tracks as Record<string, unknown>
+    const tracks = stack.children as Record<string, unknown>[]
+    const items = (tracks[0]?.children as Record<string, unknown>[]) ?? []
+    const off = trackWith({ children: [{ ...items[0], enabled: false }, ...items.slice(1)] })
+
+    expect(montageHoldsMore(off)).toEqual(['enabled'])
+  })
+
+  it('names the range a track holds, which a save writes null', () => {
+    const trimmed = trackWith({
+      source_range: { OTIO_SCHEMA: 'TimeRange.1', start_time: null, duration: null },
+    })
+
+    expect(montageHoldsMore(trimmed)).toEqual(['source_range'])
+  })
+
+  /**
+   * A clip's and a GAP's own range are composed, so neither may be reported — a gap carries one
+   * too, and reporting it refused every montage holding a hole between two clips.
+   */
+  it('says nothing about the ranges a clip and a gap carry', () => {
+    const tracks = (written().tracks as { children: Record<string, unknown>[] }).children
+    const schemas = tracks.flatMap(track =>
+      ((track.children as Record<string, unknown>[]) ?? []).map(one => one.OTIO_SCHEMA),
+    )
+
+    expect(schemas).toContain('Gap.1')
+    expect(montageHoldsMore(written())).toEqual([])
+  })
+
+  it('names the schema of an item a track holds that is neither a clip nor a gap', () => {
+    const stack = written().tracks as Record<string, unknown>
+    const tracks = stack.children as Record<string, unknown>[]
+    const cut = trackWith({
+      children: [
+        ...((tracks[0]?.children as unknown[]) ?? []),
+        { OTIO_SCHEMA: 'Transition.1', name: 'Fondu' },
+      ],
+    })
+
+    expect(montageHoldsMore(cut)).toEqual(['Transition.1'])
+  })
+
+  it('names the markers a clip holds', () => {
+    const stack = written().tracks as Record<string, unknown>
+    const tracks = stack.children as Record<string, unknown>[]
+    const items = (tracks[0]?.children as Record<string, unknown>[]) ?? []
+    const flagged = trackWith({ children: [{ ...items[0], markers: [marker] }, ...items.slice(1)] })
+
+    expect(montageHoldsMore(flagged)).toEqual(['markers'])
+  })
+
+  /** The studio's own speed change, and the one effect that must stay silent. */
+  it('says nothing about the time warp a clip at another speed carries', () => {
+    expect(clipsOnly(itemsOf(write(montage), 1))[1]?.effects).toHaveLength(1)
+    expect(montageHoldsMore(written())).toEqual([])
+  })
+
+  it('answers nothing at all for a payload that is not an OTIO timeline', () => {
+    expect(montageHoldsMore({ tracks: {}, markers: [marker] })).toEqual([])
+  })
+
+  /**
+   * The names come from the FILE, so a montage where every clip carries its own foreign domain
+   * would otherwise build a set as long as the montage and push the join of it into a sentence.
+   */
+  it('stops naming once it has said enough, on a montage that holds a domain per clip', () => {
+    const stack = written().tracks as Record<string, unknown>
+    const tracks = stack.children as Record<string, unknown>[]
+    const items = Array.from({ length: 200 }, (_unused, index) => ({
+      OTIO_SCHEMA: 'Clip.1',
+      metadata: { [`domain-${index}`]: {} },
+    }))
+
+    const held = montageHoldsMore(stackWith({ children: [{ ...tracks[0], children: items }] }))
+
+    expect(held.length).toBeLessThanOrEqual(8)
+    expect(held[0]).toBe('metadata.domain-0')
   })
 })

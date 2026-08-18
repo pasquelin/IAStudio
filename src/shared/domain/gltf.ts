@@ -167,15 +167,55 @@ export function defaultSceneIndex(document: unknown): number {
   return typeof at === 'number' ? at : 0
 }
 
+/** The scene a document opens on, or nothing — what carries the studio's own state and its name. */
+export function gltfDefaultScene(document: unknown): Record<string, unknown> | null {
+  if (!isRecord(document) || !Array.isArray(document.scenes)) return null
+  const scene = document.scenes[defaultSceneIndex(document)]
+  return isRecord(scene) ? scene : null
+}
+
 /** What rides under the studio's own domain, on the default scene, or nothing. */
 export function gltfStudioMetadata(value: unknown): Record<string, unknown> {
-  if (!isRecord(value)) return {}
+  return gltfStudioExtras(gltfDefaultScene(value)?.extras)
+}
 
-  const scenes = value.scenes
-  const scene = Array.isArray(scenes) ? scenes[defaultSceneIndex(value)] : undefined
-  const extras = isRecord(scene) ? scene.extras : undefined
-  const studio = isRecord(extras) ? extras[STUDIO_METADATA_KEY] : undefined
-  return isRecord(studio) ? studio : {}
+/**
+ * The keys an `extras` holds beside the studio's own.
+ *
+ * A save recomposes `extras` from the state, so what another application left there is dropped —
+ * which is why both glTF guards ask this rather than reading root keys alone.
+ */
+export function gltfForeignExtras(extras: unknown): string[] {
+  return isRecord(extras) ? Object.keys(extras).filter(key => key !== STUDIO_METADATA_KEY) : []
+}
+
+/** The `asset` fields a save writes back. A `copyright` another application set is not one. */
+const COMPOSED_ASSET = new Set(['version', 'generator', 'extras'])
+
+/** The `asset` fields a document carries beyond those, named as a reader of the file would see them. */
+export function gltfForeignAsset(document: unknown): string[] {
+  const asset = isRecord(document) ? document.asset : null
+  if (!isRecord(asset)) return []
+
+  return Object.keys(asset)
+    .filter(key => !COMPOSED_ASSET.has(key))
+    .map(key => `asset.${key}`)
+}
+
+/**
+ * Every extension a document names, read from BOTH sides — a file is free to declare one without
+ * listing it and the reverse. Both guards overwrite the extension block whole, so what they do not
+ * write back is lost; each passes the one it DOES write.
+ */
+export function gltfForeignExtensions(document: unknown, composed: string): string[] {
+  const used =
+    isRecord(document) && Array.isArray(document.extensionsUsed)
+      ? document.extensionsUsed.map(String)
+      : []
+  const declared =
+    isRecord(document) && isRecord(document.extensions) ? Object.keys(document.extensions) : []
+
+  return [...new Set([...used, ...declared])].filter(name => name !== composed)
 }
 
 /**

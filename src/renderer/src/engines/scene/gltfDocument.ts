@@ -19,16 +19,18 @@ import {
   GLTF_GENERATOR,
   GLTF_SCENE_STATE,
   GLTF_VERSION,
+  gltfDefaultScene,
+  gltfForeignAsset,
+  gltfForeignExtensions,
+  gltfForeignExtras,
   gltfStudioMetadata,
   isGltfDocument,
+  KHR_LIGHTS_PUNCTUAL,
 } from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
 import type { LightDescriptor, Transform } from '@shared/domain/scene'
 import { scenePayload, sceneFromPayload } from './sceneDocument'
 import type { SceneState } from './sceneState'
-
-/** The extension every punctual light of the file is declared under. */
-const LIGHTS_EXTENSION = 'KHR_lights_punctual'
 
 type GltfNode = {
   name: string
@@ -38,7 +40,7 @@ type GltfNode = {
   scale?: readonly number[]
   children?: readonly number[]
   camera?: number
-  extensions?: { [LIGHTS_EXTENSION]: { light: number } }
+  extensions?: { [KHR_LIGHTS_PUNCTUAL]: { light: number } }
 }
 
 type GltfCamera = {
@@ -106,7 +108,7 @@ export function gltfDocumentOf(
 
     const light = node.type === 'light' ? punctualLight(node.name, node.light) : null
     if (light) {
-      written.extensions = { [LIGHTS_EXTENSION]: { light: lights.length } }
+      written.extensions = { [KHR_LIGHTS_PUNCTUAL]: { light: lights.length } }
       lights.push(light)
     }
 
@@ -132,8 +134,8 @@ export function gltfDocumentOf(
     ...(cameras.length > 0 ? { cameras } : {}),
     ...(lights.length > 0
       ? {
-          extensionsUsed: [LIGHTS_EXTENSION],
-          extensions: { [LIGHTS_EXTENSION]: { lights } },
+          extensionsUsed: [KHR_LIGHTS_PUNCTUAL],
+          extensions: { [KHR_LIGHTS_PUNCTUAL]: { lights } },
         }
       : {}),
   }
@@ -164,22 +166,13 @@ const COMPOSED = new Set([
   'extensions',
 ])
 
-/** The `asset` fields a save writes back. A `copyright` another application set is not one. */
-const COMPOSED_ASSET = new Set(['version', 'generator', 'extras'])
-
 /**
  * What a file holds beyond what a save would write back.
  *
- * A scene the studio wrote and somebody then opened in Blender comes back with `meshes`,
- * `accessors` and `buffers` in it — and it still LISTS, its extras being ours. `gltfDocumentOf`
- * recomposes the whole document from the state, so the next ⌘S would drop every one of them
- * without a word. glTF is linked BY INDEX: carrying them across half way is not a thing that can
- * be done, so the honest answer is to refuse and leave the file as its author left it.
- *
  * **A composed member is not a REPRODUCED member, and reading only the root was the hole** — the
- * same one MaterialX had one layer down. `scenes` is composed, and a save writes exactly ONE
- * scene: a file holding three came back holding one, silently. So the three members that are
- * rewritten from something narrower than themselves are looked into.
+ * same one MaterialX had one layer down. `scenes` is composed and a save writes exactly ONE, so a
+ * file holding three came back holding one, silently. Hence the look INSIDE the members that are
+ * rewritten from something narrower than themselves.
  */
 export function sceneHoldsMore(document: unknown): string[] {
   if (!isGltfDocument(document)) return []
@@ -197,22 +190,13 @@ export function sceneHoldsMore(document: unknown): string[] {
   const written = Array.isArray(document.nodes) ? document.nodes.length : 0
   if (written > known) held.push('nodes')
 
-  const asset = document.asset
-  if (isRecord(asset)) {
-    held.push(
-      ...Object.keys(asset)
-        .filter(key => !COMPOSED_ASSET.has(key))
-        .map(key => `asset.${key}`),
-    )
-  }
-
-  // The extension block is overwritten whole, so anything but the lights one would be lost —
-  // read from BOTH sides, a file being free to declare one without listing it and the reverse.
-  const used = Array.isArray(document.extensionsUsed) ? document.extensionsUsed.map(String) : []
-  const declared = isRecord(document.extensions) ? Object.keys(document.extensions) : []
-  for (const name of new Set([...used, ...declared])) {
-    if (name !== LIGHTS_EXTENSION) held.push(name)
-  }
+  // The default scene's extras are recomposed whole, exactly as the sky's are: a key another
+  // application left beside ours there is dropped by the next save.
+  held.push(
+    ...gltfForeignExtras(gltfDefaultScene(document)?.extras).map(key => `scene.extras.${key}`),
+  )
+  held.push(...gltfForeignAsset(document))
+  held.push(...gltfForeignExtensions(document, KHR_LIGHTS_PUNCTUAL))
 
   return held
 }
