@@ -604,6 +604,31 @@ describe('the lens of a camera, typed into the inspector', () => {
     expect(descriptorFov(second)).toBe(50)
   })
 
+  /**
+   * The field shows what the channels PLAY, so what is written has to be picked by the same
+   * filter. Keyed on a muted channel, the number typed would vanish the moment it was written.
+   */
+  it('writes the lens itself rather than keying a channel that is muted', () => {
+    const keyed = lensToCommand(lensed, [camera], 60, 0, true).apply(lensed)
+    const muted = updateAnimationTrack(keyed, 'lens', track => ({ ...track, muted: true }))
+    const applied = lensToCommand(muted, [camera], 80, 0, true).apply(muted)
+
+    expect(keysOf(applied).map(key => key.value.x)).toEqual([10])
+    expect(descriptorFov(applied)).toBe(80)
+  })
+
+  // A locked channel goes on adding what it adds: writing the typed number into the descriptor
+  // under it would leave the lens reading that number PLUS the channel's own share.
+  it('writes under a locked channel what makes the lens read the number typed', () => {
+    const keyed = lensToCommand(lensed, [camera], 70, 0, true).apply(lensed)
+    const locked = updateAnimationTrack(keyed, 'lens', track => ({ ...track, locked: true }))
+    const applied = lensToCommand(locked, [camera], 80, 0, true).apply(locked)
+
+    expect(keysOf(applied).map(key => key.value.x)).toEqual([20])
+    expect(descriptorFov(applied)).toBe(60)
+    expect(60 + (fovAt(applied.animation, 'cam', 0) ?? 0)).toBe(80)
+  })
+
   it('has the lens read between two keys, which is what a field of view animates for', () => {
     const first = lensToCommand(lensed, [camera], 50, 0, true).apply(lensed)
     const second = lensToCommand(first, [camera], 80, 2 * SECOND, true).apply(first)

@@ -13,7 +13,15 @@ import type { Us } from '@shared/domain/time'
 import type { Command } from '../core/history'
 import { addNode, batch, moveNodes, multi, setCamera } from './commands'
 import { pathNode } from './nodeFactory'
-import { deltaOf, valueAt, withKey, withoutKey } from './animationEval'
+import {
+  anySoloed,
+  deltaOf,
+  fovAt,
+  playsThrough,
+  valueAt,
+  withKey,
+  withoutKey,
+} from './animationEval'
 import { shotsWith } from './cameraShots'
 import {
   nodeById,
@@ -575,15 +583,31 @@ export function lensToCommand(
   at: Us,
   recording: boolean,
 ): Command<SceneState> {
+  const soloed = anySoloed(state.animation)
+
   return batch('lens', nodes, node => {
     if (node.type !== 'camera') return null
 
-    const lens = recordingTracksFor(state, node.id).find(track => track.target.property === 'fov')
+    // What the channels PLAY at that instant, which is what the field was showing. The same
+    // filter has to pick what gets written: a key laid on a muted channel is a number typed and
+    // lost, and a descriptor written under a locked one moves the lens twice.
+    const played = fovAt(state.animation, node.id, at) ?? 0
+    const lens = recordingTracksFor(state, node.id).find(
+      track => track.target.property === 'fov' && playsThrough(track, soloed),
+    )
+
     // A camera ALREADY keyed records whatever the switch says, for the reason `movesToCommand`
-    // writes out: what a viewport shows is the descriptor plus what the channel adds, so writing
-    // the descriptor here would move the lens by the value of the key standing at that instant.
-    return lens && (recording || lens.keys.length > 0)
-      ? setAnimationKey(lens.id, at, { x: fov - node.camera.fov, y: 0, z: 0 })
-      : setCamera(node.id, { ...node.camera, fov })
+    // writes out: the descriptor is what the channels add to, never what the lens reads.
+    if (!lens || (!recording && lens.keys.length === 0)) {
+      return setCamera(node.id, { ...node.camera, fov: fov - played })
+    }
+
+    // This channel's own share taken back out: whatever else plays goes on adding what it adds,
+    // so the key holds exactly what is left for the lens to READ the number typed.
+    return setAnimationKey(lens.id, at, {
+      x: fov - node.camera.fov - (played - valueAt(lens, at).x),
+      y: 0,
+      z: 0,
+    })
   })
 }

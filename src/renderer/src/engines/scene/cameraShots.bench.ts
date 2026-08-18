@@ -30,8 +30,13 @@ const timeline: AnimationTimeline = {
 describe('resolving which camera a frame is taken through', () => {
   for (const count of [50, 500, 5_000, 50_000]) {
     const nodes = sceneOf(count)
-    bench(`${count} nodes`, () => {
+    bench(`${count} nodes, a shot covering the instant`, () => {
       activeCameraAt(timeline, nodes, 10 * SECOND)
+    })
+    // The OTHER shape, and the more common one: no shot covers the instant, so the answer is the
+    // fall back — every scene written before shots existed takes this path on every frame.
+    bench(`${count} nodes, falling back to the first camera`, () => {
+      activeCameraAt(timeline, nodes, 30 * SECOND)
     })
   }
 })

@@ -80,17 +80,21 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // fields of a material survive a whole drag of the position.
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
   const lit = useMemo(() => (light ? lightFields(light.light) : []), [light])
-  // The lens as it READS at the head, channel included: the field writes the same number back, so
+  // Where a key would land, which is where the lens has to be READ: the head runs on the wall
+  // clock during playback and stops between two frames, so reading it raw would show a value the
+  // key written a frame earlier never takes.
+  const at = snapToFrame(playhead, animation.fps)
+  // The lens as it reads there, channel included: the field writes the same number back, so
   // showing the descriptor alone would have a keyed camera jump by whatever its channel adds.
   const lens = useMemo(
     () =>
       camera
         ? cameraFields({
             ...camera.camera,
-            fov: camera.camera.fov + (fovAt(animation, camera.id, playhead) ?? 0),
+            fov: camera.camera.fov + (fovAt(animation, camera.id, at) ?? 0),
           })
         : [],
-    [camera, animation, playhead],
+    [camera, animation, at],
   )
 
   // The fov alone goes through `lensToCommand`, which decides between a key and the descriptor.
@@ -102,7 +106,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
             sceneOf(useScenes.getState(), documentId),
             selection,
             value,
-            snapToFrame(playhead, animation.fps),
+            at,
             animationViewOf(useAnimationViews.getState(), documentId).autoKey,
           )
         : setCameraOn(selection, name, value),

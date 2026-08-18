@@ -278,6 +278,26 @@ export function nodesOfType(nodes: readonly SceneNode[], type: SceneNodeType): S
 }
 
 /**
+ * The cameras a scene holds, in document order, cached on the identity of the node list: every
+ * edit replaces that array, so the same array holds the same cameras.
+ *
+ * Both readers are on the frame path — the shots ask which cameras still exist, the fall back
+ * asks for the first — and both walked the whole scene to answer. Measured 18/08 on
+ * `cameraShots.bench`, per call: 7,2 µs over 5 000 nodes and 73 µs over 50 000 with a shot
+ * covering the instant, 15 and 151 µs on the fall back, against 0,1 µs whatever the count.
+ */
+const cameraSets = new WeakMap<readonly SceneNode[], Set<string>>()
+
+export function cameraIds(nodes: readonly SceneNode[]): Set<string> {
+  const held = cameraSets.get(nodes)
+  if (held) return held
+
+  const ids = new Set(nodesOfType(nodes, 'camera').map(node => node.id))
+  cameraSets.set(nodes, ids)
+  return ids
+}
+
+/**
  * What a render looks through: the first camera the scene holds, in document order.
  *
  * `null` for a scene that has none, which is not a failure — a model dropped straight onto a
@@ -285,5 +305,5 @@ export function nodesOfType(nodes: readonly SceneNode[], type: SceneNodeType): S
  * sites so that what the Render button writes and what a montage shows cannot disagree.
  */
 export function firstCameraId(nodes: readonly SceneNode[]): string | null {
-  return nodesOfType(nodes, 'camera')[0]?.id ?? null
+  return cameraIds(nodes).values().next().value ?? null
 }

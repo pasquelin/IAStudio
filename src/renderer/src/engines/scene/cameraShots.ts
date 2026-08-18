@@ -2,7 +2,7 @@ import type { AnimationTimeline, CameraShot } from '@shared/domain/animation'
 import { frameDuration, SECOND, snapToFrame, type Us } from '@shared/domain/time'
 import { clamp } from '@shared/numeric'
 import { movedWithin } from '@shared/domain/order'
-import { firstCameraId, type SceneNode } from './sceneState'
+import { cameraIds, firstCameraId, type SceneNode } from './sceneState'
 
 /**
  * The cameras the band stacks, top first: one line per camera, ranked by where its first shot
@@ -60,25 +60,6 @@ export function activeShotAt(
 ): CameraShot | null {
   const cameras = cameraIds(nodes)
   return bestShot(timeline, time, shot => cameras.has(shot.cameraId))
-}
-
-/**
- * The cameras of a scene, cached on the identity of the node list — the same rule as `ranks`
- * below: an edit replaces the array, so the same array holds the same cameras.
- *
- * Asked once per frame of a montage and once per render of the preview, and it walked the whole
- * node list each time: measured 18/08 on `cameraShots.bench`, 168 µs a call over 5 000 nodes and
- * 2,0 ms over 50 000, against 0,26 µs whatever the count.
- */
-const cameraSets = new WeakMap<readonly SceneNode[], Set<string>>()
-
-function cameraIds(nodes: readonly SceneNode[]): Set<string> {
-  const held = cameraSets.get(nodes)
-  if (held) return held
-
-  const ids = new Set(nodes.flatMap(node => (node.type === 'camera' ? node.id : [])))
-  cameraSets.set(nodes, ids)
-  return ids
 }
 
 /**

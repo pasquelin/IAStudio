@@ -70,7 +70,7 @@ export function valueAt(track: AnimationTrack, time: Us): Vector3 {
 }
 
 /** Whether anything at all is soloed. Derived ONCE per pass — see `playsThrough`. */
-function anySoloed(timeline: AnimationTimeline): boolean {
+export function anySoloed(timeline: AnimationTimeline): boolean {
   return timeline.tracks.some(candidate => candidate.solo)
 }
 
