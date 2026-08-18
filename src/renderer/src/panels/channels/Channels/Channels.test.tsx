@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { PBR_CHANNELS } from '@shared/domain/texture'
 import { setChannel } from '@/engines/texture/commands'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { installDocument } from '@/stores/document-fixtures'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
@@ -35,7 +36,10 @@ beforeEach(() => {
   installTexture('doc-1')
   // Session state, shared by every document: a channel left inspected would leak into the next.
   useTextureViews.setState({ inspected: {} })
-  useAssets.setState({ items: [picture('img-1', 'Brique')] })
+  // The CATALOGUE, not the shelf: `useAssets.items` is the scope the browser is asking for, and
+  // the Textures space narrows it — a menu built out of it lists what has been browsed.
+  installFakeBridge({ assets: { search: () => Promise.resolve([picture('img-1', 'Brique')]) } })
+  useAssets.setState({ items: [] })
   // `vi.fn` keeps its calls across tests, and a count read from the previous one proves nothing.
   deriveTextureChannel.mockClear()
 })
@@ -373,11 +377,17 @@ describe('Channels', () => {
      * row ticked.
      */
     it('offers a generated sky and a generated texture, which a channel can hold', async () => {
-      useAssets.setState({
-        items: [
-          { ...picture('sky-1', 'Coucher'), type: 'skybox' },
-          { ...picture('tex-1', 'Rouille'), type: 'texture' },
-        ],
+      // The shelf stays empty on purpose: `useAssets.items` is the SCOPE the browser is asking
+      // for, and the Textures space narrows it to `['texture','image']` — a sky could never reach
+      // this menu through it, which is the very case this test claims to cover.
+      installFakeBridge({
+        assets: {
+          search: () =>
+            Promise.resolve([
+              { ...picture('sky-1', 'Coucher'), type: 'skybox' },
+              { ...picture('tex-1', 'Rouille'), type: 'texture' },
+            ]),
+        },
       })
       render(<Channels />)
 
@@ -387,9 +397,26 @@ describe('Channels', () => {
       expect(await screen.findByRole('menuitemradio', { name: /Rouille/ })).toBeInTheDocument()
     })
 
+    /**
+     * The other half: the shelf is PAGED and replaced by whatever was searched for, so a picture
+     * it happens to hold says nothing about the project. Only the catalogue answers that.
+     */
+    it('offers none the catalogue does not hold, whatever the shelf is showing', async () => {
+      installFakeBridge({ assets: { search: () => Promise.resolve([]) } })
+      useAssets.setState({ items: [picture('ghost-1', 'Fantôme')] })
+      render(<Channels />)
+
+      await userEvent.click(screen.getByRole('button', { name: /Ce que contient Normale/ }))
+
+      expect(
+        await screen.findByRole('menuitem', { name: /Aucune image dans ce projet/ }),
+      ).toBeInTheDocument()
+      expect(screen.queryByRole('menuitemradio', { name: /Fantôme/ })).not.toBeInTheDocument()
+    })
+
     /** A button that refuses without a word is worse than a menu that says why it is empty. */
     it('says there is no picture rather than refusing to open', async () => {
-      useAssets.setState({ items: [] })
+      installFakeBridge({ assets: { search: () => Promise.resolve([]) } })
       render(<Channels />)
 
       await userEvent.click(screen.getByRole('button', { name: /Ce que contient Normale/ }))
@@ -411,7 +438,7 @@ describe('Channels', () => {
           'doc-1',
           setChannel('normal', { assetId: 'gone-1', origin: 'imported', width: 8, height: 8 }),
         )
-      useAssets.setState({ items: [] })
+      installFakeBridge({ assets: { search: () => Promise.resolve([]) } })
       render(<Channels />)
 
       await userEvent.click(screen.getByRole('button', { name: /Ce que contient Normale/ }))

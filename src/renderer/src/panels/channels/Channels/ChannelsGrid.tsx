@@ -1,31 +1,24 @@
 import { useMemo, useState } from 'react'
-import { isLocalPicture, PICTURES, type Asset } from '@shared/domain/asset'
+import { PICTURES, type Asset } from '@shared/domain/asset'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { setChannel } from '@/engines/texture/commands'
 import { canDerive, sourceFor } from '@/engines/texture/textureState'
 import { placeTextureChannel } from '@/spaces/textures/placeChannel'
-import { useAssets } from '@/stores/assets'
+import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
 import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
 import { textureOf, useTextures } from '@/stores/textures'
 import { ChannelTile, type DerivationState } from '../ChannelTile'
 
 export function ChannelsGrid({ documentId }: { documentId: string }) {
   const channels = useTextures(state => textureOf(state, documentId).channels)
-  const assets = useAssets(state => state.items)
 
   /**
-   * The same question the tile answers on a drop, so it gets the same answer: `PICTURES` for the
-   * type — a generated sky or texture is a picture a channel can hold — and `isLocalPicture` for
-   * the file, because a cloud row would be offered, chosen, and show nothing at all.
-   *
-   * Filtered on both, and not on `image` alone: dropping a local skybox onto Roughness worked
-   * while the menu never listed it, so the tile showed a picture with no row ticked.
+   * Asked of the CATALOGUE, never filtered out of `useAssets`: that shelf is the scope the browser
+   * is asking for, and the Textures space narrows it to `['texture','image']` — a sky could never
+   * reach this menu through it, though the tile accepts one on a drop.
    */
-  const pictures = useMemo(
-    () => assets.filter(asset => PICTURES.includes(asset.type) && isLocalPicture(asset)),
-    [assets],
-  )
+  const pictures = useProjectPictureAssets(PICTURES)
   const options = useMemo(
     () => pictures.map(asset => ({ id: asset.id, name: asset.name })),
     [pictures],
