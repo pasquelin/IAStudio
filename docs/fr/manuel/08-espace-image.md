@@ -239,7 +239,7 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Commentaire** | `C` | *pas encore disponible* |
+| **Commentaire** | — | *pas encore disponible* |
 | **Remplir le calque** | `G` | remplit le calque actif — ou la **zone sélectionnée**, s’il y en a une |
 | **Pipette** | `I` | prélève la couleur sous le pointeur |
 | **Couleur** | — | la couleur du pinceau, du crayon, des formes et du remplissage |
