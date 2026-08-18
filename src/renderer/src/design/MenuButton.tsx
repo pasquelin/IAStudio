@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import type { TooltipFactory } from '@/helpers/tooltip'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
+import { useLatest } from '@/hooks/useLatest'
 import { Flyout } from './Flyout'
 import { ToolButton, type ToolButtonProps } from './ToolButton'
 
@@ -31,6 +32,10 @@ export type MenuButtonProps = Pick<
   rows: (close: () => void) => ReactNode
   /** Fired on click, before the menu opens. Absent for a button that only opens its menu. */
   onClick?: () => void
+  /** Fired each time the menu shows, however it was opened. For rows read from somewhere that
+   * changes without the app being told. Not `onOpen`, which `Collection` spends on opening an
+   * item — a user's intent, where this one is a lifecycle. */
+  onShow?: () => void
   /**
    * Whether the click opens the menu. False for a group whose click arms a mode — there, the
    * menu only offers to switch, and opening it on every click would fight the armed tool.
@@ -56,11 +61,19 @@ export function MenuButton({
   rowCount,
   rows,
   onClick,
+  onShow,
   opensOnClick,
   menu = true,
   ...button
 }: MenuButtonProps) {
   const flyout = useHoverFlyout(rowCount)
+  // Read through a ref: a caller passing a fresh arrow would re-run the effect on every render the
+  // menu survives, and the one caller that has it reads the branches from git each time.
+  const shown = useLatest(onShow)
+
+  useEffect(() => {
+    if (flyout.showing) shown.current?.()
+  }, [flyout.showing, shown])
 
   return (
     <div {...flyout.wrapProps} className="contents">

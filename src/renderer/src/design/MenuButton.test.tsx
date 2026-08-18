@@ -55,6 +55,42 @@ describe('MenuButton', () => {
   })
 
   /**
+   * For rows read from somewhere the app is not told about — a branch made in a terminal. Hover
+   * counts as an opening: it is how the menu opens on the toolbar, and rows reached that way
+   * would otherwise be the stale ones.
+   */
+  describe('onShow', () => {
+    it('fires when the menu is opened, and not before', async () => {
+      const onShow = vi.fn()
+      const button = bar({ onShow })
+      expect(onShow).not.toHaveBeenCalled()
+
+      await userEvent.click(button)
+
+      expect(onShow).toHaveBeenCalledTimes(1)
+    })
+
+    it('fires again on the next opening', async () => {
+      const onShow = vi.fn()
+      const button = bar({ onShow })
+      await userEvent.click(button)
+      await userEvent.keyboard('{Escape}')
+
+      await userEvent.click(button)
+
+      expect(onShow).toHaveBeenCalledTimes(2)
+    })
+
+    it('fires on a menu opened by hovering', async () => {
+      const onShow = vi.fn()
+
+      await userEvent.hover(bar({ onShow }))
+
+      expect(onShow).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  /**
    * The two halves of the rule the toolbar lives by. A mode group's menu opens under the pointer
    * as it crosses the bar; taking the focus there pulls the caret out of whatever was being
    * typed, and hands it back to a button the user never meant to press.
