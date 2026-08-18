@@ -448,6 +448,8 @@ describe('the lists that stand for a union', () => {
       'node.visible': true,
       'node.material': true,
       'node.light': true,
+      'node.camera': true,
+      'camera.shot': true,
       'node.reparent': true,
       'node.select': true,
       'git.status': true,

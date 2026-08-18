@@ -9,7 +9,9 @@ import {
   setPath,
 } from '@/engines/scene/commands'
 import { withoutPoint } from '@/engines/scene/cameraPath'
+import { removeCameraShot } from '@/engines/scene/animationCommands'
 import { nodeById, selectedNodes } from '@/engines/scene/sceneState'
+import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -74,6 +76,25 @@ export function removePickedPathPoint(documentId: string): boolean {
   return true
 }
 
+/**
+ * The shot picked in the band, taken away. Answers whether there was one, the way a picked
+ * control point does — and for the same reason, one payment later: Delete is an accelerator of
+ * the native Édition menu, so it never reaches the band's own `onKeyDown`. Clicking a shot while
+ * a camera stood selected deleted THE CAMERA, silently.
+ */
+export function removePickedShot(documentId: string): boolean {
+  const picked = animationViewOf(useAnimationViews.getState(), documentId).selected
+  if (picked.length === 0) return false
+
+  const store = useScenes.getState()
+  const shot = sceneOf(store, documentId).animation.shots.find(held => picked.includes(held.id))
+  if (!shot) return false
+
+  store.runCommand(documentId, removeCameraShot(shot.id))
+  useAnimationViews.getState().setSelected(documentId, [])
+  return true
+}
+
 export function runSceneCommand(documentId: string, command: CommandId): boolean {
   const store = useScenes.getState()
   const { nodes, selectedIds } = sceneOf(store, documentId)
@@ -88,6 +109,7 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
       // A picked control point is taken first: point and rail are one selection seen at two
       // depths, and Delete on a point that took the whole rail would be a rail nobody meant.
       if (removePickedPathPoint(documentId)) return true
+      if (removePickedShot(documentId)) return true
       if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(nodes, selectedIds))
       return true
 

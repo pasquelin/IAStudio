@@ -10,6 +10,7 @@ import {
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { token } from '../core/palette'
+import { aspectLoan } from './aspectLoan'
 import { frameDelta } from './frameClock'
 import { emptyGpuStats, recordFrame, type GpuStats } from './gpuStats'
 import {
@@ -763,6 +764,7 @@ export class ViewportEngine {
 
     const held = renderer.getClearColor(new Color())
     const heldAlpha = renderer.getClearAlpha()
+    const loan = aspectLoan(inset.rect.width, inset.rect.height)
 
     renderer.setScissorTest(true)
     try {
@@ -772,10 +774,10 @@ export class ViewportEngine {
       // paints the preview's rectangle and nothing else.
       renderer.setClearColor(inset.backdrop, 1)
       renderer.clear(true, true, false)
-      inset.camera.aspect = inset.rect.width / inset.rect.height
-      inset.camera.updateProjectionMatrix()
+      loan.frame(inset.camera)
       renderer.render(this.scene, inset.camera)
     } finally {
+      loan.restore()
       renderer.setClearColor(held, heldAlpha)
       // Every one of them in a `finally`, as `renderPanes` does: a throw here would otherwise
       // leave the workshop hidden and every later frame clipped to this corner.

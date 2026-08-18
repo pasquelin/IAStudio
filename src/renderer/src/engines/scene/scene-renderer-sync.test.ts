@@ -6,6 +6,7 @@ import {
   Mesh,
   Object3D,
   PerspectiveCamera,
+  Vector3,
 } from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock, type MockInstance } from 'vitest'
 import { nodeIdOf, SceneRenderer } from './SceneRenderer'
@@ -342,6 +343,47 @@ describe('a scene told what changed', () => {
       renderer.setQuadView(false)
       renderer.setPaneViews(['top', 'free', 'free', 'bottom'])
       expect(renderer.quadView()).toBe(false)
+      renderer.dispose()
+    })
+
+    /** What `placePanes` touches of an orbit, and nothing else — an unmounted pane carries none. */
+    type FakeOrbit = {
+      enableRotate: boolean
+      target: Vector3
+      update: () => void
+      removeEventListener: () => void
+      dispose: () => void
+    }
+
+    /**
+     * Seen on screen, and green in the whole suite: a pane offering a camera is one of panes
+     * 1–3, which START on a side view where turning is locked. Locking onto a camera left that
+     * lock in place, so the orbit that is meant to MOVE the camera did nothing at all.
+     */
+    it('gives a pane its rotation back when it draws through a camera of the scene', () => {
+      const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+      renderer.apply({ ...EMPTY_SCENE, nodes: [cameraNodeFixture('cam')] })
+      renderer.setQuadView(true)
+
+      // Unmounted, a pane carries no orbit — three stand-ins is what makes the flag readable.
+      const viewport: object = Reflect.get(renderer, 'viewport')
+      const extras: { controls: FakeOrbit | null }[] = Reflect.get(viewport, 'extras')
+      for (const extra of extras) {
+        extra.controls = {
+          enableRotate: true,
+          target: new Vector3(),
+          update: () => {},
+          removeEventListener: () => {},
+          dispose: () => {},
+        }
+      }
+
+      renderer.setPaneViews(['free', 'top', 'front', 'left'])
+      expect(extras[0]?.controls?.enableRotate).toBe(false)
+
+      renderer.setPaneViews(['free', { kind: 'camera', nodeId: 'cam' }, 'front', 'left'])
+      expect(extras[0]?.controls?.enableRotate).toBe(true)
+
       renderer.dispose()
     })
 
