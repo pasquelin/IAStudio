@@ -1,5 +1,5 @@
 import { getBridge } from '@/services/bridge'
-import { useDocuments } from '@/stores/documents'
+import { documentExportName, useDocuments } from '@/stores/documents'
 
 /** The engine, seen from an export: it flattens, and that is the whole of it. */
 export type ExportHost = { snapshot: () => Promise<string | null> }
@@ -17,19 +17,8 @@ export async function exportPicture(documentId: string, host: ExportHost): Promi
   const image = await host.snapshot()
   if (!image) return null
 
-  // The tab's own title, so the file is findable afterwards — an opaque id is not.
-  const title = useDocuments.getState().documents[documentId]?.title ?? documentId
-  return bridge.dialog.exportPicture(`${fileNameOf(title)}.png`, image)
-}
-
-/**
- * A title down to what a file system takes. Separators go, and a leading dot with them — it would
- * hide the file; the dots inside a name stay, because `Study v1.2` is a name people rely on.
- */
-function fileNameOf(title: string): string {
-  const cleaned = title
-    .replace(/[/\\:*?"<>|]/g, '')
-    .replace(/^\.+/, '')
-    .trim()
-  return cleaned || 'image'
+  // The tab's own title, so the file is findable afterwards. A word rather than the id when there
+  // is no title left to clean: an id is no more findable than a word, and shorter to read.
+  const name = documentExportName(useDocuments.getState(), documentId, 'image')
+  return bridge.dialog.exportPicture(`${name}.png`, image)
 }
