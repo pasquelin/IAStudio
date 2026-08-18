@@ -32,8 +32,8 @@ export const OTIO_DOCUMENT_ID = 'documentId'
 
 /**
  * Which kind of document the timeline is, the video montage and the audio one being the same
- * standard file. Absent — a timeline from Resolve, or one of ours written before this — means the
- * video montage, which is the only answer a file that says nothing can be given.
+ * standard file — so the name cannot say, and only this can. Written by the window that saved it,
+ * read back by the file layer.
  */
 export const OTIO_DOCUMENT_KIND = 'documentKind'
 

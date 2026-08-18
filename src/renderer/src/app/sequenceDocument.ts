@@ -66,7 +66,7 @@ export function otioTimelineFor(
   return otioTimelineOf(state, {
     name: documents[documentId]?.title ?? documentId,
     ...(identifies ? { documentId } : {}),
-    ...(studio ? { studio } : {}),
+    studio,
     sourceOf: clip => sourceOf(clip, catalogue),
   })
 }
@@ -84,10 +84,13 @@ export function sequencePayload(
   documentId: string,
   studio?: Record<string, unknown>,
 ): unknown {
+  // Read once, not once per clip: `linkOf` is called for every clip that draws from a file.
+  const folder = heldIn(documentId)
+
   return otioTimelineFor(state, documentId, {
-    linkOf: path => mediaLinkOf(path, heldIn(documentId)),
+    linkOf: path => mediaLinkOf(path, folder),
     identifies: true,
-    ...(studio ? { studio } : {}),
+    studio,
   })
 }
 

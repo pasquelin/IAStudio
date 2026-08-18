@@ -94,10 +94,9 @@ export const DOCUMENTS_FOLDER = 'documents'
  * The extension each kind reads and writes. A project folder is meant to be read by eye and
  * repaired by hand, and `a3f1.json` beside `b204.json` says nothing about what either is.
  *
- * A kind held in an OPEN format takes that format's own extension, and no other: the file IS the
- * document. The studio's own spellings are on their way out one kind at a time, and a kind loses
- * its own the day the open format can carry the whole of what it holds — never before, or the
- * file would claim a format whose bytes are not inside it.
+ * No spelling of the studio's own is left: every kind names the open format it belongs in. **Only
+ * the two montages have the BYTES to match** — the other four still hold the studio's envelope
+ * under an open name, so no other application opens one of them yet.
  *
  * Exported so a test can hold it against `DOCUMENT_KINDS`: the compiler makes this table
  * complete, but nothing makes that list complete, and a kind missing from it would be refused
@@ -145,7 +144,18 @@ export function documentPath(id: string, kind: DocumentKind): string {
  * volume — an empty document, and a second file beside the first at the next save.
  */
 export function kindForExtension(extension: string): DocumentKind | null {
-  return DOCUMENT_KINDS.find(kind => EXTENSIONS_BY_KIND[kind] === extension) ?? null
+  return kindsForExtension(extension)[0] ?? null
+}
+
+/**
+ * EVERY kind this extension could name — one for most, two where a container serves two editors.
+ * What a file's own head is allowed to claim: `.gltf` may say scene or sky, and nothing else.
+ *
+ * Reading the head is what settles it, and this is what bounds that reading. Trusting the head
+ * outright would let an envelope reading `texture` open a `.gltf` in the material editor.
+ */
+export function kindsForExtension(extension: string): readonly DocumentKind[] {
+  return DOCUMENT_KINDS.filter(kind => EXTENSIONS_BY_KIND[kind] === extension)
 }
 
 /**

@@ -98,11 +98,7 @@ describe('opensInStudio', () => {
     expect(natureOf('chair.obj').domain).toBe('mesh')
   })
 
-  /**
-   * The cost of a document being held in the same file type as an asset, written down rather than
-   * hidden: a plain glTF mesh reads as a scene document, because the NAME is all this has. Only
-   * the file's own content could tell them apart, and no caller of `natureOf` holds it.
-   */
+  // The blind spot `opensInStudio` writes down, held here so it fails the day it changes.
   it('cannot tell a plain glTF mesh from a scene document, the name being all it has', () => {
     expect(natureOf('chair.gltf')).toEqual({ domain: 'mesh', role: 'edit' })
     expect(opensInStudio('chair.gltf')).toBe(true)

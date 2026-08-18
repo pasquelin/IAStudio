@@ -146,6 +146,21 @@ describe('createDocumentFiles', () => {
     await expect(documents.read('doc-1', 'scene')).rejects.toThrow(/texture/)
   })
 
+  /**
+   * Two kinds wear `.gltf`, so the FILE says which — but only within what the extension could
+   * name. Trusting the head outright would open a material in the scene editor, and the listing
+   * is where that starts: a descriptor is built before anything asks `read` for a kind.
+   */
+  it('lets the file pick between the kinds its extension names, and no further', async () => {
+    await mkdir(join(root, 'documents'), { recursive: true })
+    const head = (kind: string): string =>
+      `${JSON.stringify({ version: DOCUMENT_VERSION, kind, title: kind, updatedAt: NOW })}\n{}`
+    await writeFile(join(root, 'documents', 'Dusk.gltf'), head('skybox'), 'utf8')
+    await writeFile(join(root, 'documents', 'Rock.gltf'), head('texture'), 'utf8')
+
+    expect((await documents.list()).map(one => one.kind)).toEqual(['skybox'])
+  })
+
   it('refuses a file written by a later build instead of flattening it', async () => {
     await mkdir(join(root, 'documents'), { recursive: true })
     const later = { version: 99, kind: 'scene', title: 'Ahead', updatedAt: NOW }

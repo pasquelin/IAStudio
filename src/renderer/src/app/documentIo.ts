@@ -334,6 +334,10 @@ const AUDIO_IO: DocumentIo = {
 
   dirty: audioHasUnsavedWork,
 
+  // The same reader as the video montage, so the same refusal: a take whose media the project has
+  // none of opens shorter than its file, and writing it back would delete those clips for good.
+  incomplete: montageIsIncomplete,
+
   forget: documentId => {
     audioEditStore.use.getState().drop(documentId)
     sequenceStore.use.getState().drop(documentId)

@@ -34,11 +34,10 @@ describe('a document of the studio’s own spelling', () => {
     expect(bodyFormatOf('.whatever')).toBe(ENVELOPED)
   })
 
-  // Two kinds wear `.gltf`, so the extension cannot say which — the envelope already carries the
-  // kind, and this is what lets it answer instead of the folder.
-  it('lets the file say which kind it is where one extension serves two', () => {
-    expect(scene.kindFromHead).toBe(true)
-    expect(ENVELOPED.kindFromHead).toBeUndefined()
+  // Two kinds wear `.gltf`, and neither needs a format of its own for that: the envelope already
+  // carries the kind, and `descriptorOf` is what bounds which one a file may claim.
+  it('spells a scene in the studio’s own envelope, as it always did', () => {
+    expect(scene).toBe(ENVELOPED)
   })
 })
 

@@ -8,6 +8,7 @@ import {
   EXTENSIONS_BY_KIND,
   isDocumentKind,
   kindForExtension,
+  kindsForExtension,
   kindForWorkspace,
   workspaceForKind,
 } from './document'
@@ -70,12 +71,6 @@ describe('workspaceForKind', () => {
 })
 
 describe('kindForExtension', () => {
-  it('reads back a kind for the extension every kind is held under', () => {
-    for (const kind of DOCUMENT_KINDS) {
-      expect(kindForExtension(EXTENSIONS_BY_KIND[kind])).not.toBeNull()
-    }
-  })
-
   // Where two kinds share a spelling this answers the first of them, and the FILE settles it —
   // `documentBody.ts` reads which kind out of what the file itself carries.
   it('answers the first kind of a spelling two of them share', () => {
@@ -147,18 +142,13 @@ describe('documentPath', () => {
     expect([...DOCUMENT_KINDS].sort()).toEqual(Object.keys(EXTENSIONS_BY_KIND).sort())
   })
 
-  /**
-   * A kind sharing a spelling is sent to the other's editor unless the FILE says which it is —
-   * `kindForExtension` answers whichever came first, and only `kindFromHead` corrects it. So the
-   * pairs are listed here rather than counted: adding a third to one is a defect, not a detail.
-   */
-  it('shares a spelling only between the two montages and the two environments', () => {
-    const shared = DOCUMENT_KINDS.filter(
-      kind =>
-        DOCUMENT_KINDS.filter(other => EXTENSIONS_BY_KIND[other] === EXTENSIONS_BY_KIND[kind])
-          .length > 1,
-    )
-    expect([...shared].sort()).toEqual(['audio', 'scene', 'sequence', 'skybox'])
+  // What a file's own head is allowed to claim. A pair here is a container serving two editors;
+  // a THIRD kind joining one would let a file open in an editor nothing meant it for.
+  it('bounds a shared spelling to the two kinds that container serves', () => {
+    expect(kindsForExtension('.otio')).toEqual(['sequence', 'audio'])
+    expect(kindsForExtension('.gltf')).toEqual(['scene', 'skybox'])
+    expect(kindsForExtension('.ora')).toEqual(['image'])
+    expect(kindsForExtension('.txt')).toEqual([])
   })
 })
 
