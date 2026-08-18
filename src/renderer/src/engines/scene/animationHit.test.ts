@@ -163,7 +163,7 @@ describe('pointing at a shot', () => {
   })
 
   /** The vertical middle of the shot line, which is the first row of the sheet. */
-  const middle = RULER_HEIGHT + CLIP_HEIGHT / 2
+  const middle = RULER_HEIGHT + SUBJECT_HEIGHT / 2
 
   it('finds the shot, and says how far into it the pointer landed', () => {
     expect(hitAnimation(withShot(), { x: 200, y: middle })).toEqual({

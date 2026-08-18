@@ -4,7 +4,6 @@ import { SECOND } from '@shared/domain/time'
 import { animationTrack, cameraShot, timelineWith } from './animation-fixtures'
 import {
   CHANNEL_HEIGHT,
-  CLIP_HEIGHT,
   SUBJECT_HEIGHT,
   animationRows,
   mergedKeys,
@@ -39,7 +38,9 @@ describe('the shot lines', () => {
     )
 
     expect(rows.map(row => row.kind)).toEqual(['shot', 'shot', 'subject', 'subject'])
-    expect(rows[0]).toMatchObject({ layer: 3, height: CLIP_HEIGHT })
+    // A track of the band, at the height its neighbours stand: half as tall reads as a strip
+    // stuck above the sheet rather than as one of its tracks.
+    expect(rows[0]).toMatchObject({ layer: 3, height: SUBJECT_HEIGHT })
     expect(rows[1]).toMatchObject({ layer: 0 })
   })
 

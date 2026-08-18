@@ -8,7 +8,7 @@ import {
   setAnimationKey,
   setTimelineSettings,
 } from '@/engines/scene/animationCommands'
-import { animationRows, CLIP_HEIGHT } from '@/engines/scene/animationRows'
+import { animationRows, SUBJECT_HEIGHT } from '@/engines/scene/animationRows'
 import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
 import { cameraNodeFixture, meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
@@ -69,7 +69,6 @@ describe('dragging a clip block', () => {
           viewport: VIEWPORT,
           expanded: [],
           selected: [],
-          selectedShotId: null,
           autoKey: false,
           order: [],
         },
@@ -138,7 +137,6 @@ describe('scrubbing and picking on the band', () => {
           viewport: VIEWPORT,
           expanded: [],
           selected: [],
-          selectedShotId: null,
           autoKey: false,
           order: [],
         },
@@ -202,7 +200,6 @@ describe('following a duration that changes', () => {
           viewport: VIEWPORT,
           expanded: [],
           selected: [],
-          selectedShotId: null,
           autoKey: false,
           order: [],
         },
@@ -256,7 +253,6 @@ describe('removing a picked key with the keyboard', () => {
           viewport: VIEWPORT,
           expanded: [],
           selected: [],
-          selectedShotId: null,
           autoKey: false,
           order: [],
         },
@@ -324,7 +320,7 @@ describe('dragging a shot', () => {
   const SHOT = cameraShot('s1', { cameraId: 'cam-a', start: 1 * SECOND, duration: 2 * SECOND })
 
   /** The vertical middle of the shot line, which the sheet draws above every subject. */
-  const SHOT_MIDDLE = RULER_HEIGHT + CLIP_HEIGHT / 2
+  const SHOT_MIDDLE = RULER_HEIGHT + SUBJECT_HEIGHT / 2
 
   beforeEach(() => {
     installScene(DOCUMENT, {
@@ -339,7 +335,6 @@ describe('dragging a shot', () => {
           viewport: VIEWPORT,
           expanded: [],
           selected: [],
-          selectedShotId: null,
           autoKey: false,
           order: [],
         },
@@ -374,6 +369,19 @@ describe('dragging a shot', () => {
     act(() => press(canvas(), 'pointerup', 500, SHOT_MIDDLE))
 
     expect(shotNow()).toMatchObject({ start: 1 * SECOND, duration: 4 * SECOND })
+  })
+
+  /**
+   * One set for everything the band holds picked, keys and shots alike — a shot answers to its
+   * own id. A second store for the same question is how two selections stop agreeing.
+   */
+  it('picks a shot into the very set the keys are picked in', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={shotRows()} />)
+
+    act(() => press(canvas(), 'pointerdown', 150, SHOT_MIDDLE))
+    act(() => press(canvas(), 'pointerup', 150, SHOT_MIDDLE))
+
+    expect(useAnimationViews.getState().views[DOCUMENT]?.selected).toEqual(['s1'])
   })
 
   /**
@@ -413,6 +421,6 @@ describe('dragging a shot', () => {
     )
 
     expect(sceneOf(useScenes.getState(), DOCUMENT).animation.shots).toEqual([])
-    expect(useAnimationViews.getState().views[DOCUMENT]?.selectedShotId).toBeNull()
+    expect(useAnimationViews.getState().views[DOCUMENT]?.selected).toEqual([])
   })
 })

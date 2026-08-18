@@ -79,7 +79,7 @@ export type ShotRow = {
 
 export type AnimationRow = SubjectRow | ChannelRow | ClipRow | ShotRow
 
-/** A block and a shot are bars, so they want the room a bar reads in. */
+/** A block is a bar hung under its subject, so it wants the room a bar reads in and no more. */
 export const CLIP_HEIGHT = 24
 
 /**
@@ -299,7 +299,9 @@ function shotRows(timeline: AnimationTimeline, nodes: readonly SheetNode[]): Sho
     .map(([layer, bars]) => ({
       kind: 'shot',
       id: `shots:${layer}`,
-      height: CLIP_HEIGHT,
+      // A track of the band, at the height the others stand: a line half as tall as the ones
+      // under it reads as a strip stuck above the sheet rather than as one of its tracks.
+      height: SUBJECT_HEIGHT,
       layer,
       bars,
     }))

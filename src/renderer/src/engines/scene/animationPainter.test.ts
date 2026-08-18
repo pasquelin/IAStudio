@@ -216,7 +216,7 @@ describe('painting a shot', () => {
       { nodes: [{ id: 'cam-a', name: 'Camera A' }], expanded: new Set() },
     )
 
-  const paintShotOf = (active: string | null) => {
+  const paintShotOf = (selected: readonly string[] = []) => {
     const spy = spyContext()
     paintAnimation(
       spy.context,
@@ -226,8 +226,7 @@ describe('painting a shot', () => {
         fps: 25,
         duration: 5 * SECOND,
         playhead: 0,
-        selected: new Set(),
-        activeShotId: active,
+        selected: new Set(selected),
       },
       size,
     )
@@ -235,24 +234,18 @@ describe('painting a shot', () => {
   }
 
   it('draws the shot as a bar spanning the time it covers, and names its camera', () => {
-    const spy = paintShotOf(null)
+    const spy = paintShotOf()
 
     expect(spy.rects.some(rect => rect.x === 100 && rect.width === 200)).toBe(true)
     expect(spy.labels).toContain('Camera A')
   })
 
-  // Two bars covering one instant is the only thing an eye cannot settle by itself.
-  it('outlines the shot that is on air, and only it', () => {
-    expect(paintShotOf('s1').outlines).toHaveLength(1)
-    expect(paintShotOf(null).outlines).toEqual([])
-  })
-
   /**
-   * The grips a clip of the montage wears, on the shot too — through the same `paintClipFrame`.
-   * A bar that can be trimmed and shows nothing to grab is a bar nobody tries to trim.
+   * The grips and the fill both come from the montage's own `paintClip` — a shot and a rush are
+   * the same object to a hand, and a second table of tokens is how two bands drift apart.
    */
   it('wears the two edge grips the montage draws on a clip', () => {
-    const grips = paintShotOf(null).rects.filter(rect => rect.width === EDGE_BAR_WIDTH)
+    const grips = paintShotOf().rects.filter(rect => rect.width === EDGE_BAR_WIDTH)
 
     expect(grips.map(grip => grip.x)).toEqual([100, 300 - EDGE_BAR_WIDTH])
   })

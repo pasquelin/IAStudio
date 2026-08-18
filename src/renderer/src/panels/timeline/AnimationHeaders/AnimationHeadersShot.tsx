@@ -19,7 +19,6 @@ export function AnimationHeadersShot({ documentId, row }: { documentId: string; 
   return (
     <TimelineRow
       height={row.height}
-      nested
       reorder={{
         label: t('animation.reorderRow', { name }),
         move: by => {
@@ -32,7 +31,7 @@ export function AnimationHeadersShot({ documentId, row }: { documentId: string; 
       }}
       data-testid={`anim-shots-${row.layer}`}
     >
-      <span className="text-muted text-tiny min-w-0 flex-1 truncate" {...HINT_RIGHT(name)}>
+      <span className="text-text text-tiny min-w-0 flex-1 truncate" {...HINT_RIGHT(name)}>
         {name}
       </span>
     </TimelineRow>

@@ -2,13 +2,17 @@ import { mdiLinkVariant, mdiLinkVariantOff } from '@mdi/js'
 import {
   badgeAt,
   BADGE_SIZE,
+  CLIP_INSET,
+  EDGE_BAR_INSET,
+  EDGE_BAR_WIDTH,
+  edgeGrab,
+  FADE_BAND,
   RULER_HEIGHT,
   timeToX,
   trackRows,
   visibleRange,
   type Viewport,
 } from './timelineGeometry'
-import { clipBoxOf, paintClipFill, paintClipFrame } from './clipShell'
 import { MDI_VIEWBOX, mdiPath } from '@/helpers/mdiCanvas'
 import { paintBandEnd } from './bandEnd'
 import { paintRuler as paintBandRuler, readRulerStyle } from './ruler'
@@ -236,11 +240,73 @@ function paintPoster(
 }
 
 /**
+ * The grips at both ends, which is what says a clip can be lengthened at all.
+ *
+ * They start BELOW the fade band, and that offset is the whole point: up there the same corner
+ * opens a fade rather than a trim (`hitTest`), so a bar drawn into the band would be pressed for
+ * a lengthening and hand back a ramp. Skipped altogether once the bar would be wider than the
+ * zone that grabs it — on a narrow clip `edgeGrab` gives the middle back to the drag, and a bar
+ * sticking out past its own target promises a trim that is refused.
+ */
+function paintEdgeBars(
+  context: CanvasRenderingContext2D,
+  left: number,
+  right: number,
+  top: number,
+  height: number,
+  selected: boolean,
+  palette: Palette,
+): void {
+  if (edgeGrab(right - left) < EDGE_BAR_WIDTH) return
+
+  // The band is measured from the row, `top` is the clip box: one inset apart.
+  const barTop = top + FADE_BAND - CLIP_INSET
+  // Never negative: MIN_TRACK_HEIGHT leaves a 23 px box against the 13 px the two insets take.
+  const barHeight = height - (FADE_BAND - CLIP_INSET) - EDGE_BAR_INSET
+
+  context.fillStyle = selected ? palette.text : palette.muted
+  context.fillRect(left, barTop, EDGE_BAR_WIDTH, barHeight)
+  context.fillRect(right - EDGE_BAR_WIDTH, barTop, EDGE_BAR_WIDTH, barHeight)
+}
+
+/**
  * What every clip of one paint shares — read once for the strip, where the nine arguments above
  * vary per clip. `linkable` is derived from the montage rather than taken from `PaintOptions`:
  * that one is the caller's, and a caller has no business claiming a montage holds pairs.
  */
 type ClipPaint = { palette: Palette; options: PaintOptions; linkable: boolean }
+
+/**
+ * One clip, for a band that is not the montage — the dope sheet's camera shots.
+ *
+ * The montage's own palette and nothing else: a shot and a rush are the same object to a hand,
+ * and two tables of tokens is how two bands stop looking alike without anyone deciding it.
+ */
+export function paintClipOn(
+  context: CanvasRenderingContext2D,
+  clip: Clip,
+  label: string,
+  viewport: Viewport,
+  top: number,
+  height: number,
+  selected: boolean,
+): void {
+  const left = timeToX(clip.start, viewport)
+  // Never nothing: a clip shorter than a pixel still has to be visible enough to grab.
+  const right = Math.max(left + 1, timeToX(clipEnd(clip), viewport))
+  const palette = readPalette()
+
+  // Posed here, where `paintTimeline` poses them for the strip: a band that draws its own text
+  // some other way leaves its baseline behind, and the name rides out of the top of the bar.
+  context.font = palette.clipFont
+  context.textBaseline = 'top'
+
+  paintClip(context, clip, label, viewport, left, right, top, height, selected, 'video', {
+    palette,
+    options: {},
+    linkable: false,
+  })
+}
 
 function paintClip(
   context: CanvasRenderingContext2D,
@@ -255,13 +321,13 @@ function paintClip(
   kind: TrackKind,
   { palette, options, linkable }: ClipPaint,
 ): void {
-  const box = clipBoxOf(top, height)
-  const boxTop = box.top
-  const boxHeight = box.height
+  const boxTop = top + CLIP_INSET
+  const boxHeight = height - CLIP_INSET * 2 - 1
 
   // Selection wins over the kind: a picked clip has to read as picked, and two greens would say
   // less than one blue does.
-  paintClipFill(context, left, right, box, selected ? palette.selected : palette[CLIP_FILLS[kind]])
+  context.fillStyle = selected ? palette.selected : palette[CLIP_FILLS[kind]]
+  context.fillRect(left, boxTop, right - left, boxHeight)
 
   context.save()
   context.beginPath()
@@ -289,6 +355,9 @@ function paintClip(
 
   paintFades(context, clip, viewport, left, right, boxTop, boxHeight, palette)
 
+  context.fillStyle = palette.text
+  context.fillText(label, left + 6, boxTop + 4)
+
   // From the row's top, not the box's: the placement is measured against the bands `hitTest`
   // reads, and those are the row's.
   const badge = linkable ? badgeAt(left, right, top) : null
@@ -302,12 +371,13 @@ function paintClip(
   }
   context.restore()
 
-  paintClipFrame(context, left, right, box, label, {
-    ink: palette.text,
-    border: palette.border,
-    grip: selected ? palette.text : palette.muted,
-    font: palette.clipFont,
-  })
+  context.fillStyle = palette.border
+  context.fillRect(left, boxTop, 1, boxHeight)
+  context.fillRect(right - 1, boxTop, 1, boxHeight)
+
+  // After the border and outside the clipping path: a grip drawn under the poster is a grip
+  // nobody sees, and the border alone reads as a seam between two clips rather than an end.
+  paintEdgeBars(context, left, right, boxTop, boxHeight, selected, palette)
 }
 
 export function paintTimeline(

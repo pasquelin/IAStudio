@@ -13,7 +13,7 @@ import {
   removeCameraShot,
   unkeySubject,
 } from '@/engines/scene/animationCommands'
-import { activeShotAt, draggedShot } from '@/engines/scene/cameraShots'
+import { draggedShot } from '@/engines/scene/cameraShots'
 import { multi, setModelClips } from '@/engines/scene/commands'
 import type { Command } from '@/engines/core/history'
 import type { SceneState } from '@/engines/scene/sceneState'
@@ -67,7 +67,6 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   const grabbed = useRef<Grab | null>(null)
 
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
-  const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
   const view = useAnimationViews(state => animationViewOf(state, documentId))
 
@@ -83,8 +82,6 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     timeline,
     playhead,
     selected,
-    activeShotId: activeShotAt(timeline, nodes, playhead)?.id ?? null,
-    selectedShotId: view.selectedShotId,
   }
 
   const latest = useRef(snapshot)
@@ -104,8 +101,6 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
           duration: current.timeline.duration,
           playhead: current.playhead,
           selected: current.selected,
-          activeShotId: current.activeShotId,
-          selectedShotId: current.selectedShotId,
         },
         box,
       )
@@ -149,10 +144,12 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     if (event.key !== 'Delete' && event.key !== 'Backspace') return
 
     const current = latest.current
-    if (current.selectedShotId) {
+    // A shot answers to its own id in the same set the keys use, so what is picked is read once.
+    const shot = current.timeline.shots.find(held => current.selected.has(held.id))
+    if (shot) {
       event.preventDefault()
-      useScenes.getState().runCommand(documentId, removeCameraShot(current.selectedShotId))
-      useAnimationViews.getState().setSelectedShot(documentId, null)
+      useScenes.getState().runCommand(documentId, removeCameraShot(shot.id))
+      useAnimationViews.getState().setSelected(documentId, [])
       return
     }
 
@@ -200,9 +197,6 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>): void => {
     const hit = hitAt(event)
-    // Anywhere but a bar drops the picked shot: Delete would otherwise take away a shot the
-    // pointer left behind three gestures ago.
-    if (hit?.kind !== 'shot') useAnimationViews.getState().setSelectedShot(documentId, null)
 
     if (!hit) {
       useAnimationViews.getState().setSelected(documentId, [])
@@ -245,9 +239,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
         grabbedAt: hit.grabbedAt,
       }
       useScenes.getState().beginGesture(documentId)
-      const views = useAnimationViews.getState()
-      views.setSelected(documentId, [])
-      views.setSelectedShot(documentId, hit.shotId)
+      useAnimationViews.getState().setSelected(documentId, [hit.shotId])
       return
     }
 

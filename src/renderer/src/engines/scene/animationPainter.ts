@@ -7,9 +7,11 @@
  * The header column beside it stays DOM, where the controls belong — see `AnimationHeaders`.
  */
 import type { Us } from '@shared/domain/time'
+import type { CameraShot } from '@shared/domain/animation'
 import { placeRows } from '../timeline/band'
 import { paintBandEnd } from '../timeline/bandEnd'
-import { clipBoxOf, paintClipFill, paintClipFrame } from '../timeline/clipShell'
+import { paintClipOn } from '../timeline/painter'
+import type { Clip } from '../timeline/timelineState'
 import { paintRuler, readRulerStyle } from '../timeline/ruler'
 import { RULER_HEIGHT, timeToX, type Viewport } from '../timeline/timelineGeometry'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
@@ -63,16 +65,11 @@ export type AnimationPaint = {
   fps: number
   duration: Us
   playhead: Us
-  /** The keys under a selection, as `<rowId>@<time>`, so a channel and its subject agree. */
-  selected: ReadonlySet<string>
   /**
-   * The shot the head is on air through, and the one under the pointer's last press.
-   *
-   * Apart from `rows` rather than inside them: which shot is on air follows the HEAD, so a row
-   * holding it would be rebuilt on every frame of playback.
+   * What the band holds picked. Keys read as `<rowId>@<time>`, so a channel and its subject
+   * agree; a shot is its own id, which `keyParts` answers nothing for.
    */
-  activeShotId?: string | null
-  selectedShotId?: string | null
+  selected: ReadonlySet<string>
 }
 
 /** How a key is named in the selection set, and in a hit test. */
@@ -185,7 +182,7 @@ function paintRows(
     }
 
     if (row.kind === 'shot') {
-      for (const bar of row.bars) paintShot(context, bar, top, row.height, paint, palette)
+      for (const bar of row.bars) paintShot(context, bar, top, row.height, paint)
       continue
     }
 
@@ -242,37 +239,40 @@ function barRect(
 }
 
 /**
- * A shot: a bar carrying the name of the camera it puts on air. The one on air wears an outline
- * in the head's own ink — two bars covering one instant is what an eye cannot settle by itself.
+ * What the montage draws a clip from, filled in from a shot. Everything a montage carries and a
+ * shot has no notion of reads as nothing: no fade, no gain, no pair to travel with.
  */
+function clipOfShot(shot: CameraShot): Clip {
+  return {
+    id: shot.id,
+    assetId: '',
+    start: shot.start,
+    duration: shot.duration,
+    inPoint: 0,
+    speed: 1,
+    fadeIn: 0,
+    fadeOut: 0,
+    gain: 0,
+  }
+}
+
+/** A shot, painted BY the montage: same fill, same name, same grips, same everything. */
 function paintShot(
   context: CanvasRenderingContext2D,
   bar: ShotBar,
   top: number,
   height: number,
   paint: AnimationPaint,
-  palette: Palette,
 ): void {
-  const left = timeToX(bar.shot.start, paint.viewport)
-  // Never nothing: a shot shorter than a pixel still has to be visible enough to grab.
-  const right = Math.max(left + 1, timeToX(bar.shot.start + bar.shot.duration, paint.viewport))
-  const box = clipBoxOf(top, height)
-  const picked = bar.shot.id === paint.selectedShotId
-
-  paintClipFill(context, left, right, box, picked ? palette.rowAlt : palette.block)
-
-  if (bar.shot.id === paint.activeShotId) {
-    context.strokeStyle = palette.playhead
-    context.lineWidth = 1
-    context.strokeRect(left + 0.5, box.top + 0.5, right - left - 1, box.height - 1)
-  }
-
-  paintClipFrame(context, left, right, box, bar.name, {
-    ink: palette.text,
-    border: palette.border,
-    grip: picked ? palette.text : palette.muted,
-    font: palette.font,
-  })
+  paintClipOn(
+    context,
+    clipOfShot(bar.shot),
+    bar.name,
+    paint.viewport,
+    top,
+    height,
+    paint.selected.has(bar.shot.id),
+  )
 }
 
 function paintHead(
