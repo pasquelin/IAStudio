@@ -151,7 +151,7 @@ describe('createBvhBuilder', () => {
 
   /**
    * The reason the whole thing exists: a tree turns a walk over every triangle into a descent.
-   * Measured in `scene-picking.bench.ts`, checked here on the count three.js actually reads.
+   * Measured in `scenePicking.bench.ts`, checked here on the count three.js actually reads.
    */
   it('leaves the geometry able to answer a ray', async () => {
     const scripted = scriptedWorker()
