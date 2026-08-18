@@ -66,7 +66,7 @@ Three settings govern flying: **Settings ▸ Workspaces ▸ 3D**
 | **Scale** | `S` | grows or shrinks it with the handles |
 | **Snap** | `M` | moves the handles **in steps** instead of leaving them free |
 | **Local frame** | `L` | lines the handles up with the **object's** orientation rather than the world's |
-| **Display mode** | `Z` | cycles the seven ways of drawing; hovering offers them one by one |
+| **Display mode** | `Z` | cycles the nine ways of drawing; hovering offers them one by one |
 | **Frame selection** | `F` | recentres the camera on the chosen object |
 
 The bar carries only what the hand asks for **without letting go of the mouse**. The rest is in
@@ -75,7 +75,7 @@ the native menu:
 | What is not in the bar | Where to find it |
 |---|---|
 | Projection, four views, quad edges, skeletons, pose mode | **View**, as ticked rows |
-| The six sides, the seven display modes | **View ▸ Point of view** and **▸ Display mode** |
+| The six sides, the nine display modes | **View ▸ Point of view** and **▸ Display mode** |
 | Adding a mesh, a light, an object | **Add** |
 | Duplicate, group, delete | **Edit** |
 | Copy, cut, paste | **the keys alone** — see below |
@@ -284,6 +284,8 @@ Together with the orthographic projection, that is the classic plan view — the
 | **Material preview** | the materials under the studio light alone, with the scene’s own lights out |
 | **Matcap** | lighting captured on a sphere: it is the relief that reads, not the colour |
 | **Density** | green to red by triangles per unit of surface: what is red is what to optimise |
+| **Translucent** | surfaces barely there, so the joints inside can be seen |
+| **Skeleton only** | no surface at all: the bones are all that is left, to be put right without guessing |
 
 The button wears the current mode and cycles it on each click; its menu picks one directly. `Z`
 does the same from the keyboard — **and in four views, on the quarter under the
