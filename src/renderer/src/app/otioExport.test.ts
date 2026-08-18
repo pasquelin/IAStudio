@@ -159,7 +159,7 @@ describe('exportOtio', () => {
           kind: 'scene',
           workspace: '3d',
           title: 'Niveau 3',
-          path: 'documents/Niveau 3.scene',
+          path: 'documents/Niveau 3.gltf',
         },
       },
     )

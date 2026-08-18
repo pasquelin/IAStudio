@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DOCUMENT_VERSION, type DocumentFile } from '@shared/domain/document'
 import { bodyFormatOf, ENVELOPED } from './documentBody'
 
-const scene = bodyFormatOf('.scene')
+const scene = bodyFormatOf('.gltf')
 const otio = bodyFormatOf('.otio')
 
 const timeline = (studio: Record<string, unknown> = {}): string =>
@@ -28,11 +28,17 @@ describe('a document of the studio’s own spelling', () => {
     expect(scene.read(scene.write(document))).toEqual(document)
   })
 
-  // Anything the table does not name is the studio's own, which is what keeps a manifest, a
-  // `.scene` and a kind that does not exist yet reading the same way.
+  // Anything the table does not name is the studio's own, which is what keeps a manifest and a
+  // kind that does not exist yet reading the same way.
   it('is what an unlisted extension is spelt in', () => {
     expect(bodyFormatOf('.whatever')).toBe(ENVELOPED)
-    expect(scene).toBe(ENVELOPED)
+  })
+
+  // Two kinds wear `.gltf`, so the extension cannot say which — the envelope already carries the
+  // kind, and this is what lets it answer instead of the folder.
+  it('lets the file say which kind it is where one extension serves two', () => {
+    expect(scene.kindFromHead).toBe(true)
+    expect(ENVELOPED.kindFromHead).toBeUndefined()
   })
 })
 

@@ -88,7 +88,7 @@ function scene(id: string): DocumentDescriptor {
     kind: 'scene',
     title: 'Set dressing',
     workspace: '3d',
-    path: `documents/${id}.scene`,
+    path: `documents/${id}.gltf`,
   }
 }
 
@@ -827,7 +827,7 @@ describe('saveDocument', () => {
             kind: 'image',
             title: 'x',
             workspace: 'image',
-            path: 'documents/x.img',
+            path: 'documents/x.ora',
           },
         },
       })
@@ -1460,7 +1460,7 @@ describe('an image document', () => {
           kind: 'image',
           workspace: 'image',
           title: 'Poster',
-          path: 'documents/Poster.img',
+          path: 'documents/Poster.ora',
         },
       },
       activeId: documentId,
@@ -1505,7 +1505,7 @@ describe('an image document', () => {
           kind: 'image',
           workspace: 'image',
           title: 'Poster',
-          path: 'documents/Poster.img',
+          path: 'documents/Poster.ora',
         },
       },
       activeId: documentId,

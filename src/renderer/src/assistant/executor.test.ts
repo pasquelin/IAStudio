@@ -71,7 +71,7 @@ describe('opening a workspace', () => {
     kind: 'scene',
     workspace: '3d',
     title: 'Niveau',
-    path: 'documents/Niveau.scene',
+    path: 'documents/Niveau.gltf',
   }
 
   beforeEach(() => {

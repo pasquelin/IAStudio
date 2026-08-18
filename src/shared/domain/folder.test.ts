@@ -20,7 +20,7 @@ describe('what the explorer does not show', () => {
 
   // Everything else shows, including what the studio cannot open — that is the difference
   // between an explorer and a list of documents.
-  it.each(['assets', 'brief.pdf', 'a3f1.scene'])('shows %s', name => {
+  it.each(['assets', 'brief.pdf', 'a3f1.gltf'])('shows %s', name => {
     expect(isHiddenEntry(name)).toBe(false)
   })
 })
@@ -108,7 +108,7 @@ describe('what may be dragged where', () => {
    */
   it('lets an asset and a document leave the folders they were filed under', () => {
     expect(canMoveInto('assets/img/dusk.png', 'notes')).toBe(true)
-    expect(canMoveInto('documents/a3f1.scene', 'notes')).toBe(true)
+    expect(canMoveInto('documents/a3f1.gltf', 'notes')).toBe(true)
     expect(canMoveInto('assets/img', 'notes')).toBe(true)
     expect(canMoveInto('brief.pdf', 'Images')).toBe(true)
   })
@@ -120,7 +120,7 @@ describe('what may be dragged where', () => {
   })
 
   /**
-   * A document written as a folder is a DOCUMENT, whatever the disk calls it. `Planche.img` is a
+   * A document written as a folder is a DOCUMENT, whatever the disk calls it. `Planche.ora` is a
    * real directory, so every reader that asks the disk gets "folder" — and the drop was accepted.
    * The next ⌘S rebuilds that folder from the document's own parts: the file dropped in there is
    * DELETED by the save, and its catalogue row left pointing at nothing.
@@ -129,10 +129,10 @@ describe('what may be dragged where', () => {
    * own now.
    */
   it('refuses to drop anything into a document written as a folder', () => {
-    expect(canMoveInto('Images/tex.png', 'Planche.img')).toBe(false)
-    expect(canMoveInto('Images/tex.png', 'Repérages/Planche.img')).toBe(false)
+    expect(canMoveInto('Images/tex.png', 'Planche.ora')).toBe(false)
+    expect(canMoveInto('Images/tex.png', 'Repérages/Planche.ora')).toBe(false)
     // The document itself moves like any other file — it is only its INSIDE that is the studio's.
-    expect(canMoveInto('Planche.img', 'Repérages')).toBe(true)
+    expect(canMoveInto('Planche.ora', 'Repérages')).toBe(true)
   })
 
   it('refuses a folder dropped on itself', () => {

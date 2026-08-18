@@ -424,7 +424,7 @@ export function takenDocumentNames(
   },
   folder: string = DOCUMENTS_FOLDER,
 ): NamedDocument[] {
-  // One folder, never the project: two folders may each hold a `Niveau.scene` and the disk is
+  // One folder, never the project: two folders may each hold a `Niveau.gltf` and the disk is
   // happy with both, so a name taken elsewhere in the tree is not taken here. The default is
   // where a document nobody has placed goes, which is what every caller of this asks about.
   return [...state.stored, ...Object.values(state.documents)]

@@ -209,7 +209,7 @@ describe('opening an asset', () => {
       kind: 'image',
       workspace: 'image',
       title: 'dusk.png',
-      path: 'documents/dusk.png.img',
+      path: 'documents/dusk.png.ora',
       sourceAssetId: 'asset-sky',
     }
     useDocuments.setState({ documents: {}, stored: [saved], activeId: null })

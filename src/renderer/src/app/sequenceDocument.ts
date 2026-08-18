@@ -50,7 +50,15 @@ function sourceOf(clip: Clip, { assets, documents, linkOf }: Catalogue): OtioSou
 export function otioTimelineFor(
   state: SequenceState,
   documentId: string,
-  { linkOf, identifies = false }: { linkOf: (assetPath: string) => string; identifies?: boolean },
+  {
+    linkOf,
+    identifies = false,
+    studio,
+  }: {
+    linkOf: (assetPath: string) => string
+    identifies?: boolean
+    studio?: Record<string, unknown>
+  },
 ): unknown {
   const { documents } = useDocuments.getState()
   const catalogue: Catalogue = { assets: assetsById(useAssets.getState()), documents, linkOf }
@@ -58,6 +66,7 @@ export function otioTimelineFor(
   return otioTimelineOf(state, {
     name: documents[documentId]?.title ?? documentId,
     ...(identifies ? { documentId } : {}),
+    ...(studio ? { studio } : {}),
     sourceOf: clip => sourceOf(clip, catalogue),
   })
 }
@@ -69,10 +78,16 @@ function heldIn(documentId: string): readonly string[] {
   return folder === FOLDER_ROOT ? [] : folder.split('/')
 }
 
-export function sequencePayload(state: SequenceState, documentId: string): unknown {
+/** `studio` is what the WORKSPACE adds under the studio domain — see `OtioWriteOptions`. */
+export function sequencePayload(
+  state: SequenceState,
+  documentId: string,
+  studio?: Record<string, unknown>,
+): unknown {
   return otioTimelineFor(state, documentId, {
     linkOf: path => mediaLinkOf(path, heldIn(documentId)),
     identifies: true,
+    ...(studio ? { studio } : {}),
   })
 }
 

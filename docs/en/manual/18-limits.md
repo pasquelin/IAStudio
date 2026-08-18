@@ -31,12 +31,12 @@ All six types write into the project folder and open back exactly as they were.
 
 | Document | Extension | Saves? |
 |---|---|---|
-| 3D scene | `.scene` | **yes** |
-| Material | `.tex` | **yes** |
-| Layered image | `.img` | **yes** |
+| 3D scene | `.gltf` | **yes** |
+| Material | `.mtlx` | **yes** |
+| Layered image | `.ora` | **yes** |
 | Video sequence | `.otio` | **yes** |
-| Edited sound | `.aud` | **yes** |
-| Sky | `.sky` | **yes** |
+| Edited sound | `.otio` | **yes** |
+| Sky | `.gltf` | **yes** |
 
 **What does not save:**
 
@@ -138,7 +138,7 @@ The *undo stack* keeps the **last 100** actions. Beyond that, the oldest disappe
 `⇧⌘E` writes the **flattened** document as a `.png` wherever you point: one picture, the layers
 melted together. It is not a save — it is an output.
 
-To keep the layer stack, use `⌘S`: an image document **does save** now, as an `.img` folder. The
+To keep the layer stack, use `⌘S`: an image document **does save** now, as an `.ora` folder. The
 two gestures do different jobs and neither replaces the other.
 
 ---
@@ -254,7 +254,7 @@ come in and go out cleanly. That is exactly what this workspace does, and no mor
 
 ### The audio document does not keep the A/B listen
 
-The `.aud` file exists and reopens — the table at the top of this chapter is what counts. What it
+The `.otio` file exists and reopens — the table at the top of this chapter is what counts. What it
 holds is **the edit chain**, not the sound: the cuts, the fades, the gain, replayed over the
 source asset — **and the multitrack edit in the bottom strip**. What it does not keep is the
 **A/B listen**: a reopened document listens to the chain, never to the source.
@@ -304,7 +304,7 @@ same thing in three more gestures.
 
 ### The export comes out as PNG, so without the highlights
 
-A sky is now written into a `.sky` file — the exposure, the horizon rotation and the sun's position
+A sky is now written into a `.gltf` file — the exposure, the horizon rotation and the sun's position
 reopen exactly as they were. What the document does not keep: the view and the field of view, which
 say how you were looking at it rather than what it is.
 

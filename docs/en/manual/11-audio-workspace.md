@@ -296,7 +296,7 @@ come in and go out cleanly. That is exactly what this workspace does.
 The detail is in [What does not exist yet](18-limits.md).
 
 > **Two different gestures, and they are worth telling apart.** `⌘S` saves the **document** —
-> your cuts, your fades, your settings, **and the edit in the bottom strip** — into an `.aud` file
+> your cuts, your fades, your settings, **and the edit in the bottom strip** — into an `.otio` file
 > in the project, which reopens just as it was. One key for both halves: an edit built over a take
 > you never touched is work, and it is saved as such. **Apply** and **Save as new** write an **audio asset**, a sound usable elsewhere, with
 > the settings baked in.

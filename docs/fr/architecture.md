@@ -782,11 +782,11 @@ Une image locale est servie au renderer sous la forme `scenario://<id>`.
 Les **documents** sont des fichiers JSON rangés où l’utilisateur veut — `documents/` n’est que le
 dossier où atterrit une première sauvegarde, et `documents.list()` parcourt le projet entier pour
 les trouver. Un par document, **nommé d’après le
-document** — `Niveau.scene`, `Bande annonce.otio`. Son identifiant vit dans l’enveloppe (version 3
+document** — `Niveau.gltf`, `Bande annonce.otio`. Son identifiant vit dans l’enveloppe (version 3
 du format) et non dans le nom du fichier : c’est ce qui permet de renommer un document, y compris
 ouvert, sans qu’il devienne un autre document — la mise en page, la liste des récents et chaque
 onglet sont indexés par cet identifiant. Un fichier écrit avant cette version porte son
-identifiant comme nom (`<id>.scene`) et se lit exactement comme avant ; rien n’est réécrit à
+identifiant comme nom (`<id>.gltf`) et se lit exactement comme avant ; rien n’est réécrit à
 l’ouverture, le tampon vient au prochain enregistrement. Le dossier fait foi : un fichier dont l’en-tête annonce un
 type que son extension dément est refusé plutôt qu’ouvert dans le mauvais éditeur. L’écriture
 passe par un fichier de transit puis un `rename`, atomique dans un même dossier, de sorte qu’une

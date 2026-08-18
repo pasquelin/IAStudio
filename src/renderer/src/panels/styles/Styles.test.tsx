@@ -177,7 +177,7 @@ describe('the styles panel', () => {
           kind: 'texture',
           title: 'Roche',
           workspace: 'textures',
-          path: 'documents/Roche.tex',
+          path: 'documents/Roche.mtlx',
         },
       },
     })

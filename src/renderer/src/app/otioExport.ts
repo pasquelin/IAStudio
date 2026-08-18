@@ -1,4 +1,4 @@
-import { OTIO_EXTENSION } from '@shared/domain/otio'
+import { EXTENSIONS_BY_KIND } from '@shared/domain/document'
 import type { FolderExportRequest } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -46,7 +46,7 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
     files: [
       {
         name,
-        extension: OTIO_EXTENSION,
+        extension: EXTENSIONS_BY_KIND.sequence,
         bytes: new TextEncoder().encode(serializeSequencePayload(timeline)),
       },
     ],

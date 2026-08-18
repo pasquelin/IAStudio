@@ -29,7 +29,7 @@ export type EntryRowProps = {
  * One entry of the project folder.
  *
  * The name shown for a document is the document's, and this row used to argue the opposite: a
- * panel answering "what is in my project folder" showed `6d517ff3-1ff7-4c04….aud` where the tab
+ * panel answering "what is in my project folder" showed `6d517ff3-1ff7-4c04….otio` where the tab
  * above it said `ElevenLabs Sound Effects 2`, and nothing on screen said they were one thing.
  * The argument held only while the two could differ. They no longer can — the file is named
  * after the document — and what is left is one name in both places.

@@ -17,7 +17,7 @@ const scene: DocumentDescriptor = {
   kind: 'scene',
   title: 'Niveau',
   workspace: '3d',
-  path: 'documents/Niveau.scene',
+  path: 'documents/Niveau.gltf',
 }
 const sequence: DocumentDescriptor = {
   id: 'doc-2',

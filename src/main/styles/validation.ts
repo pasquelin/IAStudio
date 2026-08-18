@@ -21,7 +21,7 @@ export function parseStyleName(value: unknown): string {
  * Two reasons, and the second is the one that matters. Zod would check the shape; only
  * `readMaterial` holds each value inside what the value MEANS — a roughness of 12 parses as a
  * number and reaches the GGX term as a nonsense alpha. And a second description of fifteen
- * fields is a second thing to keep in step with the first: the file layer of a `.tex` already
+ * fields is a second thing to keep in step with the first: the file layer of a `.mtlx` already
  * had this exact problem and answered it here.
  */
 const storedStyle = z

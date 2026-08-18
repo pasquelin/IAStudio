@@ -64,7 +64,7 @@ describe('createDocumentIn', () => {
     await vi.waitFor(() => expect(created()).toHaveLength(1))
     expect(created()[0]?.title).toBe('Niveau')
     // The name is the file name: there is only ever one name to change afterwards.
-    expect(created()[0]?.path).toBe('documents/Niveau.scene')
+    expect(created()[0]?.path).toBe('documents/Niveau.gltf')
     expect(openDocument).toHaveBeenCalledWith(created()[0])
   })
 
@@ -74,7 +74,7 @@ describe('createDocumentIn', () => {
    */
   it('proposes the first free number, reading the folder afresh', async () => {
     installFakeBridge({
-      documents: { list: () => Promise.resolve([stored('Sans titre 1', 'Sans titre 1.scene')]) },
+      documents: { list: () => Promise.resolve([stored('Sans titre 1', 'Sans titre 1.gltf')]) },
     })
     const asked = vi.fn<DocumentNamer>(() => Promise.resolve(null))
     namedBy(asked)
@@ -88,9 +88,9 @@ describe('createDocumentIn', () => {
   // What the field refuses a typed name against: the folder and the tabs it cannot see on disk.
   it('hands the dialog every name already spoken for', async () => {
     installFakeBridge({
-      documents: { list: () => Promise.resolve([stored('Niveau', 'Niveau.scene')]) },
+      documents: { list: () => Promise.resolve([stored('Niveau', 'Niveau.gltf')]) },
     })
-    useDocuments.setState({ documents: { open: stored('Brouillon', 'Brouillon.scene') } })
+    useDocuments.setState({ documents: { open: stored('Brouillon', 'Brouillon.gltf') } })
     const asked = vi.fn<DocumentNamer>(() => Promise.resolve(null))
     namedBy(asked)
 
@@ -99,14 +99,14 @@ describe('createDocumentIn', () => {
     await vi.waitFor(() => expect(asked).toHaveBeenCalled())
     expect(
       asked.mock.calls[0]?.[0].takenIn('documents').map(document => document.fileName),
-    ).toEqual(expect.arrayContaining(['Niveau.scene', 'Brouillon.scene']))
+    ).toEqual(expect.arrayContaining(['Niveau.gltf', 'Brouillon.gltf']))
   })
 
-  // A name is taken in ONE folder: two folders may each hold a `Niveau.scene`, and the disk is
+  // A name is taken in ONE folder: two folders may each hold a `Niveau.gltf`, and the disk is
   // happy with both.
   it('answers what another folder holds, not what this one does', async () => {
     installFakeBridge({
-      documents: { list: () => Promise.resolve([stored('Niveau', 'Niveau.scene')]) },
+      documents: { list: () => Promise.resolve([stored('Niveau', 'Niveau.gltf')]) },
     })
     const asked = vi.fn<DocumentNamer>(() => Promise.resolve(null))
     namedBy(asked)
@@ -162,7 +162,7 @@ describe('createDocumentIn', () => {
     createDocumentIn('3d')
 
     await vi.waitFor(() => expect(created()).toHaveLength(1))
-    expect(created()[0]?.path).toBe('Images/Croquis/Niveau.scene')
+    expect(created()[0]?.path).toBe('Images/Croquis/Niveau.gltf')
   })
 
   it('makes nothing when the creation is called off', async () => {
@@ -231,13 +231,13 @@ describe('createDocumentIn', () => {
       const made = await createDocumentIn('3d', { title: 'Niveau', folder: 'Repérages' })
 
       expect(asked).not.toHaveBeenCalled()
-      expect(made).toMatchObject({ title: 'Niveau', path: 'Repérages/Niveau.scene' })
+      expect(made).toMatchObject({ title: 'Niveau', path: 'Repérages/Niveau.gltf' })
     })
 
     it('files it in the documents folder when no folder is named', async () => {
       const made = await createDocumentIn('3d', { title: 'Niveau' })
 
-      expect(made?.path).toBe('documents/Niveau.scene')
+      expect(made?.path).toBe('documents/Niveau.gltf')
     })
 
     it('still refuses with no project open', async () => {

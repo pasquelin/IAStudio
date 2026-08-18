@@ -12,11 +12,12 @@ const NOW = '2026-08-16T10:00:00.000Z'
  * which is what the format's own writer would make of it.
  */
 const bodyOf = (kind: DocumentKind): string =>
-  kind === 'sequence'
+  kind === 'sequence' || kind === 'audio'
     ? JSON.stringify(
         {
           OTIO_SCHEMA: 'Timeline.1',
           name: kind,
+          metadata: { scenario: { documentKind: kind } },
           tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
         },
         null,
@@ -61,7 +62,7 @@ describe('the project fixture', () => {
     })
 
     const whole = await snapshotDocuments(documents)
-    await rm(join(root, 'documents', 'Cover.img', 'layer-1.png'))
+    await rm(join(root, 'documents', 'Cover.ora', 'layer-1.png'))
 
     const stripped = await snapshotDocuments(documentFilesAt(root, NOW))
 
@@ -76,8 +77,8 @@ describe('the project fixture', () => {
    */
   it('describes the same project when it is read again from scratch', async () => {
     const { root, documents } = await withTempProject()
-    await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":[]}' })
-    await documents.write('doc-2', 'audio', { title: 'Take', content: '{"chain":[]}' })
+    await documents.write('doc-1', 'scene', { title: 'Level', content: bodyOf('scene') })
+    await documents.write('doc-2', 'audio', { title: 'Take', content: bodyOf('audio') })
 
     const first = await snapshotDocuments(documents)
     const second = await snapshotDocuments(documentFilesAt(root, NOW))

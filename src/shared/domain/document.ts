@@ -1,4 +1,3 @@
-import { OTIO_EXTENSION } from './otio'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
 /**
@@ -33,11 +32,11 @@ export type DocumentDescriptor = {
   workspace: WorkspaceId
   /**
    * Where this document was read from, relative to the project folder, extension included —
-   * `Repérages/Niveau.scene`. The same spelling every other path on this boundary uses, `/` on
+   * `Repérages/Niveau.gltf`. The same spelling every other path on this boundary uses, `/` on
    * every platform.
    *
    * The whole path and not the entry alone, since a document may sit anywhere in the project:
-   * two folders may each hold a `Niveau.scene`, and a listing joined on the name would hand the
+   * two folders may each hold a `Niveau.gltf`, and a listing joined on the name would hand the
    * explorer one document's descriptor for the other one's row.
    *
    * Carried because the id no longer spells it: whoever joins a folder listing to a document has
@@ -105,12 +104,16 @@ export const DOCUMENTS_FOLDER = 'documents'
  * at the IPC boundary without a word.
  */
 export const EXTENSIONS_BY_KIND: Record<DocumentKind, string> = {
-  image: '.img',
-  scene: '.scene',
-  sequence: OTIO_EXTENSION,
-  audio: '.aud',
-  skybox: '.sky',
-  texture: '.tex',
+  image: '.ora',
+  scene: '.gltf',
+  sequence: '.otio',
+  // The same montage as a sequence, so the same standard file. Which workspace wrote it is read
+  // out of the file's own studio metadata — see `documentBody.ts`, the extension cannot say.
+  audio: '.otio',
+  // Held in the same container as the scene, for the same reason: a sky is an environment, and
+  // glTF is what carries one. The file says which of the two it is.
+  skybox: '.gltf',
+  texture: '.mtlx',
 }
 
 /**
@@ -132,6 +135,10 @@ export function documentPath(id: string, kind: DocumentKind): string {
  * extension is all a directory entry carries.
  *
  * `null` for anything else in there — a stray note, an export, a staging copy.
+ *
+ * **Two pairs share a spelling** — the two montages under `.otio`, the scene and the sky under
+ * `.gltf` — so this answers the first of each and the FILE settles it: the format declares
+ * `kindFromHead`, and `documentBody.ts` reads which kind out of what the file itself carries.
  *
  * Case-sensitive on purpose: `documentPath` writes the extension in lower case, so a `.IMG`
  * accepted here would be listed under a name that `read` then fails to find on a case-sensitive

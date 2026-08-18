@@ -21,7 +21,7 @@ function openTexture(): void {
         kind: 'texture',
         title: 'Roche',
         workspace: 'textures',
-        path: 'documents/Roche.tex',
+        path: 'documents/Roche.mtlx',
       },
     },
   })

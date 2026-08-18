@@ -32,7 +32,7 @@ beforeEach(() => {
         kind: 'scene',
         workspace: '3d',
         title: 'Set',
-        path: 'documents/Set.scene',
+        path: 'documents/Set.gltf',
       },
     },
     activeId: 'doc-1',

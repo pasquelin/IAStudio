@@ -70,18 +70,36 @@ describe('workspaceForKind', () => {
 })
 
 describe('kindForExtension', () => {
-  it('reads back the extension every kind is held under', () => {
+  it('reads back a kind for the extension every kind is held under', () => {
     for (const kind of DOCUMENT_KINDS) {
-      expect(kindForExtension(EXTENSIONS_BY_KIND[kind])).toBe(kind)
+      expect(kindForExtension(EXTENSIONS_BY_KIND[kind])).not.toBeNull()
     }
   })
 
-  // A montage IS its OpenTimelineIO file: the studio's own spelling is not written any more, and
-  // it is not READ any more either — a `.seq` left in a folder is not a document of this build.
-  it('holds a montage in the open format, and in nothing else', () => {
-    expect(EXTENSIONS_BY_KIND.sequence).toBe('.otio')
+  // Where two kinds share a spelling this answers the first of them, and the FILE settles it —
+  // `documentBody.ts` reads which kind out of what the file itself carries.
+  it('answers the first kind of a spelling two of them share', () => {
     expect(kindForExtension('.otio')).toBe('sequence')
-    expect(kindForExtension('.seq')).toBeNull()
+    expect(kindForExtension('.gltf')).toBe('scene')
+  })
+
+  /**
+   * Every kind is held in a format other applications already read. The studio's own spellings
+   * are not written any more, and they are not READ any more either: one left in a folder is not
+   * a document of this build.
+   */
+  it('holds every kind in an open format, and reads no spelling of the studio’s own', () => {
+    expect([...DOCUMENT_KINDS].map(kind => EXTENSIONS_BY_KIND[kind])).toEqual([
+      '.ora',
+      '.gltf',
+      '.otio',
+      '.otio',
+      '.gltf',
+      '.mtlx',
+    ])
+    for (const gone of ['.img', '.scene', '.seq', '.aud', '.sky', '.tex']) {
+      expect(kindForExtension(gone)).toBeNull()
+    }
   })
 
   // A project folder is the user's own: it holds notes, exports, and whatever else was dropped
@@ -118,14 +136,9 @@ describe('isDocumentKind', () => {
 describe('documentPath', () => {
   // Relative, and under the folder the project creates: a project folder can be moved.
   it('names the file after the kind, so a project folder reads by eye', () => {
-    expect(documentPath('a3f1', 'scene')).toBe('documents/a3f1.scene')
-    expect(documentPath('a3f1', 'image')).toBe('documents/a3f1.img')
+    expect(documentPath('a3f1', 'scene')).toBe('documents/a3f1.gltf')
+    expect(documentPath('a3f1', 'image')).toBe('documents/a3f1.ora')
     expect(documentPath('a3f1', 'sequence')).toBe('documents/a3f1.otio')
-  })
-
-  it('gives every kind an extension of its own', () => {
-    const paths = DOCUMENT_KINDS.map(kind => documentPath('id', kind))
-    expect(new Set(paths).size).toBe(DOCUMENT_KINDS.length)
   })
 
   // The compiler keeps `EXTENSIONS_BY_KIND` complete; nothing keeps `DOCUMENT_KINDS` complete,
@@ -134,11 +147,18 @@ describe('documentPath', () => {
     expect([...DOCUMENT_KINDS].sort()).toEqual(Object.keys(EXTENSIONS_BY_KIND).sort())
   })
 
-  // Two kinds sharing a spelling would send one to the other's editor, and `kindForExtension`
-  // answers whichever came first in the list without a word.
-  it('gives no extension to two kinds', () => {
-    const spellings = DOCUMENT_KINDS.map(kind => EXTENSIONS_BY_KIND[kind])
-    expect(new Set(spellings).size).toBe(spellings.length)
+  /**
+   * A kind sharing a spelling is sent to the other's editor unless the FILE says which it is —
+   * `kindForExtension` answers whichever came first, and only `kindFromHead` corrects it. So the
+   * pairs are listed here rather than counted: adding a third to one is a defect, not a detail.
+   */
+  it('shares a spelling only between the two montages and the two environments', () => {
+    const shared = DOCUMENT_KINDS.filter(
+      kind =>
+        DOCUMENT_KINDS.filter(other => EXTENSIONS_BY_KIND[other] === EXTENSIONS_BY_KIND[kind])
+          .length > 1,
+    )
+    expect([...shared].sort()).toEqual(['audio', 'scene', 'sequence', 'skybox'])
   })
 })
 

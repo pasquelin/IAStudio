@@ -32,7 +32,7 @@ export const DOCUMENT_NAME_FAILURES: readonly DocumentNameFailure[] = [
 /** What a folder already holds, as the check needs to see it. */
 export type NamedDocument = {
   id: string
-  /** The directory entry, extension included — `Niveau.scene`. */
+  /** The directory entry, extension included — `Niveau.gltf`. */
   fileName: string
 }
 
@@ -46,7 +46,7 @@ export function documentFileName(name: string, kind: DocumentKind): string {
  *
  * `selfId` exempts the document being renamed, so keeping its own name is not a duplicate.
  *
- * Duplicates are read on the FILE name rather than the title: `Niveau.scene` and `Niveau.img`
+ * Duplicates are read on the FILE name rather than the title: `Niveau.gltf` and `Niveau.ora`
  * are two files and may coexist, which is what the disk says and what the space glyph already
  * tells apart on screen.
  */

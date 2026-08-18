@@ -10,7 +10,7 @@
 export const FILE_NAME_MAX_LENGTH = 80
 
 /**
- * Names Windows refuses outright, whatever the extension: `CON.scene` is as refused as `CON`.
+ * Names Windows refuses outright, whatever the extension: `CON.gltf` is as refused as `CON`.
  * They are device names, not files, and a project holding one cannot be opened there at all —
  * so a title typed on a Mac would travel to a machine that cannot read the document.
  */

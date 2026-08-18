@@ -5,7 +5,7 @@ import { FILE_DOMAINS, natureOf, opensInStudio } from './fileRole'
 describe('natureOf', () => {
   /**
    * The decision the whole table rests on: the folder no longer votes. There is no such thing as
-   * a texture file — there are PNGs, and a `.tex` document that gives some of them a part to
+   * a texture file — there are PNGs, and a material document that gives some of them a part to
    * play. `Textures/` says nothing, and neither does a `_normal` suffix: a normal map and an
    * albedo are both PNGs, and guessing would be right often and wrong silently.
    */
@@ -19,11 +19,11 @@ describe('natureOf', () => {
   })
 
   it('files a document as an edit, in the domain its editor works in', () => {
-    expect(natureOf('Level.scene')).toEqual({ domain: 'mesh', role: 'edit' })
-    expect(natureOf('Cover.img')).toEqual({ domain: 'image', role: 'edit' })
+    expect(natureOf('Level.gltf')).toEqual({ domain: 'mesh', role: 'edit' })
+    expect(natureOf('Cover.ora')).toEqual({ domain: 'image', role: 'edit' })
     expect(natureOf('Montage.otio')).toEqual({ domain: 'video', role: 'edit' })
-    expect(natureOf('Brick.tex')).toEqual({ domain: 'texture', role: 'edit' })
-    expect(natureOf('Dusk.sky')).toEqual({ domain: 'skybox', role: 'edit' })
+    expect(natureOf('Brick.mtlx')).toEqual({ domain: 'texture', role: 'edit' })
+    expect(natureOf('Dusk.mtlx')).toEqual({ domain: 'texture', role: 'edit' })
   })
 
   // A project folder is the user's own: a `.pdf` of notes beside the rushes is shown and left
@@ -66,8 +66,8 @@ describe('opensInStudio', () => {
   })
 
   it('always opens a document of the studio', () => {
-    expect(opensInStudio('Planche.img')).toBe(true)
-    expect(opensInStudio('Level.scene')).toBe(true)
+    expect(opensInStudio('Planche.ora')).toBe(true)
+    expect(opensInStudio('Level.gltf')).toBe(true)
   })
 
   it('leaves a file it has no editor for to the system', () => {
@@ -95,8 +95,17 @@ describe('opensInStudio', () => {
 
   it('takes the one mesh a loader here reads, and no other', () => {
     expect(opensInStudio('chair.obj')).toBe(false)
-    expect(opensInStudio('chair.gltf')).toBe(false)
     expect(natureOf('chair.obj').domain).toBe('mesh')
+  })
+
+  /**
+   * The cost of a document being held in the same file type as an asset, written down rather than
+   * hidden: a plain glTF mesh reads as a scene document, because the NAME is all this has. Only
+   * the file's own content could tell them apart, and no caller of `natureOf` holds it.
+   */
+  it('cannot tell a plain glTF mesh from a scene document, the name being all it has', () => {
+    expect(natureOf('chair.gltf')).toEqual({ domain: 'mesh', role: 'edit' })
+    expect(opensInStudio('chair.gltf')).toBe(true)
   })
 
   it('folds the case, as the source table it reads does', () => {

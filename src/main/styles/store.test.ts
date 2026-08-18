@@ -87,7 +87,7 @@ describe('the styles file', () => {
 
   /**
    * The bound belongs to the value, not to the slider: a `roughness` of 12 reaches the GGX term
-   * as a nonsense alpha. `readMaterial` already held a hand-edited `.tex` to the same rule.
+   * as a nonsense alpha. `readMaterial` already held a hand-edited `.mtlx` to the same rule.
    */
   it('holds a hand-edited value inside what the value means', async () => {
     // Both bounds differ from the default they would fall back to, so a style read as "nothing

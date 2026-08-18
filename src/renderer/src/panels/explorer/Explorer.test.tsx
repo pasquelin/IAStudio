@@ -34,7 +34,7 @@ const scene: DocumentDescriptor = {
   kind: 'scene',
   title: 'Niveau',
   workspace: '3d',
-  path: 'a3f1.scene',
+  path: 'a3f1.gltf',
 }
 
 /** Written in the open format, and a document all the same — whoever wrote the file. */
@@ -52,7 +52,7 @@ const picture: DocumentDescriptor = {
   kind: 'image',
   title: 'Planche',
   workspace: 'image',
-  path: 'a3f1.img',
+  path: 'a3f1.ora',
 }
 
 const folder = (name: string, at = ''): FolderEntry => ({
@@ -117,7 +117,7 @@ function install(
     const known = catalogued.find(asset => asset.path === relative)
     if (known) return Promise.resolve(known)
 
-    // A document is never adopted — it is opened, or it is nothing: a `.scene` the project has
+    // A document is never adopted — it is opened, or it is nothing: a `.gltf` the project has
     // no envelope for is a file like any other. `adoptFile` refuses it for the same reason.
     const { domain, role } = natureOf(relative)
     if (role === 'edit' || domain === 'other' || !opensInStudio(relative)) {
@@ -356,7 +356,7 @@ describe('the project explorer', () => {
      */
     it('measures its rows as a control, not as a stack of two lines', async () => {
       withProject()
-      install({ '': [file('a3f1.scene')] }, [scene])
+      install({ '': [file('a3f1.gltf')] }, [scene])
       // Declared, so the assertion answers to the STYLESHEET rather than to the fallback the
       // suite would otherwise compare with itself. Compact values, where the overflow bit.
       declareGauge('--sc-control', '24px')
@@ -446,8 +446,8 @@ describe('the project explorer', () => {
   describe('opening what a row names', () => {
     it('opens a document of the project, tab or no tab', async () => {
       withProject()
-      const filed = { ...scene, path: 'documents/a3f1.scene' }
-      install({ '': [folder('documents')], documents: [file('a3f1.scene', 'documents')] }, [filed])
+      const filed = { ...scene, path: 'documents/a3f1.gltf' }
+      install({ '': [folder('documents')], documents: [file('a3f1.gltf', 'documents')] }, [filed])
 
       render(<Explorer />)
       await userEvent.dblClick(await screen.findByText('documents'))
@@ -458,18 +458,18 @@ describe('the project explorer', () => {
 
     /**
      * Rows are joined to descriptors by PATH, not by name. Two folders may each hold a
-     * `Niveau.scene`, and joined on the name one document's descriptor was handed to the other
+     * `Niveau.gltf`, and joined on the name one document's descriptor was handed to the other
      * one's row — the wrong title on screen, and a double-click opening the wrong document.
      */
     it('tells two documents of the same name in two folders apart', async () => {
       withProject()
-      const here = { ...scene, id: 'here', title: 'Ici', path: 'Acte 1/a3f1.scene' }
-      const there = { ...scene, id: 'there', title: 'Là', path: 'Acte 2/a3f1.scene' }
+      const here = { ...scene, id: 'here', title: 'Ici', path: 'Acte 1/a3f1.gltf' }
+      const there = { ...scene, id: 'there', title: 'Là', path: 'Acte 2/a3f1.gltf' }
       install(
         {
           '': [folder('Acte 1'), folder('Acte 2')],
-          'Acte 1': [file('a3f1.scene', 'Acte 1')],
-          'Acte 2': [file('a3f1.scene', 'Acte 2')],
+          'Acte 1': [file('a3f1.gltf', 'Acte 1')],
+          'Acte 2': [file('a3f1.gltf', 'Acte 2')],
         },
         [here, there],
       )
@@ -482,14 +482,14 @@ describe('the project explorer', () => {
     })
 
     /**
-     * An image document IS a directory — `<id>.img/` holding its manifest and its parts — and
+     * An image document IS a directory — `<id>.ora/` holding its manifest and its parts — and
      * the folder reader can only see the directory. Taken for an ordinary folder, it folded
      * open on the studio's own files instead of opening, wore a folder glyph where every other
      * document wears its space, and could be renamed while a tab held it.
      */
     it('opens an image document rather than folding it open', async () => {
       withProject()
-      install({ '': [folder('a3f1.img')] }, [picture])
+      install({ '': [folder('a3f1.ora')] }, [picture])
 
       render(<Explorer />)
       await userEvent.dblClick(await screen.findByText('Planche'))
@@ -635,17 +635,17 @@ describe('the project explorer', () => {
       expect(openAsset).not.toHaveBeenCalled()
     })
 
-    // A `.scene` whose descriptor the project does not list is a file like any other: the
+    // A `.gltf` whose descriptor the project does not list is a file like any other: the
     // studio cannot open what it has no envelope for, and the system might.
     it('does not take a document extension for a document', async () => {
       withProject()
-      const { openFile } = install({ '': [file('stray.scene')] })
+      const { openFile } = install({ '': [file('stray.gltf')] })
 
       render(<Explorer />)
-      await userEvent.dblClick(await screen.findByText('stray.scene'))
+      await userEvent.dblClick(await screen.findByText('stray.gltf'))
 
       expect(openDocument).not.toHaveBeenCalled()
-      expect(openFile).toHaveBeenCalledWith('stray.scene')
+      expect(openFile).toHaveBeenCalledWith('stray.gltf')
     })
 
     // `README` has no extension at all, and `.gitignore` is all extension. Neither is a
@@ -700,7 +700,7 @@ describe('the project explorer', () => {
     it('marks the documents a tab is showing, and them alone', async () => {
       withProject()
       useDocuments.setState({ documents: { a3f1: scene } })
-      install({ '': [file('a3f1.scene'), file('other.scene')] }, [scene])
+      install({ '': [file('a3f1.gltf'), file('other.gltf')] }, [scene])
 
       render(<Explorer />)
       await screen.findByText('Niveau')
@@ -708,10 +708,10 @@ describe('the project explorer', () => {
       const marked = (name: string): Element | null | undefined =>
         screen.getByText(name).closest('[role="treeitem"]')?.querySelector('.text-accent-ink')
 
-      // `Niveau` is the document's name; `other.scene` is a file no descriptor came back for,
+      // `Niveau` is the document's name; `other.gltf` is a file no descriptor came back for,
       // so it keeps the name the folder gives it.
       expect(marked('Niveau')).toBeInTheDocument()
-      expect(marked('other.scene')).not.toBeInTheDocument()
+      expect(marked('other.gltf')).not.toBeInTheDocument()
     })
   })
 
@@ -746,7 +746,7 @@ describe('the project explorer', () => {
 
     /**
      * The third thing a settled batch does, and the only conditional one. The panel that lists
-     * documents walks the disk rather than a row, so a `.scene` sent to the trash by another
+     * documents walks the disk rather than a row, so a `.gltf` sent to the trash by another
      * window stays listed until this asks again — and a batch of rushes must NOT pay for it.
      *
      * Counts calls, so it rests on `relist` opening a listing rather than joining one in flight.
@@ -780,7 +780,7 @@ describe('the project explorer', () => {
       })
       expect(listDocuments).toHaveBeenCalledTimes(1)
 
-      const trashed = { from: 'Act 1/opening.scene', to: '' }
+      const trashed = { from: 'Act 1/opening.gltf', to: '' }
       await act(async () => {
         announce({ done: [trashed], refused: [], batch: 'batch-2' })
       })
@@ -1230,7 +1230,7 @@ describe('the explorer menu', () => {
   it('renames a document a tab is holding', async () => {
     withProject()
     useDocuments.setState({ documents: { a3f1: scene } })
-    install({ '': [file('a3f1.scene')] }, [scene])
+    install({ '': [file('a3f1.gltf')] }, [scene])
 
     render(<Explorer />)
     await open('Niveau')
@@ -1240,10 +1240,10 @@ describe('the explorer menu', () => {
 
   it('renames a document through its own channel, never as a plain file', async () => {
     withProject()
-    const { renameFile } = install({ '': [file('a3f1.scene')] }, [scene])
+    const { renameFile } = install({ '': [file('a3f1.gltf')] }, [scene])
     const rename = vi.fn(() => Promise.resolve({ ...scene, title: 'Décor' }))
     installFakeBridge({
-      project: { listFolder: () => Promise.resolve([file('a3f1.scene')]) },
+      project: { listFolder: () => Promise.resolve([file('a3f1.gltf')]) },
       documents: { list: () => Promise.resolve([scene]), rename },
       menu: menu.bridge,
     })
@@ -1377,7 +1377,7 @@ describe('the explorer menu', () => {
    */
   it('leaves the row alone while its name is being typed in', async () => {
     withProject()
-    install({ '': [file('a3f1.scene')] }, [scene])
+    install({ '': [file('a3f1.gltf')] }, [scene])
     menu.picks('Renommer')
 
     render(<Explorer />)
@@ -1534,7 +1534,7 @@ describe('the explorer read by domain', () => {
   })
 
   /**
-   * A `.scene` and a `.glb` are both filed under Maillage, and one of them opens in the studio
+   * A `.gltf` and a `.glb` are both filed under Maillage, and one of them opens in the studio
    * where the other is a source it reads. The row already says which: a document is drawn by its
    * TITLE and wears its space's glyph, off the same table the rail and the asset menu read,
    * where a plain file keeps its file name and the generic one. That is the distinction, drawn
@@ -1544,9 +1544,9 @@ describe('the explorer read by domain', () => {
   it('tells a document from a source filed under the same domain', async () => {
     withProject()
     byDomain()
-    const filed = { ...scene, path: 'Acte 1/a3f1.scene' }
+    const filed = { ...scene, path: 'Acte 1/a3f1.gltf' }
     install({ '': [folder('Acte 1')] }, [filed], [], {}, [
-      file('a3f1.scene', 'Acte 1'),
+      file('a3f1.gltf', 'Acte 1'),
       file('chaise.glb', 'Acte 1'),
     ])
 
@@ -1555,7 +1555,7 @@ describe('the explorer read by domain', () => {
     // The document by its title, the source by its file name.
     expect(await screen.findByText('Niveau')).toBeInTheDocument()
     expect(screen.getByText('chaise.glb')).toBeInTheDocument()
-    expect(screen.queryByText('a3f1.scene')).not.toBeInTheDocument()
+    expect(screen.queryByText('a3f1.gltf')).not.toBeInTheDocument()
   })
 
   /** A domain names files rather than holding a place: nothing can be selected or written there. */
@@ -1722,7 +1722,7 @@ describe('the project explorer, as a grid', () => {
   it('leaves a document its own glyph rather than asking for a preview', async () => {
     withProject()
     showGrid()
-    install({ '': [folder('a3f1.img')] }, [picture])
+    install({ '': [folder('a3f1.ora')] }, [picture])
 
     render(<Explorer />)
 

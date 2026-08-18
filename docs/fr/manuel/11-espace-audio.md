@@ -305,7 +305,7 @@ faire entrer et sortir proprement. C’est exactement ce que fait cet espace.
 Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 
 > **Deux gestes différents, et il faut les distinguer.** `⌘S` enregistre le **document** — vos
-> coupes, vos fondus, vos réglages, **et le montage de la bande basse** — dans un fichier `.aud`
+> coupes, vos fondus, vos réglages, **et le montage de la bande basse** — dans un fichier `.otio`
 > du projet, qui se rouvre tel quel. Une seule touche pour les deux moitiés : un montage bâti
 > sur une prise qu’on n’a pas touchée est du travail, et il est enregistré comme tel.
 > **Appliquer** et **Enregistrer comme nouveau** écrivent un **asset audio**, c’est-à-dire un son

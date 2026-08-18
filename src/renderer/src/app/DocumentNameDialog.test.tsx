@@ -8,7 +8,7 @@ import {
   type NamedDocumentPlace,
 } from './documentName'
 
-const HELD = [{ id: 'held', fileName: 'Niveau.scene' }]
+const HELD = [{ id: 'held', fileName: 'Niveau.gltf' }]
 
 /**
  * Asking the way `createDocumentIn` asks — through the module registry rather than through a
@@ -106,7 +106,7 @@ describe('DocumentNameDialog', () => {
     )
   })
 
-  // The same file name in another space is another document — `Niveau.scene` and `Niveau.img`
+  // The same file name in another space is another document — `Niveau.gltf` and `Niveau.ora`
   // coexist on disk, and the space glyph already tells them apart on screen.
   it('takes a name held by a document of another kind', async () => {
     render(<DocumentNameDialog />)

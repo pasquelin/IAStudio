@@ -17,8 +17,10 @@
  */
 import { isRecord } from '../guards'
 
-/** The extension, and the domain key metadata travels under — the spec asks for a unique one. */
-export const OTIO_EXTENSION = '.otio'
+/**
+ * The domain key metadata travels under — the spec asks for a unique one. The extension is not
+ * spelt here: `EXTENSIONS_BY_KIND` is the one table that names a document's file.
+ */
 export const OTIO_STUDIO_KEY = 'scenario'
 
 /**
@@ -27,6 +29,13 @@ export const OTIO_STUDIO_KEY = 'scenario'
  * rather than on either side, where the two spellings would be free to drift apart in silence.
  */
 export const OTIO_DOCUMENT_ID = 'documentId'
+
+/**
+ * Which kind of document the timeline is, the video montage and the audio one being the same
+ * standard file. Absent — a timeline from Resolve, or one of ours written before this — means the
+ * video montage, which is the only answer a file that says nothing can be given.
+ */
+export const OTIO_DOCUMENT_KIND = 'documentKind'
 
 /**
  * Whether a payload is a timeline of this format. Spelt here for the reason `OTIO_DOCUMENT_ID`
@@ -68,7 +77,7 @@ export type OtioExternalReference = {
 /**
  * A clip whose media is not a file. The honest encoding for a live 3D scene: the cut survives
  * whole elsewhere — right place, right length — and only the picture is missing, which is what
- * `MissingReference` means. Naming a `.scene` in an `ExternalReference` would instead hand
+ * `MissingReference` means. Naming a scene document in an `ExternalReference` would instead hand
  * another application a file it would try to decode.
  */
 export type OtioMissingReference = {

@@ -364,7 +364,7 @@ on the way out; rulers, guides and marching ants are not in it.
 > for a name: the copy is called *"(the name) copy"*, and the asset you had open stays as your
 > last `⌘S` left it.
 >
-> An image is written as a **folder**, `documents/<id>.img/`: one `document.json` for the stack,
+> An image is written as a **folder**, `documents/<id>.ora/`: one `document.json` for the stack,
 > and one `.png` per layer — plus a second for its mask, where there is one. That is deliberately
 > inspectable: you can open the folder and look at the layers one by one.
 >

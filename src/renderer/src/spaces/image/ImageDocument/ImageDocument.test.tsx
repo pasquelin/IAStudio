@@ -507,7 +507,7 @@ describe('exporting the canvas', () => {
           kind: 'image',
           workspace: 'image',
           title: 'Poster',
-          path: 'documents/Poster.img',
+          path: 'documents/Poster.ora',
         },
       },
       activeId: 'doc-1',

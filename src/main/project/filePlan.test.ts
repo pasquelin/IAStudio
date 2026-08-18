@@ -77,13 +77,13 @@ describe('planning a batch of file gestures', () => {
    * document leave the folders they were filed under. Their role is read off the extension and
    * the catalogue row, and the row follows the file — the folder never said what either was.
    */
-  it.each(['assets/img/dusk.png', 'documents/a3f1.scene', 'assets'])(
+  it.each(['assets/img/dusk.png', 'documents/a3f1.gltf', 'assets'])(
     'lets %s leave the folder the studio used to hold',
     path => {
       const held = {
         '': ['assets', 'documents', 'refs'],
         'assets/img': ['dusk.png'],
-        documents: ['a3f1.scene'],
+        documents: ['a3f1.gltf'],
         refs: [],
       }
       const { acts, refused } = plan({ op: 'move', paths: [path], folder: 'refs' }, held)

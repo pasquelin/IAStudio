@@ -78,12 +78,12 @@ There are seven kinds of document, one per workspace:
 
 | Workspace | Document | File extension |
 |---|---|---|
-| Image | a layered image | `.img` |
-| 3D | a scene | `.scene` |
+| Image | a layered image | `.ora` |
+| 3D | a scene | `.gltf` |
 | Video | a sequence | `.otio` |
-| Audio | a sound being edited | `.aud` |
-| Skyboxes | a sky | `.sky` |
-| Textures | a material | `.tex` |
+| Audio | a sound being edited | `.otio` |
+| Skyboxes | a sky | `.gltf` |
+| Textures | a material | `.mtlx` |
 
 ### 4. A **model**
 

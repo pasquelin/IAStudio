@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { OTIO_EXTENSION } from '@shared/domain/otio'
+import { EXTENSIONS_BY_KIND } from '@shared/domain/document'
 import { CHANNELS, type MontageExportRequest } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { pathSegment } from '@main/validation'
@@ -27,6 +27,6 @@ export function registerMontageHandlers({ pickSavePath }: MontageHandlerDeps): v
   handle(CHANNELS.montageExport, async (_event, request) => {
     const { name, data }: MontageExportRequest = montageExport.parse(request)
 
-    return writePickedFile(() => pickSavePath(name, OTIO_EXTENSION), data)
+    return writePickedFile(() => pickSavePath(name, EXTENSIONS_BY_KIND.sequence), data)
   })
 }

@@ -376,7 +376,7 @@ composités à l’export ; les règles, les repères et les pointillés de sél
 > dialogue ne demande de nom : la copie s’appelle *« (le nom) copie »*, et l’asset que vous aviez
 > ouvert reste tel qu’il était au dernier `⌘S`.
 >
-> L’image s’écrit en **dossier** `documents/<id>.img/` : un `document.json` pour la pile, et un
+> L’image s’écrit en **dossier** `documents/<id>.ora/` : un `document.json` pour la pile, et un
 > `.png` par calque — plus un second pour son masque, s’il en a un. C’est volontairement
 > inspectable : vous pouvez ouvrir le dossier et regarder les calques un par un.
 >

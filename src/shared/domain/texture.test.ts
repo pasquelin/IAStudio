@@ -11,7 +11,7 @@ import {
 
 describe('reading a material back', () => {
   /**
-   * A hand-edited `.tex` is user territory. `rgb(255,0,0)` renders and normalises — refused for
+   * A hand-edited `.mtlx` is user territory. `rgb(255,0,0)` renders and normalises — refused for
    * one spelling, not for a bug — while `banana` is the half three.js refuses, where the material
    * keeps whatever colour it already carried and nothing on screen reports it.
    *

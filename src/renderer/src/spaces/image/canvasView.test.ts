@@ -20,7 +20,7 @@ function openImage(): void {
         kind: 'image',
         workspace: 'image',
         title: 'Sans titre',
-        path: 'documents/Sans titre.img',
+        path: 'documents/Sans titre.ora',
       },
     },
   })

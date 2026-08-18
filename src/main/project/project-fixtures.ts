@@ -93,7 +93,7 @@ export type DocumentSnapshot = {
    * The files beside the content — one PNG per layer of an image document.
    *
    * Without them this tool would miss the very loss it exists to catch: a migration that dropped
-   * every layer of an `.img` while keeping its manifest would leave `content` untouched and the
+   * every layer of an `.ora` while keeping its manifest would leave `content` untouched and the
    * snapshot identical.
    */
   parts: readonly { name: string; data: string }[]

@@ -202,14 +202,14 @@ wherever you filed it — under an extension that says what it is:
 
 | Document type | Extension | Workspace |
 |---|---|---|
-| layered image | `.img` | Image |
-| 3D scene | `.scene` | 3D |
+| layered image | `.ora` | Image |
+| 3D scene | `.gltf` | 3D |
 | video sequence | `.otio` | Video |
-| sound being edited | `.aud` | Audio |
-| sky | `.sky` | Skyboxes |
-| material | `.tex` | Textures |
+| sound being edited | `.otio` | Audio |
+| sky | `.gltf` | Skyboxes |
+| material | `.mtlx` | Textures |
 
-The extension is there so the folder **reads at a glance**. `a3f1.scene` next to `b204.tex` says
+The extension is there so the folder **reads at a glance**. `a3f1.gltf` next to `b204.mtlx` says
 what each one is; `a3f1.json` next to `b204.json` says nothing.
 
 > **All seven kinds save**, and the **Explorer** panel lists what the folder holds — that is how a
@@ -334,7 +334,7 @@ with a dot: `.index/`, `.scenario/`, `.project.json` — cannot be renamed or tr
 nothing either. Those are its tools; renaming one would break the project for a name nobody reads.
 **The same refusal holds on both sides of a drag**: you see before you let go.
 
-**A document written as a folder receives nothing either.** An `.img` sheet is a real directory,
+**A document written as a folder receives nothing either.** An `.ora` sheet is a real directory,
 but what it holds is the studio's own writing: a file dropped in there would be erased by the next
 save, which rebuilds that folder. The document itself moves like any other file — it is its inside
 that does not open.

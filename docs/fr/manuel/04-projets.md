@@ -210,15 +210,15 @@ ensuite là où vous l’avez rangé — sous une extension qui dit ce qu’il e
 
 | Type de document | Extension | Espace |
 |---|---|---|
-| image en calques | `.img` | Image |
-| scène 3D | `.scene` | 3D |
+| image en calques | `.ora` | Image |
+| scène 3D | `.gltf` | 3D |
 | séquence vidéo | `.otio` | Vidéo |
-| son en cours d’édition | `.aud` | Audio |
-| ciel | `.sky` | Skyboxes |
-| matière | `.tex` | Textures |
+| son en cours d’édition | `.otio` | Audio |
+| ciel | `.gltf` | Skyboxes |
+| matière | `.mtlx` | Textures |
 
-Cette extension est là pour que le dossier **se lise à l’œil**. `a3f1.scene` à côté de
-`b204.tex` dit ce qu’est chacun ; `a3f1.json` à côté de `b204.json` ne dit rien.
+Cette extension est là pour que le dossier **se lise à l’œil**. `a3f1.gltf` à côté de
+`b204.mtlx` dit ce qu’est chacun ; `a3f1.json` à côté de `b204.json` ne dit rien.
 
 > **Les six types savent s’enregistrer**, et le panneau **Explorateur** montre le dossier du
 > projet en arborescence — c’est par là qu’on rouvre un document fermé. Fermer un onglet dont le travail n’est
@@ -346,7 +346,7 @@ commence par un point : `.index/`, `.scenario/`, `.project.json` — ne se renom
 ne reçoit rien non plus. Ce sont ses outils ; renommer l’un d’eux casserait le projet pour un nom
 que personne ne lit. **Le même refus vaut des deux côtés du glisser** : vous voyez avant de lâcher.
 
-**Un document écrit comme un dossier ne reçoit rien non plus.** Une planche `.img` est un vrai
+**Un document écrit comme un dossier ne reçoit rien non plus.** Une planche `.ora` est un vrai
 répertoire, mais ce qu’il contient est l’écriture du studio : un fichier qu’on y déposerait
 serait effacé par la prochaine sauvegarde, qui reconstruit ce dossier. Le document lui-même se
 déplace comme n’importe quel fichier — c’est son intérieur qui ne s’ouvre pas.

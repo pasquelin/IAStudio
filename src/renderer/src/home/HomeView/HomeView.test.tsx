@@ -20,7 +20,7 @@ const POSTER_DOCUMENT: DocumentDescriptor = {
   kind: 'image',
   title: 'Poster',
   workspace: 'image',
-  path: 'documents/Poster.img',
+  path: 'documents/Poster.ora',
 }
 
 /** What each band's heading reads, so a drawn heading can be traced back to its entry. Keyed on

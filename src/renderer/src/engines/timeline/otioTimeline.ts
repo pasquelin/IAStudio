@@ -57,6 +57,12 @@ export type OtioWriteOptions = {
    * document, its tab and its place in the layout going with the old name.
    */
   documentId?: string
+  /**
+   * What the WORKSPACE wants carried under the studio domain, beside what the montage itself
+   * puts there — which kind of document the file is, and an audio take's chain of effects. The
+   * core of OTIO carries it verbatim and never reads it.
+   */
+  studio?: Record<string, unknown>
   sourceOf: (clip: Clip) => OtioSource
 }
 
@@ -189,7 +195,7 @@ function trackOf(
  */
 export function otioTimelineOf(
   state: SequenceState,
-  { name, documentId, sourceOf }: OtioWriteOptions,
+  { name, documentId, studio, sourceOf }: OtioWriteOptions,
 ): OtioTimeline {
   const { fps, width, height, sampleRate } = state.settings
   return {
@@ -197,6 +203,7 @@ export function otioTimelineOf(
     name,
     metadata: {
       [OTIO_STUDIO_KEY]: {
+        ...studio,
         ...(documentId ? { [OTIO_DOCUMENT_ID]: documentId } : {}),
         width,
         height,

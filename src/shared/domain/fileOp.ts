@@ -50,7 +50,7 @@ export type FileHistory = { undo: boolean; redo: boolean }
  * Whether a batch touched a file the studio opens as a DOCUMENT, and so whether the windows
  * have to list them again.
  *
- * Read off the name alone, which is the one table that answers it — `natureOf`. A `.scene`
+ * Read off the name alone, which is the one table that answers it — `natureOf`. A scene document
  * moved into another folder is the same document at another path, and the panel that lists
  * documents walks the disk rather than a row, so it learns nothing until it is told.
  */

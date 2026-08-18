@@ -218,19 +218,19 @@ export function createDocumentFiles({
    * overwrite without a word. One listing out of date is a document lost.
    *
    * Every entry, not only the ones that read back as documents: the disk cannot hold two things
-   * of one name, so a `Sans titre.scene` too damaged to open still takes the name it wears.
+   * of one name, so a `Sans titre.gltf` too damaged to open still takes the name it wears.
    *
    * Keyed by the directory entry, which is all a name check ever needs an id for — telling the
    * document being renamed apart from its own name.
    *
-   * Per folder and not across the project: two folders may each hold a `Niveau.scene` and the
+   * Per folder and not across the project: two folders may each hold a `Niveau.gltf` and the
    * disk is happy with both, so a check taken over the whole tree would refuse a name nothing
    * where the document sits answers to.
    */
   const namesIn = async (folder: string): Promise<NamedDocument[]> =>
     ((await folderNames(folder)) ?? []).map(entry => {
       // NFC, because `readdir` answers the bytes the volume stores and the studio composes its
-      // own: APFS keeps `Été.scene` decomposed when that is how it arrived. `checkDocumentName`
+      // own: APFS keeps `Été.gltf` decomposed when that is how it arrived. `checkDocumentName`
       // folds what it COMPARES but exempts the document being renamed by plain equality, so an
       // entry left decomposed would refuse the user their own name — `Été` → `ÉTÉ` answering
       // "already taken", pointing at the very file being renamed.
@@ -247,7 +247,7 @@ export function createDocumentFiles({
    *
    * Keyed by PROJECT as well as by document. This reader is built once for the life of the
    * process and follows whichever project is open, and a document written before version 3 is
-   * called after its file — so two projects each holding an old `Level.scene` share the id
+   * called after its file — so two projects each holding an old `Level.gltf` share the id
    * `Level`, and one would answer for the other's clock.
    */
   const seen = new Map<string, number>()
@@ -265,7 +265,7 @@ export function createDocumentFiles({
    * The file that actually holds a document's bytes.
    *
    * A folder document answers for its MANIFEST rather than the folder: a directory's own time
-   * moves when any entry inside it does, so `.img` would read as changed every time a layer was
+   * moves when any entry inside it does, so `.ora` would read as changed every time a layer was
    * rewritten by the studio itself.
    */
   const bodyFileOf = (file: string, kind: DocumentKind): string =>
@@ -424,10 +424,12 @@ export function createDocumentFiles({
       )
       // The folder's word beats the file's, exactly as `read` has it: an extension changed by
       // hand must not send a document to an editor that cannot open it. With no extension there
-      // is no word to beat, so the envelope's own kind is taken.
-      if (claimed && envelope.kind !== claimed) return null
+      // is no word to beat, so the envelope's own kind is taken — and the same where the format
+      // itself says one extension serves two kinds.
+      const decides = claimed && !bodyFormatOf(extension).kindFromHead
+      if (decides && envelope.kind !== claimed) return null
 
-      const kind = claimed ?? envelope.kind
+      const kind = decides ? claimed : envelope.kind
       const workspace = workspaceForKind(kind)
       if (!workspace) return null
 
@@ -665,7 +667,7 @@ export function createDocumentFiles({
 
         /**
          * Asked before renaming, because `fs.rename` overwrites without a word on POSIX — and
-         * replaces an empty directory without one either, which is what an untouched `.img` is.
+         * replaces an empty directory without one either, which is what an untouched `.ora` is.
          * `checkDocumentName` above asks the same folder the same thing, and this is kept anyway:
          * it is the answer nearest the syscall that overwrites, and one `stat` is a cheap price
          * for the window between a listing and a rename.
