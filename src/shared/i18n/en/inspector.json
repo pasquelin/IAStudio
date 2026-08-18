@@ -225,7 +225,7 @@
     "animationRestart": "Back to the start",
     "animationPlay": "Play the preview",
     "animationPause": "Stop the preview",
-    "animationFits": "Animation compatible.",
+    "animationFits": "The character can play all of this motion.",
     "animationFitsPartly": "The animation is not a perfect fit.",
     "animationShowJoints": "See the joints concerned",
     "animationHideJoints": "Hide the joints",
