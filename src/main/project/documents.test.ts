@@ -1,8 +1,17 @@
-import { mkdir, mkdtemp, readdir, readFile, rename, utimes, writeFile } from 'node:fs/promises'
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rename,
+  utimes,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DOCUMENT_VERSION } from '@shared/domain/document'
+import { DOCUMENT_VERSION, type DocumentDescriptor } from '@shared/domain/document'
 import { orphanStagingCopies, type DocumentFiles } from './documents'
 import { documentFilesAt } from './project-fixtures'
 
@@ -536,6 +545,72 @@ describe('createDocumentFiles', () => {
     expect(await readdir(join(root, 'documents'))).toEqual(['Brique 1 2.gltf'])
   })
 
+  /**
+   * A document duplicated in the Finder carries the id of the one it was copied from. The listing
+   * keeps that id for the first in path order and calls the second after its own PATH, which is
+   * unique by construction — the alternative being a file plainly sitting in the folder and
+   * absent from every list.
+   *
+   * What that leaves is a document whose id is a path: every gesture of the studio then arrives
+   * with that id, and the file's own envelope still answers the OLD one.
+   */
+  describe('a document duplicated outside the studio', () => {
+    /**
+     * The one the listing did NOT give the envelope's id to — whichever of the pair that is.
+     *
+     * Which one wins is settled by path order and is nobody's business: `Level copie.gltf` sorts
+     * before `Level.gltf`, a space being under a dot. What matters is the loser, and that it is
+     * reachable at all.
+     */
+    const secondOfTwo = async (): Promise<DocumentDescriptor> => {
+      await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":["mine"]}' })
+      await copyFile(
+        join(root, 'documents', 'Level.gltf'),
+        join(root, 'documents', 'Level copie.gltf'),
+      )
+
+      const second = (await documents.list()).find(one => one.id !== 'doc-1')
+      if (!second) throw new Error('expected the pair to be told apart')
+      return second
+    }
+
+    it('tells the pair apart, calling one of them after its own path', async () => {
+      const second = await secondOfTwo()
+
+      expect(second.id).toBe(second.path)
+      expect((await documents.list()).map(one => one.id).sort()).toEqual(
+        ['doc-1', second.path].sort(),
+      )
+    })
+
+    // Listed and unopenable is the worst of both: the row is there, the double-click gives an
+    // empty tab, and the next ⌘S writes that emptiness under `documents/<the whole path>.gltf`.
+    it('reads it back rather than answering nothing', async () => {
+      const second = await secondOfTwo()
+
+      expect((await documents.read(second.id, 'scene'))?.content).toBe('{"nodes":["mine"]}')
+    })
+
+    it('writes it back into its own file', async () => {
+      const second = await secondOfTwo()
+
+      expect(await documents.write(second.id, 'scene', { title: 'x', content: 'theirs' })).toBe(
+        'written',
+      )
+      expect(await readFile(join(root, second.path), 'utf8')).toContain('theirs')
+    })
+
+    it('removes it rather than the other one', async () => {
+      const second = await secondOfTwo()
+
+      await documents.remove(second.id, 'scene')
+
+      expect(await readdir(join(root, 'documents'))).toEqual([
+        basename(second.path) === 'Level.gltf' ? 'Level copie.gltf' : 'Level.gltf',
+      ])
+    })
+  })
+
   describe('a file changed outside the studio', () => {
     const LATER = new Date('2026-08-07T11:00:00.000Z')
 
@@ -974,6 +1049,26 @@ describe('createDocumentFiles', () => {
       ).rejects.toThrow()
 
       expect(await documents.list()).toEqual([])
+    })
+
+    /**
+     * A container written elsewhere may carry no `w`/`h` on its `<image>`, which the unpacker
+     * reads as zero. Refusing that on the way OUT makes the document unsaveable for good — the
+     * value came from the read, and the write is echoing it back.
+     */
+    it('saves a container whose stack declares no size', async () => {
+      const sizeless = JSON.stringify({ width: 0, height: 0, nodes: [], studio: '{}' })
+
+      await documents.write('doc-1', 'image', {
+        title: 'Sans taille',
+        content: sizeless,
+        parts: oraParts(),
+      })
+
+      expect(JSON.parse((await documents.read('doc-1', 'image'))?.content ?? '')).toMatchObject({
+        width: 0,
+        height: 0,
+      })
     })
 
     it('reads back nothing for a container that was never written', async () => {

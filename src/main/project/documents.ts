@@ -252,16 +252,16 @@ export function createDocumentFiles({
     })
 
   /**
-   * The modification time each document's file carried when the studio last read or wrote it.
+   * The modification time each FILE carried when the studio last read or wrote it.
    *
    * Held here rather than stamped in the file, and it cannot be otherwise: the write that
    * finishes a file is what sets its time, so no value written inside it can match what the
    * filesystem reports afterwards.
    *
-   * Keyed by PROJECT as well as by document. This reader is built once for the life of the
-   * process and follows whichever project is open, and a document written before version 3 is
-   * called after its file — so two projects each holding an old `Level.gltf` share the id
-   * `Level`, and one would answer for the other's clock.
+   * Keyed by the absolute path, not by the document. Keyed by id it answered for the wrong file
+   * twice over: two projects each holding an old `Level.gltf` share the id `Level`, and a
+   * document DUPLICATED in the Finder makes two files answer to one id — the second save then
+   * reported the user's own document as changed behind their back, which it was not.
    */
   const seen = new Map<string, number>()
 
@@ -273,8 +273,6 @@ export function createDocumentFiles({
   const heads = createHeadCache(headOf)
 
   const keyOf = (id: string, kind: DocumentKind): string => `${kind}:${id}`
-
-  const stampKey = (id: string, kind: DocumentKind): string => `${projectPath()}|${keyOf(id, kind)}`
 
   /** An absolute path back to the spelling every boundary of the studio uses. */
   const relativeOf = (file: string): string => relative(projectPath(), file).split(sep).join('/')
@@ -291,9 +289,9 @@ export function createDocumentFiles({
     }
   }
 
-  const remember = async (id: string, kind: DocumentKind, file: string): Promise<void> => {
+  const remember = async (file: string): Promise<void> => {
     const time = await timeOf(file)
-    if (time !== null) seen.set(stampKey(id, kind), time)
+    if (time !== null) seen.set(file, time)
   }
 
   /** Where a document of this id WOULD sit had it never been named — and where a first write goes. */
@@ -480,9 +478,22 @@ export function createDocumentFiles({
     id: string,
     kind: DocumentKind,
   ): Promise<{ file: string; found: FoundDocument | null }> => {
+    /**
+     * Whether the file at this path IS the document being asked for.
+     *
+     * `path === id` is the second document of a duplicated pair: `walk` gives it its own path
+     * for an id, its envelope still answering the id it was copied from — so an equality on the
+     * envelope alone rejected it, and every gesture fell through to the address it WOULD have
+     * had. Listed, and unopenable: a double-click gave an empty tab and the next ⌘S wrote that
+     * emptiness under `documents/<the whole path>.gltf`.
+     *
+     * No id can collide with a path: one is a uuid or the stem of a pre-version-3 file, and a
+     * path carries the extension the stem drops.
+     */
     const holding = async (path: string): Promise<FoundDocument | null> => {
       const found = await foundAt(path)
-      return found?.descriptor.id === id && found.descriptor.kind === kind ? found : null
+      if (!found || found.descriptor.kind !== kind) return null
+      return found.descriptor.id === id || path === id ? found : null
     }
 
     const cached = index.get(keyOf(id, kind))
@@ -568,8 +579,8 @@ export function createDocumentFiles({
     // the studio believes the file older than it is, and asks.
     //
     // `found.time` was taken before its own head read, so it is that same instant or earlier.
-    if (found) seen.set(stampKey(id, kind), found.time)
-    else await remember(id, kind, file)
+    if (found) seen.set(file, found.time)
+    else await remember(file)
 
     return found?.body ?? (await bodyAt(file, kind, id))
   }
@@ -591,7 +602,7 @@ export function createDocumentFiles({
 
         // A document the studio has no clock for is one it cannot claim to have written, so it
         // is not defended — and nothing is stat'd for it either.
-        const known = onDisk && !force ? seen.get(stampKey(id, kind)) : undefined
+        const known = onDisk && !force ? seen.get(file) : undefined
         if (known !== undefined && (await timeOf(file)) !== known) return 'stale'
 
         // Stamped here rather than taken from the draft: the renderer owns none of these, and
@@ -605,7 +616,7 @@ export function createDocumentFiles({
         // that come that fast.
         heads.forget(file)
         index.set(keyOf(id, kind), relativeOf(file))
-        await remember(id, kind, file)
+        await remember(file)
         return 'written'
       }),
 
@@ -634,7 +645,10 @@ export function createDocumentFiles({
         // What `locate` already read, rather than a second look at the same file: this was the
         // second of four reads a rename cost a montage.
         if (!found) throw new Error(`Document ${id} is not there to rename`)
-        const descriptor = found.descriptor
+        // `id` and not `descriptor.id`: a duplicated document is known by its PATH while its
+        // envelope still answers the id it was copied from, and the rename stamps the one the
+        // caller holds. Answering with the envelope's would hand back a document nobody asked for.
+        const descriptor = { ...found.descriptor, id }
         if (to === from) return { ...descriptor, title, path }
 
         /**
@@ -691,7 +705,10 @@ export function createDocumentFiles({
         // The envelope was just rewritten and the file just moved, both by the studio. Without
         // this, the next ⌘S would read a time it does not recognise and accuse the user of
         // having edited their own document elsewhere.
-        await remember(id, kind, to)
+        await remember(to)
+        // The file under `from` no longer exists, and its clock would answer for whatever lands
+        // there next.
+        seen.delete(from)
 
         return { ...descriptor, title, path }
       }),
@@ -710,15 +727,16 @@ export function createDocumentFiles({
         // stopped reading cannot be found at all, so removal lands on the address it would have
         // had and the real file stays — invisible in every list and undeletable from the studio.
         //
-        // `found` is that same answer when `locate` had one, which is every case but the
-        // fallback address — where nothing was read and the entry has to be looked at.
-        const sitting = found?.descriptor ?? (await descriptorOf(relativeOf(file)))
-        if (!sitting || (sitting.id === id && sitting.kind === kind)) {
+        // A `found` needs no second opinion: `locate` has already established that this file IS
+        // the document asked for. Asking its DESCRIPTOR again would refuse a duplicated document
+        // — its envelope answers the id it was copied from, never the path it is known by.
+        const sitting = found ? null : await descriptorOf(relativeOf(file))
+        if (found || !sitting || (sitting.id === id && sitting.kind === kind)) {
           await rm(file, { force: true })
         }
         heads.forget(file)
         index.delete(keyOf(id, kind))
-        seen.delete(stampKey(id, kind))
+        seen.delete(file)
       })
     },
   }

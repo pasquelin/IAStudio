@@ -256,8 +256,11 @@ const oraNode = (depth: number): z.ZodType<unknown> =>
       ])
 
 const oraStack = z.object({
-  width: z.number().int().positive(),
-  height: z.number().int().positive(),
+  // Non-negative rather than positive, and that is not laxity: a container written elsewhere may
+  // carry no `w`/`h` on its `<image>`, which the unpacker reads as zero. Refusing that HERE — on
+  // the way out — makes the document unsaveable for good, the value having come from the read.
+  width: z.number().int().min(0),
+  height: z.number().int().min(0),
   nodes: z.array(oraNode(8)).max(2000),
   studio: z.string().max(MAX_STUDIO_STATE),
 })
