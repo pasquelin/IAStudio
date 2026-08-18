@@ -1,5 +1,6 @@
 import { Texture, type ColorSpace } from 'three'
 import type { LightDescriptor, TextDescriptor } from '@shared/domain/scene'
+import type { RigState } from './rigState'
 import type { TextureCache } from './textureCache'
 import {
   DEFAULT_MATERIAL,
@@ -96,6 +97,23 @@ export function modelNodeFixture(id: string, assetId = 'asset-1'): ModelNode {
     ...shadowDefaults({ type: 'model' }),
     type: 'model',
     model: { assetId },
+  }
+}
+
+/**
+ * What the engine would report for a model carrying these bones, in one chain.
+ *
+ * For the suites that only care that a rig HAS bones — a bone picker, a track on one — and that
+ * would otherwise each spell a whole `RigState` of their own.
+ */
+export function rigStateFixture(names: readonly string[]): RigState {
+  const bones = names.map((name, index) => ({ name, parent: names[index - 1] ?? null }))
+
+  return {
+    status: names.length > 0 ? 'skinnedMesh' : 'staticMesh',
+    bones,
+    boneNames: [...names],
+    boneCount: names.length,
   }
 }
 

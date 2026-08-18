@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cameraNode } from '@/engines/scene/nodeFactory'
-import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
+import { meshNode, modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -111,7 +111,7 @@ describe('the bone picker', () => {
       selectedIds: ['perso'],
     })
     useSceneViews.setState({ views: {} })
-    useModelClips.setState({ clips: {}, bones: {}, lengths: {} })
+    useModelClips.setState({ clips: {}, rigs: {}, lengths: {} })
   })
 
   it('offers no bone picker for a model that brought none', () => {
@@ -121,7 +121,7 @@ describe('the bone picker', () => {
   })
 
   it('offers every bone the file brought, plus the model as a whole', () => {
-    useModelClips.setState({ bones: { [DOCUMENT]: { perso: ['spine', 'arm.L'] } } })
+    useModelClips.setState({ rigs: { [DOCUMENT]: { perso: rigStateFixture(['spine', 'arm.L']) } } })
     bar()
 
     expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual([

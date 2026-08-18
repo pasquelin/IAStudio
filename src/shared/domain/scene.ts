@@ -7,16 +7,12 @@
  * from them instead of restated, so a geometry added without a menu entry fails to compile.
  */
 import type { FontRef } from './font'
+import type { Rig } from './rig'
 import type { Us } from './time'
+import type { Vector3 } from './transform'
 
-export type Vector3 = { x: number; y: number; z: number }
-
-export type Transform = {
-  position: Vector3
-  /** Euler angles, in radians. */
-  rotation: Vector3
-  scale: Vector3
-}
+/** Re-exported so the fifty-odd files that read a pose from here keep reading it from here. */
+export { isTransform, isVector3, type Transform, type Vector3 } from './transform'
 
 /**
  * Each primitive carries its own parameters rather than a shared bag of optionals: a sphere has
@@ -80,6 +76,14 @@ export const DEFAULT_CAMERA: CameraDescriptor = Object.freeze({ fov: 50, near: 0
  */
 export type ModelRef = {
   assetId: string
+  /** The skeleton the studio put on this model. The one exception to the rule above — see `rig.ts`. */
+  rig?: Rig
+  /** What plays on this model, in the order the band draws the blocks. */
+  clips?: readonly ClipRef[]
+  /**
+   * @deprecated Read when a document written before clips were plural is opened, and converted
+   * into a single `ClipRef`. Never written again.
+   */
   animation?: AnimationRef
   /**
    * Maps of the project put over the ones the file carries, slot by slot.
@@ -126,14 +130,101 @@ export type AnimationRef = {
   start: Us
 }
 
-/** What a model animates like when nothing has been chosen: its first clip, stopped at the start. */
-export const DEFAULT_ANIMATION: Omit<AnimationRef, 'clip'> = Object.freeze({
+/**
+ * Where a clip's frames come from.
+ *
+ * `embedded` is the file the model itself is: the name is the one the GLB spells. `asset` is a
+ * clip of the project's own library, reusable by any character — which is the whole reason this
+ * is a union rather than a string.
+ */
+export type ClipSource =
+  { kind: 'embedded'; name: string } | { kind: 'asset'; assetId: string; name: string }
+
+/**
+ * One block of animation on a model's band.
+ *
+ * MIND THE UNITS, and they are not the same in both halves of this type: `start`, `duration`,
+ * `fadeIn` and `fadeOut` are MICROSECONDS, the unit the band counts in; `offset` is SECONDS,
+ * three's own clock inside the clip. The two meet only through `secondsToUs` / `usToSeconds`,
+ * never by being handed to one another.
+ */
+export type ClipRef = {
+  /** Minted by the studio, so two blocks of the same clip are still two blocks. */
+  id: string
+  source: ClipSource
+  /**
+   * The words shown for this block. The studio OWNS them and never takes them from the file:
+   * a Tripo rig spells its only clip `NlaTrack`, and Uthana's carries no name at all.
+   */
+  label: string
+  /** Where the block sits on the band. */
+  start: Us
+  /** How much band it takes. `0` means "not measured yet" — the length lives in the file. */
+  duration: Us
+  /** Where playback starts INSIDE the clip, in three's seconds. */
+  offset: number
+  /**
+   * Whether this block runs on real time in the viewport, as the inspector's play button asks.
+   *
+   * SESSION STATE WEARING A DOCUMENT'S CLOTHES, and a debt rather than a design: it puts an undo
+   * entry behind a play button, which `setPlayhead` refuses by name for the same reason, and
+   * `sceneWithoutSelfPlay` exists only to strip it. It belongs in `sceneViews`, and moves there
+   * with the playback phase — kept here for now so an existing document plays as it did.
+   */
+  playing: boolean
+  /** A multiplier, never a frame rate: the clip carries its own timing. */
+  speed: number
+  loop: boolean
+  fadeIn: Us
+  fadeOut: Us
+  /** `auto` lets the studio decide from what the clip actually holds. */
+  rootMotion: RootMotion
+}
+
+export type RootMotion = 'inPlace' | 'travel' | 'auto'
+
+export const ROOT_MOTIONS: readonly RootMotion[] = ['inPlace', 'travel', 'auto']
+
+/** What a block is worth before anything is chosen for it. */
+export const DEFAULT_CLIP: Omit<ClipRef, 'id' | 'source' | 'label'> = Object.freeze({
+  start: 0,
+  duration: 0,
+  offset: 0,
   playing: false,
-  time: 0,
   speed: 1,
   loop: true,
-  start: 0,
+  fadeIn: 0,
+  fadeOut: 0,
+  rootMotion: 'auto',
 })
+
+/**
+ * A block on one of the clips a model's own file brought.
+ *
+ * `extra` goes UNDER the identity, so carrying a previous block over cannot smuggle in the clip
+ * it used to play.
+ */
+export function embeddedClip(id: string, name: string, extra: Partial<ClipRef> = {}): ClipRef {
+  return { ...DEFAULT_CLIP, ...extra, id, source: { kind: 'embedded', name }, label: name }
+}
+
+/**
+ * The block a document written before clips were plural describes.
+ *
+ * The id is fixed rather than minted so that reopening a file twice gives the same document; that
+ * form holds one clip per model, so a constant is unique where it has to be.
+ */
+export function clipFromAnimation(animation: AnimationRef): ClipRef {
+  return embeddedClip('legacy', animation.clip, {
+    // Checked rather than read: `start` came late, and a document older than it holds none —
+    // the reader that lets such a node through does not require it either.
+    start: Number.isFinite(animation.start) ? animation.start : 0,
+    offset: animation.time,
+    playing: animation.playing,
+    speed: animation.speed,
+    loop: animation.loop,
+  })
+}
 
 /**
  * What lights a viewport. `studio` is procedural — three builds a small lit room and prefilters

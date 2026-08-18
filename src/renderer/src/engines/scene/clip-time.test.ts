@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ANIMATION, type AnimationRef } from '@shared/domain/scene'
+import { embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { clipTimeAt } from './animation'
 
-const ref = (extra: Partial<AnimationRef> = {}): AnimationRef => ({
-  ...DEFAULT_ANIMATION,
-  clip: 'Walk',
-  ...extra,
-})
+const ref = (extra: Partial<ClipRef> = {}): ClipRef => embeddedClip('block-1', 'Walk', extra)
 
 /** Two seconds of walk cycle. */
 const DURATION = 2

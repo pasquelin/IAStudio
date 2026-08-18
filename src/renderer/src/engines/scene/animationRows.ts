@@ -49,6 +49,8 @@ export type ClipRow = {
   name: string
   height: number
   nodeId: string
+  /** Which of the model's blocks this line draws — a node may hold several. */
+  clipId: string
   start: Us
   /** How long the block runs on the band, at the speed it plays. */
   duration: Us
@@ -98,6 +100,7 @@ export function mergedKeys(tracks: readonly AnimationTrack[]): Us[] {
 /** A model playing a clip, as the document holds it and the engine measured it. */
 export type ClipBlock = {
   nodeId: string
+  clipId: string
   name: string
   start: Us
   duration: Us
@@ -233,10 +236,11 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
   for (const clip of options.clips ?? []) {
     rows.push({
       kind: 'clip',
-      id: `clip:${clip.nodeId}`,
+      id: `clip:${clip.nodeId}:${clip.clipId}`,
       name: clip.name,
       height: CLIP_HEIGHT,
       nodeId: clip.nodeId,
+      clipId: clip.clipId,
       start: clip.start,
       duration: clip.duration,
     })

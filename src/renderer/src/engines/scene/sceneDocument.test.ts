@@ -131,6 +131,138 @@ describe('sceneFromPayload', () => {
     expect(reread({ ...EMPTY_SCENE, nodes: [ghost], selectedIds: [] }).nodes).toEqual([ghost])
   })
 
+  /**
+   * The costliest failure of the whole rig work, because it is invisible: a document saved before
+   * clips were plural opening with nothing playing looks exactly like one that never played.
+   */
+  describe('a model saved before clips were plural', () => {
+    const legacy = (animation: unknown): unknown => ({
+      ...modelNodeFixture('m'),
+      model: { assetId: 'a', animation },
+    })
+
+    const clipsOf = (animation: unknown) => {
+      const node = sceneFromPayload({ nodes: [legacy(animation)] }).nodes[0]
+      return node?.type === 'model' ? node.model.clips : undefined
+    }
+
+    it('opens with its clip turned into a block that plays the same', () => {
+      const clips = clipsOf({
+        clip: 'Walk',
+        playing: true,
+        time: 0.5,
+        speed: 2,
+        loop: false,
+        start: 3,
+      })
+
+      expect(clips).toEqual([
+        {
+          id: 'legacy',
+          source: { kind: 'embedded', name: 'Walk' },
+          label: 'Walk',
+          start: 3,
+          duration: 0,
+          offset: 0.5,
+          playing: true,
+          speed: 2,
+          loop: false,
+          fadeIn: 0,
+          fadeOut: 0,
+          rootMotion: 'auto',
+        },
+      ])
+    })
+
+    // `start` came after the rest of `AnimationRef`, and the reader never required it.
+    it('opens one written before a clip could be moved along the band', () => {
+      const clips = clipsOf({ clip: 'Walk', playing: false, time: 0, speed: 1, loop: true })
+
+      expect(clips?.[0]?.start).toBe(0)
+    })
+
+    it('never writes the singular form back', () => {
+      const node = sceneFromPayload({
+        nodes: [legacy({ clip: 'Walk', playing: false, time: 0, speed: 1, loop: true, start: 0 })],
+      }).nodes[0]
+
+      expect(node?.type === 'model' && 'animation' in node.model).toBe(false)
+    })
+
+    it('leaves a model that never animated without any clip at all', () => {
+      expect(clipsOf(undefined)).toBeUndefined()
+    })
+
+    it('keeps the list when a file holds both forms, and drops the leftover', () => {
+      const clip = {
+        id: 'c1',
+        source: { kind: 'embedded', name: 'Run' },
+        label: 'Run',
+        start: 0,
+        duration: 0,
+        offset: 0,
+        playing: false,
+        speed: 1,
+        loop: true,
+        fadeIn: 0,
+        fadeOut: 0,
+        rootMotion: 'auto',
+      }
+      const nodes: unknown[] = [
+        {
+          ...modelNodeFixture('m'),
+          model: {
+            assetId: 'a',
+            clips: [clip],
+            animation: { clip: 'Walk', playing: false, time: 0, speed: 1, loop: true, start: 0 },
+          },
+        },
+      ]
+      const node = sceneFromPayload({ nodes }).nodes[0]
+
+      expect(node?.type === 'model' && node.model.clips).toEqual([clip])
+      expect(node?.type === 'model' && 'animation' in node.model).toBe(false)
+    })
+
+    it('drops a model whose clip list is malformed, like any other bad field', () => {
+      const nodes: unknown[] = [
+        mesh('a'),
+        { ...modelNodeFixture('m'), model: { assetId: 'x', clips: [{ id: 'c1' }] } },
+      ]
+
+      expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
+    })
+
+    it('drops a model whose rig breaks an invariant of its own', () => {
+      const nodes: unknown[] = [
+        mesh('a'),
+        {
+          ...modelNodeFixture('m'),
+          model: {
+            assetId: 'x',
+            rig: {
+              origin: 'local',
+              bones: [{ name: 'Spine', parent: 'Hips', rest: IDENTITY_TRANSFORM }],
+            },
+          },
+        },
+      ]
+
+      expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
+    })
+
+    it('carries a rig through a round trip', () => {
+      const rest = { ...IDENTITY_TRANSFORM, position: { x: 0, y: 1, z: 0 } }
+      const model = modelNodeFixture('m')
+      model.model = {
+        ...model.model,
+        rig: { origin: 'local', bones: [{ name: 'Hips', parent: null, rest, role: 'Hips' }] },
+      }
+
+      expect(reread({ ...EMPTY_SCENE, nodes: [model], selectedIds: [] }).nodes).toEqual([model])
+    })
+  })
+
   // A document names no environment until this step: every one written so far, and any file a
   // hand left half-edited, has to open lit rather than black.
   it('lights a scene the file says nothing about with the studio', () => {

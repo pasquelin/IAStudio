@@ -1,8 +1,7 @@
 import { AnimationClip, Bone, Group, Mesh, SphereGeometry, VectorKeyframeTrack } from 'three'
 import type { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import type { AnimationRef } from '@shared/domain/scene'
-import { DEFAULT_ANIMATION } from '@shared/domain/scene'
+import { embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SceneRenderer } from './SceneRenderer'
 import type { BvhBuilder } from './bvhBuilder'
 import type * as ModelCache from './modelCache'
@@ -51,10 +50,13 @@ function withModel(loaded: Group): SceneRenderer {
   })
 }
 
-const modelNode = (animation: AnimationRef | null) => ({
+const modelNode = (clip: ClipRef | null) => ({
   ...modelNodeFixture('a'),
-  model: { assetId: 'asset-1', ...(animation && { animation }) },
+  model: { assetId: 'asset-1', ...(clip && { clips: [clip] }) },
 })
+
+/** A block on `walk`, since that is the clip every fixture of this file brings. */
+const walkBlock = (extra: Partial<ClipRef> = {}): ClipRef => embeddedClip('block-1', 'walk', extra)
 
 describe('SceneRenderer and the clips a model brought', () => {
   it('poses the model where the document says, without waiting for a frame', async () => {
@@ -63,7 +65,7 @@ describe('SceneRenderer and the clips a model brought', () => {
 
     engine.apply({
       ...EMPTY_SCENE,
-      nodes: [modelNode({ ...DEFAULT_ANIMATION, clip: 'walk', time: 0.5 })],
+      nodes: [modelNode(walkBlock({ offset: 0.5 }))],
     })
 
     // The file lands a tick after the sync that built its holder; the pose lands with it.
@@ -88,13 +90,13 @@ describe('SceneRenderer and the clips a model brought', () => {
 
     engine.apply({
       ...EMPTY_SCENE,
-      nodes: [modelNode({ ...DEFAULT_ANIMATION, clip: 'walk', time: 0 })],
+      nodes: [modelNode(walkBlock({ offset: 0 }))],
     })
     await vi.waitFor(() => expect(loaded.parent).not.toBeNull())
 
     engine.apply({
       ...EMPTY_SCENE,
-      nodes: [modelNode({ ...DEFAULT_ANIMATION, clip: 'walk', time: 0.25 })],
+      nodes: [modelNode(walkBlock({ offset: 0.25 }))],
     })
 
     expect(cubeOf(loaded).position.x).toBeCloseTo(0.25, 5)
@@ -117,7 +119,7 @@ describe('SceneRenderer and the clips a model brought', () => {
 
     engine.apply({
       ...EMPTY_SCENE,
-      nodes: [modelNode({ ...DEFAULT_ANIMATION, clip: 'walk', time: 0.5 })],
+      nodes: [modelNode(walkBlock({ offset: 0.5 }))],
     })
     await vi.waitFor(() => expect(cubeOf(loaded).position.x).toBeCloseTo(0.5, 5))
 

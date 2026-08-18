@@ -4,7 +4,8 @@ import { SliderField } from '@/design/SliderField'
 import { TextField } from '@/design/TextField'
 import { VectorField } from '@/design/VectorField'
 import type { GestureProps } from '@/design/styles'
-import { isVector3, type FieldValue, type PropertyField } from '@/engines/scene/propertyFields'
+import { isVector3 } from '@shared/domain/scene'
+import type { FieldValue, PropertyField } from '@/engines/scene/propertyFields'
 
 export type PropertyControlProps = {
   field: PropertyField

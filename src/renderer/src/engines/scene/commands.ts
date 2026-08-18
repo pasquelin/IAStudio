@@ -1,19 +1,21 @@
 import { composed, type Command } from '../core/history'
-import type {
-  AnimationRef,
-  EnvironmentRef,
-  GeometryDescriptor,
-  LightDescriptor,
-  MaterialDescriptor,
-  ModelRef,
-  SpriteDescriptor,
-  TextDescriptor,
-  Transform,
+import type { Rig } from '@shared/domain/rig'
+import {
+  isVector3,
+  type ClipRef,
+  type EnvironmentRef,
+  type GeometryDescriptor,
+  type LightDescriptor,
+  type MaterialDescriptor,
+  type ModelRef,
+  type SpriteDescriptor,
+  type TextDescriptor,
+  type Transform,
 } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
 import { changedFields } from '@/helpers/objects'
 import { applySelection, type SelectionMode } from '@/helpers/selection'
-import { isVector3, withField, type FieldValue } from './propertyFields'
+import { withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
 import { groupNode } from './nodeFactory'
 import {
@@ -353,16 +355,27 @@ export function setSprite(id: string, sprite: SpriteDescriptor): Command<SceneSt
 }
 
 /**
- * Which clip of an imported model plays, and how. `null` puts it back to its rest pose.
+ * What an imported model plays, in the order the band draws it. An empty list puts it back to its
+ * rest pose.
  *
- * The whole reference is written rather than the field touched: the head position is part of it,
- * and a play that kept the old time would start over from wherever the last pause happened to be.
+ * The whole list is written rather than one block patched, for the reason `setModelTextures`
+ * states: what the inspector holds IS the list, and a partial write would leave the revert unable
+ * to say which blocks it was answering for.
  */
-export function setModelAnimation(id: string, animation: AnimationRef | null): Command<SceneState> {
-  return editModel(id, 'animation', model => {
+export function setModelClips(id: string, clips: readonly ClipRef[]): Command<SceneState> {
+  return editModel(id, 'clips', model => {
     const rest = { ...model }
-    delete rest.animation
-    return animation ? { ...rest, animation } : rest
+    delete rest.clips
+    return clips.length > 0 ? { ...rest, clips } : rest
+  })
+}
+
+/** The skeleton put on a model, or none. Undo comes for free, which is why a rig is a document's. */
+export function setModelRig(id: string, rig: Rig | null): Command<SceneState> {
+  return editModel(id, 'rig', model => {
+    const rest = { ...model }
+    delete rest.rig
+    return rig ? { ...rest, rig } : rest
   })
 }
 

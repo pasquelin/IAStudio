@@ -1,17 +1,19 @@
 import { mdiPause, mdiPlay } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { DEFAULT_ANIMATION, type AnimationRef } from '@shared/domain/scene'
+import { embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
+import { QuietNote } from '@/design/QuietNote'
 import { SliderField } from '@/design/SliderField'
 import { NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
-import { setModelAnimation } from '@/engines/scene/commands'
+import { setModelClips } from '@/engines/scene/commands'
 import type { ModelNode } from '@/engines/scene/sceneState'
 import { cn } from '@/helpers/cn'
+import { newId } from '@/helpers/ids'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { clipsOfNode, useModelClips } from '@/stores/modelClips'
+import { clipsOfNode, rigOfNode, useModelClips } from '@/stores/modelClips'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
 
 export type AnimationSectionProps = {
@@ -25,72 +27,90 @@ const MIN_SPEED = 0.1
 const MAX_SPEED = 4
 
 /**
- * The clips an imported model brought, and which one it plays.
+ * What an imported model can be made to play, and what stands in the way when it cannot.
  *
- * The list comes from the engine rather than the document: the names live inside the GLB, so a
- * model still loading offers none — and the section takes itself off rather than showing an
- * empty picker, which is what the studio does everywhere a control would have no effect.
+ * Both halves come from the engine, not the document: clips and bones live inside the GLB, so a
+ * model still loading has neither.
  */
 export function AnimationSection({ documentId, node, edit }: AnimationSectionProps) {
   const { t } = useTranslation()
   const clips = useModelClips(state => clipsOfNode(state, documentId, node.id))
+  const rig = useModelClips(state => rigOfNode(state, documentId, node.id))
 
-  if (clips.length === 0) return null
+  // Nothing has landed yet: a section explaining a model the studio has not read would be wrong
+  // rather than empty.
+  if (!rig) return null
 
-  const animation = node.model.animation ?? null
-  const write = (next: AnimationRef | null): void => edit.run(setModelAnimation(node.id, next))
+  const held = node.model.clips ?? []
+  const played = held[0] ?? null
+
+  // The played block is replaced WITHIN the list, never made into the list: a document may hold
+  // several — the reader accepts them and the band draws them — and rewriting the whole field
+  // from one control would drop every block this section does not show.
+  const write = (next: ClipRef | null): void => {
+    const kept = held.filter(clip => clip.id !== played?.id)
+    edit.run(setModelClips(node.id, next ? [next, ...kept] : kept))
+  }
 
   // Picking a clip on a model that had none starts from the defaults rather than from nothing:
   // a chosen clip that neither plays nor loops would read as a control that did not work.
-  const choose = (clip: string): void =>
-    write(clip === '' ? null : { ...DEFAULT_ANIMATION, ...animation, clip, playing: true })
+  const choose = (name: string): void =>
+    write(
+      name === '' ? null : embeddedClip(played?.id ?? newId(), name, { ...played, playing: true }),
+    )
 
   return (
     <PropertySection title={t('inspector.animation')}>
-      <PropertyRow label={t('inspector.clip')}>
-        <div className="flex w-full items-center gap-1.5">
-          {/* A native select, as the model picker uses one: the OS list is searchable by
-              keystroke, and a rig can carry a dozen clips. */}
-          <select
-            aria-label={t('inspector.clip')}
-            value={animation?.clip ?? ''}
-            onChange={event => choose(event.target.value)}
-            className={cn(NATIVE_SELECT, 'min-w-0 flex-1')}
-          >
-            <option value="">{t('inspector.noClip')}</option>
-            {clips.map(clip => (
-              <option key={clip} value={clip}>
-                {clip}
-              </option>
-            ))}
-          </select>
+      <QuietNote>{t(`inspector.rigStatus_${rig.status}`)}</QuietNote>
 
-          <ToolButton
-            icon={animation?.playing ? mdiPause : mdiPlay}
-            label={animation?.playing ? t('inspector.pauseClip') : t('inspector.playClip')}
-            tooltip={TIP_LEFT}
-            variant="header"
-            disabled={!animation}
-            onClick={() => animation && write({ ...animation, playing: !animation.playing })}
-          />
-        </div>
-      </PropertyRow>
+      {/* Shown for a block whose clip the file no longer spells, too: without the picker its
+          « none » option is gone, and a block nothing can play could never be taken off. */}
+      {(clips.length > 0 || played) && (
+        <PropertyRow label={t('inspector.clip')}>
+          <div className="flex w-full items-center gap-1.5">
+            {/* A native select, as the model picker uses one: the OS list is searchable by
+                keystroke, and a rig can carry a dozen clips. */}
+            <select
+              aria-label={t('inspector.clip')}
+              value={played?.source.name ?? ''}
+              onChange={event => choose(event.target.value)}
+              className={cn(NATIVE_SELECT, 'min-w-0 flex-1')}
+            >
+              <option value="">{t('inspector.noClip')}</option>
+              {clips.map(clip => (
+                <option key={clip} value={clip}>
+                  {clip}
+                </option>
+              ))}
+            </select>
 
-      {animation && (
+            <ToolButton
+              icon={played?.playing ? mdiPause : mdiPlay}
+              label={played?.playing ? t('inspector.pauseClip') : t('inspector.playClip')}
+              tooltip={TIP_LEFT}
+              variant="header"
+              disabled={!played}
+              onClick={() => played && write({ ...played, playing: !played.playing })}
+            />
+          </div>
+        </PropertyRow>
+      )}
+
+      {played && (
         <>
           <SliderField
             label={t('inspector.clipSpeed')}
-            value={animation.speed}
+            value={played.speed}
             min={MIN_SPEED}
             max={MAX_SPEED}
             step={0.1}
-            onChange={speed => write({ ...animation, speed })}
+            onChange={speed => write({ ...played, speed })}
             {...edit.gesture}
           />
           <ToggleField
             label={t('inspector.clipLoop')}
-            value={animation.loop}
-            onChange={loop => write({ ...animation, loop })}
+            value={played.loop}
+            onChange={loop => write({ ...played, loop })}
           />
         </>
       )}

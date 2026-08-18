@@ -1,7 +1,7 @@
 import { AnimationClip, Object3D, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ANIMATION, type AnimationRef } from '@shared/domain/scene'
-import { SceneAnimations, clipNamesOf } from './animation'
+import { embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { SceneAnimations, clipNamesOf, playedClip } from './animation'
 
 /** A cube travelling one unit along X over one second, which is enough to read a mixer by. */
 function walkClip(name = 'walk', to = 1): AnimationClip {
@@ -17,12 +17,12 @@ function scene(): Object3D {
   return root
 }
 
-const ref = (extra: Partial<AnimationRef> = {}): AnimationRef => ({
-  ...DEFAULT_ANIMATION,
-  clip: 'walk',
-  playing: true,
-  ...extra,
-})
+/** `name` picks which clip of the file the block plays, since that now lives inside its source. */
+const ref = ({
+  name = 'walk',
+  id = 'block-1',
+  ...extra
+}: Partial<ClipRef> & { name?: string } = {}) => embeddedClip(id, name, { playing: true, ...extra })
 
 describe('the clips a model brought', () => {
   it('reads the names off the loaded root', () => {
@@ -95,7 +95,7 @@ describe('SceneAnimations', () => {
 
   it('seeks where the head is put, without playing to get there', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', ref({ playing: false, time: 0.75 }))
+    animations.apply('node-1', ref({ playing: false, offset: 0.75 }))
     animations.update(0)
 
     expect(cubeOf(root).position.x).toBeCloseTo(0.75, 5)
@@ -135,7 +135,7 @@ describe('SceneAnimations', () => {
 
     animations.apply('node-1', ref())
     animations.update(0.5)
-    animations.apply('node-1', ref({ clip: 'run' }))
+    animations.apply('node-1', ref({ name: 'run' }))
 
     // Back to the start of the new clip, which for `run` means the origin.
     expect(cubeOf(root).position.x).toBe(0)
@@ -143,7 +143,7 @@ describe('SceneAnimations', () => {
 
   it('ignores a clip name the file no longer holds, rather than throwing', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', ref({ clip: 'moonwalk' }))
+    animations.apply('node-1', ref({ name: 'moonwalk' }))
     animations.update(0.5)
 
     expect(cubeOf(root).position.x).toBe(0)
@@ -178,5 +178,12 @@ describe('SceneAnimations', () => {
 
     expect(animations.has('node-1')).toBe(false)
     expect(animations.has('node-2')).toBe(false)
+  })
+})
+
+describe('which block a model plays', () => {
+  it('answers the first, and nothing for a model that plays nothing', () => {
+    expect(playedClip([ref({ id: 'walk' }), ref({ id: 'dance' })])?.id).toBe('walk')
+    expect(playedClip([])).toBeNull()
   })
 })

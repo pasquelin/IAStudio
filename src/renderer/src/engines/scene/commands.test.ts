@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { embeddedClip } from '@shared/domain/scene'
+import type { Rig } from '@shared/domain/rig'
 import { emptyHistory, run, undo, type Command } from '../core/history'
 import {
   addNode,
@@ -19,7 +21,8 @@ import {
   setLightOn,
   setMeshMaterial,
   setMaterialOn,
-  setModelAnimation,
+  setModelClips,
+  setModelRig,
   setModelTextures,
   setNodeVisible,
   setEnvironment,
@@ -751,15 +754,38 @@ describe('setModelTextures', () => {
   })
 
   // Both edits write the same reference: rebuilding it from `assetId` alone dropped the other.
-  it('leaves the animation of the model alone, and is left alone by it', () => {
-    const clip = { clip: 'run', playing: true, time: 0, speed: 1, loop: true, start: 0 }
-    const playing = setModelAnimation('m', clip).apply(withModel())
+  it('leaves the clips of the model alone, and is left alone by them', () => {
+    const clip = embeddedClip('c1', 'run', { playing: true })
+    const playing = setModelClips('m', [clip]).apply(withModel())
     const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(playing)
 
     const node = nodeById(dressed, 'm')
-    expect(node?.type === 'model' && node.model.animation).toEqual(clip)
-    expect(texturesOf(setModelAnimation('m', null).apply(dressed))).toEqual({
+    expect(node?.type === 'model' && node.model.clips).toEqual([clip])
+    expect(texturesOf(setModelClips('m', []).apply(dressed))).toEqual({
       map: { assetId: 'tex-1' },
     })
+  })
+
+  it('drops the field when the last block goes, so a rest pose says nothing at all', () => {
+    const clip = embeddedClip('c1', 'run')
+    const playing = setModelClips('m', [clip]).apply(withModel())
+    const stopped = setModelClips('m', []).apply(playing)
+
+    const node = nodeById(stopped, 'm')
+    expect(node?.type === 'model' && 'clips' in node.model).toBe(false)
+  })
+
+  it('puts a skeleton on a model, and takes it back off', () => {
+    const rig: Rig = {
+      origin: 'local',
+      bones: [{ name: 'Hips', parent: null, rest: IDENTITY_TRANSFORM }],
+    }
+    const rigged = setModelRig('m', rig).apply(withModel())
+
+    const node = nodeById(rigged, 'm')
+    expect(node?.type === 'model' && node.model.rig).toEqual(rig)
+
+    const bare = nodeById(setModelRig('m', null).apply(rigged), 'm')
+    expect(bare?.type === 'model' && 'rig' in bare.model).toBe(false)
   })
 })

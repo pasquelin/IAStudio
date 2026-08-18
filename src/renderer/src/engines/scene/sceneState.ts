@@ -298,12 +298,15 @@ export function firstCameraId(nodes: readonly SceneNode[]): string | null {
 export function sceneWithoutSelfPlay(state: SceneState): SceneState {
   let changed = false
   const nodes = state.nodes.map(node => {
-    if (node.type !== 'model' || !node.model.animation?.playing) return node
+    if (node.type !== 'model' || !node.model.clips?.some(clip => clip.playing)) return node
 
     changed = true
     return {
       ...node,
-      model: { ...node.model, animation: { ...node.model.animation, playing: false } },
+      model: {
+        ...node.model,
+        clips: node.model.clips.map(clip => (clip.playing ? { ...clip, playing: false } : clip)),
+      },
     }
   })
 

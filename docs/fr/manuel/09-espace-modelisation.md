@@ -599,7 +599,9 @@ offre la section **Animation** :
 **La pose est enregistrée avec le document.** Rouvrir la scène la retrouve là où vous l’avez
 laissée, pas au début.
 
-**Un modèle sans séquence n’affiche pas la section** — plutôt qu’un menu vide.
+**Un modèle sans séquence garde la section**, qui dit alors ce qui lui manque — qu’il ne porte pas
+encore de squelette, ou qu’il en porte un que le studio ne reconnaît pas. Le menu, lui, ne
+s’affiche que s’il y a quelque chose à choisir.
 
 **La séquence choisie se voit aussi sur la bande du bas**, posée en bloc à sa longueur réelle, sur
 une ligne à elle qui porte **le nom du clip**. Les blocs sont groupés **sous** les lignes de clés,

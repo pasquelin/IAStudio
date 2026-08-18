@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ANIMATION } from '@shared/domain/scene'
+import { embeddedClip, type ClipRef } from '@shared/domain/scene'
 import {
   lightNodeFixture as light,
   meshNode as mesh,
@@ -34,6 +34,8 @@ describe('firstCameraId', () => {
 })
 
 describe('sceneWithoutSelfPlay', () => {
+  const walkBlock = (playing: boolean): ClipRef => embeddedClip('c1', 'Walk', { playing })
+
   const playing = (state: boolean): SceneState => {
     const node = model('m')
     return {
@@ -43,7 +45,7 @@ describe('sceneWithoutSelfPlay', () => {
           ...node,
           model: {
             ...node.model,
-            animation: { ...DEFAULT_ANIMATION, clip: 'Walk', playing: state },
+            clips: [walkBlock(state)],
           },
         },
       ],
@@ -53,13 +55,13 @@ describe('sceneWithoutSelfPlay', () => {
   it('stops a model its own tab left running, so the playhead alone decides the pose', () => {
     const stopped = sceneWithoutSelfPlay(playing(true)).nodes[0]
 
-    expect(stopped?.type === 'model' ? stopped.model.animation?.playing : null).toBe(false)
+    expect(stopped?.type === 'model' ? stopped.model.clips?.[0]?.playing : null).toBe(false)
   })
 
   it('keeps which clip is bound: stopping is not unbinding', () => {
     const stopped = sceneWithoutSelfPlay(playing(true)).nodes[0]
 
-    expect(stopped?.type === 'model' ? stopped.model.animation?.clip : null).toBe('Walk')
+    expect(stopped?.type === 'model' ? stopped.model.clips?.[0]?.source.name : null).toBe('Walk')
   })
 
   it('hands the very same object back when nothing was playing', () => {

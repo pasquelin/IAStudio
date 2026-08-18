@@ -49,16 +49,21 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
     const clips: ClipBlock[] = []
     for (const node of byId.values()) {
       if (node.type !== 'model') continue
-      const ref = node.model.animation
-      const seconds = ref ? (lengths?.[node.id]?.[ref.clip] ?? null) : null
-      if (!ref || seconds === null) continue
 
-      clips.push({
-        nodeId: node.id,
-        name: ref.clip,
-        start: ref.start,
-        duration: secondsToUs(seconds / Math.max(ref.speed, MIN_SPEED)),
-      })
+      for (const ref of node.model.clips ?? []) {
+        const seconds = lengths?.[node.id]?.[ref.source.name] ?? null
+        if (seconds === null) continue
+
+        clips.push({
+          nodeId: node.id,
+          clipId: ref.id,
+          // The label the studio owns, never the name the file spells — a Tripo rig would put
+          // `NlaTrack` on the band.
+          name: ref.label,
+          start: ref.start,
+          duration: secondsToUs(seconds / Math.max(ref.speed, MIN_SPEED)),
+        })
+      }
     }
 
     return animationRows(timeline, { nodes, expanded, clips, order })

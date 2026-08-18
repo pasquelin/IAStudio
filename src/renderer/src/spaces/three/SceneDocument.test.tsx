@@ -8,7 +8,7 @@ import { forgetReportedFailures } from '@/services/diagnostics'
 import { fakeMenu } from '@/helpers/menu-fixtures'
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import { addNode } from '@/engines/scene/commands'
-import { meshNode } from '@/engines/scene/scene-fixtures'
+import { meshNode, rigStateFixture } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
@@ -17,7 +17,7 @@ import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
-import { bonesOfNode, clipsOfNode, useModelClips } from '@/stores/modelClips'
+import { bonesOfNode, clipsOfNode, rigOfNode, useModelClips } from '@/stores/modelClips'
 import { IDENTITY_TRANSFORM } from '@/engines/scene/sceneState'
 import { DISPLAY_MODES } from '@shared/domain/scene'
 import { SceneDocument } from './SceneDocument'
@@ -107,7 +107,7 @@ function nodesOf(documentId: string): SceneNode[] {
 beforeEach(() => {
   vi.clearAllMocks()
   built.length = 0
-  useModelClips.setState({ clips: {}, bones: {} })
+  useModelClips.setState({ clips: {}, rigs: {} })
   // The export tests install a bridge; without this it would answer for the ones that follow.
   vi.unstubAllGlobals()
   // A report is said once per subject and the set lives at module scope: a second test on the
@@ -539,9 +539,17 @@ describe('SceneDocument and the timeline over the scene', () => {
   it('reports the bones a model brought, so a track can name one', () => {
     render(<SceneDocument documentId="doc-1" />)
     const options = built.at(-1)
-    options?.onBones?.('perso', ['spine', 'arm.L'])
+    options?.onRig?.('perso', rigStateFixture(['spine', 'arm.L']))
 
     expect(bonesOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual(['spine', 'arm.L'])
+  })
+
+  it('reports what the model turned out to be, which is what the inspector answers with', () => {
+    render(<SceneDocument documentId="doc-1" />)
+    const options = built.at(-1)
+    options?.onRig?.('perso', rigStateFixture(['spine']))
+
+    expect(rigOfNode(useModelClips.getState(), 'doc-1', 'perso')?.status).toBe('skinnedMesh')
   })
 
   it('reports the clips too, and forgets both when the viewport goes', () => {

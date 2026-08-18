@@ -114,7 +114,9 @@ describe('pointing at a clip block', () => {
     rows: animationRows(timelineWith([]), {
       nodes: [],
       expanded: new Set(),
-      clips: [{ nodeId: 'perso', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND }],
+      clips: [
+        { nodeId: 'perso', clipId: 'c1', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND },
+      ],
     }),
     viewport,
     fps: 25,
@@ -126,8 +128,9 @@ describe('pointing at a clip block', () => {
   it('finds the block, and says how far into it the pointer landed', () => {
     expect(hitAnimation(withBlock(), { x: 150, y: middle })).toEqual({
       kind: 'block',
-      rowId: 'clip:perso',
+      rowId: 'clip:perso:c1',
       nodeId: 'perso',
+      clipId: 'c1',
       grabbedAt: 0.5 * SECOND,
     })
   })

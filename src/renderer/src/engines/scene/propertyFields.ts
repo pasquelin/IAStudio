@@ -1,13 +1,13 @@
-import type {
-  GeometryDescriptor,
-  LightDescriptor,
-  MaterialDescriptor,
-  SpriteDescriptor,
-  TextDescriptor,
-  TextureSlot,
-  Vector3,
+import {
+  isVector3,
+  type GeometryDescriptor,
+  type LightDescriptor,
+  type MaterialDescriptor,
+  type SpriteDescriptor,
+  type TextDescriptor,
+  type TextureSlot,
+  type Vector3,
 } from '@shared/domain/scene'
-import { isRecord } from '@shared/guards'
 import type { NumericBounds } from '@shared/numeric'
 
 /*
@@ -220,9 +220,4 @@ function listFields(descriptor: object, specs: Record<string, PropertySpec>): Pr
 
 function isFieldValue(value: unknown): value is FieldValue {
   return typeof value === 'number' || typeof value === 'string' || isVector3(value)
-}
-
-export function isVector3(value: unknown): value is Vector3 {
-  if (!isRecord(value)) return false
-  return ['x', 'y', 'z'].every(axis => typeof value[axis] === 'number')
 }

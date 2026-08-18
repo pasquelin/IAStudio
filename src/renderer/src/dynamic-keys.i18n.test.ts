@@ -13,6 +13,7 @@ import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timelineState'
 import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
 import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
+import { RIG_STATUSES, type RigStatus } from '@/engines/scene/rigState'
 import { ASSET_INTENTS } from '@/helpers/assetIntents'
 import { FOLDER_SORTS } from '@/helpers/folderSort'
 import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
@@ -50,6 +51,9 @@ const COMPOSED_KEYS: readonly string[] = [
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}Hint`),
   ...BLEND_MODES.map(mode => `blend.${mode}`),
   ...LAYER_KINDS.map(kind => `inspector.layerKind_${kind}`),
+  // What the inspector says an imported model IS. A state with no sentence would read as the
+  // raw key on the one surface that tells a user their model cannot be animated yet.
+  ...RIG_STATUSES.map(status => `inspector.rigStatus_${status}`),
   ...TRACK_KINDS.map(kind => `inspector.kind_${kind}`),
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),
@@ -109,6 +113,18 @@ describe('the lists behind those keys', () => {
     const all: Record<TrackKind, true> = { video: true, audio: true }
 
     expect([...TRACK_KINDS].sort()).toEqual(Object.keys(all).sort())
+  })
+
+  it('holds every state an imported model can be in', () => {
+    const all: Record<RigStatus, true> = {
+      staticMesh: true,
+      skinnedMesh: true,
+      riggedCharacter: true,
+      animatedCharacter: true,
+      skeletonOnly: true,
+    }
+
+    expect([...RIG_STATUSES].sort()).toEqual(Object.keys(all).sort())
   })
 
   it('holds every channel a material carries', () => {

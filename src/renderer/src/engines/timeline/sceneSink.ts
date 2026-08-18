@@ -1,5 +1,6 @@
-import { DEFAULT_ANIMATION } from '@shared/domain/scene'
+import { embeddedClip } from '@shared/domain/scene'
 import { secondsToUs } from '@shared/domain/time'
+import { newId } from '@/helpers/ids'
 import { createDefaultScene } from '../scene/defaultScene'
 import { modelNode } from '../scene/nodeFactory'
 import type { SceneState } from '../scene/sceneState'
@@ -41,7 +42,10 @@ export function createModelScene(assetId: string, name: string): ModelScene {
         ...state,
         nodes: state.nodes.map(node =>
           node.id === model.id && node.type === 'model'
-            ? { ...node, model: { ...node.model, animation: { ...DEFAULT_ANIMATION, clip } } }
+            ? {
+                ...node,
+                model: { ...node.model, clips: [embeddedClip(newId(), clip, { playing: true })] },
+              }
             : node,
         ),
       }
