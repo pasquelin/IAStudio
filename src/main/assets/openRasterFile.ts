@@ -14,13 +14,11 @@ import {
   type OraStack,
   type OraSurface,
 } from '@shared/domain/openRaster'
+import { attribute, escapeXml, unescapeXml } from './xmlText'
 
 const MIMETYPE_PATH = 'mimetype'
 const THUMBNAIL_PATH = 'Thumbnails/thumbnail.png'
 const STACK_PATH = 'stack.xml'
-
-const escapeXml = (text: string): string =>
-  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 /** The attributes every node writes, whichever kind it is. */
 function commonAttributes(node: OraNode): string {
@@ -122,21 +120,6 @@ export function packOpenRaster({ stack, surfaces }: OraDocument, envelope = ''):
  * studio's state are compressed, and both are text measured in kilobytes.
  */
 const stored = (png: Uint8Array): [Uint8Array, { level: 0 }] => [png, { level: 0 }]
-
-/**
- * Anchored on whitespace: unanchored, `y="…"` matches inside `opacity="…"`, and every layer of
- * such a file lands at the wrong height. The spec fixes no attribute order, and ours writes `y`
- * first — so a round trip through this studio can never show it. GIMP 3.2.4 does not either.
- */
-const attribute = (tag: string, name: string): string =>
-  new RegExp(`(?:^|\\s)${name}="([^"]*)"`).exec(tag)?.[1] ?? ''
-
-const unescapeXml = (text: string): string =>
-  text
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&')
 
 /**
  * The spec's own range, and anything else reads as fully opaque — `50%`, an empty attribute, a

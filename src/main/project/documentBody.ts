@@ -12,9 +12,11 @@ import {
   type DocumentKind,
 } from '@shared/domain/document'
 import { defaultSceneIndex, gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
+import { isMtlxDocument, MTLX_HEAD_LIMIT } from '@shared/domain/materialX'
 import { isOtioTimeline, otioStudioMetadata } from '@shared/domain/otio'
 import { ORA_HEAD_LIMIT, ORA_MIMETYPE } from '@shared/domain/openRaster'
 import { isRecord, readString } from '@shared/guards'
+import { mtlxHeadIn, readMaterialX, writeMaterialX } from '@main/assets/materialXFile'
 import {
   oraHeadIn,
   packOpenRaster,
@@ -205,11 +207,82 @@ const OPEN_SCENE: DocumentBodyFormat = {
   },
 }
 
+/**
+ * What the `scenariodocument` attribute carries — the same two fields a glTF stamps, and for the
+ * same reason: the title is the file's own name and the clock is the disk's, so neither is
+ * written where it could go stale.
+ */
+function mtlxStamp(envelope: string): { id: string; kind: string } {
+  const held = envelope ? jsonOrNull(envelope) : null
+  const studio = isRecord(held) ? held : {}
+  return {
+    id: readString(studio, DOCUMENT_ID_KEY, ''),
+    kind: readString(studio, DOCUMENT_KIND_KEY, ''),
+  }
+}
+
+function mtlxEnvelope(envelope: string): DocumentEnvelope {
+  const { id, kind } = mtlxStamp(envelope)
+  return {
+    version: DOCUMENT_VERSION,
+    kind: isDocumentKind(kind) ? kind : 'texture',
+    title: '',
+    updatedAt: '',
+    ...(id ? { id } : {}),
+  }
+}
+
+/**
+ * A material document, in whichever of the two spellings its file holds — the MaterialX is what
+ * the studio writes now, the envelope what a `.mtlx` written before the switch holds.
+ *
+ * Unlike the glTF kinds, the content is NOT the file's own text: the editor composes an
+ * `MtlxDocument`, and the XML is this layer's spelling of it, exactly as `stack.xml` is of a
+ * picture's stack.
+ */
+function materialDocument(body: string): DocumentFile {
+  const { version, envelope } = mtlxHeadIn(body)
+  if (!version) return envelopedDocument(body)
+
+  return { ...mtlxEnvelope(envelope), content: JSON.stringify(readMaterialX(body)) }
+}
+
+/**
+ * A material IS its MaterialX. The envelope rides on the root tag, which is the first line of the
+ * file whatever the state weighs — so unlike a glTF this format has a real head, and a listing
+ * never opens a material whole.
+ */
+const OPEN_MATERIALX: DocumentBodyFormat = {
+  read: body => materialDocument(body.toString('utf8')),
+  write: document => {
+    const parsed = jsonOrNull(document.content)
+    return isMtlxDocument(parsed)
+      ? writeMaterialX(parsed, JSON.stringify(studioStamp({}, document)))
+      : ENVELOPED.write(document)
+  },
+  readHead: async file => {
+    const head = (await firstBytes(file, MTLX_HEAD_LIMIT)).toString('utf8')
+    // A first line that PARSES as an envelope is a document written before the switch; a
+    // `<?xml` declaration is not one, so the two never answer for each other.
+    const cut = head.indexOf('\n')
+    const first = cut === -1 ? null : jsonOrNull(head.slice(0, cut))
+    if (isRecord(first)) return parseDocumentEnvelope(first)
+
+    const { version, envelope } = mtlxHeadIn(head)
+    if (!version) throw new Error('Not a MaterialX document')
+    // A `.mtlx` somebody put in the project carries no attribute of ours. Turned away rather than
+    // listed, which is the rule every open format here follows — `read` still rebuilds it.
+    if (!envelope) throw new Error('Nothing of the studio where this file begins')
+    return mtlxEnvelope(envelope)
+  },
+}
+
 // `.gltf` twice over — the scene and the sky wear the same extension, so one entry serves both.
 const FORMAT_BY_EXTENSION: Record<string, DocumentBodyFormat> = {
   [EXTENSIONS_BY_KIND.sequence]: OPEN_TIMELINE,
   [EXTENSIONS_BY_KIND.image]: OPEN_RASTER,
   [EXTENSIONS_BY_KIND.scene]: OPEN_SCENE,
+  [EXTENSIONS_BY_KIND.texture]: OPEN_MATERIALX,
 }
 
 /** How a file of this extension is spelt — the studio's own envelope for anything unlisted. */

@@ -61,7 +61,13 @@ import type { DocumentStore } from '@/stores/documentStore'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
 import { canvasHost } from '@/spaces/image/canvasHosts'
 import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
-import { newTexture, parseTexture } from '@/engines/texture/textureState'
+import { newTexture } from '@/engines/texture/textureState'
+import {
+  forgetCarriedMaterial,
+  materialRefusesToSave,
+  textureFromPayload,
+  texturePayload,
+} from './textureDocument'
 import { useSkyboxViews } from '@/stores/skyboxViews'
 import { useTextureViews } from '@/stores/textureViews'
 import { textureStore } from '@/stores/textures'
@@ -253,9 +259,6 @@ function textDocumentIo<S>(
     forget: documentId => store.use.getState().drop(documentId),
   }
 }
-
-/** A state that is already the payload — most kinds store what they serialize. */
-const asIs = <S>(state: S): unknown => state
 
 /**
  * The key the chain of effects travels under, inside the studio domain of a take's timeline. No
@@ -582,13 +585,25 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
       forgetCarriedSky(documentId)
     },
   },
-  // The one whose absence is NOT a refusal: a channel is a reference, not pixels, and what does
-  // produce pixels — `deriveChannel` — already writes them as an asset when it derives them.
-  texture: textDocumentIo(textureStore, {
-    toPayload: asIs,
-    fromPayload: parseTexture,
-    createDefault: newTexture,
-  }),
+  // A material IS its MaterialX: each channel is a `tiledimage` reading a file beside the
+  // document, and the dials the standard has no input for ride in the attribute it reserves for
+  // applications. The one whose absence is NOT a refusal: a channel is a reference, not pixels,
+  // and what does produce pixels — `deriveChannel` — already writes them as an asset.
+  texture: {
+    ...textDocumentIo(textureStore, {
+      toPayload: texturePayload,
+      fromPayload: textureFromPayload,
+      createDefault: newTexture,
+    }),
+    // One material is rewritten from one state: a file holding a second one, or a look, cannot be
+    // half rewritten. Refused rather than flattened, exactly as a sky holding a scene is.
+    incomplete: materialRefusesToSave,
+    forget: documentId => {
+      textureStore.use.getState().drop(documentId)
+      // Dropped with the document, so a reopened id never inherits the paths another file carried.
+      forgetCarriedMaterial(documentId)
+    },
+  },
 }
 
 /** `undefined` for an id no tab is showing — never for a kind that cannot be saved. */

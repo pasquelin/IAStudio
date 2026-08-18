@@ -300,6 +300,42 @@ describe('createDocumentFiles', () => {
   })
 
   /**
+   * The same five for the material. The one that caught the sky's defect is the RENAME: it
+   * rewrites the body from what a read answered, so anything a read drops is written back empty.
+   */
+  it('writes a material as MaterialX, and finds it again by its own head', async () => {
+    const material = JSON.stringify({
+      images: [
+        {
+          input: 'base_color',
+          type: 'color3',
+          file: 'Assets/base.png',
+          colorspace: 'srgb_texture',
+          tiling: [1, 1],
+          offset: [0, 0],
+        },
+      ],
+      values: [{ input: 'specular_roughness', type: 'float', value: 0.5 }],
+      studio: { material: { edgeIntensity: 0.4 } },
+    })
+    await documents.write('doc-mat', 'texture', { title: 'Laiton', content: material })
+
+    const listed = await documents.list()
+    expect(listed).toMatchObject([{ id: 'doc-mat', kind: 'texture', title: 'Laiton' }])
+
+    // Real MaterialX, not a spelling of the studio's own wearing the extension.
+    const onDisk = await readFile(join(root, 'documents', 'Laiton.mtlx'), 'utf8')
+    expect(onDisk.startsWith('<?xml version="1.0"?>\n<materialx version="1.39"')).toBe(true)
+    expect(onDisk).toContain('<standard_surface name="SR_scenario" type="surfaceshader">')
+
+    await documents.rename('doc-mat', 'texture', 'Bronze')
+    expect(await readdir(join(root, 'documents'))).toEqual(['Bronze.mtlx'])
+    // The dial no MaterialX input can carry survived the rewrite the rename does.
+    expect((await documents.read('doc-mat', 'texture'))?.content).toContain('edgeIntensity')
+    expect(await documents.list()).toMatchObject([{ id: 'doc-mat', title: 'Bronze' }])
+  })
+
+  /**
    * `.gltf` names two kinds, so the address a document of either WOULD have had is the same one
    * — and closing a sky that was never saved would have deleted the scene sitting at it. Removal
    * asks the file whose it is rather than trusting where it was pointed.
