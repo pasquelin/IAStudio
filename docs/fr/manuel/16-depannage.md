@@ -445,8 +445,9 @@ s'était arrêtée**, elle ne recommence pas les 640 Mo.
 
 Le moteur a quitté en cours de route. Il redémarre tout seul à la dictée suivante, jusqu'à trois
 fois ; au-delà, le studio cesse d'essayer plutôt que de relancer un processus qui meurt à chaque
-phrase. Le détail est dans le journal (**Aide ▸ Journal**), pas à l'écran : il nomme un chemin de
-fichier, ce qui n'aide personne devant l'écran mais dit tout à qui lit le journal.
+phrase. Le détail va dans la console technique (**Réglages ▸ Avancé ▸ Outils de développement**),
+pas à l'écran : il nomme un chemin de fichier, ce qui n'aide personne devant l'écran mais dit tout
+à qui la lit.
 
 ### « Aucun micro disponible. »
 

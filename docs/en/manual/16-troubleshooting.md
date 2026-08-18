@@ -425,8 +425,9 @@ does not start the 640 MB again.
 
 The engine quit mid-way. It restarts on its own at the next dictation, up to three times; past
 that the studio stops trying rather than relaunch a process that dies on every sentence. The
-detail is in the journal (**Help ▸ Journal**), not on screen: it names a file path, which helps
-nobody in front of the screen and tells everything to whoever reads the journal.
+detail goes to the technical console (**Settings ▸ Advanced ▸ Developer tools**), not on screen:
+it names a file path, which helps nobody in front of the screen and tells everything to whoever
+reads the log.
 
 ### "No microphone available."
 
