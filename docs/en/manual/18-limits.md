@@ -286,7 +286,7 @@ what you do when the result has to serve elsewhere rather than carry on being ed
   the project, then drop it onto the channel's thumbnail.
 
 **Export now exists** — glTF/GLB, Unity, Unreal, Roblox and the raw channels, through File →
-Export the texture. Two bounds worth knowing: **Roblox refuses a map above 1024 px**, so its four
+Export material. Two bounds worth knowing: **Roblox refuses a map above 1024 px**, so its four
 files are brought under that ceiling; and the `.glb` leaves with the shape of the preview, an
 object format having no way to carry a material on its own.
 
