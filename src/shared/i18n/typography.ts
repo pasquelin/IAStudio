@@ -24,13 +24,14 @@ const ORDINARY = '\u0020'
  * that joins them to the figure. That join is in CODE, so no guard reading French values can see
  * it — which is why it binds with `NO_BREAK_SPACE` rather than trusting this list.
  *
- * English holds the three symbols it writes and no speculation, measured over the whole bundle:
- * every other short token after a figure is a word — `8 asset`, `3 days`, `24 hours` — which the
- * boundary already lets through.
+ * English carries the byte family for the same reason, and the two lists must MIRROR each other:
+ * a list holding `Mio` and not `MiB` reddens on a French value while its English twin passes, and
+ * the two bundles drift apart in typography with nothing to say so. What English does not carry
+ * is a word — `8 asset`, `3 days`, `24 hours` — which the boundary already lets through.
  */
 export const UNIT_SYMBOLS: Record<Language, readonly string[]> = {
   fr: ['UC', 'o', 'Kio', 'Mio', 'Gio', 'Mo', 'j', 'h', 'LUFS'],
-  en: ['CU', 'MB', 'LUFS'],
+  en: ['CU', 'B', 'KiB', 'MiB', 'GiB', 'KB', 'MB', 'GB', 'd', 'h', 'LUFS'],
 }
 
 /** Multiplication ties to BOTH numbers: bound on the left alone, the second one leaves the line. */

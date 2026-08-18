@@ -6,11 +6,15 @@
  * Decomposing first is what makes it work on either side: `é` typed as one character and `é`
  * typed as `e` plus an accent both come out as `e`, so a name pasted from elsewhere is found
  * by a name typed here.
+ *
+ * A no-break space folds to an ordinary one for the same reason: the bundles bind a figure to
+ * its unit with U+00A0, and the hand searching for `700 MB` types the space its keyboard has.
  */
 export function foldForSearch(text: string): string {
   return text
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
+    .replace(/\p{Zs}/gu, ' ')
     .toLowerCase()
 }
 

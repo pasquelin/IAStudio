@@ -291,7 +291,9 @@ describe('the translation bundles', () => {
    * in `typography.ts` because `model-text.fr.json` is guarded against exactly the same ones.
    *
    * The figure half is not French — English breaks `{{units}} CU` the same way — and this read
-   * `fr` alone while the English bundle held ZERO no-break spaces over 2556 values.
+   * `fr` alone while the English bundle held not a single no-break space. The two unit lists
+   * MIRROR each other for that reason: one symbol in a list and not the other lets the bundles
+   * drift apart in typography with nothing to say so.
    */
   it.each(CODES)('binds what %s does not break', code => {
     const breakable = [...BUNDLES[code]].flatMap(([key, text]) =>
