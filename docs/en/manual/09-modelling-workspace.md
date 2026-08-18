@@ -765,8 +765,9 @@ where the clip on top hides the one below.
 
 Auto-key is not compulsory. The gesture, in order:
 
-1. **set a key** at the start, on the object's line — it opens its three properties and keeps the
-   pose the object stands in at that moment, which every key of its own is measured against;
+1. **set a key** at the start, on the object's line — it opens its three properties (a camera has
+   a fourth, its **field of view**) and keeps the pose the object stands in at that moment, which
+   every key of its own is measured against;
 2. **move the playhead** along the ruler;
 3. **move the object**, then **set a key** again.
 
@@ -798,6 +799,13 @@ air. Drag a line's header to change its rank — that edits the document, and `�
 > **With no shot at all, nothing is lost**: the scene's first camera films, over the whole length.
 > And **deleting a camera does not punch a hole in the film** — its shots are skipped rather than
 > rendered black, and undoing the delete brings them back whole.
+
+**The field of view animates like the rest**, and that is a shot's zoom. Set a key on the camera's
+line — it opens the **field of view** along with the other three properties — then work that field
+in the Inspector: with **auto-key** on, every setting becomes a key at the playhead rather than a
+change of lens. A camera **already animated** records without it too, the way an already animated
+object does of a move. The field then shows what the lens reads **at the instant the playhead
+stands on**, keys included.
 
 The timeline's **Render to video** button writes an `.mp4` over the whole length, each frame taken
 through the camera the montage names at that instant. The studio asks **where to save before

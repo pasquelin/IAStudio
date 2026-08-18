@@ -134,6 +134,8 @@ const DOM_BOUND = [
   // Writes a real GLB, and `GLTFExporter` reaches for `FileReader`.
   'src/renderer/src/engines/scene/rigRoundTrip.test.ts',
   'src/renderer/src/engines/scene/sceneExport.test.ts',
+  // A stage opens an off-screen host before anything else, and a host is a div in a document.
+  'src/renderer/src/engines/scene/sceneStage.test.ts',
   'src/renderer/src/engines/scene/scene-models.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-animation.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-export.test.ts',

@@ -58,8 +58,27 @@ export function activeShotAt(
   nodes: readonly SceneNode[],
   time: Us,
 ): CameraShot | null {
-  const cameras = new Set(nodes.flatMap(node => (node.type === 'camera' ? node.id : [])))
+  const cameras = cameraIds(nodes)
   return bestShot(timeline, time, shot => cameras.has(shot.cameraId))
+}
+
+/**
+ * The cameras of a scene, cached on the identity of the node list — the same rule as `ranks`
+ * below: an edit replaces the array, so the same array holds the same cameras.
+ *
+ * Asked once per frame of a montage and once per render of the preview, and it walked the whole
+ * node list each time: measured 18/08 on `cameraShots.bench`, 168 µs a call over 5 000 nodes and
+ * 2,0 ms over 50 000, against 0,26 µs whatever the count.
+ */
+const cameraSets = new WeakMap<readonly SceneNode[], Set<string>>()
+
+function cameraIds(nodes: readonly SceneNode[]): Set<string> {
+  const held = cameraSets.get(nodes)
+  if (held) return held
+
+  const ids = new Set(nodes.flatMap(node => (node.type === 'camera' ? node.id : [])))
+  cameraSets.set(nodes, ids)
+  return ids
 }
 
 /**

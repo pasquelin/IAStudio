@@ -16,10 +16,16 @@ import { SceneRenderer } from './SceneRenderer'
 import type { BvhBuilder } from './bvhBuilder'
 import type { Retarget } from './retarget'
 import type * as ModelCache from './modelCache'
-import { cameraShot } from './animation-fixtures'
+import { animationTrack, cameraShot } from './animation-fixtures'
 import { cameraNodeFixture, meshNode, modelNodeFixture, pathNodeFixture } from './scene-fixtures'
 import { EMPTY_SCENE, IDENTITY_TRANSFORM } from './sceneState'
-import { EMPTY_TIMELINE, type AnimationTimeline, type CameraShot } from '@shared/domain/animation'
+import {
+  EMPTY_TIMELINE,
+  type AnimationTimeline,
+  type AnimationTrack,
+  type CameraShot,
+  type Keyframe,
+} from '@shared/domain/animation'
 import { SECOND } from '@shared/domain/time'
 
 /**
@@ -276,8 +282,18 @@ describe('SceneRenderer and a camera on a rail', () => {
     return scene.children.find(child => child.name === id)
   }
 
+  const channel = (
+    id: string,
+    target: AnimationTrack['target'],
+    keys: Keyframe[],
+    muted = false,
+  ): AnimationTrack => animationTrack(id, target.property, keys, { target, muted })
+
   /** A rail ten units long down X, a camera bound to it for the whole of a four-second shot. */
-  const staged = (extra: Partial<CameraShot> = {}): SceneRenderer => {
+  const staged = (
+    extra: Partial<CameraShot> = {},
+    timeline: Partial<AnimationTimeline> = {},
+  ): SceneRenderer => {
     const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
     engine.apply({
       ...EMPTY_SCENE,
@@ -296,6 +312,7 @@ describe('SceneRenderer and a camera on a rail', () => {
       ],
       animation: {
         ...EMPTY_TIMELINE,
+        ...timeline,
         shots: [
           cameraShot('s1', {
             cameraId: 'cam',
@@ -322,17 +339,50 @@ describe('SceneRenderer and a camera on a rail', () => {
     engine.dispose()
   })
 
-  // Placing the head straight there must give the very same pose as walking to it — the whole
-  // reason nothing here accumulates frame by frame.
-  it('gives the same place whether the head arrived in one step or in twenty', () => {
-    const straight = staged()
-    straight.setPlayhead(2.5 * SECOND)
-    const once = objectOf(straight, 'cam')?.position.x ?? -1
+  /**
+   * Placing the head straight there must give the very same STATE as walking to it — where the
+   * camera stands, where it aims and what its lens reads, the three at once. That is the whole
+   * reason nothing here accumulates frame by frame, and the aim is the one that would drift:
+   * it is taken from a target that is itself animated.
+   */
+  it('gives the same camera state whether the head arrived in one step or in twenty', () => {
+    const drifting = (): SceneRenderer =>
+      staged(
+        { target: { kind: 'node', nodeId: 'watched' } },
+        {
+          tracks: [
+            channel('lens', { nodeId: 'cam', property: 'fov' }, [
+              { time: 0, value: { x: 0, y: 0, z: 0 } },
+              { time: 4 * SECOND, value: { x: 20, y: 0, z: 0 } },
+            ]),
+            channel('walk', { nodeId: 'watched', property: 'position' }, [
+              { time: 0, value: { x: 0, y: 0, z: 0 } },
+              { time: 4 * SECOND, value: { x: 30, y: 5, z: 0 } },
+            ]),
+          ],
+        },
+      )
 
-    const walked = staged()
+    const stateOf = (engine: SceneRenderer): number[] => {
+      const camera = objectOf(engine, 'cam')
+      if (!(camera instanceof PerspectiveCamera)) throw new Error('the fixture stages a camera')
+      return [...camera.position.toArray(), ...camera.quaternion.toArray(), camera.fov]
+    }
+
+    const straight = drifting()
+    straight.setPlayhead(2.5 * SECOND)
+    const once = stateOf(straight)
+
+    // What the head reads there, spelled out: without this the comparison below would hold just
+    // as well on a camera that never left its rest, which is the one way it could mean nothing.
+    expect(once[0]).toBeCloseTo(6.25, 4)
+    expect(once.at(-1)).toBeCloseTo(62.5, 4)
+    expect(Math.abs(once[4] ?? 0)).toBeGreaterThan(0.1)
+
+    const walked = drifting()
     for (let step = 1; step <= 20; step += 1) walked.setPlayhead((2.5 * SECOND * step) / 20)
 
-    expect(objectOf(walked, 'cam')?.position.x).toBeCloseTo(once, 10)
+    stateOf(walked).forEach((value, at) => expect(value).toBeCloseTo(once[at] ?? -1, 10))
     straight.dispose()
     walked.dispose()
   })
@@ -358,19 +408,15 @@ describe('SceneRenderer and a camera on a rail', () => {
     const lensTrack = (muted: boolean): AnimationTimeline => ({
       ...EMPTY_TIMELINE,
       tracks: [
-        {
-          id: 'lens',
-          name: 'Lens',
-          index: 0,
-          muted,
-          solo: false,
-          locked: false,
-          target: { nodeId: 'cam', property: 'fov' },
-          keys: [
+        channel(
+          'lens',
+          { nodeId: 'cam', property: 'fov' },
+          [
             { time: 0, value: { x: 0, y: 0, z: 0 } },
             { time: 2 * SECOND, value: { x: 20, y: 0, z: 0 } },
           ],
-        },
+          muted,
+        ),
       ],
     })
 

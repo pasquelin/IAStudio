@@ -11,11 +11,17 @@ import {
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import type { Command } from '../core/history'
-import { addNode, moveNodes, multi } from './commands'
+import { addNode, batch, moveNodes, multi, setCamera } from './commands'
 import { pathNode } from './nodeFactory'
 import { deltaOf, valueAt, withKey, withoutKey } from './animationEval'
 import { shotsWith } from './cameraShots'
-import { nodeById, type CameraNode, type NodeMove, type SceneState } from './sceneState'
+import {
+  nodeById,
+  type CameraNode,
+  type NodeMove,
+  type SceneNode,
+  type SceneState,
+} from './sceneState'
 
 /**
  * Edits of the timeline, on the pattern of the sequence's own track commands: what a command
@@ -551,4 +557,33 @@ export function movesToCommand(
   if (plain.length > 0) keys.push(moveNodes(plain))
   if (keys.length === 0) return null
   return keys.length === 1 && keys[0] ? keys[0] : multi('transform', keys)
+}
+
+/**
+ * What a field of view typed into the inspector becomes: a key on the lens channel where one
+ * records, the camera's own descriptor everywhere else.
+ *
+ * The rule `movesToCommand` holds for a drag, applied to the one property no gizmo can carry —
+ * and the reason `recordMove` leaves the lens channel alone. The number handed in is what the
+ * lens must READ at that instant; a key holds what the channel ADDS, so the difference is taken
+ * against the descriptor, exactly as `deltaOf` takes a pose against its rest.
+ */
+export function lensToCommand(
+  state: SceneState,
+  nodes: readonly SceneNode[],
+  fov: number,
+  at: Us,
+  recording: boolean,
+): Command<SceneState> {
+  return batch('lens', nodes, node => {
+    if (node.type !== 'camera') return null
+
+    const lens = recordingTracksFor(state, node.id).find(track => track.target.property === 'fov')
+    // A camera ALREADY keyed records whatever the switch says, for the reason `movesToCommand`
+    // writes out: what a viewport shows is the descriptor plus what the channel adds, so writing
+    // the descriptor here would move the lens by the value of the key standing at that instant.
+    return lens && (recording || lens.keys.length > 0)
+      ? setAnimationKey(lens.id, at, { x: fov - node.camera.fov, y: 0, z: 0 })
+      : setCamera(node.id, { ...node.camera, fov })
+  })
 }

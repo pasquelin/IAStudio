@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { TrackTarget } from '@shared/domain/animation'
 import { SECOND } from '@shared/domain/time'
-import { poseAt } from './animationEval'
+import { fovAt, poseAt } from './animationEval'
 import {
   addAnimationTrack,
   addCameraShot,
   editCameraShot,
+  lensToCommand,
   recordingTracksFor,
   removeCameraShot,
   keyNode,
@@ -561,6 +562,53 @@ describe('dragging an object that is already keyed', () => {
     expect(
       movesToCommand(opened, move, 0, true)!.apply(opened).nodes[0]?.transform.position.x,
     ).toBe(0)
+  })
+})
+
+describe('the lens of a camera, typed into the inspector', () => {
+  const camera = cameraNodeFixture('cam', { fov: 50 })
+  const plain: SceneState = { ...EMPTY_SCENE, nodes: [camera] }
+  const lensed = addAnimationTrack(target('cam', 'fov'), 'Camera lens', 'lens').apply(plain)
+
+  const descriptorFov = (state: SceneState): number | null => {
+    const node = state.nodes[0]
+    return node?.type === 'camera' ? node.camera.fov : null
+  }
+  const keysOf = (state: SceneState) => state.animation.tracks[0]?.keys ?? []
+
+  it('writes the descriptor for a camera no lens channel drives', () => {
+    expect(descriptorFov(lensToCommand(plain, [camera], 80, 0, true).apply(plain))).toBe(80)
+  })
+
+  it('writes what the channel must ADD, leaving the descriptor where it stands', () => {
+    const applied = lensToCommand(lensed, [camera], 80, 0, true).apply(lensed)
+
+    expect(keysOf(applied)).toEqual([{ time: 0, value: { x: 30, y: 0, z: 0 } }])
+    expect(descriptorFov(applied)).toBe(50)
+  })
+
+  it('leaves an empty channel alone while nothing records', () => {
+    const applied = lensToCommand(lensed, [camera], 80, 0, false).apply(lensed)
+
+    expect(keysOf(applied)).toEqual([])
+    expect(descriptorFov(applied)).toBe(80)
+  })
+
+  // The rule `movesToCommand` holds for a drag: once a camera is animated, the switch stops
+  // deciding — writing the descriptor would move the lens by whatever the key already adds.
+  it('keeps keying a channel that already holds one, whatever the switch says', () => {
+    const first = lensToCommand(lensed, [camera], 60, 0, true).apply(lensed)
+    const second = lensToCommand(first, [camera], 80, 2 * SECOND, false).apply(first)
+
+    expect(keysOf(second).map(key => key.value.x)).toEqual([10, 30])
+    expect(descriptorFov(second)).toBe(50)
+  })
+
+  it('has the lens read between two keys, which is what a field of view animates for', () => {
+    const first = lensToCommand(lensed, [camera], 50, 0, true).apply(lensed)
+    const second = lensToCommand(first, [camera], 80, 2 * SECOND, true).apply(first)
+
+    expect(50 + (fovAt(second.animation, 'cam', 1 * SECOND) ?? 0)).toBe(65)
   })
 })
 

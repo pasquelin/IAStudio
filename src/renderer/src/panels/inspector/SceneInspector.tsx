@@ -11,10 +11,15 @@ import {
   setSpriteOn,
   setTextOn,
 } from '@/engines/scene/commands'
+import { snapToFrame } from '@shared/domain/time'
+import type { FieldValue } from '@/engines/scene/propertyFields'
 import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
+import { lensToCommand } from '@/engines/scene/animationCommands'
+import { fovAt } from '@/engines/scene/animationEval'
 import { newShotAt, shotOfCameraAt } from '@/engines/scene/cameraShots'
 import { newId } from '@/helpers/ids'
 import { selectedNodes } from '@/engines/scene/sceneState'
+import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
@@ -75,7 +80,38 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // fields of a material survive a whole drag of the position.
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
   const lit = useMemo(() => (light ? lightFields(light.light) : []), [light])
-  const lens = useMemo(() => (camera ? cameraFields(camera.camera) : []), [camera])
+  // The lens as it READS at the head, channel included: the field writes the same number back, so
+  // showing the descriptor alone would have a keyed camera jump by whatever its channel adds.
+  const lens = useMemo(
+    () =>
+      camera
+        ? cameraFields({
+            ...camera.camera,
+            fov: camera.camera.fov + (fovAt(animation, camera.id, playhead) ?? 0),
+          })
+        : [],
+    [camera, animation, playhead],
+  )
+
+  /**
+   * A lens field typed in. The fov goes through `lensToCommand`, which decides between a key and
+   * the descriptor; the other two are plain descriptor edits.
+   *
+   * The state and the switch are read at call time rather than subscribed to, as every gesture
+   * that needs more of the document than the fields show.
+   */
+  const changeLens = (name: string, value: FieldValue): void =>
+    edit.run(
+      name === 'fov' && typeof value === 'number'
+        ? lensToCommand(
+            sceneOf(useScenes.getState(), documentId),
+            selection,
+            value,
+            snapToFrame(playhead, animation.fps),
+            animationViewOf(useAnimationViews.getState(), documentId).autoKey,
+          )
+        : setCameraOn(selection, name, value),
+    )
 
   // The environment belongs to the document rather than to a node, so it shows either way — and
   // it is what keeps the panel from being empty when nothing is selected, in place of a message.
@@ -171,7 +207,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
           <DescriptorSection
             title={t('inspector.camera')}
             fields={lens}
-            onChange={(name, value) => edit.run(setCameraOn(selection, name, value))}
+            onChange={changeLens}
             gesture={edit.gesture}
           >
             <CameraAlignButton documentId={documentId} camera={camera} />
