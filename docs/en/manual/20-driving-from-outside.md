@@ -20,7 +20,7 @@ it on screen** — wherever the request came from.
 They do not see the same share of it, and that is deliberate. **The assistant knows eleven**, the
 ones a spoken sentence needs: open a workspace, find a model, prepare a generation. **The way in
 offers a hundred and forty-six**, everything a program drives deliberately — the file tree, the
-layer stack, the montage, the sky, the material, the 3D scene, the git repository, the remote
+layer stack, the edit, the sky, the material, the 3D scene, the git repository, the remote
 library. The reason is a plain one: the model that reads your sentences is given the whole
 catalogue before each of them, and a hundred and forty-six actions would leave no room left for
 the sentence.
@@ -198,7 +198,7 @@ tools: it is not copied out here, because it moves and because your client reads
 | **The library** | search, read, tag and remove assets | **files**, for removing |
 | **The remote library** | browse your own and the public feed, find likenesses, plan, fetch, send | **an asset**, for sending |
 | **The image** | the layer stack: add, style, place, group, merge, crop | nothing |
-| **The montage** | Video and Audio: lay a clip, move it, trim it, cut it, set fades, level and speed, keep the tracks. Exporting the document writes the **cut** as OpenTimelineIO, never a film — the frame-by-frame render needs a session nothing outside can hold | nothing, except the export |
+| **The edit** | Video and Audio: lay a clip, move it, trim it, cut it, set fades, level and speed, keep the tracks. Exporting the document writes the **cut** as OpenTimelineIO, never a film — the frame-by-frame render needs a session nothing outside can hold | nothing, except the export |
 | **Sky and material** | adjust a sky's image, place its sun, fill a material's channels and render it | nothing |
 | **3D** | the scene: place an object, turn it, light it, paint it, reparent it | nothing |
 | **Versions** | read the repository and its history, stage, record, branch, shelve, settle a conflict, fetch, publish | **files**, for whatever rewrites the working tree; **a server**, for publishing |
