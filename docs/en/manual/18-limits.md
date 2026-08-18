@@ -79,15 +79,19 @@ They are visible in the toolbar, greyed out.
 
 | Tool | Group |
 |---|---|
-| **Slice** (`⇧S`) | Frame |
-| **Cut** (`S`) | Frame |
+| **Slice** | Frame |
+| **Cut** | Frame |
 | **Pen** | Drawing |
 | **Text on path** | Text |
-| **Comment** (`C`) | alone in its group |
+| **Comment** | alone in its group |
 
 **They all say their state by their grey**, which is the only thing asked of them until they
 exist. Comment was the last to fall into line: it armed like the others, changed the cursor, and
 left the engine dropping every click — a button that looked alive without being so.
+
+**None of the five has a keyboard shortcut**, and that is deliberate: a key that does nothing is
+looked for longer than a key that is not there. The [Shortcuts](15-shortcuts.md) chapter therefore
+names none of them.
 
 ### In Video, tool keys are not listened for
 

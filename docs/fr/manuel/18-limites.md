@@ -82,16 +82,20 @@ Ils sont visibles dans la barre d’outils, en gris.
 
 | Outil | Groupe |
 |---|---|
-| **Section** (`⇧S`) | Cadre |
-| **Découpe** (`S`) | Cadre |
+| **Section** | Cadre |
+| **Découpe** | Cadre |
 | **Plume** | Dessin |
 | **Texte sur chemin** | Texte |
-| **Commentaire** (`C`) | seul de son groupe |
+| **Commentaire** | seul de son groupe |
 
 **Ils disent tous leur état par leur gris**, et c’est la seule chose qu’on leur demande tant qu’ils
 n’existent pas. Le Commentaire a été le dernier à rentrer dans le rang : il s’armait comme les
 autres, changeait le curseur, et laissait le moteur jeter chaque clic — un bouton qui avait l’air
 vivant sans l’être.
+
+**Aucun des cinq n’a de raccourci clavier**, et c’est voulu : une touche qui n’agit pas se cherche
+plus longtemps qu’une touche qui n’existe pas. Le chapitre
+[Raccourcis](15-raccourcis.md) ne les nomme donc nulle part.
 
 ### En Vidéo, les touches des outils ne sont pas écoutées
 
