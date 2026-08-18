@@ -40,10 +40,47 @@ describe('a montage held as OpenTimelineIO', () => {
   // The whole point of the format being the document: nothing of ours may sit in the file, or
   // another application reads a first line it has no schema for.
   it('writes the standard file and nothing else', () => {
-    const content = timeline()
-    expect(otio.write({ version: 1, kind: 'sequence', title: '', updatedAt: '', content })).toBe(
-      content,
-    )
+    const written = otio.write({
+      version: 1,
+      kind: 'sequence',
+      title: 'Bande',
+      updatedAt: '',
+      content: timeline({ documentId: 'doc-7' }),
+    })
+
+    expect(otio.read(written)).toMatchObject({ kind: 'sequence', id: 'doc-7' })
+    expect(written.startsWith('{')).toBe(true)
+  })
+
+  // The field another application shows. A save already carries the title; a RENAME is what would
+  // otherwise leave the old one inside a file the studio has just called something else.
+  it('stamps the title into the name the standard holds', () => {
+    const written = otio.write({
+      version: 1,
+      kind: 'sequence',
+      title: 'Bande son',
+      updatedAt: '',
+      content: timeline(),
+    })
+
+    expect(written).toContain('"name": "Bande son"')
+  })
+
+  /**
+   * The one place a save can be stopped. A window that mistook this file's format would put a
+   * body no reader understands into it, and the next listing would drop the document from the
+   * project altogether — file there, invisible, and no envelope left to recover it from.
+   */
+  it('refuses to write a body that is not a timeline', () => {
+    const draft: Omit<DocumentFile, 'content'> = {
+      version: 1,
+      kind: 'sequence',
+      title: '',
+      updatedAt: '',
+    }
+
+    expect(() => otio.write({ ...draft, content: '{"tracks":[],"settings":{}}' })).toThrow()
+    expect(() => otio.write({ ...draft, content: 'not json at all' })).toThrow()
   })
 
   it('reads a montage back as a sequence document, content untouched', () => {

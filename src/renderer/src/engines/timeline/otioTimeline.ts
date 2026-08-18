@@ -256,6 +256,10 @@ function assetIdFrom(
 ): string {
   const known = readString(studio, 'assetId', '')
   if (known) return known
+  // A live scene has no media to relink, and its clip carries an EMPTY `assetId`: asked anyway,
+  // the resolver reported every scene of a montage as a media it could not find.
+  if (readString(studio, 'sceneId', '')) return ''
+
   const reference = raw.media_reference
   return isRecord(reference) ? assetIdOf(readString(reference, 'target_url', '')) : ''
 }

@@ -34,11 +34,11 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
   const projectPath = useProject.getState().project?.path
   if (!projectPath) throw new Error('no project is open to resolve the media against')
 
-  const timeline = otioTimelineFor(
-    sequenceOf(useSequences.getState(), documentId),
-    documentId,
-    fileUrlsUnder(projectPath),
-  )
+  // No `identifies`: an export is a COPY, and one landing inside the project would claim the id
+  // of the document it copied — the listing settles a shared id by path order, and the copy wins.
+  const timeline = otioTimelineFor(sequenceOf(useSequences.getState(), documentId), documentId, {
+    linkOf: fileUrlsUnder(projectPath),
+  })
 
   const name = documentExportName(useDocuments.getState(), documentId, 'edit')
   return {

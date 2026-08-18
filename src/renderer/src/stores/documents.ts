@@ -11,7 +11,7 @@ import {
   type DocumentNameFailure,
   type NamedDocument,
 } from '@shared/domain/documentName'
-import { extensionOf, foldForFileName, nameFailureOf, safeFileName } from '@shared/domain/fileName'
+import { foldForFileName, nameFailureOf, safeFileName } from '@shared/domain/fileName'
 import { nameOf, parentOf, pathIn } from '@shared/domain/folder'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
@@ -361,13 +361,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       { documents: {}, stored: get().stored },
       parentOf(document.path) ?? '',
     )
-    const refused = checkDocumentName(
-      title,
-      document.kind,
-      taken,
-      id,
-      extensionOf(nameOf(document.path)),
-    )
+    const refused = checkDocumentName(title, document.kind, taken, id)
     if (refused) return refused
 
     const renamed = await getBridge()

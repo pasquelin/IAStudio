@@ -205,9 +205,14 @@ An `.otio` **does open** now: double-click one in the Explorer and the edit open
 written here or by another application, and `⌘S` writes it back into its own file. What is left is
 the starting point — a sequence created in the studio still begins as a `.seq`.
 
-An edit from elsewhere names its media by path. The studio finds them in the project by that path,
-then by file name. **A clip whose media stays missing is not opened**, and the activity journal
-says which one — the edit is then shorter than what the file describes.
+An edit from elsewhere names its media by path. The studio looks for them in the project by that
+path, then by file name — **among the assets this window has already been shown**. A project just
+opened has not read its catalogue yet: opening a foreign edit a second later may find none of them.
+
+**A clip whose media is not found is not opened**, and the activity journal says which one. The
+edit is then shorter than what the file describes, and **`⌘S` refuses to write** while that holds:
+without that refusal, saving would erase those clips from the file. Bring the missing media into
+the project, open the edit again, and saving works once more.
 
 And what that format does not carry as a standard — fades, gains, image and sound links, the 3D
 scene behind a live clip — travels in the file but **is read by Scenario alone**.

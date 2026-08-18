@@ -30,10 +30,15 @@ import { layerPixelName, layerPixelsNamed } from '@/engines/canvas/layerPixelNam
 import { oraDocumentOf } from '@/engines/canvas/oraDocument'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
-import { reportFailure } from '@/services/diagnostics'
+import { reportFailure, reportNotice } from '@/services/diagnostics'
 import i18next from 'i18next'
 import { closePanel, openDocument } from './dockviewApi'
-import { sequenceFromPayload, sequencePayload, serializeSequencePayload } from './sequenceDocument'
+import {
+  montageIsIncomplete,
+  sequenceFromPayload,
+  sequencePayload,
+  serializeSequencePayload,
+} from './sequenceDocument'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audioEdits'
@@ -127,6 +132,14 @@ type DocumentIo = AssetWriting & {
   autosaves?: false
   /** Whether the document is already filled — a remount must not read over what is open. */
   holds: (documentId: string) => boolean
+  /**
+   * Whether what opened holds LESS than the file did — a montage whose media the project has
+   * none of, and whose clips were therefore dropped. Absent means the kind cannot open partly.
+   *
+   * Writing one back deletes what could not be read, and nothing on screen says so: `install`
+   * marks the document clean whatever it managed to restore.
+   */
+  incomplete?: (documentId: string) => boolean
   /** Whether closing the document would throw work away — never true for an untouched tab. */
   dirty: (documentId: string) => boolean
   /** Drops the state and the history a closed document was holding. */
@@ -486,12 +499,15 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
     createDefault: createDefaultScene,
   }),
   // Nor here: rendering a montage is minutes of work, which has no business on a keystroke.
-  sequence: textDocumentIo(sequenceStore, {
-    toPayload: sequencePayload,
-    fromPayload: sequenceFromPayload,
-    createDefault: () => EMPTY_SEQUENCE,
-    serialize: serializeSequencePayload,
-  }),
+  sequence: {
+    ...textDocumentIo(sequenceStore, {
+      toPayload: sequencePayload,
+      fromPayload: sequenceFromPayload,
+      createDefault: () => EMPTY_SEQUENCE,
+      serialize: serializeSequencePayload,
+    }),
+    incomplete: montageIsIncomplete,
+  },
   // No `writeAsset`, for the reason the editor states itself: a take is a REPLAYABLE chain over
   // a decoded source, and « nothing is written to disk until apply or save as ». Baking it into
   // its own source would leave the chain in the document and apply it a second time on reopen —
@@ -555,6 +571,13 @@ function savableDocument(
   const io = ioOf(documentId)
   if (!bridge || !document || !io) return null
   if (unreadable.has(documentId) || !io.holds(documentId)) return null
+
+  // Said, not swallowed: this refusal answers a KEYSTROKE, and a ⌘S that writes nothing without
+  // a word is indistinguishable from one that worked.
+  if (io.incomplete?.(documentId)) {
+    reportNotice('document.save', i18next.t('documents.saveRefusedIncomplete'))
+    return null
+  }
 
   return { bridge, document, io }
 }

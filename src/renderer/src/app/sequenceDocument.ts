@@ -43,20 +43,23 @@ function sourceOf(clip: Clip, { assets, documents, linkOf }: Catalogue): OtioSou
 
 /**
  * The montage as OpenTimelineIO holds it. Composed by the WINDOW: only this side holds the
- * catalogue a clip's media is resolved against. `linkOf` is how a media is pointed at — relative
- * for the document, absolute for an export that lands outside the project.
+ * catalogue a clip's media is resolved against.
+ *
+ * `identifies` writes which document the file IS, and ONLY the document's own save may ask for
+ * it: an export landing inside the project would otherwise claim the id of what it copied, and
+ * the listing — which settles a shared id by path order — would hand the tab to the copy.
  */
 export function otioTimelineFor(
   state: SequenceState,
   documentId: string,
-  linkOf: (assetPath: string) => string,
+  { linkOf, identifies = false }: { linkOf: (assetPath: string) => string; identifies?: boolean },
 ): unknown {
   const { documents } = useDocuments.getState()
   const catalogue: Catalogue = { assets: assetsById(useAssets.getState()), documents, linkOf }
 
   return otioTimelineOf(state, {
     name: documents[documentId]?.title ?? documentId,
-    documentId,
+    ...(identifies ? { documentId } : {}),
     sourceOf: clip => sourceOf(clip, catalogue),
   })
 }
@@ -75,8 +78,23 @@ export function sequencePayload(state: SequenceState, documentId: string): unkno
   const { otio, folder } = heldIn(documentId)
   if (!otio) return state
 
-  return otioTimelineFor(state, documentId, path => mediaLinkOf(path, folder))
+  return otioTimelineFor(state, documentId, {
+    linkOf: path => mediaLinkOf(path, folder),
+    identifies: true,
+  })
 }
+
+/**
+ * Montages that opened holding LESS than their file did — a clip whose media nothing here could
+ * be found for is dropped, and the file still holds it.
+ *
+ * Read by `savableDocument`: writing such a montage back would delete those clips for good, and
+ * the tab shows nothing to say so, `install` having marked the document clean. The mark lifts
+ * when the media are in the project and the document is opened again.
+ */
+const incomplete = new Set<string>()
+
+export const montageIsIncomplete = (documentId: string): boolean => incomplete.has(documentId)
 
 /** Indented for the open format alone: a `.otio` is read by hand and by other tools. */
 export function serializeSequencePayload(payload: unknown): string {
@@ -88,6 +106,7 @@ export function serializeSequencePayload(payload: unknown): string {
  * rather than by the extension, so a file renamed by hand opens as what it is.
  */
 export function sequenceFromPayload(payload: unknown, documentId: string): SequenceState {
+  incomplete.delete(documentId)
   if (!isOtioTimeline(payload)) return parseSequence(payload)
 
   const unlinked: string[] = []
@@ -95,13 +114,17 @@ export function sequenceFromPayload(payload: unknown, documentId: string): Seque
   const state = sequenceFromOtio(payload, url => {
     const link = mediaLinkFrom(url)
     const found = relink(link)
-    if (!found) unlinked.push(mediaNameOf(link))
+    // Only a link that NAMES something: a clip drawing a live scene has no media and no url, and
+    // counting it here reported every scene of a montage as a file that had gone missing.
+    if (!found && mediaNameOf(link) !== '') unlinked.push(mediaNameOf(link))
     return found
   })
 
-  // Said rather than swallowed: a clip nothing could be found for is DROPPED, and a cut that
-  // silently opens shorter than it was written is the worst answer available.
+  // Said rather than swallowed, and the save is refused with it: a clip nothing could be found
+  // for is DROPPED, and a cut that silently opens shorter than it was written — then overwrites
+  // the file on the next ⌘S — is the worst answer available.
   if (unlinked.length > 0) {
+    incomplete.add(documentId)
     reportNotice(
       'document.load',
       i18next.t('documents.unlinkedClips', {

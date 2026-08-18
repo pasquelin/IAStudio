@@ -652,19 +652,12 @@ export function createDocumentFiles({
         // Composed on this side too: `from` is built from the index, and the folder listing above
         // is composed on the way in — the exemption is an equality, so the two have to be spelt
         // the same way.
-        // The extension it already wears, so a montage held as `.otio` is renamed rather than
-        // duplicated under the spelling a brand new one would take.
-        const wearing = extensionOf(basename(from))
-        const refused = checkDocumentName(
-          title,
-          kind,
-          taken,
-          basename(from).normalize('NFC'),
-          wearing,
-        )
+        const refused = checkDocumentName(title, kind, taken, basename(from).normalize('NFC'))
         if (refused) throw new Error(refused)
 
-        const entry = documentFileName(title, kind, wearing)
+        // The extension it already wears, so a montage held as `.otio` is renamed rather than
+        // duplicated under the spelling a brand new one would take.
+        const entry = documentFileName(title, kind, extensionOf(basename(from)))
         const path = inFolder === '' ? entry : `${inFolder}/${entry}`
         const to = absoluteOf(path)
 

@@ -215,10 +215,15 @@ Un `.otio` **s’ouvre** maintenant : un double-clic dans l’Explorateur ouvre 
 été écrit ici ou par un autre logiciel, et `⌘S` le réenregistre dans son propre fichier. Ce qui
 reste, c’est le point de départ — une séquence créée dans le studio part toujours en `.seq`.
 
-Un montage venu d’ailleurs nomme ses médias par un chemin. Le studio les retrouve dans le projet
-par ce chemin, puis par le nom du fichier. **Un plan dont le média reste introuvable n’est pas
-ouvert**, et le journal d’activité dit lequel — le montage est alors plus court que ce que le
-fichier décrit.
+Un montage venu d’ailleurs nomme ses médias par un chemin. Le studio les cherche dans le projet
+par ce chemin, puis par le nom du fichier — **parmi les assets que cette fenêtre a déjà vus**. Un
+projet qui vient d’être ouvert n’a pas encore lu son catalogue : ouvrir un montage étranger dans
+la seconde peut n’en retrouver aucun.
+
+**Un plan dont le média n’est pas retrouvé n’est pas ouvert**, et le journal d’activité dit
+lequel. Le montage est alors plus court que ce que le fichier décrit, et **`⌘S` refuse d’écrire**
+tant que c’est le cas : sans ce refus, enregistrer effacerait ces plans du fichier. Amenez les
+médias manquants dans le projet, rouvrez le montage, et l’enregistrement redevient possible.
 
 Et ce que ce format ne porte pas en standard — fondus, gains, liens image/son, scène 3D d’un clip
 vivant — voyage dans le fichier mais **n’est lu que par Scenario**.

@@ -909,7 +909,10 @@ describe('createDocumentFiles', () => {
       expect(await documents.write('doc-7', 'sequence', { title: 'Rushes', content })).toBe(
         'written',
       )
-      expect(await readFile(join(root, 'Rushes.otio'), 'utf8')).toBe(content)
+
+      const written = await readFile(join(root, 'Rushes.otio'), 'utf8')
+      expect(JSON.parse(written)).toMatchObject({ OTIO_SCHEMA: 'Timeline.1', name: 'Rushes' })
+      expect(written.startsWith('{')).toBe(true)
     })
 
     // A rename that took the spelling a NEW document gets would leave the `.otio` sitting beside

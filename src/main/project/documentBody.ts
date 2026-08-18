@@ -52,9 +52,7 @@ export const ENVELOPED: DocumentBodyFormat = {
 
 const OPEN_TIMELINE: DocumentBodyFormat = {
   read: otioDocument,
-  // Verbatim: the window composed the whole standard file, metadata included, and a line of ours
-  // in front of it would make the document unreadable to every other application.
-  write: document => document.content,
+  write: otioBody,
   // No head of ours to read short: what an envelope carries is spread through the file, so the
   // whole of it is read and parsed. `documents.bench.ts` is what says at which size that hurts.
   readHead: async file => otioDocument(await readFile(file, 'utf8')),
@@ -86,6 +84,24 @@ function envelopedDocument(body: string): DocumentFile {
   }
 
   return { ...envelope, content: cut === -1 ? '' : body.slice(cut + 1) }
+}
+
+/**
+ * The standard file and nothing else — a line of ours in front of it would make the document
+ * unreadable to every other application.
+ *
+ * Checked rather than written verbatim, and it is the one place a save can be stopped: a window
+ * that mistook this file's format would otherwise put a body no reader understands into it, and
+ * the next listing would drop the document from the project altogether — file there, invisible,
+ * with no envelope left to recover it from. The parse is the price of that, on a save alone.
+ *
+ * The name is stamped from the title so a RENAME reaches the field another application shows.
+ */
+function otioBody(document: DocumentFile): string {
+  const parsed: unknown = JSON.parse(document.content)
+  if (!isOtioTimeline(parsed)) throw new Error('Refusing to write a montage that is not one')
+
+  return JSON.stringify(document.title ? { ...parsed, name: document.title } : parsed, null, 2)
 }
 
 /**

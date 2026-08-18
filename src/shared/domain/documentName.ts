@@ -57,13 +57,16 @@ export function documentFileName(name: string, kind: DocumentKind, wearing?: str
  * Duplicates are read on the FILE name rather than the title: `Niveau.scene` and `Niveau.img`
  * are two files and may coexist, which is what the disk says and what the space glyph already
  * tells apart on screen.
+ *
+ * ALL the spellings of one kind, though — a kind reads more than one while its format is being
+ * replaced, and `Bande.seq` beside `Bande.otio` is two montages the tab strip, the explorer and
+ * the document list all show under one name, with nothing to tell them apart.
  */
 export function checkDocumentName(
   name: string,
   kind: DocumentKind,
   existing: readonly NamedDocument[],
   selfId?: string,
-  wearing?: string,
 ): DocumentNameFailure | null {
   const trimmed = name.trim()
 
@@ -73,12 +76,21 @@ export function checkDocumentName(
   // the document, and one name is the whole point.
   if (!isSafeFileName(trimmed)) return 'invalid'
 
-  const wanted = foldForFileName(documentFileName(trimmed, kind, wearing))
+  const wanted = spellingsOf(trimmed, kind)
   const taken = existing.some(
-    document => document.id !== selfId && foldForFileName(document.fileName) === wanted,
+    document => document.id !== selfId && wanted.has(foldForFileName(document.fileName)),
   )
 
   return taken ? 'duplicate' : null
+}
+
+/** Every file name this title would wear for this kind, folded as a comparison needs them. */
+function spellingsOf(name: string, kind: DocumentKind): ReadonlySet<string> {
+  return new Set(
+    EXTENSIONS_BY_KIND[kind].map(extension =>
+      foldForFileName(documentFileName(name, kind, extension)),
+    ),
+  )
 }
 
 /**
@@ -94,7 +106,8 @@ export function nextFreeDocumentName(
   existing: readonly NamedDocument[],
 ): string {
   const taken = new Set(existing.map(document => foldForFileName(document.fileName)))
-  const free = (name: string): boolean => !taken.has(foldForFileName(documentFileName(name, kind)))
+  const free = (name: string): boolean =>
+    ![...spellingsOf(name, kind)].some(spelling => taken.has(spelling))
 
   if (free(base)) return base
 

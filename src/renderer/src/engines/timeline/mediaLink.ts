@@ -32,12 +32,17 @@ export function mediaLinkOf(assetPath: string, documentFolder: readonly string[]
  * A link taken apart. Done once per clip and handed to the three questions below, which each
  * used to decode it again.
  */
-export function mediaLinkFrom(targetUrl: string): MediaLink {
+export function mediaLinkFrom(link: string): MediaLink {
+  // A montage written on Windows names its media with backslashes — `C:\Media\take.mp4`. Left
+  // alone, that is ONE segment, so neither the suffix nor the file name ever lines up.
+  const targetUrl = link.replaceAll('\\', '/')
   // The scheme and the host are not path: `file:///a/b` would otherwise start with `file:` and
   // two empty segments, and a suffix match would never line up.
   const scheme = /^[a-z][a-z0-9+.-]*:\/\/[^/]*/i.exec(targetUrl)?.[0].length ?? 0
 
   return {
+    // A drive letter answers this too — `C:` is a scheme as far as the pattern is concerned, and
+    // `C:/Media/take.mp4` names another machine's disk just as surely as `file:///`.
     absolute: targetUrl.startsWith('/') || /^[a-z][a-z0-9+.-]*:/i.test(targetUrl),
     // Segment by segment: a name holding an encoded `%2F` is one segment, and decoding the whole
     // string first would make it two.

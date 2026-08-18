@@ -6,9 +6,14 @@ import i18next from 'i18next'
 import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import { reindexTracks, SECOND } from '@/engines/timeline/timelineState'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { useAssets } from '@/stores/assets'
+import { forgetRememberedAssets, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
-import { sequenceFromPayload, sequencePayload, serializeSequencePayload } from './sequenceDocument'
+import {
+  montageIsIncomplete,
+  sequenceFromPayload,
+  sequencePayload,
+  serializeSequencePayload,
+} from './sequenceDocument'
 
 const RUSH: Asset = {
   id: 'asset-a',
@@ -122,6 +127,18 @@ describe('what an open reads back', () => {
   })
 
   /**
+   * The case the manual names first, and the shape a montage written beside its media takes: a
+   * RELATIVE link, resolved against the folder the montage itself sits in.
+   */
+  it('relinks a foreign clip by a link relative to the montage’s own folder', () => {
+    heldIn('Cinematics/Bande.otio')
+    const state = sequenceFromPayload(foreign('../assets/vid/plan%20large.mp4'), 'doc-1')
+
+    expect(state.tracks[0]?.clips[0]?.assetId).toBe('asset-a')
+    expect(reported).not.toHaveBeenCalled()
+  })
+
+  /**
    * A file from Resolve or Premiere names its media by path and knows nothing of our ids. The
    * relink is what turns that path back into a line of the catalogue.
    */
@@ -140,6 +157,13 @@ describe('what an open reads back', () => {
     expect(state.tracks[0]?.clips[0]?.assetId).toBe('asset-a')
   })
 
+  it('reads a montage written on Windows, backslashes and drive letter and all', () => {
+    heldIn('Bande.otio')
+    const state = sequenceFromPayload(foreign('C:\\Montage\\vid\\plan large.mp4'), 'doc-1')
+
+    expect(state.tracks[0]?.clips[0]?.assetId).toBe('asset-a')
+  })
+
   /**
    * Said out loud rather than swallowed: a clip nothing could be found for is DROPPED, and a cut
    * that silently opens shorter than it was written is the worst answer available.
@@ -154,10 +178,68 @@ describe('what an open reads back', () => {
     )
     expect(reported.mock.calls[0]?.[0].message).toContain('inconnu.mp4')
   })
+
+  /**
+   * And the file is defended, not only the sentence. Opening a project then a montage at once
+   * finds the catalogue still empty — `install` is synchronous and the shelf answers later — so
+   * every clip drops and `install` then marks the document CLEAN. Nothing on screen says the tab
+   * differs from the file, and the next ⌘S would delete the cut.
+   */
+  it('refuses to save a montage that opened holding less than its file', () => {
+    heldIn('Bande.otio')
+    // What opening another project does, and what makes the scenario real: the by-id index keeps
+    // every asset the window has been SHOWN, and changing project is what empties it.
+    useAssets.setState({ items: [] })
+    forgetRememberedAssets()
+
+    expect(sequenceFromPayload(foreign('../vid/plan large.mp4'), 'doc-1').tracks[0]?.clips).toEqual(
+      [],
+    )
+    expect(montageIsIncomplete('doc-1')).toBe(true)
+  })
+
+  it('lets it be saved again once every clip has found its media', () => {
+    heldIn('Bande.otio')
+    useAssets.setState({ items: [] })
+    forgetRememberedAssets()
+    sequenceFromPayload(foreign('../vid/plan large.mp4'), 'doc-1')
+
+    useAssets.setState({ items: [RUSH] })
+    sequenceFromPayload(foreign('file:///Volumes/Autre/vid/plan large.mp4'), 'doc-1')
+
+    expect(montageIsIncomplete('doc-1')).toBe(false)
+  })
+
+  // A live scene has no media and no url: asked of the relinker anyway, every scene of a montage
+  // was reported as a file that had gone missing — with an empty name in the sentence.
+  it('says nothing about a clip drawing a live scene', () => {
+    heldIn('Bande.otio')
+    const state = sequenceFromPayload(sceneClip(), 'doc-1')
+
+    expect(state.tracks[0]?.clips[0]?.sceneId).toBe('scene-1')
+    expect(reported).not.toHaveBeenCalled()
+    expect(montageIsIncomplete('doc-1')).toBe(false)
+  })
 })
 
+/** One of OURS, drawing a live scene: no media, no url, and an empty `assetId` by construction. */
+const sceneClip = (): unknown =>
+  timelineHolding(
+    { OTIO_SCHEMA: 'MissingReference.1', name: 'Scène', metadata: {}, available_range: null },
+    { scenario: { id: 'c1', assetId: '', sceneId: 'scene-1' } },
+  )
+
 /** A timeline as another application writes one: a media named by path, and no studio metadata. */
-function foreign(targetUrl: string): unknown {
+const foreign = (targetUrl: string): unknown =>
+  timelineHolding({
+    OTIO_SCHEMA: 'ExternalReference.1',
+    name: 'take',
+    metadata: {},
+    available_range: null,
+    target_url: targetUrl,
+  })
+
+function timelineHolding(reference: unknown, metadata: unknown = {}): unknown {
   const time = (value: number): unknown => ({ OTIO_SCHEMA: 'RationalTime.1', rate: 25, value })
 
   return {
@@ -180,7 +262,7 @@ function foreign(targetUrl: string): unknown {
             {
               OTIO_SCHEMA: 'Clip.1',
               name: 'take',
-              metadata: {},
+              metadata,
               enabled: true,
               effects: [],
               markers: [],
@@ -189,13 +271,7 @@ function foreign(targetUrl: string): unknown {
                 start_time: time(0),
                 duration: time(25),
               },
-              media_reference: {
-                OTIO_SCHEMA: 'ExternalReference.1',
-                name: 'take',
-                metadata: {},
-                available_range: null,
-                target_url: targetUrl,
-              },
+              media_reference: reference,
             },
           ],
         },
