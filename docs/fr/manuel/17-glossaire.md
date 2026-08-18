@@ -194,8 +194,13 @@ La différence avec un *asset* est celle qui sépare la matière de l’ouvrage 
 un asset ; l’image que vous êtes en train de peindre, avec ses *calques* et son historique, est un
 document.
 
-Six sortes, une par *espace de travail*, toutes dans un format que d’autres logiciels lisent :
-`.ora` (image), `.gltf` (scène 3D et ciel), `.otio` (séquence et audio), `.mtlx` (matière).
+Six sortes, une par *espace de travail*, chacune sous l’extension du format ouvert auquel elle
+appartient : `.ora` (image), `.gltf` (scène 3D et ciel), `.otio` (séquence et audio), `.mtlx`
+(matière).
+
+**Seuls les montages `.otio` s’ouvrent aujourd’hui dans un autre logiciel.** Pour les quatre
+autres, l’extension annonce la destination, pas encore le contenu : le fichier est écrit dans le
+format interne du studio.
 
 ---
 

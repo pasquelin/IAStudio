@@ -12,6 +12,7 @@ import {
   otioStudioMetadata,
   OTIO_DOCUMENT_ID,
   OTIO_DOCUMENT_KIND,
+  OTIO_STUDIO_KEY,
 } from '@shared/domain/otio'
 import { isRecord, readString } from '@shared/guards'
 import { parseDocumentEnvelope } from './validation'
@@ -28,6 +29,26 @@ export type DocumentBodyFormat = {
   readHead: (file: string) => Promise<DocumentEnvelope>
 }
 
+/**
+ * The field every envelope of the studio carries and no foreign JSON does — `documentEnvelope`
+ * makes it required, and it sits within the first few dozen bytes whatever the title.
+ *
+ * NOT `"version"`: a glTF names one inside `asset`, and the envelope does not even open on it —
+ * `write` spreads the draft first, so the line begins `{"title":`.
+ */
+const ENVELOPE_MARK = '"kind":"'
+
+async function firstBytes(file: string): Promise<string> {
+  const handle = await open(file, 'r')
+  try {
+    const buffer = Buffer.alloc(ENVELOPE_LIMIT)
+    const { bytesRead } = await handle.read(buffer, 0, ENVELOPE_LIMIT, 0)
+    return buffer.toString('utf8', 0, bytesRead)
+  } finally {
+    await handle.close()
+  }
+}
+
 /** The one every kind the studio invented is written in, and the one a listing reads short. */
 export const ENVELOPED: DocumentBodyFormat = {
   read: envelopedDocument,
@@ -36,18 +57,17 @@ export const ENVELOPED: DocumentBodyFormat = {
     return `${JSON.stringify(envelope)}\n${content}`
   },
   readHead: async file => {
-    const handle = await open(file, 'r')
-    try {
-      const buffer = Buffer.alloc(ENVELOPE_LIMIT)
-      const { bytesRead } = await handle.read(buffer, 0, ENVELOPE_LIMIT, 0)
-      const head = buffer.toString('utf8', 0, bytesRead)
-      const cut = head.indexOf('\n')
-      if (cut !== -1) return parseDocumentEnvelope(JSON.parse(head.slice(0, cut)))
-    } finally {
-      await handle.close()
-    }
+    const head = await firstBytes(file)
+    const cut = head.indexOf('\n')
+    if (cut !== -1) return parseDocumentEnvelope(JSON.parse(head.slice(0, cut)))
 
-    // A version 1 file has no line of its own, so its head is truncated and fails to parse.
+    // Two of ours have no line to read short: a version 1 file is one object, content included,
+    // and a manifest whose first line held the base64 of every layer runs past this many bytes.
+    // Both are read whole. What is refused is a file that does not OPEN like one of ours — a
+    // kind wears the extension of an open format now, so a minified glTF exported into the
+    // project reaches here, and reading it whole on the thread that owns every window is a
+    // freeze at each listing rather than a slow one.
+    if (!head.includes(ENVELOPE_MARK)) throw new Error('No envelope where this file begins')
     return envelopedDocument(await readFile(file, 'utf8'))
   },
 }
@@ -97,13 +117,35 @@ function envelopedDocument(body: string): DocumentFile {
  * the next listing would drop the document from the project altogether — file there, invisible,
  * with no envelope left to recover it from. The parse is the price of that, on a save alone.
  *
- * The name is stamped from the title so a RENAME reaches the field another application shows.
+ * The name is stamped from the title so a RENAME reaches the field another application shows —
+ * and the id and the kind with it. A timeline from elsewhere carries neither, so it was known by
+ * its file NAME alone: renaming it made it a different document, and the tab holding it, its
+ * place in the layout and its recent entry were all left pointing at a name nothing wears.
+ *
+ * Only a save of the document itself reaches here, which is what makes stamping safe: an export
+ * lands through the folder writer and never claims the identity of what it copied.
  */
 function otioBody(document: DocumentFile): string {
   const parsed: unknown = JSON.parse(document.content)
   if (!isOtioTimeline(parsed)) throw new Error('Refusing to write a montage that is not one')
 
-  return JSON.stringify(document.title ? { ...parsed, name: document.title } : parsed, null, 2)
+  const metadata = isRecord(parsed.metadata) ? parsed.metadata : {}
+  return JSON.stringify(
+    {
+      ...parsed,
+      ...(document.title ? { name: document.title } : {}),
+      metadata: {
+        ...metadata,
+        [OTIO_STUDIO_KEY]: {
+          ...otioStudioMetadata(parsed),
+          ...(document.id ? { [OTIO_DOCUMENT_ID]: document.id } : {}),
+          [OTIO_DOCUMENT_KIND]: document.kind,
+        },
+      },
+    },
+    null,
+    2,
+  )
 }
 
 /**

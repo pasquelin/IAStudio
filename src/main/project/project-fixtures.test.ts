@@ -17,7 +17,9 @@ const bodyOf = (kind: DocumentKind): string =>
         {
           OTIO_SCHEMA: 'Timeline.1',
           name: kind,
-          metadata: { scenario: { documentKind: kind } },
+          // What `otioBody` stamps on every save, so what is written here comes back byte for
+          // byte: the id, and which of the two kinds `.otio` names this file is.
+          metadata: { scenario: { documentId: `doc-${kind}`, documentKind: kind } },
           tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
         },
         null,

@@ -95,6 +95,40 @@ describe('createDocumentFiles', () => {
     expect((await documents.list())[0]?.title).toBe('Older')
   })
 
+  /**
+   * A version 1 file is one object, content included, so there is no line to read short — it is
+   * read WHOLE, and its size is no reason to refuse it. Refusing on size is what a first attempt
+   * at keeping a foreign glTF out of the listing did, and it made every large legacy document
+   * vanish: present in the folder, absent from every list, unopenable.
+   */
+  it('lists a document of the first version however far past a head it runs', async () => {
+    const legacy = {
+      version: 1,
+      kind: 'scene',
+      title: 'Older',
+      updatedAt: NOW,
+      content: { nodes: Array.from({ length: 4_000 }, (_, n) => `node-${n}`) },
+    }
+    await mkdir(join(root, 'documents'), { recursive: true })
+    await writeFile(join(root, 'documents', 'doc-1.gltf'), JSON.stringify(legacy), 'utf8')
+
+    expect((await documents.list())[0]).toMatchObject({ id: 'doc-1', kind: 'scene' })
+  })
+
+  /**
+   * The other half of the same rule: a file that opens like nothing of ours is turned away rather
+   * than read whole at every listing. A glTF the user exported into the project is minified onto
+   * one line, textures and buffers in base64 — reading it whole on the thread that owns every
+   * window is a freeze per listing, not a slow listing.
+   */
+  it('turns away a file of an open format the studio did not write', async () => {
+    await mkdir(join(root, 'documents'), { recursive: true })
+    const gltf = { asset: { version: '2.0' }, scenes: [{ nodes: [0] }], padding: 'x'.repeat(9_000) }
+    await writeFile(join(root, 'documents', 'Décor.gltf'), JSON.stringify(gltf), 'utf8')
+
+    expect(await documents.list()).toEqual([])
+  })
+
   it('stamps the envelope itself rather than trusting what it was handed', async () => {
     const draft = { title: 'Mine', content: '{}', version: 99, kind: 'image', updatedAt: 'nope' }
     await documents.write('doc-1', 'scene', draft)
@@ -183,6 +217,35 @@ describe('createDocumentFiles', () => {
 
     expect((await documents.read('twin', 'scene'))?.content).toBe('scene side')
     expect((await documents.read('twin', 'image'))?.content).toBe('image side')
+  })
+
+  /**
+   * `.gltf` names two kinds, so the address a document of either WOULD have had is the same one
+   * — and closing a sky that was never saved would have deleted the scene sitting at it. Removal
+   * asks the file whose it is rather than trusting where it was pointed.
+   */
+  it('removes nothing when the file at that address belongs to the other kind', async () => {
+    await documents.write('twin', 'scene', { title: 'Twin', content: '{}' })
+    await rename(join(root, 'documents', 'Twin.gltf'), join(root, 'documents', 'twin.gltf'))
+
+    await documents.remove('twin', 'skybox')
+
+    expect(await readdir(join(root, 'documents'))).toEqual(['twin.gltf'])
+  })
+
+  /**
+   * Written down rather than hidden, and it is `locate` that decides it: a document whose
+   * envelope stopped reading cannot be FOUND — `holds` refuses the cached path and the walk no
+   * longer lists it — so removal reaches the address it would have had, and the real file stays.
+   * Invisible in every list and undeletable from the studio; the Finder is the way out.
+   */
+  it('leaves behind a document whose envelope stopped reading, having nowhere to look', async () => {
+    await documents.write('doc-1', 'scene', { title: 'Level', content: '{}' })
+    await writeFile(join(root, 'documents', 'Level.gltf'), '{ truncated', 'utf8')
+
+    await documents.remove('doc-1', 'scene')
+
+    expect(await readdir(join(root, 'documents'))).toEqual(['Level.gltf'])
   })
 
   // Two windows on one document is a case the studio already lives with; a shared staging name
@@ -289,15 +352,36 @@ describe('createDocumentFiles', () => {
     ])
   })
 
-  // Renaming it is what puts the extension back, so the repair is one gesture from the explorer.
+  /**
+   * Renaming it is what puts the extension back, so the repair is one gesture from the explorer.
+   *
+   * Listed again rather than merely counted on disk: the extension it GAINS decides how the
+   * bytes are spelt, and writing them the way the file it is LEAVING was spelt made a rename
+   * destroy the document — right name, unreadable body, gone from every list at the next walk.
+   */
   it('gives the extension back to such a document when it is renamed', async () => {
+    await mkdir(join(root, 'documents'), { recursive: true })
+    const envelope = { version: 2, kind: 'texture', title: 'Perdu', updatedAt: NOW }
+    await writeFile(join(root, 'documents', 'demo'), `${JSON.stringify(envelope)}\n{}`, 'utf8')
+
+    await documents.rename('demo', 'texture', 'Retrouvé')
+
+    expect(await readdir(join(root, 'documents'))).toEqual(['Retrouvé.mtlx'])
+    expect((await documents.list()).map(one => one.title)).toEqual(['Retrouvé'])
+  })
+
+  /**
+   * A montage IS its OpenTimelineIO file, so a body that is not one cannot be written into that
+   * name. Refused LOUDLY and before anything moves: the file the user has is left exactly as it
+   * was, where a rename that went through would have left a document nothing can read again.
+   */
+  it('refuses to rename a document into a spelling its body cannot be written in', async () => {
     await mkdir(join(root, 'documents'), { recursive: true })
     const envelope = { version: 2, kind: 'audio', title: 'Perdu', updatedAt: NOW }
     await writeFile(join(root, 'documents', 'demo'), `${JSON.stringify(envelope)}\n{}`, 'utf8')
 
-    await documents.rename('demo', 'audio', 'Retrouvé')
-
-    expect(await readdir(join(root, 'documents'))).toEqual(['Retrouvé.otio'])
+    await expect(documents.rename('demo', 'audio', 'Retrouvé')).rejects.toThrow()
+    expect(await readdir(join(root, 'documents'))).toEqual(['demo'])
   })
 
   // A stray note the user dropped in there is not a document, and must stay a plain file.

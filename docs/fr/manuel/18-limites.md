@@ -39,6 +39,18 @@ Les six types s’écrivent dans le dossier du projet et se rouvrent tels quels.
 | Son édité | `.otio` | **oui** |
 | Ciel | `.gltf` | **oui** |
 
+### Quatre de ces extensions annoncent un format qu’elles ne contiennent pas encore
+
+Un montage `.otio` est **réellement** de l’OpenTimelineIO : Resolve et Premiere le lisent.
+
+Les quatre autres, non. Un `.ora`, un `.gltf` ou un `.mtlx` écrit par le studio porte le nom du
+format ouvert mais contient encore la forme interne du studio — **aucune autre application ne
+l’ouvre**. L’extension dit vers quoi ces documents vont, pas ce qu’ils sont aujourd’hui. C’est le
+chantier en cours, et c’est la limite la plus lourde de cette liste.
+
+En attendant, pour sortir une image ou une scène vers un autre logiciel, ce sont les **exports**
+qui font foi : Fichier ▸ Exporter.
+
 **Ce qui ne s’enregistre pas :**
 
 - **l’historique d’annulation** — rouvrir un document, c’est repartir sans `⌘Z` ;

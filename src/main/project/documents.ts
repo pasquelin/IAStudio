@@ -9,6 +9,7 @@ import {
   FOLDER_KINDS,
   isPartName,
   isStagingName,
+  isDocumentExtension,
   kindsForExtension,
   STAGING_SUFFIX,
   workspaceForKind,
@@ -131,7 +132,9 @@ function claimsDocument(path: string): boolean {
   // extension", and it exists because three sites had quietly disagreed about `.gitignore`.
   // Over the NAME, since it reads back to the last dot and a folder may hold one.
   const extension = extensionOf(basename(path))
-  return extension === '' || kindsForExtension(extension).length > 0
+  // A Set rather than `kindsForExtension`, which allocates: this runs once per file of the
+  // project, and a hundred thousand of them is a hundred thousand arrays thrown away.
+  return extension === '' || isDocumentExtension(extension)
 }
 
 /** How many heads are read at once. Measured in `documents.bench.ts`: 2 000 documents across
@@ -699,13 +702,25 @@ export function createDocumentFiles({
           ...(held.sourceAssetId ? { sourceAssetId: held.sourceAssetId } : {}),
         }
 
-        await (FOLDER_KINDS.has(kind)
-          ? writeAtomic(join(from, DOCUMENT_MANIFEST), ENVELOPED.write(renamed), {
-              staging: join(from, `${DOCUMENT_MANIFEST}.${randomUUID()}${STAGING_SUFFIX}`),
-            })
-          : store(from, renamed))
+        // A document that GAINS an extension is written straight to its new name, and the old
+        // file removed after. The bytes are spelt for the name they land under, so a move that
+        // failed between the two would otherwise leave a body under a name that denies it — the
+        // very loss this spelling exists to prevent. The extension is the same either way in
+        // every other rename, `descriptorOf` refusing a file whose head its name denies, and
+        // there the envelope-then-move order stands: a crash leaves the right title under the
+        // old name, which renaming again repairs.
+        if (!FOLDER_KINDS.has(kind) && extensionOf(basename(from)) !== extensionOf(entry)) {
+          await store(to, renamed)
+          await rm(from, { force: true })
+        } else {
+          await (FOLDER_KINDS.has(kind)
+            ? writeAtomic(join(from, DOCUMENT_MANIFEST), ENVELOPED.write(renamed), {
+                staging: join(from, `${DOCUMENT_MANIFEST}.${randomUUID()}${STAGING_SUFFIX}`),
+              })
+            : store(from, renamed))
 
-        await rename(from, to)
+          await rename(from, to)
+        }
         index.set(keyOf(id, kind), path)
         // The envelope was just rewritten and the file just moved, both by the studio. Without
         // this, the next ⌘S would read a time it does not recognise and accuse the user of
@@ -719,7 +734,19 @@ export function createDocumentFiles({
     remove: async (id, kind) => {
       await queued(id, async () => {
         const file = await locate(id, kind)
-        await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
+        // Refused only for a file that demonstrably belongs to something ELSE. `locate` falls
+        // back on the address a document WOULD have had, and two kinds share an extension — so
+        // that address is the same for both, and an id that happens to be another document's
+        // file name would have that document removed instead.
+        //
+        // One that answers nothing is still removed, which is what a file that is not there has
+        // always been. **The blind spot is `locate`, not this**: a document whose envelope
+        // stopped reading cannot be found at all, so removal lands on the address it would have
+        // had and the real file stays — invisible in every list and undeletable from the studio.
+        const sitting = await descriptorOf(relativeOf(file))
+        if (!sitting || (sitting.id === id && sitting.kind === kind)) {
+          await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
+        }
         index.delete(keyOf(id, kind))
         seen.delete(stampKey(id, kind))
       })

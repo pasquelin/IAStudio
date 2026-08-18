@@ -2,9 +2,14 @@ import { watch, type FSWatcher } from 'node:fs'
 import { cp, mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import { exists } from '@main/persistence'
-import { isStagingName, kindForExtension } from '@shared/domain/document'
-import { extensionOf } from '@shared/domain/fileName'
-import { entriesByName, isHiddenEntry, pathIn, type FolderEntry } from '@shared/domain/folder'
+import { isStagingName } from '@shared/domain/document'
+import {
+  entriesByName,
+  isDocumentFolder,
+  isHiddenEntry,
+  pathIn,
+  type FolderEntry,
+} from '@shared/domain/folder'
 import { isUnwatchedByGit } from '@shared/domain/git'
 import { foldForSearch } from '@shared/text'
 
@@ -117,12 +122,11 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
       for (const entry of entries) {
         if (keep(entry)) found.push(entry)
         if (entry.kind !== 'folder' || depth >= MAX_SEARCH_DEPTH) continue
-        // An image document IS a folder, and what it holds is the studio's own writing — a walk
-        // that went into it would offer the parts instead of the document. The same holds for the
-        // copy of one being staged, `Planche.img.<uuid>.tmp`: a save interrupted leaves that
-        // folder behind, and walking into it would offer a manifest and a pile of layers as
-        // though they were the user's own files, in the domain view and to the rescan alike.
-        if (kindForExtension(extensionOf(entry.name)) || isStagingName(entry.name)) continue
+        // A document written as a FOLDER, and the staged copy of one: what they hold is the
+        // studio's own writing, and walking in would offer a manifest and a pile of layers as the
+        // user's own files. Only those — a document wears the extension of an open format now,
+        // and a glTF delivered unpacked into `Repérages.gltf/` is material the rescan must see.
+        if (isDocumentFolder(entry.name) || isStagingName(entry.name)) continue
         deeper.push(walk(entry.path, depth + 1))
       }
 
@@ -158,11 +162,7 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
       // and not one caller of this keeps the order — the domain view groups what comes back, the
       // document listing re-sorts by code unit, and the reconciliation pass puts it into a `Set`.
       // This is the walk that crosses a hundred thousand files on every save.
-      await walkAll(
-        hidden,
-        entry => entry.kind === 'file' || kindForExtension(extensionOf(entry.name)) !== null,
-        false,
-      ),
+      await walkAll(hidden, entry => entry.kind === 'file' || isDocumentFolder(entry.name), false),
 
     names: async relative => await readdir(join(rootOf(), relative)).catch(() => null),
   }

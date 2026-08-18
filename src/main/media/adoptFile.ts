@@ -3,7 +3,7 @@ import { basename } from 'node:path'
 import type { Asset, MediaProbe } from '@shared/domain/asset'
 import { domainFromSignature, SIGNATURE_BYTES } from '@shared/domain/domainFromSignature'
 import { stemOf } from '@shared/domain/fileName'
-import { natureOf, opensInStudio } from '@shared/domain/fileRole'
+import { sourceNatureOf } from '@shared/domain/fileRole'
 import { isPrivatePath } from '@shared/domain/folder'
 import { assetFilePath } from '@main/assets/protocol'
 import type { AsyncCatalog } from '@main/project/catalogClient'
@@ -30,14 +30,17 @@ export type AdoptFileDeps = {
  * Which domain a file in the project belongs to, or nothing when the studio has no editor for
  * it. The extension answers when there is one — even when it lies, which is what every system
  * does — and the first bytes answer when there is none.
+ *
+ * Asked of the SOURCE table alone. A document wears the extension of an open format now, so an
+ * `.ora` painted in another application reads as an edit — and refusing it here is what stopped
+ * the studio from ever opening one. Nothing is lost by dropping that refusal: a document written
+ * as a folder is not a file, and the three other document spellings carry no source domain, so
+ * neither can be adopted by accident.
  */
 async function domainOf(fileName: string, absolute: string): Promise<Asset['type'] | null> {
-  const nature = natureOf(fileName)
-  // A document is not adopted: it is opened, and the explorer has already sent it that way.
-  if (nature.role === 'edit') return null
-
   if (fileName.includes('.')) {
-    return opensInStudio(fileName) && nature.domain !== 'other' ? nature.domain : null
+    const source = sourceNatureOf(fileName)
+    return source.openable && source.domain !== 'other' ? source.domain : null
   }
 
   const handle = await open(absolute)

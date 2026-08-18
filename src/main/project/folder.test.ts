@@ -184,6 +184,20 @@ describe('searching the project folder', () => {
     expect(await namesFound(root, 'ruelle')).toEqual(['ruelle.ora'])
   })
 
+  /**
+   * Only the kind written as a folder, though. A document wears the extension of an open format
+   * now, and a glTF delivered unpacked into `Repérages.gltf/` is the user's OWN material —
+   * walked past, every file in it drops out of the domain view, of search, and of the rescan,
+   * which then counts them all as gone.
+   */
+  it('walks into a folder that merely wears a document spelling', async () => {
+    const root = await project()
+    await mkdir(join(root, 'Repérages.gltf'))
+    await writeFile(join(root, 'Repérages.gltf', 'ruelle.png'), '')
+
+    expect(await namesFound(root, 'ruelle')).toEqual(['Repérages.gltf/ruelle.png'])
+  })
+
   it('answers nothing at all for an empty term', async () => {
     const root = await project()
 

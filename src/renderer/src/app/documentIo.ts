@@ -33,6 +33,7 @@ import { reportFailure, reportNotice } from '@/services/diagnostics'
 import i18next from 'i18next'
 import { closePanel, openDocument } from './dockviewApi'
 import {
+  forgetCarriedMetadata,
   montageIsIncomplete,
   sequenceFromPayload,
   sequencePayload,
@@ -341,6 +342,7 @@ const AUDIO_IO: DocumentIo = {
   forget: documentId => {
     audioEditStore.use.getState().drop(documentId)
     sequenceStore.use.getState().drop(documentId)
+    forgetCarriedMetadata(documentId)
   },
 }
 
@@ -507,6 +509,10 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
       serialize: serializeSequencePayload,
     }),
     incomplete: montageIsIncomplete,
+    forget: documentId => {
+      sequenceStore.use.getState().drop(documentId)
+      forgetCarriedMetadata(documentId)
+    },
   },
   // No `writeAsset`, for the reason the editor states itself: a take is a REPLAYABLE chain over
   // a decoded source, and « nothing is written to disk until apply or save as ». Baking it into
