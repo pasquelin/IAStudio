@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TrackTarget } from '@shared/domain/animation'
-import { SECOND } from '@shared/domain/time'
+import { SECOND, type Us } from '@shared/domain/time'
 import { fovAt, poseAt } from './animationEval'
 import {
   addAnimationTrack,
@@ -181,15 +181,17 @@ describe('what an armed track catches', () => {
     },
   })
 
+  const channelIds = (state: SceneState, nodeId: string, bone?: string): string[] =>
+    recordingTracksFor(state.animation, nodeId, bone).map(track => track.id)
+
   it('names every channel of that node, and no other node', () => {
     const state = withTwoTracks()
-    expect(recordingTracksFor(state, 'cube').map(track => track.id)).toEqual(['track-1', 'track-2'])
-    expect(recordingTracksFor(state, 'sphere')).toEqual([])
+    expect(channelIds(state, 'cube')).toEqual(['track-1', 'track-2'])
+    expect(channelIds(state, 'sphere')).toEqual([])
   })
 
   it('leaves a locked channel out, so a padlock still refuses a drag', () => {
-    const state = armed(withTwoTracks(), 'track-1')
-    expect(recordingTracksFor(state, 'cube').map(track => track.id)).toEqual(['track-2'])
+    expect(channelIds(armed(withTwoTracks(), 'track-1'), 'cube')).toEqual(['track-2'])
   })
 
   it('keeps a bone apart from the node that carries it', () => {
@@ -199,15 +201,16 @@ describe('what an armed track catches', () => {
       'track-bone',
     ).apply(withTwoTracks())
 
-    expect(recordingTracksFor(boned, 'cube').map(track => track.id)).toEqual(['track-1', 'track-2'])
+    expect(channelIds(boned, 'cube')).toEqual(['track-1', 'track-2'])
     // And a bone IS reachable now, which is what the pose mode needed.
-    expect(recordingTracksFor(boned, 'cube', 'Hips').map(track => track.id)).toEqual(['track-bone'])
+    expect(channelIds(boned, 'cube', 'Hips')).toEqual(['track-bone'])
   })
 
   it('writes the DIFFERENCE to the rest pose, never the pose itself', () => {
     const state = withTwoTracks()
     const pose = { ...rest, position: vec(4) }
-    const [command] = recordMove(rest, pose, 1, recordingTracksFor(state, 'cube').slice(0, 1))
+    const channels = recordingTracksFor(state.animation, 'cube')
+    const [command] = recordMove(rest, pose, 1, channels.slice(0, 1))
     if (!command) throw new Error('one channel is recording')
 
     const after = command.apply(state)
@@ -217,7 +220,8 @@ describe('what an armed track catches', () => {
   it('divides a scale back out rather than subtracting it', () => {
     const state = withTwoTracks()
     const pose = { ...rest, scale: { x: 6, y: 6, z: 6 } }
-    const [command] = recordMove(rest, pose, 0, recordingTracksFor(state, 'cube').slice(1))
+    const channels = recordingTracksFor(state.animation, 'cube')
+    const [command] = recordMove(rest, pose, 0, channels.slice(1))
     if (!command) throw new Error('one channel is recording')
 
     expect(command.apply(state).animation.tracks[1]?.keys[0]?.value.x).toBe(3)
@@ -575,20 +579,31 @@ describe('the lens of a camera, typed into the inspector', () => {
     return node?.type === 'camera' ? node.camera.fov : null
   }
   const keysOf = (state: SceneState) => state.animation.tracks[0]?.keys ?? []
+  /** The gesture the inspector makes: a field named, a number typed, at an instant. */
+  const typed = (state: SceneState, fov: number, at: Us, recording: boolean): SceneState =>
+    lensToCommand(state.animation, [camera], 'fov', fov, at, recording).apply(state)
 
   it('writes the descriptor for a camera no lens channel drives', () => {
-    expect(descriptorFov(lensToCommand(plain, [camera], 80, 0, true).apply(plain))).toBe(80)
+    expect(descriptorFov(typed(plain, 80, 0, true))).toBe(80)
+  })
+
+  it('leaves a field no channel can carry to the descriptor, whatever records', () => {
+    const applied = lensToCommand(lensed.animation, [camera], 'near', 2, 0, true).apply(lensed)
+    const node = applied.nodes[0]
+
+    expect(node?.type === 'camera' && node.camera.near).toBe(2)
+    expect(keysOf(applied)).toEqual([])
   })
 
   it('writes what the channel must ADD, leaving the descriptor where it stands', () => {
-    const applied = lensToCommand(lensed, [camera], 80, 0, true).apply(lensed)
+    const applied = typed(lensed, 80, 0, true)
 
     expect(keysOf(applied)).toEqual([{ time: 0, value: { x: 30, y: 0, z: 0 } }])
     expect(descriptorFov(applied)).toBe(50)
   })
 
   it('leaves an empty channel alone while nothing records', () => {
-    const applied = lensToCommand(lensed, [camera], 80, 0, false).apply(lensed)
+    const applied = typed(lensed, 80, 0, false)
 
     expect(keysOf(applied)).toEqual([])
     expect(descriptorFov(applied)).toBe(80)
@@ -597,8 +612,8 @@ describe('the lens of a camera, typed into the inspector', () => {
   // The rule `movesToCommand` holds for a drag: once a camera is animated, the switch stops
   // deciding — writing the descriptor would move the lens by whatever the key already adds.
   it('keeps keying a channel that already holds one, whatever the switch says', () => {
-    const first = lensToCommand(lensed, [camera], 60, 0, true).apply(lensed)
-    const second = lensToCommand(first, [camera], 80, 2 * SECOND, false).apply(first)
+    const first = typed(lensed, 60, 0, true)
+    const second = typed(first, 80, 2 * SECOND, false)
 
     expect(keysOf(second).map(key => key.value.x)).toEqual([10, 30])
     expect(descriptorFov(second)).toBe(50)
@@ -609,9 +624,11 @@ describe('the lens of a camera, typed into the inspector', () => {
    * filter. Keyed on a muted channel, the number typed would vanish the moment it was written.
    */
   it('writes the lens itself rather than keying a channel that is muted', () => {
-    const keyed = lensToCommand(lensed, [camera], 60, 0, true).apply(lensed)
-    const muted = updateAnimationTrack(keyed, 'lens', track => ({ ...track, muted: true }))
-    const applied = lensToCommand(muted, [camera], 80, 0, true).apply(muted)
+    const muted = updateAnimationTrack(typed(lensed, 60, 0, true), 'lens', track => ({
+      ...track,
+      muted: true,
+    }))
+    const applied = typed(muted, 80, 0, true)
 
     expect(keysOf(applied).map(key => key.value.x)).toEqual([10])
     expect(descriptorFov(applied)).toBe(80)
@@ -620,9 +637,11 @@ describe('the lens of a camera, typed into the inspector', () => {
   // A locked channel goes on adding what it adds: writing the typed number into the descriptor
   // under it would leave the lens reading that number PLUS the channel's own share.
   it('writes under a locked channel what makes the lens read the number typed', () => {
-    const keyed = lensToCommand(lensed, [camera], 70, 0, true).apply(lensed)
-    const locked = updateAnimationTrack(keyed, 'lens', track => ({ ...track, locked: true }))
-    const applied = lensToCommand(locked, [camera], 80, 0, true).apply(locked)
+    const locked = updateAnimationTrack(typed(lensed, 70, 0, true), 'lens', track => ({
+      ...track,
+      locked: true,
+    }))
+    const applied = typed(locked, 80, 0, true)
 
     expect(keysOf(applied).map(key => key.value.x)).toEqual([20])
     expect(descriptorFov(applied)).toBe(60)
@@ -630,8 +649,8 @@ describe('the lens of a camera, typed into the inspector', () => {
   })
 
   it('has the lens read between two keys, which is what a field of view animates for', () => {
-    const first = lensToCommand(lensed, [camera], 50, 0, true).apply(lensed)
-    const second = lensToCommand(first, [camera], 80, 2 * SECOND, true).apply(first)
+    const first = typed(lensed, 50, 0, true)
+    const second = typed(first, 80, 2 * SECOND, true)
 
     expect(50 + (fovAt(second.animation, 'cam', 1 * SECOND) ?? 0)).toBe(65)
   })

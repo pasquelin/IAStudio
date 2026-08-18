@@ -382,7 +382,8 @@ describe('SceneRenderer and a camera on a rail', () => {
     const walked = drifting()
     for (let step = 1; step <= 20; step += 1) walked.setPlayhead((2.5 * SECOND * step) / 20)
 
-    stateOf(walked).forEach((value, at) => expect(value).toBeCloseTo(once[at] ?? -1, 10))
+    // Compared WHOLE rather than index by index: a state one number shorter would otherwise pass.
+    expect(stateOf(walked)).toEqual(once.map(value => expect.closeTo(value, 10)))
     straight.dispose()
     walked.dispose()
   })

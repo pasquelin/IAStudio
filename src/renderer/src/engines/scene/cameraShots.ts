@@ -2,6 +2,7 @@ import type { AnimationTimeline, CameraShot } from '@shared/domain/animation'
 import { frameDuration, SECOND, snapToFrame, type Us } from '@shared/domain/time'
 import { clamp } from '@shared/numeric'
 import { movedWithin } from '@shared/domain/order'
+import { cachedOn } from '../core/cachedOn'
 import { cameraIds, firstCameraId, type SceneNode } from './sceneState'
 
 /**
@@ -62,22 +63,14 @@ export function activeShotAt(
   return bestShot(timeline, time, shot => cameras.has(shot.cameraId))
 }
 
-/**
- * Where each camera's line stands, cached on the identity of the list — the same reason
- * `cameraPath` caches a curve: an edit replaces the array, so the same array is the same ranks.
- *
- * `bestShot` runs once per camera and per frame of playback, and rebuilt this from scratch every
- * time although nothing in it depends on the camera being asked about.
- */
 const ranks = new WeakMap<readonly CameraShot[], Map<string, number>>()
 
+/**
+ * Where each camera's line stands. `bestShot` asks once per camera and per frame of playback,
+ * and rebuilt this every time although nothing in it depends on the camera being asked about.
+ */
 function cameraRanks(shots: readonly CameraShot[]): Map<string, number> {
-  const held = ranks.get(shots)
-  if (held) return held
-
-  const rank = new Map(shotCameras(shots).map((cameraId, at) => [cameraId, at]))
-  ranks.set(shots, rank)
-  return rank
+  return cachedOn(ranks, shots, () => new Map(shotCameras(shots).map((id, at) => [id, at])))
 }
 
 /**

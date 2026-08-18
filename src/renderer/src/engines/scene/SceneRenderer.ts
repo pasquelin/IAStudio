@@ -109,7 +109,7 @@ import {
   type ForeignClip,
 } from './animation'
 import { createRefCache, type RefCache } from '../core/refCache'
-import { drivenNodes, fovAt, poseAt } from './animationEval'
+import { drivenNodes, lensAt, poseAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
 import { nearestProjected, type Projected, type ProjectedBone } from './bonePicking'
@@ -884,10 +884,10 @@ export class SceneRenderer {
       const camera = this.cameraObject(nodeId)
       if (node?.type !== 'camera' || !camera) continue
 
-      // Zero where every channel is muted or soloed away, never "leave it alone": the lens would
-      // otherwise keep whatever the last scrub wrote, on screen and in a render alike.
-      const delta = fovAt(timeline, nodeId, this.playhead) ?? 0
-      applyCamera(camera, { ...node.camera, fov: node.camera.fov + delta })
+      // The descriptor itself where every channel is muted or soloed away, never "leave it
+      // alone": the lens would otherwise keep whatever the last scrub wrote, on screen and in a
+      // render alike.
+      applyCamera(camera, lensAt(node.camera, timeline, nodeId, this.playhead))
     }
   }
 

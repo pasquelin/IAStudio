@@ -1,6 +1,7 @@
 import {
   POSE_PROPERTIES,
   TRACK_PROPERTIES,
+  type AnimationTimeline,
   type AnimationTrack,
   type CameraMotion,
   type CameraShot,
@@ -11,7 +12,8 @@ import {
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import type { Command } from '../core/history'
-import { addNode, batch, moveNodes, multi, setCamera } from './commands'
+import { addNode, batch, moveNodes, multi, setCamera, setCameraOn } from './commands'
+import type { FieldValue } from './propertyFields'
 import { pathNode } from './nodeFactory'
 import {
   anySoloed,
@@ -218,7 +220,7 @@ export function keyNode(
   names: Readonly<Record<TrackProperty, string>>,
   mintId: (property: TrackProperty) => string,
 ): Command<SceneState> | null {
-  const held = recordingTracksFor(state, subject.nodeId, subject.bone)
+  const held = recordingTracksFor(state.animation, subject.nodeId, subject.bone)
   const missing = keyableProperties(state, subject).filter(
     property => !held.some(track => track.target.property === property),
   )
@@ -236,7 +238,9 @@ export function keyNode(
   // Applied first so the keys land on channels that exist: the state a command reads is the one
   // the commands before it produced, and `keySubject` reads the tracks by id.
   const opening = opened.reduce((current, command) => command.apply(current), state)
-  const ids = recordingTracksFor(opening, subject.nodeId, subject.bone).map(track => track.id)
+  const ids = recordingTracksFor(opening.animation, subject.nodeId, subject.bone).map(
+    track => track.id,
+  )
 
   const keys = keySubject(opening, ids, time)
   if (!keys) return opened.length === 0 ? null : multi('key:node', opened)
@@ -500,13 +504,24 @@ export function setTimelineSettings(
  * one, which left bone channels evaluable and impossible to fill.
  */
 export function recordingTracksFor(
-  state: SceneState,
+  timeline: AnimationTimeline,
   nodeId: string,
   bone?: string,
 ): AnimationTrack[] {
-  return state.animation.tracks.filter(
+  return timeline.tracks.filter(
     track => !track.locked && track.target.nodeId === nodeId && track.target.bone === bone,
   )
+}
+
+/**
+ * Whether a gesture writes KEYS rather than the thing underneath.
+ *
+ * A subject ALREADY keyed records whatever the switch says: what a viewport shows is the rest
+ * plus what the keys add, so writing underneath would move it by the value standing at that
+ * instant. The switch only decides whether an UNKEYED subject starts being animated.
+ */
+function recordsKeys(tracks: readonly AnimationTrack[], recording: boolean): boolean {
+  return tracks.length > 0 && (recording || tracks.some(track => track.keys.length > 0))
 }
 
 export function recordMove(
@@ -541,16 +556,8 @@ export function movesToCommand(
   const plain: NodeMove[] = []
 
   for (const move of moves) {
-    // An object that is ALREADY keyed records whatever the switch says.
-    //
-    // What the viewport shows is the rest pose PLUS what the keys add, so moving a keyed object
-    // without recording writes the rest pose — and the object lands short of where it was
-    // dropped, by exactly the value of the key standing at that instant. Nobody drags an object
-    // meaning that. The switch decides whether an UNKEYED object starts being animated; once it
-    // is, a drag is an edit of the animation.
-    const held = recordingTracksFor(state, move.id, move.bone)
-    const keyed = held.some(track => track.keys.length > 0)
-    const tracks = recording || keyed ? held : []
+    const held = recordingTracksFor(state.animation, move.id, move.bone)
+    const tracks = recordsKeys(held, recording) ? held : []
     const rest = move.rest ?? nodeById(state, move.id)?.transform
 
     if (tracks.length === 0 || !rest) {
@@ -568,22 +575,23 @@ export function movesToCommand(
 }
 
 /**
- * What a field of view typed into the inspector becomes: a key on the lens channel where one
- * records, the camera's own descriptor everywhere else.
+ * What a lens field typed into the inspector becomes: a key on the camera's `fov` channel where
+ * one records, the descriptor itself everywhere else.
  *
- * The rule `movesToCommand` holds for a drag, applied to the one property no gizmo can carry —
- * and the reason `recordMove` leaves the lens channel alone. The number handed in is what the
- * lens must READ at that instant; a key holds what the channel ADDS, so the difference is taken
- * against the descriptor, exactly as `deltaOf` takes a pose against its rest.
+ * Which fields can be keyed is a property of `TrackProperty`, asked here rather than by the
+ * panel: `fov` is the only one today, and the day a second joins the union no view has to learn
+ * about it. The number handed in is what the lens must READ at that instant.
  */
 export function lensToCommand(
-  state: SceneState,
+  timeline: AnimationTimeline,
   nodes: readonly SceneNode[],
-  fov: number,
+  name: string,
+  value: FieldValue,
   at: Us,
   recording: boolean,
 ): Command<SceneState> {
-  const soloed = anySoloed(state.animation)
+  if (name !== 'fov' || typeof value !== 'number') return setCameraOn(nodes, name, value)
+  const soloed = anySoloed(timeline)
 
   return batch('lens', nodes, node => {
     if (node.type !== 'camera') return null
@@ -591,21 +599,19 @@ export function lensToCommand(
     // What the channels PLAY at that instant, which is what the field was showing. The same
     // filter has to pick what gets written: a key laid on a muted channel is a number typed and
     // lost, and a descriptor written under a locked one moves the lens twice.
-    const played = fovAt(state.animation, node.id, at) ?? 0
-    const lens = recordingTracksFor(state, node.id).find(
+    const played = fovAt(timeline, node.id, at) ?? 0
+    const lenses = recordingTracksFor(timeline, node.id).filter(
       track => track.target.property === 'fov' && playsThrough(track, soloed),
     )
-
-    // A camera ALREADY keyed records whatever the switch says, for the reason `movesToCommand`
-    // writes out: the descriptor is what the channels add to, never what the lens reads.
-    if (!lens || (!recording && lens.keys.length === 0)) {
-      return setCamera(node.id, { ...node.camera, fov: fov - played })
+    const lens = lenses[0]
+    if (!lens || !recordsKeys(lenses, recording)) {
+      return setCamera(node.id, { ...node.camera, fov: value - played })
     }
 
     // This channel's own share taken back out: whatever else plays goes on adding what it adds,
     // so the key holds exactly what is left for the lens to READ the number typed.
     return setAnimationKey(lens.id, at, {
-      x: fov - node.camera.fov - (played - valueAt(lens, at).x),
+      x: value - node.camera.fov - (played - valueAt(lens, at).x),
       y: 0,
       z: 0,
     })

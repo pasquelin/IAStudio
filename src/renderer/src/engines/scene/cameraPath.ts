@@ -1,6 +1,7 @@
 import { CatmullRomCurve3, Vector3 } from 'three'
 import type { PathDescriptor, Vector3 as PlainVector3 } from '@shared/domain/scene'
 import { clamp } from '@shared/numeric'
+import { cachedOn } from '../core/cachedOn'
 
 /**
  * The curve a rail describes, and the cache that keeps it from being rebuilt every frame.
@@ -15,20 +16,18 @@ const curves = new WeakMap<PathDescriptor, CatmullRomCurve3>()
 export const PATH_SAMPLES = 64
 
 export function curveOf(path: PathDescriptor): CatmullRomCurve3 {
-  const held = curves.get(path)
-  if (held) return held
-
-  const curve = new CatmullRomCurve3(
-    path.points.map(point => new Vector3(point.x, point.y, point.z)),
-    path.closed,
-    'catmullrom',
-    path.tension,
-  )
-  // Arc lengths are what `getPointAt` reads, and what makes a travelling run at a steady speed:
-  // `getPoint` is parameterised per segment, so a camera speeds up through the short ones.
-  curve.updateArcLengths()
-  curves.set(path, curve)
-  return curve
+  return cachedOn(curves, path, () => {
+    const curve = new CatmullRomCurve3(
+      path.points.map(point => new Vector3(point.x, point.y, point.z)),
+      path.closed,
+      'catmullrom',
+      path.tension,
+    )
+    // Arc lengths are what `getPointAt` reads, and what makes a travelling run at a steady speed:
+    // `getPoint` is parameterised per segment, so a camera speeds up through the short ones.
+    curve.updateArcLengths()
+    return curve
+  })
 }
 
 /** The line to draw, sampled by arc length so the points sit evenly along it. */

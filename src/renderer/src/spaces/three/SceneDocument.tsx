@@ -10,8 +10,7 @@ import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
 import { nodeById } from '@/engines/scene/sceneState'
 import { movesToCommand } from '@/engines/scene/animationCommands'
-import { animationViewOf, useAnimationViews } from '@/stores/animationView'
-import { snapToFrame } from '@shared/domain/time'
+import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { useAnimationPlayback } from '@/hooks/useAnimationPlayback'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
@@ -70,21 +69,12 @@ async function exportScene(
   }
 }
 
-/**
- * The two store reads a gizmo drag needs; the rule itself is `movesToCommand`, which is pure and
- * therefore testable — a viewport is not.
- */
+/** The rule itself is `movesToCommand`, which is pure and therefore testable — a viewport is not. */
 function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
-  const store = useScenes.getState()
-  const state = sceneOf(store, documentId)
-  const at = snapToFrame(
-    sceneViewOf(useSceneViews.getState(), documentId).playhead,
-    state.animation.fps,
-  )
-  const recording = animationViewOf(useAnimationViews.getState(), documentId).autoKey
+  const { state, at, recording } = sceneKeyingAt(documentId)
 
   const command = movesToCommand(state, moves, at, recording)
-  if (command) store.runCommand(documentId, command)
+  if (command) useScenes.getState().runCommand(documentId, command)
 }
 
 /**
