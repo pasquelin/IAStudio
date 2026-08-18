@@ -177,16 +177,6 @@ export function removeAnimationKey(trackId: string, time: number): Command<Scene
 }
 
 /**
- * Keys an object that may hold no channel yet, creating the ones it lacks.
- *
- * This is `I → LocRotScale`: an object of a scene ALREADY EXISTS, so asking a person to create a
- * "track" before they can key it is asking them to build the thing they are looking at. The old
- * panel did exactly that, and read as empty with a cube standing in the viewport.
- *
- * Ids are minted here rather than inside `apply`, for the reason `addAnimationTrack` carries: a
- * redo must name the same channels the undo took away.
- */
-/**
  * What a subject can be keyed on: the three of a pose, plus the lens when it is a camera and the
  * subject is the node itself.
  *
@@ -201,6 +191,11 @@ export function keyableProperties(
   return camera ? TRACK_PROPERTIES : POSE_PROPERTIES
 }
 
+/**
+ * Keys an object that may hold no channel yet, creating the ones it lacks — demanding a "track"
+ * first would ask for the thing already standing in the viewport. Ids are minted here rather than
+ * inside `apply`: a redo must name the same channels the undo took away.
+ */
 export function keyNode(
   state: SceneState,
   subject: { nodeId: string; bone?: string },

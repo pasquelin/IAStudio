@@ -253,11 +253,12 @@ function wasClick(from: { x: number; y: number } | null, event: PointerEvent): b
   return from !== null && Math.hypot(event.clientX - from.x, event.clientY - from.y) <= CLICK_SLOP
 }
 
-/** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
-/** Where a shot's target stands, and where its rail puts it: a camera driven per frame
- * must allocate nothing. */
+/** Where a shot's target stands and where its rail puts it: a camera driven per frame allocates
+ * nothing. */
 const aimed = new ThreeVector3()
 const railed = new ThreeVector3()
+
+/** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
 const forward = new ThreeVector3()
 const right = new ThreeVector3()
 const step = new ThreeVector3()
