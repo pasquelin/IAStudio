@@ -26,6 +26,17 @@ describe('the name a file takes', () => {
     expect(safeFileName('Console')).toBe('Console')
   })
 
+  /**
+   * The boundary refuses every `\p{Cc}`, and this used to hand DEL and the C1 range over
+   * untouched: the export came back refused with nothing on screen to say why. A title carries
+   * one by being pasted from mis-decoded text — CP1252 `’` read as Latin-1 is U+0092.
+   */
+  it('neutralises every control character, not only those below the space', () => {
+    expect(safeFileName(`Plan${String.fromCodePoint(0x85)}large`)).toBe('Plan large')
+    expect(safeFileName(`Plan${String.fromCodePoint(0x7f)}large`)).toBe('Plan large')
+    expect(safeFileName(`Plan${String.fromCodePoint(0x1f)}large`)).toBe('Plan large')
+  })
+
   /** Cut by code point: half a surrogate pair reaches the disk as U+FFFD, and two titles merge. */
   it('cuts between characters rather than through one', () => {
     const cut = safeFileName('🎬'.repeat(100))

@@ -38,14 +38,12 @@ export function safeFileName(name: string, fallback = 'texture'): string {
   // are the same six characters on screen and two different strings underneath; left as they
   // came, one of them would be written to disk and the OTHER stored in the catalogue, and every
   // comparison of the two — the explorer joining a row to a file above all — would answer no.
-  const printable = [...name.normalize('NFC')]
-    // Control characters pass on Linux and are refused on Windows, so a name holding one would
-    // export on the machine it was written on and nowhere else. Mapped by code point rather than
-    // by a regex, which cannot hold this range without the linter being told to look away.
-    .map(character => ((character.codePointAt(0) ?? 0) < 0x20 ? ' ' : character))
-    .join('')
-
-  const cleaned = printable
+  // Control characters pass on Linux and are refused on Windows, so a name holding one would
+  // export on the machine it was written on and nowhere else. `\p{Cc}` and not `< 0x20`: the
+  // boundary refuses DEL and the C1 range too, which this used to hand over untouched.
+  const cleaned = name
+    .normalize('NFC')
+    .replace(/\p{Cc}/gu, ' ')
     .replace(/[/\\:*?"<>|]/g, ' ')
     .replace(/\s+/g, ' ')
     // Dots and spaces together, because the separators just became spaces: `..\..\etc` would
@@ -56,7 +54,7 @@ export function safeFileName(name: string, fallback = 'texture'): string {
     .replace(/[.\s]+$/, '')
     .trim()
 
-  // Cut by code point, as it was mapped: `slice` counts UTF-16 units, so a name of emoji came
+  // Cut by code point: `slice` counts UTF-16 units, so a name of emoji came
   // out ending on half a surrogate pair — which `writeFile` then replaced with U+FFFD, letting
   // two different titles land on the same folder.
   const cut = [...cleaned].slice(0, FILE_NAME_MAX_LENGTH).join('').trim()
