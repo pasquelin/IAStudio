@@ -5,6 +5,7 @@ import { clipLane, embeddedClip } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type ModelNode } from '@/engines/scene/sceneState'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useAnimationViews } from '@/stores/animationView'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene, sceneNodeIn, sceneNodeNow } from '@/stores/scene-fixtures'
@@ -195,7 +196,7 @@ describe('AnimationSection', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Jouer le clip/ }))
 
-    expect(watchedNow()).toEqual({ nodeId: 'a', clipId: 'c2' })
+    expect(watchedNow()).toEqual({ nodeId: 'a', clipId: 'c2', at: 0, playing: true })
   })
 
   // Watching one animation is a look at a block, not a move of the scene's clock: wherever the
@@ -356,5 +357,57 @@ describe('AnimationSection', () => {
     await userEvent.selectOptions(screen.getByLabelText('Déplacement du personnage'), 'inPlace')
 
     expect(playedOf()?.rootMotion).toBe('inPlace')
+  })
+
+  // What the FILE spells reaches nobody: Tripo writes `NlaTrack`, and the value behind the option
+  // stays the file's so that choosing it still finds the clip.
+  it('offers a clip the exporter never named under a name of the app', async () => {
+    show(['NlaTrack'])
+
+    expect(screen.getByRole('option', { name: 'Animation' })).toHaveValue('NlaTrack')
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'NlaTrack')
+
+    expect(playedOf()?.source).toEqual({ kind: 'embedded', name: 'NlaTrack' })
+  })
+
+  describe('the block the picker lays', () => {
+    /** Opens the picker on a rigged model and chooses the one motion the studio ships with. */
+    const lay = async (): Promise<void> => {
+      installFakeBridge({
+        animations: { list: () => Promise.resolve([{ name: 'Capoeira', thumbnail: false }]) },
+      })
+      show([], ['mixamorig:Hips'])
+      await userEvent.click(screen.getByRole('button', { name: 'Ajouter une animation' }))
+      await userEvent.click(await screen.findByRole('button', { name: 'Capoeira' }))
+    }
+
+    it('stays on the band once it is kept', async () => {
+      await lay()
+      await userEvent.click(screen.getByRole('button', { name: 'Garder' }))
+
+      expect(heldOf()?.map(clip => clip.label)).toEqual(['Capoeira'])
+    })
+
+    it('goes back only when it is cancelled', async () => {
+      await lay()
+      await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
+
+      expect(heldOf() ?? []).toEqual([])
+    })
+
+    /** Switching to another application is not an answer: alt-tab must not decide for anyone. */
+    it('survives the window losing focus', async () => {
+      await lay()
+      act(() => window.dispatchEvent(new Event('blur')))
+
+      expect(heldOf()?.map(clip => clip.label)).toEqual(['Capoeira'])
+    })
+
+    it('goes back on Escape, which is the way out of every other surface', async () => {
+      await lay()
+      await userEvent.keyboard('{Escape}')
+
+      expect(heldOf() ?? []).toEqual([])
+    })
   })
 })

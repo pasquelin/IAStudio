@@ -43,6 +43,12 @@ export type FlyoutProps = {
    * closes. Both are wanted, so there is no guard against it.
    */
   onKeyClose?: () => void
+  /**
+   * What the WINDOW losing focus does, when that is not what closing means. Defaults to
+   * `onDismiss`: a surface holding a decision answers it itself rather than letting an alt-tab
+   * answer for the user.
+   */
+  onWindowLeave?: () => void
   onPointerEnter?: () => void
   onPointerLeave?: () => void
 }
@@ -72,12 +78,13 @@ export function Flyout({
   role,
   onDismiss,
   onKeyClose,
+  onWindowLeave,
   onPointerEnter,
   onPointerLeave,
 }: FlyoutProps) {
   const panel = useRef<HTMLDivElement | null>(null)
 
-  useDismiss(onDismiss, panel, anchor)
+  useDismiss(onDismiss, panel, anchor, onWindowLeave)
   useMenuKeys(panel, onKeyClose)
 
   // Placed through a callback ref rather than state: measuring in an effect and storing the

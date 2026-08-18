@@ -5,6 +5,7 @@ import type { BundledAnimation } from '@shared/domain/animationLibrary'
 import type { ClipSource } from '@shared/domain/scene'
 import { Row } from '../Row'
 import { rowSkin } from '../styles'
+import { clipLabel } from '@/helpers/clipLabel'
 import { useProjectAnimations } from '@/hooks/useProjectAnimations'
 import { clipsOfNode, useModelClips } from '@/stores/modelClips'
 import { assetIcon } from '@/helpers/workspaces'
@@ -44,11 +45,16 @@ export function AnimationPickerLibrary({
     return <p className="text-muted text-tiny p-2">{t('inspector.animationLibraryEmpty')}</p>
   }
 
-  /** One line per motion, whichever of the three it comes from — the row is the shared one. */
-  const offer = (key: string, name: string, source: ClipSource, icon: string) => (
+  /**
+   * One line per motion, whichever of the three it comes from — the row is the shared one.
+   *
+   * `label` is what goes into the document and `shown` is what the row reads: they part company
+   * for a clip the exporter named, where a translated word must not be written into a glTF.
+   */
+  const offer = (key: string, label: string, source: ClipSource, icon: string, shown = label) => (
     <li key={key}>
-      <button type="button" className={rowSkin(false)} onClick={() => onChoose(source, name)}>
-        <Row icon={icon} title={name} />
+      <button type="button" className={rowSkin(false)} onClick={() => onChoose(source, label)}>
+        <Row icon={icon} title={shown} />
       </button>
     </li>
   )
@@ -56,7 +62,13 @@ export function AnimationPickerLibrary({
   return (
     <ul>
       {own.map(clip =>
-        offer(`own:${clip}`, clip, { kind: 'embedded', name: clip }, mdiFileOutline),
+        offer(
+          `own:${clip}`,
+          clip,
+          { kind: 'embedded', name: clip },
+          mdiFileOutline,
+          clipLabel(clip, t),
+        ),
       )}
       {bundled.map(animation =>
         offer(

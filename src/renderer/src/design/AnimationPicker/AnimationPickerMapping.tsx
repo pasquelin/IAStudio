@@ -4,6 +4,7 @@ import { clipKeyOf, type ClipSource } from '@shared/domain/scene'
 import { QuietNote } from '../QuietNote'
 import { Row } from '../Row'
 import { INLINE_LINK } from '../styles'
+import { bodyFitOf } from '@/engines/scene/retarget'
 import { clipFitOfNode, useModelClips } from '@/stores/modelClips'
 
 export type AnimationPickerMappingProps = {
@@ -31,7 +32,8 @@ export function AnimationPickerMapping({
   // brought speaks its skeleton already.
   if (!fit) return null
 
-  const missing = [...fit.missingInSource, ...fit.missingInTarget]
+  const body = bodyFitOf(fit)
+  const missing = [...body.missingInSource, ...body.missingInTarget]
   if (missing.length === 0) return <QuietNote>{t('inspector.animationFits')}</QuietNote>
 
   return (
@@ -42,12 +44,12 @@ export function AnimationPickerMapping({
       </button>
       {open && (
         <ul>
-          {fit.missingInSource.map(role => (
+          {body.missingInSource.map(role => (
             <li key={`source:${role}`}>
               <Row title={role} subtitle={t('inspector.animationJointAtRest')} />
             </li>
           ))}
-          {fit.missingInTarget.map(role => (
+          {body.missingInTarget.map(role => (
             <li key={`target:${role}`}>
               <Row title={role} subtitle={t('inspector.animationJointDropped')} />
             </li>

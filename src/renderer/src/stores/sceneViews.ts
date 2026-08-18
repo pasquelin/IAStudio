@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import type { Us } from '@shared/domain/time'
-import { DEFAULT_PANE_VIEWS, type CameraPlacement, type PaneView } from '@/engines/scene/sceneView'
+import {
+  DEFAULT_PANE_VIEWS,
+  type CameraPlacement,
+  type PaneView,
+  type PreviewWatch,
+} from '@/engines/scene/sceneView'
 import { type DisplayMode } from '@shared/domain/scene'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
 
@@ -50,7 +55,7 @@ export type SceneView = {
    * scene's clock, and the band must stay where it was left. Moving the head drops it — two
    * clocks driving one model is the one thing that would make a render disagree with the screen.
    */
-  preview: { nodeId: string; clipId: string } | null
+  preview: PreviewWatch | null
   /**
    * Where the free camera of the 3D tab stands, published once a drag of it settles.
    *

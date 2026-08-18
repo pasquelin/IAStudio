@@ -145,6 +145,7 @@ import {
   viewPosition,
   type CameraPlacement,
   type PaneView,
+  type PreviewWatch,
 } from './sceneView'
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
@@ -764,7 +765,7 @@ export class SceneRenderer {
    * model back to the head. A loop of its own rather than the head's: this is a look at a block,
    * not a move of the scene's clock.
    */
-  setPreview(target: { nodeId: string; clipId: string } | null): void {
+  setPreview(target: PreviewWatch | null): void {
     cancelAnimationFrame(this.previewFrame)
     this.previewFrame = 0
 
@@ -774,13 +775,24 @@ export class SceneRenderer {
       return
     }
 
+    // Held at one position: the pose is looked AT, so one frame answers it and no loop follows.
+    if (!target.playing) {
+      this.animations.preview(target.nodeId, target.clipId, target.at)
+      this.viewport.requestRender()
+      return
+    }
+
     const from = performance.now()
     const step = (now: number): void => {
-      const seconds = (now - from) / 1000
-      const length = this.animations.preview(target.nodeId, target.clipId, seconds)
+      const length = this.animations.preview(
+        target.nodeId,
+        target.clipId,
+        target.at + (now - from) / 1000,
+      )
       this.viewport.requestRender()
-      // A block that does not loop holds its last pose rather than asking for frames for ever.
-      if (length > 0 || seconds < 1) this.previewFrame = requestAnimationFrame(step)
+      // The grace is on the WALL clock, not the clip's: a run resumed from a scrub starts past
+      // a second, and would give up before the file it is waiting for had landed.
+      if (length > 0 || now - from < 1000) this.previewFrame = requestAnimationFrame(step)
     }
 
     this.previewFrame = requestAnimationFrame(step)
@@ -1698,6 +1710,10 @@ export class SceneRenderer {
   }
 
   dispose(): void {
+    // A preview left running would keep posing a model whose caches this method is about to drop.
+    cancelAnimationFrame(this.previewFrame)
+    this.previewFrame = 0
+
     this.stopPaletteWatch?.()
     this.stopPaletteWatch = null
 

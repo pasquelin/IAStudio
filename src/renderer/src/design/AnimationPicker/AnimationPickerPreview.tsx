@@ -1,8 +1,10 @@
-import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
+import { mdiPause, mdiPlay, mdiSkipNext, mdiSkipPrevious } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import type { ClipLane } from '@shared/domain/scene'
+import { clipKeyOf, type ClipLane } from '@shared/domain/scene'
+import { usToSeconds } from '@shared/domain/time'
 import { setModelLanes } from '@/engines/scene/commands'
-import { lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
+import { clipSpanOf, lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
+import { clipLengthOf, useModelClips } from '@/stores/modelClips'
 import { SliderField } from '../SliderField'
 import { ToggleField } from '../ToggleField'
 import { ToolButton } from '../ToolButton'
@@ -41,9 +43,16 @@ export function AnimationPickerPreview({
 
   const lane = lanes.find(one => one.clips.some(clip => clip.id === clipId))
   const played = lane?.clips.find(clip => clip.id === clipId)
+  const length = useModelClips(state =>
+    played ? clipLengthOf(state, documentId, nodeId, clipKeyOf(played.source)) : null,
+  )
   if (!lane || !played) return null
 
-  const running = preview?.clipId === clipId
+  const watching = preview?.clipId === clipId ? preview : null
+  const running = watching?.playing === true
+  // The clip's own length, at the speed it plays: what the band draws the block by, and what a
+  // position along it has to mean. Zero while the file has not landed — nothing to scrub yet.
+  const seconds = usToSeconds(clipSpanOf(played, length))
 
   const write = (speed: number, loop: boolean): void => {
     const next = lanesWith(lanes, lane.id, clips =>
@@ -52,8 +61,11 @@ export function AnimationPickerPreview({
     if (next) useScenes.getState().runCommand(documentId, setModelLanes(nodeId, next))
   }
 
-  const watch = (on: boolean): void =>
-    useSceneViews.getState().setPreview(documentId, on ? { nodeId, clipId } : null)
+  const watch = (at: number, playing: boolean): void =>
+    useSceneViews.getState().setPreview(documentId, { nodeId, clipId, at, playing })
+
+  /** Gives the model back to the scene's head. */
+  const stop = (): void => useSceneViews.getState().setPreview(documentId, null)
 
   return (
     <div className="flex flex-col gap-2">
@@ -62,19 +74,33 @@ export function AnimationPickerPreview({
           icon={mdiSkipPrevious}
           label={t('inspector.animationRestart')}
           tooltip={TIP_BOTTOM}
-          onClick={() => {
-            watch(false)
-            watch(true)
-          }}
+          onClick={() => watch(0, true)}
         />
         <ToolButton
           icon={running ? mdiPause : mdiPlay}
           label={t(running ? 'inspector.animationPause' : 'inspector.animationPlay')}
           tooltip={TIP_BOTTOM}
           active={running}
-          onClick={() => watch(!running)}
+          onClick={() => (running ? stop() : watch(watching?.at ?? 0, true))}
+        />
+        <ToolButton
+          icon={mdiSkipNext}
+          label={t('inspector.animationToEnd')}
+          tooltip={TIP_BOTTOM}
+          disabled={seconds <= 0}
+          onClick={() => watch(seconds, false)}
         />
       </div>
+      {seconds > 0 && (
+        <SliderField
+          label={t('inspector.animationPosition')}
+          min={0}
+          max={seconds}
+          step={0.05}
+          value={watching?.at ?? 0}
+          onChange={at => watch(at, false)}
+        />
+      )}
       <SliderField
         label={t('inspector.clipSpeed')}
         min={MIN_SPEED}

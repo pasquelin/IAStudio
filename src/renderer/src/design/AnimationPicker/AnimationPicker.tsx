@@ -24,16 +24,16 @@ export type AnimationPickerProps = {
   laid: { clipId: string; source: ClipSource } | null
   /** Lays one, replacing whatever was being looked at. */
   onChoose: (source: ClipSource, label: string) => void
-  /** Keeps what is laid, or takes it back — the two ways out, and there are no others. */
   onKeep: () => void
-  onDismiss: () => void
+  /** Takes the laid block back — the button, pressing outside, and `Escape`. Never a blur. */
+  onCancel: () => void
 }
 
 /**
  * Where an animation is chosen: the project's own, a file from disk, or a Scenario model.
  *
  * A flyout rather than a window, and choosing lays the REAL block: a separate window has no
- * viewport, so it could only ever show a rehearsal. `Annuler` takes the block back.
+ * viewport, so it could only ever show a rehearsal.
  */
 export function AnimationPicker({
   documentId,
@@ -42,7 +42,7 @@ export function AnimationPicker({
   laid,
   onChoose,
   onKeep,
-  onDismiss,
+  onCancel,
 }: AnimationPickerProps) {
   const { t } = useTranslation()
   const [source, setSource] = useState<AnimationPickerSource>('library')
@@ -55,7 +55,7 @@ export function AnimationPicker({
   }
 
   return (
-    <Flyout anchor={anchor} placement="under" onDismiss={onDismiss}>
+    <Flyout anchor={anchor} placement="under" onDismiss={onCancel} onWindowLeave={onKeep}>
       <div className="flex w-80 flex-col gap-2 p-2">
         <div role="tablist" aria-label={t('inspector.addAnimation')} className="flex gap-2">
           {SOURCES.map(candidate => (
@@ -79,7 +79,7 @@ export function AnimationPicker({
             <AnimationPickerPreview documentId={documentId} nodeId={nodeId} clipId={laid.clipId} />
             <AnimationPickerMapping documentId={documentId} nodeId={nodeId} source={laid.source} />
             <div className="flex justify-end gap-2">
-              <Button onClick={onDismiss}>{t('inspector.animationCancel')}</Button>
+              <Button onClick={onCancel}>{t('inspector.animationCancel')}</Button>
               <Button variant="primary" onClick={onKeep}>
                 {t('inspector.animationKeep')}
               </Button>

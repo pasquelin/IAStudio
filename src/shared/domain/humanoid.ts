@@ -125,6 +125,17 @@ export function isHumanoidRole(value: unknown): value is HumanoidRole {
   return typeof value === 'string' && ROLE_SET.has(value)
 }
 
+const FINGER_ROLE_SET: ReadonlySet<string> = new Set(HUMANOID_FINGER_ROLES)
+
+/**
+ * Whether a role belongs to a hand — the thirty an auto-rig leaves out on purpose.
+ *
+ * Asked wherever a difference between two skeletons has to be WEIGHED rather than counted.
+ */
+export function isFingerRole(role: HumanoidRole): role is HumanoidFingerRole {
+  return FINGER_ROLE_SET.has(role)
+}
+
 /**
  * Which half of a body a block drives, so two animations layered on one another stop averaging
  * each other out: walking on the legs WHILE the arms do something else needs the two to speak to
