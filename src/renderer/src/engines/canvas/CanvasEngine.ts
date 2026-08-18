@@ -1331,6 +1331,7 @@ export class CanvasEngine {
    */
   private async pngOf(target: Container | Texture, frame?: Rectangle): Promise<Uint8Array | null> {
     const renderer = this.app?.renderer
+    // `null` for an engine that is not up yet, which every caller already treats as "not ready".
     if (!renderer) return null
 
     const canvas = renderer.extract.canvas({
@@ -1339,7 +1340,16 @@ export class CanvasEngine {
       resolution: 1,
     })
     const blob = await blobOf(canvas)
-    return blob && new Uint8Array(await blob.arrayBuffer())
+    /**
+     * THROWS rather than answering nothing, and the difference is a document.
+     *
+     * `extract.base64` rejected here, so a surface that would not encode failed the whole ⌘S and
+     * left the tab dirty. Answering `null` instead, the save wrote the container WITHOUT that
+     * surface — the container is replaced whole — and then marked the document clean. A layer
+     * gone, silently, on a save that looked like it worked.
+     */
+    if (!blob) throw new Error('the renderer would not encode this surface')
+    return new Uint8Array(await blob.arrayBuffer())
   }
 
   /**
@@ -1377,7 +1387,11 @@ export class CanvasEngine {
         const surface = this.surfaces.get(mask ? maskKey(layer.id) : layer.id)
         if (!surface) continue
         const data = await this.pngOf(surface.texture)
-        if (data) taken.push({ layerId: layer.id, mask, data })
+        // A surface the engine HAS and cannot hand over is a loss, not an absence — the engine
+        // going down mid-loop is the ordinary way here. Skipping it wrote the container without
+        // that layer and called the save a success.
+        if (!data) throw new Error(`Layer ${layer.id} has a surface this engine can no longer read`)
+        taken.push({ layerId: layer.id, mask, data })
       }
     }
     return taken

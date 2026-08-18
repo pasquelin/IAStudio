@@ -84,6 +84,8 @@ const gpu: {
   refuseLoad: boolean
   /** Every URL the loader was told to forget — a blob URL held for the session is a leak. */
   unloaded: string[]
+  /** Set by the cases that need an extraction to fail: a canvas that hands back no blob. */
+  refuseEncode: boolean
   /** Every extraction, so what a snapshot framed and at what scale can be asserted. */
   extracted: { frame?: unknown; resolution?: number }[]
   /** Every frame the eyedropper read, so what it sampled — and how much of it — can be asserted. */
@@ -104,6 +106,7 @@ const gpu: {
   loaded: [],
   refuseLoad: false,
   unloaded: [],
+  refuseEncode: false,
   extracted: [],
   sampled: [],
   pixels: [0, 0, 0, 0],
@@ -260,11 +263,21 @@ vi.mock('pixi.js', () => {
             if (options.frame) gpu.sampled.push(options.frame)
             return { pixels: gpu.pixels }
           },
-          /** What the engine extracts through now: a canvas, then a blob, never a string. */
+          /**
+           * What the engine extracts through now: a canvas, then a blob, never a string.
+           *
+           * `toBlob` and NOT `convertToBlob`, because that is the one Electron gives: Pixi's
+           * `generateCanvas` goes through `DOMAdapter.createCanvas()`, which is
+           * `document.createElement('canvas')` in a window — an `HTMLCanvasElement`, which has
+           * `toBlob`. `convertToBlob` belongs to `OffscreenCanvas`, in a worker. Faking that one
+           * left the branch every ⌘S really takes untested.
+           */
           canvas: (options: { frame?: unknown; resolution?: number }) => {
             gpu.extracted.push(options)
             return {
-              convertToBlob: () => Promise.resolve(new Blob([EXTRACTED], { type: 'image/png' })),
+              toBlob: (give: (blob: Blob | null) => void) => {
+                give(gpu.refuseEncode ? null : new Blob([EXTRACTED], { type: 'image/png' }))
+              },
             }
           },
         },
@@ -1950,6 +1963,32 @@ describe('saving and restoring the pixels', () => {
     const engine = new CanvasEngine(silentOptions())
 
     await expect(engine.pixelSnapshots()).resolves.toEqual([])
+  })
+
+  /**
+   * The loudest thing this engine does, and it has to stay loud. The container is replaced whole
+   * on every ⌘S, so a surface handed back as ABSENT is a surface deleted from the file — and the
+   * save then marks the document clean. A layer gone, in silence, on a save that looked fine.
+   */
+  it('refuses the whole extraction rather than dropping a surface it cannot encode', async () => {
+    const { engine } = await mounted(masked())
+    gpu.refuseEncode = true
+    onTestFinished(() => {
+      gpu.refuseEncode = false
+    })
+
+    await expect(engine.pixelSnapshots()).rejects.toThrow()
+  })
+
+  // Same rule for the flatten: `mergedimage.png` is what every other application draws.
+  it('refuses to hand back a flatten it could not encode', async () => {
+    const { engine } = await mounted(masked())
+    gpu.refuseEncode = true
+    onTestFinished(() => {
+      gpu.refuseEncode = false
+    })
+
+    await expect(engine.flatten()).rejects.toThrow()
   })
 
   it('draws a saved picture back into the surface it came from', async () => {
