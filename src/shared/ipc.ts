@@ -570,6 +570,9 @@ export type LogScope =
   | 'scene.model'
   | 'scene.bvh'
   | 'scene.texture'
+  // Apart from `scene.model`, though both read a `.glb`: a scope says a subject once, so an
+  // animation that will not load would otherwise silence what the MODEL had to say.
+  | 'scene.animation'
   | 'scene.export'
   | 'scene.render'
   | 'sequence.export'
@@ -640,6 +643,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
   'scene.bvh',
   'scene.texture',
+  'scene.animation',
   'scene.export',
   'scene.render',
   'sequence.export',

@@ -1,6 +1,12 @@
 import { AnimationClip, Bone, Object3D, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
-import { clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
+import {
+  bundledClip,
+  clipLane,
+  embeddedClip,
+  type ClipLane,
+  type ClipRef,
+} from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { animationTrack, timelineWith } from './animation-fixtures'
 import { SceneAnimations, clipNamesOf } from './animation'
@@ -39,6 +45,38 @@ describe('the clips a model brought', () => {
   })
 })
 
+/** A skeleton the roles can be read on: hips, one leg, and one arm up the spine. */
+function limbRig(): Object3D {
+  const root = new Object3D()
+  const hips = new Bone()
+  hips.name = 'Hips'
+  const leg = new Bone()
+  leg.name = 'LeftUpperLeg'
+  const spine = new Bone()
+  spine.name = 'Spine'
+  const arm = new Bone()
+  arm.name = 'LeftUpperArm'
+
+  spine.add(arm)
+  hips.add(leg)
+  hips.add(spine)
+  root.add(hips)
+  return root
+}
+
+/** One clip driving BOTH limbs the same distance, so what a mask keeps out is what stays still. */
+const limbClip = (name: string, to: number): AnimationClip =>
+  new AnimationClip(name, 1, [
+    new VectorKeyframeTrack('LeftUpperLeg.position', [0, 1], [0, 0, 0, to, 0, 0]),
+    new VectorKeyframeTrack('LeftUpperArm.position', [0, 1], [0, 0, 0, to, 0, 0]),
+  ])
+
+const limbOf = (root: Object3D, name: string): Object3D => {
+  const bone = root.getObjectByName(name)
+  if (!bone) throw new Error('the fixture builds that bone')
+  return bone
+}
+
 /** These blocks in one lane, which is the shape a node's track has when nothing is stacked. */
 const applyTo = (animations: SceneAnimations, clips: readonly ClipRef[]): void =>
   animations.apply('node-1', [clipLane('main', clips)])
@@ -57,11 +95,41 @@ describe('SceneAnimations', () => {
     return cube
   }
 
-  it('registers nothing for a model with no clips, so nothing is driven', () => {
+  // A bare rigged character brings no clip of its own, and is exactly what an animation shipped
+  // with the app gets dropped onto: registered anyway, or there is nothing to hand it to.
+  it('registers a model bringing no clip, with nothing to play until one is filed', () => {
     const animations = new SceneAnimations()
     animations.add('node-1', scene(), [])
 
-    expect(animations.has('node-1')).toBe(false)
+    expect(animations.has('node-1')).toBe(true)
+    expect(animations.clipsOf('node-1')).toEqual([])
+  })
+
+  it('plays a clip filed after the file landed, at the width that clip really runs', () => {
+    const animations = new SceneAnimations()
+    const root = scene()
+    animations.add('node-1', root, [])
+    animations.addClip('node-1', 'bundled:Capoeira', walkClip())
+
+    applyTo(animations, [bundledClip('block-1', 'Capoeira')])
+    animations.seek(0.5 * SECOND)
+
+    expect(animations.lengthsOf('node-1')['bundled:Capoeira']).toBe(1)
+    expect(cubeOf(root).position.x).toBeCloseTo(0.5)
+  })
+
+  // The two are told apart by their KIND and not by their name: an animation shipped as `walk`
+  // and a clip the model's own file spells `walk` are two different things.
+  it('keeps a shipped animation apart from a clip of the file bearing the same name', () => {
+    const animations = new SceneAnimations()
+    const root = scene()
+    animations.add('node-1', root, [walkClip()])
+    animations.addClip('node-1', 'bundled:walk', walkClip('walk', 0))
+
+    applyTo(animations, [bundledClip('block-1', 'walk')])
+    animations.seek(0.5 * SECOND)
+
+    expect(cubeOf(root).position.x).toBe(0)
   })
 
   it('places the model where the head says, without playing to get there', () => {
@@ -355,5 +423,54 @@ describe('a block that carries its character across the floor', () => {
     animations.seek(0.5 * SECOND)
 
     expect(hip.position.x).toBeCloseTo(2, 5)
+  })
+})
+
+describe('two blocks stacked on a body', () => {
+  const withLimbs = (): { animations: SceneAnimations; root: Object3D } => {
+    const animations = new SceneAnimations()
+    const root = limbRig()
+    animations.add('node-1', root, [limbClip('walk', 1), limbClip('wave', 2)])
+    return { animations, root }
+  }
+
+  const laneOn = (id: string, clip: ClipRef): ClipLane => clipLane(id, [clip])
+
+  it('leaves the bones a block does not drive exactly where they were', () => {
+    const { animations, root } = withLimbs()
+
+    animations.apply('node-1', [laneOn('a', ref({ name: 'walk', part: 'upper' }))])
+    animations.seek(0.5 * SECOND)
+
+    expect(limbOf(root, 'LeftUpperArm').position.x).toBeCloseTo(0.5, 5)
+    expect(limbOf(root, 'LeftUpperLeg').position.x).toBe(0)
+  })
+
+  // THE point of the whole thing: « walking AND raising the arms ». Layered whole-body, the two
+  // gave their mean and neither was itself.
+  it('gives each half its own block whole, where a mean is all two whole bodies can give', () => {
+    const { animations, root } = withLimbs()
+
+    animations.apply('node-1', [
+      laneOn('a', ref({ id: 'block-1', name: 'walk', part: 'lower' })),
+      laneOn('b', ref({ id: 'block-2', name: 'wave', part: 'upper' })),
+    ])
+    animations.seek(0.5 * SECOND)
+
+    expect(limbOf(root, 'LeftUpperLeg').position.x).toBeCloseTo(0.5, 5)
+    expect(limbOf(root, 'LeftUpperArm').position.x).toBeCloseTo(1, 5)
+  })
+
+  it('still averages two blocks that both drive the whole body', () => {
+    const { animations, root } = withLimbs()
+
+    animations.apply('node-1', [
+      laneOn('a', ref({ id: 'block-1', name: 'walk' })),
+      laneOn('b', ref({ id: 'block-2', name: 'wave' })),
+    ])
+    animations.seek(0.5 * SECOND)
+
+    expect(limbOf(root, 'LeftUpperLeg').position.x).toBeCloseTo(0.75, 5)
+    expect(limbOf(root, 'LeftUpperArm').position.x).toBeCloseTo(0.75, 5)
   })
 })

@@ -9,9 +9,11 @@ import {
 } from 'three'
 import type { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import { clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { bundledClip, clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { bundledAnimationUrl } from '@shared/domain/animationLibrary'
 import { SceneRenderer } from './SceneRenderer'
 import type { BvhBuilder } from './bvhBuilder'
+import type { Retarget } from './retarget'
 import type * as ModelCache from './modelCache'
 import { cameraShot } from './animation-fixtures'
 import { cameraNodeFixture, meshNode, modelNodeFixture, pathNodeFixture } from './scene-fixtures'
@@ -559,6 +561,107 @@ describe('SceneRenderer and a track on one bone', () => {
     engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)], animation: boneTimeline(3) })
 
     await vi.waitFor(() => expect(bone.position.x).toBe(13))
+    engine.dispose()
+  })
+})
+
+describe('SceneRenderer and the animations the app ships with', () => {
+  /** What the retargeting port is asked, and what it hands back — here, the clips unchanged. */
+  const straightThrough = (): Retarget & { asked: { target: Object3D; clips: string[] }[] } => {
+    const asked: { target: Object3D; clips: string[] }[] = []
+    return {
+      asked,
+      adapt: (target, _source, clips) => {
+        asked.push({ target, clips: clips.map(clip => clip.name) })
+        return Promise.resolve([...clips])
+      },
+      dispose: () => {},
+    }
+  }
+
+  function withShipped(
+    loaded: Group,
+    shipped: Group | Error,
+    retarget: Retarget,
+  ): { engine: SceneRenderer; asked: string[]; reported: ReturnType<typeof vi.fn> } {
+    const asked: string[] = []
+    const reported = vi.fn()
+    const engine = new SceneRenderer({
+      onSelect: () => {},
+      onTransform: () => {},
+      loadModel: () => Promise.resolve(loaded),
+      loadAnimation: url => {
+        asked.push(url)
+        return shipped instanceof Error ? Promise.reject(shipped) : Promise.resolve(shipped)
+      },
+      onClips: reported,
+      retarget,
+      bvh,
+    })
+    return { engine, asked, reported }
+  }
+
+  const shippedBlock = (extra: Partial<ClipRef> = {}): ClipRef =>
+    bundledClip('block-1', 'Capoeira', extra)
+
+  // The whole point of the feature: a character brings no such clip, and the file that does was
+  // authored for another skeleton entirely.
+  it('reads the shipped file, replays it on the model, and plays the block', async () => {
+    const loaded = animatedModel([])
+    const retarget = straightThrough()
+    const { engine, asked } = withShipped(loaded, animatedModel([walk('NlaTrack')]), retarget)
+
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(shippedBlock({ offset: 0.5 }))] })
+
+    await vi.waitFor(() => expect(cubeOf(loaded).position.x).toBeCloseTo(0.5, 5))
+    expect(asked).toEqual([bundledAnimationUrl('Capoeira')])
+    // The model's own instance, since that is the skeleton the clip has to speak to.
+    expect(retarget.asked[0]?.target).toBe(loaded.parent)
+    engine.dispose()
+  })
+
+  // `NlaTrack` is what Tripo spells and Uthana spells nothing at all: the studio names its blocks.
+  it('never lets the name inside the file reach what the model plays', async () => {
+    const loaded = animatedModel([])
+    const retarget = straightThrough()
+    const { engine, reported } = withShipped(loaded, animatedModel([walk('NlaTrack')]), retarget)
+
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(shippedBlock({ offset: 0.5 }))] })
+
+    await vi.waitFor(() => expect(cubeOf(loaded).position.x).toBeGreaterThan(0))
+    // `NlaTrack` goes to the port, because that is what the file holds — and it reaches nothing
+    // else: the block is filed under the FOLDER, and the model's own list stays empty.
+    expect(retarget.asked[0]?.clips).toEqual(['NlaTrack'])
+    expect(reported).toHaveBeenLastCalledWith('a', [], { 'bundled:Capoeira': 1 })
+    engine.dispose()
+  })
+
+  // Loading is the expensive half — a shipped animation carries a whole character with it — and
+  // every edit of a lane applies again.
+  it('reads a shipped animation once, however often the lanes are applied', async () => {
+    const loaded = animatedModel([])
+    const { engine, asked } = withShipped(
+      loaded,
+      animatedModel([walk('NlaTrack')]),
+      straightThrough(),
+    )
+
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(shippedBlock())] })
+    await vi.waitFor(() => expect(asked).toHaveLength(1))
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(bundledClip('block-2', 'Capoeira'))] })
+
+    expect(asked).toEqual([bundledAnimationUrl('Capoeira')])
+    engine.dispose()
+  })
+
+  it('leaves the model standing when the shipped file will not read', async () => {
+    const loaded = animatedModel([])
+    const { engine } = withShipped(loaded, new Error('no such folder'), straightThrough())
+
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(shippedBlock())] })
+
+    await vi.waitFor(() => expect(loaded.parent).not.toBeNull())
+    expect(cubeOf(loaded).position.x).toBe(0)
     engine.dispose()
   })
 })

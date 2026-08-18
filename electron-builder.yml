@@ -72,6 +72,11 @@ extraResources:
   - from: resources/stt
     to: stt
     filter: ['**/*']
+  # The animations a character can be made to play, one folder each. In the repository rather
+  # than fetched: they are the only thing the animations panel has to offer on a fresh install.
+  - from: resources/animations
+    to: animations
+    filter: ['**/*']
   # Beside the application rather than only inside its Help window: a notice reachable only from
   # a running app is out of reach for whoever cannot start it, and the FFmpeg source offer has to
   # survive that. Both are generated or hand-written at the repository root, never duplicated.

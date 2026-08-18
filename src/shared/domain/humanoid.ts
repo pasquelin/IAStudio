@@ -124,3 +124,47 @@ const ROLE_SET: ReadonlySet<string> = new Set(HUMANOID_ROLES)
 export function isHumanoidRole(value: unknown): value is HumanoidRole {
   return typeof value === 'string' && ROLE_SET.has(value)
 }
+
+/**
+ * Which half of a body a block drives, so two animations layered on one another stop averaging
+ * each other out: walking on the legs WHILE the arms do something else needs the two to speak to
+ * different bones, not to the same ones at half strength.
+ *
+ * Two halves and not twenty: the split has to be one someone can hold in their head while
+ * dragging a block, and the waist is where a body actually divides.
+ */
+export type BodyPart = 'all' | 'upper' | 'lower'
+
+/** What a block that says nothing drives — every document written before the halves existed. */
+export const WHOLE_BODY: BodyPart = 'all'
+
+export const BODY_PARTS: readonly BodyPart[] = [WHOLE_BODY, 'upper', 'lower']
+
+export function isBodyPart(value: unknown): value is BodyPart {
+  return BODY_PARTS.some(part => part === value)
+}
+
+const UPPER_ROLES: ReadonlySet<string> = new Set<HumanoidRole>([
+  'Spine',
+  'Chest',
+  'UpperChest',
+  'Neck',
+  'Head',
+  'LeftShoulder',
+  'LeftUpperArm',
+  'LeftLowerArm',
+  'LeftHand',
+  'RightShoulder',
+  'RightUpperArm',
+  'RightLowerArm',
+  'RightHand',
+  ...HUMANOID_FINGER_ROLES,
+])
+
+/**
+ * The hips go with the LEGS, and that is the whole arbitration: they carry the character's
+ * placement, so an upper-body block would otherwise walk it away from where the legs put it.
+ */
+export function bodyPartOfRole(role: HumanoidRole): 'upper' | 'lower' {
+  return UPPER_ROLES.has(role) ? 'upper' : 'lower'
+}

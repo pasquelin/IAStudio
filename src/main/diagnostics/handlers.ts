@@ -13,6 +13,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'scene.model': 'document',
   'scene.bvh': 'document',
   'scene.texture': 'document',
+  'scene.animation': 'document',
   'scene.export': 'document',
   'scene.render': 'document',
   // With the document, as every other export is: it writes outside the project, and what its

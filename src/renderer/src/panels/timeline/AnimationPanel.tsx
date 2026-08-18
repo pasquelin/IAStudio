@@ -2,7 +2,7 @@ import { mdiRhombus } from '@mdi/js'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
-import { clipLane, MAIN_LANE_ID } from '@shared/domain/scene'
+import { clipKeyOf, clipLane, MAIN_LANE_ID } from '@shared/domain/scene'
 import { animationRows, type ClipBlock, type SheetLane } from '@/engines/scene/animationRows'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
 import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
@@ -54,7 +54,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
         const blocks: ClipBlock[] = []
 
         for (const ref of lane.clips) {
-          const seconds = lengths?.[node.id]?.[ref.source.name] ?? null
+          const seconds = lengths?.[node.id]?.[clipKeyOf(ref.source)] ?? null
           if (seconds === null) continue
 
           blocks.push({

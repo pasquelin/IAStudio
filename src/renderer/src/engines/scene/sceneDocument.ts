@@ -23,6 +23,7 @@ import {
   type EnvironmentRef,
   type ModelRef,
 } from '@shared/domain/scene'
+import { BODY_PARTS } from '@shared/domain/humanoid'
 import { isRig } from '@shared/domain/rig'
 import {
   DEFAULT_DURATION,
@@ -254,6 +255,8 @@ function isClip(value: unknown): boolean {
   // passing: it is session state now, so an extra boolean in the file is simply ignored.
   if (typeof value.loop !== 'boolean') return false
   if (!ROOT_MOTIONS.some(motion => motion === value.rootMotion)) return false
+  // Absent is legal and means the whole body: every document written before the halves existed.
+  if (value.part != null && !BODY_PARTS.some(part => part === value.part)) return false
 
   return ['start', 'duration', 'offset', 'speed', 'fadeIn', 'fadeOut'].every(field =>
     Number.isFinite(value[field]),
@@ -262,7 +265,7 @@ function isClip(value: unknown): boolean {
 
 function isClipSource(value: unknown): boolean {
   if (!isRecord(value) || typeof value.name !== 'string') return false
-  if (value.kind === 'embedded') return true
+  if (value.kind === 'embedded' || value.kind === 'bundled') return true
 
   return value.kind === 'asset' && typeof value.assetId === 'string' && value.assetId !== ''
 }

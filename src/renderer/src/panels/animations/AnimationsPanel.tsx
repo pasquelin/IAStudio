@@ -51,10 +51,10 @@ export function AnimationsPanel() {
       ))}
       {bundled.map(animation => (
         <AnimationsPanelRow
-          key={`bundled:${animation.path}`}
+          key={`bundled:${animation.name}`}
           name={animation.name}
           thumbnail={animation.thumbnail}
-          source={{ kind: 'bundled', path: animation.path }}
+          source={{ kind: 'bundled', name: animation.name }}
         />
       ))}
     </div>

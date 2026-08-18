@@ -29,6 +29,7 @@ const resolversReading = (findAsset: () => Promise<Asset | null>) =>
     findAsset,
     favouriteThumbnail: () => '/userData/favorites/favorite_1.png',
     thumbnailOf: () => Promise.resolve(null),
+    bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
   })
 
 describe('what the asset scheme resolves', () => {
@@ -50,6 +51,7 @@ describe('what the asset scheme resolves', () => {
       findAsset,
       favouriteThumbnail: () => null,
       thumbnailOf: () => Promise.resolve(null),
+      bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
     })
 
     await expect(resolvers[ASSET_HOST]?.('asset-1')).resolves.toBeNull()
@@ -89,6 +91,7 @@ describe('what the asset scheme resolves', () => {
       findAsset: () => Promise.resolve(null),
       favouriteThumbnail: () => '/userData/favorites/favorite_1.png',
       thumbnailOf: relative => Promise.resolve(`${PROJECT}/.index/thumbs/${relative}.png`),
+      bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
     })
 
     await expect(resolvers[FAVORITE_HOST]?.('favorite_1')).resolves.toBe(

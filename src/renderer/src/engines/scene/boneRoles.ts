@@ -8,7 +8,13 @@
  * Pure, and shaped from measurement rather than from documentation: the three lists it answers
  * were parsed out of the real files on 2026-08-18, hierarchy included.
  */
-import { isHumanoidRole, type HumanoidRole, type HumanoidSide } from '@shared/domain/humanoid'
+import {
+  bodyPartOfRole,
+  isHumanoidRole,
+  type BodyPart,
+  type HumanoidRole,
+  type HumanoidSide,
+} from '@shared/domain/humanoid'
 
 /** What reading a role needs of a bone: its name, and where it hangs. */
 export type NamedBone = {
@@ -37,6 +43,46 @@ export function boneRolesOf(bones: readonly NamedBone[]): Record<string, Humanoi
 
   if (!taken.has('Neck')) nameNeckByShape(bones, roles)
   return roles
+}
+
+/**
+ * The bones one half of a body drives, or `null` for the whole of it — which is not the same as
+ * "every bone", and is why the two cases answer differently: nothing is filtered at all then.
+ *
+ * A bone that fills no role follows the NEAREST ONE ABOVE it, so a twist bone, a finger nobody
+ * named and a tail all move with the limb they hang from. Anything hanging above the hips goes
+ * with the legs: the root carries where the character stands, and standing is the legs' business.
+ */
+export function bonesDrivenBy(
+  bones: readonly NamedBone[],
+  part: BodyPart,
+): ReadonlySet<string> | null {
+  if (part === 'all') return null
+
+  const roles = boneRolesOf(bones)
+  const byName = new Map(bones.map(bone => [bone.name, bone]))
+  const driven = new Set<string>()
+
+  for (const bone of bones) {
+    if (partOfBone(bone, roles, byName) === part) driven.add(bone.name)
+  }
+  return driven
+}
+
+function partOfBone(
+  bone: NamedBone,
+  roles: Readonly<Record<string, HumanoidRole>>,
+  byName: ReadonlyMap<string, NamedBone>,
+): 'upper' | 'lower' {
+  let walked: NamedBone | undefined = bone
+  // Bounded like every other walk of this tree: a rig edited in a document can hold a cycle.
+  for (let step = 0; walked && step <= byName.size; step += 1) {
+    const role = roles[walked.name]
+    if (role) return bodyPartOfRole(role)
+
+    walked = boneAbove(walked, byName)
+  }
+  return 'lower'
 }
 
 /**

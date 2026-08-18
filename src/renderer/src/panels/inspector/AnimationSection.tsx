@@ -1,6 +1,7 @@
 import { mdiPause, mdiPlay } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { clipLane, embeddedClip, MAIN_LANE_ID, type ClipRef } from '@shared/domain/scene'
+import { BODY_PARTS, isBodyPart, WHOLE_BODY, type BodyPart } from '@shared/domain/humanoid'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { QuietNote } from '@/design/QuietNote'
@@ -27,6 +28,9 @@ export type AnimationSectionProps = {
 /** How fast a clip may be asked to run. Below zero it would play backwards, which is a lot more. */
 const MIN_SPEED = 0.1
 const MAX_SPEED = 4
+
+/** A `<select>` answers a string; the whole body is what anything else can only have meant. */
+const bodyPartRead = (value: string): BodyPart => (isBodyPart(value) ? value : WHOLE_BODY)
 
 /**
  * What an imported model can be made to play, and what stands in the way when it cannot.
@@ -151,6 +155,22 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
             value={played.loop}
             onChange={loop => write({ ...played, loop })}
           />
+          {/* What makes two blocks stack rather than average each other out. A select for the
+              same reason as the clip picker above: the OS list reads on its own. */}
+          <PropertyRow label={t('inspector.clipPart')}>
+            <select
+              aria-label={t('inspector.clipPart')}
+              value={played.part ?? WHOLE_BODY}
+              onChange={event => write({ ...played, part: bodyPartRead(event.target.value) })}
+              className={cn(NATIVE_SELECT, 'w-full')}
+            >
+              {BODY_PARTS.map(part => (
+                <option key={part} value={part}>
+                  {t(`inspector.clipPart_${part}`)}
+                </option>
+              ))}
+            </select>
+          </PropertyRow>
         </>
       )}
     </PropertySection>

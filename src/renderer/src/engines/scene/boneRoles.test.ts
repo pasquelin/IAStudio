@@ -1,7 +1,7 @@
 import { PropertyBinding } from 'three'
 import { describe, expect, it } from 'vitest'
 import { HUMANOID_BODY_ROLES, type HumanoidRole } from '@shared/domain/humanoid'
-import { boneRolesOf, type NamedBone } from './boneRoles'
+import { boneRolesOf, bonesDrivenBy, type NamedBone } from './boneRoles'
 import { TRIPO_BONES, UTHANA_MOTION_BONES, UTHANA_RIG_BONES } from './boneRoles-fixtures'
 
 function chain(...names: string[]): NamedBone[] {
@@ -165,5 +165,41 @@ describe('what a broken file gets', () => {
 
   it('answers nothing on a skeleton that fills no role', () => {
     expect(boneRolesOf(chain('wheel', 'axle', 'chassis'))).toEqual({})
+  })
+})
+
+describe('the bones one half of a body drives', () => {
+  // Read off the REAL file rather than a made-up chain: 46 of its 52 bones fill no role at all,
+  // which is the whole reason the answer is walked up the tree.
+  it('splits a provider rig at the waist, hips with the legs', () => {
+    const lower = bonesDrivenBy(UTHANA_MOTION_BONES, 'lower')
+    const upper = bonesDrivenBy(UTHANA_MOTION_BONES, 'upper')
+
+    expect(lower?.has('mixamorig:Hips')).toBe(true)
+    expect(lower?.has('mixamorig:LeftFoot')).toBe(true)
+    expect(upper?.has('mixamorig:Hips')).toBe(false)
+    expect(upper?.has('mixamorig:Head')).toBe(true)
+  })
+
+  // A finger nobody named, a twist bone, a tail: they move with the limb they hang from, or the
+  // half they belong to would freeze halfway down.
+  it('gives a bone filling no role the half of the nearest one above it', () => {
+    const upper = bonesDrivenBy(UTHANA_MOTION_BONES, 'upper')
+
+    expect(upper?.has('mixamorig:LeftHandPinky3')).toBe(true)
+  })
+
+  it('takes every bone of both halves, and none twice', () => {
+    const lower = bonesDrivenBy(UTHANA_MOTION_BONES, 'lower') ?? new Set()
+    const upper = bonesDrivenBy(UTHANA_MOTION_BONES, 'upper') ?? new Set()
+
+    expect(lower.size + upper.size).toBe(UTHANA_MOTION_BONES.length)
+    expect([...upper].filter(bone => lower.has(bone))).toEqual([])
+  })
+
+  // `null` and not "every bone": nothing is filtered at all, so a clip driving something no
+  // skeleton holds still reaches whatever it addresses.
+  it('answers nothing to filter by for the whole body', () => {
+    expect(bonesDrivenBy(UTHANA_MOTION_BONES, 'all')).toBeNull()
   })
 })
