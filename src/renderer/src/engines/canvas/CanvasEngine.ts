@@ -223,7 +223,6 @@ export type LayerPixels = {
   data: string
 }
 
-/** A surface a gesture may write to, with the key its undo patches are filed under. */
 /**
  * Where a stroke lands, and how to get there. `toSurface` maps the document onto the surface's
  * own pixels: the sprite that shows them carries the layer's transform, so artwork drawn where

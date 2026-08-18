@@ -45,11 +45,10 @@ export type PlayingSound = { stop: () => void }
 /** A sound in memory, ready to be started. */
 export type LoadedSound = (cue: SoundCue) => PlayingSound
 
-/**
- * What the window can do and jsdom cannot: read over the scheme, decode samples, put them on an
- * output clock. Everything above this line is arithmetic, and the arithmetic is where the bugs
- * are — a sound planned a frame late is heard, a picture painted a frame late is not.
- */
+// What the window can do and jsdom cannot starts here: read over the scheme, decode samples, put
+// them on an output clock. Everything above is arithmetic, and the arithmetic is where the bugs
+// are — a sound planned a frame late is heard, a picture painted a frame late is not.
+
 /**
  * A listening point on the output, for the surfaces that draw what is being heard.
  *

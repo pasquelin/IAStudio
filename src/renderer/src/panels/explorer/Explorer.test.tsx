@@ -67,12 +67,6 @@ const withProject = (): void => {
   })
 }
 
-/**
- * What the main process answers per folder, so a test says what the disk holds and no more.
- *
- * `catalogued` is what the folder cannot say: whether a file it shows is an asset. Empty by
- * default, which is a folder of files the studio has never heard of.
- */
 /** Reset per case in `beforeEach`, and read by `install` — every case here raises a menu. */
 let menu = fakeMenu()
 
@@ -80,6 +74,12 @@ let menu = fakeMenu()
 const nothingMoved = (): Promise<FileOutcome> =>
   Promise.resolve({ done: [], refused: [], batch: 'batch-1' })
 
+/**
+ * What the main process answers per folder, so a test says what the disk holds and no more.
+ *
+ * `catalogued` is what the folder cannot say: whether a file it shows is an asset. Empty by
+ * default, which is a folder of files the studio has never heard of.
+ */
 function install(
   byFolder: Record<string, FolderEntry[]>,
   documents: DocumentDescriptor[] = [],

@@ -490,7 +490,6 @@ export type SaveTextureRequest = {
   png: Uint8Array
 }
 
-/** A scene on its way to a file the studio will never look at again. */
 /** What a render is asked for, before a single frame is computed. */
 export type RenderStartRequest = {
   /** Suggested file name, without its extension. */
@@ -509,6 +508,7 @@ export type RenderFrameRequest = {
   png: Uint8Array
 }
 
+/** A scene on its way to a file the studio will never look at again. */
 export type SceneExportRequest = {
   /** Suggested file name, without its extension — the format decides that. */
   name: string

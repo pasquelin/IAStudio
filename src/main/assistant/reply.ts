@@ -1,3 +1,10 @@
+/**
+ * Reads what the model answered, and refuses everything it cannot vouch for.
+ *
+ * The model has no tool use: it is asked for JSON and answers text, so this is the seam where a
+ * plausible sentence becomes — or fails to become — something the studio will act on. It is
+ * written to be strict on purpose. A call it lets through is a call that runs.
+ */
 import {
   type ActionName,
   assistantAction,
@@ -8,14 +15,6 @@ import { isRecord } from '@shared/guards'
 
 /** What `parseReply` answers: the reply without the cost, which only the caller knows. */
 type Reply = Omit<AssistantAnswer, 'cost'>
-
-/**
- * Reads what the model answered, and refuses everything it cannot vouch for.
- *
- * The model has no tool use: it is asked for JSON and answers text, so this is the seam where a
- * plausible sentence becomes — or fails to become — something the studio will act on. It is
- * written to be strict on purpose. A call it lets through is a call that runs.
- */
 
 /**
  * Pulls the object out of whatever the model wrapped it in.

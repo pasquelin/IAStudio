@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
+import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
+import { walkIn } from './astSites'
 import { PROJECT_TREES, SOURCE_ROOT, WHOLE_PROJECT, sourceFiles } from './sourceFiles'
 import { testFilesUnder } from './wideGuards'
 
@@ -9,56 +11,56 @@ import { testFilesUnder } from './wideGuards'
  *
  * TypeScript attaches the LAST block before a declaration and drops the rest, so two in a row
  * mean the first has lost whatever it was written for — and it reads as if it described the
- * declaration below, which is how a case ends up carrying another case's reason. Found eleven of
- * them on 2026-08-18, every one of them a paragraph somebody had written and nobody could see
- * was misplaced: a contract copied twice in `shared/ipc.ts`, a reason two cases below its own in
- * three suites, a renderer paragraph left behind by a method inserted above it.
+ * declaration below, which is how a case ends up carrying another case's reason. Forty were
+ * found on 2026-08-18 across two batches, one of them a contract copied twice in `shared/ipc.ts`
+ * and one a pair of sentences that CONTRADICTED each other on `Tree.tsx`'s `onContextMenu`.
  *
- * **Blind to blocks in column 0, and that is a bound rather than an oversight**: a file header
- * sitting above the first symbol's own block is the same shape and perfectly legitimate. The
- * distinction takes a parser, and a regex would either miss the defect or refuse the header.
- * **Twenty-four unindented ones were measured the same day**, `main/scenario/client.ts` and
- * `main/services.ts` among them, and they are a backlog entry rather than a silence here.
+ * **One header per file is tolerated, and only on the first declaration that carries any doc,
+ * and only in column 0**: a module header above the first symbol's own block is the same shape
+ * as the defect, and an indented block is never one. That tolerance is what a line-based sweep
+ * could not express — it read 24 sites where an independent recount read 23 and a third pass
+ * read 77, three numbers for one tree, which is why this reads the parser instead.
  */
 const RULE = 'a JSDoc block followed by another documents nothing'
 
 /** Every file a reader opens: sources on one side, suites on the other — `sourceFiles` drops those. */
 const filesOfTree = (tree: string): string[] => [...sourceFiles(tree), ...testFilesUnder(tree)]
 
-/**
- * Where an indented block is immediately followed by another, by line.
- *
- * Blank lines between the two count as adjacency: what matters is that no declaration sits
- * between them, and a blank line is not one.
- */
-function orphansIn(code: string): number[] {
-  const lines = code.split('\n')
-  const found: number[] = []
-  let closedAt = -1
+/** The `/** …` ranges TypeScript would consider for `start`, in source order. */
+const docsBefore = (text: string, start: number): readonly ts.CommentRange[] =>
+  (ts.getLeadingCommentRanges(text, start) ?? []).filter(
+    range => text.slice(range.pos, range.pos + 3) === '/**',
+  )
 
-  for (const [index, raw] of lines.entries()) {
-    const text = raw.trim()
-    if (text === '*/') {
-      closedAt = index
-      continue
-    }
-    if (text === '') continue
-    if (text.startsWith('/**')) {
-      const indented = raw.length > raw.trimStart().length
-      if (closedAt >= 0 && indented) found.push(index + 1)
-      // A one-line block opens and closes here: the next one after it is just as orphaned.
-      closedAt = text.endsWith('*/') ? index : -1
-      continue
-    }
-    closedAt = -1
-  }
+function orphansIn(path: string, text: string): string[] {
+  const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true)
+  const visited = new Set<number>()
+  const found: string[] = []
+  let headerSpent = false
+
+  walkIn(file, node => {
+    // Nested nodes share the leading trivia of their parent, so a block would be reported once
+    // per level without this.
+    if (visited.has(node.getFullStart())) return
+    visited.add(node.getFullStart())
+
+    const docs = docsBefore(text, node.getFullStart())
+    if (docs.length === 0) return
+
+    // A module header opens in column 0 — an indented block never is one, whatever it sits above.
+    const opensTheFile =
+      !headerSpent && file.getLineAndCharacterOfPosition(docs[0]?.pos ?? 0).character === 0
+    headerSpent = true
+    for (const range of docs.slice(0, Math.max(0, docs.length - (opensTheFile ? 2 : 1))))
+      found.push(`${path}:${file.getLineAndCharacterOfPosition(range.pos).line + 1}`)
+  })
 
   return found
 }
 
 const findingsOf = (): string[] =>
   PROJECT_TREES.flatMap(tree => filesOfTree(tree)).flatMap(path =>
-    orphansIn(readFileSync(path, 'utf8')).map(line => `${relative(SOURCE_ROOT, path)}:${line}`),
+    orphansIn(relative(SOURCE_ROOT, path), readFileSync(path, 'utf8')),
   )
 
 describe(RULE, () => {
@@ -71,8 +73,7 @@ describe(RULE, () => {
   )
 
   /**
-   * The rule put in default, so the green above is one somebody has seen go red. Two blocks with
-   * a blank line between them, which is the shape the eleven findings of 2026-08-18 had.
+   * The rule put in default, so the green above is one somebody has seen go red.
    */
   it('names the block that lost its declaration, and only that one', () => {
     const code = [
@@ -84,13 +85,28 @@ describe(RULE, () => {
       '}',
     ].join('\n')
 
-    expect(orphansIn(code)).toEqual([4])
+    expect(orphansIn('probe.ts', code)).toEqual(['probe.ts:2'])
   })
 
-  /** A header above the first symbol's own block is the legitimate twin, and stays out. */
-  it('leaves a file header followed by the first symbol alone', () => {
+  /** The legitimate twin, and the one a line-based sweep could not tell from the defect. */
+  it('leaves a module header above the first documented symbol alone', () => {
     const code = ['/** the module */', '/** the symbol */', 'export const value = 1'].join('\n')
 
-    expect(orphansIn(code)).toEqual([])
+    expect(orphansIn('probe.ts', code)).toEqual([])
+  })
+
+  /** The tolerance is spent once: a file does not open twice, whatever its length. */
+  it('takes the header only for the first documented symbol', () => {
+    const code = [
+      '/** the module */',
+      '/** the first symbol */',
+      'export const first = 1',
+      '',
+      '/** stranded */',
+      '/** the second symbol */',
+      'export const second = 2',
+    ].join('\n')
+
+    expect(orphansIn('probe.ts', code)).toEqual(['probe.ts:5'])
   })
 })

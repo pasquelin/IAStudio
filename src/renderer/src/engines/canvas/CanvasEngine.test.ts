@@ -529,16 +529,16 @@ function groupContainer(id: string): Placed | undefined {
   return gpu.containers.find(container => container.label === id)
 }
 
-/**
- * Every engine a test mounted. They listen on `window` for `pointerup` and `keydown`, so one left
- * alive answers the next test's keys as well: a crop frame placed here and never applied was
- * being cropped by the ⏎ of the test after it.
- */
 /** A harness whose page refuses every face, which is what a missing or unreadable file is. */
 function mountedWithoutFace(): Promise<Harness> {
   return mounted(DEFAULT_CANVAS, 'brush', () => Promise.reject(new Error('no such file')))
 }
 
+/**
+ * Every engine a test mounted. They listen on `window` for `pointerup` and `keydown`, so one left
+ * alive answers the next test's keys as well: a crop frame placed here and never applied was
+ * being cropped by the ⏎ of the test after it.
+ */
 const mountedEngines: InstanceType<typeof CanvasEngine>[] = []
 
 afterEach(() => {

@@ -345,21 +345,6 @@ async function download(url: string): Promise<Uint8Array> {
 }
 
 /**
- * Composition root of the main process. Everything stateful is built here, once, so no module
- * reaches for a singleton and every collaborator stays injectable in tests.
- *
- * Called after `app.whenReady()`: it registers the asset protocol handler, which Electron
- * refuses before then. The settings are built before it and handed in — see `createSettings`.
- */
-/**
- * The settings, on their own and before anything else. Built apart from the rest because the
- * first window is painted from them: the splash takes its colour from the theme, and the rest
- * of `createServices` opens SQLite synchronously — far too late to decide what to paint.
- *
- * Notified from the store rather than from the IPC handler: the project store writes
- * `lastProject` on its own, and every window replicates these settings.
- */
-/**
  * What this machine asks to be spoken to in: the application's own locale first, the system's
  * preferences behind it.
  *
@@ -379,6 +364,14 @@ function machineLanguages(): string[] {
   return [app.getLocale(), ...app.getPreferredSystemLanguages()]
 }
 
+/**
+ * The settings, on their own and before anything else. Built apart from the rest because the
+ * first window is painted from them: the splash takes its colour from the theme, and the rest
+ * of `createServices` opens SQLite synchronously — far too late to decide what to paint.
+ *
+ * Notified from the store rather than from the IPC handler: the project store writes
+ * `lastProject` on its own, and every window replicates these settings.
+ */
 export function createSettings(): SettingsStore {
   // `isDevelopment`, arrived on main: the fallback reads a `.env` only outside a packaged run.
   const fallback = createFileSystemFallback(app.getAppPath(), !isDevelopment)
@@ -416,6 +409,9 @@ export function createSettings(): SettingsStore {
 /**
  * Composition root of the main process. Everything stateful is built here, once, so no module
  * reaches for a singleton and every collaborator stays injectable in tests.
+ *
+ * Called after `app.whenReady()`: it registers the asset protocol handler, which Electron
+ * refuses before then. The settings are built before it and handed in — see `createSettings`.
  */
 export function createServices(settings: SettingsStore): Services {
   // Read off the one copy rather than derived a second time: the file picker below is a native

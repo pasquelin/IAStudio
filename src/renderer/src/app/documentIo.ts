@@ -586,18 +586,6 @@ export async function saveDocument(documentId: string, byHand = true): Promise<b
 }
 
 /**
- * The second half of ⌘S: the asset the tab was opened from, brought back in line with it.
- *
- * AFTER the document, and the order is the guarantee — the document holds the layers and the
- * history, the asset only a flat picture, so writing the asset first and failing on the document
- * would leave a fresh tile in front of lost work. A failure here undoes nothing and does not mark
- * the document dirty: it is journaled, remembered in `assetBehind`, and the next ⌘S retries it.
- *
- * Nothing at all for a document that edits no asset, for a kind whose `writeAsset` is absent —
- * every refusal in `IO_BY_KIND` says why at its own line — or for a tab nobody touched whose
- * asset is not already behind.
- */
-/**
  * Which format overwriting the source means writing, and what it would destroy.
  *
  * A format the table does not write — a `.tif`, a `.gif` — reports everything the document holds
@@ -620,6 +608,18 @@ function writePlanFor(
   return { format: format ?? 'png', losses: format ? lossesFor(traits, format) : traits }
 }
 
+/**
+ * The second half of ⌘S: the asset the tab was opened from, brought back in line with it.
+ *
+ * AFTER the document, and the order is the guarantee — the document holds the layers and the
+ * history, the asset only a flat picture, so writing the asset first and failing on the document
+ * would leave a fresh tile in front of lost work. A failure here undoes nothing and does not mark
+ * the document dirty: it is journaled, remembered in `assetBehind`, and the next ⌘S retries it.
+ *
+ * Nothing at all for a document that edits no asset, for a kind whose `writeAsset` is absent —
+ * every refusal in `IO_BY_KIND` says why at its own line — or for a tab nobody touched whose
+ * asset is not already behind.
+ */
 async function rewriteSourceAsset(
   document: DocumentDescriptor,
   io: DocumentIo,
@@ -860,15 +860,6 @@ export function documentIsDirty(documentId: string): boolean {
 }
 
 /**
- * Closes a document: asks about unsaved work, writes it if that is the answer, then drops its
- * state, its history and its tab. `false` when the user cancelled, which is the one answer that
- * leaves everything as it was.
- *
- * The order matters. The file is written before anything is forgotten — a save that fails must
- * not have already thrown the work away — and the question is asked before the write so that a
- * cancelled dialog costs nothing.
- */
-/**
  * How many gestures are deciding a document's fate right now.
  *
  * A native dialog blocks the user's input, NOT the renderer's timers. With "Save / Don't Save"
@@ -897,6 +888,15 @@ async function askAboutUnsavedWork(documentId: string): Promise<CloseChoice> {
   return (await getBridge()?.documents.confirmClose(title)) ?? 'cancel'
 }
 
+/**
+ * Closes a document: asks about unsaved work, writes it if that is the answer, then drops its
+ * state, its history and its tab. `false` when the user cancelled, which is the one answer that
+ * leaves everything as it was.
+ *
+ * The order matters. The file is written before anything is forgotten — a save that fails must
+ * not have already thrown the work away — and the question is asked before the write so that a
+ * cancelled dialog costs nothing.
+ */
 export async function closeDocument(documentId: string): Promise<boolean> {
   return await whileSettling(async () => {
     if (documentIsDirty(documentId)) {

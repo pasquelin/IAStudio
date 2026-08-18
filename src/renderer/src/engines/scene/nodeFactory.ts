@@ -54,11 +54,6 @@ export function modelNode(assetId: string, name: string): SceneNode {
   }
 }
 
-/**
- * A picture that always faces the camera. Built mapless: the picture is picked in the inspector
- * from the project's assets, and a sprite that demanded one before it could exist would be a
- * node the Add menu could not add.
- */
 /** A camera of the scene: what a render looks through, placed like anything else. */
 export function cameraNode(): SceneNode {
   return {
@@ -75,6 +70,11 @@ export function cameraNode(): SceneNode {
   }
 }
 
+/**
+ * A picture that always faces the camera. Built mapless: the picture is picked in the inspector
+ * from the project's assets, and a sprite that demanded one before it could exist would be a
+ * node the Add menu could not add.
+ */
 export function spriteNode(): SceneNode {
   return {
     id: newId(),

@@ -51,17 +51,17 @@ async function domainOf(fileName: string, absolute: string): Promise<Asset['type
 }
 
 /**
- * Gives a file the project already holds a row in the catalogue, so the studio can open it.
- * Writes `path` where `ingest` writes `sourcePath` — that is what lets the rescan follow the
- * file — and answers `null` for what the studio would not show, which the caller sends outside.
- */
-/**
  * Adoptions in flight, by path. The catalogue holds no unique index on `path`, and the row only
  * exists once the fingerprint and the probe have answered — seconds, for a rush. Two double-clicks
  * in that window would otherwise mint two rows over one file, and derive it twice.
  */
 const running = new Map<string, Promise<Asset | null>>()
 
+/**
+ * Gives a file the project already holds a row in the catalogue, so the studio can open it.
+ * Writes `path` where `ingest` writes `sourcePath` — that is what lets the rescan follow the
+ * file — and answers `null` for what the studio would not show, which the caller sends outside.
+ */
 export async function adoptFile(relative: string, deps: AdoptFileDeps): Promise<Asset | null> {
   const already = running.get(relative)
   if (already) return already

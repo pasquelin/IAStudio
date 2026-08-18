@@ -1122,13 +1122,6 @@ export function bindingOf(id: CommandId, overrides: BindingOverrides): Signature
 }
 
 /**
- * The command a signature fires on one surface. Scoped, because the same key means different
- * things on the timeline and in the scene, and only one of the two is ever listening.
- *
- * `global` is deliberately excluded: those are the native menu's accelerators, and Electron
- * fires them itself — matching them here too would run the command twice.
- */
-/**
  * The one key that answers to two names.
  *
  * A Mac's main keyboard carries a single key marked « delete », and it reports `Backspace`. The
@@ -1141,6 +1134,13 @@ export function bindingOf(id: CommandId, overrides: BindingOverrides): Signature
  */
 const KEY_ALIASES: Partial<Record<Signature, Signature>> = { Backspace: 'Delete' }
 
+/**
+ * The command a signature fires on one surface. Scoped, because the same key means different
+ * things on the timeline and in the scene, and only one of the two is ever listening.
+ *
+ * `global` is deliberately excluded: those are the native menu's accelerators, and Electron
+ * fires them itself — matching them here too would run the command twice.
+ */
 export function commandFor(
   signature: Signature,
   scope: CommandScope,

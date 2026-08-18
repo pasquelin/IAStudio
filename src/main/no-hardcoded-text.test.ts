@@ -257,8 +257,7 @@ describe('the main process', () => {
  *
  * It runs from here, of all places, because it reads the tree off the disk: `src/shared` is
  * compiled for the web as well, where `node:fs` has no types and no business being imported.
- */
-/**
+ *
  * Reading and parsing every file of the project is not a unit test's usual budget: 2.5 s idle,
  * and past the shared 15 s the moment a dozen other suites share the machine. `WHOLE_PROJECT`
  * comes from `sourceFiles.ts` with the sweep it belongs to, rather than being raised for

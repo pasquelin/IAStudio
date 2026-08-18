@@ -209,13 +209,6 @@ function showSection(window: BrowserWindow, section: SettingsSectionId): void {
 }
 
 /**
- * Settings live in their own window, opened by ⌘,. One at a time: a second copy of the
- * account form could save a different key than the one the first is still showing.
- *
- * `section` is what a panel asks for when it sends the user here — the account form, from a
- * panel that has just said no API key is set.
- */
-/**
  * Whether the settings window is holding changes nobody applied. Published by its renderer,
  * because closing a window is the main process's decision and it has no other way to know.
  */
@@ -225,6 +218,13 @@ export function markSettingsPending(pending: boolean): void {
   settingsPending = pending
 }
 
+/**
+ * Settings live in their own window, opened by ⌘,. One at a time: a second copy of the
+ * account form could save a different key than the one the first is still showing.
+ *
+ * `section` is what a panel asks for when it sends the user here — the account form, from a
+ * panel that has just said no API key is set.
+ */
 export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     // Already open, possibly on another section: reloading it would throw away a half-typed
