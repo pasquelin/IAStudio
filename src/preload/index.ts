@@ -195,6 +195,9 @@ const bridge: StudioBridge = {
   scene: {
     export: request => ipcRenderer.invoke(CHANNELS.sceneExport, request),
   },
+  montage: {
+    export: request => ipcRenderer.invoke(CHANNELS.montageExport, request),
+  },
   render: {
     start: request => ipcRenderer.invoke(CHANNELS.renderStart, request),
     frame: request => ipcRenderer.invoke(CHANNELS.renderFrame, request),

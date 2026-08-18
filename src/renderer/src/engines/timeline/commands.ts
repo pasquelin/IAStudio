@@ -520,7 +520,7 @@ export function addTrack(kind: TrackKind): Command<SequenceState> {
   return {
     id: `track:add:${kind}`,
     apply: state => {
-      const id = nextTrackId(state, kind)
+      const id = nextTrackId(state.tracks, kind)
       added = id
       return {
         ...state,

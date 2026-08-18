@@ -9,12 +9,14 @@
 import { extensionOf } from './fileName'
 
 /**
- * A property of an edited document that a format either carries or loses.
- *
- * Picture traits alone today, because the image is the one kind that writes back over a source.
- * A second domain adds its own here rather than beside: the question is the same one.
+ * The kind of document a trait and a format belong to. A format only ever answers about traits
+ * of its own domain: an `.otio` carries no layer, and the answer for one is « everything lost »
+ * rather than « nothing to lose ».
  */
-export type CapabilityTrait =
+export type CapabilityDomain = 'picture' | 'montage'
+
+/** A property of an edited picture that a format either carries or loses. */
+export type PictureTrait =
   | 'layers'
   | 'groups'
   | 'layerMask'
@@ -27,7 +29,7 @@ export type CapabilityTrait =
   | 'layerLock'
   | 'guides'
 
-export const CAPABILITY_TRAITS: readonly CapabilityTrait[] = [
+export const PICTURE_TRAITS: readonly PictureTrait[] = [
   'layers',
   'groups',
   'layerMask',
@@ -41,10 +43,77 @@ export const CAPABILITY_TRAITS: readonly CapabilityTrait[] = [
   'guides',
 ]
 
-/** A format the studio can write an edited picture to. */
-export type WritableFormat = 'png' | 'jpeg' | 'webp' | 'ora' | 'img'
+/**
+ * The same question for a montage. Measured against the OpenTimelineIO specification rather
+ * than guessed — `.claude/spike-otio.md` holds the reading, trait by trait.
+ *
+ * `trackAudible` is the RESULT of mute and solo, which is what another application is told;
+ * which of the two switches produced it is `trackSwitches`, and only this studio reads it back.
+ */
+export type MontageTrait =
+  | 'tracks'
+  | 'trackName'
+  | 'trackOrder'
+  | 'clipPlacement'
+  | 'clipTrim'
+  | 'clipSpeed'
+  | 'mediaLink'
+  | 'trackAudible'
+  | 'clipFade'
+  | 'clipGain'
+  | 'clipLink'
+  | 'trackSwitches'
+  | 'trackLock'
+  | 'trackHeight'
+  | 'liveScene'
+  | 'exactTime'
+  | 'frameSize'
+  | 'sampleRate'
+  | 'editorState'
 
-export const WRITABLE_FORMATS: readonly WritableFormat[] = ['png', 'jpeg', 'webp', 'ora', 'img']
+export const MONTAGE_TRAITS: readonly MontageTrait[] = [
+  'tracks',
+  'trackName',
+  'trackOrder',
+  'clipPlacement',
+  'clipTrim',
+  'clipSpeed',
+  'mediaLink',
+  'trackAudible',
+  'clipFade',
+  'clipGain',
+  'clipLink',
+  'trackSwitches',
+  'trackLock',
+  'trackHeight',
+  'liveScene',
+  'exactTime',
+  'frameSize',
+  'sampleRate',
+  'editorState',
+]
+
+export type CapabilityTrait = PictureTrait | MontageTrait
+
+export const CAPABILITY_TRAITS: readonly CapabilityTrait[] = [...PICTURE_TRAITS, ...MONTAGE_TRAITS]
+
+export const TRAITS_OF_DOMAIN: Record<CapabilityDomain, readonly CapabilityTrait[]> = {
+  picture: PICTURE_TRAITS,
+  montage: MONTAGE_TRAITS,
+}
+
+/** A format the studio can write an edited document to. */
+export type WritableFormat = 'png' | 'jpeg' | 'webp' | 'ora' | 'img' | 'otio' | 'seq'
+
+export const WRITABLE_FORMATS: readonly WritableFormat[] = [
+  'png',
+  'jpeg',
+  'webp',
+  'ora',
+  'img',
+  'otio',
+  'seq',
+]
 
 /**
  * Where each trait lands in a given format. The three lists PARTITION the traits — a guard holds
@@ -55,6 +124,7 @@ export const WRITABLE_FORMATS: readonly WritableFormat[] = ['png', 'jpeg', 'webp
  * without that split would promise a round trip through Krita that no format can keep.
  */
 export type FormatCapability = {
+  domain: CapabilityDomain
   /** Standard in this format, so another application reads it. */
   interchange: readonly CapabilityTrait[]
   /** Carried as studio data alongside the standard part: read back here, invisible elsewhere. */
@@ -65,9 +135,10 @@ export type FormatCapability = {
 
 /** Nothing survives a flatten, so the three flat formats share one entry. */
 const FLAT: FormatCapability = {
+  domain: 'picture',
   interchange: [],
   extended: [],
-  dropped: CAPABILITY_TRAITS,
+  dropped: PICTURE_TRAITS,
 }
 
 /**
@@ -79,6 +150,7 @@ const FLAT: FormatCapability = {
  * offset, not the rotation, scale and skew a layer here can hold.
  */
 const OPEN_RASTER: FormatCapability = {
+  domain: 'picture',
   interchange: ['layers', 'groups', 'blendMode', 'layerOpacity'],
   extended: [
     'layerMask',
@@ -93,9 +165,47 @@ const OPEN_RASTER: FormatCapability = {
 }
 
 /** The studio's own document: it loses nothing, and no one else reads it. */
-const STUDIO: FormatCapability = {
+const studioOwn = (domain: CapabilityDomain): FormatCapability => ({
+  domain,
   interchange: [],
-  extended: CAPABILITY_TRAITS,
+  extended: TRAITS_OF_DOMAIN[domain],
+  dropped: [],
+})
+
+/**
+ * OpenTimelineIO holds the STRUCTURE of a cut — which is the whole of what a `.seq` loses today
+ * by existing nowhere else. Everything past that rides under the `scenario` domain of the
+ * metadata, which the core of OTIO carries and never reads.
+ *
+ * `clipFade` is extended rather than standard, and it is the one interchange loss worth naming:
+ * OTIO's `Transition` sits BETWEEN two items and consumes media from both, which a fade held by
+ * a clip does not. Writing one as the other would change the cut in the standard part.
+ */
+const OPEN_TIMELINE: FormatCapability = {
+  domain: 'montage',
+  interchange: [
+    'tracks',
+    'trackName',
+    'trackOrder',
+    'clipPlacement',
+    'clipTrim',
+    'clipSpeed',
+    'mediaLink',
+    'trackAudible',
+  ],
+  extended: [
+    'clipFade',
+    'clipGain',
+    'clipLink',
+    'trackSwitches',
+    'trackLock',
+    'trackHeight',
+    'liveScene',
+    'exactTime',
+    'frameSize',
+    'sampleRate',
+    'editorState',
+  ],
   dropped: [],
 }
 
@@ -104,7 +214,9 @@ const CAPABILITY_BY_FORMAT: Record<WritableFormat, FormatCapability> = {
   jpeg: FLAT,
   webp: FLAT,
   ora: OPEN_RASTER,
-  img: STUDIO,
+  img: studioOwn('picture'),
+  otio: OPEN_TIMELINE,
+  seq: studioOwn('montage'),
 }
 
 export const capabilityOf = (format: WritableFormat): FormatCapability =>
@@ -117,6 +229,8 @@ const FORMAT_BY_EXTENSION: Record<string, WritableFormat> = {
   '.webp': 'webp',
   '.ora': 'ora',
   '.img': 'img',
+  '.otio': 'otio',
+  '.seq': 'seq',
 }
 
 /**
@@ -133,6 +247,9 @@ export function formatOfFile(fileName: string): WritableFormat | null {
  * What writing `format` would destroy of a document holding `traits` — the question ⌘S asks
  * before it writes over anything. Empty is the licence to overwrite.
  *
+ * Read as « what this format does NOT carry » rather than off `dropped`, so a trait of another
+ * domain — a layer against an `.otio` — is reported lost instead of silently unclassed.
+ *
  * The order given is the order returned: what a document holds is listed the same way twice
  * running, so a message about it does not reshuffle between two saves.
  */
@@ -140,7 +257,8 @@ export function lossesFor(
   traits: readonly CapabilityTrait[],
   format: WritableFormat,
 ): CapabilityTrait[] {
-  return traits.filter(trait => capabilityOf(format).dropped.includes(trait))
+  const { interchange, extended } = capabilityOf(format)
+  return traits.filter(trait => !interchange.includes(trait) && !extended.includes(trait))
 }
 
 /**

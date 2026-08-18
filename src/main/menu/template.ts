@@ -287,6 +287,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       return [
         { type: 'separator' },
         commandItem('sequence.export', t.commands.sequenceExport.title),
+        commandItem('sequence.exportCut', t.commands.sequenceExportCut.title),
       ]
     }
 

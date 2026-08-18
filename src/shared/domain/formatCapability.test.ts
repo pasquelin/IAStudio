@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   CAPABILITY_TRAITS,
+  MONTAGE_TRAITS,
+  PICTURE_TRAITS,
+  TRAITS_OF_DOMAIN,
   WRITABLE_FORMATS,
   capabilityOf,
   formatOfFile,
@@ -26,6 +29,16 @@ describe('what a format would drop for good', () => {
     expect(lossesFor(STACKED, 'img')).toEqual([])
   })
 
+  // « No answer » must never read as « nothing to lose »: an `.otio` has no field for a layer.
+  it('drops everything into a format of another domain', () => {
+    expect(lossesFor(STACKED, 'otio')).toEqual(STACKED)
+    expect(lossesFor(['tracks', 'clipFade'], 'ora')).toEqual(['tracks', 'clipFade'])
+  })
+
+  it('drops nothing of a montage into the format that carries a cut', () => {
+    expect(lossesFor(MONTAGE_TRAITS, 'otio')).toEqual([])
+  })
+
   it('keeps the order the traits were given, so two documents read the same way', () => {
     expect(lossesFor(['liveText', 'layers'], 'jpeg')).toEqual(['liveText', 'layers'])
   })
@@ -36,6 +49,7 @@ describe('what a file name says its format is', () => {
     expect(formatOfFile('hero.ORA')).toBe('ora')
     expect(formatOfFile('hero.jpeg')).toBe('jpeg')
     expect(formatOfFile('hero.jpg')).toBe('jpeg')
+    expect(formatOfFile('Bande.otio')).toBe('otio')
   })
 
   /** Not « nothing to lose »: a format this table cannot write has no answer to give at all. */
@@ -51,26 +65,34 @@ describe('the table itself', () => {
     // read as carried — and a trait wrongly read as carried is a trait silently lost, which is
     // the whole failure this table was written against.
     const misclassed = WRITABLE_FORMATS.flatMap(format => {
-      const { interchange, extended, dropped } = capabilityOf(format)
+      const { domain, interchange, extended, dropped } = capabilityOf(format)
       const all = [...interchange, ...extended, ...dropped]
 
-      return CAPABILITY_TRAITS.filter(
-        trait => all.filter(classed => classed === trait).length !== 1,
-      ).map(trait => `${format}: ${trait}`)
+      return TRAITS_OF_DOMAIN[domain]
+        .filter(trait => all.filter(classed => classed === trait).length !== 1)
+        .map(trait => `${format}: ${trait}`)
     })
 
     expect(misclassed).toEqual([])
   })
 
-  it('names no trait the union does not carry', () => {
-    const unknown = WRITABLE_FORMATS.flatMap(format => {
-      const { interchange, extended, dropped } = capabilityOf(format)
+  // A format that classed a trait of the other domain would answer « carried » for something it
+  // has no field for — an `.otio` claiming to hold a layer mask.
+  it('names no trait outside its own domain', () => {
+    const foreign = WRITABLE_FORMATS.flatMap(format => {
+      const { domain, interchange, extended, dropped } = capabilityOf(format)
 
       return [...interchange, ...extended, ...dropped]
-        .filter(trait => !CAPABILITY_TRAITS.includes(trait))
+        .filter(trait => !TRAITS_OF_DOMAIN[domain].includes(trait))
         .map(trait => `${format}: ${trait}`)
     })
 
-    expect(unknown).toEqual([])
+    expect(foreign).toEqual([])
+  })
+
+  // That the two lists share no value is the COMPILER's to hold — `PictureTrait` and
+  // `MontageTrait` have no overlap, so an assertion here would not even type-check.
+  it('publishes a union that is exactly its two domains', () => {
+    expect([...CAPABILITY_TRAITS].sort()).toEqual([...PICTURE_TRAITS, ...MONTAGE_TRAITS].sort())
   })
 })

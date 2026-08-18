@@ -222,6 +222,7 @@ export type Channels = {
   dictationOpenPrivacy: 'dictation:open-privacy'
 
   sceneExport: 'scene:export'
+  montageExport: 'montage:export'
   renderStart: 'render:start'
   renderFrame: 'render:frame'
   renderFinish: 'render:finish'
@@ -400,6 +401,7 @@ export const CHANNELS: Channels = {
   dictationOpenPrivacy: 'dictation:open-privacy',
 
   sceneExport: 'scene:export',
+  montageExport: 'montage:export',
   renderStart: 'render:start',
   renderFrame: 'render:frame',
   renderFinish: 'render:finish',
@@ -512,6 +514,18 @@ export type SceneExportRequest = {
   name: string
   format: ExportFormat
   /** Already encoded by the renderer: three.js's exporters run where the scene lives. */
+  data: Uint8Array
+}
+
+/**
+ * The montage itself, as an OpenTimelineIO file — the cut, not a film of it.
+ *
+ * Encoded by the renderer like a scene is, and for the same reason: only the window holds the
+ * catalogue a clip's media is resolved against.
+ */
+export type MontageExportRequest = {
+  /** Suggested file name, without its extension: this writer only ever writes `.otio`. */
+  name: string
   data: Uint8Array
 }
 
@@ -1368,6 +1382,13 @@ export type StudioBridge = {
      * a file sits is the main process's business, exactly as for an asset.
      */
     export: (request: SceneExportRequest) => Promise<string | null>
+  }
+  montage: {
+    /**
+     * Writes the cut as an OpenTimelineIO file wherever the save dialog lands — what `render`
+     * below does for the picture, this does for the edit. Answers the file name, never the path.
+     */
+    export: (request: MontageExportRequest) => Promise<string | null>
   }
   /**
    * Rendering a scene to a film, in three steps: a session is opened once the save dialog has

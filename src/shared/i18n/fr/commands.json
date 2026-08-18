@@ -160,6 +160,10 @@
       "title": "Exporter la vidéo…",
       "help": "Écrit le montage dans un fichier vidéo, image par image, scènes 3D comprises. Le son n’y est pas encore."
     },
+    "sequenceExportCut": {
+      "title": "Exporter le montage (OTIO)…",
+      "help": "Écrit le montage lui-même dans un fichier OpenTimelineIO, que d’autres logiciels de montage ouvrent — pistes, clips, points d’entrée, vitesses et liens vers les médias. Les fondus, les gains et les liens image/son y voyagent aussi, mais seul Scenario les relit."
+    },
     "sequenceMirror": {
       "title": "Fenêtre de retour",
       "help": "Ouvre le montage dans une fenêtre à part, à poser sur un second écran. Elle suit le studio image par image, sans le son, et se ferme comme une fenêtre ordinaire."

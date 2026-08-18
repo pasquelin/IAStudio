@@ -204,6 +204,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       export: () => Promise.resolve(null),
       ...overrides.scene,
     },
+    montage: {
+      export: () => Promise.resolve(null),
+      ...overrides.montage,
+    },
     render: {
       start: () => Promise.resolve(null),
       frame: () => Promise.resolve(),

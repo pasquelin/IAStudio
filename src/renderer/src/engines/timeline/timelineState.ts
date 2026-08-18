@@ -188,8 +188,8 @@ const TRACK_PREFIX: Record<TrackKind, string> = { video: 'V', audio: 'A' }
  * its id, and a header column reading `track_9f3c…` shows a name nobody typed. Renaming is a
  * command of its own, so this only has to be free, not final.
  */
-export function nextTrackId(state: SequenceState, kind: TrackKind): string {
-  const taken = new Set(state.tracks.map(track => track.id))
+export function nextTrackId(tracks: readonly Track[], kind: TrackKind): string {
+  const taken = new Set(tracks.map(track => track.id))
   const prefix = TRACK_PREFIX[kind]
 
   for (let n = 1; ; n += 1) {
