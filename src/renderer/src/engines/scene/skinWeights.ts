@@ -83,9 +83,9 @@ export function createSkinWeights(spawn: () => Worker): SkinWeights {
 
         watch?.signal?.addEventListener('abort', give)
 
-        // An `abort` already fired has already been delivered, so the listener above never runs:
-        // without this the worker walks every vertex against every bone for a caller that gave
-        // up before it asked, and answers it weights it will apply.
+        // An `abort` already fired has already been delivered, so the listener above never runs.
+        // The port's contract, not an observed path: the one caller today cannot hand over an
+        // abandoned signal — measured, `scene-models.test.ts` names the ordering that stops it.
         if (watch?.signal?.aborted) give()
       }),
 

@@ -2,7 +2,9 @@ import { Mesh, BoxGeometry, MeshStandardMaterial, Object3D, Texture } from 'thre
 import { describe, expect, it, vi } from 'vitest'
 import { nodeIdOf, SceneRenderer } from './SceneRenderer'
 import { modelNodeFixture } from './scene-fixtures'
+import type { SkinWeights } from './skinWeights'
 import type { SceneState } from './sceneState'
+import type { Rig } from '@shared/domain/rig'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 
 /**
@@ -278,6 +280,73 @@ describe('a node hanging under another node', () => {
 
     expect(parentCopy.children[0]?.castShadow).toBe(true)
     expect(childCopy.children[0]?.castShadow).toBe(false)
+    renderer.dispose()
+  })
+})
+
+const RIG: Rig = {
+  origin: 'local',
+  bones: [
+    {
+      name: 'Hips',
+      parent: null,
+      rest: {
+        position: { x: 0, y: 1, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 },
+      },
+      role: 'Hips',
+    },
+  ],
+}
+
+/**
+ * A skinning port that answers only when taken back, like the real one: a bind stays out until
+ * its signal is abandoned, and then answers nothing.
+ */
+function pendingSkin() {
+  const signals: (AbortSignal | undefined)[] = []
+
+  return {
+    signals,
+    port: {
+      bind: (_positions, _rig, watch) => {
+        signals.push(watch?.signal)
+        return new Promise(resolve => {
+          watch?.signal?.addEventListener('abort', () => resolve(null))
+          if (watch?.signal?.aborted) resolve(null)
+        })
+      },
+      dispose: () => {},
+    } satisfies SkinWeights,
+  }
+}
+
+const rigged = (id: string, assetId: string): SceneState => ({
+  ...EMPTY_SCENE,
+  nodes: [{ ...modelNodeFixture(id, assetId), model: { assetId, rig: RIG } }],
+})
+
+describe('binding a rig that is taken back', () => {
+  it('still stops the skinning of a model whose file changed while the first was out', async () => {
+    const skin = pendingSkin()
+    const renderer = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      loadModel: async () => source(),
+      skin: skin.port,
+    })
+
+    renderer.apply(rigged('a', 'asset-1'))
+    await vi.waitFor(() => expect(skin.signals).toHaveLength(1))
+    // Another file on the same node: released and rebuilt, so a second binding starts while the
+    // first is still out and its `finally` has yet to run.
+    renderer.apply(rigged('a', 'asset-2'))
+    await vi.waitFor(() => expect(skin.signals).toHaveLength(2))
+
+    renderer.apply(EMPTY_SCENE)
+
+    expect(skin.signals[1]?.aborted).toBe(true)
     renderer.dispose()
   })
 })
