@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { animationRows, type ClipBlock } from '@/engines/scene/animationRows'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
-import { useAnimationPlayback } from '@/hooks/useAnimationPlayback'
 import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
 import { useModelClips } from '@/stores/modelClips'
@@ -31,7 +30,6 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const expandedList = useAnimationViews(state => animationViewOf(state, documentId).expanded)
   const order = useAnimationViews(state => animationViewOf(state, documentId).order)
 
-  useAnimationPlayback(documentId, view.playing, timeline.duration)
   useHeadInsideBand(documentId, view.playhead, timeline.duration)
 
   // Both memos are keyed on identities zustand keeps stable; building either inside a selector

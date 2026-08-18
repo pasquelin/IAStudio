@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import type { Us } from '@shared/domain/time'
-import type { SelfPlay } from '@/engines/scene/animation'
 import { DEFAULT_PANE_VIEWS, type CameraPlacement, type PaneView } from '@/engines/scene/sceneView'
 import { type DisplayMode } from '@shared/domain/scene'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
@@ -27,12 +26,11 @@ export type SceneView = {
   panes: readonly PaneView[]
   /** Where the animation head stands, in microseconds. Never in the document — see `AnimationTimeline`. */
   playhead: Us
-  playing: boolean
   /**
-   * The one block a play button of the inspector is holding, running on real time rather than on
-   * the head. Twin of `pickedBone`, and session state for the same reason — see `SelfPlay`.
+   * Whether the head runs on. The ONE clock of a scene: the inspector's play button writes here
+   * too, so a clip watched in the viewport and the band under it can never disagree.
    */
-  selfPlay: SelfPlay | null
+  playing: boolean
   /**
    * Where the free camera of the 3D tab stands, published once a drag of it settles.
    *
@@ -58,7 +56,6 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   panes: DEFAULT_PANE_VIEWS,
   playhead: 0,
   playing: false,
-  selfPlay: null,
   camera: null,
 }
 
@@ -82,7 +79,6 @@ export type SceneViewsState = {
   setPaneView: (documentId: string, pane: number, view: PaneView) => void
   setPlayhead: (documentId: string, playhead: Us) => void
   setPlaying: (documentId: string, playing: boolean) => void
-  setSelfPlay: (documentId: string, selfPlay: SelfPlay | null) => void
   setCamera: (documentId: string, camera: CameraPlacement) => void
 }
 
@@ -146,11 +142,6 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setPlaying: (documentId, playing) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), playing } },
-    })),
-
-  setSelfPlay: (documentId, selfPlay) =>
-    set(state => ({
-      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), selfPlay } },
     })),
 
   setCamera: (documentId, camera) =>

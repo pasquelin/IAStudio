@@ -8,6 +8,7 @@ import { SliderField } from '@/design/SliderField'
 import { NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
+import { clipSpanOf } from '@/engines/scene/clipBlend'
 import { setModelClips } from '@/engines/scene/commands'
 import type { ModelNode } from '@/engines/scene/sceneState'
 import { cn } from '@/helpers/cn'
@@ -37,7 +38,9 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   const { t } = useTranslation()
   const clips = useModelClips(state => clipsOfNode(state, documentId, node.id))
   const rig = useModelClips(state => rigOfNode(state, documentId, node.id))
-  const selfPlay = useSceneViews(state => sceneViewOf(state, documentId).selfPlay)
+  const running = useSceneViews(state => sceneViewOf(state, documentId).playing)
+  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
+  const lengths = useModelClips(state => state.lengths[documentId]?.[node.id])
 
   // Nothing has landed yet: a section explaining a model the studio has not read would be wrong
   // rather than empty.
@@ -45,14 +48,20 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
 
   const held = node.model.clips ?? []
   const played = held[0] ?? null
-  const running = Boolean(played && selfPlay?.nodeId === node.id && selfPlay.clipId === played.id)
 
-  // Through the store rather than the document: watching a clip is not an edit, so this leaves
-  // neither an undo entry nor a modified flag — see `SelfPlay`.
-  const hold = (clip: ClipRef | null): void =>
-    useSceneViews
-      .getState()
-      .setSelfPlay(documentId, clip ? { nodeId: node.id, clipId: clip.id } : null)
+  /**
+   * Runs the scene's HEAD, which is the only clock a scene has: what plays in the viewport and
+   * what the band draws can then never disagree. The head is rewound to the block first when it
+   * stands outside it, or pressing play on a clip already behind would show nothing at all.
+   */
+  const play = (clip: ClipRef | null): void => {
+    const views = useSceneViews.getState()
+    const span = clip ? clipSpanOf(clip, lengths?.[clip.source.name] ?? null) : 0
+    if (clip && (playhead < clip.start || playhead >= clip.start + span)) {
+      views.setPlayhead(documentId, clip.start)
+    }
+    views.setPlaying(documentId, clip !== null)
+  }
 
   // The played block is replaced WITHIN the list, never made into the list: a document may hold
   // several — the reader accepts them and the band draws them — and rewriting the whole field
@@ -63,12 +72,12 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   }
 
   // Picking a clip on a model that had none starts from the defaults rather than from nothing,
-  // and is held at once: a chosen clip standing at its first frame would read as a control that
+  // and plays at once: a chosen clip standing at its first frame would read as a control that
   // did not work.
   const choose = (name: string): void => {
     const next = name === '' ? null : embeddedClip(played?.id ?? newId(), name, { ...played })
     write(next)
-    hold(next)
+    play(next)
   }
 
   return (
@@ -102,7 +111,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
               tooltip={TIP_LEFT}
               variant="header"
               disabled={!played}
-              onClick={() => hold(running ? null : played)}
+              onClick={() => play(running ? null : played)}
             />
           </div>
         </PropertyRow>
