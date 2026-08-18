@@ -61,6 +61,10 @@ One context is special: **Anywhere in the application**. Its keys go through the
 menu, which catches them before anybody else. They are therefore the only ones that can never be
 "covered" by another context — and the only ones whose conflict is always a real conflict.
 
+**One exception, and only one: `⌥D`, dictation.** It is **held** rather than tapped, and a system
+menu has nothing to report a release with — so the window hears it, and it has no menu row. That
+is also what lets it write into a text field, see below.
+
 ---
 
 ## Anywhere in the application
@@ -521,8 +525,9 @@ as long as the caret is in a text field, and takes over again the moment you lea
 The same holds for `⌘X`, `⌘C` and `⌘V`: in a field they work on the text; anywhere else, on what
 the workspace has selected.
 
-**No shortcut crosses a text field**: a command has to declare it to be heard there, and none
-does today.
+**One shortcut crosses a text field**: a command has to declare it to be heard there, and **`⌥D`,
+dictation, is the only one that does** — it exists precisely to write into the field you are
+already in. That is also why it carries a modifier: without one, it would swallow a letter.
 
 ---
 
