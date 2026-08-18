@@ -220,9 +220,9 @@ par ce chemin, puis par le nom du fichier — **parmi les assets que cette fenê
 projet qui vient d’être ouvert n’a pas encore lu son catalogue : ouvrir un montage étranger dans
 la seconde peut n’en retrouver aucun.
 
-**Un plan dont le média n’est pas retrouvé n’est pas ouvert**, et le journal d’activité dit
+**Un clip dont le média n’est pas retrouvé n’est pas ouvert**, et le journal d’activité dit
 lequel. Le montage est alors plus court que ce que le fichier décrit, et **`⌘S` refuse d’écrire**
-tant que c’est le cas : sans ce refus, enregistrer effacerait ces plans du fichier. Amenez les
+tant que c’est le cas : sans ce refus, enregistrer effacerait ces clips du fichier. Amenez les
 médias manquants dans le projet, rouvrez le montage, et l’enregistrement redevient possible.
 
 Et ce que ce format ne porte pas en standard — fondus, gains, liens image/son, scène 3D d’un clip
