@@ -51,18 +51,22 @@ describe('the camera preview', () => {
     )
   })
 
-  // Selected is not on air: the badge is what says when the two happen to coincide.
-  it('says ON AIR only while the shot of that camera covers the head', () => {
+  /**
+   * Selected is not on air, and the badge is what says when the two coincide. Two cameras, since
+   * with one the film falls back to it — `activeCameraAt` decides here as it does everywhere.
+   */
+  it('says ON AIR only while this camera is the one a render would look through', () => {
     install({
-      nodes: [cameraNodeFixture('cam-a')],
-      selectedIds: ['cam-a'],
+      nodes: [cameraNodeFixture('cam-a'), cameraNodeFixture('cam-b')],
+      selectedIds: ['cam-b'],
       animation: {
         ...EMPTY_SCENE.animation,
-        shots: [cameraShot('s1', { cameraId: 'cam-a', start: 2 * SECOND, duration: 2 * SECOND })],
+        shots: [cameraShot('s1', { cameraId: 'cam-b', start: 2 * SECOND, duration: 2 * SECOND })],
       },
     })
     render(<CameraPreview documentId={DOCUMENT} />)
 
+    // At zero no shot covers the head, so the first camera of the document has the film.
     expect(screen.queryByText('À l’antenne')).not.toBeInTheDocument()
 
     act(() => useSceneViews.getState().setPlayhead(DOCUMENT, 3 * SECOND))

@@ -214,19 +214,38 @@ function paintBlock(
   viewport: Viewport,
   palette: Palette,
 ): void {
-  const left = timeToX(start, viewport)
-  const right = timeToX(start + duration, viewport)
+  const box = barRect(start, duration, top, height, viewport)
 
   context.fillStyle = palette.block
-  context.fillRect(left, top + BLOCK_INSET, Math.max(1, right - left), height - BLOCK_INSET * 2 - 1)
+  context.fillRect(box.x, box.y, box.width, box.height)
 }
 
 /**
- * A shot: a bar carrying the name of the camera it puts on air.
- *
- * The one on air wears an outline in the head's own ink — a second bar covering the same instant
- * is the only thing an eye cannot settle by itself, and it is the very case layers exist for.
- * The picked one is filled brighter, which says CHOSEN without saying it in another colour.
+ * Where a bar sits in its row — the one arithmetic a block and a shot share, so an inset changed
+ * moves both rather than one.
+ */
+function barRect(
+  start: Us,
+  duration: Us,
+  top: number,
+  height: number,
+  viewport: Viewport,
+): { x: number; y: number; width: number; height: number } {
+  const left = timeToX(start, viewport)
+  const right = timeToX(start + duration, viewport)
+
+  return {
+    x: left,
+    y: top + BLOCK_INSET,
+    // Never nothing: a shot shorter than a pixel still has to be visible enough to grab.
+    width: Math.max(1, right - left),
+    height: height - BLOCK_INSET * 2 - 1,
+  }
+}
+
+/**
+ * A shot: a bar carrying the name of the camera it puts on air. The one on air wears an outline
+ * in the head's own ink — two bars covering one instant is what an eye cannot settle by itself.
  */
 function paintShot(
   context: CanvasRenderingContext2D,
@@ -236,30 +255,26 @@ function paintShot(
   paint: AnimationPaint,
   palette: Palette,
 ): void {
-  const left = timeToX(bar.shot.start, paint.viewport)
-  const right = timeToX(bar.shot.start + bar.shot.duration, paint.viewport)
-  const width = Math.max(1, right - left)
-  const boxTop = top + BLOCK_INSET
-  const boxHeight = height - BLOCK_INSET * 2 - 1
+  const box = barRect(bar.shot.start, bar.shot.duration, top, height, paint.viewport)
 
   context.fillStyle = bar.shot.id === paint.selectedShotId ? palette.rowAlt : palette.block
-  context.fillRect(left, boxTop, width, boxHeight)
+  context.fillRect(box.x, box.y, box.width, box.height)
 
   if (bar.shot.id === paint.activeShotId) {
     context.strokeStyle = palette.playhead
     context.lineWidth = 1
-    context.strokeRect(left + 0.5, boxTop + 0.5, width - 1, boxHeight - 1)
+    context.strokeRect(box.x + 0.5, box.y + 0.5, box.width - 1, box.height - 1)
   }
 
   // Clipped to the bar: a name running past its end would read as belonging to the next shot.
   context.save()
   context.beginPath()
-  context.rect(left, boxTop, width, boxHeight)
+  context.rect(box.x, box.y, box.width, box.height)
   context.clip()
   context.font = palette.font
   context.textBaseline = 'middle'
   context.fillStyle = palette.text
-  context.fillText(bar.name, left + BAR_PADDING, boxTop + boxHeight / 2)
+  context.fillText(bar.name, box.x + BAR_PADDING, box.y + box.height / 2)
   context.restore()
 }
 

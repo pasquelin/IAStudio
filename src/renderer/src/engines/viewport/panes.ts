@@ -77,6 +77,24 @@ export function insetRect(width: number, height: number, aspect: number): PaneRe
   }
 }
 
+/** How big a preview is drawn: in its corner, or over the whole view. */
+export type InsetSize = 'inset' | 'full'
+
+/**
+ * Where a camera preview sits at either size. The grown one takes the surface whole, which is
+ * what lets a renderer skip the panes it would cover — the arithmetic of both stays here.
+ */
+export function previewRect(
+  width: number,
+  height: number,
+  aspect: number,
+  size: InsetSize,
+): PaneRect | null {
+  if (width <= 0 || height <= 0) return null
+  if (size === 'full') return { x: 0, y: 0, width, height }
+  return insetRect(width, height, aspect)
+}
+
 /** Whether a point falls inside a rectangle — the inset's own test, and `paneAt`'s. */
 export function inRect(rect: PaneRect, x: number, y: number): boolean {
   return x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height

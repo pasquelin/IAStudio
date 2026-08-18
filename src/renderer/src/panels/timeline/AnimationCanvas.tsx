@@ -75,17 +75,19 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   // zustand a new snapshot on every render and the subscription would never settle.
   const selected = useMemo(() => keySetOf(view.selected), [view.selected])
 
-  const activeShotId = activeShotAt(timeline, nodes, playhead)?.id ?? null
-
-  const latest = useRef({
+  // Everything the paint reads, gathered once: the ref and the effect below hand over the very
+  // same object, so a field gained here is not a field to remember in two other places.
+  const snapshot = {
     rows,
     viewport: view.viewport,
     timeline,
     playhead,
     selected,
-    activeShotId,
+    activeShotId: activeShotAt(timeline, nodes, playhead)?.id ?? null,
     selectedShotId: view.selectedShotId,
-  })
+  }
+
+  const latest = useRef(snapshot)
   const size = useRef<Size>({ width: 0, height: 0 })
 
   const paint = useCallback((): void => {
@@ -111,17 +113,9 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   }, [])
 
   useEffect(() => {
-    latest.current = {
-      rows,
-      viewport: view.viewport,
-      timeline,
-      playhead,
-      selected,
-      activeShotId,
-      selectedShotId: view.selectedShotId,
-    }
+    latest.current = snapshot
     paint()
-  }, [rows, view.viewport, timeline, playhead, selected, activeShotId, view.selectedShotId, paint])
+  })
 
   useRepaintOnResize(canvasRef, paint)
 

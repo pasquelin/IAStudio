@@ -1,25 +1,16 @@
 import { mdiVectorPolyline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import {
-  POINT_TARGET,
-  type CameraMotion,
-  type CameraShot,
-  type CameraTarget,
-} from '@shared/domain/animation'
+import { POINT_TARGET, type CameraShot, type CameraTarget } from '@shared/domain/animation'
+import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { ToolButton } from '@/design/ToolButton'
 import { VectorField } from '@/design/VectorField'
 import { NATIVE_SELECT, type GestureProps } from '@/design/styles'
-import { editCameraShot } from '@/engines/scene/animationCommands'
-import { addNode, multi } from '@/engines/scene/commands'
-import { pathNode } from '@/engines/scene/nodeFactory'
+import { bindRailToShot, editCameraShot, railForShot } from '@/engines/scene/animationCommands'
 import type { Command } from '@/engines/core/history'
 import type { CameraNode, SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { CameraShotSectionMotion } from './CameraShotSectionMotion'
-
-/** What a fresh binding takes: the whole rail, forwards, at a steady speed. */
-const WHOLE_RAIL: Omit<CameraMotion, 'pathId'> = { from: 0, to: 1, easing: 'linear' }
 
 export type CameraShotSectionProps = {
   camera: CameraNode
@@ -34,8 +25,7 @@ export type CameraShotSectionProps = {
  * What a shot does with its camera: run it along a rail, and aim it at something.
  *
  * Both live on the SHOT rather than on the camera, which is what lets one camera travel in one
- * shot and stand still in the next — see `CameraShot`. With no shot covering the head there is
- * nothing to bind, so the section says so rather than offering controls that write nowhere.
+ * shot and stand still in the next — see `CameraShot`.
  */
 export function CameraShotSection({ camera, shot, nodes, run, gesture }: CameraShotSectionProps) {
   const { t } = useTranslation()
@@ -48,44 +38,21 @@ export function CameraShotSection({ camera, shot, nodes, run, gesture }: CameraS
     )
   }
 
-  const target = shot.target ?? null
-
-  const bindRail = (pathId: string): void =>
-    run(
-      editCameraShot(shot.id, {
-        motion: pathId === '' ? undefined : { ...WHOLE_RAIL, ...shot.motion, pathId },
-      }),
-    )
-
-  /** A rail laid where the camera stands, aimed down its line of sight, and bound in one undo. */
-  const addRail = (): void => {
-    const rail = { ...pathNode(), transform: camera.transform }
-    run(
-      multi(`shot:rail:${shot.id}`, [
-        addNode(rail),
-        editCameraShot(shot.id, { motion: { ...WHOLE_RAIL, pathId: rail.id } }),
-      ]),
-    )
-  }
-
+  const target = shot.target
   const aimAt = (choice: string): void => {
-    const chosen: CameraTarget | undefined =
-      choice === ''
-        ? undefined
-        : choice === POINT_TARGET.kind
-          ? POINT_TARGET
-          : { kind: 'node', nodeId: choice }
+    if (choice === '') return run(editCameraShot(shot.id, { target: undefined }))
 
+    const chosen: CameraTarget =
+      choice === POINT_TARGET.kind ? POINT_TARGET : { kind: 'node', nodeId: choice }
     run(editCameraShot(shot.id, { target: chosen }))
   }
 
   return (
     <PropertySection title={t('inspector.shot')}>
-      <label className="flex items-center justify-between gap-2 px-2">
-        <span className="text-muted text-tiny">{t('inspector.rail')}</span>
+      <PropertyRow label={t('inspector.rail')}>
         <select
           value={shot.motion?.pathId ?? ''}
-          onChange={event => bindRail(event.target.value)}
+          onChange={event => run(bindRailToShot(shot, event.target.value))}
           className={NATIVE_SELECT}
         >
           <option value="">{t('inspector.noRail')}</option>
@@ -103,9 +70,9 @@ export function CameraShotSection({ camera, shot, nodes, run, gesture }: CameraS
           description={t('inspector.addRailHint')}
           tooltip={TIP_LEFT}
           variant="header"
-          onClick={addRail}
+          onClick={() => run(railForShot(camera, shot))}
         />
-      </label>
+      </PropertyRow>
 
       {shot.motion && (
         <CameraShotSectionMotion
@@ -115,16 +82,9 @@ export function CameraShotSection({ camera, shot, nodes, run, gesture }: CameraS
         />
       )}
 
-      <label className="flex items-center justify-between gap-2 px-2">
-        <span className="text-muted text-tiny">{t('inspector.target')}</span>
+      <PropertyRow label={t('inspector.target')}>
         <select
-          value={
-            target === null
-              ? ''
-              : target.kind === POINT_TARGET.kind
-                ? POINT_TARGET.kind
-                : target.nodeId
-          }
+          value={target?.kind === 'node' ? target.nodeId : (target?.kind ?? '')}
           onChange={event => aimAt(event.target.value)}
           className={NATIVE_SELECT}
         >
@@ -138,7 +98,7 @@ export function CameraShotSection({ camera, shot, nodes, run, gesture }: CameraS
               </option>
             ))}
         </select>
-      </label>
+      </PropertyRow>
 
       {target?.kind === POINT_TARGET.kind && (
         <VectorField

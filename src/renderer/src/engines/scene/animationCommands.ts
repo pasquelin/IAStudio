@@ -2,6 +2,7 @@ import {
   POSE_PROPERTIES,
   TRACK_PROPERTIES,
   type AnimationTrack,
+  type CameraMotion,
   type CameraShot,
   type Keyframe,
   type TrackProperty,
@@ -10,9 +11,10 @@ import {
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import type { Command } from '../core/history'
-import { moveNodes, multi } from './commands'
+import { addNode, moveNodes, multi } from './commands'
+import { pathNode } from './nodeFactory'
 import { deltaOf, valueAt, withKey, withoutKey } from './animationEval'
-import { nodeById, type NodeMove, type SceneState } from './sceneState'
+import { nodeById, type CameraNode, type NodeMove, type SceneState } from './sceneState'
 
 /**
  * Edits of the timeline, on the pattern of the sequence's own track commands: what a command
@@ -390,6 +392,32 @@ export function editCameraShot(
         : writeShots(state, shots => shots.map(shot => (shot.id === shotId ? origin : shot)))
     },
   }
+}
+
+/** What a rail takes when it is first bound: the whole of it, forwards, at a steady speed. */
+const WHOLE_RAIL: Omit<CameraMotion, 'pathId'> = { from: 0, to: 1, easing: 'linear' }
+
+/**
+ * A rail laid where a camera stands, aimed down its line of sight, and bound to its shot.
+ *
+ * One command for the two edits, so a single ⌘Z takes back the whole gesture rather than leaving
+ * a rail nothing runs on.
+ */
+export function railForShot(camera: CameraNode, shot: CameraShot): Command<SceneState> {
+  const rail = { ...pathNode(), transform: camera.transform }
+
+  return multi(`shot:rail:${shot.id}`, [
+    addNode(rail),
+    editCameraShot(shot.id, { motion: { ...WHOLE_RAIL, pathId: rail.id } }),
+  ])
+}
+
+/** Another rail on a shot that already exists, or none at all. */
+export function bindRailToShot(shot: CameraShot, pathId: string): Command<SceneState> {
+  const motion: CameraMotion | undefined =
+    pathId === '' ? undefined : { ...WHOLE_RAIL, ...shot.motion, pathId }
+
+  return editCameraShot(shot.id, { motion })
 }
 
 /** How long the whole thing runs, and how finely it is cut. */

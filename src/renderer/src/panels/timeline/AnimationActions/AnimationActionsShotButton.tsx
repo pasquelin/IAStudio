@@ -1,24 +1,15 @@
 import { mdiVideoPlusOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { frameDuration, SECOND, snapToFrame, type Us } from '@shared/domain/time'
 import { ToolButton } from '@/design/ToolButton'
 import { addCameraShot } from '@/engines/scene/animationCommands'
+import { newShotAt } from '@/engines/scene/cameraShots'
 import { selectedNodes } from '@/engines/scene/sceneState'
 import { newId } from '@/helpers/ids'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 
-/** How long a shot lasts when nothing says otherwise: what is left of the band, at most this. */
-const DEFAULT_SHOT: Us = 3 * SECOND
-
-/**
- * Puts the selected camera on air from the head onwards.
- *
- * The layer is one above the highest already there, so a shot laid over another wins straight
- * away — laying one down to have it hidden by what was already on the band would read as a
- * button that did nothing.
- */
+/** Puts the selected camera on air from the head onwards — the shot itself is `newShotAt`'s. */
 export function AnimationActionsShotButton({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
@@ -41,23 +32,9 @@ export function AnimationActionsShotButton({ documentId }: { documentId: string 
 
         const store = useScenes.getState()
         const { animation } = sceneOf(store, documentId)
-        const start = snapToFrame(Math.min(playhead, animation.duration), animation.fps)
-        const layers = animation.shots.map(shot => shot.layer)
-
         store.runCommand(
           documentId,
-          addCameraShot({
-            id: newId(),
-            cameraId: camera.id,
-            layer: layers.length === 0 ? 0 : Math.max(...layers) + 1,
-            start,
-            // A frame at least: pressed with the head on the last frame, a shot of what is left
-            // of the band would have no length at all, and no bar to grab it back by.
-            duration: Math.max(
-              frameDuration(animation.fps),
-              Math.min(DEFAULT_SHOT, animation.duration - start),
-            ),
-          }),
+          addCameraShot(newShotAt(animation, camera.id, newId(), playhead)),
         )
       }}
     />

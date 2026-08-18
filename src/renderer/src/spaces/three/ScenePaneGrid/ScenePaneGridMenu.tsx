@@ -7,7 +7,8 @@ import { CANVAS_TRIGGER } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { HINT_RIGHT, HINT_TOP } from '@/helpers/tooltip'
 import { isCameraView, PANE_VIEWS, type PaneView } from '@/engines/scene/sceneView'
-import { PANE_VIEW_ICONS, paneViewIcon } from '../sceneTools'
+import { CAMERA_ICON } from '@/engines/scene/nodeKinds'
+import { PANE_VIEW_ICONS } from '../sceneTools'
 
 /** What a pane names itself: a word for the fixed views, the camera's own name for a locked one. */
 function labelOf(view: PaneView, cameras: readonly SceneCamera[], t: (key: string) => string) {
@@ -79,7 +80,7 @@ export function ScenePaneGridMenu({
             <MenuRow
               key={camera.id}
               label={camera.name}
-              icon={paneViewIcon({ kind: 'camera', nodeId: camera.id })}
+              icon={CAMERA_ICON}
               checked={isCameraView(view) && view.nodeId === camera.id}
               tick="one-of"
               tip={HINT_RIGHT(t('sceneViews.throughCameraHint'))}

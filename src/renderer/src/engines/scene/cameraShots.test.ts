@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_TIMELINE, type AnimationTimeline, type CameraShot } from '@shared/domain/animation'
 import { SECOND } from '@shared/domain/time'
-import { activeCameraAt, activeShotAt, draggedShot } from './cameraShots'
+import { activeCameraAt, activeShotAt, draggedShot, layerMoved, newShotAt } from './cameraShots'
 import { cameraShot } from './animation-fixtures'
 import { cameraNodeFixture, meshNode } from './scene-fixtures'
 
@@ -66,6 +66,36 @@ describe('activeCameraAt', () => {
     )
 
     expect(activeCameraAt(timeline, CAMERAS, 1 * SECOND)).toBe('cam-a')
+  })
+})
+
+describe('newShotAt', () => {
+  const timeline = timelineOf(cameraShot('under', { layer: 2 }))
+
+  // A shot laid down only to be hidden by what was already there reads as a button doing nothing.
+  it('opens on the layer above every other, from the head onwards', () => {
+    const shot = newShotAt(timeline, 'cam-a', 'fresh', 1 * SECOND)
+
+    expect(shot).toMatchObject({ id: 'fresh', cameraId: 'cam-a', layer: 3, start: 1 * SECOND })
+  })
+
+  it('opens on the ground floor when the band holds no shot at all', () => {
+    expect(newShotAt(EMPTY_TIMELINE, 'cam-a', 'fresh', 0).layer).toBe(0)
+  })
+
+  it('never opens one of no length, however late the head stands', () => {
+    const late = newShotAt(EMPTY_TIMELINE, 'cam-a', 'fresh', EMPTY_TIMELINE.duration + 9 * SECOND)
+
+    expect(late.duration).toBeGreaterThan(0)
+    expect(late.start).toBeLessThanOrEqual(EMPTY_TIMELINE.duration)
+  })
+})
+
+describe('layerMoved', () => {
+  it('sends a shot up and down, and never below the ground floor', () => {
+    expect(layerMoved(cameraShot('s1', { layer: 2 }), 1)).toBe(3)
+    expect(layerMoved(cameraShot('s1', { layer: 2 }), -1)).toBe(1)
+    expect(layerMoved(cameraShot('s1', { layer: 0 }), -1)).toBe(0)
   })
 })
 

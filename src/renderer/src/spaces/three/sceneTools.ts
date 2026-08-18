@@ -23,8 +23,6 @@ import {
   mdiVectorSquare,
 } from '@mdi/js'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
-import { isCameraView, type PaneView } from '@/engines/scene/sceneView'
-import { CAMERA_ICON } from '@/engines/scene/nodeKinds'
 import { DISPLAY_MODES, type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 
 /** Arrows read as the direction the camera looks from, which is what the row promises. */
@@ -41,11 +39,6 @@ const VIEW_ICONS: Record<ViewDirection, string> = {
 export const PANE_VIEW_ICONS: Record<'free' | ViewDirection, string> = {
   free: mdiCubeOutline,
   ...VIEW_ICONS,
-}
-
-/** The same, for any view — a pane locked onto a camera of the scene wears that camera's glyph. */
-export function paneViewIcon(view: PaneView): string {
-  return isCameraView(view) ? CAMERA_ICON : PANE_VIEW_ICONS[view]
 }
 
 const DISPLAY_ICONS: Record<DisplayMode, string> = {

@@ -2,9 +2,9 @@ import { mdiArrowExpand, mdiArrowCollapse } from '@mdi/js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
-import { activeShotAt } from '@/engines/scene/cameraShots'
+import { activeCameraAt } from '@/engines/scene/cameraShots'
 import { selectedNodes } from '@/engines/scene/sceneState'
-import { insetRect, type PaneRect } from '@/engines/viewport/panes'
+import { previewRect, type PaneRect } from '@/engines/viewport/panes'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { sceneEngineOf } from '@/stores/sceneEngines'
@@ -17,12 +17,8 @@ const FILM_ASPECT = 16 / 9
 /**
  * What the selected camera films, drawn in the corner of the viewport.
  *
- * The rectangle is decided HERE and handed to the engine, which draws into it: the frame, the
- * name and the buttons are DOM over the canvas, and two rectangles agreeing by construction is
- * the only way a border stays around its picture.
- *
- * It opens on a camera being selected and closes with that selection — selected is not on air,
- * and the badge is what says when the two happen to coincide.
+ * The rectangle is decided HERE and handed to the engine: the frame around the picture is DOM,
+ * and two rectangles agreeing by construction is the only way it stays around it.
  */
 export function CameraPreview({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
@@ -32,21 +28,19 @@ export function CameraPreview({ documentId }: { documentId: string }) {
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
-  const view = useSceneViews(state => sceneViewOf(state, documentId))
+  // Two narrow selectors rather than the whole view: `setPlayhead` replaces that object on every
+  // frame of playback, and this component would re-render sixty times a second for two fields.
+  const previewSize = useSceneViews(state => sceneViewOf(state, documentId).previewSize)
+  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
 
   const anchor = selectedNodes(nodes, selectedIds).at(-1) ?? null
   const camera = anchor?.type === 'camera' ? anchor : null
-  const full = view.previewSize === 'full'
-  // Memoised on what it is made of: the engine is told about a rect by identity, and a fresh
-  // object per render would hand it the same rectangle sixty times a second.
+  const cameraId = camera?.id ?? null
+  // Memoised on the camera's ID rather than the node: moving it hands over a fresh object, and
+  // the engine would be told about a rectangle that has not changed a pixel.
   const rect: PaneRect | null = useMemo(
-    () =>
-      !camera
-        ? null
-        : full
-          ? { x: 0, y: 0, width: size.width, height: size.height }
-          : insetRect(size.width, size.height, FILM_ASPECT),
-    [camera, full, size],
+    () => (cameraId ? previewRect(size.width, size.height, FILM_ASPECT, previewSize) : null),
+    [cameraId, previewSize, size],
   )
 
   useEffect(() => {
@@ -72,22 +66,22 @@ export function CameraPreview({ documentId }: { documentId: string }) {
 
   useEffect(() => {
     const engine = sceneEngineOf(documentId)
-    engine?.setCameraPreview(camera?.id ?? null, rect)
+    engine?.setCameraPreview(cameraId, rect)
 
-    // Closed on the way out, or a preview would keep being drawn over a document nobody is
-    // looking at any more — the engine outlives this component.
+    // The engine outlives this component: left open, it would draw over a document nobody sees.
     return () => engine?.setCameraPreview(null, null)
-  }, [documentId, camera?.id, rect])
+  }, [documentId, cameraId, rect])
 
-  const onAir =
-    camera !== null && activeShotAt(timeline, nodes, view.playhead)?.cameraId === camera.id
+  // `activeCameraAt` and nothing else, so the badge cannot disagree with what the montage and
+  // the film are drawing — its fall back to the first camera included.
+  const onAir = camera !== null && activeCameraAt(timeline, nodes, playhead) === camera.id
+  const full = previewSize === 'full'
 
   return (
     <div ref={host} className="pointer-events-none absolute inset-0">
       {camera && rect && (
         <div
-          // The frame turns to the head's own ink while this camera is the one on air — the same
-          // signal its bar wears in the dope sheet, and the only state an eye cannot deduce.
+          // On air, the frame takes the head's own ink — the signal its bar wears in the sheet.
           className={cn(
             'absolute flex flex-col justify-between border',
             onAir ? 'border-accent' : 'border-border',

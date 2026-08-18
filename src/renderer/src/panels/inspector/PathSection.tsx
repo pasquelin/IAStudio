@@ -1,6 +1,7 @@
 import { mdiPlus } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { PathDescriptor } from '@shared/domain/scene'
+import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { SliderField } from '@/design/SliderField'
 import { ToggleField } from '@/design/ToggleField'
@@ -19,11 +20,8 @@ export type PathSectionProps = {
 }
 
 /**
- * The shape of a rail: how round it runs, whether it closes on itself, and how many points it
- * is made of.
- *
- * The points themselves are not listed as fields: three numbers each, in a column, is a table
- * nobody can aim with — they are dragged in the viewport, and this section only ever adds one.
+ * The shape of a rail. Its points are not listed as fields — three numbers each in a column is a
+ * table nobody can aim with; they are dragged in the viewport, and this only ever adds one.
  */
 export function PathSection({ path, onChange, gesture }: PathSectionProps) {
   const { t } = useTranslation()
@@ -44,8 +42,7 @@ export function PathSection({ path, onChange, gesture }: PathSectionProps) {
         value={path.closed}
         onChange={closed => onChange({ ...path, closed })}
       />
-      <div className="flex items-center justify-between px-2">
-        <span className="text-muted text-tiny">{t('inspector.pathPoints')}</span>
+      <PropertyRow label={t('inspector.pathPoints')}>
         <ToolButton
           icon={mdiPlus}
           label={t('inspector.addPathPoint')}
@@ -54,7 +51,7 @@ export function PathSection({ path, onChange, gesture }: PathSectionProps) {
           variant="header"
           onClick={() => onChange(withPointAfter(path, path.points.length - 1))}
         />
-      </div>
+      </PropertyRow>
     </PropertySection>
   )
 }

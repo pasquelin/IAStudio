@@ -53,16 +53,16 @@ export function withMovedPoint(
  */
 export function withPointAfter(path: PathDescriptor, index: number): PathDescriptor {
   const from = path.points[index]
-  if (!from) return path
-
+  // The neighbour folds back to the first point past the end, and `from` proves there is one.
   const to = path.points[index + 1] ?? path.points[0]
-  const added =
-    to === undefined
-      ? from
-      : { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2, z: (from.z + to.z) / 2 }
+  if (!from || !to) return path
 
   const points = [...path.points]
-  points.splice(index + 1, 0, added)
+  points.splice(index + 1, 0, {
+    x: (from.x + to.x) / 2,
+    y: (from.y + to.y) / 2,
+    z: (from.z + to.z) / 2,
+  })
   return { ...path, points }
 }
 

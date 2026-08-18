@@ -1,5 +1,6 @@
 import type { AnimationTimeline, CameraShot } from '@shared/domain/animation'
-import type { Us } from '@shared/domain/time'
+import { frameDuration, SECOND, snapToFrame, type Us } from '@shared/domain/time'
+import { clamp } from '@shared/numeric'
 import { firstCameraId, type SceneNode } from './sceneState'
 
 /**
@@ -19,11 +20,23 @@ export function activeShotAt(
   time: Us,
 ): CameraShot | null {
   const cameras = new Set(nodes.flatMap(node => (node.type === 'camera' ? node.id : [])))
+  return bestShot(timeline, time, shot => cameras.has(shot.cameraId))
+}
 
+/**
+ * The montage's law, written once: the highest layer wins, and at equal layers the shot laid
+ * down latest. What differs between its two callers is only which shots they let compete.
+ */
+function bestShot(
+  timeline: AnimationTimeline,
+  time: Us,
+  competes: (shot: CameraShot) => boolean,
+): CameraShot | null {
   let best: CameraShot | null = null
+
   for (const shot of timeline.shots) {
-    if (!cameras.has(shot.cameraId)) continue
     if (time < shot.start || time >= shot.start + shot.duration) continue
+    if (!competes(shot)) continue
     if (
       !best ||
       shot.layer > best.layer ||
@@ -47,20 +60,43 @@ export function shotOfCameraAt(
   cameraId: string,
   time: Us,
 ): CameraShot | null {
-  let best: CameraShot | null = null
+  return bestShot(timeline, time, shot => shot.cameraId === cameraId)
+}
 
-  for (const shot of timeline.shots) {
-    if (shot.cameraId !== cameraId) continue
-    if (time < shot.start || time >= shot.start + shot.duration) continue
-    if (
-      !best ||
-      shot.layer > best.layer ||
-      (shot.layer === best.layer && shot.start > best.start)
-    ) {
-      best = shot
-    }
+/** How long a shot lasts when nothing says otherwise: what is left of the band, at most this. */
+const DEFAULT_SHOT: Us = 3 * SECOND
+
+/**
+ * The shot a camera opens at the head: on the layer above every other, from the head onwards.
+ *
+ * Above, because a shot laid down only to be hidden by what was already on the band reads as a
+ * button that did nothing. At least one frame long, so a shot opened on the last frame still has
+ * a bar to grab it back by.
+ */
+export function newShotAt(
+  timeline: AnimationTimeline,
+  cameraId: string,
+  id: string,
+  time: Us,
+): CameraShot {
+  const start = snapToFrame(clamp(time, 0, timeline.duration), timeline.fps)
+  const layers = timeline.shots.map(shot => shot.layer)
+
+  return {
+    id,
+    cameraId,
+    layer: layers.length === 0 ? 0 : Math.max(...layers) + 1,
+    start,
+    duration: Math.max(
+      frameDuration(timeline.fps),
+      Math.min(DEFAULT_SHOT, timeline.duration - start),
+    ),
   }
-  return best
+}
+
+/** Which layer a shot lands on when sent up or down. Never below the ground floor. */
+export function layerMoved(shot: CameraShot, by: number): number {
+  return Math.max(0, shot.layer + by)
 }
 
 /**
@@ -81,7 +117,7 @@ export function draggedShot(
   let duration = shot.duration
 
   if (drag.edge === 'start') {
-    start = Math.max(0, Math.min(at, end - minimum))
+    start = clamp(at, 0, end - minimum)
     duration = end - start
   } else if (drag.edge === 'end') {
     duration = Math.max(minimum, at - shot.start)

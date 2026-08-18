@@ -9,11 +9,8 @@ import { sceneEngineOf } from '@/stores/sceneEngines'
 import { useScenes } from '@/stores/scenes'
 
 /**
- * Puts the camera where the view stands, looking where the view looks.
- *
- * The placement is asked of the ENGINE rather than read from the store: what the store publishes
- * lands once a drag settles, so a view nobody has moved since the tab opened holds nothing —
- * and this button would do nothing at all on the very framing one has just found.
+ * Puts the camera where the view stands, looking where it looks. Asked of the ENGINE, not the
+ * store: the store only publishes once a drag settles, so a view nobody moved holds nothing.
  */
 export function CameraAlignButton({
   documentId,

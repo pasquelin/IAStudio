@@ -254,8 +254,10 @@ function wasClick(from: { x: number; y: number } | null, event: PointerEvent): b
 }
 
 /** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
-/** Where a shot's target stands, reused: a camera aimed per frame must allocate nothing. */
+/** Where a shot's target stands, and where its rail puts it: a camera driven per frame
+ * must allocate nothing. */
 const aimed = new ThreeVector3()
+const railed = new ThreeVector3()
 const forward = new ThreeVector3()
 const right = new ThreeVector3()
 const step = new ThreeVector3()
@@ -346,6 +348,8 @@ export class SceneRenderer {
   /** A shadow walk stops here: what hangs under a node carries that node's flags, not its parent's. */
   private readonly belongsToAnotherNode = ownedByAnotherNode(this.objects)
   private readonly helpers = new Map<string, LightHelper>()
+  /** The frustum drawn under each camera of the scene — what makes one clickable. */
+  private readonly frustums = new Map<string, CameraHelper>()
   /** The texture slots of each mesh, and the references they hold on the cache. */
   private readonly textures = new Map<string, MaterialTextures>()
   /** The same, for the one map a sprite wears. Apart, so each map stays exactly typed. */
@@ -578,33 +582,33 @@ export class SceneRenderer {
   }
 
   /**
-   * Lays the timeline over the rest poses. Only the nodes it drives are touched, and a scene
-   * with no track at all leaves before building anything.
-   */
-  /**
    * Where the shots put their cameras at the instant the head stands on: along a rail, aimed at
    * a target, or both.
    *
-   * After `applyPoses` and never before, in two explicit passes: a camera may be told to watch a
-   * node that is itself animated, and aiming at where that node USED to be is a shot that lags
-   * one frame behind for good.
+   * After `applyPoses` and never before: a camera may be told to watch a node that is itself
+   * animated, and aiming at where that node USED to be lags one frame behind for good.
    */
   private applyCameraShots(): void {
     const shots = this.timeline.shots
     if (shots.length === 0) return
 
-    // World positions are read below, and three only refreshes them as it draws: without this
-    // the first frame of a shot would aim at where everything stood before the head moved.
-    this.viewport.scene.updateMatrixWorld(true)
-
+    const driven: { object: Object3D; shot: CameraShot }[] = []
     for (const node of this.applied.values()) {
       if (node.type !== 'camera') continue
 
       const object = this.objects.get(node.id)
       const shot = shotOfCameraAt(this.timeline, node.id, this.playhead)
       // A camera the gizmo carries holds a transform relative to the pivot — see `applyPoses`.
-      if (!object || !shot || object.parent === this.pivot) continue
+      if (object && shot && object.parent !== this.pivot) driven.push({ object, shot })
+    }
 
+    // Only when something is about to READ a world position, and only then: `force` recomposes
+    // the matrix of every object of the scene, bones included, on the frame path.
+    if (driven.some(({ shot }) => shot.motion || shot.target?.kind === 'node')) {
+      this.viewport.scene.updateMatrixWorld(true)
+    }
+
+    for (const { object, shot } of driven) {
       if (shot.motion) this.railCamera(object, shot, shot.motion)
       if (shot.target) this.aimCamera(object, shot.target)
     }
@@ -617,8 +621,12 @@ export class SceneRenderer {
     if (rail?.type !== 'path' || !railObject) return
 
     // `getPointAt`, never `getPoint`: the second is parameterised per segment, so a camera
-    // speeds up through the short ones — the very defect a rail exists to avoid.
-    const along = curveOf(rail.path).getPointAt(clampUnit(progressAt(shot, motion, this.playhead)))
+    // speeds up through the short ones — the very defect a rail exists to avoid. Into a scratch
+    // vector, since this runs per frame of playback.
+    const along = curveOf(rail.path).getPointAt(
+      clampUnit(progressAt(shot, motion, this.playhead)),
+      railed,
+    )
     const world = railObject.localToWorld(along)
     object.position.copy(object.parent ? object.parent.worldToLocal(world) : world)
   }
@@ -657,16 +665,21 @@ export class SceneRenderer {
   /**
    * What the `fov` channels add to each camera's own field of view, in degrees.
    *
-   * Written only where a channel actually drives one: a camera nothing animates keeps the lens
-   * its descriptor gave it, and `applyCamera` stays the only other writer.
+   * Walked from the CHANNELS rather than from the nodes: a scene of a thousand objects and no
+   * lens channel is one that leaves here having read nothing.
    */
   private applyLenses(timeline: AnimationTimeline): void {
-    for (const node of this.applied.values()) {
-      if (node.type !== 'camera') continue
+    const lensed = new Set(
+      timeline.tracks.flatMap(track =>
+        track.target.property === 'fov' ? track.target.nodeId : [],
+      ),
+    )
 
-      const delta = fovAt(timeline, node.id, this.playhead)
-      const camera = this.cameraObject(node.id)
-      if (delta === null || !camera) continue
+    for (const nodeId of lensed) {
+      const node = this.applied.get(nodeId)
+      const delta = fovAt(timeline, nodeId, this.playhead)
+      const camera = this.cameraObject(nodeId)
+      if (node?.type !== 'camera' || delta === null || !camera) continue
 
       applyCamera(camera, { ...node.camera, fov: node.camera.fov + delta })
     }
@@ -1285,10 +1298,8 @@ export class SceneRenderer {
 
     for (const helper of this.helpers.values()) hide(helper)
     for (const skeleton of this.skeletons.values()) hide(skeleton)
+    for (const frustum of this.frustums.values()) hide(frustum)
     hide(this.grid)
-    for (const object of this.objects.values()) {
-      hide(object.children.find(child => child instanceof CameraHelper))
-    }
 
     return () => {
       for (const object of hidden) object.visible = true
@@ -1714,6 +1725,9 @@ export class SceneRenderer {
     const helper = new CameraHelper(camera)
     // The helper reads the camera's world matrix, which is only right once three has updated it.
     camera.add(helper)
+    // Kept beside the light helpers, and for the same reason: the preview hides all of them on
+    // every frame it draws, and finding them by walking each node's children would be a scan.
+    this.frustums.set(node.id, helper)
     return camera
   }
 
@@ -1998,6 +2012,14 @@ export class SceneRenderer {
       helper.dispose()
       this.helpers.delete(id)
     }
+
+    // The frustum hangs under its camera, so removing the node takes it off screen — but the
+    // map would keep it alive, and the preview would go on hiding an object nobody draws.
+    const frustum = this.frustums.get(id)
+    if (frustum) {
+      frustum.dispose()
+      this.frustums.delete(id)
+    }
   }
 
   private selectedObjects(): Object3D[] {
@@ -2084,11 +2106,7 @@ export class SceneRenderer {
     const knob = this.pickedKnob()
     if (point && knob) {
       // The knob's own position IS the control point: both live in the rail's frame.
-      this.options.onPathPoint?.(point.nodeId, point.index, {
-        x: knob.position.x,
-        y: knob.position.y,
-        z: knob.position.z,
-      })
+      this.options.onPathPoint?.(point.nodeId, point.index, plainVector(knob.position))
       return
     }
 
@@ -2128,11 +2146,8 @@ export class SceneRenderer {
   }
 
   /**
-   * A hand has let go of a camera. Which camera decides where it is written.
-   *
-   * A pane locked onto a camera of the scene orbits THAT camera, so the gesture is an edit of
-   * the document and lands as one command — once per gesture, never per frame of it. Every other
-   * pane moves the view, which is session state and goes to `onView`.
+   * A hand has let go of a camera, and which camera decides where it is written: a locked pane
+   * edits the DOCUMENT, every other one moves the view, which is session state.
    */
   private reportCameraSettled(pane: number): void {
     const view = this.paneViews[pane]
@@ -2265,10 +2280,8 @@ export class SceneRenderer {
   }
 
   /**
-   * The control point the pointer is over, on a rail that is already SELECTED.
-   *
-   * Selected first, because the knobs of every rail in the scene would otherwise take clicks
-   * meant for whatever stands behind them — a rail is a working aid, not a wall.
+   * The control point the pointer is over, on a rail that is already SELECTED — otherwise the
+   * knobs of every rail would take clicks meant for what stands behind them.
    */
   private pathPointAt(event: PointerEvent): { nodeId: string; index: number } | null {
     const ndc = this.viewport.pointerNdcOf(event)

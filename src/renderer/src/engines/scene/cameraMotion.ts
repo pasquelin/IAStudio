@@ -1,5 +1,6 @@
 import type { CameraMotion, CameraShot, Easing } from '@shared/domain/animation'
 import type { Us } from '@shared/domain/time'
+import { clamp } from '@shared/numeric'
 
 /**
  * How far along its rail a camera stands at an instant — arithmetic alone, so it is held to
@@ -17,6 +18,11 @@ export function progressAt(shot: CameraShot, motion: CameraMotion, time: Us): nu
   return motion.from + (motion.to - motion.from) * eased
 }
 
+/** Held inside the rail: a head dragged past the end of a shot must not run off its curve. */
+export function clampUnit(value: number): number {
+  return clamp(value, 0, 1)
+}
+
 /** Four curves, each a pure function of 0..1 — the absence of any of them shows at both ends. */
 export function ease(easing: Easing, at: number): number {
   switch (easing) {
@@ -29,9 +35,4 @@ export function ease(easing: Easing, at: number): number {
     case 'linear':
       return at
   }
-}
-
-/** Held inside the rail: a head dragged past the end of a shot must not run off its curve. */
-export function clampUnit(value: number): number {
-  return Math.min(1, Math.max(0, value))
 }

@@ -7,7 +7,13 @@
  */
 import { snapToFrame, type Us } from '@shared/domain/time'
 import { placeRows } from '../timeline/band'
-import { RULER_HEIGHT, timeToX, xToTime, type Viewport } from '../timeline/timelineGeometry'
+import {
+  edgeGrab,
+  RULER_HEIGHT,
+  timeToX,
+  xToTime,
+  type Viewport,
+} from '../timeline/timelineGeometry'
 import { keysOf, reachOf } from './animationPainter'
 import type { Point } from '../core/geometry'
 import type { AnimationRow } from './animationRows'
@@ -35,16 +41,16 @@ export type HitContext = {
 const GRAB_SLACK = 2
 
 /**
- * Which edge of a bar the hand landed on, in PIXELS rather than in time: a shot two seconds long
- * and one four minutes long must offer the same handle to grab, and a fraction of the duration
- * would make the second one's handle four minutes wide.
+ * Which edge of a bar the hand landed on, through the montage's own `edgeGrab`: handles are
+ * measured in PIXELS, and they shrink on a narrow bar so its body stays draggable.
  */
-const EDGE_GRAB = 4
-
 function edgeOf(start: Us, duration: Us, x: number, viewport: Viewport): 'start' | 'end' | null {
-  if (Math.abs(timeToX(start, viewport) - x) <= EDGE_GRAB) return 'start'
-  if (Math.abs(timeToX(start + duration, viewport) - x) <= EDGE_GRAB) return 'end'
-  return null
+  const left = timeToX(start, viewport)
+  const right = timeToX(start + duration, viewport)
+  const grab = edgeGrab(right - left)
+
+  if (Math.abs(left - x) <= grab) return 'start'
+  return Math.abs(right - x) <= grab ? 'end' : null
 }
 
 export function hitAnimation(context: HitContext, point: Point): AnimationHit | null {

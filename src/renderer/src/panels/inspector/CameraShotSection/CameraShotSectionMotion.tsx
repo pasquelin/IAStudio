@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { EASINGS, type CameraMotion } from '@shared/domain/animation'
 import { NumberField } from '@/design/NumberField'
+import { PropertyRow } from '@/design/PropertyRow'
 import { NATIVE_SELECT, type GestureProps } from '@/design/styles'
 
 export type CameraShotSectionMotionProps = {
@@ -12,7 +13,6 @@ export type CameraShotSectionMotionProps = {
 /**
  * How a camera travels its rail: at what speed curve, and between which two abscissae.
  *
- * `from` and `to` are 0..1 along the rail rather than seconds — the clock is the shot's window.
  * `from` greater than `to` runs the rail backwards, which is why neither is clamped to the other.
  */
 export function CameraShotSectionMotion({
@@ -24,8 +24,7 @@ export function CameraShotSectionMotion({
 
   return (
     <>
-      <label className="flex items-center justify-between gap-2 px-2">
-        <span className="text-muted text-tiny">{t('inspector.easing')}</span>
+      <PropertyRow label={t('inspector.easing')}>
         <select
           value={motion.easing}
           // Read back off the list rather than asserted: what a select hands over is a string,
@@ -42,7 +41,7 @@ export function CameraShotSectionMotion({
             </option>
           ))}
         </select>
-      </label>
+      </PropertyRow>
 
       <NumberField
         label={t('inspector.railFrom')}

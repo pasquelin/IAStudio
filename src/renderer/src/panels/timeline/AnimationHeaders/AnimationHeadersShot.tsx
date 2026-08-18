@@ -2,6 +2,7 @@ import { mdiChevronDown, mdiChevronUp } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { editCameraShot } from '@/engines/scene/animationCommands'
+import { layerMoved } from '@/engines/scene/cameraShots'
 import type { ShotRow } from '@/engines/scene/animationRows'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
@@ -9,12 +10,8 @@ import { useScenes } from '@/stores/scenes'
 import { TimelineRow } from '../TimelineRow/TimelineRow'
 
 /**
- * One layer of shots: what it is called, and the two buttons that send the picked shot to the
- * layer above or below.
- *
- * The buttons act on the PICKED shot rather than on the line, because a line can hold several
- * and a layer as a whole is not a thing one moves — moving them all would leave the stack in
- * exactly the order it was.
+ * One layer of shots, and the two buttons that send the PICKED one up or down — a line can hold
+ * several, and moving them all would leave the stack in the order it was.
  */
 export function AnimationHeadersShot({ documentId, row }: { documentId: string; row: ShotRow }) {
   const { t } = useTranslation()
@@ -23,11 +20,10 @@ export function AnimationHeadersShot({ documentId, row }: { documentId: string; 
   const name = t('animation.shotLayer', { layer: row.layer })
 
   const send = (by: number): void => {
-    if (shot) {
-      useScenes
-        .getState()
-        .runCommand(documentId, editCameraShot(shot.id, { layer: shot.layer + by }))
-    }
+    if (!shot) return
+    useScenes
+      .getState()
+      .runCommand(documentId, editCameraShot(shot.id, { layer: layerMoved(shot, by) }))
   }
 
   return (

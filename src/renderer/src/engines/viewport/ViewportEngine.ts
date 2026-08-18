@@ -403,8 +403,9 @@ export class ViewportEngine {
    * camera of the scene — which is the whole point, and why `onCameraSettled` carries the pane.
    */
   setPaneCamera(index: number, camera: PerspectiveCamera | null): void {
+    // Pane 0 draws with the viewport's own camera and reads `extras[-1]`, which is nobody.
     const pane = this.extras[index - 1]
-    if (index === 0 || !pane || pane.borrowed === camera) return
+    if (!pane || pane.borrowed === camera) return
 
     pane.borrowed = camera
     const drawn = cameraOf(pane)
@@ -700,6 +701,20 @@ export class ViewportEngine {
    * `scene-stage` pays elsewhere and says why. The cost is one more `render` per frame, on a
    * rectangle a quarter as wide — and the loop still sleeps when nothing moves.
    */
+  /** Whether the preview leaves nothing of the panes to see — its grown state, in practice. */
+  private insetCoversAll(renderer: WebGLRenderer): boolean {
+    const rect = this.inset?.rect
+    if (!rect) return false
+
+    const canvas = renderer.domElement
+    return (
+      rect.x <= 0 &&
+      rect.y <= 0 &&
+      rect.width >= canvas.clientWidth &&
+      rect.height >= canvas.clientHeight
+    )
+  }
+
   private renderInset(renderer: WebGLRenderer): void {
     const inset = this.inset
     if (!inset) return
@@ -754,7 +769,9 @@ export class ViewportEngine {
       if (pane.controls?.enabled === true && pane.controls.update()) settling = true
     }
 
-    this.renderPanes(renderer)
+    // The panes are skipped when the preview covers them whole: drawing a scene twice over to
+    // throw the first one away is the most expensive thing a frame can do.
+    if (!this.insetCoversAll(renderer)) this.renderPanes(renderer)
     // After the panes and before the overlay: the preview covers the view it sits on, and the
     // trihedron stays on top of both.
     this.renderInset(renderer)

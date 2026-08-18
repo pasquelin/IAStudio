@@ -17,7 +17,7 @@ import {
   type Vector3 as PlainVector3,
   type ViewDirection,
 } from '@shared/domain/scene'
-import { centreOf } from './pivot'
+import { centreOf, transformOf } from './pivot'
 
 /**
  * What one view of a quad layout shows: a side, or a camera free to turn.
@@ -302,12 +302,8 @@ export function transformFromPlacement(placement: CameraPlacement, rest: Transfo
   object.position.set(placement.position.x, placement.position.y, placement.position.z)
   object.lookAt(placement.target.x, placement.target.y, placement.target.z)
 
-  return {
-    position: plainVector(object.position),
-    rotation: { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z },
-    // A camera is never scaled by this gesture: what it stood at is what it keeps.
-    scale: rest.scale,
-  }
+  // A camera is never scaled by this gesture: what it stood at is what it keeps.
+  return { ...transformOf(object), scale: rest.scale }
 }
 
 /**
