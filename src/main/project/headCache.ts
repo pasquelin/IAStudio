@@ -3,7 +3,7 @@ import type { DocumentEnvelope, DocumentFile } from '@shared/domain/document'
 import type { DocumentHead } from './documentBody'
 
 /** What one file's head answered, and the clock the answer was taken against. */
-export type CachedHead = {
+type CachedHead = {
   envelope: DocumentEnvelope
   /**
    * The body, when reading the head meant reading the whole file — and `null` whenever the
