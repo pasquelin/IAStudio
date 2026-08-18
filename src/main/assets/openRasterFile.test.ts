@@ -1,6 +1,11 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
-import { ORA_MIMETYPE, type OraDocument, type OraLayer } from '@shared/domain/openRaster'
+import {
+  isOraGroup,
+  ORA_MIMETYPE,
+  type OraDocument,
+  type OraLayer,
+} from '@shared/domain/openRaster'
 import { packOpenRaster, unpackOpenRaster } from './openRasterFile'
 
 /** One transparent pixel, which is all any of this needs to be real PNG bytes. */
@@ -225,6 +230,35 @@ describe('reading an OpenRaster container back', () => {
       ],
       studio: '',
     })
+  })
+
+  /**
+   * A GROUP as GIMP 3.2.4 really writes one, copied verbatim off a file it exported on 18/08.
+   * It carries neither `x`/`y` nor `isolation`, both of which this studio always emits — so the
+   * defaults are the whole of what is on trial here, and `groups` is declared interchange.
+   */
+  it('reads a group an installed GIMP actually wrote, defaults and all', () => {
+    const read = unpackOpenRaster(
+      foreign(
+        `<image w="64" h="32"><stack>` +
+          `<stack name="Groupe GIMP" opacity="0.6" visibility="visible" ` +
+          `composite-op="svg:src-over">` +
+          `<layer src="data/001-000.png" name="Dans le groupe" x="0" y="0" opacity="1.0" ` +
+          `visibility="visible" composite-op="svg:src-over" selected="true" />` +
+          `</stack>` +
+          `<layer src="data/001.png" name="Hors groupe" x="0" y="0" opacity="1.0" ` +
+          `visibility="visible" composite-op="svg:src-over" />` +
+          `</stack></image>`,
+      ),
+    )
+
+    const group = read.nodes[0]
+    expect(read.nodes).toHaveLength(2)
+    expect(group).toMatchObject({ kind: 'group', name: 'Groupe GIMP', opacity: 0.6, x: 0, y: 0 })
+    expect(group && isOraGroup(group) ? group.children.map(child => child.name) : []).toEqual([
+      'Dans le groupe',
+    ])
+    expect(read.nodes[1]).toMatchObject({ kind: 'layer', name: 'Hors groupe' })
   })
 
   /**
