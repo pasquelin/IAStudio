@@ -739,7 +739,7 @@ position inside the folder, not a location on your disk.
 By default, the studio **reopens the last project** when you launch it. You find your tabs and
 panels where you left them.
 
-This behaviour is adjustable: **Settings ▸ General ▸ On startup**, with two choices — "Reopen the
+This behaviour is adjustable: **Settings ▸ General ▸ On opening**, with two choices — "Reopen the
 last project" or "Open nothing".
 
 You can also choose **where the studio offers to create your projects**:

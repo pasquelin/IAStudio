@@ -174,13 +174,13 @@ find it, the first question to ask is **"am I in the right workspace?"**.
 Three families have no workspace at all: **upscale**, **background removal** and
 **vectorisation**. Their models take an image and return one, like image models, but they do a job
 of their own and the studio files them apart. The **Models** panel therefore shows them nowhere:
-their model is chosen in **Settings ▸ Generation**, and it is the **Image** menu's edits — Enlarge,
+their model is chosen in **Settings ▸ Generation**, and it is the **Image** menu's edits — Upscale,
 Cut out, Vectorise — that use them.
 
 | Edit | Family asked for | Where its model is set |
 |---|---|---|
 | Regenerate the region, Extend | image | the Image workspace's **Models** panel |
-| Enlarge | upscale | **Settings ▸ Generation ▸ Upscaling** |
+| Upscale | upscale | **Settings ▸ Generation ▸ Upscaling** |
 | Cut out | background removal | **Settings ▸ Generation ▸ Background removal** |
 | Vectorise | vectorisation | **Settings ▸ Generation ▸ Vectorisation** |
 

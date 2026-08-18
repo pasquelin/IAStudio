@@ -518,7 +518,7 @@ Hide it to judge an image with nothing around it.
 
 ## Getting a scene out of the studio
 
-**File ▸ Export the scene** writes everything the document holds. **File ▸ Export the selection**
+**File ▸ Export scene** writes everything the document holds. **File ▸ Export selection**
 writes only the chosen objects — a group takes along whatever hangs from it.
 
 | Format | What it is | When to use it |

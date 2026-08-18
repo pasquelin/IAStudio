@@ -86,7 +86,7 @@ text — the other path is an image document with the picture dragged onto it as
 
 ## Enlarge a picture
 
-**Image ▸ Enlarge** flattens the document, sends it, and opens the upscaler's form with your
+**Image ▸ Upscale** flattens the document, sends it, and opens the upscaler's form with your
 picture already in it. You are the one who presses **Generate**.
 
 Once, before the first time: **Settings ▸ Generation ▸ Upscaling**, pick a model. Without it the
@@ -98,7 +98,7 @@ shows the open workspace's family.
 
 **Do not look for it in the Image workspace's Models panel**: that panel only ever lists its own
 workspace's family, and an upscaler is not part of it — you could look for a long time. The
-**Image ▸ Enlarge** menu is the way in.
+**Image ▸ Upscale** menu is the way in.
 
 ---
 
@@ -121,7 +121,7 @@ right, to set exposure and rotation.
 6 faces. They show the same sky, at the same rotation, but laid flat: a seam at the back or a
 crushed pole shows up at a glance, where the 360 view makes you turn your head to run into it.
 
-**To take it into an engine**: **File ▸ Export the sky**, and a size. Six PNGs come out into a
+**To take it into an engine**: **File ▸ Export sky**, and a size. Six PNGs come out into a
 folder, named `_Rt`, `_Lf`, `_Up`, `_Dn`, `_Ft`, `_Bk` — the two letters Unity, Unreal and Roblox
 expect. **Grade before you export**: the exposure, the horizon rotation and everything else are
 baked into the files. See [Skyboxes workspace](13-skyboxes-workspace.md#taking-the-sky-out-the-six-faces).
@@ -350,7 +350,7 @@ All of it is spelled out, with nothing hidden, in
 |---|---|---|
 | a picture from a sentence | Image | Models → prompt → Generate |
 | a variant of a picture | Image | *Image to image* filter → give the picture |
-| a bigger picture | Image | the **Image ▸ Enlarge** menu, once its model is set |
+| a bigger picture | Image | the **Image ▸ Upscale** menu, once its model is set |
 | a 360° sky | Skyboxes | `+` → Generate, it lands by itself |
 | a material | Textures | `+` → drag a picture onto the preview → `⌘S` |
 | an animated shot | Video | *Image to video* filter → Generate |

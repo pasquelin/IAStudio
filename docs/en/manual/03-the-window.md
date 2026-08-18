@@ -508,7 +508,7 @@ The system menu — at the top of the screen on macOS, at the top of the window 
 
 The shortcuts shown in the menus are **the ones you have set**.
 
-**View ▸ Tool windows only lists what the workspace can open**, like the rail.
+**View ▸ Tool windows** only lists what the workspace can open, like the rail.
 
 ### The usage window
 

@@ -352,7 +352,7 @@ That number is adjustable: **Settings ▸ Generation ▸ Concurrent generations*
 When a request fails because of a dropped connection or a busy server, the studio **retries on its
 own**, waiting a little longer at each attempt.
 
-The number of attempts is adjustable: **Settings ▸ Generation ▸ Maximum retries**, from 0 to 10.
+The number of attempts is adjustable: **Settings ▸ Generation ▸ Max retries**, from 0 to 10.
 Four by default.
 
 > **An invalid API key is never retried.** Retrying would not fix it. The studio distinguishes what
