@@ -3,7 +3,7 @@ import type { FileOutcome } from '@shared/domain/fileOp'
 import { getBridge } from '@/services/bridge'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
-import { dragChannel } from './drag'
+import { dragChannel, type DragLike } from './drag'
 
 /** Dragging an asset out of the browser and onto an editor. See `dragChannel` for the why. */
 export const ASSET_DRAG_TYPE = 'application/x-scenario-asset'
@@ -32,7 +32,7 @@ const TYPED_PREFIX = `${ASSET_DRAG_TYPE}+`
 
 /** Announces the drag under both types: the plain one for existing targets, the typed one too. */
 export function startAssetDrag(
-  event: { dataTransfer: DataTransfer | null },
+  event: DragLike,
   asset: {
     id: string
     type: AssetType
@@ -56,10 +56,7 @@ export function startAssetDrag(
  * type tells the two apart, and only at the drop — where the difference is a download, not a
  * refusal.
  */
-export function startLibraryDrag(
-  event: { dataTransfer: DataTransfer | null },
-  asset: { id: string; type: AssetType },
-): void {
+export function startLibraryDrag(event: DragLike, asset: { id: string; type: AssetType }): void {
   // The marker FIRST, because every channel's `start` resets `effectAllowed` to `move` — and
   // `startAssetDrag` ends by overriding it to `copy`. Announced after, it undid that override,
   // and a `dropEffect` the allowed set forbids collapses the operation to `none`: the platform
@@ -80,7 +77,7 @@ export const carriesAsset = ASSETS.carries
  * type. A target that gets `null` should fall back to accepting, not to refusing: a drop that
  * silently does nothing is worse than one that lands somewhere sensible.
  */
-export function draggedAssetType(event: { dataTransfer: DataTransfer | null }): AssetType | null {
+export function draggedAssetType(event: DragLike): AssetType | null {
   // One read of `types`: it is a fresh array on every access, and this runs on every `dragover`.
   const announced = event.dataTransfer?.types.find(type => type.startsWith(TYPED_PREFIX))
   if (!announced) return null
@@ -105,9 +102,7 @@ export function draggedAssetType(event: { dataTransfer: DataTransfer | null }): 
  * promise settles. Callers must therefore call this synchronously from `onDrop`, which is why it
  * takes the event rather than an id.
  */
-export async function droppedAsset(event: {
-  dataTransfer: DataTransfer | null
-}): Promise<Asset | null> {
+export async function droppedAsset(event: DragLike): Promise<Asset | null> {
   const id = assetIdFromDrag(event)
   const fromLibrary = LIBRARY.carries(event)
   if (!id) return null
@@ -133,10 +128,7 @@ export async function droppedAsset(event: {
  *
  * Reads the event synchronously, as `droppedAsset` requires.
  */
-export async function landAssetIn(
-  event: { dataTransfer: DataTransfer | null },
-  folder: string,
-): Promise<FileOutcome | null> {
+export async function landAssetIn(event: DragLike, folder: string): Promise<FileOutcome | null> {
   const asset = await droppedAsset(event)
   if (!asset?.path) return null
 

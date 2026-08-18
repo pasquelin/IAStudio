@@ -1,4 +1,4 @@
-import type { AssetGeneration, AssetType, CloudAssetType } from './asset'
+import { PICTURES, type AssetGeneration, type AssetType, type CloudAssetType } from './asset'
 
 /** What the API says an asset may be seen by. No documented endpoint changes it. */
 export type AssetPrivacy = 'private' | 'public' | 'unlisted'
@@ -119,14 +119,6 @@ export type ExploreQuery = {
 }
 
 /**
- * The kinds whose own file IS a still picture, and can therefore be drawn as one.
- *
- * A take or a clip has a URL too, and it is the sound or the film itself — an `<img>` pointed at
- * one draws nothing. Those keep the thumbnail, which is a picture OF them rather than them.
- */
-const DRAWABLE_TYPES: readonly AssetType[] = ['image', 'texture', 'skybox']
-
-/**
  * The picture that stands for a cloud asset, or `null` when it has none to show, resized to
  * `width` pixels when one is asked for.
  *
@@ -144,7 +136,9 @@ const DRAWABLE_TYPES: readonly AssetType[] = ['image', 'texture', 'skybox']
  * and `format=jpeg` drops the alpha channel to save 2 ko over WebP.
  */
 export function cloudPreviewUrl(asset: CloudAsset, width?: number): string | null {
-  const drawable = DRAWABLE_TYPES.includes(asset.type)
+  // A take or a clip has a URL too, but it is the sound or the film itself: only a picture can be
+  // drawn from its own file, the rest keep the thumbnail taken OF them.
+  const drawable = PICTURES.includes(asset.type)
   const baseUrl = drawable ? (asset.url ?? asset.thumbnailUrl) : (asset.thumbnailUrl ?? asset.url)
 
   if (baseUrl === undefined) return null

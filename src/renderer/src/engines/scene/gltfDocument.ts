@@ -15,16 +15,17 @@ import {
   STUDIO_METADATA_KEY,
   type DocumentKind,
 } from '@shared/domain/document'
-import { GLTF_SCENE_STATE, gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
+import {
+  GLTF_GENERATOR,
+  GLTF_SCENE_STATE,
+  GLTF_VERSION,
+  gltfStudioMetadata,
+  isGltfDocument,
+} from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
 import type { LightDescriptor, Transform } from '@shared/domain/scene'
 import { scenePayload, sceneFromPayload } from './sceneDocument'
 import type { SceneState } from './sceneState'
-
-/** What the studio writes into a file, so a reader knows which build made it. */
-const GENERATOR = 'Scenario Studio'
-
-const GLTF_VERSION = '2.0'
 
 /** The extension every punctual light of the file is declared under. */
 const LIGHTS_EXTENSION = 'KHR_lights_punctual'
@@ -113,7 +114,7 @@ export function gltfDocumentOf(
   })
 
   return {
-    asset: { version: GLTF_VERSION, generator: GENERATOR },
+    asset: { version: GLTF_VERSION, generator: GLTF_GENERATOR },
     scene: 0,
     scenes: [
       {

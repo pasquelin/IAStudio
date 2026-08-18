@@ -48,6 +48,9 @@ export function SettingRowControl({
 }) {
   const { t, i18n } = useTranslation()
   const decimals = decimalsOf(descriptor.step)
+  // Empty means "unset": the key is dropped rather than stored blank, which is what lets ffmpeg
+  // fall back to the bundled binary and then to the PATH.
+  const commitOrUnset = (typed: string) => onChange(typed === '' ? undefined : typed)
 
   switch (descriptor.kind) {
     case 'choice':
@@ -146,9 +149,7 @@ export function SettingRowControl({
           id={id}
           describedBy={describedBy}
           stored={value}
-          // Empty means "unset": the key is dropped rather than stored blank, which is what
-          // lets ffmpeg fall back to the bundled binary and then to the PATH.
-          onCommit={typed => onChange(typed === '' ? undefined : typed)}
+          onCommit={commitOrUnset}
         />
       )
 
@@ -159,9 +160,7 @@ export function SettingRowControl({
           id={id}
           describedBy={describedBy}
           stored={value}
-          // Empty means "unset": the key is dropped rather than stored blank, which is what
-          // lets ffmpeg fall back to the bundled binary and then to the PATH.
-          onCommit={typed => onChange(typed === '' ? undefined : typed)}
+          onCommit={commitOrUnset}
         />
       )
   }

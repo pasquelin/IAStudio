@@ -1,4 +1,5 @@
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
+import { usToSeconds } from '@shared/domain/time'
 import { clamp } from '@shared/numeric'
 import { timeToX, xToTime, type Viewport } from './timelineGeometry'
 import { clipEnd, type Clip } from './timelineState'
@@ -29,7 +30,7 @@ export function waveformColumns(
   return columnsOver(peaks, left, right, x => {
     // Timeline time → time inside the source, through the in point and the speed.
     const source = clip.inPoint + (xToTime(x, viewport) - clip.start) * clip.speed
-    return Math.floor((source / 1_000_000) * PEAKS_PER_SECOND)
+    return Math.floor(usToSeconds(source) * PEAKS_PER_SECOND)
   })
 }
 

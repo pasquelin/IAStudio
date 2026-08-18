@@ -73,7 +73,7 @@ export function isSettingsDraftDirty(state: Pick<DraftState, 'pending' | 'touche
  * This is also the collision rule with the other windows: a write landing from elsewhere moves
  * `settings` underneath, and the buffer keeps only the leaves it was actually given.
  */
-export function valueOf(
+export function settingsDraftValueOf(
   draft: Pick<DraftState, 'pending' | 'touched'>,
   stored: SettingValue | undefined,
   path: SettingPath,

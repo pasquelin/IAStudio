@@ -1,4 +1,4 @@
-import { dragChannel } from './drag'
+import { dragChannel, type DragLike } from './drag'
 
 /**
  * Dragging a 3D document onto a montage, so a scene can be laid on a track the way an asset is.
@@ -12,10 +12,7 @@ export const SCENE_DRAG_TYPE = 'application/x-scenario-scene'
 
 const SCENES = dragChannel(SCENE_DRAG_TYPE)
 
-export function startSceneDrag(
-  event: { dataTransfer: DataTransfer | null },
-  sceneId: string,
-): void {
+export function startSceneDrag(event: DragLike, sceneId: string): void {
   SCENES.start(event, sceneId)
   // Laying a scene on a track takes nothing away from the list it came from — the same "+"
   // under the pointer an asset drag asks for, rather than the arrow that means "moved".
@@ -23,11 +20,11 @@ export function startSceneDrag(
 }
 
 /** Whether a scene document is what is flying. Askable during `dragover`, unlike its payload. */
-export function carriesScene(event: { dataTransfer: DataTransfer | null }): boolean {
+export function carriesScene(event: DragLike): boolean {
   return SCENES.carries(event)
 }
 
 /** Which scene was dropped. Null before the drop, by design of the platform. */
-export function droppedSceneId(event: { dataTransfer: DataTransfer | null }): string | null {
+export function droppedSceneId(event: DragLike): string | null {
   return SCENES.idFrom(event)
 }

@@ -8,6 +8,7 @@
  * A bone is a SEGMENT between itself and its child, never a point. Measuring to a point puts the
  * whole forearm's influence at the elbow, and the skin folds there instead of bending.
  */
+import { clamp } from '@shared/numeric'
 import { INFLUENCES, type SkinRequest } from './skinMessage'
 
 export type SkinBinding = { skinIndex: Uint16Array; skinWeight: Float32Array }
@@ -178,8 +179,10 @@ function distanceToBone(
   const along =
     lengthSquared === 0
       ? 0
-      : clamp01(
+      : clamp(
           ((x - headX) * alongX + (y - headY) * alongY + (z - headZ) * alongZ) / lengthSquared,
+          0,
+          1,
         )
 
   return Math.hypot(
@@ -187,8 +190,4 @@ function distanceToBone(
     y - (headY + alongY * along),
     z - (headZ + alongZ * along),
   )
-}
-
-function clamp01(value: number): number {
-  return value < 0 ? 0 : value > 1 ? 1 : value
 }
