@@ -1074,7 +1074,20 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   const document = useDocuments.getState().documents[documentId]
   if (!bridge || !document) return false
 
-  if (!(await bridge.documents.confirmDelete(document.title))) return false
+  return (await bridge.documents.confirmDelete(document.title)) && dropDocument(documentId)
+}
+
+/**
+ * The same removal with no question asked — for a caller that has already been answered.
+ *
+ * The assistant is that caller: its own gate stands in front of every `files` action, and it can
+ * be delegated. A native dialog behind that gate would ask twice, and an MCP client on the other
+ * side of the machine cannot answer the second one — the call would simply stand there.
+ */
+export async function dropDocument(documentId: string): Promise<boolean> {
+  const bridge = getBridge()
+  const document = useDocuments.getState().documents[documentId]
+  if (!bridge || !document) return false
 
   await bridge.documents.remove(document.id, document.kind)
   forgetDocument(documentId)

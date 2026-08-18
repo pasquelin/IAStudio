@@ -69,6 +69,14 @@
         "title": "Renommer un document",
         "description": "Appelle un document autrement, sur le disque et à l’écran d’un même geste. Le document garde son identité, et un onglet ouvert se renomme sans se fermer."
       },
+      "documentSave": {
+        "title": "Enregistrer un document",
+        "description": "Écrit le document nommé dans le projet, et attend que ce soit fait. Sans identifiant, c’est celui qui est devant. Répond si quelque chose a été écrit, car un onglet intact n’a rien à écrire et ce n’est pas un échec."
+      },
+      "documentRemove": {
+        "title": "Supprimer un document",
+        "description": "Retire du projet le fichier du document, puis ferme son onglet. Le travail non enregistré part avec lui, puisque le fichier s’en va — l’enregistrer avant de le détruire n’aurait pas de sens."
+      },
       "activityRecent": {
         "title": "Lire l’activité récente",
         "description": "Rend ce que le studio a consigné dernièrement — générations, opérations sur les fichiers, échecs — du plus récent au plus ancien. C’est ainsi qu’on apprend ce qu’une action a réellement fait."

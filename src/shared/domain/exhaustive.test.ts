@@ -345,6 +345,8 @@ describe('the lists that stand for a union', () => {
       'document.activate': true,
       'document.close': true,
       'document.rename': true,
+      'document.save': true,
+      'document.remove': true,
       'document.export': true,
       'activity.recent': true,
       'project.open': true,
