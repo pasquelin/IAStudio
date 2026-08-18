@@ -5,7 +5,7 @@ import { STUDIO_METADATA_KEY } from '@shared/domain/document'
 import { directionOfQuaternion, KHR_LIGHTS_PUNCTUAL } from '@shared/domain/gltf'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import { isRecord } from '@shared/guards'
-import { gltfSkyOf, skyFromGltf } from './gltfSky'
+import { gltfSkyOf, skyFromGltf, skyHoldsMore } from './gltfSky'
 
 const sky = (over: Partial<SkyboxContent> = {}): SkyboxContent => ({
   ...createSkyboxContent(),
@@ -294,5 +294,116 @@ describe('the angles a quaternion carries', () => {
 
     expect(read.elevation).toBeCloseTo(angles.elevation, 6)
     expect(read.azimuth).toBeCloseTo(angles.azimuth, 6)
+  })
+})
+
+/**
+ * Each case asserts WHICH member was found, never that something was. An assertion on emptiness
+ * alone passes on a guard that fired for another reason entirely — measured on the scene's own
+ * suite, 18/08, where disarming the `scenes` check left every case green.
+ */
+describe('a sky whose file holds more than this editor composes', () => {
+  const enriched = (over: Record<string, unknown>): unknown => ({
+    ...(written(sky()) as Record<string, unknown>),
+    ...over,
+  })
+
+  it('finds nothing in a file it wrote itself', () => {
+    expect(skyHoldsMore(written(sky()))).toEqual([])
+  })
+
+  it('finds nothing in a file that has been through the file layer', () => {
+    const stamped = enriched({
+      scenes: [{ name: 'Crépuscule', nodes: [0, 1], extras: { [STUDIO_METADATA_KEY]: { id: 'a' } } }],
+    })
+
+    expect(skyHoldsMore(stamped)).toEqual([])
+  })
+
+  it('names the second scene of a file holding two', () => {
+    const two = enriched({
+      scenes: [
+        ...((written(sky()) as { scenes: unknown[] }).scenes ?? []),
+        { name: 'Variante de nuit', nodes: [0] },
+      ],
+    })
+
+    expect(skyHoldsMore(two)).toEqual(['scenes'])
+  })
+
+  it('names the node a file gained beside the horizon and the sun', () => {
+    const three = enriched({
+      nodes: [...((written(sky()) as { nodes: unknown[] }).nodes ?? []), { name: 'Vide' }],
+    })
+
+    expect(skyHoldsMore(three)).toEqual(['nodes'])
+  })
+
+  /** A light SHARING a node brings no extra node, so the node count alone would miss it. */
+  it('names the second light of a file declaring two under one node', () => {
+    const lit = enriched({
+      extensions: {
+        [KHR_LIGHTS_PUNCTUAL]: {
+          lights: [
+            { type: 'directional', name: 'Sun', intensity: 1 },
+            { type: 'point', name: 'Lampe', intensity: 30 },
+          ],
+        },
+      },
+    })
+
+    expect(skyHoldsMore(lit)).toEqual(['lights'])
+  })
+
+  it('names an extension the file declares beside the lights one', () => {
+    const variants = enriched({
+      extensionsUsed: [KHR_LIGHTS_PUNCTUAL, 'KHR_materials_variants'],
+      extensions: {
+        ...(written(sky()) as { extensions: Record<string, unknown> }).extensions,
+        KHR_materials_variants: { variants: [] },
+      },
+    })
+
+    expect(skyHoldsMore(variants)).toEqual(['KHR_materials_variants'])
+  })
+
+  /** Never written by this editor, so a file that declares one would come back without it. */
+  it('names an extension the file REQUIRES', () => {
+    expect(skyHoldsMore(enriched({ extensionsRequired: ['KHR_draco_mesh_compression'] }))).toEqual([
+      'extensionsRequired',
+    ])
+  })
+
+  it('names an asset field beyond the two a save writes back', () => {
+    const credited = enriched({ asset: { version: '2.0', copyright: 'Atelier' } })
+
+    expect(skyHoldsMore(credited)).toEqual(['asset.copyright'])
+  })
+
+  it('names a key another application left in the root extras', () => {
+    const marked = enriched({
+      extras: {
+        ...(written(sky()) as { extras: Record<string, unknown> }).extras,
+        blender: { version: '4.2' },
+      },
+    })
+
+    expect(skyHoldsMore(marked)).toEqual(['extras.blender'])
+  })
+
+  it('names a key another application left in the default scene extras', () => {
+    const marked = enriched({
+      scenes: [{ name: 'Crépuscule', nodes: [0, 1], extras: { blender: { collection: 'Ciel' } } }],
+    })
+
+    expect(skyHoldsMore(marked)).toEqual(['scene.extras.blender'])
+  })
+
+  it('names a root member this editor never writes', () => {
+    expect(skyHoldsMore(enriched({ meshes: [{ primitives: [] }] }))).toEqual(['meshes'])
+  })
+
+  it('answers nothing at all for a payload that is not a glTF document', () => {
+    expect(skyHoldsMore({ nodes: [], meshes: [] })).toEqual([])
   })
 })

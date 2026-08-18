@@ -97,7 +97,7 @@
     "new": "Nouveau document",
     "missing": "Ce document n’est plus ouvert.",
     "saveRefusedIncomplete": "Ce montage s’est ouvert sans les clips dont le média manque. Enregistrer les effacerait du fichier — importez les médias dans le projet, puis rouvrez le montage.",
-    "saveRefusedSkyHoldsMore": "Ce ciel vient d’un fichier glTF qui contient une scène entière. Le studio ne sait réécrire que le soleil et l’horizon, donc enregistrer effacerait le reste. Utilisez Fichier ▸ Exporter le ciel, ou repartez d’un ciel neuf.",
+    "saveRefusedSkyHoldsMore": "Ce ciel vient d’un fichier glTF qui contient plus que ce que le studio compose — une seconde scène, une autre lumière, une extension à lui. Seuls le soleil et l’horizon sont réécrits, donc enregistrer effacerait le reste. Utilisez Fichier ▸ Exporter le ciel, ou repartez d’un ciel neuf.",
     "skyHoldsMore": "Ce ciel contient des parties que le studio ne sait pas réécrire — {{parts}}. Il s’ouvre en lecture seule, et l’enregistrement est refusé tant qu’elles sont là.",
     "saveRefusedSceneHoldsMore": "Cette scène vient d’un fichier glTF qui contient des mailles ou des animations que le studio ne compose pas. Un glTF est lié par index, donc enregistrer effacerait ces parties. Utilisez Fichier ▸ Exporter la scène, ou repartez d’une scène neuve.",
     "sceneHoldsMore": "Cette scène contient des parties que le studio ne sait pas réécrire — {{parts}}. Elle s’ouvre en lecture seule, et l’enregistrement est refusé tant qu’elles sont là.",

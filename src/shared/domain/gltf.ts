@@ -167,15 +167,26 @@ export function defaultSceneIndex(document: unknown): number {
   return typeof at === 'number' ? at : 0
 }
 
+/** The scene a document opens on, or nothing — what carries the studio's own state and its name. */
+export function gltfDefaultScene(document: unknown): Record<string, unknown> | null {
+  if (!isRecord(document) || !Array.isArray(document.scenes)) return null
+  const scene = document.scenes[defaultSceneIndex(document)]
+  return isRecord(scene) ? scene : null
+}
+
 /** What rides under the studio's own domain, on the default scene, or nothing. */
 export function gltfStudioMetadata(value: unknown): Record<string, unknown> {
-  if (!isRecord(value)) return {}
+  return gltfStudioExtras(gltfDefaultScene(value)?.extras)
+}
 
-  const scenes = value.scenes
-  const scene = Array.isArray(scenes) ? scenes[defaultSceneIndex(value)] : undefined
-  const extras = isRecord(scene) ? scene.extras : undefined
-  const studio = isRecord(extras) ? extras[STUDIO_METADATA_KEY] : undefined
-  return isRecord(studio) ? studio : {}
+/**
+ * The keys an `extras` holds beside the studio's own.
+ *
+ * A save recomposes `extras` from the state, so what another application left there is dropped —
+ * which is why both glTF guards ask this rather than reading root keys alone.
+ */
+export function gltfForeignExtras(extras: unknown): string[] {
+  return isRecord(extras) ? Object.keys(extras).filter(key => key !== STUDIO_METADATA_KEY) : []
 }
 
 /**

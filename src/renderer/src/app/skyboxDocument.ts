@@ -1,8 +1,7 @@
 import type { SkyboxContent } from '@shared/domain/skybox'
-import { isRecord } from '@shared/guards'
 import i18next from 'i18next'
 import { documentFolder } from '@/app/documentFolder'
-import { gltfSkyOf, skyFromGltf, skySourceUri } from '@/engines/skybox/gltfSky'
+import { gltfSkyOf, skyFromGltf, skyHoldsMore, skySourceUri } from '@/engines/skybox/gltfSky'
 import { mediaLinkFrom, mediaLinkOf } from '@/engines/timeline/mediaLink'
 import { assetIdForLink } from '@/helpers/assetIndex'
 import { reportNotice } from '@/services/diagnostics'
@@ -46,24 +45,8 @@ export function skyboxPayload(content: SkyboxContent, documentId: string): unkno
 }
 
 /**
- * The keys of a glTF this editor composes. Anything ELSE at the root is a scene graph the studio
- * would destroy: the nodes are recomposed from two, so a mesh or a camera carried across would
- * point at indices that no longer mean what they meant.
- */
-const COMPOSED = new Set([
-  'asset',
-  'scene',
-  'scenes',
-  'nodes',
-  'extensionsUsed',
-  'extensionsRequired',
-  'extensions',
-  'extras',
-])
-
-/**
- * Skies that opened holding LESS than their file did — a `.gltf` somebody added a mesh, a camera
- * or an animation to.
+ * Skies that opened holding LESS than their file did — a `.gltf` somebody added a mesh, a second
+ * light or an extension to.
  *
  * Read by `savableDocument`, exactly as an incomplete montage is: glTF is an INDEX-LINKED graph, so
  * carrying those parts across a save is not a thing that can be done half way — a `meshes` kept
@@ -82,10 +65,10 @@ export function skyboxFromPayload(payload: unknown, documentId: string): SkyboxC
   if (uri) carried.set(documentId, { sourceUri: uri })
   else carried.delete(documentId)
 
-  const extra = isRecord(payload) ? Object.keys(payload).filter(key => !COMPOSED.has(key)) : []
-  if (extra.length > 0) {
+  const held = skyHoldsMore(payload)
+  if (held.length > 0) {
     incomplete.add(documentId)
-    reportNotice('document.load', i18next.t('documents.skyHoldsMore', { parts: extra.join(', ') }))
+    reportNotice('document.load', i18next.t('documents.skyHoldsMore', { parts: held.join(', ') }))
   }
 
   const folder = documentFolder(documentId)

@@ -2,6 +2,7 @@ import i18next from 'i18next'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { TRANSLATIONS } from '@shared/i18n'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
+import { KHR_LIGHTS_PUNCTUAL } from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
 import type { Asset } from '@shared/domain/asset'
 import { useAssets } from '@/stores/assets'
@@ -165,6 +166,27 @@ describe('a sky whose file holds more than the studio composes', () => {
   it('refuses to be saved, and says what it holds', () => {
     openSky()
     skyboxFromPayload(withScene(), DOCUMENT)
+
+    expect(skyRefusesToSave(DOCUMENT)).toContain('glTF')
+  })
+
+  /**
+   * The case the refusal was blind to until 18/08, and the one an ordinary user meets: a light
+   * added in Blender brings no new root key at all, so a guard reading root keys let it through
+   * and the next ⌘S deleted it. `skyHoldsMore` is what decides now — `gltfSky.test.ts` names each
+   * member it finds; this one only proves the refusal is wired to it.
+   */
+  it('refuses to be saved over a file that gained a second light', () => {
+    openSky()
+    skyboxFromPayload(
+      {
+        ...(skyboxPayload(sky(), DOCUMENT) as Record<string, unknown>),
+        extensions: {
+          [KHR_LIGHTS_PUNCTUAL]: { lights: [{ type: 'directional' }, { type: 'point' }] },
+        },
+      },
+      DOCUMENT,
+    )
 
     expect(skyRefusesToSave(DOCUMENT)).toContain('glTF')
   })
