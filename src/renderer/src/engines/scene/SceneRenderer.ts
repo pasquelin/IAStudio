@@ -103,6 +103,11 @@ import {
 } from './sceneView'
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
+import SkinWorker from './skinWeights.worker?worker'
+import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
+import { createSkinWeights, type SkinWeights } from './skinWeights'
+import type { SkinBinding } from './skinVertices'
+import type { Rig } from '@shared/domain/rig'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
@@ -178,6 +183,13 @@ export type SceneRendererOptions = {
   assetVersion?: (assetId: string) => string | undefined
   /** Same again, for the picking trees: jsdom spawns the worker that builds them no more. */
   bvh?: BvhBuilder
+  /** And again, for the skinning weights a local rig is bound with. */
+  skin?: SkinWeights
+  /**
+   * How far along binding a model's rig is, 0 to 1. Reported because it is the one operation of
+   * this engine that can take a minute — and it is free, so nothing else warns the user it began.
+   */
+  onRigProgress?: (nodeId: string, progress: number) => void
   /** The typefaces a text is cut from. Shared with the image workspace — see `services/fonts`. */
   fonts?: FontLibrary
 }
@@ -380,6 +392,9 @@ export class SceneRenderer {
   /** What each mesh wore, and which lights the material preview put out — see `pane-dress`. */
   private readonly paneMemory = createPaneMemory()
   private readonly bvh: BvhBuilder
+  private readonly skin: SkinWeights
+  /** The binds still running, so a model that leaves the stage takes its own off the worker. */
+  private readonly skinning = new Map<string, AbortController>()
   private readonly fonts: FontLibrary
   private stopPaletteWatch: (() => void) | null = null
   /** Set by `prepareOffscreen`: what stops the backdrop being painted over a montage. */
@@ -404,6 +419,7 @@ export class SceneRenderer {
       (assetId, error) => reportFailure('scene.model', assetId, error),
     )
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
+    this.skin = options.skin ?? createSkinWeights(() => new SkinWorker())
     this.sky = createSkyBinding(this.textureCache, () => this.paintBackground())
     // The studio's own by default: a face parsed for a caption in the image workspace is the
     // same object a text node extrudes, and half a megabyte of glyph tables is worth sharing.
@@ -923,6 +939,58 @@ export class SceneRenderer {
   }
 
   /**
+   * Weights every mesh of a model against the rig its document holds, then binds them.
+   *
+   * Off the UI thread and reporting as it goes: half a million vertices against fifty-two bones
+   * is twenty-six million distances, and the window has to stay answerable throughout.
+   */
+  private async skinModel(nodeId: string, holder: Object3D, rig: Rig): Promise<void> {
+    // Captured once: `applyRig` is told which meshes these weights belong to rather than walking
+    // the holder again after the awaits, when it may hold others.
+    const meshes = skinnableMeshesOf(holder)
+    if (meshes.length === 0) return
+
+    this.stopSkinning(nodeId)
+    const stop = new AbortController()
+    this.skinning.set(nodeId, stop)
+
+    try {
+      const bound: { mesh: Mesh; binding: SkinBinding }[] = []
+      for (const [index, mesh] of meshes.entries()) {
+        const binding = await this.skin.bind(positionsIn(mesh, holder), rig, {
+          signal: stop.signal,
+          onProgress: progress =>
+            this.options.onRigProgress?.(nodeId, (index + progress) / meshes.length),
+        })
+        // Taken back, or the port let go — either way this model is no longer being skinned.
+        if (!binding) return
+        bound.push({ mesh, binding })
+      }
+
+      // The model may have been released while the weights were out.
+      if (this.objects.get(nodeId) !== holder) return
+
+      applyRig(holder, rig, bound)
+      // The bones exist only now: the helper was bound before them, when the holder carried none,
+      // and without this a locally rigged character has a skeleton nothing can show or pick.
+      this.bindSkeleton(nodeId, holder, true)
+      this.options.onRig?.(nodeId, rigStateOf(holder, this.animations.clipsOf(nodeId)))
+      this.viewport.requestRender()
+    } finally {
+      this.skinning.delete(nodeId)
+      // In every exit, cancellation included: what says "binding" is the progress being there,
+      // so leaving it behind would hide both buttons of the inspector for good.
+      this.options.onRigProgress?.(nodeId, 1)
+    }
+  }
+
+  /** Twenty-six million distances are not worth finishing for a model nobody will see again. */
+  private stopSkinning(nodeId: string): void {
+    this.skinning.get(nodeId)?.abort()
+    this.skinning.delete(nodeId)
+  }
+
+  /**
    * A helper is built from the instance and hung beside the nodes, like the grid and the
    * trihedron — never inside the model, where the outliner would list it as part of the scene
    * and a click could pick it.
@@ -1201,6 +1269,7 @@ export class SceneRenderer {
     this.wireMaterial.dispose()
     this.paneMaterials.dispose()
     this.bvh.dispose()
+    this.skin.dispose()
 
     this.grid?.dispose()
     this.grid = null
@@ -1572,6 +1641,14 @@ export class SceneRenderer {
         this.animations.apply(node.id, playedClip(applied.model.clips ?? []))
       }
       this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
+
+      // The document's own rig, put back on. Its weights are NOT saved with it — they are derived
+      // from mesh and rig, like a BVH — so they are worked out again on every load. The skeleton
+      // is reported before that finishes: a rig that takes a minute to bind still has bones the
+      // inspector can name at once.
+      const held = applied.type === 'model' ? applied.model.rig : undefined
+      if (held) void this.skinModel(node.id, holder, held)
+
       // Read once and used twice: whether this model has bones at all is the same question the
       // helper asks, and answering it in two places is how the two came to disagree. The COUNT
       // and not the named ones — an export that stripped joint names still has a rig to draw.
@@ -1729,6 +1806,7 @@ export class SceneRenderer {
     // alive with it.
     this.animations.remove(id)
     this.unbindSkeleton(id)
+    this.stopSkinning(id)
 
     this.applied.delete(id)
 
@@ -2083,8 +2161,15 @@ function receivesShadow(node: SceneNode): boolean {
   return canReceiveShadow(node) && node.receiveShadow
 }
 
+/**
+ * Whether a model has to be built again rather than patched.
+ *
+ * A rig counts as much as an asset: putting one on replaces every mesh by a skinned one and hangs
+ * bones under the holder, which is a different object graph and not an edit of this one.
+ */
 function pointsElsewhere(previous: ModelNode, node: SceneNode): boolean {
-  return node.type === 'model' && previous.model.assetId !== node.model.assetId
+  if (node.type !== 'model') return true
+  return previous.model.assetId !== node.model.assetId || previous.model.rig !== node.model.rig
 }
 
 function disposeMaterial(mesh: Mesh): void {

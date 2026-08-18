@@ -78,6 +78,11 @@ export class SceneAnimations {
     return this.players.has(nodeId)
   }
 
+  /** What a node's file brought, for whoever has to say again what that model IS. */
+  clipsOf(nodeId: string): AnimationClip[] {
+    return this.players.get(nodeId)?.clips ?? []
+  }
+
   /**
    * Makes a node play what the document says. `null` puts the model back to its rest pose: with
    * no action left driving them, three restores the values the file was loaded with.

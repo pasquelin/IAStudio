@@ -154,6 +154,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onClips: (nodeId, clips, lengths) =>
         useModelClips.getState().report(documentId, nodeId, clips, lengths),
       onRig: (nodeId, rig) => useModelClips.getState().reportRig(documentId, nodeId, rig),
+      onRigProgress: (nodeId, progress) =>
+        useModelClips.getState().reportRigProgress(documentId, nodeId, progress),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onContextMenu: nodeId => openNodeMenu(documentId, nodeId),
       onStats: (scene, selected) => setStats({ scene, selected }),
