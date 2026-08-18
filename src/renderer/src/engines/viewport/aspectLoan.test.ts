@@ -16,7 +16,8 @@ describe('a pass that borrows the aspect of a camera', () => {
 
     loan.restore()
     expect(camera.aspect).toBe(1)
-    expect(camera.projectionMatrix.elements[0]).toBeCloseTo(square().projectionMatrix.elements[0], 5)
+    const built = square().projectionMatrix.elements[0]
+    expect(camera.projectionMatrix.elements[0]).toBeCloseTo(built, 5)
   })
 
   // A film hands over to a second camera mid-way, and the first one is never framed again.
