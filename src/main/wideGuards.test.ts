@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { LEAST_GUARDS, readsTheTree, wideGuardsUnder } from './wideGuards'
+import { LEAST_GUARDS, MOST_SLACK, readsTheTree, wideGuardsUnder } from './wideGuards'
 
 const ROOT = join(import.meta.dirname, '..', '..')
 const GUARDED = wideGuardsUnder(join(ROOT, 'src')).map(path => path.replace(`${ROOT}/`, ''))
@@ -116,5 +116,14 @@ describe('finding the tests no import graph reaches', () => {
   /** Why a floor at all is on `LEAST_GUARDS`; this is it checked against the tree it will read. */
   it('finds enough of them that a broken detector would say so', () => {
     expect(GUARDED.length).toBeGreaterThanOrEqual(LEAST_GUARDS)
+  })
+
+  /**
+   * The half a floor cannot hold on its own: it drifts DOWNWARDS as guards are added, and nothing
+   * says so. Measured on 2026-08-19 — 67 guards against a floor of 50, so a silent loss of
+   * seventeen would have passed, the very failure the floor was raised to 50 to stop.
+   */
+  it('stays close enough to the count that a real loss would still fail', () => {
+    expect(GUARDED.length - LEAST_GUARDS).toBeLessThanOrEqual(MOST_SLACK)
   })
 })
