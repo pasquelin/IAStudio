@@ -82,7 +82,7 @@ export type ViewportEngineOptions = {
    * listens publishes where the view now stands, and a store written sixty times a second
    * would repaint everything reading it for a drag that is not over.
    */
-  onCameraSettled?: () => void
+  onCameraSettled?: (pane: number) => void
   fieldOfView?: number
   near?: number
   far?: number
@@ -132,6 +132,8 @@ type ExtraPane = {
   orthographic: OrthographicCamera
   projection: ProjectionKind
   controls: OrbitControls | null
+  /** A camera of the SCENE this pane draws through instead of its own — see `setPaneCamera`. */
+  borrowed: PerspectiveCamera | null
 }
 
 /**
@@ -140,8 +142,9 @@ type ExtraPane = {
  */
 const EXTRA_PANE_HEIGHT = 6
 
-/** The camera an added view is currently drawing through. */
+/** The camera an added view is currently drawing through — a borrowed one wins over both. */
 function cameraOf(pane: ExtraPane): ViewportCamera {
+  if (pane.borrowed) return pane.borrowed
   return pane.projection === 'perspective' ? pane.perspective : pane.orthographic
 }
 
@@ -370,6 +373,7 @@ export class ViewportEngine {
       orthographic,
       projection: 'orthographic',
       controls: null,
+      borrowed: null,
     }
 
     const canvas = this.renderer?.domElement
@@ -382,8 +386,34 @@ export class ViewportEngine {
     // one canvas would each answer the same drag, and the three off-screen ones would answer it
     // invisibly.
     controls.enabled = false
+    // The index is read at the moment of the event rather than captured: panes are pushed after
+    // this returns, so nothing here knows yet which one this will be.
+    controls.addEventListener('end', () =>
+      this.options.onCameraSettled?.(this.extras.indexOf(pane) + 1),
+    )
     pane.controls = controls
     return pane
+  }
+
+  /**
+   * Draws a pane through a camera of the SCENE rather than through its own.
+   *
+   * The orbit follows: left on the camera nobody is drawing, a drag would turn something
+   * invisible. Handing it the borrowed camera is what makes orbiting in that pane MOVE the
+   * camera of the scene — which is the whole point, and why `onCameraSettled` carries the pane.
+   */
+  setPaneCamera(index: number, camera: PerspectiveCamera | null): void {
+    const pane = this.extras[index - 1]
+    if (index === 0 || !pane || pane.borrowed === camera) return
+
+    pane.borrowed = camera
+    const drawn = cameraOf(pane)
+    if (pane.controls) {
+      pane.controls.object = drawn
+      pane.controls.update()
+    }
+    this.layOutPanes()
+    this.requestRender()
   }
 
   /**
@@ -501,9 +531,8 @@ export class ViewportEngine {
       // On `end` rather than on `change`: the latter fires per frame of an orbit, and whoever
       // listens here publishes into a store. Once the hand lets go is when the framing is a
       // decision rather than a gesture in progress.
-      if (this.options.onCameraSettled) {
-        this.controls.addEventListener('end', this.options.onCameraSettled)
-      }
+      const settled = this.options.onCameraSettled
+      if (settled) this.controls.addEventListener('end', () => settled(0))
     }
 
     canvas.addEventListener('pointerdown', this.armPaneUnderPointer)

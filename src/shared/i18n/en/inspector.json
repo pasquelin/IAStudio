@@ -13,6 +13,8 @@
     "camera": "Camera",
     "path": "Path",
     "pathPoints": "Points",
+    "alignCamera": "Put this camera where I am looking",
+    "alignCameraHint": "Gives the camera the place and the direction of the current view",
     "shot": "Camera shot",
     "noShot": "Open a shot for this camera at the playhead to give it a move.",
     "rail": "Rail",

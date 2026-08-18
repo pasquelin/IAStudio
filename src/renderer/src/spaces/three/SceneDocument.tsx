@@ -3,7 +3,7 @@ import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { ExportFormat, Vector3 } from '@shared/domain/scene'
 import { withMovedPoint } from '@/engines/scene/cameraPath'
-import { setPath } from '@/engines/scene/commands'
+import { setPath, setTransform } from '@/engines/scene/commands'
 import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PANE_TOOLBAR } from '@/design/styles'
@@ -177,6 +177,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onSelectPathPoint: picked => useSceneViews.getState().setPickedPathPoint(documentId, picked),
       onPathPoint: (nodeId, index, point) => movePathPoint(documentId, nodeId, index, point),
+      // Orbiting a pane locked onto a camera MOVES that camera: an edit of the document, so it
+      // lands as a command — one per gesture, since the engine reports on release.
+      onCameraMoved: (nodeId, transform) =>
+        useScenes.getState().runCommand(documentId, setTransform(nodeId, transform)),
       onContextMenu: nodeId => openNodeMenu(documentId, nodeId),
       onStats: (scene, selected) => setStats({ scene, selected }),
       // Published so a montage can look through this very view: a scene with no camera of its
@@ -422,6 +426,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       {view.quad && (
         <ScenePaneGrid
           views={view.panes}
+          cameras={scene.nodes.filter(node => node.type === 'camera')}
           onView={(pane, chosen) => useSceneViews.getState().setPaneView(documentId, pane, chosen)}
         />
       )}

@@ -112,6 +112,7 @@ import {
   showsEdges,
   directionOf,
   framingPlacement,
+  isCameraView,
   plainVector,
   viewPosition,
   type CameraPlacement,
@@ -172,6 +173,11 @@ export type SceneRendererOptions = {
   onSelectPathPoint?: (picked: { nodeId: string; index: number } | null) => void
   /** Where a picked control point was dragged to, in the frame of the rail that holds it. */
   onPathPoint?: (nodeId: string, index: number, point: PlainVector3) => void
+  /**
+   * A camera of the scene was moved by orbiting the pane locked onto it — an EDIT of the
+   * document, unlike moving the view, and reported once per gesture rather than per frame.
+   */
+  onCameraMoved?: (nodeId: string, transform: Transform) => void
   /**
    * A node right-clicked in the viewport, for whoever raises the menu — this side draws none.
    *
@@ -320,7 +326,7 @@ export class SceneRenderer {
     // A preview shows what the camera FILMS: the same pass the film and the montage take.
     onInset: () => this.hideWorkshop(),
     // Read back rather than computed here: only the controls know where an orbit ended up.
-    onCameraSettled: () => this.options.onView?.(this.viewPlacement()),
+    onCameraSettled: pane => this.reportCameraSettled(pane),
     // Only here: the texture and skybox viewports show what they show without any light told to
     // cast, so a depth pass per frame would buy them nothing.
     shadows: true,
@@ -774,6 +780,12 @@ export class SceneRenderer {
     this.viewport.setPaneHeight(this.sceneHeight())
 
     for (const [index, view] of this.paneViews.entries()) {
+      // A pane locked onto a camera of the scene draws through IT: orbiting there then moves
+      // that camera, which is what `onCameraSettled` writes back to the document.
+      const locked = isCameraView(view) ? this.cameraObject(view.nodeId) : null
+      this.viewport.setPaneCamera(index, locked)
+      if (isCameraView(view)) continue
+
       this.viewport.setPaneProjection(index, view === 'free' ? 'perspective' : 'orthographic')
 
       // Read AFTER the projection is set: swapping it hands the pane a different camera object.
@@ -2113,6 +2125,24 @@ export class SceneRenderer {
     const rest = transformOf(object)
     this.boneRests.set(key, rest)
     return rest
+  }
+
+  /**
+   * A hand has let go of a camera. Which camera decides where it is written.
+   *
+   * A pane locked onto a camera of the scene orbits THAT camera, so the gesture is an edit of
+   * the document and lands as one command — once per gesture, never per frame of it. Every other
+   * pane moves the view, which is session state and goes to `onView`.
+   */
+  private reportCameraSettled(pane: number): void {
+    const view = this.paneViews[pane]
+    const object = isCameraView(view) ? this.cameraObject(view.nodeId) : null
+
+    if (isCameraView(view) && object) {
+      this.options.onCameraMoved?.(view.nodeId, transformOf(object))
+      return
+    }
+    if (pane === 0) this.options.onView?.(this.viewPlacement())
   }
 
   /** Aims the gizmo at a bone, or lets go of the one it held. */

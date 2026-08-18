@@ -20,6 +20,7 @@ import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from './DescriptorSection'
 import { AnimationSection } from './AnimationSection'
+import { CameraAlignButton } from './CameraAlignButton'
 import { CameraShotSection } from './CameraShotSection/CameraShotSection'
 import { RigSection } from './RigSection'
 import { EnvironmentSection } from './EnvironmentSection'
@@ -171,7 +172,9 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
             fields={lens}
             onChange={(name, value) => edit.run(setCameraOn(selection, name, value))}
             gesture={edit.gesture}
-          />
+          >
+            <CameraAlignButton documentId={documentId} camera={camera} />
+          </DescriptorSection>
           <CameraShotSection
             camera={camera}
             shot={shotOfCameraAt(animation, camera.id, playhead)}

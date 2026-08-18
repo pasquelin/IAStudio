@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PANE_VIEWS } from '@/engines/scene/sceneView'
 import { ScenePaneGrid } from './ScenePaneGrid'
 
+/** One camera of the scene, so a pane has something to be locked onto. */
+const CAMERAS = [{ id: 'cam-a', name: 'Camera A' }]
+
 describe('the four views and their seams', () => {
   /**
    * The accessible name carries the word that is ON SCREEN, and the rank only tells the four
@@ -11,7 +14,7 @@ describe('the four views and their seams', () => {
    * reach by saying what they see (WCAG SC 2.5.3).
    */
   it('names each view by the word it shows, then by its rank', () => {
-    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={vi.fn()} />)
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} cameras={CAMERAS} onView={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: 'Perspective — vue 1' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'De dessus — vue 2' })).toBeInTheDocument()
@@ -21,7 +24,7 @@ describe('the four views and their seams', () => {
 
   it('lets a view be changed to any of the seven, and says which one it is', async () => {
     const onView = vi.fn()
-    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={onView} />)
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} cameras={CAMERAS} onView={onView} />)
 
     await userEvent.click(screen.getByRole('button', { name: /vue 2/ }))
     await userEvent.click(await screen.findByRole('menuitemradio', { name: /De droite/ }))
@@ -32,7 +35,7 @@ describe('the four views and their seams', () => {
   /** Two perspectives and two sides is a layout the user is entitled to ask for. */
   it('offers the free view to a quarter that already holds a side', async () => {
     const onView = vi.fn()
-    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={onView} />)
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} cameras={CAMERAS} onView={onView} />)
 
     await userEvent.click(screen.getByRole('button', { name: /vue 3/ }))
     await userEvent.click(await screen.findByRole('menuitemradio', { name: /Perspective/ }))
@@ -41,7 +44,7 @@ describe('the four views and their seams', () => {
   })
 
   it('ticks the view a quarter is on', async () => {
-    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={vi.fn()} />)
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} cameras={CAMERAS} onView={vi.fn()} />)
 
     await userEvent.click(screen.getByRole('button', { name: /vue 2/ }))
 
@@ -53,7 +56,9 @@ describe('the four views and their seams', () => {
 
   /** A drag has to reach the canvas underneath; only the labels take the pointer. */
   it('lets the pointer through everywhere but its own buttons', () => {
-    const { container } = render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={vi.fn()} />)
+    const { container } = render(
+      <ScenePaneGrid views={DEFAULT_PANE_VIEWS} cameras={CAMERAS} onView={vi.fn()} />,
+    )
 
     expect(container.firstElementChild).toHaveClass('pointer-events-none')
     expect(screen.getByRole('button', { name: /vue 1/ })).toHaveClass('pointer-events-auto')
@@ -61,7 +66,7 @@ describe('the four views and their seams', () => {
 
   /** A bare word reads as a caption: the chevron is what says the label opens something. */
   it('shows that the label opens a menu', () => {
-    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={vi.fn()} />)
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} cameras={CAMERAS} onView={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: /vue 1/ }).querySelector('svg')).not.toBeNull()
   })
@@ -71,7 +76,7 @@ describe('the four views and their seams', () => {
    * per line — which is what a viewport four rectangles wide showed on screen.
    */
   it('keeps its label on one line rather than stretching it down the pane', () => {
-    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={vi.fn()} />)
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} cameras={CAMERAS} onView={vi.fn()} />)
 
     const button = screen.getByRole('button', { name: /vue 1/ })
     expect(button).toHaveClass('whitespace-nowrap')
@@ -80,14 +85,14 @@ describe('the four views and their seams', () => {
 
   /** The space keeps its tool rail down the left edge: a label in that corner sits behind it. */
   it('keeps its labels out of the corner the toolbar occupies', () => {
-    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={vi.fn()} />)
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} cameras={CAMERAS} onView={vi.fn()} />)
 
     const cell = screen.getByRole('button', { name: /vue 1/ }).parentElement
     expect(cell).toHaveClass('justify-end')
   })
 
   it('falls back to the free view for a quarter nothing has set', () => {
-    render(<ScenePaneGrid views={[]} onView={vi.fn()} />)
+    render(<ScenePaneGrid views={[]} cameras={CAMERAS} onView={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: /vue 1/ })).toHaveTextContent('Perspective')
   })

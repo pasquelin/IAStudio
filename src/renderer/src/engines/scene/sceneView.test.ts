@@ -23,7 +23,9 @@ import {
   viewPosition,
   framingDistance,
   framingPlacement,
+  transformFromPlacement,
 } from './sceneView'
+import { IDENTITY_TRANSFORM } from './sceneState'
 import {
   DISPLAY_MODES,
   VIEW_DIRECTIONS,
@@ -32,6 +34,46 @@ import {
 } from '@shared/domain/scene'
 
 const ORIGIN = new Vector3(0, 0, 0)
+
+describe('transformFromPlacement', () => {
+  const rest = { ...IDENTITY_TRANSFORM, scale: { x: 2, y: 2, z: 2 } }
+
+  it('stands the node where the view stands', () => {
+    const placed = transformFromPlacement(
+      { position: { x: 1, y: 2, z: 3 }, target: { x: 0, y: 0, z: 0 } },
+      rest,
+    )
+
+    expect(placed.position).toEqual({ x: 1, y: 2, z: 3 })
+  })
+
+  // A camera born from the Add menu looks down −Z: standing at +Z and watching the origin, it
+  // has nothing to turn at all.
+  it('turns it to look where the view looks', () => {
+    const straight = transformFromPlacement(
+      { position: { x: 0, y: 0, z: 5 }, target: { x: 0, y: 0, z: 0 } },
+      rest,
+    )
+    expect(straight.rotation.y).toBeCloseTo(0, 6)
+
+    const sideways = transformFromPlacement(
+      { position: { x: 5, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } },
+      rest,
+    )
+    // A quarter turn, in the direction three's own `lookAt` gives — which is the whole reason
+    // this goes through an `Object3D` rather than composing the angles by hand.
+    expect(Math.abs(sideways.rotation.y)).toBeCloseTo(Math.PI / 2, 6)
+  })
+
+  it('leaves the scale the node stood at, since aiming a camera never resizes it', () => {
+    const placed = transformFromPlacement(
+      { position: { x: 1, y: 1, z: 1 }, target: { x: 0, y: 0, z: 0 } },
+      rest,
+    )
+
+    expect(placed.scale).toEqual(rest.scale)
+  })
+})
 
 describe('viewPosition', () => {
   it('stands on the axis the side names, at the distance it was given', () => {

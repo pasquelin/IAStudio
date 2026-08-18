@@ -253,6 +253,43 @@ describe('a viewport', () => {
       expect(engine.paneAtPointer(pointerAt(100, 100))).toBe(0)
     })
 
+    it('draws a locked pane through the camera it was lent, and gives it the orbit', () => {
+      const engine = atRest()
+      engine.setLayout('quad')
+      const lent = new PerspectiveCamera()
+
+      engine.setPaneCamera(1, lent)
+
+      expect(engine.paneCameras[1]).toBe(lent)
+      // The orbit follows, or a drag in that pane would turn a camera nobody is drawing.
+      expect(engine.paneOrbits[1]?.object).toBe(lent)
+    })
+
+    it('gives a pane its own camera back when the loan ends', () => {
+      const engine = atRest()
+      engine.setLayout('quad')
+      const own = engine.paneCameras[1]
+
+      engine.setPaneCamera(1, new PerspectiveCamera())
+      engine.setPaneCamera(1, null)
+
+      expect(engine.paneCameras[1]).toBe(own)
+    })
+
+    // Which pane settled is what tells a caller whether a gesture moved the VIEW or a camera of
+    // the scene — the two land in different places, and one of them is an edit.
+    it('says which pane a settled orbit belongs to', () => {
+      const settled = vi.fn()
+      const engine = atRest({ onCameraSettled: settled })
+      engine.setLayout('quad')
+
+      engine.orbit?.dispatchEvent({ type: 'end' })
+      expect(settled).toHaveBeenLastCalledWith(0)
+
+      engine.paneOrbits[1]?.dispatchEvent({ type: 'end' })
+      expect(settled).toHaveBeenLastCalledWith(1)
+    })
+
     it('draws one pass and no scissor while there is one view', () => {
       const engine = atRest()
       rendered.mockClear()
