@@ -143,7 +143,23 @@ const OPENABLE_EXTENSIONS: readonly string[] = [
 export function opensInStudio(fileName: string): boolean {
   if (natureOf(fileName).role === 'edit') return true
 
-  return OPENABLE_EXTENSIONS.includes(extensionOf(fileName).toLowerCase())
+  return sourceNatureOf(fileName).openable
+}
+
+/**
+ * What a file could be as MATERIAL — bytes to look at — whatever a document of that name would
+ * be. The two questions came apart the day a document took the extension of an open format: an
+ * `.ora` from another application is a picture to adopt, and `natureOf` calls it an edit.
+ *
+ * `openable` is narrower than a domain on purpose: `.heic` and `.gltf` carry one and nothing here
+ * draws them, so adopting one would post a tab over a file the studio cannot show.
+ */
+export function sourceNatureOf(fileName: string): { domain: FileDomain; openable: boolean } {
+  const extension = extensionOf(fileName).toLowerCase()
+  return {
+    domain: DOMAIN_BY_EXTENSION[extension] ?? 'other',
+    openable: OPENABLE_EXTENSIONS.includes(extension),
+  }
 }
 
 /**

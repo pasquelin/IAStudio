@@ -92,6 +92,36 @@ describe('adoptFile', () => {
   })
 
   /**
+   * A document wears the extension of an open format now, so the spelling of a picture painted
+   * in another application is also the spelling of one of ours. Asked as MATERIAL, `.ora` is a
+   * picture — refusing it because a document could bear that name is what stopped the studio
+   * from ever opening a layered picture made anywhere else.
+   */
+  it('adopts a layered picture another application wrote, document spelling or not', async () => {
+    await put('Images/planche.ora')
+
+    expect(await adoptFile('Images/planche.ora', deps())).toMatchObject({
+      type: 'image',
+      path: 'Images/planche.ora',
+    })
+  })
+
+  /**
+   * The other side of the same rule, and what keeps a document out of the shelf: the three other
+   * spellings a document wears carry no source domain, so nothing here can take one for material.
+   */
+  it('takes no document spelling the studio cannot draw as material', async () => {
+    await put('Repérages/décor.gltf', new Uint8Array([0x7b, 0x7d]))
+    await put('Montages/bande.otio', new Uint8Array([0x7b, 0x7d]))
+    await put('Matières/roche.mtlx', new Uint8Array([0x7b, 0x7d]))
+
+    expect(await adoptFile('Repérages/décor.gltf', deps())).toBeNull()
+    expect(await adoptFile('Montages/bande.otio', deps())).toBeNull()
+    expect(await adoptFile('Matières/roche.mtlx', deps())).toBeNull()
+    expect(await catalog.search({})).toHaveLength(0)
+  })
+
+  /**
    * The suffix wins even when it lies, as every system does — the one exception is having no
    * suffix at all, where the bytes are the only thing left to read.
    */
