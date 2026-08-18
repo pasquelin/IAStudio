@@ -497,6 +497,41 @@ texture** ouvre la liste ; **Retirer la texture** la vide.
 | **Cible** | vers quoi elle pointe |
 | **Couleur du ciel** / **Couleur du sol** | hémisphérique seulement |
 
+### Pour une caméra
+
+Une caméra a **son objectif**, et, dès qu’un plan la couvre, **ce que ce plan lui fait faire**.
+
+| Champ | Ce qu’il règle |
+|---|---|
+| **Angle de vue** | ce que la caméra embrasse, en degrés. C’est le zoom : petit angle = téléobjectif, grand angle = grand-angle |
+| **Distance proche** | en deçà, plus rien n’est dessiné. Jamais zéro — le tri des profondeurs n’aurait plus de marge |
+| **Distance lointaine** | au-delà, plus rien n’est dessiné |
+
+Le bouton **Poser cette caméra là où regarde la vue** lui donne la place et la direction de la
+vue en cours : cadrez à la souris, cliquez, la caméra y est.
+
+#### Plan caméra
+
+Cette section porte **le plan qui couvre la tête de lecture** : ce qui **déplace** la caméra
+pendant ce plan, et ce qu’elle **regarde**. Tant qu’aucun plan ne couvre la tête, elle ne montre
+que le bouton **Créer un chemin pour cette caméra** — qui ouvre alors le plan et pose le rail du
+même geste.
+
+| Champ | Ce qu’il fait |
+|---|---|
+| **Chemin** | le rail que la caméra emprunte pendant ce plan. **Aucun** la laisse là où son emplacement et ses clés la mettent |
+| **Créer un chemin pour cette caméra** | pose un chemin devant la caméra, dans son axe de visée, et le lie à ce plan. **Un seul `⌘Z` annule les deux** — et si aucun plan ne couvre la tête, le bouton en ouvre un du même geste |
+| **Courbe de vitesse** | **Constante**, **Départ doux**, **Arrivée douce**, **Départ et arrivée doux**. Sans elle, un travelling démarre et s’arrête net |
+| **Départ sur le chemin** / **Arrivée sur le chemin** | de 0 à 1, la portion de rail réellement parcourue. **Un départ plus grand que l’arrivée fait rouler le rail à l’envers** |
+| **Cible** | **Libre** — la caméra regarde là où sa rotation la tourne · **Un point** — elle vise des coordonnées, réglées par **Point visé** · **le nom d’un objet** — elle le suit, même si cet objet est lui-même animé |
+
+**La vitesse est régulière le long du rail**, quelles que soient les distances entre ses points :
+à la moitié du plan la caméra a parcouru la moitié de la **longueur** du chemin, pas la moitié de
+ses segments.
+
+**Ces réglages vivent sur le PLAN, pas sur la caméra.** La même caméra peut donc faire un
+travelling dans un plan et rester fixe dans le suivant, viser la statue ici et la porte là.
+
 ### Ombres
 
 Deux interrupteurs, sur chaque objet qui peut en avoir :
@@ -880,6 +915,24 @@ Ajoutez une **caméra** à la scène (menu Ajouter → Objet → Caméra). C’e
 elle se déplace au gizmo, elle s’anime comme n’importe quel objet, et un export glTF l’emporte
 avec lui.
 
+#### L’aperçu — voir ce que la caméra filme
+
+**Choisissez une caméra, et un encart s’ouvre en haut à droite de la vue** : ce qu’elle voit, à
+l’instant où se tient la tête de lecture, au format d’une vidéo. En haut, son nom. Il se referme
+en désélectionnant la caméra.
+
+Ce n’est pas une vue de travail mais une **image de rendu** : ni grille, ni poignées, ni
+squelettes, ni repères de lumières ou de caméras — exactement ce que le fichier vidéo contiendra.
+
+| Geste | Ce qu’il fait |
+|---|---|
+| **Glisser l’encart** | le déplace dans la vue, s’il gêne |
+| **Agrandir l’aperçu à toute la vue** | l’encart prend toute la surface. Le même bouton, devenu **Remettre l’aperçu dans son coin**, le renvoie d’où il vient |
+
+**La pastille « À l’antenne »** s’allume quand la caméra choisie est aussi celle que le montage
+désigne à cet instant. C’est la seule chose qui distingue les deux : **l’aperçu suit ce que vous
+avez sélectionné**, le montage et le rendu suivent ce que les plans décident — voir plus bas.
+
 **Une scène peut en porter plusieurs et changer de caméra en cours de route.** C’est le rôle des
 **plans**, posés sur la bande du bas :
 
@@ -916,8 +969,9 @@ avant de calculer quoi que ce soit** — un rendu prend des minutes.
 
 L’espace Modélisation a désormais tout ce que ce manuel décrit. Ce qui reste tient en deux phrases : les
 polices s’offrent en une seule graisse par famille, et un texte ne se plie pas le long d’une
-courbe. Côté animation, les clés s’enchaînent en ligne droite — il n’y a pas encore de courbes
-d’accélération —, et une séquence d’un modèle se joue seule, sans fondu vers une autre.
+courbe. Côté animation, **les clés** s’enchaînent en ligne droite — il n’y a pas encore de courbes
+d’accélération pour elles, la **Courbe de vitesse** d’un plan caméra étant la seule du studio —, et
+une séquence d’un modèle se joue seule, sans fondu vers une autre.
 
 Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 
