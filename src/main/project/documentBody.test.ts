@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_VERSION, type DocumentFile } from '@shared/domain/document'
+import { GLTF_STUDIO_KEY, isGltfDocument } from '@shared/domain/gltf'
 import { bodyFormatOf, ENVELOPED } from './documentBody'
 
 const scene = bodyFormatOf('.gltf')
 const otio = bodyFormatOf('.otio')
+
+const gltf = (studio: Record<string, unknown> = {}): string =>
+  JSON.stringify({
+    asset: { version: '2.0' },
+    scene: 0,
+    scenes: [{ nodes: [], extras: { [GLTF_STUDIO_KEY]: studio } }],
+    nodes: [],
+  })
 
 const timeline = (studio: Record<string, unknown> = {}): string =>
   JSON.stringify({
@@ -33,11 +42,60 @@ describe('a document of the studio’s own spelling', () => {
   it('is what an unlisted extension is spelt in', () => {
     expect(bodyFormatOf('.whatever')).toBe(ENVELOPED)
   })
+})
 
-  // Two kinds wear `.gltf`, and neither needs a format of its own for that: the envelope already
-  // carries the kind, and `descriptorOf` is what bounds which one a file may claim.
-  it('spells a scene in the studio’s own envelope, as it always did', () => {
-    expect(scene).toBe(ENVELOPED)
+describe('a scene held as glTF', () => {
+  it('writes the standard file and nothing else', () => {
+    const written = scene.write({
+      version: 1,
+      kind: 'scene',
+      title: 'Level',
+      updatedAt: '',
+      content: gltf({ documentId: 'doc-3', documentKind: 'scene' }),
+    })
+
+    // The whole file parses as one document: an envelope would leave a second line no glTF
+    // reader has a schema for, and `startsWith('{')` alone cannot tell the two apart.
+    expect(isGltfDocument(JSON.parse(written))).toBe(true)
+    expect(scene.read(written)).toMatchObject({ kind: 'scene', id: 'doc-3' })
+  })
+
+  // The field another application shows, on the scene the document points at — a rename would
+  // otherwise leave the old title inside a file the studio has just called something else.
+  it('stamps the title into the name the standard holds', () => {
+    const written = scene.write({
+      version: 1,
+      kind: 'scene',
+      title: 'Repérage',
+      updatedAt: '',
+      content: gltf(),
+    })
+
+    expect(written).toContain('"name": "Repérage"')
+  })
+
+  // The sky wears this extension too, and is still written the studio's own way: what the file
+  // holds decides, never the name it wears.
+  it('writes the envelope for a document that is not glTF', () => {
+    const sky: DocumentFile = {
+      version: DOCUMENT_VERSION,
+      kind: 'skybox',
+      title: 'Ciel',
+      updatedAt: '2026-08-18T10:00:00.000Z',
+      id: 'doc-9',
+      content: '{"adjustments":{}}',
+    }
+
+    expect(scene.read(scene.write(sky))).toEqual(sky)
+  })
+
+  it('takes the kind from the file, this container serving two editors', () => {
+    expect(scene.read(gltf({ documentKind: 'skybox' })).kind).toBe('skybox')
+    expect(scene.read(gltf()).kind).toBe('scene')
+  })
+
+  it('takes no id from a glTF that carries none', () => {
+    expect(scene.read(gltf()).id).toBeUndefined()
   })
 })
 

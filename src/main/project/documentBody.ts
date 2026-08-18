@@ -8,6 +8,12 @@ import {
   type DocumentFile,
 } from '@shared/domain/document'
 import {
+  gltfStudioMetadata,
+  isGltfDocument,
+  GLTF_DOCUMENT_ID,
+  GLTF_DOCUMENT_KIND,
+} from '@shared/domain/gltf'
+import {
   isOtioTimeline,
   otioStudioMetadata,
   OTIO_DOCUMENT_ID,
@@ -80,8 +86,30 @@ const OPEN_TIMELINE: DocumentBodyFormat = {
   readHead: async file => otioDocument(await readFile(file, 'utf8')),
 }
 
+/**
+ * The container the 3D scene and the sky share. Only the scene has the BYTES to match so far, so
+ * this format holds two spellings and the FILE decides between them: a glTF document, or the
+ * studio's envelope a sky still writes — and a scene written before the switch.
+ */
+const OPEN_SCENE: DocumentBodyFormat = {
+  read: sceneDocument,
+  write: document =>
+    isGltfDocument(jsonOrNull(document.content)) ? gltfBody(document) : ENVELOPED.write(document),
+  // Read whole, the studio's metadata sitting inside the file rather than on a line of its own.
+  // The envelope is tried first all the same: a sky is still written that way, and its head is
+  // the bounded read it has always been.
+  readHead: async file => {
+    try {
+      return await ENVELOPED.readHead(file)
+    } catch {
+      return sceneDocument(await readFile(file, 'utf8'))
+    }
+  },
+}
+
 const FORMAT_BY_EXTENSION: Record<string, DocumentBodyFormat> = {
   [EXTENSIONS_BY_KIND.sequence]: OPEN_TIMELINE,
+  [EXTENSIONS_BY_KIND.scene]: OPEN_SCENE,
 }
 
 /** How a file of this extension is spelt — the studio's own envelope for anything unlisted. */
@@ -146,6 +174,65 @@ function otioBody(document: DocumentFile): string {
     null,
     2,
   )
+}
+
+/** A parse that answers `null` rather than throwing — asked of a body of unknown spelling. */
+function jsonOrNull(body: string): unknown {
+  try {
+    return JSON.parse(body)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * A scene document, in whichever of the two spellings its file holds. The glTF is what the studio
+ * writes now; the envelope is what a sky still writes, and what a scene written before the switch
+ * holds — refusing it would drop those from every listing.
+ */
+function sceneDocument(body: string): DocumentFile {
+  const parsed = jsonOrNull(body)
+  if (!isGltfDocument(parsed)) return envelopedDocument(body)
+
+  const studio = gltfStudioMetadata(parsed)
+  const id = readString(studio, GLTF_DOCUMENT_ID, '')
+  const claimed = readString(studio, GLTF_DOCUMENT_KIND, '')
+  return {
+    version: DOCUMENT_VERSION,
+    kind: isDocumentKind(claimed) ? claimed : 'scene',
+    title: '',
+    updatedAt: '',
+    ...(id ? { id } : {}),
+    content: body,
+  }
+}
+
+/**
+ * The standard file and nothing else, for the reason `otioBody` gives: a line of ours in front of
+ * it would make the document unreadable to every other application.
+ *
+ * The scene's name is stamped from the title so a RENAME reaches the field a reader shows. It sits
+ * on the default scene, which is the one the studio's own data hangs from.
+ */
+function gltfBody(document: DocumentFile): string {
+  const parsed = jsonOrNull(document.content)
+  if (!isGltfDocument(parsed)) throw new Error('Refusing to write a scene that is not glTF')
+
+  return JSON.stringify(named(parsed, document.title), null, 2)
+}
+
+/** The document with its default scene renamed, or as it stands when it has no title to give. */
+function named(document: Record<string, unknown>, title: string): Record<string, unknown> {
+  const scenes = document.scenes
+  const at = typeof document.scene === 'number' ? document.scene : 0
+  if (!title || !Array.isArray(scenes) || !isRecord(scenes[at])) return document
+
+  return {
+    ...document,
+    scenes: scenes.map((scene, index) =>
+      index === at && isRecord(scene) ? { ...scene, name: title } : scene,
+    ),
+  }
 }
 
 /**

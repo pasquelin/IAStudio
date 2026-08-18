@@ -550,6 +550,13 @@ stands in the scene, not where it stands inside its group.
 
 **3D scenes can save**, as do the six other document kinds.
 
+**The file written is a `.gltf`, and it is a real glTF**: another application opens it and finds
+the scene tree, the name and place of every object, the cameras, and the directional, point and
+spot lights. What the standard does not carry — the shape of the primitives, the materials, the
+rails, the camera shots, the animation — travels inside the same file but **is read by Scenario
+alone**. Nothing is lost from one save to the next; what opens elsewhere is poorer than what you
+see here.
+
 A tab whose work is not yet written carries **a dot** (`•`) beside its name. The dot disappears on
 save and comes back on the next change.
 

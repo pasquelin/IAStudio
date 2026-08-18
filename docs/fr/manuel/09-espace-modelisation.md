@@ -567,6 +567,13 @@ est dans la scène, pas là où il est dans son groupe.
 
 **Les scènes 3D savent s’enregistrer**, comme les six autres types de documents.
 
+**Le fichier écrit est un `.gltf`, et c’est un vrai glTF** : un autre logiciel l’ouvre et y trouve
+l’arbre de la scène, le nom et la place de chaque objet, les caméras et les lumières
+directionnelles, ponctuelles et coniques. Ce que le standard ne porte pas — la forme des
+primitives, les matières, les rails, les plans de caméra, l’animation — voyage dans le même
+fichier mais **n’est lu que par Scenario**. Rien ne se perd d’un enregistrement à l’autre ; ce qui
+s’ouvre ailleurs est plus pauvre que ce que vous voyez ici.
+
 Un onglet dont le travail n’est pas encore écrit porte **un point** (`•`) à côté de son nom. Le
 point disparaît à l’enregistrement et revient à la modification suivante.
 

@@ -10,7 +10,7 @@ import {
 import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import { chainsOnMontage, parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
-import { scenePayload, sceneFromPayload } from '@/engines/scene/sceneDocument'
+import { gltfDocumentOf, sceneFromGltf } from '@/engines/scene/gltfDocument'
 import { parseSkybox } from '@/engines/skybox/skyboxState'
 import {
   EMPTY_SEQUENCE,
@@ -496,8 +496,8 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   // No `writeAsset`, and the reason is the kind itself: a scene is not a mesh — the asset it was
   // opened from is one node of it.
   scene: textDocumentIo(sceneStore, {
-    toPayload: scenePayload,
-    fromPayload: sceneFromPayload,
+    toPayload: (state, documentId) => gltfDocumentOf(state, { documentId, documentKind: 'scene' }),
+    fromPayload: sceneFromGltf,
     createDefault: createDefaultScene,
   }),
   // Nor here: rendering a montage is minutes of work, which has no business on a keystroke.
