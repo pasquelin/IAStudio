@@ -375,6 +375,16 @@ describe('the translation bundles', () => {
       { dropped: /champ de vision/i, kept: 'angle de vue' },
       { dropped: /maillages?/i, kept: 'maille', except: ['sceneDisplay.wireframeHint'] },
       { dropped: /matériaux?/i, kept: 'matière' },
+      /**
+       * `rigué` is English wearing a French ending, and the workspace that gave a mesh its bones
+       * had already decided against it: seven of its nine sentences said `squelette`, two command
+       * hints still said `rigué` and `un rig`.
+       *
+       * French only. English keeps `rig` beside `skeleton` because they are not the same thing
+       * there — a rig is the skeleton plus what drives it — and `SETTLED_WORDS.en` would be
+       * refusing a distinction the trade makes.
+       */
+      { dropped: /rigu[ée]e?s?|\brigs?\b/i, kept: 'squelette' },
     ],
     en: [
       { dropped: /file browser/i, kept: 'file manager' },

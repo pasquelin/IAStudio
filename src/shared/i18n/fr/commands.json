@@ -395,11 +395,11 @@
     },
     "sceneSkeletons": {
       "title": "Afficher les squelettes",
-      "help": "Dessine les os de chaque modèle rigué par-dessus la scène."
+      "help": "Dessine les os de chaque modèle à squelette par-dessus la scène."
     },
     "scenePoseMode": {
       "title": "Mode pose",
-      "help": "Bascule entre la sélection des objets et celle des os d’un rig."
+      "help": "Bascule entre la sélection des objets et celle des os d’un squelette."
     }
   }
 }
