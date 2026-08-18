@@ -67,7 +67,7 @@ Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ 3D**
 | **Redimensionner** | `S` | agrandit ou rétrécit avec les poignées |
 | **Magnétisme** | `M` | fait avancer les poignées **par crans** au lieu de les laisser libres |
 | **Repère local** | `L` | aligne les poignées sur l’orientation de **l’objet** plutôt que sur celle du monde |
-| **Mode de rendu** | `Z` | fait défiler les sept façons de dessiner ; le survol les offre une à une |
+| **Mode de rendu** | `Z` | fait défiler les neuf façons de dessiner ; le survol les offre une à une |
 | **Cadrer la sélection** | `F` | recentre la caméra sur l’objet choisi |
 
 La barre ne porte que ce qui se réclame **sans lâcher la souris**. Le reste est au menu natif :
@@ -75,7 +75,7 @@ La barre ne porte que ce qui se réclame **sans lâcher la souris**. Le reste es
 | Ce qui n’est pas dans la barre | Où le trouver |
 |---|---|
 | Projection, quatre vues, arêtes de quads, squelettes, mode pose | **Affichage**, en cases à cocher |
-| Les six côtés, les sept modes de rendu | **Affichage ▸ Point de vue** et **▸ Mode de rendu** |
+| Les six côtés, les neuf modes de rendu | **Affichage ▸ Point de vue** et **▸ Mode de rendu** |
 | Ajouter une maille, une lumière, un objet | **Ajouter** |
 | Dupliquer, grouper, supprimer | **Édition** |
 | Copier, couper, coller | **les touches seules** — voir plus bas |
@@ -294,6 +294,8 @@ aligne.
 | **Aperçu matière** | les matières sous le seul éclairage du studio, sans les lumières de la scène |
 | **Matcap** | un éclairage capté sur une sphère : c’est le relief qui se lit, pas la couleur |
 | **Densité** | du vert au rouge selon les triangles au centimètre carré : le rouge est à optimiser |
+| **Translucide** | les surfaces à peine posées, pour voir les articulations à l’intérieur |
+| **Squelette seul** | plus aucune surface — il ne reste que les os, pour les corriger sans rien deviner |
 
 Le bouton porte le mode en cours et le fait défiler à chaque clic ; son menu permet d’en choisir un
 directement. `Z` fait la même chose au clavier — **et en quatre vues, sur le

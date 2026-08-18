@@ -26,10 +26,10 @@ and download an image, is **everything that comes after**:
 > what is still missing is the chapter [What does not exist yet](18-limits.md) — it exists to be
 > read, not hidden.
 
-## Seven ways of working
+## Six ways of working
 
-The studio is not seven different applications. It is one application that **rearranges itself**
-according to what you are making. Those seven arrangements are called **workspaces**.
+The studio is not six different applications. It is one application that **rearranges itself**
+according to what you are making. Those six arrangements are called **workspaces**.
 
 | Workspace | What you make there | An example |
 |---|---|---|
@@ -74,7 +74,7 @@ A work in progress, open in a tab, in the centre of the window.
 The difference from an asset is the one between **material** and **work**: a generated image is an
 asset; the image you are painting on, with its layers and its history, is a document.
 
-There are seven kinds of document, one per workspace:
+There are six kinds of document, one per workspace:
 
 | Workspace | Document | File extension |
 |---|---|---|
