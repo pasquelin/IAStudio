@@ -197,12 +197,22 @@ raccourcis, et le bouton **Chercher par touche** ne les trouve pas.
 
 ## Espace Vidéo
 
-### Pas d’export
+### L’export vidéo sort sans le son
 
 Une séquence s’enregistre désormais en `.seq` et se rouvre telle quelle.
 
-**Il n’y a toujours pas d’export** : on ne peut pas encore produire un fichier vidéo final. C’est
-la limite la plus lourde du studio à ce jour, parce qu’elle empêche de livrer.
+**Fichier › Exporter la vidéo** écrit bien un fichier final, image par image, scènes 3D comprises.
+**Mais il sort muet** : les pistes de son du montage ne sont pas encore encodées dedans. C’est la
+limite la plus lourde de cet espace, parce qu’elle oblige à remonter le son ailleurs.
+
+### Un `.otio` ne se rouvre pas ici
+
+**Fichier › Exporter le montage (OTIO)** écrit le montage dans un format que d’autres logiciels de
+montage ouvrent. Le chemin inverse manque : on ne peut pas encore **ouvrir** un `.otio` dans le
+studio, ni celui d’un autre logiciel, ni un des siens.
+
+Et ce que ce format ne porte pas en standard — fondus, gains, liens image/son, scène 3D d’un clip
+vivant — voyage dans le fichier mais **n’est lu que par Scenario**.
 
 ### Les réglages d’une séquence sont figés
 
@@ -479,7 +489,7 @@ Si vous ne deviez retenir que cinq choses de ce chapitre :
    quoi que ce soit ; ce qui ne revient pas, c’est l’historique d’annulation ;
 2. **un recadrage ne se défait qu’à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;
-3. **il n’y a pas d’export vidéo** — le studio ne peut pas encore livrer un fichier final ;
+3. **l’export vidéo sort muet** — le fichier final est livrable, le son du montage n’y est pas ;
 4. **les familles Texture et Skybox n’ont pas de modèle par défaut** — ces deux espaces font
    rechoisir leur modèle à chaque session ;
 5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu’un `.glb`.
