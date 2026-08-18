@@ -775,14 +775,23 @@ personnage, transposé comme il le sera, et il se met à jouer aussitôt : ce qu
 le résultat, il n’y a pas d’aperçu qui pourrait en différer. Continuer à parcourir remplace le bloc
 posé par le suivant — il n’en reste jamais deux.
 
-**Deux sorties, et il n’y en a pas d’autres.** **Garder** laisse le bloc où il est et referme le
-volet : garder, c’est ne rien faire de plus. **Annuler** le reprend, et la scène revient où elle
-était.
+**Deux boutons pour sortir.** **Garder** laisse le bloc où il est et referme le volet : garder,
+c’est ne rien faire de plus. **Annuler** le reprend, et la scène revient où elle était.
 
-**Sous la liste, l’aperçu porte ses propres contrôles** : *Revenir au début*, *Jouer l’aperçu*, puis
-**Vitesse** et **En boucle** — les deux mêmes réglages que la section, écrits dans le bloc que vous
-venez de poser. Comme le ▶ de l’Inspecteur, cet aperçu tourne sur une horloge à lui et ne déplace
-pas la tête de lecture.
+**Le volet se ferme aussi tout seul, et ce qu’il advient du bloc dépend de la raison.** Cliquer
+hors du volet ou appuyer sur `Échap` sont des façons de le FERMER : le bloc est repris, comme avec
+Annuler. **Passer à une autre application n’en est pas une** — le studio referme le volet en
+**gardant** le bloc, exactement comme si vous aviez appuyé sur Garder, plutôt que de le reprendre
+pendant que vous regardez ailleurs.
+
+**Sous la liste, l’aperçu porte ses propres contrôles** : *Revenir au début*, *Jouer l’aperçu*,
+*Aller à la fin*, puis **Position**, **Vitesse** et **En boucle** — ces deux derniers étant les
+réglages de la section, écrits dans le bloc que vous venez de poser. Comme le ▶ de l’Inspecteur,
+cet aperçu tourne sur une horloge à lui et ne déplace pas la tête de lecture.
+
+**Position TIENT la pose où vous la laissez**, au lieu de tout ramener au début : c’est ce qui
+permet de juger une pose plutôt qu’un mouvement, et la lecture repart ensuite de là. *Aller à la
+fin* montre la dernière pose du mouvement — celle qui compte pour enchaîner sur le bloc suivant.
 
 **Le volet dit ensuite si le mouvement va au squelette**, en une ligne : « Le personnage sait jouer
 ce mouvement. », ou bien qu’il ne lui va pas parfaitement. **Aucun nom d’os n’est affiché

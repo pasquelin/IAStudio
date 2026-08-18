@@ -748,14 +748,23 @@ character, retargeted as it will be, and it starts playing at once: what you are
 the result, and no preview could ever differ from it. Carrying on browsing replaces the block that
 was laid with the next one — there are never two.
 
-**Two ways out, and there are no others.** **Keep** leaves the block where it is and closes the
-panel: keeping is doing nothing more. **Cancel** takes it back, and the scene returns to where it
-was.
+**Two buttons to leave by.** **Keep** leaves the block where it is and closes the panel: keeping is
+doing nothing more. **Cancel** takes it back, and the scene returns to where it was.
+
+**The panel also closes on its own, and what becomes of the block depends on why.** Clicking
+outside the panel or pressing `Esc` are ways of CLOSING it: the block is taken back, as with
+Cancel. **Switching to another application is not one** — the studio closes the panel **keeping**
+the block, exactly as if you had pressed Keep, rather than taking it back while you are looking
+elsewhere.
 
 **Below the list, the preview carries its own controls**: *Back to the start*, *Play the preview*,
-then **Speed** and **Loop** — the same two settings as the section, written into the block you have
-just laid. Like the ▶ of the Inspector, this preview runs on a clock of its own and does not move
-the playhead.
+*Go to end*, then **Position**, **Speed** and **Loop** — the last two being the section's own
+settings, written into the block you have just laid. Like the ▶ of the Inspector, this preview runs
+on a clock of its own and does not move the playhead.
+
+**Position HOLDS the pose where you leave it**, instead of running everything back to the start:
+that is what lets you judge a pose rather than a move, and playback then picks up from there. *Go
+to end* shows the motion's last pose — the one that matters for what the next block picks up from.
 
 **The panel then says whether the motion fits the skeleton**, in one line: "The character can play this
 motion.", or that it is not a perfect fit. **No bone name is shown up front** — *See the joints concerned*
