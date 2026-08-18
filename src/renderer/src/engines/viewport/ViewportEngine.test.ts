@@ -1,4 +1,10 @@
-import { ACESFilmicToneMapping, NoToneMapping, OrthographicCamera, PerspectiveCamera } from 'three'
+import {
+  ACESFilmicToneMapping,
+  Color,
+  NoToneMapping,
+  OrthographicCamera,
+  PerspectiveCamera,
+} from 'three'
 import type * as ThreeModule from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ViewportEngine } from './ViewportEngine'
@@ -20,6 +26,8 @@ const rendered = vi.fn()
 const viewported = vi.fn()
 const scissored = vi.fn()
 const scissorTest = vi.fn()
+const clearColor = vi.fn()
+const cleared = vi.fn()
 /** What the display is worth. Two is a laptop retina screen, which is where the fault showed. */
 let displayRatio = 1
 
@@ -52,6 +60,12 @@ vi.mock('three', async importOriginal => ({
     setViewport = viewported
     setScissor = scissored
     setScissorTest = scissorTest
+    // The preview clears its own rectangle before drawing, so it reads the clear colour back to
+    // put it where it found it. A double that answered nothing here failed inside the frame loop.
+    getClearColor = (target: { set: (hex: number) => unknown }): unknown => target.set(0x000000)
+    getClearAlpha = (): number => 1
+    setClearColor = clearColor
+    clear = cleared
     getPixelRatio = (): number => displayRatio
     render = (...args: unknown[]): void => {
       if (this.info.autoReset) this.info.reset()
@@ -210,12 +224,39 @@ describe('a viewport', () => {
       expect(viewported).not.toHaveBeenCalledWith(0, HOST_HEIGHT, HOST_WIDTH, HOST_HEIGHT)
     })
 
+    /**
+     * Seen on screen before it was written down: a scene with no background of its own draws
+     * NOTHING where it is empty, so the panes underneath showed straight through the picture and
+     * the preview read as a hole in the view. The clear obeys the scissor, so it paints that
+     * rectangle and nothing else — and the colour it found is put back for the frames after.
+     */
+    it('clears the preview to its own backdrop before drawing it', () => {
+      const engine = atRest()
+      clearColor.mockClear()
+      cleared.mockClear()
+
+      const backdrop = new Color('#123456')
+      engine.setInsetPane({
+        camera: new PerspectiveCamera(),
+        backdrop,
+        rect: { x: 500, y: 700, width: 100, height: 56 },
+      })
+      drawFrames()
+
+      expect(clearColor).toHaveBeenNthCalledWith(1, backdrop, 1)
+      expect(cleared).toHaveBeenCalledTimes(1)
+      // Put back, and with the alpha it was read with: every later frame clears to what the
+      // viewport itself uses, not to the preview's colour.
+      expect(clearColor).toHaveBeenLastCalledWith(expect.any(Color), 1)
+    })
+
     it('draws the camera preview as one more scissored pass, never a second context', () => {
       const engine = atRest()
       rendered.mockClear()
 
       engine.setInsetPane({
         camera: new PerspectiveCamera(),
+        backdrop: new Color(),
         rect: { x: 500, y: 700, width: 100, height: 56 },
       })
       drawFrames()
@@ -233,6 +274,7 @@ describe('a viewport', () => {
 
       engine.setInsetPane({
         camera: new PerspectiveCamera(),
+        backdrop: new Color(),
         rect: { x: 0, y: 0, width: 100, height: 56 },
       })
       drawFrames()
@@ -246,6 +288,7 @@ describe('a viewport', () => {
       const engine = atRest()
       engine.setInsetPane({
         camera: new PerspectiveCamera(),
+        backdrop: new Color(),
         rect: { x: 500, y: 700, width: 100, height: 56 },
       })
 

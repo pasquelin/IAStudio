@@ -48,9 +48,10 @@ export function CameraShotSection({
     return (
       <PropertySection title={t('inspector.shot')}>
         <PropertyRow label={t('inspector.rail')}>
-          <p className="text-muted text-tiny min-w-0 flex-1">{t('inspector.noShot')}</p>
           {/* Offered with no shot to hang it on: a rail drives nothing on its own, so the one
-              gesture opens both — and the button was unreachable until a shot was posed elsewhere. */}
+              gesture opens both — and the button was unreachable until a shot was posed elsewhere.
+              What it does is the button's TOOLTIP: a sentence laid in the row beside it overran
+              the panel and pushed the label out of line with every other row. */}
           <ToolButton
             icon={mdiVectorPolyline}
             label={t('inspector.addRail')}

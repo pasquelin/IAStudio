@@ -2,6 +2,7 @@ import {
   Box3,
   BufferGeometry,
   CameraHelper,
+  Color,
   type AnimationClip,
   DirectionalLight,
   GridHelper,
@@ -245,7 +246,7 @@ const STUDIO_INTENSITY = 0.4
 /** How far the pointer may wander between press and release and still count as a click, in px. */
 const CLICK_SLOP = 4
 
-/** How far an unselected camera's frustum is drawn, in metres. See `showAidsForSelection`. */
+/** How far a camera's frustum is OUTLINED, in metres. Never how far that camera sees. */
 const FRUSTUM_REACH = 2
 
 /**
@@ -573,22 +574,31 @@ export class SceneRenderer {
   }
 
   /**
-   * The working aids of a camera and of a rail, drawn in full only on what is selected.
+   * The working aids — a camera's frustum, a light's helper, a rail's knobs — shown on what is
+   * SELECTED and on nothing else.
    *
-   * A frustum reaches the camera's own `far` — a thousand metres by default — so two cameras
-   * already cross the whole viewport and five make it unreadable. Unselected, it is drawn short:
-   * enough to say where the camera stands and which way it looks, and still clickable, which is
-   * what selects a camera in the first place.
+   * A directional light draws a line clear across the scene and a frustum reaches its camera's
+   * `far`: three lamps and two cameras already cross the whole viewport, which is what made a
+   * scene unreadable. Selected, a frustum is still drawn SHORT — a thousand metres of outline
+   * says nothing a couple of metres does not, and the projection it is read off is put straight
+   * back, so what a film renders through is untouched.
+   *
+   * The price, and it is real: a light or a camera nobody has selected is no longer under the
+   * pointer, so it is selected from the scene tree. A resting mark that stays clickable is what
+   * would give that back.
    */
   private showAidsForSelection(): void {
     const selected = new Set(this.selectedIds)
 
-    for (const id of this.frustums.keys()) {
+    for (const [id, frustum] of this.frustums) {
       const node = this.applied.get(id)
       const camera = this.objects.get(id)
       if (node?.type !== 'camera' || !(camera instanceof PerspectiveCamera)) continue
-      applyCamera(camera, node.camera, selected.has(id) ? node.camera.far : FRUSTUM_REACH)
+      applyCamera(camera, node.camera, FRUSTUM_REACH)
+      frustum.visible = selected.has(id)
     }
+
+    for (const [id, helper] of this.helpers) helper.visible = selected.has(id)
 
     for (const [id, node] of this.applied) {
       if (node.type !== 'path') continue
@@ -1311,7 +1321,10 @@ export class SceneRenderer {
    */
   setCameraPreview(cameraNodeId: string | null, rect: PaneRect | null): void {
     const camera = this.cameraObject(cameraNodeId)
-    this.viewport.setInsetPane(camera && rect ? { camera, rect } : null)
+    // The viewport's own colour, never a panel one: what this shows is a RENDER, and a preview
+    // painted on studio chrome would promise a film nobody is going to get.
+    const backdrop = new Color(this.viewport.paletteToken('--color-viewport'))
+    this.viewport.setInsetPane(camera && rect ? { camera, rect, backdrop } : null)
   }
 
   /** The camera a node id stands for, or `null` when nothing in the scene answers to it. */
@@ -2367,8 +2380,13 @@ export class SceneRenderer {
     this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
 
     // Helpers are what makes a light clickable, and recursively: it is one of their children
-    // that the ray actually meets. Both they and the light carry the node's id.
-    const targets = [...this.objects.values(), ...this.helpers.values()]
+    // that the ray actually meets. Both they and the light carry the node's id. Only the ones on
+    // SCREEN: three's raycaster does not read `visible`, so a hidden helper would go on catching
+    // clicks over empty space and selecting a lamp nobody could see.
+    const targets = [
+      ...this.objects.values(),
+      ...[...this.helpers.values()].filter(helper => helper.visible),
+    ]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
     return hit ? nodeIdOf(hit.object, name => this.objects.has(name)) : null
   }

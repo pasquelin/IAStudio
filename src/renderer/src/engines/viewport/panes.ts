@@ -55,7 +55,11 @@ const INSET_MARGIN = 12
 const INSET_MAX_HEIGHT = 0.4
 
 /**
- * Where a camera preview sits: bottom right, at the aspect of what that camera films.
+ * Where a camera preview opens: top right, at the aspect of what that camera films.
+ *
+ * TOP and not bottom: the gizmo of whatever is selected stands at the middle of the view and its
+ * arms reach down and out, so a preview in the lower corner sat under the very handles a hand is
+ * reaching for.
  *
  * `null` for a surface with no room for one — an inset wider than the view it sits on would hide
  * the very thing it is a preview OF. Sized from the surface rather than fixed, so it stays the
@@ -71,7 +75,7 @@ export function insetRect(width: number, height: number, aspect: number): PaneRe
 
   return {
     x: width - insetWidth - INSET_MARGIN,
-    y: height - insetHeight - INSET_MARGIN,
+    y: INSET_MARGIN,
     width: insetWidth,
     height: insetHeight,
   }
@@ -89,10 +93,32 @@ export function previewRect(
   height: number,
   aspect: number,
   size: InsetSize,
+  offset: { x: number; y: number } = { x: 0, y: 0 },
 ): PaneRect | null {
   if (width <= 0 || height <= 0) return null
   if (size === 'full') return { x: 0, y: 0, width, height }
-  return insetRect(width, height, aspect)
+
+  const rect = insetRect(width, height, aspect)
+  return rect && movedInside(rect, width, height, offset)
+}
+
+/**
+ * The preview where it was dragged to, kept whole inside the view.
+ *
+ * Clamped rather than free: a preview pushed past the edge cannot be dragged back — the pointer
+ * has nothing left to grab — and one shoved off screen is indistinguishable from one that closed.
+ */
+function movedInside(
+  rect: PaneRect,
+  width: number,
+  height: number,
+  offset: { x: number; y: number },
+): PaneRect {
+  return {
+    ...rect,
+    x: Math.max(0, Math.min(width - rect.width, rect.x + offset.x)),
+    y: Math.max(0, Math.min(height - rect.height, rect.y + offset.y)),
+  }
 }
 
 /** Whether a point falls inside a rectangle — the inset's own test, and `paneAt`'s. */

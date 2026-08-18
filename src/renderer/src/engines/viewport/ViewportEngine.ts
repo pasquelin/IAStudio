@@ -120,6 +120,12 @@ export type InsetPane = {
   camera: PerspectiveCamera
   /** In CSS pixels, origin top-left, like every other pane rect. */
   rect: PaneRect
+  /**
+   * What the preview is cleared to before it draws. A scene with no background of its own is
+   * TRANSPARENT, and the panes underneath then showed straight through the picture — a preview
+   * one reads the viewport through is not a preview.
+   */
+  backdrop: Color
 }
 
 /**
@@ -754,14 +760,22 @@ export class ViewportEngine {
     const gl = glRect(inset.rect, height)
     const restore = this.options.onInset?.()
 
+    const held = renderer.getClearColor(new Color())
+    const heldAlpha = renderer.getClearAlpha()
+
     renderer.setScissorTest(true)
     try {
       renderer.setViewport(gl.x, gl.y, gl.width, gl.height)
       renderer.setScissor(gl.x, gl.y, gl.width, gl.height)
+      // Cleared to an opaque colour before anything is drawn: `clear` obeys the scissor, so this
+      // paints the preview's rectangle and nothing else.
+      renderer.setClearColor(inset.backdrop, 1)
+      renderer.clear(true, true, false)
       inset.camera.aspect = inset.rect.width / inset.rect.height
       inset.camera.updateProjectionMatrix()
       renderer.render(this.scene, inset.camera)
     } finally {
+      renderer.setClearColor(held, heldAlpha)
       // Every one of them in a `finally`, as `renderPanes` does: a throw here would otherwise
       // leave the workshop hidden and every later frame clipped to this corner.
       restore?.()

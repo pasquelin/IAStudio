@@ -411,7 +411,6 @@ describe('the translation bundles', () => {
           'meshes.plane',
           'texture.shapePlane',
           'inspector.shot',
-          'inspector.noShot',
           'inspector.addRailHint',
           'objects.pathHint',
           'animation.addShotHint',

@@ -29,6 +29,11 @@ export type SceneView = {
    * closes with that selection, so there is no third value: what it shows is never a question.
    */
   previewSize: 'inset' | 'full'
+  /**
+   * How far the preview has been dragged from the corner it opens in, in CSS pixels. Session
+   * state like the rest: where somebody pushed a window aside to see under it is not the scene.
+   */
+  previewOffset: { x: number; y: number }
   /** What each of the four views shows. Only a free one turns — see `PaneView`. */
   panes: readonly PaneView[]
   /** Where the animation head stands, in microseconds. Never in the document — see `AnimationTimeline`. */
@@ -62,6 +67,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   quad: false,
   quadEdges: false,
   previewSize: 'inset',
+  previewOffset: { x: 0, y: 0 },
   panes: DEFAULT_PANE_VIEWS,
   playhead: 0,
   playing: false,
@@ -87,6 +93,7 @@ export type SceneViewsState = {
   setQuad: (documentId: string, quad: boolean) => void
   setQuadEdges: (documentId: string, quadEdges: boolean) => void
   setPreviewSize: (documentId: string, previewSize: SceneView['previewSize']) => void
+  setPreviewOffset: (documentId: string, previewOffset: SceneView['previewOffset']) => void
   setPaneView: (documentId: string, pane: number, view: PaneView) => void
   setPlayhead: (documentId: string, playhead: Us) => void
   setPlaying: (documentId: string, playing: boolean) => void
@@ -149,6 +156,11 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setPreviewSize: (documentId, previewSize) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), previewSize } },
+    })),
+
+  setPreviewOffset: (documentId, previewOffset) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), previewOffset } },
     })),
 
   setPaneView: (documentId, pane, view) =>

@@ -16,7 +16,6 @@
     "alignCamera": "Poser cette caméra là où je regarde",
     "alignCameraHint": "Donne à la caméra la place et la direction de la vue en cours",
     "shot": "Plan caméra",
-    "noShot": "Ouvrez un plan pour cette caméra à la position de la tête pour lui donner un mouvement.",
     "rail": "Rail",
     "noRail": "Aucun",
     "addRail": "Créer un rail pour cette caméra",

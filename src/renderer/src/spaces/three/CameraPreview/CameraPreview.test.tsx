@@ -77,12 +77,14 @@ describe('the camera preview', () => {
   })
 
   /**
-   * Measured rather than spelled out: `border-border` was #34363a over a #33363b viewport — one
-   * step of one channel, and the frame was not there at all on screen. The bar is the 3:1 WCAG
-   * 1.4.11 asks of a glyph that informs, which is what a monitor's frame is.
+   * The RING, not the border, and that is the whole point. Measured 18/08 against the #33363b
+   * viewport: `border` is 1,00:1, `panel` 1,44 and pure black 1,73 — the viewport sits lighter
+   * than every surface of the studio, so NO dark grey can reach the 3:1 WCAG 1.4.11 asks of a
+   * glyph that informs. The dark border is what the eye reads as a frame of this app; the ring
+   * inside it is what makes the frame exist at all.
    */
   it('draws a frame that can be told from the viewport it sits on', () => {
-    const token = /border-(?!accent)([a-z-]+)'/.exec(source)?.[1] ?? ''
+    const token = /ring-([a-z-]+)/.exec(source)?.[1] ?? ''
     const tokenOf = (name: string): string =>
       /--color-[a-z0-9-]+:\s*(#[0-9a-fA-F]{6})/.exec(
         stylesheet.slice(stylesheet.indexOf(`--color-${name}:`)),
