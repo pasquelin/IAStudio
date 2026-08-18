@@ -149,7 +149,7 @@
     "object": "Object",
     "exportScene": "Export scene",
     "exportSelection": "Export selection",
-    "exportTexture": "Export texture",
+    "exportTexture": "Export material",
     "exportSkybox": "Export sky",
     "resetLayout": "Reset layout",
     "fullScreen": "Full screen",
