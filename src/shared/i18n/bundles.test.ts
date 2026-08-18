@@ -384,7 +384,7 @@ describe('the translation bundles', () => {
        * there — a rig is the skeleton plus what drives it — and `SETTLED_WORDS.en` would be
        * refusing a distinction the trade makes.
        */
-      { dropped: /rigu[ée]e?s?|\brigs?\b/i, kept: 'squelette' },
+      { dropped: /(?<!\p{L})(?:rigu[ée]e?s?|rigs?)(?!\p{L})/iu, kept: 'squelette' },
     ],
     en: [
       { dropped: /file browser/i, kept: 'file manager' },
@@ -440,6 +440,23 @@ describe('the translation bundles', () => {
     )
 
     expect(covering).toEqual([])
+  })
+
+  /**
+   * `\b` is ASCII in JavaScript whatever the flags, so a boundary after `é` bounds nothing: the
+   * first writing of the `rigué` reading also matched `intrigue`, `rigueur` and `garrigue`. It ran
+   * GREEN, and only because no bundle value happened to say any of them — the manual says
+   * `intrigue`. Hence the lookarounds on `\p{L}`, and hence this.
+   *
+   * French only: the English readings are bounded by `\b` and their words are ASCII, so nothing
+   * there can slip the same way. The day an accented English reading is added, it belongs here.
+   */
+  it('reads a settled French word whole, never inside a longer one', () => {
+    const says = (word: string) => SETTLED_WORDS.fr.some(({ dropped }) => dropped.test(word))
+
+    // The canary of an assertion on an empty list: a reading that stopped matching would pass it.
+    expect(['rigué', 'riguées', 'un rig', 'des rigs'].filter(word => !says(word))).toEqual([])
+    expect(['intrigue', 'intriguée', 'rigueur', 'garrigue'].filter(says)).toEqual([])
   })
 
   /**
