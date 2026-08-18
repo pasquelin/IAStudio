@@ -97,9 +97,10 @@ export const UTHANA_MOTION_BONES: readonly NamedBone[] = mixamoBonesOf([
  * EIGHTEEN are twist bones and 21 are not. The issue says fourteen and twenty-five; the file
  * says otherwise, and this list is the file.
  *
- * Three candidates for the hips — `Root`, `Hip`, `Pelvis` — and the tree settles it: `Hip` is
- * what both the legs and the trunk hang from. Its neck is `NeckTwist01`/`NeckTwist02`, which is
- * why a neck is read off the shape and never off a name.
+ * Three candidates for the hips — `Root`, `Hip`, `Pelvis` — and the tree settles it: `Pelvis`
+ * leads to the legs alone and `Waist` to the trunk, so `Hip`, above both, is the only one with a
+ * whole body under it. Its neck is `NeckTwist01`/`NeckTwist02`, which is why a neck is read off
+ * the shape and never off a name.
  */
 export const TRIPO_BONES: readonly NamedBone[] = bonesOf([
   ['Root', null],

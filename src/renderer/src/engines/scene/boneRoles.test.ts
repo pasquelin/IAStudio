@@ -58,6 +58,8 @@ describe('reading the measured provider skeletons', () => {
   it('leaves a role unfilled when the file has no such bone', () => {
     const roles = boneRolesOf(TRIPO_BONES)
 
+    // The positive half matters: without it this passes on an empty answer.
+    expect(Object.values(roles)).toContain('LeftFoot')
     expect(Object.values(roles)).not.toContain('LeftToes')
   })
 })
@@ -81,7 +83,16 @@ describe('the same file spelled two ways', () => {
     const fromFile = boneRolesOf(UTHANA_MOTION_BONES)
     const loaded = boneRolesOf(asThreeHoldsIt(UTHANA_MOTION_BONES))
 
-    expect(Object.values(loaded)).toEqual(Object.values(fromFile))
+    // KEY BY KEY, not just the roles: comparing the values alone would pass even if every role
+    // had landed on a different bone, which is the one thing this is here to catch.
+    expect(loaded).toEqual(
+      Object.fromEntries(
+        Object.entries(fromFile).map(([name, role]) => [
+          PropertyBinding.sanitizeNodeName(name),
+          role,
+        ]),
+      ),
+    )
     expect(loaded.mixamorigHips).toBe('Hips')
   })
 })
@@ -128,13 +139,14 @@ describe('naming the neck off the tree', () => {
   it('leaves a head hanging under nothing without inventing one', () => {
     const roles = boneRolesOf(chain('Floater', 'Head'))
 
+    expect(roles.Head).toBe('Head')
     expect(roles.Floater).toBeUndefined()
   })
 
   it('names no neck when the head sits straight on the trunk', () => {
     const roles = boneRolesOf(chain('Hips', 'Spine', 'Head'))
 
-    expect(Object.values(roles)).not.toContain('Neck')
+    expect(Object.values(roles)).toEqual(['Hips', 'Spine', 'Head'])
   })
 })
 

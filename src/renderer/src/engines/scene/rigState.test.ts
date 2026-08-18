@@ -40,6 +40,9 @@ function rootWith(...children: Object3D[]): Object3D {
   return root
 }
 
+/** The least a skeleton must fill to be called a character: the hips and one whole limb. */
+const HUMANOID_ARM = ['Hips', 'Spine', 'LeftUpperArm', 'LeftLowerArm', 'LeftHand']
+
 const walk = new AnimationClip('NlaTrack', 1, [
   new VectorKeyframeTrack('.position', [0, 1], [0, 0, 0, 1, 0, 0]),
 ])
@@ -60,21 +63,35 @@ describe('what a loaded model is', () => {
   })
 
   it('calls a provider skeleton a rigged character, whatever its convention', () => {
-    const tripo = rootWith(skinnedOn(chain(['Root', 'Hip', 'L_Thigh', 'L_Calf'])))
-    const uthana = rootWith(skinnedOn(chain(['mixamorig:Hips', 'mixamorig:LeftUpLeg'])))
+    const tripo = rootWith(skinnedOn(chain(['Root', 'Hip', 'L_Thigh', 'L_Calf', 'L_Foot'])))
+    const uthana = rootWith(
+      skinnedOn(
+        chain(['mixamorig:Hips', 'mixamorig:LeftUpLeg', 'mixamorig:LeftLeg', 'mixamorig:LeftFoot']),
+      ),
+    )
 
     expect(rigStateOf(tripo).status).toBe('riggedCharacter')
     expect(rigStateOf(uthana).status).toBe('riggedCharacter')
   })
 
+  /**
+   * A spine and a head are not a person. One recognised role used to be enough, which was safe
+   * only while the studio's own rigger produced the only names anything recognised.
+   */
+  it('calls a creature named like a torso a skinned mesh, not a character', () => {
+    const dragon = rootWith(skinnedOn(chain(['Spine', 'Chest', 'Neck', 'Head'])))
+
+    expect(rigStateOf(dragon).status).toBe('skinnedMesh')
+  })
+
   it('calls bones filling humanoid roles a rigged character', () => {
-    const root = rootWith(skinnedOn(chain(['Hips', 'Spine', 'Head'])))
+    const root = rootWith(skinnedOn(chain(HUMANOID_ARM)))
 
     expect(rigStateOf(root).status).toBe('riggedCharacter')
   })
 
   it('calls a rigged character carrying clips an animated character', () => {
-    const root = rootWith(skinnedOn(chain(['Hips', 'Spine', 'Head'])))
+    const root = rootWith(skinnedOn(chain(HUMANOID_ARM)))
 
     expect(rigStateOf(root, [walk]).status).toBe('animatedCharacter')
   })
@@ -111,7 +128,7 @@ describe('what a loaded model is', () => {
   it('reads the mixamo prefix off a name before matching a role', () => {
     const root = rootWith(skinnedOn(chain(['mixamorig:Hips', 'mixamorig:Spine'])))
 
-    expect(rigStateOf(root).status).toBe('riggedCharacter')
+    expect(rigStateOf(root).bones.map(bone => bone.role)).toEqual(['Hips', 'Spine'])
   })
 
   /**

@@ -1,4 +1,4 @@
-import { AnimationClip, QuaternionKeyframeTrack } from 'three'
+import { AnimationClip, QuaternionKeyframeTrack, VectorKeyframeTrack } from 'three'
 import type * as SkeletonUtilsModule from 'three/addons/utils/SkeletonUtils.js'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { wireClipOf } from './retarget'
@@ -78,6 +78,15 @@ function ask(id: number, clips: readonly WireClip[], fps: number | null = 30): v
   )
 }
 
+/** The source walks one unit forward on hips that start at the origin. */
+function hipTravel(): WireClip {
+  return wireClipOf(
+    new AnimationClip('walk', 1, [
+      new VectorKeyframeTrack('mixamorigHips.position', [0, 1], [0, 1, 0, 1, 1, 0]),
+    ]),
+  )
+}
+
 /** `frames` keys spread over one second, so the clip's own rate is `frames` per second. */
 function spineTurnAt(frames: number): WireClip {
   const times = Array.from({ length: frames }, (_, frame) => frame / (frames - 1))
@@ -125,6 +134,20 @@ describe('replaying an animation on another skeleton', () => {
 
     // A quarter turn about Y, sampled: the identity quaternion would be [0, 0, 0, 1].
     expect(Math.abs(last[1] ?? 0)).toBeGreaterThan(0.3)
+  })
+
+  it('reads the hips’ travel at the target’s size, so its feet do not slide', async () => {
+    ask(1, [hipTravel()])
+    await drain()
+
+    const answer = settled()
+    if (!answer?.done || !answer.ok) throw new Error('the worker did not answer with clips')
+    const travel = answer.clips[0]?.tracks.find(track => track.name === 'Hip.position')
+    if (!travel) throw new Error('the hips carried no translation at all')
+
+    // The source walks one unit forward on a torso of 0.4; the target's is 0.8, so it must cover
+    // two. Carried over unchanged — three's default `scale` of 1 — it would cover one and slide.
+    expect(Math.abs(travel.values[travel.values.length - 3] ?? 0)).toBeGreaterThan(1.5)
   })
 
   it('keeps the length the source was authored at', async () => {
@@ -175,5 +198,22 @@ describe('when a run goes wrong or is taken back', () => {
     await drain()
 
     expect(settled()).toBeUndefined()
+  })
+
+  /**
+   * A cancellation crossing paths with the answer it meant to stop is the ordinary case, not an
+   * edge: the caller drops its slot and posts one anyway. Remembered, that id would silence the
+   * next request wearing it — and would sit in the worker's memory for the life of the window.
+   */
+  it('forgets a cancellation that arrived after the run it named had ended', async () => {
+    ask(1, [spineTurn()])
+    await drain()
+    self.dispatchEvent(new MessageEvent('message', { data: { id: 1, cancel: true } }))
+    posted.length = 0
+
+    ask(1, [spineTurn()])
+    await drain()
+
+    expect(settled()).toBeDefined()
   })
 })
