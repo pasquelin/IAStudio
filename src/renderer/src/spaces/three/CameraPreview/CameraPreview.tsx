@@ -61,14 +61,9 @@ export function CameraPreview({ documentId }: { documentId: string }) {
     [cameraId, previewSize, previewOffset, size],
   )
 
-  /**
-   * `activeCameraAt` and nothing else, so the badge cannot disagree with what the montage and the
-   * film are drawing — its fall back to the first camera included.
-   *
-   * The ANSWER is subscribed to rather than the head: `setPlayhead` replaces the view sixty times
-   * a second during playback, and a component reading the head off it re-rendered as often to
-   * draw a word that changes twice in a sequence.
-   */
+  // `activeCameraAt` and nothing else, so the badge cannot disagree with the montage or the film.
+  // The ANSWER is subscribed to rather than the head: reading the head off the view re-rendered
+  // this sixty times a second to draw a word that changes twice in a sequence.
   const onAir = useSceneViews(
     state =>
       cameraId !== null &&

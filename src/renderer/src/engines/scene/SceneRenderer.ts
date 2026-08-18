@@ -786,8 +786,7 @@ export class SceneRenderer {
 
     const driven: { object: Object3D; shot: CameraShot }[] = []
     // Walked from the SHOTS rather than from the nodes, exactly as `applyLenses` is: a camera no
-    // shot names is a camera this pass has nothing to do to, and a scene holds far more nodes
-    // than shots — this ran over every one of them, per frame of playback.
+    // shot names is one this pass has nothing to do to, and this ran over every node per frame.
     for (const cameraId of shotCameras(shots)) {
       const node = this.applied.get(cameraId)
       const object = this.objects.get(cameraId)

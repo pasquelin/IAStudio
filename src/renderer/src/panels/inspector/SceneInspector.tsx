@@ -93,13 +93,8 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
     [camera, animation, playhead],
   )
 
-  /**
-   * A lens field typed in. The fov goes through `lensToCommand`, which decides between a key and
-   * the descriptor; the other two are plain descriptor edits.
-   *
-   * The state and the switch are read at call time rather than subscribed to, as every gesture
-   * that needs more of the document than the fields show.
-   */
+  // The fov alone goes through `lensToCommand`, which decides between a key and the descriptor.
+  // Its state and switch are read at call time, as every gesture needing more than the fields show.
   const changeLens = (name: string, value: FieldValue): void =>
     edit.run(
       name === 'fov' && typeof value === 'number'
