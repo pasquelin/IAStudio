@@ -718,6 +718,28 @@ s’affiche que s’il y a quelque chose à choisir.
 **Anim. 1**, **Anim. 2**, et ainsi de suite. Les sous-pistes sont groupées **sous** les lignes de
 clés, jamais mêlées à elles.
 
+**Une séquence que son fichier ne nomme pas s’appelle « Animation » à l’écran**, ou
+**Animation 1**, **Animation 2** — et partout où le studio la nomme : le menu **Clip**, le bloc sur
+la bande, le panneau Animations et le volet d’ajout. C’est le cas le plus courant : un export Tripo
+appelle son unique séquence `NlaTrack` — le nom que Blender donne par défaut à une piste qu’on n’a
+pas nommée — et un export Uthana n’en nomme aucune, ce qui les fait numéroter à l’ouverture.
+
+**Le numéro n’est pas un rang recompté** : c’est celui que le fichier porte déjà. Si des séquences
+nommées sont mêlées aux autres, **la numérotation saute** — « Animation 1 », « Marche »,
+« Animation 3 ».
+
+> **Le fichier, lui, garde son mot.** Ce remplacement ne vit qu’à l’écran : ouvrez la scène
+> ailleurs, `NlaTrack` est toujours là. C’est délibéré — écrire « Animation » dans le document
+> figerait la langue du jour où il a été enregistré, et un fichier français resterait français pour
+> un lecteur anglophone.
+
+**Tout autre nom est laissé intact** : le studio ne remplace que ces deux écritures-là, à la
+lettre. Une séquence que quelqu’un aurait vraiment appelée `NlaTrack` serait donc renommée elle
+aussi — rien ne permet de l’en distinguer.
+
+> **Une animation LIVRÉE ne suit pas cette règle** : elle porte le nom de son dossier, quoi que son
+> fichier écrive. C’est un autre mécanisme, décrit plus bas.
+
 ### Rendre un modèle animable
 
 Un modèle importé n’a le plus souvent aucun squelette : c’est une **maille**, et rien ne peut
