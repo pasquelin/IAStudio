@@ -52,6 +52,11 @@ describe('a texture written as MaterialX', () => {
     expect(written.studio).toMatchObject({ channels: { ao: { assetId: 'a' } } })
   })
 
+  /**
+   * What this function does with a path it was not given — NOT a statement that the path may be
+   * lost. Finding one is `filesFor`'s job, and `textureDocument.test.ts` is what holds it: the
+   * memory of what the file carried is consulted there, before this is ever called.
+   */
   it('writes no image for a channel whose picture the window could not resolve', () => {
     const written = mtlxMaterialOf(texture({ channels: { baseColor: map('a') } }), { files: {} })
 

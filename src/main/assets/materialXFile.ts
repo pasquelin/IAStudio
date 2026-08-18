@@ -5,10 +5,10 @@ import {
   MTLX_ENVELOPE_ATTR,
   MTLX_HEAD_LIMIT,
   MTLX_STUDIO_ATTR,
+  MTLX_STUDIO_INPUTS,
   MTLX_VERSION,
   type MtlxDocument,
   type MtlxImage,
-  type MtlxType,
   type MtlxValue,
   type MtlxWrap,
 } from '@shared/domain/materialX'
@@ -39,8 +39,11 @@ const tintNode = (input: string): string => `tint_${input}`
 const normalNode = (input: string): string => `normalmap_${input}`
 const outputName = (input: string): string => `out_${input}`
 
-/** What a chain ends as, which is what the surface input has to be typed. */
-function terminalType(image: MtlxImage): MtlxType {
+/**
+ * What a chain ends as, which is what the surface input has to be typed. A `normalmap` answers
+ * `vector3` whatever fed it; anything else keeps the type the image itself declared.
+ */
+function terminalType(image: MtlxImage): string {
   return image.wrap?.node === 'normalmap' ? 'vector3' : image.type
 }
 
@@ -101,8 +104,11 @@ function surfaceInput(image: MtlxImage): string {
 }
 
 function valueInput({ input, type, value }: MtlxValue): string {
-  const spelt = typeof value === 'number' ? num(value) : list(value)
-  return `    <input name="${input}" type="${type}" value="${spelt}" />`
+  // A string is a spelling this studio does not interpret — `true`, an enumerated name — and it
+  // goes back out exactly as it came in rather than through a numeric round trip.
+  const spelt =
+    typeof value === 'number' ? num(value) : typeof value === 'string' ? value : list(value)
+  return `    <input name="${input}" type="${type}" value="${escapeXml(spelt)}" />`
 }
 
 /**
@@ -170,13 +176,23 @@ export type MtlxHead = {
   envelope: string
 }
 
-/** The root tag alone, which is where both custom attributes ride. */
+/**
+ * The root tag's own attributes, read WITHOUT requiring the tag to close inside the window.
+ *
+ * Waiting for the `>` is what would have made « the envelope is written first, so a head read
+ * reaches it whatever the state weighs » a false claim: both attributes live in the same tag, so a
+ * state heavy enough to push the closing bracket past the limit failed the match entirely and the
+ * document left every listing. Reading each attribute where it sits is what makes the ordering pay.
+ */
 export function mtlxHeadIn(head: string): MtlxHead {
-  const root = /<materialx\b([^>]*)>/.exec(head.slice(0, MTLX_HEAD_LIMIT))
-  if (!root?.[1]) return { version: '', envelope: '' }
+  const window = head.slice(0, MTLX_HEAD_LIMIT)
+  const at = window.indexOf('<materialx')
+  if (at === -1) return { version: '', envelope: '' }
+
+  const opening = window.slice(at + '<materialx'.length)
   return {
-    version: unescapeXml(attribute(root[1], 'version')),
-    envelope: unescapeXml(attribute(root[1], MTLX_ENVELOPE_ATTR)),
+    version: unescapeXml(attribute(opening, 'version')),
+    envelope: unescapeXml(attribute(opening, MTLX_ENVELOPE_ATTR)),
   }
 }
 
@@ -189,6 +205,8 @@ type Node = {
   /** An input's `nodename`, by input name — what connects this node to the one before it. */
   from: Map<string, string>
   values: Map<string, string>
+  /** Each input's DECLARED type, kept so a round trip cannot retype what the file said. */
+  types: Map<string, string>
   colorspaces: Map<string, string>
   connections: Map<string, GraphOutput>
 }
@@ -198,6 +216,7 @@ const emptyNode = (kind: string, type: string): Node => ({
   type,
   from: new Map(),
   values: new Map(),
+  types: new Map(),
   colorspaces: new Map(),
   connections: new Map(),
 })
@@ -230,6 +249,8 @@ function nodesIn(xml: string): Map<string, Node> {
       if (output) holder.connections.set(name, { graph: attribute(rest, 'nodegraph'), output })
       const value = attribute(rest, 'value')
       if (value) holder.values.set(name, unescapeXml(value))
+      const declared = attribute(rest, 'type')
+      if (declared) holder.types.set(name, declared)
       const colorspace = attribute(rest, 'colorspace')
       if (colorspace) holder.colorspaces.set(name, unescapeXml(colorspace))
       continue
@@ -259,7 +280,12 @@ const pairIn = (text: string, fallback: readonly [number, number]): [number, num
  * The image a chain ends at, walked BACKWARDS from what the surface is connected to — picking up
  * the tint and the normal scale on the way. `null` for a chain holding no `tiledimage` at all.
  */
-function imageBehind(nodes: Map<string, Node>, start: string, input: string): MtlxImage | null {
+function imageBehind(
+  nodes: Map<string, Node>,
+  start: string,
+  input: string,
+  prefix: string,
+): MtlxImage | null {
   let wrap: MtlxWrap | undefined
   let multiply: readonly [number, number, number] | undefined
   let at: string | undefined = start
@@ -276,8 +302,10 @@ function imageBehind(nodes: Map<string, Node>, start: string, input: string): Mt
       const colorspace = node.colorspaces.get('file')
       return {
         input,
-        type: (node.type || 'color3') as MtlxType,
-        file,
+        type: node.type || 'color3',
+        // `fileprefix` is prepended to every `filename` value in its scope — § File Prefixes.
+        // Ignored, the path names nothing and the catalogue resolves no picture at all.
+        file: `${prefix}${file}`,
         ...(colorspace ? { colorspace } : {}),
         tiling: pairIn(node.values.get('uvtiling') ?? '', [1, 1]),
         offset: pairIn(node.values.get('uvoffset') ?? '', [0, 0]),
@@ -337,24 +365,31 @@ export function readMaterialX(xml: string): MtlxDocument {
   const nodes = nodesIn(xml)
   const images: MtlxImage[] = []
   const values: MtlxValue[] = []
+  const root = /<materialx\b([^>]*)>/.exec(xml)
+  const prefix = root?.[1] ? unescapeXml(attribute(root[1], 'fileprefix')) : ''
 
   const material = [...nodes.values()].find(node => node.kind === 'surfacematerial')
   const surfaceName = material?.from.get('surfaceshader')
   const surface = surfaceName ? nodes.get(surfaceName) : undefined
 
   for (const [input, value] of surface?.values ?? []) {
+    // The DECLARED type, never one re-derived from how many numbers the value holds: `normal`
+    // and `tangent` are `vector3` and would come back `color3`, and `thin_walled="true"` holds
+    // no number at all and would be dropped entirely.
+    const declared = surface?.types.get(input) ?? ''
     const numbers = numbersIn(value)
-    if (numbers.length === 0) continue
-    values.push(
-      numbers.length === 1 && numbers[0] !== undefined
-        ? { input, type: 'float', value: numbers[0] }
-        : { input, type: 'color3', value: numbers },
-    )
+    const spelt = numbers.length === 0 ? value : numbers.length === 1 ? numbers[0] : numbers
+    if (spelt === undefined) continue
+    values.push({
+      input,
+      type: declared || (numbers.length === 1 ? 'float' : 'color3'),
+      value: spelt,
+    })
   }
 
   for (const [input, output] of surface?.connections ?? []) {
     const target = outputTarget(nodes, output)
-    const image = target ? imageBehind(nodes, target, input) : null
+    const image = target ? imageBehind(nodes, target, input, prefix) : null
     if (image) images.push(image)
   }
 
@@ -362,7 +397,7 @@ export function readMaterialX(xml: string): MtlxDocument {
   const displace = displaceName ? nodes.get(displaceName) : undefined
   const heightOutput = displace?.connections.get('displacement')
   const heightTarget = heightOutput ? outputTarget(nodes, heightOutput) : undefined
-  const height = heightTarget ? imageBehind(nodes, heightTarget, MTLX_DISPLACEMENT) : null
+  const height = heightTarget ? imageBehind(nodes, heightTarget, MTLX_DISPLACEMENT, prefix) : null
   if (height) {
     images.push({
       ...height,
@@ -370,10 +405,9 @@ export function readMaterialX(xml: string): MtlxDocument {
     })
   }
 
-  const root = /<materialx\b([^>]*)>/.exec(xml)
   const state = root?.[1] ? unescapeXml(attribute(root[1], MTLX_STUDIO_ATTR)) : ''
   const studio: unknown = state ? JSON.parse(state) : null
-  const extra = uncomposedIn(xml, nodes)
+  const extra = uncomposedIn(xml, nodes, surface)
 
   return {
     images,
@@ -384,12 +418,14 @@ export function readMaterialX(xml: string): MtlxDocument {
 }
 
 /**
- * What the file holds beyond one material — a second `surfacematerial`, a `look`, a `nodedef`.
+ * What the file holds beyond what a save would write back — a second `surfacematerial`, a `look`,
+ * a `nodedef`, AND every `standard_surface` input this studio does not compose.
  *
- * Counted rather than ignored: this studio rewrites a `.mtlx` from ONE material, so a file
- * holding more would come back with the rest deleted. The window refuses the save instead.
+ * **The input grain is the one that matters**, and leaving it out was a real hole: the surface is
+ * an element this studio composes, so an element-only check reads the distribution's own brass
+ * example as safe to rewrite while ⌘S deletes its `coat`, `specular` and `base`.
  */
-function uncomposedIn(xml: string, nodes: Map<string, Node>): string[] {
+function uncomposedIn(xml: string, nodes: Map<string, Node>, surface: Node | undefined): string[] {
   const kinds = new Set<string>()
   for (const match of xml.matchAll(/<([a-zA-Z_][\w.]*)\b/g)) {
     const kind = match[1]
@@ -397,6 +433,9 @@ function uncomposedIn(xml: string, nodes: Map<string, Node>): string[] {
   }
   if ([...nodes.values()].filter(node => node.kind === 'surfacematerial').length > 1) {
     kinds.add('surfacematerial')
+  }
+  for (const input of [...(surface?.values.keys() ?? []), ...(surface?.connections.keys() ?? [])]) {
+    if (!MTLX_STUDIO_INPUTS.includes(input)) kinds.add(`input:${input}`)
   }
   return [...kinds]
 }

@@ -41,7 +41,11 @@ export const MTLX_SRGB = 'srgb_texture'
  */
 export const MTLX_COLORSPACE = 'lin_rec709'
 
-/** The types this studio writes. `standard_surface` names one per input, and never another. */
+/**
+ * The types this studio WRITES. A type read back off a file is kept as the file spelt it — a
+ * `vector3`, a `boolean`, a `matrix33` — because re-deriving one from the shape of the value gets
+ * it wrong: `normal` and `tangent` are `vector3` and would come back `color3`.
+ */
 export type MtlxType = 'color3' | 'float' | 'vector3'
 
 /**
@@ -55,7 +59,8 @@ export type MtlxWrap = { node: 'normalmap' | 'displacement'; scale: number }
 export type MtlxImage = {
   /** The `standard_surface` input it feeds, or `displacementshader` on the `surfacematerial`. */
   input: string
-  type: MtlxType
+  /** As the file spelt it. This studio writes one of `MtlxType`; a file may say anything. */
+  type: string
   /** Project-relative, as the file spells it — an asset id would name nothing anywhere else. */
   file: string
   colorspace?: string
@@ -67,11 +72,17 @@ export type MtlxImage = {
   multiply?: readonly [number, number, number]
 }
 
-/** A uniform value on an input — what a channel carrying no map writes instead of an image. */
+/**
+ * A uniform value on an input — what a channel carrying no map writes instead of an image, and
+ * what an input from another application is carried across as.
+ *
+ * `value` keeps a STRING when the file's own spelling is not numeric: `thin_walled="true"` and
+ * every enumerated input would otherwise be dropped on the floor by a numeric parse.
+ */
 export type MtlxValue = {
   input: string
-  type: MtlxType
-  value: number | readonly number[]
+  type: string
+  value: number | readonly number[] | string
 }
 
 /**
@@ -89,6 +100,23 @@ export type MtlxDocument = {
    */
   extra?: readonly string[]
 }
+
+/**
+ * The `standard_surface` inputs this studio composes, and the only ones a save writes back.
+ *
+ * **The refusal has to bite at the INPUT, not only at the element** — that is where enrichment
+ * actually arrives. `standard_surface` is an element this studio composes, so an element-grained
+ * check reads a file carrying `coat`, `specular` and `transmission` as safe to rewrite, and ⌘S
+ * deletes all three without a word. Measured on the distribution's own brass example.
+ */
+export const MTLX_STUDIO_INPUTS: readonly string[] = [
+  'base_color',
+  'specular_roughness',
+  'metalness',
+  'normal',
+  'emission',
+  'emission_color',
+]
 
 /** What a file this studio writes is made of. Anything else in one came from somewhere else. */
 export const MTLX_COMPOSED: readonly string[] = [

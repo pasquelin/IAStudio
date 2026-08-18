@@ -84,7 +84,8 @@ avec des parties que le studio ne compose pas. Il s’ouvre, il s’affiche — 
 d’écrire**, avec la raison en clair. Ce n’est pas une précaution excessive : un glTF est lié par
 **index**, donc réécrire la scène depuis ce que le studio en connaît supprimerait ces parties, et
 un fichier à demi réécrit ne s’ouvrirait nulle part. Le même refus protège un ciel qui contient
-une scène entière, et une matière `.mtlx` qui en contient plus d’une.
+une scène entière, et une matière `.mtlx` qui porte plus que ce que le studio compose — un second
+matériau, ou simplement un réglage de surface que l’éditeur de matières n’a pas, comme un vernis.
 
 Pour sortir malgré tout ce que vous avez modifié, passez par **Fichier ▸ Exporter la scène** :
 l’export écrit à côté, sans toucher au fichier d’origine.

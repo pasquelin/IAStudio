@@ -80,7 +80,8 @@ Open a studio scene in Blender, add a mesh, save it back: the file returns holdi
 studio does not compose. It opens, it draws — and **`⌘S` refuses to write**, saying why. This is
 not over-caution: a glTF is linked by **index**, so rewriting the scene from what the studio knows
 of it would delete those parts, and a half-rewritten file would open nowhere. The same refusal
-protects a sky holding a whole scene, and a `.mtlx` material holding more than one.
+protects a sky holding a whole scene, and a `.mtlx` material holding more than the studio composes
+— a second material, or simply a surface dial the material editor has not got, such as a coat.
 
 To take your changes out anyway, use **File ▸ Export scene**: an export writes beside the file,
 leaving the original untouched.
