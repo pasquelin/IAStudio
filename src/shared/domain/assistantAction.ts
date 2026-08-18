@@ -365,6 +365,7 @@ function fits(field: ActionField, value: unknown): boolean {
     case 'longText':
     case 'choice':
     case 'image':
+    case 'mesh':
       return (
         typeof value === 'string' &&
         (!field.required || value.trim() !== '') &&

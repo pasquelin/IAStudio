@@ -61,6 +61,65 @@ export function rigFaultOf(bones: readonly RigBone[]): RigFault | null {
   return hasCycle(bones, byName) ? 'cycle' : null
 }
 
+/**
+ * The bones with one more, or `null` when the rig would not stand it — a name already taken, a
+ * parent nobody holds, a role another bone fills. `rigFaultOf` is the one judge of that.
+ */
+export function rigWithBones(
+  bones: readonly RigBone[],
+  added: readonly RigBone[],
+): RigBone[] | null {
+  const next = [...bones, ...added]
+  return rigFaultOf(next) === null ? next : null
+}
+
+/**
+ * The bones without one, its children hung where it hung.
+ *
+ * Reparented rather than removed with it: taking an elbow out must not take the hand and its
+ * fingers with it. A track addressing the bone by name survives untouched — the document
+ * addresses bones by NAME, so nothing it holds points at what has gone.
+ */
+export function rigWithoutBone(bones: readonly RigBone[], name: string): RigBone[] {
+  const removed = bones.find(bone => bone.name === name)
+  if (!removed) return [...bones]
+
+  return bones
+    .filter(bone => bone.name !== name)
+    .map(bone => (bone.parent === name ? { ...bone, parent: removed.parent } : bone))
+}
+
+/** The bones with one renamed, its children following. `null` when the new name is taken. */
+export function rigRenamed(bones: readonly RigBone[], from: string, to: string): RigBone[] | null {
+  if (to === '' || !bones.some(bone => bone.name === from)) return null
+
+  const next = bones.map(bone => ({
+    ...bone,
+    name: bone.name === from ? to : bone.name,
+    parent: bone.parent === from ? to : bone.parent,
+  }))
+  return rigFaultOf(next) === null ? next : null
+}
+
+/**
+ * The bones with one filling a role, or filling none when `role` is `null`.
+ *
+ * Whatever bone held that role loses it in the same move, because a rig holding one role twice
+ * is a `duplicate-role` fault and the reader drops such a model whole.
+ */
+export function rigWithRole(
+  bones: readonly RigBone[],
+  name: string,
+  role: HumanoidRole | null,
+): RigBone[] {
+  return bones.map(bone => {
+    const rest = { ...bone }
+    if (bone.name === name || bone.role === role) delete rest.role
+
+    return bone.name === name && role !== null ? { ...rest, role } : rest
+  })
+}
+
 export function isRig(value: unknown): value is Rig {
   if (!isRecord(value) || !Array.isArray(value.bones)) return false
   if (!isRigOrigin(value.origin)) return false

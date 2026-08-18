@@ -1,5 +1,7 @@
 import { AnimationClip, QuaternionKeyframeTrack, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
+import type { HumanoidRole } from '@shared/domain/humanoid'
+import { skeletonSignatureOf } from '@shared/domain/skeletonProfile'
 import {
   clipFromWire,
   createRetarget,
@@ -104,6 +106,47 @@ describe('pairing two skeletons', () => {
     const other: WireBone[] = [boneAt('Hips', -1, 1), boneAt('Antenna', 0, 0.3)]
 
     expect(retargetPlanOf(odd, other, []).names.Antenna).toBe('Antenna')
+  })
+})
+
+describe('pairing a skeleton whose mapping was put right by hand', () => {
+  /** A rig spelling nothing this studio reads: only a correction can say what these bones are. */
+  const ODD: WireBone[] = [boneAt('b0', -1, 2), boneAt('b1', 0, 1.5), boneAt('b2', 1, 1)]
+
+  const learnt = (roles: Record<string, HumanoidRole>) =>
+    new Map([[skeletonSignatureOf(ODD.map(bone => bone.name)), { signature: 'ignored', roles }]])
+
+  it('reads nothing at all off names that spell no role', () => {
+    expect(retargetPlanOf(ODD, UTHANA, []).names).toEqual({})
+  })
+
+  it('pairs by the correction once the skeleton has been recognised', () => {
+    const plan = retargetPlanOf(ODD, UTHANA, [], undefined, learnt({ b0: 'Hips', b2: 'Head' }))
+
+    expect(plan.names).toEqual({ b0: 'mixamorigHips', b2: 'mixamorigHead' })
+  })
+
+  // A correction is made BECAUSE the name lied: it has to beat what the name spells, and take
+  // the role off whichever bone was reading it.
+  it('takes a role off the bone whose name had claimed it', () => {
+    const named = [boneAt('Hips', -1, 2), boneAt('Pelvis', 0, 1.8)]
+    const known = new Map([
+      [
+        skeletonSignatureOf(named.map(bone => bone.name)),
+        { signature: 'ignored', roles: { Pelvis: 'Hips' as HumanoidRole } },
+      ],
+    ])
+
+    const plan = retargetPlanOf(named, UTHANA, [], undefined, known)
+
+    expect(plan.names.Pelvis).toBe('mixamorigHips')
+    expect(plan.names.Hips).toBeUndefined()
+  })
+
+  it('leaves a skeleton it has never been told about exactly as its names read', () => {
+    const other: WireBone[] = [boneAt('c0', -1, 2)]
+
+    expect(retargetPlanOf(other, UTHANA, [], undefined, learnt({ b0: 'Hips' })).names).toEqual({})
   })
 })
 

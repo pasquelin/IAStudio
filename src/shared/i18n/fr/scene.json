@@ -202,7 +202,11 @@
     "matcap": "Matcap",
     "matcapHint": "Un éclairage capté sur une sphère : c’est le relief qui se lit, pas la couleur",
     "density": "Densité",
-    "densityHint": "Du vert au rouge selon les triangles par unité de surface : le rouge est à optimiser"
+    "densityHint": "Du vert au rouge selon les triangles par unité de surface : le rouge est à optimiser",
+    "ghost": "Translucide",
+    "ghostHint": "Les surfaces à peine posées, pour voir les articulations à l’intérieur",
+    "skeleton": "Squelette seul",
+    "skeletonHint": "Plus aucune surface — il ne reste que les os, pour les corriger sans rien deviner"
   },
   "animation": {
     "position": "Position",

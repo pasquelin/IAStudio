@@ -1,5 +1,15 @@
 import { composed, type Command } from '../core/history'
-import type { Rig } from '@shared/domain/rig'
+import {
+  rigFaultOf,
+  rigRenamed,
+  rigWithBones,
+  rigWithoutBone,
+  rigWithRole,
+  type Rig,
+  type RigBone,
+} from '@shared/domain/rig'
+import type { HumanoidRole } from '@shared/domain/humanoid'
+import { rigHandBones } from './rigFit'
 import {
   isVector3,
   type CameraDescriptor,
@@ -432,6 +442,59 @@ export function setModelRig(id: string, rig: Rig | null): Command<SceneState> {
     const rest = { ...model }
     delete rest.rig
     return rig ? { ...rest, rig } : rest
+  })
+}
+
+/**
+ * One edit of a model's skeleton, refused whole when the result would not hold.
+ *
+ * A change answering `null` writes nothing at all rather than a rig the document reader would
+ * drop on the next open — a cycle, a name taken twice, one role on two bones. The weights follow
+ * on their own: the engine re-binds whenever `model.rig` changes, so nothing recomputes here.
+ */
+function editRigBones(
+  id: string,
+  edited: string,
+  change: (bones: readonly RigBone[]) => readonly RigBone[] | null,
+): Command<SceneState> {
+  return editModel(id, edited, model => {
+    if (!model.rig) return model
+
+    const bones = change(model.rig.bones)
+    if (!bones || rigFaultOf(bones) !== null) return model
+
+    return { ...model, rig: { ...model.rig, bones } }
+  })
+}
+
+/** A bone hung under one the rig already holds. Refused if the parent, the name or the role clash. */
+export function addRigBone(id: string, bone: RigBone): Command<SceneState> {
+  return editRigBones(id, 'rigBone', bones => rigWithBones(bones, [bone]))
+}
+
+/** A bone taken out, its children hung where it hung — an elbow leaves, the hand stays. */
+export function removeRigBone(id: string, name: string): Command<SceneState> {
+  return editRigBones(id, 'rigBone', bones => rigWithoutBone(bones, name))
+}
+
+export function renameRigBone(id: string, from: string, to: string): Command<SceneState> {
+  return editRigBones(id, 'rigBone', bones => rigRenamed(bones, from, to))
+}
+
+/** Which joint of the standard a bone IS. `null` says it fills none. */
+export function setRigBoneRole(
+  id: string,
+  name: string,
+  role: HumanoidRole | null,
+): Command<SceneState> {
+  return editRigBones(id, 'rigRole', bones => rigWithRole(bones, name, role))
+}
+
+/** The thirty finger bones, at rest, on whatever hands the rig holds. */
+export function addRigHands(id: string): Command<SceneState> {
+  return editRigBones(id, 'rigBone', bones => {
+    const hands = rigHandBones(bones)
+    return hands && rigWithBones(bones, hands)
   })
 }
 

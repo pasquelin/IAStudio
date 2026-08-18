@@ -9,6 +9,7 @@ import {
   mdiArrowUpBold,
   mdiAxisArrow,
   mdiAxisArrowLock,
+  mdiBone,
   mdiCircleHalfFull,
   mdiCircleOpacity,
   mdiCropFree,
@@ -19,6 +20,7 @@ import {
   mdiMagnet,
   mdiResize,
   mdiSphere,
+  mdiSquareOpacity,
   mdiThermometer,
   mdiVectorSquare,
 } from '@mdi/js'
@@ -49,6 +51,8 @@ const DISPLAY_ICONS: Record<DisplayMode, string> = {
   material: mdiSphere,
   matcap: mdiCircleHalfFull,
   density: mdiThermometer,
+  ghost: mdiSquareOpacity,
+  skeleton: mdiBone,
 }
 
 /** Every tool of this bar carries one now: the two groups that acted through rows have left. */

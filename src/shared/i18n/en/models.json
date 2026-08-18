@@ -5,6 +5,7 @@
     "noProject": "Open a project to generate.",
     "noCredentials": "Enter your API credentials to see your models.",
     "dropPicture": "Drop an image, or paste its id",
+    "dropModel": "Drop a 3D model, or paste its id",
     "estimatedCost": "~{{units}} CU"
   },
   "models": {
