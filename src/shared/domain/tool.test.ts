@@ -267,7 +267,7 @@ describe('the rail order of the upper right', () => {
   })
 
   it('reads the scene in 3D, and no longer the shelf', () => {
-    expect(upperRightIn('3d')).toEqual(['scene', 'lights', 'meshes'])
+    expect(upperRightIn('3d')).toEqual(['scene', 'lights', 'meshes', 'animations'])
   })
 
   /**

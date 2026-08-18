@@ -60,6 +60,7 @@ export type ToolId =
   | 'view'
   | 'projects'
   | 'library'
+  | 'animations'
 
 /**
  * The panels the upper half of a WORKSPACE's left column is reserved for: what the Scenario API
@@ -159,6 +160,9 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'scene', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'lights', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'meshes', zone: 'right', slot: 'primary', surfaces: ['3d'] },
+  // What a character can be made to play, on the right where the panels that steer a document
+  // already are. Its rows are dragged onto the band below, which is why the two face each other.
+  { id: 'animations', zone: 'right', slot: 'primary', surfaces: ['3d'] },
 
   // The other half of the right column, and always up: what is selected is read WHILE a
   // model is chosen and a prompt written, and in an editor the inspector is never the panel

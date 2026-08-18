@@ -204,6 +204,7 @@ describe('Rail', () => {
       'Scène',
       'Lumières',
       'Mailles',
+      'Animations',
       'separator',
       'Inspecteur',
       // At the FOOT of this rail since the band was split: its right half is the one this side

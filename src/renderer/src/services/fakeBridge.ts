@@ -230,6 +230,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       read: () => Promise.resolve(null),
       ...overrides.fonts,
     },
+    animations: {
+      list: () => Promise.resolve([]),
+      ...overrides.animations,
+    },
     media: {
       ingest: () => Promise.resolve([]),
       adopt: () => Promise.resolve(null),

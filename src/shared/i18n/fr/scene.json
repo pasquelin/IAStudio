@@ -1,4 +1,8 @@
 {
+  "animations": {
+    "empty": "Aucune animation. Sélectionnez un personnage, ou installez des animations dans le dossier de l’application.",
+    "dragHint": "Glissez sur une sous-piste"
+  },
   "meshes": {
     "box": "Cube",
     "capsule": "Capsule",

@@ -188,6 +188,40 @@ export class SceneAnimations {
     this.placeAll()
   }
 
+  /**
+   * Poses one model from a clock of its OWN, so a block can be watched without the scene's head
+   * moving. `seconds` counts from the moment watching began; `null` gives the model back to the
+   * head. Answers how long the clip runs, so a caller knows when one pass is over.
+   */
+  preview(nodeId: string, clipId: string | null, seconds: number): number {
+    const player = this.players.get(nodeId)
+    if (!player) return 0
+
+    const held = clipId === null ? undefined : player.bound.get(clipId)
+    if (!held) {
+      this.place(player)
+      return 0
+    }
+
+    const length = player.lengths[held.ref.source.name] ?? 0
+    const into = seconds * held.ref.speed + held.ref.offset
+    const time = held.ref.loop ? (length > 0 ? into % length : 0) : Math.min(into, length)
+
+    for (const [id, other] of player.bound) {
+      const action = player.mixer.clipAction(other.clip)
+      action.loop = other.ref.loop ? LoopRepeat : LoopOnce
+      action.play()
+      action.paused = true
+      // The watched block alone drives the model: the others would blend their own pose into it.
+      action.enabled = id === clipId
+      action.weight = id === clipId ? 1 : 0
+      if (id === clipId) action.time = time
+    }
+
+    player.mixer.update(0)
+    return length
+  }
+
   private placeAll(): void {
     for (const player of this.players.values()) this.place(player)
   }
