@@ -8,6 +8,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { cn } from '@/helpers/cn'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
+import { useLatest } from '@/hooks/useLatest'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
@@ -97,10 +98,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 
   // What a fresh caption says. Held in a ref so the effect that builds the engine does not
   // depend on the language, which would remount it — and lose every layer's texture.
-  const caption = useRef(t('imageTools.textDefault'))
-  useEffect(() => {
-    caption.current = t('imageTools.textDefault')
-  }, [t])
+  const caption = useLatest(t('imageTools.textDefault'))
 
   useEffect(() => {
     const element = hostRef.current
@@ -144,7 +142,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       created.dispose()
       engine.current = null
     }
-  }, [documentId])
+  }, [documentId, caption])
 
   // After the engine is registered, never before: the pixels are handed to it, and it has to be
   // reachable.
