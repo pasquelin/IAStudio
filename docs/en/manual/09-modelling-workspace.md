@@ -606,8 +606,9 @@ section:
 | **▶ / ⏸** | shows the block in the view, on a clock of its own |
 | **Speed** | a multiplier, from 0.1 to 4 |
 | **Loop** | starts over at the end, or holds the last pose |
+| **Drives** | which half of the body this block animates — **The whole body**, **The upper body**, **The lower body** |
 
-**All four controls act on THE BLOCK YOU CHOSE on the band**: press a block to choose it, and the
+**All five controls act on THE BLOCK YOU CHOSE on the band**: press a block to choose it, and the
 section switches over to it — while you have chosen none, it is the first. A model carrying several
 blocks is therefore set block by block: speed and loop are written into the one you are watching,
 and the others do not move.
@@ -618,14 +619,42 @@ and the others do not move.
 > head, and starting the preview pauses the timeline.
 
 **The playhead position is not saved**: reopening the scene puts it back at the start. What is
-saved are the blocks — where they sit on the band, their speed and their loop.
+saved are the blocks — where they sit on the band, their speed, their loop and what they drive.
 
 **A model with no clip keeps the section**, which then says what it is missing — that it carries no
 skeleton yet, or one the studio does not recognise. The picker itself only appears when there is
 something to choose.
 
-**A clip also shows on the band below**, laid as a block at its real length, on a line of its own
-bearing **the clip's name**. Blocks are grouped **under** the key lines, never mixed into them.
+**A clip also shows on the band below**, laid as a block at its real length, and it is **the
+block** that bears the clip's name. The line holding it is a **sub-track**, called **Anim. 1**,
+**Anim. 2**, and so on. Sub-tracks are grouped **under** the key lines, never mixed into them.
+
+#### Layering two animations
+
+**Two blocks do not layer on one sub-track.** Where they overlap they share the character in equal
+parts, and the pose you get is their mean — that is, neither of them. Lay them **end to end** to
+run one after the other: outside its own block a motion holds its edge pose, and the next one
+takes over.
+
+**To play them together, give each its own line.** The **+** button on the last sub-track — *Add a
+sub-track* — opens one below it, and a sub-track left on its own cannot be removed: it is what
+receives whatever is dropped on the object. They are reordered by dragging their header, and
+**that changes only where they are drawn** — unlike camera shots, no sub-track comes in front of
+another.
+
+**This is where *Drives* earns its place.** Two blocks set to **The whole body** have nothing more
+to give than their mean, even on two lines: they are competing for the same bones. Set one to
+**The upper body** and the other to **The lower body**, and each keeps its half whole — walking
+*and* raising the arms becomes both at once, instead of half a step with the arms halfway up.
+
+> **The hips go with the legs**, and that is deliberate: they carry where the character stands, so
+> an upper-body block would otherwise walk it away from where its legs put it.
+
+> **The halves are read off the skeleton, not off the file.** A bone filling no recognised role
+> follows the limb it hangs from — a twist bone, a finger nobody named, a tail. And when nothing
+> above it is recognised either, it goes with the lower body: on a model whose section announces
+> **a skeleton with no recognised joints**, do not count on the halves and leave the blocks on
+> **The whole body**.
 
 ### Seeing the skeleton
 
