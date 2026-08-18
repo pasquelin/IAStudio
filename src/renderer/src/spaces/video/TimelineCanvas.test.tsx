@@ -15,6 +15,8 @@ import { EMPTY_SEQUENCE, EMPTY_SOUND_SEQUENCE, snapToFrame } from '@/engines/tim
 import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { fakeMenu } from '@/helpers/menu-fixtures'
+import { exportOtio } from '@/app/otioExport'
+import { publishCommand } from '@/services/commandBus'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -22,6 +24,8 @@ import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { TIMELESS_DURATION } from '@/engines/timeline/insert'
 import { TimelineCanvas } from './TimelineCanvas'
 import type { VideoToolId } from './videoTools'
+
+vi.mock('@/app/otioExport', () => ({ exportOtio: vi.fn(() => Promise.resolve('Bande.otio')) }))
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
@@ -209,6 +213,18 @@ describe('TimelineCanvas', () => {
     })
 
     expect(clipsOf()).toHaveLength(0)
+  })
+
+  /**
+   * The one command of this strip with no key of its own, so no keyboard test reaches it: it
+   * arrives from the File menu through the bus, and nothing else here proves that it lands.
+   */
+  it('writes the montage out as a cut when the menu asks for it', () => {
+    paint()
+
+    act(() => publishCommand('sequence.exportCut'))
+
+    expect(exportOtio).toHaveBeenCalledWith(sequenceOf(useSequences.getState(), 'doc-1'), 'doc-1')
   })
 
   it('deletes the selected clip on Delete', () => {
