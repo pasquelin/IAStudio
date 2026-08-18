@@ -443,6 +443,8 @@ export class SceneRenderer {
   private readonly gltf: GltfSource
   /** The clips of every model on stage. Apart from the nodes: see `animation.ts`. */
   private readonly animations = new SceneAnimations()
+  /** The cameras the shots named last pass, so one they let go of can be put back where it was. */
+  private railedCameras = new Set<string>()
   /** One per rigged model, drawn over it. Beside the nodes like the grid — never inside one. */
   private readonly skeletons = new Map<string, SkeletonHelper>()
   private showSkeletons = false
@@ -793,29 +795,61 @@ export class SceneRenderer {
    */
   private applyCameraShots(): void {
     const shots = this.timeline.shots
-    if (shots.length === 0) return
+    // Nothing named and nothing to put back: a scene with no shot at all allocates nothing here,
+    // and this runs once per frame of playback.
+    if (shots.length === 0 && this.railedCameras.size === 0) return
 
-    const driven: { object: Object3D; shot: CameraShot }[] = []
     // Walked from the SHOTS rather than from the nodes, exactly as `applyLenses` is: a camera no
     // shot names is one this pass has nothing to do to, and this ran over every node per frame.
-    for (const cameraId of shotCameras(shots)) {
-      const node = this.applied.get(cameraId)
-      const object = this.objects.get(cameraId)
-      // A camera the gizmo carries holds a transform relative to the pivot — see `applyPoses`.
-      if (node?.type !== 'camera' || !object || object.parent === this.pivot) continue
+    const named = new Set(shotCameras(shots))
+    const held = new Set(named)
+
+    // The ones the shots have just let go of. Nothing else in the engine writes a camera's
+    // position, so a shot deleted — or the undo of one that opened — would leave its camera
+    // wherever the rail last put it, and the film would go on being taken from there.
+    for (const cameraId of this.railedCameras) {
+      if (named.has(cameraId)) continue
+      // Held for the next pass when it could not be written — a camera the gizmo carries, whose
+      // shot an undo took away mid-drag. Forfeiting the one attempt makes the rail its rest pose
+      // on release; a camera the document has lost leaves `applied`, so this cannot pile up.
+      if (!this.restCamera(cameraId) && this.applied.has(cameraId)) held.add(cameraId)
+    }
+    this.railedCameras = held
+    if (named.size === 0) return
+
+    const driven: { object: Object3D; shot: CameraShot }[] = []
+    for (const cameraId of named) {
+      // Where the document holds it, before any shot has its say: unbinding a rail, or deleting
+      // it, leaves a shot that covers the head and moves nothing.
+      const object = this.restCamera(cameraId)
+      if (!object) continue
 
       const shot = shotOfCameraAt(this.timeline, cameraId, this.playhead)
       if (shot) driven.push({ object, shot })
-      // Put back where the document holds it the moment no shot drives it any more: scrubbing
-      // past the end of a shot would otherwise strand the camera wherever its rail left it, and
-      // the film would go on being taken from there.
-      else applyTransform(object, poseAt(node.transform, this.timeline, cameraId, this.playhead))
     }
 
+    // Every rail before any aim, and not one camera at a time: a shot may watch a camera that is
+    // itself riding one, and aiming at where that camera stood BEFORE its rail ran is wrong for
+    // the whole length of the shot rather than by one scrub step.
     for (const { object, shot } of driven) {
       if (shot.motion) this.railCamera(object, shot, shot.motion)
+    }
+    for (const { object, shot } of driven) {
       if (shot.target) this.aimCamera(object, shot.target)
     }
+  }
+
+  /**
+   * A camera put back where the document holds it, tracks included, and the object it stands for.
+   * `null` for one the gizmo carries — its transform is relative to the pivot, see `applyPoses`.
+   */
+  private restCamera(cameraId: string): Object3D | null {
+    const node = this.applied.get(cameraId)
+    const object = this.objects.get(cameraId)
+    if (node?.type !== 'camera' || !object || object.parent === this.pivot) return null
+
+    applyTransform(object, poseAt(node.transform, this.timeline, cameraId, this.playhead))
+    return object
   }
 
   /** Puts a camera where its rail says, in the frame of whatever the camera hangs from. */

@@ -5,6 +5,7 @@ import {
   Mesh,
   PerspectiveCamera,
   SphereGeometry,
+  Vector3,
   VectorKeyframeTrack,
 } from 'three'
 import type { Object3D } from 'three'
@@ -19,7 +20,7 @@ import type { Retarget } from './retarget'
 import type * as ModelCache from './modelCache'
 import { animationTrack, cameraShot } from './animation-fixtures'
 import { cameraNodeFixture, meshNode, modelNodeFixture, pathNodeFixture } from './scene-fixtures'
-import { EMPTY_SCENE, IDENTITY_TRANSFORM } from './sceneState'
+import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './sceneState'
 import {
   EMPTY_TIMELINE,
   type AnimationTimeline,
@@ -291,42 +292,49 @@ describe('SceneRenderer and a camera on a rail', () => {
   ): AnimationTrack => animationTrack(id, target.property, keys, { target, muted })
 
   /** A rail ten units long down X, a camera bound to it for the whole of a four-second shot. */
+  const stagedScene = (
+    extra: Partial<CameraShot> = {},
+    timeline: Partial<AnimationTimeline> = {},
+  ): SceneState => ({
+    ...EMPTY_SCENE,
+    nodes: [
+      cameraNodeFixture('cam'),
+      pathNodeFixture('rail', {
+        points: [
+          { x: 0, y: 0, z: 0 },
+          { x: 10, y: 0, z: 0 },
+        ],
+      }),
+      {
+        ...meshNode('watched'),
+        transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 0, z: -20 } },
+      },
+    ],
+    animation: {
+      ...EMPTY_TIMELINE,
+      ...timeline,
+      shots: [
+        cameraShot('s1', {
+          cameraId: 'cam',
+          start: 0,
+          duration: 4 * SECOND,
+          motion: { pathId: 'rail', easing: 'linear', from: 0, to: 1 },
+          ...extra,
+        }),
+      ],
+    },
+  })
+
+  const stagedOn = (scene: SceneState): SceneRenderer => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    engine.apply(scene)
+    return engine
+  }
+
   const staged = (
     extra: Partial<CameraShot> = {},
     timeline: Partial<AnimationTimeline> = {},
-  ): SceneRenderer => {
-    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
-    engine.apply({
-      ...EMPTY_SCENE,
-      nodes: [
-        cameraNodeFixture('cam'),
-        pathNodeFixture('rail', {
-          points: [
-            { x: 0, y: 0, z: 0 },
-            { x: 10, y: 0, z: 0 },
-          ],
-        }),
-        {
-          ...meshNode('watched'),
-          transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 0, z: -20 } },
-        },
-      ],
-      animation: {
-        ...EMPTY_TIMELINE,
-        ...timeline,
-        shots: [
-          cameraShot('s1', {
-            cameraId: 'cam',
-            start: 0,
-            duration: 4 * SECOND,
-            motion: { pathId: 'rail', easing: 'linear', from: 0, to: 1 },
-            ...extra,
-          }),
-        ],
-      },
-    })
-    return engine
-  }
+  ): SceneRenderer => stagedOn(stagedScene(extra, timeline))
 
   it('stands the camera at the start of the rail, and at its end when the shot is over', () => {
     const engine = staged()
@@ -446,6 +454,101 @@ describe('SceneRenderer and a camera on a rail', () => {
     expect(objectOf(engine, 'cam')?.position.x).toBeCloseTo(10, 4)
 
     engine.setPlayhead(5 * SECOND)
+    expect(objectOf(engine, 'cam')?.position.x).toBeCloseTo(0, 4)
+    engine.dispose()
+  })
+
+  /**
+   * Unbinding a rail, or deleting it, leaves the shot covering the head with nothing left to write
+   * the camera's position — so it stayed where the rail had put it, on screen as in the film.
+   */
+  it('puts the camera back where the document holds it once its shot has no rail to run', () => {
+    // The nodes travel by REFERENCE, as a command that writes only `animation` leaves them:
+    // rebuilding them here would have `syncNode` write every transform again and hide the defect.
+    const scene = stagedScene()
+
+    const unbound = stagedOn(scene)
+    unbound.setPlayhead(2 * SECOND)
+    expect(objectOf(unbound, 'cam')?.position.x).toBeCloseTo(5, 4)
+    unbound.apply({
+      ...scene,
+      animation: {
+        ...scene.animation,
+        shots: scene.animation.shots.map(shot => ({ ...shot, motion: undefined })),
+      },
+    })
+    expect(objectOf(unbound, 'cam')?.position.x).toBeCloseTo(0, 4)
+    unbound.dispose()
+
+    const deleted = stagedOn(scene)
+    deleted.setPlayhead(2 * SECOND)
+    deleted.apply({ ...scene, nodes: scene.nodes.filter(node => node.type !== 'path') })
+    expect(objectOf(deleted, 'cam')?.position.x).toBeCloseTo(0, 4)
+    deleted.dispose()
+  })
+
+  /**
+   * A camera may watch another that is itself riding a rail, and the watcher's line can outrank
+   * the rider's — so every rail runs before any aim, rather than one camera at a time.
+   */
+  it('aims at where the camera it watches stands ON its rail, not where the document holds it', () => {
+    const engine = stagedOn({
+      ...EMPTY_SCENE,
+      nodes: [
+        {
+          ...cameraNodeFixture('watcher'),
+          transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 0, z: 10 } },
+        },
+        cameraNodeFixture('rider'),
+        pathNodeFixture('rail', {
+          points: [
+            { x: 0, y: 0, z: 0 },
+            { x: 10, y: 0, z: 0 },
+          ],
+        }),
+      ],
+      animation: {
+        ...EMPTY_TIMELINE,
+        // The watcher FIRST, which is the order that puts its line above the rider's.
+        shots: [
+          cameraShot('watching', {
+            cameraId: 'watcher',
+            start: 0,
+            duration: 4 * SECOND,
+            target: { kind: 'node', nodeId: 'rider' },
+          }),
+          cameraShot('riding', {
+            cameraId: 'rider',
+            start: 0,
+            duration: 4 * SECOND,
+            motion: { pathId: 'rail', easing: 'linear', from: 0, to: 1 },
+          }),
+        ],
+      },
+    })
+
+    engine.setPlayhead(2 * SECOND)
+    const watcher = objectOf(engine, 'watcher')
+    const rider = objectOf(engine, 'rider')
+    if (!watcher || !rider) throw new Error('both cameras stand in the scene')
+
+    expect(rider.position.x).toBeCloseTo(5, 4)
+    const aim = new Vector3(0, 0, -1).applyQuaternion(watcher.quaternion)
+    expect(aim.angleTo(rider.position.clone().sub(watcher.position))).toBeCloseTo(0, 4)
+    engine.dispose()
+  })
+
+  /**
+   * And when the SHOT itself goes — deleted, or the undo of one just opened. The camera leaves
+   * the roll this pass walks, so nothing reached it at all and it stayed on its rail.
+   */
+  it('puts the camera back where the document holds it once no shot names it any more', () => {
+    const scene = stagedScene()
+    const engine = stagedOn(scene)
+    engine.setPlayhead(2 * SECOND)
+    expect(objectOf(engine, 'cam')?.position.x).toBeCloseTo(5, 4)
+
+    engine.apply({ ...scene, animation: { ...scene.animation, shots: [] } })
     expect(objectOf(engine, 'cam')?.position.x).toBeCloseTo(0, 4)
     engine.dispose()
   })
