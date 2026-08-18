@@ -51,8 +51,9 @@ Everything else on the home is a panel, held in its two columns.
 
 ### Explore, the endless feed
 
-The feed of what **everyone** has published, one category at a time — the studio's six kinds, as
-tabs. There is no "all" tab.
+The feed of what **everyone** has published, one category at a time — the six kinds the remote
+library can serve, as tabs. There is no "all" tab, and **no Animation tab**: the studio knows a
+seventh kind the feed cannot serve.
 
 - **it loads as you go down**: the feed pages while you scroll;
 - **it stays at the foot of the page**, and does not move;

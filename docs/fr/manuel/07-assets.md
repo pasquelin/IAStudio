@@ -27,7 +27,7 @@ dossier, jamais autrement.
 
 ## Ce qu’on y trouve
 
-Six types d’assets :
+Sept types d’assets :
 
 | Type | Ce que c’est | Où il atterrit |
 |---|---|---|
@@ -37,8 +37,9 @@ Six types d’assets :
 | **Maille** | un objet en 3D | `3D/` |
 | **Texture** | une matière | `Textures/` |
 | **Skybox** | un ciel à 360° | `Sky/` |
+| **Animation** | un mouvement, à rejouer sur un personnage | `Animations/` |
 
-**Où il atterrit, pas où il vit.** Ces six dossiers sont posés à la création du projet et ne sont
+**Où il atterrit, pas où il vit.** Ces sept dossiers sont posés à la création du projet et ne sont
 qu’un point de départ : déplacez un asset où vous voulez, renommez le dossier, videz-le. Ce qu’un
 fichier EST ne dépend pas de l’endroit où il est — le studio le retrouve, et sa fiche le suit.
 
@@ -447,7 +448,7 @@ sans avoir exécuté `pnpm ffmpeg:fetch`.
 
 ## Où sont vraiment vos fichiers
 
-**Là où vous les avez mis.** Un asset généré atterrit dans l’un des six dossiers de départ — voir
+**Là où vous les avez mis.** Un asset généré atterrit dans l’un des sept dossiers de départ — voir
 [Ce qu’on y trouve](#ce-quon-y-trouve) — et rien ne l’y retient : déplacez-le, rangez-le dans une
 arborescence à vous, l’étagère continue de le montrer et sa fiche le suit. La disposition du
 dossier de projet est décrite au chapitre [Les projets](04-projets.md#ce-quil-y-a-dedans).
