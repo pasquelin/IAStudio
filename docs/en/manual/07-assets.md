@@ -92,7 +92,7 @@ The message says which of the three cases you are in, because they call for diff
 |---|---|
 | "Open a project to see its assets." | no project is open |
 | "No asset yet. Generate something to get started." | the project is empty |
-| "No results for this filter." | your filters are too narrow |
+| "No result for this filter." | your filters are too narrow |
 
 ---
 

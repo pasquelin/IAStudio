@@ -211,14 +211,14 @@ prend toute seule.
 > Les réglages proposés sont **filtrés contre ce que le modèle déclare accepter** avant d’être
 > appliqués. Une valeur hors bornes est écartée, jamais ramenée de force dans l’intervalle.
 
-### Les deux refus que vous verrez
+### Quand ces demandes n’ont rien à faire
 
-| Message | Ce qu’il veut dire |
+| La demande | Ce qui arrive |
 |---|---|
-| « Ce texte est déjà en anglais. » | la traduction n’a rien à faire — le studio vérifie la langue avant d’appeler |
-| « Déposez une image de référence pour en décrire le style. » | le formulaire ne porte aucune image à lire |
+| **Traduire un prompt en anglais**, sur un texte déjà anglais | **rien n’est refusé** : le texte revient tel quel, et la réponse porte la langue reconnue |
+| **Décrire le style des références**, sans image sur le formulaire | « Le formulaire ne porte aucune image de référence dont lire le style. » |
 
-Ces deux-là ne sont pas des pannes, et rien n’est dépensé quand ils s’affichent.
+Ni l’un ni l’autre n’est une panne, et rien n’est dépensé.
 
 > **Ces demandes-là n’entrent pas dans la file** : elles ne s’affichent pas dans la ligne d’état,
 > et il n’y a rien à annuler. **Proposer des variantes ne coûte aucune unité créative** — c’est
