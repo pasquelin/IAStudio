@@ -19,9 +19,20 @@ import { join } from 'node:path'
  *
  * Under the real count rather than on it — a suite legitimately deleted must not fail this — but
  * close enough to mean something: it sat at 20 while the count reached 58, where a silent loss of
- * thirty-eight guards would have passed. Raise it when the gap grows back, and never to the count.
+ * thirty-eight guards would have passed. Never RAISE it to the count; `MOST_SLACK` below is what
+ * now says when it has drifted too far, so this no longer rests on anyone remembering.
  */
-export const LEAST_GUARDS = 50
+export const LEAST_GUARDS = 60
+
+/**
+ * How far the floor may sit below the real count before it stops meaning anything.
+ *
+ * A floor only drifts one way — guards are added, it is not — and nothing said so: it reached
+ * seventeen below on 2026-08-19, back where a silent loss of seventeen guards would have passed.
+ * `wideGuards.test.ts` fails when the gap grows past this, which turns « remember to raise it »
+ * into « the suite tells you to ». **Raise the FLOOR when that happens, never this.**
+ */
+export const MOST_SLACK = 10
 
 /**
  * A glob standing for files it does not name, rather than one naming a single file.
