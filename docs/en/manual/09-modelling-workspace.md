@@ -631,6 +631,53 @@ something to choose.
 block** that bears the clip's name. The line holding it is a **sub-track**, called **Anim. 1**,
 **Anim. 2**, and so on. Sub-tracks are grouped **under** the key lines, never mixed into them.
 
+### Adding an animation
+
+The **Animation** section holds the way in itself: the **Add an animation** link drops a panel
+underneath it, with three tabs.
+
+| Tab | What it offers |
+|---|---|
+| **Library** | everything already at hand, in a single list: the clips the character's own file brought, the ones shipped with the studio, and the animations filed in the project |
+| **Import** | a file taken from disk — `.glb`, `.gltf`, `.fbx` |
+| **AI** | the Scenario models that **make** a motion |
+
+**The Library tab is not the *Animations* panel** described further down, and the two lists are not
+the same: the tab counts one source more — the animations filed in the project — and it **lays**
+what you choose, where the panel is dragged onto the band.
+
+**Choosing a row LAYS the block, it is not a rehearsal.** The motion is written onto the real
+character, retargeted as it will be, and it starts playing at once: what you are looking at **is**
+the result, and no preview could ever differ from it. Carrying on browsing replaces the block that
+was laid with the next one — there are never two.
+
+**Two ways out, and there are no others.** **Keep** leaves the block where it is and closes the
+panel: keeping is doing nothing more. **Cancel** takes it back, and the scene returns to where it
+was.
+
+**Below the list, the preview carries its own controls**: *Back to the start*, *Play the preview*,
+then **Speed** and **Loop** — the same two settings as the section, written into the block you have
+just laid. Like the ▶ of the Inspector, this preview runs on a clock of its own and does not move
+the playhead.
+
+**The panel then says whether the motion fits the skeleton**, in one line: "Animation compatible.",
+or that it is not a perfect fit. **No bone name is shown up front** — *See the joints concerned*
+opens the list, and those are **roles**, never bone names: that vocabulary is the only one two
+skeletons share. Each row says what happens to the joint — "stays at rest" for a joint of your
+character the motion does not animate, "not carried over" for a joint of the motion your character
+does not have.
+
+> **A clip that came from the character's own file says none of this**, and rightly so: it already
+> speaks that skeleton, so there was no retargeting to judge.
+
+**An imported file stays where it is** — the studio references it, it does not copy it, as every
+import does. A file carrying no motion is refused on the spot, with its reason, rather than doing
+nothing at all.
+
+**The AI tab only LISTS today**, and it says so: nothing is submitted from it yet. Each row bears
+the reason standing in the way — the subscription that falls short, or "Not wired up yet". When the
+catalogue offers no motion service at all, the tab says that too.
+
 ### The animation library
 
 The **Animations** panel, in the right column, lists **what a character can be made to play**:

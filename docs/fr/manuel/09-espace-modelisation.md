@@ -652,6 +652,53 @@ s’affiche que s’il y a quelque chose à choisir.
 **Anim. 1**, **Anim. 2**, et ainsi de suite. Les sous-pistes sont groupées **sous** les lignes de
 clés, jamais mêlées à elles.
 
+### Ajouter une animation
+
+La section **Animation** ouvre elle-même de quoi en choisir une : le lien **Ajouter une animation**
+déroule un volet sous lui, avec trois onglets.
+
+| Onglet | Ce qu’il offre |
+|---|---|
+| **Bibliothèque** | tout ce qui est déjà sous la main, en une seule liste : les séquences que le fichier du personnage porte, celles livrées avec le studio, et les animations rangées dans le projet |
+| **Import** | un fichier pris sur le disque — `.glb`, `.gltf`, `.fbx` |
+| **IA** | les modèles Scenario qui **fabriquent** un mouvement |
+
+**L’onglet Bibliothèque n’est pas le panneau *Animations*** décrit plus bas, et les deux listes ne
+se valent pas : l’onglet compte une source de plus — les animations rangées dans le projet — et il
+**pose** ce qu’on choisit, là où le panneau se glisse sur la bande.
+
+**Choisir une ligne POSE le bloc, ce n’est pas une répétition.** Le mouvement est écrit sur le vrai
+personnage, transposé comme il le sera, et il se met à jouer aussitôt : ce que vous regardez **est**
+le résultat, il n’y a pas d’aperçu qui pourrait en différer. Continuer à parcourir remplace le bloc
+posé par le suivant — il n’en reste jamais deux.
+
+**Deux sorties, et il n’y en a pas d’autres.** **Garder** laisse le bloc où il est et referme le
+volet : garder, c’est ne rien faire de plus. **Annuler** le reprend, et la scène revient où elle
+était.
+
+**Sous la liste, l’aperçu porte ses propres contrôles** : *Revenir au début*, *Jouer l’aperçu*, puis
+**Vitesse** et **En boucle** — les deux mêmes réglages que la section, écrits dans le bloc que vous
+venez de poser. Comme le ▶ de l’Inspecteur, cet aperçu tourne sur une horloge à lui et ne déplace
+pas la tête de lecture.
+
+**Le volet dit ensuite si le mouvement va au squelette**, en une ligne : « Le personnage sait tout
+jouer de ce mouvement. », ou bien qu’il ne lui va pas parfaitement. **Aucun nom d’os n’est affiché
+d’emblée** — *Voir les articulations concernées* ouvre la liste, et ce sont des **rôles**, jamais
+des noms d’os : deux squelettes ne partagent que ce vocabulaire-là. Chaque ligne dit ce qui arrive à
+l’articulation — « reste au repos » pour une articulation de votre personnage que le mouvement
+n’anime pas, « non reprise » pour une articulation du mouvement que votre personnage n’a pas.
+
+> **Une séquence venue du fichier du personnage ne dit rien de tout cela**, et c’est normal : elle
+> parle déjà son squelette, il n’y a eu aucune transposition à juger.
+
+**Un fichier importé reste où il est** — le studio le référence, il ne le recopie pas, comme tout
+import. Un fichier qui ne porte aucun mouvement est refusé sur place, avec sa raison, plutôt que de
+ne rien faire.
+
+**L’onglet IA ne fait aujourd’hui que LISTER**, et il le dit : aucune génération ne s’y lance
+encore. Chaque ligne porte la raison qui l’en empêche — l’abonnement qui manque, ou « Pas encore
+branché ». Quand le catalogue n’offre aucun service de mouvement, l’onglet le dit aussi.
+
 ### La bibliothèque d’animations
 
 Le panneau **Animations**, dans la colonne de droite, liste **ce qu’un personnage peut jouer** :
