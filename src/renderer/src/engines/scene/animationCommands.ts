@@ -11,11 +11,25 @@ import {
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import type { Command } from '../core/history'
-import { addNode, moveNodes, multi } from './commands'
+import { addNode, batch, moveNodes, multi, setCamera } from './commands'
 import { pathNode } from './nodeFactory'
-import { deltaOf, valueAt, withKey, withoutKey } from './animationEval'
+import {
+  anySoloed,
+  deltaOf,
+  fovAt,
+  playsThrough,
+  valueAt,
+  withKey,
+  withoutKey,
+} from './animationEval'
 import { shotsWith } from './cameraShots'
-import { nodeById, type CameraNode, type NodeMove, type SceneState } from './sceneState'
+import {
+  nodeById,
+  type CameraNode,
+  type NodeMove,
+  type SceneNode,
+  type SceneState,
+} from './sceneState'
 
 /**
  * Edits of the timeline, on the pattern of the sequence's own track commands: what a command
@@ -551,4 +565,49 @@ export function movesToCommand(
   if (plain.length > 0) keys.push(moveNodes(plain))
   if (keys.length === 0) return null
   return keys.length === 1 && keys[0] ? keys[0] : multi('transform', keys)
+}
+
+/**
+ * What a field of view typed into the inspector becomes: a key on the lens channel where one
+ * records, the camera's own descriptor everywhere else.
+ *
+ * The rule `movesToCommand` holds for a drag, applied to the one property no gizmo can carry —
+ * and the reason `recordMove` leaves the lens channel alone. The number handed in is what the
+ * lens must READ at that instant; a key holds what the channel ADDS, so the difference is taken
+ * against the descriptor, exactly as `deltaOf` takes a pose against its rest.
+ */
+export function lensToCommand(
+  state: SceneState,
+  nodes: readonly SceneNode[],
+  fov: number,
+  at: Us,
+  recording: boolean,
+): Command<SceneState> {
+  const soloed = anySoloed(state.animation)
+
+  return batch('lens', nodes, node => {
+    if (node.type !== 'camera') return null
+
+    // What the channels PLAY at that instant, which is what the field was showing. The same
+    // filter has to pick what gets written: a key laid on a muted channel is a number typed and
+    // lost, and a descriptor written under a locked one moves the lens twice.
+    const played = fovAt(state.animation, node.id, at) ?? 0
+    const lens = recordingTracksFor(state, node.id).find(
+      track => track.target.property === 'fov' && playsThrough(track, soloed),
+    )
+
+    // A camera ALREADY keyed records whatever the switch says, for the reason `movesToCommand`
+    // writes out: the descriptor is what the channels add to, never what the lens reads.
+    if (!lens || (!recording && lens.keys.length === 0)) {
+      return setCamera(node.id, { ...node.camera, fov: fov - played })
+    }
+
+    // This channel's own share taken back out: whatever else plays goes on adding what it adds,
+    // so the key holds exactly what is left for the lens to READ the number typed.
+    return setAnimationKey(lens.id, at, {
+      x: fov - node.camera.fov - (played - valueAt(lens, at).x),
+      y: 0,
+      z: 0,
+    })
+  })
 }

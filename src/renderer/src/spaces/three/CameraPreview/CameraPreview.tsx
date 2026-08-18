@@ -47,7 +47,6 @@ export function CameraPreview({ documentId }: { documentId: string }) {
   // frame of playback, and this component would re-render sixty times a second for two fields.
   const previewSize = useSceneViews(state => sceneViewOf(state, documentId).previewSize)
   const previewOffset = useSceneViews(state => sceneViewOf(state, documentId).previewOffset)
-  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
 
   const anchor = selectedNodes(nodes, selectedIds).at(-1) ?? null
   const camera = anchor?.type === 'camera' ? anchor : null
@@ -62,9 +61,14 @@ export function CameraPreview({ documentId }: { documentId: string }) {
     [cameraId, previewSize, previewOffset, size],
   )
 
-  // `activeCameraAt` and nothing else, so the badge cannot disagree with what the montage and
-  // the film are drawing — its fall back to the first camera included.
-  const onAir = camera !== null && activeCameraAt(timeline, nodes, playhead) === camera.id
+  // `activeCameraAt` and nothing else, so the badge cannot disagree with the montage or the film.
+  // The ANSWER is subscribed to rather than the head: reading the head off the view re-rendered
+  // this sixty times a second to draw a word that changes twice in a sequence.
+  const onAir = useSceneViews(
+    state =>
+      cameraId !== null &&
+      activeCameraAt(timeline, nodes, sceneViewOf(state, documentId).playhead) === cameraId,
+  )
   const full = previewSize === 'full'
 
   useEffect(() => {

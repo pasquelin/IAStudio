@@ -2,7 +2,7 @@ import type { AnimationTimeline, CameraShot } from '@shared/domain/animation'
 import { frameDuration, SECOND, snapToFrame, type Us } from '@shared/domain/time'
 import { clamp } from '@shared/numeric'
 import { movedWithin } from '@shared/domain/order'
-import { firstCameraId, type SceneNode } from './sceneState'
+import { cameraIds, firstCameraId, type SceneNode } from './sceneState'
 
 /**
  * The cameras the band stacks, top first: one line per camera, ranked by where its first shot
@@ -58,7 +58,7 @@ export function activeShotAt(
   nodes: readonly SceneNode[],
   time: Us,
 ): CameraShot | null {
-  const cameras = new Set(nodes.flatMap(node => (node.type === 'camera' ? node.id : [])))
+  const cameras = cameraIds(nodes)
   return bestShot(timeline, time, shot => cameras.has(shot.cameraId))
 }
 

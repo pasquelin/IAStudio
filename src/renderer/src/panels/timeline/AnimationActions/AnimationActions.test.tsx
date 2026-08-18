@@ -1,8 +1,15 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { SECOND } from '@shared/domain/time'
+import { cameraShot } from '@/engines/scene/animation-fixtures'
 import { cameraNode } from '@/engines/scene/nodeFactory'
-import { meshNode, modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
+import {
+  cameraNodeFixture,
+  meshNode,
+  modelNodeFixture,
+  rigStateFixture,
+} from '@/engines/scene/scene-fixtures'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -142,8 +149,15 @@ describe('writing the film', () => {
     })
   }
 
-  /** A stand-in for the engine: there is no WebGL here, and what is under test is the wiring. */
-  function installEngine(renderFilm = vi.fn(() => Promise.resolve())): typeof renderFilm {
+  /**
+   * A stand-in for the engine: there is no WebGL here, and what is under test is the wiring.
+   *
+   * Typed on the real method's parameters so a case can read back WHAT the film was handed —
+   * a stub taking none makes that argument unreachable rather than untyped.
+   */
+  function installEngine(
+    renderFilm = vi.fn((..._film: Parameters<SceneRenderer['renderFilm']>) => Promise.resolve()),
+  ): typeof renderFilm {
     registerSceneEngine(DOCUMENT, { renderFilm } as unknown as SceneRenderer)
     return renderFilm
   }
@@ -170,6 +184,35 @@ describe('writing the film', () => {
     expect(start).toHaveBeenCalledWith({ name: expect.any(String), fps: timelineOf().fps })
     expect(renderFilm).toHaveBeenCalled()
     expect(finish).toHaveBeenCalledWith('render_1')
+  })
+
+  /**
+   * A film takes a RESOLVER rather than one camera: the shots hand it over half way, and a fixed
+   * camera would write the whole film through whichever one happened to be first.
+   */
+  it('hands the film a camera per instant rather than one for the whole of it', async () => {
+    const first = cameraNodeFixture('cam-a')
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [first, cameraNodeFixture('cam-b')],
+      animation: {
+        ...EMPTY_SCENE.animation,
+        shots: [
+          cameraShot('s1', { cameraId: 'cam-a', start: 0, duration: 7 * SECOND }),
+          cameraShot('s2', { cameraId: 'cam-b', start: 7 * SECOND, duration: 8 * SECOND }),
+        ],
+      },
+    })
+    const renderFilm = installEngine()
+    installFakeBridge({
+      render: { start: () => Promise.resolve('render_1'), finish: () => Promise.resolve('a.mp4') },
+    })
+
+    bar()
+    await userEvent.click(screen.getByRole('button', { name: /Rendre en vidéo/ }))
+
+    const cameraAt = renderFilm.mock.calls[0]?.[0]
+    expect([cameraAt?.(3 * SECOND), cameraAt?.(10 * SECOND)]).toEqual(['cam-a', 'cam-b'])
   })
 
   it('cleans the title down to a file name before the save dialog is asked', async () => {

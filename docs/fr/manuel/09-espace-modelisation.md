@@ -787,8 +787,9 @@ C’est l’inverse d’un montage vidéo, où le clip du dessus cache celui du 
 
 L’enregistrement automatique n’est pas obligatoire. Le geste, dans l’ordre :
 
-1. **posez une clé** au départ, sur la ligne de l’objet — elle ouvre ses trois propriétés et
-   retient la pose où il se tient à cet instant, contre laquelle toutes ses clés se mesureront ;
+1. **posez une clé** au départ, sur la ligne de l’objet — elle ouvre ses trois propriétés (une
+   caméra en a une quatrième, son **angle de vue**) et retient la pose où il se tient à cet
+   instant, contre laquelle toutes ses clés se mesureront ;
 2. **déplacez la tête** sur la règle ;
 3. **déplacez l’objet**, puis **posez une clé** à nouveau.
 
@@ -823,6 +824,13 @@ modifie le document, et `⌘Z` le rend.
 > **Sans aucun plan, rien n’est perdu** : c’est la première caméra de la scène qui filme, sur toute
 > la durée. Et **supprimer une caméra ne troue pas le film** — ses plans sont sautés plutôt que
 > rendus en noir, et annuler la suppression les ramène entiers.
+
+**L’angle de vue s’anime comme le reste**, et c’est le zoom d’un plan. Posez une clé sur la ligne
+de la caméra — elle ouvre l’**angle de vue** avec les trois autres propriétés —, puis réglez ce
+champ dans l’Inspecteur : avec l’**enregistrement automatique**, chaque réglage devient une clé à
+la tête plutôt qu’un changement d’objectif. Une caméra **déjà animée** enregistre même sans, comme
+un objet déjà animé le fait d’un déplacement. Le champ affiche alors ce que l’objectif lit **à
+l’instant où se tient la tête**, clés comprises.
 
 Le bouton **Rendre en vidéo** de la timeline écrit un fichier `.mp4` sur toute la durée, chaque
 image prise par la caméra que le montage désigne à cet instant. Le studio demande **où enregistrer

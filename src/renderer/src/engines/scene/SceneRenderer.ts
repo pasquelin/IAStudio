@@ -63,7 +63,7 @@ import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
 import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
 import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
 import { clampUnit, progressAt } from './cameraMotion'
-import { railsInUse, shotOfCameraAt } from './cameraShots'
+import { railsInUse, shotCameras, shotOfCameraAt } from './cameraShots'
 import {
   buildPath,
   cameraBody,
@@ -785,21 +785,20 @@ export class SceneRenderer {
     if (shots.length === 0) return
 
     const driven: { object: Object3D; shot: CameraShot }[] = []
-    for (const node of this.applied.values()) {
-      if (node.type !== 'camera') continue
-
-      const object = this.objects.get(node.id)
+    // Walked from the SHOTS rather than from the nodes, exactly as `applyLenses` is: a camera no
+    // shot names is one this pass has nothing to do to, and this ran over every node per frame.
+    for (const cameraId of shotCameras(shots)) {
+      const node = this.applied.get(cameraId)
+      const object = this.objects.get(cameraId)
       // A camera the gizmo carries holds a transform relative to the pivot — see `applyPoses`.
-      if (!object || object.parent === this.pivot) continue
+      if (node?.type !== 'camera' || !object || object.parent === this.pivot) continue
 
-      const shot = shotOfCameraAt(this.timeline, node.id, this.playhead)
+      const shot = shotOfCameraAt(this.timeline, cameraId, this.playhead)
       if (shot) driven.push({ object, shot })
       // Put back where the document holds it the moment no shot drives it any more: scrubbing
       // past the end of a shot would otherwise strand the camera wherever its rail left it, and
       // the film would go on being taken from there.
-      else if (this.timeline.shots.some(held => held.cameraId === node.id)) {
-        applyTransform(object, poseAt(node.transform, this.timeline, node.id, this.playhead))
-      }
+      else applyTransform(object, poseAt(node.transform, this.timeline, cameraId, this.playhead))
     }
 
     for (const { object, shot } of driven) {

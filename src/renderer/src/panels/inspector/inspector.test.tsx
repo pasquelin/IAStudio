@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, TEXTURE_SLOTS } from '@shared/domain/scene'
+import { addAnimationTrack } from '@/engines/scene/animationCommands'
 import { addNode } from '@/engines/scene/commands'
 import { createNodeOf } from '@/engines/scene/nodeFactory'
 import {
@@ -21,6 +22,7 @@ import {
 import type { Transform } from '@shared/domain/scene'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { useAnimationViews } from '@/stores/animationView'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
@@ -185,6 +187,41 @@ describe('inspector panel', () => {
     expect(screen.getByRole('button', { name: /Caméra/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Matière/ })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Transformation/ })).toBeInTheDocument()
+  })
+
+  /**
+   * The lens is the one property no gizmo can carry, so the inspector is where a camera is
+   * animated from — and where the whole of `fov` in `TrackProperty` would otherwise be
+   * unreachable: a channel opened by the sheet held nothing but zeroes.
+   */
+  it('keys the field of view while auto-key records, rather than moving the lens itself', () => {
+    const state = install(cameraNodeFixture('camera-1', { fov: 50 }))
+    installScene(
+      'doc-1',
+      addAnimationTrack({ nodeId: 'camera-1', property: 'fov' }, 'Lens', 'lens').apply(state),
+    )
+    useAnimationViews.getState().setAutoKey('doc-1', true)
+    render(<Content />)
+
+    fireEvent.change(screen.getByLabelText('Angle de vue'), { target: { value: '80' } })
+
+    const node = nodeInStore('camera-1')
+    expect(node?.type === 'camera' && node.camera.fov).toBe(50)
+    expect(sceneOf(useScenes.getState(), 'doc-1').animation.tracks[0]?.keys).toEqual([
+      { time: 0, value: { x: 30, y: 0, z: 0 } },
+    ])
+    // What the field reads back is what was typed: the descriptor plus what the channel adds.
+    expect(screen.getByLabelText('Angle de vue')).toHaveValue('80')
+  })
+
+  it('writes the lens itself for a camera nothing animates', () => {
+    install(cameraNodeFixture('camera-1', { fov: 50 }))
+    render(<Content />)
+
+    fireEvent.change(screen.getByLabelText('Angle de vue'), { target: { value: '80' } })
+
+    const node = nodeInStore('camera-1')
+    expect(node?.type === 'camera' && node.camera.fov).toBe(80)
   })
 
   it('shows a sprite its own section, and no material', () => {
