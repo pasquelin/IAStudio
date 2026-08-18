@@ -5,8 +5,8 @@ import type { BundledAnimation } from '@shared/domain/animationLibrary'
 import type { ClipSource } from '@shared/domain/scene'
 import { Row } from '../Row'
 import { rowSkin } from '../styles'
+import { useProjectAnimations } from '@/hooks/useProjectAnimations'
 import { clipsOfNode, useModelClips } from '@/stores/modelClips'
-import { assetsById, useAssets } from '@/stores/assets'
 
 export type AnimationPickerLibraryProps = {
   documentId: string
@@ -29,7 +29,7 @@ export function AnimationPickerLibrary({
   const { t } = useTranslation()
   const [bundled, setBundled] = useState<readonly BundledAnimation[]>([])
   const own = useModelClips(state => clipsOfNode(state, documentId, nodeId))
-  const items = useAssets(state => state.items)
+  const motions = useProjectAnimations()
 
   useEffect(() => {
     let alive = true
@@ -38,8 +38,6 @@ export function AnimationPickerLibrary({
     })
     return () => void (alive = false)
   }, [])
-
-  const motions = [...assetsById({ items }).values()].filter(asset => asset.type === 'animation')
 
   if (own.length === 0 && bundled.length === 0 && motions.length === 0) {
     return <p className="text-muted text-tiny p-2">{t('inspector.animationLibraryEmpty')}</p>

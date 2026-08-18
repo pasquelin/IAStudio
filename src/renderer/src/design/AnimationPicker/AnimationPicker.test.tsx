@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
 import type { ClipSource } from '@shared/domain/scene'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
@@ -14,6 +15,15 @@ import { AnimationPicker } from './AnimationPicker'
 const DOCUMENT = 'doc-1'
 
 const bundled = [{ name: 'Capoeira', thumbnail: true }]
+
+const JIG: Asset = {
+  id: 'asset-9',
+  name: 'jig',
+  type: 'animation',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-01-01T00:00:00.000Z',
+}
 
 function show(laid: { clipId: string; source: ClipSource } | null = null) {
   const onChoose = vi.fn()
@@ -64,24 +74,27 @@ describe('choosing an animation', () => {
     expect(onChoose).toHaveBeenCalledWith({ kind: 'bundled', name: 'Capoeira' }, 'Capoeira')
   })
 
+  // The shelf stays empty on purpose: `useAssets.items` is a SCOPE — paged, narrowed by the space
+  // in front and by whatever facet was picked — so a library built out of it lists what has been
+  // browsed rather than what the project holds.
   it('lists the motions the project holds beside them', async () => {
-    useAssets.setState({
-      items: [
-        {
-          id: 'asset-9',
-          name: 'jig',
-          type: 'animation',
-          location: 'local',
-          tags: [],
-          createdAt: '2026-01-01T00:00:00.000Z',
-        },
-      ],
+    installFakeBridge({
+      animations: { list: () => Promise.resolve(bundled) },
+      assets: { search: () => Promise.resolve([JIG]) },
     })
     const { onChoose } = show()
 
     await userEvent.click(await screen.findByRole('button', { name: 'jig' }))
 
     expect(onChoose).toHaveBeenCalledWith({ kind: 'asset', assetId: 'asset-9', name: 'jig' }, 'jig')
+  })
+
+  it('offers none the catalogue no longer holds, whatever the shelf still remembers', async () => {
+    useAssets.setState({ items: [JIG] })
+    show()
+
+    expect(await screen.findByRole('button', { name: 'Capoeira' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'jig' })).not.toBeInTheDocument()
   })
 
   // Nothing is laid yet, so there is nothing to keep and nothing to look at.
