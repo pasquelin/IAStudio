@@ -29,7 +29,7 @@ const reported = vi.fn<(entry: LogEntry) => Promise<void>>()
 
 /** Only the parts of a written timeline these cases read back. */
 type WrittenTimeline = {
-  metadata: { scenario: { documentId?: string } }
+  metadata: { scenario: { documentId?: string; playhead?: number; audioEdits?: unknown } }
   tracks: { children: { children: { media_reference: { target_url?: string; name: string } }[] }[] }
 }
 
@@ -112,6 +112,29 @@ describe('what a save writes for a montage', () => {
     useDocuments.setState({ documents: {}, activeId: null })
 
     expect(sequencePayload(ONE_CLIP, 'doc-1')).toMatchObject({ OTIO_SCHEMA: 'Timeline.1' })
+  })
+
+  /**
+   * What the file carried is given back, and what this editor COMPOSES wins over it. The two
+   * halves are one rule and the order between them is the whole of it: carried values that
+   * outranked the state would freeze a montage at the playhead it was opened with.
+   */
+  it('gives a foreign key back untouched, and never an outdated one of its own', () => {
+    heldIn('Bande.otio')
+    sequenceFromPayload(
+      {
+        OTIO_SCHEMA: 'Timeline.1',
+        metadata: { scenario: { audioEdits: { 'clip-a': [] }, playhead: 9_000_000 } },
+        tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
+      },
+      'doc-1',
+    )
+
+    const studio = written(sequencePayload({ ...ONE_CLIP, playhead: 42 }, 'doc-1')).metadata
+      .scenario
+
+    expect(studio.audioEdits).toEqual({ 'clip-a': [] })
+    expect(studio.playhead).toBe(42)
   })
 })
 

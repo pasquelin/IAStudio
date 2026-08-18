@@ -29,13 +29,21 @@ export type DocumentBodyFormat = {
   readHead: (file: string) => Promise<DocumentEnvelope>
 }
 
-/** `filled` says the file has more to it — which is what tells a document from a file too big. */
-async function firstBytes(file: string): Promise<{ head: string; filled: boolean }> {
+/**
+ * The field every envelope of the studio carries and no foreign JSON does — `documentEnvelope`
+ * makes it required, and it sits within the first few dozen bytes whatever the title.
+ *
+ * NOT `"version"`: a glTF names one inside `asset`, and the envelope does not even open on it —
+ * `write` spreads the draft first, so the line begins `{"title":`.
+ */
+const ENVELOPE_MARK = '"kind":"'
+
+async function firstBytes(file: string): Promise<string> {
   const handle = await open(file, 'r')
   try {
     const buffer = Buffer.alloc(ENVELOPE_LIMIT)
     const { bytesRead } = await handle.read(buffer, 0, ENVELOPE_LIMIT, 0)
-    return { head: buffer.toString('utf8', 0, bytesRead), filled: bytesRead === ENVELOPE_LIMIT }
+    return buffer.toString('utf8', 0, bytesRead)
   } finally {
     await handle.close()
   }
@@ -49,15 +57,17 @@ export const ENVELOPED: DocumentBodyFormat = {
     return `${JSON.stringify(envelope)}\n${content}`
   },
   readHead: async file => {
-    const { head, filled } = await firstBytes(file)
+    const head = await firstBytes(file)
     const cut = head.indexOf('\n')
     if (cut !== -1) return parseDocumentEnvelope(JSON.parse(head.slice(0, cut)))
 
-    // A version 1 file has no line of its own, so its head is truncated and fails to parse. Only
-    // one that FITS, though: a kind wears the extension of an open format now, so a real glTF
-    // exported into the project reaches here — and reading it whole on the thread that owns every
-    // window is a freeze at each listing rather than a slow listing.
-    if (filled) throw new Error('No envelope in the first bytes of this file')
+    // Two of ours have no line to read short: a version 1 file is one object, content included,
+    // and a manifest whose first line held the base64 of every layer runs past this many bytes.
+    // Both are read whole. What is refused is a file that does not OPEN like one of ours — a
+    // kind wears the extension of an open format now, so a minified glTF exported into the
+    // project reaches here, and reading it whole on the thread that owns every window is a
+    // freeze at each listing rather than a slow one.
+    if (!head.includes(ENVELOPE_MARK)) throw new Error('No envelope where this file begins')
     return envelopedDocument(await readFile(file, 'utf8'))
   },
 }

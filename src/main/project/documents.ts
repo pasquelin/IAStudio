@@ -306,13 +306,7 @@ export function createDocumentFiles({
   /** The staging copies being written right now. Every window writes through this one map. */
   const staging = new Set<string>()
 
-  /**
-   * `spelling` is the file the bytes are DESTINED for, which a rename makes different from the
-   * one they are written to: a document that lost its extension is written back under the one
-   * its kind names, and spelling it as the file it is leaving puts an envelope inside a name
-   * that promises a standard — unreadable at the next listing, and the document is gone.
-   */
-  const store = async (file: string, document: DocumentFile, spelling = file): Promise<void> => {
+  const store = async (file: string, document: DocumentFile): Promise<void> => {
     // Unique per call: the staging copy of one window must not be the staging copy of another.
     const copy = `${file}.${randomUUID()}${STAGING_SUFFIX}`
     staging.add(basename(copy))
@@ -325,7 +319,7 @@ export function createDocumentFiles({
       // Shared with the three stores of `persistence`, which is also where the tidy-up learned not
       // to become the failure: this copy's `rm` used to throw over the error the caller needed.
       // Durability across a power cut would want `fsync`; it has none.
-      const body = bodyFormatOf(extensionOf(basename(spelling))).write(document)
+      const body = bodyFormatOf(extensionOf(basename(file))).write(document)
       await writeAtomic(file, body, { staging: copy })
     } finally {
       staging.delete(basename(copy))
@@ -532,13 +526,11 @@ export function createDocumentFiles({
    * renamed in the Finder would otherwise be written to a path that is no longer there — which
    * `writeFile` answers by creating it, leaving two files where the user made one.
    */
-  const holdsDocument = async (path: string, id: string, kind: DocumentKind): Promise<boolean> => {
-    const descriptor = await descriptorOf(path)
-    return descriptor?.id === id && descriptor.kind === kind
-  }
-
   const locate = async (id: string, kind: DocumentKind): Promise<string> => {
-    const holds = (path: string): Promise<boolean> => holdsDocument(path, id, kind)
+    const holds = async (path: string): Promise<boolean> => {
+      const descriptor = await descriptorOf(path)
+      return descriptor?.id === id && descriptor.kind === kind
+    }
 
     const cached = index.get(keyOf(id, kind))
     if (cached && (await holds(cached))) return absoluteOf(cached)
@@ -710,13 +702,25 @@ export function createDocumentFiles({
           ...(held.sourceAssetId ? { sourceAssetId: held.sourceAssetId } : {}),
         }
 
-        await (FOLDER_KINDS.has(kind)
-          ? writeAtomic(join(from, DOCUMENT_MANIFEST), ENVELOPED.write(renamed), {
-              staging: join(from, `${DOCUMENT_MANIFEST}.${randomUUID()}${STAGING_SUFFIX}`),
-            })
-          : store(from, renamed, to))
+        // A document that GAINS an extension is written straight to its new name, and the old
+        // file removed after. The bytes are spelt for the name they land under, so a move that
+        // failed between the two would otherwise leave a body under a name that denies it — the
+        // very loss this spelling exists to prevent. The extension is the same either way in
+        // every other rename, `descriptorOf` refusing a file whose head its name denies, and
+        // there the envelope-then-move order stands: a crash leaves the right title under the
+        // old name, which renaming again repairs.
+        if (!FOLDER_KINDS.has(kind) && extensionOf(basename(from)) !== extensionOf(entry)) {
+          await store(to, renamed)
+          await rm(from, { force: true })
+        } else {
+          await (FOLDER_KINDS.has(kind)
+            ? writeAtomic(join(from, DOCUMENT_MANIFEST), ENVELOPED.write(renamed), {
+                staging: join(from, `${DOCUMENT_MANIFEST}.${randomUUID()}${STAGING_SUFFIX}`),
+              })
+            : store(from, renamed))
 
-        await rename(from, to)
+          await rename(from, to)
+        }
         index.set(keyOf(id, kind), path)
         // The envelope was just rewritten and the file just moved, both by the studio. Without
         // this, the next ⌘S would read a time it does not recognise and accuse the user of
@@ -730,11 +734,17 @@ export function createDocumentFiles({
     remove: async (id, kind) => {
       await queued(id, async () => {
         const file = await locate(id, kind)
-        // Verified before it is deleted, never merely located. `locate` falls back on the address
-        // a document WOULD have had, and two kinds share an extension — so that address is the
-        // same for both, and an id that happens to be another document's file name would have
-        // that document removed instead. A file that is not there answers no, as it always did.
-        if (await holdsDocument(relativeOf(file), id, kind)) {
+        // Refused only for a file that demonstrably belongs to something ELSE. `locate` falls
+        // back on the address a document WOULD have had, and two kinds share an extension — so
+        // that address is the same for both, and an id that happens to be another document's
+        // file name would have that document removed instead.
+        //
+        // One that answers nothing is still removed, which is what a file that is not there has
+        // always been. **The blind spot is `locate`, not this**: a document whose envelope
+        // stopped reading cannot be found at all, so removal lands on the address it would have
+        // had and the real file stays — invisible in every list and undeletable from the studio.
+        const sitting = await descriptorOf(relativeOf(file))
+        if (!sitting || (sitting.id === id && sitting.kind === kind)) {
           await rm(file, { force: true, recursive: FOLDER_KINDS.has(kind) })
         }
         index.delete(keyOf(id, kind))
