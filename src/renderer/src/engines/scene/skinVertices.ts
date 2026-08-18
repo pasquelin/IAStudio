@@ -1,0 +1,173 @@
+/**
+ * Which bones drive each vertex, and how much.
+ *
+ * The arithmetic of the skinning worker, held apart from it so it can be measured without one:
+ * everything that can go wrong here — a vertex caught by the wrong limb, weights that do not sum
+ * to one, a bone of zero length — is numbers.
+ *
+ * A bone is a SEGMENT between itself and its child, never a point. Measuring to a point puts the
+ * whole forearm's influence at the elbow, and the skin folds there instead of bending.
+ */
+import { INFLUENCES, type SkinRequest } from './skinMessage'
+
+export type SkinBinding = { skinIndex: Uint16Array; skinWeight: Float32Array }
+
+/** Index of the `trunk` region in `SKIN_REGIONS`, which is the one that agrees with every other. */
+const TRUNK = 0
+
+/** Keeps a vertex sitting exactly on a bone from weighing infinity. */
+const EPSILON = 1e-6
+
+/** How often the worker looks up: often enough to cancel promptly, rarely enough to cost nothing. */
+const REPORT_EVERY = 4096
+
+export type SkinProgress = {
+  /** Called with 0…1 as the walk advances. Never with 1 — finishing is what the return says. */
+  report: (progress: number) => void
+  /** Asked between batches. `true` abandons the walk, and `skinVertices` answers `null`. */
+  cancelled: () => boolean
+}
+
+export function vertexCountOf(request: SkinRequest): number {
+  return Math.floor(request.position.length / 3)
+}
+
+export function emptyBinding(vertices: number): SkinBinding {
+  return {
+    skinIndex: new Uint16Array(vertices * INFLUENCES),
+    skinWeight: new Float32Array(vertices * INFLUENCES),
+  }
+}
+
+/**
+ * Weights one slice of the vertices into a binding already made.
+ *
+ * A slice at a time because the worker has to come back for air: its message queue is only read
+ * between tasks, so a single synchronous walk over half a million vertices would take a
+ * cancellation nobody could deliver.
+ */
+export function skinRange(
+  request: SkinRequest,
+  binding: SkinBinding,
+  from: number,
+  to: number,
+): void {
+  const bones = Math.floor(request.segments.length / 6)
+  if (bones === 0) return
+
+  const distances = new Float64Array(bones)
+
+  for (let vertex = from; vertex < to; vertex += 1) {
+    const x = request.position[vertex * 3] ?? 0
+    const y = request.position[vertex * 3 + 1] ?? 0
+    const z = request.position[vertex * 3 + 2] ?? 0
+
+    let nearest = 0
+    for (let bone = 0; bone < bones; bone += 1) {
+      distances[bone] = distanceToBone(request.segments, bone, x, y, z)
+      if ((distances[bone] ?? 0) < (distances[nearest] ?? 0)) nearest = bone
+    }
+
+    writeInfluences(request, distances, nearest, vertex, binding.skinIndex, binding.skinWeight)
+  }
+}
+
+/**
+ * The binding for every vertex of the request, or `null` if it was taken back mid-walk.
+ *
+ * Weights are the inverse of the distance to each bone, normalised to one — a vertex twice as far
+ * from a bone follows it half as much. Candidates are restricted by region first: that is what
+ * stops the hand bone from catching a hip vertex when the arm hangs beside the body.
+ */
+export function skinVertices(request: SkinRequest, progress?: SkinProgress): SkinBinding | null {
+  const vertices = vertexCountOf(request)
+  const binding = emptyBinding(vertices)
+
+  for (let from = 0; from < vertices; from += REPORT_EVERY) {
+    if (progress) {
+      if (progress.cancelled()) return null
+      progress.report(from / vertices)
+    }
+    skinRange(request, binding, from, Math.min(from + REPORT_EVERY, vertices))
+  }
+
+  return binding
+}
+
+/**
+ * The four nearest ALLOWED bones for one vertex, weighted and normalised.
+ *
+ * The vertex takes the region of the bone nearest it whatever the region, and only then are the
+ * candidates narrowed — deciding a region any other way would need to know the body, which a
+ * bounding box does not.
+ */
+function writeInfluences(
+  request: SkinRequest,
+  distances: Float64Array,
+  nearest: number,
+  vertex: number,
+  skinIndex: Uint16Array,
+  skinWeight: Float32Array,
+): void {
+  const region = request.regions[nearest] ?? TRUNK
+  const chosen: number[] = []
+
+  for (let bone = 0; bone < distances.length; bone += 1) {
+    if (!agrees(region, request.regions[bone] ?? TRUNK)) continue
+
+    chosen.push(bone)
+    // Kept sorted by distance as they arrive: four is small enough that a full sort would cost
+    // more than the walk it saves.
+    chosen.sort((left, right) => (distances[left] ?? 0) - (distances[right] ?? 0))
+    if (chosen.length > INFLUENCES) chosen.pop()
+  }
+
+  let total = 0
+  for (const bone of chosen) total += 1 / ((distances[bone] ?? 0) + EPSILON)
+
+  chosen.forEach((bone, slot) => {
+    skinIndex[vertex * INFLUENCES + slot] = bone
+    skinWeight[vertex * INFLUENCES + slot] = 1 / ((distances[bone] ?? 0) + EPSILON) / total
+  })
+}
+
+/** Two regions agree when they are the same, or when either is the trunk everything hangs off. */
+function agrees(left: number, right: number): boolean {
+  return left === right || left === TRUNK || right === TRUNK
+}
+
+/** Distance from a point to a bone's segment, clamped to its ends so a limb has no reach beyond itself. */
+function distanceToBone(
+  segments: Float32Array,
+  bone: number,
+  x: number,
+  y: number,
+  z: number,
+): number {
+  const at = bone * 6
+  const headX = segments[at] ?? 0
+  const headY = segments[at + 1] ?? 0
+  const headZ = segments[at + 2] ?? 0
+  const alongX = (segments[at + 3] ?? 0) - headX
+  const alongY = (segments[at + 4] ?? 0) - headY
+  const alongZ = (segments[at + 5] ?? 0) - headZ
+
+  const lengthSquared = alongX * alongX + alongY * alongY + alongZ * alongZ
+  // A leaf bone — a hand, a toe — has no child to reach towards, so it measures as a point.
+  const along =
+    lengthSquared === 0
+      ? 0
+      : clamp01(
+          ((x - headX) * alongX + (y - headY) * alongY + (z - headZ) * alongZ) / lengthSquared,
+        )
+
+  return Math.hypot(
+    x - (headX + alongX * along),
+    y - (headY + alongY * along),
+    z - (headZ + alongZ * along),
+  )
+}
+
+function clamp01(value: number): number {
+  return value < 0 ? 0 : value > 1 ? 1 : value
+}

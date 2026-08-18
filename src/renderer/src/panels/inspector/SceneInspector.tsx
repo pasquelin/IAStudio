@@ -16,6 +16,7 @@ import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from './DescriptorSection'
 import { AnimationSection } from './AnimationSection'
+import { RigSection } from './RigSection'
 import { EnvironmentSection } from './EnvironmentSection'
 import { MaterialSection } from './MaterialSection'
 import { ModelOverridesSection } from './ModelOverridesSection'
@@ -122,6 +123,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
 
       {model && (
         <>
+          <RigSection documentId={documentId} node={model} edit={edit} />
           <AnimationSection documentId={documentId} node={model} edit={edit} />
           {/* On the anchor alone, unlike a material: which maps a model wears depends on what its
               own file carries, so spreading one over a selection would dress meshes that never

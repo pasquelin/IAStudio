@@ -114,6 +114,9 @@ export function rigStateFixture(names: readonly string[]): RigState {
     bones,
     boneNames: [...names],
     boneCount: names.length,
+    // A standing figure of ordinary proportions, so a suite that offers to fit one is not
+    // refused for a reason it never meant to test.
+    bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
   }
 }
 

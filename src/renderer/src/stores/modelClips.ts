@@ -23,6 +23,12 @@ type ModelClipsState = {
     lengths?: Readonly<Record<string, number>>,
   ) => void
   reportRig: (documentId: string, nodeId: string, rig: RigState) => void
+  /**
+   * How far along binding a model's skeleton is, 0 to 1. Absent means "not binding" — which a
+   * number cannot say, and a model at 0 has to read differently from one nobody asked about.
+   */
+  rigProgress: Record<string, Record<string, number>>
+  reportRigProgress: (documentId: string, nodeId: string, progress: number) => void
   forget: (documentId: string) => void
 }
 
@@ -37,6 +43,7 @@ type ModelClipsState = {
 export const useModelClips = create<ModelClipsState>()(set => ({
   clips: {},
   rigs: {},
+  rigProgress: {},
   lengths: {},
   report: (documentId, nodeId, clips, lengths) =>
     set(state => ({
@@ -57,15 +64,27 @@ export const useModelClips = create<ModelClipsState>()(set => ({
       },
     })),
 
+  reportRigProgress: (documentId, nodeId, progress) =>
+    set(state => {
+      const forDocument = { ...state.rigProgress[documentId] }
+      // Taken out at the end rather than left at 1: what says "binding" is the field being there.
+      if (progress >= 1) delete forDocument[nodeId]
+      else forDocument[nodeId] = progress
+
+      return { rigProgress: { ...state.rigProgress, [documentId]: forDocument } }
+    }),
+
   forget: documentId =>
     set(state => {
       const { [documentId]: goneClips, ...clips } = state.clips
       const { [documentId]: goneRigs, ...rigs } = state.rigs
+      const { [documentId]: goneProgress, ...rigProgress } = state.rigProgress
       const { [documentId]: goneLengths, ...lengths } = state.lengths
       void goneClips
       void goneRigs
+      void goneProgress
       void goneLengths
-      return { clips, rigs, lengths }
+      return { clips, rigs, rigProgress, lengths }
     }),
 }))
 
@@ -93,6 +112,15 @@ export function clipLengthOf(
   clip: string,
 ): number | null {
   return state.lengths[documentId]?.[nodeId]?.[clip] ?? null
+}
+
+/** How far along a node's bind is, or `null` when nothing is being bound for it. */
+export function rigProgressOfNode(
+  state: ModelClipsState,
+  documentId: string,
+  nodeId: string,
+): number | null {
+  return state.rigProgress[documentId]?.[nodeId] ?? null
 }
 
 /** What a node's model is, or nothing at all while its file has not landed. */

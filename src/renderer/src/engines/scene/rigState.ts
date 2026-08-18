@@ -8,8 +8,9 @@
  * Pure, like `bonePicking.ts`: three runs under jsdom without a GPU, and every question here is
  * about the shape of a tree.
  */
-import type { AnimationClip, Object3D } from 'three'
+import { Box3, type AnimationClip, type Object3D } from 'three'
 import { isHumanoidRole, type HumanoidRole } from '@shared/domain/humanoid'
+import type { Bounds } from './rigFit'
 
 export type RigStatus =
   /** No bones at all. This is what "make animatable" is offered on. */
@@ -57,6 +58,8 @@ export type RigState = {
    * export pipelines strip joint names, and such a rig still has a skeleton to draw.
    */
   boneCount: number
+  /** What the model measures, for whoever fits a skeleton to it. Empty for a model with no mesh. */
+  bounds: Bounds
 }
 
 /** three marks its bones with a flag; `instanceof` would miss one from another three instance. */
@@ -95,14 +98,32 @@ function walkBones(root: Object3D): { bones: SkeletonBone[]; boneCount: number }
 
 export function rigStateOf(root: Object3D, clips: readonly AnimationClip[] = []): RigState {
   const { bones, boneCount } = walkBones(root)
+  const status = statusOf(root, bones, boneCount, clips.length > 0)
 
   return {
-    status: statusOf(root, bones, boneCount, clips.length > 0),
+    status,
     bones,
     boneNames: bones.map(bone => bone.name),
     boneCount,
+    bounds: status === 'staticMesh' ? boundsOf(root) : EMPTY_BOUNDS,
   }
 }
+
+/**
+ * Measured for a bare mesh alone, which is the only kind anything fits a skeleton to.
+ *
+ * Not for the others, and that is not an optimisation: `Box3.setFromObject` walks a `SkinnedMesh`
+ * through its bones, and one whose geometry carries no skin attributes — a malformed export, or a
+ * fixture — throws inside three rather than answering a box.
+ */
+function boundsOf(root: Object3D): Bounds {
+  const box = new Box3().setFromObject(root)
+  // `Box3` starts inverted: a model with nothing to measure never narrows it, and those numbers
+  // would place bones at the ends of the world.
+  return box.isEmpty() ? EMPTY_BOUNDS : { min: { ...box.min }, max: { ...box.max } }
+}
+
+const EMPTY_BOUNDS: Bounds = { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } }
 
 function statusOf(
   root: Object3D,

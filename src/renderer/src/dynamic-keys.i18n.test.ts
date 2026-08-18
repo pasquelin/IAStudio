@@ -14,6 +14,7 @@ import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
 import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
 import { RIG_STATUSES, type RigStatus } from '@/engines/scene/rigState'
+import { RIG_FIT_FAULTS, type RigFitFault } from '@/engines/scene/rigFit'
 import { ASSET_INTENTS } from '@/helpers/assetIntents'
 import { FOLDER_SORTS } from '@/helpers/folderSort'
 import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
@@ -54,6 +55,9 @@ const COMPOSED_KEYS: readonly string[] = [
   // What the inspector says an imported model IS. A state with no sentence would read as the
   // raw key on the one surface that tells a user their model cannot be animated yet.
   ...RIG_STATUSES.map(status => `inspector.rigStatus_${status}`),
+  // Why a mesh cannot take a skeleton. Composed the same way, and it stands in for the button
+  // itself: a fault with no sentence would leave the user a raw key where the offer used to be.
+  ...RIG_FIT_FAULTS.map(fault => `inspector.rigFault_${fault}`),
   ...TRACK_KINDS.map(kind => `inspector.kind_${kind}`),
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),
@@ -113,6 +117,12 @@ describe('the lists behind those keys', () => {
     const all: Record<TrackKind, true> = { video: true, audio: true }
 
     expect([...TRACK_KINDS].sort()).toEqual(Object.keys(all).sort())
+  })
+
+  it('holds every reason a mesh cannot take a skeleton', () => {
+    const all: Record<RigFitFault, true> = { noGeometry: true, lyingDown: true }
+
+    expect([...RIG_FIT_FAULTS].sort()).toEqual(Object.keys(all).sort())
   })
 
   it('holds every state an imported model can be in', () => {

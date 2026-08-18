@@ -75,6 +75,15 @@ describe('what a loaded model is', () => {
     expect(rigStateOf(root, [walk]).status).toBe('skeletonOnly')
   })
 
+  // What a fit is worked out from. Measured for a bare mesh alone — `Box3` walks a skinned one
+  // through its bones and throws inside three when its geometry carries no skin attributes.
+  it('measures a bare mesh, so a skeleton can be fitted to it', () => {
+    const mesh = new Mesh(new BoxGeometry(2, 4, 2), new MeshStandardMaterial())
+    const state = rigStateOf(rootWith(mesh))
+
+    expect(state.bounds.max.y - state.bounds.min.y).toBeCloseTo(4, 5)
+  })
+
   it('reads the mixamo prefix off a name before matching a role', () => {
     const root = rootWith(skinnedOn(chain(['mixamorig:Hips', 'mixamorig:Spine'])))
 
