@@ -816,6 +816,27 @@ choisi aussitôt : l’Inspecteur décrit alors ce que vous venez de poser.
 > est l’objet lui-même, et la règle du haut n’est pas une piste : lâcher sur l’une des trois ne
 > fait rien.
 
+**Chaque ligne porte aussi un ▶ — *Jouer sur le personnage*** — et c’est le moyen d’essayer une
+animation sans viser une sous-piste. **Il pose un VRAI bloc** sur le personnage sélectionné, avec
+les mêmes réglages de départ qu’un glisser, et le joue aussitôt. **Il le pose au DÉBUT de la
+première sous-piste**, là où le glisser vous laisse choisir la ligne et l’endroit.
+
+> **Ce n’est pas le ▶ de l’Inspecteur**, qui regarde un bloc **déjà posé** sans jamais rien écrire.
+> Celui-ci pose le bloc lui-même, et peut le reprendre.
+
+**Un second appui l’arrête ET retire le bloc** : le bouton le dit, *Arrêter et retirer le bloc*.
+Appuyer sur le ▶ d’une **autre** ligne retire d’abord celui d’avant — il n’y en a jamais deux à la
+fois.
+
+> **Ce qui reste dépend de la façon dont ça s’est arrêté**, et c’est la seule subtilité de ce
+> bouton. Arrêté par vous, le bloc s’en va. **Interrompu par la tête de lecture — parce que vous
+> avez lancé la bande ou déplacé la tête — le bloc RESTE**, posé sur le personnage. Ce n’est pas un
+> accident : c’est ce qui transforme un essai concluant en travail gardé.
+
+**Le ▶ est éteint tant qu’aucun modèle n’est sélectionné dans la scène** : il n’y a alors rien sur
+quoi jouer un mouvement. **Un modèle suffit — il n’a pas besoin d’être déjà animable** ; ce qu’il
+sait vraiment jouer, la section Animation le dira. La liste, elle, reste affichée.
+
 **Une animation livrée est rejouée sur le squelette de VOTRE personnage** — elle a été montée pour
 un autre, et le studio la transpose. Le personnage qui la portait n’entre pas dans la scène.
 
