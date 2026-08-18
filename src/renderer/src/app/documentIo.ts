@@ -51,7 +51,6 @@ import {
 } from './sequenceDocument'
 import {
   forgetCarriedSky,
-  serializeSkyboxPayload,
   skyboxFromPayload,
   skyboxPayload,
   skyRefusesToSave,
@@ -586,10 +585,12 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   // the picture a file referenced beside the document rather than an id no other reader resolves.
   skybox: {
     ...textDocumentIo(skyboxStore, {
+      // No `serialize` of its own: the file layer parses this content to stamp the title into the
+      // standard, and writes the glTF back compact. An indented string here is built, crossed and
+      // thrown away — measured on the file it produces, which is on one line.
       toPayload: skyboxPayload,
       fromPayload: skyboxFromPayload,
       createDefault: createSkyboxContent,
-      serialize: serializeSkyboxPayload,
     }),
     // glTF is an index-linked graph: a file holding a mesh or a camera cannot be half rewritten,
     // and the nodes are recomposed from two. Refused rather than flattened.

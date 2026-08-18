@@ -45,11 +45,6 @@ export function skyboxPayload(content: SkyboxContent, documentId: string): unkno
   })
 }
 
-/** Indented: a sky IS its `.gltf`, and that file is read by hand and by other tools. */
-export function serializeSkyboxPayload(payload: unknown): string {
-  return JSON.stringify(payload, null, 2)
-}
-
 /**
  * The keys of a glTF this editor composes. Anything ELSE at the root is a scene graph the studio
  * would destroy: the nodes are recomposed from two, so a mesh or a camera carried across would

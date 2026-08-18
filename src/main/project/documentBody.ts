@@ -462,9 +462,11 @@ function gltfBody(parsed: Record<string, unknown>, document: DocumentFile): stri
 /**
  * Extras with the studio's own FIRST, and whatever another application left there after.
  *
- * The order is the whole point: `readHead` looks for the mark inside the first bytes of the file,
- * so ours has to open the object. And the copy skips a `scenario` the file arrived with, or the
- * spread would put back the very stamp this was called to write.
+ * The copy skips a `scenario` the file arrived with, or the spread would put back the very stamp
+ * this was called to write. **The ORDER decides nothing any more** — `markedAsset` puts the mark on
+ * `asset`, which `gltfBody` writes first, so a head read finds it whatever sits in a scene's extras.
+ * Kept because it costs nothing and reads better; a mutation that puts ours last leaves the whole
+ * suite green, measured 18/08.
  */
 function studioExtrasFirst(held: unknown, studio: unknown): Record<string, unknown> {
   const extras: Record<string, unknown> = { [STUDIO_METADATA_KEY]: studio }
