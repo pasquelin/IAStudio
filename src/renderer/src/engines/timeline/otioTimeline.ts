@@ -380,14 +380,21 @@ const COMPOSED_ITEMS = new Set(['Clip.1', 'Gap.1'])
 const COMPOSED_EFFECT = 'LinearTimeWarp.1'
 
 /**
+ * How many distinct names the walk collects before it stops.
+ *
+ * The names come from the FILE — a foreign metadata domain, an unknown schema — so a montage of
+ * 5 000 clips each carrying its own could otherwise build a set of 5 000 and push the join of it
+ * into a sentence. Enough of them to name what is there; the refusal does not change past that.
+ */
+const HELD_LIMIT = 8
+
+/**
  * What an OTIO file holds beyond what a save would write back.
  *
- * `otioTimelineOf` recomposes the whole timeline: the root metadata becomes the studio's own, and
- * every stack, track and clip is written with `markers: []`, `effects: []` and a metadata holding
- * nothing but `scenario`. So a montage the studio wrote, enriched elsewhere with a marker, a
- * colour effect or a transition, came back without them on the first ⌘S — measured at the screen
- * on 18/08, with nothing said. The refusal that already existed covers only clips whose media the
- * project has lost, which is a different failure.
+ * `otioTimelineOf` recomposes the whole timeline, so a montage the studio wrote and another
+ * application enriched came back without its markers, its effects or its transitions on the first
+ * ⌘S — measured at the screen 18/08, with nothing said. The refusal that already existed covers
+ * clips whose media the project has lost, which is a different failure.
  *
  * **The blind spot, in clear**: a TAKE keeps only its audio tracks (`soundMontageOf`), so a `.otio`
  * of a take that somehow holds a picture track loses it, and nothing here can see that — this
@@ -404,12 +411,16 @@ export function montageHoldsMore(payload: unknown): string[] {
 
   for (const track of childrenOf(stack)) {
     // `enabled` is the RESULT of the mute and the solo, written from the state on every save.
-    for (const name of composedOver(track, { enabled: true })) held.add(name)
+    for (const name of composedOver(track, 'enabled')) held.add(name)
 
     for (const item of childrenOf(track)) {
+      // Stopping HERE rather than after the loop: the walk is the cost, on a file already parsed
+      // whole, and a montage past the limit has said everything the sentence can hold.
+      if (held.size >= HELD_LIMIT) return [...held]
+
       const schema = readString(item, 'OTIO_SCHEMA', '')
       if (!COMPOSED_ITEMS.has(schema)) held.add(schema || 'children')
-      else for (const name of composedOver(item, { range: true })) held.add(name)
+      else for (const name of composedOver(item, 'range')) held.add(name)
     }
   }
 
@@ -425,21 +436,19 @@ const foreignMetadata = (value: Record<string, unknown>): string[] =>
     : []
 
 /**
- * What a level of the file writes back from its own state, and therefore must not be reported. A
- * track's `enabled` is its mute and its solo; a clip's and a gap's `source_range` is its trim.
- */
-type Composes = { range?: boolean; enabled?: boolean }
-
-/**
  * The members an item is rewritten with whatever it held — every one of them a place another
  * application puts work. A `LinearTimeWarp` is the studio's own speed change and stays silent.
+ *
+ * `composes` names the ONE member this level writes back from its own state, and must therefore
+ * not report: a track's `enabled` is its mute and its solo, a clip's and a gap's `source_range` is
+ * its trim. Without it the guard refused every montage holding a hole between two clips.
  */
-function composedOver(item: Record<string, unknown>, composes: Composes = {}): string[] {
+function composedOver(item: Record<string, unknown>, composes?: 'range' | 'enabled'): string[] {
   const held = foreignMetadata(item).map(key => `metadata.${key}`)
 
   if (Array.isArray(item.markers) && item.markers.length > 0) held.push('markers')
-  if (!composes.enabled && !readBoolean(item, 'enabled', true)) held.push('enabled')
-  if (!composes.range && isRecord(item.source_range)) held.push('source_range')
+  if (composes !== 'enabled' && !readBoolean(item, 'enabled', true)) held.push('enabled')
+  if (composes !== 'range' && isRecord(item.source_range)) held.push('source_range')
 
   const effects = Array.isArray(item.effects) ? item.effects : []
   if (effects.some(one => !isRecord(one) || one.OTIO_SCHEMA !== COMPOSED_EFFECT)) {

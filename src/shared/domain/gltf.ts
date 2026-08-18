@@ -189,6 +189,35 @@ export function gltfForeignExtras(extras: unknown): string[] {
   return isRecord(extras) ? Object.keys(extras).filter(key => key !== STUDIO_METADATA_KEY) : []
 }
 
+/** The `asset` fields a save writes back. A `copyright` another application set is not one. */
+const COMPOSED_ASSET = new Set(['version', 'generator', 'extras'])
+
+/** The `asset` fields a document carries beyond those, named as a reader of the file would see them. */
+export function gltfForeignAsset(document: unknown): string[] {
+  const asset = isRecord(document) ? document.asset : null
+  if (!isRecord(asset)) return []
+
+  return Object.keys(asset)
+    .filter(key => !COMPOSED_ASSET.has(key))
+    .map(key => `asset.${key}`)
+}
+
+/**
+ * Every extension a document names, read from BOTH sides — a file is free to declare one without
+ * listing it and the reverse. Both guards overwrite the extension block whole, so what they do not
+ * write back is lost; each passes the one it DOES write.
+ */
+export function gltfForeignExtensions(document: unknown, composed: string): string[] {
+  const used =
+    isRecord(document) && Array.isArray(document.extensionsUsed)
+      ? document.extensionsUsed.map(String)
+      : []
+  const declared =
+    isRecord(document) && isRecord(document.extensions) ? Object.keys(document.extensions) : []
+
+  return [...new Set([...used, ...declared])].filter(name => name !== composed)
+}
+
 /**
  * Which textures a glTF material definition asks to wear.
  *

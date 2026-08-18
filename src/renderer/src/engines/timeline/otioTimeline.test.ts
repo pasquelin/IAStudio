@@ -317,10 +317,7 @@ describe('sequenceFromOtio', () => {
   })
 })
 
-/**
- * Each case asserts WHICH member was found, never that something was. An assertion on emptiness
- * alone passes on a guard that fired for another reason — measured on the scene's own suite.
- */
+/** Each case asserts WHICH member was found — `gltfDocument.test.ts` says what that costs. */
 describe('montageHoldsMore', () => {
   const written = (): Record<string, unknown> =>
     JSON.parse(JSON.stringify(write(montage))) as Record<string, unknown>
@@ -437,5 +434,23 @@ describe('montageHoldsMore', () => {
 
   it('answers nothing at all for a payload that is not an OTIO timeline', () => {
     expect(montageHoldsMore({ tracks: {}, markers: [marker] })).toEqual([])
+  })
+
+  /**
+   * The names come from the FILE, so a montage where every clip carries its own foreign domain
+   * would otherwise build a set as long as the montage and push the join of it into a sentence.
+   */
+  it('stops naming once it has said enough, on a montage that holds a domain per clip', () => {
+    const stack = written().tracks as Record<string, unknown>
+    const tracks = stack.children as Record<string, unknown>[]
+    const items = Array.from({ length: 200 }, (_unused, index) => ({
+      OTIO_SCHEMA: 'Clip.1',
+      metadata: { [`domain-${index}`]: {} },
+    }))
+
+    const held = montageHoldsMore(stackWith({ children: [{ ...tracks[0], children: items }] }))
+
+    expect(held.length).toBeLessThanOrEqual(8)
+    expect(held[0]).toBe('metadata.domain-0')
   })
 })

@@ -196,6 +196,17 @@ describe('sceneHoldsMore', () => {
     expect(sceneHoldsMore(enriched({ meshes: [{ primitives: [] }] }))).toEqual(['meshes'])
   })
 
+  /** The default scene's extras are recomposed whole, exactly as the sky's are. */
+  it('names a key another application left in the default scene extras', () => {
+    const scenes = written().scenes
+    const first = Array.isArray(scenes) && isRecord(scenes[0]) ? scenes[0] : {}
+    const marked = enriched({
+      scenes: [{ ...first, extras: { ...(first.extras as object), blender: { collection: 'A' } } }],
+    })
+
+    expect(sceneHoldsMore(marked)).toEqual(['scene.extras.blender'])
+  })
+
   /** A scene written before the studio wrote glTF is not one, so there is nothing to measure. */
   it('answers nothing at all for a payload that is not a glTF document', () => {
     expect(sceneHoldsMore({ nodes: [], selection: [] })).toEqual([])

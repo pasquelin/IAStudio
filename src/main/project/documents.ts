@@ -164,9 +164,9 @@ export async function pooledHeads<T>(
  * What a listing needs of a file, read the cheapest way the format allows — a project of heavy
  * scenes would otherwise be read whole every time it is opened.
  *
- * "Cheapest" is not cheap for an open format: a glTF and an `.otio` carry no head of ours to read
- * short, so one is read and parsed WHOLE — 10,1 ms at 5 000 nodes and 31,3 at 15 000, measured
- * 18/08 by the bench beside this. That is what `headCache.ts` sits over, and what makes the
+ * Every format reads a BOUNDED head now, the two glTF kinds and the montage included — ×4,0 on
+ * 5 000 documents of 200 Kio, measured 18/08. What still reads whole is a file written before its
+ * id was stamped where the head reaches. `headCache.ts` sits over all of it, and is what makes the
  * second listing of an unchanged folder cost a `stat` and nothing else.
  *
  * Exported for the bench beside it rather than for callers — like `pooledHeads`, and for the same

@@ -4,6 +4,8 @@ import {
   angleAboutY,
   directionOfQuaternion,
   gltfDefaultScene,
+  gltfForeignAsset,
+  gltfForeignExtensions,
   gltfForeignExtras,
   gltfPunctualLights,
   gltfStudioExtras,
@@ -116,38 +118,23 @@ const COMPOSED = new Set([
   'extras',
 ])
 
-/** The `asset` fields a save writes back. A `copyright` another application set is not one. */
-const COMPOSED_ASSET = new Set(['version', 'generator', 'extras'])
-
-/** What `gltfSkyOf` writes, always: the horizon and the sun, one scene, one directional light. */
-const COMPOSED_NODES = 2
-const COMPOSED_SCENES = 1
-const COMPOSED_LIGHTS = 1
-
 /**
  * What a sky's file holds beyond what a save would write back.
  *
  * The scene's guard learnt this and the sky did not, which cost four silent losses on one ⌘S,
- * measured 18/08. **A composed member is not a REPRODUCED member**: `scenes`, `nodes`, `extensions`
- * and `extras` are all rewritten from a state that knows a horizon, a sun and nothing else, so
- * reading root keys alone reported a file carrying a second scene as safe to overwrite.
+ * measured 18/08. **A composed member is not a REPRODUCED member**: `gltfSkyOf` writes exactly one
+ * scene, two nodes and one directional light, whatever the file held.
  */
 export function skyHoldsMore(document: unknown): string[] {
   if (!isGltfDocument(document)) return []
   const held = Object.keys(document).filter(key => !COMPOSED.has(key))
 
-  if (countOf(document.scenes) > COMPOSED_SCENES) held.push('scenes')
-  if (countOf(document.nodes) > COMPOSED_NODES) held.push('nodes')
+  if (countOf(document.scenes) > 1) held.push('scenes')
+  if (countOf(document.nodes) > 2) held.push('nodes')
   // A light ADDED elsewhere brings no new root key: it is one more entry under the extension this
   // editor already declares, and one more node — which the count above catches only when the file
   // hangs it off its own node. Read from the extension too, so a light sharing a node still shows.
-  if (gltfPunctualLights(document).length > COMPOSED_LIGHTS) held.push('lights')
-
-  held.push(
-    ...Object.keys(isRecord(document.asset) ? document.asset : {})
-      .filter(key => !COMPOSED_ASSET.has(key))
-      .map(key => `asset.${key}`),
-  )
+  if (gltfPunctualLights(document).length > 1) held.push('lights')
 
   // Both `extras` a sky carries: the root one holds its state, and the default scene's holds the
   // identity the file layer stamps. Each is rewritten whole, so a foreign key in either is lost.
@@ -155,14 +142,8 @@ export function skyHoldsMore(document: unknown): string[] {
   held.push(
     ...gltfForeignExtras(gltfDefaultScene(document)?.extras).map(key => `scene.extras.${key}`),
   )
-
-  // The extension block is overwritten whole, so anything but the lights one would be lost — read
-  // from BOTH sides, a file being free to declare one without listing it and the reverse.
-  const used = Array.isArray(document.extensionsUsed) ? document.extensionsUsed.map(String) : []
-  const declared = isRecord(document.extensions) ? Object.keys(document.extensions) : []
-  for (const name of new Set([...used, ...declared])) {
-    if (name !== KHR_LIGHTS_PUNCTUAL) held.push(name)
-  }
+  held.push(...gltfForeignAsset(document))
+  held.push(...gltfForeignExtensions(document, KHR_LIGHTS_PUNCTUAL))
 
   return held
 }

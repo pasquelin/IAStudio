@@ -297,11 +297,7 @@ describe('the angles a quaternion carries', () => {
   })
 })
 
-/**
- * Each case asserts WHICH member was found, never that something was. An assertion on emptiness
- * alone passes on a guard that fired for another reason entirely — measured on the scene's own
- * suite, 18/08, where disarming the `scenes` check left every case green.
- */
+/** Each case asserts WHICH member was found — `gltfDocument.test.ts` says what that costs. */
 describe('a sky whose file holds more than this editor composes', () => {
   const enriched = (over: Record<string, unknown>): unknown => ({
     ...(written(sky()) as Record<string, unknown>),

@@ -9,7 +9,7 @@ import {
   STUDIO_METADATA_KEY,
   type DocumentFile,
 } from '@shared/domain/document'
-import { isGltfDocument } from '@shared/domain/gltf'
+import { GLTF_HEAD_LIMIT, isGltfDocument } from '@shared/domain/gltf'
 import { ORA_MERGED_PATH } from '@shared/domain/openRaster'
 import { packOpenRaster } from '@main/assets/openRasterFile'
 import { bodyFormatOf, ENVELOPED } from './documentBody'
@@ -34,7 +34,7 @@ const asText = (body: string | Uint8Array): string =>
 
 const writeScene = (document: DocumentFile): string => asText(scene.write(document))
 
-/** The four fields every document file carries, so a case states only what it is about. */
+/** What every document file carries, so a case states only what it is about. */
 const ENVELOPE = {
   version: DOCUMENT_VERSION,
   title: 'Titre',
@@ -646,7 +646,7 @@ describe('what a listing pays per document', () => {
 
   /** Past the bound, so the rest of the file is what the short head exists not to read. */
   const wide = (over: Record<string, unknown>): string =>
-    JSON.stringify({ asset: { version: '2.0' }, nodes: 'x'.repeat(ENVELOPE_LIMIT), ...over })
+    JSON.stringify({ asset: { version: '2.0' }, nodes: 'x'.repeat(GLTF_HEAD_LIMIT), ...over })
 
   it('reads a scene bigger than the bound without parsing it', async () => {
     const body = writeScene({
@@ -657,7 +657,7 @@ describe('what a listing pays per document', () => {
     })
     const head = await scene.readHead(await laid('Niveau.gltf', body))
 
-    expect(body.length).toBeGreaterThan(ENVELOPE_LIMIT)
+    expect(body.length).toBeGreaterThan(GLTF_HEAD_LIMIT)
     expect(head).toMatchObject({ kind: 'scene', id: 'doc-9', title: '', updatedAt: '' })
     expect(head.content).toBeUndefined()
   })
@@ -695,7 +695,7 @@ describe('what a listing pays per document', () => {
     })
     const head = await scene.readHead(await laid('Petite.gltf', body))
 
-    expect(body.length).toBeLessThan(ENVELOPE_LIMIT)
+    expect(body.length).toBeLessThan(GLTF_HEAD_LIMIT)
     expect(head).toMatchObject({ kind: 'scene', id: 'doc-9' })
     expect(head.content).toBe(body)
   })
@@ -721,14 +721,14 @@ describe('what a listing pays per document', () => {
    * every such document listed rather than renamed to its own file name.
    */
   it('reads a scene whose id sits behind more than the head holds', async () => {
-    const wide = JSON.stringify({
+    const buried = JSON.stringify({
       asset: { version: '2.0', extras: { [STUDIO_METADATA_KEY]: { documentKind: 'scene' } } },
       scene: 0,
       scenes: [
         {
           extras: {
             [STUDIO_METADATA_KEY]: {
-              scene: { nodes: 'x'.repeat(ENVELOPE_LIMIT) },
+              scene: { nodes: 'x'.repeat(GLTF_HEAD_LIMIT) },
               documentId: 'doc-6',
             },
           },
@@ -736,10 +736,10 @@ describe('what a listing pays per document', () => {
       ],
     })
 
-    const head = await scene.readHead(await laid('Vaste.gltf', wide))
+    const head = await scene.readHead(await laid('Vaste.gltf', buried))
 
     expect(head).toMatchObject({ kind: 'scene', id: 'doc-6' })
-    expect(head.content).toBe(wide)
+    expect(head.content).toBe(buried)
   })
 
   it('still answers the envelope of a document written before the switch', async () => {
