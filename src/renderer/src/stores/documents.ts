@@ -11,12 +11,7 @@ import {
   type DocumentNameFailure,
   type NamedDocument,
 } from '@shared/domain/documentName'
-import {
-  extensionOf,
-  foldForFileName,
-  nameFailureOf,
-  safeFileName,
-} from '@shared/domain/fileName'
+import { extensionOf, foldForFileName, nameFailureOf, safeFileName } from '@shared/domain/fileName'
 import { nameOf, parentOf, pathIn } from '@shared/domain/folder'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'

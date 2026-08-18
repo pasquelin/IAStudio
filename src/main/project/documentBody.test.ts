@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_VERSION, type DocumentFile } from '@shared/domain/document'
-import { bodyOf, documentFrom, readsWhole } from './documentBody'
+import { bodyFormatOf, ENVELOPED } from './documentBody'
 
-const SCENE = '.scene'
-const OTIO = '.otio'
+const scene = bodyFormatOf('.scene')
+const otio = bodyFormatOf('.otio')
 
 const timeline = (studio: Record<string, unknown> = {}): string =>
   JSON.stringify({
@@ -25,7 +25,14 @@ describe('a document of the studio’s own spelling', () => {
       content: '{"nodes":[]}',
     }
 
-    expect(documentFrom(bodyOf(document, SCENE), SCENE)).toEqual(document)
+    expect(scene.read(scene.write(document))).toEqual(document)
+  })
+
+  // Anything the table does not name is the studio's own, which is what keeps a manifest, a
+  // `.scene` and a kind that does not exist yet reading the same way.
+  it('is what an unlisted extension is spelt in', () => {
+    expect(bodyFormatOf('.whatever')).toBe(ENVELOPED)
+    expect(scene).toBe(ENVELOPED)
   })
 })
 
@@ -34,7 +41,7 @@ describe('a montage held as OpenTimelineIO', () => {
   // another application reads a first line it has no schema for.
   it('writes the standard file and nothing else', () => {
     const content = timeline()
-    expect(bodyOf({ version: 1, kind: 'sequence', title: '', updatedAt: '', content }, OTIO)).toBe(
+    expect(otio.write({ version: 1, kind: 'sequence', title: '', updatedAt: '', content })).toBe(
       content,
     )
   })
@@ -42,7 +49,7 @@ describe('a montage held as OpenTimelineIO', () => {
   it('reads a montage back as a sequence document, content untouched', () => {
     const content = timeline({ documentId: 'doc-7' })
 
-    expect(documentFrom(content, OTIO)).toEqual({
+    expect(otio.read(content)).toEqual({
       version: DOCUMENT_VERSION,
       kind: 'sequence',
       title: '',
@@ -57,19 +64,14 @@ describe('a montage held as OpenTimelineIO', () => {
    * falls back on the file name, exactly as it does for a document written before version 3.
    */
   it('takes no id from a file that carries none', () => {
-    expect(documentFrom(timeline(), OTIO).id).toBeUndefined()
-    expect(documentFrom(JSON.stringify({ OTIO_SCHEMA: 'Timeline.1' }), OTIO).id).toBeUndefined()
+    expect(otio.read(timeline()).id).toBeUndefined()
+    expect(otio.read(JSON.stringify({ OTIO_SCHEMA: 'Timeline.1' })).id).toBeUndefined()
   })
 
   // Refused rather than opened empty: a tab showing nothing is indistinguishable from a new
   // document, and the next ⌘S would write that over whatever the file really held.
   it('refuses a file that is not a timeline', () => {
-    expect(() => documentFrom('{"OTIO_SCHEMA":"Clip.1"}', OTIO)).toThrow()
-    expect(() => documentFrom('not json at all', OTIO)).toThrow()
-  })
-
-  it('is the one spelling whose head cannot be read short', () => {
-    expect(readsWhole(OTIO)).toBe(true)
-    expect(readsWhole(SCENE)).toBe(false)
+    expect(() => otio.read('{"OTIO_SCHEMA":"Clip.1"}')).toThrow()
+    expect(() => otio.read('not json at all')).toThrow()
   })
 })

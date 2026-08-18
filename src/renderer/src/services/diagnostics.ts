@@ -1,5 +1,5 @@
 import { messageOf } from '@shared/guards'
-import { MAX_LOG_MESSAGE, type LogScope, type TraceScope } from '@shared/ipc'
+import { MAX_LOG_MESSAGE, type LogLevel, type LogScope, type TraceScope } from '@shared/ipc'
 import { getBridge } from './bridge'
 
 /**
@@ -73,11 +73,7 @@ export function reportFailure(scope: LogScope, subject: string, error: unknown):
     reported.add(said)
   }
 
-  // The rejection is dropped on purpose: this IS the path a failure travels, and a failure to
-  // report one has nowhere left to go.
-  getBridge()
-    ?.diagnostics.report({ level: 'error', scope, message: lineFor(subject, error) })
-    .catch(() => {})
+  send('error', scope, lineFor(subject, error))
 }
 
 /**
@@ -86,8 +82,16 @@ export function reportFailure(scope: LogScope, subject: string, error: unknown):
  * twice, and a second silence would read as a second open that went fine.
  */
 export function reportNotice(scope: LogScope, message: string): void {
+  send('warn', scope, message.slice(0, MAX_LOG_MESSAGE))
+}
+
+/**
+ * The rejection is dropped on purpose: this IS the path a failure travels, and a failure to
+ * report one has nowhere left to go. Silent with no bridge — tests and a plain browser have none.
+ */
+function send(level: LogLevel, scope: LogScope, message: string): void {
   getBridge()
-    ?.diagnostics.report({ level: 'warn', scope, message: message.slice(0, MAX_LOG_MESSAGE) })
+    ?.diagnostics.report({ level, scope, message })
     .catch(() => {})
 }
 

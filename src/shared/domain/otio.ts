@@ -15,6 +15,7 @@
  * Only the subset this studio writes is modelled. A transition, a marker or a nested stack read
  * from a foreign file is not represented — see `sequenceFromOtio` for what that costs.
  */
+import { isRecord } from '../guards'
 
 /** The extension, and the domain key metadata travels under — the spec asks for a unique one. */
 export const OTIO_EXTENSION = '.otio'
@@ -26,6 +27,22 @@ export const OTIO_STUDIO_KEY = 'scenario'
  * rather than on either side, where the two spellings would be free to drift apart in silence.
  */
 export const OTIO_DOCUMENT_ID = 'documentId'
+
+/**
+ * Whether a payload is a timeline of this format. Spelt here for the reason `OTIO_DOCUMENT_ID`
+ * is: three modules across both processes ask it, and three spellings would drift in silence.
+ */
+export function isOtioTimeline(value: unknown): value is Record<string, unknown> {
+  return isRecord(value) && value.OTIO_SCHEMA === 'Timeline.1'
+}
+
+/** What rides under the studio's own domain, or nothing — the core of OTIO never looks inside. */
+export function otioStudioMetadata(value: unknown): Record<string, unknown> {
+  const metadata = isRecord(value) ? value.metadata : null
+  if (!isRecord(metadata)) return {}
+  const studio = metadata[OTIO_STUDIO_KEY]
+  return isRecord(studio) ? studio : {}
+}
 
 /** A time as OTIO holds it: a count of `rate`ths of a second. */
 export type OtioRationalTime = { OTIO_SCHEMA: 'RationalTime.1'; rate: number; value: number }

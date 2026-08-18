@@ -1,12 +1,11 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, relative, sep } from 'node:path'
 import {
   DOCUMENT_MANIFEST,
   documentPath,
   DOCUMENTS_FOLDER,
   DOCUMENT_VERSION,
-  ENVELOPE_LIMIT,
   FOLDER_KINDS,
   isPartName,
   isStagingName,
@@ -30,11 +29,7 @@ import {
 import { extensionOf, foldForFileName } from '@shared/domain/fileName'
 import { parentOf, pathIn, type FolderEntry } from '@shared/domain/folder'
 import { exists, isMissing, writeAtomic } from '@main/persistence'
-import { bodyOf, documentFrom, readsWhole } from './documentBody'
-import { parseDocumentEnvelope } from './validation'
-
-/** The manifest inside a folder document is the studio's own spelling, whatever the folder is. */
-const MANIFEST_EXTENSION = extensionOf(DOCUMENT_MANIFEST)
+import { bodyFormatOf, ENVELOPED } from './documentBody'
 
 export type DocumentFiles = {
   /**
@@ -167,32 +162,14 @@ export async function pooledHeads<T>(
 }
 
 /**
- * The envelope of a file, without reading the document under it: a listing needs a title and a
- * kind, and a project of heavy scenes would otherwise be read whole every time it is opened.
- *
- * A version 1 file has no first line, so its head is truncated and fails to parse; it falls
- * back to the whole file, which is the only way to read one. So does a file in an open format,
- * where nothing of ours sits at the top — `readsWhole` says which.
+ * What a listing needs of a file, read the cheapest way the format allows — a project of heavy
+ * scenes would otherwise be read whole every time it is opened.
  *
  * Exported for the bench beside it rather than for callers — like `pooledHeads`, and for the same
  * reason: timing a copy of it would time something else.
  */
 export async function headOf(file: string): Promise<DocumentEnvelope> {
-  const extension = extensionOf(basename(file))
-  if (readsWhole(extension)) return documentFrom(await readFile(file, 'utf8'), extension)
-
-  const handle = await open(file, 'r')
-  try {
-    const buffer = Buffer.alloc(ENVELOPE_LIMIT)
-    const { bytesRead } = await handle.read(buffer, 0, ENVELOPE_LIMIT, 0)
-    const head = buffer.toString('utf8', 0, bytesRead)
-    const cut = head.indexOf('\n')
-    if (cut !== -1) return parseDocumentEnvelope(JSON.parse(head.slice(0, cut)))
-  } finally {
-    await handle.close()
-  }
-
-  return documentFrom(await readFile(file, 'utf8'), extension)
+  return await bodyFormatOf(extensionOf(basename(file))).readHead(file)
 }
 
 /**
@@ -339,7 +316,8 @@ export function createDocumentFiles({
       // Shared with the three stores of `persistence`, which is also where the tidy-up learned not
       // to become the failure: this copy's `rm` used to throw over the error the caller needed.
       // Durability across a power cut would want `fsync`; it has none.
-      await writeAtomic(file, bodyOf(document, extensionOf(basename(file))), { staging: copy })
+      const body = bodyFormatOf(extensionOf(basename(file))).write(document)
+      await writeAtomic(file, body, { staging: copy })
     } finally {
       staging.delete(basename(copy))
     }
@@ -369,7 +347,8 @@ export function createDocumentFiles({
       await mkdir(staged, { recursive: true })
       // The manifest holds no parts: they are the folder's own entries, and naming them twice
       // would let the two disagree.
-      await writeFile(join(staged, DOCUMENT_MANIFEST), bodyOf(rest, MANIFEST_EXTENSION), 'utf8')
+      // A folder document is always the studio's own: its manifest holds the envelope by design.
+      await writeFile(join(staged, DOCUMENT_MANIFEST), ENVELOPED.write(rest), 'utf8')
       for (const part of parts) {
         await writeFile(join(staged, part.name), Buffer.from(part.data, 'base64'))
       }
@@ -404,10 +383,7 @@ export function createDocumentFiles({
 
   /** Reads a folder document back: its manifest, and every file the renderer left beside it. */
   const readFolder = async (folder: string): Promise<DocumentFile> => {
-    const document = documentFrom(
-      await readFile(join(folder, DOCUMENT_MANIFEST), 'utf8'),
-      MANIFEST_EXTENSION,
-    )
+    const document = ENVELOPED.read(await readFile(join(folder, DOCUMENT_MANIFEST), 'utf8'))
     const entries = await readdir(folder)
 
     const parts: DocumentPart[] = []
@@ -617,7 +593,7 @@ export function createDocumentFiles({
     try {
       document = FOLDER_KINDS.has(kind)
         ? await readFolder(file)
-        : documentFrom(await readFile(file, 'utf8'), extensionOf(basename(file)))
+        : bodyFormatOf(extensionOf(basename(file))).read(await readFile(file, 'utf8'))
     } catch (error) {
       if (isMissing(error)) return null
       throw error
@@ -733,7 +709,7 @@ export function createDocumentFiles({
         }
 
         await (FOLDER_KINDS.has(kind)
-          ? writeAtomic(join(from, DOCUMENT_MANIFEST), bodyOf(renamed, MANIFEST_EXTENSION), {
+          ? writeAtomic(join(from, DOCUMENT_MANIFEST), ENVELOPED.write(renamed), {
               staging: join(from, `${DOCUMENT_MANIFEST}.${randomUUID()}${STAGING_SUFFIX}`),
             })
           : store(from, renamed))

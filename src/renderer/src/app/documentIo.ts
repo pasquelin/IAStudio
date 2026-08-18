@@ -171,14 +171,25 @@ type AssetWriting =
  * is what marks the document unreadable and stops the next ⌘S from writing over it — a kind
  * whose own reader swallowed that would lose the protection with nothing to catch it.
  */
+type TextDocumentCodec<S> = {
+  toPayload: (state: S, documentId: string) => unknown
+  fromPayload: (payload: unknown, documentId: string) => S
+  createDefault: () => S
+  /**
+   * How the payload becomes the file's bytes. A kind held in an open format writes it the way an
+   * export of it would — read by hand and by other tools — where the studio's own stays compact.
+   */
+  serialize?: (payload: unknown) => string
+}
+
 function textDocumentIo<S>(
   store: DocumentStore<S>,
-  toPayload: (state: S, documentId: string) => unknown,
-  fromPayload: (payload: unknown, documentId: string) => S,
-  createDefault: () => S,
-  // Two spaces for a file another application opens, and none for the studio's own: a montage in
-  // the open format is read by hand and by other tools, and is written the way it is exported.
-  serialize: (payload: unknown) => string = payload => JSON.stringify(payload),
+  {
+    toPayload,
+    fromPayload,
+    createDefault,
+    serialize = payload => JSON.stringify(payload),
+  }: TextDocumentCodec<S>,
 ): DocumentIo {
   return {
     capture: documentId => {
@@ -469,15 +480,18 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   image: IMAGE_IO,
   // No `writeAsset`, and the reason is the kind itself: a scene is not a mesh — the asset it was
   // opened from is one node of it.
-  scene: textDocumentIo(sceneStore, scenePayload, sceneFromPayload, createDefaultScene),
+  scene: textDocumentIo(sceneStore, {
+    toPayload: scenePayload,
+    fromPayload: sceneFromPayload,
+    createDefault: createDefaultScene,
+  }),
   // Nor here: rendering a montage is minutes of work, which has no business on a keystroke.
-  sequence: textDocumentIo(
-    sequenceStore,
-    sequencePayload,
-    sequenceFromPayload,
-    () => EMPTY_SEQUENCE,
-    serializeSequencePayload,
-  ),
+  sequence: textDocumentIo(sequenceStore, {
+    toPayload: sequencePayload,
+    fromPayload: sequenceFromPayload,
+    createDefault: () => EMPTY_SEQUENCE,
+    serialize: serializeSequencePayload,
+  }),
   // No `writeAsset`, for the reason the editor states itself: a take is a REPLAYABLE chain over
   // a decoded source, and « nothing is written to disk until apply or save as ». Baking it into
   // its own source would leave the chain in the document and apply it a second time on reopen —
@@ -485,10 +499,18 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   audio: AUDIO_IO,
   // Nor here: `adjustments` are applied over a source left intact, and baking them into it would
   // destroy the only copy of what they are meant to stay undoable against.
-  skybox: textDocumentIo(skyboxStore, asIs, parseSkybox, createSkyboxContent),
+  skybox: textDocumentIo(skyboxStore, {
+    toPayload: asIs,
+    fromPayload: parseSkybox,
+    createDefault: createSkyboxContent,
+  }),
   // The one whose absence is NOT a refusal: a channel is a reference, not pixels, and what does
   // produce pixels — `deriveChannel` — already writes them as an asset when it derives them.
-  texture: textDocumentIo(textureStore, asIs, parseTexture, newTexture),
+  texture: textDocumentIo(textureStore, {
+    toPayload: asIs,
+    fromPayload: parseTexture,
+    createDefault: newTexture,
+  }),
 }
 
 /** `undefined` for an id no tab is showing — never for a kind that cannot be saved. */

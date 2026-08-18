@@ -8,19 +8,19 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { otioTimelineFor, serializeSequencePayload } from './sequenceDocument'
 
 /**
- * An absolute path as a URL another application resolves.
- *
- * Absolute HERE and relative in the document, and the two are not the same question: an export
- * lands wherever the save dialog says, so nothing about its own folder says where the project's
- * media sits. A document sits in the project, where a relative link survives the folder moving.
+ * Absolute HERE and relative in the document: an export lands wherever the save dialog says, so
+ * nothing about its own folder says where the project's media sits.
  */
-function fileUrlOf(projectPath: string, relative: string): string {
-  const joined = `${projectPath.replaceAll('\\', '/').replace(/\/$/, '')}/${relative}`
-  const url = new URL('file:///')
-  // Through the parser rather than `encodeURIComponent`, which escapes the `:` of a Windows
-  // drive letter too. The leading slash is what keeps that letter out of the host.
-  url.pathname = joined.startsWith('/') ? joined : `/${joined}`
-  return url.href
+function fileUrlsUnder(projectPath: string): (relative: string) => string {
+  const root = projectPath.replaceAll('\\', '/').replace(/\/$/, '')
+
+  return relative => {
+    const url = new URL('file:///')
+    // Through the parser rather than `encodeURIComponent`, which escapes the `:` of a Windows
+    // drive letter too. The leading slash is what keeps that letter out of the host.
+    url.pathname = root.startsWith('/') ? `${root}/${relative}` : `/${root}/${relative}`
+    return url.href
+  }
 }
 
 /**
@@ -34,12 +34,13 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
   const projectPath = useProject.getState().project?.path
   if (!projectPath) throw new Error('no project is open to resolve the media against')
 
-  const tabs = useDocuments.getState()
-  const timeline = otioTimelineFor(sequenceOf(useSequences.getState(), documentId), documentId, path =>
-    fileUrlOf(projectPath, path),
+  const timeline = otioTimelineFor(
+    sequenceOf(useSequences.getState(), documentId),
+    documentId,
+    fileUrlsUnder(projectPath),
   )
 
-  const name = documentExportName(tabs, documentId, 'edit')
+  const name = documentExportName(useDocuments.getState(), documentId, 'edit')
   return {
     folder: name,
     files: [

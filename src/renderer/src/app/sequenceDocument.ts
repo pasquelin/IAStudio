@@ -1,15 +1,16 @@
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { extensionOf } from '@shared/domain/fileName'
-import { nameOf, parentOf } from '@shared/domain/folder'
-import { OTIO_EXTENSION } from '@shared/domain/otio'
-import { isRecord } from '@shared/guards'
+import { FOLDER_ROOT, nameOf, parentOf } from '@shared/domain/folder'
+import { isOtioTimeline, OTIO_EXTENSION } from '@shared/domain/otio'
 import i18next from 'i18next'
 import {
+  mediaLinkFrom,
   mediaLinkOf,
   mediaNameOf,
   mediaPathOf,
   relinkedBySuffix,
+  type MediaLink,
 } from '@/engines/timeline/mediaLink'
 import { otioTimelineOf, sequenceFromOtio, type OtioSource } from '@/engines/timeline/otioTimeline'
 import { parseSequence, type Clip, type SequenceState } from '@/engines/timeline/timelineState'
@@ -18,11 +19,8 @@ import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 
 /**
- * A montage on its way to and from its file.
- *
- * Which spelling it is WRITTEN in is the file's, not the kind's: a project holds montages saved
- * before the studio spoke OpenTimelineIO. What is READ is decided by the payload itself — a file
- * renamed by hand must open as what it holds, not as what its name claims.
+ * A montage on its way to and from its file. Which spelling it is WRITTEN in is the file's, not
+ * the kind's: a project holds montages saved before the studio spoke OpenTimelineIO.
  */
 
 /** Everything a clip is named and pointed at from, read once for a whole montage. */
@@ -44,13 +42,9 @@ function sourceOf(clip: Clip, { assets, documents, linkOf }: Catalogue): OtioSou
 }
 
 /**
- * The montage as OpenTimelineIO holds it, media pointed at from the montage's own folder.
- *
- * Composed by the WINDOW: only this side holds the catalogue a clip's media is resolved against,
- * and the main process would have nothing to turn an asset id into a path with.
- *
- * `linkOf` is how a media is pointed at — relative for the document, which is what makes a
- * project movable, and absolute for an export that lands outside it.
+ * The montage as OpenTimelineIO holds it. Composed by the WINDOW: only this side holds the
+ * catalogue a clip's media is resolved against. `linkOf` is how a media is pointed at — relative
+ * for the document, absolute for an export that lands outside the project.
  */
 export function otioTimelineFor(
   state: SequenceState,
@@ -67,48 +61,41 @@ export function otioTimelineFor(
   })
 }
 
-/** Where a document's own file sits, which is what its media links are relative to. */
-const folderOf = (documentId: string): string =>
-  parentOf(useDocuments.getState().documents[documentId]?.path ?? '') ?? ''
-
-/** Whether this document's own file is the standard one, which is what a save has to write. */
-function heldAsOtio(documentId: string): boolean {
-  const path = useDocuments.getState().documents[documentId]?.path
-  return path !== undefined && extensionOf(nameOf(path)) === OTIO_EXTENSION
+/** The file a document is held in, split into the folder its media links are relative to. */
+function heldIn(documentId: string): { otio: boolean; folder: readonly string[] } {
+  const path = useDocuments.getState().documents[documentId]?.path ?? FOLDER_ROOT
+  const folder = parentOf(path) ?? FOLDER_ROOT
+  return {
+    otio: extensionOf(nameOf(path)) === OTIO_EXTENSION,
+    folder: folder === FOLDER_ROOT ? [] : folder.split('/'),
+  }
 }
 
 export function sequencePayload(state: SequenceState, documentId: string): unknown {
-  if (!heldAsOtio(documentId)) return state
+  const { otio, folder } = heldIn(documentId)
+  if (!otio) return state
 
-  const folder = folderOf(documentId)
   return otioTimelineFor(state, documentId, path => mediaLinkOf(path, folder))
 }
 
-/**
- * Indented for the open format and not for the studio's own: a `.otio` is read by hand and by
- * other tools, and it is written exactly as an export of it would be.
- */
+/** Indented for the open format alone: a `.otio` is read by hand and by other tools. */
 export function serializeSequencePayload(payload: unknown): string {
   return isOtioTimeline(payload) ? JSON.stringify(payload, null, 2) : JSON.stringify(payload)
 }
 
-const isOtioTimeline = (payload: unknown): boolean =>
-  isRecord(payload) && payload.OTIO_SCHEMA === 'Timeline.1'
-
 /**
- * A montage read back, whichever of the two spellings its file holds.
- *
- * Read off the payload rather than off the extension: a `.seq` holding a standard timeline — one
- * renamed by hand, or written by a build that had already turned over — must open as what it is.
+ * A montage read back, whichever of the two spellings its file holds — decided by the payload
+ * rather than by the extension, so a file renamed by hand opens as what it is.
  */
 export function sequenceFromPayload(payload: unknown, documentId: string): SequenceState {
   if (!isOtioTimeline(payload)) return parseSequence(payload)
 
   const unlinked: string[] = []
-  const relink = assetIdRelinker(folderOf(documentId))
+  const relink = assetIdRelinker(heldIn(documentId).folder)
   const state = sequenceFromOtio(payload, url => {
-    const found = relink(url)
-    if (!found) unlinked.push(mediaNameOf(url))
+    const link = mediaLinkFrom(url)
+    const found = relink(link)
+    if (!found) unlinked.push(mediaNameOf(link))
     return found
   })
 
@@ -127,18 +114,19 @@ export function sequenceFromPayload(payload: unknown, documentId: string): Seque
 }
 
 /**
- * Turns a media a file names by path into a line of the catalogue.
+ * Turns a media a file names by path into a line of the catalogue — only ever asked for a clip
+ * the studio's own metadata does not name, which means a file written by another application.
  *
- * Only ever consulted for a clip the studio's own metadata does not name — a file written by
- * another application. By path first, then by the longest tail of an absolute one, then by file
- * name. Never a guess beyond that: an empty answer drops the clip, which is said out loud, where
- * a wrong one would play the wrong picture and say nothing.
+ * **The blind spot, written rather than hidden**: this reads `assetsById`, which holds every
+ * asset this window has been SHOWN, not the whole catalogue. A media whose row has never been
+ * listed here answers nothing and its clip is dropped — said out loud, but dropped. Asking the
+ * catalogue by path (`helpers/assetAt`) is a round trip, and `DocumentIo.install` is synchronous.
  */
-function assetIdRelinker(documentFolder: string): (targetUrl: string) => string {
+function assetIdRelinker(documentFolder: readonly string[]): (link: MediaLink) => string {
   const byPath = new Map<string, string>()
   const byName = new Map<string, string>()
 
-  for (const asset of useAssets.getState().items) {
+  for (const asset of assetsById(useAssets.getState()).values()) {
     if (!asset.path) continue
     byPath.set(asset.path, asset.id)
     // First in wins: two folders may hold a `rush.mp4`, and answering the last read would make
@@ -146,9 +134,13 @@ function assetIdRelinker(documentFolder: string): (targetUrl: string) => string 
     if (!byName.has(nameOf(asset.path))) byName.set(nameOf(asset.path), asset.id)
   }
 
-  return targetUrl => {
-    const path = mediaPathOf(targetUrl, documentFolder)
-    const here = path === null ? undefined : byPath.get(path)
-    return here ?? relinkedBySuffix(targetUrl, byPath) ?? byName.get(mediaNameOf(targetUrl)) ?? ''
+  return link => {
+    const path = mediaPathOf(link, documentFolder)
+    return (
+      (path === null ? undefined : byPath.get(path)) ??
+      relinkedBySuffix(link, byPath) ??
+      byName.get(mediaNameOf(link)) ??
+      ''
+    )
   }
 }

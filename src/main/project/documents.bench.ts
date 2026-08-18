@@ -9,7 +9,7 @@ import { DOCUMENT_VERSION, type DocumentFile } from '@shared/domain/document'
 // being measured. It did — `headOf` was copied here without its envelope parse, so the pool was
 // timed against a lighter read than the one it runs.
 import { headOf, pooledHeads } from './documents'
-import { bodyOf, documentFrom } from './documentBody'
+import { bodyFormatOf } from './documentBody'
 
 /**
  * What one save and one open cost the main process.
@@ -62,10 +62,8 @@ function sceneOf(count: number): DocumentFile {
   }
 }
 
-const SCENE_EXTENSION = '.scene'
-
-/** What `createDocumentFiles` writes: the envelope on one line, the content under it. */
-const sceneBodyOf = (file: DocumentFile): string => bodyOf(file, SCENE_EXTENSION)
+const SCENE = bodyFormatOf('.scene')
+const OTIO = bodyFormatOf('.otio')
 
 const SIZES: readonly number[] = [50, 500, 5_000, 10_000, 15_000, 50_000]
 
@@ -73,7 +71,7 @@ describe('writing a document: the whole main-thread cost of one save', () => {
   for (const count of SIZES) {
     const clone = serialize(sceneOf(count))
     bench(`${count} nodes`, () => {
-      sceneBodyOf(deserialize(clone))
+      SCENE.write(deserialize(clone))
     })
   }
 })
@@ -90,9 +88,9 @@ describe('writing a document: serializing the content, as it no longer does', ()
 
 describe('reading a document: the whole main-thread cost of one open', () => {
   for (const count of SIZES) {
-    const body = sceneBodyOf(sceneOf(count))
+    const body = SCENE.write(sceneOf(count))
     bench(`${count} nodes`, () => {
-      serialize(documentFrom(body, SCENE_EXTENSION))
+      serialize(SCENE.read(body))
     })
   }
 })
@@ -187,21 +185,25 @@ describe('listing a project of 2 000 documents in 200 folders', () => {
   })
 })
 
-/**
- * What listing a montage costs, which is not what listing a scene costs.
- *
- * A file in the open format carries no head of ours: its title and its id are spread through the
- * standard's own metadata, so `headOf` reads and parses the WHOLE file. This is the price of the
- * format being the document, and it is measured rather than assumed — the same parse a scene of
- * fifty thousand nodes is expressly kept from paying.
- */
 const CLIP_COUNTS: readonly number[] = [50, 500, 5_000]
 
+/**
+ * The price of the format BEING the document: an `.otio` carries no head of ours, so listing one
+ * reads and parses the whole file — the very parse a scene is kept from paying.
+ *
+ * **Measured 2026-08-18** (macOS, Node 24): 0.09 ms at 50 clips, 0.92 ms at 500, 9.4 ms at 5 000.
+ * A project of a few ordinary montages stays under the 16 ms a frame has; several of the largest
+ * would not, and `list()` runs on the thread that owns every window.
+ *
+ * **And one gesture pays it more than once**: `locate` verifies through `descriptorOf`, so an
+ * open costs two of these and a rename four. Cheap for a `.scene` head, not for this — the fix
+ * is `locate` answering with what it already read, and it is not written yet.
+ */
 describe('reading a montage: the head that has to be the whole file', () => {
   for (const count of CLIP_COUNTS) {
     const body = otioOf(count)
     bench(`${count} clips (${Math.round(body.length / 1024)} KiB)`, () => {
-      documentFrom(body, '.otio')
+      OTIO.read(body)
     })
   }
 })

@@ -7,6 +7,8 @@
  * it blindly would silently undo a trim made in Resolve.
  */
 import {
+  isOtioTimeline,
+  otioStudioMetadata,
   OTIO_DOCUMENT_ID,
   OTIO_STUDIO_KEY,
   type OtioClip,
@@ -217,13 +219,6 @@ export function otioTimelineOf(
   }
 }
 
-const studioOf = (raw: Record<string, unknown>): Record<string, unknown> => {
-  const metadata = raw.metadata
-  if (!isRecord(metadata)) return {}
-  const studio = metadata[OTIO_STUDIO_KEY]
-  return isRecord(studio) ? studio : {}
-}
-
 /**
  * The exact time the extension remembers, but only while it still names the frame the standard
  * holds. A clip moved or trimmed by another application makes them disagree, and then the
@@ -272,7 +267,7 @@ function clipFrom(
   frame: Us,
   assetIdOf: OtioAssetIdOf,
 ): Clip | null {
-  const studio = studioOf(raw)
+  const studio = otioStudioMetadata(raw)
   const duration = refined(studio, 'duration', standard.duration, frame)
   if (duration <= 0) return null
 
@@ -325,7 +320,7 @@ function trackFrom(
 ): Track | null {
   if (!isRecord(raw) || raw.OTIO_SCHEMA !== 'Track.1') return null
 
-  const studio = studioOf(raw)
+  const studio = otioStudioMetadata(raw)
   const kind: TrackKind = raw.kind === 'Audio' ? 'audio' : 'video'
   // A file written elsewhere names its tracks freely; the studio names them V1, A1… and the
   // numbering has to come from what is already read, not from the row.
@@ -377,7 +372,7 @@ export function sequenceFromOtio(
   content: unknown,
   assetIdOf: OtioAssetIdOf = () => '',
 ): SequenceState {
-  if (!isRecord(content) || content.OTIO_SCHEMA !== 'Timeline.1') return EMPTY_SEQUENCE
+  if (!isOtioTimeline(content)) return EMPTY_SEQUENCE
   const stack = content.tracks
   if (!isRecord(stack) || !Array.isArray(stack.children)) return EMPTY_SEQUENCE
 
@@ -394,7 +389,7 @@ export function sequenceFromOtio(
   })
   if (tracks.length === 0) return EMPTY_SEQUENCE
 
-  const studio = studioOf(content)
+  const studio = otioStudioMetadata(content)
   const selectedId = readString(studio, 'selectedId', '')
   const read: SequenceState = {
     settings: {
