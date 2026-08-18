@@ -1,9 +1,11 @@
 import { readFileSync } from 'node:fs'
-import { relative } from 'node:path'
+import { join, relative } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { sitesIn } from './astSites'
 import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './sourceFiles'
+import { TRANSLATIONS } from '@shared/i18n'
+import { isRecord } from '@shared/guards'
 
 /**
  * Whether an argument is a literal spelling a `{{hole}}` — quoted, backticked, or a regexp.
@@ -106,5 +108,58 @@ describe('no translation is filled by hand in the main process', () => {
   it('leaves a replace that has nothing to do with a translation alone', () => {
     expect(handRolledFillsIn('probe.ts', "path.replace('\\\\', '/')")).toEqual([])
     expect(handRolledFillsIn('probe.ts', 'const spelt = `{{name}}`')).toEqual([])
+  })
+})
+
+/**
+ * The third shape of the same defect, and the only one that reached a screen: a hole `fillHoles`
+ * could not fill. `explorer.trashTitle` is `Ces {{count, number}} éléments…`, the trash dialog
+ * built it through `fillHoles`, and the system printed those braces.
+ *
+ * Two guards were each right and could not both be satisfied: `bundles.test.ts` requires
+ * `{{count, number}}` on every count — a library of four thousand read `4000` in both languages
+ * before it — while `fillHoles` read `{{\w+}}` and left the formatted hole whole. This reads the
+ * SHAPE that made that possible: a main file reaching a formatted key, whether or not the helper
+ * can fill it today.
+ *
+ * It reads a file's OWN sections — `TRANSLATIONS[…].explorer` — before looking for a leaf in it,
+ * which is what keeps it quiet: the leaf alone finds `git.ahead` and `usage.period.hint` in main
+ * files that never read those sections, three false positives out of four. Measured.
+ */
+describe('the formatted holes the main process reaches for', () => {
+  const formattedKeys = (bundle: unknown, prefix = '', into: string[] = []): string[] => {
+    if (typeof bundle === 'string') {
+      if (/\{\{[^}]*,[^}]*\}\}/.test(bundle)) into.push(prefix)
+    } else if (isRecord(bundle))
+      for (const [name, held] of Object.entries(bundle))
+        formattedKeys(held, prefix ? `${prefix}.${name}` : name, into)
+
+    return into
+  }
+
+  const reached = (): string[] => {
+    const keys = formattedKeys(TRANSLATIONS.fr)
+
+    return sourceFiles(join(SOURCE_ROOT, 'main')).flatMap(path => {
+      const source = readFileSync(path, 'utf8')
+      const sections = [...source.matchAll(/TRANSLATIONS\[[^\]]+\]\.(\w+)/g)].map(
+        ([, name]) => name,
+      )
+
+      return keys
+        .filter(key => sections.includes(key.split('.')[0] ?? ''))
+        .filter(key => new RegExp(`\\.${key.split('.').at(-1)}\\b`).test(source))
+        .map(key => `${relative(SOURCE_ROOT, path)} — ${key}`)
+    })
+  }
+
+  /**
+   * ONE, and named: the trash dialog. A list rather than an empty assertion because the helper
+   * now fills this shape — the day a second one appears, whoever adds it reads this line and
+   * checks that `fillHoles` still knows the format it carries. A `number` it does; anything else
+   * it leaves whole, deliberately.
+   */
+  it('reaches for exactly the one the helper was taught to fill', () => {
+    expect(reached()).toEqual(['main/project/projectDialogs.ts — explorer.trashTitle'])
   })
 })

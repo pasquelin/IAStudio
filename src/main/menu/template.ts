@@ -149,7 +149,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
 
   // Interpolated rather than spelled out in both bundles: `constants.test.ts` pins the product
   // name to one place, and a hard-coded copy here would drift past it unnoticed.
-  const named = (sentence: string): string => fillHoles(sentence, { name: APP_NAME })
+  const named = (sentence: string): string => fillHoles(sentence, { name: APP_NAME }, language)
   const aboutLabel = named(t.menu.about)
 
   // `named` rides along: only `hide` and `quit` carry a placeholder, and a sentence without one
@@ -252,7 +252,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    */
   const skyboxItems = (): MenuItemConstructorOptions[] =>
     FACE_SIZES.map(size => ({
-      label: fillHoles(t.skyboxFaceSize, { size }),
+      label: fillHoles(t.skyboxFaceSize, { size }, language),
       click: () => actions.exportSkybox({ size }),
     }))
 
