@@ -1,22 +1,18 @@
-import type { Asset } from '@shared/domain/asset'
-import type { DocumentDescriptor } from '@shared/domain/document'
 import { OTIO_EXTENSION } from '@shared/domain/otio'
 import type { FolderExportRequest } from '@shared/ipc'
-import { otioTimelineOf, type OtioSource } from '@/engines/timeline/otioTimeline'
-import type { Clip } from '@/engines/timeline/timelineState'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
-import { assetsById, useAssets } from '@/stores/assets'
 import { documentExportName, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { sequenceOf, useSequences } from '@/stores/sequences'
+import { otioTimelineFor, serializeSequencePayload } from './sequenceDocument'
 
 /**
  * An absolute path as a URL another application resolves.
  *
- * Absolute because one encoding serves two doors that land the file in different places — a save
- * dialog anywhere on the disk, or a folder of the project — and only an absolute link resolves
- * from both. The cost is that moving the project breaks it, which no encoding avoids.
+ * Absolute HERE and relative in the document, and the two are not the same question: an export
+ * lands wherever the save dialog says, so nothing about its own folder says where the project's
+ * media sits. A document sits in the project, where a relative link survives the folder moving.
  */
 function fileUrlOf(projectPath: string, relative: string): string {
   const joined = `${projectPath.replaceAll('\\', '/').replace(/\/$/, '')}/${relative}`
@@ -27,33 +23,9 @@ function fileUrlOf(projectPath: string, relative: string): string {
   return url.href
 }
 
-/** Everything a clip is named and pointed at from, read once for a whole montage. */
-type Catalogue = {
-  projectPath: string
-  assets: ReadonlyMap<string, Asset>
-  documents: Record<string, DocumentDescriptor>
-}
-
-function sourceOf(clip: Clip, { projectPath, assets, documents }: Catalogue): OtioSource {
-  if (clip.sceneId) {
-    // No url whatever we answer — a scene is rendered, not read — but the NAME is what another
-    // application shows in place of the missing picture.
-    return { name: documents[clip.sceneId]?.title ?? clip.sceneId, url: null }
-  }
-
-  const asset = assets.get(clip.assetId)
-  return {
-    name: asset?.name ?? clip.assetId,
-    url: asset?.path ? fileUrlOf(projectPath, asset.path) : null,
-  }
-}
-
 /**
  * The montage, encoded to one file — the half of an export that has nothing to do with where it
  * lands. Shared by the File menu and by the outside door, exactly as a scene's is.
- *
- * Composed by the WINDOW: only this side holds the catalogue a clip's media is resolved against,
- * and the main process would have nothing to turn an asset id into a path with.
  *
  * A folder for a single file, like every other door onto the folder writer. Throws when no
  * project is open — there is then no path to point a clip's media at.
@@ -63,17 +35,9 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
   if (!projectPath) throw new Error('no project is open to resolve the media against')
 
   const tabs = useDocuments.getState()
-  const catalogue: Catalogue = {
-    projectPath,
-    documents: tabs.documents,
-    assets: assetsById(useAssets.getState()),
-  }
-  // The RAW title, which names the timeline inside the file — that is not a file name, and the
-  // two are read apart: one by another editing application, the other by a file system.
-  const timeline = otioTimelineOf(sequenceOf(useSequences.getState(), documentId), {
-    name: tabs.documents[documentId]?.title ?? documentId,
-    sourceOf: clip => sourceOf(clip, catalogue),
-  })
+  const timeline = otioTimelineFor(sequenceOf(useSequences.getState(), documentId), documentId, path =>
+    fileUrlOf(projectPath, path),
+  )
 
   const name = documentExportName(tabs, documentId, 'edit')
   return {
@@ -82,7 +46,7 @@ export function otioExportFiles(documentId: string): FolderExportRequest {
       {
         name,
         extension: OTIO_EXTENSION,
-        bytes: new TextEncoder().encode(JSON.stringify(timeline, null, 2)),
+        bytes: new TextEncoder().encode(serializeSequencePayload(timeline)),
       },
     ],
   }

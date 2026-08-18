@@ -81,6 +81,17 @@ export function reportFailure(scope: LogScope, subject: string, error: unknown):
 }
 
 /**
+ * Something the user has to be told that is not a failure: work that went through with less than
+ * it was asked for. Never deduplicated — the same document opened twice loses the same thing
+ * twice, and a second silence would read as a second open that went fine.
+ */
+export function reportNotice(scope: LogScope, message: string): void {
+  getBridge()
+    ?.diagnostics.report({ level: 'warn', scope, message: message.slice(0, MAX_LOG_MESSAGE) })
+    .catch(() => {})
+}
+
+/**
  * A failure the terminal keeps and no surface shows.
  *
  * Never deduplicated, unlike `reportFailure`: nothing here is read while it happens, and a

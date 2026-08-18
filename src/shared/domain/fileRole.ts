@@ -50,10 +50,6 @@ const DOMAIN_BY_EXTENSION: Record<string, AssetType> = {
   // document is what turns one into an environment.
   '.exr': 'image',
   '.hdr': 'image',
-  // A cut rather than a picture, and filed with the videos all the same: it belongs to no other
-  // domain, and `other` would bury an exported montage among the notes. `opensInStudio` still
-  // answers false — nothing here reads one back yet, and a tab that opens on nothing is worse.
-  '.otio': 'video',
   '.mp4': 'video',
   '.webm': 'video',
   '.mov': 'video',

@@ -1,4 +1,4 @@
-import { EXTENSION_BY_KIND, type DocumentKind } from './document'
+import { extensionForKind, EXTENSIONS_BY_KIND, type DocumentKind } from './document'
 import { foldForFileName, isSafeFileName, safeFileName, stemForSuffix } from './fileName'
 
 /**
@@ -36,9 +36,17 @@ export type NamedDocument = {
   fileName: string
 }
 
-/** The file a document of this name and kind lands on. */
-export function documentFileName(name: string, kind: DocumentKind): string {
-  return `${safeFileName(name, 'document')}${EXTENSION_BY_KIND[kind]}`
+/**
+ * The file a document of this name and kind lands on.
+ *
+ * `wearing` is the extension the document ALREADY has, for a kind that reads more than one: a
+ * montage renamed must stay the file it is, not become a second one under the spelling a new
+ * document would get.
+ */
+export function documentFileName(name: string, kind: DocumentKind, wearing?: string): string {
+  const extension =
+    wearing && EXTENSIONS_BY_KIND[kind].includes(wearing) ? wearing : extensionForKind(kind)
+  return `${safeFileName(name, 'document')}${extension}`
 }
 
 /**
@@ -55,6 +63,7 @@ export function checkDocumentName(
   kind: DocumentKind,
   existing: readonly NamedDocument[],
   selfId?: string,
+  wearing?: string,
 ): DocumentNameFailure | null {
   const trimmed = name.trim()
 
@@ -64,7 +73,7 @@ export function checkDocumentName(
   // the document, and one name is the whole point.
   if (!isSafeFileName(trimmed)) return 'invalid'
 
-  const wanted = foldForFileName(documentFileName(trimmed, kind))
+  const wanted = foldForFileName(documentFileName(trimmed, kind, wearing))
   const taken = existing.some(
     document => document.id !== selfId && foldForFileName(document.fileName) === wanted,
   )

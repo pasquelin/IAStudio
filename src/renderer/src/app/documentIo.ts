@@ -33,6 +33,7 @@ import type { StudioBridge } from '@shared/ipc'
 import { reportFailure } from '@/services/diagnostics'
 import i18next from 'i18next'
 import { closePanel, openDocument } from './dockviewApi'
+import { sequenceFromPayload, sequencePayload, serializeSequencePayload } from './sequenceDocument'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audioEdits'
@@ -172,9 +173,12 @@ type AssetWriting =
  */
 function textDocumentIo<S>(
   store: DocumentStore<S>,
-  toPayload: (state: S) => unknown,
-  fromPayload: (payload: unknown) => S,
+  toPayload: (state: S, documentId: string) => unknown,
+  fromPayload: (payload: unknown, documentId: string) => S,
   createDefault: () => S,
+  // Two spaces for a file another application opens, and none for the studio's own: a montage in
+  // the open format is read by hand and by other tools, and is written the way it is exported.
+  serialize: (payload: unknown) => string = payload => JSON.stringify(payload),
 ): DocumentIo {
   return {
     capture: documentId => {
@@ -184,14 +188,14 @@ function textDocumentIo<S>(
       return Promise.resolve({
         // Serialized in the window that owns the document: the file layer never parses a
         // content, so the biggest of them is never decoded in the main process.
-        draft: { content: JSON.stringify(toPayload(store.stateOf(current, documentId))) },
+        draft: { content: serialize(toPayload(store.stateOf(current, documentId), documentId)) },
         commit: () => store.use.getState().markSaved(documentId, mark),
         wasEdited: store.hasUnsavedWork(current, documentId),
       })
     },
     install: (documentId, content) => {
       // `replace`, not a command: loading a document is not something ⌘Z gives back.
-      store.use.getState().replace(documentId, fromPayload(JSON.parse(content)))
+      store.use.getState().replace(documentId, fromPayload(JSON.parse(content), documentId))
       // What is on screen is now exactly what the disk holds, so the document opens clean.
       const loaded = store.use.getState()
       loaded.markSaved(documentId, store.markOf(loaded, documentId))
@@ -467,7 +471,13 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   // opened from is one node of it.
   scene: textDocumentIo(sceneStore, scenePayload, sceneFromPayload, createDefaultScene),
   // Nor here: rendering a montage is minutes of work, which has no business on a keystroke.
-  sequence: textDocumentIo(sequenceStore, asIs, parseSequence, () => EMPTY_SEQUENCE),
+  sequence: textDocumentIo(
+    sequenceStore,
+    sequencePayload,
+    sequenceFromPayload,
+    () => EMPTY_SEQUENCE,
+    serializeSequencePayload,
+  ),
   // No `writeAsset`, for the reason the editor states itself: a take is a REPLAYABLE chain over
   // a decoded source, and « nothing is written to disk until apply or save as ». Baking it into
   // its own source would leave the chain in the document and apply it a second time on reopen —

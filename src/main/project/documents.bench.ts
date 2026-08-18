@@ -8,7 +8,8 @@ import { DOCUMENT_VERSION, type DocumentFile } from '@shared/domain/document'
 // syscall shape `list()` takes, and a second implementation beside it would drift from the one
 // being measured. It did — `headOf` was copied here without its envelope parse, so the pool was
 // timed against a lighter read than the one it runs.
-import { headOf, pooledHeads, splitDocument } from './documents'
+import { headOf, pooledHeads } from './documents'
+import { bodyOf, documentFrom } from './documentBody'
 
 /**
  * What one save and one open cost the main process.
@@ -61,11 +62,10 @@ function sceneOf(count: number): DocumentFile {
   }
 }
 
+const SCENE_EXTENSION = '.scene'
+
 /** What `createDocumentFiles` writes: the envelope on one line, the content under it. */
-function bodyOf(file: DocumentFile): string {
-  const { content, ...envelope } = file
-  return `${JSON.stringify(envelope)}\n${content}`
-}
+const sceneBodyOf = (file: DocumentFile): string => bodyOf(file, SCENE_EXTENSION)
 
 const SIZES: readonly number[] = [50, 500, 5_000, 10_000, 15_000, 50_000]
 
@@ -73,7 +73,7 @@ describe('writing a document: the whole main-thread cost of one save', () => {
   for (const count of SIZES) {
     const clone = serialize(sceneOf(count))
     bench(`${count} nodes`, () => {
-      bodyOf(deserialize(clone))
+      sceneBodyOf(deserialize(clone))
     })
   }
 })
@@ -90,9 +90,9 @@ describe('writing a document: serializing the content, as it no longer does', ()
 
 describe('reading a document: the whole main-thread cost of one open', () => {
   for (const count of SIZES) {
-    const body = bodyOf(sceneOf(count))
+    const body = sceneBodyOf(sceneOf(count))
     bench(`${count} nodes`, () => {
-      serialize(splitDocument(body))
+      serialize(documentFrom(body, SCENE_EXTENSION))
     })
   }
 })
@@ -186,3 +186,74 @@ describe('listing a project of 2 000 documents in 200 folders', () => {
     await pooledHeads(await candidates(), file => stat(file))
   })
 })
+
+/**
+ * What listing a montage costs, which is not what listing a scene costs.
+ *
+ * A file in the open format carries no head of ours: its title and its id are spread through the
+ * standard's own metadata, so `headOf` reads and parses the WHOLE file. This is the price of the
+ * format being the document, and it is measured rather than assumed — the same parse a scene of
+ * fifty thousand nodes is expressly kept from paying.
+ */
+const CLIP_COUNTS: readonly number[] = [50, 500, 5_000]
+
+describe('reading a montage: the head that has to be the whole file', () => {
+  for (const count of CLIP_COUNTS) {
+    const body = otioOf(count)
+    bench(`${count} clips (${Math.round(body.length / 1024)} KiB)`, () => {
+      documentFrom(body, '.otio')
+    })
+  }
+})
+
+function otioOf(count: number): string {
+  const time = (value: number): unknown => ({ OTIO_SCHEMA: 'RationalTime.1', rate: 25, value })
+
+  return JSON.stringify({
+    OTIO_SCHEMA: 'Timeline.1',
+    name: 'Bench',
+    metadata: { scenario: { documentId: 'a3f1', width: 1920, height: 1080, sampleRate: 48_000 } },
+    global_start_time: time(0),
+    tracks: {
+      OTIO_SCHEMA: 'Stack.1',
+      name: 'tracks',
+      metadata: {},
+      children: [
+        {
+          OTIO_SCHEMA: 'Track.1',
+          name: 'V1',
+          kind: 'Video',
+          metadata: {},
+          enabled: true,
+          children: Array.from({ length: count }, (_unused, index) => ({
+            OTIO_SCHEMA: 'Clip.1',
+            name: `Plan ${index}`,
+            metadata: {
+              scenario: {
+                id: `clip_${index}`,
+                assetId: 'asset_00000000-0000-0000-0000-000000000000',
+                start: index * 1_000_000,
+                duration: 1_000_000,
+                inPoint: 0,
+                fadeIn: 0,
+                fadeOut: 0,
+                gain: 0,
+              },
+            },
+            source_range: { OTIO_SCHEMA: 'TimeRange.1', start_time: time(0), duration: time(25) },
+            markers: [],
+            enabled: true,
+            effects: [],
+            media_reference: {
+              OTIO_SCHEMA: 'ExternalReference.1',
+              name: `Plan ${index}`,
+              metadata: {},
+              available_range: null,
+              target_url: `../assets/vid/plan%20${index}.mp4`,
+            },
+          })),
+        },
+      ],
+    },
+  })
+}

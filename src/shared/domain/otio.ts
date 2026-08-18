@@ -20,6 +20,13 @@
 export const OTIO_EXTENSION = '.otio'
 export const OTIO_STUDIO_KEY = 'scenario'
 
+/**
+ * Which document of the studio a timeline IS, under the studio domain. Read by BOTH processes —
+ * the window writes it, the file layer reads it back as the document's id — so it is spelt here
+ * rather than on either side, where the two spellings would be free to drift apart in silence.
+ */
+export const OTIO_DOCUMENT_ID = 'documentId'
+
 /** A time as OTIO holds it: a count of `rate`ths of a second. */
 export type OtioRationalTime = { OTIO_SCHEMA: 'RationalTime.1'; rate: number; value: number }
 

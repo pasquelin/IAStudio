@@ -7,6 +7,7 @@
  * it blindly would silently undo a trim made in Resolve.
  */
 import {
+  OTIO_DOCUMENT_ID,
   OTIO_STUDIO_KEY,
   type OtioClip,
   type OtioGap,
@@ -48,6 +49,12 @@ export type OtioSource = { name: string; url: string | null }
 export type OtioWriteOptions = {
   /** The timeline's own name — the document's title. */
   name: string
+  /**
+   * Which document of the studio this file IS, when it is one. Written under the studio domain
+   * and read back by the file layer: without it a montage renamed on disk becomes a different
+   * document, its tab and its place in the layout going with the old name.
+   */
+  documentId?: string
   sourceOf: (clip: Clip) => OtioSource
 }
 
@@ -180,7 +187,7 @@ function trackOf(
  */
 export function otioTimelineOf(
   state: SequenceState,
-  { name, sourceOf }: OtioWriteOptions,
+  { name, documentId, sourceOf }: OtioWriteOptions,
 ): OtioTimeline {
   const { fps, width, height, sampleRate } = state.settings
   return {
@@ -188,6 +195,7 @@ export function otioTimelineOf(
     name,
     metadata: {
       [OTIO_STUDIO_KEY]: {
+        ...(documentId ? { [OTIO_DOCUMENT_ID]: documentId } : {}),
         width,
         height,
         sampleRate,

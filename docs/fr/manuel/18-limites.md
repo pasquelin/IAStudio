@@ -209,11 +209,16 @@ Une séquence s’enregistre désormais en `.seq` et se rouvre telle quelle.
 **Mais il sort muet** : les pistes de son du montage ne sont pas encore encodées dedans. C’est la
 limite la plus lourde de cet espace, parce qu’elle oblige à remonter le son ailleurs.
 
-### Un `.otio` ne se rouvre pas ici
+### Un montage neuf s’enregistre encore en `.seq`
 
-**Fichier › Exporter le montage (OTIO)** écrit le montage dans un format que d’autres logiciels de
-montage ouvrent. Le chemin inverse manque : on ne peut pas encore **ouvrir** un `.otio` dans le
-studio, ni celui d’un autre logiciel, ni un des siens.
+Un `.otio` **s’ouvre** maintenant : un double-clic dans l’Explorateur ouvre le montage, qu’il ait
+été écrit ici ou par un autre logiciel, et `⌘S` le réenregistre dans son propre fichier. Ce qui
+reste, c’est le point de départ — une séquence créée dans le studio part toujours en `.seq`.
+
+Un montage venu d’ailleurs nomme ses médias par un chemin. Le studio les retrouve dans le projet
+par ce chemin, puis par le nom du fichier. **Un plan dont le média reste introuvable n’est pas
+ouvert**, et le journal d’activité dit lequel — le montage est alors plus court que ce que le
+fichier décrit.
 
 Et ce que ce format ne porte pas en standard — fondus, gains, liens image/son, scène 3D d’un clip
 vivant — voyage dans le fichier mais **n’est lu que par Scenario**.
