@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { SECOND } from '@shared/domain/time'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { installScene } from '@/stores/scene-fixtures'
@@ -161,6 +162,42 @@ describe('placing and dressing an object', () => {
     const light = nodeNamed('Ciel')
     expect(light).toMatchObject({ light: { kind: 'hemisphere', intensity: 3 } })
     expect(light?.type === 'light' && 'color' in light.light).toBe(false)
+  })
+})
+
+describe('a camera driven by value', () => {
+  it('writes the lens fields it was given and keeps the rest, and refuses a mesh', async () => {
+    const added = await runAction('node.add', { kind: 'camera', name: 'Caméra' })
+    const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
+    const mesh = await runAction('node.add', { kind: 'box', name: 'Caisse' })
+    const meshId = mesh.ok ? (mesh.data as { nodeId: string }).nodeId : ''
+
+    await runAction('node.camera', { nodeId, fov: 24 })
+
+    expect(nodeNamed('Caméra')).toMatchObject({ camera: { fov: 24, near: 0.1, far: 1000 } })
+    expect(await runAction('node.camera', { nodeId: meshId, fov: 24 })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  // Seconds across the boundary, microseconds in the timeline: the conversion is the point.
+  it('opens a shot at the second it was given', async () => {
+    const added = await runAction('node.add', { kind: 'camera', name: 'Caméra' })
+    const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
+
+    await runAction('camera.shot', { nodeId, startSeconds: 2 })
+
+    expect(scene().animation.shots).toHaveLength(1)
+    expect(scene().animation.shots[0]).toMatchObject({ cameraId: nodeId, start: 2 * SECOND })
+  })
+
+  it('refuses to open a shot for anything but a camera', async () => {
+    const mesh = await runAction('node.add', { kind: 'box', name: 'Caisse' })
+    const nodeId = mesh.ok ? (mesh.data as { nodeId: string }).nodeId : ''
+
+    expect(await runAction('camera.shot', { nodeId })).toEqual({ ok: false, refusal: 'badInput' })
+    expect(scene().animation.shots).toEqual([])
   })
 })
 

@@ -497,6 +497,14 @@
         "title": "Set a light",
         "description": "Changes the colour or the intensity of a light. Only these two, because the rest of a light’s fields differ from one kind to another."
       },
+      "nodeCamera": {
+        "title": "Set a camera lens",
+        "description": "Changes the field of view and the near and far distances of a camera. Where it stands is set by its transform, like anything else in the tree."
+      },
+      "cameraShot": {
+        "title": "Put a camera on air",
+        "description": "Opens a shot for this camera, from the given instant in seconds. Which layer it lands on follows the band’s own rule, where a camera not yet on the band arrives on top."
+      },
       "nodeReparent": {
         "title": "Reparent an object",
         "description": "Hangs one node under another, or under the scene itself when no parent is given. The node keeps its own transform, which is then read relative to its new parent."
@@ -729,6 +737,10 @@
       "roughness": "Roughness, from 0 to 1",
       "metalness": "Metalness, from 0 to 1",
       "intensity": "Intensity",
+      "fov": "Field of view, in degrees",
+      "near": "Near distance",
+      "far": "Far distance",
+      "startSeconds": "Where the shot starts, in seconds",
       "gitPath": "Path inside the repository",
       "gitPaths": "Paths inside the repository",
       "commitHash": "Version identifier",

@@ -134,6 +134,8 @@ export type ActionName =
   | 'node.visible'
   | 'node.material'
   | 'node.light'
+  | 'node.camera'
+  | 'camera.shot'
   | 'node.reparent'
   | 'node.select'
   | 'git.status'

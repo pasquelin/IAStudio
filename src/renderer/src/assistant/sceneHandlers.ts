@@ -1,17 +1,22 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { readColor } from '@shared/domain/color'
 import type { Vector3 } from '@shared/domain/scene'
+import { SECOND } from '@shared/domain/time'
 import {
   addNode,
   removeNode,
   renameNode,
   reparentNode,
+  setCamera,
   setLight,
   setMeshMaterial,
   setNodeVisible,
   setSelection,
   setTransform,
 } from '@/engines/scene/commands'
+import { addCameraShot } from '@/engines/scene/animationCommands'
+import { newShotAt } from '@/engines/scene/cameraShots'
+import { newId } from '@/helpers/ids'
 import type { Command } from '@/engines/core/history'
 import { createNodeOf, modelNode } from '@/engines/scene/nodeFactory'
 import { canReparent, nodeById, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
@@ -192,6 +197,30 @@ export const SCENE_HANDLERS: ActionHandlers = {
             metalness: numberOf(input, 'metalness') ?? node.material.metalness,
           }),
     ),
+
+  'node.camera': input =>
+    editNode(input, node =>
+      node.type !== 'camera'
+        ? null
+        : setCamera(node.id, {
+            fov: numberOf(input, 'fov') ?? node.camera.fov,
+            near: numberOf(input, 'near') ?? node.camera.near,
+            far: numberOf(input, 'far') ?? node.camera.far,
+          }),
+    ),
+
+  // Seconds here, microseconds in the timeline: a client counting a shot in `Us` would be one
+  // unit away from a film six orders of magnitude too long, with nothing on screen to say so.
+  'camera.shot': input =>
+    editNode(input, node => {
+      if (node.type !== 'camera') return null
+
+      const open = mounted()
+      if (!open) return null
+
+      const at = (numberOf(input, 'startSeconds') ?? 0) * SECOND
+      return addCameraShot(newShotAt(open.state.animation, node.id, newId(), at))
+    }),
 
   'node.light': input =>
     editNode(input, node => {
