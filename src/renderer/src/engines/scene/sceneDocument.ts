@@ -262,7 +262,7 @@ function isClip(value: unknown): boolean {
 
 function isClipSource(value: unknown): boolean {
   if (!isRecord(value) || typeof value.name !== 'string') return false
-  if (value.kind === 'embedded') return true
+  if (value.kind === 'embedded' || value.kind === 'bundled') return true
 
   return value.kind === 'asset' && typeof value.assetId === 'string' && value.assetId !== ''
 }

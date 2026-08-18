@@ -4,7 +4,7 @@
  * Never `crossFadeTo`: that runs the fade on the mixer's clock, so the pose would depend on how
  * playback reached the instant, and a scrub or a frame-by-frame render would not match it.
  */
-import { clipLane, type ClipLane, type ClipRef } from '@shared/domain/scene'
+import { clipKeyOf, clipLane, type ClipLane, type ClipRef } from '@shared/domain/scene'
 import { secondsToUs, usToSeconds, type Us } from '@shared/domain/time'
 import { clamp } from '@shared/numeric'
 import type { ClipEdge } from '../timeline/timelineGeometry'
@@ -88,7 +88,7 @@ function placed(clips: readonly ClipRef[], lengths: Readonly<Record<string, numb
   const blocks: Block[] = []
 
   for (const ref of clips) {
-    const length = lengths[ref.source.name]
+    const length = lengths[clipKeyOf(ref.source)]
     if (length === undefined) continue
 
     const span = clipSpanOf(ref, length)

@@ -42,14 +42,36 @@ describe('the animations panel', () => {
 
   it('lists the animations shipped with the app, by their folder name', async () => {
     installFakeBridge({
-      animations: {
-        list: () =>
-          Promise.resolve([{ name: 'walk', path: '/res/animations/walk/a.glb', thumbnail: null }]),
-      },
+      animations: { list: () => Promise.resolve([{ name: 'walk', thumbnail: false }]) },
     })
     render(<AnimationsPanel />)
 
     await waitFor(() => expect(screen.getByText('walk')).toBeInTheDocument())
+  })
+
+  // Dragged by its NAME and nothing else: the band writes that name into the document, and a
+  // path off this machine would name a file the next one has not got.
+  it('hands the band the folder name when a shipped animation is dragged', async () => {
+    installFakeBridge({
+      animations: { list: () => Promise.resolve([{ name: 'walk', thumbnail: false }]) },
+    })
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('walk')).toBeInTheDocument())
+
+    const carried = new Map<string, string>()
+    screen
+      .getByText('walk')
+      .closest('[draggable]')
+      ?.dispatchEvent(
+        Object.assign(new Event('dragstart', { bubbles: true }), {
+          dataTransfer: { setData: (type: string, value: string) => void carried.set(type, value) },
+        }),
+      )
+
+    expect(JSON.parse(carried.get(ANIMATION_DRAG_TYPE) ?? 'null')).toEqual({
+      kind: 'bundled',
+      name: 'walk',
+    })
   })
 
   // The drag is what puts a block on a lane, so a row that carries nothing is a row that does

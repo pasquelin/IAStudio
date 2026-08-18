@@ -167,12 +167,28 @@ export type AnimationRef = {
 /**
  * Where a clip's frames come from.
  *
- * `embedded` is the file the model itself is: the name is the one the GLB spells. `asset` is a
- * clip of the project's own library, reusable by any character — which is the whole reason this
- * is a union rather than a string.
+ * `embedded` is the file the model itself is: the name is the one the GLB spells. `bundled` is a
+ * folder shipped beside the app, named by that FOLDER — never by what its clip spells, which is
+ * `NlaTrack` on a Tripo rig and nothing at all on Uthana's. `asset` is a clip of the project's
+ * own library, reusable by any character.
  */
 export type ClipSource =
-  { kind: 'embedded'; name: string } | { kind: 'asset'; assetId: string; name: string }
+  | { kind: 'embedded'; name: string }
+  | { kind: 'bundled'; name: string }
+  | { kind: 'asset'; assetId: string; name: string }
+
+/**
+ * What a block's clip is filed under, wherever a player or a length is kept by name.
+ *
+ * The kind is part of it, and that is the whole point: an animation shipped as `walk` and a clip
+ * the model's own file spells `walk` are two different things, and a bare name would play one
+ * for the other.
+ */
+export function clipKeyOf(source: ClipSource): string {
+  if (source.kind === 'embedded') return source.name
+  // The id and not the name: two library clips may well be called the same thing.
+  return source.kind === 'asset' ? `asset:${source.assetId}` : `bundled:${source.name}`
+}
 
 /**
  * One block of animation on a model's band.
@@ -253,6 +269,11 @@ export const DEFAULT_CLIP: Omit<ClipRef, 'id' | 'source' | 'label'> = Object.fre
  */
 export function embeddedClip(id: string, name: string, extra: Partial<ClipRef> = {}): ClipRef {
   return { ...DEFAULT_CLIP, ...extra, id, source: { kind: 'embedded', name }, label: name }
+}
+
+/** A block on an animation shipped with the app, named — and labelled — by its folder. */
+export function bundledClip(id: string, name: string, extra: Partial<ClipRef> = {}): ClipRef {
+  return { ...DEFAULT_CLIP, ...extra, id, source: { kind: 'bundled', name }, label: name }
 }
 
 /**

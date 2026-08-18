@@ -1,10 +1,11 @@
 import type { Asset } from '@shared/domain/asset'
 import { ASSET_HOST, POSTER_HOST, THUMB_HOST } from '@shared/domain/asset'
+import { ANIMATION_HOST } from '@shared/domain/animationLibrary'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import { orWhenGone } from '@main/project/store'
 import { posterFileOf, servedFileOf, type AssetResolvers } from './protocol'
 
-/** What the four hosts read, each behind the narrowest port that answers for it. */
+/** What the hosts read, each behind the narrowest port that answers for it. */
 export type AssetResolverDeps = {
   /** The open project's folder, or nothing — every path a host serves is relative to it. */
   projectPath: () => string | null
@@ -12,6 +13,8 @@ export type AssetResolverDeps = {
   findAsset: (assetId: string) => Promise<Asset | null>
   favouriteThumbnail: (favoriteId: string) => string | null
   thumbnailOf: (relative: string) => Promise<string | null>
+  /** A folder shipped beside the app, which is why no project takes part in answering. */
+  bundledAnimation: (id: string) => Promise<string | null>
 }
 
 /**
@@ -40,5 +43,8 @@ export function createAssetResolvers(deps: AssetResolverDeps): AssetResolvers {
     // most of what it draws the catalogue has never heard of. `assetFilePath` refuses whatever
     // walks out of the project, exactly as it does for a row.
     [THUMB_HOST]: relative => deps.thumbnailOf(relative),
+    // A folder's name alone means its clip, a name going deeper means that very file: the
+    // document holds the animation's NAME, and nothing in it says which file is inside.
+    [ANIMATION_HOST]: id => deps.bundledAnimation(id),
   }
 }

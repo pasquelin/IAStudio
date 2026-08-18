@@ -15,10 +15,9 @@ import {
   unkeySubject,
 } from '@/engines/scene/animationCommands'
 import { draggedShot } from '@/engines/scene/cameraShots'
-import { embeddedClip, type ClipRef } from '@shared/domain/scene'
-import { isRecord } from '@shared/guards'
+import { bundledClip, clipKeyOf, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
-import { ANIMATION_DRAG_TYPE } from '@/panels/animations/dragged'
+import { ANIMATION_DRAG_TYPE, draggedAnimationOf } from '@/panels/animations/dragged'
 import { multi, setModelLanes } from '@/engines/scene/commands'
 import { clipsMoved, clipsTrimmed, lanesWith } from '@/engines/scene/clipBlend'
 import { useModelClips } from '@/stores/modelClips'
@@ -100,7 +99,8 @@ function clipLengthOf(documentId: string, where: BlockRef): number | null {
     ?.clips.find(candidate => candidate.id === where.clipId)
 
   return clip
-    ? (useModelClips.getState().lengths[documentId]?.[where.nodeId]?.[clip.source.name] ?? null)
+    ? (useModelClips.getState().lengths[documentId]?.[where.nodeId]?.[clipKeyOf(clip.source)] ??
+        null)
     : null
 }
 
@@ -265,10 +265,8 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     const row = latest.current.rows.find(candidate => candidate.id === hit.rowId)
     if (row?.kind !== 'lane') return
 
-    const dropped: unknown = JSON.parse(written)
-    // A bundled animation still has to be read off disk and retargeted, which is not this lot.
-    if (!isRecord(dropped) || typeof dropped.clip !== 'string') return
-    const clip = dropped.clip
+    const dropped = draggedAnimationOf(JSON.parse(written))
+    if (!dropped) return
 
     const current = latest.current
     const at = clampPlayhead(
@@ -276,7 +274,13 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       current.timeline.duration,
     )
 
-    const laid = embeddedClip(newId(), clip, { start: Math.max(0, at) })
+    // A shipped animation is laid down at once and read afterwards: the engine sees a block
+    // naming a clip it has not got, loads it, retargets it, and the block starts playing.
+    const start = Math.max(0, at)
+    const laid =
+      dropped.kind === 'embedded'
+        ? embeddedClip(newId(), dropped.clip, { start })
+        : bundledClip(newId(), dropped.name, { start })
     editLane(documentId, { ...row, clipId: laid.id }, clips => [...clips, laid])
     // Dropped is chosen: the inspector then describes what one has just laid down.
     useAnimationViews.getState().setPickedBlock(documentId, laid.id)

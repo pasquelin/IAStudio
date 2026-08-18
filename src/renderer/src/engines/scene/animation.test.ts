@@ -1,6 +1,6 @@
 import { AnimationClip, Bone, Object3D, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
-import { clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { bundledClip, clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { animationTrack, timelineWith } from './animation-fixtures'
 import { SceneAnimations, clipNamesOf } from './animation'
@@ -57,11 +57,41 @@ describe('SceneAnimations', () => {
     return cube
   }
 
-  it('registers nothing for a model with no clips, so nothing is driven', () => {
+  // A bare rigged character brings no clip of its own, and is exactly what an animation shipped
+  // with the app gets dropped onto: registered anyway, or there is nothing to hand it to.
+  it('registers a model bringing no clip, with nothing to play until one is filed', () => {
     const animations = new SceneAnimations()
     animations.add('node-1', scene(), [])
 
-    expect(animations.has('node-1')).toBe(false)
+    expect(animations.has('node-1')).toBe(true)
+    expect(animations.clipsOf('node-1')).toEqual([])
+  })
+
+  it('plays a clip filed after the file landed, at the width that clip really runs', () => {
+    const animations = new SceneAnimations()
+    const root = scene()
+    animations.add('node-1', root, [])
+    animations.addClip('node-1', 'bundled:Capoeira', walkClip())
+
+    applyTo(animations, [bundledClip('block-1', 'Capoeira')])
+    animations.seek(0.5 * SECOND)
+
+    expect(animations.lengthsOf('node-1')['bundled:Capoeira']).toBe(1)
+    expect(cubeOf(root).position.x).toBeCloseTo(0.5)
+  })
+
+  // The two are told apart by their KIND and not by their name: an animation shipped as `walk`
+  // and a clip the model's own file spells `walk` are two different things.
+  it('keeps a shipped animation apart from a clip of the file bearing the same name', () => {
+    const animations = new SceneAnimations()
+    const root = scene()
+    animations.add('node-1', root, [walkClip()])
+    animations.addClip('node-1', 'bundled:walk', walkClip('walk', 0))
+
+    applyTo(animations, [bundledClip('block-1', 'walk')])
+    animations.seek(0.5 * SECOND)
+
+    expect(cubeOf(root).position.x).toBe(0)
   })
 
   it('places the model where the head says, without playing to get there', () => {

@@ -1,9 +1,9 @@
 import { AnimationMixer, LoopOnce, LoopRepeat, type AnimationClip, type Object3D } from 'three'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
-import type { ClipLane, ClipRef } from '@shared/domain/scene'
+import { clipKeyOf, type ClipLane, type ClipRef } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import { clipBlendAt, type ClipWeight } from './clipBlend'
-import { skeletonBonesOf } from './rigState'
+import { skeletonBonesOf, type SkeletonBone } from './rigState'
 import { blockClip, nodeTravelsOnBand, rootTrackOf, travelsWith } from './rootMotion'
 
 /** The clips a loaded file brought, in the order it spells them. */
@@ -20,6 +20,16 @@ export function clipLengthsOf(source: Object3D): Record<string, number> {
   return lengthsOf(clipsOf(source))
 }
 
+/** The shipped animations a document asks a model to play, each named once however often used. */
+export function bundledNamesOf(lanes: readonly ClipLane[]): string[] {
+  const names = new Set<string>()
+
+  for (const clip of lanes.flatMap(lane => lane.clips)) {
+    if (clip.source.kind === 'bundled') names.add(clip.source.name)
+  }
+  return [...names]
+}
+
 /** One place decides the shape of this record: the band and the mixer must read the same one. */
 function lengthsOf(clips: readonly AnimationClip[]): Record<string, number> {
   const lengths: Record<string, number> = {}
@@ -32,18 +42,24 @@ type Bound = {
   ref: ClipRef
   /** Whether that object kept the travel, so a decision that flips rebuilds it. */
   travel: boolean
+  /** Which entry of `clips` it was built from, so a block pointed elsewhere is rebuilt. */
+  key: string
   clip: AnimationClip
 }
 
 type Player = {
   mixer: AnimationMixer
   /**
-   * The file's clips, by name. FIRST WINS on a name held twice, and so does `lengths`: a Mixamo
-   * export calls every clip `mixamo.com`, and two answers here would play one clip at another's
-   * width.
+   * Every clip this model can play, by `clipKeyOf` — its file's own, and whatever was retargeted
+   * onto it since. FIRST WINS on a key held twice, and so does `lengths`: a Mixamo export calls
+   * every clip `mixamo.com`, and two answers here would play one clip at another's width.
    */
   clips: Map<string, AnimationClip>
-  /** How long each clip of the file runs, which is what a block's width is derived from. */
+  /** The names the model's OWN file spells, which is what a panel offers a choice from. */
+  fileNames: readonly string[]
+  /** The bones the clips play on, kept so a clip arriving later can be read against them. */
+  bones: readonly SkeletonBone[]
+  /** How long each clip runs, which is what a block's width is derived from. */
   lengths: Record<string, number>
   /** The travel channel of each clip, worked out once — it depends on the file and the rig alone. */
   rootTracks: Map<string, string | null>
@@ -75,8 +91,8 @@ export class SceneAnimations {
    * than the clone: `Object3D.copy` does not carry them, and a clip addresses its targets by name.
    */
   add(nodeId: string, root: Object3D, clips: AnimationClip[]): void {
-    if (clips.length === 0) return
-
+    // A file bringing NO clip is filed all the same: a bare rigged character is exactly what a
+    // shipped animation is dropped onto, and there would be nothing here to hand it to.
     this.remove(nodeId)
     const bones = skeletonBonesOf(root)
     const byName = new Map<string, AnimationClip>()
@@ -91,11 +107,37 @@ export class SceneAnimations {
     this.players.set(nodeId, {
       mixer: new AnimationMixer(root),
       clips: byName,
+      fileNames: [...byName.keys()],
+      bones,
       lengths: lengthsOf([...byName.values()]),
       rootTracks,
       lanes: [],
       bound: new Map(),
     })
+  }
+
+  /**
+   * Files a clip this model did not bring — one shipped with the app, replayed on its skeleton.
+   * Blocks naming it play nothing until it lands, so applying again is part of adding it.
+   */
+  addClip(nodeId: string, key: string, clip: AnimationClip): void {
+    const player = this.players.get(nodeId)
+    if (!player || player.clips.has(key)) return
+
+    player.clips.set(key, clip)
+    player.lengths[key] = clip.duration
+    player.rootTracks.set(key, rootTrackOf(clip, player.bones))
+    this.apply(nodeId, player.lanes)
+  }
+
+  /** How long each clip a node can play runs, by key — what the band draws its blocks from. */
+  lengthsOf(nodeId: string): Readonly<Record<string, number>> {
+    return this.players.get(nodeId)?.lengths ?? {}
+  }
+
+  /** What the model's own file spells, which is the list a panel offers a choice from. */
+  fileNamesOf(nodeId: string): readonly string[] {
+    return this.players.get(nodeId)?.fileNames ?? []
   }
 
   remove(nodeId: string): void {
@@ -119,7 +161,12 @@ export class SceneAnimations {
 
   /** What a node's file brought, for whoever has to say again what that model IS. */
   clipsOf(nodeId: string): AnimationClip[] {
-    return [...(this.players.get(nodeId)?.clips.values() ?? [])]
+    const player = this.players.get(nodeId)
+    if (!player) return []
+
+    // Its OWN, never what was retargeted onto it: a rig describes the file, and an animation
+    // dropped on a character says nothing about the character.
+    return player.fileNames.flatMap(name => player.clips.get(name) ?? [])
   }
 
   /**
@@ -148,24 +195,25 @@ export class SceneAnimations {
     const kept = new Set<string>()
 
     for (const ref of lanes.flatMap(lane => lane.clips)) {
-      const source = player.clips.get(ref.source.name)
-      // A block naming a clip the file no longer spells plays nothing, rather than costing the
-      // whole model its animation.
+      const key = clipKeyOf(ref.source)
+      const source = player.clips.get(key)
+      // A block naming a clip nothing has filed plays nothing, rather than costing the whole
+      // model its animation — which is also the state a shipped animation is in while it loads.
       if (!source) continue
 
       kept.add(ref.id)
       const travel = travelsWith(ref.rootMotion, onBand)
       const held = player.bound.get(ref.id)
       // Rebuilt only when the travel decision flips; a speed, a fade or a move is written onto
-      // the action further down without touching the clip. `player.clips` never changes.
-      if (held && held.travel === travel && held.clip.name === ref.source.name) {
+      // the action further down without touching the clip.
+      if (held && held.travel === travel && held.key === key) {
         held.ref = ref
         continue
       }
 
       if (held) player.mixer.uncacheClip(held.clip)
-      const clip = blockClip(source, player.rootTracks.get(ref.source.name) ?? null, travel)
-      player.bound.set(ref.id, { ref, travel, clip })
+      const clip = blockClip(source, player.rootTracks.get(key) ?? null, travel)
+      player.bound.set(ref.id, { ref, travel, key, clip })
     }
 
     for (const [id, held] of player.bound) {
@@ -203,7 +251,7 @@ export class SceneAnimations {
       return 0
     }
 
-    const length = player.lengths[held.ref.source.name] ?? 0
+    const length = player.lengths[held.key] ?? 0
     const into = seconds * held.ref.speed + held.ref.offset
     const time = held.ref.loop ? (length > 0 ? into % length : 0) : Math.min(into, length)
 

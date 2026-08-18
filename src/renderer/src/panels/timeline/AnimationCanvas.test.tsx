@@ -164,6 +164,28 @@ describe('dragging a clip block', () => {
     expect(clips[1]?.source.name).toBe('Walk')
   })
 
+  // The panel offers both kinds and only the drop tells them apart: a shipped animation is
+  // written into the document as a NAME, and read off disk on the other side of the frontier.
+  it('lays a shipped animation as a block of its own kind, labelled by its folder', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    drop(canvas(), { kind: 'bundled', name: 'Capoeira' }, 400, LANE_Y)
+
+    const laid = laneOf()?.clips[1]
+    expect(laid?.source).toEqual({ kind: 'bundled', name: 'Capoeira' })
+    expect(laid?.label).toBe('Capoeira')
+  })
+
+  // A `dataTransfer` carries text, and this one used to be read by looking for a `clip` field:
+  // anything else laid a block naming `undefined`, which nothing could ever play.
+  it('lays nothing for a payload that is neither of the two shapes', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    drop(canvas(), { kind: 'bundled', path: '/somewhere/walk.glb' }, 400, LANE_Y)
+
+    expect(laneOf()?.clips).toHaveLength(1)
+  })
+
   it('makes the block one just dropped the chosen one', () => {
     render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
 

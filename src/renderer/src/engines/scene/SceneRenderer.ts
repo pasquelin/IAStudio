@@ -29,7 +29,13 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
-import type { ExportFormat, LightDescriptor, Transform } from '@shared/domain/scene'
+import {
+  clipKeyOf,
+  type ClipLane,
+  type ExportFormat,
+  type LightDescriptor,
+  type Transform,
+} from '@shared/domain/scene'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { SelectionMode } from '@/helpers/selection'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
@@ -93,7 +99,7 @@ import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './textGeometry'
 import { createGltfSource, type GltfSource } from './gltfSource'
-import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
+import { SceneAnimations, bundledNamesOf, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
 import { drivenNodes, fovAt, poseAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
@@ -101,7 +107,13 @@ import { nearestProjected, type Projected, type ProjectedBone } from './bonePick
 import { rigStateOf, type RigState } from './rigState'
 import { evenSize, flipInto, frameTimes, type FilmRequest } from './film'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
-import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './modelCache'
+import {
+  createModelCache,
+  disposeTree,
+  instanceOf,
+  type ModelCache,
+  type ModelSource,
+} from './modelCache'
 import { applyTransform, carry, placePivot, release, transformOf } from './pivot'
 import {
   applyShadowFlags,
@@ -128,6 +140,9 @@ import {
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
 import SkinWorker from './skinWeights.worker?worker'
+import RetargetWorker from './retarget.worker?worker'
+import { createRetarget, type Retarget } from './retarget'
+import { bundledAnimationUrl } from '@shared/domain/animationLibrary'
 import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
 import { createSkinWeights, type SkinWeights } from './skinWeights'
 import type { SkinBinding } from './skinVertices'
@@ -212,6 +227,10 @@ export type SceneRendererOptions = {
   onView?: (placement: CameraPlacement) => void
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
+  /** Same, for a file read for its animation alone — which may be an FBX. See `GltfSource`. */
+  loadAnimation?: ModelSource
+  /** And again, for replaying a shipped animation on a character's own skeleton. */
+  retarget?: Retarget
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
   loadTexture?: TextureSource
   /**
@@ -476,6 +495,12 @@ export class SceneRenderer {
   private readonly paneMemory = createPaneMemory()
   private readonly bvh: BvhBuilder
   private readonly skin: SkinWeights
+  private readonly retarget: Retarget
+  /**
+   * Which shipped animations were already asked for, per node. A block plays nothing until its
+   * clip lands, and every `apply` would otherwise start the same load again.
+   */
+  private readonly bundled = new Map<string, Set<string>>()
   /** The binds still running, so a model that leaves the stage takes its own off the worker. */
   private readonly skinning = new Map<string, AbortController>()
   private readonly fonts: FontLibrary
@@ -493,7 +518,13 @@ export class SceneRenderer {
       options.assetVersion,
     )
     this.gltf = options.loadModel
-      ? { load: options.loadModel, dispose: () => {} }
+      ? {
+          load: options.loadModel,
+          // A test that hands one stub reads animations off it too, exactly as a `.glb` holding
+          // both would.
+          loadAnimation: options.loadAnimation ?? options.loadModel,
+          dispose: () => {},
+        }
       : createGltfSource(() => this.viewport.gl)
     this.modelCache = createModelCache(
       this.gltf.load,
@@ -503,6 +534,7 @@ export class SceneRenderer {
     )
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
     this.skin = options.skin ?? createSkinWeights(() => new SkinWorker())
+    this.retarget = options.retarget ?? createRetarget(() => new RetargetWorker())
     this.sky = createSkyBinding(this.textureCache, () => this.paintBackground())
     // The studio's own by default: a face parsed for a caption in the image workspace is the
     // same object a text node extrudes, and half a megabyte of glyph tables is worth sharing.
@@ -1587,6 +1619,8 @@ export class SceneRenderer {
     this.paneMaterials.dispose()
     this.bvh.dispose()
     this.skin.dispose()
+    this.retarget.dispose()
+    this.bundled.clear()
 
     this.grid?.dispose()
     this.grid = null
@@ -1768,6 +1802,7 @@ export class SceneRenderer {
     // binds what the file brought the moment it lands, and applies this reference there.
     if (node.type === 'model' && this.animations.has(node.id)) {
       this.animations.apply(node.id, node.model.lanes ?? [])
+      this.ensureBundled(node.id, node.model.lanes ?? [])
       this.viewport.requestRender()
     }
 
@@ -1983,7 +2018,10 @@ export class SceneRenderer {
       // carry them, and a clip addresses its targets by name — so the source's drive any
       // instance built from it.
       this.animations.add(node.id, holder, clipsOf(source))
-      if (applied.type === 'model') this.animations.apply(node.id, applied.model.lanes ?? [])
+      if (applied.type === 'model') {
+        this.animations.apply(node.id, applied.model.lanes ?? [])
+        this.ensureBundled(node.id, applied.model.lanes ?? [])
+      }
       this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
 
       // The document's own rig, put back on. Its weights are NOT saved with it — they are derived
@@ -2025,6 +2063,58 @@ export class SceneRenderer {
     })
 
     return holder
+  }
+
+  /**
+   * Loads whatever shipped animations a model's blocks name, once each. Called wherever lanes
+   * are applied: a block can be dropped long after the file it plays on landed.
+   */
+  private ensureBundled(nodeId: string, lanes: readonly ClipLane[]): void {
+    const asked = this.bundled.get(nodeId) ?? new Set<string>()
+    this.bundled.set(nodeId, asked)
+
+    for (const name of bundledNamesOf(lanes)) {
+      if (asked.has(name)) continue
+
+      asked.add(name)
+      void this.adoptBundled(nodeId, name)
+    }
+  }
+
+  /**
+   * Reads an animation the app ships with and replays it on THIS model's skeleton, which is the
+   * whole point: the clip was authored for a rig nobody here has.
+   */
+  private async adoptBundled(nodeId: string, name: string): Promise<void> {
+    const holder = this.objects.get(nodeId)
+    if (!holder) return
+
+    try {
+      const source = await this.gltf.loadAnimation(bundledAnimationUrl(name))
+      // The first clip and only it: a folder IS one animation, however many the file spells.
+      const clip = clipsOf(source)[0]
+      if (!clip) throw new Error('this file carries no animation')
+
+      const adapted = (await this.retarget.adapt(holder, source, [clip]))?.[0]
+      // Nothing of the file itself is kept — a shipped animation carries a whole character with
+      // it, and its meshes and pictures would sit on the GPU for a set of keyframes.
+      disposeTree(source)
+      if (!adapted || this.objects.get(nodeId) !== holder) return
+
+      // Named by the studio, always: Tripo spells its only clip `NlaTrack` and Uthana's spells
+      // nothing at all, and neither may reach the screen.
+      adapted.name = name
+      this.animations.addClip(nodeId, clipKeyOf({ kind: 'bundled', name }), adapted)
+      this.options.onClips?.(
+        nodeId,
+        this.animations.fileNamesOf(nodeId),
+        this.animations.lengthsOf(nodeId),
+      )
+      this.viewport.requestRender()
+    } catch (error) {
+      // Under a scope of its own: a failing animation must not swallow what a failing model says.
+      reportFailure('scene.animation', name, error)
+    }
   }
 
   /** Every mesh a model brought, given the tree that makes picking it cheap. */
@@ -2157,6 +2247,7 @@ export class SceneRenderer {
     // Before the instance goes: a mixer holding actions keeps every bone of a released model
     // alive with it.
     this.animations.remove(id)
+    this.bundled.delete(id)
     this.unbindSkeleton(id)
     this.stopSkinning(id)
 
