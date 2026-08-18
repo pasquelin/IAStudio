@@ -85,12 +85,18 @@ export function gltfStudioExtras(extras: unknown): Record<string, unknown> {
   return isRecord(studio) ? studio : {}
 }
 
-/** The lights `KHR_lights_punctual` declares at the root, in the order nodes index them. */
+/**
+ * The lights `KHR_lights_punctual` declares at the root, in the order nodes index them.
+ *
+ * Mapped rather than FILTERED, and the difference is which node gets which light: a node names its
+ * light by position in this very list, so dropping an entry that is not an object would shift
+ * every light after it onto the wrong node. What is not an object becomes an empty one.
+ */
 export function gltfPunctualLights(document: unknown): Record<string, unknown>[] {
   if (!isRecord(document) || !isRecord(document.extensions)) return []
   const held = document.extensions[KHR_LIGHTS_PUNCTUAL]
   if (!isRecord(held) || !Array.isArray(held.lights)) return []
-  return held.lights.filter(isRecord)
+  return held.lights.map(light => (isRecord(light) ? light : {}))
 }
 
 /**

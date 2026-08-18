@@ -1,10 +1,17 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import i18next from 'i18next'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { TRANSLATIONS } from '@shared/i18n'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import { isRecord } from '@shared/guards'
 import type { Asset } from '@shared/domain/asset'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
-import { skyboxFromPayload, skyboxPayload } from './skyboxDocument'
+import {
+  forgetCarriedSky,
+  skyboxFromPayload,
+  skyboxPayload,
+  skyRefusesToSave,
+} from './skyboxDocument'
 
 const DOCUMENT = 'doc-sky'
 
@@ -39,11 +46,27 @@ const sky = (over: Partial<SkyboxContent> = {}): SkyboxContent => ({
   ...over,
 })
 
+/** Where the file names its picture: on the node it turns with, never in `images`. */
 const uriOf = (payload: unknown): string => {
-  const images = isRecord(payload) && Array.isArray(payload.images) ? payload.images : []
-  const first = images[0]
-  return isRecord(first) && typeof first.uri === 'string' ? first.uri : ''
+  const nodes = isRecord(payload) && Array.isArray(payload.nodes) ? payload.nodes : []
+  const horizon = nodes.filter(isRecord).find(node => node.name === 'Horizon')
+  const extras = isRecord(horizon?.extras) ? horizon.extras.scenario : null
+  return isRecord(extras) && typeof extras.source === 'string' ? extras.source : ''
 }
+
+/**
+ * The refusal is a SENTENCE, so the bundles have to be loaded for it to be one. Straight into
+ * i18next rather than through `initI18n`, which reads `localStorage` and writes on the document —
+ * neither of which a suite outside a browser has.
+ */
+beforeAll(async () => {
+  await i18next.init({
+    lng: 'fr',
+    defaultNS: 'studio',
+    resources: { fr: { studio: TRANSLATIONS.fr } },
+    interpolation: { escapeValue: false },
+  })
+})
 
 beforeEach(() => {
   useAssets.setState({ items: [{ ...dusk(), path: 'Assets/dusk.hdr' }] })
@@ -101,6 +124,19 @@ describe('the picture a sky points at', () => {
     })
   })
 
+  /**
+   * The link survives a ⌘S made while the catalogue has not answered — which is the ordinary state
+   * of a window that has not opened the shelf. Without it the picture left the file for every
+   * other reader, silently, and only the studio's own id was left to find it by.
+   */
+  it('writes the link the file already carried when the catalogue answers nothing', () => {
+    openSky()
+    skyboxFromPayload(skyboxPayload(sky(), DOCUMENT), DOCUMENT)
+    useAssets.setState({ items: [] })
+
+    expect(uriOf(skyboxPayload(sky(), DOCUMENT))).toBe('../../Assets/dusk.hdr')
+  })
+
   /** A sky copied into another project finds its picture by the path, not by the stale id. */
   it('prefers the picture the path names over the id the file also carries', () => {
     openSky()
@@ -110,5 +146,43 @@ describe('the picture a sky points at', () => {
     expect(skyboxFromPayload(written, DOCUMENT)).toMatchObject({
       source: { assetId: 'asset-elsewhere' },
     })
+  })
+})
+
+/**
+ * glTF is an INDEX-LINKED graph, and the studio recomposes its nodes from two. A file holding a
+ * mesh, a camera or an animation cannot be half rewritten — a `meshes` kept without its
+ * `accessors`, or beside two fresh nodes, is a broken file. So the save is refused and the file
+ * stays as its author left it, exactly as an incomplete montage is refused.
+ */
+describe('a sky whose file holds more than the studio composes', () => {
+  const withScene = (): unknown => ({
+    ...(skyboxPayload(sky(), DOCUMENT) as Record<string, unknown>),
+    meshes: [{ primitives: [] }],
+    accessors: [],
+  })
+
+  it('refuses to be saved, and says what it holds', () => {
+    openSky()
+    skyboxFromPayload(withScene(), DOCUMENT)
+
+    expect(skyRefusesToSave(DOCUMENT)).toContain('glTF')
+  })
+
+  it('opens like any other once the file holds nothing else', () => {
+    openSky()
+    skyboxFromPayload(withScene(), DOCUMENT)
+    skyboxFromPayload(skyboxPayload(sky(), DOCUMENT), DOCUMENT)
+
+    expect(skyRefusesToSave(DOCUMENT)).toBeNull()
+  })
+
+  /** Dropped with the document, so a reopened id never inherits another file's refusal. */
+  it('forgets its refusal when the document is closed', () => {
+    openSky()
+    skyboxFromPayload(withScene(), DOCUMENT)
+    forgetCarriedSky(DOCUMENT)
+
+    expect(uriOf(skyboxPayload(sky({ source: null }), DOCUMENT))).toBe('')
   })
 })

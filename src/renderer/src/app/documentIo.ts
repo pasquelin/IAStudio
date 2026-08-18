@@ -43,7 +43,13 @@ import {
   sequencePayload,
   serializeSequencePayload,
 } from './sequenceDocument'
-import { serializeSkyboxPayload, skyboxFromPayload, skyboxPayload } from './skyboxDocument'
+import {
+  forgetCarriedSky,
+  serializeSkyboxPayload,
+  skyboxFromPayload,
+  skyboxPayload,
+  skyRefusesToSave,
+} from './skyboxDocument'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audioEdits'
@@ -137,13 +143,17 @@ type DocumentIo = AssetWriting & {
   /** Whether the document is already filled — a remount must not read over what is open. */
   holds: (documentId: string) => boolean
   /**
-   * Whether what opened holds LESS than the file did — a montage whose media the project has
-   * none of, and whose clips were therefore dropped. Absent means the kind cannot open partly.
+   * The sentence to refuse a save with, or `null` — for a document that opened holding LESS than
+   * its file did: a montage whose media the project has none of, a sky whose glTF holds a scene.
+   * Absent means the kind cannot open partly.
+   *
+   * The SENTENCE rather than a yes: what to import, and what would be erased, differ per kind, and
+   * one message for both told the owner of a sky to go and find some missing clips.
    *
    * Writing one back deletes what could not be read, and nothing on screen says so: `install`
    * marks the document clean whatever it managed to restore.
    */
-  incomplete?: (documentId: string) => boolean
+  incomplete?: (documentId: string) => string | null
   /** Whether closing the document would throw work away — never true for an untouched tab. */
   dirty: (documentId: string) => boolean
   /** Drops the state and the history a closed document was holding. */
@@ -555,12 +565,22 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   // destroy the only copy of what they are meant to stay undoable against.
   // A sky IS its glTF: the sun is a `KHR_lights_punctual` light, the horizon a node rotation, and
   // the picture a file referenced beside the document rather than an id no other reader resolves.
-  skybox: textDocumentIo(skyboxStore, {
-    toPayload: skyboxPayload,
-    fromPayload: skyboxFromPayload,
-    createDefault: createSkyboxContent,
-    serialize: serializeSkyboxPayload,
-  }),
+  skybox: {
+    ...textDocumentIo(skyboxStore, {
+      toPayload: skyboxPayload,
+      fromPayload: skyboxFromPayload,
+      createDefault: createSkyboxContent,
+      serialize: serializeSkyboxPayload,
+    }),
+    // glTF is an index-linked graph: a file holding a mesh or a camera cannot be half rewritten,
+    // and the nodes are recomposed from two. Refused rather than flattened.
+    incomplete: skyRefusesToSave,
+    forget: documentId => {
+      skyboxStore.use.getState().drop(documentId)
+      // Dropped with the document, so a reopened id never inherits the link another file carried.
+      forgetCarriedSky(documentId)
+    },
+  },
   // The one whose absence is NOT a refusal: a channel is a reference, not pixels, and what does
   // produce pixels — `deriveChannel` — already writes them as an asset when it derives them.
   texture: textDocumentIo(textureStore, {
@@ -615,8 +635,9 @@ function savableDocument(
 
   // Said, not swallowed: this refusal answers a KEYSTROKE, and a ⌘S that writes nothing without
   // a word is indistinguishable from one that worked.
-  if (io.incomplete?.(documentId)) {
-    reportNotice('document.save', i18next.t('documents.saveRefusedIncomplete'))
+  const refusal = io.incomplete?.(documentId)
+  if (refusal) {
+    reportNotice('document.save', refusal)
     return null
   }
 

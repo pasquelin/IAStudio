@@ -101,7 +101,9 @@ export function sequencePayload(
  */
 const incomplete = new Set<string>()
 
-export const montageIsIncomplete = (documentId: string): boolean => incomplete.has(documentId)
+/** The sentence a refusal says, or `null` — a sky's would talk about something else entirely. */
+export const montageIsIncomplete = (documentId: string): string | null =>
+  incomplete.has(documentId) ? i18next.t('documents.saveRefusedIncomplete') : null
 
 /** Indented: a montage IS its `.otio`, and that file is read by hand and by other tools. */
 export function serializeSequencePayload(payload: unknown): string {

@@ -96,6 +96,8 @@
     "new": "New document",
     "missing": "This document is no longer open.",
     "saveRefusedIncomplete": "This edit opened without the clips whose media are missing. Saving would erase them from the file — import the media into the project, then open the edit again.",
+    "saveRefusedSkyHoldsMore": "This sky comes from a glTF file holding a whole scene. The studio can only write the sun and the horizon back: saving would erase the rest. Use File ▸ Export, or start from a new sky.",
+    "skyHoldsMore": "This sky holds parts the studio cannot write back — {{parts}}. It opens read-only: saving is refused while they are there.",
     "unlinkedClips_one": "{{count, number}} clip did not find its media in this project and was not opened — {{files}}",
     "unlinkedClips_many": "{{count, number}} clips did not find their media in this project and were not opened — {{files}}",
     "unlinkedClips_other": "{{count, number}} clips did not find their media in this project and were not opened — {{files}}",

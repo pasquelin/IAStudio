@@ -23,9 +23,9 @@ import { parseSkybox } from './skyboxState'
  * A sky as glTF holds it, and back.
  *
  * The split is the one OpenRaster already draws: the standard part is what ANOTHER application
- * reads — a directional light for the sun, a node rotation for the horizon, a referenced image for
- * the picture — and the studio's own state rides verbatim in `extras`, so reopening is one parse
- * and no rule is kept in step on two sides.
+ * reads — a directional light for the sun, a node rotation for the horizon — and the studio's own
+ * state rides verbatim in `extras`, so reopening is one parse and no rule is kept in step on two
+ * sides.
  *
  * **What that costs, written rather than hidden**: the horizon rotation is therefore in the file
  * TWICE, once as a node and once inside `extras`. A file of ours reads the second; only a file
@@ -43,8 +43,12 @@ export type SkyGltfOptions = {
   name: string
   /**
    * Where the source picture sits, relative to the document's own folder — `null` for a sky that
-   * has none yet. The file is REFERENCED and never embedded: a `.hdr` is the one thing in this
-   * document another application can already open.
+   * has none yet. The file is REFERENCED and never embedded.
+   *
+   * NOT in `images`, and the reason is conformance: glTF 2.0 § 3.9 knows JPEG and PNG and nothing
+   * else, and an `images` entry no `texture` points at is what the official validator calls an
+   * unused object. It hangs off the node it turns with instead, in the place the specification
+   * reserves for applications.
    */
   sourceUri: string | null
 }
@@ -57,9 +61,7 @@ export function gltfSkyOf(
     {
       name: HORIZON_NODE,
       rotation: quaternionAboutY(content.adjustments.rotationY),
-      // The picture is named on the node it turns with. glTF core has no environment at all, so
-      // this is a place to look rather than a slot a reader already knows.
-      ...(sourceUri ? { extras: { [GLTF_STUDIO_KEY]: { image: 0 } } } : {}),
+      ...(sourceUri ? { extras: { [GLTF_STUDIO_KEY]: { source: sourceUri } } } : {}),
     },
     {
       name: SUN_NODE,
@@ -73,7 +75,6 @@ export function gltfSkyOf(
     scene: 0,
     scenes: [{ name, nodes: [0, 1] }],
     nodes,
-    ...(sourceUri ? { images: [{ uri: sourceUri, name }] } : {}),
     extensionsUsed: [KHR_LIGHTS_PUNCTUAL],
     extensions: {
       [KHR_LIGHTS_PUNCTUAL]: {
@@ -82,6 +83,13 @@ export function gltfSkyOf(
             type: 'directional',
             name: SUN_NODE,
             color: linearRgbOf(content.sun.color),
+            /**
+             * The studio's own dial, and NOT the lux the extension asks a directional light for.
+             * Measured on three.js 0.185, which is the only glTF reader on this machine and the
+             * renderer this studio is built on: its exporter writes `light.intensity` unchanged
+             * and its loader reads it back unchanged. Converting would mean inventing a reference
+             * illuminance nothing here measures. A consumer that honours the unit reads a dim sun.
+             */
             intensity: content.sun.intensity,
           },
         ],
@@ -93,10 +101,12 @@ export function gltfSkyOf(
 
 /** The uri the file points its picture at, or `''` — what a foreign sky is relinked from. */
 export function skySourceUri(payload: unknown): string {
-  if (!isRecord(payload) || !Array.isArray(payload.images)) return ''
-  const first = payload.images[0]
-  return isRecord(first) ? readString(first, 'uri', '') : ''
+  const horizon = nodesOf(payload).find(node => readString(node, 'name', '') === HORIZON_NODE)
+  return readString(gltfStudioExtras(horizon?.extras), 'source', '')
 }
+
+const nodesOf = (payload: unknown): Record<string, unknown>[] =>
+  isRecord(payload) && Array.isArray(payload.nodes) ? payload.nodes.filter(isRecord) : []
 
 /**
  * A sky read back off its file.
@@ -131,8 +141,7 @@ export function skyFromGltf(payload: unknown, assetIdOf: (uri: string) => string
  * derived from an identity rotation — which would stand it due north, on the horizon.
  */
 function foreignSky(payload: unknown, assetId: string): SkyboxContent {
-  const nodes =
-    isRecord(payload) && Array.isArray(payload.nodes) ? payload.nodes.filter(isRecord) : []
+  const nodes = nodesOf(payload)
   const lights = gltfPunctualLights(payload)
   const at = lights.findIndex(light => readString(light, 'type', '') === 'directional')
   const light = at === -1 ? undefined : lights[at]
@@ -143,16 +152,28 @@ function foreignSky(payload: unknown, assetId: string): SkyboxContent {
     ...createSkyboxContent(),
     ...(assetId ? { source: { assetId } } : {}),
     adjustments: { ...NEUTRAL_ADJUSTMENTS, rotationY: angleAboutY(rotationOf(horizon)) },
-    sun: light
-      ? {
-          ...anglesFromDirection(directionOfQuaternion(rotationOf(sun)), DEFAULT_SUN),
-          intensity: readNumber(light, 'intensity', DEFAULT_SUN.intensity),
-          color: Array.isArray(light.color)
-            ? colourFromLinearRgb(light.color.filter(one => typeof one === 'number'))
-            : DEFAULT_SUN.color,
-        }
-      : { ...DEFAULT_SUN },
+    // A sun whose node carries no rotation of its own keeps the DEFAULT rather than the angles an
+    // identity stands for — due north on the horizon, which is an answer and not an absence.
+    sun:
+      light && sun?.rotation
+        ? {
+            ...anglesFromDirection(directionOfQuaternion(rotationOf(sun)), DEFAULT_SUN),
+            intensity: readNumber(light, 'intensity', DEFAULT_SUN.intensity),
+            color: colourIn(light.color),
+          }
+        : { ...DEFAULT_SUN },
   }
+}
+
+/**
+ * A light's colour, or white — which is the extension's OWN default and also the studio's.
+ *
+ * Read by index with a fallback rather than filtered: a triplet holding one value that is not a
+ * number would come out SHORTER, and the channels after it would each shift up one.
+ */
+function colourIn(colour: unknown): string {
+  if (!Array.isArray(colour)) return DEFAULT_SUN.color
+  return colourFromLinearRgb([0, 1, 2].map(at => (typeof colour[at] === 'number' ? colour[at] : 1)))
 }
 
 /** Which light of the root list a node carries, or `-1` for a node carrying none. */
@@ -165,7 +186,15 @@ function lightIndexOf(node: Record<string, unknown>): number {
 
 const IDENTITY_ROTATION = [0, 0, 0, 1]
 
-/** `[0,0,0,1]` for a node with none, which is what glTF says an absent rotation means. */
+/**
+ * A node's own rotation. `[0,0,0,1]` for one that has none, which is what glTF says.
+ *
+ * **Two blind spots, written rather than hidden**: a node may carry a `matrix` INSTEAD of the three
+ * components — many exporters write one — and a light may hang under a parent that is itself
+ * turned. Neither is read here, and the caller answers the default sun rather than a wrong one
+ * whenever there is no `rotation` at all. A node carrying both a `matrix` and a rotation of its own
+ * is the case still unaccounted for, and glTF forbids it.
+ */
 function rotationOf(node: Record<string, unknown> | undefined): number[] {
   const rotation = node?.rotation
   if (!Array.isArray(rotation)) return IDENTITY_ROTATION

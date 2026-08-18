@@ -78,15 +78,21 @@ describe('a sky written as glTF', () => {
   })
 
   /**
-   * The picture stays a `.hdr` beside the document, named by a PATH: an asset id resolves to
-   * nothing outside this studio, and to nothing at all in another project.
+   * The picture stays a `.hdr` beside the document, named by a PATH — and NOT in `images`: glTF
+   * 2.0 § 3.9 knows JPEG and PNG and nothing else, and an entry no `texture` points at is what the
+   * official validator calls an unused object. It hangs off the node it turns with instead.
    */
-  it('points at the source picture rather than embedding or naming it by id', () => {
-    expect(written(sky())).toMatchObject({ images: [{ uri: '../Assets/dusk.hdr' }] })
+  it('points at the source picture without claiming it is a glTF image', () => {
+    const file = written(sky())
+
+    expect(file).not.toHaveProperty('images')
+    expect(nodeNamed(file, 'Horizon')?.extras).toEqual({
+      [GLTF_STUDIO_KEY]: { source: '../Assets/dusk.hdr' },
+    })
   })
 
-  it('writes no image at all for a sky that has no picture yet', () => {
-    expect(written(sky({ source: null }), null)).not.toHaveProperty('images')
+  it('names no picture at all for a sky that has none yet', () => {
+    expect(nodeNamed(written(sky({ source: null }), null), 'Horizon')).not.toHaveProperty('extras')
   })
 
   it('carries the whole studio state where glTF reserves room for it', () => {
@@ -154,6 +160,71 @@ describe('a sky written by another application', () => {
 
     expect(read.sun).toEqual(createSkyboxContent().sun)
     expect(read.source).toBeNull()
+  })
+
+  /**
+   * A node carrying a `matrix` instead of the three components — which many exporters write — has
+   * no rotation to read. The DEFAULT sun, not the one an identity stands for: that would be due
+   * north on the horizon, an answer rather than an absence, and nothing on screen would say so.
+   */
+  it('keeps the default sun for a light whose node states no rotation of its own', () => {
+    const read = skyFromGltf(
+      {
+        asset: { version: '2.0' },
+        nodes: [{ name: 'Sun', matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] }],
+        extensions: { [KHR_LIGHTS_PUNCTUAL]: { lights: [{ type: 'directional', intensity: 7 }] } },
+      },
+      () => '',
+    )
+
+    expect(read.sun).toEqual(createSkyboxContent().sun)
+  })
+
+  /**
+   * A node names its light by POSITION in the root list, so an entry that is not an object may not
+   * be dropped on the way in — every light after it would land on the wrong node.
+   */
+  it('gives a node the light its index names, even past an entry that is not one', () => {
+    const read = skyFromGltf(
+      {
+        asset: { version: '2.0' },
+        nodes: [
+          {
+            name: 'Sun',
+            rotation: [0, 0, 0, 1],
+            extensions: { [KHR_LIGHTS_PUNCTUAL]: { light: 1 } },
+          },
+        ],
+        extensions: {
+          [KHR_LIGHTS_PUNCTUAL]: { lights: [null, { type: 'directional', intensity: 7 }] },
+        },
+      },
+      () => '',
+    )
+
+    expect(read.sun.intensity).toBe(7)
+  })
+
+  /** Read by index with a fallback: filtered, a bad channel shifts every one after it. */
+  it('reads a colour channel that is not a number as full rather than as its neighbour', () => {
+    const read = skyFromGltf(
+      {
+        asset: { version: '2.0' },
+        nodes: [
+          {
+            name: 'Sun',
+            rotation: [0, 0, 0, 1],
+            extensions: { [KHR_LIGHTS_PUNCTUAL]: { light: 0 } },
+          },
+        ],
+        extensions: {
+          [KHR_LIGHTS_PUNCTUAL]: { lights: [{ type: 'directional', color: [0, 'x', 0] }] },
+        },
+      },
+      () => '',
+    )
+
+    expect(read.sun.color).toBe('#00ff00')
   })
 })
 
