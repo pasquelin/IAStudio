@@ -7,7 +7,7 @@ import { SliderField } from '@/design/SliderField'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
 import type { GestureProps } from '@/design/styles'
-import { withPointAfter } from '@/engines/scene/cameraPath'
+import { withPointAtEnd } from '@/engines/scene/cameraPath'
 import { TIP_LEFT } from '@/helpers/tooltip'
 
 /** Zero is angular, one is as round as a Catmull-Rom curve gets. */
@@ -27,7 +27,7 @@ export function PathSection({ path, onChange, gesture }: PathSectionProps) {
   const { t } = useTranslation()
 
   return (
-    <PropertySection title={t('inspector.path')}>
+    <PropertySection title={t('inspector.rail')}>
       <SliderField
         label={t('inspector.fields.tension')}
         value={path.tension}
@@ -49,7 +49,7 @@ export function PathSection({ path, onChange, gesture }: PathSectionProps) {
           description={t('inspector.addPathPointHint')}
           tooltip={TIP_LEFT}
           variant="header"
-          onClick={() => onChange(withPointAfter(path, path.points.length - 1))}
+          onClick={() => onChange(withPointAtEnd(path))}
         />
       </PropertyRow>
     </PropertySection>

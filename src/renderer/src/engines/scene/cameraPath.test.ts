@@ -6,6 +6,7 @@ import {
   segmentAt,
   withMovedPoint,
   withPointAfter,
+  withPointAtEnd,
   withoutPoint,
 } from './cameraPath'
 
@@ -80,6 +81,20 @@ describe('editing the points of a rail', () => {
 
   it('adds a point after the last one by folding back to the first', () => {
     expect(withPointAfter(three, 2).points.map(point => point.x)).toEqual([0, 10, 20, 10])
+  })
+
+  /**
+   * The gesture of the panel, which has no stretch of line to aim at. Its own case, because
+   * `withPointAfter` on the last point does something else entirely on an OPEN rail.
+   */
+  it('extends an open rail past its last point, by half its last span', () => {
+    expect(withPointAtEnd(three).points.map(point => point.x)).toEqual([0, 10, 20, 25])
+  })
+
+  it('lays a point in the span that comes back to the first point of a closed rail', () => {
+    const closed = { ...pathOf([at(0), at(10), at(20)]), closed: true }
+
+    expect(withPointAtEnd(closed).points.map(point => point.x)).toEqual([0, 10, 20, 10])
   })
 
   it('drops a point', () => {

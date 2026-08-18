@@ -236,9 +236,11 @@ Trois gestes, dans la scène :
 | **⌥ + clic sur la courbe** | pose un nouveau point dans la portion cliquée, et le choisit aussitôt |
 | **Suppr**, ou clic droit sur une poignée | retire le point choisi. Un chemin garde toujours ses deux derniers points |
 
-L’Inspecteur, section **Emplacement**, règle la **Tension** — de l’angle vif à la courbe ronde —
-et **Fermé**, qui referme la boucle sur le premier point. Le **+** de la ligne **Points** ajoute
-un point au bout, sans viser dans la vue.
+L’Inspecteur, section **Chemin**, règle la **Tension** — de l’angle vif à la courbe ronde — et
+**Fermé**, qui referme la boucle sur le premier point. Le **+** de la ligne **Points** ajoute un
+point au bout, sans viser dans la vue : le chemin s’allonge dans la direction qu’il prenait. Sur
+un chemin **fermé**, qui n’a pas de bout, le point se pose dans la portion qui revient au
+premier.
 
 ### Les lumières disponibles
 

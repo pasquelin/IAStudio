@@ -11,7 +11,6 @@
     "sprite": "Sprite",
     "light": "Light",
     "camera": "Camera",
-    "path": "Path",
     "pathPoints": "Points",
     "alignCamera": "Put this camera where the view is looking",
     "alignCameraHint": "Gives the camera the place and the direction of the current view",

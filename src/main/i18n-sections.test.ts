@@ -21,6 +21,46 @@ function rootsOf(language: Language, file: string): readonly string[] {
 }
 
 /**
+ * The keys a file declares twice inside ONE object, with the line of the loser.
+ *
+ * Read off the TEXT, because `JSON.parse` keeps the last of the two and drops the other without
+ * a word: by the time an object exists the defect is gone. Strings are walked rather than
+ * matched — a French value holds `{{name}}`, colons and braces of its own.
+ */
+function duplicateKeysOf(source: string): string[] {
+  const duplicates: string[] = []
+  // One frame per open container. `null` is an array, which declares no key at all.
+  const containers: (Set<string> | null)[] = []
+  let last: { key: string; line: number } | null = null
+  let line = 1
+
+  for (let at = 0; at < source.length; at += 1) {
+    const char = source[at]
+
+    if (char === '\n') line += 1
+    else if (char === '"') {
+      let end = at + 1
+      while (end < source.length && source[end] !== '"') end += source[end] === '\\' ? 2 : 1
+      last = { key: source.slice(at + 1, end), line }
+      at = end
+    } else if (char === '{') containers.push(new Set())
+    else if (char === '[') containers.push(null)
+    else if (char === '}' || char === ']') containers.pop()
+    else if (char === ':') {
+      // The colon is what tells a key from a value, and only the string right before it can be
+      // one: a value is followed by a comma or a brace.
+      const held = containers.at(-1)
+      if (held && last) {
+        if (held.has(last.key)) duplicates.push(`${last.key} (line ${last.line})`)
+        held.add(last.key)
+      }
+    }
+  }
+
+  return duplicates
+}
+
+/**
  * The bundles are split by functional surface, and they are the most contested path of the
  * repository — so they are also the most likely to be merged wrong. Each failure below loses
  * screen text without breaking anything the compiler or a rendering test would notice.
@@ -71,5 +111,30 @@ describe('i18n sections', () => {
 
     // A section file the directory index forgets to import parses fine and reaches nothing.
     expect([...claimed.keys()].sort()).toEqual(Object.keys(TRANSLATIONS[language]).sort())
+  })
+
+  /**
+   * Measured on `inspector.path`, declared twice in fr AND in en: the second spelling won, and
+   * the section of a camera rail was titled "Emplacement" / "Location" for as long as rails had
+   * existed. Nothing else could see it — the compiler reads one key, the parity of the two
+   * languages was perfect since the defect was symmetrical, and the key WAS translated.
+   */
+  it.each(CODES)('declares no key twice inside one object in %s', language => {
+    const twice = sectionFiles(language)
+      .map(file => ({
+        file,
+        keys: duplicateKeysOf(readFileSync(new URL(`${language}/${file}`, I18N), 'utf8')),
+      }))
+      .filter(({ keys }) => keys.length > 0)
+
+    expect(twice).toEqual([])
+  })
+
+  // The reading above is only worth its green if it can go red: a walker that never names a key
+  // would pass every file of the tree.
+  it('reads a doubled key off the text, and leaves values that look like one alone', () => {
+    const source = '{\n "a": { "x": "1" },\n "b": "{{x}}: 2",\n "x": "3",\n "x": "4"\n}'
+
+    expect(duplicateKeysOf(source)).toEqual(['x (line 5)'])
   })
 })

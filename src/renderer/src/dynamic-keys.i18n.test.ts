@@ -5,6 +5,7 @@ import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { BODY_PARTS } from '@shared/domain/humanoid'
 import { ROOT_MOTIONS } from '@shared/domain/scene'
+import { EASINGS } from '@shared/domain/animation'
 import {
   ADJUSTMENT_KINDS,
   BLEND_MODES,
@@ -68,6 +69,9 @@ const COMPOSED_KEYS: readonly string[] = [
   ...BODY_PARTS.map(part => `inspector.clipPart_${part}`),
   // Whether a block moves the character or plays on the spot. Same control, same trap.
   ...ROOT_MOTIONS.map(motion => `inspector.rootMotion_${motion}`),
+  // How a camera picks up speed along its rail. The only control of the shot section whose rows
+  // are composed, so a fifth curve would read as a raw key inside a travelling.
+  ...EASINGS.map(easing => `inspector.easing_${easing}`),
   ...TRACK_KINDS.map(kind => `inspector.kind_${kind}`),
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),

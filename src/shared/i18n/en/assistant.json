@@ -679,7 +679,6 @@
       "saturation": "Saturation, 1 being neutral",
       "temperature": "Temperature, from -1 cold to +1 warm",
       "tint": "Tint, from -1 green to +1 magenta",
-      "rotationY": "Rotation about the vertical, in radians",
       "blur": "Softening, from 0 sharp to 1 blurred",
       "elevation": "Elevation, in radians",
       "azimuth": "Azimuth, in radians",
