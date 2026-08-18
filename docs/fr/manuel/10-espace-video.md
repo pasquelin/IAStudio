@@ -183,8 +183,9 @@ Sous chaque moniteur :
 | `Suppr` | supprimer le clip sélectionné |
 | `⌘Z` / `⇧⌘Z` | annuler / rétablir |
 
-> **`C` et `S` ne font pas la même chose.** `C` **arme l’outil Lame** — vous coupez ensuite là où
-> vous cliquez. `S` **coupe tout de suite**, à la tête de lecture, sans changer d’outil.
+> **L’outil Lame et `S` ne font pas la même chose.** La **Lame** se choisit à la souris — sa
+> touche n’est pas écoutée, voir plus haut — et vous coupez ensuite là où vous cliquez. `S`
+> **coupe tout de suite**, à la tête de lecture, sans changer d’outil.
 
 **Un seul lecteur est actif à la fois.** Si vous ouvrez deux séquences, seule celle qui est en
 avant répond à la barre d’espace. C’est ce qui garde la lecture fluide : deux décodeurs vidéo qui

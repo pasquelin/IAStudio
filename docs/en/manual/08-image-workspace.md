@@ -230,7 +230,7 @@ The eraser erases **to transparency**; it does not paint white.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Comment** | `C` | *not available yet* |
+| **Comment** | — | *not available yet* |
 | **Fill layer** | `G` | fills the active layer — or the **selected area**, if there is one |
 | **Eyedropper** | `I` | picks up the colour under the pointer |
 | **Colour** | — | the colour of the brush, the pencil, the shapes and the fill |

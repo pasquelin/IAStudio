@@ -179,8 +179,9 @@ Below each monitor:
 | `Del` | delete the selected clip |
 | `⌘Z` / `⇧⌘Z` | undo / redo |
 
-> **`C` and `S` do not do the same thing.** `C` **arms the Blade tool** — you then cut wherever you
-> click. `S` **cuts straight away**, at the playhead, without switching tool.
+> **The Blade tool and `S` do not do the same thing.** The **Blade** is picked with the mouse —
+> its key is not listened for, see above — and you then cut wherever you click. `S` **cuts
+> straight away**, at the playhead, without switching tool.
 
 **Only one player is active at a time.** If you open two sequences, only the one in front answers
 the space bar. That is what keeps playback smooth: two video decoders running at once fight over
