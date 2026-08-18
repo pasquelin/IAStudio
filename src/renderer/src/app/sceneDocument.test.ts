@@ -102,11 +102,20 @@ describe('a scene on its way back from its file', () => {
    * The lesson MaterialX taught, applied here: a root member this studio composes is NOT a
    * member it reproduces. `gltfDocumentOf` writes `scene: 0` and exactly ONE scene, so a file
    * holding three comes back holding one — and `scenes` being composed, nothing reported it.
+   *
+   * The studio's own scenes are KEPT and one is added. Replacing them, as this case used to,
+   * drops the extras that carry the state — the node count then fires instead, and the case
+   * passed with the scene check disarmed. `gltfDocument.test.ts` names each member it finds.
    */
   it('refuses to save one that came back holding more than one scene', () => {
-    const two = { ...written(), scenes: [{ nodes: [] }, { name: 'Plan large', nodes: [] }] }
+    const held = written().scenes
+    const two = {
+      ...written(),
+      scenes: [...(Array.isArray(held) ? held : []), { name: 'Plan large', nodes: [] }],
+    }
 
     sceneFromPayloadFile(two, DOCUMENT)
+    expect(notices.at(-1)).toContain('scenes')
     expect(sceneRefusesToSave(DOCUMENT)).not.toBeNull()
   })
 
