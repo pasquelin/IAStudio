@@ -784,8 +784,8 @@ volet : garder, c’est ne rien faire de plus. **Annuler** le reprend, et la sc�
 venez de poser. Comme le ▶ de l’Inspecteur, cet aperçu tourne sur une horloge à lui et ne déplace
 pas la tête de lecture.
 
-**Le volet dit ensuite si le mouvement va au squelette**, en une ligne : « Le personnage sait tout
-jouer de ce mouvement. », ou bien qu’il ne lui va pas parfaitement. **Aucun nom d’os n’est affiché
+**Le volet dit ensuite si le mouvement va au squelette**, en une ligne : « Le personnage sait jouer
+ce mouvement. », ou bien qu’il ne lui va pas parfaitement. **Aucun nom d’os n’est affiché
 d’emblée** — *Voir les articulations concernées* ouvre la liste, et ce sont des **rôles**, jamais
 des noms d’os : deux squelettes ne partagent que ce vocabulaire-là. Chaque ligne dit ce qui arrive à
 l’articulation — « reste au repos » pour une articulation de votre personnage que le mouvement
