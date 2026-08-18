@@ -6,7 +6,7 @@
     "roblox": "Roblox",
     "raw": "Raw channels"
   },
-  "skyboxFaceSize": "{{size}} × {{size}}",
+  "skyboxFaceSize": "{{size}} × {{size}}",
   "skybox": {
     "sun": "Sun",
     "elevation": "Elevation",

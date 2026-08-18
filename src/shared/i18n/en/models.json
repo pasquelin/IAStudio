@@ -6,7 +6,7 @@
     "noCredentials": "Enter your API credentials to see your models.",
     "dropPicture": "Drop an image, or paste its id",
     "dropModel": "Drop a 3D model, or paste its id",
-    "estimatedCost": "~{{units}} CU"
+    "estimatedCost": "~{{units}} CU"
   },
   "models": {
     "none": "No model in this workspace.",
