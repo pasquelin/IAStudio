@@ -137,9 +137,9 @@ function claimsDocument(path: string): boolean {
   return extension === '' || isDocumentExtension(extension)
 }
 
-/** How many heads are read at once. Measured in `documents.bench.ts`: 2 000 documents across
- * 200 folders take 117 ms one at a time and 35 ms over this pool. A cache of `mtime`/`size`
- * would take it to 19 ms and was not written — 16 ms does not pay for a map to keep in step. */
+/** How many heads are read at once. Measured in `documents.bench.ts` on 18/08: 2 000 documents
+ * across 200 folders take 151 ms one at a time and 55 ms over this pool — 20 ms once `headOf`
+ * answers from what it kept, which is why that cache was written after all. */
 const HEAD_POOL = 16
 
 /** Runs `read` over `items` with at most `HEAD_POOL` in flight, ANSWERING IN ORDER.
@@ -208,10 +208,8 @@ const HEAD_CACHE_LIMIT = 4_096
  */
 export async function headOf(file: string): Promise<DocumentEnvelope> {
   const stamp = await stat(file).catch(() => null)
-  const held = stamp ? heads.get(file) : undefined
-  if (held && stamp && held.mtimeMs === stamp.mtimeMs && held.size === stamp.size) {
-    return held.envelope
-  }
+  const held = heads.get(file)
+  if (stamp && held?.mtimeMs === stamp.mtimeMs && held.size === stamp.size) return held.envelope
 
   const envelope = await bodyFormatOf(extensionOf(basename(file))).readHead(file)
 
@@ -223,7 +221,14 @@ export async function headOf(file: string): Promise<DocumentEnvelope> {
   return envelope
 }
 
-/** What the studio just wrote, moved or removed. A path it no longer holds is one to read again. */
+/**
+ * What the studio just wrote, moved or removed. A path it no longer holds is one to read again.
+ *
+ * **Every new path that writes a document file has to call this**, and the four that do are
+ * enumerated by hand — a fifth arriving without it would leave a stale entry, and nothing would
+ * go red. What catches that case is `mtimeMs` + `size`, which is only as fine as the clock of
+ * the volume the project sits on.
+ */
 function forgetHead(file: string): void {
   heads.delete(file)
 }

@@ -282,7 +282,10 @@ function gltfBody(parsed: Record<string, unknown>, document: DocumentFile): stri
     scenes: scenes.map((other, index) =>
       index === at
         ? {
-            extras: sceneExtras(heldExtras, studioStamp(gltfStudioMetadata(parsed), document)),
+            extras: studioExtrasFirst(
+              heldExtras,
+              studioStamp(gltfStudioMetadata(parsed), document),
+            ),
             ...restOfScene,
             ...(document.title ? { name: document.title } : {}),
           }
@@ -298,30 +301,36 @@ function gltfBody(parsed: Record<string, unknown>, document: DocumentFile): stri
   return JSON.stringify(body)
 }
 
-/** The `asset` member, carrying the mark that says the file is a document of the studio. */
-function markedAsset(held: unknown, document: DocumentFile): Record<string, unknown> {
-  const extras: Record<string, unknown> = { [STUDIO_METADATA_KEY]: { kind: document.kind } }
-  const heldExtras = isRecord(held) ? held.extras : undefined
-
-  for (const [key, value] of Object.entries(isRecord(heldExtras) ? heldExtras : {})) {
-    if (key !== STUDIO_METADATA_KEY) extras[key] = value
-  }
-
-  return { ...(isRecord(held) ? held : {}), extras }
-}
-
 /**
- * The default scene's extras: the studio's stamp first, then whatever another application left
- * there — added after, so its own `scenario` cannot put back the stamp this just wrote.
+ * Extras with the studio's own FIRST, and whatever another application left there after.
+ *
+ * The order is the whole point: `readHead` looks for the mark inside the first bytes of the file,
+ * so ours has to open the object. And the copy skips a `scenario` the file arrived with, or the
+ * spread would put back the very stamp this was called to write.
  */
-function sceneExtras(held: unknown, stamp: Record<string, unknown>): Record<string, unknown> {
-  const extras: Record<string, unknown> = { [STUDIO_METADATA_KEY]: stamp }
+function studioExtrasFirst(held: unknown, studio: unknown): Record<string, unknown> {
+  const extras: Record<string, unknown> = { [STUDIO_METADATA_KEY]: studio }
 
   for (const [key, value] of Object.entries(isRecord(held) ? held : {})) {
     if (key !== STUDIO_METADATA_KEY) extras[key] = value
   }
 
   return extras
+}
+
+/**
+ * The `asset` member, carrying the mark that says the file is a document of the studio.
+ *
+ * `DOCUMENT_KIND_KEY` rather than a spelling of its own: the same invariant written twice is free
+ * to drift, and nothing reads THIS copy — so nothing would go red the day the two disagree.
+ */
+function markedAsset(held: unknown, document: DocumentFile): Record<string, unknown> {
+  return {
+    ...(isRecord(held) ? held : {}),
+    extras: studioExtrasFirst(isRecord(held) ? held.extras : undefined, {
+      [DOCUMENT_KIND_KEY]: document.kind,
+    }),
+  }
 }
 
 /** A montage as OpenTimelineIO holds it, `.otio` serving two kinds and the file saying which. */
