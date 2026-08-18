@@ -61,8 +61,8 @@ export const PROMPT_SUGGESTIONS_MAX = 5
 
 /**
  * How many references one rewrite may be conditioned on. `contextual-v2` accepts fifteen where
- * the other modes stop at five — a distinction the API states, and that a call confirms; the
- * local copy of its reference that used to say so was removed on 2026-08-11.
+ * the other modes stop at five — the bound this app enforces; the API decides it, and nothing
+ * has re-measured it since the local copy of its reference was removed on 2026-08-11.
  */
 export const PROMPT_IMAGES_MAX = 15
 

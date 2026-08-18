@@ -5,8 +5,8 @@
  * 49, 1000 — and because going over one is not a partial success: the request is refused whole,
  * with a 4xx that says nothing about which limit was crossed.
  *
- * Each bound is the API's own. The local copy of its reference that carried them was removed on
- * 2026-08-11 for getting values wrong: re-read one with a call, never with a page.
+ * **Nothing has re-measured them since 2026-08-11**, when the local copy of the API reference that
+ * carried them was removed for getting values wrong. A doubt is settled by a call, never by a page.
  *
  * How many calls a minute may hold is another quantity entirely, and lives in `rateLimiter.ts`.
  */
