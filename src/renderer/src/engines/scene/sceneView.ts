@@ -9,6 +9,7 @@ import {
   type Material,
   type Object3D,
 } from 'three'
+import { toRadians } from '@shared/domain/angles'
 import {
   DISPLAY_MODES,
   VIEW_DIRECTIONS,
@@ -267,9 +268,8 @@ export function applyWireOverlay(
  * framing does the moment it stopped ignoring it.
  */
 export function framingDistance(halfSize: number, fieldOfView: number): number {
-  return (
-    (Math.max(halfSize, MIN_FRAMED_HALF) / Math.tan((fieldOfView * Math.PI) / 360)) * FRAME_MARGIN
-  )
+  // The inverse of `frustumHeight`: the distance at which the visible height is twice this half.
+  return (Math.max(halfSize, MIN_FRAMED_HALF) / Math.tan(toRadians(fieldOfView) / 2)) * FRAME_MARGIN
 }
 
 /** A point light and an empty group have no size at all, and would otherwise ask for distance nil. */
