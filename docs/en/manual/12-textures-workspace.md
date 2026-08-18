@@ -296,8 +296,8 @@ lists them all.
 **Double-click a style** — or press Enter on it — to apply it to the open material. It is a
 single undo: `⌘Z` puts back exactly what was set before.
 
-**Right-click ▸ Rename**, IDE-style. The name is edited where it is read. Right-click ▸ Delete
-removes the style.
+**Right-click ▸ Rename**, IDE-style. The name is edited where it is read.
+**Right-click ▸ Delete** removes the style.
 
 ### What a style carries, and what it does not
 

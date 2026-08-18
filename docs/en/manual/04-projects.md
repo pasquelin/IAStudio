@@ -21,8 +21,8 @@ is a project you lose the day that software stops opening.
 
 | Action | Shortcut | Menu |
 |---|---|---|
-| **New project** | `⌘N` / `Ctrl+N` | File ▸ New project… |
-| **Open project** | `⌘O` / `Ctrl+O` | File ▸ Open project… |
+| **New project** | `⌘N` / `Ctrl+N` | **File ▸ New project…** |
+| **Open project** | `⌘O` / `Ctrl+O` | **File ▸ Open project…** |
 
 **Both gestures are in the Explorer panel too**, whenever no project is open: it then shows
 **Open project** and **New project**, in its usual place in the left column. It is there so that
