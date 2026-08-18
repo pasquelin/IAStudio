@@ -55,6 +55,32 @@ const NOT_A_MENU_ENTRY: Record<Language, ReadonlySet<string>> = {
   en: new Set(['right-click']),
 }
 
+/** Any bold run on one line — the shape `MENU_PATH` narrows, kept whole for the reading below. */
+const BOLD = /\*\*([^*\n]{1,90})\*\*/g
+
+/** Read by both the guard below and its exemption-freshness sibling, so the two cannot drift. */
+const arrowsOf = (language: Language): { slug: string; bold: string }[] =>
+  chaptersOf(language).flatMap(chapter =>
+    [...chapter.markdown.matchAll(BOLD)]
+      .flatMap(match => (match[1] ?? '').trim())
+      .filter(bold => bold.includes('→'))
+      .map(bold => ({ slug: chapter.slug, bold })),
+  )
+
+/**
+ * `→` is the third arrow the chapters write, and adding it to `MENU_PATH` returned six French and
+ * ten English fragments of sentences — `**` pairs greedily across the prose arrows of chapters 16
+ * and 19, measured. It marks a DIRECTION, so a menu path written with it escapes that reading
+ * whole: `File → Export the texture` did, for an entry the screen spells `Export texture`.
+ *
+ * Its own blind spot is a FOURTH glyph: `->`, `⇒` and their kin would escape both readings. None
+ * is written in a bold run of either manual today — measured — so the hole is prospective.
+ */
+const A_DIRECTION_NOT_A_PATH: Record<Language, ReadonlySet<string>> = {
+  fr: new Set(['projet → bibliothèque']),
+  en: new Set(['project → library']),
+}
+
 describe('the manual the application carries', () => {
   // A hole here is a language that opens on nothing, and only for the readers who chose it.
   it('carries the same chapters in every language', () => {
@@ -162,6 +188,21 @@ describe('the manual the application carries', () => {
     )
 
     expect([...NOT_A_MENU_ENTRY[language]].filter(segment => !written.has(segment))).toEqual([])
+  })
+
+  it.each(languages)('writes every menu path with a separator it reads, in %s', language => {
+    const unread = arrowsOf(language)
+      .filter(({ bold }) => !A_DIRECTION_NOT_A_PATH[language].has(bold))
+      .map(({ slug, bold }) => `${slug} — ${bold}`)
+
+    expect(unread).toEqual([])
+  })
+
+  // The same reasoning as the gesture exemptions above: one nobody writes reads as a rule.
+  it.each(languages)('drops a direction exemption once no chapter writes it, in %s', language => {
+    const written = new Set(arrowsOf(language).map(({ bold }) => bold))
+
+    expect([...A_DIRECTION_NOT_A_PATH[language]].filter(bold => !written.has(bold))).toEqual([])
   })
 
   // The range a literal union would have held, had a JSON import been able to keep one.
