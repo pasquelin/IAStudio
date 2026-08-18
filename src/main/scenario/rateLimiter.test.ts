@@ -114,8 +114,14 @@ describe('rate limiter', () => {
    */
   it('lets go of a caller that gives up while still queued, without waiting for its turn', async () => {
     const { deps } = clock()
-    // A delay that never resolves: the caller ahead holds the chain for the whole test.
-    const limiter = createRateLimiter({ ...deps, limit: 1, delay: () => new Promise(() => {}) })
+    // A delay that never resolves, and a window short enough to be waited on rather than
+    // refused outright: without both, the caller ahead lets go and the queue drains at once.
+    const limiter = createRateLimiter({
+      ...deps,
+      limit: 1,
+      windowMs: 1000,
+      delay: () => new Promise(() => {}),
+    })
     const giving = new AbortController()
 
     await limiter.acquire()
@@ -124,6 +130,25 @@ describe('rate limiter', () => {
     giving.abort()
 
     await expect(queued).rejects.toThrow()
+  })
+
+  // The same caller, one step earlier: an `abort` already delivered calls no listener, so the
+  // one above cannot catch it and the queue is what the caller would have waited on.
+  it('lets go of a caller that had already given up before it asked', async () => {
+    const { deps } = clock()
+    const limiter = createRateLimiter({
+      ...deps,
+      limit: 1,
+      windowMs: 1000,
+      delay: () => new Promise(() => {}),
+    })
+    const abandoned = new AbortController()
+    abandoned.abort()
+
+    await limiter.acquire()
+    void limiter.acquire()
+
+    await expect(limiter.acquire(abandoned.signal)).rejects.toThrow()
   })
 
   it('serves waiting callers in the order they asked', async () => {
