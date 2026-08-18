@@ -429,6 +429,9 @@ l’importer.
 > final, image par image, scènes 3D comprises — mais **sans le son**, qui n’y est pas encore.
 > *Exporter le montage (OTIO)* écrit le montage lui-même : pistes, clips, points d’entrée,
 > vitesses et liens vers les médias, dans un fichier que d’autres logiciels de montage ouvrent.
+>
+> **Un `.otio` s’ouvre aussi**, d’un double-clic dans l’Explorateur — le vôtre comme celui d’un
+> autre logiciel — et `⌘S` le réenregistre dans son propre fichier.
 > Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ---

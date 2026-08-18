@@ -5,7 +5,8 @@ import {
   documentPath,
   FOLDER_KINDS,
   isPartName,
-  EXTENSION_BY_KIND,
+  EXTENSIONS_BY_KIND,
+  extensionForKind,
   isDocumentKind,
   kindForExtension,
   kindForWorkspace,
@@ -70,10 +71,19 @@ describe('workspaceForKind', () => {
 })
 
 describe('kindForExtension', () => {
-  it('reads back the extension every kind is written under', () => {
+  it('reads back every extension a kind is held under, not only the one it writes', () => {
     for (const kind of DOCUMENT_KINDS) {
-      expect(kindForExtension(EXTENSION_BY_KIND[kind])).toBe(kind)
+      for (const extension of EXTENSIONS_BY_KIND[kind]) {
+        expect(kindForExtension(extension)).toBe(kind)
+      }
     }
+  })
+
+  // The half a montage held as OpenTimelineIO turns on: the studio's own spelling is what a NEW
+  // document takes, and the standard one is read all the same.
+  it('writes a montage under the studio spelling and reads the standard one too', () => {
+    expect(extensionForKind('sequence')).toBe('.seq')
+    expect(kindForExtension('.otio')).toBe('sequence')
   })
 
   // A project folder is the user's own: it holds notes, exports, and whatever else was dropped
@@ -120,10 +130,17 @@ describe('documentPath', () => {
     expect(new Set(paths).size).toBe(DOCUMENT_KINDS.length)
   })
 
-  // The compiler keeps `EXTENSION_BY_KIND` complete; nothing keeps `DOCUMENT_KINDS` complete,
+  // The compiler keeps `EXTENSIONS_BY_KIND` complete; nothing keeps `DOCUMENT_KINDS` complete,
   // and a kind missing from it is refused at the IPC boundary without a word.
   it('lists every kind the extension table knows', () => {
-    expect([...DOCUMENT_KINDS].sort()).toEqual(Object.keys(EXTENSION_BY_KIND).sort())
+    expect([...DOCUMENT_KINDS].sort()).toEqual(Object.keys(EXTENSIONS_BY_KIND).sort())
+  })
+
+  // Two kinds sharing a spelling would send one to the other's editor, and `kindForExtension`
+  // answers whichever came first in the list without a word.
+  it('gives no extension to two kinds', () => {
+    const spellings = DOCUMENT_KINDS.flatMap(kind => [...EXTENSIONS_BY_KIND[kind]])
+    expect(new Set(spellings).size).toBe(spellings.length)
   })
 })
 

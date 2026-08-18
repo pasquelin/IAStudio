@@ -1,5 +1,5 @@
 import { messageOf } from '@shared/guards'
-import { MAX_LOG_MESSAGE, type LogScope, type TraceScope } from '@shared/ipc'
+import { MAX_LOG_MESSAGE, type LogLevel, type LogScope, type TraceScope } from '@shared/ipc'
 import { getBridge } from './bridge'
 
 /**
@@ -73,10 +73,25 @@ export function reportFailure(scope: LogScope, subject: string, error: unknown):
     reported.add(said)
   }
 
-  // The rejection is dropped on purpose: this IS the path a failure travels, and a failure to
-  // report one has nowhere left to go.
+  send('error', scope, lineFor(subject, error))
+}
+
+/**
+ * Something the user has to be told that is not a failure: work that went through with less than
+ * it was asked for. Never deduplicated — the same document opened twice loses the same thing
+ * twice, and a second silence would read as a second open that went fine.
+ */
+export function reportNotice(scope: LogScope, message: string): void {
+  send('warn', scope, message.slice(0, MAX_LOG_MESSAGE))
+}
+
+/**
+ * The rejection is dropped on purpose: this IS the path a failure travels, and a failure to
+ * report one has nowhere left to go. Silent with no bridge — tests and a plain browser have none.
+ */
+function send(level: LogLevel, scope: LogScope, message: string): void {
   getBridge()
-    ?.diagnostics.report({ level: 'error', scope, message: lineFor(subject, error) })
+    ?.diagnostics.report({ level, scope, message })
     .catch(() => {})
 }
 

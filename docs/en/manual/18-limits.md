@@ -199,11 +199,20 @@ A sequence is now written into a `.seq` file and reopens exactly as it was.
 comes out mute**: the edit's sound tracks are not encoded into it yet. This is the heaviest limit
 of this workspace, because it makes you rebuild the sound elsewhere.
 
-### An `.otio` does not open here
+### A new edit is still written into a `.seq`
 
-**File › Export edit (OTIO)** writes the edit in a format other editing applications open. The way
-back is missing: you cannot yet **open** an `.otio` in the studio, neither another application's
-nor one of your own.
+An `.otio` **does open** now: double-click one in the Explorer and the edit opens, whether it was
+written here or by another application, and `⌘S` writes it back into its own file. What is left is
+the starting point — a sequence created in the studio still begins as a `.seq`.
+
+An edit from elsewhere names its media by path. The studio looks for them in the project by that
+path, then by file name — **among the assets this window has already been shown**. A project just
+opened has not read its catalogue yet: opening a foreign edit a second later may find none of them.
+
+**A clip whose media is not found is not opened**, and the activity journal says which one. The
+edit is then shorter than what the file describes, and **`⌘S` refuses to write** while that holds:
+without that refusal, saving would erase those clips from the file. Bring the missing media into
+the project, open the edit again, and saving works once more.
 
 And what that format does not carry as a standard — fades, gains, image and sound links, the 3D
 scene behind a live clip — travels in the file but **is read by Scenario alone**.

@@ -7,6 +7,9 @@
  * it blindly would silently undo a trim made in Resolve.
  */
 import {
+  isOtioTimeline,
+  otioStudioMetadata,
+  OTIO_DOCUMENT_ID,
   OTIO_STUDIO_KEY,
   type OtioClip,
   type OtioGap,
@@ -48,6 +51,12 @@ export type OtioSource = { name: string; url: string | null }
 export type OtioWriteOptions = {
   /** The timeline's own name — the document's title. */
   name: string
+  /**
+   * Which document of the studio this file IS, when it is one. Written under the studio domain
+   * and read back by the file layer: without it a montage renamed on disk becomes a different
+   * document, its tab and its place in the layout going with the old name.
+   */
+  documentId?: string
   sourceOf: (clip: Clip) => OtioSource
 }
 
@@ -180,7 +189,7 @@ function trackOf(
  */
 export function otioTimelineOf(
   state: SequenceState,
-  { name, sourceOf }: OtioWriteOptions,
+  { name, documentId, sourceOf }: OtioWriteOptions,
 ): OtioTimeline {
   const { fps, width, height, sampleRate } = state.settings
   return {
@@ -188,6 +197,7 @@ export function otioTimelineOf(
     name,
     metadata: {
       [OTIO_STUDIO_KEY]: {
+        ...(documentId ? { [OTIO_DOCUMENT_ID]: documentId } : {}),
         width,
         height,
         sampleRate,
@@ -207,13 +217,6 @@ export function otioTimelineOf(
       enabled: true,
     },
   }
-}
-
-const studioOf = (raw: Record<string, unknown>): Record<string, unknown> => {
-  const metadata = raw.metadata
-  if (!isRecord(metadata)) return {}
-  const studio = metadata[OTIO_STUDIO_KEY]
-  return isRecord(studio) ? studio : {}
 }
 
 /**
@@ -253,6 +256,10 @@ function assetIdFrom(
 ): string {
   const known = readString(studio, 'assetId', '')
   if (known) return known
+  // A live scene has no media to relink, and its clip carries an EMPTY `assetId`: asked anyway,
+  // the resolver reported every scene of a montage as a media it could not find.
+  if (readString(studio, 'sceneId', '')) return ''
+
   const reference = raw.media_reference
   return isRecord(reference) ? assetIdOf(readString(reference, 'target_url', '')) : ''
 }
@@ -264,7 +271,7 @@ function clipFrom(
   frame: Us,
   assetIdOf: OtioAssetIdOf,
 ): Clip | null {
-  const studio = studioOf(raw)
+  const studio = otioStudioMetadata(raw)
   const duration = refined(studio, 'duration', standard.duration, frame)
   if (duration <= 0) return null
 
@@ -317,7 +324,7 @@ function trackFrom(
 ): Track | null {
   if (!isRecord(raw) || raw.OTIO_SCHEMA !== 'Track.1') return null
 
-  const studio = studioOf(raw)
+  const studio = otioStudioMetadata(raw)
   const kind: TrackKind = raw.kind === 'Audio' ? 'audio' : 'video'
   // A file written elsewhere names its tracks freely; the studio names them V1, A1… and the
   // numbering has to come from what is already read, not from the row.
@@ -369,7 +376,7 @@ export function sequenceFromOtio(
   content: unknown,
   assetIdOf: OtioAssetIdOf = () => '',
 ): SequenceState {
-  if (!isRecord(content) || content.OTIO_SCHEMA !== 'Timeline.1') return EMPTY_SEQUENCE
+  if (!isOtioTimeline(content)) return EMPTY_SEQUENCE
   const stack = content.tracks
   if (!isRecord(stack) || !Array.isArray(stack.children)) return EMPTY_SEQUENCE
 
@@ -386,7 +393,7 @@ export function sequenceFromOtio(
   })
   if (tracks.length === 0) return EMPTY_SEQUENCE
 
-  const studio = studioOf(content)
+  const studio = otioStudioMetadata(content)
   const selectedId = readString(studio, 'selectedId', '')
   const read: SequenceState = {
     settings: {

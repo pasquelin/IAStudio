@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EXTENSION_BY_KIND } from './document'
+import { EXTENSIONS_BY_KIND } from './document'
 import { FILE_DOMAINS, natureOf, opensInStudio } from './fileRole'
 
 describe('natureOf', () => {
@@ -43,11 +43,13 @@ describe('natureOf', () => {
     expect(natureOf('Level.SCENE')).toEqual({ domain: 'other', role: 'source' })
   })
 
-  // The compiler cannot see this one: `EXTENSION_BY_KIND` is complete by its type, but nothing
+  // The compiler cannot see this one: `EXTENSIONS_BY_KIND` is complete by its type, but nothing
   // makes `natureOf` agree with it, and a kind that fell through would be filed as `other`.
-  it('knows every document extension the studio writes', () => {
-    for (const extension of Object.values(EXTENSION_BY_KIND)) {
-      expect(natureOf(`Untitled${extension}`).role).toBe('edit')
+  it('knows every document extension the studio reads', () => {
+    for (const extensions of Object.values(EXTENSIONS_BY_KIND)) {
+      for (const extension of extensions) {
+        expect(natureOf(`Untitled${extension}`).role).toBe('edit')
+      }
     }
   })
 
@@ -86,11 +88,11 @@ describe('opensInStudio', () => {
     }
   })
 
-  // The studio WRITES this one and cannot read it back yet — the same disagreement, from the
-  // other side. Filed with the videos so an exported montage is not buried among the notes.
-  it('files an exported cut under video, and still leaves it to the system', () => {
-    expect(natureOf('Bande.otio')).toEqual({ domain: 'video', role: 'source' })
-    expect(opensInStudio('Bande.otio')).toBe(false)
+  // A montage IS a document now, whichever application wrote it — the studio reads the standard
+  // rather than a spelling of its own, so a cut from Resolve opens where its own do.
+  it('opens a cut as the document it is, whoever wrote it', () => {
+    expect(natureOf('Bande.otio')).toEqual({ domain: 'video', role: 'edit' })
+    expect(opensInStudio('Bande.otio')).toBe(true)
   })
 
   it('takes the one mesh a loader here reads, and no other', () => {

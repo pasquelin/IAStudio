@@ -1,3 +1,4 @@
+import { OTIO_EXTENSION } from './otio'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
 /**
@@ -91,20 +92,28 @@ export const DOCUMENT_VERSION = 3
 export const DOCUMENTS_FOLDER = 'documents'
 
 /**
- * One extension per kind, as spec § 5 names them. A project folder is meant to be read by eye
- * and repaired by hand, and `a3f1.json` beside `b204.json` says nothing about what either is.
+ * Every extension a kind READS, the one it WRITES first. A project folder is meant to be read by
+ * eye and repaired by hand, and `a3f1.json` beside `b204.json` says nothing about what either is.
+ *
+ * A kind wears two spellings while its format is being replaced by an open one — the studio's own
+ * extensions are on their way out, and the files a project already holds have to keep opening.
  *
  * Exported so a test can hold it against `DOCUMENT_KINDS`: the compiler makes this table
  * complete, but nothing makes that list complete, and a kind missing from it would be refused
  * at the IPC boundary without a word.
  */
-export const EXTENSION_BY_KIND: Record<DocumentKind, string> = {
-  image: '.img',
-  scene: '.scene',
-  sequence: '.seq',
-  audio: '.aud',
-  skybox: '.sky',
-  texture: '.tex',
+export const EXTENSIONS_BY_KIND: Record<DocumentKind, readonly [string, ...string[]]> = {
+  image: ['.img'],
+  scene: ['.scene'],
+  sequence: ['.seq', OTIO_EXTENSION],
+  audio: ['.aud'],
+  skybox: ['.sky'],
+  texture: ['.tex'],
+}
+
+/** The one a document nobody has named yet is written to. */
+export function extensionForKind(kind: DocumentKind): string {
+  return EXTENSIONS_BY_KIND[kind][0]
 }
 
 /**
@@ -117,11 +126,11 @@ export const EXTENSION_BY_KIND: Record<DocumentKind, string> = {
  * the folder a first save falls back to.
  */
 export function documentPath(id: string, kind: DocumentKind): string {
-  return `${DOCUMENTS_FOLDER}/${id}${EXTENSION_BY_KIND[kind]}`
+  return `${DOCUMENTS_FOLDER}/${id}${extensionForKind(kind)}`
 }
 
 /**
- * What a file name says the document is, read the other way round from `EXTENSION_BY_KIND`.
+ * What a file name says the document is, read the other way round from `EXTENSIONS_BY_KIND`.
  * Listing a project folder needs it: the folder is what says which documents exist, and the
  * extension is all a directory entry carries.
  *
@@ -132,7 +141,7 @@ export function documentPath(id: string, kind: DocumentKind): string {
  * volume — an empty document, and a second file beside the first at the next save.
  */
 export function kindForExtension(extension: string): DocumentKind | null {
-  return DOCUMENT_KINDS.find(kind => EXTENSION_BY_KIND[kind] === extension) ?? null
+  return DOCUMENT_KINDS.find(kind => EXTENSIONS_BY_KIND[kind].includes(extension)) ?? null
 }
 
 /**

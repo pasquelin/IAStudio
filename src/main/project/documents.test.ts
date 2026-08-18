@@ -849,6 +849,90 @@ describe('createDocumentFiles', () => {
       expect(await documents.read('doc-9', 'image')).toBeNull()
     })
   })
+
+  /**
+   * A montage in the open format IS the document — there is no envelope of ours in the file, so
+   * every field one carries has to come from the standard's metadata or from the folder.
+   */
+  describe('a montage held as OpenTimelineIO', () => {
+    const otio = (studio: Record<string, unknown> = {}): string =>
+      JSON.stringify({
+        OTIO_SCHEMA: 'Timeline.1',
+        name: 'Bande',
+        metadata: { scenario: studio },
+        global_start_time: null,
+        tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
+      })
+
+    it('lists a file another application wrote, named after its file', async () => {
+      await writeFile(join(root, 'Rushes.otio'), otio(), 'utf8')
+
+      expect(await documents.list()).toEqual([
+        {
+          id: 'Rushes',
+          kind: 'sequence',
+          title: 'Rushes',
+          workspace: 'video',
+          path: 'Rushes.otio',
+        },
+      ])
+    })
+
+    it('remembers which document one of its own is, whatever the file is called', async () => {
+      await writeFile(join(root, 'Rushes.otio'), otio({ documentId: 'doc-7' }), 'utf8')
+
+      expect((await documents.list())[0]?.id).toBe('doc-7')
+    })
+
+    it('hands the whole standard file to the editor, untouched', async () => {
+      const content = otio({ documentId: 'doc-7' })
+      await writeFile(join(root, 'Rushes.otio'), content, 'utf8')
+      await documents.list()
+
+      expect(await documents.read('doc-7', 'sequence')).toEqual({
+        version: DOCUMENT_VERSION,
+        kind: 'sequence',
+        title: '',
+        updatedAt: '',
+        id: 'doc-7',
+        content,
+      })
+    })
+
+    // The defect this whole change exists to close: a save that wrote our envelope back would
+    // leave a file no other application can read, and the studio would be the only reader again.
+    it('writes the montage back with nothing of ours in front of it', async () => {
+      const content = otio({ documentId: 'doc-7' })
+      await writeFile(join(root, 'Rushes.otio'), content, 'utf8')
+      await documents.list()
+
+      expect(await documents.write('doc-7', 'sequence', { title: 'Rushes', content })).toBe(
+        'written',
+      )
+
+      const written = await readFile(join(root, 'Rushes.otio'), 'utf8')
+      expect(JSON.parse(written)).toMatchObject({ OTIO_SCHEMA: 'Timeline.1', name: 'Rushes' })
+      expect(written.startsWith('{')).toBe(true)
+    })
+
+    // A rename that took the spelling a NEW document gets would leave the `.otio` sitting beside
+    // a `.seq` holding the same cut — two files for one document, which is the whole defect.
+    it('keeps the spelling it wears when it is renamed', async () => {
+      await writeFile(join(root, 'Rushes.otio'), otio({ documentId: 'doc-7' }), 'utf8')
+      await documents.list()
+
+      expect((await documents.rename('doc-7', 'sequence', 'Bande son')).path).toBe('Bande son.otio')
+      expect(await readdir(root)).toEqual(['Bande son.otio'])
+    })
+
+    // A tab opened on nothing is indistinguishable from a new document, and the next ⌘S would
+    // write that over whatever the file really held.
+    it('leaves a file that is not a timeline out of the listing', async () => {
+      await writeFile(join(root, 'Notes.otio'), '{"OTIO_SCHEMA":"Clip.1"}', 'utf8')
+
+      expect(await documents.list()).toEqual([])
+    })
+  })
 })
 
 describe('orphanStagingCopies', () => {

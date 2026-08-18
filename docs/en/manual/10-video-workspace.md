@@ -415,7 +415,11 @@ file. To edit an `.exr` or a `.tif`, convert it to `.png` yourself before import
 > **Two exports exist**, both on the File menu. *Export video* writes a final file, frame by
 > frame, 3D scenes included — but **without the sound**, which is not in it yet. *Export edit
 > (OTIO)* writes the edit itself: tracks, clips, in points, speeds and links to the media, in a
-> file other editing applications open. See [What does not exist yet](18-limits.md).
+> file other editing applications open.
+>
+> **An `.otio` also opens**, on a double-click in the Explorer — yours as much as another
+> application's — and `⌘S` writes it back into its own file.
+> See [What does not exist yet](18-limits.md).
 
 ---
 

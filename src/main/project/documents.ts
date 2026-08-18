@@ -1,12 +1,11 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, relative, sep } from 'node:path'
 import {
   DOCUMENT_MANIFEST,
   documentPath,
   DOCUMENTS_FOLDER,
   DOCUMENT_VERSION,
-  ENVELOPE_LIMIT,
   FOLDER_KINDS,
   isPartName,
   isStagingName,
@@ -29,9 +28,8 @@ import {
 } from '@shared/domain/documentName'
 import { extensionOf, foldForFileName } from '@shared/domain/fileName'
 import { parentOf, pathIn, type FolderEntry } from '@shared/domain/folder'
-import { isRecord } from '@shared/guards'
 import { exists, isMissing, writeAtomic } from '@main/persistence'
-import { parseDocumentEnvelope } from './validation'
+import { bodyFormatOf, ENVELOPED } from './documentBody'
 
 export type DocumentFiles = {
   /**
@@ -164,49 +162,14 @@ export async function pooledHeads<T>(
 }
 
 /**
- * A file read back: the envelope off its first line, the content left as the string the editor
- * wrote. Nothing here parses the content — that is the editor's business, on its own thread.
- *
- * A file written by version 1 has no line of its own: its whole body is one object, content
- * included. It is put back into the current shape rather than refused — that is what the
- * version field was for.
- */
-export function splitDocument(body: string): DocumentFile {
-  const cut = body.indexOf('\n')
-  const head: unknown = JSON.parse(cut === -1 ? body : body.slice(0, cut))
-  const envelope = parseDocumentEnvelope(head)
-
-  if (envelope.version === 1) {
-    const legacy = isRecord(head) ? head.content : undefined
-    return { ...envelope, content: legacy === undefined ? '' : JSON.stringify(legacy) }
-  }
-
-  return { ...envelope, content: cut === -1 ? '' : body.slice(cut + 1) }
-}
-
-/**
- * The envelope of a file, without reading the document under it: a listing needs a title and a
- * kind, and a project of heavy scenes would otherwise be read whole every time it is opened.
- *
- * A version 1 file has no first line, so its head is truncated and fails to parse; it falls
- * back to the whole file, which is the only way to read one.
+ * What a listing needs of a file, read the cheapest way the format allows — a project of heavy
+ * scenes would otherwise be read whole every time it is opened.
  *
  * Exported for the bench beside it rather than for callers — like `pooledHeads`, and for the same
  * reason: timing a copy of it would time something else.
  */
 export async function headOf(file: string): Promise<DocumentEnvelope> {
-  const handle = await open(file, 'r')
-  try {
-    const buffer = Buffer.alloc(ENVELOPE_LIMIT)
-    const { bytesRead } = await handle.read(buffer, 0, ENVELOPE_LIMIT, 0)
-    const head = buffer.toString('utf8', 0, bytesRead)
-    const cut = head.indexOf('\n')
-    if (cut !== -1) return parseDocumentEnvelope(JSON.parse(head.slice(0, cut)))
-  } finally {
-    await handle.close()
-  }
-
-  return splitDocument(await readFile(file, 'utf8'))
+  return await bodyFormatOf(extensionOf(basename(file))).readHead(file)
 }
 
 /**
@@ -340,16 +303,6 @@ export function createDocumentFiles({
   /** The staging copies being written right now. Every window writes through this one map. */
   const staging = new Set<string>()
 
-  /**
-   * The envelope on its first line, the content on the rest. Concatenated rather than
-   * serialized as one object: the content arrives already serialized, and stringifying it again
-   * here would put the cost of every document back on the thread that owns every window.
-   */
-  const bodyOf = (document: DocumentFile): string => {
-    const { content, ...envelope } = document
-    return `${JSON.stringify(envelope)}\n${content}`
-  }
-
   const store = async (file: string, document: DocumentFile): Promise<void> => {
     // Unique per call: the staging copy of one window must not be the staging copy of another.
     const copy = `${file}.${randomUUID()}${STAGING_SUFFIX}`
@@ -363,7 +316,8 @@ export function createDocumentFiles({
       // Shared with the three stores of `persistence`, which is also where the tidy-up learned not
       // to become the failure: this copy's `rm` used to throw over the error the caller needed.
       // Durability across a power cut would want `fsync`; it has none.
-      await writeAtomic(file, bodyOf(document), { staging: copy })
+      const body = bodyFormatOf(extensionOf(basename(file))).write(document)
+      await writeAtomic(file, body, { staging: copy })
     } finally {
       staging.delete(basename(copy))
     }
@@ -393,7 +347,8 @@ export function createDocumentFiles({
       await mkdir(staged, { recursive: true })
       // The manifest holds no parts: they are the folder's own entries, and naming them twice
       // would let the two disagree.
-      await writeFile(join(staged, DOCUMENT_MANIFEST), bodyOf(rest), 'utf8')
+      // A folder document is always the studio's own: its manifest holds the envelope by design.
+      await writeFile(join(staged, DOCUMENT_MANIFEST), ENVELOPED.write(rest), 'utf8')
       for (const part of parts) {
         await writeFile(join(staged, part.name), Buffer.from(part.data, 'base64'))
       }
@@ -428,7 +383,7 @@ export function createDocumentFiles({
 
   /** Reads a folder document back: its manifest, and every file the renderer left beside it. */
   const readFolder = async (folder: string): Promise<DocumentFile> => {
-    const document = splitDocument(await readFile(join(folder, DOCUMENT_MANIFEST), 'utf8'))
+    const document = ENVELOPED.read(await readFile(join(folder, DOCUMENT_MANIFEST), 'utf8'))
     const entries = await readdir(folder)
 
     const parts: DocumentPart[] = []
@@ -638,7 +593,7 @@ export function createDocumentFiles({
     try {
       document = FOLDER_KINDS.has(kind)
         ? await readFolder(file)
-        : splitDocument(await readFile(file, 'utf8'))
+        : bodyFormatOf(extensionOf(basename(file))).read(await readFile(file, 'utf8'))
     } catch (error) {
       if (isMissing(error)) return null
       throw error
@@ -700,7 +655,9 @@ export function createDocumentFiles({
         const refused = checkDocumentName(title, kind, taken, basename(from).normalize('NFC'))
         if (refused) throw new Error(refused)
 
-        const entry = documentFileName(title, kind)
+        // The extension it already wears, so a montage held as `.otio` is renamed rather than
+        // duplicated under the spelling a brand new one would take.
+        const entry = documentFileName(title, kind, extensionOf(basename(from)))
         const path = inFolder === '' ? entry : `${inFolder}/${entry}`
         const to = absoluteOf(path)
 
@@ -745,7 +702,7 @@ export function createDocumentFiles({
         }
 
         await (FOLDER_KINDS.has(kind)
-          ? writeAtomic(join(from, DOCUMENT_MANIFEST), bodyOf(renamed), {
+          ? writeAtomic(join(from, DOCUMENT_MANIFEST), ENVELOPED.write(renamed), {
               staging: join(from, `${DOCUMENT_MANIFEST}.${randomUUID()}${STAGING_SUFFIX}`),
             })
           : store(from, renamed))

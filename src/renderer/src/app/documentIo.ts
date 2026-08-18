@@ -30,9 +30,15 @@ import { layerPixelName, layerPixelsNamed } from '@/engines/canvas/layerPixelNam
 import { oraDocumentOf } from '@/engines/canvas/oraDocument'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
-import { reportFailure } from '@/services/diagnostics'
+import { reportFailure, reportNotice } from '@/services/diagnostics'
 import i18next from 'i18next'
 import { closePanel, openDocument } from './dockviewApi'
+import {
+  montageIsIncomplete,
+  sequenceFromPayload,
+  sequencePayload,
+  serializeSequencePayload,
+} from './sequenceDocument'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audioEdits'
@@ -126,6 +132,14 @@ type DocumentIo = AssetWriting & {
   autosaves?: false
   /** Whether the document is already filled — a remount must not read over what is open. */
   holds: (documentId: string) => boolean
+  /**
+   * Whether what opened holds LESS than the file did — a montage whose media the project has
+   * none of, and whose clips were therefore dropped. Absent means the kind cannot open partly.
+   *
+   * Writing one back deletes what could not be read, and nothing on screen says so: `install`
+   * marks the document clean whatever it managed to restore.
+   */
+  incomplete?: (documentId: string) => boolean
   /** Whether closing the document would throw work away — never true for an untouched tab. */
   dirty: (documentId: string) => boolean
   /** Drops the state and the history a closed document was holding. */
@@ -170,11 +184,25 @@ type AssetWriting =
  * is what marks the document unreadable and stops the next ⌘S from writing over it — a kind
  * whose own reader swallowed that would lose the protection with nothing to catch it.
  */
+type TextDocumentCodec<S> = {
+  toPayload: (state: S, documentId: string) => unknown
+  fromPayload: (payload: unknown, documentId: string) => S
+  createDefault: () => S
+  /**
+   * How the payload becomes the file's bytes. A kind held in an open format writes it the way an
+   * export of it would — read by hand and by other tools — where the studio's own stays compact.
+   */
+  serialize?: (payload: unknown) => string
+}
+
 function textDocumentIo<S>(
   store: DocumentStore<S>,
-  toPayload: (state: S) => unknown,
-  fromPayload: (payload: unknown) => S,
-  createDefault: () => S,
+  {
+    toPayload,
+    fromPayload,
+    createDefault,
+    serialize = payload => JSON.stringify(payload),
+  }: TextDocumentCodec<S>,
 ): DocumentIo {
   return {
     capture: documentId => {
@@ -184,14 +212,14 @@ function textDocumentIo<S>(
       return Promise.resolve({
         // Serialized in the window that owns the document: the file layer never parses a
         // content, so the biggest of them is never decoded in the main process.
-        draft: { content: JSON.stringify(toPayload(store.stateOf(current, documentId))) },
+        draft: { content: serialize(toPayload(store.stateOf(current, documentId), documentId)) },
         commit: () => store.use.getState().markSaved(documentId, mark),
         wasEdited: store.hasUnsavedWork(current, documentId),
       })
     },
     install: (documentId, content) => {
       // `replace`, not a command: loading a document is not something ⌘Z gives back.
-      store.use.getState().replace(documentId, fromPayload(JSON.parse(content)))
+      store.use.getState().replace(documentId, fromPayload(JSON.parse(content), documentId))
       // What is on screen is now exactly what the disk holds, so the document opens clean.
       const loaded = store.use.getState()
       loaded.markSaved(documentId, store.markOf(loaded, documentId))
@@ -465,9 +493,21 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   image: IMAGE_IO,
   // No `writeAsset`, and the reason is the kind itself: a scene is not a mesh — the asset it was
   // opened from is one node of it.
-  scene: textDocumentIo(sceneStore, scenePayload, sceneFromPayload, createDefaultScene),
+  scene: textDocumentIo(sceneStore, {
+    toPayload: scenePayload,
+    fromPayload: sceneFromPayload,
+    createDefault: createDefaultScene,
+  }),
   // Nor here: rendering a montage is minutes of work, which has no business on a keystroke.
-  sequence: textDocumentIo(sequenceStore, asIs, parseSequence, () => EMPTY_SEQUENCE),
+  sequence: {
+    ...textDocumentIo(sequenceStore, {
+      toPayload: sequencePayload,
+      fromPayload: sequenceFromPayload,
+      createDefault: () => EMPTY_SEQUENCE,
+      serialize: serializeSequencePayload,
+    }),
+    incomplete: montageIsIncomplete,
+  },
   // No `writeAsset`, for the reason the editor states itself: a take is a REPLAYABLE chain over
   // a decoded source, and « nothing is written to disk until apply or save as ». Baking it into
   // its own source would leave the chain in the document and apply it a second time on reopen —
@@ -475,10 +515,18 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   audio: AUDIO_IO,
   // Nor here: `adjustments` are applied over a source left intact, and baking them into it would
   // destroy the only copy of what they are meant to stay undoable against.
-  skybox: textDocumentIo(skyboxStore, asIs, parseSkybox, createSkyboxContent),
+  skybox: textDocumentIo(skyboxStore, {
+    toPayload: asIs,
+    fromPayload: parseSkybox,
+    createDefault: createSkyboxContent,
+  }),
   // The one whose absence is NOT a refusal: a channel is a reference, not pixels, and what does
   // produce pixels — `deriveChannel` — already writes them as an asset when it derives them.
-  texture: textDocumentIo(textureStore, asIs, parseTexture, newTexture),
+  texture: textDocumentIo(textureStore, {
+    toPayload: asIs,
+    fromPayload: parseTexture,
+    createDefault: newTexture,
+  }),
 }
 
 /** `undefined` for an id no tab is showing — never for a kind that cannot be saved. */
@@ -523,6 +571,13 @@ function savableDocument(
   const io = ioOf(documentId)
   if (!bridge || !document || !io) return null
   if (unreadable.has(documentId) || !io.holds(documentId)) return null
+
+  // Said, not swallowed: this refusal answers a KEYSTROKE, and a ⌘S that writes nothing without
+  // a word is indistinguishable from one that worked.
+  if (io.incomplete?.(documentId)) {
+    reportNotice('document.save', i18next.t('documents.saveRefusedIncomplete'))
+    return null
+  }
 
   return { bridge, document, io }
 }

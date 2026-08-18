@@ -37,6 +37,15 @@ const scene: DocumentDescriptor = {
   path: 'a3f1.scene',
 }
 
+/** Written in the open format, and a document all the same — whoever wrote the file. */
+const montage: DocumentDescriptor = {
+  id: 'cut',
+  kind: 'sequence',
+  title: 'Bande',
+  workspace: 'video',
+  path: 'Bande.otio',
+}
+
 /** Written as a folder — `FOLDER_KINDS` — which is what the folder reader sees of it. */
 const picture: DocumentDescriptor = {
   id: 'a3f1',
@@ -487,6 +496,22 @@ describe('the project explorer', () => {
 
       expect(openDocument).toHaveBeenCalledWith(picture)
       expect(screen.getByRole('treeitem')).not.toHaveAttribute('aria-expanded')
+    })
+
+    /**
+     * A montage in the open format is a DOCUMENT, whichever application wrote it — the studio
+     * writes OpenTimelineIO and reads it back, so a `.otio` opens in the video space rather than
+     * being adopted as a media or handed to whatever the system opens `.otio` with.
+     */
+    it('opens a montage held in the open format', async () => {
+      withProject()
+      const { openFile } = install({ '': [file('Bande.otio')] }, [montage])
+
+      render(<Explorer />)
+      await userEvent.dblClick(await screen.findByText('Bande'))
+
+      expect(openDocument).toHaveBeenCalledWith(montage)
+      expect(openFile).not.toHaveBeenCalled()
     })
 
     // A folder the user owns can hold anything, and the studio has no business refusing a

@@ -1,4 +1,4 @@
-import { EXTENSION_BY_KIND, type DocumentKind } from './document'
+import { extensionForKind, EXTENSIONS_BY_KIND, type DocumentKind } from './document'
 import { foldForFileName, isSafeFileName, safeFileName, stemForSuffix } from './fileName'
 
 /**
@@ -36,9 +36,17 @@ export type NamedDocument = {
   fileName: string
 }
 
-/** The file a document of this name and kind lands on. */
-export function documentFileName(name: string, kind: DocumentKind): string {
-  return `${safeFileName(name, 'document')}${EXTENSION_BY_KIND[kind]}`
+/**
+ * The file a document of this name and kind lands on.
+ *
+ * `wearing` is the extension the document ALREADY has, for a kind that reads more than one: a
+ * montage renamed must stay the file it is, not become a second one under the spelling a new
+ * document would get.
+ */
+export function documentFileName(name: string, kind: DocumentKind, wearing?: string): string {
+  const extension =
+    wearing && EXTENSIONS_BY_KIND[kind].includes(wearing) ? wearing : extensionForKind(kind)
+  return `${safeFileName(name, 'document')}${extension}`
 }
 
 /**
@@ -49,6 +57,10 @@ export function documentFileName(name: string, kind: DocumentKind): string {
  * Duplicates are read on the FILE name rather than the title: `Niveau.scene` and `Niveau.img`
  * are two files and may coexist, which is what the disk says and what the space glyph already
  * tells apart on screen.
+ *
+ * ALL the spellings of one kind, though — a kind reads more than one while its format is being
+ * replaced, and `Bande.seq` beside `Bande.otio` is two montages the tab strip, the explorer and
+ * the document list all show under one name, with nothing to tell them apart.
  */
 export function checkDocumentName(
   name: string,
@@ -64,12 +76,21 @@ export function checkDocumentName(
   // the document, and one name is the whole point.
   if (!isSafeFileName(trimmed)) return 'invalid'
 
-  const wanted = foldForFileName(documentFileName(trimmed, kind))
+  const wanted = spellingsOf(trimmed, kind)
   const taken = existing.some(
-    document => document.id !== selfId && foldForFileName(document.fileName) === wanted,
+    document => document.id !== selfId && wanted.has(foldForFileName(document.fileName)),
   )
 
   return taken ? 'duplicate' : null
+}
+
+/** Every file name this title would wear for this kind, folded as a comparison needs them. */
+function spellingsOf(name: string, kind: DocumentKind): ReadonlySet<string> {
+  return new Set(
+    EXTENSIONS_BY_KIND[kind].map(extension =>
+      foldForFileName(documentFileName(name, kind, extension)),
+    ),
+  )
 }
 
 /**
@@ -85,7 +106,8 @@ export function nextFreeDocumentName(
   existing: readonly NamedDocument[],
 ): string {
   const taken = new Set(existing.map(document => foldForFileName(document.fileName)))
-  const free = (name: string): boolean => !taken.has(foldForFileName(documentFileName(name, kind)))
+  const free = (name: string): boolean =>
+    ![...spellingsOf(name, kind)].some(spelling => taken.has(spelling))
 
   if (free(base)) return base
 
