@@ -5,8 +5,8 @@
  * 49, 1000 — and because going over one is not a partial success: the request is refused whole,
  * with a 4xx that says nothing about which limit was crossed.
  *
- * Sources, in `docs/scenario-api/reference/`: `assets.get_bulk.md`, `assets.delete_multiple.md`,
- * `assets.list.md`. The collection and batch-download caps join them when those endpoints do.
+ * Each bound is the API's own. The local copy of its reference that carried them was removed on
+ * 2026-08-11 for getting values wrong: re-read one with a call, never with a page.
  *
  * How many calls a minute may hold is another quantity entirely, and lives in `rateLimiter.ts`.
  */
