@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { Asset } from '@shared/domain/asset'
+import { ASSET_SEARCH_LIMIT_MAX, type Asset } from '@shared/domain/asset'
 import { getBridge } from '@/services/bridge'
 import { NO_ASSETS, useCatalogueAssets } from './useCatalogueAssets'
 
@@ -9,8 +9,12 @@ import { NO_ASSETS, useCatalogueAssets } from './useCatalogueAssets'
  * had been browsed. Same reason as `useDerivedTextures` and `useProjectPictures`.
  */
 export function useProjectAnimations(): readonly Asset[] {
+  // Spelt out because leaving it off is not "no bound": the main answers `DEFAULT_LIMIT`, which is
+  // 200 — the very page size of the shelf this hook exists to stop reading.
   const ask = useCallback(
-    () => getBridge()?.assets.search({ type: 'animation' }) ?? Promise.resolve(NO_ASSETS),
+    () =>
+      getBridge()?.assets.search({ type: 'animation', limit: ASSET_SEARCH_LIMIT_MAX }) ??
+      Promise.resolve(NO_ASSETS),
     [],
   )
 

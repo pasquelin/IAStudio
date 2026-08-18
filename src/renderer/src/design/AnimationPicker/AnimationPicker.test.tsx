@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Asset } from '@shared/domain/asset'
+import { ASSET_SEARCH_LIMIT_MAX, type Asset } from '@shared/domain/asset'
 import type { ClipSource } from '@shared/domain/scene'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
@@ -95,6 +95,21 @@ describe('choosing an animation', () => {
 
     expect(await screen.findByRole('button', { name: 'Capoeira' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'jig' })).not.toBeInTheDocument()
+  })
+
+  // Without a `limit` the main answers `DEFAULT_LIMIT` — 200, exactly the page the shelf reads by,
+  // so a project past that many motions would be truncated with nothing said.
+  it('asks the catalogue as wide as it is allowed to answer', async () => {
+    const search = vi.fn(() => Promise.resolve([JIG]))
+    installFakeBridge({
+      animations: { list: () => Promise.resolve(bundled) },
+      assets: { search },
+    })
+    show()
+
+    await screen.findByRole('button', { name: 'jig' })
+
+    expect(search).toHaveBeenCalledWith({ type: 'animation', limit: ASSET_SEARCH_LIMIT_MAX })
   })
 
   // Nothing is laid yet, so there is nothing to keep and nothing to look at.
