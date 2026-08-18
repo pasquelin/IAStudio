@@ -109,6 +109,12 @@ describe('rendering a scene to a film', () => {
     await expect(start('../../etc/passwd', 25)).rejects.toThrow()
   })
 
+  // The same climb without a separator to give it away, which this channel used to let through.
+  it('refuses the name of the folder above', async () => {
+    install()
+    await expect(start('..', 25)).rejects.toThrow()
+  })
+
   it('keeps two renders apart', async () => {
     const { encode } = install()
     const first = await start('First', 25)

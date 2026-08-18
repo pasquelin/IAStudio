@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { EXPORT_FORMATS, type ExportFormat } from '@shared/domain/scene'
 import type { SceneExportRequest } from '@shared/ipc'
+import { pathSegment } from '@main/validation'
 
 /**
  * An exported scene crosses the boundary as bytes. Bounded rather than trusted: the renderer is
@@ -13,13 +14,7 @@ const MAX_EXPORT_BYTES = 2 * 1024 * 1024 * 1024
 const format = z.enum(EXPORT_FORMATS as [ExportFormat, ...ExportFormat[]])
 
 const sceneExport = z.object({
-  // No separator and no dots: the name is joined to an extension and handed to a save dialog.
-  name: z
-    .string()
-    .trim()
-    .min(1)
-    .max(200)
-    .refine(value => !/[/\\]/.test(value)),
+  name: pathSegment,
   format,
   data: z.instanceof(Uint8Array).refine(bytes => bytes.byteLength <= MAX_EXPORT_BYTES),
 })

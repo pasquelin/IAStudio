@@ -66,6 +66,12 @@ describe('the picture export handler', () => {
     expect(savePicture).not.toHaveBeenCalled()
   })
 
+  // The folder itself is not a file in it, and this channel used to answer that it was.
+  it('refuses the name of the folder it sits in', () => {
+    expect(() => invoke(CHANNELS.dialogExportPicture, '.', 'QUI=')).toThrow()
+    expect(savePicture).not.toHaveBeenCalled()
+  })
+
   // A data URL prefix would be written into the file as if it were pixels.
   it('refuses a data URL', () => {
     expect(() =>

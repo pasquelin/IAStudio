@@ -64,6 +64,14 @@ describe('the scene export handler', () => {
     ).rejects.toThrow()
   })
 
+  // The same climb without a separator to give it away, and this channel used to let it through
+  // while the picture one refused it.
+  it('refuses the name of the folder above', async () => {
+    await expect(
+      invoke(CHANNELS.sceneExport, { name: '..', format: 'glb', data: bytes }),
+    ).rejects.toThrow()
+  })
+
   /**
    * The whole reason this handler answers a name rather than a path — and a rejected
    * `ipcMain.handle` hands its message to the renderer, which files it in the journal. Node
