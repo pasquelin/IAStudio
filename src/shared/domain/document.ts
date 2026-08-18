@@ -1,3 +1,4 @@
+import type { OraSurface } from './openRaster'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
 /**
@@ -202,36 +203,18 @@ export type DocumentDraft = {
    */
   sourceAssetId?: string
   /**
-   * The files that go beside the content, for a document one string cannot hold. An image keeps
-   * one PNG per layer: the pixels live on the GPU, never in the state, so `content` can only
-   * name them.
+   * The surfaces the container holds beside the stack, for a document one string cannot hold.
+   * An image keeps one PNG per layer: the pixels live on the GPU, never in the state, so
+   * `content` can only name them.
+   *
+   * `OraSurface.path` becomes an entry the studio writes AND reads back, so it is checked rather
+   * than trusted — `isOraSurfacePath`. It is the one field of this contract crossing a security
+   * boundary.
    *
    * Absent for every kind that fits in a string, which is all of them but the image.
    */
-  parts?: readonly DocumentPart[]
+  parts?: readonly OraSurface[]
 }
-
-/**
- * One file beside a document's content. `data` is base64 — the renderer has no filesystem, and
- * bytes are what it has.
- *
- * `name` is turned into a path by the main process, so it is checked there rather than trusted:
- * see `isPartName`. It is the one field of this contract that crosses a security boundary.
- */
-export type DocumentPart = {
-  name: string
-  data: string
-}
-
-/**
- * Which kinds are written as a folder rather than a single file. `parts` is what makes it
- * necessary: a document with files beside it needs somewhere to put them, and `<id>.img/` keeps
- * them together — inspectable, and removable in one gesture.
- */
-export const FOLDER_KINDS: ReadonlySet<DocumentKind> = new Set<DocumentKind>(['image'])
-
-/** The manifest inside a folder document, holding exactly what a file document's body holds. */
-export const DOCUMENT_MANIFEST = 'document.json'
 
 /** The suffix on a copy being written, before the rename that makes it the document. */
 export const STAGING_SUFFIX = '.tmp'
@@ -241,26 +224,13 @@ export const STAGING_SUFFIX = '.tmp'
  * own, and a `render.tmp` they left in there is not something to delete on their behalf.
  *
  * Here rather than beside the writer because two readers need it and neither owns the other: the
- * listing sweeps these away, and the folder walk refuses to descend into one — a folder document
- * stages a FOLDER, and walking into it would offer a manifest and a pile of layers as though
- * they were the user's own files.
+ * listing sweeps these away, and the folder walk leaves them out of what it offers.
  */
 export function isStagingName(name: string): boolean {
   return STAGING_PATTERN.test(name)
 }
 
 const STAGING_PATTERN = /\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/i
-
-/**
- * Whether a part may become a file name. Deliberately narrow: the renderer picks these, and a
- * `../` or an absolute path would write wherever it pleased. Letters, digits, dot, dash and
- * underscore only — no separator can be spelled with those, so no traversal can either.
- *
- * `document.json` is refused: a part must never stand where the manifest goes.
- */
-export function isPartName(name: string): boolean {
-  return /^[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/.test(name) && name !== DOCUMENT_MANIFEST
-}
 
 /**
  * What a document weighs on disk: a draft under an envelope the file layer stamps itself. The

@@ -1,7 +1,9 @@
-import { readdir, rm } from 'node:fs/promises'
+import { readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { strToU8, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_KINDS, type DocumentKind } from '@shared/domain/document'
+import { ORA_MERGED_PATH, ORA_MIMETYPE } from '@shared/domain/openRaster'
 import { documentFilesAt, snapshotDocuments, withTempProject } from './project-fixtures'
 
 const NOW = '2026-08-16T10:00:00.000Z'
@@ -25,7 +27,19 @@ const bodyOf = (kind: DocumentKind): string =>
         null,
         2,
       )
-    : `{"of":"${kind}"}`
+    : kind === 'image'
+      ? // An image IS its OpenRaster container, so its content is the stack that container
+        // holds — anything else is refused at the write, like a montage that is not a timeline.
+        JSON.stringify({ width: 64, height: 32, nodes: [], studio: '{"layers":[]}' })
+      : `{"of":"${kind}"}`
+
+/** The surfaces beside it: the flatten the spec demands, and nothing else for an empty stack. */
+const PIXELS = Uint8Array.from(
+  Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64',
+  ),
+)
 
 /**
  * The measuring tool has to be measured too: a snapshot that missed a document, or that differed
@@ -50,26 +64,70 @@ describe('the project fixture', () => {
 
     expect(taken).toHaveLength(DOCUMENT_KINDS.length)
     expect(taken.map(one => one.kind).sort()).toEqual([...DOCUMENT_KINDS].sort())
-    expect(taken.every(one => one.content === bodyOf(one.kind))).toBe(true)
+    // Compared as VALUES: a container re-spells its stack on the way back, the keys coming out
+    // in the order the unpacker builds them rather than the order they went in.
+    for (const one of taken) expect(JSON.parse(one.content)).toEqual(JSON.parse(bodyOf(one.kind)))
   })
 
-  // The loss this tool exists to catch, and the one a file count cannot see: the manifest is
-  // intact and every layer beside it is gone.
-  it('sees the layers of an image document, not just its manifest', async () => {
+  // The loss this tool exists to catch, and the one a file count cannot see: the stack is intact
+  // and every surface beside it is gone.
+  it('sees the surfaces of an image document, not just its stack', async () => {
     const { root, documents } = await withTempProject()
+    const content = JSON.stringify({
+      width: 64,
+      height: 32,
+      nodes: [
+        {
+          kind: 'layer',
+          name: 'Ink',
+          src: 'data/p_a.png',
+          x: 0,
+          y: 0,
+          opacity: 1,
+          visible: true,
+          composite: 'svg:src-over',
+        },
+      ],
+      studio: '{"layers":[]}',
+    })
     await documents.write('doc-1', 'image', {
       title: 'Cover',
-      content: '{"layers":["layer-1"]}',
-      parts: [{ name: 'layer-1.png', data: 'iVBORw0KGgo=' }],
+      content,
+      parts: [
+        { path: ORA_MERGED_PATH, png: PIXELS },
+        { path: 'data/p_a.png', png: PIXELS },
+      ],
     })
 
     const whole = await snapshotDocuments(documents)
-    await rm(join(root, 'documents', 'Cover.ora', 'layer-1.png'))
+
+    /**
+     * Written by hand rather than by `packOpenRaster`, which refuses this shape now: the tree may
+     * only name entries the container holds. It is still what a truncated copy, a failed sync or
+     * another tool leaves on disk, and it is exactly the loss a file count cannot see.
+     */
+    await writeFile(
+      join(root, 'documents', 'Cover.ora'),
+      zipSync({
+        mimetype: [strToU8(ORA_MIMETYPE), { level: 0 }],
+        'stack.xml': strToU8(
+          `<?xml version='1.0' encoding='UTF-8'?>\n` +
+            `<image version="0.0.3" w="64" h="32"><stack>` +
+            `<layer name="Ink" x="0" y="0" opacity="1" visibility="visible" ` +
+            `composite-op="svg:src-over" src="data/p_a.png"/>` +
+            `</stack></image>\n`,
+        ),
+        'scenario/document.json': strToU8('{"layers":[]}'),
+      }),
+    )
 
     const stripped = await snapshotDocuments(documentFilesAt(root, NOW))
 
-    expect(whole[0]?.parts).toEqual([{ name: 'layer-1.png', data: 'iVBORw0KGgo=' }])
-    expect(stripped[0]?.content).toBe(whole[0]?.content)
+    expect(whole[0]?.parts).toEqual([
+      { path: 'data/p_a.png', bytes: PIXELS.byteLength },
+      { path: ORA_MERGED_PATH, bytes: PIXELS.byteLength },
+    ])
+    expect(JSON.parse(stripped[0]?.content ?? '')).toEqual(JSON.parse(whole[0]?.content ?? ''))
     expect(stripped[0]?.parts).toEqual([])
   })
 

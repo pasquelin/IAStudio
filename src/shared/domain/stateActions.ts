@@ -76,6 +76,42 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
+     * ⌘S on a NAMED document, awaited — which is what `command.run('document.save')` could not
+     * be. That route saves whatever tab is in front and answers before the write lands, so a
+     * client had no way to save a document it was not looking at, nor to know it was written.
+     *
+     * Answers `written: false` rather than refusing when there was nothing to write: an untouched
+     * tab is not a failure, and a client told `failed` would retry forever.
+     */
+    name: 'document.save',
+    titleKey: 'assistant.actions.documentSave.title',
+    descriptionKey: 'assistant.actions.documentSave.description',
+    commitment: 'files',
+    reach: 'mcp',
+    fields: [
+      { key: 'documentId', kind: 'text', labelKey: 'assistant.fields.documentId', required: false },
+    ],
+  }),
+  action({
+    /**
+     * Deletes the document's FILE and closes its tab. The one gesture of the studio that destroys
+     * work the user made, and the last of the five verbs an outside client had no way to reach.
+     *
+     * `asksItself` is deliberately NOT set: the tab menu's own route raises a native dialog, and
+     * this one must not — nobody on the other side of the machine can answer it, and the call
+     * would stand there for good. The assistant's own gate is what stands in front of this.
+     */
+    name: 'document.remove',
+    titleKey: 'assistant.actions.documentRemove.title',
+    descriptionKey: 'assistant.actions.documentRemove.description',
+    commitment: 'files',
+    reach: 'mcp',
+    fields: [
+      { key: 'documentId', kind: 'text', labelKey: 'assistant.fields.documentId', required: true },
+    ],
+  }),
+  action({
+    /**
      * The one export an outside client can ask for, and the reason it takes a FOLDER rather than a
      * path: every other export channel raises a native picker nobody outside can fill, and a path
      * a client chose freely is a write anywhere on the disk. Held inside the open project instead.

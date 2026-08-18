@@ -12,9 +12,18 @@ import {
   type DocumentKind,
 } from '@shared/domain/document'
 import { defaultSceneIndex, gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
+import { isMtlxDocument, MTLX_HEAD_LIMIT } from '@shared/domain/materialX'
 import { isOtioTimeline, otioStudioMetadata } from '@shared/domain/otio'
+import { ORA_HEAD_LIMIT, ORA_MIMETYPE } from '@shared/domain/openRaster'
 import { isRecord, readString } from '@shared/guards'
-import { parseDocumentEnvelope } from './validation'
+import { mtlxHeadIn, readMaterialX, writeMaterialX } from '@main/assets/materialXFile'
+import {
+  oraHeadIn,
+  packOpenRaster,
+  unpackOpenRaster,
+  type OraHead,
+} from '@main/assets/openRasterFile'
+import { parseDocumentEnvelope, parseOraStack } from './validation'
 
 /**
  * How a document's bytes are spelt. A kind of the studio's own is an envelope on its first line
@@ -22,11 +31,23 @@ import { parseDocumentEnvelope } from './validation'
  * envelope carries is read out of the standard's own metadata instead.
  */
 export type DocumentBodyFormat = {
-  read: (body: string) => DocumentFile
-  write: (document: DocumentFile) => string
+  read: (body: Buffer) => DocumentFile
+  /** A string where the format is text and bytes where it is a container — both go to `writeFile`. */
+  write: (document: DocumentFile) => string | Uint8Array
   /** What a listing needs, without reading the document under it when the format allows that. */
-  readHead: (file: string) => Promise<DocumentEnvelope>
+  readHead: (file: string) => Promise<DocumentHead>
 }
+
+/**
+ * What a head read answers with: the envelope, plus the body when the format has no short head
+ * and the whole file had to be read to find one.
+ *
+ * `content` is carried rather than dropped so that the caller who wanted the document — an open,
+ * a rename — reads the file once instead of twice. An `.otio` of 5 000 clips parses in 17 ms on
+ * the thread that owns every window; doing it a second time to answer the same question is the
+ * whole of what this field exists to stop.
+ */
+export type DocumentHead = DocumentEnvelope & { content?: string }
 
 /**
  * The field every envelope of the studio carries and no foreign JSON does — `documentEnvelope`
@@ -44,12 +65,13 @@ const ENVELOPE_MARK = '"kind":"'
  */
 const STUDIO_MARK = `"${STUDIO_METADATA_KEY}"`
 
-async function firstBytes(file: string): Promise<string> {
+/** The head of a file and no more of it — what keeps a listing from reading a project whole. */
+async function firstBytes(file: string, limit: number): Promise<Buffer> {
   const handle = await open(file, 'r')
   try {
-    const buffer = Buffer.alloc(ENVELOPE_LIMIT)
-    const { bytesRead } = await handle.read(buffer, 0, ENVELOPE_LIMIT, 0)
-    return buffer.toString('utf8', 0, bytesRead)
+    const buffer = Buffer.alloc(limit)
+    const { bytesRead } = await handle.read(buffer, 0, limit, 0)
+    return buffer.subarray(0, bytesRead)
   } finally {
     await handle.close()
   }
@@ -57,55 +79,118 @@ async function firstBytes(file: string): Promise<string> {
 
 /** The one every kind the studio invented is written in, and the one a listing reads short. */
 export const ENVELOPED: DocumentBodyFormat = {
-  read: envelopedDocument,
+  read: body => envelopedDocument(body.toString('utf8')),
   write: document => {
     const { content, ...envelope } = document
     return `${JSON.stringify(envelope)}\n${content}`
   },
   readHead: async file => {
-    const head = await firstBytes(file)
+    const head = (await firstBytes(file, ENVELOPE_LIMIT)).toString('utf8')
     const cut = head.indexOf('\n')
     if (cut !== -1) return parseDocumentEnvelope(JSON.parse(head.slice(0, cut)))
 
-    // Two of ours have no line to read short: a version 1 file is one object, content included,
-    // and a manifest whose first line held the base64 of every layer runs past this many bytes.
-    // Both are read whole. What is refused is a file that does not OPEN like one of ours — a
-    // kind wears the extension of an open format now, so a minified glTF exported into the
-    // project reaches here, and reading it whole on the thread that owns every window is a
-    // freeze at each listing rather than a slow one.
+    // One of ours has no line to read short: a version 1 file is one object, content included,
+    // and is read whole. What is refused is a file that does not OPEN like one of ours — a kind
+    // wears the extension of an open format now, so a minified glTF exported into the project
+    // reaches here, and reading it whole on the thread that owns every window is a freeze at
+    // each listing rather than a slow one.
     if (!head.includes(ENVELOPE_MARK)) throw new Error('No envelope where this file begins')
     return envelopedDocument(await readFile(file, 'utf8'))
   },
 }
 
 const OPEN_TIMELINE: DocumentBodyFormat = {
-  read: otioDocument,
+  read: body => otioDocument(body.toString('utf8')),
   write: otioBody,
   // No head of ours to read short: what an envelope carries is spread through the file, so the
-  // whole of it is read and parsed. `documents.bench.ts` is what says at which size that hurts.
+  // whole of it is read and parsed — and handed back whole, `DocumentHead.content` being what
+  // keeps an open from paying for that parse a second time.
   readHead: async file => otioDocument(await readFile(file, 'utf8')),
 }
 
 /**
- * The container the 3D scene and the sky share. Only the scene has the BYTES to match so far, so
- * this format holds two spellings and the FILE decides between them: a glTF document, or the
- * studio's envelope a sky still writes — and a scene written before the switch.
+ * A layered picture as OpenRaster holds it: a ZIP, and the studio's own state inside it.
+ *
+ * `content` is the STACK, as JSON — the tree another application reads out of `stack.xml`, plus
+ * the studio's serialized canvas under `studio`. The pixels never go through it: they are the
+ * draft's `parts`, and they reach the container as bytes.
+ *
+ * The head is the first `ORA_HEAD_LIMIT` bytes and nothing more. A container of ten 4K layers is
+ * a hundred megabytes; reading one per document at every listing is what this exists to refuse.
+ */
+const OPEN_RASTER: DocumentBodyFormat = {
+  read: body => {
+    const { stack, surfaces } = unpackOpenRaster(body)
+    return {
+      ...oraEnvelope(oraHeadIn(body)),
+      content: JSON.stringify(stack),
+      parts: surfaces,
+    }
+  },
+  write: document =>
+    packOpenRaster(
+      { stack: parseOraStack(JSON.parse(document.content)), surfaces: document.parts ?? [] },
+      // The content is the caller's; the envelope is the file layer's own, exactly as the first
+      // line of an enveloped document is. `parts` is left out for the same reason `content` is:
+      // they are the container's own entries, and naming them twice would let the two disagree.
+      JSON.stringify(envelopeOf(document)),
+    ),
+  readHead: async file => oraEnvelope(oraHeadIn(await firstBytes(file, ORA_HEAD_LIMIT))),
+}
+
+/**
+ * What a container says about itself. A picture written elsewhere carries no envelope of ours,
+ * and is a document all the same — known by its file name, exactly as one written before
+ * version 3 is.
+ *
+ * Bytes that are NOT a container are refused rather than read as an empty document: a `.ora` the
+ * user copied a scene into would otherwise be listed as an image, open as nothing, and be
+ * overwritten by the next ⌘S. The mimetype is what tells them apart, as the spec says to.
+ */
+function oraEnvelope({ mimetype, envelope }: OraHead): DocumentEnvelope {
+  if (mimetype !== ORA_MIMETYPE) throw new Error('Not an OpenRaster container')
+  if (!envelope) return { version: DOCUMENT_VERSION, kind: 'image', title: '', updatedAt: '' }
+  return parseDocumentEnvelope(JSON.parse(envelope))
+}
+
+/** What the file layer stamps into a container of its own, whichever standard the container is. */
+function envelopeOf({
+  version,
+  kind,
+  title,
+  updatedAt,
+  id,
+  sourceAssetId,
+}: DocumentFile): DocumentEnvelope {
+  return {
+    version,
+    kind,
+    title,
+    updatedAt,
+    ...(id ? { id } : {}),
+    ...(sourceAssetId ? { sourceAssetId } : {}),
+  }
+}
+
+/**
+ * The container the 3D scene and the sky share, and both write it as real glTF now. What tells
+ * the two apart is the file's own studio metadata and never the extension — and a `.gltf` a
+ * project held before the switch still opens, its envelope on a first line of ours.
  */
 const OPEN_SCENE: DocumentBodyFormat = {
-  read: sceneDocument,
-  // Parsed ONCE, and only for the kind that writes glTF: the parse is the price of stamping the
-  // title into the standard, and a sky would otherwise pay a whole one to learn it writes an
-  // envelope. `documents.bench.ts` is what says what that costs at fifty thousand nodes.
+  read: body => sceneDocument(body.toString('utf8')),
+  // Parsed ONCE: the parse is the price of stamping the title into the standard, and a document
+  // still written the studio's own way falls back rather than paying it at all.
   write: document => {
-    const parsed = document.kind === 'scene' ? jsonOrNull(document.content) : null
+    const parsed = jsonOrNull(document.content)
     return isGltfDocument(parsed) ? gltfBody(parsed, document) : ENVELOPED.write(document)
   },
   // Decided on the bounded head, never by catching a failure: a glTF is one JSON object and has no
-  // first line, where a sky's envelope has one. And a glTF with nothing of OURS in its head is a
-  // mesh somebody exported into the project — `.gltf` is an asset extension too — so it is turned
-  // away rather than read whole at every listing, which is the rule `ENVELOPE_MARK` states.
+  // first line, where an envelope of ours has one. And a glTF with nothing of OURS in its head is
+  // a mesh somebody exported into the project — `.gltf` is an asset extension too — so it is
+  // turned away rather than read whole at every listing, which is the rule `ENVELOPE_MARK` states.
   readHead: async file => {
-    const head = await firstBytes(file)
+    const head = (await firstBytes(file, ENVELOPE_LIMIT)).toString('utf8')
     const cut = head.indexOf('\n')
     // A first line that PARSES as an envelope, never a first line at all: an indented glTF has
     // one too — it reads `{` — and taking that as an envelope dropped every scene written before
@@ -122,9 +207,82 @@ const OPEN_SCENE: DocumentBodyFormat = {
   },
 }
 
+/**
+ * What the `scenariodocument` attribute carries — the same two fields a glTF stamps, and for the
+ * same reason: the title is the file's own name and the clock is the disk's, so neither is
+ * written where it could go stale.
+ */
+function mtlxStamp(envelope: string): { id: string; kind: string } {
+  const held = envelope ? jsonOrNull(envelope) : null
+  const studio = isRecord(held) ? held : {}
+  return {
+    id: readString(studio, DOCUMENT_ID_KEY, ''),
+    kind: readString(studio, DOCUMENT_KIND_KEY, ''),
+  }
+}
+
+function mtlxEnvelope(envelope: string): DocumentEnvelope {
+  const { id, kind } = mtlxStamp(envelope)
+  return {
+    version: DOCUMENT_VERSION,
+    kind: isDocumentKind(kind) ? kind : 'texture',
+    title: '',
+    updatedAt: '',
+    ...(id ? { id } : {}),
+  }
+}
+
+/**
+ * A material document, in whichever of the two spellings its file holds — the MaterialX is what
+ * the studio writes now, the envelope what a `.mtlx` written before the switch holds.
+ *
+ * Unlike the glTF kinds, the content is NOT the file's own text: the editor composes an
+ * `MtlxDocument`, and the XML is this layer's spelling of it, exactly as `stack.xml` is of a
+ * picture's stack.
+ */
+function materialDocument(body: string): DocumentFile {
+  const { version, envelope } = mtlxHeadIn(body)
+  if (!version) return envelopedDocument(body)
+
+  return { ...mtlxEnvelope(envelope), content: JSON.stringify(readMaterialX(body)) }
+}
+
+/**
+ * A material IS its MaterialX. The envelope rides on the root tag, which is the first line of the
+ * file whatever the state weighs — so unlike a glTF this format has a real head, and a listing
+ * never opens a material whole.
+ */
+const OPEN_MATERIALX: DocumentBodyFormat = {
+  read: body => materialDocument(body.toString('utf8')),
+  write: document => {
+    const parsed = jsonOrNull(document.content)
+    return isMtlxDocument(parsed)
+      ? writeMaterialX(parsed, JSON.stringify(studioStamp({}, document)))
+      : ENVELOPED.write(document)
+  },
+  readHead: async file => {
+    const head = (await firstBytes(file, MTLX_HEAD_LIMIT)).toString('utf8')
+    // A first line that PARSES as an envelope is a document written before the switch; a
+    // `<?xml` declaration is not one, so the two never answer for each other.
+    const cut = head.indexOf('\n')
+    const first = cut === -1 ? null : jsonOrNull(head.slice(0, cut))
+    if (isRecord(first)) return parseDocumentEnvelope(first)
+
+    const { version, envelope } = mtlxHeadIn(head)
+    if (!version) throw new Error('Not a MaterialX document')
+    // A `.mtlx` somebody put in the project carries no attribute of ours. Turned away rather than
+    // listed, which is the rule every open format here follows — `read` still rebuilds it.
+    if (!envelope) throw new Error('Nothing of the studio where this file begins')
+    return mtlxEnvelope(envelope)
+  },
+}
+
+// `.gltf` twice over — the scene and the sky wear the same extension, so one entry serves both.
 const FORMAT_BY_EXTENSION: Record<string, DocumentBodyFormat> = {
   [EXTENSIONS_BY_KIND.sequence]: OPEN_TIMELINE,
+  [EXTENSIONS_BY_KIND.image]: OPEN_RASTER,
   [EXTENSIONS_BY_KIND.scene]: OPEN_SCENE,
+  [EXTENSIONS_BY_KIND.texture]: OPEN_MATERIALX,
 }
 
 /** How a file of this extension is spelt — the studio's own envelope for anything unlisted. */

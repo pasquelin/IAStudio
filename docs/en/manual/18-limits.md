@@ -38,17 +38,52 @@ All six types write into the project folder and open back exactly as they were.
 | Edited sound | `.otio` | **yes** |
 | Sky | `.gltf` | **yes** |
 
-### Four of these extensions announce a format they do not hold yet
+### All six extensions announce the format they hold
 
-An `.otio` edit really **is** OpenTimelineIO: Resolve and Premiere read it.
+An `.otio` edit really **is** OpenTimelineIO: Resolve and Premiere read it. An `.ora` picture
+really **is** OpenRaster: an archive holding one PNG per layer, the stack in `stack.xml` and the
+flattened picture the specification requires — GIMP opens it layer by layer, with the names, the
+opacities, the blend modes and the groups. Measured both ways with GIMP 3.2.4.
 
-The other four are not. An `.ora`, a `.gltf` or an `.mtlx` written by the studio wears the name of
-the open format but still holds the studio's own internal shape — **no other application opens
-it**. The extension says where these documents are going, not what they are today. That is the
-work in progress, and it is the heaviest limit on this page.
+A `.gltf` sky really **is** glTF 2.0: the sun is a real directional light
+(`KHR_lights_punctual`), the horizon rotation a node transform, and the source picture a `.hdr` or
+`.exr` file **referenced beside it** rather than copied inside. A glTF reader opens the file and
+finds the light, its colour and its intensity.
 
-Until then, to take an image or a scene to another application, the **exports** are what count —
-**File ▸ Export scene** and its neighbours.
+A `.gltf` 3D scene is one too: the tree, the placements, the cameras and the punctual lights are
+the standard's own, and what glTF has no field for travels in the `extras` the specification
+reserves for applications.
+
+A `.mtlx` material is one as well: each channel is a `tiledimage` reading a file sitting beside
+the document, wired to the matching input of a `standard_surface`, and the tint, the tiling and
+the offset are the standard's own.
+
+**Two reservations, stated rather than left out.** Ambient occlusion and cavity do not fit:
+`standard_surface` has an input for neither. They are kept — the studio finds them again — but no
+other application sees them, and the same goes for UV rotation, which a `tiledimage` cannot
+carry. And this format's conformance was checked against the **text** of the MaterialX 1.39
+specification and against the files its distribution ships, **never against a rendering**: no
+MaterialX reader has opened these files.
+
+What the sky keeps beyond the standard — the exposure, contrast and temperature dials, the blur,
+the environment's intensity — travels inside the file at a place glTF reserves for applications.
+Another application does not lose it: it does not see it. Opening a sky written elsewhere
+therefore gives what the standard carries, and those dials at their neutral value.
+
+What an `.ora` from this studio keeps beyond the standard — adjustment layers, still-editable
+text, guides — travels inside the container under a name other applications ignore. They do not
+lose it: they do not see it.
+
+### A file enriched elsewhere opens read-only
+
+Open a studio scene in Blender, add a mesh, save it back: the file returns holding parts the
+studio does not compose. It opens, it draws — and **`⌘S` refuses to write**, saying why. This is
+not over-caution: a glTF is linked by **index**, so rewriting the scene from what the studio knows
+of it would delete those parts, and a half-rewritten file would open nowhere. The same refusal
+protects a sky holding a whole scene, and a `.mtlx` material holding more than one.
+
+To take your changes out anyway, use **File ▸ Export scene**: an export writes beside the file,
+leaving the original untouched.
 
 **What does not save:**
 

@@ -1,12 +1,15 @@
 import {
   isOraGroup,
+  isOraSurfacePath,
+  ORA_MERGED_PATH,
   type OraDocument,
   type OraNode,
-  type OraLayer,
+  type OraStack,
+  type OraSurface,
 } from '@shared/domain/openRaster'
-import { isPartName } from '@shared/domain/document'
+import { isRecord } from '@shared/guards'
 import type { LayerPixels } from './CanvasEngine'
-import { layerPixelName, layerPixelsNamed } from './layerPixelName'
+import { layerPixelPath, layerPixelsNamed } from './layerPixelPath'
 import {
   IDENTITY,
   BLEND_MODES,
@@ -23,10 +26,6 @@ import {
 
 const PLAIN = 'svg:src-over'
 
-/** Where a surface's bytes sit inside the container: the studio's own name, under `data/`. */
-const pathOf = (layerId: string, mask: boolean): string =>
-  `data/${layerPixelName({ layerId, mask, data: '' })}`
-
 const compositeOf = (blend: BlendMode): string => (blend === 'normal' ? PLAIN : `svg:${blend}`)
 
 function blendOf(composite: string): BlendMode {
@@ -34,7 +33,7 @@ function blendOf(composite: string): BlendMode {
   return BLEND_MODES.find(mode => mode === name) ?? 'normal'
 }
 
-function nodeOf(layer: Layer, pixels: Map<string, string>): OraNode | null {
+function nodeOf(layer: Layer, held: ReadonlySet<string>): OraNode | null {
   const shared = {
     name: layer.name,
     x: Math.round(layer.transform.x),
@@ -49,7 +48,7 @@ function nodeOf(layer: Layer, pixels: Map<string, string>): OraNode | null {
       ...shared,
       kind: 'group',
       isolation: layer.isolation === 'isolate' ? 'isolate' : 'auto',
-      children: nodesOf(layer.children, pixels),
+      children: nodesOf(layer.children, held),
     }
   }
 
@@ -57,79 +56,60 @@ function nodeOf(layer: Layer, pixels: Map<string, string>): OraNode | null {
   // for them: they ride in `studio` alone. The flatten already shows what they did.
   if (layer.kind !== 'pixel') return null
 
-  const src = pathOf(layer.id, false)
-  const png = pixels.get(src)
-  // A layer with no bytes is LEFT OUT rather than written empty, exactly as `capture` skips it:
-  // the container's writer refuses an empty payload, so one layer whose surface the engine has
-  // not built yet — a layer added seconds before ⌘S — would fail the whole save instead of
-  // costing itself. `studio` still carries it, so reopening finds it.
-  if (!png || !isPartName(src.slice('data/'.length))) return null
-
-  return { ...shared, kind: 'layer', src, png }
+  const src = layerPixelPath({ layerId: layer.id, mask: false })
+  // A layer with no bytes is LEFT OUT of the stack rather than named with nothing behind it —
+  // a layer added seconds before ⌘S, whose surface the engine has not built. `studio` still
+  // carries it, so reopening finds it.
+  return held.has(src) ? { ...shared, kind: 'layer', src } : null
 }
 
 /** Top first, undoing the studio's bottom-first order — the format writes a stack the other way. */
-function nodesOf(layers: readonly Layer[], pixels: Map<string, string>): OraNode[] {
+function nodesOf(layers: readonly Layer[], held: ReadonlySet<string>): OraNode[] {
   return [...layers]
     .reverse()
-    .map(layer => nodeOf(layer, pixels))
+    .map(layer => nodeOf(layer, held))
     .filter((node): node is OraNode => node !== null)
 }
 
-const layerPaths = (nodes: readonly OraNode[]): string[] =>
-  nodes.flatMap(node => (isOraGroup(node) ? layerPaths(node.children) : [node.src]))
+/**
+ * Every surface the container will hold: one per layer texture, one per mask, and the flatten.
+ *
+ * Held to `isOraSurfacePath` here rather than at the boundary that would refuse the whole save:
+ * one odd layer id must cost that layer's pixels, never the document.
+ */
+export function oraSurfacesOf(
+  pixels: readonly LayerPixels[],
+  merged: Uint8Array<ArrayBuffer>,
+): OraSurface[] {
+  const surfaces: OraSurface[] = [{ path: ORA_MERGED_PATH, png: merged }]
+  for (const one of pixels) {
+    const path = layerPixelPath(one)
+    if (isOraSurfacePath(path) && one.data.byteLength > 0) surfaces.push({ path, png: one.data })
+  }
+  return surfaces
+}
 
 /**
- * The document as OpenRaster holds it, plus what OpenRaster cannot.
+ * The stack as OpenRaster holds it, plus what OpenRaster cannot.
  *
  * `studio` carries the whole state verbatim rather than a diff of what the stack could not say:
  * reading it back is then one `deserializeCanvas`, and no rule has to be kept in step on two
  * sides. What the standard part is for is the OTHER reader — the one that will never know this
  * field exists.
- *
- * **Known blind spot:** this half round-trips against `canvasFromOra`, and `packOpenRaster`
- * round-trips against `unpackOpenRaster`, but nothing tests the two halves COMPOSED — the file
- * layer lives in the main process and this one in the window. What ties them is the `OraDocument`
- * type alone, so a path convention drifting inside one of them compiles and passes.
  */
-export function oraDocumentOf(
-  state: CanvasState,
-  pixels: readonly LayerPixels[],
-  merged: string,
-): OraDocument {
-  const byPath = new Map(pixels.map(one => [pathOf(one.layerId, one.mask), one.data]))
-  const nodes = nodesOf(state.layers, byPath)
-  const named = new Set(layerPaths(nodes))
-
+export function oraStackOf(state: CanvasState, surfaces: readonly OraSurface[]): OraStack {
   return {
     width: state.width,
     height: state.height,
-    nodes,
-    merged,
+    nodes: nodesOf(state.layers, new Set(surfaces.map(one => one.path))),
     studio: serializeCanvas(state),
-    // Held to the same two rules as a named layer, and for the same reason: one unwritable entry
-    // would be refused at the boundary, taking the whole save with it.
-    extras: Object.fromEntries(
-      [...byPath].filter(
-        ([path, png]) => !named.has(path) && png && isPartName(path.slice('data/'.length)),
-      ),
-    ),
   }
 }
 
-const pixelsFromPath = (path: string, data: string): LayerPixels | null =>
-  path.startsWith('data/') ? layerPixelsNamed(path.slice('data/'.length), data) : null
-
-function pixelsOf(document: OraDocument): LayerPixels[] {
-  const flat = (nodes: readonly OraNode[]): OraLayer[] =>
-    nodes.flatMap(node => (isOraGroup(node) ? flat(node.children) : [node]))
-
-  return [
-    ...flat(document.nodes).map((layer): [string, string] => [layer.src, layer.png]),
-    ...Object.entries(document.extras),
-  ]
-    .map(([path, data]) => pixelsFromPath(path, data))
-    .filter((one): one is LayerPixels => one !== null && one.data !== '')
+function pixelsOf(surfaces: readonly OraSurface[]): LayerPixels[] {
+  return surfaces
+    .map(one => layerPixelsNamed(one.path, one.png))
+    .filter((one): one is LayerPixels => one !== null && one.data.byteLength > 0)
 }
 
 /**
@@ -142,6 +122,7 @@ function pixelsOf(document: OraDocument): LayerPixels[] {
  */
 function layersFromNodes(
   nodes: readonly OraNode[],
+  pngOf: (src: string) => Uint8Array<ArrayBuffer> | undefined,
   found: LayerPixels[],
   at = { next: 0 },
 ): Layer[] {
@@ -159,14 +140,15 @@ function layersFromNodes(
       const group: GroupLayer = {
         ...shared,
         kind: 'group',
-        children: layersFromNodes(node.children, found, at),
+        children: layersFromNodes(node.children, pngOf, found, at),
         collapsed: false,
         isolation: node.isolation === 'isolate' ? 'isolate' : 'pass-through',
       }
       return group
     }
 
-    if (node.png) found.push({ layerId: shared.id, mask: false, data: node.png })
+    const png = pngOf(node.src)
+    if (png?.byteLength) found.push({ layerId: shared.id, mask: false, data: png })
     const pixel: PixelLayer = { ...shared, kind: 'pixel' }
     return pixel
   })
@@ -180,25 +162,67 @@ function layersFromNodes(
  * standard part — with everything the standard cannot say simply absent, rather than the file
  * being refused.
  */
-export function canvasFromOra(document: OraDocument): {
+export function canvasFromOra({ stack, surfaces }: OraDocument): {
   state: CanvasState
   pixels: LayerPixels[]
 } {
-  if (document.studio) {
-    return { state: deserializeCanvas(document.studio), pixels: pixelsOf(document) }
+  if (stack.studio) {
+    return { state: deserializeCanvas(stack.studio), pixels: pixelsOf(surfaces) }
   }
 
+  const byPath = new Map(surfaces.map(one => [one.path, one.png]))
   const pixels: LayerPixels[] = []
-  const layers = layersFromNodes(document.nodes, pixels)
+  const layers = layersFromNodes(stack.nodes, src => byPath.get(src), pixels)
 
   return {
     state: {
       ...deserializeCanvas('{}'),
-      width: document.width,
-      height: document.height,
+      width: stack.width,
+      height: stack.height,
       layers,
       activeLayerId: layers[layers.length - 1]?.id ?? null,
     },
     pixels,
   }
+}
+
+/**
+ * The same, from an image document's own `content` — which IS the stack, as JSON.
+ *
+ * A content that will not parse opens an EMPTY document rather than throwing into a mount effect
+ * that has nowhere to show it. The file layer validates this string on every write, so the only
+ * way here is a container repaired by hand.
+ */
+export function canvasFromOraContent(
+  content: string,
+  surfaces: readonly OraSurface[],
+): { state: CanvasState; pixels: LayerPixels[] } {
+  return canvasFromOra({ stack: oraStackFromContent(content) ?? EMPTY_STACK, surfaces })
+}
+
+/**
+ * The stack an image document's `content` IS, or `null` for a string that is not one.
+ *
+ * The caller decides what an unreadable one means, and the two callers disagree: opening shows an
+ * empty document, where baking into an asset must write nothing at all.
+ */
+export function oraStackFromContent(content: string): OraStack | null {
+  try {
+    const parsed: unknown = JSON.parse(content)
+    return isOraStack(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const EMPTY_STACK: OraStack = { width: 0, height: 0, nodes: [], studio: '' }
+
+function isOraStack(value: unknown): value is OraStack {
+  return (
+    isRecord(value) &&
+    typeof value.width === 'number' &&
+    typeof value.height === 'number' &&
+    Array.isArray(value.nodes) &&
+    typeof value.studio === 'string'
+  )
 }

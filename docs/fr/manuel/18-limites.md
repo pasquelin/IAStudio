@@ -39,17 +39,55 @@ Les six types s’écrivent dans le dossier du projet et se rouvrent tels quels.
 | Son édité | `.otio` | **oui** |
 | Ciel | `.gltf` | **oui** |
 
-### Quatre de ces extensions annoncent un format qu’elles ne contiennent pas encore
+### Les six extensions annoncent le format qu’elles contiennent
 
-Un montage `.otio` est **réellement** de l’OpenTimelineIO : Resolve et Premiere le lisent.
+Un montage `.otio` est **réellement** de l’OpenTimelineIO : Resolve et Premiere le lisent. Une
+image `.ora` est **réellement** de l’OpenRaster : c’est une archive, avec un PNG par calque, la
+pile dans `stack.xml` et l’aplat que la spécification exige — GIMP l’ouvre, calque par calque,
+avec les noms, les opacités, les modes de fusion et les groupes. Mesuré dans les deux sens avec
+GIMP 3.2.4.
 
-Les quatre autres, non. Un `.ora`, un `.gltf` ou un `.mtlx` écrit par le studio porte le nom du
-format ouvert mais contient encore la forme interne du studio — **aucune autre application ne
-l’ouvre**. L’extension dit vers quoi ces documents vont, pas ce qu’ils sont aujourd’hui. C’est le
-chantier en cours, et c’est la limite la plus lourde de cette liste.
+Un ciel `.gltf` est **réellement** du glTF 2.0 : le soleil y est une vraie lumière directionnelle
+(`KHR_lights_punctual`), la rotation d’horizon une transformation de nœud, et l’image source un
+fichier `.hdr` ou `.exr` **référencé à côté** plutôt que recopié dedans. Un lecteur glTF ouvre le
+fichier et retrouve la lumière, sa couleur et son intensité.
 
-En attendant, pour sortir une image ou une scène vers un autre logiciel, ce sont les **exports**
-qui font foi — **Fichier ▸ Exporter la scène** et ses voisines.
+Une scène 3D `.gltf` en est aussi : l’arbre, les placements, les caméras et les lumières
+ponctuelles sont ceux du standard, et ce que glTF n’a pas de champ pour voyage dans les `extras`
+que la spécification réserve aux applications.
+
+Une matière `.mtlx` en est également : chaque canal y est un `tiledimage` qui lit un fichier posé
+à côté du document, branché sur l’entrée correspondante d’un `standard_surface`, et la teinte, la
+répétition et le décalage sont ceux du standard.
+
+**Deux réserves, et elles sont dites plutôt que tues.** L’occlusion ambiante et la cavité ne
+rentrent pas : `standard_surface` n’a d’entrée ni pour l’une ni pour l’autre. Elles sont
+conservées — le studio les retrouve — mais aucun autre logiciel ne les voit, et c’est le cas
+aussi de la rotation des UV, qu’un `tiledimage` ne sait pas porter. Et la conformité de ce format
+a été vérifiée contre le **texte** de la spécification MaterialX 1.39 et contre les fichiers que
+sa distribution livre, **jamais contre un rendu** : aucun lecteur MaterialX n’a ouvert ces
+fichiers.
+
+Ce que le ciel garde en plus du standard — les réglages d’exposition, de contraste, de
+température, le flou, l’intensité de l’environnement — voyage dans le fichier à un endroit que
+glTF réserve aux applications. Un autre logiciel ne les perd pas : il ne les voit pas. Ouvrir un
+ciel écrit ailleurs donne donc ce que le standard porte, et ces réglages-là au neutre.
+
+Ce qu’un `.ora` du studio garde en plus du standard — les calques de réglage, le texte encore
+modifiable, les repères — voyage dans le conteneur sous un nom que les autres logiciels ignorent.
+Ils ne le perdent pas : ils ne le voient pas.
+
+### Un fichier enrichi ailleurs s’ouvre en lecture seule
+
+Ouvrez une scène du studio dans Blender, posez-y une maille, réenregistrez : le fichier revient
+avec des parties que le studio ne compose pas. Il s’ouvre, il s’affiche — et **`⌘S` refuse
+d’écrire**, avec la raison en clair. Ce n’est pas une précaution excessive : un glTF est lié par
+**index**, donc réécrire la scène depuis ce que le studio en connaît supprimerait ces parties, et
+un fichier à demi réécrit ne s’ouvrirait nulle part. Le même refus protège un ciel qui contient
+une scène entière, et une matière `.mtlx` qui en contient plus d’une.
+
+Pour sortir malgré tout ce que vous avez modifié, passez par **Fichier ▸ Exporter la scène** :
+l’export écrit à côté, sans toucher au fichier d’origine.
 
 **Ce qui ne s’enregistre pas :**
 

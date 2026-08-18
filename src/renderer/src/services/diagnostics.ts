@@ -35,6 +35,9 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   // ⌘S again: pressed a second time precisely because the first left the source file alone, and
   // a refusal said once reads as a save that worked.
   'canvas.flatten',
+  // Picking an edit from the Image menu is a gesture too, and it was the one refusal of that menu
+  // that said nothing at all — the caller swallowed everything it threw.
+  'canvas.edit',
   // ⌘S is a gesture, and the half that reaches the asset can fail while the document is written.
   'assets.save',
   // ⇧⌘S is the same kind of gesture: asked again precisely because the first said nothing.

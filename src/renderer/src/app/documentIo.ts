@@ -1,18 +1,21 @@
 import type { Asset } from '@shared/domain/asset'
 import {
-  isPartName,
   DOCUMENT_KIND_KEY,
   type CloseChoice,
   type DocumentDescriptor,
   type DocumentDraft,
   type DocumentKind,
-  type DocumentPart,
 } from '@shared/domain/document'
+import { ORA_MERGED_PATH, type OraSurface } from '@shared/domain/openRaster'
 import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import { chainsOnMontage, parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
-import { gltfDocumentOf, sceneFromGltf } from '@/engines/scene/gltfDocument'
-import { parseSkybox } from '@/engines/skybox/skyboxState'
+import {
+  forgetCarriedScene,
+  sceneFromPayloadFile,
+  scenePayloadOf,
+  sceneRefusesToSave,
+} from './sceneDocument'
 import {
   EMPTY_SEQUENCE,
   EMPTY_SOUND_SEQUENCE,
@@ -26,8 +29,14 @@ import {
   type WritableFormat,
 } from '@shared/domain/formatCapability'
 import { traitsOfCanvas } from '@/engines/canvas/canvasTraits'
-import { layerPixelName, layerPixelsNamed } from '@/engines/canvas/layerPixelName'
-import { oraDocumentOf } from '@/engines/canvas/oraDocument'
+import {
+  canvasFromOra,
+  canvasFromOraContent,
+  oraStackFromContent,
+  oraStackOf,
+  oraSurfacesOf,
+} from '@/engines/canvas/oraDocument'
+import { bytesToBase64 } from '@/helpers/base64'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
 import { reportFailure, reportNotice } from '@/services/diagnostics'
@@ -40,6 +49,13 @@ import {
   sequencePayload,
   serializeSequencePayload,
 } from './sequenceDocument'
+import {
+  forgetCarriedSky,
+  serializeSkyboxPayload,
+  skyboxFromPayload,
+  skyboxPayload,
+  skyRefusesToSave,
+} from './skyboxDocument'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audioEdits'
@@ -47,11 +63,16 @@ import { sceneStore } from '@/stores/scenes'
 import { sequenceStore } from '@/stores/sequences'
 import { skyboxStore } from '@/stores/skyboxes'
 import type { DocumentStore } from '@/stores/documentStore'
-import { DEFAULT_CANVAS, deserializeCanvas, serializeCanvas } from '@/engines/canvas/canvasState'
-import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
+import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
 import { canvasHost } from '@/spaces/image/canvasHosts'
 import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
-import { newTexture, parseTexture } from '@/engines/texture/textureState'
+import { newTexture } from '@/engines/texture/textureState'
+import {
+  forgetCarriedMaterial,
+  materialRefusesToSave,
+  textureFromPayload,
+  texturePayload,
+} from './textureDocument'
 import { useSkyboxViews } from '@/stores/skyboxViews'
 import { useTextureViews } from '@/stores/textureViews'
 import { textureStore } from '@/stores/textures'
@@ -104,7 +125,7 @@ type DocumentIo = AssetWriting & {
   capture: (
     documentId: string,
   ) => Promise<{ draft: CapturedDraft; commit: () => void; wasEdited: boolean }>
-  install: (documentId: string, content: string, parts?: readonly DocumentPart[]) => void
+  install: (documentId: string, content: string, parts?: readonly OraSurface[]) => void
   /**
    * Hands a FRESH engine the pixels the document already has on disk, leaving the state alone.
    *
@@ -116,7 +137,7 @@ type DocumentIo = AssetWriting & {
    * their asset — and once ⌘S writes the flattened stack into that asset, redrawing from it
    * folds the whole picture into the one layer it came from.
    */
-  rehydrate?: (documentId: string, parts: readonly DocumentPart[]) => void
+  rehydrate?: (documentId: string, content: string, parts: readonly OraSurface[]) => void
   /**
    * The same, for a tab whose pixels are still in the ASSET it was opened from — a container
    * opened and not yet saved has no document file to read them out of.
@@ -134,13 +155,17 @@ type DocumentIo = AssetWriting & {
   /** Whether the document is already filled — a remount must not read over what is open. */
   holds: (documentId: string) => boolean
   /**
-   * Whether what opened holds LESS than the file did — a montage whose media the project has
-   * none of, and whose clips were therefore dropped. Absent means the kind cannot open partly.
+   * The sentence to refuse a save with, or `null` — for a document that opened holding LESS than
+   * its file did: a montage whose media the project has none of, a sky whose glTF holds a scene.
+   * Absent means the kind cannot open partly.
+   *
+   * The SENTENCE rather than a yes: what to import, and what would be erased, differ per kind, and
+   * one message for both told the owner of a sky to go and find some missing clips.
    *
    * Writing one back deletes what could not be read, and nothing on screen says so: `install`
    * marks the document clean whatever it managed to restore.
    */
-  incomplete?: (documentId: string) => boolean
+  incomplete?: (documentId: string) => string | null
   /** Whether closing the document would throw work away — never true for an untouched tab. */
   dirty: (documentId: string) => boolean
   /** Drops the state and the history a closed document was holding. */
@@ -169,8 +194,16 @@ type AssetWriting =
        *
        * Answers `null` when there was nothing to bake yet — an engine whose GPU context is
        * still coming up, which is exactly when a save right after switching workspace lands.
+       *
+       * `captured` is the draft the document was written from, and it is handed over rather than
+       * taken again: an image's bytes come off the graphics card, and asking twice per ⌘S doubles
+       * a freeze that grows with the stack.
        */
-      writeAsset: (documentId: string, target: AssetTarget) => Promise<Asset | null>
+      writeAsset: (
+        documentId: string,
+        target: AssetTarget,
+        captured: CapturedDraft,
+      ) => Promise<Asset | null>
       /** What this document holds that the target format has to carry, measured on its state. */
       traitsOf: (documentId: string) => CapabilityTrait[]
     }
@@ -231,9 +264,6 @@ function textDocumentIo<S>(
     forget: documentId => store.use.getState().drop(documentId),
   }
 }
-
-/** A state that is already the payload — most kinds store what they serialize. */
-const asIs = <S>(state: S): unknown => state
 
 /**
  * The key the chain of effects travels under, inside the studio domain of a take's timeline. No
@@ -348,20 +378,47 @@ const AUDIO_IO: DocumentIo = {
 }
 
 /**
- * The name `layerPixelName` gives, once it is known to be a file name a document folder accepts.
+ * The stack, into the asset it was opened from — out of the capture ⌘S already paid for.
  *
- * `null` for an id that could not be one. Ids are UUIDs today, but `reviveLayer` takes whatever a
- * file holds, and one odd id must cost that layer's pixels — never the whole save.
+ * Nothing is asked of the engine here, and that is the point: reading a layer's texture back off
+ * the card is a synchronous `gl.readPixels`, and this half of the gesture wants the very bytes the
+ * other half has just written. It is also what keeps the two from disagreeing — a stroke landing
+ * while the document is on its way to disk would otherwise reach the asset and not the file.
+ *
+ * `null` for a stack that will not parse: the asset is replaced whole, so writing an empty one
+ * would destroy the picture in the file it names.
  */
-function partName(pixels: LayerPixels): string | null {
-  const name = layerPixelName(pixels)
-  return isPartName(name) ? name : null
+async function layeredAsset(
+  captured: CapturedDraft,
+  target: AssetTarget,
+  bridge: StudioBridge,
+): Promise<Asset | null> {
+  const stack = oraStackFromContent(captured.content)
+  if (!stack) return null
+
+  return await bridge.assets.saveLayered({
+    ...target,
+    document: { stack, surfaces: captured.parts ?? [] },
+  })
+}
+
+/** The flatten alone, for a format that holds no layers. Base64, as `savePicture` takes it. */
+async function flatAsset(
+  captured: CapturedDraft,
+  target: AssetTarget,
+  bridge: StudioBridge,
+): Promise<Asset | null> {
+  // The same entry every other application draws of a container, taken from the capture rather
+  // than flattened a second time — `snapshot()` IS `flatten()` with a base64 pass after it.
+  const merged = captured.parts?.find(one => one.path === ORA_MERGED_PATH)
+  if (!merged) return null
+  return await bridge.assets.savePicture({ ...target, png: bytesToBase64(merged.png) })
 }
 
 /**
- * The image, which is the one kind a string cannot hold: the stack goes in the manifest, and each
- * layer's texture in a PNG beside it. The pixels live on the GPU, so they are asked of the engine
- * holding the document — see `canvasHost`.
+ * The image, which is the one kind a string cannot hold: its file IS an OpenRaster container —
+ * `content` is the stack as JSON, and each surface a PNG entry beside it. The pixels live on the
+ * GPU, so they are asked of the engine holding the document — see `canvasHost`.
  */
 const IMAGE_IO: DocumentIo = {
   /**
@@ -376,24 +433,26 @@ const IMAGE_IO: DocumentIo = {
     // edit made while the pixels are being extracted must not be counted as saved.
     const mark = canvasStore.markOf(canvases, documentId)
     const wasEdited = canvasStore.hasUnsavedWork(canvases, documentId)
-    const content = serializeCanvas(canvasOf(canvases, documentId))
+    const state = canvasOf(canvases, documentId)
 
     const host = canvasHost(documentId)
-    // Refused rather than written empty. A folder is replaced whole, so a save with no pictures
-    // would delete the ones on disk AND mark the document clean — the work would be gone with
-    // nothing said. The engine is unreachable while it boots its GPU context, which is exactly
-    // when a ⌘S after switching workspace lands.
+    // Refused rather than written empty. The container is replaced whole, so a save with no
+    // pictures would delete the ones on disk AND mark the document clean — the work would be
+    // gone with nothing said. The engine is unreachable while it boots its GPU context, which is
+    // exactly when a ⌘S after switching workspace lands.
     if (!host) throw new Error(`No editor holds ${documentId}: its pixels cannot be read`)
 
-    const taken = await host.pixelSnapshots()
-    const parts: DocumentPart[] = []
-    for (const pixels of taken) {
-      const name = partName(pixels)
-      if (name) parts.push({ name, data: pixels.data })
-    }
+    // The flatten is what every OTHER application draws of this file, and the spec requires it.
+    // Refused for the same reason as the engine: a container without one opens as nothing, with
+    // the layers inside it intact and unreachable.
+    const merged = await host.flatten()
+    if (!merged)
+      throw new Error(`No flatten for ${documentId}: the container would open as nothing`)
+
+    const parts = oraSurfacesOf(await host.pixelSnapshots(), merged)
 
     return {
-      draft: { content, parts },
+      draft: { content: JSON.stringify(oraStackOf(state, parts)), parts },
       commit: () => useCanvases.getState().markSaved(documentId, mark),
       wasEdited,
     }
@@ -401,20 +460,22 @@ const IMAGE_IO: DocumentIo = {
   install: (documentId, content, parts = []) => {
     const canvases = useCanvases.getState()
     // `replace`, not a command: loading a document is not something ⌘Z gives back.
-    canvases.replace(documentId, deserializeCanvas(content))
+    canvases.replace(documentId, canvasFromOraContent(content, parts).state)
     canvases.markSaved(documentId, canvasStore.markOf(useCanvases.getState(), documentId))
 
     // After the state, never before: the engine builds a surface per layer of the state it was
     // given, and pixels aimed at a layer it has not heard of yet land nowhere.
-    IMAGE_IO.rehydrate?.(documentId, parts)
+    IMAGE_IO.rehydrate?.(documentId, content, parts)
   },
-  rehydrate: (documentId, parts) => {
+  rehydrate: (documentId, content, parts) => {
     const host = canvasHost(documentId)
     if (!host) return
-    for (const part of parts) {
-      const pixels = layerPixelsNamed(part.name, part.data)
+    // Through the stack rather than by name alone: a container written elsewhere names its
+    // surfaces its own way, and only the stack says which layer each belongs to. The ids it
+    // invents are positional, so the same file gives the same ones the state was built with.
+    for (const pixels of canvasFromOraContent(content, parts).pixels) {
       // Nothing is rethrown into a mount effect that has nowhere to show it — see `restoreDocument`.
-      if (pixels) void host.restoreSnapshot(pixels).catch(() => undefined)
+      void host.restoreSnapshot(pixels).catch(() => undefined)
     }
   },
   /**
@@ -427,12 +488,11 @@ const IMAGE_IO: DocumentIo = {
     const layered = host ? await getBridge()?.assets.readLayered(assetId) : null
     if (!host || !layered) return
 
-    const { canvasFromOra } = await import('@/engines/canvas/oraDocument')
     for (const pixels of canvasFromOra(layered).pixels) {
       void host.restoreSnapshot(pixels).catch(() => undefined)
     }
   },
-  writeAsset: async (documentId, target) => {
+  writeAsset: async (documentId, target, captured) => {
     const bridge = getBridge()
     const host = canvasHost(documentId)
     if (!bridge || !host) return null
@@ -462,20 +522,10 @@ const IMAGE_IO: DocumentIo = {
 
     // `null` while the engine boots its GPU context, which is exactly when a ⌘S after switching
     // workspace lands. The document is still written; only the asset waits for the next save.
-    const png = await host.snapshot()
-    if (!png) return null
-
-    const written =
-      target.format === 'ora'
-        ? await bridge.assets.saveLayered({
-            ...target,
-            document: oraDocumentOf(
-              canvasOf(useCanvases.getState(), documentId),
-              await host.pixelSnapshots(),
-              png,
-            ),
-          })
-        : await bridge.assets.savePicture({ ...target, png })
+    const written = await (target.format === 'ora'
+      ? layeredAsset(captured, target, bridge)
+      : flatAsset(captured, target, bridge))
+    if (!written) return null
     // After the write, and only for an overwrite: the id did not move, so the loader would keep
     // answering with the picture it cached before this save.
     if (target.replaces) await host.forgetPicture(target.replaces)
@@ -496,11 +546,21 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   image: IMAGE_IO,
   // No `writeAsset`, and the reason is the kind itself: a scene is not a mesh — the asset it was
   // opened from is one node of it.
-  scene: textDocumentIo(sceneStore, {
-    toPayload: (state, documentId) => gltfDocumentOf(state, { documentId, documentKind: 'scene' }),
-    fromPayload: sceneFromGltf,
-    createDefault: createDefaultScene,
-  }),
+  scene: {
+    ...textDocumentIo(sceneStore, {
+      toPayload: scenePayloadOf,
+      fromPayload: sceneFromPayloadFile,
+      createDefault: createDefaultScene,
+    }),
+    // A scene the studio wrote and Blender then enriched still LISTS — its extras are ours — and
+    // a save recomposes the whole document from the state. glTF links by INDEX, so the meshes and
+    // buffers it gained cannot be carried across half way. Refused rather than silently dropped.
+    incomplete: sceneRefusesToSave,
+    forget: documentId => {
+      sceneStore.use.getState().drop(documentId)
+      forgetCarriedScene(documentId)
+    },
+  },
   // Nor here: rendering a montage is minutes of work, which has no business on a keystroke.
   sequence: {
     ...textDocumentIo(sequenceStore, {
@@ -522,18 +582,43 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   audio: AUDIO_IO,
   // Nor here: `adjustments` are applied over a source left intact, and baking them into it would
   // destroy the only copy of what they are meant to stay undoable against.
-  skybox: textDocumentIo(skyboxStore, {
-    toPayload: asIs,
-    fromPayload: parseSkybox,
-    createDefault: createSkyboxContent,
-  }),
-  // The one whose absence is NOT a refusal: a channel is a reference, not pixels, and what does
-  // produce pixels — `deriveChannel` — already writes them as an asset when it derives them.
-  texture: textDocumentIo(textureStore, {
-    toPayload: asIs,
-    fromPayload: parseTexture,
-    createDefault: newTexture,
-  }),
+  // A sky IS its glTF: the sun is a `KHR_lights_punctual` light, the horizon a node rotation, and
+  // the picture a file referenced beside the document rather than an id no other reader resolves.
+  skybox: {
+    ...textDocumentIo(skyboxStore, {
+      toPayload: skyboxPayload,
+      fromPayload: skyboxFromPayload,
+      createDefault: createSkyboxContent,
+      serialize: serializeSkyboxPayload,
+    }),
+    // glTF is an index-linked graph: a file holding a mesh or a camera cannot be half rewritten,
+    // and the nodes are recomposed from two. Refused rather than flattened.
+    incomplete: skyRefusesToSave,
+    forget: documentId => {
+      skyboxStore.use.getState().drop(documentId)
+      // Dropped with the document, so a reopened id never inherits the link another file carried.
+      forgetCarriedSky(documentId)
+    },
+  },
+  // A material IS its MaterialX: each channel is a `tiledimage` reading a file beside the
+  // document, and the dials the standard has no input for ride in the attribute it reserves for
+  // applications. The one whose absence is NOT a refusal: a channel is a reference, not pixels,
+  // and what does produce pixels — `deriveChannel` — already writes them as an asset.
+  texture: {
+    ...textDocumentIo(textureStore, {
+      toPayload: texturePayload,
+      fromPayload: textureFromPayload,
+      createDefault: newTexture,
+    }),
+    // One material is rewritten from one state: a file holding a second one, or a look, cannot be
+    // half rewritten. Refused rather than flattened, exactly as a sky holding a scene is.
+    incomplete: materialRefusesToSave,
+    forget: documentId => {
+      textureStore.use.getState().drop(documentId)
+      // Dropped with the document, so a reopened id never inherits the paths another file carried.
+      forgetCarriedMaterial(documentId)
+    },
+  },
 }
 
 /** `undefined` for an id no tab is showing — never for a kind that cannot be saved. */
@@ -581,8 +666,9 @@ function savableDocument(
 
   // Said, not swallowed: this refusal answers a KEYSTROKE, and a ⌘S that writes nothing without
   // a word is indistinguishable from one that worked.
-  if (io.incomplete?.(documentId)) {
-    reportNotice('document.save', i18next.t('documents.saveRefusedIncomplete'))
+  const refusal = io.incomplete?.(documentId)
+  if (refusal) {
+    reportNotice('document.save', refusal)
     return null
   }
 
@@ -640,7 +726,7 @@ export async function saveDocument(documentId: string, byHand = true): Promise<b
    */
   if (!byHand) return true
 
-  await rewriteSourceAsset(document, io, wasEdited)
+  await rewriteSourceAsset(document, io, wasEdited, draft)
   // The folder now holds a file it did not: a document saved for the first time has to appear
   // in the Explorer without waiting for the panel to be reopened.
   void useDocuments.getState().relist('own-write')
@@ -686,6 +772,7 @@ async function rewriteSourceAsset(
   document: DocumentDescriptor,
   io: DocumentIo,
   wasEdited: boolean,
+  captured: CapturedDraft,
 ): Promise<void> {
   const source = document.sourceAssetId
   if (!source || !io.writeAsset) return
@@ -704,11 +791,11 @@ async function rewriteSourceAsset(
   }
 
   try {
-    const written = await io.writeAsset(document.id, {
-      replaces: source,
-      name: document.title,
-      format,
-    })
+    const written = await io.writeAsset(
+      document.id,
+      { replaces: source, name: document.title, format },
+      captured,
+    )
     // `null` is "nothing to bake yet" — an engine still bringing its GPU context up, which is
     // exactly when a ⌘S after switching workspace lands. Not a success, and not silent either:
     // treated as such it left every consumer of the asset on the pre-edit picture for good.
@@ -766,11 +853,15 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
   const { format, losses } = writePlanFor(document, io, source)
 
   try {
-    const copy = await io.writeAsset(documentId, {
-      derivedFrom: source,
-      name,
-      format: losses.length === 0 ? format : 'ora',
-    })
+    // ONE capture for both, and it comes first: the copy and the document it belongs to have to be
+    // the same picture, and an image's bytes come off the graphics card — asking twice doubles the
+    // freeze AND lets a stroke made in between land in one of the two and not the other.
+    const { draft } = await io.capture(documentId)
+    const copy = await io.writeAsset(
+      documentId,
+      { derivedFrom: source, name, format: losses.length === 0 ? format : 'ora' },
+      draft,
+    )
     if (!copy) {
       reportFailure('assets.copy', document.title, new Error('nothing to bake yet'))
       return false
@@ -778,7 +869,6 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
 
     // The document SECOND, and pointed at the copy: the tab carries on with the new asset, and
     // the one that was open keeps whatever the last ⌘S left on it.
-    const { draft } = await io.capture(documentId)
     const created = await useDocuments
       .getState()
       .create(document.workspace, { title: name, sourceAssetId: copy.id })
@@ -905,7 +995,7 @@ export async function rehydrateDocument(documentId: string): Promise<void> {
 
   try {
     const file = await bridge.documents.read(document.id, document.kind)
-    if (file?.parts?.length) return io.rehydrate(documentId, file.parts)
+    if (file?.parts?.length) return io.rehydrate(documentId, file.content, file.parts)
 
     // No file of its own yet — a tab opened from a container and never saved. Its pixels are
     // still where they were read from, and only the container holds them layer by layer.
@@ -1061,7 +1151,20 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   const document = useDocuments.getState().documents[documentId]
   if (!bridge || !document) return false
 
-  if (!(await bridge.documents.confirmDelete(document.title))) return false
+  return (await bridge.documents.confirmDelete(document.title)) && dropDocument(documentId)
+}
+
+/**
+ * The same removal with no question asked — for a caller that has already been answered.
+ *
+ * The assistant is that caller: its own gate stands in front of every `files` action, and it can
+ * be delegated. A native dialog behind that gate would ask twice, and an MCP client on the other
+ * side of the machine cannot answer the second one — the call would simply stand there.
+ */
+export async function dropDocument(documentId: string): Promise<boolean> {
+  const bridge = getBridge()
+  const document = useDocuments.getState().documents[documentId]
+  if (!bridge || !document) return false
 
   await bridge.documents.remove(document.id, document.kind)
   forgetDocument(documentId)

@@ -15,7 +15,14 @@ vi.mock('@/app/dockviewApi', () => ({ openDocument, showWorkspace: vi.fn() }))
 
 const closeDocument = vi.hoisted(() => vi.fn(async () => true))
 const documentIsDirty = vi.hoisted(() => vi.fn(() => false))
-vi.mock('@/app/documentIo', () => ({ closeDocument, documentIsDirty }))
+const saveDocument = vi.hoisted(() => vi.fn(async () => true))
+const dropDocument = vi.hoisted(() => vi.fn(async () => true))
+vi.mock('@/app/documentIo', () => ({
+  closeDocument,
+  documentIsDirty,
+  saveDocument,
+  dropDocument,
+}))
 
 const WHEN = '2026-08-17T10:00:00.000Z'
 
@@ -32,6 +39,10 @@ beforeEach(() => {
   openDocument.mockClear()
   closeDocument.mockClear()
   closeDocument.mockResolvedValue(true)
+  saveDocument.mockClear()
+  saveDocument.mockResolvedValue(true)
+  dropDocument.mockClear()
+  dropDocument.mockResolvedValue(true)
   documentIsDirty.mockReturnValue(false)
   useProject.setState({
     project: {
@@ -229,6 +240,7 @@ describe('exporting the document in front', () => {
     holdCanvas('doc-b', () => ({
       pixelSnapshots: async () => [],
       restoreSnapshot: async () => {},
+      flatten: async () => new Uint8Array(0),
       snapshot: async () => PIXEL,
       forgetPicture: async () => {},
     }))
@@ -335,5 +347,99 @@ describe('exporting the document in front', () => {
     installDocuments({}, '')
 
     expect(await runAction('document.export', {})).toEqual({ ok: false, refusal: 'wrongSurface' })
+  })
+})
+
+/**
+ * The two verbs an outside client had no way to reach. Creating one was already possible
+ * (`workspace.open` with `createDocument`), and so was trashing a file (`files.trash`) — what was
+ * missing is a save it can WAIT on, and a delete at all.
+ */
+describe('saving a document from outside the window', () => {
+  it('saves the document it names, and says whether anything was written', async () => {
+    installDocuments({ 'doc-a': '3d', 'doc-b': 'image' }, 'doc-b')
+
+    expect(await runAction('document.save', { documentId: 'doc-a' })).toEqual({
+      ok: true,
+      data: { written: true },
+    })
+    expect(saveDocument).toHaveBeenCalledWith('doc-a')
+  })
+
+  // `command.run('document.save')` could only ever reach the tab in front, and answered before
+  // the write landed. Naming one is the whole point of this action.
+  it('falls back on the document in front when none is named', async () => {
+    installDocuments({ 'doc-a': '3d', 'doc-b': 'image' }, 'doc-b')
+
+    await runAction('document.save', {})
+
+    expect(saveDocument).toHaveBeenCalledWith('doc-b')
+  })
+
+  // An untouched tab has nothing to write. A client told `failed` would retry it for ever.
+  it('answers that nothing was written rather than refusing', async () => {
+    installDocuments({ 'doc-a': '3d' }, 'doc-a')
+    saveDocument.mockResolvedValue(false)
+
+    expect(await runAction('document.save', {})).toEqual({ ok: true, data: { written: false } })
+  })
+
+  it('refuses for a document no tab holds', async () => {
+    installDocuments({ 'doc-a': '3d' }, 'doc-a')
+
+    expect(await runAction('document.save', { documentId: 'ghost' })).toEqual({
+      ok: false,
+      refusal: 'notFound',
+    })
+    expect(saveDocument).not.toHaveBeenCalled()
+  })
+
+  /**
+   * An image whose engine is still booting its GPU context throws rather than writing a container
+   * with no pixels. Across this boundary that has to be a refusal, and the same one an export
+   * gives for the same cause.
+   */
+  it('refuses rather than throwing when the editor cannot hand its pixels over', async () => {
+    installDocuments({ 'doc-b': 'image' }, 'doc-b')
+    saveDocument.mockRejectedValue(new Error('its pixels cannot be read'))
+
+    expect(await runAction('document.save', {})).toEqual({
+      ok: false,
+      refusal: 'notRenderable',
+    })
+  })
+})
+
+describe('deleting a document from outside the window', () => {
+  /**
+   * `dropDocument` and not `deleteDocument`: the tab menu's route raises a NATIVE dialog, which
+   * nobody on the other side of the machine can answer — the call would stand there for good.
+   * The assistant's own gate is what stands in front of this one.
+   */
+  it('deletes without raising a dialog nobody can answer', async () => {
+    installDocuments({ 'doc-a': '3d' }, 'doc-a')
+
+    expect(await runAction('document.remove', { documentId: 'doc-a' })).toEqual({ ok: true })
+    expect(dropDocument).toHaveBeenCalledWith('doc-a')
+  })
+
+  it('refuses for a document no tab holds', async () => {
+    installDocuments({ 'doc-a': '3d' }, 'doc-a')
+
+    expect(await runAction('document.remove', { documentId: 'ghost' })).toEqual({
+      ok: false,
+      refusal: 'notFound',
+    })
+    expect(dropDocument).not.toHaveBeenCalled()
+  })
+
+  it('says it did not go through rather than reporting a deletion that never happened', async () => {
+    installDocuments({ 'doc-a': '3d' }, 'doc-a')
+    dropDocument.mockResolvedValue(false)
+
+    expect(await runAction('document.remove', { documentId: 'doc-a' })).toEqual({
+      ok: false,
+      refusal: 'failed',
+    })
   })
 })

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import type { OraDocument } from '@shared/domain/openRaster'
+import type { OraDocument, OraLayer } from '@shared/domain/openRaster'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -168,36 +168,31 @@ describe('making a document be the asset', () => {
 describe('opening an asset that holds a whole stack', () => {
   const measuring = (width: number, height: number) => () => Promise.resolve({ width, height })
 
+  const PNG = Uint8Array.from([137, 80, 78, 71])
+
+  const layer = (name: string, src: string): OraLayer => ({
+    kind: 'layer',
+    name,
+    src,
+    x: 0,
+    y: 0,
+    opacity: 1,
+    visible: true,
+    composite: 'svg:src-over',
+  })
+
   const container: OraDocument = {
-    width: 800,
-    height: 600,
-    nodes: [
-      {
-        kind: 'layer',
-        name: 'Ink',
-        src: 'data/p_ink.png',
-        x: 0,
-        y: 0,
-        opacity: 1,
-        visible: true,
-        composite: 'svg:src-over',
-        png: 'iVBORw0KGgo=',
-      },
-      {
-        kind: 'layer',
-        name: 'Paper',
-        src: 'data/p_paper.png',
-        x: 0,
-        y: 0,
-        opacity: 1,
-        visible: true,
-        composite: 'svg:src-over',
-        png: 'iVBORw0KGgo=',
-      },
+    stack: {
+      width: 800,
+      height: 600,
+      nodes: [layer('Ink', 'data/p_ink.png'), layer('Paper', 'data/p_paper.png')],
+      studio: '',
+    },
+    surfaces: [
+      { path: 'mergedimage.png', png: PNG },
+      { path: 'data/p_ink.png', png: PNG },
+      { path: 'data/p_paper.png', png: PNG },
     ],
-    merged: 'iVBORw0KGgo=',
-    studio: '',
-    extras: {},
   }
 
   /**

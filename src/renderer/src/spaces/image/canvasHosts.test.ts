@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { canvasHost, holdCanvas, type CanvasHost } from './canvasHosts'
 
 const engine = (label: string): CanvasHost => ({
-  pixelSnapshots: () => Promise.resolve([{ layerId: label, mask: false, data: '' }]),
+  pixelSnapshots: () => Promise.resolve([{ layerId: label, mask: false, data: new Uint8Array(0) }]),
   restoreSnapshot: () => Promise.resolve(),
+  flatten: () => Promise.resolve(new Uint8Array(0)),
   snapshot: () => Promise.resolve(label),
   forgetPicture: () => Promise.resolve(),
 })
@@ -18,7 +19,7 @@ describe('the canvas host registry', () => {
     const release = holdCanvas('doc-1', () => held)
 
     expect(await canvasHost('doc-1')?.pixelSnapshots()).toEqual([
-      { layerId: 'one', mask: false, data: '' },
+      { layerId: 'one', mask: false, data: new Uint8Array(0) },
     ])
     release()
   })
@@ -33,7 +34,7 @@ describe('the canvas host registry', () => {
     live = engine('second')
 
     expect(await canvasHost('doc-1')?.pixelSnapshots()).toEqual([
-      { layerId: 'second', mask: false, data: '' },
+      { layerId: 'second', mask: false, data: new Uint8Array(0) },
     ])
     release()
   })

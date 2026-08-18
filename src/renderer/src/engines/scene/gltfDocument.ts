@@ -148,6 +148,36 @@ export function sceneFromGltf(document: unknown): SceneState {
   return sceneFromPayload(gltfStudioMetadata(document)[GLTF_SCENE_STATE])
 }
 
+/**
+ * The root members `gltfDocumentOf` composes. Anything ELSE in a file came from somewhere else —
+ * the studio writes no `meshes`, no `accessors` and no `animations` into a scene document.
+ */
+const COMPOSED = new Set([
+  'asset',
+  'scene',
+  'scenes',
+  'nodes',
+  'cameras',
+  'extensionsUsed',
+  'extensionsRequired',
+  'extensions',
+  'extras',
+])
+
+/**
+ * What a file holds beyond what a save would write back.
+ *
+ * A scene the studio wrote and somebody then opened in Blender comes back with `meshes`,
+ * `accessors` and `buffers` in it — and it still LISTS, its extras being ours. `gltfDocumentOf`
+ * recomposes the whole document from the state, so the next ⌘S would drop every one of them
+ * without a word. glTF is linked BY INDEX: carrying them across half way is not a thing that can
+ * be done, so the honest answer is to refuse and leave the file as its author left it.
+ */
+export function sceneHoldsMore(document: unknown): string[] {
+  if (!isGltfDocument(document)) return []
+  return Object.keys(document).filter(key => !COMPOSED.has(key))
+}
+
 /** Fields at their default are left out. The rotation is Euler here, a quaternion there. */
 function placement({ position, rotation, scale }: Transform): Partial<GltfNode> {
   const quaternion = new Quaternion().setFromEuler(new Euler(rotation.x, rotation.y, rotation.z))

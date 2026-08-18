@@ -30,10 +30,11 @@ import { useTextures } from '@/stores/textures'
 import { newTexture } from '@/engines/texture/textureState'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { isSceneDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
-import { isPartName } from '@shared/domain/document'
+import { isOraSurfacePath } from '@shared/domain/openRaster'
 import { DEFAULT_CANVAS, pixelLayer, textLayer } from '@/engines/canvas/canvasState'
 import { addLayer, removeLayer, renameLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas, type CanvasHost } from '@/spaces/image/canvasHosts'
+import { bytesToBase64 } from '@/helpers/base64'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import { EMPTY_AUDIO_EDIT, pushEdit } from '@/engines/audio/edits'
 import { addClip, removeTrack } from '@/engines/timeline/commands'
@@ -107,15 +108,38 @@ beforeEach(() => {
  * A fake engine behind the canvas port. Written once so a member added to `CanvasHost` is one
  * edit here rather than one per case — nine of them had spelled the same stubs out.
  */
-function fakeCanvas(overrides: Partial<CanvasHost> = {}): CanvasHost {
-  return {
+function fakeCanvas(overrides: Omit<Partial<CanvasHost>, 'snapshot'> = {}): CanvasHost {
+  const host = {
     pixelSnapshots: () => Promise.resolve([]),
     restoreSnapshot: () => Promise.resolve(),
-    snapshot: () => Promise.resolve(null),
+    flatten: () => Promise.resolve<Uint8Array<ArrayBuffer> | null>(FLATTEN),
     forgetPicture: () => Promise.resolve(),
     ...overrides,
   }
+
+  return {
+    ...host,
+    /**
+     * NOT overridable, because the engine cannot make the two disagree: `snapshot()` IS
+     * `flatten()` with a base64 pass after it. A fake that answered bytes to one and nothing to
+     * the other described a state no engine reaches, and it is what let ⌘S read the whole picture
+     * back off the card twice without a single case going red.
+     */
+    snapshot: async () => {
+      const png = await host.flatten()
+      return png && bytesToBase64(png)
+    },
+  }
 }
+
+/** The pixels a fake engine hands over: bytes, as `LayerPixels` and `OraSurface` now carry them. */
+const PIXELS = new Uint8Array([137, 80, 78, 71])
+/** The flatten `mergedimage.png` holds — the container has no document without one. */
+const FLATTEN = new Uint8Array([137, 80, 78, 71, 13, 10])
+
+/** An image document's content: the OpenRaster stack, as JSON, with the studio state inside it. */
+const oraContent = (studio: string): string =>
+  JSON.stringify({ width: 64, height: 32, nodes: [], studio })
 
 describe('saveDocument', () => {
   const openScene = async (): Promise<string> => {
@@ -342,7 +366,8 @@ describe('saveDocument', () => {
    * the loop it would otherwise close is written out.
    */
   describe('the asset behind the document', () => {
-    const PNG = 'iVBORw0KGgo='
+    /** What a flat source is written with — the flatten ⌘S already captured, base64 as the channel takes it. */
+    const PNG = bytesToBase64(FLATTEN)
 
     /** Which pictures the engine was told to forget, so the overwrite's second half is visible. */
     let forgotten: string[] = []
@@ -363,7 +388,6 @@ describe('saveDocument', () => {
       useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
       const release = holdCanvas(created.id, () =>
         fakeCanvas({
-          snapshot: () => Promise.resolve(PNG),
           forgetPicture: assetId => {
             forgotten.push(assetId)
             return Promise.resolve()
@@ -563,6 +587,47 @@ describe('saveDocument', () => {
     })
 
     /**
+     * One extraction per ⌘S, and this is a COUNT rather than a duration: each of these reads every
+     * layer's texture back off the graphics card through a synchronous `gl.readPixels`, so a
+     * second pass doubles the freeze on a stack of ten 4K layers.
+     *
+     * Both halves of the gesture want the same bytes — the document's container and the source
+     * asset's — and they were asking the engine separately.
+     */
+    it('reads the pixels back off the card once, whatever the second half of ⌘S needs', async () => {
+      let flattens = 0
+      let extractions = 0
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        assets: { saveLayered: () => Promise.resolve(picture()) },
+      })
+      shelve('Images/hero.ora')
+      const created = await useDocuments
+        .getState()
+        .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
+      if (!created) throw new Error('expected a document')
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+      const release = holdCanvas(created.id, () =>
+        fakeCanvas({
+          flatten: () => {
+            flattens += 1
+            return Promise.resolve(FLATTEN)
+          },
+          pixelSnapshots: () => {
+            extractions += 1
+            return Promise.resolve([])
+          },
+        }),
+      )
+      useCanvases.getState().runCommand(created.id, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await expect(saveDocument(created.id)).resolves.toBe(true)
+      release()
+
+      expect({ flattens, extractions }).toEqual({ flattens: 1, extractions: 1 })
+    })
+
+    /**
      * A row named like a picture but filed under a container is the shape of the defect that
      * nearly shipped: the format has to come off the PATH, so a name saying `.png` must not make
      * ⌘S flatten a `.ora`. It also stands for every real row, whose name has no extension at all.
@@ -602,11 +667,10 @@ describe('saveDocument', () => {
       // one with no pixels is left out of the stack, so a fake that has none writes nothing.
       const release = holdCanvas(created.id, () =>
         fakeCanvas({
-          snapshot: () => Promise.resolve(PNG),
           pixelSnapshots: () =>
             Promise.resolve([
-              { layerId: 'layer-1', mask: false, data: PNG },
-              { layerId: 'layer-2', mask: false, data: PNG },
+              { layerId: 'layer-1', mask: false, data: PIXELS },
+              { layerId: 'layer-2', mask: false, data: PIXELS },
             ]),
         }),
       )
@@ -615,8 +679,11 @@ describe('saveDocument', () => {
       await saveDocument(created.id)
       release()
 
-      expect(saveLayered.mock.calls[0]?.[0].document.nodes).toHaveLength(2)
-      expect(saveLayered.mock.calls[0]?.[0].document.merged).toBe(PNG)
+      expect(saveLayered.mock.calls[0]?.[0].document.stack.nodes).toHaveLength(2)
+      expect(saveLayered.mock.calls[0]?.[0].document.surfaces).toContainEqual({
+        path: 'mergedimage.png',
+        png: FLATTEN,
+      })
     })
 
     /**
@@ -733,9 +800,9 @@ describe('saveDocument', () => {
               version: DOCUMENT_VERSION,
               kind: 'image',
               title: 'Gemini 3.1',
-              content: JSON.stringify(DEFAULT_CANVAS),
+              content: oraContent(JSON.stringify(DEFAULT_CANVAS)),
               updatedAt: '2026-08-12T10:00:00.000Z',
-              parts: [{ name: 'p_layer-1.png', data: 'QUJD' }],
+              parts: [{ path: 'data/p_layer-1.png', png: PIXELS }],
             }),
         },
       })
@@ -874,14 +941,25 @@ describe('saveDocument', () => {
     })
 
     /**
-     * `null` is "nothing to bake yet" — an engine still bringing its GPU context up, which is
-     * exactly when a ⌘S after switching workspace lands. Treated as a success it left every
-     * consumer of the asset on the pre-edit picture, and said nothing.
+     * `null` is "nothing to bake yet" — the engine gone between the two halves of ⌘S, which is
+     * what switching workspace mid-save does. Treated as a success it left every consumer of the
+     * asset on the pre-edit picture, and said nothing.
+     *
+     * The engine is dropped DURING the document write, and that is the only window there is: the
+     * pixels are captured before it and the asset is written after it. A fake answering nothing to
+     * `snapshot` while `flatten` still hands bytes over would be quicker to write and would
+     * describe a state no engine reaches.
      */
     it('says so, and retries, when there was nothing to bake yet', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
+      let booting = (): void => undefined
       const { entries } = bridgeWatchingLogs({
-        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+        documents: {
+          write: () => {
+            booting()
+            return Promise.resolve<DocumentWrite>('written')
+          },
+        },
         assets: { savePicture },
       })
       const created = await useDocuments
@@ -890,18 +968,16 @@ describe('saveDocument', () => {
       if (!created) throw new Error('expected a document')
       useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
 
-      const booting = holdCanvas(created.id, () => fakeCanvas())
+      booting = holdCanvas(created.id, () => fakeCanvas())
       editImage(created.id)
       await saveDocument(created.id)
-      booting()
 
       expect(savePicture).not.toHaveBeenCalled()
       expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
 
       // The engine is up now, and the debt is what brings the asset back into line.
-      const ready = holdCanvas(created.id, () =>
-        fakeCanvas({ snapshot: () => Promise.resolve(PNG) }),
-      )
+      booting = () => undefined
+      const ready = holdCanvas(created.id, () => fakeCanvas())
       await saveDocument(created.id)
       ready()
 
@@ -960,7 +1036,7 @@ describe('saveDocument', () => {
    * copy — the gesture every application has, applied to an asset rather than to a file.
    */
   describe('saveDocumentAs', () => {
-    const PNG = 'iVBORw0KGgo='
+    const PNG = bytesToBase64(FLATTEN)
 
     /** What the engine was told to forget — nothing, for a gesture that overwrites nothing. */
     let forgotten: string[] = []
@@ -978,7 +1054,6 @@ describe('saveDocument', () => {
       useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
       const release = holdCanvas(created.id, () =>
         fakeCanvas({
-          snapshot: () => Promise.resolve(PNG),
           forgetPicture: assetId => {
             forgotten.push(assetId)
             return Promise.resolve()
@@ -1307,8 +1382,6 @@ describe('what reaches the bridge', () => {
  * seam — that the engine holding the document is asked, and that what came back reaches it again.
  */
 describe('an image document', () => {
-  const PIXELS = 'iVBORw0KGgo='
-
   const openImage = async (): Promise<string> => {
     const created = await useDocuments.getState().create('image')
     if (!created) throw new Error('expected a document')
@@ -1316,7 +1389,7 @@ describe('an image document', () => {
     return created.id
   }
 
-  it('writes one file per surface, named after the layer it belongs to', async () => {
+  it('writes one surface per texture, named after the layer it belongs to', async () => {
     const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
     installFakeBridge({ documents: { write } })
     const documentId = await openImage()
@@ -1338,8 +1411,9 @@ describe('an image document', () => {
       'image',
       expect.objectContaining({
         parts: [
-          { name: 'p_layer-1.png', data: PIXELS },
-          { name: 'm_layer-1.png', data: PIXELS },
+          { path: 'mergedimage.png', png: FLATTEN },
+          { path: 'data/p_layer-1.png', png: PIXELS },
+          { path: 'data/m_layer-1.png', png: PIXELS },
         ],
       }),
       false,
@@ -1347,8 +1421,26 @@ describe('an image document', () => {
     )
   })
 
-  // Every part name becomes a path in the main process, so the two ends have to agree.
-  it('names its parts so the file layer accepts them', async () => {
+  /**
+   * The container has no document without one: `mergedimage.png` is what every other application
+   * draws of a `.ora`, and the spec requires it. A save that wrote a stack with no flatten under
+   * it would make a file that opens as nothing, with the layers inside it intact and unreachable.
+   */
+  it('refuses to save rather than write a container with no flatten in it', async () => {
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
+    installFakeBridge({ documents: { write } })
+    const documentId = await openImage()
+    const release = holdCanvas(documentId, () =>
+      fakeCanvas({ flatten: () => Promise.resolve(null) }),
+    )
+
+    await expect(saveDocument(documentId)).rejects.toThrow(/would open as nothing/)
+    expect(write).not.toHaveBeenCalled()
+    release()
+  })
+
+  // Every surface name becomes a ZIP entry the main process writes, so the two ends have to agree.
+  it('names its surfaces so the file layer accepts them', async () => {
     const written: DocumentDraft[] = []
     installFakeBridge({
       documents: {
@@ -1368,14 +1460,15 @@ describe('an image document', () => {
     await saveDocument(documentId)
     release()
 
-    expect(written[0]?.parts).toHaveLength(1)
-    for (const part of written[0]?.parts ?? []) expect(isPartName(part.name)).toBe(true)
+    expect(written[0]?.parts).toHaveLength(2)
+    for (const part of written[0]?.parts ?? []) expect(isOraSurfacePath(part.path)).toBe(true)
   })
 
   /**
-   * A folder is replaced whole, so writing one with no pictures would delete the ones on disk and
-   * mark the document clean — the work gone, with nothing said. The engine is unreachable while it
-   * boots its GPU context, which is exactly when a ⌘S after switching workspace lands.
+   * The container is replaced whole, so writing one with no pictures would delete the ones on
+   * disk and mark the document clean — the work gone, with nothing said. The engine is
+   * unreachable while it boots its GPU context, which is exactly when a ⌘S after switching
+   * workspace lands.
    */
   it('refuses to save rather than write a document without its pixels', async () => {
     const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
@@ -1414,12 +1507,16 @@ describe('an image document', () => {
     await saveDocument(documentId)
     release()
 
-    expect(written[0]?.parts?.map(part => part.name)).toEqual(['p_x-mask.png', 'm_x.png'])
+    expect(written[0]?.parts?.map(part => part.path)).toEqual([
+      'mergedimage.png',
+      'data/p_x-mask.png',
+      'data/m_x.png',
+    ])
   })
 
   // One odd id costs that layer's pixels, never the whole document: `reviveLayer` takes whatever
   // a file holds, and the save must not fail on all of it.
-  it('skips a layer whose id could not be a file name', async () => {
+  it('skips a layer whose id could not be a container entry', async () => {
     const written: DocumentDraft[] = []
     installFakeBridge({
       documents: {
@@ -1443,7 +1540,10 @@ describe('an image document', () => {
     await saveDocument(documentId)
     release()
 
-    expect(written[0]?.parts?.map(part => part.name)).toEqual(['p_fine.png'])
+    expect(written[0]?.parts?.map(part => part.path)).toEqual([
+      'mergedimage.png',
+      'data/p_fine.png',
+    ])
   })
 
   it('hands every saved picture back to the engine on the way in', async () => {
@@ -1455,9 +1555,9 @@ describe('an image document', () => {
             version: DOCUMENT_VERSION,
             kind: 'image' as DocumentKind,
             title: 'Poster',
-            content: JSON.stringify(DEFAULT_CANVAS),
+            content: oraContent(JSON.stringify(DEFAULT_CANVAS)),
             updatedAt: '2026-08-08T10:00:00.000Z',
-            parts: [{ name: 'm_layer-1.png', data: PIXELS }],
+            parts: [{ path: 'data/m_layer-1.png', png: PIXELS }],
           }),
       },
     })
@@ -1490,8 +1590,8 @@ describe('an image document', () => {
     })
   })
 
-  // A folder is the user's to open: a file they dropped in there is not a layer of theirs.
-  it('ignores a file in the folder that names no layer', async () => {
+  // A container may hold entries this studio never wrote — a preview a foreign editor left.
+  it('ignores a surface that names no layer', async () => {
     const restoreSnapshot = vi.fn(() => Promise.resolve())
     installFakeBridge({
       documents: {
@@ -1500,9 +1600,9 @@ describe('an image document', () => {
             version: DOCUMENT_VERSION,
             kind: 'image' as DocumentKind,
             title: 'Poster',
-            content: JSON.stringify(DEFAULT_CANVAS),
+            content: oraContent(JSON.stringify(DEFAULT_CANVAS)),
             updatedAt: '2026-08-08T10:00:00.000Z',
-            parts: [{ name: 'notes.txt', data: PIXELS }],
+            parts: [{ path: 'data/preview.png', png: PIXELS }],
           }),
       },
     })

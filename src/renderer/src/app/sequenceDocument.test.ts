@@ -214,7 +214,8 @@ describe('what an open reads back', () => {
     expect(sequenceFromPayload(foreign('../vid/plan large.mp4'), 'doc-1').tracks[0]?.clips).toEqual(
       [],
     )
-    expect(montageIsIncomplete('doc-1')).toBe(true)
+    // The SENTENCE, not a yes: what a refusal tells the user to go and do differs per kind.
+    expect(montageIsIncomplete('doc-1')).not.toBeNull()
   })
 
   it('lets it be saved again once every clip has found its media', () => {
@@ -226,7 +227,7 @@ describe('what an open reads back', () => {
     useAssets.setState({ items: [RUSH] })
     sequenceFromPayload(foreign('file:///Volumes/Autre/vid/plan large.mp4'), 'doc-1')
 
-    expect(montageIsIncomplete('doc-1')).toBe(false)
+    expect(montageIsIncomplete('doc-1')).toBeNull()
   })
 
   // A live scene has no media and no url: asked of the relinker anyway, every scene of a montage
@@ -237,7 +238,7 @@ describe('what an open reads back', () => {
 
     expect(state.tracks[0]?.clips[0]?.sceneId).toBe('scene-1')
     expect(reported).not.toHaveBeenCalled()
-    expect(montageIsIncomplete('doc-1')).toBe(false)
+    expect(montageIsIncomplete('doc-1')).toBeNull()
   })
 })
 

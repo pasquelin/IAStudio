@@ -13,7 +13,7 @@ import { extensionOf } from './fileName'
  * of its own domain: an `.otio` carries no layer, and the answer for one is « everything lost »
  * rather than « nothing to lose ».
  */
-export type CapabilityDomain = 'picture' | 'montage'
+export type CapabilityDomain = 'picture' | 'montage' | 'material'
 
 /** A property of an edited picture that a format either carries or loses. */
 export type PictureTrait =
@@ -93,19 +93,80 @@ export const MONTAGE_TRAITS: readonly MontageTrait[] = [
   'editorState',
 ]
 
-export type CapabilityTrait = PictureTrait | MontageTrait
+/**
+ * The same question for a material, measured against the text of the MaterialX 1.39
+ * specification — `.claude/spike-materialx.md` holds the reading.
+ *
+ * `occlusionMap` and `cavityMap` are the two that matter: `standard_surface` has NO input for
+ * either, checked against the table in `MaterialX.PBRSpec.md`. They are carried, but only this
+ * studio reads them back.
+ */
+export type MaterialTrait =
+  | 'colourMap'
+  | 'roughnessMap'
+  | 'metalnessMap'
+  | 'normalMap'
+  | 'heightMap'
+  | 'emissiveMap'
+  | 'baseTint'
+  | 'uvTiling'
+  | 'normalScale'
+  | 'heightScale'
+  | 'emissiveStrength'
+  | 'occlusionMap'
+  | 'cavityMap'
+  | 'valueRanges'
+  | 'normalGreenFlip'
+  | 'uvRotation'
+  | 'channelOrigin'
+  | 'previewState'
 
-export const CAPABILITY_TRAITS: readonly CapabilityTrait[] = [...PICTURE_TRAITS, ...MONTAGE_TRAITS]
+export const MATERIAL_TRAITS: readonly MaterialTrait[] = [
+  'colourMap',
+  'roughnessMap',
+  'metalnessMap',
+  'normalMap',
+  'heightMap',
+  'emissiveMap',
+  'baseTint',
+  'uvTiling',
+  'normalScale',
+  'heightScale',
+  'emissiveStrength',
+  'occlusionMap',
+  'cavityMap',
+  'valueRanges',
+  'normalGreenFlip',
+  'uvRotation',
+  'channelOrigin',
+  'previewState',
+]
+
+export type CapabilityTrait = PictureTrait | MontageTrait | MaterialTrait
+
+export const CAPABILITY_TRAITS: readonly CapabilityTrait[] = [
+  ...PICTURE_TRAITS,
+  ...MONTAGE_TRAITS,
+  ...MATERIAL_TRAITS,
+]
 
 export const TRAITS_OF_DOMAIN: Record<CapabilityDomain, readonly CapabilityTrait[]> = {
   picture: PICTURE_TRAITS,
   montage: MONTAGE_TRAITS,
+  material: MATERIAL_TRAITS,
 }
 
 /** A format the studio can write an edited document to. */
-export type WritableFormat = 'png' | 'jpeg' | 'webp' | 'ora' | 'otio'
+export type WritableFormat = 'png' | 'jpeg' | 'webp' | 'ora' | 'otio' | 'mtlx'
 
-export const WRITABLE_FORMATS: readonly WritableFormat[] = ['png', 'jpeg', 'webp', 'ora', 'otio']
+export const WRITABLE_FORMATS: readonly WritableFormat[] = [
+  'png',
+  'jpeg',
+  'webp',
+  'ora',
+  'otio',
+  'mtlx',
+]
 
 /**
  * Where each trait lands in a given format. The three lists PARTITION the traits — a guard holds
@@ -193,12 +254,51 @@ const OPEN_TIMELINE: FormatCapability = {
   dropped: [],
 }
 
+/**
+ * MaterialX holds a `standard_surface` fed by `tiledimage` nodes, and it IS the material
+ * document. Everything past that rides in the custom attribute the specification reserves for
+ * applications — and requires a reader that does not understand it to preserve.
+ *
+ * `occlusionMap` and `cavityMap` are extended rather than standard because there is nowhere else
+ * to put them: the surface shader declares no input for either, so a map another application
+ * would honour cannot be written at all. They come back here and nowhere else.
+ */
+const MATERIAL_X: FormatCapability = {
+  domain: 'material',
+  interchange: [
+    'colourMap',
+    'roughnessMap',
+    'metalnessMap',
+    'normalMap',
+    'heightMap',
+    'emissiveMap',
+    'baseTint',
+    'uvTiling',
+    'normalScale',
+    'heightScale',
+    'emissiveStrength',
+  ],
+  extended: [
+    'occlusionMap',
+    'cavityMap',
+    'valueRanges',
+    'normalGreenFlip',
+    // `tiledimage` carries `uvtiling` and `uvoffset` and no rotation at all — checked against
+    // `MaterialX.StandardNodes.md`. The studio's own turn of the map has no standard slot.
+    'uvRotation',
+    'channelOrigin',
+    'previewState',
+  ],
+  dropped: [],
+}
+
 const CAPABILITY_BY_FORMAT: Record<WritableFormat, FormatCapability> = {
   png: FLAT,
   jpeg: FLAT,
   webp: FLAT,
   ora: OPEN_RASTER,
   otio: OPEN_TIMELINE,
+  mtlx: MATERIAL_X,
 }
 
 export const capabilityOf = (format: WritableFormat): FormatCapability =>
@@ -211,6 +311,7 @@ const FORMAT_BY_EXTENSION: Record<string, WritableFormat> = {
   '.webp': 'webp',
   '.ora': 'ora',
   '.otio': 'otio',
+  '.mtlx': 'mtlx',
 }
 
 /**

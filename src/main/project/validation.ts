@@ -18,6 +18,7 @@ import {
   type DocumentKind,
 } from '@shared/domain/document'
 import { isPrivatePath } from '@shared/domain/folder'
+import { isOraSurfacePath, type OraStack } from '@shared/domain/openRaster'
 import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
 import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
 import type {
@@ -212,6 +213,13 @@ export function parseSavePicture(value: unknown): SavePictureRequest {
   return savePicture.parse(value)
 }
 
+/**
+ * The studio's own canvas state, as text. Generous: it holds the whole layer tree, every text
+ * layer's string and every adjustment's parameters, for a document that may have hundreds of
+ * layers — and refusing it would lose the half of the document the standard cannot carry.
+ */
+const MAX_STUDIO_STATE = 64 * 1024 * 1024
+
 const oraBase = {
   name: z.string().max(200),
   x: z.number().finite(),
@@ -221,17 +229,13 @@ const oraBase = {
   composite: z.string().max(64),
 }
 
-/** `data/…` and nothing else: a path out of the container is a path out of the project folder. */
-const oraPath = z
-  .string()
-  .max(300)
-  .regex(/^data\/[\w.-]+\.png$/)
+/** One flat entry under `data/`, or the flatten's own name — `isOraSurfacePath` is the rule. */
+const oraPath = z.string().max(300).refine(isOraSurfacePath)
 
 const oraLayer = z.object({
   ...oraBase,
   kind: z.literal('layer'),
   src: oraPath,
-  png: z.string().max(MAX_PICTURE_BASE64).pipe(base64Payload),
 })
 
 /**
@@ -251,23 +255,49 @@ const oraNode = (depth: number): z.ZodType<unknown> =>
         }),
       ])
 
+const oraStack = z.object({
+  // Non-negative rather than positive, and that is not laxity: a container written elsewhere may
+  // carry no `w`/`h` on its `<image>`, which the unpacker reads as zero. Refusing that HERE — on
+  // the way out — makes the document unsaveable for good, the value having come from the read.
+  width: z.number().int().min(0),
+  height: z.number().int().min(0),
+  nodes: z.array(oraNode(8)).max(2000),
+  studio: z.string().max(MAX_STUDIO_STATE),
+})
+
+/**
+ * A stack on its way into a container. Called on the CONTENT of an image document, which the
+ * renderer wrote and the file layer is about to turn into `stack.xml` and a list of ZIP entries.
+ */
+export function parseOraStack(value: unknown): OraStack {
+  // The shape is checked field by field above; the cast names what zod has just proved, the
+  // recursive `nodes` being typed as `unknown` by the depth-bounded builder.
+  return oraStack.parse(value) as OraStack
+}
+
+/**
+ * One surface, on its way into a container.
+ *
+ * `png` is a `Uint8Array` and never base64: a 4K stack of ten layers is hundreds of megabytes of
+ * text otherwise. Its ceiling is the picture ceiling, applied to the bytes themselves.
+ */
+const oraSurface = z.object({
+  path: oraPath,
+  png: z.instanceof(Uint8Array).refine(bytes => bytes.byteLength <= MAX_PICTURE_BYTES),
+})
+
 const saveLayered = z.object({
   replaces: assetId.optional(),
   name: z.string().trim().min(1).max(200),
   derivedFrom: assetId.optional(),
   document: z.object({
-    width: z.number().int().positive(),
-    height: z.number().int().positive(),
-    nodes: z.array(oraNode(8)).max(2000),
-    merged: z.string().max(MAX_PICTURE_BASE64).pipe(base64Payload),
-    studio: z.string().max(MAX_PICTURE_BASE64),
-    extras: z.record(oraPath, z.string().max(MAX_PICTURE_BASE64).pipe(base64Payload)),
+    stack: oraStack,
+    surfaces: z.array(oraSurface).max(2048),
   }),
 })
 
 export function parseSaveLayered(value: unknown): SaveLayeredRequest {
-  // The shape is checked field by field above; the cast names what zod has just proved, the
-  // recursive `nodes` being typed as `unknown` by the depth-bounded builder.
+  // Cast for the reason `parseOraStack` gives — the recursive nodes are typed `unknown`.
   return saveLayered.parse(value) as SaveLayeredRequest
 }
 
@@ -316,27 +346,15 @@ const MAX_CONTENT_BYTES = 256 * 1024 * 1024
 
 const content = z.string().max(MAX_CONTENT_BYTES)
 
-/**
- * The files that go beside the content — one PNG per layer of an image document.
- *
- * `isPartName` is the guard that matters and it lives where the file is written; this only
- * bounds what crosses. Without this field the schema STRIPPED every part in silence, and
- * `storeFolder` then replaced the document folder with a manifest and nothing else: a save
- * threw away the pixels it was called to keep.
- */
-const MAX_PART_BYTES = 512 * 1024 * 1024
-
-const documentPart = z.object({
-  name: z.string().min(1).max(255),
-  data: z.string().max(MAX_PART_BYTES),
-})
-
 const documentDraft = z.object({
   // Trimmed and non-empty, where the envelope's twin is not: a title is now the NAME OF THE
   // FILE, and a document nobody named is a document nothing can be written to.
   title: z.string().trim().min(1).max(200),
   content,
-  parts: z.array(documentPart).max(1024).optional(),
+  // The surfaces of an image document's container. Declared or the schema STRIPS them in
+  // silence, and a save then writes a stack with no pixels under it — the very loss this whole
+  // field exists to prevent, and one that has already been paid for once.
+  parts: z.array(oraSurface).max(2048).optional(),
   // The asset this document edits. Same reason as `parts`: a field the schema does not name is
   // a field the renderer writes and the disk never sees.
   sourceAssetId: assetId.optional(),
