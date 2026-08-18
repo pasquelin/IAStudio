@@ -788,6 +788,27 @@ straight away: the Inspector then describes what you have just laid down.
 > **Only a sub-track accepts a drop.** A key line holds keys, an object's own line is the object
 > itself, and the ruler at the top is not a track: dropping on any of the three does nothing.
 
+**Each row also carries a ▶ — *Play it on the character*** — and that is the way to try an
+animation without aiming at a sub-track. **It lays a REAL block** on the selected character, with
+the same starting settings a drag would give it, and plays it at once. **It lays it at the START of
+the first sub-track**, where dragging lets you choose the line and the spot.
+
+> **This is not the Inspector's ▶**, which watches a block **already laid** without ever writing
+> anything. This one lays the block itself, and can take it back.
+
+**A second press stops it AND takes the block off**: the button says so, *Stop and take the block
+off*. Pressing the ▶ of **another** row takes the previous one away first — there are never two at
+a time.
+
+> **What is left depends on how it stopped**, and that is the one subtlety of this button. Stopped
+> by you, the block goes. **Interrupted by the playhead — because you started the band or moved the
+> head — the block STAYS**, laid on the character. That is not an accident: it is what turns a
+> convincing try into kept work.
+
+**The ▶ is off while no model is selected in the scene**: there is then nothing to play a motion
+on. **A model is enough — it does not have to be animatable yet**; what it can really play is what
+the Animation section will say. The list itself stays up.
+
 **A shipped animation is replayed on YOUR character's skeleton** — it was authored for another
 one, and the studio transposes it. The character that carried it does not enter the scene.
 
