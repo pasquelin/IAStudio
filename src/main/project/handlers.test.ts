@@ -450,10 +450,6 @@ describe('project handlers', () => {
   })
 
   /**
-   * The home's shelf points at projects that are NOT open, so this one names a folder outright
-   * instead of resolving against the open project.
-   */
-  /**
    * The name in the manifest, never the folder on disk: `recentProjects`, `storage.lastProject`
    * and every absolute path the catalogue holds are keyed on that folder.
    */
@@ -535,6 +531,10 @@ describe('project handlers', () => {
     })
   })
 
+  /**
+   * The home's shelf points at projects that are NOT open, so this one names a folder outright
+   * instead of resolving against the open project.
+   */
   describe('showing a recent project folder', () => {
     it('shows the folder it was handed, not one under the open project', async () => {
       const injected = deps(catalog)

@@ -91,10 +91,6 @@ describe('saving before the panel has ever been opened', () => {
   })
 
   /**
-   * A read in flight is older than a write that lands during it. Answering with it puts the
-   * panel back to what the disk held before the save, and `loaded` stops `load` ever retrying.
-   */
-  /**
    * A read in flight is older than a write that lands during it. Answering with it would put the
    * panel back to what the disk held before, and `loaded` stops `load` ever retrying.
    *

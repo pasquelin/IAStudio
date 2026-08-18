@@ -1102,14 +1102,6 @@ export type StudioBridge = {
     /** `setUpstream` on the first push of a branch — the one that has nothing to track yet. */
     push: (setUpstream: boolean) => Promise<GitRepository>
     /**
-     * Whether a token is held for a host — and NOTHING else about it.
-     *
-     * There is no channel that answers with a token, and that absence is the point: invariant 1
-     * says the window asks whether it is authenticated, never what the credential is. The token
-     * goes down to the main process once and only ever comes back out inside the environment of
-     * a git command.
-     */
-    /**
      * Settles a conflict by keeping one whole side, and marks it settled in the same breath.
      *
      * During a MERGE, `ours` is the branch that is out and `theirs` is what is being brought in.

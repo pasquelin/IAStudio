@@ -222,8 +222,9 @@ export type Settings = {
      *
      * By LEVEL rather than by action name, and deliberately: the level is the axis the question
      * already speaks in, and a hundred and forty-six checkboxes is not an interface.
+     *
+     * This one: moving, renaming, binning, and whatever rewrites the working copy.
      */
-    /** Moving, renaming, binning, and whatever rewrites the working copy. */
     delegateFiles: boolean
     /** Uploading a picture, which then stays in the library. */
     delegateAsset: boolean

@@ -839,6 +839,11 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
+  /** Whether any view is asking for edges at all — what decides if the geometry is built. */
+  private needsEdges(): boolean {
+    return this.displays.some(mode => showsEdges(mode, this.quadEdges))
+  }
+
   /**
    * How THIS view shows the scene, set while its pass is about to run.
    *
@@ -847,11 +852,6 @@ export class SceneRenderer {
    * manipulator nobody can grab. Only the document's own objects are walked — the gizmo, the
    * grid and the trihedron are siblings, never in `objects`.
    */
-  /** Whether any view is asking for edges at all — what decides if the geometry is built. */
-  private needsEdges(): boolean {
-    return this.displays.some(mode => showsEdges(mode, this.quadEdges))
-  }
-
   private dressPane(index: number, camera: ViewportCamera): void {
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
     dressForPane(
