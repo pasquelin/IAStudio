@@ -397,15 +397,26 @@ describe('the translation bundles', () => {
        * `plane` and `plantage` just as well, both neighbours being ASCII. Measured, after the
        * JSDoc here claimed the opposite for a day.
        *
-       * `except` is the geometric plane. `bloc` against `clip` meets this list's bar — 22 French
-       * values say `bloc`, all `assistant.*`, against 25 saying `clip`, and the glossary settles
-       * it with a head-word for `Clip`. It is left out for SCOPE, not for want of evidence: 20
-       * of the 22 sit under keys named `clip*`, which is a batch of its own.
+       * `except` is the geometric plane, and the camera shot — a take, not a stretch of media on
+       * a track, and the trade word Alban settled on 18/08 for the 3D space. `bloc` against
+       * `clip` meets this list's bar — 22 French values say `bloc`, all `assistant.*`, against 25
+       * saying `clip`, and the glossary settles it with a head-word for `Clip`. It is left out
+       * for SCOPE, not for want of evidence: 20 of the 22 sit under keys named `clip*`, which is
+       * a batch of its own.
        */
       {
         dropped: /(?<!premiers? |seconds? |arrière-|\{\{)(?<!\p{L})plans?(?!\p{L})/iu,
         kept: 'clip',
-        except: ['meshes.plane', 'texture.shapePlane'],
+        except: [
+          'meshes.plane',
+          'texture.shapePlane',
+          'inspector.shot',
+          'inspector.noShot',
+          'inspector.addRailHint',
+          'objects.pathHint',
+          'animation.addShotHint',
+          'animation.addShotNeedsCamera',
+        ],
       },
     ],
     en: [
@@ -766,6 +777,10 @@ describe('the translation bundles', () => {
     failed: {
       reads: ['échec', 'échouée'],
       separates: "an ingest status, and a job's, which agrees with `tâche`",
+    },
+    free: {
+      reads: ['libre', 'gratuit'],
+      separates: 'a camera aiming at nothing, and what a generation costs',
     },
     group: { reads: ['grouper', 'groupe'], separates: 'the command, and the layer it makes' },
     home: { reads: ['début', 'accueil'], separates: 'the Home key, and the home screen' },
