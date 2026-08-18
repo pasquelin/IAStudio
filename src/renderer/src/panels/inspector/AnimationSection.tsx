@@ -6,9 +6,12 @@ import {
   DEFAULT_CLIP,
   embeddedClip,
   MAIN_LANE_ID,
+  ROOT_MOTIONS,
   type ClipRef,
   type ClipSource,
+  type RootMotion,
 } from '@shared/domain/scene'
+import { secondsToUs, usToSeconds } from '@shared/domain/time'
 import { AnimationPicker } from '@/design/AnimationPicker/AnimationPicker'
 import { BODY_PARTS, isBodyPart, WHOLE_BODY, type BodyPart } from '@shared/domain/humanoid'
 import { PropertyRow } from '@/design/PropertyRow'
@@ -38,8 +41,15 @@ export type AnimationSectionProps = {
 const MIN_SPEED = 0.1
 const MAX_SPEED = 4
 
+/** Seconds. Past a second a transition stops reading as one move joining another. */
+const MAX_FADE = 1
+
 /** A `<select>` answers a string; the whole body is what anything else can only have meant. */
 const bodyPartRead = (value: string): BodyPart => (isBodyPart(value) ? value : WHOLE_BODY)
+
+/** Same contract: `auto` is what a value the studio did not write can only have meant. */
+const rootMotionRead = (value: string): RootMotion =>
+  ROOT_MOTIONS.find(motion => motion === value) ?? 'auto'
 
 /**
  * What an imported model can be made to play, and what stands in the way when it cannot.
@@ -211,6 +221,35 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
             value={played.loop}
             onChange={loop => write({ ...played, loop })}
           />
+          {/* One value for both edges: what is being set is how this move JOINS its neighbours,
+              and a block whose two ends faded differently would have no such thing. */}
+          <SliderField
+            label={t('inspector.clipFade')}
+            value={usToSeconds(played.fadeIn)}
+            min={0}
+            max={MAX_FADE}
+            step={0.05}
+            onChange={seconds =>
+              write({ ...played, fadeIn: secondsToUs(seconds), fadeOut: secondsToUs(seconds) })
+            }
+            {...edit.gesture}
+          />
+          <PropertyRow label={t('inspector.clipRootMotion')}>
+            <select
+              aria-label={t('inspector.clipRootMotion')}
+              value={played.rootMotion}
+              onChange={event =>
+                write({ ...played, rootMotion: rootMotionRead(event.target.value) })
+              }
+              className={cn(NATIVE_SELECT, 'w-full')}
+            >
+              {ROOT_MOTIONS.map(motion => (
+                <option key={motion} value={motion}>
+                  {t(`inspector.rootMotion_${motion}`)}
+                </option>
+              ))}
+            </select>
+          </PropertyRow>
           {/* What makes two blocks stack rather than average each other out. A select for the
               same reason as the clip picker above: the OS list reads on its own. */}
           <PropertyRow label={t('inspector.clipPart')}>

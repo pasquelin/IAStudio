@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { assetClip, bundledClip, clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { bundledAnimationUrl } from '@shared/domain/animationLibrary'
 import { assetUrl } from '@shared/domain/asset'
+import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
 import { SceneRenderer } from './SceneRenderer'
 import type { BvhBuilder } from './bvhBuilder'
 import type { Retarget } from './retarget'
@@ -617,10 +618,10 @@ describe('SceneRenderer and the animations the app ships with', () => {
   /** What the retargeting port is asked, and what it hands back — here, the clips unchanged. */
   const straightThrough = (): Retarget & {
     asked: { target: Object3D; clips: string[] }[]
-    learnt: { bones: readonly string[]; roles: Readonly<Record<string, string>> }[]
+    learnt: SkeletonProfile[]
   } => {
     const asked: { target: Object3D; clips: string[] }[] = []
-    const learnt: { bones: readonly string[]; roles: Readonly<Record<string, string>> }[] = []
+    const learnt: SkeletonProfile[] = []
     return {
       asked,
       learnt,
@@ -628,7 +629,7 @@ describe('SceneRenderer and the animations the app ships with', () => {
         asked.push({ target, clips: clips.map(clip => clip.name) })
         return Promise.resolve([...clips])
       },
-      learn: (bones, roles) => learnt.push({ bones, roles }),
+      remember: profile => void learnt.push(profile),
       dispose: () => {},
     }
   }
@@ -799,7 +800,46 @@ describe('SceneRenderer and the animations the app ships with', () => {
     })
 
     await vi.waitFor(() => expect(retarget.learnt).toHaveLength(1))
-    expect(retarget.learnt[0]).toEqual({ bones: ['b0', 'b1'], roles: { b0: 'Hips' } })
+    expect(retarget.learnt[0]).toEqual({
+      signature: skeletonSignatureOf(['b0', 'b1']),
+      roles: { b0: 'Hips' },
+    })
+    engine.dispose()
+  })
+
+  // The port dies with the viewport, so a mapping worked out in one document would be worked out
+  // again in the next: the project keeps it, and hands it back before anything is read.
+  it('hands what a project already learnt to the port, and reports what it learns', async () => {
+    const known: SkeletonProfile = { signature: skeletonSignatureOf(['x']), roles: { x: 'Hips' } }
+    const retarget = straightThrough()
+    const rest = IDENTITY_TRANSFORM
+    const learnt: SkeletonProfile[] = []
+    const engine = new SceneRenderer({
+      onSelect: () => {},
+      onTransform: () => {},
+      loadModel: () => Promise.resolve(animatedModel([])),
+      retarget,
+      profiles: [known],
+      onProfile: profile => void learnt.push(profile),
+      bvh,
+    })
+
+    engine.apply({
+      ...EMPTY_SCENE,
+      nodes: [
+        {
+          ...modelNode(shippedBlock()),
+          model: {
+            ...modelNode(shippedBlock()).model,
+            rig: { origin: 'local', bones: [{ name: 'b0', parent: null, rest, role: 'Hips' }] },
+          },
+        },
+      ],
+    })
+
+    expect(retarget.learnt[0]).toEqual(known)
+    await vi.waitFor(() => expect(learnt).toHaveLength(1))
+    expect(learnt[0]?.roles).toEqual({ b0: 'Hips' })
     engine.dispose()
   })
 

@@ -339,4 +339,22 @@ describe('AnimationSection', () => {
 
     expect(playedOf()?.speed).toBe(2)
   })
+
+  // Both edges from one control: what is being set is how this move joins its neighbours, and
+  // the fields were honoured by the band long before anything wrote them.
+  it('writes a transition on both edges of the chosen block', async () => {
+    show()
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
+    fireEvent.change(screen.getByLabelText('Transition'), { target: { value: '0.5' } })
+
+    expect(playedOf()).toMatchObject({ fadeIn: 0.5 * SECOND, fadeOut: 0.5 * SECOND })
+  })
+
+  it('writes whether the block moves the character or plays on the spot', async () => {
+    show()
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
+    await userEvent.selectOptions(screen.getByLabelText('Déplacement du personnage'), 'inPlace')
+
+    expect(playedOf()?.rootMotion).toBe('inPlace')
+  })
 })

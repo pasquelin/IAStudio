@@ -12,18 +12,44 @@
 import {
   BufferAttribute,
   BufferGeometry,
+  CanvasTexture,
   Color,
   Points,
   PointsMaterial,
   Vector3,
   type Bone,
+  type Texture,
 } from 'three'
 import { rootColour } from '../core/palette'
 
 /** Screen pixels, never metres: the mark has to stay aimable whatever the camera is doing. */
 const JOINT_SIZE = 7
 
+/** Texture pixels. Four times the mark on screen, so its edge holds under any zoom. */
+const DISC_SIZE = 32
+
 const WORLD = new Vector3()
+
+/**
+ * The round mark itself, drawn rather than shipped: `PointsMaterial` squares off a point, and a
+ * joint reads as a point only when it is round. `null` under a runner, where a canvas hands back
+ * no 2D context — the mark is then square, which is what it has always been.
+ */
+function jointDisc(): Texture | null {
+  const canvas = document.createElement('canvas')
+  canvas.width = DISC_SIZE
+  canvas.height = DISC_SIZE
+
+  const context = canvas.getContext('2d')
+  if (!context) return null
+
+  context.fillStyle = '#ffffff'
+  context.beginPath()
+  context.arc(DISC_SIZE / 2, DISC_SIZE / 2, DISC_SIZE / 2, 0, 2 * Math.PI)
+  context.fill()
+
+  return new CanvasTexture(canvas)
+}
 
 export type BoneJoints = {
   points: Points
@@ -38,12 +64,16 @@ export type BoneJoints = {
  * Inside, the outliner would list it and a click could pick it; beside, it is decoration exactly
  * as the helper it doubles is.
  */
-export function createBoneJoints(bones: readonly Bone[]): BoneJoints {
+export function createBoneJoints(
+  bones: readonly Bone[],
+  drawDisc: () => Texture | null = jointDisc,
+): BoneJoints {
   const geometry = new BufferGeometry()
   const positions = new Float32Array(bones.length * 3)
   const attribute = new BufferAttribute(positions, 3)
   geometry.setAttribute('position', attribute)
 
+  const disc = drawDisc()
   const material = new PointsMaterial({
     color: new Color(rootColour('--color-accent')),
     size: JOINT_SIZE,
@@ -52,6 +82,9 @@ export function createBoneJoints(bones: readonly Bone[]): BoneJoints {
     sizeAttenuation: false,
     depthTest: false,
     transparent: true,
+    // Cut rather than blended: these marks are drawn out of depth order, and a soft edge would
+    // let the ones behind show through the ones in front.
+    ...(disc ? { alphaMap: disc, alphaTest: 0.5 } : {}),
   })
 
   const points = new Points(geometry, material)
@@ -80,6 +113,7 @@ export function createBoneJoints(bones: readonly Bone[]): BoneJoints {
     dispose: () => {
       geometry.dispose()
       material.dispose()
+      disc?.dispose()
     },
   }
 }

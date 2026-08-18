@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/design/Button'
+import { Flyout } from '@/design/Flyout'
+import { InlineRename } from '@/design/InlineRename'
 import { ProgressBar } from '@/design/ProgressBar'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
@@ -13,6 +16,7 @@ import {
   addRigHands,
   removeIkChain,
   removeRigBone,
+  renameRigBone,
   setModelRig,
   setRigBoneRole,
 } from '@/engines/scene/commands'
@@ -57,6 +61,17 @@ function rigServicesRefusalOf(
   return refusals.every(refusal => refusal !== null) ? (refusals[0] ?? null) : null
 }
 
+/** What is being made animatable. The studio's own rigger only knows the first two. */
+export type CharacterKind = 'auto' | 'human' | 'animal' | 'other'
+
+export const CHARACTER_KINDS: readonly CharacterKind[] = ['auto', 'human', 'animal', 'other']
+
+/** The kinds a bounding box can be fitted with a skeleton — see `rigFit`, which is humanoid. */
+const HUMANOID_KINDS: readonly CharacterKind[] = ['auto', 'human']
+
+const characterKindRead = (value: string): CharacterKind =>
+  CHARACTER_KINDS.find(kind => kind === value) ?? 'auto'
+
 export type RigSectionProps = {
   documentId: string
   node: ModelNode
@@ -71,6 +86,9 @@ export type RigSectionProps = {
  */
 export function RigSection({ documentId, node, edit }: RigSectionProps) {
   const { t, i18n } = useTranslation()
+  const [asking, setAsking] = useState(false)
+  const [opener, setOpener] = useState<HTMLButtonElement | null>(null)
+  const [kind, setKind] = useState<CharacterKind>('auto')
   const rig = useModelClips(state => rigOfNode(state, documentId, node.id))
   const progress = useModelClips(state => rigProgressOfNode(state, documentId, node.id))
   const plan = usePlanAccess()
@@ -97,6 +115,20 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
   const bounds = rig.bounds
   const fault = bounds && rigFitFaultOf(bounds)
 
+  /**
+   * A bone renamed, and the pick carried over to the new name — the whole rig re-binds, and a
+   * pick left on a name nobody answers to would grey every control below it.
+   *
+   * A name already taken is refused HERE rather than by the command: `renameRigBone` writes
+   * nothing for a duplicate, and the pick would then follow a rename that never happened.
+   */
+  const renameBone = (name: string): void => {
+    if (!picked || node.model.rig?.bones.some(bone => bone.name === name)) return
+
+    edit.run(renameRigBone(node.id, picked, name))
+    useSceneViews.getState().setPickedBone(documentId, { nodeId: node.id, bone: name })
+  }
+
   return (
     <PropertySection title={t('inspector.rig')}>
       {progress !== null && <ProgressBar ratio={progress} label={t('inspector.rigBinding')} />}
@@ -105,9 +137,72 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
 
       {progress === null && bounds && !fault && !node.model.rig && (
         <>
-          <Button variant="primary" onClick={() => edit.run(setModelRig(node.id, rigFit(bounds)))}>
+          <Button ref={setOpener} variant="primary" onClick={() => setAsking(!asking)}>
             {t('inspector.makeAnimatable')}
           </Button>
+
+          {asking && (
+            <Flyout anchor={opener} placement="under" onDismiss={() => setAsking(false)}>
+              <div className="flex w-72 flex-col gap-2 p-2">
+                <PropertyRow label={t('inspector.characterKind')}>
+                  <select
+                    aria-label={t('inspector.characterKind')}
+                    value={kind}
+                    onChange={event => setKind(characterKindRead(event.target.value))}
+                    className={cn(NATIVE_SELECT, 'w-full')}
+                  >
+                    {CHARACTER_KINDS.map(candidate => (
+                      <option key={candidate} value={candidate}>
+                        {t(`inspector.characterKinds.${candidate}`)}
+                      </option>
+                    ))}
+                  </select>
+                </PropertyRow>
+
+                {/* Every service is shown and none can be chosen: submitting one needs the whole
+                    export-upload-job-import chain, which nothing here can verify. */}
+                <PropertyRow label={t('inspector.rigService')}>
+                  <select
+                    aria-label={t('inspector.rigService')}
+                    value=""
+                    onChange={() => undefined}
+                    className={cn(NATIVE_SELECT, 'w-full')}
+                  >
+                    <option value="">{t('inspector.rigServiceLocal')}</option>
+                    {services.map(service => (
+                      <option key={service.modelId} value={service.modelId} disabled>
+                        {`${service.name} — ${
+                          rigRefusalOf(service, plan, { bytes, maxSize })
+                            ? t('inspector.animationAiLocked', { plan: plan?.name ?? '' })
+                            : t('inspector.animationAiSoon')
+                        }`}
+                      </option>
+                    ))}
+                  </select>
+                </PropertyRow>
+
+                {/* The studio's own rigger lays a HUMANOID skeleton — hips, spine, four limbs.
+                    Saying so beats laying one on a horse and letting the user find out. */}
+                {!HUMANOID_KINDS.includes(kind) && (
+                  <QuietNote>{t('inspector.rigNotHumanoid')}</QuietNote>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <Button onClick={() => setAsking(false)}>{t('inspector.animationCancel')}</Button>
+                  <Button
+                    variant="primary"
+                    disabled={!HUMANOID_KINDS.includes(kind)}
+                    onClick={() => {
+                      edit.run(setModelRig(node.id, rigFit(bounds)))
+                      setAsking(false)
+                    }}
+                  >
+                    {t('inspector.rigCreate')}
+                  </Button>
+                </div>
+              </div>
+            </Flyout>
+          )}
           {/* Said BEFORE any click, never discovered as a 403 nor after minutes of upload: on
               this account every service refuses, and the studio's own rigger runs either way. */}
           {refusal?.kind === 'plan' && (
@@ -129,6 +224,17 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
 
           {picked && (
             <>
+              {/* Renamed where it is read, as a layer and a track are. A rig arrives with the
+                  names its file spells, and `mixamorigHips` is not one anybody chose. */}
+              <PropertyRow label={t('inspector.boneName')}>
+                <InlineRename
+                  value={picked}
+                  label={t('inspector.boneName')}
+                  gauge="inline"
+                  onCommit={name => renameBone(name)}
+                />
+              </PropertyRow>
+
               <PropertyRow label={t('inspector.boneRole')}>
                 {/* The standard's own spelling, untranslated and deliberately so: these are the
                     identifiers of the Mixamo set, and the issue's mapping screen shows them as

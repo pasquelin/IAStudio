@@ -273,3 +273,63 @@ function trimmedIn(clip: ClipRef, at: Us, span: Us, length: number | null): Clip
 export function clipsWithout(clips: readonly ClipRef[], clipId: string): readonly ClipRef[] | null {
   return clips.some(clip => clip.id === clipId) ? clips.filter(clip => clip.id !== clipId) : null
 }
+
+/**
+ * A copy of one block, laid end to end with the one it came from and carrying everything else.
+ *
+ * Refused while the file has not landed: a block of no width would be laid ON its own original.
+ */
+export function clipsDuplicated(
+  clips: readonly ClipRef[],
+  clipId: string,
+  copyId: string,
+  length: number | null,
+): readonly ClipRef[] | null {
+  const found = clips.find(clip => clip.id === clipId)
+  if (!found) return null
+
+  const span = clipSpanOf(found, length)
+  if (span <= 0) return null
+
+  return [...clips, { ...found, id: copyId, start: found.start + span }]
+}
+
+/**
+ * One block cut in two, each half playing on from where the other stops.
+ *
+ * No ramp at the cut, as the montage's own split has it: the two halves read as one move, and a
+ * fade in the middle of it would melt the pose where nothing happens.
+ */
+export function clipsSplit(
+  clips: readonly ClipRef[],
+  clipId: string,
+  at: Us,
+  tailId: string,
+  length: number | null,
+): readonly ClipRef[] | null {
+  const found = clips.find(clip => clip.id === clipId)
+  if (!found) return null
+
+  const span = clipSpanOf(found, length)
+  if (span <= 0 || at <= found.start || at >= found.start + span) return null
+
+  const head = { ...found, duration: at - found.start, fadeOut: 0 }
+  const wrap = found.loop && length !== null && length > 0 ? length : null
+  const played = found.offset + usToSeconds(at - found.start) * found.speed
+
+  return clips.flatMap(clip =>
+    clip.id === clipId
+      ? [
+          head,
+          {
+            ...found,
+            id: tailId,
+            start: at,
+            duration: found.start + span - at,
+            offset: wrap === null ? played : played % wrap,
+            fadeIn: 0,
+          },
+        ]
+      : [clip],
+  )
+}

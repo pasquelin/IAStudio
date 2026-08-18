@@ -30,6 +30,12 @@ function Host() {
   return <RigSection documentId={DOCUMENT} node={node} edit={edit} />
 }
 
+/** The two clicks the offer takes: the dialogue opens, and the skeleton is laid from it. */
+async function makeAnimatable(): Promise<void> {
+  await userEvent.click(screen.getByRole('button', { name: 'Rendre animable' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Créer le squelette' }))
+}
+
 /** A model whose file has landed as a bare mesh of the given shape. */
 function show(bounds = STANDING_BOUNDS, progress?: number): void {
   useModelClips.setState({
@@ -56,16 +62,37 @@ describe('RigSection', () => {
 
   it('offers to make a bare mesh animatable', async () => {
     show()
-    await userEvent.click(screen.getByRole('button', { name: 'Rendre animable' }))
+    await makeAnimatable()
 
     expect(nodeOf()?.model.rig?.origin).toBe('local')
+  })
+
+  // Nothing is laid until the dialogue says so: the type of character and the service are read
+  // there, and a click that rigged straight through would leave neither anything to answer.
+  it('asks before it lays anything', async () => {
+    show()
+    await userEvent.click(screen.getByRole('button', { name: 'Rendre animable' }))
+
+    expect(screen.getByLabelText('Type de personnage')).toBeInTheDocument()
+    expect(nodeOf()?.model.rig).toBeUndefined()
+  })
+
+  // The studio's rigger fits a HUMANOID skeleton to a bounding box. Offering to lay one on a
+  // horse would be a button that produces nonsense, so it says why instead.
+  it('refuses to lay its own skeleton on something that is not humanoid', async () => {
+    show()
+    await userEvent.click(screen.getByRole('button', { name: 'Rendre animable' }))
+    await userEvent.selectOptions(screen.getByLabelText('Type de personnage'), 'animal')
+
+    expect(screen.getByText(/humanoïde/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Créer le squelette' })).toBeDisabled()
   })
 
   // Twenty-two bones carrying their humanoid roles: that is what makes retargeting possible
   // later, and the names are what a track addresses.
   it('writes a whole body, each bone named after the role it fills', async () => {
     show()
-    await userEvent.click(screen.getByRole('button', { name: 'Rendre animable' }))
+    await makeAnimatable()
 
     const bones = nodeOf()?.model.rig?.bones ?? []
     expect(bones).toHaveLength(22)
@@ -75,7 +102,7 @@ describe('RigSection', () => {
 
   it('undoes the whole thing, since the rig is a document edit like any other', async () => {
     show()
-    await userEvent.click(screen.getByRole('button', { name: 'Rendre animable' }))
+    await makeAnimatable()
     useScenes.getState().undo(DOCUMENT)
 
     expect(nodeOf()?.model.rig).toBeUndefined()
@@ -83,7 +110,7 @@ describe('RigSection', () => {
 
   it('offers to take a skeleton back off once one is on', async () => {
     show()
-    await userEvent.click(screen.getByRole('button', { name: 'Rendre animable' }))
+    await makeAnimatable()
     await userEvent.click(screen.getByRole('button', { name: 'Retirer le squelette' }))
 
     expect(nodeOf()?.model.rig).toBeUndefined()
@@ -298,6 +325,44 @@ describe('RigSection', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Retirer la poignée' }))
     expect(nodeOf()?.model.rig?.ik).toEqual([])
     expect(nodeOf()?.model.rig?.bones.map(bone => bone.name)).not.toContain('LeftHand.handle')
+  })
+
+  // Every one of them answers 403 on this account, and submitting one needs the whole
+  // export-upload-job-import chain: they are shown with the reason rather than left out.
+  it('lists the Scenario services in the dialogue without letting one be chosen', async () => {
+    withCatalogue([{ requiredPlanLevel: 50 }], { name: 'cu-basic', level: 25 })
+    show()
+    await userEvent.click(await screen.findByRole('button', { name: 'Rendre animable' }))
+
+    const services = await screen.findByLabelText('Service')
+    expect(services).toHaveValue('')
+    expect([...services.querySelectorAll('option')].filter(option => option.disabled)).toHaveLength(
+      1,
+    )
+  })
+
+  // Written, tested and called by nothing until now. A rig arrives with the names its file
+  // spells, and the pick has to follow the rename or every control below it goes grey.
+  it('renames the picked bone, and keeps it picked under its new name', async () => {
+    rigged('Spine')
+
+    await userEvent.clear(screen.getByLabelText('Nom'))
+    await userEvent.type(screen.getByLabelText('Nom'), 'Torso{Enter}')
+
+    expect(nodeOf()?.model.rig?.bones.map(bone => bone.name)).toContain('Torso')
+    expect(useSceneViews.getState().views[DOCUMENT]?.pickedBone?.bone).toBe('Torso')
+  })
+
+  // `renameRigBone` writes nothing for a name already taken, and the pick would then follow a
+  // rename that never happened.
+  it('refuses a name another bone already answers to', async () => {
+    rigged('Spine')
+
+    await userEvent.clear(screen.getByLabelText('Nom'))
+    await userEvent.type(screen.getByLabelText('Nom'), 'Hips{Enter}')
+
+    expect(nodeOf()?.model.rig?.bones.filter(bone => bone.name === 'Hips')).toHaveLength(1)
+    expect(useSceneViews.getState().views[DOCUMENT]?.pickedBone?.bone).toBe('Spine')
   })
 
   it('never tells a model it cannot be rigged once it has been', () => {

@@ -1,6 +1,9 @@
-import { Bone, Object3D } from 'three'
+import { Bone, Object3D, Texture } from 'three'
 import { describe, expect, it } from 'vitest'
 import { createBoneJoints } from './boneJoints'
+
+/** What the studio draws at runtime; a runner has no 2D context, so the mark is handed in here. */
+const disc = () => new Texture()
 
 /** Two bones, one under the other, so a world position is not the local one. */
 function chain(): Bone[] {
@@ -59,6 +62,31 @@ describe('marking where two bones meet', () => {
     expect(Array.isArray(material) ? material[0] : material).toMatchObject({
       depthTest: false,
       sizeAttenuation: false,
+    })
+    joints.dispose()
+  })
+
+  // « Point » reads as round, and a material left to itself draws a square.
+  it('cuts the mark to a round one when a disc can be drawn', () => {
+    const joints = createBoneJoints(chain(), disc)
+    const material = joints.points.material
+
+    expect(Array.isArray(material) ? material[0] : material).toMatchObject({
+      alphaMap: expect.any(Texture),
+      alphaTest: 0.5,
+    })
+    joints.dispose()
+  })
+
+  // A canvas hands back no 2D context under a runner, and every one of these points would then
+  // be cut away by an alpha that is not there.
+  it('leaves the mark uncut where no disc could be drawn', () => {
+    const joints = createBoneJoints(chain(), () => null)
+    const material = joints.points.material
+
+    expect(Array.isArray(material) ? material[0] : material).toMatchObject({
+      alphaMap: null,
+      alphaTest: 0,
     })
     joints.dispose()
   })

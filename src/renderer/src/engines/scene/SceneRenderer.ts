@@ -158,6 +158,7 @@ import { createSkinWeights, type SkinWeights } from './skinWeights'
 import type { SkinBinding } from './skinVertices'
 import type { Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
+import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
@@ -197,6 +198,13 @@ export type SceneRendererOptions = {
    * five states it is in. Same reason as `onClips`: none of it lives in the document.
    */
   onRig?: (nodeId: string, rig: RigState) => void
+  /**
+   * What a skeleton of that signature means, worked out from a document's own rig. Kept by the
+   * project rather than here: this port dies with the viewport, and the mapping outlives it.
+   */
+  onProfile?: (profile: SkeletonProfile) => void
+  /** The mappings the project already knows, applied before anything is read. */
+  profiles?: readonly SkeletonProfile[]
   /**
    * The bone a click picked while the pose mode is on, or nothing for a click in the void.
    *
@@ -568,6 +576,9 @@ export class SceneRenderer {
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
     this.skin = options.skin ?? createSkinWeights(() => new SkinWorker())
     this.retarget = options.retarget ?? createRetarget(() => new RetargetWorker())
+    // Before any file lands: a skeleton this project has already been taught is recognised on
+    // the first model that carries it, in a document that never saw the correction.
+    for (const profile of options.profiles ?? []) this.retarget.remember(profile)
     this.sky = createSkyBinding(this.textureCache, () => this.paintBackground())
     // The studio's own by default: a face parsed for a caption in the image workspace is the
     // same object a text node extrudes, and half a megabyte of glyph tables is worth sharing.
@@ -2151,10 +2162,14 @@ export class SceneRenderer {
     for (const bone of rig.bones) if (bone.role) roles[bone.name] = bone.role
     if (Object.keys(roles).length === 0) return
 
-    this.retarget.learn(
-      rig.bones.map(bone => bone.name),
+    const profile = {
+      signature: skeletonSignatureOf(rig.bones.map(bone => bone.name)),
       roles,
-    )
+    }
+    this.retarget.remember(profile)
+    // Out to whoever keeps them: a mapping put right in one document is the same mapping the
+    // next document of this project needs, and the port dies with the viewport.
+    this.options.onProfile?.(profile)
   }
 
   /**

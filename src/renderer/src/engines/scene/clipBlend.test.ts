@@ -4,7 +4,9 @@ import { SECOND, type Us } from '@shared/domain/time'
 import {
   clipBlendAt,
   clipSpanOf,
+  clipsDuplicated,
   clipsMoved,
+  clipsSplit,
   clipsTrimmed,
   clipTimeAt,
   lanesMinus,
@@ -248,5 +250,60 @@ describe('editing the blocks of a lane', () => {
     )
 
     expect(trimmed?.[0]?.fadeOut).toBe(0.4 * SECOND)
+  })
+
+  it('lays a copy end to end with the block it came from', () => {
+    const copied = clipsDuplicated([walk({ start: SECOND, duration: 2 * SECOND })], 'walk', 'x', 2)
+
+    expect(copied?.map(clip => [clip.id, clip.start])).toEqual([
+      ['walk', SECOND],
+      ['x', 3 * SECOND],
+    ])
+  })
+
+  // The width of a block whose file has not landed is the file's own, and there is none yet: the
+  // copy would be laid on top of its original.
+  it('refuses to copy a block that has no width yet', () => {
+    expect(clipsDuplicated([walk()], 'walk', 'x', null)).toBeNull()
+  })
+
+  it('cuts a block in two, the tail playing on from where the head stops', () => {
+    const cut = clipsSplit([walk({ duration: 2 * SECOND })], 'walk', 0.5 * SECOND, 'tail', 2)
+
+    expect(cut?.map(clip => [clip.id, clip.start, clip.duration, clip.offset])).toEqual([
+      ['walk', 0, 0.5 * SECOND, 0],
+      ['tail', 0.5 * SECOND, 1.5 * SECOND, 0.5],
+    ])
+  })
+
+  // A cut is a butt joint: a ramp there would dip the pose in the middle of one move.
+  it('leaves no fade on either side of the cut', () => {
+    const cut = clipsSplit(
+      [walk({ duration: 2 * SECOND, fadeIn: 0.2 * SECOND, fadeOut: 0.2 * SECOND })],
+      'walk',
+      SECOND,
+      'tail',
+      2,
+    )
+
+    expect(cut?.map(clip => [clip.fadeIn, clip.fadeOut])).toEqual([
+      [0.2 * SECOND, 0],
+      [0, 0.2 * SECOND],
+    ])
+  })
+
+  it('refuses a cut on an edge of the block, which would give a half of no width', () => {
+    const block = [walk({ duration: 2 * SECOND })]
+
+    expect(clipsSplit(block, 'walk', 0, 'tail', 2)).toBeNull()
+    expect(clipsSplit(block, 'walk', 2 * SECOND, 'tail', 2)).toBeNull()
+  })
+
+  // A looping block played past the end of its clip comes round again, so the tail has to read
+  // where the head actually stood rather than off the end of the file.
+  it('wraps the tail of a looping block into the clip it plays', () => {
+    const cut = clipsSplit([walk({ duration: 5 * SECOND, loop: true })], 'walk', 3 * SECOND, 't', 2)
+
+    expect(cut?.[1]?.offset).toBe(1)
   })
 })

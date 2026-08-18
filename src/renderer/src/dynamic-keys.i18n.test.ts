@@ -4,6 +4,7 @@ import { LANGUAGES, TRANSLATIONS, type Language } from '@shared/i18n'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { BODY_PARTS } from '@shared/domain/humanoid'
+import { ROOT_MOTIONS } from '@shared/domain/scene'
 import {
   ADJUSTMENT_KINDS,
   BLEND_MODES,
@@ -16,6 +17,7 @@ import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStac
 import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
 import { RIG_STATUSES, type RigStatus } from '@/engines/scene/rigState'
 import { RIG_FIT_FAULTS, type RigFitFault } from '@/engines/scene/rigFit'
+import { CHARACTER_KINDS } from '@/panels/inspector/RigSection'
 import { ASSET_INTENTS } from '@/helpers/assetIntents'
 import { FOLDER_SORTS } from '@/helpers/folderSort'
 import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
@@ -59,9 +61,13 @@ const COMPOSED_KEYS: readonly string[] = [
   // Why a mesh cannot take a skeleton. Composed the same way, and it stands in for the button
   // itself: a fault with no sentence would leave the user a raw key where the offer used to be.
   ...RIG_FIT_FAULTS.map(fault => `inspector.rigFault_${fault}`),
+  // The four answers to « what is this », in the dialogue that lays a skeleton.
+  ...CHARACTER_KINDS.map(kind => `inspector.characterKinds.${kind}`),
   // Which half of a body a block drives. A part with no sentence would read as a raw key inside
   // the one control that makes two animations stack rather than average.
   ...BODY_PARTS.map(part => `inspector.clipPart_${part}`),
+  // Whether a block moves the character or plays on the spot. Same control, same trap.
+  ...ROOT_MOTIONS.map(motion => `inspector.rootMotion_${motion}`),
   ...TRACK_KINDS.map(kind => `inspector.kind_${kind}`),
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),

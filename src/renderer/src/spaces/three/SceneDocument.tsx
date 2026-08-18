@@ -30,6 +30,8 @@ import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { addModelTo, isSceneDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { displayOfPane, useSceneViews, sceneViewOf } from '@/stores/sceneViews'
+import { skeletonProfilesOf, useSkeletonProfiles } from '@/stores/skeletonProfiles'
+import { useProject } from '@/stores/project'
 import { nextDisplayMode } from '@/engines/scene/sceneView'
 import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
@@ -168,6 +170,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     const element = host.current
     if (!element) return
 
+    // Read at mount rather than subscribed to: a project cannot change under an open document,
+    // and a subscription here would tear the viewport down to answer a rename.
+    const projectPath = useProject.getState().project?.path ?? null
+
     const renderer = new SceneRenderer({
       // A click in the void with a modifier held keeps the selection: `toggle` of nothing is
       // nothing, which is what stops a near miss from undoing the picking that came before it.
@@ -176,6 +182,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onClips: (nodeId, clips, lengths) =>
         useModelClips.getState().report(documentId, nodeId, clips, lengths),
       onRig: (nodeId, rig) => useModelClips.getState().reportRig(documentId, nodeId, rig),
+      // The project's, not the document's: the same character opens in the next document of this
+      // project, and a mapping worked out once must never be worked out again.
+      profiles: skeletonProfilesOf(useSkeletonProfiles.getState(), projectPath),
+      onProfile: profile =>
+        projectPath && useSkeletonProfiles.getState().rememberSkeletonProfile(projectPath, profile),
       onClipFit: (nodeId, clipKey, fit) =>
         useModelClips.getState().reportClipFit(documentId, nodeId, clipKey, fit),
       onRigProgress: (nodeId, progress) =>
