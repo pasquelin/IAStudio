@@ -4,6 +4,7 @@ import { mdiContentCut, mdiDeleteOutline, mdiLinkVariantOff } from '@mdi/js'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { posterUrl } from '@shared/domain/asset'
+import { exportOtio } from '@/app/otioExport'
 import type { Command } from '@/engines/core/history'
 import {
   addClips,
@@ -56,7 +57,6 @@ import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { useSelection } from '@/stores/selection'
 import { addSceneToSequence, sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
-import { exportOtio } from './otioExport'
 import { exportSequence } from './sequenceExport'
 import type { VideoToolId } from './videoTools'
 

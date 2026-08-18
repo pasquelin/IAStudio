@@ -11,6 +11,7 @@ import { useSplitPair } from '@/hooks/useSplitPair'
 import { audioHistoryOf, isAudioEditDirty, useAudioEdits } from '@/stores/audioEdits'
 import { useDocuments } from '@/stores/documents'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
+import { exportOtio } from '@/app/otioExport'
 import { ProgramMonitor } from './ProgramMonitor'
 import { TakeEditor } from './TakeEditor'
 
@@ -94,14 +95,23 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   // gives: Dockview keeps hidden tabs mounted, and a background take would eat ⌘Z.
   useShortcuts({ scope: 'audio', enabled: active, onCommand })
 
-  // The space bar, which the programme monitor answers here as it does in the picture pair.
-  const onTransport = useCallback(
+  // The space bar, which the programme monitor answers here as it does in the picture pair —
+  // and the montage export, this space holding the same `SequenceState` the video one does.
+  const onMontage = useCallback(
     (command: CommandId) => {
-      if (command === 'sequence.playPause') transport.toggle()
+      if (command === 'sequence.playPause') return transport.toggle()
+      // The chain of an edited take is NOT in it, and that is not a loss of the export: the
+      // programme monitor does not hear it either — it becomes real when the take is applied.
+      if (command === 'sequence.exportCut') {
+        void exportOtio(
+          sequenceOf(useSequences.getState(), documentId),
+          useDocuments.getState().documents[documentId]?.title ?? documentId,
+        )
+      }
     },
-    [transport],
+    [documentId, transport],
   )
-  useShortcuts({ scope: 'sequence', enabled: active, onCommand: onTransport })
+  useShortcuts({ scope: 'sequence', enabled: active, onCommand: onMontage })
 
   return (
     /*

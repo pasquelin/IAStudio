@@ -249,6 +249,14 @@ its width, from start to finish: this is a view you read at a glance, not one yo
 > take; the upper one plays the **clips laid on the tracks**. Starting one stops the other: the
 > studio has a single player.
 
+**File › Export edit (OTIO)** writes that edit into a file other editing applications open:
+tracks, clips, in points, speeds and links to the sounds. It is the same edit the Video workspace
+holds, so it is the same command.
+
+> **The tool chain is not in it, and that is not a loss of the export.** The upper monitor does
+> not hear it either: it belongs to the take open below, and it becomes real when you **Apply**.
+> An exported edit is worth exactly what the Program plays.
+
 ---
 
 ## Undo and redo

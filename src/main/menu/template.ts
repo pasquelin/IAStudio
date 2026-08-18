@@ -291,6 +291,15 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       ]
     }
 
+    // The same montage without a picture row, so the same row — and no film to render out of a
+    // document that has none.
+    if (workspace === 'audio') {
+      return [
+        { type: 'separator' },
+        commandItem('sequence.exportCut', t.commands.sequenceExportCut.title),
+      ]
+    }
+
     return []
   }
 

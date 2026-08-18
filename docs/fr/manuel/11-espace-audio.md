@@ -257,6 +257,14 @@ qu’on lit d’un coup d’œil, pas une qu’on fait défiler.
 > d’outils** appliquée à la prise ouverte ; celui du haut fait entendre les **clips posés sur
 > les pistes**. Lancer l’une arrête l’autre : le studio n’a qu’un seul lecteur.
 
+**Fichier › Exporter le montage (OTIO)** écrit ce montage dans un fichier que d’autres logiciels
+de montage ouvrent : pistes, clips, points d’entrée, vitesses et liens vers les sons. C’est le
+même montage que l’espace Vidéo, donc la même commande.
+
+> **La chaîne d’outils n’y est pas, et ce n’est pas une perte de l’export.** Le moniteur du haut
+> ne l’entend pas non plus : elle appartient à la prise ouverte en dessous, et elle devient réelle
+> quand vous **Appliquez**. Un montage exporté vaut ce que le Programme fait entendre.
+
 ---
 
 ## Annuler et rétablir

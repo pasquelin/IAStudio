@@ -175,9 +175,12 @@ describe('reading an OpenRaster container back', () => {
     })
 
   /**
-   * GIMP and MyPaint write attributes in alphabetical order, so `opacity` comes before `y`. An
-   * unanchored search for `y="…"` then found the tail of `opacity="…"` and every layer landed at
+   * An unanchored search for `y="…"` finds the tail of `opacity="…"`, and every layer lands at
    * the wrong height — invisible to a round trip through this studio, which emits `y` first.
+   *
+   * The order is not fixed by the spec and is not worth guessing at: this case was written
+   * against « GIMP writes them alphabetically », which MEASURING GIMP 3.2.4 disproved — it emits
+   * `src name x y opacity visibility composite-op`. The defence is right, the reason was not.
    */
   it('reads an attribute whose name ends another one, whatever the order', () => {
     const read = unpackOpenRaster(
@@ -190,6 +193,38 @@ describe('reading an OpenRaster container back', () => {
     )
 
     expect(read.nodes[0]).toMatchObject({ name: 'Ink', x: 7, y: 9, opacity: 0.25 })
+  })
+
+  /**
+   * The stack GIMP 3.2.4 really writes, copied verbatim off a file it exported on 18/08 — the
+   * only case here that is not this repository guessing at another application. It carries
+   * `selected`, which the spec does not define, and no `version` on `<image>`.
+   *
+   * The other half of that measurement cannot live in this suite: GIMP opened a container
+   * `packOpenRaster` wrote and reported both layer names, `0.25` opacity and the multiply mode.
+   * It needs GIMP installed, so it is written in `.claude/etat-formats-ouverts.md` instead.
+   */
+  it('reads the stack an installed GIMP actually wrote', () => {
+    const read = unpackOpenRaster(
+      foreign(
+        `<image w="64" h="32"><stack>` +
+          `<layer src="data/000.png" name="Encre GIMP" x="0" y="0" opacity="0.4" ` +
+          `visibility="visible" composite-op="svg:multiply" selected="true" />` +
+          `<layer src="data/001.png" name="Fond GIMP" x="0" y="0" opacity="1.0" ` +
+          `visibility="visible" composite-op="svg:src-over" />` +
+          `</stack></image>`,
+      ),
+    )
+
+    expect(read).toMatchObject({
+      width: 64,
+      height: 32,
+      nodes: [
+        { kind: 'layer', name: 'Encre GIMP', opacity: 0.4, composite: 'svg:multiply' },
+        { kind: 'layer', name: 'Fond GIMP', opacity: 1, composite: 'svg:src-over' },
+      ],
+      studio: '',
+    })
   })
 
   /**
