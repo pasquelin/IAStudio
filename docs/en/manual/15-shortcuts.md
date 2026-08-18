@@ -53,9 +53,12 @@ Nine contexts:
 | **In the material** | the preview and channels of the Textures workspace |
 
 **A surface can listen to a key without being a context, and the guarantee above does not cover it
-then.** The Modelling workspace's animation band is that case: `Delete` and `Backspace` take off the
-chosen key there, the key being bound to the band rather than to the register of contexts. So it
-does not appear on the shortcuts screen, and cannot be changed.
+then.** The Modelling workspace's animation band is that case, and it listens to **four** keys:
+`Delete` and `Backspace` take off whatever is chosen — the key, or the animation block — `⌘D`
+duplicates the chosen block end to end, and `S` cuts it at the playhead. All four are bound to the
+band rather than to the register of contexts: they do not appear on the shortcuts screen, and
+cannot be changed. Right-clicking a block carries the three gestures that concern it — see [the
+Modelling workspace](09-modelling-workspace.md).
 
 One context is special: **Anywhere in the application**. Its keys go through the operating system's
 menu, which catches them before anybody else. They are therefore the only ones that can never be
@@ -588,8 +591,8 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 **The flying keys** (`W A S D Q E` and boost) are not on this screen. They are fixed for now. See
 [What does not exist yet](18-limits.md).
 
-**`Delete` and `Backspace` on the animation band** are not either, for the reason given above: they
-are bound to the band, not to a context.
+**The animation band's four keys** are not either — `Delete`, `Backspace`, `⌘D` and `S` — for the
+reason given above: they are bound to the band, not to a context.
 
 ---
 

@@ -731,6 +731,31 @@ to give than their mean, even on two lines: they are competing for the same bone
 > **a skeleton with no recognised joints**, do not count on the halves and leave the blocks on
 > **The whole body**.
 
+### Editing a block once laid
+
+**A chosen block answers to three gestures**, and right-clicking the block carries all three —
+without that menu, none of them would ever be found.
+
+| Gesture | Key | What it does |
+|---|---|---|
+| **Duplicate** | `⌘D` | lays a copy of the block **right after it**, end to end |
+| **Split block** | `S` | cuts the block in two where the playhead stands |
+| **Remove** | `Delete` | takes the block off the band. **The animation itself is untouched** |
+
+**The cut leaves no fade at the joint**, exactly as the montage's own does: the two halves read as
+one move, and a ramp in the middle would melt the pose where nothing happens. The second half picks
+the motion up where the first one stops.
+
+**Split stays greyed out until the playhead sits STRICTLY inside the block**: standing on either
+of its two edges, it would cut nothing at all. The menu keeps the entry greyed rather than dropping
+it — a list whose length follows the playhead cannot be learnt.
+
+> **These three keys belong to no context of the shortcuts screen**, and so cannot be changed
+> there: they are bound to the band, which must hold the focus. **Two of them do something else in
+> the 3D view** — `S` scales there, `⌘D` duplicates the selected object — and it is whichever
+> surface holds the focus that decides. Right-clicking stays the safe way in. See [Keyboard
+> shortcuts](15-shortcuts.md).
+
 ### Seeing the skeleton
 
 A rigged model carries **bones**. The **B** key, or **View ▸ Show skeletons**, draws them over
