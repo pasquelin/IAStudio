@@ -18,6 +18,7 @@ import {
   PointsMaterial,
   Vector3,
   type Bone,
+  type Object3D,
   type Texture,
 } from 'three'
 import { rootColour } from '../core/palette'
@@ -95,9 +96,16 @@ export function createBoneJoints(
   points.renderOrder = 1
   points.frustumCulled = false
 
+  // One walk per root rather than one per bone: `getWorldPosition` re-composes the whole ancestor
+  // chain for the bone it is asked about, and every bone of a skeleton shares that chain.
+  const held = new Set<Object3D>(bones)
+  const roots = bones.filter(bone => !bone.parent || !held.has(bone.parent))
+
   const refresh = (): void => {
+    for (const root of roots) root.updateWorldMatrix(true, true)
+
     for (const [index, bone] of bones.entries()) {
-      bone.getWorldPosition(WORLD)
+      WORLD.setFromMatrixPosition(bone.matrixWorld)
       positions[index * 3] = WORLD.x
       positions[index * 3 + 1] = WORLD.y
       positions[index * 3 + 2] = WORLD.z

@@ -1,4 +1,4 @@
-import { mdiFileOutline, mdiPackageVariantClosed, mdiRun } from '@mdi/js'
+import { mdiFileOutline, mdiPackageVariantClosed } from '@mdi/js'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { BundledAnimation } from '@shared/domain/animationLibrary'
@@ -7,6 +7,7 @@ import { Row } from '../Row'
 import { rowSkin } from '../styles'
 import { useProjectAnimations } from '@/hooks/useProjectAnimations'
 import { clipsOfNode, useModelClips } from '@/stores/modelClips'
+import { assetIcon } from '@/helpers/workspaces'
 
 export type AnimationPickerLibraryProps = {
   documentId: string
@@ -70,7 +71,7 @@ export function AnimationPickerLibrary({
           `asset:${asset.id}`,
           asset.name,
           { kind: 'asset', assetId: asset.id, name: asset.name },
-          mdiRun,
+          assetIcon('animation'),
         ),
       )}
     </ul>

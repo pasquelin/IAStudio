@@ -59,13 +59,9 @@ export function selectIn(
 }
 
 /**
- * The one way an imported model enters a scene, whichever door it came through: a double-click
- * in the asset browser, a drop on the viewport, or a 3D generation landing in the tab it was
- * launched from. Three call sites building the node their own way is three ways for a model to
- * arrive without a name.
- *
- * Answers whether it went in, so a caller that owns a gesture — a drop — knows whether to
- * swallow it. An asset of another type is refused rather than turned into an empty node.
+ * The one way an imported model enters a scene, whichever door it came through — three call sites
+ * building the node their own way is three ways for a model to arrive without a name. Answers
+ * whether it went in, so a caller that owns a gesture knows whether to swallow it.
  */
 export function addModelTo(documentId: string, asset: Asset): boolean {
   if (asset.type !== 'mesh') return false

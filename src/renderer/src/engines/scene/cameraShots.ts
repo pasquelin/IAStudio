@@ -5,6 +5,8 @@ import { movedWithin } from '@shared/domain/order'
 import { cachedOn } from '../core/cachedOn'
 import { cameraIds, firstCameraId, type SceneNode } from './sceneState'
 
+const cameraLists = new WeakMap<readonly CameraShot[], readonly string[]>()
+
 /**
  * The cameras the band stacks, top first: one line per camera, ranked by where its first shot
  * stands in the list.
@@ -13,8 +15,8 @@ import { cameraIds, firstCameraId, type SceneNode } from './sceneState'
  * rather than in a number on each shot. A number said the same thing twice: two shots of one
  * camera could hold different layers, and the line drawn for them then had no rank at all.
  */
-export function shotCameras(shots: readonly CameraShot[]): string[] {
-  return [...new Set(shots.map(shot => shot.cameraId))]
+export function shotCameras(shots: readonly CameraShot[]): readonly string[] {
+  return cachedOn(cameraLists, shots, () => [...new Set(shots.map(shot => shot.cameraId))])
 }
 
 /**

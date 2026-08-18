@@ -32,12 +32,8 @@ export type AnimationPickerProps = {
 /**
  * Where an animation is chosen: the project's own, a file from disk, or a Scenario model.
  *
- * The preview is NOT a rehearsal — choosing lays the real block on the real character and plays
- * it through the real retargeting, which is what the issue demands in as many words: an preview
- * that differs from the result is a defect rather than an approximation. `Annuler` takes it back.
- *
- * A flyout off the button rather than a window of its own, and that is the whole reason: a
- * separate window has no viewport, so it could only ever show a rehearsal.
+ * A flyout rather than a window, and choosing lays the REAL block: a separate window has no
+ * viewport, so it could only ever show a rehearsal. `Annuler` takes the block back.
  */
 export function AnimationPicker({
   documentId,
@@ -51,10 +47,11 @@ export function AnimationPicker({
   const { t } = useTranslation()
   const [source, setSource] = useState<AnimationPickerSource>('library')
 
-  const panes: Record<AnimationPickerSource, ReactNode> = {
-    library: <AnimationPickerLibrary documentId={documentId} nodeId={nodeId} onChoose={onChoose} />,
-    import: <AnimationPickerImport onChoose={onChoose} />,
-    ai: <AnimationPickerAi />,
+  const pane = (): ReactNode => {
+    if (source === 'import') return <AnimationPickerImport onChoose={onChoose} />
+    if (source === 'ai') return <AnimationPickerAi />
+
+    return <AnimationPickerLibrary documentId={documentId} nodeId={nodeId} onChoose={onChoose} />
   }
 
   return (
@@ -75,7 +72,7 @@ export function AnimationPicker({
           ))}
         </div>
 
-        <div className="max-h-64 min-h-0 overflow-y-auto">{panes[source]}</div>
+        <div className="max-h-64 min-h-0 overflow-y-auto">{pane()}</div>
 
         {laid && (
           <>

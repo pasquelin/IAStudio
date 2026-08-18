@@ -1,5 +1,5 @@
 import type { CloudAssetType } from '@shared/domain/asset'
-import type { UploadKind } from '@shared/domain/assetMime'
+import { UPLOAD_KIND_BY_TYPE, type UploadKind } from '@shared/domain/assetMime'
 
 /**
  * The filter `POST /search/assets` takes, in its Meilisearch-style syntax.
@@ -15,23 +15,14 @@ import type { UploadKind } from '@shared/domain/assetMime'
  */
 
 /**
- * The API's media classes, from the ones it can be asked for. Several of ours share one.
+ * The API's media classes, read off the table the upload path already holds.
  *
  * `CloudAssetType` and not `AssetType`, which is the whole reason that split exists: the studio
- * knows an animation, the API does not, and mapping one onto `3d` HERE would answer a request
- * for motion with a shelf of characters.
- *
- * Typed against the same union the upload table uses rather than `string`: a typo here compiles
- * and produces a filter that silently matches nothing, which is the one failure mode a filter
- * expression cannot signal.
+ * knows an animation, the API does not, and asking for one HERE would answer a request for
+ * motion with a shelf of characters.
  */
-const KIND_BY_TYPE: Record<CloudAssetType, UploadKind> = {
-  image: 'image',
-  texture: 'image',
-  skybox: 'image',
-  video: 'video',
-  audio: 'audio',
-  mesh: '3d',
+function kindOf(type: CloudAssetType): UploadKind {
+  return UPLOAD_KIND_BY_TYPE[type]
 }
 
 /**
@@ -60,7 +51,7 @@ export function filterExpression({ tags, types, collectionId }: FilterTerms): st
 
   for (const tag of tags ?? []) clauses.push(`tags = ${quoted(tag)}`)
 
-  const kinds = [...new Set((types ?? []).map(type => KIND_BY_TYPE[type]))]
+  const kinds = [...new Set((types ?? []).map(kindOf))]
   if (kinds.length > 0) {
     const group = kinds.map(kind => `kind = ${quoted(kind)}`).join(' OR ')
     clauses.push(kinds.length === 1 ? group : `(${group})`)
@@ -98,7 +89,7 @@ export function publicFeedFilter(type: CloudAssetType): string {
 
   if (type === 'texture' || type === 'skybox') clauses.push(contains(type))
   else {
-    clauses.push(`kind = ${quoted(KIND_BY_TYPE[type])}`)
+    clauses.push(`kind = ${quoted(kindOf(type))}`)
     // Both share `kind: image`, and a feed of pictures that opens on seven channels of one
     // material is not the feed anyone asked for.
     if (type === 'image') clauses.push(`NOT ${contains('texture')}`, `NOT ${contains('skybox')}`)

@@ -91,6 +91,24 @@ export function rigRefusalOf(
   return { kind: 'too-large', maxSize: mesh.maxSize }
 }
 
+/**
+ * Why NO provider of a list can be used, or nothing at all when one of them could.
+ *
+ * `null` for « one is within reach », and equally for a catalogue that answered nothing at all:
+ * offline is not a subscription being short.
+ */
+export function providersRefusalOf(
+  providers: readonly RigProvider[],
+  plan: PlanAccess | null,
+  mesh: { bytes: number; maxSize?: number },
+): RigRefusal | null {
+  if (providers.length === 0) return null
+
+  const refusals = providers.map(provider => rigRefusalOf(provider, plan, mesh))
+  // The first one, since they all refuse: one sentence rather than a list nobody reads.
+  return refusals.every(refusal => refusal !== null) ? (refusals[0] ?? null) : null
+}
+
 function ownsTag(tags: readonly string[], wanted: readonly string[]): boolean {
   return tags.some(tag => wanted.includes(tag.toLowerCase()))
 }

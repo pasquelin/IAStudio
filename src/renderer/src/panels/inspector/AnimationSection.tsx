@@ -22,6 +22,7 @@ import { INLINE_LINK, NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
 import { addModelClip, removeModelClip, setModelLanes } from '@/engines/scene/commands'
+import { lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import type { ModelNode } from '@/engines/scene/sceneState'
 import { cn } from '@/helpers/cn'
@@ -36,10 +37,6 @@ export type AnimationSectionProps = {
   node: ModelNode
   edit: SceneEdit
 }
-
-/** How fast a clip may be asked to run. Below zero it would play backwards, which is a lot more. */
-const MIN_SPEED = 0.1
-const MAX_SPEED = 4
 
 /** Seconds. Past a second a transition stops reading as one move joining another. */
 const MAX_FADE = 1
@@ -93,27 +90,21 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   // The chosen block is replaced INSIDE its own lane, every other lane carried over untouched:
   // rewriting the whole field from one control would drop every block this section does not show.
   const write = (next: ClipRef | null): void => {
-    const holding = lanes.find(lane => lane.clips.some(clip => clip.id === played?.id)) ?? lanes[0]
-    const clips = holding?.clips ?? []
     // Rewritten IN PLACE: a block moved to the front of its lane because a speed changed would
     // reorder what the band draws.
-    const rewritten = clipLane(
-      holding?.id ?? MAIN_LANE_ID,
+    const rewrite = (clips: readonly ClipRef[]): readonly ClipRef[] =>
       next === null
         ? clips.filter(clip => clip.id !== played?.id)
         : played
           ? clips.map(clip => (clip.id === played.id ? next : clip))
-          : [...clips, next],
-    )
+          : [...clips, next]
 
-    edit.run(
-      setModelLanes(
-        node.id,
-        lanes.length > 0
-          ? lanes.map(lane => (lane.id === rewritten.id ? rewritten : lane))
-          : [rewritten],
-      ),
-    )
+    const holding = lanes.find(lane => lane.clips.some(clip => clip.id === played?.id)) ?? lanes[0]
+    const written = holding
+      ? lanesWith(lanes, holding.id, rewrite)
+      : [clipLane(MAIN_LANE_ID, rewrite([]))]
+
+    if (written) edit.run(setModelLanes(node.id, written))
   }
 
   // Picking a clip on a model that had none starts from the defaults rather than from nothing,
@@ -128,7 +119,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   /** Lays what the picker chose, plays it at once, and remembers which block that was. */
   const browse = (source: ClipSource, label: string): void => {
     const laid = { ...DEFAULT_CLIP, id: newId(), source, label }
-    if (picking?.clipId) edit.run(removeModelClip(node.id, picking.clipId))
+    if (picking) edit.run(removeModelClip(node.id, picking.clipId))
     edit.run(addModelClip(node.id, laid))
     setPicking({ clipId: laid.id, source })
     play(laid)
@@ -141,9 +132,8 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   }
 
   const drop = (): void => {
-    if (picking?.clipId) edit.run(removeModelClip(node.id, picking.clipId))
-    setPicking(null)
-    play(null)
+    if (picking) edit.run(removeModelClip(node.id, picking.clipId))
+    keep()
   }
 
   return (

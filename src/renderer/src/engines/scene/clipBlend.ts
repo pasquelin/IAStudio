@@ -11,7 +11,10 @@ import { clamp } from '@shared/numeric'
 import type { ClipEdge } from '../timeline/timelineGeometry'
 
 /** A speed of zero would make a block infinitely long; no control in the studio offers less. */
-const MIN_SPEED = 0.1
+export const MIN_SPEED = 0.1
+
+/** Past four times, a motion reads as a glitch rather than as a faster move. */
+export const MAX_SPEED = 4
 
 /**
  * How much band a block takes: what the document says, else the file's length at the speed it

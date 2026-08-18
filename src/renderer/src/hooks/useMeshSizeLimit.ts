@@ -2,15 +2,9 @@ import { useEffect, useState } from 'react'
 import { getBridge } from '@/services/bridge'
 
 /**
- * The biggest mesh a model will take, in bytes, or `undefined` while nobody knows.
- *
- * Read off the model's OWN schema and never written down here: Uthana's character rigger answers
- * 30 000 000 today and nothing promises it will tomorrow. `undefined` refuses nothing, which is
- * the same rule an unreadable plan lives under — being wrong about a limit hides a file that
- * would have gone through.
- *
- * One call, and only for the model actually about to be used: a limit is asked before an upload,
- * not for every row of a list.
+ * The biggest mesh a model will take, in bytes, or `undefined` while nobody knows — which refuses
+ * nothing: being wrong about a limit hides a file that would have gone through. Read off the
+ * model's OWN schema, never written down: Uthana answers 30 000 000 today, and only today.
  */
 export function useMeshSizeLimit(modelId: string | null): number | undefined {
   const [limit, setLimit] = useState<number | undefined>(undefined)

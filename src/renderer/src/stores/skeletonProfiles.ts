@@ -15,13 +15,9 @@ const NO_PROFILES: readonly SkeletonProfile[] = []
 /**
  * What each project knows about the skeletons it has already read, kept between sessions.
  *
- * By project because that is where a mapping is worth anything: two documents of one project hold
- * the same characters, and the retargeting port dies with the viewport that made it. What is
- * stored is the CORRECTION, filed under the fingerprint of the bone names — the same rig arrives
- * under many files, and the signature is what recognises them as one.
- *
- * On this machine and not in the project folder: the studio writes nothing of its own into a
- * folder someone else may open, so a project copied elsewhere learns its skeletons again.
+ * What is stored is the CORRECTION, filed under the fingerprint of the bone names — one rig
+ * arrives under many files, and the signature is what recognises them as one. On this machine
+ * rather than in the project folder, which the studio writes nothing of its own into.
  */
 export const useSkeletonProfiles = create<SkeletonProfilesState>()(
   persist(

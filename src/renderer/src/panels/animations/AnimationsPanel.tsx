@@ -13,16 +13,9 @@ import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { AnimationsPanelRow } from './AnimationsPanelRow'
 
 /**
- * What a character can be made to play: the clips its own file brought, and the animations the
- * app ships with. A row is DRAGGED onto a sub-track of the band, which is what puts a block on it.
- *
- * The two sources are shown as one list on purpose — from where someone stands, both answer the
- * same question, and only the drop decides what a block ends up playing.
- *
- * `▶` plays one AT ONCE, by laying the real block and watching it — the same trade the picker
- * makes, and for the same reason: there is no rehearsal that could match the result. Pressing it
- * again takes the block back off. A preview the playhead interrupts leaves its block standing,
- * which is exactly what dragging the row would have laid.
+ * What a character can be made to play: the clips its file brought, and those the app ships with.
+ * `▶` lays the REAL block and watches it, so a preview the playhead interrupts leaves its block
+ * standing — which is exactly what dragging the row would have laid.
  */
 export function AnimationsPanel() {
   const { t } = useTranslation()
@@ -63,12 +56,16 @@ export function AnimationsPanel() {
   const watch = (source: ClipSource, label: string): void => {
     if (!documentId || !nodeId) return
 
+    // Read before anything is taken back: pressing the row that plays STOPS it, and the answer
+    // must not depend on what the lines below have already written.
+    const stop = playingIs(label)
+
     // Whatever was laid goes first, whichever row is pressed: the block IS the preview, and two
     // of them left behind would play at once on the character.
     if (watched) useScenes.getState().runCommand(documentId, removeModelClip(nodeId, watched.id))
     useSceneViews.getState().setPreview(documentId, null)
     setWatched(null)
-    if (playingIs(label)) return
+    if (stop) return
 
     const laid = { ...DEFAULT_CLIP, id: newId(), source, label }
     useScenes.getState().runCommand(documentId, addModelClip(nodeId, laid))

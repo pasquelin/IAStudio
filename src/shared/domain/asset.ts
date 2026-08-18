@@ -15,21 +15,18 @@ export const ASSET_TYPES: readonly AssetType[] = [
 ]
 
 /**
- * What the PROJECT knows and Scenario does not.
+ * A kind the API can be ASKED for. Every other list narrows to this one before a request.
  *
  * MEASURED: the API has no animation class at all — the Uthana file carrying a capoeira is filed
  * `kind: '3d'` there, beside the characters. A tab offering animations against the cloud would
  * therefore promise motion and list models, which is why this split exists rather than one list.
  */
-const LOCAL_ONLY: readonly AssetType[] = ['animation']
-
-/** A kind the API can be ASKED for. Every other list narrows to this one before a request. */
 export type CloudAssetType = Exclude<AssetType, 'animation'>
 
 export const CLOUD_ASSET_TYPES: readonly CloudAssetType[] = ASSET_TYPES.filter(isCloudAssetType)
 
 export function isCloudAssetType(type: AssetType): type is CloudAssetType {
-  return !LOCAL_ONLY.includes(type)
+  return type !== 'animation'
 }
 
 export function isAssetType(value: unknown): value is AssetType {
