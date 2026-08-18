@@ -4,7 +4,7 @@ import { SECOND } from '@shared/domain/time'
 import { cameraShot } from './animation-fixtures'
 import { cameraNodeFixture } from './scene-fixtures'
 import type { SceneRenderer } from './SceneRenderer'
-import { createSceneStage } from './sceneStage'
+import { createSceneStage, type SceneStage } from './sceneStage'
 import { EMPTY_SCENE, type SceneState } from './sceneState'
 
 /**
@@ -13,7 +13,6 @@ import { EMPTY_SCENE, type SceneState } from './sceneState'
  */
 function stubRenderer(): {
   renderer: SceneRenderer
-  /** Handed back whole rather than spread: a count spread out is a count frozen at zero. */
   record: { drawn: (string | null)[]; framed: number }
 } {
   const record = { drawn: [] as (string | null)[], framed: 0 }
@@ -51,6 +50,14 @@ const sequenced: SceneState = {
   },
 }
 
+const stageOn = (): { stage: SceneStage; record: ReturnType<typeof stubRenderer>['record'] } => {
+  const { renderer, record } = stubRenderer()
+  return {
+    stage: createSceneStage({ width: 16, height: 9, createRenderer: () => renderer }),
+    record,
+  }
+}
+
 describe('the stage a montage watches a scene through', () => {
   /**
    * The one line that gives the montage and the export the whole camera sequence: `draw` resolves
@@ -58,8 +65,7 @@ describe('the stage a montage watches a scene through', () => {
    * the viewport does.
    */
   it('takes each instant through the camera the shots put on air then', () => {
-    const { renderer, record } = stubRenderer()
-    const stage = createSceneStage({ width: 16, height: 9, createRenderer: () => renderer })
+    const { stage, record } = stageOn()
 
     stage.show(sequenced)
     stage.draw(3 * SECOND)
@@ -72,22 +78,16 @@ describe('the stage a montage watches a scene through', () => {
   // Framing the contents is what a scene with no camera of its own gets. A sequenced scene asking
   // for it would have the montage fight the shots for where the picture is taken from.
   it('frames the contents itself only while no camera is on air', () => {
-    const withShots = stubRenderer()
-    const stage = createSceneStage({
-      width: 16,
-      height: 9,
-      createRenderer: () => withShots.renderer,
-    })
-    stage.show(sequenced)
-    stage.draw(3 * SECOND)
+    const sequence = stageOn()
+    sequence.stage.show(sequenced)
+    sequence.stage.draw(3 * SECOND)
 
-    const bare = stubRenderer()
-    const plain = createSceneStage({ width: 16, height: 9, createRenderer: () => bare.renderer })
-    plain.show({ ...EMPTY_SCENE, nodes: [] })
-    plain.draw(3 * SECOND)
+    const bare = stageOn()
+    bare.stage.show({ ...EMPTY_SCENE, nodes: [] })
+    bare.stage.draw(3 * SECOND)
 
-    expect([withShots.record.framed, bare.record.framed]).toEqual([0, 1])
-    stage.dispose()
-    plain.dispose()
+    expect([sequence.record.framed, bare.record.framed]).toEqual([0, 1])
+    sequence.stage.dispose()
+    bare.stage.dispose()
   })
 })

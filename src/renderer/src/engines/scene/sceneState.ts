@@ -20,6 +20,7 @@ import {
 } from '@shared/domain/scene'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { DEFAULT_FONT } from '@shared/domain/font'
+import { cachedOn } from '../core/cachedOn'
 
 export type SceneNodeBase = {
   id: string
@@ -277,24 +278,17 @@ export function nodesOfType(nodes: readonly SceneNode[], type: SceneNodeType): S
   return nodes.filter(node => node.type === type)
 }
 
-/**
- * The cameras a scene holds, in document order, cached on the identity of the node list: every
- * edit replaces that array, so the same array holds the same cameras.
- *
- * Both readers are on the frame path — the shots ask which cameras still exist, the fall back
- * asks for the first — and both walked the whole scene to answer. Measured 18/08 on
- * `cameraShots.bench`, per call: 7,2 µs over 5 000 nodes and 73 µs over 50 000 with a shot
- * covering the instant, 15 and 151 µs on the fall back, against 0,1 µs whatever the count.
- */
 const cameraSets = new WeakMap<readonly SceneNode[], Set<string>>()
 
+/**
+ * The cameras a scene holds, in document order. Both readers are on the frame path — the shots
+ * ask which cameras still exist, the fall back asks for the first — and both walked the whole
+ * scene to answer: measured 18/08 on `cameraShots.bench`, 7,2 µs a call over 5 000 nodes and
+ * 73 µs over 50 000 with a shot covering the instant, 15 and 151 µs on the fall back, against
+ * 0,1 µs whatever the count.
+ */
 export function cameraIds(nodes: readonly SceneNode[]): Set<string> {
-  const held = cameraSets.get(nodes)
-  if (held) return held
-
-  const ids = new Set(nodesOfType(nodes, 'camera').map(node => node.id))
-  cameraSets.set(nodes, ids)
-  return ids
+  return cachedOn(cameraSets, nodes, () => new Set(nodesOfType(nodes, 'camera').map(n => n.id)))
 }
 
 /**

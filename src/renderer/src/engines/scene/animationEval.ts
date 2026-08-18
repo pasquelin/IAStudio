@@ -8,7 +8,7 @@ import {
   type Keyframe,
   type TrackProperty,
 } from '@shared/domain/animation'
-import type { Transform, Vector3 } from '@shared/domain/scene'
+import type { CameraDescriptor, Transform, Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import { clamp } from '@shared/numeric'
 
@@ -114,6 +114,21 @@ export function fovAt(timeline: AnimationTimeline, nodeId: string, time: Us): nu
   if (tracks.length === 0) return null
 
   return tracks.reduce((total, track) => total + valueAt(track, time).x, 0)
+}
+
+/**
+ * The lens a camera READS at that instant: its own descriptor, opened by what its `fov` channels
+ * add. The brother of `poseAt` — same shape, same rule — for the one property a pose has no room
+ * for, and the one place that composition is written.
+ */
+export function lensAt(
+  rest: CameraDescriptor,
+  timeline: AnimationTimeline,
+  nodeId: string,
+  time: Us,
+): CameraDescriptor {
+  const delta = fovAt(timeline, nodeId, time)
+  return delta === null ? rest : { ...rest, fov: rest.fov + delta }
 }
 
 /**

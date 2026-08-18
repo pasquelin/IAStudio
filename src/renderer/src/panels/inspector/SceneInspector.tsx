@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  setCameraOn,
   setEnvironment,
   setGeometryOn,
   setPath,
@@ -15,11 +14,11 @@ import { snapToFrame } from '@shared/domain/time'
 import type { FieldValue } from '@/engines/scene/propertyFields'
 import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
 import { lensToCommand } from '@/engines/scene/animationCommands'
-import { fovAt } from '@/engines/scene/animationEval'
+import { lensAt } from '@/engines/scene/animationEval'
 import { newShotAt, shotOfCameraAt } from '@/engines/scene/cameraShots'
 import { newId } from '@/helpers/ids'
 import { selectedNodes } from '@/engines/scene/sceneState'
-import { animationViewOf, useAnimationViews } from '@/stores/animationView'
+import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
@@ -84,33 +83,21 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // clock during playback and stops between two frames, so reading it raw would show a value the
   // key written a frame earlier never takes.
   const at = snapToFrame(playhead, animation.fps)
-  // The lens as it reads there, channel included: the field writes the same number back, so
+  // `lensAt`, which the viewport draws through too: the field writes the same number back, so
   // showing the descriptor alone would have a keyed camera jump by whatever its channel adds.
   const lens = useMemo(
-    () =>
-      camera
-        ? cameraFields({
-            ...camera.camera,
-            fov: camera.camera.fov + (fovAt(animation, camera.id, at) ?? 0),
-          })
-        : [],
+    () => (camera ? cameraFields(lensAt(camera.camera, animation, camera.id, at)) : []),
     [camera, animation, at],
   )
 
-  // The fov alone goes through `lensToCommand`, which decides between a key and the descriptor.
-  // Its state and switch are read at call time, as every gesture needing more than the fields show.
-  const changeLens = (name: string, value: FieldValue): void =>
+  // Which lens fields can be keyed is `lensToCommand`'s to know, not a panel's. Read at call time
+  // rather than from the render above, so a value typed as playback runs keys where it lands.
+  const changeLens = (name: string, value: FieldValue): void => {
+    const keying = sceneKeyingAt(documentId)
     edit.run(
-      name === 'fov' && typeof value === 'number'
-        ? lensToCommand(
-            sceneOf(useScenes.getState(), documentId),
-            selection,
-            value,
-            at,
-            animationViewOf(useAnimationViews.getState(), documentId).autoKey,
-          )
-        : setCameraOn(selection, name, value),
+      lensToCommand(keying.state.animation, selection, name, value, keying.at, keying.recording),
     )
+  }
 
   // The environment belongs to the document rather than to a node, so it shows either way — and
   // it is what keeps the panel from being empty when nothing is selected, in place of a message.
