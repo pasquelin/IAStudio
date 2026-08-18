@@ -1,4 +1,4 @@
-import type { AssetGeneration, AssetType } from './asset'
+import type { AssetGeneration, AssetType, CloudAssetType } from './asset'
 
 /** What the API says an asset may be seen by. No documented endpoint changes it. */
 export type AssetPrivacy = 'private' | 'public' | 'unlisted'
@@ -70,8 +70,13 @@ export const CLOUD_ORDERS: readonly CloudOrder[] = ['newest', 'relevance']
 export type CloudQuery = {
   text?: string
   tags?: readonly string[]
-  /** Our own six kinds; translated to the API's eighty on the way out. */
-  types?: readonly AssetType[]
+  /**
+   * The kinds the API can be asked for, translated to its own eighty on the way out.
+   *
+   * `CloudAssetType`, so what the studio knows alone cannot be requested: there is no animation
+   * class over there, and asking for one would answer a shelf of characters.
+   */
+  types?: readonly CloudAssetType[]
   collectionId?: string
   /** Opaque, straight from the previous page. */
   cursor?: string
@@ -98,8 +103,8 @@ export type CloudPage = {
  * and another in the other.
  */
 export type ExploreQuery = {
-  /** One tab of the feed. The kinds a masonry can show are the six the studio already has. */
-  type: AssetType
+  /** One tab of the feed, and only a kind the API sorts by — it publishes no motion. */
+  type: CloudAssetType
   /**
    * What to look for in the feed, or nothing to take it whole.
    *

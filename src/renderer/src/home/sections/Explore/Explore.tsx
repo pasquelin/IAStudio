@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
+import { CLOUD_ASSET_TYPES, type CloudAssetType } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { Masonry } from '@/design/Masonry'
 import { Section } from '../../Section'
@@ -26,7 +26,7 @@ function ratioOf(asset: CloudAsset): number | undefined {
  */
 export function Explore() {
   const { t } = useTranslation()
-  const [type, setType] = useState<AssetType>('image')
+  const [type, setType] = useState<CloudAssetType>('image')
   const { items, exhausted, more } = useExplore(type)
 
   return (
@@ -38,7 +38,9 @@ export function Explore() {
       sticky
       actions={
         <div role="tablist" aria-label={t('home.sections.explore')} className="flex gap-2">
-          {ASSET_TYPES.map(candidate => (
+          {/* The kinds the API PUBLISHES, never every kind the studio knows: a tab for motion
+              would query the cloud, which has no such class, and list characters instead. */}
+          {CLOUD_ASSET_TYPES.map(candidate => (
             <ExploreTab
               key={candidate}
               type={candidate}

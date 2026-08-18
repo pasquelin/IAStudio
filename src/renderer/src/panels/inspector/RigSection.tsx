@@ -8,8 +8,10 @@ import { NATIVE_SELECT } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { rigFit, rigFitFaultOf, rigHandBones } from '@/engines/scene/rigFit'
 import {
+  addIkChain,
   addRigBone,
   addRigHands,
+  removeIkChain,
   removeRigBone,
   setModelRig,
   setRigBoneRole,
@@ -19,30 +21,40 @@ import type { RigBone } from '@shared/domain/rig'
 import { IDENTITY_TRANSFORM, type ModelNode } from '@/engines/scene/sceneState'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
-import type { ModelSummary } from '@shared/domain/model'
 import type { PlanAccess } from '@shared/domain/plan'
-import { rigProvidersOf, rigRefusalOf } from '@shared/domain/rigProvider'
+import {
+  rigProvidersOf,
+  rigRefusalOf,
+  type RigProvider,
+  type RigRefusal,
+} from '@shared/domain/rigProvider'
+import { formatBytes } from '@/helpers/format'
 import { useFamilyModels } from '@/hooks/useFamilyModels'
+import { useMeshSizeLimit } from '@/hooks/useMeshSizeLimit'
 import { usePlanAccess } from '@/hooks/usePlanAccess'
+import { assetsById, useAssets } from '@/stores/assets'
 import { rigOfNode, rigProgressOfNode, useModelClips } from '@/stores/modelClips'
 
 /**
- * The plan to name when Scenario could rig this and the subscription will not let it, or
- * nothing at all — nothing being both « every service is within reach » and « the plan could not
- * be read », which greys nothing out on purpose.
+ * Why no Scenario service can rig this, or nothing at all when one of them could.
+ *
+ * The mesh is WEIGHED — that is what lets the answer be « too big for the limit » rather than
+ * always the subscription: a plan that allows a rigger still refuses a file above its `maxSize`,
+ * and hearing it after minutes of upload is the failure this exists to avoid.
+ *
+ * `null` for « one is within reach », and equally for a catalogue that answered nothing at all:
+ * offline is not a subscription being short.
  */
-function lockedRigPlanOf(models: readonly ModelSummary[], plan: PlanAccess | null): string | null {
-  // Zero bytes: the mesh has not been weighed, so only the plan can refuse here. A size is what
-  // the gesture that actually uploads one has to ask `rigRefusalOf` again with.
-  const providers = rigProvidersOf(models)
-  const reachable = providers.filter(
-    provider => rigRefusalOf(provider, plan, { bytes: 0 }) === null,
-  )
-  // No provider at all is offline or unauthenticated, never a refusal: an empty catalogue must
-  // not read as « your subscription is short ».
-  if (!plan || providers.length === 0 || reachable.length > 0) return null
+function rigServicesRefusalOf(
+  providers: readonly RigProvider[],
+  plan: PlanAccess | null,
+  mesh: { bytes: number; maxSize?: number },
+): RigRefusal | null {
+  if (providers.length === 0) return null
 
-  return plan.name
+  const refusals = providers.map(provider => rigRefusalOf(provider, plan, mesh))
+  // The first one, since they all refuse: one sentence rather than a list nobody reads.
+  return refusals.every(refusal => refusal !== null) ? (refusals[0] ?? null) : null
 }
 
 export type RigSectionProps = {
@@ -58,14 +70,24 @@ export type RigSectionProps = {
  * click writes a skeleton into the document, and the engine works out the weights from it.
  */
 export function RigSection({ documentId, node, edit }: RigSectionProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const rig = useModelClips(state => rigOfNode(state, documentId, node.id))
   const progress = useModelClips(state => rigProgressOfNode(state, documentId, node.id))
-  const locked = lockedRigPlanOf(useFamilyModels('3d'), usePlanAccess())
+  const plan = usePlanAccess()
+  // Asked for ONLY where the note could be drawn — on a bare mesh. Every other model selection
+  // was sending a listing and a schema read to say nothing at all; seen in the log, on screen.
+  const offering = rig?.status === 'staticMesh' && !node.model.rig
+  const services = rigProvidersOf(useFamilyModels(offering ? '3d' : null))
+  // The mesh is weighed against the limit of the service that would take it, and against that
+  // one only: asking every model's schema to draw one line would be a call per row.
+  const maxSize = useMeshSizeLimit(services[0]?.modelId ?? null)
+  const bytes = useAssets(state => assetsById(state).get(node.model.assetId)?.bytes ?? 0)
+  const refusal = rigServicesRefusalOf(services, plan, { bytes, maxSize })
   // The bone the pose mode picked, and only when it belongs to THIS model: the inspector shows
   // one node, and editing a bone of another from here would be silent nonsense.
   const held = useSceneViews(state => sceneViewOf(state, documentId).pickedBone)
   const picked = held?.nodeId === node.id ? held.bone : null
+  const reaching = node.model.rig?.ik?.find(chain => chain.effector === picked)
 
   // Only where the studio has something to offer: a model that already carries a skeleton of its
   // own is never offered another, and one still loading has nothing to measure.
@@ -86,9 +108,18 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
           <Button variant="primary" onClick={() => edit.run(setModelRig(node.id, rigFit(bounds)))}>
             {t('inspector.makeAnimatable')}
           </Button>
-          {/* Said BEFORE any click, never discovered as a 403: on this account all six services
-              refuse, and the studio's own rigger is what runs either way. */}
-          {locked && <QuietNote>{t('inspector.rigServicesLocked', { plan: locked })}</QuietNote>}
+          {/* Said BEFORE any click, never discovered as a 403 nor after minutes of upload: on
+              this account every service refuses, and the studio's own rigger runs either way. */}
+          {refusal?.kind === 'plan' && (
+            <QuietNote>{t('inspector.rigServicesLocked', { plan: plan?.name ?? '' })}</QuietNote>
+          )}
+          {refusal?.kind === 'too-large' && (
+            <QuietNote>
+              {t('inspector.rigServicesTooLarge', {
+                limit: formatBytes(refusal.maxSize, unit => t(`units.${unit}`), i18n.language),
+              })}
+            </QuietNote>
+          )}
         </>
       )}
 
@@ -125,6 +156,18 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
               <Button onClick={() => edit.run(removeRigBone(node.id, picked))}>
                 {t('inspector.removeBone')}
               </Button>
+
+              {/* A handle the joint reaches for: the two bones above it turn to follow, which is
+                  what puts a foot on the ground and a hand on a grip. */}
+              {reaching ? (
+                <Button onClick={() => edit.run(removeIkChain(node.id, reaching.id))}>
+                  {t('inspector.removeHandle')}
+                </Button>
+              ) : (
+                <Button onClick={() => edit.run(addIkChain(node.id, picked))}>
+                  {t('inspector.addHandle')}
+                </Button>
+              )}
             </>
           )}
 

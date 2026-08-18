@@ -5,15 +5,19 @@ import {
   rigWithBones,
   rigWithoutBone,
   rigWithRole,
+  type IkChain,
   type Rig,
   type RigBone,
 } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { rigHandBones } from './rigFit'
+import { ikLinksOf } from './ik'
 import {
+  clipLane,
   isVector3,
   type CameraDescriptor,
   type ClipLane,
+  type ClipRef,
   type EnvironmentRef,
   type GeometryDescriptor,
   type LightDescriptor,
@@ -495,6 +499,86 @@ export function addRigHands(id: string): Command<SceneState> {
   return editRigBones(id, 'rigBone', bones => {
     const hands = rigHandBones(bones)
     return hands && rigWithBones(bones, hands)
+  })
+}
+
+/**
+ * One block more on a model's band, at the end of its first lane.
+ *
+ * The lane is made if the model has none: a character that has never played anything holds no
+ * lane at all, and it is exactly the one an animation is dropped on.
+ */
+export function addModelClip(id: string, clip: ClipRef): Command<SceneState> {
+  return editModel(id, 'lanes', model => {
+    const lanes = model.lanes?.length ? model.lanes : [clipLane('main', [])]
+    const [first, ...rest] = lanes
+    if (!first) return model
+
+    return { ...model, lanes: [{ ...first, clips: [...first.clips, clip] }, ...rest] }
+  })
+}
+
+/** One block gone, wherever it sat. The lane stays, empty if it has to — see `setModelLanes`. */
+export function removeModelClip(id: string, clipId: string): Command<SceneState> {
+  return editModel(id, 'lanes', model => ({
+    ...model,
+    lanes: model.lanes?.map(lane => ({
+      ...lane,
+      clips: lane.clips.filter(clip => clip.id !== clipId),
+    })),
+  }))
+}
+
+/** What a handle bone is called, after the joint that reaches for it. */
+export const IK_HANDLE = '.handle'
+
+/**
+ * A handle a joint reaches for: one bone added ON the joint, and the chain that follows it.
+ *
+ * Both in one command, so undoing gives back a rig with neither — a handle left behind by an
+ * undone chain would be a bone nothing drives and nothing explains.
+ */
+export function addIkChain(id: string, effector: string): Command<SceneState> {
+  return editModel(id, 'rigIk', model => {
+    const rig = model.rig
+    const joint = rig?.bones.find(bone => bone.name === effector)
+    if (!rig || !joint) return model
+
+    const handle: RigBone = {
+      name: `${effector}${IK_HANDLE}`,
+      parent: joint.parent,
+      rest: joint.rest,
+    }
+    const bones = rigWithBones(rig.bones, [handle])
+    if (!bones) return model
+
+    const chain: IkChain = {
+      id: newId(),
+      effector,
+      target: handle.name,
+      links: ikLinksOf(rig.bones, effector),
+    }
+    if (chain.links.length === 0) return model
+
+    return { ...model, rig: { ...rig, bones, ik: [...(rig.ik ?? []), chain] } }
+  })
+}
+
+/** The chain and the handle it reached for, both. */
+export function removeIkChain(id: string, chainId: string): Command<SceneState> {
+  return editModel(id, 'rigIk', model => {
+    const rig = model.rig
+    const dropped = rig?.ik?.find(chain => chain.id === chainId)
+    if (!rig || !dropped) return model
+
+    return {
+      ...model,
+      rig: {
+        ...rig,
+        bones: rigWithoutBone(rig.bones, dropped.target),
+        ik: rig.ik?.filter(chain => chain.id !== chainId),
+      },
+    }
   })
 }
 

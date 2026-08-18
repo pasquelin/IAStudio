@@ -72,6 +72,7 @@
     "mesh": "Mesh",
     "texture": "Texture",
     "skybox": "Skybox",
+    "animation": "Animation",
     "other": "Other"
   },
   "collection": {

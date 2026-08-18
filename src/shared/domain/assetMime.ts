@@ -15,6 +15,9 @@ export const UPLOAD_KIND_BY_TYPE: Record<AssetType, UploadKind> = {
   video: 'video',
   audio: 'audio',
   mesh: '3d',
+  // The API has no animation class either — the Uthana file carrying a capoeira is filed `3d`
+  // there, beside the characters. Sending it up as anything else would be inventing a class.
+  animation: '3d',
 }
 
 /**

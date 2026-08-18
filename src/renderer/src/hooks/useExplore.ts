@@ -1,4 +1,4 @@
-import type { AssetType } from '@shared/domain/asset'
+import type { CloudAssetType } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { cloudPage } from '@/helpers/cloudPage'
 import { getBridge } from '@/services/bridge'
@@ -15,7 +15,7 @@ const PAGE_SIZE = 40
  * costing eighteen `POST /search/assets`, the endpoint the catalogue bills apart. The tiles are
  * read through and never stored — they belong to other people, and their URLs expire.
  */
-export function useExplore(type: AssetType): Pages<CloudAsset> {
+export function useExplore(type: CloudAssetType): Pages<CloudAsset> {
   const owner = useSettings(activeOwnerId)
 
   return usePages(

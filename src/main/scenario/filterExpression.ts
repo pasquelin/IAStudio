@@ -1,4 +1,4 @@
-import type { AssetType } from '@shared/domain/asset'
+import type { CloudAssetType } from '@shared/domain/asset'
 import type { UploadKind } from '@shared/domain/assetMime'
 
 /**
@@ -15,13 +15,17 @@ import type { UploadKind } from '@shared/domain/assetMime'
  */
 
 /**
- * The API's media classes, from our six. Several of ours share one.
+ * The API's media classes, from the ones it can be asked for. Several of ours share one.
+ *
+ * `CloudAssetType` and not `AssetType`, which is the whole reason that split exists: the studio
+ * knows an animation, the API does not, and mapping one onto `3d` HERE would answer a request
+ * for motion with a shelf of characters.
  *
  * Typed against the same union the upload table uses rather than `string`: a typo here compiles
  * and produces a filter that silently matches nothing, which is the one failure mode a filter
  * expression cannot signal.
  */
-const KIND_BY_TYPE: Record<AssetType, UploadKind> = {
+const KIND_BY_TYPE: Record<CloudAssetType, UploadKind> = {
   image: 'image',
   texture: 'image',
   skybox: 'image',
@@ -40,7 +44,7 @@ function quoted(value: string): string {
 
 export type FilterTerms = {
   tags?: readonly string[]
-  types?: readonly AssetType[]
+  types?: readonly CloudAssetType[]
   collectionId?: string
 }
 
@@ -89,7 +93,7 @@ function contains(needle: string): string {
  * only has to avoid asking for a page the caller will then empty: the hits are typed again on
  * arrival, so an over-catch costs a shorter page and an under-catch would lose assets for good.
  */
-export function publicFeedFilter(type: AssetType): string {
+export function publicFeedFilter(type: CloudAssetType): string {
   const clauses = [NSFW_EMPTY]
 
   if (type === 'texture' || type === 'skybox') clauses.push(contains(type))

@@ -72,6 +72,7 @@
     "mesh": "Maille",
     "texture": "Texture",
     "skybox": "Skybox",
+    "animation": "Animation",
     "other": "Autre"
   },
   "collection": {

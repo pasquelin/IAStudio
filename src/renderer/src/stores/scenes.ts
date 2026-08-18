@@ -1,7 +1,9 @@
 import type { AnimationTrack } from '@shared/domain/animation'
 import type { Asset } from '@shared/domain/asset'
 import { updateAnimationTrack } from '@/engines/scene/animationCommands'
-import { addNode, setSelection } from '@/engines/scene/commands'
+import { addModelClip, addNode, setSelection } from '@/engines/scene/commands'
+import { assetClip } from '@shared/domain/scene'
+import { newId } from '@/helpers/ids'
 import { modelNode } from '@/engines/scene/nodeFactory'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
 import type { SelectionMode } from '@/helpers/selection'
@@ -69,5 +71,27 @@ export function addModelTo(documentId: string, asset: Asset): boolean {
   if (asset.type !== 'mesh') return false
 
   useScenes.getState().runCommand(documentId, addNode(modelNode(asset.id, asset.name)))
+  return true
+}
+
+/**
+ * A motion laid on the character that is SELECTED — never on a node of its own.
+ *
+ * An animation is not a thing in a scene: it is something a character does. With nothing
+ * selected there is nobody to make it do it, and the gesture is refused rather than landing an
+ * invisible node — which is exactly the `SKELETON_ONLY` trap `rigState` was written for.
+ */
+export function addAnimationTo(documentId: string, asset: Asset): boolean {
+  if (asset.type !== 'animation') return false
+
+  const scene = sceneOf(useScenes.getState(), documentId)
+  const model = scene.nodes.find(
+    node => node.type === 'model' && scene.selectedIds.includes(node.id),
+  )
+  if (!model) return false
+
+  useScenes
+    .getState()
+    .runCommand(documentId, addModelClip(model.id, assetClip(newId(), asset.id, asset.name)))
   return true
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ModelSummary } from './model'
-import { rigProvidersOf, rigRefusalOf, type RigProvider } from './rigProvider'
+import { motionProvidersOf, rigProvidersOf, rigRefusalOf, type RigProvider } from './rigProvider'
 
 function model(
   id: string,
@@ -56,6 +56,23 @@ describe('finding the services that can rig a mesh', () => {
     const graded = model('a', ['Rigging'], { requiredPlanLevel: 50 })
 
     expect(rigProvidersOf([graded])[0]?.requiredPlanLevel).toBe(50)
+  })
+})
+
+describe('finding the services that make a motion', () => {
+  // Counted on screen against the real account: six, and the `Rigging` half of the test is what
+  // keeps the two Tripo riggers out — both carry `Animation` as well.
+  it('keeps what animates and leaves what rigs out, though both are tagged Animation', () => {
+    expect(motionProvidersOf(CATALOGUE).map(provider => provider.modelId)).toEqual([
+      'model_meshy-animation',
+      'model_uthana-text-to-motion-3.0',
+    ])
+  })
+
+  it('takes a motion model whatever it reads, since they span three capabilities', () => {
+    const video = model('a', ['Motion'], { capabilities: ['video23d'] })
+
+    expect(motionProvidersOf([video])).toHaveLength(1)
   })
 })
 

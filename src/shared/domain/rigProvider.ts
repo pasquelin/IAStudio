@@ -42,9 +42,35 @@ export type RigRefusal = { kind: 'plan' } | { kind: 'too-large'; maxSize: number
  * release, and one withdrawn has to stop being offered.
  */
 export function rigProvidersOf(models: readonly ModelSummary[]): RigProvider[] {
+  return models.filter(model => isRigger(model)).map(asProvider)
+}
+
+/**
+ * The models that MAKE a motion, as opposed to putting a skeleton in a mesh.
+ *
+ * MEASURED on 2026-08-18, and counted ON SCREEN rather than from the catalogue dump — which is
+ * how the count was WRONG first: SIX carry `Motion` or `Animation` and no `Rigging`. Three
+ * Uthana and not two, the deprecated `text-to-motion-bucmd` being still listed, plus the two
+ * Cartwheel and Meshy's animator. The `Rigging` half of the test keeps `tripo-rigging-v2-5`
+ * out, which carries `Animation` as well and rigs.
+ *
+ * The capability is deliberately NOT read: these span `txt23d`, `video23d` and `3d23d`, and a
+ * list built on it would be either three quarters wrong or a list of everything.
+ */
+export function motionProvidersOf(models: readonly ModelSummary[]): RigProvider[] {
   return models
-    .filter(model => model.capabilities.includes(RIG_CAPABILITY) && ownsRigTag(model.tags))
-    .map(({ id, name, requiredPlanLevel }) => ({ modelId: id, name, requiredPlanLevel }))
+    .filter(model => !isRigger(model) && ownsTag(model.tags, MOTION_TAGS))
+    .map(asProvider)
+}
+
+const MOTION_TAGS: readonly string[] = ['motion', 'animation']
+
+function isRigger(model: ModelSummary): boolean {
+  return model.capabilities.includes(RIG_CAPABILITY) && ownsTag(model.tags, [RIG_TAG])
+}
+
+function asProvider({ id, name, requiredPlanLevel }: ModelSummary): RigProvider {
+  return { modelId: id, name, requiredPlanLevel }
 }
 
 /**
@@ -65,6 +91,6 @@ export function rigRefusalOf(
   return { kind: 'too-large', maxSize: mesh.maxSize }
 }
 
-function ownsRigTag(tags: readonly string[]): boolean {
-  return tags.some(tag => tag.toLowerCase() === RIG_TAG)
+function ownsTag(tags: readonly string[], wanted: readonly string[]): boolean {
+  return tags.some(tag => wanted.includes(tag.toLowerCase()))
 }

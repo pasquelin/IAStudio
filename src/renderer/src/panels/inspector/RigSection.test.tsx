@@ -10,8 +10,9 @@ import { useScenes } from '@/stores/scenes'
 import { useSceneEdit } from '@/hooks/useSceneEdit'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
+import { useAssets } from '@/stores/assets'
 import { useSceneViews } from '@/stores/sceneViews'
-import type { ModelSummary } from '@shared/domain/model'
+import type { FieldKind, ModelSummary } from '@shared/domain/model'
 import type { PlanAccess } from '@shared/domain/plan'
 import { RigSection } from './RigSection'
 
@@ -42,6 +43,7 @@ describe('RigSection', () => {
   beforeEach(() => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] })
     useModelClips.setState({ rigs: {}, rigProgress: {} })
+    useAssets.setState({ items: [] })
     // Or a bone picked by one case decides what the next one draws, whatever it installs.
     useSceneViews.setState({ views: {} })
   })
@@ -120,7 +122,9 @@ describe('RigSection', () => {
     expect(screen.queryByText('Squelette')).not.toBeInTheDocument()
   })
 
-  /** The catalogue as it answers, and the plan a `cu-basic` account is on. */
+  /** The kind every rigger takes its character under — what carries the size limit. */
+  const MESH_FIELD: FieldKind = 'mesh'
+
   const RIGGER: ModelSummary = {
     id: 'model_x',
     name: 'X',
@@ -132,7 +136,12 @@ describe('RigSection', () => {
     tags: ['Rigging'],
   }
 
-  function withCatalogue(models: readonly Partial<ModelSummary>[], plan: PlanAccess | null): void {
+  /** The catalogue as it answers, and the plan a `cu-basic` account is on. */
+  function withCatalogue(
+    models: readonly Partial<ModelSummary>[],
+    plan: PlanAccess | null,
+    maxSize?: number,
+  ): void {
     installFakeBridge({
       scenario: {
         searchModels: () =>
@@ -141,6 +150,19 @@ describe('RigSection', () => {
             cursor: null,
           }),
         plan: () => Promise.resolve(plan),
+        describeModel: () =>
+          Promise.resolve({
+            ...RIGGER,
+            fields: [
+              {
+                key: 'characterFile',
+                kind: MESH_FIELD,
+                label: 'Character',
+                required: true,
+                ...(maxSize === undefined ? {} : { maxSize }),
+              },
+            ],
+          }),
       },
     })
     useSettings.setState({ auth: { authenticated: true } })
@@ -161,6 +183,50 @@ describe('RigSection', () => {
 
     await screen.findByRole('button', { name: 'Rendre animable' })
     expect(screen.queryByText(/abonnement/)).not.toBeInTheDocument()
+  })
+
+  // The other refusal, and the one that costs minutes when it is heard too late: a plan that
+  // allows the service still answers 413 above its limit, after the whole file has gone up.
+  it('names the limit when the mesh is over it, plan or no plan', async () => {
+    useAssets.setState({
+      items: [
+        {
+          id: 'asset-1',
+          name: 'giant',
+          type: 'mesh',
+          location: 'local',
+          tags: [],
+          createdAt: '2026-01-01T00:00:00.000Z',
+          bytes: 39_000_000,
+        },
+      ],
+    })
+    withCatalogue([{}], { name: 'cu-max', level: 100 }, 30_000_000)
+    show()
+
+    // 30 000 000 bytes, said the way every file manager on the desktop says them.
+    expect(await screen.findByText(/29 Mio/)).toBeInTheDocument()
+  })
+
+  it('says nothing about a size while no service names a limit', async () => {
+    useAssets.setState({
+      items: [
+        {
+          id: 'asset-1',
+          name: 'giant',
+          type: 'mesh',
+          location: 'local',
+          tags: [],
+          createdAt: '2026-01-01T00:00:00.000Z',
+          bytes: 39_000_000,
+        },
+      ],
+    })
+    withCatalogue([{}], { name: 'cu-max', level: 100 })
+    show()
+
+    await screen.findByRole('button', { name: 'Rendre animable' })
+    expect(screen.queryByText(/limite/)).not.toBeInTheDocument()
   })
 
   // Offline, or not authenticated: an empty catalogue is not a subscription being short.
@@ -221,6 +287,17 @@ describe('RigSection', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Retirer cet os' }))
     expect(nodeOf()?.model.rig?.bones.some(bone => bone.name === 'Spine')).toBe(false)
+  })
+
+  it('gives a joint a handle to reach for, and takes it back with its bone', async () => {
+    rigged('LeftHand')
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter une poignée à suivre' }))
+
+    expect(nodeOf()?.model.rig?.ik?.[0]).toMatchObject({ effector: 'LeftHand' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer la poignée' }))
+    expect(nodeOf()?.model.rig?.ik).toEqual([])
+    expect(nodeOf()?.model.rig?.bones.map(bone => bone.name)).not.toContain('LeftHand.handle')
   })
 
   it('never tells a model it cannot be rigged once it has been', () => {

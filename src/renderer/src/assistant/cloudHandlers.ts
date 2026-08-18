@@ -1,4 +1,4 @@
-import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
+import { CLOUD_ASSET_TYPES, type CloudAssetType } from '@shared/domain/asset'
 import { refused } from '@shared/domain/assistant'
 import { CLOUD_ORDERS, type CloudQuery, type ExploreQuery } from '@shared/domain/cloudAsset'
 import { SYNC_POLICIES } from '@shared/domain/sync'
@@ -12,9 +12,10 @@ import { numberOf, oneOf, textOf, textsOf } from './actionInputs'
  * an empty list is not "everything of no kind", it is a question the API does not answer.
  */
 
-function typesOf(input: Record<string, unknown>): readonly AssetType[] {
-  return textsOf(input, 'types').filter((type): type is AssetType =>
-    ASSET_TYPES.some(known => known === type),
+/** Only what the cloud sorts by: an agent asking for animations would be answered characters. */
+function typesOf(input: Record<string, unknown>): readonly CloudAssetType[] {
+  return textsOf(input, 'types').filter((type): type is CloudAssetType =>
+    CLOUD_ASSET_TYPES.some(known => known === type),
   )
 }
 
@@ -49,7 +50,7 @@ export const CLOUD_HANDLERS: ActionHandlers = {
   },
 
   'cloud.explore': input => {
-    const type = oneOf(input, 'type', ASSET_TYPES)
+    const type = oneOf(input, 'type', CLOUD_ASSET_TYPES)
     if (!type) return Promise.resolve(refused('badInput'))
 
     const cursor = textOf(input, 'cursor')

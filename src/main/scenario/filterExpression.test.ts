@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
+import { CLOUD_ASSET_TYPES, type CloudAssetType } from '@shared/domain/asset'
 import { assetTypeOfRemote } from '@shared/domain/assetKind'
 import { filterExpression, publicFeedFilter } from './filterExpression'
 import { remoteTypesFor } from './remoteTypes'
@@ -93,7 +93,9 @@ describe('the provenance values that stand for our kinds', () => {
 
 describe('the filter the public feed is narrowed by', () => {
   it('drops what the API flagged, whatever the kind', () => {
-    for (const type of ASSET_TYPES) {
+    // The kinds the feed publishes, which is not every kind the studio knows: there is no
+    // animation class over there, so no tab could ever ask for one.
+    for (const type of CLOUD_ASSET_TYPES) {
       expect(publicFeedFilter(type)).toContain('nsfw IS EMPTY')
     }
   })
@@ -124,7 +126,7 @@ describe('the filter the public feed is narrowed by', () => {
    * under-catch, because nothing downstream can recover an asset the index was not asked for.
    */
   it('catches every provenance the studio files as a material or a sky', () => {
-    const byProvenance: AssetType[] = ['texture', 'skybox']
+    const byProvenance: CloudAssetType[] = ['texture', 'skybox']
 
     for (const type of byProvenance) {
       const filter = publicFeedFilter(type)
@@ -148,7 +150,7 @@ describe('the round trip between what we ask for and what comes back', () => {
   // a value we send as a filter must come back as the kind we asked for, or the shelf shows
   // what it did not request. Nothing enforced that before this test.
   it('reads every filtered provenance back as the kind it stands for', () => {
-    const kinds: AssetType[] = ['texture', 'skybox', 'mesh', 'video', 'audio']
+    const kinds: CloudAssetType[] = ['texture', 'skybox', 'mesh', 'video', 'audio']
 
     for (const kind of kinds) {
       for (const remoteType of remoteTypesFor([kind]) ?? []) {

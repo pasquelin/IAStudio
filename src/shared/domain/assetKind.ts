@@ -139,6 +139,9 @@ const WORKSPACE_OF_TYPE: Record<AssetType, WorkspaceId> = {
   mesh: '3d',
   texture: 'textures',
   skybox: 'skyboxes',
+  // Where a motion is USED, which is the only shelf that means anything for one: nothing
+  // generates an animation on its own, it is laid on a character.
+  animation: '3d',
 }
 
 export function workspaceOfType(type: AssetType): WorkspaceId {

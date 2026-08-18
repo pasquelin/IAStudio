@@ -56,6 +56,7 @@ describe('the lists that stand for a union', () => {
       mesh: true,
       texture: true,
       skybox: true,
+      animation: true,
     }
 
     expect(sorted(ASSET_TYPES)).toEqual(sorted(Object.keys(all)))

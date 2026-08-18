@@ -676,6 +676,7 @@ describe('catalogue provenance and sync', () => {
       mesh: 0,
       texture: 0,
       skybox: 1,
+      animation: 0,
     })
   })
 

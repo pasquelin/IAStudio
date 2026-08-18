@@ -178,7 +178,7 @@ async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<Cl
   // otherwise start over.
   const wanted = query.types
   const assets = wanted?.length
-    ? page.assets.filter(asset => wanted.includes(asset.type))
+    ? page.assets.filter(asset => wanted.some(type => type === asset.type))
     : page.assets
 
   return { assets, cursor: page.cursor }

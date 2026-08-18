@@ -6,6 +6,7 @@ import { emptyHistory, run, undo, type Command } from '../core/history'
 import {
   addNode,
   addNodes,
+  addIkChain,
   addRigBone,
   addRigHands,
   batch,
@@ -14,6 +15,7 @@ import {
   moveNodes,
   reparentNode,
   multi,
+  removeIkChain,
   removeNode,
   removeNodes,
   removeRigBone,
@@ -917,5 +919,45 @@ describe('editing a skeleton bone by bone', () => {
 
   it('lays no finger on a rig that names no hand', () => {
     expect(bonesOf(addRigHands('m').apply(rigged()))).toEqual(ARM.bones)
+  })
+
+  const ikOf = (state: SceneState) => {
+    const node = nodeById(state, 'm')
+    return node?.type === 'model' ? node.model.rig?.ik : undefined
+  }
+
+  // The handle is a BONE of the same rig, and that is three's rule rather than a shortcut:
+  // `CCDIKSolver` addresses `Skeleton.bones` by index and knows no scene object.
+  it('adds the handle and the chain that reaches for it in one move', () => {
+    const next = addIkChain('m', 'Wrist').apply(rigged())
+
+    expect(bonesOf(next).map(one => one.name)).toContain('Wrist.handle')
+    expect(ikOf(next)?.[0]).toMatchObject({ effector: 'Wrist', target: 'Wrist.handle' })
+  })
+
+  it('lets the two bones above the joint turn, and no more', () => {
+    expect(ikOf(addIkChain('m', 'Wrist').apply(rigged()))?.[0]?.links).toEqual(['Elbow', 'Hips'])
+  })
+
+  it('rests the handle exactly where the joint stands, so nothing jumps on the first frame', () => {
+    const next = addIkChain('m', 'Wrist').apply(rigged())
+
+    expect(bonesOf(next).find(one => one.name === 'Wrist.handle')?.rest).toEqual(IDENTITY_TRANSFORM)
+  })
+
+  // Undone as one: a handle left behind by an undone chain is a bone nothing drives and nothing
+  // explains.
+  it('takes the handle away with the chain', () => {
+    const added = addIkChain('m', 'Wrist').apply(rigged())
+    const chain = ikOf(added)?.[0]
+    if (!chain) throw new Error('the chain was just added')
+
+    const next = removeIkChain('m', chain.id).apply(added)
+    expect(bonesOf(next).map(one => one.name)).not.toContain('Wrist.handle')
+    expect(ikOf(next)).toEqual([])
+  })
+
+  it('reaches for nothing from a root, which has no bone above it to turn', () => {
+    expect(ikOf(addIkChain('m', 'Hips').apply(rigged()))).toBeUndefined()
   })
 })

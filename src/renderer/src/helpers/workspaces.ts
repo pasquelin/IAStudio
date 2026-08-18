@@ -2,6 +2,7 @@ import {
   mdiCubeOutline,
   mdiImageOutline,
   mdiPanoramaVariantOutline,
+  mdiRun,
   mdiTextureBox,
   mdiVideoOutline,
   mdiVolumeHigh,
@@ -37,11 +38,19 @@ const ICONS: Record<WorkspaceId, string> = {
 export { workspaceOfType }
 
 /**
+ * A kind whose workspace no longer tells it apart, and which therefore keeps a glyph of its own.
+ *
+ * The moment two kinds share a space the workspace table stops being enough: a motion and a
+ * character both live in 3D, and one cube drawn for both says nothing at all on a shelf.
+ */
+const OWN_ICON: Partial<Record<AssetType, string>> = { animation: mdiRun }
+
+/**
  * What stands for an asset when there is no picture to show it by. Read off the workspace table
  * rather than relisted: changing the video glyph in the rail must change it on the tiles too.
  */
 export function assetIcon(type: AssetType): string {
-  return ICONS[workspaceOfType(type)]
+  return OWN_ICON[type] ?? ICONS[workspaceOfType(type)]
 }
 
 /**
@@ -57,7 +66,7 @@ export function assetIcon(type: AssetType): string {
 const USED_BY_WORKSPACE: Record<WorkspaceId, readonly AssetType[]> = {
   image: ['image', 'texture', 'skybox'],
   video: ASSET_TYPES,
-  '3d': ['mesh', 'texture', 'skybox', 'image'],
+  '3d': ['mesh', 'animation', 'texture', 'skybox', 'image'],
   audio: ['audio'],
   textures: ['texture', 'image'],
   skyboxes: ['skybox', 'image'],

@@ -18,6 +18,27 @@ export type Rig = {
   bones: readonly RigBone[]
   /** Who produced it — to tell the user, and to replay a fit. */
   origin: RigOrigin
+  /** What reaches for something instead of being posed joint by joint. */
+  ik?: readonly IkChain[]
+}
+
+/**
+ * A chain that reaches: a foot that stays on the ground, a hand that follows a handle.
+ *
+ * All three are BONES OF THIS RIG, target included, and that is not a simplification — three's
+ * `CCDIKSolver` addresses `Skeleton.bones` by index and knows nothing else. The target is
+ * therefore a bone one moves at the gizmo, or that a clip drives like any other.
+ */
+export type IkChain = {
+  id: string
+  /** The bone that has to arrive at the target. */
+  effector: string
+  /** The bone it reaches for. */
+  target: string
+  /** The bones allowed to turn on the way, effector's parent first. */
+  links: readonly string[]
+  /** How many passes the solver makes. Fewer is faster and less exact. */
+  iterations?: number
 }
 
 export type RigOrigin = 'local' | 'imported' | { provider: string; modelId: string }
@@ -124,8 +145,26 @@ export function isRig(value: unknown): value is Rig {
   if (!isRecord(value) || !Array.isArray(value.bones)) return false
   if (!isRigOrigin(value.origin)) return false
   if (!value.bones.every(isRigBone)) return false
+  if (value.ik !== undefined && !(Array.isArray(value.ik) && value.ik.every(isIkChain)))
+    return false
 
   return rigFaultOf(value.bones) === null
+}
+
+/**
+ * Structural only: whether the bones it names are still there is settled where the solver is
+ * built, and a chain naming one that has gone is DROPPED rather than taking the model with it —
+ * the same rule a track addressing a removed bone lives under.
+ */
+export function isIkChain(value: unknown): value is IkChain {
+  if (!isRecord(value)) return false
+  if (typeof value.id !== 'string' || value.id === '') return false
+  if (typeof value.effector !== 'string' || typeof value.target !== 'string') return false
+  if (!Array.isArray(value.links) || !value.links.every(link => typeof link === 'string')) {
+    return false
+  }
+
+  return value.iterations === undefined || typeof value.iterations === 'number'
 }
 
 /**

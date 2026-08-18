@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { RetargetFit } from '@/engines/scene/retarget'
 import type { RigState } from '@/engines/scene/rigState'
 
 type ClipsByNode = Record<string, readonly string[]>
@@ -29,6 +30,14 @@ type ModelClipsState = {
    */
   rigProgress: Record<string, Record<string, number>>
   reportRigProgress: (documentId: string, nodeId: string, progress: number) => void
+  /**
+   * How well each foreign clip fits the character playing it, by `clipKeyOf`.
+   *
+   * Engine state like everything else here: only the engine ever holds both skeletons at once,
+   * and nothing in the document says which joints the two have in common.
+   */
+  fits: Record<string, Record<string, Record<string, RetargetFit>>>
+  reportClipFit: (documentId: string, nodeId: string, clipKey: string, fit: RetargetFit) => void
   forget: (documentId: string) => void
 }
 
@@ -45,6 +54,7 @@ export const useModelClips = create<ModelClipsState>()(set => ({
   rigs: {},
   rigProgress: {},
   lengths: {},
+  fits: {},
   report: (documentId, nodeId, clips, lengths) =>
     set(state => ({
       clips: {
@@ -74,17 +84,33 @@ export const useModelClips = create<ModelClipsState>()(set => ({
       return { rigProgress: { ...state.rigProgress, [documentId]: forDocument } }
     }),
 
+  reportClipFit: (documentId, nodeId, clipKey, fit) =>
+    set(state => {
+      const forDocument = state.fits[documentId] ?? {}
+      return {
+        fits: {
+          ...state.fits,
+          [documentId]: {
+            ...forDocument,
+            [nodeId]: { ...forDocument[nodeId], [clipKey]: fit },
+          },
+        },
+      }
+    }),
+
   forget: documentId =>
     set(state => {
       const { [documentId]: goneClips, ...clips } = state.clips
       const { [documentId]: goneRigs, ...rigs } = state.rigs
       const { [documentId]: goneProgress, ...rigProgress } = state.rigProgress
       const { [documentId]: goneLengths, ...lengths } = state.lengths
+      const { [documentId]: goneFits, ...fits } = state.fits
       void goneClips
       void goneRigs
       void goneProgress
       void goneLengths
-      return { clips, rigs, rigProgress, lengths }
+      void goneFits
+      return { clips, rigs, rigProgress, lengths, fits }
     }),
 }))
 
@@ -130,6 +156,21 @@ export function rigOfNode(
   nodeId: string,
 ): RigState | null {
   return state.rigs[documentId]?.[nodeId] ?? null
+}
+
+/**
+ * How well one foreign clip fits this character, or nothing while the engine has not read it.
+ *
+ * `null` also answers a clip the model's own file brought: nothing is retargeted then, so there
+ * is no fit to speak of — and « perfectly » would be a claim rather than a measurement.
+ */
+export function clipFitOfNode(
+  state: ModelClipsState,
+  documentId: string,
+  nodeId: string,
+  clipKey: string,
+): RetargetFit | null {
+  return state.fits[documentId]?.[nodeId]?.[clipKey] ?? null
 }
 
 /** The bones a node's model brought, or none — a mesh has none, and neither has a loading model. */

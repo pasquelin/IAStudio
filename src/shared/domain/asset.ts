@@ -1,7 +1,7 @@
 import { FILE_NAME_MAX_LENGTH } from './fileName'
 import type { PbrChannel } from './texture'
 
-export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'texture' | 'skybox'
+export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'texture' | 'skybox' | 'animation'
 
 /** The values, beside the type: a validator and a row reader both need to enumerate them. */
 export const ASSET_TYPES: readonly AssetType[] = [
@@ -11,7 +11,26 @@ export const ASSET_TYPES: readonly AssetType[] = [
   'mesh',
   'texture',
   'skybox',
+  'animation',
 ]
+
+/**
+ * What the PROJECT knows and Scenario does not.
+ *
+ * MEASURED: the API has no animation class at all — the Uthana file carrying a capoeira is filed
+ * `kind: '3d'` there, beside the characters. A tab offering animations against the cloud would
+ * therefore promise motion and list models, which is why this split exists rather than one list.
+ */
+const LOCAL_ONLY: readonly AssetType[] = ['animation']
+
+/** A kind the API can be ASKED for. Every other list narrows to this one before a request. */
+export type CloudAssetType = Exclude<AssetType, 'animation'>
+
+export const CLOUD_ASSET_TYPES: readonly CloudAssetType[] = ASSET_TYPES.filter(isCloudAssetType)
+
+export function isCloudAssetType(type: AssetType): type is CloudAssetType {
+  return !LOCAL_ONLY.includes(type)
+}
 
 export function isAssetType(value: unknown): value is AssetType {
   return ASSET_TYPES.some(candidate => candidate === value)
@@ -39,6 +58,7 @@ export const DEFAULT_ASSET_FOLDERS: Record<AssetType, string> = {
   mesh: '3D',
   texture: 'Textures',
   skybox: 'Sky',
+  animation: 'Animations',
 }
 
 /**
@@ -514,7 +534,7 @@ export type AssetCounts = Record<AssetType, number>
  * compile error here instead of a counter silently missing from five hand-written copies.
  */
 export function emptyAssetCounts(): AssetCounts {
-  return { image: 0, video: 0, audio: 0, mesh: 0, texture: 0, skybox: 0 }
+  return { image: 0, video: 0, audio: 0, mesh: 0, texture: 0, skybox: 0, animation: 0 }
 }
 
 /**
