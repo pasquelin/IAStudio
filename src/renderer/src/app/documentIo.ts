@@ -657,6 +657,7 @@ const assetBehind = new Set<string>()
  */
 function savableDocument(
   documentId: string,
+  byHand = true,
 ): { bridge: StudioBridge; document: DocumentDescriptor; io: DocumentIo } | null {
   const bridge = getBridge()
   const document = useDocuments.getState().documents[documentId]
@@ -664,11 +665,13 @@ function savableDocument(
   if (!bridge || !document || !io) return null
   if (unreadable.has(documentId) || !io.holds(documentId)) return null
 
-  // Said, not swallowed: this refusal answers a KEYSTROKE, and a ⌘S that writes nothing without
-  // a word is indistinguishable from one that worked.
   const refusal = io.incomplete?.(documentId)
   if (refusal) {
-    reportNotice('document.save', refusal)
+    // Said to a KEYSTROKE, and only to one: a ⌘S that writes nothing without a word is
+    // indistinguishable from one that worked. The autosave says nothing at all — `document.save`
+    // is a gesture scope, so it is never deduplicated, and a refused document is refused on
+    // every pass: the sentence would land in front of the user every thirty seconds, for good.
+    if (byHand) reportNotice('document.save', refusal)
     return null
   }
 
@@ -686,7 +689,7 @@ function savableDocument(
  * would not read from closing the tab on work that never reached the disk.
  */
 export async function saveDocument(documentId: string, byHand = true): Promise<boolean> {
-  const savable = savableDocument(documentId)
+  const savable = savableDocument(documentId, byHand)
   if (!savable) return false
   const { bridge, document, io } = savable
 

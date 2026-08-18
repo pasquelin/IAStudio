@@ -160,9 +160,7 @@ const COMPOSED = new Set([
   'nodes',
   'cameras',
   'extensionsUsed',
-  'extensionsRequired',
   'extensions',
-  'extras',
 ])
 
 /** The `asset` fields a save writes back. A `copyright` another application set is not one. */
@@ -189,6 +187,15 @@ export function sceneHoldsMore(document: unknown): string[] {
   const scenes = document.scenes
   if (Array.isArray(scenes) && scenes.length > 1) held.push('scenes')
 
+  // A node ADDED elsewhere brings no new root key of its own — a Blender empty is one `nodes`
+  // entry and nothing else, and a camera adds only to `cameras`, both of them composed. The file
+  // is compared against what the studio state holds, which is the only thing that can tell them
+  // apart: more nodes in the file than in the state means the extra ones came from somewhere else.
+  const held3d = gltfStudioMetadata(document)[GLTF_SCENE_STATE]
+  const known = isRecord(held3d) && Array.isArray(held3d.nodes) ? held3d.nodes.length : 0
+  const written = Array.isArray(document.nodes) ? document.nodes.length : 0
+  if (written > known) held.push('nodes')
+
   const asset = document.asset
   if (isRecord(asset)) {
     held.push(
@@ -198,10 +205,12 @@ export function sceneHoldsMore(document: unknown): string[] {
     )
   }
 
-  // The extension block is overwritten whole, so anything but the lights one would be lost.
-  const used = document.extensionsUsed
-  if (Array.isArray(used)) {
-    held.push(...used.filter(name => name !== LIGHTS_EXTENSION).map(name => String(name)))
+  // The extension block is overwritten whole, so anything but the lights one would be lost —
+  // read from BOTH sides, a file being free to declare one without listing it and the reverse.
+  const used = Array.isArray(document.extensionsUsed) ? document.extensionsUsed.map(String) : []
+  const declared = isRecord(document.extensions) ? Object.keys(document.extensions) : []
+  for (const name of new Set([...used, ...declared])) {
+    if (name !== LIGHTS_EXTENSION) held.push(name)
   }
 
   return held
