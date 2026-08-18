@@ -290,6 +290,20 @@ export type Framing = { target: Vector3; position: Vector3 }
  */
 export type CameraPlacement = { position: PlainVector3; target: PlainVector3 }
 
+/**
+ * One block watched on a clock of its own — which block, from where, and whether it runs.
+ *
+ * `at` is a position along the BLOCK in seconds, before speed and offset: the mixer reads it as
+ * `at * speed + offset`. It is where a run STARTS and not where it stands — a position published
+ * every frame would be the scene's clock again.
+ */
+export type PreviewWatch = {
+  nodeId: string
+  clipId: string
+  at: number
+  playing: boolean
+}
+
 /** Three's vector as the studio spells one everywhere else. */
 export function plainVector({ x, y, z }: Vector3): PlainVector3 {
   return { x, y, z }

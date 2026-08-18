@@ -19,7 +19,7 @@ import {
   type KeyframeTrack,
   type Object3D,
 } from 'three'
-import type { HumanoidRole } from '@shared/domain/humanoid'
+import { isFingerRole, type HumanoidRole } from '@shared/domain/humanoid'
 import {
   profileWithRole,
   skeletonSignatureOf,
@@ -229,6 +229,20 @@ export type RetargetFit = {
   missingInSource: HumanoidRole[]
   /** Named by the animation and not by the character: that much of the motion is dropped. */
   missingInTarget: HumanoidRole[]
+}
+
+/**
+ * The same two lists with the hands taken out — what a reader is actually asked to judge.
+ *
+ * MEASURED on the issue's files: Uthana Character Rigging carries 22 bones and stops at the
+ * wrists, so every Mixamo motion drops its thirty fingers on one. Counting those would warn on
+ * the ordinary case, and list thirty rows nobody can act on.
+ */
+export function bodyFitOf(fit: RetargetFit): Omit<RetargetFit, 'matched'> {
+  return {
+    missingInSource: fit.missingInSource.filter(role => !isFingerRole(role)),
+    missingInTarget: fit.missingInTarget.filter(role => !isFingerRole(role)),
+  }
 }
 
 export function retargetFitOf(target: Object3D, source: Object3D): RetargetFit {

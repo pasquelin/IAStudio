@@ -145,6 +145,7 @@ import {
   viewPosition,
   type CameraPlacement,
   type PaneView,
+  type PreviewWatch,
 } from './sceneView'
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
@@ -466,6 +467,9 @@ export class SceneRenderer {
 
   /** The frame of the preview loop, so switching block or stopping cancels the one running. */
   private previewFrame = 0
+
+  /** The pose a preview stands still at, which nothing else writes again. See `holdPreview`. */
+  private heldPreview: PreviewWatch | null = null
   /** Where each driven bone rested when it arrived, keyed `<nodeId>/<bone>`. See `applyBonePoses`. */
   private readonly boneRests = new Map<string, Transform>()
   private readonly held = new Set<MotionId>()
@@ -764,9 +768,10 @@ export class SceneRenderer {
    * model back to the head. A loop of its own rather than the head's: this is a look at a block,
    * not a move of the scene's clock.
    */
-  setPreview(target: { nodeId: string; clipId: string } | null): void {
+  setPreview(target: PreviewWatch | null): void {
     cancelAnimationFrame(this.previewFrame)
     this.previewFrame = 0
+    this.heldPreview = target?.playing === false ? target : null
 
     if (!target) {
       this.animations.seek(this.playhead)
@@ -774,16 +779,39 @@ export class SceneRenderer {
       return
     }
 
+    // Held at one position: the pose is looked AT, so one frame answers it and no loop follows.
+    if (!target.playing) {
+      this.animations.preview(target.nodeId, target.clipId, target.at)
+      this.viewport.requestRender()
+      return
+    }
+
     const from = performance.now()
     const step = (now: number): void => {
-      const seconds = (now - from) / 1000
-      const length = this.animations.preview(target.nodeId, target.clipId, seconds)
+      const length = this.animations.preview(
+        target.nodeId,
+        target.clipId,
+        target.at + (now - from) / 1000,
+      )
       this.viewport.requestRender()
-      // A block that does not loop holds its last pose rather than asking for frames for ever.
-      if (length > 0 || seconds < 1) this.previewFrame = requestAnimationFrame(step)
+      // The grace stays on the WALL clock and not on the clip's: a run resumed from a scrub
+      // starts past a second in, and would give up before the file it waits for had landed.
+      if (length > 0 || now - from < 1000) this.previewFrame = requestAnimationFrame(step)
     }
 
     this.previewFrame = requestAnimationFrame(step)
+  }
+
+  /**
+   * Puts a HELD pose back after the mixer was asked to apply the document.
+   *
+   * `SceneAnimations.apply` finishes by posing the model from the scene's head, and a held
+   * preview has no loop of its own to write it again — editing the speed of the very block being
+   * looked at would otherwise snap the character back to frame zero.
+   */
+  private holdPreview(nodeId: string): void {
+    if (this.heldPreview?.nodeId !== nodeId) return
+    this.animations.preview(nodeId, this.heldPreview.clipId, this.heldPreview.at)
   }
 
   /**
@@ -1698,6 +1726,11 @@ export class SceneRenderer {
   }
 
   dispose(): void {
+    // A preview left running would keep posing a model whose caches this method is about to drop.
+    cancelAnimationFrame(this.previewFrame)
+    this.previewFrame = 0
+    this.heldPreview = null
+
     this.stopPaletteWatch?.()
     this.stopPaletteWatch = null
 
@@ -1924,6 +1957,7 @@ export class SceneRenderer {
     if (node.type === 'model' && this.animations.has(node.id)) {
       this.animations.apply(node.id, node.model.lanes ?? [])
       this.ensureBundled(node.id, node.model.lanes ?? [])
+      this.holdPreview(node.id)
       this.viewport.requestRender()
     }
 

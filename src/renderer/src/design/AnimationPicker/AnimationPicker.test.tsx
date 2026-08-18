@@ -28,7 +28,7 @@ const JIG: Asset = {
 function show(laid: { clipId: string; source: ClipSource } | null = null) {
   const onChoose = vi.fn()
   const onKeep = vi.fn()
-  const onDismiss = vi.fn()
+  const onCancel = vi.fn()
 
   render(
     <AnimationPicker
@@ -38,10 +38,10 @@ function show(laid: { clipId: string; source: ClipSource } | null = null) {
       laid={laid}
       onChoose={onChoose}
       onKeep={onKeep}
-      onDismiss={onDismiss}
+      onCancel={onCancel}
     />,
   )
-  return { onChoose, onKeep, onDismiss }
+  return { onChoose, onKeep, onCancel }
 }
 
 beforeEach(() => {
@@ -64,6 +64,18 @@ describe('choosing an animation', () => {
       'Import',
       'IA',
     ])
+  })
+
+  // The character's own clips are offered here too, and a Tripo rig spells its one `NlaTrack`.
+  it('offers a clip of the character under a name of the app, not the exporter’s', async () => {
+    useModelClips.setState({ clips: { [DOCUMENT]: { a: ['NlaTrack'] } } })
+    const { onChoose } = show()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Animation' }))
+
+    // The row READS « Animation » and the document keeps « NlaTrack »: a translated word written
+    // into a glTF would follow the language the project happened to be created in.
+    expect(onChoose).toHaveBeenCalledWith({ kind: 'embedded', name: 'NlaTrack' }, 'NlaTrack')
   })
 
   it('lists what the app ships with, and hands its source back on a click', async () => {
@@ -120,13 +132,25 @@ describe('choosing an animation', () => {
   })
 
   it('offers the two ways out once a block is laid', () => {
-    const { onKeep, onDismiss } = show({
+    const { onKeep, onCancel } = show({
       clipId: 'block-1',
       source: { kind: 'bundled', name: 'Capoeira' },
     })
 
     expect(screen.getByRole('button', { name: 'Garder' })).toBeInTheDocument()
     expect(onKeep).not.toHaveBeenCalled()
-    expect(onDismiss).not.toHaveBeenCalled()
+    expect(onCancel).not.toHaveBeenCalled()
+  })
+
+  it('takes the block back on the only control that means it', async () => {
+    const { onKeep, onCancel } = show({
+      clipId: 'block-1',
+      source: { kind: 'bundled', name: 'Capoeira' },
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
+
+    expect(onCancel).toHaveBeenCalled()
+    expect(onKeep).not.toHaveBeenCalled()
   })
 })

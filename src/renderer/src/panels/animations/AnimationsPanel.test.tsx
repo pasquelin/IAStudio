@@ -37,11 +37,14 @@ describe('the animations panel', () => {
     await waitFor(() => expect(screen.getByText(/Aucune animation/)).toBeInTheDocument())
   })
 
-  it('lists the clips the character in front brought', async () => {
+  // `NlaTrack` is the default name of a Blender NLA track and what a Tripo rig ships with: the
+  // studio names such a clip itself rather than letting the exporter name it.
+  it('lists the clips the character in front brought, under names of its own', async () => {
     withCharacter(['NlaTrack', 'run'])
     render(<AnimationsPanel />)
 
-    await waitFor(() => expect(screen.getByText('NlaTrack')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Animation')).toBeInTheDocument())
+    expect(screen.queryByText('NlaTrack')).not.toBeInTheDocument()
     expect(screen.getByText('run')).toBeInTheDocument()
   })
 
@@ -84,10 +87,10 @@ describe('the animations panel', () => {
   it('hands the band what it needs when a row is dragged', async () => {
     withCharacter(['NlaTrack'])
     render(<AnimationsPanel />)
-    await waitFor(() => expect(screen.getByText('NlaTrack')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Animation')).toBeInTheDocument())
 
     const carried = new Map<string, string>()
-    const row = screen.getByText('NlaTrack').closest('[draggable]')
+    const row = screen.getByText('Animation').closest('[draggable]')
     row?.dispatchEvent(
       Object.assign(new Event('dragstart', { bubbles: true }), {
         dataTransfer: { setData: (type: string, value: string) => void carried.set(type, value) },
@@ -118,7 +121,7 @@ describe('the animations panel', () => {
   it('lays the real block on the character and watches it', async () => {
     withCharacter(['NlaTrack'])
     render(<AnimationsPanel />)
-    await waitFor(() => expect(screen.getByText('NlaTrack')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Animation')).toBeInTheDocument())
 
     await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))
 
@@ -129,7 +132,7 @@ describe('the animations panel', () => {
   it('takes the block back off when the same row is pressed again', async () => {
     withCharacter(['NlaTrack'])
     render(<AnimationsPanel />)
-    await waitFor(() => expect(screen.getByText('NlaTrack')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Animation')).toBeInTheDocument())
 
     await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))
     await userEvent.click(screen.getByRole('button', { name: 'Arrêter et retirer le bloc' }))

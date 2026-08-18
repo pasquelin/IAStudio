@@ -6,6 +6,7 @@ import {
   HUMANOID_FINGER_ROLES,
   HUMANOID_ROLES,
   HUMANOID_SIDES,
+  isFingerRole,
   isHumanoidRole,
   type HumanoidBodyRole,
   type HumanoidFinger,
@@ -102,5 +103,13 @@ describe('the humanoid standard', () => {
     expect(isHumanoidRole('mixamorig:LeftHand')).toBe(false)
     expect(isHumanoidRole('L_ThighTwist01')).toBe(false)
     expect(isHumanoidRole(null)).toBe(false)
+  })
+
+  // The hand itself is body: a rig that stops at the wrists still HAS wrists.
+  it('tells a finger from the body it hangs off', () => {
+    expect(isFingerRole('LeftThumb1')).toBe(true)
+    expect(isFingerRole('RightLittle3')).toBe(true)
+    expect(isFingerRole('LeftHand')).toBe(false)
+    expect(isFingerRole('Hips')).toBe(false)
   })
 })

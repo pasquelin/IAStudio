@@ -178,4 +178,67 @@ describe('Flyout', () => {
       expect(outside).toHaveFocus()
     })
   })
+
+  /**
+   * Three ways out through one hook, and a surface holding a decision has to tell them apart:
+   * pressing outside and `Escape` are someone closing it, a window losing focus is not.
+   */
+  describe('the ways out', () => {
+    const show = (props: Partial<FlyoutProps> = {}) => {
+      const anchor = document.createElement('div')
+      document.body.appendChild(anchor)
+      const onDismiss = vi.fn()
+      render(
+        <Flyout anchor={anchor} onDismiss={onDismiss} {...props}>
+          <button type="button">Pinceau</button>
+        </Flyout>,
+      )
+      return { onDismiss }
+    }
+
+    it('dismisses on a press outside it', async () => {
+      const { onDismiss } = show()
+
+      await userEvent.click(document.body)
+
+      expect(onDismiss).toHaveBeenCalled()
+    })
+
+    it('dismisses on Escape', async () => {
+      const { onDismiss } = show()
+
+      await userEvent.keyboard('{Escape}')
+
+      expect(onDismiss).toHaveBeenCalled()
+    })
+
+    // What a caller that asked for nothing else gets: leaving the window closes it like the rest.
+    it('dismisses on the window losing focus, when nothing else was asked for', () => {
+      const { onDismiss } = show()
+
+      window.dispatchEvent(new Event('blur'))
+
+      expect(onDismiss).toHaveBeenCalled()
+    })
+
+    it('hands a caller that asked its own answer for the window leaving, and only that one', () => {
+      const onWindowLeave = vi.fn()
+      const { onDismiss } = show({ onWindowLeave })
+
+      window.dispatchEvent(new Event('blur'))
+
+      expect(onWindowLeave).toHaveBeenCalled()
+      expect(onDismiss).not.toHaveBeenCalled()
+    })
+
+    it('still dismisses that caller on Escape, which is a decision and not a departure', async () => {
+      const onWindowLeave = vi.fn()
+      const { onDismiss } = show({ onWindowLeave })
+
+      await userEvent.keyboard('{Escape}')
+
+      expect(onDismiss).toHaveBeenCalled()
+      expect(onWindowLeave).not.toHaveBeenCalled()
+    })
+  })
 })

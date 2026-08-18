@@ -2,9 +2,10 @@ import { mdiRunFast } from '@mdi/js'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { BundledAnimation } from '@shared/domain/animationLibrary'
-import { DEFAULT_CLIP, type ClipRef, type ClipSource } from '@shared/domain/scene'
+import { clipKeyOf, DEFAULT_CLIP, type ClipRef, type ClipSource } from '@shared/domain/scene'
 import { EmptyState } from '@/design/EmptyState'
 import { addModelClip, removeModelClip } from '@/engines/scene/commands'
+import { clipLabel } from '@/helpers/clipLabel'
 import { newId } from '@/helpers/ids'
 import { clipsOfNode, useModelClips } from '@/stores/modelClips'
 import { useDocuments } from '@/stores/documents'
@@ -49,16 +50,23 @@ export function AnimationsPanel() {
     return <EmptyState icon={mdiRunFast} message={t('animations.empty')} />
   }
 
-  /** Whether the row for `label` is the one playing right now, and not merely the one laid. */
-  const playingIs = (label: string): boolean =>
-    watched?.label === label && preview?.clipId === watched.id
+  /**
+   * Whether this row is the one playing right now, and not merely the one laid.
+   *
+   * By SOURCE and never by label: a label reaches the screen translated, and an identity that
+   * changes with the language would lose the row at the first switch.
+   */
+  const playingIs = (source: ClipSource): boolean =>
+    watched !== null &&
+    clipKeyOf(watched.source) === clipKeyOf(source) &&
+    preview?.clipId === watched.id
 
   const watch = (source: ClipSource, label: string): void => {
     if (!documentId || !nodeId) return
 
     // Read before anything is taken back: pressing the row that plays STOPS it, and the answer
     // must not depend on what the lines below have already written.
-    const stop = playingIs(label)
+    const stop = playingIs(source)
 
     // Whatever was laid goes first, whichever row is pressed: the block IS the preview, and two
     // of them left behind would play at once on the character.
@@ -69,7 +77,12 @@ export function AnimationsPanel() {
 
     const laid = { ...DEFAULT_CLIP, id: newId(), source, label }
     useScenes.getState().runCommand(documentId, addModelClip(nodeId, laid))
-    useSceneViews.getState().setPreview(documentId, { nodeId, clipId: laid.id })
+    useSceneViews.getState().setPreview(documentId, {
+      nodeId,
+      clipId: laid.id,
+      at: 0,
+      playing: true,
+    })
     setWatched(laid)
   }
 
@@ -78,9 +91,11 @@ export function AnimationsPanel() {
       {own.map(clip => (
         <AnimationsPanelRow
           key={`own:${clip}`}
-          name={clip}
+          name={clipLabel(clip, t)}
           source={{ kind: 'embedded', clip }}
-          playing={playingIs(clip)}
+          playing={playingIs({ kind: 'embedded', name: clip })}
+          // The label goes into the document, so it stays the file's own word — the band
+          // translates it on the way out. A French string written into a glTF is not a label.
           onPlay={nodeId ? () => watch({ kind: 'embedded', name: clip }, clip) : undefined}
         />
       ))}
@@ -90,7 +105,7 @@ export function AnimationsPanel() {
           name={animation.name}
           thumbnail={animation.thumbnail}
           source={{ kind: 'bundled', name: animation.name }}
-          playing={playingIs(animation.name)}
+          playing={playingIs({ kind: 'bundled', name: animation.name })}
           onPlay={
             nodeId
               ? () => watch({ kind: 'bundled', name: animation.name }, animation.name)

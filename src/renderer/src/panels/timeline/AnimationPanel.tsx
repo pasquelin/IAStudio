@@ -5,6 +5,7 @@ import { EmptyState } from '@/design/EmptyState'
 import { clipKeyOf, clipLane, MAIN_LANE_ID } from '@shared/domain/scene'
 import { animationRows, type ClipBlock, type SheetLane } from '@/engines/scene/animationRows'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
+import { clipLabel } from '@/helpers/clipLabel'
 import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
 import { useModelClips } from '@/stores/modelClips'
@@ -27,11 +28,13 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const { t } = useTranslation()
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
-  const view = useSceneViews(state => sceneViewOf(state, documentId))
+  // The one field this panel reads, and not the whole view: `setPlayhead` and `setPreview` both
+  // replace that object, and the band would repaint for every frame of playback and every scrub.
+  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
   const expandedList = useAnimationViews(state => animationViewOf(state, documentId).expanded)
   const order = useAnimationViews(state => animationViewOf(state, documentId).order)
 
-  useHeadInsideBand(documentId, view.playhead, timeline.duration)
+  useHeadInsideBand(documentId, playhead, timeline.duration)
 
   // Both memos are keyed on identities zustand keeps stable; building either inside a selector
   // would hand it a new snapshot every render and the subscription would never settle.
@@ -59,9 +62,9 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
 
           blocks.push({
             clipId: ref.id,
-            // The label the studio owns, never the name the file spells — a Tripo rig would put
-            // `NlaTrack` on the band.
-            name: ref.label,
+            // Renamed only for a clip the model's OWN file spells — an asset or a bundle was
+            // named by the studio or by the user, and `animation_0.glb` is a name they chose.
+            name: ref.source.kind === 'embedded' ? clipLabel(ref.label, t) : ref.label,
             start: ref.start,
             // The same arithmetic the mixer plays by, and it has to be: a bar drawn wider than
             // what is heard is a bar whose end shows a pose nothing holds.

@@ -5,11 +5,16 @@ import { isComposing } from '@/helpers/composition'
  * `pointerdown` in capture, not `click`: a surface that survives until mouseup stays under the
  * pointer while what is behind it has already reacted to the press. `opener` has to count as
  * inside, or the press closes and the click that follows reopens. `undefined` opts out entirely.
+ *
+ * `onLeave` separates the two reasons a surface closes: pressing outside and `Escape` are the
+ * user CLOSING it, while the window losing focus is the user going elsewhere. A surface holding
+ * a decision must not take the second for the first — alt-tab would then answer for them.
  */
 export function useDismiss(
   onDismiss: (() => void) | undefined,
   surface: RefObject<HTMLElement | null>,
   opener?: HTMLElement | null,
+  onLeave: (() => void) | undefined = onDismiss,
 ): void {
   useEffect(() => {
     if (!onDismiss) return
@@ -25,15 +30,16 @@ export function useDismiss(
       // field would close under it — the assistant does. See `isComposing`.
       if (event.key === 'Escape' && !isComposing(event)) onDismiss()
     }
+    const onBlur = (): void => onLeave?.()
 
     document.addEventListener('pointerdown', onPointerDown, true)
     document.addEventListener('keydown', onKeyDown)
-    window.addEventListener('blur', onDismiss)
+    window.addEventListener('blur', onBlur)
 
     return () => {
       document.removeEventListener('pointerdown', onPointerDown, true)
       document.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('blur', onDismiss)
+      window.removeEventListener('blur', onBlur)
     }
-  }, [onDismiss, surface, opener])
+  }, [onDismiss, surface, opener, onLeave])
 }

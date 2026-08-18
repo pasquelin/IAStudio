@@ -25,6 +25,7 @@ import { addModelClip, removeModelClip, setModelLanes } from '@/engines/scene/co
 import { lanesWith, MAX_SPEED, MIN_SPEED } from '@/engines/scene/clipBlend'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import type { ModelNode } from '@/engines/scene/sceneState'
+import { clipLabel } from '@/helpers/clipLabel'
 import { cn } from '@/helpers/cn'
 import { newId } from '@/helpers/ids'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -75,7 +76,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   const played =
     lanes.flatMap(lane => lane.clips).find(clip => clip.id === picked) ?? lanes[0]?.clips[0] ?? null
 
-  const running = preview?.clipId === played?.id && played !== null
+  const running = played !== null && preview?.clipId === played.id && preview.playing
 
   /**
    * Watches the chosen block on a clock of its OWN, in the viewport, leaving the band where it
@@ -84,7 +85,10 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   const play = (clip: ClipRef | null): void => {
     useSceneViews
       .getState()
-      .setPreview(documentId, clip ? { nodeId: node.id, clipId: clip.id } : null)
+      .setPreview(
+        documentId,
+        clip ? { nodeId: node.id, clipId: clip.id, at: 0, playing: true } : null,
+      )
   }
 
   // The chosen block is replaced INSIDE its own lane, every other lane carried over untouched:
@@ -155,7 +159,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
             keep()
             setOpen(false)
           }}
-          onDismiss={() => {
+          onCancel={() => {
             drop()
             setOpen(false)
           }}
@@ -178,7 +182,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
               <option value="">{t('inspector.noClip')}</option>
               {clips.map(clip => (
                 <option key={clip} value={clip}>
-                  {clip}
+                  {clipLabel(clip, t)}
                 </option>
               ))}
             </select>
