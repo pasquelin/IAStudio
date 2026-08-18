@@ -92,6 +92,23 @@ describe('a material written as MaterialX', () => {
     expect(readMaterialX(written).images).toEqual([])
   })
 
+  /**
+   * The claim above, actually held. Both attributes ride in the SAME tag, so a reader that waits
+   * for the closing `>` fails its match entirely once the state is heavy — and `readHead` then
+   * throws « Not a MaterialX document », taking the file out of every listing while it sits on
+   * disk. The ordering only pays if each attribute is read where it sits.
+   */
+  it('reaches the envelope even when the state pushes the tag past the head limit', () => {
+    const heavy = writeMaterialX(
+      document({ studio: { note: 'x'.repeat(40_000) } }),
+      '{"documentId":"m1"}',
+    )
+
+    // The ROOT tag's own bracket, not the one closing the XML declaration in front of it.
+    expect(heavy.indexOf('>', heavy.indexOf('<materialx'))).toBeGreaterThan(16 * 1024)
+    expect(mtlxHeadIn(heavy)).toEqual({ version: '1.39', envelope: '{"documentId":"m1"}' })
+  })
+
   it('answers no version for a file that only wears the extension', () => {
     expect(mtlxHeadIn('<html><body>not a material</body></html>')).toEqual({
       version: '',
@@ -251,34 +268,56 @@ describe('a MaterialX file this studio did not write', () => {
     expect(readMaterialX(BRASS).studio).toBeUndefined()
   })
 
-  it('rebuilds each textured input from the graph behind it', () => {
+  /**
+   * `fileprefix` is prepended to every `filename` value in its scope — § File Prefixes. BRASS
+   * carries one, and ignoring it hands the window a path that names no picture at all: the
+   * catalogue resolves nothing, and a save writes the material with its textures unlinked.
+   */
+  it('rebuilds each textured input from the graph behind it, through the file prefix', () => {
     const read = readMaterialX(BRASS)
 
     expect(read.images).toContainEqual({
       input: 'coat_color',
       type: 'color3',
-      file: 'brass_color.jpg',
+      file: '../../../Images/brass_color.jpg',
       colorspace: 'srgb_texture',
       tiling: [1, 1],
       offset: [0, 0],
     })
     expect(
-      read.images.filter(image => image.file === 'brass_roughness.jpg').map(i => i.input),
+      read.images
+        .filter(image => image.file === '../../../Images/brass_roughness.jpg')
+        .map(i => i.input),
     ).toEqual(['specular_roughness', 'coat_roughness'])
   })
 
   /**
-   * This studio rewrites a `.mtlx` from ONE material. A file holding more has to be REPORTED, or
-   * the next save comes back with the rest of it deleted — and the file is the only copy.
+   * This studio rewrites a `.mtlx` from ONE material and from six surface inputs. A file holding
+   * more has to be REPORTED, or the next save comes back with the rest of it deleted — and the
+   * file is the only copy.
+   *
+   * **The INPUT grain is the one that matters, and it was the hole**: `standard_surface` is an
+   * element this studio composes, so an element-only check read this very file as safe to
+   * rewrite while a save would have dropped its `coat`, `specular` and `base`.
    */
-  it('reports what it holds beyond the one material this studio composes', () => {
+  it('reports the surface inputs it would not write back', () => {
+    expect(readMaterialX(BRASS).extra).toEqual([
+      'input:base',
+      'input:specular',
+      'input:coat',
+      'input:coat_color',
+      'input:coat_roughness',
+    ])
+  })
+
+  it('reports an element it does not compose', () => {
     const withLook = BRASS.replace(
       '</materialx>',
       '  <look name="L"><materialassign material="Tiled_Brass" /></look>\n</materialx>',
     )
 
-    expect(readMaterialX(BRASS).extra).toBeUndefined()
-    expect(readMaterialX(withLook).extra).toEqual(['look', 'materialassign'])
+    expect(readMaterialX(withLook).extra).toContain('look')
+    expect(readMaterialX(withLook).extra).toContain('materialassign')
   })
 
   it('reports a second material as more than it composes', () => {
@@ -289,7 +328,42 @@ describe('a MaterialX file this studio did not write', () => {
         '  </surfacematerial>\n</materialx>',
     )
 
-    expect(readMaterialX(twice).extra).toEqual(['surfacematerial'])
+    expect(readMaterialX(twice).extra).toContain('surfacematerial')
+  })
+
+  /** A file of OURS carries only what we compose, so nothing is ever reported for it. */
+  it('reports nothing for a file this studio wrote', () => {
+    expect(readMaterialX(writeMaterialX(document({ studio: {} }), '{}')).extra).toBeUndefined()
+  })
+
+  /**
+   * The DECLARED type, never one re-derived from how many numbers a value holds. `normal` and
+   * `tangent` are `vector3` in `standard_surface`; counting their three numbers calls them
+   * `color3`, and a rename — which reads then rewrites the body — would write that wrong type out.
+   */
+  it('keeps the type a value was declared with, rather than counting its numbers', () => {
+    const withVector = BRASS.replace(
+      '<input name="base" type="float" value="1" />',
+      '<input name="tangent" type="vector3" value="1, 0, 0" />',
+    )
+
+    expect(readMaterialX(withVector).values).toContainEqual({
+      input: 'tangent',
+      type: 'vector3',
+      value: [1, 0, 0],
+    })
+  })
+
+  /** A value holding no number at all was dropped entirely by a numeric parse. */
+  it('carries a value that is not a number across untouched', () => {
+    const withFlag = BRASS.replace(
+      '<input name="base" type="float" value="1" />',
+      '<input name="thin_walled" type="boolean" value="true" />',
+    )
+    const read = readMaterialX(withFlag)
+
+    expect(read.values).toContainEqual({ input: 'thin_walled', type: 'boolean', value: 'true' })
+    expect(writeMaterialX(read)).toContain('<input name="thin_walled" type="boolean" value="true"')
   })
 
   it('reads the uniform inputs beside them', () => {
