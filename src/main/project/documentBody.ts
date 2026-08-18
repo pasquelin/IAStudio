@@ -14,6 +14,12 @@ import {
   OTIO_DOCUMENT_KIND,
   OTIO_STUDIO_KEY,
 } from '@shared/domain/otio'
+import {
+  gltfStudioExtras,
+  isGltfDocument,
+  GLTF_HEAD_LIMIT,
+  GLTF_STUDIO_KEY,
+} from '@shared/domain/gltf'
 import { ORA_HEAD_LIMIT, ORA_MIMETYPE } from '@shared/domain/openRaster'
 import { isRecord, readString } from '@shared/guards'
 import {
@@ -125,7 +131,7 @@ const OPEN_RASTER: DocumentBodyFormat = {
       // The content is the caller's; the envelope is the file layer's own, exactly as the first
       // line of an enveloped document is. `parts` is left out for the same reason `content` is:
       // they are the container's own entries, and naming them twice would let the two disagree.
-      JSON.stringify(oraEnvelopeOf(document)),
+      JSON.stringify(envelopeOf(document)),
     ),
   readHead: async file => oraEnvelope(oraHeadIn(await firstBytes(file, ORA_HEAD_LIMIT))),
 }
@@ -145,7 +151,8 @@ function oraEnvelope({ mimetype, envelope }: OraHead): DocumentEnvelope {
   return parseDocumentEnvelope(JSON.parse(envelope))
 }
 
-function oraEnvelopeOf({
+/** What the file layer stamps into a container of its own, whichever standard the container is. */
+function envelopeOf({
   version,
   kind,
   title,
@@ -163,9 +170,120 @@ function oraEnvelopeOf({
   }
 }
 
+/**
+ * A `.gltf`, which two kinds share — the 3D scene and the sky. Only the sky is written as real
+ * glTF today, so this format carries BOTH and lets the file say which it is: a body that opens on
+ * `asset` is glTF, and anything else is a document of ours still spelt the studio's own way.
+ *
+ * The migration shim is the whole point, and it goes when the scene follows: a `.gltf` written
+ * yesterday must open today, and a `.gltf` written today must open in Blender.
+ */
+const OPEN_GLTF: DocumentBodyFormat = {
+  read: body => (looksGltf(body) ? gltfDocument(body.toString('utf8')) : ENVELOPED.read(body)),
+  write: document =>
+    isGltfDocument(safeParse(document.content)) ? gltfBody(document) : ENVELOPED.write(document),
+  readHead: async file => {
+    const head = (await firstBytes(file, GLTF_HEAD_LIMIT)).toString('utf8')
+    const envelope = gltfEnvelopeIn(head)
+    if (envelope) return envelope
+
+    // Not one of ours as glTF: either a document still written the old way, or a `.gltf` from
+    // somewhere else whose head says nothing. `ENVELOPED` answers the first and refuses the second.
+    return await ENVELOPED.readHead(file)
+  },
+}
+
+/** `{` then optional space then `"asset"` — the shape this writer always puts first. */
+const looksGltf = (body: Buffer): boolean =>
+  /^\s*\{\s*"asset"\s*:/.test(body.subarray(0, 64).toString('utf8'))
+
+function safeParse(text: string): unknown {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The envelope out of the head of a `.gltf`, or `null` when the head is not one of ours.
+ *
+ * `asset` is written FIRST and on a line of its own, so the first line plus a closing brace is a
+ * whole JSON object — the same trick as an enveloped document's first line, in the one place glTF
+ * allows it. Whitespace is free in JSON, so the file stays valid for every other reader.
+ */
+function gltfEnvelopeIn(head: string): DocumentEnvelope | null {
+  const cut = head.indexOf('\n')
+  if (cut === -1) return null
+
+  const line = head.slice(0, cut).replace(/,\s*$/, '')
+  const parsed = safeParse(`${line}}`)
+  if (!isGltfDocument(parsed)) return null
+
+  const held = gltfStudioExtras(isRecord(parsed.asset) ? parsed.asset.extras : null)
+  return Object.keys(held).length > 0 ? parseDocumentEnvelope(held) : null
+}
+
+/**
+ * What a `.gltf` says about itself — the same two answers a container gives.
+ *
+ * A file written elsewhere carries no envelope of ours and is a document all the same, known by
+ * its file name. It takes the first kind the extension names, which is the scene: a `.gltf`
+ * somebody dropped into a project is a model far more often than a sky.
+ */
+function gltfEnvelope(parsed: Record<string, unknown>): DocumentEnvelope {
+  const held = gltfStudioExtras(isRecord(parsed.asset) ? parsed.asset.extras : null)
+  if (Object.keys(held).length === 0) {
+    return { version: DOCUMENT_VERSION, kind: 'scene', title: '', updatedAt: '' }
+  }
+  return parseDocumentEnvelope(held)
+}
+
+/**
+ * The standard file, with the studio's identity in the one place a listing can reach without
+ * inflating the rest — checked rather than written verbatim, exactly as a montage is.
+ *
+ * The name is stamped from the title so a RENAME reaches the field another application shows.
+ */
+function gltfBody(document: DocumentFile): string {
+  const parsed: unknown = JSON.parse(document.content)
+  if (!isGltfDocument(parsed)) throw new Error('Refusing to write a sky that is not glTF')
+
+  const { asset, ...rest } = parsed
+  const stamped = {
+    ...(isRecord(asset) ? asset : {}),
+    extras: {
+      ...(isRecord(asset) && isRecord(asset.extras) ? asset.extras : {}),
+      [GLTF_STUDIO_KEY]: envelopeOf(document),
+    },
+  }
+
+  const body = JSON.stringify(rest, null, 2)
+  const head = `{"asset":${JSON.stringify(stamped)}`
+  // A glTF with nothing but its `asset` is not one this studio writes, but a hand-edited file is
+  // still a file: `body.slice(1)` on `{}` would leave a trailing comma and an unreadable document.
+  return body === '{}' ? `${head}}\n` : `${head},${body.slice(1)}\n`
+}
+
+/**
+ * A `.gltf` read back, content untouched.
+ *
+ * The clock comes back with it, unlike a montage's — the envelope is IN this file, and a rename
+ * rewrites the body from what a read answered. Dropped here, `updatedAt` came back empty and the
+ * envelope the rename wrote was one the head reader then refused: the document vanished from every
+ * listing while sitting on disk, and nothing said so.
+ */
+function gltfDocument(body: string): DocumentFile {
+  const parsed: unknown = JSON.parse(body)
+  if (!isGltfDocument(parsed)) throw new Error('Not a glTF document')
+
+  return { ...gltfEnvelope(parsed), content: body }
+}
+
 const FORMAT_BY_EXTENSION: Record<string, DocumentBodyFormat> = {
   [EXTENSIONS_BY_KIND.sequence]: OPEN_TIMELINE,
   [EXTENSIONS_BY_KIND.image]: OPEN_RASTER,
+  [EXTENSIONS_BY_KIND.skybox]: OPEN_GLTF,
 }
 
 /** How a file of this extension is spelt — the studio's own envelope for anything unlisted. */

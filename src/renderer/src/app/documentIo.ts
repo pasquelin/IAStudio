@@ -10,7 +10,6 @@ import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import { chainsOnMontage, parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { scenePayload, sceneFromPayload } from '@/engines/scene/sceneDocument'
-import { parseSkybox } from '@/engines/skybox/skyboxState'
 import {
   EMPTY_SEQUENCE,
   EMPTY_SOUND_SEQUENCE,
@@ -44,6 +43,7 @@ import {
   sequencePayload,
   serializeSequencePayload,
 } from './sequenceDocument'
+import { serializeSkyboxPayload, skyboxFromPayload, skyboxPayload } from './skyboxDocument'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audioEdits'
@@ -553,10 +553,13 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   audio: AUDIO_IO,
   // Nor here: `adjustments` are applied over a source left intact, and baking them into it would
   // destroy the only copy of what they are meant to stay undoable against.
+  // A sky IS its glTF: the sun is a `KHR_lights_punctual` light, the horizon a node rotation, and
+  // the picture a file referenced beside the document rather than an id no other reader resolves.
   skybox: textDocumentIo(skyboxStore, {
-    toPayload: asIs,
-    fromPayload: parseSkybox,
+    toPayload: skyboxPayload,
+    fromPayload: skyboxFromPayload,
     createDefault: createSkyboxContent,
+    serialize: serializeSkyboxPayload,
   }),
   // The one whose absence is NOT a refusal: a channel is a reference, not pixels, and what does
   // produce pixels — `deriveChannel` — already writes them as an asset when it derives them.

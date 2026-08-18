@@ -271,6 +271,35 @@ describe('createDocumentFiles', () => {
   })
 
   /**
+   * The five gestures a format is not delivered without: write it, read it back, list it, rename
+   * it, and open it again. A sky IS its glTF, so all five run against a real one here — the file
+   * another application reads, not a spelling of the studio's own under the same extension.
+   */
+  it('writes a sky as glTF, and finds it again by its own head', async () => {
+    const sky = JSON.stringify({
+      asset: { version: '2.0', generator: 'Scenario Studio' },
+      scene: 0,
+      scenes: [{ name: 'Crépuscule', nodes: [0] }],
+      nodes: [{ name: 'Sun', rotation: [0, 0, 0, 1] }],
+      extras: { scenario: { sun: { intensity: 2 } } },
+    })
+    await documents.write('doc-sky', 'skybox', { title: 'Crépuscule', content: sky })
+
+    const listed = await documents.list()
+    expect(listed).toMatchObject([{ id: 'doc-sky', kind: 'skybox', title: 'Crépuscule' }])
+
+    // Whole, and still glTF: the envelope went into `asset.extras` rather than in front of it.
+    const onDisk: unknown = JSON.parse(
+      await readFile(join(root, 'documents', 'Crépuscule.gltf'), 'utf8'),
+    )
+    expect(onDisk).toMatchObject({ asset: { version: '2.0' }, scene: 0 })
+
+    await documents.rename('doc-sky', 'skybox', 'Aube')
+    expect((await documents.read('doc-sky', 'skybox'))?.content).toContain('"scenario"')
+    expect(await readdir(join(root, 'documents'))).toEqual(['Aube.gltf'])
+  })
+
+  /**
    * `.gltf` names two kinds, so the address a document of either WOULD have had is the same one
    * — and closing a sky that was never saved would have deleted the scene sitting at it. Removal
    * asks the file whose it is rather than trusting where it was pointed.

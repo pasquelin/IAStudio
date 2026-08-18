@@ -47,13 +47,22 @@ pile dans `stack.xml` et l’aplat que la spécification exige — GIMP l’ouvr
 avec les noms, les opacités, les modes de fusion et les groupes. Mesuré dans les deux sens avec
 GIMP 3.2.4.
 
-Les deux autres, non. Un `.gltf` ou un `.mtlx` écrit par le studio porte le nom du format ouvert
-mais contient encore la forme interne du studio — **aucune autre application ne l’ouvre**.
-L’extension dit vers quoi ces documents vont, pas ce qu’ils sont aujourd’hui. Cela concerne la
-**scène 3D**, le **ciel** et la **matière**.
+Un ciel `.gltf` est **réellement** du glTF 2.0 : le soleil y est une vraie lumière directionnelle
+(`KHR_lights_punctual`), la rotation d’horizon une transformation de nœud, et l’image source un
+fichier `.hdr` ou `.exr` **référencé à côté** plutôt que recopié dedans. Un lecteur glTF ouvre le
+fichier et retrouve la lumière, sa couleur et son intensité.
+
+Les deux autres, non. Un `.gltf` de **scène 3D** ou un `.mtlx` de **matière** porte le nom du
+format ouvert mais contient encore la forme interne du studio — **aucune autre application ne
+l’ouvre**. L’extension dit vers quoi ces documents vont, pas ce qu’ils sont aujourd’hui.
 
 En attendant, pour sortir une scène ou une matière vers un autre logiciel, ce sont les **exports**
 qui font foi : Fichier ▸ Exporter.
+
+Ce que le ciel garde en plus du standard — les réglages d’exposition, de contraste, de
+température, le flou, l’intensité de l’environnement — voyage dans le fichier à un endroit que
+glTF réserve aux applications. Un autre logiciel ne les perd pas : il ne les voit pas. Ouvrir un
+ciel écrit ailleurs donne donc ce que le standard porte, et ces réglages-là au neutre.
 
 Ce qu’un `.ora` du studio garde en plus du standard — les calques de réglage, le texte encore
 modifiable, les repères — voyage dans le conteneur sous un nom que les autres logiciels ignorent.

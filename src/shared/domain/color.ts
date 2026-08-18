@@ -48,6 +48,30 @@ function channels(colour: string): [number, number, number] {
   ]
 }
 
+const toLinear = (value: number): number =>
+  value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+
+const toSrgb = (value: number): number =>
+  value <= 0.0031308 ? value * 12.92 : 1.055 * value ** (1 / 2.4) - 0.055
+
+/**
+ * `#rrggbb` as the LINEAR triple every interchange format writes a colour in — glTF's
+ * `KHR_lights_punctual` among them, whose specification says so in as many words.
+ *
+ * Not the same transfer as `relativeLuminance`, which uses the WCAG threshold of 0.03928: this
+ * one is the sRGB standard's own 0.04045. The two differ in the sixth decimal and never in a
+ * ratio, but a file written with the wrong one is a colour another renderer disagrees with.
+ */
+export function linearRgbOf(colour: string): [number, number, number] {
+  const [red, green, blue] = channels(HEX_COLOR.test(colour) ? colour : '#000000')
+  return [toLinear(red / 255), toLinear(green / 255), toLinear(blue / 255)]
+}
+
+/** The way back, for a file written elsewhere. Out-of-range channels are clamped, never wrapped. */
+export function colourFromLinearRgb(linear: readonly number[]): string {
+  return toHex([0, 1, 2].map(index => toSrgb(Math.min(Math.max(linear[index] ?? 0, 0), 1)) * 255))
+}
+
 /** Relative luminance, WCAG 2.x. Expects the `#rrggbb` shape above; anything else reads as black. */
 export function relativeLuminance(colour: string): number {
   return channels(colour)

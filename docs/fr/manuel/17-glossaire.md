@@ -198,9 +198,10 @@ Six sortes, une par *espace de travail*, chacune sous l’extension du format ou
 appartient : `.ora` (image), `.gltf` (scène 3D et ciel), `.otio` (séquence et audio), `.mtlx`
 (matière).
 
-**Seuls les montages `.otio` s’ouvrent aujourd’hui dans un autre logiciel.** Pour les quatre
-autres, l’extension annonce la destination, pas encore le contenu : le fichier est écrit dans le
-format interne du studio.
+**Les montages `.otio`, les images `.ora` et les ciels `.gltf` s’ouvrent aujourd’hui dans un autre
+logiciel.** Pour la scène 3D et la matière, l’extension annonce encore la destination et pas le
+contenu : le fichier est écrit dans le format interne du studio. Voir
+[Ce que le studio ne fait pas](18-limites.md).
 
 ---
 

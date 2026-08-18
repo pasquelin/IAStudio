@@ -45,13 +45,22 @@ really **is** OpenRaster: an archive holding one PNG per layer, the stack in `st
 flattened picture the specification requires — GIMP opens it layer by layer, with the names, the
 opacities, the blend modes and the groups. Measured both ways with GIMP 3.2.4.
 
-The other two are not. A `.gltf` or an `.mtlx` written by the studio wears the name of the open
+A `.gltf` sky really **is** glTF 2.0: the sun is a real directional light
+(`KHR_lights_punctual`), the horizon rotation a node transform, and the source picture a `.hdr` or
+`.exr` file **referenced beside it** rather than copied inside. A glTF reader opens the file and
+finds the light, its colour and its intensity.
+
+The other two are not. A **3D scene** `.gltf` or a **material** `.mtlx` wears the name of the open
 format but still holds the studio's own internal shape — **no other application opens it**. The
-extension says where these documents are going, not what they are today. This covers the **3D
-scene**, the **sky** and the **material**.
+extension says where these documents are going, not what they are today.
 
 Until then, to take a scene or a material to another application, the **exports** are what count:
 File ▸ Export.
+
+What the sky keeps beyond the standard — the exposure, contrast and temperature dials, the blur,
+the environment's intensity — travels inside the file at a place glTF reserves for applications.
+Another application does not lose it: it does not see it. Opening a sky written elsewhere
+therefore gives what the standard carries, and those dials at their neutral value.
 
 What an `.ora` from this studio keeps beyond the standard — adjustment layers, still-editable
 text, guides — travels inside the container under a name other applications ignore. They do not

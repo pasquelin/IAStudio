@@ -1,18 +1,12 @@
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { FOLDER_ROOT, nameOf, parentOf } from '@shared/domain/folder'
+import { FOLDER_ROOT, parentOf } from '@shared/domain/folder'
 import { otioStudioMetadata, OTIO_DOCUMENT_ID } from '@shared/domain/otio'
 import i18next from 'i18next'
-import {
-  mediaLinkFrom,
-  mediaLinkOf,
-  mediaNameOf,
-  mediaPathOf,
-  relinkedBySuffix,
-  type MediaLink,
-} from '@/engines/timeline/mediaLink'
+import { mediaLinkFrom, mediaLinkOf, mediaNameOf } from '@/engines/timeline/mediaLink'
 import { otioTimelineOf, sequenceFromOtio, type OtioSource } from '@/engines/timeline/otioTimeline'
 import type { Clip, SequenceState } from '@/engines/timeline/timelineState'
+import { assetIdForLink } from '@/helpers/assetIndex'
 import { reportNotice } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
@@ -154,10 +148,10 @@ export function sequenceFromPayload(payload: unknown, documentId: string): Seque
   remember(payload, documentId)
 
   const unlinked: string[] = []
-  const relink = assetIdRelinker(heldIn(documentId))
+  const folder = heldIn(documentId)
   const state = sequenceFromOtio(payload, url => {
     const link = mediaLinkFrom(url)
-    const found = relink(link)
+    const found = assetIdForLink(link, folder)
     // Only a link that NAMES something: a clip drawing a live scene has no media and no url, and
     // counting it here reported every scene of a montage as a file that had gone missing.
     if (!found && mediaNameOf(link) !== '') unlinked.push(mediaNameOf(link))
@@ -178,57 +172,4 @@ export function sequenceFromPayload(payload: unknown, documentId: string): Seque
     )
   }
   return state
-}
-
-/**
- * Turns a media a file names by path into a line of the catalogue — only ever asked for a clip
- * the studio's own metadata does not name, which means a file written by another application.
- *
- * **The blind spot, written rather than hidden**: this reads `assetsById`, which holds every
- * asset this window has been SHOWN, not the whole catalogue. A media whose row has never been
- * listed here answers nothing and its clip is dropped — said out loud, but dropped. Asking the
- * catalogue by path (`helpers/assetAt`) is a round trip, and `DocumentIo.install` is synchronous.
- */
-function assetIdRelinker(documentFolder: readonly string[]): (link: MediaLink) => string {
-  const { byPath, byName } = assetIndex()
-
-  return link => {
-    const path = mediaPathOf(link, documentFolder)
-    return (
-      (path === null ? undefined : byPath.get(path)) ??
-      relinkedBySuffix(link, byPath) ??
-      byName.get(mediaNameOf(link)) ??
-      ''
-    )
-  }
-}
-
-type AssetIndex = { byPath: ReadonlyMap<string, string>; byName: ReadonlyMap<string, string> }
-
-let indexed: { of: ReadonlyMap<string, Asset>; index: AssetIndex } | null = null
-
-/**
- * The catalogue turned the two ways a link resolves, built once per catalogue rather than once
- * per document opened: every montage opened in a session walked every asset the window had been
- * shown, and that set only grows.
- *
- * Keyed on the map's identity, which `assetsById` already memoises on the asset list — so this
- * rebuilds exactly when the catalogue changes, and never otherwise.
- */
-function assetIndex(): AssetIndex {
-  const assets = assetsById(useAssets.getState())
-  if (indexed?.of === assets) return indexed.index
-
-  const byPath = new Map<string, string>()
-  const byName = new Map<string, string>()
-  for (const asset of assets.values()) {
-    if (!asset.path) continue
-    byPath.set(asset.path, asset.id)
-    // First in wins: two folders may hold a `rush.mp4`, and answering the last read would make
-    // the link depend on the order the catalogue happened to come back in.
-    if (!byName.has(nameOf(asset.path))) byName.set(nameOf(asset.path), asset.id)
-  }
-
-  indexed = { of: assets, index: { byPath, byName } }
-  return indexed.index
 }

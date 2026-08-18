@@ -1,4 +1,151 @@
+/**
+ * glTF 2.0, as this studio writes and reads it.
+ *
+ * The open format IS the document for two kinds — the 3D scene and the sky — and a `.gltf` in a
+ * project may be either. What settles it is the file's own envelope, which rides in `asset.extras`
+ * under the studio's key; nothing about the extension can say.
+ *
+ * **Two `extras`, and they are not interchangeable.** The ENVELOPE goes in `asset.extras` because
+ * `asset` is written first and on one line, so a listing reads a document's identity out of the
+ * head of the file without inflating the rest of it. The STATE goes in the root `extras`, where it
+ * may weigh whatever it weighs. The specification reserves both for exactly this: § 3.5 says an
+ * `extras` property "MAY be defined on any glTF object" and that clients ignore what they do not
+ * understand.
+ */
 import { isRecord } from '../guards'
+
+export const GLTF_VERSION = '2.0'
+
+export const GLTF_GENERATOR = 'Scenario Studio'
+
+/** The studio's own key inside an `extras`, as `metadata.scenario` is inside an OTIO object. */
+export const GLTF_STUDIO_KEY = 'scenario'
+
+/** The one extension the studio writes today, and the one three.js reads on both sides. */
+export const KHR_LIGHTS_PUNCTUAL = 'KHR_lights_punctual'
+
+/**
+ * How much of a `.gltf` is read to find its envelope. Larger than an OpenRaster head because the
+ * whole `asset` object shares that first line, generator string included.
+ */
+export const GLTF_HEAD_LIMIT = 16 * 1024
+
+/** A rotation, in the order glTF stores one: x, y, z, w. */
+export type GltfQuaternion = readonly [number, number, number, number]
+
+export type GltfExtras = Record<string, unknown>
+
+export type GltfAsset = { version: string; generator?: string; extras?: GltfExtras }
+
+export type GltfNode = {
+  name?: string
+  rotation?: GltfQuaternion
+  children?: readonly number[]
+  extensions?: Record<string, unknown>
+  extras?: GltfExtras
+}
+
+/** One light of `KHR_lights_punctual`. `color` is LINEAR, which the extension states outright. */
+export type GltfPunctualLight = {
+  type: 'directional' | 'point' | 'spot'
+  name?: string
+  color?: readonly number[]
+  intensity?: number
+}
+
+/** An image the file points at rather than embeds — a `.hdr` beside the document stays a `.hdr`. */
+export type GltfImage = { uri: string; name?: string }
+
+export type GltfScene = { name?: string; nodes?: readonly number[] }
+
+export type GltfDocument = {
+  asset: GltfAsset
+  scene?: number
+  scenes?: readonly GltfScene[]
+  nodes?: readonly GltfNode[]
+  images?: readonly GltfImage[]
+  extensionsUsed?: readonly string[]
+  extensions?: Record<string, unknown>
+  extras?: GltfExtras
+}
+
+/**
+ * Whether a payload is glTF at all. `asset.version` is the one field the specification makes
+ * required, and it is what tells a real file from a document of ours that still holds the studio's
+ * own shape under the same extension.
+ */
+export function isGltfDocument(value: unknown): value is Record<string, unknown> {
+  return isRecord(value) && isRecord(value.asset) && typeof value.asset.version === 'string'
+}
+
+/** What rides under the studio's own key of an `extras`, or nothing — never a partial object. */
+export function gltfStudioExtras(extras: unknown): Record<string, unknown> {
+  if (!isRecord(extras)) return {}
+  const studio = extras[GLTF_STUDIO_KEY]
+  return isRecord(studio) ? studio : {}
+}
+
+/** The lights `KHR_lights_punctual` declares at the root, in the order nodes index them. */
+export function gltfPunctualLights(document: unknown): Record<string, unknown>[] {
+  if (!isRecord(document) || !isRecord(document.extensions)) return []
+  const held = document.extensions[KHR_LIGHTS_PUNCTUAL]
+  if (!isRecord(held) || !Array.isArray(held.lights)) return []
+  return held.lights.filter(isRecord)
+}
+
+/**
+ * The rotation taking `+Z` onto a unit direction — how a node aims the light it carries.
+ *
+ * A directional light of `KHR_lights_punctual` travels down its node's `-Z`, so a sun standing in
+ * direction `d` is a node whose `+Z` is `d` and whose light therefore shines back down at the
+ * ground. Turning that around is the one piece of arithmetic this file exists for.
+ */
+export function quaternionTowards({
+  x,
+  y,
+  z,
+}: {
+  x: number
+  y: number
+  z: number
+}): GltfQuaternion {
+  const length = Math.hypot(x, y, z)
+  if (length === 0) return [0, 0, 0, 1]
+
+  const [unitX, unitY, unitZ] = [x / length, y / length, z / length]
+  // Antiparallel: the cross product is the zero vector, so every axis is equally perpendicular and
+  // the formula below would answer the zero quaternion. A half turn about Y is the answer, and it
+  // is reachable — a sun due south at the horizon aims at exactly `-Z`.
+  if (unitZ <= -1 + 1e-9) return [0, 1, 0, 0]
+
+  const norm = Math.hypot(unitY, unitX, 0, 1 + unitZ)
+  return [-unitY / norm, unitX / norm, 0, (1 + unitZ) / norm]
+}
+
+/** The direction a rotation aims `+Z` at — the way back from a file written anywhere. */
+export function directionOfQuaternion(rotation: readonly number[]): {
+  x: number
+  y: number
+  z: number
+} {
+  const [x, y, z, w] = [rotation[0] ?? 0, rotation[1] ?? 0, rotation[2] ?? 0, rotation[3] ?? 1]
+  return {
+    x: 2 * (y * w + z * x),
+    y: 2 * (z * y - x * w),
+    z: 1 - 2 * (x * x + y * y),
+  }
+}
+
+/** A turn about the vertical axis, which is what a horizon rotation is. */
+export function quaternionAboutY(radians: number): GltfQuaternion {
+  return [0, Math.sin(radians / 2), 0, Math.cos(radians / 2)]
+}
+
+/** The angle a rotation about Y stands for, read back into `[0, 2PI)`. */
+export function angleAboutY(rotation: readonly number[]): number {
+  const angle = 2 * Math.atan2(rotation[1] ?? 0, rotation[3] ?? 1)
+  return angle < 0 ? angle + Math.PI * 2 : angle
+}
 
 /**
  * Which textures a glTF material definition asks to wear.
