@@ -72,6 +72,7 @@ export type CommandId =
   | 'scene.redo'
   | 'sequence.playPause'
   | 'sequence.export'
+  | 'sequence.exportCut'
   | 'sequence.mirror'
   | 'sequence.split'
   | 'sequence.delete'
@@ -526,6 +527,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     // it on the Window menu, and two menu rows carrying one accelerator is a key nobody owns.
     // Shift+⌘E is taken too, so this ships without one until someone chooses it — legitimate,
     // and better than a row that quietly steals Minimise.
+    defaultBinding: null,
+  }),
+  // Beside the one above rather than a mode of it: one writes a film, the other writes the EDIT
+  // — a file another application opens to keep cutting. Nothing about them is the same gesture.
+  command({
+    id: 'sequence.exportCut',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceExportCut.title',
+    helpKey: 'commands.sequenceExportCut.help',
     defaultBinding: null,
   }),
   // The program monitor alone answers it: `Monitor` arms the sequence scope on the one that

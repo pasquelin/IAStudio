@@ -22,6 +22,7 @@ import { registerContextMenu } from '@main/window/contextMenu'
 import { registerDialogHandlers } from '@main/window/dialogs'
 import { registerSceneHandlers } from '@main/scene/export'
 import { registerExportHandlers } from '@main/export/folder'
+import { registerMontageHandlers } from '@main/export/montage'
 import { registerRenderHandlers } from '@main/render/handlers'
 import { registerUpdateHandlers } from '@main/update/handlers'
 import { registerFileInfoWindow } from '@main/window/fileInfo'
@@ -103,6 +104,7 @@ export function registerIpc(services: Services): void {
   registerDialogHandlers(services)
   registerSceneHandlers(services)
   registerExportHandlers(services)
+  registerMontageHandlers(services)
   registerRenderHandlers({
     ...services,
     newId: () => `render_${randomUUID()}`,

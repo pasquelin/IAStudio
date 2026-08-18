@@ -56,6 +56,7 @@ import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { useSelection } from '@/stores/selection'
 import { addSceneToSequence, sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
+import { exportOtio } from './otioExport'
 import { exportSequence } from './sequenceExport'
 import type { VideoToolId } from './videoTools'
 
@@ -73,6 +74,10 @@ export type TimelineCanvasProps = {
    */
   history?: boolean
 }
+
+/** What an exported file is named after: the tab, falling back to the id nothing else shows. */
+const titleOf = (documentId: string): string =>
+  useDocuments.getState().documents[documentId]?.title ?? documentId
 
 export function TimelineCanvas({ documentId, tool, history = true }: TimelineCanvasProps) {
   const { t } = useTranslation()
@@ -229,11 +234,13 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
         case 'sequence.delete':
           if (state.selectedId) store.runCommand(documentId, removeClip(state.selectedId))
           return
+        // Both exports name their file after the tab: one writes a film of the montage, the
+        // other the montage itself.
         case 'sequence.export':
-          void exportSequence({
-            sequence: state,
-            title: useDocuments.getState().documents[documentId]?.title ?? documentId,
-          })
+          void exportSequence({ sequence: state, title: titleOf(documentId) })
+          return
+        case 'sequence.exportCut':
+          void exportOtio(state, titleOf(documentId))
           return
         case 'sequence.unlink': {
           // Asked here rather than left to the command: every command run lands on the undo

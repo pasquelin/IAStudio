@@ -160,6 +160,10 @@
       "title": "Export video…",
       "help": "Writes the edit out as a video file, frame by frame, 3D scenes included. The sound is not in it yet."
     },
+    "sequenceExportCut": {
+      "title": "Export edit (OTIO)…",
+      "help": "Writes the edit itself out as an OpenTimelineIO file, which other editing applications open — tracks, clips, in points, speeds and links to the media. Fades, gains and image/sound links travel in it too, but only Scenario reads them back."
+    },
     "sequenceMirror": {
       "title": "Return window",
       "help": "Opens the edit in a window of its own, to put on a second screen. It follows the studio frame by frame, without the sound, and closes like any window."

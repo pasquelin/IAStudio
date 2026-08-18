@@ -1,0 +1,324 @@
+import { describe, expect, it } from 'vitest'
+import {
+  OTIO_STUDIO_KEY,
+  type OtioClip,
+  type OtioTimeline,
+  type OtioTrackItem,
+} from '@shared/domain/otio'
+import { otioTimelineOf, sequenceFromOtio, type OtioSource } from './otioTimeline'
+import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
+import {
+  DEFAULT_SETTINGS,
+  makeClip,
+  makeTrack,
+  reindexTracks,
+  SECOND,
+  type Clip,
+  type SequenceState,
+} from './timelineState'
+
+const named = (clip: Clip): OtioSource => ({
+  name: clip.assetId,
+  url: `file:///project/assets/${clip.assetId}.mp4`,
+})
+
+const write = (state: SequenceState, sourceOf: (clip: Clip) => OtioSource = named): OtioTimeline =>
+  otioTimelineOf(state, { name: 'Montage', sourceOf })
+
+const itemsOf = (timeline: OtioTimeline, track: number): readonly OtioTrackItem[] =>
+  timeline.tracks.children[track]?.children ?? []
+
+const clipsOnly = (items: readonly OtioTrackItem[]): OtioClip[] =>
+  items.filter((item): item is OtioClip => item.OTIO_SCHEMA === 'Clip.1')
+
+/** The same montage with its clip ids blanked, for a comparison identity is not part of. */
+const anonymous = (state: SequenceState): SequenceState => ({
+  ...state,
+  tracks: state.tracks.map(track => ({
+    ...track,
+    clips: track.clips.map(clip => ({ ...clip, id: '' })),
+  })),
+})
+
+describe('otioTimelineOf', () => {
+  it('writes the tracks bottom first, which is the opposite of the studio order', () => {
+    const timeline = write(
+      sequenceWith(
+        reindexTracks([
+          trackFixture('V1', 'video', [clipFixture('a', 0, SECOND)]),
+          trackFixture('A1', 'audio', [clipFixture('b', 0, SECOND)]),
+        ]),
+      ),
+    )
+
+    expect(timeline.OTIO_SCHEMA).toBe('Timeline.1')
+    expect(timeline.tracks.OTIO_SCHEMA).toBe('Stack.1')
+    expect(timeline.tracks.children.map(track => track.kind)).toEqual(['Audio', 'Video'])
+  })
+
+  it('fills the hole before a clip with a gap, so the track stays contiguous', () => {
+    const timeline = write(
+      sequenceWith([trackFixture('V1', 'video', [clipFixture('a', 2 * SECOND, SECOND)])]),
+    )
+
+    const [gap, clip] = itemsOf(timeline, 0)
+    expect(gap?.OTIO_SCHEMA).toBe('Gap.1')
+    // 25 fps: two seconds of silence, then one second of picture.
+    expect(gap?.source_range.duration.value).toBe(50)
+    expect(clip?.source_range.duration.value).toBe(25)
+    expect(clip?.source_range.duration.rate).toBe(25)
+  })
+
+  it('writes a trim as the source range and a speed as a linear time warp', () => {
+    const timeline = write(
+      sequenceWith([
+        trackFixture('V1', 'video', [
+          clipFixture('a', 0, SECOND, { inPoint: 4 * SECOND, speed: 2 }),
+        ]),
+      ]),
+    )
+
+    const [clip] = clipsOnly(itemsOf(timeline, 0))
+    expect(clip?.source_range.start_time.value).toBe(100)
+    expect(clip?.effects).toEqual([
+      {
+        OTIO_SCHEMA: 'LinearTimeWarp.1',
+        name: '',
+        metadata: {},
+        effect_name: 'LinearTimeWarp',
+        time_scalar: 2,
+      },
+    ])
+  })
+
+  it('points a clip at its media, and says the media is missing when there is no file', () => {
+    const timeline = write(
+      sequenceWith([
+        trackFixture('V1', 'video', [
+          clipFixture('a', 0, SECOND),
+          clipFixture('b', SECOND, SECOND),
+        ]),
+      ]),
+      clip => (clip.assetId === 'asset-a' ? named(clip) : { name: 'remote', url: null }),
+    )
+
+    const [first, second] = clipsOnly(itemsOf(timeline, 0))
+    expect(first?.media_reference).toMatchObject({
+      OTIO_SCHEMA: 'ExternalReference.1',
+      target_url: 'file:///project/assets/asset-a.mp4',
+    })
+    expect(second?.media_reference.OTIO_SCHEMA).toBe('MissingReference.1')
+  })
+
+  it('writes a live scene as a missing reference, keeping its place and its length', () => {
+    const timeline = write(
+      sequenceWith([
+        trackFixture('V1', 'video', [
+          makeClip({ id: 'a', assetId: '', sceneId: 'scene-7', start: SECOND, duration: SECOND }),
+        ]),
+      ]),
+      () => ({ name: 'Niveau', url: 'file:///should/not/be/used.mp4' }),
+    )
+
+    const [clip] = clipsOnly(itemsOf(timeline, 0))
+    expect(clip?.media_reference.OTIO_SCHEMA).toBe('MissingReference.1')
+    expect(clip?.name).toBe('Niveau')
+    expect(clip?.source_range.duration.value).toBe(25)
+  })
+
+  it('disables a track that does not reach the output, whether muted or outsoloed', () => {
+    const timeline = write(
+      sequenceWith(
+        reindexTracks([
+          trackFixture('V1', 'video', [clipFixture('a', 0, SECOND)], { solo: true }),
+          trackFixture('V2', 'video', [clipFixture('b', 0, SECOND)]),
+          trackFixture('A1', 'audio', [clipFixture('c', 0, SECOND)], { muted: true }),
+        ]),
+      ),
+    )
+
+    // Bottom first: A1 muted, V2 silenced by V1's solo, V1 through.
+    expect(timeline.tracks.children.map(track => track.enabled)).toEqual([false, false, true])
+  })
+})
+
+describe('sequenceFromOtio', () => {
+  const montage: SequenceState = {
+    settings: { width: 1280, height: 720, fps: 30, sampleRate: 44_100 },
+    tracks: reindexTracks([
+      trackFixture(
+        'V1',
+        'video',
+        [
+          clipFixture('a', 0, 2 * SECOND, { fadeIn: 200_000, linkId: 'take-1' }),
+          clipFixture('b', 3 * SECOND, SECOND, { inPoint: 5 * SECOND, speed: 0.5 }),
+        ],
+        { name: 'Plans', height: 90, locked: true },
+      ),
+      trackFixture(
+        'A1',
+        'audio',
+        [clipFixture('c', 0, 2 * SECOND, { gain: -6, linkId: 'take-1' })],
+        { muted: true },
+      ),
+    ]),
+    selectedId: 'b',
+    playhead: 1_500_000,
+  }
+
+  it('reads back everything the studio put in, standard or extended', () => {
+    expect(sequenceFromOtio(write(montage))).toEqual(montage)
+  })
+
+  it('carries a live scene clip through the round trip', () => {
+    const scene = sequenceWith(
+      reindexTracks([
+        trackFixture('V1', 'video', [
+          makeClip({ id: 'a', assetId: '', sceneId: 'scene-7', start: 0, duration: SECOND }),
+        ]),
+      ]),
+    )
+
+    expect(sequenceFromOtio(write(scene))).toEqual(scene)
+  })
+
+  it('reads a file written elsewhere, given something to relink its media with', () => {
+    const foreign = JSON.parse(
+      JSON.stringify(
+        write(
+          sequenceWith(
+            reindexTracks([
+              trackFixture('V1', 'video', [
+                clipFixture('a', 2 * SECOND, SECOND, { inPoint: SECOND }),
+              ]),
+            ]),
+          ),
+        ),
+      ).replaceAll(`"${OTIO_STUDIO_KEY}"`, '"someone_else"'),
+    )
+
+    const state = sequenceFromOtio(foreign, () => 'relinked')
+    const [clip] = state.tracks[0]?.clips ?? []
+    expect(state.tracks).toHaveLength(1)
+    expect(clip).toMatchObject({
+      assetId: 'relinked',
+      start: 2 * SECOND,
+      duration: SECOND,
+      inPoint: SECOND,
+    })
+  })
+
+  it('drops a clip whose media nothing can name, rather than inventing a catalogue row', () => {
+    const foreign = JSON.parse(
+      JSON.stringify(
+        write(sequenceWith([trackFixture('V1', 'video', [clipFixture('a', 0, SECOND)])])),
+      ).replaceAll(`"${OTIO_STUDIO_KEY}"`, '"someone_else"'),
+    )
+
+    expect(sequenceFromOtio(foreign).tracks[0]?.clips).toEqual([])
+  })
+
+  /**
+   * What ANOTHER application sees: the same file with the `scenario` domain of its metadata gone.
+   * The one measurement behind `capabilityOf('otio')` — and the reason « no loss » is never said
+   * without saying to whom.
+   *
+   * Clip ids are blanked on both sides: identity rides in the metadata this drops, and a fresh
+   * one is minted for a clip read without it.
+   */
+  it('shows the cut and nothing else once the studio metadata is gone', () => {
+    const rich: SequenceState = {
+      settings: { width: 1280, height: 720, fps: 25, sampleRate: 44_100 },
+      tracks: reindexTracks([
+        trackFixture(
+          'V1',
+          'video',
+          [
+            // One microsecond off the frame grid, which is what makes `exactTime` visible.
+            clipFixture('a', 0, 2 * SECOND, { inPoint: SECOND + 1, fadeIn: 200_000, linkId: 'x' }),
+            clipFixture('b', 3 * SECOND, SECOND, { speed: 0.5 }),
+          ],
+          { name: 'Plans', height: 90, locked: true, solo: true },
+        ),
+        trackFixture('A1', 'audio', [clipFixture('c', 0, 2 * SECOND, { gain: -6, linkId: 'x' })], {
+          muted: true,
+        }),
+      ]),
+      selectedId: 'b',
+      playhead: 1_500_000,
+    }
+
+    const stripped = JSON.parse(
+      JSON.stringify(write(rich)).replaceAll(`"${OTIO_STUDIO_KEY}"`, '"someone_else"'),
+    )
+
+    expect(
+      anonymous(sequenceFromOtio(stripped, url => url.slice(url.lastIndexOf('/') + 1, -4))),
+    ).toEqual(
+      anonymous({
+        // Frame size, sample rate, playhead and selection are gone: OTIO has no field for any
+        // of them, so the read falls back on the defaults.
+        settings: DEFAULT_SETTINGS,
+        tracks: reindexTracks([
+          makeTrack({
+            id: 'V1',
+            kind: 'video',
+            index: 0,
+            name: 'Plans',
+            clips: [
+              // Fade, link and the exact microsecond are gone; the cut is not.
+              makeClip({
+                id: 'a',
+                assetId: 'asset-a',
+                start: 0,
+                duration: 2 * SECOND,
+                inPoint: SECOND,
+              }),
+              makeClip({
+                id: 'b',
+                assetId: 'asset-b',
+                start: 3 * SECOND,
+                duration: SECOND,
+                speed: 0.5,
+              }),
+            ],
+          }),
+          // Silenced by the solo above rather than muted, and the file cannot tell those apart:
+          // what it carries is the RESULT, and this track reads back as a muted one.
+          makeTrack({
+            id: 'A1',
+            kind: 'audio',
+            index: 0,
+            muted: true,
+            clips: [makeClip({ id: 'c', assetId: 'asset-c', start: 0, duration: 2 * SECOND })],
+          }),
+        ]),
+        selectedId: null,
+        playhead: 0,
+      }),
+    )
+  })
+
+  // The standard part is what another application edits; the metadata only remembers.
+  it('takes a mute made elsewhere over the switches the metadata still remembers', () => {
+    const heard = sequenceWith(
+      reindexTracks([trackFixture('A1', 'audio', [clipFixture('a', 0, SECOND)])]),
+    )
+    const timeline = write(heard)
+    const silenced = {
+      ...timeline,
+      tracks: {
+        ...timeline.tracks,
+        children: timeline.tracks.children.map(track => ({ ...track, enabled: false })),
+      },
+    }
+
+    expect(sequenceFromOtio(timeline).tracks[0]?.muted).toBe(false)
+    expect(sequenceFromOtio(silenced).tracks[0]?.muted).toBe(true)
+  })
+
+  it('opens an empty sequence on anything that is not an OTIO timeline', () => {
+    expect(sequenceFromOtio({ tracks: [] }).tracks).toHaveLength(2)
+    expect(sequenceFromOtio('not json at all').tracks).toHaveLength(2)
+  })
+})
