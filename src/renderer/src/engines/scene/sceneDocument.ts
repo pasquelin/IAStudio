@@ -25,6 +25,7 @@ import { isRig } from '@shared/domain/rig'
 import {
   DEFAULT_DURATION,
   DEFAULT_FPS,
+  EASINGS,
   EMPTY_TIMELINE,
   TRACK_PROPERTIES,
   type AnimationTimeline,
@@ -318,8 +319,32 @@ function isShot(value: unknown): value is CameraShot {
   if (typeof value.id !== 'string' || value.id === '') return false
   if (typeof value.cameraId !== 'string' || value.cameraId === '') return false
   if (!Number.isFinite(value.layer) || !Number.isFinite(value.start)) return false
+  if (!isOptionalMotion(value.motion) || !isOptionalTarget(value.target)) return false
   // A shot of no length covers no instant at all, so it could only ever be a hole in the band.
   return typeof value.duration === 'number' && value.duration > 0
+}
+
+/** Absent means a shot that does not move. A rail it names but the scene has lost is skipped
+ * by `railCamera` rather than refused here — the same rule shots follow for their camera. */
+function isOptionalMotion(value: unknown): boolean {
+  if (value == null) return true
+  if (!isRecord(value)) return false
+
+  return (
+    typeof value.pathId === 'string' &&
+    EASINGS.some(easing => easing === value.easing) &&
+    Number.isFinite(value.from) &&
+    Number.isFinite(value.to)
+  )
+}
+
+/** Absent means FREE: the camera is aimed by its own rotation and nothing else. */
+function isOptionalTarget(value: unknown): boolean {
+  if (value == null) return true
+  if (!isRecord(value)) return false
+
+  if (value.kind === 'point') return isVector3(value.at)
+  return value.kind === 'node' && typeof value.nodeId === 'string'
 }
 
 function isTrack(value: unknown): value is AnimationTrack {

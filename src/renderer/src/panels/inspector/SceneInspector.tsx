@@ -12,12 +12,15 @@ import {
   setTextOn,
 } from '@/engines/scene/commands'
 import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
+import { shotOfCameraAt } from '@/engines/scene/cameraShots'
 import { selectedNodes } from '@/engines/scene/sceneState'
+import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from './DescriptorSection'
 import { AnimationSection } from './AnimationSection'
+import { CameraShotSection } from './CameraShotSection/CameraShotSection'
 import { RigSection } from './RigSection'
 import { EnvironmentSection } from './EnvironmentSection'
 import { MaterialSection } from './MaterialSection'
@@ -48,6 +51,8 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // Two stable selectors, then derived: a selector that builds an array hands React a new
   // snapshot on every call, and the render loop never settles.
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
+  const animation = useScenes(state => sceneOf(state, documentId).animation)
+  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   const environment = useScenes(state => sceneOf(state, documentId).environment)
   const selection = useMemo(() => selectedNodes(nodes, selectedIds), [nodes, selectedIds])
@@ -160,12 +165,21 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
       )}
 
       {camera && (
-        <DescriptorSection
-          title={t('inspector.camera')}
-          fields={lens}
-          onChange={(name, value) => edit.run(setCameraOn(selection, name, value))}
-          gesture={edit.gesture}
-        />
+        <>
+          <DescriptorSection
+            title={t('inspector.camera')}
+            fields={lens}
+            onChange={(name, value) => edit.run(setCameraOn(selection, name, value))}
+            gesture={edit.gesture}
+          />
+          <CameraShotSection
+            camera={camera}
+            shot={shotOfCameraAt(animation, camera.id, playhead)}
+            nodes={nodes}
+            run={command => edit.run(command)}
+            gesture={edit.gesture}
+          />
+        </>
       )}
 
       {light && (

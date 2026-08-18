@@ -36,6 +36,34 @@ export function activeShotAt(
 }
 
 /**
+ * The shot driving ONE camera at an instant, whichever camera is on air.
+ *
+ * Apart from `activeShotAt` because it answers another question: a camera runs its rail while a
+ * shot of it covers the instant, whether or not that shot is the one the film is taken through.
+ * The preview shows exactly that — what this camera is doing, on air or not.
+ */
+export function shotOfCameraAt(
+  timeline: AnimationTimeline,
+  cameraId: string,
+  time: Us,
+): CameraShot | null {
+  let best: CameraShot | null = null
+
+  for (const shot of timeline.shots) {
+    if (shot.cameraId !== cameraId) continue
+    if (time < shot.start || time >= shot.start + shot.duration) continue
+    if (
+      !best ||
+      shot.layer > best.layer ||
+      (shot.layer === best.layer && shot.start > best.start)
+    ) {
+      best = shot
+    }
+  }
+  return best
+}
+
+/**
  * Where a drag leaves a shot: its body slides, its edges trim it.
  *
  * `null` when nothing would move, so a drag that has not left the frame it started on costs no

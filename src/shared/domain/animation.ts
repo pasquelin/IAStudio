@@ -50,6 +50,35 @@ export type AnimationTrack = {
   keys: readonly Keyframe[]
 }
 
+/** How a camera picks up speed along its rail. A named union, so a drawn curve can join it. */
+export type Easing = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut'
+
+export const EASINGS: readonly Easing[] = ['linear', 'easeIn', 'easeOut', 'easeInOut']
+
+/**
+ * What moves a camera during a shot: a rail, and which stretch of it to take.
+ *
+ * `from` and `to` are normalised abscissae, never seconds — that is what lets a shot take only
+ * part of a rail, and what makes `from > to` mean "run it backwards". The clock of the move is
+ * the shot's own window, which is why this lives on the shot.
+ */
+export type CameraMotion = {
+  pathId: string
+  easing: Easing
+  /** 0..1 */
+  from: number
+  /** 0..1 */
+  to: number
+}
+
+/**
+ * What a camera looks at during a shot. One abstraction for both LOOK AT and TRACK OBJECT: a
+ * fixed point, or a node — which may itself be animated.
+ *
+ * An ORIENTATION target, never a focus distance: depth of field is another chantier entirely.
+ */
+export type CameraTarget = { kind: 'point'; at: Vector3 } | { kind: 'node'; nodeId: string }
+
 /**
  * One camera, on air from `start` for `duration`.
  *
@@ -64,6 +93,10 @@ export type CameraShot = {
   layer: number
   start: Us
   duration: Us
+  /** Absent leaves the camera wherever its transform and its tracks put it. */
+  motion?: CameraMotion
+  /** Absent leaves the camera aimed by its own rotation — FREE, in the language of the trade. */
+  target?: CameraTarget
 }
 
 /**
@@ -82,6 +115,12 @@ export type AnimationTimeline = {
 
 export const ZERO: Vector3 = Object.freeze({ x: 0, y: 0, z: 0 })
 export const ONE: Vector3 = Object.freeze({ x: 1, y: 1, z: 1 })
+
+/** What aiming at a fixed point starts as, and the one place its `kind` is spelled out. */
+export const POINT_TARGET: Extract<CameraTarget, { kind: 'point' }> = Object.freeze({
+  kind: 'point',
+  at: ZERO,
+})
 
 export const DEFAULT_DURATION: Us = 5 * SECOND
 export const DEFAULT_FPS = 25

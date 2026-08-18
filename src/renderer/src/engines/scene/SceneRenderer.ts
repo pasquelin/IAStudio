@@ -50,6 +50,10 @@ import {
   type TextNode,
 } from './sceneState'
 import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
+import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
+import { curveOf } from './cameraPath'
+import { clampUnit, progressAt } from './cameraMotion'
+import { shotOfCameraAt } from './cameraShots'
 import {
   buildPath,
   geometryFor,
@@ -244,6 +248,8 @@ function wasClick(from: { x: number; y: number } | null, event: PointerEvent): b
 }
 
 /** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
+/** Where a shot's target stands, reused: a camera aimed per frame must allocate nothing. */
+const aimed = new ThreeVector3()
 const forward = new ThreeVector3()
 const right = new ThreeVector3()
 const step = new ThreeVector3()
@@ -543,6 +549,7 @@ export class SceneRenderer {
     // node was rebuilt under an unchanged timeline, and that node would stand in its rest pose.
     // It costs nothing on a scene with no track, and the loop is over driven nodes, not all.
     this.applyPoses()
+    this.applyCameraShots()
     if (this.environment) void this.sky.apply(this.environment, state.environment)
     this.attachGizmo()
     this.reportStats()
@@ -557,6 +564,7 @@ export class SceneRenderer {
     if (time === this.playhead) return
     this.playhead = time
     this.applyPoses()
+    this.applyCameraShots()
     // The clips of every imported model follow the head too, which is what puts them on the band
     // rather than on real time — and what stops a render from writing a frozen character.
     this.animations.seek(time)
@@ -567,6 +575,61 @@ export class SceneRenderer {
    * Lays the timeline over the rest poses. Only the nodes it drives are touched, and a scene
    * with no track at all leaves before building anything.
    */
+  /**
+   * Where the shots put their cameras at the instant the head stands on: along a rail, aimed at
+   * a target, or both.
+   *
+   * After `applyPoses` and never before, in two explicit passes: a camera may be told to watch a
+   * node that is itself animated, and aiming at where that node USED to be is a shot that lags
+   * one frame behind for good.
+   */
+  private applyCameraShots(): void {
+    const shots = this.timeline.shots
+    if (shots.length === 0) return
+
+    // World positions are read below, and three only refreshes them as it draws: without this
+    // the first frame of a shot would aim at where everything stood before the head moved.
+    this.viewport.scene.updateMatrixWorld(true)
+
+    for (const node of this.applied.values()) {
+      if (node.type !== 'camera') continue
+
+      const object = this.objects.get(node.id)
+      const shot = shotOfCameraAt(this.timeline, node.id, this.playhead)
+      // A camera the gizmo carries holds a transform relative to the pivot — see `applyPoses`.
+      if (!object || !shot || object.parent === this.pivot) continue
+
+      if (shot.motion) this.railCamera(object, shot, shot.motion)
+      if (shot.target) this.aimCamera(object, shot.target)
+    }
+  }
+
+  /** Puts a camera where its rail says, in the frame of whatever the camera hangs from. */
+  private railCamera(object: Object3D, shot: CameraShot, motion: CameraMotion): void {
+    const rail = this.applied.get(motion.pathId)
+    const railObject = this.objects.get(motion.pathId)
+    if (rail?.type !== 'path' || !railObject) return
+
+    // `getPointAt`, never `getPoint`: the second is parameterised per segment, so a camera
+    // speeds up through the short ones — the very defect a rail exists to avoid.
+    const along = curveOf(rail.path).getPointAt(clampUnit(progressAt(shot, motion, this.playhead)))
+    const world = railObject.localToWorld(along)
+    object.position.copy(object.parent ? object.parent.worldToLocal(world) : world)
+  }
+
+  /** Turns a camera towards a point of the scene, or towards whatever a node stands at. */
+  private aimCamera(object: Object3D, target: CameraTarget): void {
+    if (target.kind === 'point') {
+      object.lookAt(target.at.x, target.at.y, target.at.z)
+      return
+    }
+
+    // A camera cannot watch itself: doing so leaves `lookAt` with a direction of no length, and
+    // the quaternion it hands back is the identity — a shot silently aimed down the Z axis.
+    const watched = target.nodeId === object.name ? null : this.objects.get(target.nodeId)
+    if (watched) object.lookAt(watched.getWorldPosition(aimed))
+  }
+
   private applyPoses(): void {
     const timeline = this.timeline
     if (timeline.tracks.length === 0) return
