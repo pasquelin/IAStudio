@@ -5,20 +5,23 @@ import { describe, expect, it } from 'vitest'
 const ROOT = join(import.meta.dirname, '..', '..')
 
 /**
- * The tree removed on 2026-08-11, and the manifest script that rebuilt it.
- *
- * BOTH, because a first version of this guard searched the path alone and found five lines out of
- * eight: the manifest entry, the readme row and a `.gitignore` comment name the COMMAND, and would
- * have survived a green run — the one site able to bring the whole tree back among them.
+ * The tree removed on 2026-08-11, and the manifest script that rebuilt it — BOTH, since the three
+ * sites able to bring it back name the command and never the path.
  */
 const REMOVED = ['docs/scenario-api', 'docs:scenario']
+
+/** `git grep` saying « no match », and nothing else it can fail with. */
+const foundNothing = (error: unknown): boolean =>
+  typeof error === 'object' && error !== null && 'status' in error && error.status === 1
 
 /**
  * Every tracked line naming either, as `path:line:text` — git's own search, so binaries and
  * untracked files stay out and no walk is written twice.
  *
  * `git grep` EXITS 1 on no match, which `execFileSync` raises: an unguarded call would fail the
- * suite on exactly the state this guard wants to see. This file is excluded from its own sweep.
+ * suite on exactly the state this guard wants to see. Status 1 and NOTHING else — a broken
+ * pathspec exits 128 and a missing binary throws `ENOENT`, both of which a blanket `catch` would
+ * turn into the green this guard exists to refuse. This file is excluded from its own sweep.
  */
 function namingTheRemovedTree(): string[] {
   try {
@@ -36,8 +39,9 @@ function namingTheRemovedTree(): string[] {
     )
       .split('\n')
       .filter(Boolean)
-  } catch {
-    return []
+  } catch (error) {
+    if (foundNothing(error)) return []
+    throw error
   }
 }
 

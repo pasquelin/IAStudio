@@ -71,23 +71,33 @@ function borrowsTheSweep(code: string): boolean {
 }
 
 /**
+ * A suite that asks GIT for the tree instead of reading it — `git grep`, `git ls-files`.
+ *
+ * The sixth way, and it was missing for a day: a guard sweeping every TRACKED file goes through
+ * neither `fs` nor a glob, so all five other detectors were blind to it while it was the only
+ * thing standing between the repository and a defect it had just spent a lot removing.
+ */
+const asksGitForTheTree = (code: string): boolean => /execFileSync\(\s*'git'/.test(code)
+
+/**
  * Whether a test reads sources it never imports.
  *
- * Five ways. The fourth was missing until a review found it on 2026-08-13: a wide
+ * Six ways. The fourth was missing until a review found it on 2026-08-13: a wide
  * `import.meta.glob`, a walk of the disk, a read of a file that is data rather than a module
  * (`vitest.config.ts` for the test projects, `index.css` for the design tokens), and a read
  * anchored on the suite's own location. That last one covers `csp.test.ts`, `licences.test.ts`,
  * `permission-strings.test.ts` and `gate-caches.test.ts` — four guards that sat outside the net
  * while the floor read 32 and looked healthy. The fifth arrived with `sourceFiles.ts`, for the
- * suites that no longer read anything themselves. A count above `LEAST_GUARDS` proves nothing
- * about what the detector cannot see, which is why the ways are enumerated here rather than
- * counted.
+ * suites that no longer read anything themselves; the sixth with the first guard to ask git. A
+ * count above `LEAST_GUARDS` proves nothing about what the detector cannot see, which is why the
+ * ways are enumerated here rather than counted.
  */
 export function readsTheTree(code: string): boolean {
   return (
     walksTheTree(code) ||
     readsAnchoredFile(code) ||
     borrowsTheSweep(code) ||
+    asksGitForTheTree(code) ||
     /readdirSync|vitest\.config\.ts|index\.css/.test(code)
   )
 }

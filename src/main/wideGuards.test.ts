@@ -61,6 +61,16 @@ describe('finding the tests no import graph reaches', () => {
     expect(readsTheTree("import sheet from './index.css?raw'")).toBe(true)
   })
 
+  /**
+   * A guard sweeping every TRACKED file touches neither `fs` nor a glob, and sat outside the net
+   * for a day — the short loop stayed green on the very defect it had been written to refuse.
+   */
+  it('sees the suite that asks git for the tree rather than reading it', () => {
+    expect(readsTheTree("execFileSync('git', ['ls-files', '*.md'], { cwd: ROOT })")).toBe(true)
+    expect(readsTheTree("execFileSync(\n  'git',\n  ['grep', '-In', NEEDLE],\n)")).toBe(true)
+    expect(readsTheTree("execFileSync('node', ['scripts/check.mjs'])")).toBe(false)
+  })
+
   it('leaves an ordinary suite alone, which is what keeps the selection worth making', () => {
     expect(readsTheTree("import { Tree } from './Tree'\nrender(<Tree />)")).toBe(false)
   })
