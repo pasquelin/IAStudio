@@ -210,7 +210,9 @@ function isClip(value: unknown): boolean {
   if (!isRecord(value)) return false
   if (typeof value.id !== 'string' || typeof value.label !== 'string') return false
   if (!isClipSource(value.source)) return false
-  if (typeof value.loop !== 'boolean' || typeof value.playing !== 'boolean') return false
+  // `playing` is NOT required, and a document written while it was still a field must keep
+  // passing: it is session state now, so an extra boolean in the file is simply ignored.
+  if (typeof value.loop !== 'boolean') return false
   if (!ROOT_MOTIONS.some(motion => motion === value.rootMotion)) return false
 
   return ['start', 'duration', 'offset', 'speed', 'fadeIn', 'fadeOut'].every(field =>

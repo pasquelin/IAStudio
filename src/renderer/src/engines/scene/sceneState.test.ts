@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { embeddedClip, type ClipRef } from '@shared/domain/scene'
 import {
   lightNodeFixture as light,
   meshNode as mesh,
-  modelNodeFixture as model,
   spriteNodeFixture as sprite,
 } from './scene-fixtures'
 import {
@@ -14,7 +12,6 @@ import {
   hasChildren,
   nodeById,
   rotationShows,
-  sceneWithoutSelfPlay,
   selectedNodes,
   subtreeOf,
   type SceneState,
@@ -30,45 +27,6 @@ describe('EMPTY_SCENE', () => {
 describe('firstCameraId', () => {
   it('answers the first camera in document order, and nothing for a scene without one', () => {
     expect(firstCameraId([mesh('a'), light('b')])).toBeNull()
-  })
-})
-
-describe('sceneWithoutSelfPlay', () => {
-  const walkBlock = (playing: boolean): ClipRef => embeddedClip('c1', 'Walk', { playing })
-
-  const playing = (state: boolean): SceneState => {
-    const node = model('m')
-    return {
-      ...EMPTY_SCENE,
-      nodes: [
-        {
-          ...node,
-          model: {
-            ...node.model,
-            clips: [walkBlock(state)],
-          },
-        },
-      ],
-    }
-  }
-
-  it('stops a model its own tab left running, so the playhead alone decides the pose', () => {
-    const stopped = sceneWithoutSelfPlay(playing(true)).nodes[0]
-
-    expect(stopped?.type === 'model' ? stopped.model.clips?.[0]?.playing : null).toBe(false)
-  })
-
-  it('keeps which clip is bound: stopping is not unbinding', () => {
-    const stopped = sceneWithoutSelfPlay(playing(true)).nodes[0]
-
-    expect(stopped?.type === 'model' ? stopped.model.clips?.[0]?.source.name : null).toBe('Walk')
-  })
-
-  it('hands the very same object back when nothing was playing', () => {
-    const paused = playing(false)
-
-    expect(sceneWithoutSelfPlay(paused)).toBe(paused)
-    expect(sceneWithoutSelfPlay(EMPTY_SCENE)).toBe(EMPTY_SCENE)
   })
 })
 

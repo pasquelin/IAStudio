@@ -164,7 +164,6 @@ describe('sceneFromPayload', () => {
           start: 3,
           duration: 0,
           offset: 0.5,
-          playing: true,
           speed: 2,
           loop: false,
           fadeIn: 0,
@@ -193,21 +192,33 @@ describe('sceneFromPayload', () => {
       expect(clipsOf(undefined)).toBeUndefined()
     })
 
+    /** A block as a file spells one. */
+    const clip = {
+      id: 'c1',
+      source: { kind: 'embedded', name: 'Run' },
+      label: 'Run',
+      start: 0,
+      duration: 0,
+      offset: 0,
+      speed: 1,
+      loop: true,
+      fadeIn: 0,
+      fadeOut: 0,
+      rootMotion: 'auto',
+    }
+
+    // Written for two days, then moved to `sceneViews`. A file that still spells it must open —
+    // the alternative is a model vanishing from a scene saved last week.
+    it('opens a block that still carries the play flag it used to hold', () => {
+      const nodes: unknown[] = [
+        { ...modelNodeFixture('m'), model: { assetId: 'a', clips: [{ ...clip, playing: true }] } },
+      ]
+      const node = sceneFromPayload({ nodes }).nodes[0]
+
+      expect(node?.type === 'model' && node.model.clips?.[0]?.source.name).toBe('Run')
+    })
+
     it('keeps the list when a file holds both forms, and drops the leftover', () => {
-      const clip = {
-        id: 'c1',
-        source: { kind: 'embedded', name: 'Run' },
-        label: 'Run',
-        start: 0,
-        duration: 0,
-        offset: 0,
-        playing: false,
-        speed: 1,
-        loop: true,
-        fadeIn: 0,
-        fadeOut: 0,
-        rootMotion: 'auto',
-      }
       const nodes: unknown[] = [
         {
           ...modelNodeFixture('m'),

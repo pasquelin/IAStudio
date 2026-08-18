@@ -1,9 +1,11 @@
-import { AnimationClip, Object3D, VectorKeyframeTrack } from 'three'
+import { AnimationClip, Bone, Object3D, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
 import { embeddedClip, type ClipRef } from '@shared/domain/scene'
-import { SceneAnimations, clipNamesOf, playedClip } from './animation'
+import { SECOND } from '@shared/domain/time'
+import { animationTrack, timelineWith } from './animation-fixtures'
+import { SceneAnimations, clipNamesOf } from './animation'
 
-/** A cube travelling one unit along X over one second, which is enough to read a mixer by. */
+/** A cube travelling `to` units along X over one second, which is enough to read a mixer by. */
 function walkClip(name = 'walk', to = 1): AnimationClip {
   const track = new VectorKeyframeTrack('cube.position', [0, 1], [0, 0, 0, to, 0, 0])
   return new AnimationClip(name, 1, [track])
@@ -22,7 +24,7 @@ const ref = ({
   name = 'walk',
   id = 'block-1',
   ...extra
-}: Partial<ClipRef> & { name?: string } = {}) => embeddedClip(id, name, { playing: true, ...extra })
+}: Partial<ClipRef> & { name?: string } = {}) => embeddedClip(id, name, extra)
 
 describe('the clips a model brought', () => {
   it('reads the names off the loaded root', () => {
@@ -58,102 +60,60 @@ describe('SceneAnimations', () => {
     expect(animations.has('node-1')).toBe(false)
   })
 
-  it('moves the model the clip addresses', () => {
+  it('places the model where the head says, without playing to get there', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', ref())
-    animations.update(0.5)
-
-    expect(cubeOf(root).position.x).toBeCloseTo(0.5, 5)
-  })
-
-  it('stays where it is while paused, however many frames go by', () => {
-    const { animations, root } = withWalk()
-    animations.apply('node-1', ref({ playing: false }))
-    animations.update(0.5)
-    animations.update(0.5)
-
-    expect(cubeOf(root).position.x).toBe(0)
-  })
-
-  it('says whether anything moved, so the frame loop can go back to sleep', () => {
-    const { animations } = withWalk()
-
-    animations.apply('node-1', ref({ playing: false }))
-    expect(animations.update(0.1)).toBe(false)
-
-    animations.apply('node-1', ref())
-    expect(animations.update(0.1)).toBe(true)
-  })
-
-  it('runs at the speed the document asks for', () => {
-    const { animations, root } = withWalk()
-    animations.apply('node-1', ref({ speed: 2 }))
-    animations.update(0.25)
-
-    expect(cubeOf(root).position.x).toBeCloseTo(0.5, 5)
-  })
-
-  it('seeks where the head is put, without playing to get there', () => {
-    const { animations, root } = withWalk()
-    animations.apply('node-1', ref({ playing: false, offset: 0.75 }))
-    animations.update(0)
+    animations.apply('node-1', [ref()])
+    animations.seek(0.75 * SECOND)
 
     expect(cubeOf(root).position.x).toBeCloseTo(0.75, 5)
   })
 
-  it('starts the clip over when it loops', () => {
+  it('stands still as the frames go by, since the head is the only clock', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', ref({ loop: true }))
-    // A whole clip and a half: a looping one is a quarter of the way back down its travel.
-    animations.update(1.25)
+    animations.apply('node-1', [ref()])
+    animations.update(0.5)
+    animations.update(0.5)
+
+    expect(cubeOf(root).position.x).toBe(0)
+  })
+
+  it('runs at the speed the document asks for, which shortens the block', () => {
+    const { animations, root } = withWalk()
+    animations.apply('node-1', [ref({ speed: 2 })])
+    animations.seek(0.25 * SECOND)
+
+    expect(cubeOf(root).position.x).toBeCloseTo(0.5, 5)
+  })
+
+  it('wraps a looping block rather than running off its end', () => {
+    const { animations, root } = withWalk()
+    animations.apply('node-1', [ref({ loop: true, duration: 3 * SECOND })])
+    animations.seek(1.25 * SECOND)
 
     expect(cubeOf(root).position.x).toBeCloseTo(0.25, 5)
   })
 
-  it('holds the last pose when it does not loop, rather than snapping back to the first', () => {
+  it('holds the last pose of a block that does not loop, rather than snapping back', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', ref({ loop: false }))
-    animations.update(1.25)
+    animations.apply('node-1', [ref({ loop: false })])
+    animations.seek(5 * SECOND)
 
     expect(cubeOf(root).position.x).toBeCloseTo(1, 5)
   })
 
-  it('keeps the head where it was when only the speed changes, rather than restarting', () => {
-    const { animations, root } = withWalk()
-    animations.apply('node-1', ref())
-    animations.update(0.4)
-    animations.apply('node-1', ref({ speed: 2 }))
-
-    // Read off the object rather than off a getter: what the head is worth is what it shows.
-    expect(cubeOf(root).position.x).toBeCloseTo(0.4, 5)
-  })
-
-  it('switches clip without carrying the previous head over', () => {
-    const animations = new SceneAnimations()
-    const root = scene()
-    animations.add('node-1', root, [walkClip('walk'), walkClip('run', 2)])
-
-    animations.apply('node-1', ref())
-    animations.update(0.5)
-    animations.apply('node-1', ref({ name: 'run' }))
-
-    // Back to the start of the new clip, which for `run` means the origin.
-    expect(cubeOf(root).position.x).toBe(0)
-  })
-
   it('ignores a clip name the file no longer holds, rather than throwing', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', ref({ name: 'moonwalk' }))
-    animations.update(0.5)
+    animations.apply('node-1', [ref({ name: 'moonwalk' })])
+    animations.seek(0.5 * SECOND)
 
     expect(cubeOf(root).position.x).toBe(0)
   })
 
-  it('puts the model back to its rest pose when the reference is cleared', () => {
+  it('puts the model back to its rest pose when the last block is taken off', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', ref())
-    animations.update(0.5)
-    animations.apply('node-1', null)
+    animations.apply('node-1', [ref()])
+    animations.seek(0.5 * SECOND)
+    animations.apply('node-1', [])
 
     // Without an action driving them, three restores the values the file was loaded with — and
     // it has to reach the objects on the spot, since nothing will advance afterwards.
@@ -162,9 +122,9 @@ describe('SceneAnimations', () => {
 
   it('drives nothing once a node is removed', () => {
     const { animations, root } = withWalk()
-    animations.apply('node-1', ref())
+    animations.apply('node-1', [ref()])
     animations.remove('node-1')
-    animations.update(0.5)
+    animations.seek(0.5 * SECOND)
 
     expect(animations.has('node-1')).toBe(false)
     expect(cubeOf(root).position.x).toBe(0)
@@ -181,9 +141,202 @@ describe('SceneAnimations', () => {
   })
 })
 
-describe('which block a model plays', () => {
-  it('answers the first, and nothing for a model that plays nothing', () => {
-    expect(playedClip([ref({ id: 'walk' }), ref({ id: 'dance' })])?.id).toBe('walk')
-    expect(playedClip([])).toBeNull()
+describe('several blocks on one model', () => {
+  const twoClips = (): { animations: SceneAnimations; root: Object3D; cube: Object3D } => {
+    const animations = new SceneAnimations()
+    const root = new Object3D()
+    const cube = new Object3D()
+    cube.name = 'cube'
+    root.add(cube)
+    animations.add('node-1', root, [walkClip('walk'), walkClip('run', 2)])
+    return { animations, root, cube }
+  }
+
+  const walk = (extra: Partial<ClipRef> = {}): ClipRef => embeddedClip('walk', 'walk', extra)
+  const run = (extra: Partial<ClipRef> = {}): ClipRef => embeddedClip('run', 'run', extra)
+
+  it('plays the block the head is inside, and no other', () => {
+    const { animations, cube } = twoClips()
+    animations.apply('node-1', [walk(), run({ start: SECOND })])
+
+    animations.seek(0.5 * SECOND)
+    expect(cube.position.x).toBeCloseTo(0.5, 5)
+
+    // Half a second into `run`, which travels twice as far in the same time.
+    animations.seek(1.5 * SECOND)
+    expect(cube.position.x).toBeCloseTo(1, 5)
+  })
+
+  it('shows a mix of both blocks halfway through a fade, rather than one then the other', () => {
+    const { animations, cube } = twoClips()
+    const spans = { duration: 2 * SECOND }
+
+    animations.apply('node-1', [walk(spans)])
+    animations.seek(1.5 * SECOND)
+    const walkAlone = cube.position.x
+
+    animations.apply('node-1', [run({ ...spans, start: SECOND })])
+    animations.seek(1.5 * SECOND)
+    const runAlone = cube.position.x
+
+    animations.apply('node-1', [
+      walk({ ...spans, fadeOut: SECOND }),
+      run({ ...spans, start: SECOND, fadeIn: SECOND }),
+    ])
+    animations.seek(1.5 * SECOND)
+
+    // Halfway through complementary fades the weights are a half each, so the pose is the
+    // average of the two — which is what stops a jump between neighbouring blocks.
+    expect(cube.position.x).toBeCloseTo((walkAlone + runAlone) / 2, 5)
+  })
+
+  it('answers the same pose for one head however the head got there', () => {
+    const { animations, cube } = twoClips()
+    animations.apply('node-1', [
+      walk({ duration: 2 * SECOND, fadeOut: SECOND }),
+      run({ start: SECOND, duration: 2 * SECOND, fadeIn: SECOND }),
+    ])
+
+    animations.seek(1.5 * SECOND)
+    const forwards = cube.position.x
+    animations.seek(2.4 * SECOND)
+    animations.seek(0.2 * SECOND)
+    animations.seek(1.5 * SECOND)
+
+    expect(cube.position.x).toBe(forwards)
+  })
+
+  it('gives two blocks of the SAME clip two heads of their own', () => {
+    const { animations, cube } = twoClips()
+    animations.apply('node-1', [
+      embeddedClip('first', 'walk'),
+      embeddedClip('second', 'walk', { start: 4 * SECOND }),
+    ])
+
+    animations.seek(4.25 * SECOND)
+
+    // The second block is a quarter of the way in; sharing one action would have shown the first
+    // block's own head, four seconds past its end.
+    expect(cube.position.x).toBeCloseTo(0.25, 5)
+  })
+})
+
+describe('the one block a play button holds', () => {
+  const held = (): { animations: SceneAnimations; cube: Object3D } => {
+    const animations = new SceneAnimations()
+    const root = scene()
+    animations.add('node-1', root, [walkClip()])
+    animations.apply('node-1', [embeddedClip('block-1', 'walk')])
+
+    const cube = root.children[0]
+    if (!cube) throw new Error('the fixture builds one child')
+    return { animations, cube }
+  }
+
+  it('runs on real time while the head stands still', () => {
+    const { animations, cube } = held()
+    animations.setSelfPlay({ nodeId: 'node-1', clipId: 'block-1' })
+    animations.update(0.5)
+
+    expect(cube.position.x).toBeCloseTo(0.5, 5)
+  })
+
+  it('says whether anything moved, so the frame loop can go back to sleep', () => {
+    const { animations } = held()
+
+    expect(animations.update(0.1)).toBe(false)
+    animations.setSelfPlay({ nodeId: 'node-1', clipId: 'block-1' })
+    expect(animations.update(0.1)).toBe(true)
+  })
+
+  it('gives the model back to the head when it is let go of', () => {
+    const { animations, cube } = held()
+    animations.setSelfPlay({ nodeId: 'node-1', clipId: 'block-1' })
+    animations.update(0.5)
+    animations.setSelfPlay(null)
+
+    expect(cube.position.x).toBe(0)
+  })
+})
+
+describe('a block that carries its character across the floor', () => {
+  const rigged = (): { animations: SceneAnimations; hip: Object3D } => {
+    const animations = new SceneAnimations()
+    const root = new Object3D()
+    const hip = new Bone()
+    hip.name = 'Hip'
+    const spine = new Bone()
+    spine.name = 'Spine'
+    hip.add(spine)
+    root.add(hip)
+
+    const clip = new AnimationClip('walk', 1, [
+      new VectorKeyframeTrack('Hip.position', [0, 1], [0, 0, 0, 4, 0, 0]),
+      new VectorKeyframeTrack('Spine.position', [0, 1], [0, 0, 0, 0, 1, 0]),
+    ])
+    animations.add('node-1', root, [clip])
+    return { animations, hip }
+  }
+
+  const trajectory = () =>
+    timelineWith([
+      animationTrack(
+        'move',
+        'position',
+        [
+          { time: 0, value: { x: 0, y: 0, z: 0 } },
+          { time: SECOND, value: { x: 4, y: 0, z: 0 } },
+        ],
+        { target: { nodeId: 'node-1', property: 'position' } },
+      ),
+    ])
+
+  it('travels on its own when the band drives the node nowhere', () => {
+    const { animations, hip } = rigged()
+    animations.apply('node-1', [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
+    animations.seek(0.5 * SECOND)
+
+    expect(hip.position.x).toBeCloseTo(2, 5)
+  })
+
+  it('walks on the spot as soon as the band carries the node, so nothing moves twice', () => {
+    const { animations, hip } = rigged()
+    animations.setTimeline(trajectory())
+    animations.apply('node-1', [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
+    animations.seek(SECOND)
+
+    expect(hip.position.x).toBe(0)
+  })
+
+  it('keeps everything the travel is not, so a neutralised walk still walks', () => {
+    const { animations, hip } = rigged()
+    animations.setTimeline(trajectory())
+    animations.apply('node-1', [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
+    animations.seek(0.5 * SECOND)
+
+    const spine = hip.children[0]
+    expect(spine?.position.y).toBeCloseTo(0.5, 5)
+  })
+
+  it('stops travelling the moment a trajectory is keyed under it', () => {
+    const { animations, hip } = rigged()
+    animations.apply('node-1', [embeddedClip('block-1', 'walk', { rootMotion: 'auto' })])
+    animations.seek(0.5 * SECOND)
+    expect(hip.position.x).toBeCloseTo(2, 5)
+
+    animations.setTimeline(trajectory())
+
+    // No node of the document changed, so nothing else would have told this block to give up
+    // its own travel.
+    expect(hip.position.x).toBe(0)
+  })
+
+  it('travels anyway when the document says so plainly', () => {
+    const { animations, hip } = rigged()
+    animations.setTimeline(trajectory())
+    animations.apply('node-1', [embeddedClip('block-1', 'walk', { rootMotion: 'travel' })])
+    animations.seek(0.5 * SECOND)
+
+    expect(hip.position.x).toBeCloseTo(2, 5)
   })
 })

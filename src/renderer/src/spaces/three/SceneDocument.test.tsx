@@ -44,6 +44,7 @@ const setPickedBone = vi.fn()
 const setQuadView = vi.fn()
 const setPaneViews = vi.fn()
 const setPlayhead = vi.fn()
+const setSelfPlay = vi.fn()
 const refreshTextures = vi.fn()
 /** Every engine built, so a test can fire the callbacks the real one would. */
 const built = vi.hoisted((): SceneRendererOptions[] => [])
@@ -78,6 +79,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setQuadView = setQuadView
     setPaneViews = setPaneViews
     setPlayhead = setPlayhead
+    setSelfPlay = setSelfPlay
     refreshTextures = refreshTextures
     viewFrom = viewFrom
     frameSelection = frameSelection

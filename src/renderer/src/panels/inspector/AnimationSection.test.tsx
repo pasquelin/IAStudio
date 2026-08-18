@@ -6,6 +6,7 @@ import { modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixture
 import { EMPTY_SCENE, type ModelNode } from '@/engines/scene/sceneState'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene, sceneNodeIn, sceneNodeNow } from '@/stores/scene-fixtures'
+import { useSceneViews } from '@/stores/sceneViews'
 import { useScenes } from '@/stores/scenes'
 import { AnimationSection } from './AnimationSection'
 import { useSceneEdit } from '@/hooks/useSceneEdit'
@@ -18,6 +19,9 @@ const nodeOf = (): ModelNode | undefined => {
 }
 
 const playedOf = () => nodeOf()?.model.clips?.[0]
+
+/** Which block the play button is holding — session state now, so it lives outside the document. */
+const heldOf = () => useSceneViews.getState().views[DOCUMENT]?.selfPlay ?? null
 
 /**
  * The section takes its node and its edit subscribed, so a write reaches the screen the way it
@@ -45,6 +49,7 @@ describe('AnimationSection', () => {
   beforeEach(() => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] })
     useModelClips.setState({ clips: {}, rigs: {} })
+    useSceneViews.setState({ views: {} })
   })
 
   it('says nothing at all while the file has not landed, having nothing to say about it yet', () => {
@@ -86,22 +91,23 @@ describe('AnimationSection', () => {
     show()
     await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
 
-    expect(playedOf()).toMatchObject({
-      source: { kind: 'embedded', name: 'walk' },
-      playing: true,
-      offset: 0,
-    })
+    expect(playedOf()).toMatchObject({ source: { kind: 'embedded', name: 'walk' }, offset: 0 })
+    expect(heldOf()).toEqual({ nodeId: 'a', clipId: playedOf()?.id })
   })
 
-  it('pauses and resumes without losing the clip', async () => {
+  it('pauses and resumes without losing the clip, and without touching the document', async () => {
     show()
     await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
+    const chosen = playedOf()
     await userEvent.click(screen.getByRole('button', { name: /Mettre en pause/ }))
 
-    expect(playedOf()).toMatchObject({ source: { name: 'walk' }, playing: false })
+    expect(heldOf()).toBeNull()
+    // The same object, not merely an equal one: pausing writes nothing into the scene, so ⌘Z
+    // never gives a play button back.
+    expect(playedOf()).toBe(chosen)
 
     await userEvent.click(screen.getByRole('button', { name: /Jouer le clip/ }))
-    expect(playedOf()?.playing).toBe(true)
+    expect(heldOf()).toEqual({ nodeId: 'a', clipId: chosen?.id })
   })
 
   it('clears the reference when the choice goes back to none', async () => {
@@ -185,7 +191,6 @@ describe('AnimationSection', () => {
       source: { kind: 'embedded', name: 'run' },
       label: 'run',
       loop: false,
-      playing: true,
     })
   })
 
