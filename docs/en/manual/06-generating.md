@@ -204,14 +204,14 @@ own.
 > Suggested settings are **filtered against what the model declares it accepts** before being
 > applied. A value out of bounds is dropped, never forced back into range.
 
-### The two refusals you will meet
+### When these requests have nothing to do
 
-| Message | What it means |
+| The request | What happens |
 |---|---|
-| "This text is already in English." | translation has nothing to do — the studio checks the language before calling |
-| "Drop a reference image to describe its style." | the form carries no image to read |
+| **Translate a prompt into English**, on text that is already English | **nothing is refused**: the text comes back as it was, and the answer carries the language that was recognised |
+| **Describe the style of the references**, with no image on the form | "The form carries no reference image to read a style from." |
 
-Neither is a failure, and nothing is spent when they appear.
+Neither is a failure, and nothing is spent.
 
 > **These requests do not enter the queue**: they do not show in the status line, and there is
 > nothing to cancel. **Suggesting variants costs no creative units** — that is measured, not
