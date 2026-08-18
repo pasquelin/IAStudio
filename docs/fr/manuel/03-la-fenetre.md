@@ -52,8 +52,9 @@ Tout le reste de l’accueil est un panneau, logé dans les deux colonnes.
 
 ### Explorer, le fil sans fin
 
-Le fil de ce que **tout le monde** a publié, une catégorie à la fois — les six types du studio,
-en onglets. Pas d’onglet « tout ».
+Le fil de ce que **tout le monde** a publié, une catégorie à la fois — les six types que la
+bibliothèque distante sait rendre, en onglets. Pas d’onglet « tout », et **pas d’onglet
+Animation** : le studio en connaît un septième type, que le fil ne sait pas servir.
 
 - **il se charge en descendant** : le fil pagine tant que vous scrollez ;
 - **il reste en bas de page**, et ne se déplace pas ;

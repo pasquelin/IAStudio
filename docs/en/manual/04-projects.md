@@ -61,12 +61,13 @@ back. It is the gesture that cleans up a list where a moved folder lingers.
 ```
 My project/
 │
-├── Images/               SIX FOLDERS TO START FROM
+├── Images/               SEVEN FOLDERS TO START FROM
 ├── Video/                  laid down at creation, and ordinary: rename them,
 ├── Audio/                  empty them, throw them away, arrange them otherwise
 ├── 3D/
 ├── Textures/
 ├── Sky/
+├── Animations/
 │                           …and whatever you make beside them
 │
 ├── .project.json         the identity card — HIDDEN
@@ -87,7 +88,7 @@ Your files stay visible and you arrange them as you see fit — you must be able
 copy them, repair them. The identity card, the index and the backup do not: they are the studio's
 tools, not your work.
 
-> **The six starter folders are only a starting point.** They are laid down at creation and never
+> **The seven starter folders are only a starting point.** They are laid down at creation and never
 > put back: delete `Images/` and it stays deleted — except the day a generation needs somewhere to
 > land, where the studio recreates it rather than refusing to work.
 
@@ -217,7 +218,7 @@ what each one is; `a3f1.json` next to `b204.json` says nothing.
 
 ### Walking the project — the Explorer panel
 
-The **Explorer** panel shows **the project folder**, as a tree: the six starter folders, and
+The **Explorer** panel shows **the project folder**, as a tree: the seven starter folders, and
 whatever you made or dropped in there yourself. Folders unfold, files are inside them, as in your
 system's own file browser.
 
@@ -234,9 +235,9 @@ the two is always lit:
 | **By folder** | the project as it is filed on disk, as a tree |
 | **By domain** | every file in the project grouped by what it **is**, wherever it is filed |
 
-**By domain** ignores folders. It lays down at most seven headings — the studio's six kinds, plus
+**By domain** ignores folders. It lays down at most eight headings — the studio's seven kinds, plus
 **Other** for what belongs to none — each followed by how many files it counts. **A domain nothing
-fills does not appear**: seven empty headings over a new project would say nothing at all.
+fills does not appear**: eight empty headings over a new project would say nothing at all.
 
 A heading names, it does not open: it cannot be selected, it cannot be renamed, and nothing drops
 onto it.
@@ -339,7 +340,7 @@ but what it holds is the studio's own writing: a file dropped in there would be 
 save, which rebuilds that folder. The document itself moves like any other file — it is its inside
 that does not open.
 
-**Everything else obeys you**, the six starter folders included: rename them, empty them, throw
+**Everything else obeys you**, the seven starter folders included: rename them, empty them, throw
 them away, take an asset out of one and file it elsewhere, cut, copy, duplicate. The studio
 follows — that is what the reconciliation pass does when a project opens and when you come back to
 the window.

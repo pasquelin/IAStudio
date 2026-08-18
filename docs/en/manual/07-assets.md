@@ -26,7 +26,7 @@ shelf to the folder, never otherwise.
 
 ## What you find there
 
-Six asset types:
+Seven asset types:
 
 | Type | What it is | Where it lands |
 |---|---|---|
@@ -36,8 +36,9 @@ Six asset types:
 | **Mesh** | a 3D object | `3D/` |
 | **Texture** | a material | `Textures/` |
 | **Skybox** | a 360° sky | `Sky/` |
+| **Animation** | a motion, to be replayed on a character | `Animations/` |
 
-**Where it lands, not where it lives.** These six folders are laid down when the project is
+**Where it lands, not where it lives.** These seven folders are laid down when the project is
 created and are only a starting point: move an asset wherever you like, rename the folder, empty
 it. What a file IS does not depend on where it sits — the studio finds it again, and its entry
 follows.
@@ -431,7 +432,7 @@ without having run `pnpm ffmpeg:fetch`.
 
 ## Where your files really are
 
-**Wherever you put them.** A generated asset lands in one of the six starter folders — see
+**Wherever you put them.** A generated asset lands in one of the seven starter folders — see
 [What you find there](#what-you-find-there) — and nothing holds it there: move it, file it in a
 tree of your own, the shelf keeps showing it and its entry follows. The layout of the project
 folder is described in [Projects](04-projects.md#what-is-inside).
