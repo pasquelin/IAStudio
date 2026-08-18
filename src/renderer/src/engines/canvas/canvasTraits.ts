@@ -13,6 +13,7 @@ import {
  * survives a save as OpenRaster; a rotated, scaled or skewed one does not.
  */
 function isPlacedOnly(transform: Transform): boolean {
+  // `Object.keys` answers `string[]` whatever it is given, and `IDENTITY` holds the whole type.
   const keys = Object.keys(IDENTITY) as (keyof Transform)[]
 
   return keys.every(key => key === 'x' || key === 'y' || transform[key] === IDENTITY[key])

@@ -109,11 +109,13 @@ export function timelineClip(
         return [turn.x, turn.y, turn.z, turn.w]
       })
 
-      for (const [channelName, values, stride] of [
+      const channels: readonly [string, number[], number][] = [
         [`${object.uuid}.position`, positions, 3],
         [`${object.uuid}.quaternion`, turns, 4],
         [`${object.uuid}.scale`, scales, 3],
-      ] as [string, number[], number][]) {
+      ]
+
+      for (const [channelName, values, stride] of channels) {
         const made = trackOf(channelName, times, values, stride)
         if (made) tracks.push(made)
       }
