@@ -5,7 +5,9 @@ import {
   CapsuleGeometry,
   CatmullRomCurve3,
   CircleGeometry,
+  Color,
   CylinderGeometry,
+  EdgesGeometry,
   DirectionalLight,
   DirectionalLightHelper,
   DodecahedronGeometry,
@@ -15,6 +17,7 @@ import {
   LatheGeometry,
   Line,
   LineBasicMaterial,
+  LineSegments,
   Mesh,
   MeshBasicMaterial,
   Object3D,
@@ -153,8 +156,146 @@ export function helperFor(light: Light): LightHelper | null {
   return null
 }
 
-/** How big a control point is drawn, in scene units — a knob a pointer can actually land on. */
-export const PATH_KNOB_RADIUS = 0.08
+/**
+ * What a camera and a light are DRAWN as, so a scene reads as a set rather than as a wireframe.
+ *
+ * A body a hand recognises, and one that stays under the pointer: the outline of a frustum is
+ * four lines and a hair to click, and it says nothing about which way the thing faces until it is
+ * read carefully. These are what stand in the view at rest; the wireframe aids — the frustum, the
+ * cone of a spot — are what selection adds on top.
+ *
+ * Lit by nothing: a marker painted with a standard material goes black in a scene whose lamps are
+ * off, which is exactly the scene somebody is trying to light. `MeshBasicMaterial` at a flat token
+ * colour is readable whatever the scene does, and shading is faked by the shape alone.
+ */
+export const MARKER_NAME = 'workshop-marker'
+
+/** Metres. A camera about the size of a hand, so it neither hides the set nor disappears in it. */
+const CAMERA_BODY = { width: 0.24, height: 0.2, depth: 0.36 }
+
+/**
+ * A film camera: a body, a lens down its line of sight, and a magazine on top. It faces −Z, which
+ * is where a `PerspectiveCamera` looks, so the lens says which way the shot goes.
+ */
+export function cameraBody(fill: string, edge: string): Object3D {
+  const body = new Object3D()
+  body.name = MARKER_NAME
+
+  const shell = solid(
+    new BoxGeometry(CAMERA_BODY.width, CAMERA_BODY.height, CAMERA_BODY.depth),
+    fill,
+    edge,
+  )
+
+  const lens = solid(new CylinderGeometry(0.06, 0.075, 0.16, 16), fill, edge)
+  // Laid down the depth axis: a cylinder is born standing up the Y axis.
+  lens.rotation.x = Math.PI / 2
+  lens.position.z = -CAMERA_BODY.depth / 2 - 0.06
+
+  const hood = solid(new CylinderGeometry(0.1, 0.085, 0.05, 16), fill, edge)
+  hood.rotation.x = Math.PI / 2
+  hood.position.z = -CAMERA_BODY.depth / 2 - 0.16
+
+  const magazine = solid(new CylinderGeometry(0.09, 0.09, 0.05, 16), fill, edge)
+  // Standing on its edge across the body, which is how a film magazine sits.
+  magazine.rotation.z = Math.PI / 2
+  magazine.position.set(0, CAMERA_BODY.height / 2 + 0.06, 0.04)
+
+  body.add(shell, lens, hood, magazine)
+  return body
+}
+
+/**
+ * A part of a marker: a solid SHADED by the way its faces point, plus the edges that outline it.
+ *
+ * Baked into the materials rather than lit, and that is the whole trick: a marker has to survive
+ * a scene whose lamps are all off — which is exactly the scene somebody is trying to light — so
+ * no light may touch it. Painting the top lighter and the underside darker gives the volume a
+ * lamp would have given it, at no cost and in every scene.
+ *
+ * A box takes its six faces in three's own order (+X, −X, +Y, −Y, +Z, −Z) and a cylinder takes
+ * three (side, top, bottom); anything else takes one and leans on its edges.
+ */
+function solid(geometry: BufferGeometry, fill: string, edge: string): Object3D {
+  const faces = shadedFaces(geometry, fill)
+  const mesh = new Mesh(geometry, faces.length === 1 ? faces[0] : faces)
+  mesh.add(new LineSegments(new EdgesGeometry(geometry), new LineBasicMaterial({ color: edge })))
+  return mesh
+}
+
+/** How much lighter a face turned up is, and how much darker one turned down — of its lightness. */
+const FACE_LIGHT = 1.3
+const FACE_DARK = 0.62
+const FACE_SIDE = 0.85
+
+function shadedFaces(geometry: BufferGeometry, fill: string): MeshBasicMaterial[] {
+  const shade = (amount: number): MeshBasicMaterial =>
+    new MeshBasicMaterial({ color: dimmed(fill, amount) })
+
+  if (geometry instanceof BoxGeometry) {
+    return [
+      shade(1),
+      shade(FACE_SIDE),
+      shade(FACE_LIGHT),
+      shade(FACE_DARK),
+      shade(1),
+      shade(FACE_SIDE),
+    ]
+  }
+  if (geometry instanceof CylinderGeometry) return [shade(1), shade(FACE_LIGHT), shade(FACE_DARK)]
+  return [shade(1)]
+}
+
+/** The same hue, at a share of its lightness — a shade of the marker, never a second colour. */
+function dimmed(colour: string, amount: number): Color {
+  const hsl = { h: 0, s: 0, l: 0 }
+  const held = new Color(colour)
+  held.getHSL(hsl)
+  return held.setHSL(hsl.h, hsl.s, Math.min(1, hsl.l * amount))
+}
+
+/**
+ * A bulb, glowing in the light's own colour so a lamp says what it does before it is clicked.
+ *
+ * The glass takes the colour and the cap stays neutral — an unlit token — so a white lamp is
+ * still told from the grey of everything else.
+ */
+export function lightBulb(colour: string, fill: string, edge: string): Object3D {
+  const bulb = new Object3D()
+  bulb.name = MARKER_NAME
+
+  const glass = new Mesh(
+    new SphereGeometry(0.11, 16, 12),
+    new MeshBasicMaterial({ color: lit(colour) }),
+  )
+  glass.position.y = 0.06
+
+  const cap = solid(new CylinderGeometry(0.05, 0.06, 0.09, 12), fill, edge)
+  cap.position.y = -0.07
+
+  bulb.add(glass, cap)
+  return bulb
+}
+
+/**
+ * A lamp's own colour, brought up to where it can be SEEN. An ambient light ships at #222222 and
+ * a bulb painted with it is a black ball on a dark viewport — the colour still says which lamp
+ * this is, the lightness only says that there is one.
+ */
+function lit(colour: string): Color {
+  const hsl = { h: 0, s: 0, l: 0 }
+  const held = new Color(colour)
+  held.getHSL(hsl)
+  return held.setHSL(hsl.h, hsl.s, Math.max(hsl.l, 0.62))
+}
+
+/**
+ * How big a control point is drawn, in scene units. Raised from 0,08 on 18/08 for one measured
+ * reason: on a rail five units long seen whole, a knob of that size covers about five pixels, and
+ * a target of five pixels is one nobody hits. It is still a fixed size in the SCENE, so it shrinks
+ * with distance — a knob that keeps its size on screen is what would settle this for good.
+ */
+export const PATH_KNOB_RADIUS = 0.14
 
 /** What the line of a rail is called among its node's children, so a sync can find it again. */
 export const PATH_CURVE_NAME = 'path-curve'

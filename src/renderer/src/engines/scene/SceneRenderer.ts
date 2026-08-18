@@ -28,7 +28,7 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
-import type { ExportFormat, Transform } from '@shared/domain/scene'
+import type { ExportFormat, LightDescriptor, Transform } from '@shared/domain/scene'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { SelectionMode } from '@/helpers/selection'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
@@ -57,10 +57,12 @@ import { clampUnit, progressAt } from './cameraMotion'
 import { shotOfCameraAt } from './cameraShots'
 import {
   buildPath,
+  cameraBody,
   geometryFor,
   helperFor,
   knobIndexOf,
   knobName,
+  lightBulb,
   tuneViewHelper,
   type LightHelper,
 } from './threeFactory'
@@ -356,6 +358,12 @@ export class SceneRenderer {
   private readonly helpers = new Map<string, LightHelper>()
   /** The frustum drawn under each camera of the scene — what makes one clickable. */
   private readonly frustums = new Map<string, CameraHelper>()
+  /**
+   * The body a camera and a lamp are DRAWN as, by node. Kept the way the helpers are, and for the
+   * same two reasons: a render hides all of them at once, and finding them by walking each node's
+   * children would be a scan per frame.
+   */
+  private readonly markers = new Map<string, Object3D>()
   /** The texture slots of each mesh, and the references they hold on the cache. */
   private readonly textures = new Map<string, MaterialTextures>()
   /** The same, for the one map a sprite wears. Apart, so each map stays exactly typed. */
@@ -423,6 +431,10 @@ export class SceneRenderer {
   private selectedIds: readonly string[] = []
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
   private meshColor = ''
+  /** What a camera body and a bulb's cap are FILLED with, read off the palette beside `meshColor`. */
+  private markerColor = ''
+  /** And what outlines them: the edges are what carry the shape where no lamp lights it. */
+  private markerEdge = ''
   /** One mode per pane, main view first. A single-view scene reads index 0 and nothing else. */
   private displays: DisplayMode[] = ['shaded']
   /** Whether the edges are rebuilt as quads. Never real quads — see `applyWireOverlay`. */
@@ -1354,6 +1366,9 @@ export class SceneRenderer {
     for (const helper of this.helpers.values()) hide(helper)
     for (const skeleton of this.skeletons.values()) hide(skeleton)
     for (const frustum of this.frustums.values()) hide(frustum)
+    // A body and a bulb are workshop furniture too: they stand where the thing they draw stands,
+    // so a camera aimed at a lamp would otherwise film the bulb somebody drew to find it by.
+    for (const marker of this.markers.values()) hide(marker)
     hide(this.grid)
     // The arrows a person drags an object by. They stand where the object stands, so a camera
     // aimed at a selected node fills its preview — and its film — with the tool instead.
@@ -1601,6 +1616,10 @@ export class SceneRenderer {
     const line = this.viewport.paletteToken('--color-viewport-line')
 
     this.meshColor = this.viewport.paletteToken('--color-mesh')
+    // `elevated` is what a marker is made of and `muted` what outlines it: the fill sits a step
+    // off the viewport so the body reads as an object, and the edges carry the shape.
+    this.markerColor = this.viewport.paletteToken('--color-elevated')
+    this.markerEdge = this.viewport.paletteToken('--color-muted')
     this.paintBackground()
 
     if (this.grid) {
@@ -1778,20 +1797,23 @@ export class SceneRenderer {
   }
 
   /**
-   * A camera of the scene, drawn as the frustum it sees — the helper is what makes it clickable
-   * and readable, since a camera itself draws nothing.
+   * A camera of the scene: the body one sees and clicks, and the frustum selection adds to it.
    *
-   * Hung UNDER the camera rather than beside it, unlike a light's helper: this one has to follow
-   * the object it draws through every move, and a camera is aimed far more often than a lamp.
+   * Both hang UNDER the camera rather than beside it, unlike a light's helper: they have to
+   * follow the object they draw through every move, and a camera is aimed far more often than a
+   * lamp. The body carries no name of its own, so a click on it walks up to the camera's id.
    */
   private buildCamera(node: SceneNode & { type: 'camera' }): Object3D {
     const camera = new PerspectiveCamera(node.camera.fov, 1, node.camera.near, node.camera.far)
     const helper = new CameraHelper(camera)
     // The helper reads the camera's world matrix, which is only right once three has updated it.
     camera.add(helper)
+    const body = cameraBody(this.markerColor, this.markerEdge)
+    camera.add(body)
     // Kept beside the light helpers, and for the same reason: the preview hides all of them on
     // every frame it draws, and finding them by walking each node's children would be a scan.
     this.frustums.set(node.id, helper)
+    this.markers.set(node.id, body)
     return camera
   }
 
@@ -1999,6 +2021,14 @@ export class SceneRenderer {
       this.helpers.set(node.id, helper)
       this.viewport.scene.add(helper)
     }
+
+    // The bulb, glowing in the lamp's own colour, hung under the light so it travels with it —
+    // and so a click on it walks up to the light's id. It is what stands in the view at rest,
+    // the helper being what selection adds; an ambient light gets one too, which is the only
+    // thing in the viewport that can be pointed at to select it.
+    const bulb = lightBulb(bulbColourOf(node.light), this.markerColor, this.markerEdge)
+    light.add(bulb)
+    this.markers.set(node.id, bulb)
     return light
   }
 
@@ -2362,7 +2392,12 @@ export class SceneRenderer {
     const rails = this.selectedIds.flatMap(id =>
       this.applied.get(id)?.type === 'path' ? (this.objects.get(id) ?? []) : [],
     )
-    const hit = this.raycaster.intersectObjects(rails, true)[0]
+    // The nearest KNOB, not the nearest thing on the rail: the curve is an object of the same
+    // subtree and it lies right across its own control points, so taking the first intersection
+    // meant a press landing on the line between two knobs answered « no point here ».
+    const hit = this.raycaster
+      .intersectObjects(rails, true)
+      .find(candidate => knobIndexOf(candidate.object.name) !== null)
     const index = hit ? knobIndexOf(hit.object.name) : null
 
     return index === null ? null : { nodeId: hit?.object.parent?.name ?? '', index }
@@ -2488,6 +2523,14 @@ export function nodeIdOf(object: Object3D, isNode: (name: string) => boolean): s
     current = current.parent
   }
   return null
+}
+
+/**
+ * What colour a lamp's bulb glows. A hemisphere light has two, and the sky one is what says which
+ * way it is turned; an ambient has one and lights everything with it.
+ */
+function bulbColourOf(light: LightDescriptor): string {
+  return light.kind === 'hemisphere' ? light.skyColor : light.color
 }
 
 /** A light catches nothing: the flag exists on every node, but only two kinds answer to it. */
