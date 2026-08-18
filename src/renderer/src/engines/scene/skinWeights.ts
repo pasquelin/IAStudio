@@ -75,11 +75,18 @@ export function createSkinWeights(spawn: () => Worker): SkinWeights {
         running.postMessage(request, [request.position.buffer, request.segments.buffer])
         waiting.set(id, { resolve, reject, onProgress: watch?.onProgress })
 
-        watch?.signal?.addEventListener('abort', () => {
+        const give = (): void => {
           if (!waiting.delete(id)) return
           running.postMessage({ id, cancel: true })
           resolve(null)
-        })
+        }
+
+        watch?.signal?.addEventListener('abort', give)
+
+        // An `abort` already fired has already been delivered, so the listener above never runs:
+        // without this the worker walks every vertex against every bone for a caller that gave
+        // up before it asked, and answers it weights it will apply.
+        if (watch?.signal?.aborted) give()
       }),
 
     dispose: () => {
