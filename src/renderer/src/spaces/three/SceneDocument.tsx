@@ -245,6 +245,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     engine.current?.setPlayhead(view.playhead)
   }, [view.playhead])
 
+  useEffect(() => {
+    engine.current?.setSelfPlay(view.selfPlay)
+  }, [view.selfPlay])
+
   // Subscribed here rather than in `useNativeMenu`: an export reads the three.js objects, and
   // this component is the only thing that holds them. Only while this tab is in front, or two
   // open scenes would both answer one menu click.

@@ -1,9 +1,9 @@
 import { mdiRhombus } from '@mdi/js'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { secondsToUs } from '@shared/domain/time'
 import { EmptyState } from '@/design/EmptyState'
 import { animationRows, type ClipBlock } from '@/engines/scene/animationRows'
+import { clipSpanOf } from '@/engines/scene/clipBlend'
 import { useAnimationPlayback } from '@/hooks/useAnimationPlayback'
 import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
@@ -14,9 +14,6 @@ import { AnimationCanvas } from './AnimationCanvas'
 import { AnimationHeaders } from './AnimationHeaders/AnimationHeaders'
 
 export type AnimationPanelProps = { documentId: string }
-
-/** A speed of zero would make a block infinitely long; the inspector never offers less. */
-const MIN_SPEED = 0.1
 
 /**
  * The animation of a 3D scene, laid out as a dope sheet: one line per object, its channels
@@ -61,7 +58,9 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
           // `NlaTrack` on the band.
           name: ref.label,
           start: ref.start,
-          duration: secondsToUs(seconds / Math.max(ref.speed, MIN_SPEED)),
+          // The same arithmetic the mixer plays by, and it has to be: a bar drawn wider than
+          // what is heard is a bar whose end shows a pose nothing holds.
+          duration: clipSpanOf(ref, seconds),
         })
       }
     }

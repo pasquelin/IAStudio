@@ -163,15 +163,6 @@ export type ClipRef = {
   duration: Us
   /** Where playback starts INSIDE the clip, in three's seconds. */
   offset: number
-  /**
-   * Whether this block runs on real time in the viewport, as the inspector's play button asks.
-   *
-   * SESSION STATE WEARING A DOCUMENT'S CLOTHES, and a debt rather than a design: it puts an undo
-   * entry behind a play button, which `setPlayhead` refuses by name for the same reason, and
-   * `sceneWithoutSelfPlay` exists only to strip it. It belongs in `sceneViews`, and moves there
-   * with the playback phase — kept here for now so an existing document plays as it did.
-   */
-  playing: boolean
   /** A multiplier, never a frame rate: the clip carries its own timing. */
   speed: number
   loop: boolean
@@ -190,7 +181,6 @@ export const DEFAULT_CLIP: Omit<ClipRef, 'id' | 'source' | 'label'> = Object.fre
   start: 0,
   duration: 0,
   offset: 0,
-  playing: false,
   speed: 1,
   loop: true,
   fadeIn: 0,
@@ -220,7 +210,9 @@ export function clipFromAnimation(animation: AnimationRef): ClipRef {
     // the reader that lets such a node through does not require it either.
     start: Number.isFinite(animation.start) ? animation.start : 0,
     offset: animation.time,
-    playing: animation.playing,
+    // `playing` is deliberately dropped: whether a block runs on real time is session state now
+    // (see `SelfPlay`), and a document reopening mid-walk would put an undo entry behind a play
+    // button.
     speed: animation.speed,
     loop: animation.loop,
   })

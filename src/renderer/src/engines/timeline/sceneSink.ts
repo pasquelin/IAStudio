@@ -18,9 +18,9 @@ import type { SinkLike } from './decoderPool'
 export type ModelScene = {
   read: () => SceneState
   /**
-   * The clips the file turned out to carry, once it has landed. The first one is played: a model
-   * exported with an animation is a model meant to move, and a montage that showed it frozen
-   * would look like the import failed.
+   * The clips the file turned out to carry, once it has landed. The first becomes a block on the
+   * band: a model exported with an animation is a model meant to move, and a montage that showed
+   * it frozen would look like the import failed.
    */
   useClips: (nodeId: string, clips: readonly string[]) => void
 }
@@ -44,7 +44,7 @@ export function createModelScene(assetId: string, name: string): ModelScene {
           node.id === model.id && node.type === 'model'
             ? {
                 ...node,
-                model: { ...node.model, clips: [embeddedClip(newId(), clip, { playing: true })] },
+                model: { ...node.model, clips: [embeddedClip(newId(), clip)] },
               }
             : node,
         ),

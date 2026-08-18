@@ -70,7 +70,7 @@ import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './textGeometry'
 import { createGltfSource, type GltfSource } from './gltfSource'
-import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf, playedClip } from './animation'
+import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf, type SelfPlay } from './animation'
 import { drivenNodes, poseAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import type { Us } from '@shared/domain/time'
@@ -490,6 +490,12 @@ export class SceneRenderer {
   }
 
   apply(state: SceneState): void {
+    // Before the nodes, not after: whether a block travels is decided against what the band
+    // already drives, and a model built in this very pass has to read the timeline that arrived
+    // with it rather than the previous one.
+    this.timeline = state.animation
+    this.animations.setTimeline(state.animation)
+
     // A Set rather than a `some` per object: `apply` runs on every state change, selection
     // included, and the quadratic form costs milliseconds well before a scene gets large.
     const alive = new Set<string>()
@@ -507,7 +513,6 @@ export class SceneRenderer {
     for (const node of state.nodes) this.hangFromParent(node)
 
     this.selectedIds = state.selectedIds
-    this.timeline = state.animation
     // After the transforms are written, never before: a pose is what the tracks ADD to the one
     // the node holds, so it has to be laid over a rest pose that is already up to date.
     //
@@ -532,6 +537,15 @@ export class SceneRenderer {
     // The clips of every imported model follow the head too, which is what puts them on the band
     // rather than on real time — and what stops a render from writing a frozen character.
     this.animations.seek(time)
+    this.viewport.requestRender()
+  }
+
+  /**
+   * Which block runs on real time, as the inspector's play button asks. Session state, arriving
+   * by a call of its own for the same reason the head does.
+   */
+  setSelfPlay(selfPlay: SelfPlay | null): void {
+    this.animations.setSelfPlay(selfPlay)
     this.viewport.requestRender()
   }
 
@@ -1446,7 +1460,7 @@ export class SceneRenderer {
     // The clips of a model that is already on stage. Skipped for one still loading: `buildModel`
     // binds what the file brought the moment it lands, and applies this reference there.
     if (node.type === 'model' && this.animations.has(node.id)) {
-      this.animations.apply(node.id, playedClip(node.model.clips ?? []))
+      this.animations.apply(node.id, node.model.clips ?? [])
       this.viewport.requestRender()
     }
 
@@ -1637,9 +1651,7 @@ export class SceneRenderer {
       // carry them, and a clip addresses its targets by name — so the source's drive any
       // instance built from it.
       this.animations.add(node.id, holder, clipsOf(source))
-      if (applied.type === 'model') {
-        this.animations.apply(node.id, playedClip(applied.model.clips ?? []))
-      }
+      if (applied.type === 'model') this.animations.apply(node.id, applied.model.clips ?? [])
       this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
 
       // The document's own rig, put back on. Its weights are NOT saved with it — they are derived

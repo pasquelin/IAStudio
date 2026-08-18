@@ -4,7 +4,7 @@ import { offScreenHost } from '@/engines/core/offScreenHost'
 import { reportFailure } from '@/services/diagnostics'
 import { SceneRenderer } from './SceneRenderer'
 import type { CameraPlacement } from './sceneView'
-import { firstCameraId, sceneWithoutSelfPlay, type SceneState } from './sceneState'
+import { firstCameraId, type SceneState } from './sceneState'
 
 /**
  * A scene rendered somewhere no one is looking, so a montage can show it.
@@ -110,7 +110,10 @@ export function createSceneStage({
       if (!active) return
 
       shown = state
-      active.apply(sceneWithoutSelfPlay(state))
+      // Straight through: a montage owns time, and nothing in a document can make a mixer run
+      // against the wall clock any more — self-play is session state of the 3D tab alone, which
+      // a stage of its own never carries.
+      active.apply(state)
     },
 
     draw: time => {

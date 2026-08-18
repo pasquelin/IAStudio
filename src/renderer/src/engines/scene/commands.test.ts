@@ -755,9 +755,9 @@ describe('setModelTextures', () => {
 
   // Both edits write the same reference: rebuilding it from `assetId` alone dropped the other.
   it('leaves the clips of the model alone, and is left alone by them', () => {
-    const clip = embeddedClip('c1', 'run', { playing: true })
-    const playing = setModelClips('m', [clip]).apply(withModel())
-    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(playing)
+    const clip = embeddedClip('c1', 'run', { speed: 2 })
+    const blocked = setModelClips('m', [clip]).apply(withModel())
+    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(blocked)
 
     const node = nodeById(dressed, 'm')
     expect(node?.type === 'model' && node.model.clips).toEqual([clip])
@@ -768,8 +768,8 @@ describe('setModelTextures', () => {
 
   it('drops the field when the last block goes, so a rest pose says nothing at all', () => {
     const clip = embeddedClip('c1', 'run')
-    const playing = setModelClips('m', [clip]).apply(withModel())
-    const stopped = setModelClips('m', []).apply(playing)
+    const blocked = setModelClips('m', [clip]).apply(withModel())
+    const stopped = setModelClips('m', []).apply(blocked)
 
     const node = nodeById(stopped, 'm')
     expect(node?.type === 'model' && 'clips' in node.model).toBe(false)
