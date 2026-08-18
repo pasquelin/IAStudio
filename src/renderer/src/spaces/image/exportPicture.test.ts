@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { installDocument } from '@/stores/document-fixtures'
-import { useDocuments } from '@/stores/documents'
+import { installDocument, retitleDocument } from '@/stores/document-fixtures'
 import { exportPicture } from './exportPicture'
 
 const DOCUMENT = 'doc-1'
@@ -20,22 +19,7 @@ beforeEach(() => {
   installDocument(DOCUMENT, 'image')
 })
 
-/** The tab's own title, so the file is findable afterwards — an opaque id is not. */
-function titled(title: string): void {
-  useDocuments.setState(state => ({
-    documents: {
-      ...state.documents,
-      [DOCUMENT]: {
-        ...state.documents[DOCUMENT],
-        id: DOCUMENT,
-        kind: 'image',
-        workspace: 'image',
-        title,
-        path: `documents/${title}.img`,
-      },
-    },
-  }))
-}
+const titled = (title: string): void => retitleDocument(DOCUMENT, title)
 
 describe('exporting the document', () => {
   it('writes the flattened picture under the tab title', async () => {
@@ -45,13 +29,24 @@ describe('exporting the document', () => {
     expect(written).toHaveBeenCalledWith('Sky.png', 'PAYLOAD')
   })
 
-  // A separator would name another folder; a leading dot would hide the file.
+  // A SPACE where a separator was, which is what every other export door writes: this one dropped
+  // it, so one title came out as `Brique 12` here and `Brique 1 2` two menus away.
   it('takes a title a file system cannot hold down to one it can', async () => {
     titled('a/b:c*')
 
     await exportPicture(DOCUMENT, host)
 
-    expect(written.mock.calls[0]?.[0]).toBe('abc.png')
+    expect(written.mock.calls[0]?.[0]).toBe('a b c.png')
+  })
+
+  // Spelled out both ways on purpose: APFS stores decomposed while most keyboards send composed,
+  // and left as it came, one title on screen lands on two different files.
+  it('settles how an accent is spelled before it becomes a file', async () => {
+    titled('Été'.normalize('NFD'))
+
+    await exportPicture(DOCUMENT, host)
+
+    expect(written.mock.calls[0]?.[0]).toBe('Été.png'.normalize('NFC'))
   })
 
   // The dots inside a name stay: `Study v1.2` is a name people rely on.
