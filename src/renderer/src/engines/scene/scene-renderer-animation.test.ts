@@ -574,14 +574,20 @@ describe('SceneRenderer and a track on one bone', () => {
 
 describe('SceneRenderer and the animations the app ships with', () => {
   /** What the retargeting port is asked, and what it hands back — here, the clips unchanged. */
-  const straightThrough = (): Retarget & { asked: { target: Object3D; clips: string[] }[] } => {
+  const straightThrough = (): Retarget & {
+    asked: { target: Object3D; clips: string[] }[]
+    learnt: { bones: readonly string[]; roles: Readonly<Record<string, string>> }[]
+  } => {
     const asked: { target: Object3D; clips: string[] }[] = []
+    const learnt: { bones: readonly string[]; roles: Readonly<Record<string, string>> }[] = []
     return {
       asked,
+      learnt,
       adapt: (target, _source, clips) => {
         asked.push({ target, clips: clips.map(clip => clip.name) })
         return Promise.resolve([...clips])
       },
+      learn: (bones, roles) => learnt.push({ bones, roles }),
       dispose: () => {},
     }
   }
@@ -717,6 +723,42 @@ describe('SceneRenderer and the animations the app ships with', () => {
     await vi.waitFor(() => expect(cubeOf(loaded).position.x).toBeCloseTo(0.5, 5))
     expect(asked).toEqual([assetUrl('asset-9')])
     expect(source.parent).toBeNull()
+    engine.dispose()
+  })
+
+  // Case 19 of the issue: a role put right by hand lives in the document, and until now nothing
+  // read it — the port went on deriving roles from names, which is what had been corrected.
+  it('tells the port what the document says this skeleton means', async () => {
+    const retarget = straightThrough()
+    const { engine } = withShipped(animatedModel([]), animatedModel([walk('NlaTrack')]), retarget)
+    const rest = {
+      position: { x: 0, y: 1, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    }
+    const node = modelNode(shippedBlock())
+
+    engine.apply({
+      ...EMPTY_SCENE,
+      nodes: [
+        {
+          ...node,
+          model: {
+            ...node.model,
+            rig: {
+              origin: 'local',
+              bones: [
+                { name: 'b0', parent: null, rest, role: 'Hips' },
+                { name: 'b1', parent: 'b0', rest },
+              ],
+            },
+          },
+        },
+      ],
+    })
+
+    await vi.waitFor(() => expect(retarget.learnt).toHaveLength(1))
+    expect(retarget.learnt[0]).toEqual({ bones: ['b0', 'b1'], roles: { b0: 'Hips' } })
     engine.dispose()
   })
 

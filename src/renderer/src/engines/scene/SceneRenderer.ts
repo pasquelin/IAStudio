@@ -153,6 +153,7 @@ import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
 import { createSkinWeights, type SkinWeights } from './skinWeights'
 import type { SkinBinding } from './skinVertices'
 import type { Rig } from '@shared/domain/rig'
+import type { HumanoidRole } from '@shared/domain/humanoid'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
@@ -1812,6 +1813,10 @@ export class SceneRenderer {
     }
     if (node.type === 'light') this.tuneShadow(object)
 
+    // Before anything is retargeted onto it: the document is where a bone's role was PUT RIGHT,
+    // and the port would otherwise go on reading roles off names that lied.
+    if (node.type === 'model' && node.model.rig) this.learnRig(node.model.rig)
+
     // The clips of a model that is already on stage. Skipped for one still loading: `buildModel`
     // binds what the file brought the moment it lands, and applies this reference there.
     if (node.type === 'model' && this.animations.has(node.id)) {
@@ -2077,6 +2082,18 @@ export class SceneRenderer {
     })
 
     return holder
+  }
+
+  /** Told once per skeleton, not per model: it is filed by what its bones ARE. */
+  private learnRig(rig: Rig): void {
+    const roles: Record<string, HumanoidRole> = {}
+    for (const bone of rig.bones) if (bone.role) roles[bone.name] = bone.role
+    if (Object.keys(roles).length === 0) return
+
+    this.retarget.learn(
+      rig.bones.map(bone => bone.name),
+      roles,
+    )
   }
 
   /**
