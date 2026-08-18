@@ -87,6 +87,15 @@ describe('writing a document: serializing the content, as it no longer does', ()
   }
 })
 
+/**
+ * **This figure ROSE on 2026-08-18 and nothing got slower** — the boundary moved. A format used
+ * to be handed a string, `readFile(file, 'utf8')` having decoded it just outside this timing;
+ * it is handed bytes now, and the decode happens inside. Same work, same thread, measured.
+ *
+ * Measured rather than argued: the body of a 50 000-node scene is 22.81 MiB, `toString('utf8')`
+ * on it costs 3.19 ms, and reading from a string already decoded costs ~0 — V8 slices lazily.
+ * 1.25 ms before plus 3.19 is the 4.37 ms this now reads.
+ */
 describe('reading a document: the whole main-thread cost of one open', () => {
   for (const count of SIZES) {
     // As `readFile` hands it over: the format reads bytes, and decoding them is part of an open.
