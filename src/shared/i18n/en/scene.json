@@ -75,7 +75,7 @@
     "hide": "Hide object",
     "hideHint": "Takes the object out of the view without taking it out of the scene, to clear what it covers",
     "removePathPoint": "Remove this point",
-    "removePathPointHint": "Takes the point off the rail. A rail always keeps its last two points"
+    "removePathPointHint": "Takes the point off the path. A path always keeps its last two points"
   },
   "objects": {
     "sprite": "Sprite",
