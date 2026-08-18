@@ -52,9 +52,19 @@ describe('what a loaded model is', () => {
   })
 
   it('calls bones driving a mesh under unrecognised names a skinned mesh', () => {
-    const root = rootWith(skinnedOn(chain(['Root', 'L_Thigh', 'L_Calf'])))
+    // A creature no humanoid role fits. `L_Thigh` used to stand here and no longer can: that is
+    // Tripo's spelling, and `boneRoles` reads it.
+    const root = rootWith(skinnedOn(chain(['chassis', 'axle', 'wheel'])))
 
     expect(rigStateOf(root).status).toBe('skinnedMesh')
+  })
+
+  it('calls a provider skeleton a rigged character, whatever its convention', () => {
+    const tripo = rootWith(skinnedOn(chain(['Root', 'Hip', 'L_Thigh', 'L_Calf'])))
+    const uthana = rootWith(skinnedOn(chain(['mixamorig:Hips', 'mixamorig:LeftUpLeg'])))
+
+    expect(rigStateOf(tripo).status).toBe('riggedCharacter')
+    expect(rigStateOf(uthana).status).toBe('riggedCharacter')
   })
 
   it('calls bones filling humanoid roles a rigged character', () => {
