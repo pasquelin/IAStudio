@@ -8,6 +8,10 @@ import { useModelClips } from '@/stores/modelClips'
 import { installScene, sceneNodeIn, sceneNodeNow } from '@/stores/scene-fixtures'
 import { useScenes } from '@/stores/scenes'
 import { useSceneEdit } from '@/hooks/useSceneEdit'
+import { installFakeBridge } from '@/services/fakeBridge'
+import { useSettings } from '@/stores/settings'
+import type { ModelSummary } from '@shared/domain/model'
+import type { PlanAccess } from '@shared/domain/plan'
 import { RigSection } from './RigSection'
 
 const DOCUMENT = 'doc-1'
@@ -111,6 +115,58 @@ describe('RigSection', () => {
     render(<Host />)
 
     expect(screen.queryByText('Squelette')).not.toBeInTheDocument()
+  })
+
+  /** The catalogue as it answers, and the plan a `cu-basic` account is on. */
+  const RIGGER: ModelSummary = {
+    id: 'model_x',
+    name: 'X',
+    family: '3d',
+    source: 'other',
+    origin: 'official',
+    featured: false,
+    capabilities: ['3d23d'],
+    tags: ['Rigging'],
+  }
+
+  function withCatalogue(models: readonly Partial<ModelSummary>[], plan: PlanAccess | null): void {
+    installFakeBridge({
+      scenario: {
+        searchModels: () =>
+          Promise.resolve({
+            items: models.map(model => ({ ...RIGGER, ...model })),
+            cursor: null,
+          }),
+        plan: () => Promise.resolve(plan),
+      },
+    })
+    useSettings.setState({ auth: { authenticated: true } })
+  }
+
+  // The refusal is said BEFORE any click, never discovered as a 403 — and it names the plan,
+  // because « unavailable » without a reason is what sends someone hunting through settings.
+  it('says why Scenario cannot rig this, without a click and without an attempt', async () => {
+    withCatalogue([{ requiredPlanLevel: 50 }], { name: 'cu-basic', level: 25 })
+    show()
+
+    expect(await screen.findByText(/cu-basic/)).toBeInTheDocument()
+  })
+
+  it('says nothing when a service is within reach — the local rigger is the default anyway', async () => {
+    withCatalogue([{ requiredPlanLevel: 50 }, { id: 'model_y' }], { name: 'cu-max', level: 100 })
+    show()
+
+    await screen.findByRole('button', { name: 'Rendre animable' })
+    expect(screen.queryByText(/abonnement/)).not.toBeInTheDocument()
+  })
+
+  // Offline, or not authenticated: an empty catalogue is not a subscription being short.
+  it('says nothing when the catalogue answered no service at all', async () => {
+    withCatalogue([{ tags: ['Remeshing'] }], { name: 'cu-basic', level: 25 })
+    show()
+
+    await screen.findByRole('button', { name: 'Rendre animable' })
+    expect(screen.queryByText(/abonnement/)).not.toBeInTheDocument()
   })
 
   it('never tells a model it cannot be rigged once it has been', () => {

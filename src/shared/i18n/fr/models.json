@@ -5,6 +5,7 @@
     "noProject": "Ouvrez un projet pour générer.",
     "noCredentials": "Renseignez vos identifiants API pour voir vos modèles.",
     "dropPicture": "Déposez une image, ou collez son identifiant",
+    "dropModel": "Déposez un modèle 3D, ou collez son identifiant",
     "estimatedCost": "~{{units}} UC"
   },
   "models": {

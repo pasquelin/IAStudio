@@ -73,12 +73,30 @@ describe('translateSchema', () => {
     expect(field?.kind).toBe('seed')
   })
 
-  it('treats an image file as an image and the rest as raw', () => {
+  it('treats an image file as an image, a 3D file as a mesh, and the rest as raw', () => {
     const fields = translateSchema([
       { name: 'image', type: 'file', kind: 'image' },
+      { name: 'characterFile', type: 'file', kind: '3d' },
       { name: 'doc', type: 'file', kind: 'document' },
     ])
-    expect(fields.map(field => field.kind)).toEqual(['image', 'raw'])
+    expect(fields.map(field => field.kind)).toEqual(['image', 'mesh', 'raw'])
+  })
+
+  // What lets a mesh be refused before minutes of upload rather than after them. Uthana's
+  // character rigger is the measured case: `characterFile`, 30 MB.
+  it('carries the size limit a file input names', () => {
+    const fields = translateSchema([
+      { name: 'characterFile', type: 'file', kind: '3d', maxSize: 30000000 },
+    ])
+    expect(fields[0]?.maxSize).toBe(30000000)
+  })
+
+  it('carries which field moves the price, and leaves the rest unmarked', () => {
+    const fields = translateSchema([
+      { name: 'animation', type: 'string', costImpact: true },
+      { name: 'includeRiggedModel', type: 'boolean' },
+    ])
+    expect(fields.map(field => field.costImpact)).toEqual([true, undefined])
   })
 
   it('falls back to raw input on an unknown type instead of dropping the field', () => {
