@@ -62,6 +62,11 @@ système d’exploitation, qui les attrape avant tout le monde. Elles sont donc 
 jamais pouvoir être « recouvertes » par un autre contexte — et les seules dont un conflit est
 toujours un vrai conflit.
 
+**Une exception, une seule : `⌥D`, la dictée.** Elle se **maintient** au lieu de se taper, et un
+menu du système n’a rien pour rapporter un relâchement — c’est donc la fenêtre qui l’entend, et
+elle n’a aucune ligne de menu. C’est aussi ce qui lui permet d’écrire dans un champ de saisie,
+voir plus bas.
+
 ---
 
 ## Partout dans l’application
@@ -532,8 +537,10 @@ que vous en sortez.
 Cela vaut aussi pour `⌘X`, `⌘C` et `⌘V` : dans un champ, ils travaillent sur le texte ; ailleurs,
 sur ce que l’espace a sélectionné.
 
-**Aucun raccourci ne traverse un champ de saisie** : une commande doit le déclarer pour y être
-entendue, et aucune ne le déclare aujourd’hui.
+**Un seul raccourci traverse un champ de saisie** : une commande doit le déclarer pour y être
+entendue, et **`⌥D`, la dictée, est la seule à le faire** — elle existe précisément pour écrire
+dans le champ où vous êtes déjà. C’est aussi pour cela qu’elle porte un modificateur : sans lui,
+elle avalerait une lettre.
 
 ---
 
