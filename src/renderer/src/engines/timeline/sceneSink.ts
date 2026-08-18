@@ -88,7 +88,7 @@ export function createSceneSink({ read, stage }: SceneSinkDeps): SinkLike {
       const canvas = stage.draw(secondsToUs(seconds))
       if (!canvas) return null
 
-      const frame = new VideoFrame(canvas, { timestamp: Math.round(seconds * 1_000_000) })
+      const frame = new VideoFrame(canvas, { timestamp: secondsToUs(seconds) })
       // Closed by whoever draws it, exactly as a still's is; closing it here would hand the
       // monitor a frame it can no longer read.
       return { toVideoFrame: () => frame, close: () => {} }

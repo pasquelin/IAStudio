@@ -23,13 +23,14 @@ import { DictationStatusListening } from './DictationStatusListening'
 export function DictationStatus() {
   const { t, i18n } = useTranslation()
   const dictation = useDictation()
+  const bytes = (value: number) => formatBytes(value, unit => t(`units.${unit}`), i18n.language)
 
   if (!dictation.enabled) return null
 
   if (dictation.isListening) return <DictationStatusListening />
 
   if (dictation.state === 'modelMissing') {
-    const size = formatBytes(STT_MODEL_BYTES, unit => t(`units.${unit}`), i18n.language)
+    const size = bytes(STT_MODEL_BYTES)
     return (
       <button
         type="button"
@@ -44,7 +45,6 @@ export function DictationStatus() {
   }
 
   if (dictation.state === 'downloadingModel' && dictation.download) {
-    const bytes = (value: number) => formatBytes(value, unit => t(`units.${unit}`), i18n.language)
     const label = t('dictation.downloading', {
       done: bytes(dictation.download.received),
       total: bytes(dictation.download.total),

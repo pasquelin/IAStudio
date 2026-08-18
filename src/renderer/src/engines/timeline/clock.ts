@@ -1,3 +1,4 @@
+import { secondsToUs } from '@shared/domain/time'
 import type { Us } from './timelineState'
 
 export type ClockDeps = {
@@ -26,7 +27,7 @@ export function createClock({ audioTime, monotonic }: ClockDeps): Clock {
 
     const audio = audioTime()
     if (origin.audio && audio !== null) {
-      return origin.from + Math.round((audio - origin.at) * 1_000_000)
+      return origin.from + secondsToUs(audio - origin.at)
     }
     return origin.from + Math.round((monotonic() - origin.at) * 1_000)
   }

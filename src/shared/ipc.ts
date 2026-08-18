@@ -434,13 +434,22 @@ export const CHANNELS: Channels = {
   updateInstall: 'update:install',
 }
 
-/** An edited take on its way back to disk — see `StudioBridge['assets']['saveAudio']`. */
-export type SaveAudioRequest = {
-  /** The asset to overwrite. Absent creates a new one instead. */
+/**
+ * What every "save an edit back into the project" channel carries, whatever the payload is.
+ *
+ * Written once because the three that extend it went from two to three in one batch, and the
+ * per-field contract had already drifted: two spelled it out and the newcomer left it bare.
+ */
+export type SaveRequestBase = {
+  /** The asset to overwrite, keeping its id and its place in the shelf. Absent creates one. */
   replaces?: string
   name: string
-  /** The take this one was edited from, so the two stay traceable to each other. */
+  /** The asset this one was edited from, so the two stay traceable to each other. */
   derivedFrom?: string
+}
+
+/** An edited take on its way back to disk — see `StudioBridge['assets']['saveAudio']`. */
+export type SaveAudioRequest = SaveRequestBase & {
   /** 16-bit PCM WAV, encoded by the renderer that decoded it. */
   wav: Uint8Array
 }
@@ -454,12 +463,7 @@ export type SaveAudioRequest = {
  * string, `derive` hands back bytes; each sends what it holds rather than paying for a
  * conversion — which on a 4K picture is megabytes copied twice for nothing.
  */
-export type SavePictureRequest = {
-  /** The asset to overwrite, keeping its id and its place in the shelf. Absent creates one. */
-  replaces?: string
-  name: string
-  /** The picture this one was edited from, so the two stay traceable to each other. */
-  derivedFrom?: string
+export type SavePictureRequest = SaveRequestBase & {
   /** PNG payload, base64 and never a data URL — the prefix is part of the picture otherwise. */
   png: string
 }
@@ -467,14 +471,10 @@ export type SavePictureRequest = {
 /**
  * A layered picture on its way to disk as OpenRaster — see `StudioBridge['assets']['saveLayered']`.
  *
- * The same shape as `SavePictureRequest` down to `derivedFrom`, and it carries a whole stack
- * instead of one flatten. Two channels rather than one taking either: what the main process does
- * with them differs entirely — one writes bytes it was handed, the other assembles a container.
+ * Two channels rather than one taking either: what the main process does with them differs
+ * entirely — one writes bytes it was handed, the other assembles a container.
  */
-export type SaveLayeredRequest = {
-  replaces?: string
-  name: string
-  derivedFrom?: string
+export type SaveLayeredRequest = SaveRequestBase & {
   document: OraDocument
 }
 

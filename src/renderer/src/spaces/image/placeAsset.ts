@@ -21,8 +21,12 @@ import type { PictureMeasure } from './pictureSize'
 export function placeAsset(documentId: string, asset: Asset): void {
   if (!isLocalPicture(asset)) return
 
-  const layer = { ...pixelLayer(newId(), asset.name), source: asset.id }
-  useCanvases.getState().runCommand(documentId, addLayer(layer))
+  useCanvases.getState().runCommand(documentId, addLayer(sourceLayer(asset)))
+}
+
+/** A layer that names the asset it draws, so the engine fetches the pixels rather than holding them. */
+function sourceLayer(asset: Asset) {
+  return { ...pixelLayer(newId(), asset.name), source: asset.id }
 }
 
 /**
@@ -85,7 +89,7 @@ export async function becomeAsset(
   } else if (size.width !== measured.width || size.height !== measured.height) {
     reportFailure('canvas.size', asset.name, new Error('picture opened below its own size'))
   }
-  const layer = { ...pixelLayer(newId(), asset.name), source: asset.id }
+  const layer = sourceLayer(asset)
   const state: CanvasState = {
     ...DEFAULT_CANVAS,
     width: size.width,

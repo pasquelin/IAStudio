@@ -15,9 +15,9 @@ import { ActivityListMessage } from './ActivityListMessage'
  * a density anyone chose.
  *
  * `time` is handed over already written: an hour and an "how long ago" are the same row said to
- * two different readers. `null` for a stamp neither can read.
+ * two different readers.
  */
-export function ActivityListRow({ entry, time }: { entry: ActivityEntry; time: string | null }) {
+export function ActivityListRow({ entry, time }: { entry: ActivityEntry; time: string }) {
   return (
     <li className="flex items-start gap-2 px-2 py-1.5">
       <UiIcon

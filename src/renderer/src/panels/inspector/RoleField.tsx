@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, isAssetType } from '@shared/domain/asset'
 import type { FileDomain } from '@shared/domain/fileRole'
 import { PropertyRow } from '@/design/PropertyRow'
-import { FIELD } from '@/design/styles'
+import { NATIVE_SELECT } from '@/design/styles'
+import { cn } from '@/helpers/cn'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useAssets } from '@/stores/assets'
 
@@ -36,7 +37,7 @@ export function RoleField({ assetId, domain }: { assetId: string | null; domain:
       {/* A native `<select>`, as `CollectionBar` uses one: the inspector is a narrow column, and
           a menu drawn inside it gets clipped by its own edge. */}
       <select
-        className={FIELD}
+        className={cn(NATIVE_SELECT, 'w-full')}
         aria-label={t('inspector.role')}
         value={domain}
         onChange={event => {

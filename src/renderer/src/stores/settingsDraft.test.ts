@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useSettings } from './settings'
-import { isSettingsDraftDirty, useSettingsDraft, valueOf } from './settingsDraft'
+import { isSettingsDraftDirty, settingsDraftValueOf, useSettingsDraft } from './settingsDraft'
 
 const draft = () => useSettingsDraft.getState()
 
@@ -86,7 +86,7 @@ describe('what a control shows', () => {
   it('shows the staged value where one was staged', () => {
     draft().stage('appearance.density', 'compact')
 
-    expect(valueOf(draft(), 'comfortable', 'appearance.density')).toBe('compact')
+    expect(settingsDraftValueOf(draft(), 'comfortable', 'appearance.density')).toBe('compact')
   })
 
   /*
@@ -97,13 +97,13 @@ describe('what a control shows', () => {
   it('shows what another window wrote on a leaf it never touched', () => {
     draft().stage('appearance.density', 'compact')
 
-    expect(valueOf(draft(), 'light', 'appearance.theme')).toBe('light')
+    expect(settingsDraftValueOf(draft(), 'light', 'appearance.theme')).toBe('light')
   })
 
   it('shows a staged value that was deliberately unset', () => {
     draft().stage('media.ffmpegPath', undefined)
 
-    expect(valueOf(draft(), '/usr/bin/ffmpeg', 'media.ffmpegPath')).toBeUndefined()
+    expect(settingsDraftValueOf(draft(), '/usr/bin/ffmpeg', 'media.ffmpegPath')).toBeUndefined()
   })
 })
 

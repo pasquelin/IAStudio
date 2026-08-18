@@ -1900,12 +1900,7 @@ export class SceneRenderer {
     // A carried object holds a transform relative to the pivot, and the state holds one relative
     // to the scene: writing the second into the first mid-drag teleports it. The release puts
     // the truth back, so an undo during a gesture repaints everything but where things are.
-    if (object.parent !== this.pivot) {
-      const { position, rotation, scale } = node.transform
-      object.position.set(position.x, position.y, position.z)
-      object.rotation.set(rotation.x, rotation.y, rotation.z)
-      object.scale.set(scale.x, scale.y, scale.z)
-    }
+    if (object.parent !== this.pivot) applyTransform(object, node.transform)
     object.visible = node.visible
 
     const helper = this.helpers.get(node.id)
