@@ -20,8 +20,8 @@ export type NamedBone = {
  * Every bone whose name spells a role, by name.
  *
  * A role lands on ONE bone: two candidates are settled by depth, the higher winning. That is not
- * a tie-break for tidiness — Tripo carries `Root`, `Hip` and `Pelvis`, and the hips of a humanoid
- * are the bone both the legs and the trunk hang from, which is the higher of the two named ones.
+ * a tie-break for tidiness — Tripo carries `Root`, `Hip` and `Pelvis`, all three synonyms of the
+ * hips, and only `Hip` has both the legs and the trunk BELOW it: `Pelvis` leads to the legs alone.
  */
 export function boneRolesOf(bones: readonly NamedBone[]): Record<string, HumanoidRole> {
   const roles: Record<string, HumanoidRole> = {}

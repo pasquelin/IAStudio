@@ -14,10 +14,12 @@ import {
   QuaternionKeyframeTrack,
   Skeleton,
   SkinnedMesh,
+  Vector3,
   VectorKeyframeTrack,
   type KeyframeTrack,
   type Object3D,
 } from 'three'
+import type { HumanoidRole } from '@shared/domain/humanoid'
 import { boneRolesOf, type NamedBone } from './boneRoles'
 import { isBoneObject } from './rigState'
 import {
@@ -84,13 +86,38 @@ export function createRetarget(spawn: () => Worker): Retarget {
       // Posted before it is recorded, so a payload the structured clone cannot carry throws with
       // no slot left behind — `bvhInflight` says why this order is safe.
       running.postMessage(request, clipBuffers(request.clips))
-      waiting.set(request.id, { resolve, reject, onProgress: watch?.onProgress })
 
-      watch?.signal?.addEventListener('abort', () => {
-        if (!waiting.delete(request.id)) return
+      // Dropped whichever way the request ends, a worker dying included.
+      const stop = new AbortController()
+      const give = (clips: readonly WireClip[] | null): void => {
+        stop.abort()
+        resolve(clips)
+      }
+      const fail = (error: Error): void => {
+        stop.abort()
+        reject(error)
+      }
+      waiting.set(request.id, { resolve: give, reject: fail, onProgress: watch?.onProgress })
+
+      // `{ signal }` rather than a bare listener: a caller keeping ONE controller for its whole
+      // life would otherwise leave one listener per request behind it, each holding a `resolve`.
+      watch?.signal?.addEventListener(
+        'abort',
+        () => {
+          if (!waiting.delete(request.id)) return
+          running.postMessage({ id: request.id, cancel: true })
+          give(null)
+        },
+        { signal: stop.signal },
+      )
+
+      // An `abort` already fired has already been delivered, so the listener above would never
+      // run: without this the worker does the whole job and answers clips for a dead caller.
+      if (watch?.signal?.aborted) {
+        waiting.delete(request.id)
         running.postMessage({ id: request.id, cancel: true })
-        resolve(null)
-      })
+        give(null)
+      }
     })
 
   return {
@@ -179,6 +206,43 @@ function namedBonesOf(bones: readonly WireBone[]): NamedBone[] {
 }
 
 /**
+ * How much longer the target's torso is than the source's — the factor the hips' TRAVEL is read
+ * at.
+ *
+ * `retargetClip` carries the hip translation over unchanged unless told otherwise, so a stride
+ * authored on a small character replays at its own size on a large one and the feet slide. Hip
+ * HEIGHT is the obvious measure and cannot be used: Uthana builds its skeleton with the hips at
+ * the ORIGIN, measured on the real file on 2026-08-18 — hips to head is intrinsic to a rig and
+ * survives that, as it survives the rest rotations 46 of its 52 bones carry.
+ */
+export function skeletonScaleOf(target: Object3D, source: Object3D): number {
+  const to = torsoLengthOf(target)
+  const from = torsoLengthOf(source)
+
+  // A rig with no head, or two bones in one place: reading it as a size would be worse than not.
+  return to > 0 && from > 0 ? to / from : 1
+}
+
+function torsoLengthOf(root: Object3D): number {
+  const roles = boneRolesOf(namedBonesOf(wireBonesOf(root)))
+  const hips = boneFilling(root, roles, 'Hips')
+  const head = boneFilling(root, roles, 'Head')
+  if (!hips || !head) return 0
+
+  root.updateWorldMatrix(false, true)
+  return hips.getWorldPosition(new Vector3()).distanceTo(head.getWorldPosition(new Vector3()))
+}
+
+function boneFilling(
+  root: Object3D,
+  roles: Readonly<Record<string, HumanoidRole>>,
+  role: HumanoidRole,
+): Object3D | undefined {
+  const name = Object.keys(roles).find(bone => roles[bone] === role)
+  return name === undefined ? undefined : root.getObjectByName(name)
+}
+
+/**
  * Whether the clips can be played as they are.
  *
  * Names and hierarchy are not enough: two rigs spelled alike but built to different proportions
@@ -200,7 +264,11 @@ export function sameSkeleton(target: readonly WireBone[], source: readonly WireB
   })
 }
 
-/** Loose enough to survive a float32 round trip through a file, tight enough to see a real limb. */
+/**
+ * An ABSOLUTE tolerance, which suits a rig measured in metres — the three measured provider files
+ * all stand about one unit tall. A rig in centimetres would never short-circuit and would be
+ * retargeted instead, which is the safe way round to be wrong.
+ */
 const REST_TOLERANCE = 1e-6
 
 function near(a: readonly number[], b: readonly number[]): boolean {

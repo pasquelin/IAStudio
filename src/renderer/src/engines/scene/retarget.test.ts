@@ -6,6 +6,7 @@ import {
   nodeTrackNameOf,
   retargetPlanOf,
   sameSkeleton,
+  skeletonScaleOf,
   skinnedFromWire,
   wireBonesOf,
   wireClipOf,
@@ -194,6 +195,40 @@ describe('asking the worker', () => {
     port.dispose()
 
     expect(await port.adapt(skinnedFromWire(TRIPO), skinnedFromWire(UTHANA), [])).toBeNull()
+  })
+
+  it('answers nothing to a caller whose signal had already fired', async () => {
+    const script = scriptedWorker()
+    const stop = new AbortController()
+    stop.abort()
+
+    // An `abort` already delivered never reaches a listener added after it: without a check of
+    // its own, the worker would do the whole job and hand clips to a caller already gone.
+    const adapted = await createRetarget(script.spawn).adapt(
+      skinnedFromWire(TRIPO),
+      skinnedFromWire(UTHANA),
+      [turnClip('x')],
+      { signal: stop.signal },
+    )
+
+    expect(adapted).toBeNull()
+    expect(script.sent.at(-1)).toEqual({ id: 1, cancel: true })
+  })
+})
+
+describe('reading how much bigger one skeleton is than another', () => {
+  it('answers the ratio of their torsos', () => {
+    const twice = UTHANA.map(bone => boneAt(bone.name, bone.parent, bone.position[1] * 2))
+
+    expect(skeletonScaleOf(skinnedFromWire(twice), skinnedFromWire(UTHANA))).toBeCloseTo(2, 5)
+  })
+
+  it('answers one when a skeleton has no head to measure to', () => {
+    const headless = UTHANA.filter(bone => !bone.name.endsWith('Head'))
+
+    // Hip HEIGHT would be the obvious measure and cannot be used: Uthana builds its skeleton with
+    // the hips at the origin, measured on the real file.
+    expect(skeletonScaleOf(skinnedFromWire(headless), skinnedFromWire(UTHANA))).toBe(1)
   })
 })
 

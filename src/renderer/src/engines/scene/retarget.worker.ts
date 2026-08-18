@@ -10,7 +10,13 @@
 import { retargetClip } from 'three/addons/utils/SkeletonUtils.js'
 import type { SkinnedMesh } from 'three'
 import { messageOf } from '@shared/guards'
-import { clipFromWire, nodeTrackNameOf, skinnedFromWire, wireClipOf } from './retarget'
+import {
+  clipFromWire,
+  nodeTrackNameOf,
+  skeletonScaleOf,
+  skinnedFromWire,
+  wireClipOf,
+} from './retarget'
 import {
   clipBuffers,
   isRetargetCancel,
@@ -22,28 +28,35 @@ import {
 
 declare const self: DedicatedWorkerGlobalScope
 
+const running = new Set<number>()
 const cancelled = new Set<number>()
 
 self.addEventListener('message', (event: MessageEvent<RetargetIncoming>) => {
   const message = event.data
   if (isRetargetCancel(message)) {
-    cancelled.add(message.id)
+    // Only what is still going. A cancellation crossing paths with the answer it meant to stop is
+    // the ordinary case, and remembering that id would leave one entry behind for good.
+    if (running.has(message.id)) cancelled.add(message.id)
     return
   }
   void run(message)
 })
 
 async function run(request: RetargetRequest): Promise<void> {
+  running.add(request.id)
   try {
     // Built once for the whole request: rebuilding a skeleton per clip would dominate the work.
     const target = skinnedFromWire(request.target)
     const source = skinnedFromWire(request.source)
+    // Measured HERE rather than on the caller's objects, so the size read is the one of the very
+    // skeletons three is about to sample — the same space, whatever the scene did to the models.
+    const scale = skeletonScaleOf(target, source)
     const adapted: WireClip[] = []
 
     for (const [index, clip] of request.clips.entries()) {
       if (cancelled.delete(request.id)) return
 
-      adapted.push(adaptOne(request, target, source, clip))
+      adapted.push(adaptOne(request, target, source, clip, scale))
       post({ id: request.id, done: false, progress: (index + 1) / request.clips.length })
       // Yields the queue: without it a cancellation sent mid-request would sit unread until the
       // whole run it was meant to stop had finished.
@@ -60,6 +73,9 @@ async function run(request: RetargetRequest): Promise<void> {
     )
   } catch (error) {
     post({ id: request.id, done: true, ok: false, error: messageOf(error) })
+  } finally {
+    running.delete(request.id)
+    cancelled.delete(request.id)
   }
 }
 
@@ -68,6 +84,7 @@ function adaptOne(
   target: SkinnedMesh,
   source: SkinnedMesh,
   clip: WireClip,
+  scale: number,
 ): WireClip {
   // A FRESH options object per clip, and that is not tidiness: `retargetClip` WRITES its defaults
   // back into what it is handed, so a shared one would fix every later clip at the first one's
@@ -76,6 +93,7 @@ function adaptOne(
     names: request.names,
     hip: request.hip,
     fps: request.fps,
+    scale,
   })
   const wire = wireClipOf(sampled)
 

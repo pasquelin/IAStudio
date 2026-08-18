@@ -169,10 +169,34 @@ function statusOf(
 ): RigStatus {
   if (boneCount === 0) return 'staticMesh'
   if (!root.getObjectByProperty('isSkinnedMesh', true)) return 'skeletonOnly'
-  if (!bones.some(bone => bone.role)) return 'skinnedMesh'
+  if (!isHumanoidEnough(bones)) return 'skinnedMesh'
 
   return animated ? 'animatedCharacter' : 'riggedCharacter'
 }
+
+/**
+ * Whether calling this a character would promise something true.
+ *
+ * The hips and one WHOLE limb, which is the least retargeting can say anything with: a root to
+ * hang the pose on, and one chain to replay. One recognised role used to be enough, and that was
+ * safe only while the studio's own rigger was the sole thing producing recognised names — reading
+ * the provider conventions made `Spine` plus `Head` on a dragon read as a person, and it would be
+ * offered the humanoid animation library.
+ */
+function isHumanoidEnough(bones: readonly SkeletonBone[]): boolean {
+  const roles = new Set(bones.flatMap(bone => (bone.role ? [bone.role] : [])))
+  if (!roles.has('Hips')) return false
+
+  return LIMB_CHAINS.some(chain => chain.every(role => roles.has(role)))
+}
+
+/** Written out rather than built from the sides: four is fewer lines than the machinery would be. */
+const LIMB_CHAINS: readonly (readonly HumanoidRole[])[] = [
+  ['LeftUpperArm', 'LeftLowerArm', 'LeftHand'],
+  ['RightUpperArm', 'RightLowerArm', 'RightHand'],
+  ['LeftUpperLeg', 'LeftLowerLeg', 'LeftFoot'],
+  ['RightUpperLeg', 'RightLowerLeg', 'RightFoot'],
+]
 
 function nearestBoneAbove(bone: Object3D): string | null {
   let above = bone.parent
