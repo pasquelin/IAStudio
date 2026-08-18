@@ -3,10 +3,11 @@ import {
   EdgesGeometry,
   LineSegments,
   Mesh,
-  Object3D,
+  PerspectiveCamera,
   Vector3,
   WireframeGeometry,
   type Material,
+  type Object3D,
 } from 'three'
 import {
   DISPLAY_MODES,
@@ -293,17 +294,17 @@ export function plainVector({ x, y, z }: Vector3): PlainVector3 {
 /**
  * The transform a node takes to stand where a view stands and look where it looks.
  *
- * Through an `Object3D` rather than by hand: `lookAt` builds the matrix and reads the Euler
- * angles back in the order three itself uses, and an orientation composed here would differ
- * from the one the viewport draws with — by a little, which is the worst kind.
+ * Through a CAMERA and not a bare `Object3D`: `lookAt` branches on `isCamera` — it points local
+ * +Z at the target for an object, and −Z for a camera. Aimed as an object, the camera would end
+ * up in the right place facing exactly the opposite way.
  */
 export function transformFromPlacement(placement: CameraPlacement, rest: Transform): Transform {
-  const object = new Object3D()
-  object.position.set(placement.position.x, placement.position.y, placement.position.z)
-  object.lookAt(placement.target.x, placement.target.y, placement.target.z)
+  const camera = new PerspectiveCamera()
+  camera.position.set(placement.position.x, placement.position.y, placement.position.z)
+  camera.lookAt(placement.target.x, placement.target.y, placement.target.z)
 
   // A camera is never scaled by this gesture: what it stood at is what it keeps.
-  return { ...transformOf(object), scale: rest.scale }
+  return { ...transformOf(camera), scale: rest.scale }
 }
 
 /**

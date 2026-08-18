@@ -91,6 +91,25 @@ describe('the four views and their seams', () => {
     expect(cell).toHaveClass('justify-end')
   })
 
+  it('lets a quarter look through a camera of the scene', async () => {
+    const onView = vi.fn()
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} cameras={CAMERAS} onView={onView} />)
+
+    await userEvent.click(screen.getByRole('button', { name: /vue 2/ }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /Camera A/ }))
+
+    expect(onView).toHaveBeenCalledWith(1, { kind: 'camera', nodeId: 'cam-a' })
+  })
+
+  /** The first pane draws with the viewport's own camera: it can be lent none, so it offers none. */
+  it('offers no camera to the first quarter', async () => {
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} cameras={CAMERAS} onView={vi.fn()} />)
+
+    await userEvent.click(screen.getByRole('button', { name: /vue 1/ }))
+
+    expect(screen.queryByRole('menuitemradio', { name: /Camera A/ })).not.toBeInTheDocument()
+  })
+
   it('falls back to the free view for a quarter nothing has set', () => {
     render(<ScenePaneGrid views={[]} cameras={CAMERAS} onView={vi.fn()} />)
 

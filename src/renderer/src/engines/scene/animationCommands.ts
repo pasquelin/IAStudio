@@ -466,8 +466,12 @@ export function recordMove(
   time: Us,
   tracks: readonly AnimationTrack[],
 ): Command<SceneState>[] {
-  return tracks.map(track =>
-    setAnimationKey(track.id, time, deltaOf(rest, pose, track.target.property)),
+  return tracks.flatMap(track =>
+    // A lens is not a pose: a drag says nothing about a field of view, and `deltaOf` would hand
+    // this channel the rotation delta of the very same gesture.
+    track.target.property === 'fov'
+      ? []
+      : setAnimationKey(track.id, time, deltaOf(rest, pose, track.target.property)),
   )
 }
 

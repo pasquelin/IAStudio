@@ -265,6 +265,37 @@ describe('a viewport', () => {
       expect(engine.paneOrbits[1]?.object).toBe(lent)
     })
 
+    /**
+     * `OrbitControls.update()` ends on `object.lookAt(target)`. Left where the pane last
+     * orbited, that target swung the borrowed camera round the moment it was lent — and again
+     * on every frame the pointer merely hovered the pane, with no gesture to report it.
+     */
+    it('leaves a borrowed camera aimed where it already was', () => {
+      const engine = atRest()
+      engine.setLayout('quad')
+
+      const lent = new PerspectiveCamera()
+      lent.position.set(0, 0, 10)
+      lent.lookAt(0, 0, 0)
+      const before = lent.quaternion.clone()
+
+      engine.setPaneCamera(1, lent)
+      engine.paneOrbits[1]?.update()
+
+      expect(lent.quaternion.angleTo(before)).toBeCloseTo(0, 6)
+    })
+
+    it('sizes a borrowed camera to the pane it draws into', () => {
+      const engine = atRest()
+      engine.setLayout('quad')
+      const lent = new PerspectiveCamera()
+
+      engine.setPaneCamera(1, lent)
+
+      // A camera of the scene is built square; the pane is a quarter of the host.
+      expect(lent.aspect).toBeCloseTo(HOST_WIDTH / HOST_HEIGHT, 6)
+    })
+
     it('gives a pane its own camera back when the loan ends', () => {
       const engine = atRest()
       engine.setLayout('quad')

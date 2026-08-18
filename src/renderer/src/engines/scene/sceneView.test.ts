@@ -7,6 +7,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  PerspectiveCamera,
   Raycaster,
 } from 'three'
 import { Vector3 } from 'three'
@@ -23,6 +24,7 @@ import {
   viewPosition,
   framingDistance,
   framingPlacement,
+  plainVector,
   transformFromPlacement,
 } from './sceneView'
 import { IDENTITY_TRANSFORM } from './sceneState'
@@ -47,22 +49,29 @@ describe('transformFromPlacement', () => {
     expect(placed.position).toEqual({ x: 1, y: 2, z: 3 })
   })
 
-  // A camera born from the Add menu looks down −Z: standing at +Z and watching the origin, it
-  // has nothing to turn at all.
-  it('turns it to look where the view looks', () => {
-    const straight = transformFromPlacement(
-      { position: { x: 0, y: 0, z: 5 }, target: { x: 0, y: 0, z: 0 } },
-      rest,
-    )
-    expect(straight.rotation.y).toBeCloseTo(0, 6)
+  /**
+   * Asserted on the DIRECTION the camera ends up looking in, never on an angle: `lookAt` points
+   * +Z at the target for a plain object and −Z for a camera, and both give a rotation whose `y`
+   * reads as a quarter turn. Only the direction tells the two apart — the object form aims the
+   * camera exactly backwards.
+   */
+  it('turns it to look at what the view was looking at', () => {
+    const watched = new Vector3(0, 0, 0)
 
-    const sideways = transformFromPlacement(
-      { position: { x: 5, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } },
-      rest,
-    )
-    // A quarter turn, in the direction three's own `lookAt` gives — which is the whole reason
-    // this goes through an `Object3D` rather than composing the angles by hand.
-    expect(Math.abs(sideways.rotation.y)).toBeCloseTo(Math.PI / 2, 6)
+    for (const from of [new Vector3(0, 0, 5), new Vector3(5, 0, 0), new Vector3(3, 4, 5)]) {
+      const placed = transformFromPlacement(
+        { position: plainVector(from), target: plainVector(watched) },
+        rest,
+      )
+
+      const camera = new PerspectiveCamera()
+      camera.position.copy(from)
+      camera.rotation.set(placed.rotation.x, placed.rotation.y, placed.rotation.z)
+
+      const forward = camera.getWorldDirection(new Vector3())
+      const wanted = watched.clone().sub(from).normalize()
+      expect(forward.dot(wanted)).toBeCloseTo(1, 6)
+    }
   })
 
   it('leaves the scale the node stood at, since aiming a camera never resizes it', () => {

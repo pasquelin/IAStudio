@@ -208,6 +208,9 @@ export function deltaOf(rest: Transform, pose: Transform, property: TrackPropert
       z: rest.scale.z === 0 ? 1 : pose.scale.z / rest.scale.z,
     }
   }
+  // A pose says nothing about a lens: answering the rotation delta here is what would put the
+  // angle of a drag into a field of view. Whoever keys a lens writes its own value.
+  if (property === 'fov') return ZERO
 
   angles.set(rest.rotation.x, rest.rotation.y, rest.rotation.z)
   step.setFromEuler(angles).invert()

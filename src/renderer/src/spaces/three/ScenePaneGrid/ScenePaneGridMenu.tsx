@@ -74,9 +74,9 @@ export function ScenePaneGridMenu({
               }}
             />
           ))}
-          {/* The cameras of the scene, under the fixed views: looking THROUGH one is what turns
-              this pane into a monitor, and orbiting in it then moves that camera. */}
-          {cameras.map(camera => (
+          {/* The cameras of the scene, under the fixed views — never for the first pane, which
+              draws with the viewport's own camera and can be lent none. */}
+          {(pane === 0 ? [] : cameras).map(camera => (
             <MenuRow
               key={camera.id}
               label={camera.name}

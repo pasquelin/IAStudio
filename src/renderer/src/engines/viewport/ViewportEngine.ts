@@ -142,6 +142,10 @@ type ExtraPane = {
  */
 const EXTRA_PANE_HEIGHT = 6
 
+/** How far ahead of a borrowed camera its orbit turns. Reused, so lending allocates nothing. */
+const BORROWED_PIVOT = 5
+const borrowedAim = new Vector3()
+
 /** The camera an added view is currently drawing through — a borrowed one wins over both. */
 function cameraOf(pane: ExtraPane): ViewportCamera {
   if (pane.borrowed) return pane.borrowed
@@ -345,8 +349,21 @@ export class ViewportEngine {
 
     // The inset first, and it answers for nobody: it covers a pane rather than dividing the
     // surface, so without this a drag inside the preview would orbit the view underneath it.
-    if (this.inset && inRect(this.inset.rect, x, y)) return null
+    if (this.insetHasPointer(pointer)) return null
     return paneAt(this.rects, x, y)
+  }
+
+  /**
+   * Whether a pointer landed in the camera preview. What a picker asks before casting a ray: the
+   * preview draws through a camera of its own, so a ray cast from the pane underneath would meet
+   * whatever stands behind the picture rather than what is in it.
+   */
+  insetHasPointer(pointer: PointerPosition): boolean {
+    const canvas = this.renderer?.domElement
+    if (!canvas || !this.inset) return false
+
+    const bounds = canvas.getBoundingClientRect()
+    return inRect(this.inset.rect, pointer.clientX - bounds.left, pointer.clientY - bounds.top)
   }
 
   /**
@@ -411,6 +428,14 @@ export class ViewportEngine {
     const drawn = cameraOf(pane)
     if (pane.controls) {
       pane.controls.object = drawn
+      // The target is put in FRONT of the borrowed camera before anything updates: `update()`
+      // ends on `object.lookAt(target)`, so a target left where the pane last orbited would
+      // swing that camera round the moment it is lent — and again on every frame the pointer
+      // merely hovers the pane, with no gesture to report it.
+      if (camera) {
+        camera.getWorldDirection(borrowedAim)
+        pane.controls.target.copy(camera.position).addScaledVector(borrowedAim, BORROWED_PIVOT)
+      }
       pane.controls.update()
     }
     this.layOutPanes()
@@ -487,6 +512,13 @@ export class ViewportEngine {
       pane.orthographic.updateProjectionMatrix()
       pane.perspective.aspect = aspect
       pane.perspective.updateProjectionMatrix()
+
+      // A borrowed camera too: one of the scene is built square, and a 1:1 frustum drawn into a
+      // quarter of a wide canvas stretches everything it shows.
+      if (pane.borrowed) {
+        pane.borrowed.aspect = aspect
+        pane.borrowed.updateProjectionMatrix()
+      }
     }
 
     return this.rects[0] ?? { x: 0, y: 0, width, height }

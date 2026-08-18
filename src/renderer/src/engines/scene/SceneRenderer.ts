@@ -597,9 +597,17 @@ export class SceneRenderer {
       if (node.type !== 'camera') continue
 
       const object = this.objects.get(node.id)
-      const shot = shotOfCameraAt(this.timeline, node.id, this.playhead)
       // A camera the gizmo carries holds a transform relative to the pivot — see `applyPoses`.
-      if (object && shot && object.parent !== this.pivot) driven.push({ object, shot })
+      if (!object || object.parent === this.pivot) continue
+
+      const shot = shotOfCameraAt(this.timeline, node.id, this.playhead)
+      if (shot) driven.push({ object, shot })
+      // Put back where the document holds it the moment no shot drives it any more: scrubbing
+      // past the end of a shot would otherwise strand the camera wherever its rail left it, and
+      // the film would go on being taken from there.
+      else if (this.timeline.shots.some(held => held.cameraId === node.id)) {
+        applyTransform(object, poseAt(node.transform, this.timeline, node.id, this.playhead))
+      }
     }
 
     // Only when something is about to READ a world position, and only then: `force` recomposes
@@ -677,10 +685,12 @@ export class SceneRenderer {
 
     for (const nodeId of lensed) {
       const node = this.applied.get(nodeId)
-      const delta = fovAt(timeline, nodeId, this.playhead)
       const camera = this.cameraObject(nodeId)
-      if (node?.type !== 'camera' || delta === null || !camera) continue
+      if (node?.type !== 'camera' || !camera) continue
 
+      // Zero where every channel is muted or soloed away, never "leave it alone": the lens would
+      // otherwise keep whatever the last scrub wrote, on screen and in a render alike.
+      const delta = fovAt(timeline, nodeId, this.playhead) ?? 0
       applyCamera(camera, { ...node.camera, fov: node.camera.fov + delta })
     }
   }
@@ -1300,6 +1310,12 @@ export class SceneRenderer {
     for (const skeleton of this.skeletons.values()) hide(skeleton)
     for (const frustum of this.frustums.values()) hide(frustum)
     hide(this.grid)
+
+    // A rail is a working aid like the grid, not something a shot puts on screen: drawn, its
+    // line and its knobs would run across every previewed and every rendered frame.
+    for (const node of this.applied.values()) {
+      if (node.type === 'path') hide(this.objects.get(node.id))
+    }
 
     return () => {
       for (const object of hidden) object.visible = true
@@ -2150,7 +2166,9 @@ export class SceneRenderer {
    * edits the DOCUMENT, every other one moves the view, which is session state.
    */
   private reportCameraSettled(pane: number): void {
-    const view = this.paneViews[pane]
+    // Pane 0 draws with the viewport's own camera whatever its view says — it can be lent none,
+    // so an orbit there moves the VIEW even where a camera was picked for it.
+    const view = pane === 0 ? 'free' : this.paneViews[pane]
     const object = isCameraView(view) ? this.cameraObject(view.nodeId) : null
 
     if (isCameraView(view) && object) {
@@ -2248,6 +2266,9 @@ export class SceneRenderer {
     const pressed = this.pressed
     this.pressed = null
     if (!wasClick(pressed, event)) return
+    // A click in the preview picks nothing: it is drawn through another camera, so a ray cast
+    // from the pane underneath would select whatever the picture happens to be covering.
+    if (this.viewport.insetHasPointer(event)) return
 
     this.aimGizmo()
 

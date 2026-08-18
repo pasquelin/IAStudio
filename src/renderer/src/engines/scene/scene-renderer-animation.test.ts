@@ -350,37 +350,69 @@ describe('SceneRenderer and a camera on a rail', () => {
     engine.dispose()
   })
 
-  it('opens the lens by what its fov channel adds, and leaves it alone without one', () => {
+  it('opens the lens by what its fov channel adds, and puts it back when that channel goes quiet', () => {
     const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
-    const camera = cameraNodeFixture('cam', { fov: 50 })
-    engine.apply({
-      ...EMPTY_SCENE,
-      nodes: [camera],
-      animation: {
-        ...EMPTY_TIMELINE,
-        tracks: [
-          {
-            id: 'lens',
-            name: 'Lens',
-            index: 0,
-            muted: false,
-            solo: false,
-            locked: false,
-            target: { nodeId: 'cam', property: 'fov' },
-            keys: [
-              { time: 0, value: { x: 0, y: 0, z: 0 } },
-              { time: 2 * SECOND, value: { x: 20, y: 0, z: 0 } },
-            ],
-          },
-        ],
-      },
+    const lensTrack = (muted: boolean): AnimationTimeline => ({
+      ...EMPTY_TIMELINE,
+      tracks: [
+        {
+          id: 'lens',
+          name: 'Lens',
+          index: 0,
+          muted,
+          solo: false,
+          locked: false,
+          target: { nodeId: 'cam', property: 'fov' },
+          keys: [
+            { time: 0, value: { x: 0, y: 0, z: 0 } },
+            { time: 2 * SECOND, value: { x: 20, y: 0, z: 0 } },
+          ],
+        },
+      ],
     })
+
+    const nodes = [cameraNodeFixture('cam', { fov: 50 })]
+    engine.apply({ ...EMPTY_SCENE, nodes, animation: lensTrack(false) })
 
     const lens = objectOf(engine, 'cam')
     expect(lens instanceof PerspectiveCamera && lens.fov).toBe(50)
 
     engine.setPlayhead(1 * SECOND)
     expect(lens instanceof PerspectiveCamera && lens.fov).toBeCloseTo(60, 5)
+
+    // Muted, the lens takes back what the document says rather than keeping the last scrub.
+    engine.apply({ ...EMPTY_SCENE, nodes, animation: lensTrack(true) })
+    expect(lens instanceof PerspectiveCamera && lens.fov).toBe(50)
+    engine.dispose()
+  })
+
+  // Scrubbing past the end of a shot used to strand the camera wherever its rail left it — and
+  // the film went on being taken from there.
+  it('puts the camera back where the document holds it once no shot drives it', () => {
+    const engine = staged()
+
+    engine.setPlayhead(4 * SECOND - 1)
+    expect(objectOf(engine, 'cam')?.position.x).toBeCloseTo(10, 4)
+
+    engine.setPlayhead(5 * SECOND)
+    expect(objectOf(engine, 'cam')?.position.x).toBeCloseTo(0, 4)
+    engine.dispose()
+  })
+
+  /**
+   * A rail is a working aid like the grid: the preview and the film both draw through
+   * `hideWorkshop`, and a line with a knob per point ran across every frame of both.
+   */
+  it('hides the rails for a pass that shows what a camera films', () => {
+    const engine = staged()
+    const rail = objectOf(engine, 'rail')
+    // `hideWorkshop` is what both the inset pass and `renderFilm` take; reached here directly,
+    // since neither of the two can run without a GL context.
+    const restore: () => void = Reflect.get(engine, 'hideWorkshop').call(engine)
+
+    expect(rail?.visible).toBe(false)
+    restore()
+    expect(rail?.visible).toBe(true)
     engine.dispose()
   })
 
