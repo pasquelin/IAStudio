@@ -1,7 +1,15 @@
 {
   "animations": {
     "empty": "No animation yet. Select a character, or install animations in the application folder.",
-    "dragHint": "Drag onto a sub-track"
+    "dragHint": "Drag onto a sub-track",
+    "playPreview": "Play it on the character",
+    "stopPreview": "Stop and take the block off",
+    "duplicateBlock": "Duplicate",
+    "duplicateBlockHint": "Lays a copy of this block right after it",
+    "splitBlock": "Split block",
+    "splitBlockHint": "Cuts this block in two where the playhead stands",
+    "removeBlock": "Remove",
+    "removeBlockHint": "Takes this block off the band — the animation itself is untouched"
   },
   "meshes": {
     "box": "Box",

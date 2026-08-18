@@ -49,13 +49,13 @@ export type Retarget = {
     watch?: { onProgress?: (progress: number) => void; signal?: AbortSignal },
   ) => Promise<AnimationClip[] | null>
   /**
-   * What a skeleton of exactly these bones means, from now on and for every model carrying them.
+   * What a skeleton of that signature means, from now on and for every model carrying it.
    *
    * Recognised by SIGNATURE and not by model: a mapping put right on one character is the same
    * mapping the next file of that rig needs, and asking twice for the same correction is the
-   * thing this closes.
+   * thing this closes. Profiles a project remembered are handed back the same way.
    */
-  learn: (boneNames: readonly string[], roles: Readonly<Record<string, HumanoidRole>>) => void
+  remember: (profile: SkeletonProfile) => void
   dispose: () => void
 }
 
@@ -152,10 +152,7 @@ export function createRetarget(spawn: () => Worker): Retarget {
       return adapted && adapted.map(clipFromWire)
     },
 
-    learn: (boneNames, roles) => {
-      const signature = skeletonSignatureOf(boneNames)
-      profiles.set(signature, { signature, roles })
-    },
+    remember: profile => void profiles.set(profile.signature, profile),
 
     dispose: () => {
       disposed = true

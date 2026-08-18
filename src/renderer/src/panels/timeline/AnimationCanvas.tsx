@@ -1,3 +1,4 @@
+import { mdiContentCut, mdiContentDuplicate, mdiDeleteOutline } from '@mdi/js'
 import {
   useCallback,
   useEffect,
@@ -5,8 +6,11 @@ import {
   useRef,
   type DragEvent,
   type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent,
 } from 'react'
+import { useTranslation } from 'react-i18next'
+import { showContextMenu } from '@/helpers/contextMenu'
 import { frameDuration, snapToFrame, type Us } from '@shared/domain/time'
 import {
   editCameraShot,
@@ -19,8 +23,14 @@ import { assetClip, bundledClip, clipKeyOf, embeddedClip, type ClipRef } from '@
 import { draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { newId } from '@/helpers/ids'
 import { ANIMATION_DRAG_TYPE, draggedAnimationOf } from '@/panels/animations/dragged'
-import { multi, setModelLanes } from '@/engines/scene/commands'
-import { clipsMoved, clipsTrimmed, lanesWith } from '@/engines/scene/clipBlend'
+import { multi, removeModelClip, setModelLanes } from '@/engines/scene/commands'
+import {
+  clipsDuplicated,
+  clipsMoved,
+  clipsSplit,
+  clipsTrimmed,
+  lanesWith,
+} from '@/engines/scene/clipBlend'
 import { useModelClips } from '@/stores/modelClips'
 import type { Command } from '@/engines/core/history'
 import type { SceneState } from '@/engines/scene/sceneState'
@@ -100,16 +110,31 @@ function editLane(
   if (lanes) store.runCommand(documentId, setModelLanes(where.nodeId, lanes))
 }
 
-/** How long the clip a block plays runs in the file, which is what a trim is measured against. */
-function clipLengthOf(documentId: string, where: BlockRef): number | null {
+/** Which model and lane hold a block, since the band remembers the chosen one by its id alone. */
+function blockOf(documentId: string, clipId: string): BlockRef | null {
+  for (const node of sceneOf(useScenes.getState(), documentId).nodes) {
+    if (node.type !== 'model') continue
+
+    const lane = node.model.lanes?.find(held => held.clips.some(clip => clip.id === clipId))
+    if (lane) return { nodeId: node.id, laneId: lane.id, clipId }
+  }
+
+  return null
+}
+
+/** The blocks of the lane a reference names, or nothing once the model or the lane has gone. */
+function laneClipsOf(documentId: string, where: BlockRef): readonly ClipRef[] | null {
   const node = sceneOf(useScenes.getState(), documentId).nodes.find(
     candidate => candidate.id === where.nodeId,
   )
   if (node?.type !== 'model') return null
 
-  const clip = node.model.lanes
-    ?.find(lane => lane.id === where.laneId)
-    ?.clips.find(candidate => candidate.id === where.clipId)
+  return node.model.lanes?.find(lane => lane.id === where.laneId)?.clips ?? null
+}
+
+/** How long the clip a block plays runs in the file, which is what a trim is measured against. */
+function clipLengthOf(documentId: string, where: BlockRef): number | null {
+  const clip = laneClipsOf(documentId, where)?.find(candidate => candidate.id === where.clipId)
 
   return clip
     ? (useModelClips.getState().lengths[documentId]?.[where.nodeId]?.[clipKeyOf(clip.source)] ??
@@ -125,6 +150,7 @@ function clipLengthOf(documentId: string, where: BlockRef): number | null {
  * browser; drawing a thousand diamonds in the DOM would be a scroll that stutters.
  */
 export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
+  const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const grabbed = useRef<Grab | null>(null)
 
@@ -199,12 +225,54 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
 
   useTimelineWheel(canvasRef, () => latest.current.viewport, setViewport)
 
+  const dropBlock = (where: BlockRef): void => {
+    useScenes.getState().runCommand(documentId, removeModelClip(where.nodeId, where.clipId))
+    useAnimationViews.getState().setPickedBlock(documentId, null)
+  }
+
+  const duplicateBlock = (where: BlockRef): void =>
+    editLane(documentId, where, clips =>
+      clipsDuplicated(clips, where.clipId, newId(), clipLengthOf(documentId, where)),
+    )
+
+  /** Cut where the head stands, which is the montage's own gesture and the only mark on screen. */
+  const splitBlock = (where: BlockRef): void =>
+    editLane(documentId, where, clips =>
+      clipsSplit(
+        clips,
+        where.clipId,
+        latest.current.playhead,
+        newId(),
+        clipLengthOf(documentId, where),
+      ),
+    )
+
+  /** The three gestures a block answers to, or `false` when the key meant something else. */
+  const blockKey = (event: ReactKeyboardEvent<HTMLCanvasElement>, where: BlockRef): boolean => {
+    const gesture =
+      event.key === 'Delete' || event.key === 'Backspace'
+        ? dropBlock
+        : event.code === 'KeyD' && (event.metaKey || event.ctrlKey)
+          ? duplicateBlock
+          : event.code === 'KeyS' && !event.metaKey && !event.ctrlKey
+            ? splitBlock
+            : null
+
+    if (gesture) gesture(where)
+    return gesture !== null
+  }
+
   /**
    * Removes what is picked. Bound on the canvas rather than on a global scope: the band is one
    * surface among several that answer to Delete, and a key must not vanish because a viewport
    * happened to have focus.
    */
   const onKeyDown = (event: ReactKeyboardEvent<HTMLCanvasElement>): void => {
+    // A block and a key are never both picked — `setPickedBlock` empties the other — so Delete
+    // has one answer, and the block is asked first because it is the one that carries more keys.
+    const block = latest.current.picked ? blockOf(documentId, latest.current.picked) : null
+    if (block && blockKey(event, block)) return event.preventDefault()
+
     if (event.key !== 'Delete' && event.key !== 'Backspace') return
 
     const current = latest.current
@@ -261,6 +329,60 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     useSceneViews
       .getState()
       .setPlayhead(documentId, clampPlayhead(snapToFrame(time, held.fps), held.duration))
+  }
+
+  /**
+   * Whether a cut at the head would give two halves. Asked of the arithmetic that will do it
+   * rather than repeated here — the answer must not drift from what the gesture then refuses.
+   */
+  const cuttable = (where: BlockRef): boolean => {
+    const clips = laneClipsOf(documentId, where)
+    const cut =
+      clips &&
+      clipsSplit(
+        clips,
+        where.clipId,
+        latest.current.playhead,
+        newId(),
+        clipLengthOf(documentId, where),
+      )
+    return cut !== null
+  }
+
+  /** The three block gestures, where a key alone would leave them undiscoverable. */
+  const onContextMenu = (event: ReactMouseEvent<HTMLCanvasElement>): void => {
+    const hit = hitAnimation(hitContext(), pointIn(event))
+    if (hit?.kind !== 'block') return
+
+    event.preventDefault()
+    // Chosen first: a menu acting on something other than what the band shows as chosen is a
+    // menu nobody trusts.
+    const where = blockRefOf(hit)
+    useAnimationViews.getState().setPickedBlock(documentId, where.clipId)
+
+    void showContextMenu([
+      {
+        label: t('animations.duplicateBlock'),
+        icon: mdiContentDuplicate,
+        tooltip: t('animations.duplicateBlockHint'),
+        onSelect: () => duplicateBlock(where),
+      },
+      {
+        label: t('animations.splitBlock'),
+        icon: mdiContentCut,
+        tooltip: t('animations.splitBlockHint'),
+        // Greyed rather than dropped, as the montage's own cut is: a menu whose length follows
+        // the playhead cannot be learnt.
+        disabled: !cuttable(where),
+        onSelect: () => splitBlock(where),
+      },
+      {
+        label: t('animations.removeBlock'),
+        icon: mdiDeleteOutline,
+        tooltip: t('animations.removeBlockHint'),
+        onSelect: () => dropBlock(where),
+      },
+    ])
   }
 
   /**
@@ -471,6 +593,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
         event.dataTransfer.dropEffect = 'copy'
       }}
       onDrop={onDrop}
+      onContextMenu={onContextMenu}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       // Or a pointer that leaves mid-hover writes the resize cursor on the element for good.

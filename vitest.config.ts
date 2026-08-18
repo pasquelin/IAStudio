@@ -124,6 +124,8 @@ const DOM_BOUND = [
   'src/renderer/src/engines/core/offScreenHost.test.ts',
   'src/renderer/src/engines/core/palette.test.ts',
   'src/renderer/src/engines/scene/animationPainter.test.ts',
+  // Draws the round mark of a joint on a canvas, exactly as `paneMaterials` draws its matcap.
+  'src/renderer/src/engines/scene/boneJoints.test.ts',
   'src/renderer/src/engines/scene/bvhBuilder.test.ts',
   'src/renderer/src/engines/scene/bvh.worker.test.ts',
   'src/renderer/src/engines/scene/nodeKinds.test.ts',
@@ -176,6 +178,8 @@ const DOM_BOUND = [
   'src/renderer/src/stores/dictation.test.ts',
   'src/renderer/src/stores/documents.test.ts',
   'src/renderer/src/stores/layouts.test.ts',
+  // Reads what a previous session stored back out of `localStorage`, as the layouts do.
+  'src/renderer/src/stores/skeletonProfiles.test.ts',
   'src/renderer/src/stores/models.test.ts',
   'src/renderer/src/testSetup.test.ts',
 ]

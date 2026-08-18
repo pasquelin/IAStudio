@@ -614,3 +614,73 @@ describe('dragging a shot', () => {
     expect(useAnimationViews.getState().views[DOCUMENT]?.selected).toEqual([])
   })
 })
+
+describe('the three gestures a chosen block answers to', () => {
+  beforeEach(() => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelWithClip()] })
+    useModelClips.getState().report(DOCUMENT, 'perso', ['Walk'], { Walk: 2 })
+    useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({
+      views: {
+        [DOCUMENT]: {
+          viewport: VIEWPORT,
+          expanded: [],
+          selected: [],
+          pickedBlock: 'c1',
+          autoKey: false,
+          order: [],
+        },
+      },
+    })
+  })
+
+  const blocks = () => {
+    const node = sceneOf(useScenes.getState(), DOCUMENT).nodes[0]
+    return node?.type === 'model' ? (node.model.lanes?.[0]?.clips ?? []) : []
+  }
+
+  const type = (key: string, held: { metaKey?: boolean } = {}): void => {
+    canvas().dispatchEvent(new KeyboardEvent('keydown', { key, code: key, bubbles: true, ...held }))
+  }
+
+  it('takes the chosen block off the band, and lets the pick go with it', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    act(() => type('Delete'))
+
+    expect(blocks()).toEqual([])
+    expect(animationViewOf(useAnimationViews.getState(), DOCUMENT).pickedBlock).toBeNull()
+  })
+
+  it('lays a copy of it end to end with the original', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    act(() => type('KeyD', { metaKey: true }))
+
+    expect(blocks().map(clip => clip.start)).toEqual([1 * SECOND, 3 * SECOND])
+  })
+
+  it('cuts it in two where the head stands', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+    act(() => useSceneViews.getState().setPlayhead(DOCUMENT, 2 * SECOND))
+
+    act(() => type('KeyS'))
+
+    expect(blocks().map(clip => [clip.start, clip.duration])).toEqual([
+      [1 * SECOND, 1 * SECOND],
+      [2 * SECOND, 1 * SECOND],
+    ])
+  })
+
+  // The band answers Delete for keys as well, and a block is the one thing that carries several
+  // of them: asking the block first is what keeps one key from being taken instead.
+  it('leaves the keys alone when nothing is chosen on the band', () => {
+    act(() => useAnimationViews.getState().setPickedBlock(DOCUMENT, null))
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    act(() => type('Delete'))
+    act(() => type('KeyS'))
+
+    expect(blocks()).toHaveLength(1)
+  })
+})

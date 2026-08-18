@@ -1,7 +1,15 @@
 {
   "animations": {
     "empty": "Aucune animation. Sélectionnez un personnage, ou installez des animations dans le dossier de l’application.",
-    "dragHint": "Glissez sur une sous-piste"
+    "dragHint": "Glissez sur une sous-piste",
+    "playPreview": "Jouer sur le personnage",
+    "stopPreview": "Arrêter et retirer le bloc",
+    "duplicateBlock": "Dupliquer",
+    "duplicateBlockHint": "Pose une copie de ce bloc juste après lui",
+    "splitBlock": "Couper le bloc",
+    "splitBlockHint": "Coupe ce bloc en deux là où se trouve la tête de lecture",
+    "removeBlock": "Supprimer",
+    "removeBlockHint": "Retire ce bloc de la bande — l’animation elle-même n’est pas touchée"
   },
   "meshes": {
     "box": "Cube",

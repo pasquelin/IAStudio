@@ -1,10 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { useDocuments } from '@/stores/documents'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene } from '@/stores/scene-fixtures'
+import { sceneOf, useScenes } from '@/stores/scenes'
+import { useSceneViews } from '@/stores/sceneViews'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { AnimationsPanel } from './AnimationsPanel'
 import { ANIMATION_DRAG_TYPE } from './dragged'
@@ -23,6 +26,8 @@ describe('the animations panel', () => {
     installFakeBridge()
     useDocuments.setState({ activeId: DOCUMENT })
     useModelClips.setState({ clips: {}, rigs: {} })
+    // Or the block one case watched decides what the next one shows as playing.
+    useSceneViews.setState({ views: {} })
     installScene(DOCUMENT, EMPTY_SCENE)
   })
 
@@ -101,5 +106,61 @@ describe('the animations panel', () => {
     render(<AnimationsPanel />)
 
     await waitFor(() => expect(screen.getByText(/Aucune animation/)).toBeInTheDocument())
+  })
+
+  const blocksOf = () =>
+    sceneOf(useScenes.getState(), DOCUMENT).nodes.flatMap(node =>
+      node.type === 'model' ? (node.model.lanes?.flatMap(lane => lane.clips) ?? []) : [],
+    )
+
+  // The block IS the preview — the same trade the picker makes, since a rehearsal that differed
+  // from the result would be a defect rather than an approximation.
+  it('lays the real block on the character and watches it', async () => {
+    withCharacter(['NlaTrack'])
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('NlaTrack')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))
+
+    expect(blocksOf()).toHaveLength(1)
+    expect(useSceneViews.getState().views[DOCUMENT]?.preview).toMatchObject({ nodeId: 'perso' })
+  })
+
+  it('takes the block back off when the same row is pressed again', async () => {
+    withCharacter(['NlaTrack'])
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('NlaTrack')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Arrêter et retirer le bloc' }))
+
+    expect(blocksOf()).toEqual([])
+    expect(useSceneViews.getState().views[DOCUMENT]?.preview).toBeNull()
+  })
+
+  // Two blocks left standing would play at once on one character, which is not what pressing a
+  // second row asks for.
+  it('never leaves two previews on the character', async () => {
+    withCharacter(['NlaTrack', 'run'])
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('run')).toBeInTheDocument())
+
+    const buttons = screen.getAllByRole('button', { name: 'Jouer sur le personnage' })
+    await userEvent.click(buttons[0] as HTMLElement)
+    await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))
+
+    expect(blocksOf()).toHaveLength(1)
+  })
+
+  // Nothing to play it ON: the row is still listed, since a shipped animation is listed whatever
+  // is in front, and the button says so rather than doing nothing.
+  it('offers no preview while no character is in front', async () => {
+    installFakeBridge({
+      animations: { list: () => Promise.resolve([{ name: 'walk', thumbnail: false }]) },
+    })
+    render(<AnimationsPanel />)
+    await waitFor(() => expect(screen.getByText('walk')).toBeInTheDocument())
+
+    expect(screen.getByRole('button', { name: 'Jouer sur le personnage' })).toBeDisabled()
   })
 })
