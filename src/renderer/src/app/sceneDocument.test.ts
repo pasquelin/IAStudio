@@ -1,5 +1,5 @@
 import i18next from 'i18next'
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TRANSLATIONS } from '@shared/i18n'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import {
@@ -10,6 +10,15 @@ import {
 } from './sceneDocument'
 
 const DOCUMENT = 'doc-scene'
+
+/** What the load reported, so the case can read the sentence and not only its existence. */
+const { notices } = vi.hoisted(() => ({ notices: [] as string[] }))
+
+vi.mock('@/services/diagnostics', () => ({
+  reportNotice: (_scope: string, message: string) => {
+    notices.push(message)
+  },
+}))
 
 beforeAll(async () => {
   await i18next.init({
@@ -22,6 +31,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   forgetCarriedScene(DOCUMENT)
+  notices.length = 0
 })
 
 /** What a save writes: the whole document, recomposed from the state and from nothing else. */
@@ -50,9 +60,41 @@ describe('a scene on its way back from its file', () => {
     expect(sceneRefusesToSave(DOCUMENT)).toContain('glTF')
   })
 
+  /**
+   * The refusal has to NAME what blocks it. Asserting only that it is not null would pass just as
+   * well on an empty list of parts, which is a sentence with a hole in the middle.
+   */
   it('names what it found, so the refusal is not a mystery', () => {
-    sceneFromPayloadFile({ ...written(), animations: [] }, DOCUMENT)
+    sceneFromPayloadFile({ ...written(), animations: [], skins: [] }, DOCUMENT)
 
+    expect(notices.at(-1)).toContain('animations')
+    expect(notices.at(-1)).toContain('skins')
+    expect(sceneRefusesToSave(DOCUMENT)).not.toBeNull()
+  })
+
+  /**
+   * A node added elsewhere brings NO new root key — a Blender empty is one `nodes` entry, and a
+   * camera adds only to `cameras`. Both members are composed, so nothing reported them, and a
+   * save recomposes the nodes from the state alone: the object was erased without a word.
+   */
+  it('refuses to save one that came back holding a node the studio never wrote', () => {
+    const payload = written()
+    const nodes = Array.isArray(payload.nodes) ? payload.nodes : []
+
+    sceneFromPayloadFile({ ...payload, nodes: [...nodes, { name: 'Empty' }] }, DOCUMENT)
+    expect(sceneRefusesToSave(DOCUMENT)).not.toBeNull()
+  })
+
+  /** Never re-emitted at all, so a file carrying either comes back without it. */
+  it('refuses to save one carrying required extensions or extras of its own', () => {
+    sceneFromPayloadFile(
+      { ...written(), extensionsRequired: ['KHR_draco_mesh_compression'] },
+      DOCUMENT,
+    )
+    expect(sceneRefusesToSave(DOCUMENT)).not.toBeNull()
+
+    forgetCarriedScene(DOCUMENT)
+    sceneFromPayloadFile({ ...written(), extras: { pipeline: 'atelier' } }, DOCUMENT)
     expect(sceneRefusesToSave(DOCUMENT)).not.toBeNull()
   })
 

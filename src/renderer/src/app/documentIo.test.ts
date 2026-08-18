@@ -56,6 +56,7 @@ import {
   saveDocumentAs,
   unsavedDocumentIds,
 } from './documentIo'
+import { sceneFromPayloadFile } from './sceneDocument'
 
 // The real one needs a live Dockview; what this file checks is that closing and opening reach it.
 const closePanel = vi.fn()
@@ -288,6 +289,27 @@ describe('saveDocument', () => {
 
       expect(confirmOverwrite).not.toHaveBeenCalled()
       expect(isSceneDirty(useScenes.getState(), documentId)).toBe(true)
+    })
+
+    /**
+     * A refused document is refused on EVERY pass, and `document.save` is a gesture scope, so
+     * nothing deduplicates it: said here, the sentence would land in front of the user every
+     * thirty seconds, for good. The contract this suite holds is the one written on the function
+     * — « neither a refusal nor a failure is reported » — and only ⌘S answers for itself.
+     */
+    it('says nothing when a document refuses, where ⌘S says why', async () => {
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+      })
+      const documentId = await openScene()
+      // The file came back holding meshes, which a save would recompose away.
+      sceneFromPayloadFile({ asset: { version: '2.0' }, meshes: [{ primitives: [] }] }, documentId)
+
+      await autosaveOpenDocuments()
+      expect(entries().filter(entry => entry.scope === 'document.save')).toEqual([])
+
+      await saveDocument(documentId)
+      expect(entries().filter(entry => entry.scope === 'document.save')).toHaveLength(1)
     })
   })
 
