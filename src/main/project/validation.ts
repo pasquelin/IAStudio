@@ -27,7 +27,7 @@ import type {
   SaveTextureRequest,
 } from '@shared/ipc'
 import { isPngBytes } from '@main/media/png'
-import { pathSegment } from '@main/validation'
+import { pathSegment, withinCodePoints } from '@main/validation'
 import { base64Payload } from '@main/scenario/validation'
 
 const manifest = z.object({
@@ -57,20 +57,30 @@ export function parseProjectName(value: unknown): string {
   return pathSegment.parse(value)
 }
 
+// In code points, and generous rather than exact: `mkdirSync` takes an absolute path of 1 023
+// BYTES on APFS and refuses at 1 024 — swept a byte at a time, with segments under `NAME_MAX` —
+// so nothing a relative path this long names is a folder the disk would hold.
+const withinPathBound = withinCodePoints(1024)
+
 /**
- * A path inside the project, as the explorer asks for it: `''` for the root, then segments
- * joined by `/`. Never absolute, never a `.` or `..` segment, never a backslash.
+ * A path inside the project, as the explorer asks for it: `''` for the root, then segments joined
+ * by `/`. Bounded, never absolute, never climbing, and never through a backslash — Windows takes
+ * that as a separator, so `..\..` would walk out through a check that only looked at `/`.
  *
- * The refusal is the point, not the shape. This is the one channel where the renderer names a
- * path of its own, and `join(root, '../../..')` escapes the project on every platform — the
- * whole folder is otherwise reachable from a window that is not supposed to touch the disk.
- * Backslashes are refused rather than translated: Windows accepts them as separators, so
- * `..\..` would walk out through a check that only looked at `/`.
+ * A control character is deliberately NOT refused, unlike `pathSegment`: that one names what gets
+ * CREATED, this one names what already exists. APFS holds such a name and `folder.list` hands it
+ * straight back, so refusing here would lose a folder the disk really has.
  */
-const folderPath = z
-  .string()
-  .refine(value => !isAbsolute(value) && !value.startsWith('/') && !value.includes('\\'))
-  .refine(value => value.split('/').every(segment => segment !== '.' && segment !== '..'))
+const folderPath = z.string().refine(
+  // One `refine`, and short-circuited, because zod runs every check after a failed one: a bound
+  // of its own would still let a 5 MB string be split, two thousand at a time via `folderPaths`.
+  value =>
+    withinPathBound(value) &&
+    !isAbsolute(value) &&
+    !value.startsWith('/') &&
+    !value.includes('\\') &&
+    value.split('/').every(segment => segment !== '.' && segment !== '..'),
+)
 
 export function parseFolderPath(value: unknown): string {
   return folderPath.parse(value)
