@@ -389,16 +389,21 @@ describe('the translation bundles', () => {
        * `plan` was a third French word for the thing on a track, written under keys NAMED
        * `unlinkedClips`. The manual glossary settles it, head-word `Clip`.
        *
-       * The lookbehinds carry the three senses that stay: `premier plan`, `arrière-plan`, and
-       * `{{plan}}`, the subscription tier — a variable name, not screen text. `plane` and
-       * `plantage` are held by the trailing `\p{L}`: `\b` is ASCII and would read neither.
+       * The lookbehinds carry the senses that stay: `premier(s) plan(s)`, `second(s) plan(s)`,
+       * `arrière-plan`, and `{{plan}}` — the subscription tier, a variable name and not screen
+       * text. The plurals are not decoration: `premiers plans` passed the first writing.
        *
-       * `except` is the geometric plane. This does NOT settle `bloc` against `clip` — 22 French
-       * values say `bloc`, every one of them `assistant.*`, against 25 saying `clip`, and the
-       * glossary has no head-word for `bloc` to settle it either way.
+       * What the `\p{L}` lookarounds buy over `\b` is `planète`, and only it: `\b` rejects
+       * `plane` and `plantage` just as well, both neighbours being ASCII. Measured, after the
+       * JSDoc here claimed the opposite for a day.
+       *
+       * `except` is the geometric plane. `bloc` against `clip` meets this list's bar — 22 French
+       * values say `bloc`, all `assistant.*`, against 25 saying `clip`, and the glossary settles
+       * it with a head-word for `Clip`. It is left out for SCOPE, not for want of evidence: 20
+       * of the 22 sit under keys named `clip*`, which is a batch of its own.
        */
       {
-        dropped: /(?<!premier |arrière-|\{\{)(?<!\p{L})plans?(?!\p{L})/iu,
+        dropped: /(?<!premiers? |seconds? |arrière-|\{\{)(?<!\p{L})plans?(?!\p{L})/iu,
         kept: 'clip',
         except: ['meshes.plane', 'texture.shapePlane'],
       },
@@ -492,10 +497,27 @@ describe('the translation bundles', () => {
    */
   it('reads a settled French word whole, never inside a longer one', () => {
     const says = (word: string) => SETTLED_WORDS.fr.some(({ dropped }) => dropped.test(word))
+    const samples = [
+      'système de fichiers',
+      'préférence',
+      'champ de vision',
+      'maillage',
+      'matériau',
+      'rigué',
+      'riguées',
+      'un rig',
+      'des rigs',
+      'plan',
+      'plans',
+    ]
 
     // The canary of an assertion on an empty list: a reading that stopped matching would pass it.
+    expect(samples.filter(word => !says(word))).toEqual([])
+    // `says` is a disjunction: without this, a typo'd reading passes on a neighbour's match.
     expect(
-      ['rigué', 'riguées', 'un rig', 'des rigs', 'plan', 'plans'].filter(word => !says(word)),
+      SETTLED_WORDS.fr
+        .filter(({ dropped }) => !samples.some(word => dropped.test(word)))
+        .map(({ kept }) => kept),
     ).toEqual([])
     expect(
       [
@@ -503,9 +525,12 @@ describe('the translation bundles', () => {
         'intriguée',
         'rigueur',
         'garrigue',
+        'planète',
         'plane',
         'plantage',
         'premier plan',
+        'premiers plans',
+        'second plan',
         'arrière-plan',
         'abonnement {{plan}}',
       ].filter(says),
