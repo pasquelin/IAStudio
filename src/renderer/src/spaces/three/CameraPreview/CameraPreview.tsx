@@ -81,10 +81,12 @@ export function CameraPreview({ documentId }: { documentId: string }) {
     <div ref={host} className="pointer-events-none absolute inset-0">
       {camera && rect && (
         <div
+          // `muted` and not `border`, which is the frame of a panel: this one sits ON the
+          // viewport, and #34363a over #33363b is one step of one channel — invisible.
           // On air, the frame takes the head's own ink — the signal its bar wears in the sheet.
           className={cn(
             'absolute flex flex-col justify-between border',
-            onAir ? 'border-accent' : 'border-border',
+            onAir ? 'border-accent' : 'border-muted',
           )}
           style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
         >

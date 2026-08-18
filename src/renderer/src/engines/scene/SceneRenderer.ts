@@ -1292,7 +1292,8 @@ export class SceneRenderer {
 
   /**
    * Hides everything the workshop draws for the person editing — light helpers, camera
-   * frustums, skeletons, the grid — and hands back the call that puts them all back.
+   * frustums, skeletons, the grid, the rails, the transform gizmo — and hands back the call
+   * that puts them all back.
    *
    * A render is the scene, not the tools it was built with. A directional light's helper is a
    * line drawn clean across the picture, and it was in every frame of both the film and the
@@ -1311,6 +1312,9 @@ export class SceneRenderer {
     for (const skeleton of this.skeletons.values()) hide(skeleton)
     for (const frustum of this.frustums.values()) hide(frustum)
     hide(this.grid)
+    // The arrows a person drags an object by. They stand where the object stands, so a camera
+    // aimed at a selected node fills its preview — and its film — with the tool instead.
+    hide(this.gizmo?.getHelper())
 
     // A rail is a working aid like the grid, not something a shot puts on screen: drawn, its
     // line and its knobs would run across every previewed and every rendered frame.

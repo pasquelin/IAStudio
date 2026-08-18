@@ -1,7 +1,9 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { AA_NON_TEXT, contrastRatio } from '@shared/domain/color'
 import { SECOND } from '@shared/domain/time'
+import stylesheet from '@/index.css?raw'
 import { cameraShot } from '@/engines/scene/animation-fixtures'
 import { cameraNodeFixture, meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
@@ -10,6 +12,7 @@ import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { installScene } from '@/stores/scene-fixtures'
 import { useSceneViews } from '@/stores/sceneViews'
 import { CameraPreview } from './CameraPreview'
+import source from './CameraPreview.tsx?raw'
 
 const DOCUMENT = 'doc-1'
 
@@ -71,6 +74,21 @@ describe('the camera preview', () => {
 
     act(() => useSceneViews.getState().setPlayhead(DOCUMENT, 3 * SECOND))
     expect(screen.getByText('À l’antenne')).toBeInTheDocument()
+  })
+
+  /**
+   * Measured rather than spelled out: `border-border` was #34363a over a #33363b viewport — one
+   * step of one channel, and the frame was not there at all on screen. The bar is the 3:1 WCAG
+   * 1.4.11 asks of a glyph that informs, which is what a monitor's frame is.
+   */
+  it('draws a frame that can be told from the viewport it sits on', () => {
+    const token = /border-(?!accent)([a-z-]+)'/.exec(source)?.[1] ?? ''
+    const tokenOf = (name: string): string =>
+      /--color-[a-z0-9-]+:\s*(#[0-9a-fA-F]{6})/.exec(
+        stylesheet.slice(stylesheet.indexOf(`--color-${name}:`)),
+      )?.[1] ?? ''
+
+    expect(contrastRatio(tokenOf(token), tokenOf('viewport'))).toBeGreaterThanOrEqual(AA_NON_TEXT)
   })
 
   it('grows to the whole view and comes back to its corner', async () => {

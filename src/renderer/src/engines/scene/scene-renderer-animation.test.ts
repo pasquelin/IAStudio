@@ -416,6 +416,27 @@ describe('SceneRenderer and a camera on a rail', () => {
     engine.dispose()
   })
 
+  /**
+   * The gizmo stands where the object stands, so a camera aimed at a selected node filled its
+   * preview — and its film — with the arrows instead of the node. Stood in for: the real one
+   * needs a GL canvas, and `hideWorkshop` asks it for nothing but its helper.
+   */
+  it('hides the transform gizmo for a pass that shows what a camera films', () => {
+    const engine = staged()
+    const helper = new Group()
+    Reflect.set(engine, 'gizmo', { getHelper: () => helper })
+    const restore: () => void = Reflect.get(engine, 'hideWorkshop').call(engine)
+
+    expect(helper.visible).toBe(false)
+    restore()
+    expect(helper.visible).toBe(true)
+
+    // Back to none before disposing: the stand-in answers `getHelper` and nothing else, and
+    // teardown unsubscribes from the real one.
+    Reflect.set(engine, 'gizmo', null)
+    engine.dispose()
+  })
+
   it('leaves a camera with no shot exactly where its transform puts it', () => {
     const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
     engine.apply({ ...EMPTY_SCENE, nodes: [cameraNodeFixture('cam')] })
