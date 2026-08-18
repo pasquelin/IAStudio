@@ -518,6 +518,17 @@ export function addModelClip(id: string, clip: ClipRef): Command<SceneState> {
   })
 }
 
+/** One block gone, wherever it sat. The lane stays, empty if it has to — see `setModelLanes`. */
+export function removeModelClip(id: string, clipId: string): Command<SceneState> {
+  return editModel(id, 'lanes', model => ({
+    ...model,
+    lanes: model.lanes?.map(lane => ({
+      ...lane,
+      clips: lane.clips.filter(clip => clip.id !== clipId),
+    })),
+  }))
+}
+
 /** What a handle bone is called, after the joint that reaches for it. */
 export const IK_HANDLE = '.handle'
 

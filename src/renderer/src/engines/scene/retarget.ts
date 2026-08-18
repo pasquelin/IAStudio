@@ -219,6 +219,32 @@ export function retargetPlanOf(
   return { target, source, clips, names, hip: sourceByRole.get('Hips'), fps }
 }
 
+/**
+ * How well an animation fits a character: which joints both of them name, and which only one does.
+ *
+ * What the screen needs to say « compatible » or « not quite », and to say WHICH joint is the
+ * trouble. Roles and not bones, because that is the only vocabulary the two skeletons share —
+ * `mixamorigLeftHand` and `L_Hand` are the same thing and no string comparison says so.
+ */
+export type RetargetFit = {
+  matched: HumanoidRole[]
+  /** Named by the character and not by the animation: that joint will simply stay at rest. */
+  missingInSource: HumanoidRole[]
+  /** Named by the animation and not by the character: that much of the motion is dropped. */
+  missingInTarget: HumanoidRole[]
+}
+
+export function retargetFitOf(target: Object3D, source: Object3D): RetargetFit {
+  const targetRoles = new Set(Object.values(boneRolesOf(namedBonesOf(wireBonesOf(target)))))
+  const sourceRoles = new Set(Object.values(boneRolesOf(namedBonesOf(wireBonesOf(source)))))
+
+  return {
+    matched: [...targetRoles].filter(role => sourceRoles.has(role)),
+    missingInSource: [...targetRoles].filter(role => !sourceRoles.has(role)),
+    missingInTarget: [...sourceRoles].filter(role => !targetRoles.has(role)),
+  }
+}
+
 /** The wire spells a parent as an index; reading roles wants it as a name. */
 function namedBonesOf(bones: readonly WireBone[]): NamedBone[] {
   return bones.map(bone => ({ name: bone.name, parent: bones[bone.parent]?.name ?? null }))

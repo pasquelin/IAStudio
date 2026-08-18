@@ -1,4 +1,4 @@
-import { AnimationClip, QuaternionKeyframeTrack, VectorKeyframeTrack } from 'three'
+import { AnimationClip, Bone, Object3D, QuaternionKeyframeTrack, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf } from '@shared/domain/skeletonProfile'
@@ -6,6 +6,7 @@ import {
   clipFromWire,
   createRetarget,
   nodeTrackNameOf,
+  retargetFitOf,
   retargetPlanOf,
   sameSkeleton,
   skeletonScaleOf,
@@ -147,6 +148,51 @@ describe('pairing a skeleton whose mapping was put right by hand', () => {
     const other: WireBone[] = [boneAt('c0', -1, 2)]
 
     expect(retargetPlanOf(other, UTHANA, [], undefined, learnt({ b0: 'Hips' })).names).toEqual({})
+  })
+})
+
+describe('how well an animation fits a character', () => {
+  /** A tree of named bones, so the fit is read off two real skeletons rather than off wire rows. */
+  const treeOf = (names: readonly string[]): Object3D => {
+    const root = new Object3D()
+    let parent: Object3D = root
+    for (const name of names) {
+      const bone = new Bone()
+      bone.name = name
+      parent.add(bone)
+      parent = bone
+    }
+    return root
+  }
+
+  const HUMAN = treeOf(['mixamorigHips', 'mixamorigSpine', 'mixamorigNeck', 'mixamorigHead'])
+
+  it('names the joints both of them know, in roles rather than in bone names', () => {
+    const tripo = treeOf(['Hip', 'Spine01', 'NeckTwist01', 'Head'])
+
+    // `mixamorigHips` and `Hip` are the same joint, and no string comparison says so. `Spine01`
+    // is deliberately absent: Tripo spells the CHEST that way, which `boneRoles` measured.
+    expect([...retargetFitOf(tripo, HUMAN).matched].sort()).toEqual(['Head', 'Hips', 'Neck'])
+  })
+
+  it('says which joint the character has and the animation never moves', () => {
+    const withArms = treeOf(['mixamorigHips', 'mixamorigSpine', 'mixamorigLeftArm'])
+
+    expect(retargetFitOf(withArms, HUMAN).missingInSource).toContain('LeftUpperArm')
+  })
+
+  it('says which joint the animation drives and the character does not have', () => {
+    const bare = treeOf(['mixamorigHips'])
+
+    expect(retargetFitOf(bare, HUMAN).missingInTarget).toContain('Head')
+  })
+
+  // « Compatible » has to be a measurement rather than a hope: two skeletons of one convention
+  // leave nothing on either side.
+  it('finds nothing missing between two skeletons of the same convention', () => {
+    const fit = retargetFitOf(HUMAN, HUMAN)
+
+    expect([...fit.missingInSource, ...fit.missingInTarget]).toEqual([])
   })
 })
 

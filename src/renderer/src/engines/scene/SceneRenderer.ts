@@ -150,7 +150,7 @@ import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
 import SkinWorker from './skinWeights.worker?worker'
 import RetargetWorker from './retarget.worker?worker'
-import { createRetarget, type Retarget } from './retarget'
+import { createRetarget, retargetFitOf, type Retarget, type RetargetFit } from './retarget'
 import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
 import { createIkBinding, ikSpecsOf, type IkBinding } from './ik'
 import { createBoneJoints, type BoneJoints } from './boneJoints'
@@ -187,6 +187,11 @@ export type SceneRendererOptions = {
     clips: readonly string[],
     lengths: Readonly<Record<string, number>>,
   ) => void
+  /**
+   * How well a clip from elsewhere fits this character, once both skeletons are in hand. Only
+   * the engine ever holds the two at once, so nothing else could work it out.
+   */
+  onClipFit?: (nodeId: string, clipKey: string, fit: RetargetFit) => void
   /**
    * What a model turned out to be once its file landed — bones, humanoid roles, and which of the
    * five states it is in. Same reason as `onClips`: none of it lives in the document.
@@ -2196,6 +2201,10 @@ export class SceneRenderer {
       // The first clip and only it: one file IS one animation, however many it spells.
       const first = clipsOf(source)[0]
       if (!first) throw new Error('this file carries no animation')
+
+      // Before the retarget and not after: it is the only moment both skeletons are in hand, and
+      // it is what lets the screen say WHICH joint the motion has nothing to drive.
+      this.options.onClipFit?.(nodeId, clip.key, retargetFitOf(holder, source))
 
       const adapted = (await this.retarget.adapt(holder, source, [first]))?.[0]
       if (!adapted || this.objects.get(nodeId) !== holder) return

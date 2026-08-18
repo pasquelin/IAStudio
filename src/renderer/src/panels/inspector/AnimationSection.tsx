@@ -1,15 +1,24 @@
 import { mdiPause, mdiPlay } from '@mdi/js'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { clipLane, embeddedClip, MAIN_LANE_ID, type ClipRef } from '@shared/domain/scene'
+import {
+  clipLane,
+  DEFAULT_CLIP,
+  embeddedClip,
+  MAIN_LANE_ID,
+  type ClipRef,
+  type ClipSource,
+} from '@shared/domain/scene'
+import { AnimationPicker } from '@/design/AnimationPicker/AnimationPicker'
 import { BODY_PARTS, isBodyPart, WHOLE_BODY, type BodyPart } from '@shared/domain/humanoid'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { QuietNote } from '@/design/QuietNote'
 import { SliderField } from '@/design/SliderField'
-import { NATIVE_SELECT } from '@/design/styles'
+import { INLINE_LINK, NATIVE_SELECT } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
-import { setModelLanes } from '@/engines/scene/commands'
+import { addModelClip, removeModelClip, setModelLanes } from '@/engines/scene/commands'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import type { ModelNode } from '@/engines/scene/sceneState'
 import { cn } from '@/helpers/cn'
@@ -44,6 +53,10 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   const rig = useModelClips(state => rigOfNode(state, documentId, node.id))
   const preview = useSceneViews(state => sceneViewOf(state, documentId).preview)
   const picked = useAnimationViews(state => animationViewOf(state, documentId).pickedBlock)
+  const [open, setOpen] = useState(false)
+  const [opener, setOpener] = useState<HTMLElement | null>(null)
+  /** The block the picker laid while browsing, so keeping it is doing nothing more. */
+  const [picking, setPicking] = useState<{ clipId: string; source: ClipSource } | null>(null)
 
   // Nothing has landed yet: a section explaining a model the studio has not read would be wrong
   // rather than empty.
@@ -102,9 +115,52 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
     play(next)
   }
 
+  /** Lays what the picker chose, plays it at once, and remembers which block that was. */
+  const browse = (source: ClipSource, label: string): void => {
+    const laid = { ...DEFAULT_CLIP, id: newId(), source, label }
+    if (picking?.clipId) edit.run(removeModelClip(node.id, picking.clipId))
+    edit.run(addModelClip(node.id, laid))
+    setPicking({ clipId: laid.id, source })
+    play(laid)
+  }
+
+  /** Leaves the block where it is, and stops watching it: keeping is doing nothing more. */
+  const keep = (): void => {
+    setPicking(null)
+    play(null)
+  }
+
+  const drop = (): void => {
+    if (picking?.clipId) edit.run(removeModelClip(node.id, picking.clipId))
+    setPicking(null)
+    play(null)
+  }
+
   return (
     <PropertySection title={t('inspector.animation')}>
       <QuietNote>{t(`inspector.rigStatus_${rig.status}`)}</QuietNote>
+
+      {/* The one way in, and it browses by LAYING: the preview is the result, never a rehearsal. */}
+      <button ref={setOpener} type="button" className={INLINE_LINK} onClick={() => setOpen(!open)}>
+        {t('inspector.addAnimation')}
+      </button>
+      {open && (
+        <AnimationPicker
+          documentId={documentId}
+          nodeId={node.id}
+          anchor={opener}
+          laid={picking}
+          onChoose={browse}
+          onKeep={() => {
+            keep()
+            setOpen(false)
+          }}
+          onDismiss={() => {
+            drop()
+            setOpen(false)
+          }}
+        />
+      )}
 
       {/* Shown for a block whose clip the file no longer spells, too: without the picker its
           « none » option is gone, and a block nothing can play could never be taken off. */}
