@@ -3,12 +3,16 @@ import {
   useEffect,
   useMemo,
   useRef,
+  type DragEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent,
 } from 'react'
 import { snapToFrame, type Us } from '@shared/domain/time'
 import { moveAnimationKey, unkeySubject } from '@/engines/scene/animationCommands'
-import type { ClipRef } from '@shared/domain/scene'
+import { embeddedClip, type ClipRef } from '@shared/domain/scene'
+import { isRecord } from '@shared/guards'
+import { newId } from '@/helpers/ids'
+import { ANIMATION_DRAG_TYPE } from '@/panels/animations/dragged'
 import { multi, setModelLanes } from '@/engines/scene/commands'
 import { clipsMoved, clipsTrimmed, lanesWith } from '@/engines/scene/clipBlend'
 import { useModelClips } from '@/stores/modelClips'
@@ -218,7 +222,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     return { rows: current.rows, viewport: current.viewport, fps: current.timeline.fps }
   }
 
-  const pointIn = (event: PointerEvent<HTMLCanvasElement>): Point => {
+  const pointIn = (event: { currentTarget: Element; clientX: number; clientY: number }): Point => {
     const bounds = event.currentTarget.getBoundingClientRect()
     return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
   }
@@ -231,6 +235,38 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     useSceneViews
       .getState()
       .setPlayhead(documentId, clampPlayhead(snapToFrame(time, held.fps), held.duration))
+  }
+
+  /**
+   * Drops an animation onto the lane under the pointer, where it was let go. Only a lane accepts
+   * one: a channel holds keys, and a subject line is the object itself.
+   */
+  const onDrop = (event: DragEvent<HTMLCanvasElement>): void => {
+    const written = event.dataTransfer.getData(ANIMATION_DRAG_TYPE)
+    if (!written) return
+
+    event.preventDefault()
+    const hit = hitAnimation(hitContext(), pointIn(event))
+    if (!hit || hit.kind === 'ruler') return
+
+    const row = latest.current.rows.find(candidate => candidate.id === hit.rowId)
+    if (row?.kind !== 'lane') return
+
+    const dropped: unknown = JSON.parse(written)
+    // A bundled animation still has to be read off disk and retargeted, which is not this lot.
+    if (!isRecord(dropped) || typeof dropped.clip !== 'string') return
+    const clip = dropped.clip
+
+    const current = latest.current
+    const at = clampPlayhead(
+      snapToFrame(xToTime(pointIn(event).x, current.viewport), current.timeline.fps),
+      current.timeline.duration,
+    )
+
+    const laid = embeddedClip(newId(), clip, { start: Math.max(0, at) })
+    editLane(documentId, { ...row, clipId: laid.id }, clips => [...clips, laid])
+    // Dropped is chosen: the inspector then describes what one has just laid down.
+    useAnimationViews.getState().setPickedBlock(documentId, laid.id)
   }
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>): void => {
@@ -359,6 +395,13 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       // Focusable, or the canvas would never receive a key at all.
       tabIndex={0}
       onKeyDown={onKeyDown}
+      // Without the `preventDefault` on drag-over the drop never fires at all.
+      onDragOver={event => {
+        if (!event.dataTransfer.types.includes(ANIMATION_DRAG_TYPE)) return
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'copy'
+      }}
+      onDrop={onDrop}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={closeGesture}

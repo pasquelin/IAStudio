@@ -40,3 +40,11 @@ export function bundledFfmpeg(root: string, platform: NodeJS.Platform): string {
 export function bundledVad(root: string): string {
   return join(root, 'stt', 'silero_vad.onnx')
 }
+
+/**
+ * Where the animations shipped with the app live — one folder per animation, holding the clip
+ * and its `thumb.png`. Common to every project, read-only, updated by updating the app.
+ */
+export function bundledAnimations(root: string): string {
+  return join(root, 'animations')
+}

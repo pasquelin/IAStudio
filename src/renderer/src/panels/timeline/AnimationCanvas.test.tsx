@@ -12,6 +12,7 @@ import { animationRows, CHANNEL_HEIGHT, SUBJECT_HEIGHT } from '@/engines/scene/a
 import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
 import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
+import { ANIMATION_DRAG_TYPE } from '@/panels/animations/dragged'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene } from '@/stores/scene-fixtures'
@@ -89,10 +90,12 @@ describe('dragging a clip block', () => {
     })
   })
 
-  const blockOf = (): ClipRef | null => {
+  const laneOf = () => {
     const node = sceneOf(useScenes.getState(), DOCUMENT).nodes[0]
-    return node?.type === 'model' ? (node.model.lanes?.[0]?.clips[0] ?? null) : null
+    return node?.type === 'model' ? (node.model.lanes?.[0] ?? null) : null
   }
+
+  const blockOf = (): ClipRef | null => laneOf()?.clips[0] ?? null
 
   const startOf = (): number => blockOf()?.start ?? -1
 
@@ -130,6 +133,52 @@ describe('dragging a clip block', () => {
     press(canvas(), 'pointerup', 500, LANE_Y)
 
     expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 2)
+  })
+
+  /** Dropping an animation from the panel, as the browser hands it over. */
+  function drop(element: Element, payload: unknown, x: number, y: number): void {
+    const event = new MouseEvent('drop', {
+      bubbles: true,
+      clientX: x,
+      clientY: y,
+      cancelable: true,
+    })
+    Object.defineProperty(event, 'dataTransfer', {
+      value: {
+        getData: (type: string) => (type === ANIMATION_DRAG_TYPE ? JSON.stringify(payload) : ''),
+      },
+    })
+    element.dispatchEvent(event)
+  }
+
+  // The only gesture that puts a SECOND block on a lane: without it a model could hold one clip
+  // and neither "one after another" nor "both at once" was reachable.
+  it('lays a block where an animation is dropped, on the lane it lands on', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    drop(canvas(), { kind: 'embedded', clip: 'Walk' }, 400, LANE_Y)
+
+    const clips = laneOf()?.clips ?? []
+    expect(clips).toHaveLength(2)
+    expect(clips[1]?.start).toBe(4 * SECOND)
+    expect(clips[1]?.source.name).toBe('Walk')
+  })
+
+  it('makes the block one just dropped the chosen one', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    drop(canvas(), { kind: 'embedded', clip: 'Walk' }, 400, LANE_Y)
+
+    const laid = laneOf()?.clips[1]
+    expect(animationViewOf(useAnimationViews.getState(), DOCUMENT).pickedBlock).toBe(laid?.id)
+  })
+
+  it('lays nothing when the drop lands on a channel or on the ruler', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    drop(canvas(), { kind: 'embedded', clip: 'Walk' }, 400, 4)
+
+    expect(laneOf()?.clips).toHaveLength(1)
   })
 
   it('shows the block one presses as the chosen one, and drops the picked keys', () => {

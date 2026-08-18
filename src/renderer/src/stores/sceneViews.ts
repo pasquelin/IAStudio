@@ -32,6 +32,14 @@ export type SceneView = {
    */
   playing: boolean
   /**
+   * The block being watched on its own clock, by node and by block id, or nothing.
+   *
+   * Deliberately NOT the head: watching one animation is a look at a block, not a move of the
+   * scene's clock, and the band must stay where it was left. Moving the head drops it — two
+   * clocks driving one model is the one thing that would make a render disagree with the screen.
+   */
+  preview: { nodeId: string; clipId: string } | null
+  /**
    * Where the free camera of the 3D tab stands, published once a drag of it settles.
    *
    * It is here so a MONTAGE can look through it: a scene with no camera of its own is drawn
@@ -56,6 +64,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   panes: DEFAULT_PANE_VIEWS,
   playhead: 0,
   playing: false,
+  preview: null,
   camera: null,
 }
 
@@ -79,6 +88,7 @@ export type SceneViewsState = {
   setPaneView: (documentId: string, pane: number, view: PaneView) => void
   setPlayhead: (documentId: string, playhead: Us) => void
   setPlaying: (documentId: string, playing: boolean) => void
+  setPreview: (documentId: string, preview: SceneView['preview']) => void
   setCamera: (documentId: string, camera: CameraPlacement) => void
 }
 
@@ -134,14 +144,30 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
       return { views: { ...state.views, [documentId]: { ...current, panes } } }
     }),
 
+  // Moving the head drops the preview: two clocks driving one model is what makes a render
+  // disagree with the screen.
   setPlayhead: (documentId, playhead) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), playhead } },
+      views: {
+        ...state.views,
+        [documentId]: { ...sceneViewOf(state, documentId), playhead, preview: null },
+      },
     })),
 
   setPlaying: (documentId, playing) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), playing } },
+      views: {
+        ...state.views,
+        [documentId]: { ...sceneViewOf(state, documentId), playing, preview: null },
+      },
+    })),
+
+  setPreview: (documentId, preview) =>
+    set(state => ({
+      views: {
+        ...state.views,
+        [documentId]: { ...sceneViewOf(state, documentId), preview, playing: false },
+      },
     })),
 
   setCamera: (documentId, camera) =>

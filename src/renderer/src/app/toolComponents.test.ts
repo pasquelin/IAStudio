@@ -6,6 +6,7 @@ import { definition as channels } from '@/panels/channels'
 import { definition as explorer } from '@/panels/explorer'
 import { definition as git } from '@/panels/git'
 import { definition as history } from '@/panels/history'
+import { definition as animations } from '@/panels/animations'
 import { definition as library } from '@/panels/library'
 import { definition as generator } from '@/panels/generator'
 import { definition as inspector } from '@/panels/inspector'
@@ -48,6 +49,7 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   view,
   projects,
   library,
+  animations,
 }
 
 const IDS = Object.keys(PANELS).filter(isKnownTool)
