@@ -4,7 +4,7 @@ import type { TrackProperty } from '@shared/domain/animation'
 import { snapToFrame } from '@shared/domain/time'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
-import { keyNode, moveShotCamera, unkeySubject } from '@/engines/scene/animationCommands'
+import { keyNode, reorderCameraShots, unkeySubject } from '@/engines/scene/animationCommands'
 import { trackIdsOf, type SubjectRow } from '@/engines/scene/animationRows'
 import { shotsWithCameraMoved } from '@/engines/scene/cameraShots'
 import { newId } from '@/helpers/ids'
@@ -65,20 +65,17 @@ export function AnimationHeadersSubject({
 
   const label = t('animation.reorderRow', { name: row.name })
 
-  /**
-   * A camera's line is the montage's law itself, so dragging it EDITS the document — where a
-   * plain subject's line is only rearranged on screen, which no history holds.
-   */
+  // A camera's line IS the montage's law, so dragging it edits the document — where a plain
+  // subject's line is only rearranged on screen, which no history holds.
   const reorder: RowReorder = row.bars
     ? {
         label,
         move: by => {
           const store = useScenes.getState()
-          const shots = sceneOf(store, documentId).animation.shots
-          const moved = shotsWithCameraMoved(shots, row.id, by)
+          const moved = shotsWithCameraMoved(sceneOf(store, documentId).animation.shots, row.id, by)
           if (!moved) return 0
 
-          store.runCommand(documentId, moveShotCamera(row.id, by))
+          store.runCommand(documentId, reorderCameraShots(row.id, moved.shots))
           return moved.steps
         },
         // A drag across three places is one thing the user did: without the gesture, `runCommand`

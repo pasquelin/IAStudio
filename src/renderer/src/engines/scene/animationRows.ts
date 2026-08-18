@@ -228,9 +228,8 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
   const onAir = shotCameras(timeline.shots).filter(cameraId => named.has(cameraId))
 
   // The cameras on air open the sheet, in the order the DOCUMENT holds their shots — that order
-  // IS the montage's law, so what the eye reads and what `activeShotAt` answers cannot disagree.
-  // They are left out of the arrangement below for the same reason: a line whose rank is the law
-  // must not be rearrangeable on screen alone.
+  // IS the montage's law, so the eye and `activeShotAt` cannot disagree. Which is also why they
+  // are left out of the arrangement below.
   for (const cameraId of onAir) push(cameraId, barsOf(timeline, cameraId, named))
 
   /** The objects first, in the order the scene holds them, then the bones keyed inside them. */

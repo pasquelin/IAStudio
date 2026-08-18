@@ -14,7 +14,7 @@ import type { Command } from '../core/history'
 import { addNode, moveNodes, multi } from './commands'
 import { pathNode } from './nodeFactory'
 import { deltaOf, valueAt, withKey, withoutKey } from './animationEval'
-import { shotsWith, shotsWithCameraMoved } from './cameraShots'
+import { shotsWith } from './cameraShots'
 import { nodeById, type CameraNode, type NodeMove, type SceneState } from './sceneState'
 
 /**
@@ -395,18 +395,22 @@ export function editCameraShot(
  *
  * An edit of the DOCUMENT, unlike the sheet's own arrangement: this order is the law an overlap
  * is settled by, so moving a line changes what the film looks through.
+ *
+ * The whole list arrives written rather than a number of notches, and `coalesce` is why: a drag
+ * merges into ONE entry that keeps the LAST apply, so a step would replay a three-notch gesture
+ * as one. `cameraId` names the line only so two drags of two lines stay two entries.
  */
-export function moveShotCamera(cameraId: string, by: number): Command<SceneState> {
+export function reorderCameraShots(
+  cameraId: string,
+  shots: readonly CameraShot[],
+): Command<SceneState> {
   let previous: readonly CameraShot[] | null = null
 
   return {
     id: `shot:camera:${cameraId}`,
     apply: state => {
-      const moved = shotsWithCameraMoved(state.animation.shots, cameraId, by)
-      if (!moved) return state
-
       previous = state.animation.shots
-      return writeShots(state, () => moved.shots)
+      return writeShots(state, () => shots)
     },
     revert: state => {
       const origin = previous

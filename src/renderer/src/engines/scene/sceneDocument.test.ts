@@ -650,6 +650,20 @@ describe('the timeline a file holds', () => {
     expect(shots[0]).not.toHaveProperty('layer')
   })
 
+  // The stack a user arranged IS the order of this list now, so a read that re-sorted it would
+  // undo that arrangement every time the document was opened.
+  it('leaves the order of a file written without layers exactly as it stands', () => {
+    const held = (id: string, start: number) => ({
+      id,
+      cameraId: `cam-${id}`,
+      start,
+      duration: 5,
+    })
+
+    const shots = read({ tracks: [], shots: [held('late', 9), held('early', 0)] }).shots
+    expect(shots.map(shot => shot.id)).toEqual(['late', 'early'])
+  })
+
   // A shot of no length covers no instant, so it can only ever be a hole in the band.
   it('drops a shot of no length, and one naming no camera, rather than the band around it', () => {
     const shot = { id: 'shot-1', cameraId: 'cam-a', layer: 0, start: 0, duration: 5 }

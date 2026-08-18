@@ -11,11 +11,7 @@ export type AnimationHeadersProps = {
   rows: readonly AnimationRow[]
 }
 
-/**
- * The lines the sheet's own arrangement covers. A camera on air is left out: its rank is the
- * montage's law, held in the document, and rearranging it on screen alone would make the picture
- * lie about what the film looks through.
- */
+/** A camera on air is out: its rank is the document's law, not an arrangement of the sheet. */
 function shownSubjects(rows: readonly AnimationRow[]): string[] {
   return rows.filter(row => row.kind === 'subject' && !row.bars).map(row => row.id)
 }

@@ -11,8 +11,8 @@ import {
   keyNode,
   keySubject,
   moveAnimationKey,
-  moveShotCamera,
   movesToCommand,
+  reorderCameraShots,
   railOnNewShot,
   recordMove,
   removeAnimationKey,
@@ -615,18 +615,31 @@ describe('the shots of a sequence', () => {
    * The order of the lines is the montage's law, so dragging one is an edit of the document —
    * unlike the sheet's own arrangement, which no history holds.
    */
-  it('moves a camera’s line down the stack, its shots travelling whole', () => {
-    const command = moveShotCamera('cam-a', 1)
+  it('writes the order it is given, and gives back the one that stood before', () => {
+    const command = reorderCameraShots('cam-a', [other, shot])
     const applied = command.apply(start)
 
-    expect(applied.animation.shots.map(held => held.cameraId)).toEqual(['cam-b', 'cam-a'])
+    expect(applied.animation.shots.map(held => held.id)).toEqual(['s2', 's1'])
     expect(command.revert(applied)).toEqual(start)
   })
 
-  it('leaves the state alone at the end of the stack, so undo has nothing to give back', () => {
-    const command = moveShotCamera('cam-b', 1)
-    expect(command.apply(start)).toBe(start)
-    expect(command.revert(start)).toBe(start)
+  it('replays a whole drag rather than its last notch, once the steps have coalesced', () => {
+    const third = cameraShot('s3', { cameraId: 'cam-c' })
+    const from: SceneState = {
+      ...start,
+      animation: { ...start.animation, shots: [shot, other, third] },
+    }
+
+    const first = reorderCameraShots('cam-a', [other, shot, third])
+    const last = reorderCameraShots('cam-a', [other, third, shot])
+
+    // `coalesce` keeps the FIRST revert and the LAST apply, so the last apply has to describe the
+    // drag from where it STARTED — a command holding a step would redo one notch of the two.
+    first.apply(from)
+    const replayed = last.apply(from)
+
+    expect(replayed.animation.shots.map(held => held.id)).toEqual(['s2', 's3', 's1'])
+    expect(first.revert(replayed)).toEqual(from)
   })
 
   /**

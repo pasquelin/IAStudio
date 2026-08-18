@@ -322,6 +322,10 @@ function shotsInOrder(shots: readonly CameraShot[]): CameraShot[] {
   // every writer go on filling a number nothing reads.
   const written = shots as readonly (CameraShot & { layer?: number })[]
 
+  // Only a file that HELD layers is re-sorted. Without this the comparator would fall through to
+  // `start` on every document written since, undoing on each read the stack the user arranged.
+  if (!written.some(shot => typeof shot.layer === 'number')) return [...written]
+
   return [...written]
     .sort((left, right) => (right.layer ?? 0) - (left.layer ?? 0) || left.start - right.start)
     .map(({ layer: _, ...kept }) => kept)
