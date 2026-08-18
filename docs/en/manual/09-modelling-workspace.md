@@ -694,6 +694,27 @@ something to choose.
 block** that bears the clip's name. The line holding it is a **sub-track**, called **Anim. 1**,
 **Anim. 2**, and so on. Sub-tracks are grouped **under** the key lines, never mixed into them.
 
+**A clip its file does not name is called "Animation" on screen**, or **Animation 1**,
+**Animation 2** — and everywhere the studio names it: the **Clip** picker, the block on the band,
+the Animations panel and the add panel. That is the common case: a Tripo export calls its only clip
+`NlaTrack` — the name Blender gives by default to a track nobody named — and a Uthana export names
+none at all, which is what gets them numbered on opening.
+
+**The number is not a rank recounted**: it is the one the file already carries. Where named clips
+are mixed in with the others, **the numbering skips** — "Animation 1", "Walk", "Animation 3".
+
+> **The file keeps its own word.** This replacement lives on screen only: open the scene elsewhere
+> and `NlaTrack` is still there. That is deliberate — writing "Animation" into the document would
+> freeze the language of the day it was saved, and a French file would stay French for an English
+> reader.
+
+**Every other name is left alone**: the studio replaces those two spellings and nothing else, to
+the letter. A clip somebody really did call `NlaTrack` would therefore be renamed too — nothing
+tells the two apart.
+
+> **A SHIPPED animation does not follow this rule**: it bears the name of its folder, whatever its
+> file spells. That is a different mechanism, described further down.
+
 ### Making a model animatable
 
 An imported model most often carries no skeleton at all: it is a **mesh**, and nothing can animate
