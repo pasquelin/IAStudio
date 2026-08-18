@@ -286,6 +286,21 @@ export function bundledClip(id: string, name: string, extra: Partial<ClipRef> = 
 }
 
 /**
+ * A block on an animation the PROJECT holds: a file of its own, played on another character.
+ *
+ * The name is the asset's, which is a file's stem rather than anything the clip inside spells —
+ * `NlaTrack` and `animation_0` are what those spell, and neither may reach the screen.
+ */
+export function assetClip(
+  id: string,
+  assetId: string,
+  name: string,
+  extra: Partial<ClipRef> = {},
+): ClipRef {
+  return { ...DEFAULT_CLIP, ...extra, id, source: { kind: 'asset', assetId, name }, label: name }
+}
+
+/**
  * The block a document written before clips were plural describes.
  *
  * The id is fixed rather than minted so that reopening a file twice gives the same document; that

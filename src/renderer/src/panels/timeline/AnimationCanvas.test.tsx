@@ -13,6 +13,8 @@ import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
 import { cameraNodeFixture, meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { ANIMATION_DRAG_TYPE } from '@/panels/animations/dragged'
+import { ASSET_DRAG_TYPE } from '@/helpers/assetDrag'
+import { useAssets } from '@/stores/assets'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene } from '@/stores/scene-fixtures'
@@ -182,6 +184,53 @@ describe('dragging a clip block', () => {
     render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
 
     drop(canvas(), { kind: 'bundled', path: '/somewhere/walk.glb' }, 400, LANE_Y)
+
+    expect(laneOf()?.clips).toHaveLength(1)
+  })
+
+  /** Dropping a model of the project onto a lane, as the asset browser hands it over. */
+  function dropAsset(element: Element, id: string, x: number, y: number): void {
+    const event = new MouseEvent('drop', { bubbles: true, clientX: x, clientY: y })
+    Object.defineProperty(event, 'dataTransfer', {
+      value: {
+        types: [ASSET_DRAG_TYPE, `${ASSET_DRAG_TYPE}+mesh`],
+        getData: (type: string) => (type === ASSET_DRAG_TYPE ? id : ''),
+      },
+    })
+    element.dispatchEvent(event)
+  }
+
+  // Case 6 of the issue: a file the project holds, dropped for the motion inside it. The mesh it
+  // also carries is the engine's business to leave alone; the block only ever names the asset.
+  it('lays a block on a model of the project dropped onto a lane', async () => {
+    useAssets.setState({
+      items: [
+        {
+          id: 'asset-9',
+          name: 'jig',
+          type: 'mesh',
+          location: 'local',
+          tags: [],
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    })
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    await act(async () => dropAsset(canvas(), 'asset-9', 400, LANE_Y))
+
+    const laid = laneOf()?.clips[1]
+    expect(laid?.source).toEqual({ kind: 'asset', assetId: 'asset-9', name: 'jig' })
+    // Its own name, never what the clip inside spells — `NlaTrack` is what Tripo writes.
+    expect(laid?.label).toBe('jig')
+    expect(laid?.start).toBe(4 * SECOND)
+  })
+
+  it('lays nothing for a model the catalogue has never heard of', async () => {
+    useAssets.setState({ items: [] })
+    render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
+
+    await act(async () => dropAsset(canvas(), 'asset-9', 400, LANE_Y))
 
     expect(laneOf()?.clips).toHaveLength(1)
   })
