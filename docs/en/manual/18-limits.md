@@ -187,12 +187,22 @@ by key** button does not find them.
 
 ## Video workspace
 
-### No export
+### The video export comes out silent
 
 A sequence is now written into a `.seq` file and reopens exactly as it was.
 
-**There is still no export**: you cannot yet produce a final video file. This is the studio's
-heaviest limit to date, because it stops you delivering.
+**File › Export video** does write a final file, frame by frame, 3D scenes included. **But it
+comes out mute**: the edit's sound tracks are not encoded into it yet. This is the heaviest limit
+of this workspace, because it makes you rebuild the sound elsewhere.
+
+### An `.otio` does not open here
+
+**File › Export edit (OTIO)** writes the edit in a format other editing applications open. The way
+back is missing: you cannot yet **open** an `.otio` in the studio, neither another application's
+nor one of your own.
+
+And what that format does not carry as a standard — fades, gains, image and sound links, the 3D
+scene behind a live clip — travels in the file but **is read by Scenario alone**.
 
 ### A sequence's settings are fixed
 
@@ -464,7 +474,7 @@ If you only remember five things from this chapter:
    come back is the undo history;
 2. **a crop only half undoes** — `⌘Z` gives the frame back, never the cropped pixels; export
    before cropping hard;
-3. **there is no video export** — the studio cannot yet deliver a final file;
+3. **the video export comes out silent** — the final file is deliverable, the edit's sound is not in it;
 4. **the Texture and Skybox families have no default model** — both workspaces make you pick one
    again every session;
 5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.

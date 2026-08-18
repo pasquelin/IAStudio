@@ -424,8 +424,11 @@ l’importer.
 > **Une séquence s’enregistre** en `.seq` par `⌘S`, et se rouvre telle quelle : pistes, clips,
 > fondus et gains. Ce qui ne revient pas, c’est l’historique d’annulation.
 >
-> Il n’y a en revanche toujours pas d’**export** : on ne peut pas encore écrire un fichier vidéo
-> final. Voir [Ce qui n’existe pas encore](18-limites.md).
+> **Deux exports existent**, tous deux dans le menu Fichier. *Exporter la vidéo* écrit un fichier
+> final, image par image, scènes 3D comprises — mais **sans le son**, qui n’y est pas encore.
+> *Exporter le montage (OTIO)* écrit le montage lui-même : pistes, clips, points d’entrée,
+> vitesses et liens vers les médias, dans un fichier que d’autres logiciels de montage ouvrent.
+> Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ---
 
