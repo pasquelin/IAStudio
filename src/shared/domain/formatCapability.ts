@@ -13,7 +13,7 @@ import { extensionOf } from './fileName'
  * of its own domain: an `.otio` carries no layer, and the answer for one is « everything lost »
  * rather than « nothing to lose ».
  */
-export type CapabilityDomain = 'picture' | 'montage' | 'material'
+export type CapabilityDomain = 'picture' | 'montage' | 'scene' | 'material'
 
 /** A property of an edited picture that a format either carries or loses. */
 export type PictureTrait =
@@ -94,6 +94,44 @@ export const MONTAGE_TRAITS: readonly MontageTrait[] = [
 ]
 
 /**
+ * The same question for a 3D scene. Read off what `gltfDocument.ts` actually writes, trait by
+ * trait, rather than off the standard: the tree, the names, the placements, the perspective
+ * cameras and the punctual lights are glTF fields, and everything else rides in the `extras` of
+ * the scene — which the format says a reader may ignore.
+ *
+ * `ambientLight` is the one that surprises: `KHR_lights_punctual` has no spelling for an ambient
+ * or a hemisphere light, so those two travel as studio data while the other three do not.
+ */
+export type SceneTrait =
+  | 'sceneTree'
+  | 'nodeName'
+  | 'nodePlacement'
+  | 'cameraLens'
+  | 'punctualLight'
+  | 'ambientLight'
+  | 'primitiveShape'
+  | 'nodeMaterial'
+  | 'cameraPath'
+  | 'cameraShot'
+  | 'sceneAnimation'
+  | 'sceneEnvironment'
+
+export const SCENE_TRAITS: readonly SceneTrait[] = [
+  'sceneTree',
+  'nodeName',
+  'nodePlacement',
+  'cameraLens',
+  'punctualLight',
+  'ambientLight',
+  'primitiveShape',
+  'nodeMaterial',
+  'cameraPath',
+  'cameraShot',
+  'sceneAnimation',
+  'sceneEnvironment',
+]
+
+/**
  * The same question for a material, measured against the text of the MaterialX 1.39
  * specification — `.claude/spike-materialx.md` holds the reading.
  *
@@ -142,22 +180,24 @@ export const MATERIAL_TRAITS: readonly MaterialTrait[] = [
   'previewState',
 ]
 
-export type CapabilityTrait = PictureTrait | MontageTrait | MaterialTrait
+export type CapabilityTrait = PictureTrait | MontageTrait | SceneTrait | MaterialTrait
 
 export const CAPABILITY_TRAITS: readonly CapabilityTrait[] = [
   ...PICTURE_TRAITS,
   ...MONTAGE_TRAITS,
+  ...SCENE_TRAITS,
   ...MATERIAL_TRAITS,
 ]
 
 export const TRAITS_OF_DOMAIN: Record<CapabilityDomain, readonly CapabilityTrait[]> = {
   picture: PICTURE_TRAITS,
   montage: MONTAGE_TRAITS,
+  scene: SCENE_TRAITS,
   material: MATERIAL_TRAITS,
 }
 
 /** A format the studio can write an edited document to. */
-export type WritableFormat = 'png' | 'jpeg' | 'webp' | 'ora' | 'otio' | 'mtlx'
+export type WritableFormat = 'png' | 'jpeg' | 'webp' | 'ora' | 'otio' | 'gltf' | 'mtlx'
 
 export const WRITABLE_FORMATS: readonly WritableFormat[] = [
   'png',
@@ -165,6 +205,7 @@ export const WRITABLE_FORMATS: readonly WritableFormat[] = [
   'webp',
   'ora',
   'otio',
+  'gltf',
   'mtlx',
 ]
 
@@ -255,6 +296,28 @@ const OPEN_TIMELINE: FormatCapability = {
 }
 
 /**
+ * glTF IS the scene document, and nothing of it is lost: what the standard has no field for
+ * rides in the scene's `extras` under the studio's own key.
+ *
+ * The split is what the manual promises — a scene opened elsewhere shows its tree, its cameras
+ * and its lights, and is poorer than what this studio draws.
+ */
+const GLTF_SCENE: FormatCapability = {
+  domain: 'scene',
+  interchange: ['sceneTree', 'nodeName', 'nodePlacement', 'cameraLens', 'punctualLight'],
+  extended: [
+    'ambientLight',
+    'primitiveShape',
+    'nodeMaterial',
+    'cameraPath',
+    'cameraShot',
+    'sceneAnimation',
+    'sceneEnvironment',
+  ],
+  dropped: [],
+}
+
+/**
  * MaterialX holds a `standard_surface` fed by `tiledimage` nodes, and it IS the material
  * document. Everything past that rides in the custom attribute the specification reserves for
  * applications — and requires a reader that does not understand it to preserve.
@@ -298,6 +361,7 @@ const CAPABILITY_BY_FORMAT: Record<WritableFormat, FormatCapability> = {
   webp: FLAT,
   ora: OPEN_RASTER,
   otio: OPEN_TIMELINE,
+  gltf: GLTF_SCENE,
   mtlx: MATERIAL_X,
 }
 
@@ -311,6 +375,9 @@ const FORMAT_BY_EXTENSION: Record<string, WritableFormat> = {
   '.webp': 'webp',
   '.ora': 'ora',
   '.otio': 'otio',
+  // `.gltf` only: a `.glb` is what **Exporter** writes of a selection, never a document the
+  // studio saves back over.
+  '.gltf': 'gltf',
   '.mtlx': 'mtlx',
 }
 

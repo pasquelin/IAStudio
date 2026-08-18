@@ -416,6 +416,8 @@ describe('the translation bundles', () => {
           'objects.pathHint',
           'animation.addShotHint',
           'animation.addShotNeedsCamera',
+          'assistant.actions.cameraShot.description',
+          'assistant.fields.startSeconds',
         ],
       },
     ],

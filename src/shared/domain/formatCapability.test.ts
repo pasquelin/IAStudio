@@ -4,6 +4,7 @@ import {
   MATERIAL_TRAITS,
   MONTAGE_TRAITS,
   PICTURE_TRAITS,
+  SCENE_TRAITS,
   TRAITS_OF_DOMAIN,
   WRITABLE_FORMATS,
   capabilityOf,
@@ -39,6 +40,12 @@ describe('what a format would drop for good', () => {
     expect(lossesFor(MONTAGE_TRAITS, 'otio')).toEqual([])
   })
 
+  // What the manual promises of a saved scene: the standard part is poorer, the file is not.
+  it('drops nothing of a scene into the glTF that IS the scene document', () => {
+    expect(lossesFor(SCENE_TRAITS, 'gltf')).toEqual([])
+    expect(lossesFor(['cameraPath', 'cameraShot'], 'ora')).toEqual(['cameraPath', 'cameraShot'])
+  })
+
   it('keeps the order the traits were given, so two documents read the same way', () => {
     expect(lossesFor(['liveText', 'layers'], 'jpeg')).toEqual(['liveText', 'layers'])
   })
@@ -56,6 +63,12 @@ describe('what a file name says its format is', () => {
   it('answers nothing for a format it does not write, and for a name with no extension', () => {
     expect(formatOfFile('scan.tif')).toBeNull()
     expect(formatOfFile('README')).toBeNull()
+    // A `.glb` is an export of a selection, never a document saved back over.
+    expect(formatOfFile('hero.glb')).toBeNull()
+  })
+
+  it('reads a scene document by its own extension', () => {
+    expect(formatOfFile('Plateau.gltf')).toBe('gltf')
   })
 })
 
@@ -104,11 +117,11 @@ describe('the table itself', () => {
     expect(lossesFor(['layers'], 'mtlx')).toEqual(['layers'])
   })
 
-  // That the lists share no value is the COMPILER's to hold — the three trait unions have no
+  // That the lists share no value is the COMPILER's to hold — the four trait unions have no
   // overlap, so an assertion here would not even type-check.
-  it('publishes a union that is exactly its three domains', () => {
+  it('publishes a union that is exactly its four domains', () => {
     expect([...CAPABILITY_TRAITS].sort()).toEqual(
-      [...PICTURE_TRAITS, ...MONTAGE_TRAITS, ...MATERIAL_TRAITS].sort(),
+      [...PICTURE_TRAITS, ...MONTAGE_TRAITS, ...SCENE_TRAITS, ...MATERIAL_TRAITS].sort(),
     )
   })
 })

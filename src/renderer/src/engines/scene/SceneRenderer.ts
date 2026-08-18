@@ -37,6 +37,7 @@ import {
 } from '@shared/domain/scene'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { SelectionMode } from '@/helpers/selection'
+import { aspectLoan } from '../viewport/aspectLoan'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { screenScale } from '../viewport/screenScale'
 import { createSkyBinding, type SkyBinding } from '../viewport/skyBinding'
@@ -991,7 +992,14 @@ export class SceneRenderer {
       // that camera, which is what `onCameraSettled` writes back to the document.
       const locked = isCameraView(view) ? this.cameraObject(view.nodeId) : null
       this.viewport.setPaneCamera(index, locked)
-      if (isCameraView(view)) continue
+      if (isCameraView(view)) {
+        // Rotation given back explicitly: a pane offering a camera is one of panes 1–3, and
+        // those START on a side view, where turning is locked. Left alone, the orbit that is
+        // supposed to MOVE the camera did nothing at all — seen on screen, green in the suite.
+        const orbit = this.viewport.paneOrbits[index]
+        if (orbit) orbit.enableRotate = true
+        continue
+      }
 
       this.viewport.setPaneProjection(index, view === 'free' ? 'perspective' : 'orthographic')
 
@@ -1444,13 +1452,14 @@ export class SceneRenderer {
     this.setPlayhead(time)
 
     const restore = this.hideWorkshop()
-    camera.aspect = canvas.width / canvas.height
-    camera.updateProjectionMatrix()
+    const loan = aspectLoan(canvas.width, canvas.height)
+    loan.frame(camera)
 
     try {
       gl.setRenderTarget(null)
       gl.render(this.viewport.scene, camera)
     } finally {
+      loan.restore()
       restore()
     }
     return canvas
@@ -1550,6 +1559,7 @@ export class SceneRenderer {
     const image = context.createImageData(width, height)
 
     const restore = this.hideWorkshop()
+    const loan = aspectLoan(width, height)
 
     const head = this.playhead
 
@@ -1561,8 +1571,7 @@ export class SceneRenderer {
         // Resolved per frame: a shot hands the film to another camera mid-way, and the frame
         // after a camera is deleted keeps the last one rather than throwing at the encoder.
         camera = this.cameraObject(cameraAt(time)) ?? camera
-        camera.aspect = width / height
-        camera.updateProjectionMatrix()
+        loan.frame(camera)
 
         this.setPlayhead(time)
         gl.setRenderTarget(target)
@@ -1578,6 +1587,7 @@ export class SceneRenderer {
     } finally {
       gl.setRenderTarget(null)
       target.dispose()
+      loan.restore()
       restore()
       // Where the head was before the film was asked for: a render is not an edit.
       this.setPlayhead(head)

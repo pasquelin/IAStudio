@@ -179,6 +179,50 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
+    // The lens, and nothing of where the camera stands: a camera is moved by `node.transform`
+    // like anything else in the tree.
+    name: 'node.camera',
+    titleKey: 'assistant.actions.nodeCamera.title',
+    descriptionKey: 'assistant.actions.nodeCamera.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      NODE,
+      {
+        key: 'fov',
+        kind: 'number',
+        labelKey: 'assistant.fields.fov',
+        required: false,
+        min: 1,
+        max: 170,
+      },
+      { key: 'near', kind: 'number', labelKey: 'assistant.fields.near', required: false, min: 0 },
+      { key: 'far', kind: 'number', labelKey: 'assistant.fields.far', required: false, min: 0 },
+    ],
+  }),
+  action({
+    /**
+     * A shot opened for a camera, from an instant onwards. Where it lands in the stack is
+     * `shotsWith`'s rule, the same one the band's button obeys — a client that could choose its
+     * own layer would be a second law over what is on air.
+     */
+    name: 'camera.shot',
+    titleKey: 'assistant.actions.cameraShot.title',
+    descriptionKey: 'assistant.actions.cameraShot.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true },
+      {
+        key: 'startSeconds',
+        kind: 'number',
+        labelKey: 'assistant.fields.startSeconds',
+        required: false,
+        min: 0,
+      },
+    ],
+  }),
+  action({
     name: 'node.reparent',
     titleKey: 'assistant.actions.nodeReparent.title',
     descriptionKey: 'assistant.actions.nodeReparent.description',
