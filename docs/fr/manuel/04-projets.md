@@ -23,8 +23,8 @@ logiciel qui l’a créé est un projet qu’on perd le jour où le logiciel ne 
 
 | Action | Raccourci | Menu |
 |---|---|---|
-| **Nouveau projet** | `⌘N` / `Ctrl+N` | Fichier ▸ Nouveau projet… |
-| **Ouvrir un projet** | `⌘O` / `Ctrl+O` | Fichier ▸ Ouvrir un projet… |
+| **Nouveau projet** | `⌘N` / `Ctrl+N` | **Fichier ▸ Nouveau projet…** |
+| **Ouvrir un projet** | `⌘O` / `Ctrl+O` | **Fichier ▸ Ouvrir un projet…** |
 
 **Les deux gestes sont aussi dans le panneau Explorateur**, quand aucun projet n’est ouvert : il
 affiche alors **Ouvrir un projet** et **Créer un projet**, à sa place habituelle dans la colonne

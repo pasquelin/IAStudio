@@ -47,8 +47,8 @@ the open format but still holds the studio's own internal shape — **no other a
 it**. The extension says where these documents are going, not what they are today. That is the
 work in progress, and it is the heaviest limit on this page.
 
-Until then, to take an image or a scene to another application, the **exports** are what count:
-File ▸ Export.
+Until then, to take an image or a scene to another application, the **exports** are what count —
+**File ▸ Export scene** and its neighbours.
 
 **What does not save:**
 

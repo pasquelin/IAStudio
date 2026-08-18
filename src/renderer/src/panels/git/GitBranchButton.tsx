@@ -1,5 +1,5 @@
 import { mdiPlus, mdiSourceBranch } from '@mdi/js'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isRefName, type GitBranch, type GitStatus } from '@shared/domain/git'
 import { MenuButton } from '@/design/MenuButton'
@@ -9,11 +9,8 @@ import { HINT_LEFT, TIP_BOTTOM } from '@/helpers/tooltip'
 import { useGit } from '@/stores/git'
 
 /**
- * Which branch is out, and the way to any other.
- *
- * The list is read when the menu OPENS rather than with every status: it is a command of its own,
- * and the branches of a project change far less often than its files do. Re-read on each open, so
- * one made in a terminal is there the next time the menu is pulled down.
+ * Which branch is out, and the way to any other. Re-read on every open: a branch made in a
+ * terminal moves neither the head nor the current branch, so nothing else would ask for it.
  */
 export function GitBranchButton({ status }: { status: GitStatus }) {
   const { t } = useTranslation()
@@ -24,11 +21,14 @@ export function GitBranchButton({ status }: { status: GitStatus }) {
   const createBranch = useGit(state => state.createBranch)
   const busy = useGit(state => state.busy)
 
-  // Keyed on the head as well as the branch: a commit can be the only thing that changed, and
-  // the list carries what each branch points at once the remote arrives.
-  useEffect(() => {
+  const reload = useCallback(() => {
     void listBranches().then(setBranches)
-  }, [listBranches, status.branch, status.head])
+  }, [listBranches])
+
+  // On mount too, and not only on open: the count decides whether the button opens a menu at all,
+  // so a button that had never read would send the first click to naming. Keyed on the head as
+  // well, a commit being able to be the only thing that moved.
+  useEffect(reload, [reload, status.branch, status.head])
 
   if (naming) {
     return (
@@ -68,6 +68,7 @@ export function GitBranchButton({ status }: { status: GitStatus }) {
       onClick={() => {
         if (branches.length === 0) setNaming(true)
       }}
+      onShow={reload}
       rowCount={branches.length + 1}
       rows={close => (
         <>

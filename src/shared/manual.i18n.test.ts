@@ -26,10 +26,17 @@ const chaptersOf = (language: (typeof languages)[number]): ManualChapter[] => ma
  * 70 paths in French and 71 in English, `›` four each. Reading one alone missed two false
  * citations, measured.
  *
- * Bounded and newline-free because `**` pairs greedily across a paragraph: an unbounded reading
- * returned whole sentences as menu paths, which is a relevé nobody can act on.
+ * ONE line break at most, and the `\S` edges are what make crossing it safe: `**` pairs greedily,
+ * so without them the reading starts on a CLOSING `**` and runs to the next line's opening one,
+ * returning half a table row as a path — measured. Refusing the break outright was the other
+ * failure: a path a reflow had split was quoted correctly and read by nobody.
  */
-const MENU_PATH = /\*\*([^*\n]{1,90}[▸›][^*\n]{1,90})\*\*/g
+const MENU_PATH =
+  /\*\*(?=\S)((?:[^*\n]|\n(?!\s*\n)){1,90}[▸›](?:[^*\n]|\n(?!\s*\n)){1,90})(?<=\S)\*\*/g
+
+/** A path a reflow split reads as one line, the break being of the page and not of the menu. */
+const menuPathsOf = (markdown: string): string[] =>
+  [...markdown.matchAll(MENU_PATH)].flatMap(match => (match[1] ?? '').replace(/\s*\n\s*/g, ' '))
 
 /** As a reader compares a quote to a menu: trailing ellipsis dropped, holes dropped, folded. */
 const asRead = (text: string): string =>
@@ -143,6 +150,21 @@ describe('the manual the application carries', () => {
   })
 
   /**
+   * Every assertion below is a list expected EMPTY, so a reading that recognises nothing keeps
+   * them all green. These samples are what `menuPathsOf` is worth: the middle one is the table
+   * row that a first, edge-free crossing returned as a menu path.
+   */
+  it('reads a path across one line break of the page, and no further', () => {
+    expect(menuPathsOf('**Fichier ▸ Exporter la\nsélection** écrit tout')).toEqual([
+      'Fichier ▸ Exporter la sélection',
+    ])
+    expect(
+      menuPathsOf('| la pastille est **verte** en haut |\n| [Premiers pas ▸ étape 3] |'),
+    ).toEqual([])
+    expect(menuPathsOf('**Aide ▸\n\nJournal**')).toEqual([])
+  })
+
+  /**
    * A chapter sending its reader to **Help ▸ Journal** was sending them to a menu entry no
    * language carries, and the manual being read INSIDE the window, a wrong path reads as the
    * software being broken. The French chapters were right to the last of their 66 paths; the
@@ -156,19 +178,15 @@ describe('the manual the application carries', () => {
   it.each(languages)('quotes no menu path the screen does not carry, in %s', language => {
     const labels = labelsOf(TRANSLATIONS[language])
     const invented = chaptersOf(language).flatMap(chapter =>
-      [...chapter.markdown.matchAll(MENU_PATH)]
-        // The group always matches — `flatMap` drops the `[]` the type demands.
-        .flatMap(match => match[1] ?? [])
-        .flatMap(path =>
-          path
-            .split(/[▸›]/)
-            .map(asRead)
-            .filter(
-              segment =>
-                segment && !labels.has(segment) && !NOT_A_MENU_ENTRY[language].has(segment),
-            )
-            .map(segment => `${chapter.slug} — "${segment}" in ${path.trim()}`),
-        ),
+      menuPathsOf(chapter.markdown).flatMap(path =>
+        path
+          .split(/[▸›]/)
+          .map(asRead)
+          .filter(
+            segment => segment && !labels.has(segment) && !NOT_A_MENU_ENTRY[language].has(segment),
+          )
+          .map(segment => `${chapter.slug} — "${segment}" in ${path.trim()}`),
+      ),
     )
 
     expect(invented).toEqual([])
@@ -181,9 +199,7 @@ describe('the manual the application carries', () => {
   it.each(languages)('drops a gesture exemption once no path writes it, in %s', language => {
     const written = new Set(
       chaptersOf(language).flatMap(chapter =>
-        [...chapter.markdown.matchAll(MENU_PATH)]
-          .flatMap(match => match[1] ?? [])
-          .flatMap(path => path.split(/[▸›]/).map(asRead)),
+        menuPathsOf(chapter.markdown).flatMap(path => path.split(/[▸›]/).map(asRead)),
       ),
     )
 

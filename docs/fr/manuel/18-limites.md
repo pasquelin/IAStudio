@@ -49,7 +49,7 @@ l’ouvre**. L’extension dit vers quoi ces documents vont, pas ce qu’ils son
 chantier en cours, et c’est la limite la plus lourde de cette liste.
 
 En attendant, pour sortir une image ou une scène vers un autre logiciel, ce sont les **exports**
-qui font foi : Fichier ▸ Exporter.
+qui font foi — **Fichier ▸ Exporter la scène** et ses voisines.
 
 **Ce qui ne s’enregistre pas :**
 

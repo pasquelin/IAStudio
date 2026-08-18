@@ -289,6 +289,40 @@ describe('the branch button', () => {
   })
 
   /**
+   * A branch made in a terminal moves neither the head nor the current branch, so nothing tells
+   * the app it exists. Without a read on each open it would stay out of the menu for as long as
+   * the panel is mounted.
+   */
+  it('lists a branch made outside the app on the next opening', async () => {
+    let outside = false
+    installFakeBridge({
+      git: {
+        read: () => Promise.resolve(CLEAN_READY),
+        branches: () =>
+          Promise.resolve(
+            outside
+              ? [
+                  { name: 'main', current: true },
+                  { name: 'faite-au-terminal', current: false },
+                ]
+              : [{ name: 'main', current: true }],
+          ),
+      },
+    })
+    render(<Git />)
+
+    const button = await screen.findByRole('button', { name: 'main' })
+    await userEvent.click(button)
+    expect(screen.queryByRole('menuitemradio', { name: 'faite-au-terminal' })).toBeNull()
+
+    outside = true
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(button)
+
+    expect(await screen.findByRole('menuitemradio', { name: 'faite-au-terminal' })).toBeVisible()
+  })
+
+  /**
    * A repository with no first commit lists no branch at all — git has none until something is
    * recorded — so the menu would hold the single row that makes one. The click goes straight to
    * the field instead of opening a list of one.
