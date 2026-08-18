@@ -1,54 +1,40 @@
-import { mdiChevronDown, mdiChevronUp } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
-import { editCameraShot } from '@/engines/scene/animationCommands'
-import { layerMoved } from '@/engines/scene/cameraShots'
+import { swapShotLayers } from '@/engines/scene/animationCommands'
+import { layersSwapped } from '@/engines/scene/cameraShots'
 import type { ShotRow } from '@/engines/scene/animationRows'
-import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
-import { animationViewOf, useAnimationViews } from '@/stores/animationView'
-import { useScenes } from '@/stores/scenes'
+import { HINT_RIGHT } from '@/helpers/tooltip'
+import { sceneOf, useScenes } from '@/stores/scenes'
 import { TimelineRow } from '../TimelineRow/TimelineRow'
 
 /**
- * One layer of shots, and the two buttons that send the PICKED one up or down — a line can hold
- * several, and moving them all would leave the stack in the order it was.
+ * One layer of shots, dragged up and down the stack by the grip every other band uses.
+ *
+ * The LINE moves, never the shot picked on it: a layer is what settles an overlap, and sending
+ * one bar out of the line it shares with others would leave the stack exactly as it was.
  */
 export function AnimationHeadersShot({ documentId, row }: { documentId: string; row: ShotRow }) {
   const { t } = useTranslation()
-  const picked = useAnimationViews(state => animationViewOf(state, documentId).selectedShotId)
-  const shot = row.bars.find(bar => bar.shot.id === picked)?.shot ?? null
   const name = t('animation.shotLayer', { layer: row.layer })
 
-  const send = (by: number): void => {
-    if (!shot) return
-    useScenes
-      .getState()
-      .runCommand(documentId, editCameraShot(shot.id, { layer: layerMoved(shot, by) }))
-  }
-
   return (
-    <TimelineRow height={row.height} nested data-testid={`anim-shots-${row.layer}`}>
-      <div className="flex items-center gap-0.5">
-        <span className="text-muted text-tiny min-w-0 flex-1 truncate" {...HINT_RIGHT(name)}>
-          {name}
-        </span>
-        <ToolButton
-          icon={mdiChevronUp}
-          label={t('animation.raiseShot')}
-          tooltip={TIP_RIGHT}
-          variant="header"
-          disabled={!shot}
-          onClick={() => send(1)}
-        />
-        <ToolButton
-          icon={mdiChevronDown}
-          label={t('animation.lowerShot')}
-          tooltip={TIP_RIGHT}
-          variant="header"
-          disabled={!shot}
-          onClick={() => send(-1)}
-        />
-      </div>
+    <TimelineRow
+      height={row.height}
+      nested
+      reorder={{
+        label: t('animation.reorderRow', { name }),
+        move: by => {
+          const timeline = sceneOf(useScenes.getState(), documentId).animation
+          const swap = layersSwapped(timeline, row.layer, by)
+          if (!swap) return 0
+          useScenes.getState().runCommand(documentId, swapShotLayers(swap.from, swap.to))
+          return swap.steps
+        },
+      }}
+      data-testid={`anim-shots-${row.layer}`}
+    >
+      <span className="text-muted text-tiny min-w-0 flex-1 truncate" {...HINT_RIGHT(name)}>
+        {name}
+      </span>
     </TimelineRow>
   )
 }

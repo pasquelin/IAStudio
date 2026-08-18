@@ -23,6 +23,7 @@ import {
   applyPath,
   applySprite,
   giveSecondUvSet,
+  showPathKnobs,
   standardMaterialOf,
 } from './threeSync'
 
@@ -283,6 +284,61 @@ describe('applyCamera', () => {
     applyCamera(camera, { fov: 90, near: 1, far: 10 })
 
     expect(update).toHaveBeenCalled()
+  })
+
+  /**
+   * The outline is what makes a viewport with five cameras unreadable, and the camera it is
+   * drawn from is the very one a preview and a film render through — so a shortened reach must
+   * not survive the call.
+   */
+  it('draws a shortened outline without leaving the camera short', () => {
+    const camera = cameraWithHelper()
+    const helper = camera.children[0]
+    if (!(helper instanceof CameraHelper)) throw new Error('the camera wears its helper')
+    const seen: number[] = []
+    vi.spyOn(helper, 'update').mockImplementation(() => void seen.push(camera.far))
+
+    applyCamera(camera, { fov: 50, near: 0.1, far: 1000 }, 2)
+
+    expect(seen).toEqual([2])
+    expect(camera.far).toBe(1000)
+  })
+
+  it('never lengthens a frustum past the lens it belongs to', () => {
+    const camera = cameraWithHelper()
+    const helper = camera.children[0]
+    if (!(helper instanceof CameraHelper)) throw new Error('the camera wears its helper')
+    const seen: number[] = []
+    vi.spyOn(helper, 'update').mockImplementation(() => void seen.push(camera.far))
+
+    applyCamera(camera, { fov: 50, near: 0.1, far: 5 }, 40)
+
+    expect(seen).toEqual([5])
+  })
+})
+
+describe('showPathKnobs', () => {
+  /**
+   * Only a selected rail hands its points to the gizmo, and a knob per point on every rail is
+   * what buries a sequence. The line stays, so an unselected rail can still be clicked.
+   */
+  it('hides the knobs and leaves the line', () => {
+    const points = [
+      { x: 0, y: 0, z: 0 },
+      { x: 10, y: 0, z: 0 },
+    ]
+    const object = buildPath({ ...DEFAULT_PATH, points }, '#ffffff')
+
+    showPathKnobs(object, false)
+    expect(
+      object.children.filter(child => child instanceof Mesh).map(knob => knob.visible),
+    ).toEqual([false, false])
+    expect(object.getObjectByName(PATH_CURVE_NAME)?.visible).toBe(true)
+
+    showPathKnobs(object, true)
+    expect(
+      object.children.filter(child => child instanceof Mesh).map(knob => knob.visible),
+    ).toEqual([true, true])
   })
 })
 

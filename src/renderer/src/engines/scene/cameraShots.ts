@@ -94,9 +94,29 @@ export function newShotAt(
   }
 }
 
-/** Which layer a shot lands on when sent up or down. Never below the ground floor. */
-export function layerMoved(shot: CameraShot, by: number): number {
-  return Math.max(0, shot.layer + by)
+/**
+ * Where a layer lands when its whole line is dragged, as the two layers it swaps with.
+ *
+ * The stack the sheet shows, never the numbers: layers 0 and 5 are neighbours on screen, so a
+ * line dragged one notch takes the place of the line drawn against it — not of layer 1, which
+ * no row shows. `null` when the line is already at that end.
+ */
+export function layersSwapped(
+  timeline: AnimationTimeline,
+  layer: number,
+  by: number,
+): { from: number; to: number; steps: number } | null {
+  // Highest first, as `shotRows` stacks them: a step DOWN the screen is a step down the pile.
+  const stack = [...new Set(timeline.shots.map(shot => shot.layer))].sort((a, b) => b - a)
+  const at = stack.indexOf(layer)
+  if (at === -1) return null
+
+  // Clamped rather than refused: a drag that asks for two notches with one left must take that
+  // one, or the grip banks a step it never made and the line lags behind the pointer.
+  const target = Math.min(Math.max(at - by, 0), stack.length - 1)
+  const to = stack[target]
+
+  return target === at || to === undefined ? null : { from: layer, to, steps: at - target }
 }
 
 /**

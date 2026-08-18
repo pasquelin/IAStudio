@@ -389,6 +389,26 @@ export function editCameraShot(
   }
 }
 
+/**
+ * Two layers trading places, which is what dragging a line of the sheet does.
+ *
+ * A swap and not a shift: the sheet draws one line per layer USED, so the numbers between two
+ * lines belong to nobody and moving into them would leave the stack looking untouched.
+ */
+export function swapShotLayers(from: number, to: number): Command<SceneState> {
+  const swap = (shots: readonly CameraShot[]): readonly CameraShot[] =>
+    shots.map(shot => {
+      if (shot.layer === from) return { ...shot, layer: to }
+      return shot.layer === to ? { ...shot, layer: from } : shot
+    })
+
+  return {
+    id: `shot:layers:${from}:${to}`,
+    apply: state => writeShots(state, swap),
+    revert: state => writeShots(state, swap),
+  }
+}
+
 /** What a rail takes when it is first bound: the whole of it, forwards, at a steady speed. */
 const WHOLE_RAIL: Omit<CameraMotion, 'pathId'> = { from: 0, to: 1, easing: 'linear' }
 

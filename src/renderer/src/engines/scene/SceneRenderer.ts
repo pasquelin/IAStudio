@@ -71,6 +71,7 @@ import {
   applyPath,
   applySprite,
   lightFor,
+  showPathKnobs,
   standardMaterialOf,
 } from './threeSync'
 import {
@@ -243,6 +244,9 @@ const STUDIO_INTENSITY = 0.4
 
 /** How far the pointer may wander between press and release and still count as a click, in px. */
 const CLICK_SLOP = 4
+
+/** How far an unselected camera's frustum is drawn, in metres. See `showAidsForSelection`. */
+const FRUSTUM_REACH = 2
 
 /**
  * Whether a release ends a click rather than a drag. Both buttons ask it: the left one to tell a
@@ -561,10 +565,36 @@ export class SceneRenderer {
     // It costs nothing on a scene with no track, and the loop is over driven nodes, not all.
     this.applyPoses()
     this.applyCameraShots()
+    this.showAidsForSelection()
     if (this.environment) void this.sky.apply(this.environment, state.environment)
     this.attachGizmo()
     this.reportStats()
     this.viewport.requestRender()
+  }
+
+  /**
+   * The working aids of a camera and of a rail, drawn in full only on what is selected.
+   *
+   * A frustum reaches the camera's own `far` — a thousand metres by default — so two cameras
+   * already cross the whole viewport and five make it unreadable. Unselected, it is drawn short:
+   * enough to say where the camera stands and which way it looks, and still clickable, which is
+   * what selects a camera in the first place.
+   */
+  private showAidsForSelection(): void {
+    const selected = new Set(this.selectedIds)
+
+    for (const id of this.frustums.keys()) {
+      const node = this.applied.get(id)
+      const camera = this.objects.get(id)
+      if (node?.type !== 'camera' || !(camera instanceof PerspectiveCamera)) continue
+      applyCamera(camera, node.camera, selected.has(id) ? node.camera.far : FRUSTUM_REACH)
+    }
+
+    for (const [id, node] of this.applied) {
+      if (node.type !== 'path') continue
+      const rail = this.objects.get(id)
+      if (rail) showPathKnobs(rail, selected.has(id))
+    }
   }
 
   /**

@@ -437,6 +437,36 @@ describe('SceneRenderer and a camera on a rail', () => {
     engine.dispose()
   })
 
+  /**
+   * A knob per control point on every rail of the scene is what buries a five-camera sequence,
+   * and only a SELECTED rail hands its points to the gizmo anyway — see `pathPointAt`.
+   */
+  it('shows a rail its knobs only while it is the selected one', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    const scene = {
+      ...EMPTY_SCENE,
+      nodes: [
+        pathNodeFixture('rail', {
+          points: [
+            { x: 0, y: 0, z: 0 },
+            { x: 10, y: 0, z: 0 },
+          ],
+        }),
+      ],
+    }
+    const knobs = (): boolean[] =>
+      (objectOf(engine, 'rail')?.children ?? [])
+        .filter(child => child.name.startsWith('path-knob-'))
+        .map(knob => knob.visible)
+
+    engine.apply(scene)
+    expect(knobs()).toEqual([false, false])
+
+    engine.apply({ ...scene, selectedIds: ['rail'] })
+    expect(knobs()).toEqual([true, true])
+    engine.dispose()
+  })
+
   it('leaves a camera with no shot exactly where its transform puts it', () => {
     const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
     engine.apply({ ...EMPTY_SCENE, nodes: [cameraNodeFixture('cam')] })

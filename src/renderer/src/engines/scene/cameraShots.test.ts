@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_TIMELINE, type AnimationTimeline, type CameraShot } from '@shared/domain/animation'
 import { SECOND } from '@shared/domain/time'
-import { activeCameraAt, activeShotAt, draggedShot, layerMoved, newShotAt } from './cameraShots'
+import { activeCameraAt, activeShotAt, draggedShot, layersSwapped, newShotAt } from './cameraShots'
 import { cameraShot } from './animation-fixtures'
 import { cameraNodeFixture, meshNode } from './scene-fixtures'
 
@@ -91,11 +91,25 @@ describe('newShotAt', () => {
   })
 })
 
-describe('layerMoved', () => {
-  it('sends a shot up and down, and never below the ground floor', () => {
-    expect(layerMoved(cameraShot('s1', { layer: 2 }), 1)).toBe(3)
-    expect(layerMoved(cameraShot('s1', { layer: 2 }), -1)).toBe(1)
-    expect(layerMoved(cameraShot('s1', { layer: 0 }), -1)).toBe(0)
+describe('layersSwapped', () => {
+  /** Layers 0 and 5, which the sheet draws against each other however far apart they number. */
+  const gapped: AnimationTimeline = {
+    ...EMPTY_TIMELINE,
+    shots: [cameraShot('s1', { layer: 0 }), cameraShot('s2', { layer: 5 })],
+  }
+
+  it('trades a line with the one drawn against it, whatever the numbers between', () => {
+    expect(layersSwapped(gapped, 0, 1)).toEqual({ from: 0, to: 5, steps: 1 })
+    expect(layersSwapped(gapped, 5, -1)).toEqual({ from: 5, to: 0, steps: -1 })
+  })
+
+  it('takes the notches it can when asked for more, so the grip banks no step it never made', () => {
+    expect(layersSwapped(gapped, 0, 4)).toEqual({ from: 0, to: 5, steps: 1 })
+  })
+
+  it('answers nothing at the end of the stack, and for a layer no line shows', () => {
+    expect(layersSwapped(gapped, 5, 1)).toBeNull()
+    expect(layersSwapped(gapped, 3, 1)).toBeNull()
   })
 })
 
