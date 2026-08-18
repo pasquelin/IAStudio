@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { DocumentNameFailure } from '@shared/domain/documentName'
+import type { WorkspaceId } from '@shared/domain/workspace'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { holdCanvas } from '@/spaces/image/canvasHosts'
 import { installDocuments } from '@/stores/document-fixtures'
@@ -261,7 +262,7 @@ describe('exporting the document in front', () => {
    * drives and a client cannot hold, while the `.otio` is one encoding of plain data. This case
    * asserted the refusal until the montage got that encoding.
    */
-  it.each(['video', 'audio'] as const)('writes the cut of a %s montage', async workspace => {
+  it.each<WorkspaceId>(['video', 'audio'])('writes the cut of a %s montage', async workspace => {
     installDocuments({ 'doc-m': workspace }, 'doc-m')
     const exportInto = vi.fn(async () => 'doc-m')
     installFakeBridge({ project: { exportInto } })

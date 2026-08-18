@@ -411,8 +411,21 @@ describe('the translation bundles', () => {
         kept: 'activity journal',
         except: ['settings.logLevel.title', 'settings.openDevtools.help'],
       },
+      /**
+       * The trade means something else by `montage` — a run of short shots, not the timeline.
+       * One surface kept the French word: eleven `assistant.*` values, against `edit` in
+       * thirty-three values elsewhere. It forbids `montage`; it does not require `edit`.
+       */
+      { dropped: /\bmontages?\b/i, kept: 'edit' },
     ],
   }
+
+  /**
+   * One word per `SETTLED_WORDS.en` reading, for the canary below. SINGULAR on purpose: written
+   * plural, `montages` slips through the very typo the canary is there to catch — `montagess?`
+   * still reads it, and the canary shipped green when it was.
+   */
+  const ENGLISH_SAMPLES = ['file browser', 'preference', 'picture', 'log', 'montage']
 
   it.each(CODES)('says one thing one way in %s', code => {
     const drifted = [...BUNDLES[code]].flatMap(([key, text]) =>
@@ -457,6 +470,23 @@ describe('the translation bundles', () => {
     // The canary of an assertion on an empty list: a reading that stopped matching would pass it.
     expect(['rigué', 'riguées', 'un rig', 'des rigs'].filter(word => !says(word))).toEqual([])
     expect(['intrigue', 'intriguée', 'rigueur', 'garrigue'].filter(says)).toEqual([])
+  })
+
+  /**
+   * The same canary for the English readings, which had none: `drifted` runs against a bundle
+   * that no longer says any of these, so a typo — `/\bmontagess?\b/` — would ship green. The
+   * second assertion keeps the sample from outliving the entry it was written for.
+   */
+  it('reads every settled English word, none of the readings dead', () => {
+    const dead = SETTLED_WORDS.en.filter(
+      ({ dropped }) => !ENGLISH_SAMPLES.some(word => dropped.test(word)),
+    )
+    const orphans = ENGLISH_SAMPLES.filter(
+      word => !SETTLED_WORDS.en.some(({ dropped }) => dropped.test(word)),
+    )
+
+    expect(dead.map(({ kept }) => kept)).toEqual([])
+    expect(orphans).toEqual([])
   })
 
   /**
@@ -1261,7 +1291,7 @@ describe('a space a sentence points at', () => {
    *
    * **This reads ONE phrasing, the one that claims a name**, and the test is named for that
    * rather than for the rule a reader might hope it holds. A sentence naming the same surface
-   * some other way — `the montage`, `the audio editor` — says nothing this can check. Two of the
+   * some other way — `the edit`, `the audio editor` — says nothing this can check. Two of the
    * five siblings of that hint do exactly that, and stay unchecked here.
    */
   it.each(CODES)('never claims a space name the bar does not carry, in %s', code => {

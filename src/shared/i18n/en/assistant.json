@@ -226,19 +226,19 @@
         "description": "Folds one layer into the layer below it, within its own level of the stack. The result keeps the lower layer’s identity."
       },
       "sequenceState": {
-        "title": "Read the montage being edited",
-        "description": "Answers the montage in front — its settings, its length, the playhead and what is selected — then every track with its clips, their bounds, their entry into the source, their speed, their fades and their level."
+        "title": "Read the edit being worked on",
+        "description": "Answers the edit in front — its settings, its length, the playhead and what is selected — then every track with its clips, their bounds, their entry into the source, their speed, their fades and their level."
       },
       "sequenceSeek": {
         "title": "Place the playhead",
-        "description": "Moves the playhead of the montage in front to the given instant, in microseconds. Not an edit: nothing enters the history, and undo does not bring it back."
+        "description": "Moves the playhead of the edit in front to the given instant, in microseconds. Not a change: nothing enters the history, and undo does not bring it back."
       },
       "clipAdd": {
-        "title": "Lay a clip on the montage",
-        "description": "Lays an asset from the library on a track of the montage in front, at the given instant or under the playhead. Opens the tracks it needs, and links a take’s image to its sound when it carries one."
+        "title": "Lay a clip on the edit",
+        "description": "Lays an asset from the library on a track of the edit in front, at the given instant or under the playhead. Opens the tracks it needs, and links a take’s image to its sound when it carries one."
       },
       "clipRemove": {
-        "title": "Take a clip off the montage",
+        "title": "Take a clip off the edit",
         "description": "Removes a clip from its track, and the half linked to it with it. The room it took stays empty rather than closing over its neighbours."
       },
       "clipMove": {
@@ -263,7 +263,7 @@
       },
       "clipSpeed": {
         "title": "Set a clip’s speed",
-        "description": "Changes how fast a clip plays, one being its original speed. Its length on the montage follows, the source it reads staying the same."
+        "description": "Changes how fast a clip plays, one being its original speed. Its length on the edit follows, the source it reads staying the same."
       },
       "clipUnlink": {
         "title": "Part an image from its sound",
@@ -271,7 +271,7 @@
       },
       "clipSelect": {
         "title": "Point at a clip",
-        "description": "Names the clip the inspector and the gestures that aim at nothing will act on. Not an edit, and undo does not take it back."
+        "description": "Names the clip the inspector and the gestures that aim at nothing will act on. Not a change, and undo does not take it back."
       },
       "trackAdd": {
         "title": "Add a track",
@@ -279,7 +279,7 @@
       },
       "trackRemove": {
         "title": "Remove a track",
-        "description": "Takes a track off the montage, and every clip it carried with it. A locked track is not removed."
+        "description": "Takes a track off the edit, and every clip it carried with it. A locked track is not removed."
       },
       "trackMove": {
         "title": "Reorder the tracks",
@@ -459,7 +459,7 @@
       },
       "mirrorOpen": {
         "title": "Open the video return",
-        "description": "Opens the return window, or brings it to the front when it is already there. It shows what the montage plays, and carries none of the edit."
+        "description": "Opens the return window, or brings it to the front when it is already there. It shows what the edit plays, and carries none of the editing."
       },
       "sceneState": {
         "title": "Read the scene being edited",
@@ -686,8 +686,8 @@
       "trackId": "Track identifier",
       "trackKind": "What the track carries",
       "clipEdge": "Which edge of the clip, in or out",
-      "time": "Instant on the montage, in microseconds",
-      "start": "Start on the montage, in microseconds",
+      "time": "Instant on the edit, in microseconds",
+      "start": "Start on the edit, in microseconds",
       "at": "The instant aimed at, in microseconds",
       "fadeLength": "Fade length, in microseconds",
       "gain": "Level, in decibels",
