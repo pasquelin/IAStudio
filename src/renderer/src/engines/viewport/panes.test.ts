@@ -60,11 +60,19 @@ describe('paneAt', () => {
 describe('insetRect', () => {
   const wide = 16 / 9
 
-  it('sits in the bottom-right corner, at the aspect of what the camera films', () => {
+  /**
+   * TOP right, and the corner is asserted rather than merely fitted in: the reason it is not the
+   * lower one — the gizmo's arms reach down and out, under the very handles a hand aims for — is
+   * written in `insetRect` and was held by nothing.
+   */
+  it('sits in the top-right corner, at the aspect of what the camera films', () => {
     const rect = insetRect(800, 600, wide)
     if (!rect) throw new Error('a surface of this size has room for a preview')
 
     expect(rect.width / rect.height).toBeCloseTo(wide, 1)
+    // Nearer the top edge than the bottom one, and nearer the right edge than the left.
+    expect(rect.y).toBeLessThan(600 - (rect.y + rect.height))
+    expect(800 - (rect.x + rect.width)).toBeLessThan(rect.x)
     expect(rect.x + rect.width).toBeLessThan(800)
     expect(rect.y + rect.height).toBeLessThan(600)
   })
