@@ -467,6 +467,9 @@ export class SceneRenderer {
 
   /** The frame of the preview loop, so switching block or stopping cancels the one running. */
   private previewFrame = 0
+
+  /** The pose a preview stands still at, which nothing else writes again. See `holdPreview`. */
+  private heldPreview: PreviewWatch | null = null
   /** Where each driven bone rested when it arrived, keyed `<nodeId>/<bone>`. See `applyBonePoses`. */
   private readonly boneRests = new Map<string, Transform>()
   private readonly held = new Set<MotionId>()
@@ -768,6 +771,7 @@ export class SceneRenderer {
   setPreview(target: PreviewWatch | null): void {
     cancelAnimationFrame(this.previewFrame)
     this.previewFrame = 0
+    this.heldPreview = target?.playing === false ? target : null
 
     if (!target) {
       this.animations.seek(this.playhead)
@@ -790,12 +794,24 @@ export class SceneRenderer {
         target.at + (now - from) / 1000,
       )
       this.viewport.requestRender()
-      // The grace is on the WALL clock, not the clip's: a run resumed from a scrub starts past
-      // a second, and would give up before the file it is waiting for had landed.
+      // The grace stays on the WALL clock and not on the clip's: a run resumed from a scrub
+      // starts past a second in, and would give up before the file it waits for had landed.
       if (length > 0 || now - from < 1000) this.previewFrame = requestAnimationFrame(step)
     }
 
     this.previewFrame = requestAnimationFrame(step)
+  }
+
+  /**
+   * Puts a HELD pose back after the mixer was asked to apply the document.
+   *
+   * `SceneAnimations.apply` finishes by posing the model from the scene's head, and a held
+   * preview has no loop of its own to write it again — editing the speed of the very block being
+   * looked at would otherwise snap the character back to frame zero.
+   */
+  private holdPreview(nodeId: string): void {
+    if (this.heldPreview?.nodeId !== nodeId) return
+    this.animations.preview(nodeId, this.heldPreview.clipId, this.heldPreview.at)
   }
 
   /**
@@ -1713,6 +1729,7 @@ export class SceneRenderer {
     // A preview left running would keep posing a model whose caches this method is about to drop.
     cancelAnimationFrame(this.previewFrame)
     this.previewFrame = 0
+    this.heldPreview = null
 
     this.stopPaletteWatch?.()
     this.stopPaletteWatch = null
@@ -1940,6 +1957,7 @@ export class SceneRenderer {
     if (node.type === 'model' && this.animations.has(node.id)) {
       this.animations.apply(node.id, node.model.lanes ?? [])
       this.ensureBundled(node.id, node.model.lanes ?? [])
+      this.holdPreview(node.id)
       this.viewport.requestRender()
     }
 

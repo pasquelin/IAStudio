@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { bundledClip, clipLane, MAIN_LANE_ID } from '@shared/domain/scene'
+import { bundledClip, clipLane, MAIN_LANE_ID, type ClipRef } from '@shared/domain/scene'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { useModelClips } from '@/stores/modelClips'
@@ -17,7 +17,7 @@ const LENGTH = 4
 
 const watchedNow = () => useSceneViews.getState().views[DOCUMENT]?.preview ?? null
 
-function show(length: number | null = LENGTH): void {
+function show(length: number | null = LENGTH, clip: Partial<ClipRef> = {}): void {
   const node = modelNodeFixture('a')
   installScene(DOCUMENT, {
     ...EMPTY_SCENE,
@@ -26,7 +26,7 @@ function show(length: number | null = LENGTH): void {
         ...node,
         model: {
           ...node.model,
-          lanes: [clipLane(MAIN_LANE_ID, [bundledClip(CLIP, 'Capoeira')])],
+          lanes: [clipLane(MAIN_LANE_ID, [bundledClip(CLIP, 'Capoeira', clip)])],
         },
       },
     ],
@@ -71,8 +71,23 @@ describe('watching the block that was laid', () => {
     expect(watchedNow()).toMatchObject({ at: 2, playing: true })
   })
 
-  it('goes to the end on the last pose of the clip, held', async () => {
+  /**
+   * A step short of the length, and that step is the whole point: the mixer wraps a looping clip
+   * AT its length — `length % length` is the FIRST pose — so aiming at it would show frame zero
+   * under a button that says « go to the end ».
+   */
+  it('goes to the last pose of a looping clip rather than back to its first', async () => {
     show()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Aller à la fin' }))
+
+    expect(watchedNow()?.at).toBeLessThan(LENGTH)
+    expect(watchedNow()).toMatchObject({ playing: false })
+    expect(watchedNow()?.at).toBeGreaterThan(LENGTH - 0.5)
+  })
+
+  it('goes to the very end of a clip that holds its last pose instead', async () => {
+    show(LENGTH, { loop: false })
 
     await userEvent.click(screen.getByRole('button', { name: 'Aller à la fin' }))
 

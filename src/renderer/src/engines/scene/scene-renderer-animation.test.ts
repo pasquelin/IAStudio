@@ -124,6 +124,40 @@ describe('SceneRenderer and the clips a model brought', () => {
     engine.dispose()
   })
 
+  /**
+   * A held preview has no loop of its own to write the pose again, and applying the document
+   * poses the model from the scene's head: editing the speed of the very block being looked at
+   * would otherwise snap the character back to where the band stands.
+   */
+  it('keeps a pose the preview is held at when the document is applied again', async () => {
+    const loaded = animatedModel([walk()])
+    const engine = withModel(loaded)
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(walkBlock({ offset: 0 }))] })
+    await vi.waitFor(() => expect(loaded.parent).not.toBeNull())
+
+    engine.setPreview({ nodeId: 'a', clipId: 'block-1', at: 0.4, playing: false })
+    expect(cubeOf(loaded).position.x).toBeCloseTo(0.4, 5)
+
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(walkBlock({ offset: 0, speed: 2 }))] })
+
+    expect(cubeOf(loaded).position.x).toBeCloseTo(0.8, 5)
+    engine.dispose()
+  })
+
+  it('gives the model back to the head once the preview is dropped', async () => {
+    const loaded = animatedModel([walk()])
+    const engine = withModel(loaded)
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(walkBlock({ offset: 0 }))] })
+    await vi.waitFor(() => expect(loaded.parent).not.toBeNull())
+    engine.setPreview({ nodeId: 'a', clipId: 'block-1', at: 0.4, playing: false })
+
+    engine.setPreview(null)
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(walkBlock({ offset: 0 }))] })
+
+    expect(cubeOf(loaded).position.x).toBeCloseTo(0, 5)
+    engine.dispose()
+  })
+
   it('takes a model with no clip at all without complaining', async () => {
     const loaded = animatedModel([])
     const engine = withModel(loaded)

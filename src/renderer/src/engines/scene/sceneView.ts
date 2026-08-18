@@ -293,8 +293,9 @@ export type CameraPlacement = { position: PlainVector3; target: PlainVector3 }
 /**
  * One block watched on a clock of its own — which block, from where, and whether it runs.
  *
- * `at` is in three's seconds, the unit the mixer counts in, and it is where a run STARTS rather
- * than where it stands: a position published every frame would be the scene's clock again.
+ * `at` is a position along the BLOCK in seconds, before speed and offset: the mixer reads it as
+ * `at * speed + offset`. It is where a run STARTS and not where it stands — a position published
+ * every frame would be the scene's clock again.
  */
 export type PreviewWatch = {
   nodeId: string

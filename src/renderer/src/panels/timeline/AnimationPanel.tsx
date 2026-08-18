@@ -62,9 +62,9 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
 
           blocks.push({
             clipId: ref.id,
-            // The label the studio owns, never the name the file spells — a Tripo rig writes
-            // `NlaTrack` into `label` when the block came off its own file.
-            name: clipLabel(ref.label, t),
+            // Renamed only for a clip the model's OWN file spells — an asset or a bundle was
+            // named by the studio or by the user, and `animation_0.glb` is a name they chose.
+            name: ref.source.kind === 'embedded' ? clipLabel(ref.label, t) : ref.label,
             start: ref.start,
             // The same arithmetic the mixer plays by, and it has to be: a bar drawn wider than
             // what is heard is a bar whose end shows a pose nothing holds.

@@ -21,6 +21,9 @@ export type AnimationPickerPreviewProps = {
 /** One identity for « this model plays nothing », so the subscription can settle. */
 const NO_LANES: readonly ClipLane[] = []
 
+/** Seconds. Fine enough to land on a pose, and the grain the end of the run is measured in. */
+const SCRUB_STEP = 0.05
+
 /**
  * Play, restart, speed and loop, on the block that was just laid.
  *
@@ -53,6 +56,9 @@ export function AnimationPickerPreview({
   // The clip's own length, at the speed it plays: what the band draws the block by, and what a
   // position along it has to mean. Zero while the file has not landed — nothing to scrub yet.
   const seconds = usToSeconds(clipSpanOf(played, length))
+  // A looping block wraps AT its length — the mixer reads `length % length` as the first pose —
+  // so the end of the run is the step before it. A block that holds its last pose ends on it.
+  const end = played.loop ? Math.max(0, seconds - SCRUB_STEP) : seconds
 
   const write = (speed: number, loop: boolean): void => {
     const next = lanesWith(lanes, lane.id, clips =>
@@ -88,15 +94,15 @@ export function AnimationPickerPreview({
           label={t('inspector.animationToEnd')}
           tooltip={TIP_BOTTOM}
           disabled={seconds <= 0}
-          onClick={() => watch(seconds, false)}
+          onClick={() => watch(end, false)}
         />
       </div>
       {seconds > 0 && (
         <SliderField
           label={t('inspector.animationPosition')}
           min={0}
-          max={seconds}
-          step={0.05}
+          max={end}
+          step={SCRUB_STEP}
           value={watching?.at ?? 0}
           onChange={at => watch(at, false)}
         />
